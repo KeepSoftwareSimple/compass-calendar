@@ -3,7 +3,6 @@ import {
   type MouseEventHandler,
   type ReactNode,
   type RefCallback,
-  useMemo,
 } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
@@ -16,24 +15,21 @@ import {
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { type CSSVariables } from "@web/common/styles/css.types";
 import { accentGradient } from "@web/common/styles/theme.util";
-import {
-  getColorsByHour,
-  getHourLabels,
-} from "@web/common/utils/datetime/web.date.util";
+import { getHourLabels } from "@web/common/utils/datetime/web.date.util";
 import { getCurrentPercentOfDay } from "@web/common/utils/grid/grid.util";
 import { ScrollableRegion } from "@web/components/ScrollableRegion/ScrollableRegion";
+import { CalendarTimeColumn } from "@web/grid/components/CalendarTimeColumn";
 import {
   EVENT_WIDTH_MINIMUM,
-  GRID_MARGIN_LEFT,
   TIMED_VISIBLE_HOURS,
 } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
 import {
   selectEventJumpActiveDayKeys,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
-import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
 interface TimedGridProps {
   columnsId?: string;
@@ -57,9 +53,14 @@ export const TimedGrid: FC<TimedGridProps> = ({
   visibleDates,
 }) => {
   const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
+  const marginLeft = useGridMarginLeft();
   const todayColumnIndexes = visibleDates.flatMap(({ date }, index) =>
     date.isSame(today, "day") ? [index] : [],
   );
+  const labelDay =
+    visibleDates.find(({ date }) => date.isSame(today, "day"))?.date ??
+    visibleDates[0]?.date ??
+    today;
 
   return (
     <ScrollableRegion
@@ -71,7 +72,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
       id={timedGridId}
       ref={timedGridRef}
     >
-      <CalendarTimeColumn />
+      <CalendarTimeColumn at={labelDay.toDate()} />
       <div
         className="absolute top-0 left-(--calendar-grid-margin-left) grid h-[calc(24*100%/var(--calendar-visible-hours))] w-[calc(100%-var(--calendar-grid-margin-left))] grid-cols-[repeat(var(--calendar-column-count),minmax(var(--calendar-column-min-width),1fr))]"
         id={columnsId}
@@ -80,7 +81,7 @@ export const TimedGrid: FC<TimedGridProps> = ({
           {
             "--calendar-column-count": visibleDates.length,
             "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
-            "--calendar-grid-margin-left": `${GRID_MARGIN_LEFT}px`,
+            "--calendar-grid-margin-left": `${marginLeft}px`,
             "--calendar-visible-hours": TIMED_VISIBLE_HOURS,
           } as CSSVariables
         }
@@ -125,9 +126,10 @@ export const TimedGrid: FC<TimedGridProps> = ({
       </div>
 
       <div
-        className="absolute left-12.5 h-full w-[calc(100%-50px)]"
+        className="absolute left-(--calendar-grid-margin-left) h-full w-[calc(100%-var(--calendar-grid-margin-left))]"
         style={
           {
+            "--calendar-grid-margin-left": `${marginLeft}px`,
             "--calendar-visible-hours": TIMED_VISIBLE_HOURS,
           } as CSSVariables
         }
@@ -145,34 +147,6 @@ export const TimedGrid: FC<TimedGridProps> = ({
 
       {eventsLayer}
     </ScrollableRegion>
-  );
-};
-
-const CalendarTimeColumn = () => {
-  const timeZone = useEffectiveTimeZone();
-  const currentHour = useMinuteTick().tz(timeZone).hour();
-  const colors = useMemo(() => getColorsByHour(currentHour), [currentHour]);
-  const hourLabels = useMemo(() => getHourLabels(), []);
-
-  return (
-    <div
-      className="absolute top-[calc(100%/var(--calendar-visible-hours)-5px)] z-1 h-full"
-      style={
-        {
-          "--calendar-visible-hours": TIMED_VISIBLE_HOURS,
-        } as CSSVariables
-      }
-    >
-      {hourLabels.map((label, index) => (
-        <div
-          className="h-[calc(100%/var(--calendar-visible-hours))]"
-          style={{ color: colors[index] }}
-          key={label}
-        >
-          <span className="block text-[10px]">{label}</span>
-        </div>
-      ))}
-    </div>
   );
 };
 

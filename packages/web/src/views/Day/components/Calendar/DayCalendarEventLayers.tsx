@@ -11,7 +11,7 @@ import {
 } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridEventDraft } from "@web/events/event-draft.types";
-import { GRID_MARGIN_LEFT } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import {
   type GridMeasurements,
@@ -59,14 +59,15 @@ export const DayCalendarAllDayEventsLayer = ({
 }: DayAllDayEventsProps) => {
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
+  const marginLeft = useGridMarginLeft();
 
   return (
     <div
       className="relative h-full"
       id={ID_GRID_EVENTS_ALLDAY}
       style={{
-        marginLeft: GRID_MARGIN_LEFT,
-        width: `calc(100% - ${GRID_MARGIN_LEFT}px)`,
+        marginLeft,
+        width: `calc(100% - ${marginLeft}px)`,
       }}
     >
       {allDayEvents.map((event) => (

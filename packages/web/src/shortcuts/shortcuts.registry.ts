@@ -321,6 +321,12 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
     label: "Toggle Hardcore Mode",
     section: "other",
   },
+  {
+    id: "other-time-travel",
+    keys: ["z"],
+    label: "Time travel",
+    section: "other",
+  },
 ];
 
 interface FilterOptions {
@@ -378,6 +384,9 @@ export const filterShortcutsByContext = (
           shortcut.id === "nav-day-view" ||
           shortcut.id === "nav-week-view"
         );
+      }
+      if (shortcut.id === "other-time-travel") {
+        return false;
       }
     } else {
       // Day/week view excludes life-specific shortcuts

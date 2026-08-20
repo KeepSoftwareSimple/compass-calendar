@@ -17,5 +17,14 @@ export function useTimezoneCmdItems(): CommandItem[] {
       keywords: ["timezone", "time zone", "tz", abbreviation],
       onClick: () => timezoneDialogActions.open(restoreCommandPaletteFocus),
     },
+    {
+      id: "time-travel",
+      label: "Time travel",
+      icon: GlobeIcon,
+      shortcut: ["Z"],
+      keywords: ["timezone", "time zone", "tz", "secondary"],
+      onClick: () =>
+        timezoneDialogActions.open(restoreCommandPaletteFocus, "time-travel"),
+    },
   ];
 }

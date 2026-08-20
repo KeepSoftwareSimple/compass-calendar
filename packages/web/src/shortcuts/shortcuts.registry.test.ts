@@ -83,6 +83,22 @@ describe("shortcuts.registry", () => {
       expect(life).not.toContain("focus-shift-hold");
     });
 
+    it("lists time travel in day and week but not life", () => {
+      for (const view of ["day", "week"] as const) {
+        const ids = filterShortcutsByContext({
+          view,
+          isViewingCurrentPeriod: true,
+        }).map((shortcut) => shortcut.id);
+        expect(ids).toContain("other-time-travel");
+      }
+
+      const life = filterShortcutsByContext({
+        view: "life",
+        isViewingCurrentPeriod: true,
+      }).map((shortcut) => shortcut.id);
+      expect(life).not.toContain("other-time-travel");
+    });
+
     it("lists h keyboard-only mode in every view's other section", () => {
       for (const view of ["day", "week", "life"] as const) {
         const ids = filterShortcutsByContext({

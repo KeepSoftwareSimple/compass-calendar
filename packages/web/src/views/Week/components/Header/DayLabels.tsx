@@ -3,10 +3,8 @@ import { type FC } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { getWeekDayLabel } from "@web/common/utils/event/event.util";
-import {
-  EVENT_WIDTH_MINIMUM,
-  GRID_MARGIN_LEFT,
-} from "@web/grid/grid.constants";
+import { EVENT_WIDTH_MINIMUM } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import {
   selectEventJumpActiveDayKeys,
   useEventJumpStore,
@@ -27,6 +25,7 @@ export const DayLabels: FC<Props> = ({
   weekDays,
 }) => {
   const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
+  const marginLeft = useGridMarginLeft();
   const getColor = (day: Dayjs) => {
     const isCurrentWeek = today.week() === week;
     const isToday = isCurrentWeek && today.format("DD") === day.format("DD");
@@ -54,15 +53,15 @@ export const DayLabels: FC<Props> = ({
     <div className="relative mt-2.5 min-h-8 w-full">
       <div
         className="absolute inset-y-0 left-0 z-1 flex items-end justify-center pb-0.5"
-        style={{ width: GRID_MARGIN_LEFT }}
+        style={{ width: marginLeft }}
       >
         <GridTimezoneLabel />
       </div>
       <div
         className="absolute top-0 grid h-full items-end"
         style={{
-          left: GRID_MARGIN_LEFT,
-          width: `calc(100% - ${GRID_MARGIN_LEFT}px)`,
+          left: marginLeft,
+          width: `calc(100% - ${marginLeft}px)`,
           gridTemplateColumns: `repeat(${weekDays.length}, minmax(${EVENT_WIDTH_MINIMUM}px, 1fr))`,
         }}
       >

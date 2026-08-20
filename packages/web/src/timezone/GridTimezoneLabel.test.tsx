@@ -11,7 +11,12 @@ import {
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 import { GridTimezoneLabel } from "@web/timezone/GridTimezoneLabel";
 import {
+  resetTimeTravelStoreForTests,
+  setTimeTravelZone,
+} from "@web/timezone/time-travel.store";
+import {
   selectTimezoneDialogOpen,
+  selectTimezoneDialogPurpose,
   timezoneDialogActions,
   useTimezoneDialogStore,
 } from "@web/timezone/timezone-dialog.store";
@@ -72,6 +77,9 @@ describe("GridTimezoneLabel", () => {
 
     expect(selectTimezoneDialogOpen(useTimezoneDialogStore.getState())).toBe(
       true,
+    );
+    expect(selectTimezoneDialogPurpose(useTimezoneDialogStore.getState())).toBe(
+      "time-travel",
     );
     act(() => {
       timezoneDialogActions.close();
@@ -162,5 +170,40 @@ describe("GridTimezoneLabel", () => {
       setIntervalSpy.mockRestore();
       clearIntervalSpy.mockRestore();
     }
+  });
+
+  it("shows both abbreviations and a remove control while time traveling", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      setEffectiveTimeZoneForTests("America/New_York");
+      setTimeTravelZone("America/Denver");
+    });
+
+    render(<GridTimezoneLabel />);
+
+    expect(
+      screen.getByRole("group", { name: "Time travel timezones" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Time travel timezone: ${formatTimeZoneAbbreviation("America/Denver")}`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Calendar timezone: ${formatTimeZoneAbbreviation("America/New_York")}`,
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: "Remove time travel timezone" }),
+    );
+
+    expect(
+      screen.queryByRole("group", { name: "Time travel timezones" }),
+    ).not.toBeInTheDocument();
+    act(() => {
+      resetTimeTravelStoreForTests();
+    });
   });
 });

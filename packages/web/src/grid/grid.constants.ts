@@ -39,6 +39,13 @@ export const TIMED_EVENT_MIN_WIDTH = 280;
 export const TIMED_EVENT_FAN_INDENT = 44;
 export const TIMED_EVENT_FAN_GUTTER = 120;
 export const GRID_PADDING_BOTTOM = 20;
-export const GRID_MARGIN_LEFT = 50;
+export const GRID_TIME_COLUMN_WIDTH = 50;
+export const GRID_MARGIN_LEFT = GRID_TIME_COLUMN_WIDTH;
+
+export function gridMarginLeftFor(hasSecondaryTimeZone: boolean): number {
+  return hasSecondaryTimeZone
+    ? GRID_TIME_COLUMN_WIDTH * 2
+    : GRID_TIME_COLUMN_WIDTH;
+}
 export const GRID_TIME_STEP = 15;
 export const TIMED_VISIBLE_HOURS = 13;

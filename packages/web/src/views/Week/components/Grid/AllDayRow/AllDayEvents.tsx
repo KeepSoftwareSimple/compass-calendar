@@ -14,6 +14,7 @@ import {
 } from "@web/events/hooks/useGridDraftSchemaOverlay";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectDraftId, useDraftStore } from "@web/events/stores/draft.store";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -84,11 +85,13 @@ export const AllDayEvents = ({
 
   const { onEventKeyDown, onOpenReadOnlyDetails } =
     useGridEventDraftHandlers(weekEvents);
+  const marginLeft = useGridMarginLeft();
 
   return (
     <div
-      className="relative ml-[50px] h-full w-full"
+      className="relative h-full w-full"
       id={ID_GRID_EVENTS_ALLDAY}
+      style={{ marginLeft }}
     >
       {!isLoadingWeekView &&
         visibleAllDayEventsWithIdentity.map(

@@ -41,6 +41,12 @@ describe("computeVisibleDayCount", () => {
     expect(computeVisibleDayCount(0)).toBe(1);
     expect(computeVisibleDayCount(100000)).toBe(WEEK_DAY_COUNT);
   });
+
+  it("subtracts a wider gutter when time travel is on", () => {
+    // (890 - 50) / 140 = 6 days; (890 - 100) / 140 = 5 days
+    expect(computeVisibleDayCount(890)).toBe(6);
+    expect(computeVisibleDayCount(890, 100)).toBe(5);
+  });
 });
 
 describe("computeVisibleWindowOffset", () => {

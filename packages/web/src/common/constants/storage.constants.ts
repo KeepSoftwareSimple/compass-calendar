@@ -32,7 +32,9 @@ type StorageKey =
   // an id that no longer resolves to a visible item is skipped, not an error.
   | "compass.commands.recent"
   // Pinned calendar timezone. Absent means Auto (follow the browser).
-  | "compass.timezone.default";
+  | "compass.timezone.default"
+  // Secondary time-travel zone. Absent means the extra hour column is off.
+  | "compass.timezone.time-travel";
 
 export const STORAGE_KEYS: Record<
   | "AUTH"
@@ -53,7 +55,8 @@ export const STORAGE_KEYS: Record<
   | "DEFAULT_CALENDAR_ID"
   | "COLLAPSED_ACCOUNTS"
   | "RECENT_COMMANDS"
-  | "DEFAULT_TIMEZONE",
+  | "DEFAULT_TIMEZONE"
+  | "TIME_TRAVEL_TIMEZONE",
   StorageKey
 > = {
   AUTH: "compass.auth",
@@ -78,4 +81,5 @@ export const STORAGE_KEYS: Record<
   COLLAPSED_ACCOUNTS: "compass.calendars.collapsed-accounts",
   RECENT_COMMANDS: "compass.commands.recent",
   DEFAULT_TIMEZONE: "compass.timezone.default",
+  TIME_TRAVEL_TIMEZONE: "compass.timezone.time-travel",
 } as const;

@@ -125,6 +125,7 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Create event")).toBeInTheDocument();
     expect(screen.getByText("Create all-day event")).toBeInTheDocument();
     expect(screen.getByText(/Change default timezone/)).toBeInTheDocument();
+    expect(screen.getByText("Time travel")).toBeInTheDocument();
     expect(getInput()).toHaveFocus();
     // First option is active by default.
     expect(activeRowText(container)).toBe("Go to Today");

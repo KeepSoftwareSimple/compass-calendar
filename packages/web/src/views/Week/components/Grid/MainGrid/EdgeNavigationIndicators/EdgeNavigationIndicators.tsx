@@ -1,10 +1,11 @@
 import { type FC } from "react";
 import { type CSSVariables } from "@web/common/styles/css.types";
-import { GRID_MARGIN_LEFT } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { useWeekInteractionEdgeNavigationState } from "@web/views/Week/interaction/state/edge-navigation.state";
 
 export const EdgeNavigationIndicators: FC = () => {
   const dragEdgeState = useWeekInteractionEdgeNavigationState();
+  const marginLeft = useGridMarginLeft();
   const { currentEdge, isDragging, progress } = dragEdgeState;
 
   if (!isDragging || !currentEdge) return null;
@@ -17,7 +18,7 @@ export const EdgeNavigationIndicators: FC = () => {
         {
           "--edge-opacity": 0.04 + (progress / 100) * 0.06,
           "--edge-width": `${24 + 32 * (progress / 100)}px`,
-          "--grid-margin-left": `${GRID_MARGIN_LEFT}px`,
+          "--grid-margin-left": `${marginLeft}px`,
         } as CSSVariables
       }
     />

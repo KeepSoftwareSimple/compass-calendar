@@ -370,6 +370,28 @@ PageUp and PageDown always scroll the timed grid by one viewport, even when focu
 
 ---
 
+## Scenario 16: Time Travel With Z
+
+### UX
+
+Bare `Z` opens the time-travel timezone picker in Day and Week view. Cmd+Z / Ctrl+Z remains undo. Escape closes the picker without dropping an existing secondary hour column.
+
+### Steps
+
+1. Navigate to `/week`.
+2. Press `Z`.
+3. Choose a timezone, then press Escape from the grid.
+4. Press Cmd+Z / Ctrl+Z after an undoable action.
+
+### Expected Results
+
+- `Z` opens the Time travel picker.
+- A second hour column appears after a zone is chosen and survives reload until removed.
+- Escape closes the picker and leaves the extra column in place.
+- Cmd+Z undoes; it does not open time travel.
+
+---
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping shortcut-related changes:
@@ -391,3 +413,4 @@ If time is limited, run these checks before shipping shortcut-related changes:
 15. Pressing `S` shows event jump chips; a day letter + digit focuses that event; Shift+Tab does not show chips.
 16. `H` enters Hardcore Mode (clicks blocked, indicator visible); Esc or another `H` exits. Shift-Shift does not.
 17. PageUp / PageDown scroll the timed grid in Day and Week view even when an event is focused; they do not fire in a text input.
+18. `Z` opens time travel in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.

@@ -1,7 +1,8 @@
 import { type MutableRefObject } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { roundToPrev } from "@web/common/utils/round/round.util";
-import { GRID_MARGIN_LEFT, GRID_TIME_STEP } from "@web/grid/grid.constants";
+import { GRID_TIME_STEP } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import {
   type GridMeasurements,
   type GridVisibleDate,
@@ -12,12 +13,13 @@ export const useGridCoordinates = (
   mainGridRef: MutableRefObject<HTMLElement | null>,
   visibleDates: GridVisibleDate[],
 ) => {
+  const marginLeft = useGridMarginLeft();
   const getVisibleDateIndexByX = (x: number) => {
     const gridLeft =
       mainGridRef.current?.getBoundingClientRect().left ??
       measurements.mainGrid?.left ??
       0;
-    const gridX = Math.max(0, x - gridLeft - GRID_MARGIN_LEFT);
+    const gridX = Math.max(0, x - gridLeft - marginLeft);
     let dateIndex = 0;
     const totalWidth = measurements.colWidths.reduce((left, width, index) => {
       if (gridX >= left && gridX < left + width) {

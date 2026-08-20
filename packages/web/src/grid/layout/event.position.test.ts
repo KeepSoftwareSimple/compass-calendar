@@ -1,6 +1,7 @@
 import { act } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
+import { setTimeTravelZone } from "@web/timezone/time-travel.store";
 import {
   getAllDayEventPosition,
   getTimedEventPosition,
@@ -339,5 +340,36 @@ describe("event position", () => {
     expect(utcTop).toBe(9 * 60);
     expect(chicagoTop).toBe(4 * 60);
     expect(chicagoTop).not.toBe(utcTop);
+  });
+
+  it("shifts timed events right for the extra hour column without moving them in time", () => {
+    const event = {
+      endDate: "2026-05-20T10:00:00.000",
+      isAllDay: false,
+      position: { widthMultiplier: 1 },
+      startDate: "2026-05-20T09:00:00.000",
+    } as never;
+
+    const before = getTimedEventPosition(event, {
+      measurements,
+      visibleDates,
+      isDraft: false,
+    });
+
+    act(() => {
+      setTimeTravelZone("America/Denver");
+    });
+
+    const after = getTimedEventPosition(event, {
+      measurements,
+      visibleDates,
+      isDraft: false,
+    });
+
+    expect(after.top).toBe(before.top);
+    expect(after.left).toBe(before.left + 50);
+    act(() => {
+      setTimeTravelZone(null);
+    });
   });
 });

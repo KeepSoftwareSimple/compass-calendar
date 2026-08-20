@@ -7,9 +7,9 @@ import {
   EVENT_ALLDAY_HEIGHT,
   EVENT_ALLDAY_ROW_HEIGHT,
   EVENT_PADDING_RIGHT,
-  GRID_MARGIN_LEFT,
   TIMED_EVENT_COLUMN_INSET,
 } from "@web/grid/grid.constants";
+import { gridMarginLeftPx } from "@web/grid/grid-margin";
 import {
   type EventPosition,
   type GridMeasurements,
@@ -51,7 +51,7 @@ export const getTimedEventPosition = (
     height:
       (durationMinutes / 60) * input.measurements.hourHeight -
       DRAFT_PADDING_BOTTOM,
-    left: GRID_MARGIN_LEFT + columnLeft + TIMED_EVENT_COLUMN_INSET,
+    left: gridMarginLeftPx() + columnLeft + TIMED_EVENT_COLUMN_INSET,
     top: (minutesFromStartOfDay / 60) * input.measurements.hourHeight,
     width: Math.max(
       0,
@@ -97,7 +97,7 @@ export const getBusyPeriodPosition = (
 
   return {
     height: (durationMinutes / 60) * input.measurements.hourHeight,
-    left: GRID_MARGIN_LEFT + columnLeft + TIMED_EVENT_COLUMN_INSET,
+    left: gridMarginLeftPx() + columnLeft + TIMED_EVENT_COLUMN_INSET,
     top: (minutesFromStartOfDay / 60) * input.measurements.hourHeight,
     width: Math.max(0, columnWidth - TIMED_EVENT_COLUMN_INSET * 2),
   };

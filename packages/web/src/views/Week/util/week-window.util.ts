@@ -16,10 +16,13 @@ export const WEEK_DAY_COUNT = 7;
  * below a readable width. The hour labels margin is part of the track, so it
  * is subtracted before dividing.
  */
-export const computeVisibleDayCount = (trackWidth: number) =>
+export const computeVisibleDayCount = (
+  trackWidth: number,
+  marginLeft: number = GRID_MARGIN_LEFT,
+) =>
   Math.min(
     Math.max(
-      Math.floor((trackWidth - GRID_MARGIN_LEFT) / DAY_COLUMN_MIN_USABLE_WIDTH),
+      Math.floor((trackWidth - marginLeft) / DAY_COLUMN_MIN_USABLE_WIDTH),
       1,
     ),
     WEEK_DAY_COUNT,

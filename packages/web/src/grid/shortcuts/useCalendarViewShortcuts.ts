@@ -1,6 +1,10 @@
 import { useGridScrollShortcuts } from "@web/grid/shortcuts/useGridScrollShortcuts";
 import { KEYMAP } from "@web/shortcuts/keymap";
-import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
+import {
+  useAppShortcut,
+  useAppShortcutUp,
+} from "@web/shortcuts/useAppShortcut";
+import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 
 export interface CalendarViewShortcutsConfig {
   /** J / K: previous / next period (day or week). */
@@ -41,4 +45,9 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
     config.onCreateTimedEvent?.(),
   );
   useAppShortcutUp("U", () => config.onFocusCalendar?.());
+  // Keydown so a macOS Cmd+Z keyup-replay (meta already released) cannot
+  // match this binding the way Mod+D vs D does on keyup.
+  useAppShortcut("Z", () =>
+    timezoneDialogActions.open(undefined, "time-travel"),
+  );
 }

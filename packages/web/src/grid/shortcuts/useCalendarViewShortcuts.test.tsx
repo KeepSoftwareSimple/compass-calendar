@@ -1,7 +1,13 @@
 import { HotkeyManager, HotkeysProvider } from "@tanstack/react-hotkeys";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
-import { type PropsWithChildren } from "react";
+import { act, type PropsWithChildren } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import {
+  selectTimezoneDialogOpen,
+  selectTimezoneDialogPurpose,
+  timezoneDialogActions,
+  useTimezoneDialogStore,
+} from "@web/timezone/timezone-dialog.store";
 import { useCalendarViewShortcuts } from "./useCalendarViewShortcuts";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -96,5 +102,42 @@ describe("useCalendarViewShortcuts", () => {
 
     expect(onShiftViewBackward).toHaveBeenCalledTimes(1);
     expect(onShiftViewForward).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens time travel on Z and ignores a Cmd+Z keyup replay", () => {
+    renderHook(() => useCalendarViewShortcuts({}), { wrapper });
+
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        bubbles: true,
+        cancelable: true,
+        key: "z",
+        ctrlKey: true,
+      }),
+    );
+    document.dispatchEvent(
+      new KeyboardEvent("keyup", {
+        bubbles: true,
+        cancelable: true,
+        key: "z",
+        ctrlKey: false,
+      }),
+    );
+
+    expect(selectTimezoneDialogOpen(useTimezoneDialogStore.getState())).toBe(
+      false,
+    );
+
+    pressKey("z");
+
+    expect(selectTimezoneDialogOpen(useTimezoneDialogStore.getState())).toBe(
+      true,
+    );
+    expect(selectTimezoneDialogPurpose(useTimezoneDialogStore.getState())).toBe(
+      "time-travel",
+    );
+    act(() => {
+      timezoneDialogActions.close();
+    });
   });
 });

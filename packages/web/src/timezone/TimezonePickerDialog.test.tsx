@@ -9,6 +9,11 @@ import {
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { TimezonePickerDialog } from "@web/timezone/TimezonePickerDialog";
+import {
+  getTimeTravelZone,
+  resetTimeTravelStoreForTests,
+  setTimeTravelZone,
+} from "@web/timezone/time-travel.store";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 import { afterEach, describe, expect, it } from "bun:test";
 
@@ -16,6 +21,7 @@ describe("TimezonePickerDialog", () => {
   afterEach(() => {
     act(() => {
       resetEffectiveTimeZoneStoreForTests();
+      resetTimeTravelStoreForTests();
     });
   });
 
@@ -78,5 +84,52 @@ describe("TimezonePickerDialog", () => {
 
     expect(getPinnedTimeZone()).toBeNull();
     expect(getEffectiveTimeZone()).toBe(getBrowserTimeZone());
+  });
+
+  it("commits a secondary zone without changing the pin", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      setPinnedTimeZone("America/New_York");
+    });
+
+    render(
+      <TimezonePickerDialog
+        onDismiss={() => timezoneDialogActions.close()}
+        purpose="time-travel"
+      />,
+    );
+
+    expect(
+      screen.queryByRole("option", { name: /Use browser timezone \(Auto\)/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("dialog", { name: "Time travel" }),
+    ).toBeInTheDocument();
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Search timezones" }),
+      "Denver",
+    );
+    await user.keyboard("{Enter}");
+
+    expect(getTimeTravelZone()).toBe("America/Denver");
+    expect(getPinnedTimeZone()).toBe("America/New_York");
+  });
+
+  it("offers Stop time travel when a secondary zone is already set", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      setTimeTravelZone("America/Denver");
+    });
+
+    render(
+      <TimezonePickerDialog
+        onDismiss={() => timezoneDialogActions.close()}
+        purpose="time-travel"
+      />,
+    );
+
+    await user.click(screen.getByRole("option", { name: /Stop time travel/ }));
+    expect(getTimeTravelZone()).toBeNull();
   });
 });

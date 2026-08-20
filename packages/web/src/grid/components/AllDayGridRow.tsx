@@ -14,10 +14,10 @@ import {
   EVENT_ALLDAY_GAP,
   EVENT_ALLDAY_ROW_HEIGHT,
   EVENT_WIDTH_MINIMUM,
-  GRID_MARGIN_LEFT,
   GRID_PADDING_BOTTOM,
   GRID_TIME_STEP,
 } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
 import {
@@ -64,6 +64,7 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
   visibleDates,
 }) => {
   const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
+  const marginLeft = useGridMarginLeft();
 
   return (
     <section
@@ -85,7 +86,7 @@ export const AllDayGridRow: FC<AllDayRowProps> = ({
           {
             "--calendar-column-count": visibleDates.length,
             "--calendar-column-min-width": `${EVENT_WIDTH_MINIMUM}px`,
-            "--calendar-grid-margin-left": `${GRID_MARGIN_LEFT}px`,
+            "--calendar-grid-margin-left": `${marginLeft}px`,
           } as CSSVariables
         }
       >
