@@ -162,3 +162,16 @@ everything runs through Bun, so that mismatch is not a blocker.
   `compass.yaml`. Without them the backend still runs and serves
   anonymous/health traffic, but do not attempt login flows (see the AGENTS.md
   rule) until those are configured.
+- GitHub merge (`/ship` squash-merge) is a permission on the **GitHub MCP**
+  identity, not the sandbox `gh` CLI. `gh` uses a read-only Cursor GitHub App
+  token (`ghs_…`, account `cursor`) and returns `403 Resource not accessible
+  by integration` for writes. Squash-merge uses GitHub MCP
+  `merge_pull_request`, which authenticates as the connected user. That token
+  must have **Contents: Read and write** and **Pull requests: Read and write**
+  on `KeepSoftwareSimple/compass-calendar`. `403 Resource not accessible by
+  personal access token` on merge means Contents write is missing — do not
+  treat that as a successful ship. Grant Contents write on the GitHub MCP /
+  Cursor GitHub connection, and add a fine-grained PAT with those same
+  permissions as `GH_TOKEN` on the `ccal` cloud environment
+  (https://cursor.com/dashboard/cloud-agents/environments/e/a8d6d701-95d6-11f1-ba66-0e7d0216e441).
+  New agent runs pick up the secret; the current session will not.

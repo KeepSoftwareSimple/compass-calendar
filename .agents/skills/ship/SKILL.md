@@ -118,10 +118,22 @@ nearest focused local command, fix the root cause in a separate commit, push,
 and watch again. Address actionable review feedback.
 
 Squash-merge only when required checks and review gates pass, the base is
-correct, and validation supports confidence. Capture the merge SHA, then watch
-workflows triggered on `main` for release tagging, image publication, staging
-deployment, and health checks. Treat release/deploy failures as incidents;
-report evidence rather than making unrequested infrastructure changes.
+correct, and validation supports confidence. Use GitHub MCP
+`merge_pull_request` with `merge_method: squash`. Do not use `gh pr merge`
+unless a user-provided `GH_TOKEN` is present in the environment — the
+sandbox `gh` token is a read-only GitHub App installation and cannot merge.
+
+If merge returns `403 Resource not accessible by personal access token`,
+Contents write is missing on the GitHub MCP identity. Stop and tell the
+user to grant **Contents: Read and write** (plus **Pull requests: Read and
+write**) on `KeepSoftwareSimple/compass-calendar` for that token, and to
+add the same PAT as `GH_TOKEN` on the `ccal` cloud environment. Do not
+treat a 403 as a successful ship.
+
+Capture the merge SHA, then watch workflows triggered on `main` for release
+tagging, image publication, staging deployment, and health checks. Treat
+release/deploy failures as incidents; report evidence rather than making
+unrequested infrastructure changes.
 
 ## Report
 
