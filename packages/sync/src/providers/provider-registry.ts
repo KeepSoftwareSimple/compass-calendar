@@ -4,6 +4,16 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { type SyncConfig } from "@sync/config/sync.config";
 import {
+  APPLE_PROVIDER_CAPABILITIES,
+  appleCapabilitiesFromScopes,
+  appleScopesForFeatures,
+} from "@sync/providers/apple/apple-capabilities";
+import {
+  appleAdapters,
+  appleProviderConfigured,
+  bindAppleAdaptersForConnection,
+} from "@sync/providers/apple/build-provider-resolvers";
+import {
   googleAdapters,
   googleProviderConfigured,
   type ProviderAdapterOverrides,
@@ -40,6 +50,15 @@ export interface ProviderRegistration {
   callbackPath: string;
   notificationsCallbackPath: string;
   capabilitiesFromScopes(granted: readonly string[]): ProviderCapability[];
+  bindAdaptersForConnection?: (
+    connection: {
+      account: {
+        email: string | null;
+        providerAccountId?: string;
+      };
+    },
+    adapters: ProviderAdapters,
+  ) => ProviderAdapters;
 }
 
 export class ProviderRegistry {
@@ -75,6 +94,8 @@ export const GOOGLE_CALLBACK_PATH = "/sync/google";
 export const GOOGLE_NOTIFICATIONS_PATH = "/sync/notifications/google";
 export const MICROSOFT_CALLBACK_PATH = "/sync/microsoft";
 export const MICROSOFT_NOTIFICATIONS_PATH = "/sync/notifications/microsoft";
+export const APPLE_CALLBACK_PATH = "/sync/apple";
+export const APPLE_NOTIFICATIONS_PATH = "/sync/notifications/apple";
 export const OAUTH_CALLBACK_PARAM_PATH = "/sync/:provider";
 export const NOTIFICATIONS_PARAM_PATH = "/sync/notifications/:provider";
 
@@ -108,14 +129,32 @@ export function buildProviderRegistry(
       capabilitiesFromScopes: microsoftCapabilitiesFromScopes,
     });
   }
-  // Apple registration lands in A-08.
+  const appleOverride = overrides.apple;
+  if (appleProviderConfigured(config) || appleOverride?.auth !== undefined) {
+    registrations.set("apple", {
+      adapters: appleAdapters(config, appleOverride),
+      scopes: { forFeatures: appleScopesForFeatures },
+      capabilities: APPLE_PROVIDER_CAPABILITIES,
+      callbackPath: APPLE_CALLBACK_PATH,
+      notificationsCallbackPath: APPLE_NOTIFICATIONS_PATH,
+      capabilitiesFromScopes: appleCapabilitiesFromScopes,
+      bindAdaptersForConnection: bindAppleAdaptersForConnection,
+    });
+  }
   return new ProviderRegistry(registrations);
 }
 
 export function resolveAdaptersFrom(
   registry: ProviderRegistry,
 ): ResolveProviderAdapters {
-  return (kind) => registry.get(kind).adapters;
+  return (kind, connection) => {
+    const registration = registry.get(kind);
+    let adapters = registration.adapters;
+    if (connection && registration.bindAdaptersForConnection) {
+      adapters = registration.bindAdaptersForConnection(connection, adapters);
+    }
+    return adapters;
+  };
 }
 
 export function resolveAuthFrom(

@@ -1,13 +1,17 @@
 import { NodeEnv } from "@core/constants/core.constants";
+import { TEST_CREDENTIAL_ENCRYPTION_KEY } from "@sync/__tests__/helpers/credential-encryption";
 import { type SyncConfig } from "@sync/config/sync.config";
 import { ProviderNotConfiguredError } from "@sync/providers/provider-adapters";
 import { type ProviderAuthAdapter } from "@sync/providers/provider-auth.port";
 import {
+  APPLE_CALLBACK_PATH,
+  APPLE_NOTIFICATIONS_PATH,
   buildProviderRegistry,
   GOOGLE_CALLBACK_PATH,
   GOOGLE_NOTIFICATIONS_PATH,
   MICROSOFT_CALLBACK_PATH,
   MICROSOFT_NOTIFICATIONS_PATH,
+  resolveAdaptersFrom,
 } from "@sync/providers/provider-registry";
 import { describe, expect, it } from "bun:test";
 
@@ -106,6 +110,17 @@ describe("ProviderRegistry", () => {
     ).toBe(true);
   });
 
+  it("registers apple only when credential encryption key is present", () => {
+    expect(buildProviderRegistry(baseConfig()).has("apple")).toBe(false);
+    expect(
+      buildProviderRegistry(
+        baseConfig({
+          CREDENTIAL_ENCRYPTION_KEY: TEST_CREDENTIAL_ENCRYPTION_KEY,
+        }),
+      ).has("apple"),
+    ).toBe(true);
+  });
+
   it("returns capabilities per kind", () => {
     const registry = buildProviderRegistry(
       baseConfig({
@@ -181,11 +196,73 @@ describe("ProviderRegistry", () => {
     expect(microsoft.scopes.forFeatures([])).toEqual([]);
   });
 
+  it("returns apple capabilities and paths when configured", () => {
+    const registry = buildProviderRegistry(
+      baseConfig({
+        CREDENTIAL_ENCRYPTION_KEY: TEST_CREDENTIAL_ENCRYPTION_KEY,
+      }),
+    );
+    const apple = registry.get("apple");
+    expect(apple.callbackPath).toBe(APPLE_CALLBACK_PATH);
+    expect(apple.notificationsCallbackPath).toBe(APPLE_NOTIFICATIONS_PATH);
+    expect(registry.callbackUrlFor("https://example.test", "apple")).toBe(
+      "https://example.test/sync/notifications/apple",
+    );
+    expect(apple.capabilities).toEqual([
+      "readEvents",
+      "writeEvents",
+      "readBusy",
+      "inviteAttendees",
+      "incrementalChanges",
+    ]);
+    expect(apple.capabilities).not.toContain("changeNotifications");
+    expect(apple.capabilities).not.toContain("suggestContacts");
+    expect(apple.capabilitiesFromScopes([])).toEqual([
+      "readEvents",
+      "writeEvents",
+      "readBusy",
+      "inviteAttendees",
+      "incrementalChanges",
+    ]);
+    expect(apple.scopes.forFeatures(["contacts"])).toEqual([]);
+    expect(apple.scopes.forFeatures([])).toEqual([]);
+  });
+
   it("registers google from a test auth override without yaml credentials", () => {
     const registry = buildProviderRegistry(baseConfig(), {
       google: { auth: fakeAuth() },
     });
     expect(registry.has("google")).toBe(true);
     expect(registry.kinds()).toEqual(["google"]);
+  });
+
+  it("registers apple from a test auth override without the encryption key", () => {
+    const registry = buildProviderRegistry(baseConfig(), {
+      apple: { auth: fakeAuth() },
+    });
+    expect(registry.has("apple")).toBe(true);
+    expect(registry.kinds()).toEqual(["apple"]);
+  });
+
+  it("binds apple adapters to the connection account email", () => {
+    const registry = buildProviderRegistry(
+      baseConfig({
+        CREDENTIAL_ENCRYPTION_KEY: TEST_CREDENTIAL_ENCRYPTION_KEY,
+      }),
+    );
+    const resolve = resolveAdaptersFrom(registry);
+    const unbound = resolve("apple");
+    const bound = resolve("apple", {
+      account: {
+        email: "user@icloud.com",
+        providerAccountId: "user@icloud.com",
+        displayName: null,
+      },
+    });
+    expect(bound).not.toBe(unbound);
+    expect(bound.calendars).not.toBe(unbound.calendars);
+    expect(bound.reader).not.toBe(unbound.reader);
+    expect(bound.writer).not.toBe(unbound.writer);
+    expect(bound.auth).toBe(unbound.auth);
   });
 });

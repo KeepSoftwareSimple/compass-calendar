@@ -105,7 +105,7 @@ function resolveConnectionAdapters(
   try {
     return executionDepsForAdapters(
       deps,
-      deps.resolveAdapters(connection.provider),
+      deps.resolveAdapters(connection.provider, connection),
     );
   } catch (error) {
     if (error instanceof ProviderNotConfiguredError) {

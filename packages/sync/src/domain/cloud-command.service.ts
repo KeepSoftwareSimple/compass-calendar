@@ -240,7 +240,8 @@ async function resolveProviderWriter(
   );
   if (!connection) return null;
   try {
-    return deps.provider.resolveAdapters(connection.provider).writer;
+    return deps.provider.resolveAdapters(connection.provider, connection)
+      .writer;
   } catch (error) {
     if (error instanceof ProviderNotConfiguredError) return null;
     throw error;

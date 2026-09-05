@@ -17,6 +17,12 @@ export interface ProviderAdapters {
 
 export type ResolveProviderAdapters = (
   provider: ProviderKind,
+  connection?: {
+    account: {
+      email: string | null;
+      providerAccountId?: string;
+    };
+  },
 ) => ProviderAdapters;
 
 export type ResolveProviderAuth = (

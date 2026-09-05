@@ -97,8 +97,8 @@ export const SyncConfigSchema = z
     // Microsoft OAuth client. Both must be set for ProviderRegistry registration.
     MICROSOFT_CLIENT_ID: z.string().trim().min(1).optional(),
     MICROSOFT_CLIENT_SECRET: z.string().trim().min(1).optional(),
-    // AES-256-GCM key for password credentials at rest (Apple). Read-only in
-    // this WP; custody encryption is WP-06.
+    // AES-256-GCM key for password credentials at rest (Apple). Both custody
+    // encryption and ProviderRegistry Apple registration require this key.
     CREDENTIAL_ENCRYPTION_KEY: z.string().trim().min(1).optional(),
     // Optional PostHog credentials for sanitized sync_health_snapshot events.
     // When absent, the health emitter no-ops (local/dev without analytics).

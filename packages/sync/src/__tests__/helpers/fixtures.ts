@@ -243,5 +243,5 @@ export function fakeResolveAdapters(
   overrides: Partial<Omit<ProviderAdapters, "reader">> = {},
 ): ResolveProviderAdapters {
   const adapters = fakeAdapters(reader, overrides);
-  return () => adapters;
+  return (_provider, _connection) => adapters;
 }
