@@ -12,6 +12,7 @@ import {
   SSE_DEGRADED_STATUS,
 } from "@web/auth/providers/connect.util";
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
+import { CALENDAR_HOST_EXPLAINER } from "@web/auth/providers/provider-copy.util";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
 import { useDisconnectGoogleAccount } from "@web/auth/providers/useDisconnectAccount";
 import {
@@ -419,6 +420,7 @@ const AccountsSection: FC<AccountsSectionProps> = ({
           variant="overlay-primary"
         />
       </OverlayPanelActions>
+      <p className="text-text-muted text-xs">{CALENDAR_HOST_EXPLAINER}</p>
     </div>
   );
 };

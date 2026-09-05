@@ -4,6 +4,7 @@ import {
   type CalendarConnectionBannerKind,
   calendarReconnectBannerMessage,
 } from "@web/auth/providers/connect.util";
+import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   POINTER_ACTION_ATTRIBUTE,
@@ -17,7 +18,7 @@ import {
 } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 
 const STATIC_COPY: Record<
-  Exclude<CalendarConnectionBannerKind, "reconnect">,
+  Exclude<CalendarConnectionBannerKind, "reconnect" | "consentRequired">,
   { message: string; action: string }
 > = {
   importFailed: {
@@ -47,10 +48,20 @@ export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
           message: calendarReconnectBannerMessage(provider),
           action: "Reconnect",
         }
-      : STATIC_COPY[kind];
-  const isError = kind === "reconnect" || kind === "importFailed";
+      : kind === "consentRequired"
+        ? {
+            message: CONSENT_REQUIRED_COPY,
+            action: "Reconnect",
+          }
+        : STATIC_COPY[kind];
+  const isError =
+    kind === "reconnect" ||
+    kind === "consentRequired" ||
+    kind === "importFailed";
   const pointerAction =
-    kind === "reconnect" ? POINTER_ACTIONS.reconnectGoogle : undefined;
+    kind === "reconnect" || kind === "consentRequired"
+      ? POINTER_ACTIONS.reconnectGoogle
+      : undefined;
 
   useNoticeActionShortcut(CONNECTION_BANNER_SHORTCUT_KEY, onAction);
 

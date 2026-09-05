@@ -939,6 +939,7 @@ export async function preparePublicBookingReschedulePage(
 export interface HostBookingSettingsStubOptions {
   slug?: string;
   bookingUrl?: string;
+  microsoftConnect?: boolean;
 }
 
 export interface CapturedHostBookingRequests {
@@ -1048,7 +1049,19 @@ export async function prepareSignedInBookingSettingsPage(
     }
 
     if (path.endsWith("/api/config")) {
-      return route.fulfill(jsonResponse({ google: { isConfigured: true } }));
+      return route.fulfill(
+        jsonResponse({
+          google: { isConfigured: true },
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: {
+              signIn: false,
+              connect: Boolean(options.microsoftConnect),
+            },
+            apple: { signIn: false, connect: false },
+          },
+        }),
+      );
     }
 
     return route.fulfill(jsonResponse({}));

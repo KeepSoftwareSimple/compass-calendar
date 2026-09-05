@@ -32,6 +32,7 @@ export const useShowAccountsCmdItems = (): CommandItem[] => {
         "add account",
         "connect google",
         "connect microsoft",
+        "outlook",
         "connect apple",
         "connect calendar",
         "multiple google",

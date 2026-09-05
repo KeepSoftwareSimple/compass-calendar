@@ -3,10 +3,15 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { useStartGoogleAuthorization } from "@web/auth/google/authorization/useStartGoogleAuthorization";
 import { track } from "@web/auth/posthog/track";
+import {
+  CALENDAR_HOST_EXPLAINER,
+  CONNECT_THE_CALENDAR_YOU_USE,
+} from "@web/auth/providers/provider-copy.util";
 import { useIsProviderAvailable } from "@web/auth/providers/useIsProviderAvailable";
 import { MODAL_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { GoogleButton } from "@web/components/AuthModal/components/GoogleButton";
+import { MicrosoftButton } from "@web/components/AuthModal/components/MicrosoftButton";
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
@@ -55,6 +60,10 @@ export function WelcomeModal() {
   const { authenticated } = useContext(SessionContext);
   const { openModal, isOpen: isAuthModalOpen } = useAuthModal();
   const isGoogleAvailable = useIsProviderAvailable("google", "signIn");
+  const isMicrosoftConnectAvailable = useIsProviderAvailable(
+    "microsoft",
+    "connect",
+  );
   const { loading: isGoogleAuthLoading, startGoogleAuthorization } =
     useStartGoogleAuthorization({ intent: "signIn" });
   // A ?play= deep link goes straight to the practice game. This initializer
@@ -227,6 +236,9 @@ export function WelcomeModal() {
     if (key === "g" && isGoogleAvailable) {
       e.preventDefault();
       handOffToGoogle();
+    } else if (key === "m" && isMicrosoftConnectAvailable) {
+      e.preventDefault();
+      handOffToAuth("sign_up");
     } else if (key === "u") {
       e.preventDefault();
       handOffToAuth("sign_up");
@@ -357,10 +369,13 @@ export function WelcomeModal() {
           <>
             <div className="flex w-full flex-col gap-2">
               <h2 className="font-bold text-2xl text-text leading-snug">
-                Ready when you are
+                {CONNECT_THE_CALENDAR_YOU_USE}
               </h2>
               <p className="text-text-muted">
                 Pick how you want to start. You can sign up later.
+              </p>
+              <p className="text-text-muted text-xs">
+                {CALENDAR_HOST_EXPLAINER}
               </p>
             </div>
             {/* Connecting a calendar is the moment Compass starts being
@@ -379,6 +394,20 @@ export function WelcomeModal() {
                   />
                   <p className="text-center text-text-muted text-xs">
                     Signs you up and connects your Google Calendar.
+                  </p>
+                </>
+              )}
+              {isMicrosoftConnectAvailable && (
+                <>
+                  <MicrosoftButton
+                    onClick={() => handOffToAuth("sign_up")}
+                    disabled={isGoogleAuthLoading}
+                    label="Connect Microsoft"
+                    shortcutKey="M"
+                    style={{ width: "100%" }}
+                  />
+                  <p className="text-center text-text-muted text-xs">
+                    Create an account, then connect Microsoft from Settings.
                   </p>
                 </>
               )}

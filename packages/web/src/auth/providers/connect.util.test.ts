@@ -146,6 +146,25 @@ describe("getGoogleSyncStatus", () => {
     });
   });
 
+  it("renders the consentRequired copy whole", () => {
+    expect(
+      getGoogleSyncStatus("RECONNECT_REQUIRED", {
+        id: "c1",
+        state: "actionRequired",
+        stateReason: "consentRequired",
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+        accountEmail: "ada@contoso.com",
+        connectionState: "RECONNECT_REQUIRED",
+        canSuggestContacts: false,
+        provider: "microsoft",
+      }),
+    ).toEqual({
+      variant: "error",
+      text: "Your organization's admin has to approve Compass before this account can connect.",
+    });
+  });
+
   it("keeps reconnect-required over a lagging Sync catchingUp/healthy summary", () => {
     expect(
       getGoogleSyncStatus(
@@ -409,6 +428,30 @@ describe("getSidebarSyncStatus", () => {
     });
   });
 
+  it("renders the consentRequired copy whole in the sidebar", () => {
+    expect(
+      getSidebarSyncStatus({
+        connection: {
+          id: "c1",
+          state: "actionRequired",
+          stateReason: "consentRequired",
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "ada@contoso.com",
+          connectionState: "RECONNECT_REQUIRED",
+          canSuggestContacts: false,
+          provider: "microsoft",
+        },
+        isConnecting: false,
+        state: "RECONNECT_REQUIRED",
+        nowMs,
+      }),
+    ).toEqual({
+      variant: "error",
+      text: "Your organization's admin has to approve Compass before this account can connect.",
+    });
+  });
+
   it("falls back to the generic reconnect text with no account email to name", () => {
     expect(
       getSidebarSyncStatus({
@@ -578,6 +621,20 @@ describe("getCalendarConnectionBannerKind", () => {
     ).toBe("reconnect");
   });
 
+  it("returns consentRequired before generic reconnect", () => {
+    expect(
+      getCalendarConnectionBannerKind(
+        "RECONNECT_REQUIRED",
+        makeConnection({
+          state: "actionRequired",
+          stateReason: "consentRequired",
+          connectionState: "RECONNECT_REQUIRED",
+          provider: "microsoft",
+        }),
+      ),
+    ).toBe("consentRequired");
+  });
+
   it("returns importFailed for a never-healthy delayed connection", () => {
     expect(
       getCalendarConnectionBannerKind(
@@ -651,6 +708,13 @@ describe("getGoogleConnectionConfig", () => {
     expect(config.commandAction?.label).toBe("Connect Google Calendar");
     config.commandAction?.onSelect?.();
     expect(onConnectGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it("labels Microsoft connect from the provider option", () => {
+    const config = getGoogleConnectionConfig("NOT_CONNECTED", handlers, {
+      provider: "microsoft",
+    });
+    expect(config.commandAction?.label).toBe("Connect Microsoft Calendar");
   });
 
   it("wires RECONNECT_REQUIRED to onConnectGoogle", () => {

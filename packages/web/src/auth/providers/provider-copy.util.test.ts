@@ -51,18 +51,20 @@ describe("provider copy", () => {
     );
   });
 
-  it("names Microsoft as Outlook in reconnect copy", () => {
+  it("names Microsoft Calendar in reconnect copy", () => {
     expect(RECONNECT_BANNER_MESSAGE.microsoft).toBe(
-      "Outlook needs reconnecting.",
+      "Microsoft Calendar needs reconnecting.",
     );
     expect(reconnectToastTitle("microsoft", "ada@outlook.com")).toBe(
-      "Outlook disconnected (ada@outlook.com)",
+      "Microsoft Calendar disconnected (ada@outlook.com)",
     );
     expect(reconnectToastBody("microsoft", "ada@outlook.com")).toBe(
-      "Access for ada@outlook.com expired or was revoked. Your events are still safe in Outlook. Reconnect and Compass will re-import them.",
+      "Access for ada@outlook.com expired or was revoked. Your events are still safe in Microsoft. Reconnect and Compass will re-import them.",
     );
-    expect(RECONNECT_CALENDAR_LABEL.microsoft).toBe("Reconnect Outlook");
-    expect(CONNECT_CALENDAR_LABEL.microsoft).toBe("Connect Outlook");
+    expect(RECONNECT_CALENDAR_LABEL.microsoft).toBe(
+      "Reconnect Microsoft Calendar",
+    );
+    expect(CONNECT_CALENDAR_LABEL.microsoft).toBe("Connect Microsoft Calendar");
     expect(openingProviderCopy("microsoft")).toBe("Opening Microsoft…");
     expect(emptyCalendarsCopy(["microsoft"])).toBe(
       "Connect Microsoft to see your calendars.",
@@ -71,7 +73,7 @@ describe("provider copy", () => {
       "ada@outlook.com (Microsoft)",
     );
     expect(reconnectPointerHint("microsoft")).toBe(
-      "Press G to reconnect Outlook.",
+      "Press G to reconnect Microsoft Calendar.",
     );
   });
 
@@ -105,7 +107,7 @@ describe("provider copy", () => {
       },
       "microsoft",
     );
-    expect(connect?.label).toBe("Connect Outlook");
+    expect(connect?.label).toBe("Connect Microsoft Calendar");
 
     const reconnect = relabelConnectCommand(
       {
@@ -115,6 +117,6 @@ describe("provider copy", () => {
       },
       "microsoft",
     );
-    expect(reconnect?.label).toBe("Reconnect Outlook");
+    expect(reconnect?.label).toBe("Reconnect Microsoft Calendar");
   });
 });

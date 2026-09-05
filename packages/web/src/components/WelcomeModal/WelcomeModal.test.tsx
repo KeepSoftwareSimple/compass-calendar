@@ -14,7 +14,9 @@ import {
 } from "@web/auth/google/authorization/useStartGoogleAuthorization";
 import {
   resetGoogleAvailabilityForTests,
+  resetProviderAvailabilityForTests,
   setGoogleAvailabilityForTests,
+  setProviderAvailabilityForTests,
 } from "@web/auth/providers/useIsProviderAvailable";
 import {
   afterAll,
@@ -215,6 +217,14 @@ describe("WelcomeModal", () => {
 
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Connect the calendar you use" }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        "If you view your calendar in Apple Calendar, it may still be hosted by Google or Microsoft.",
+      ),
+    ).toBeTruthy();
     expect(screen.getByRole("link", { name: "Terms" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Sign up" })).toHaveFocus();
 
@@ -570,6 +580,34 @@ describe("WelcomeModal", () => {
       await user.keyboard("g");
 
       expect(startGoogleAuthorization).toHaveBeenCalled();
+    });
+  });
+
+  describe("with Microsoft connect available", () => {
+    beforeEach(() => {
+      setProviderAvailabilityForTests("microsoft", "available");
+    });
+
+    afterEach(() => {
+      cleanup();
+      resetProviderAvailabilityForTests();
+    });
+
+    it("offers a Connect Microsoft button and the host explainer", async () => {
+      const user = userEvent.setup();
+      render(<WelcomeModal />);
+      await goToChooseScreen(user);
+
+      expect(
+        screen.getByRole("heading", { name: "Connect the calendar you use" }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Connect Microsoft" }),
+      ).toBeTruthy();
+      await user.click(
+        screen.getByRole("button", { name: "Connect Microsoft" }),
+      );
+      expect(mockOpenModal).toHaveBeenCalledWith("signUp");
     });
   });
 });

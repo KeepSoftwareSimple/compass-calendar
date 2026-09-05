@@ -65,6 +65,26 @@ describe("CalendarConnectionBanner", () => {
     );
   });
 
+  it("renders the consentRequired copy whole with a reconnect action", async () => {
+    const onAction = mock();
+    const user = userEvent.setup();
+    render(
+      <HotkeysProvider>
+        <CalendarConnectionBanner
+          kind="consentRequired"
+          onAction={onAction}
+          provider="microsoft"
+        />
+      </HotkeysProvider>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Your organization's admin has to approve Compass before this account can connect.",
+    );
+    await user.click(screen.getByRole("button", { name: "Reconnect" }));
+    expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
   it("shows a G keycap and reconnects when G is pressed", () => {
     const onAction = mock();
     renderBanner("reconnect", onAction);

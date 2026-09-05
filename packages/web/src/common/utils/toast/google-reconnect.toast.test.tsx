@@ -119,10 +119,10 @@ describe("GoogleReconnectToast", () => {
     );
 
     expect(
-      screen.getByText("Outlook disconnected (user@outlook.com)"),
+      screen.getByText("Microsoft Calendar disconnected (user@outlook.com)"),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Reconnect Outlook" }),
+      screen.getByRole("button", { name: "Reconnect Microsoft Calendar" }),
     ).toBeInTheDocument();
   });
 

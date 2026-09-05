@@ -43,6 +43,11 @@ issue:
 - **Provider behavior enters through capabilities**, never through
   `provider === "x"` branches in domain or web code.
 - **Google keeps working unchanged** through every foundation change.
+- **User-facing Microsoft copy uses "Microsoft", never "Outlook".** The account,
+  toasts, banners, chooser, and Settings rows say Microsoft (or Microsoft
+  Calendar, parallel to Google Calendar). "Outlook" is not shown in the product
+  UI; command-palette search still accepts "outlook" as a keyword for
+  Manage Accounts.
 - **No em-dashes** in user-facing copy.
 
 ## Capability matrix

@@ -4,6 +4,7 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import {
   isAccountReconnectRequired,
   isConnectionReconnectRequired,
@@ -19,6 +20,15 @@ const RECONNECT_STATUS: SyncStatus = {
   variant: "error",
   text: "Calendar needs reconnecting",
 };
+
+const CONSENT_REQUIRED_STATUS: SyncStatus = {
+  variant: "error",
+  text: CONSENT_REQUIRED_COPY,
+};
+
+const connectionNeedsAdminConsent = (
+  connection?: GoogleSyncConnectionSummary | null,
+): boolean => connection?.stateReason === "consentRequired";
 
 // Settings lists every account as its own row (email visible right above this
 // text), so a generic message there is unambiguous. The sidebar's status bar
@@ -269,6 +279,10 @@ export const getGoogleSyncStatus = (
   nowMs: number = Date.now(),
   options: GoogleSyncStatusOptions = {},
 ): SyncStatus => {
+  if (connectionNeedsAdminConsent(connection)) {
+    return CONSENT_REQUIRED_STATUS;
+  }
+
   if (connectionNeedsReconnect(state, connection)) {
     return RECONNECT_STATUS;
   }
@@ -368,6 +382,7 @@ export const isFirstImportFailed = (
 
 export type CalendarConnectionBannerKind =
   | "reconnect"
+  | "consentRequired"
   | "importFailed"
   | "delayed";
 
@@ -378,6 +393,7 @@ export const getCalendarConnectionBannerKind = (
   state: GoogleUiState,
   connection?: GoogleSyncConnectionSummary | null,
 ): CalendarConnectionBannerKind | null => {
+  if (connectionNeedsAdminConsent(connection)) return "consentRequired";
   if (connectionNeedsReconnect(state, connection)) return "reconnect";
   if (isFirstImportFailed(connection)) return "importFailed";
   if (state === "ATTENTION" || connection?.state === "delayed") {
@@ -415,6 +431,10 @@ export const getSidebarSyncStatus = ({
         ? "Reconnecting your calendar…"
         : "Connecting your calendar…",
     };
+  }
+
+  if (connectionNeedsAdminConsent(connection)) {
+    return CONSENT_REQUIRED_STATUS;
   }
 
   if (connectionNeedsReconnect(state, connection)) {

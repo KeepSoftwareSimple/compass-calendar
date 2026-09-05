@@ -2,6 +2,10 @@ import classNames from "classnames";
 import { type FC, useMemo } from "react";
 import { useUser } from "@web/auth/compass/user/hooks/useUser";
 import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
+import {
+  CALENDAR_HOST_EXPLAINER,
+  CONNECT_THE_CALENDAR_YOU_USE,
+} from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import {
   selectSyncConnections,
@@ -73,10 +77,21 @@ const CalendarListHeaderContent: FC<{ email: string }> = ({ email }) => {
         </span>
       </h2>
       {showChooser ? (
-        <ConnectProviderChooser
-          idleLabel={commandAction?.label ?? "Connect calendar"}
-          variant="sidebar-primary"
-        />
+        <>
+          <ConnectProviderChooser
+            idleLabel={
+              availableProviders.length > 1
+                ? CONNECT_THE_CALENDAR_YOU_USE
+                : (commandAction?.label ?? "Connect calendar")
+            }
+            variant="sidebar-primary"
+          />
+          {availableProviders.length > 1 ? (
+            <p className="mb-2 text-text-muted text-xs">
+              {CALENDAR_HOST_EXPLAINER}
+            </p>
+          ) : null}
+        </>
       ) : isAvailable && commandAction != null && actionLabel != null ? (
         <button
           aria-busy={isConnecting || isRefreshing || undefined}

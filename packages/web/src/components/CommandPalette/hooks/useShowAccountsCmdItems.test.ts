@@ -48,7 +48,8 @@ describe("useShowAccountsCmdItems", () => {
 
     expect(result.current[0].label).toBe("Manage Accounts");
     expect(result.current[0].icon).toBe(UsersIcon);
-    expect(result.current[0].keywords).toContain("accounts");
+    expect(result.current[0].keywords).toContain("connect microsoft");
+    expect(result.current[0].keywords).toContain("outlook");
     expect(result.current[0].keywords).not.toContain("billing");
 
     act(() => {
