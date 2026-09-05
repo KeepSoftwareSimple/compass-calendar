@@ -1,5 +1,8 @@
 import { type PropsWithChildren } from "react";
 
+export const PUBLIC_BOOKING_STICKY_STEP_CLASS =
+  "sticky bottom-0 z-10 -mx-4 border-border border-t bg-background px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:py-0";
+
 interface PublicBookingLayoutProps extends PropsWithChildren {
   wide?: boolean;
 }

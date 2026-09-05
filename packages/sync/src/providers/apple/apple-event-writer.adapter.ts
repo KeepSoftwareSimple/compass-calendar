@@ -10,7 +10,11 @@ import {
   serializeAppleEventInstance,
   serializeAppleEventPatch,
 } from "@sync/providers/apple/apple-event.serializer";
-import { appleInstanceEventId } from "@sync/providers/apple/apple-instance-id";
+import {
+  appleInstanceEventId,
+  type ParsedAppleInstanceId,
+  parseAppleInstanceId,
+} from "@sync/providers/apple/apple-instance-id";
 import {
   type CaldavClient,
   type CaldavResponse,
@@ -445,46 +449,6 @@ class CaldavAppleEventWriterApi implements AppleEventWriterApi {
   propfind(url: string, props: readonly string[]): Promise<CaldavResponse> {
     return this.client.propfind(url, [...props], 0);
   }
-}
-
-interface ParsedAppleInstanceId {
-  readonly seriesUid: string;
-  readonly originalStartAt: string;
-  readonly scheduleKind: "timed" | "allDay";
-}
-
-export function parseAppleInstanceId(
-  providerEventId: string,
-): ParsedAppleInstanceId | null {
-  const timedMatch = /^(.+)_(\d{8}T\d{6}Z)$/.exec(providerEventId);
-  if (timedMatch) {
-    const suffix = timedMatch[2]!;
-    const instant = dayjs.utc(suffix, RFC5545, true);
-    if (!instant.isValid()) return null;
-    return {
-      seriesUid: timedMatch[1]!,
-      originalStartAt: instant.toDate().toISOString(),
-      scheduleKind: "timed",
-    };
-  }
-
-  const allDayMatch = /^(.+)_(\d{8})$/.exec(providerEventId);
-  if (allDayMatch) {
-    const suffix = allDayMatch[2]!;
-    const instant = dayjs.utc(
-      suffix,
-      dayjs.DateFormat.YEAR_MONTH_DAY_COMPACT_FORMAT,
-      true,
-    );
-    if (!instant.isValid()) return null;
-    return {
-      seriesUid: allDayMatch[1]!,
-      originalStartAt: instant.toDate().toISOString(),
-      scheduleKind: "allDay",
-    };
-  }
-
-  return null;
 }
 
 export function eventResourceHref(calendarUrl: string, uid: string): string {

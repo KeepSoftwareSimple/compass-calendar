@@ -1,9 +1,13 @@
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { PublicBookingNotFoundError } from "@web/api/public-booking.api";
+import { PublicBookingAlert } from "@web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@web/booking/PublicBookingGuestForm";
-import { PublicBookingLayout } from "@web/booking/PublicBookingLayout";
+import {
+  PUBLIC_BOOKING_STICKY_STEP_CLASS,
+  PublicBookingLayout,
+} from "@web/booking/PublicBookingLayout";
 import { PublicBookingPicker } from "@web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@web/booking/PublicBookingSkipLink";
 import {
@@ -19,9 +23,6 @@ import {
   useBookingHeadingFocus,
 } from "@web/booking/use-booking-heading-focus";
 import { usePublicBookingFlow } from "@web/booking/use-public-booking-flow";
-
-const STICKY_STEP_CLASS_NAME =
-  "sticky bottom-0 z-10 -mx-4 border-border border-t bg-background px-4 py-3 sm:static sm:mx-0 sm:border-0 sm:px-0 sm:py-0";
 
 export function PublicBookingPage() {
   const { username } = useParams({ from: "/book/$username" });
@@ -126,18 +127,14 @@ export function PublicBookingPage() {
       </header>
 
       {flow.alertMessage ? (
-        <p
-          ref={flow.alertRef}
-          role="alert"
-          tabIndex={-1}
-          className="rounded-md border border-warning/40 bg-surface-panel px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-accent"
-        >
-          {flow.alertMessage}
-        </p>
+        <PublicBookingAlert
+          alertRef={flow.alertRef}
+          message={flow.alertMessage}
+        />
       ) : null}
 
       {flow.showDetailsStep && flow.selectedSlotStart ? (
-        <div className={STICKY_STEP_CLASS_NAME}>
+        <div className={PUBLIC_BOOKING_STICKY_STEP_CLASS}>
           <PublicBookingDetailsStep
             headingRef={flow.detailsHeadingRef}
             slotStart={flow.selectedSlotStart}
@@ -176,7 +173,7 @@ export function PublicBookingPage() {
           />
 
           {flow.showConflictForm ? (
-            <div className={STICKY_STEP_CLASS_NAME}>
+            <div className={PUBLIC_BOOKING_STICKY_STEP_CLASS}>
               <PublicBookingGuestForm
                 disabled={flow.createReservation.isPending}
                 submitDisabled={!flow.selectedSlotStart}

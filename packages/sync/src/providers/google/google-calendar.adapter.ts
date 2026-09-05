@@ -5,10 +5,8 @@ import {
   type gSchema$Calendar,
   type gSchema$CalendarListEntry,
 } from "@core/types/gcal";
-import {
-  type CalendarAccessRole,
-  type SyncCalendarCapabilities,
-} from "@core/types/sync/connection.contracts";
+import { type CalendarAccessRole } from "@core/types/sync/connection.contracts";
+import { capabilitiesForAccessRole } from "@sync/providers/calendar-role-capabilities";
 import {
   googleFailureCause,
   googleStatus,
@@ -174,38 +172,6 @@ const ACCESS_ROLE_BY_GOOGLE: Record<string, CalendarAccessRole> = {
   freeBusyReader: "busyOnly",
 };
 
-// Operational capabilities implied by each role. Invite ability follows write
-// access — Google exposes no separate per-calendar attendee-invite flag.
-const CAPABILITIES_BY_ROLE: Record<
-  CalendarAccessRole,
-  SyncCalendarCapabilities
-> = {
-  owner: {
-    canReadEvents: true,
-    canWriteEvents: true,
-    canReadBusy: true,
-    canInviteAttendees: true,
-  },
-  editor: {
-    canReadEvents: true,
-    canWriteEvents: true,
-    canReadBusy: true,
-    canInviteAttendees: true,
-  },
-  viewer: {
-    canReadEvents: true,
-    canWriteEvents: false,
-    canReadBusy: true,
-    canInviteAttendees: false,
-  },
-  busyOnly: {
-    canReadEvents: false,
-    canWriteEvents: false,
-    canReadBusy: true,
-    canInviteAttendees: false,
-  },
-};
-
 // Map one Google calendar-list entry to provider-neutral facts. An entry
 // without an id is unusable (it cannot be keyed or persisted), so it is dropped.
 async function mapCalendar(
@@ -229,7 +195,7 @@ async function mapCalendar(
     // from before the hide, not a signal Google is still showing it.
     active: item.deleted !== true && item.hidden !== true,
     accessRole,
-    capabilities: CAPABILITIES_BY_ROLE[accessRole],
+    capabilities: capabilitiesForAccessRole(accessRole),
     createsGoogleMeet: calendarCreatesGoogleMeet(
       item.conferenceProperties?.allowedConferenceSolutionTypes,
     ),

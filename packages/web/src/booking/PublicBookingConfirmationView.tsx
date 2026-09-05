@@ -1,6 +1,5 @@
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { PublicBookingCopyCancelUrl } from "@web/booking/PublicBookingCopyCancelUrl";
-import { PublicBookingCopyRescheduleUrl } from "@web/booking/PublicBookingCopyRescheduleUrl";
+import { PublicBookingCopyGuestAction } from "@web/booking/PublicBookingCopyGuestAction";
 import { PublicBookingLayout } from "@web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@web/booking/PublicBookingSlotSummary";
 import { PUBLIC_BOOKING_HEADING_CLASS } from "@web/booking/PublicBookingStatusMessage";
@@ -94,10 +93,18 @@ export function PublicBookingConfirmationView({
             aria-label="Booking actions"
           >
             {cancelUrl ? (
-              <PublicBookingCopyCancelUrl cancelUrl={cancelUrl} />
+              <PublicBookingCopyGuestAction
+                copyLabel="Copy cancel link"
+                linkLabel="Cancel this booking"
+                url={cancelUrl}
+              />
             ) : null}
             {rescheduleUrl ? (
-              <PublicBookingCopyRescheduleUrl rescheduleUrl={rescheduleUrl} />
+              <PublicBookingCopyGuestAction
+                copyLabel="Copy reschedule link"
+                linkLabel="Reschedule this booking"
+                url={rescheduleUrl}
+              />
             ) : null}
           </div>
         ) : null}

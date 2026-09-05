@@ -36,7 +36,6 @@ import {
   ProviderKindSchema,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
-import dayjs from "@core/util/date/dayjs";
 import { type SyncExecutionMode } from "@sync/config/sync.config";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
 import {
@@ -51,10 +50,7 @@ import {
 import { type DerivedConnectionState } from "@sync/domain/connection-state";
 import { refreshConnectionState } from "@sync/domain/connection-state-refresh.service";
 import { assembleEventInstances } from "@sync/domain/event-instance-assembly";
-import {
-  HORIZON_FUTURE_MONTHS,
-  HORIZON_PAST_MONTHS,
-} from "@sync/domain/horizon";
+import { syncHorizon } from "@sync/domain/horizon";
 import { signOAuthState, verifyOAuthState } from "@sync/oauth/oauth-state";
 import { isMicrosoftConsentRequired } from "@sync/providers/microsoft/microsoft-consent";
 import {
@@ -275,14 +271,7 @@ export function registerConnectionRoutes(
       }
 
       const now = deps.now ? deps.now() : Date.now();
-      const start = maxDate(
-        new Date(query.start),
-        dayjs(now).subtract(HORIZON_PAST_MONTHS, "month").toDate(),
-      );
-      const end = minDate(
-        new Date(query.end),
-        dayjs(now).add(HORIZON_FUTURE_MONTHS, "month").toDate(),
-      );
+      const { start, end } = clampQueryToHorizon(query.start, query.end, now);
       if (start >= end) {
         const empty: EventInstanceListResponse = {
           instances: [],
@@ -393,14 +382,7 @@ export function registerConnectionRoutes(
       // Clamp the requested range to the horizon. A range that falls entirely
       // outside it collapses to empty rather than scanning anything.
       const now = deps.now ? deps.now() : Date.now();
-      const start = maxDate(
-        new Date(query.start),
-        dayjs(now).subtract(HORIZON_PAST_MONTHS, "month").toDate(),
-      );
-      const end = minDate(
-        new Date(query.end),
-        dayjs(now).add(HORIZON_FUTURE_MONTHS, "month").toDate(),
-      );
+      const { start, end } = clampQueryToHorizon(query.start, query.end, now);
       if (start >= end) {
         // The window collapsed entirely outside the horizon: nothing to read, and
         // nothing verified, so fail closed. Build it through the mapper so the
@@ -896,10 +878,6 @@ export function registerConnectionRoutes(
 // Redirect the browser to the server-configured post-connect URL with a coarse
 // status. The base is from config, never the request, so it can't be abused as
 // an open redirect; status is a fixed label, carrying no provider detail.
-function resolveAuthForConnectionApi(deps: ConnectionApiDeps) {
-  return resolveAuthFrom(deps.registry);
-}
-
 function redirectAfterConnect(
   deps: ConnectionApiDeps,
   res: Response,
@@ -974,7 +952,7 @@ async function linkConnection(
   try {
     const custody = new CredentialCustody(
       repos.credentials,
-      resolveAuthForConnectionApi(deps),
+      resolveAuthFrom(deps.registry),
       undefined,
       undefined,
       deps.credentialAtRestKey,
@@ -1135,6 +1113,18 @@ function decodeOccurrenceCursor(
   } catch {
     return undefined;
   }
+}
+
+function clampQueryToHorizon(
+  start: string,
+  end: string,
+  now: number,
+): { start: Date; end: Date } {
+  const horizon = syncHorizon(new Date(now));
+  return {
+    start: maxDate(new Date(start), horizon.start),
+    end: minDate(new Date(end), horizon.end),
+  };
 }
 
 const maxDate = (a: Date, b: Date): Date => (a > b ? a : b);

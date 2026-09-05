@@ -5,8 +5,8 @@ import {
   type AppleEventWriterApi,
   appendExdateToMaster,
   eventResourceHref,
-  parseAppleInstanceId,
 } from "@sync/providers/apple/apple-event-writer.adapter";
+import { parseAppleInstanceId } from "@sync/providers/apple/apple-instance-id";
 import { type CaldavResponse } from "@sync/providers/apple/caldav-client";
 
 const CALENDAR = "https://caldav.icloud.com/123/calendars/home/";
