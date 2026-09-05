@@ -1,150 +1,25 @@
 import {
-  type GoogleAuthCodeRequest,
-  type GoogleConnectErrorResponse,
-  GoogleConnectErrorResponseSchema,
-} from "@core/types/auth.types";
-import { type ApiError } from "@web/api/api.types";
-import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
-import {
-  GOOGLE_AUTH_SCOPES_REQUIRED,
-  GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
-  MISSING_GOOGLE_SCOPES_ERROR_MESSAGE,
-} from "./google-authorization.constants";
-import {
-  clearGoogleAuthorizationIntent,
-  markGoogleAuthNeedsConsentRetry,
-  readGoogleAuthorizationIntent,
-} from "./google-authorization.storage";
-import {
-  buildGoogleAuthCallbackUrl,
-  buildGoogleAuthCodePayload,
-} from "./google-authorization.util";
+  type CompleteProviderAuthorizationOptions,
+  type CompleteProviderAuthorizationResult,
+  completeProviderAuthorization,
+  type ProviderAuthorizationAuthAdapter,
+} from "@web/auth/providers/authorization/complete-provider-authorization";
 
-type CompleteAuthentication = (input: {
-  email?: string;
-  onComplete?: () => void;
-}) => Promise<void>;
+export type GoogleAuthorizationAuthAdapter = ProviderAuthorizationAuthAdapter;
 
-export type GoogleAuthorizationAuthAdapter = {
-  loginOrSignup(data: GoogleAuthCodeRequest): Promise<{
-    createdNewRecipeUser: boolean;
-    user: { emails?: string[] };
-  }>;
-};
-
-export type CompleteGoogleAuthorizationOptions = {
-  authApi: GoogleAuthorizationAuthAdapter;
-  completeAuthentication: CompleteAuthentication;
-  search: string;
-};
+export type CompleteGoogleAuthorizationOptions = Omit<
+  CompleteProviderAuthorizationOptions,
+  "provider"
+>;
 
 export type CompleteGoogleAuthorizationResult =
-  | {
-      returnPath: string;
-      status: "completed";
-      isNewUser: boolean;
-    }
-  | {
-      message: string;
-      returnPath: string;
-      status: "failed";
-    };
+  CompleteProviderAuthorizationResult;
 
-const fail = (
-  message = GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
-  returnPath: string = DEFAULT_CALENDAR_ROUTE,
-): CompleteGoogleAuthorizationResult => ({
-  message,
-  returnPath,
-  status: "failed",
-});
-
-const getApiError = (error: unknown): ApiError | undefined => {
-  if (typeof error !== "object" || error === null || !("response" in error)) {
-    return undefined;
-  }
-
-  return error as ApiError;
-};
-
-const parseGoogleConnectError = (
-  error: unknown,
-): GoogleConnectErrorResponse | undefined => {
-  const data = getApiError(error)?.response?.data;
-  const parsed = GoogleConnectErrorResponseSchema.safeParse(data);
-
-  return parsed.success ? parsed.data : undefined;
-};
-
-export async function completeGoogleAuthorization({
-  authApi,
-  completeAuthentication,
-  search,
-}: CompleteGoogleAuthorizationOptions): Promise<CompleteGoogleAuthorizationResult> {
-  const params = new URLSearchParams(search);
-  const state = params.get("state");
-
-  if (!state) {
-    return fail();
-  }
-
-  const savedIntent = readGoogleAuthorizationIntent(state);
-  clearGoogleAuthorizationIntent(state);
-  const returnPath = savedIntent?.returnPath ?? DEFAULT_CALENDAR_ROUTE;
-
-  if (!savedIntent || params.get("error")) {
-    return fail(GOOGLE_AUTHORIZATION_ERROR_MESSAGE, returnPath);
-  }
-
-  const code = params.get("code");
-
-  if (!code) {
-    return fail(GOOGLE_AUTHORIZATION_ERROR_MESSAGE, returnPath);
-  }
-
-  const grantedScopes = new Set((params.get("scope") ?? "").split(" "));
-  const isMissingRequiredScope = GOOGLE_AUTH_SCOPES_REQUIRED.some(
-    (scope) => !grantedScopes.has(scope),
-  );
-
-  if (isMissingRequiredScope) {
-    return fail(MISSING_GOOGLE_SCOPES_ERROR_MESSAGE, returnPath);
-  }
-
-  const payload = buildGoogleAuthCodePayload({
-    code,
-    scope: params.get("scope") ?? undefined,
-    state,
-    redirectUri: buildGoogleAuthCallbackUrl(),
+export async function completeGoogleAuthorization(
+  options: CompleteGoogleAuthorizationOptions,
+): Promise<CompleteGoogleAuthorizationResult> {
+  return completeProviderAuthorization({
+    provider: "google",
+    ...options,
   });
-
-  try {
-    const result = await authApi.loginOrSignup(payload);
-    await completeAuthentication({
-      email: result.user.emails?.[0],
-    });
-
-    return {
-      returnPath,
-      status: "completed",
-      isNewUser: result.createdNewRecipeUser,
-    };
-  } catch (error) {
-    const parsedError = parseGoogleConnectError(error);
-
-    if (parsedError?.code === "GOOGLE_REFRESH_TOKEN_MISSING") {
-      // This browser already consented once before (e.g. an earlier attempt
-      // failed after Google-side consent but before Compass finished
-      // linking) - Google silently withholds the refresh token on a repeat
-      // consent. Mark it so the NEXT attempt forces prompt=consent, or it
-      // fails the exact same way forever.
-      markGoogleAuthNeedsConsentRetry();
-    }
-
-    if (parsedError?.message) {
-      return fail(parsedError.message, returnPath);
-    }
-
-    return fail(GOOGLE_AUTHORIZATION_ERROR_MESSAGE, returnPath);
-  }
 }

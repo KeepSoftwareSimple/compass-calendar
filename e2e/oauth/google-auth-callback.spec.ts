@@ -1,12 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
+import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 
 const CALLBACK_PATH = "/auth/google/callback";
 const INTENT_STORAGE_PREFIX = "compass.googleAuthorizationIntent";
-const REQUIRED_SCOPES = [
-  "https://www.googleapis.com/auth/userinfo.email",
-  "https://www.googleapis.com/auth/calendar.readonly",
-  "https://www.googleapis.com/auth/calendar.events",
-];
+const REQUIRED_SCOPES = [...GOOGLE_SCOPES];
 
 const getIntentStorageKey = (state: string) =>
   `${INTENT_STORAGE_PREFIX}.${state}`;

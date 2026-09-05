@@ -13,10 +13,11 @@ import {
   type CredentialConnectPayload,
 } from "@core/types/sync/connection.contracts";
 import { BaseApi } from "@web/api/base/base.api";
+import { type ProviderAuthCodeRequest } from "@web/auth/providers/authorization/provider-authorization.util";
 
 const AuthApi = {
   async loginOrSignup(
-    data: GoogleAuthCodeRequest,
+    data: GoogleAuthCodeRequest | ProviderAuthCodeRequest,
   ): Promise<Result_Auth_Compass> {
     const response = await BaseApi.post<Result_Auth_Compass>(
       `/signinup`,

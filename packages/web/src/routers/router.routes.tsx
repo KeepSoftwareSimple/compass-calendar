@@ -162,14 +162,18 @@ export const cleanupRoute = createRoute({
   ),
 });
 
-export const googleAuthCallbackRoute = createRoute({
+export const providerAuthCallbackRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: ROOT_ROUTES.GOOGLE_AUTH_CALLBACK,
+  path: ROOT_ROUTES.PROVIDER_AUTH_CALLBACK,
   component: lazyRouteComponent(
-    () => import("@web/views/GoogleAuthCallback/GoogleAuthCallback"),
-    "GoogleAuthCallbackView",
+    () => import("@web/views/ProviderAuthCallback/ProviderAuthCallback"),
+    "ProviderAuthCallbackView",
   ),
 });
+
+/** @deprecated One-release alias; `/auth/google/callback` is handled by `providerAuthCallbackRoute`. */
+const googleAuthCallbackRoute = providerAuthCallbackRoute;
+void googleAuthCallbackRoute;
 
 const authenticatedRoute = authenticatedLayoutRoute.addChildren([
   dayRoute.addChildren([dayDateRoute, dayIndexRoute]),
@@ -193,5 +197,5 @@ export const routeTree = rootRoute.addChildren([
         publicBookRoute,
       ]
     : []),
-  googleAuthCallbackRoute,
+  providerAuthCallbackRoute,
 ]);

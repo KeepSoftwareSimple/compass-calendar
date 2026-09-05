@@ -1,77 +1,15 @@
-import {
-  type UseGoogleLoginOptionsAuthCodeFlow,
-  useGoogleLogin as useGoogleLoginBase,
-} from "@react-oauth/google";
-import { useCallback, useMemo, useState } from "react";
-import { track } from "@web/auth/posthog/track";
-import { GOOGLE_AUTH_SCOPES_REQUESTED } from "./google-authorization.constants";
-import {
-  type GoogleAuthorizationIntent,
-  writeGoogleAuthorizationIntent,
-} from "./google-authorization.storage";
-import {
-  buildGoogleAuthCallbackUrl,
-  getSafeGoogleAuthReturnPath,
-} from "./google-authorization.util";
+import { useStartProviderAuthorization } from "@web/auth/providers/authorization/useStartProviderAuthorization";
 
-export const useStartGoogleAuthorizationImpl = ({
-  intent,
-  onStart,
-  onError,
-  prompt,
-}: {
-  intent: GoogleAuthorizationIntent["intent"];
-  onStart?: () => void;
-  onError?: (error: unknown) => void;
-  prompt?: "consent" | "none" | "select_account";
-}) => {
-  const [loading, setLoading] = useState(false);
-  const [state] = useState(() => crypto.randomUUID());
-  const [redirectUri] = useState(buildGoogleAuthCallbackUrl);
-
-  const loginOptions = useMemo<
-    UseGoogleLoginOptionsAuthCodeFlow & {
-      prompt?: "consent" | "none" | "select_account";
-    }
-  >(
-    () => ({
-      flow: "auth-code",
-      // Contacts are requested separately only after the user enables the
-      // contacts feature. Login asks solely for verified Calendar scopes.
-      scope: GOOGLE_AUTH_SCOPES_REQUESTED.join(" "),
-      prompt,
-      state,
-      ux_mode: "redirect",
-      redirect_uri: redirectUri,
-      onNonOAuthError(error) {
-        setLoading(false);
-        onError?.(error);
-      },
-      onError(error) {
-        setLoading(false);
-        onError?.(error);
-      },
-    }),
-    [onError, prompt, redirectUri, state],
+export const useStartGoogleAuthorizationImpl = (
+  options: Parameters<typeof useStartProviderAuthorization>[1],
+) => {
+  const { loading, startAuthorization } = useStartProviderAuthorization(
+    "google",
+    options,
   );
-
-  const startGoogleAuthorization = useGoogleLoginBase(loginOptions);
 
   return {
     loading,
-    startGoogleAuthorization: useCallback(() => {
-      onStart?.();
-      setLoading(true);
-      writeGoogleAuthorizationIntent(state, {
-        intent,
-        returnPath: getSafeGoogleAuthReturnPath(),
-        createdAt: Date.now(),
-      });
-      // PostHog loses the session at the redirect; this marks "left for
-      // Google" so abandoned round trips are distinguishable from silent
-      // failures on return.
-      track("oauth_redirect_started", { provider: "google", intent });
-      return startGoogleAuthorization();
-    }, [intent, onStart, startGoogleAuthorization, state]),
+    startGoogleAuthorization: startAuthorization,
   };
 };

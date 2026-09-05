@@ -11,7 +11,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "paths": {
+      "@core/*": ["../packages/core/src/*"]
+    }
   },
   "include": ["./**/*.ts"]
 }

@@ -6,12 +6,9 @@ import {
   writeGoogleAuthorizationIntent,
 } from "@web/auth/google/authorization/google-authorization.storage";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import { completeProviderAuthCallback } from "@web/views/ProviderAuthCallback/ProviderAuthCallback";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
-// Patch the one method on the real AuthApi object rather than replacing the
-// module: mock.module is process-wide and permanent, and an AuthApi carrying
-// only loginOrSignup breaks every later file that reaches for another method
-// (useConnectGoogle.scope.test.tsx spies on beginGoogleConnection).
 const mockLoginOrSignup = mock();
 const realLoginOrSignup = AuthApi.loginOrSignup;
 AuthApi.loginOrSignup = mockLoginOrSignup as typeof AuthApi.loginOrSignup;
@@ -21,9 +18,6 @@ afterAll(() => {
 });
 
 const { port, mocks } = createTestToastPort();
-
-const { completeGoogleAuthCallback } =
-  require("./GoogleAuthCallback") as typeof import("./GoogleAuthCallback");
 
 const callbackSearch = (
   state: string,
@@ -41,7 +35,7 @@ const writeIntent = (state: string, returnPath = "/week") => {
   });
 };
 
-describe("completeGoogleAuthCallback", () => {
+describe("completeProviderAuthCallback (google)", () => {
   const completeAuthentication = mock();
   const navigate = mock();
 
@@ -60,7 +54,8 @@ describe("completeGoogleAuthCallback", () => {
   it("finishes a saved Google sign-in intent and returns to the saved path", async () => {
     writeIntent("sign-in-state", "/week");
 
-    await completeGoogleAuthCallback({
+    await completeProviderAuthCallback({
+      provider: "google",
       completeAuthentication,
       navigate,
       search: callbackSearch("sign-in-state"),
@@ -88,12 +83,13 @@ describe("completeGoogleAuthCallback", () => {
   it("rejects a Google callback that is missing required calendar scopes", async () => {
     writeIntent("missing-scopes-state", "/week");
 
-    await completeGoogleAuthCallback({
+    await completeProviderAuthCallback({
+      provider: "google",
       completeAuthentication,
       navigate,
       search: callbackSearch(
         "missing-scopes-state",
-        GOOGLE_AUTH_SCOPES_REQUIRED[0],
+        GOOGLE_AUTH_SCOPES_REQUIRED[0]!,
       ),
     });
 
@@ -107,7 +103,8 @@ describe("completeGoogleAuthCallback", () => {
   });
 
   it("rejects a Google callback without a saved intent", async () => {
-    await completeGoogleAuthCallback({
+    await completeProviderAuthCallback({
+      provider: "google",
       completeAuthentication,
       navigate,
       search: callbackSearch("unknown-state"),
