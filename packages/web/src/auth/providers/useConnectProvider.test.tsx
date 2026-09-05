@@ -24,6 +24,7 @@ const connection = (
 describe("useConnectProvider", () => {
   beforeEach(() => {
     userMetadataActions.set({
+      connections: [connection({})],
       google: {
         connectionState: "RECONNECT_REQUIRED",
         connections: [connection({})],

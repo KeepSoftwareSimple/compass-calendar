@@ -1,5 +1,13 @@
 import { X } from "@phosphor-icons/react";
 import { type FC, type ReactNode, useEffect, useState } from "react";
+import {
+  calendarProductName,
+  connectionProvider,
+} from "@web/auth/providers/provider-copy.util";
+import {
+  selectPrimarySyncConnection,
+  useUserMetadataStore,
+} from "@web/auth/state/user-metadata.store";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import IconButton from "@web/components/IconButton/IconButton";
 import {
@@ -41,11 +49,13 @@ const Key = ({ children }: { children: string }) => (
 const pointerHintMessage = ({
   attempt,
   eventJumpKey,
+  provider,
   showcaseActive,
   welcomeOpen,
 }: {
   attempt: BlockedPointerAttempt | null;
   eventJumpKey: string | null;
+  provider: ReturnType<typeof connectionProvider>;
   showcaseActive: boolean;
   welcomeOpen: boolean;
 }): ReactNode => {
@@ -125,8 +135,8 @@ const pointerHintMessage = ({
   if (attempt?.actionId === POINTER_ACTIONS.reconnectGoogle) {
     return (
       <>
-        Press <Key>{CONNECTION_BANNER_SHORTCUT_KEY}</Key> to reconnect Google
-        Calendar.
+        Press <Key>{CONNECTION_BANNER_SHORTCUT_KEY}</Key> to reconnect{" "}
+        {calendarProductName(provider)}.
       </>
     );
   }
@@ -166,6 +176,8 @@ export const PointerHint: FC = () => {
   const eventJumpKey = useEventJumpStore(selectEventJumpPointerHintKey);
   const showcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
   const welcomeOpen = useWelcomeGuideStore(selectWelcomeSurfaceOpen);
+  const primary = useUserMetadataStore(selectPrimarySyncConnection);
+  const provider = connectionProvider(primary);
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -189,6 +201,7 @@ export const PointerHint: FC = () => {
         {pointerHintMessage({
           attempt,
           eventJumpKey,
+          provider,
           showcaseActive,
           welcomeOpen,
         })}

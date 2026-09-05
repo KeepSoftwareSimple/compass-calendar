@@ -2,6 +2,7 @@ import { providerAvailability } from "@web/auth/providers/provider-availability.
 
 export const {
   useIsProviderAvailable,
+  useConnectableProviders,
   setProviderAvailabilityForTests,
   resetProviderAvailabilityForTests,
 } = providerAvailability;

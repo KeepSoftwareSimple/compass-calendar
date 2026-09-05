@@ -1,8 +1,9 @@
 import classNames from "classnames";
 import { type FC, useMemo } from "react";
 import { useUser } from "@web/auth/compass/user/hooks/useUser";
+import { ProviderConnectChooser } from "@web/auth/providers/ProviderConnectChooser";
 import {
-  selectGoogleSyncConnections,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
@@ -36,7 +37,7 @@ const CalendarListHeaderContent: FC<{ email: string }> = ({ email }) => {
   // second account's problem flashes under the first account's name for as
   // long as that gap lasts (2026-08-04, caught disconnecting one of two live
   // accounts).
-  const connections = useUserMetadataStore(selectGoogleSyncConnections);
+  const connections = useUserMetadataStore(selectSyncConnections);
   const ownConnection = useMemo(
     () => connections.find((c) => c.accountEmail === email) ?? null,
     [connections, email],
@@ -65,7 +66,10 @@ const CalendarListHeaderContent: FC<{ email: string }> = ({ email }) => {
           {email}
         </span>
       </h2>
-      {isAvailable && commandAction != null && actionLabel != null ? (
+      {ownConnection &&
+      isAvailable &&
+      commandAction != null &&
+      actionLabel != null ? (
         <button
           aria-busy={isConnecting || isRefreshing || undefined}
           className={CONNECT_GOOGLE_BUTTON_CLASSNAME}
@@ -75,6 +79,8 @@ const CalendarListHeaderContent: FC<{ email: string }> = ({ email }) => {
         >
           {actionLabel}
         </button>
+      ) : !ownConnection ? (
+        <ProviderConnectChooser variant="sidebar" />
       ) : null}
     </>
   );

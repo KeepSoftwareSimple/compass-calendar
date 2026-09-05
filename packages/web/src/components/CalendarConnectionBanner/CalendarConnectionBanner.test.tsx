@@ -21,10 +21,15 @@ afterEach(() => {
 const renderBanner = (
   kind: "reconnect" | "importFailed" | "delayed",
   onAction = mock(),
+  provider?: "google" | "microsoft" | "apple",
 ) =>
   render(
     <HotkeysProvider>
-      <CalendarConnectionBanner kind={kind} onAction={onAction} />
+      <CalendarConnectionBanner
+        kind={kind}
+        onAction={onAction}
+        provider={provider}
+      />
     </HotkeysProvider>,
   );
 
@@ -46,6 +51,14 @@ describe("CalendarConnectionBanner", () => {
     );
     await user.click(screen.getByRole("button", { name: "Reconnect" }));
     expect(onAction).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a Microsoft reconnect with Outlook copy", () => {
+    renderBanner("reconnect", mock(), "microsoft");
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Outlook needs reconnecting.",
+    );
   });
 
   it("shows a G keycap and reconnects when G is pressed", () => {

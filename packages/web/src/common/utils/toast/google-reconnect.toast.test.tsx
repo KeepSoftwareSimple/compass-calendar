@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
-import * as realConnectGoogle from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
+import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import {
   isBillingGateOwningScreen,
   resetBillingGateAttentionForTests,
@@ -29,18 +29,12 @@ import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockConnect = mock();
-const mockUseConnectGoogle = mock(() => ({ connect: mockConnect }));
+const mockUseConnectProvider = mock(() => ({ connect: mockConnect }));
 
-// useConnectGoogle owns the flush-pending-events -> delegation-fork ->
-// legacy-popup-or-sync-redirect logic (the exact thing that drifted out of
-// sync here before: this toast used to reimplement a legacy-only copy of it
-// directly). Mocking the hook keeps this file testing only what it owns —
-// that a click dismisses the toast and calls connect() — not re-deriving
-// useConnectGoogle's own behavior.
 mockModuleForFile(
-  "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle",
-  realConnectGoogle,
-  { useConnectGoogle: mockUseConnectGoogle },
+  "@web/auth/providers/useConnectProvider",
+  realConnectProvider,
+  { useConnectProvider: mockUseConnectProvider },
 );
 
 describe("GoogleReconnectToast", () => {
@@ -51,19 +45,23 @@ describe("GoogleReconnectToast", () => {
     document.body.removeAttribute("data-app-locked");
     eventJumpActions.reset();
     mockConnect.mockClear();
-    mockUseConnectGoogle.mockClear();
+    mockUseConnectProvider.mockClear();
     mocks.error.mockClear();
     mocks.dismiss.mockClear();
     mocks.isActive.mockReturnValue(false);
     registerToastPort(port);
   });
 
-  const renderToast = (accountEmail?: string) =>
+  const renderToast = (
+    accountEmail?: string,
+    provider?: "google" | "microsoft" | "apple",
+  ) =>
     render(
       <HotkeysProvider>
         <GoogleReconnectToast
           accountEmail={accountEmail}
           connectionId="conn-1"
+          provider={provider}
           toastId="google-revoked-api"
         />
       </HotkeysProvider>,
@@ -92,6 +90,22 @@ describe("GoogleReconnectToast", () => {
       screen.getByText(
         "This happens when access expires or is revoked. Your events are still safe in Google. Reconnect and Compass will re-import them.",
       ),
+    ).toBeInTheDocument();
+  });
+
+  it("names a Microsoft connection with Outlook copy", () => {
+    renderToast("ada@outlook.com", "microsoft");
+
+    expect(
+      screen.getByText("Outlook disconnected (ada@outlook.com)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Access for ada@outlook.com expired or was revoked. Your events are still safe in Outlook. Reconnect and Compass will re-import them.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reconnect Outlook" }),
     ).toBeInTheDocument();
   });
 

@@ -20,9 +20,13 @@ import {
   refreshGoogleSync,
   useGoogleSyncRefreshSnapshot,
 } from "@web/auth/google/state/google.sync.refresh";
+import {
+  connectionProvider,
+  relabelConnectCommand,
+} from "@web/auth/providers/provider-copy.util";
 import { useIsProviderAvailable } from "@web/auth/providers/useIsProviderAvailable";
 import {
-  selectPrimaryGoogleSyncConnection,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import {
@@ -43,11 +47,17 @@ export const useConnectProvider = (
 ): UseConnectGoogleResult => {
   const isAvailable = useIsProviderAvailable(kind, "connect");
   const aggregateState = useGoogleUiState();
-  const primaryConnection = useUserMetadataStore(
-    selectPrimaryGoogleSyncConnection,
-  );
+  const connections = useUserMetadataStore(selectSyncConnections);
+  const kindPrimary =
+    connections.find(
+      (connection) =>
+        connectionProvider(connection) === kind &&
+        connection.connectionState === aggregateState,
+    ) ??
+    connections.find((connection) => connectionProvider(connection) === kind) ??
+    null;
   const scopedConnection = options?.connection;
-  const syncConnection = scopedConnection ?? primaryConnection;
+  const syncConnection = scopedConnection ?? kindPrimary;
   const state =
     scopedConnection != null && connectionHasReconnectRequired(scopedConnection)
       ? "RECONNECT_REQUIRED"
@@ -173,17 +183,20 @@ export const useConnectProvider = (
     [queryClient, refreshSnapshot.isRefreshing],
   );
 
+  const googleConfig = getGoogleConnectionConfig(
+    state,
+    {
+      onConnectGoogle: onOpenAuth,
+      onRefreshGoogle: onRefresh,
+    },
+    {
+      refreshGaveUp: refreshSnapshot.gaveUp,
+    },
+  );
+
   return {
-    ...getGoogleConnectionConfig(
-      state,
-      {
-        onConnectGoogle: onOpenAuth,
-        onRefreshGoogle: onRefresh,
-      },
-      {
-        refreshGaveUp: refreshSnapshot.gaveUp,
-      },
-    ),
+    ...googleConfig,
+    commandAction: relabelConnectCommand(googleConfig.commandAction, kind),
     connect: onOpenAuth,
     connection: syncConnection,
     refresh: onRefresh,

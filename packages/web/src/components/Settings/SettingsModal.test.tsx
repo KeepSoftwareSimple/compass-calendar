@@ -9,10 +9,12 @@ import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { AuthApi } from "@web/api/auth.api";
+import { setGoogleAvailabilityForTests } from "@web/auth/google/hooks/useIsGoogleAvailable/useIsGoogleAvailable";
 import {
   markAccountReconnectRequired,
   resetGoogleReconnectRequiredForTests,
 } from "@web/auth/google/state/google.reconnect.state";
+import { setProviderAvailabilityForTests } from "@web/auth/providers/useIsProviderAvailable";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationProvider";
 import { type AppAccess } from "@web/billing/useAppAccess";
@@ -163,6 +165,7 @@ const renderSettings = ({
 } = {}) => {
   authenticated = isAuthenticated;
   userMetadataActions.set({
+    connections,
     google: { connectionState: "HEALTHY", connections },
   });
   const { queryClient, wrapper } = createStoreWrapper();
@@ -511,7 +514,9 @@ describe("SettingsModal", () => {
 
     const combobox = screen.getByRole("combobox", { name: "Default Calendar" });
     expect(
-      within(combobox).getByRole("group", { name: "ahab@pequod.com" }),
+      within(combobox).getByRole("group", {
+        name: "ahab@pequod.com (Google)",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -1050,5 +1055,62 @@ describe("SettingsModal", () => {
 
     await user.keyboard("h");
     expect(document.activeElement).not.toBe(screen.getByLabelText("Monday"));
+  });
+
+  it("keeps today's Google add-account copy when Google is the only connectable provider", () => {
+    setGoogleAvailabilityForTests("available");
+    renderSettings({ connections: [connection({ provider: "google" })] });
+
+    expect(
+      screen.getByRole("button", { name: "Add account" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Microsoft" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders a Microsoft connection with Microsoft copy and a Google connection with today's copy", () => {
+    setGoogleAvailabilityForTests("available");
+    setProviderAvailabilityForTests("microsoft", "available");
+    const google = connection({
+      provider: "google",
+      accountEmail: "ahab@gmail.com",
+    });
+    const microsoft = connection({
+      id: "connection-ms",
+      provider: "microsoft",
+      accountEmail: "ada@outlook.com",
+    });
+    const googleCal = createMockCalendar({
+      name: "Gmail",
+      accountEmail: "ahab@gmail.com",
+    });
+    const outlookCal = createMockCalendar({
+      name: "Outlook",
+      accountEmail: "ada@outlook.com",
+      provider: "microsoft",
+    });
+
+    renderSettings({
+      connections: [google, microsoft],
+      calendars: [googleCal, outlookCal],
+    });
+
+    const combobox = screen.getByRole("combobox", { name: "Default Calendar" });
+    expect(
+      within(combobox).getByRole("group", { name: "ahab@gmail.com (Google)" }),
+    ).toBeInTheDocument();
+    expect(
+      within(combobox).getByRole("group", {
+        name: "ada@outlook.com (Microsoft)",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Google" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Microsoft" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Add account" }),
+    ).not.toBeInTheDocument();
   });
 });

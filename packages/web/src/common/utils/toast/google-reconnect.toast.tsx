@@ -1,10 +1,17 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
-import { useConnectGoogle } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { type GoogleReconnectTarget } from "@web/auth/google/state/google.reconnect.state";
 import {
-  selectGoogleSyncConnections,
+  connectionProvider,
+  RECONNECT_CALENDAR_LABEL,
+  reconnectToastBody,
+  reconnectToastTitle,
+} from "@web/auth/providers/provider-copy.util";
+import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
+import {
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import {
@@ -42,13 +49,16 @@ interface GoogleReconnectToastProps {
   toastId: Id;
   accountEmail?: string | null;
   connectionId?: string | null;
+  provider?: ProviderKind;
 }
 
 const toastScopedConnection = (
   connectionId: string | null | undefined,
   accountEmail: string | null | undefined,
-): GoogleSyncConnectionSummary => ({
+  provider: ProviderKind,
+): SyncConnectionSummary => ({
   id: connectionId?.trim() || "reconnect-target",
+  provider,
   state: "actionRequired",
   stateReason: "authorizationRevoked",
   lastSyncedAt: null,
@@ -65,25 +75,34 @@ const toastScopedConnection = (
 // stay accurate for either cause. Hooks are fine here: ToastContainer renders
 // inside GoogleOAuthProvider (CompassProvider).
 //
-// Delegates to useConnectGoogle's connect() — the same trigger the command
+// Delegates to useConnectProvider's connect() — the same trigger the command
 // palette uses — rather than driving the OAuth redirect flow directly, so
 // this toast can't drift out of sync with the one place that flow lives.
 export const GoogleReconnectToast = ({
   toastId,
   accountEmail,
   connectionId,
+  provider: providerProp,
 }: GoogleReconnectToastProps) => {
-  const connections = useUserMetadataStore(selectGoogleSyncConnections);
+  const connections = useUserMetadataStore(selectSyncConnections);
   const connectionFromStore =
     connections.find((entry) => entry.id === connectionId) ??
     connections.find((entry) => entry.accountEmail === accountEmail) ??
     null;
+  const kind = connectionProvider(
+    connectionFromStore ?? (providerProp ? { provider: providerProp } : null),
+  );
   // Props keep the target even while metadata is refetching, so Reconnect
   // still binds OAuth to the broken connectionId instead of adding a new one.
   const connection =
     connectionFromStore ??
-    (connectionId ? toastScopedConnection(connectionId, accountEmail) : null);
-  const { connect } = useConnectGoogle(connection ? { connection } : undefined);
+    (connectionId
+      ? toastScopedConnection(connectionId, accountEmail, kind)
+      : null);
+  const { connect } = useConnectProvider(
+    kind,
+    connection ? { connection } : undefined,
+  );
 
   const handleReconnect = () => {
     getToast().dismiss(toastId);
@@ -95,20 +114,16 @@ export const GoogleReconnectToast = ({
   return (
     <ToastNotice>
       <p className="font-medium text-sm text-text">
-        {namedAccount
-          ? `Google Calendar disconnected (${namedAccount})`
-          : "Google Calendar disconnected"}
+        {reconnectToastTitle(kind, namedAccount)}
       </p>
       <p className="text-sm text-text">
-        {namedAccount
-          ? `Access for ${namedAccount} expired or was revoked. Your events are still safe in Google. Reconnect and Compass will re-import them.`
-          : "This happens when access expires or is revoked. Your events are still safe in Google. Reconnect and Compass will re-import them."}
+        {reconnectToastBody(kind, namedAccount)}
       </p>
       <ToastActionButton
         onClick={handleReconnect}
         shortcutKey={CONNECTION_BANNER_SHORTCUT_KEY}
       >
-        Reconnect Google Calendar
+        {RECONNECT_CALENDAR_LABEL[kind]}
       </ToastActionButton>
     </ToastNotice>
   );

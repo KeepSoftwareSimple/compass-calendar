@@ -5,6 +5,7 @@ import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
 import { type GoogleUiState } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle.types";
+import { RECONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { toggleAccountCollapsed } from "@web/calendars/collapsed-accounts.store";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -15,21 +16,30 @@ const EMAIL = "ahab@pequod.com";
 // (flipped in afterAll) decides which one runs, leaving later files with the
 // real hook. Without a mock here this file would instead inherit whichever
 // other file's useConnectGoogle mock loaded last.
-const actualUseConnectGoogle = (
-  await import("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle")
-).useConnectGoogle;
+const actualUseConnectProvider = (
+  await import("@web/auth/providers/useConnectProvider")
+).useConnectProvider;
 let isConnectGoogleMocked = true;
 let googleState: GoogleUiState = "HEALTHY";
 const onSelect = mock();
-const commandActionFor = (state: GoogleUiState) =>
+const commandActionFor = (
+  state: GoogleUiState,
+  kind: "google" | "microsoft" | "apple" = "google",
+) =>
   state === "RECONNECT_REQUIRED"
-    ? { label: "Reconnect Google Calendar", onSelect }
+    ? {
+        label:
+          kind === "google"
+            ? "Reconnect Google Calendar"
+            : RECONNECT_CALENDAR_LABEL[kind],
+        onSelect,
+      }
     : null;
-mock.module("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle", () => ({
-  useConnectGoogle: (...args: Parameters<typeof actualUseConnectGoogle>) =>
+mock.module("@web/auth/providers/useConnectProvider", () => ({
+  useConnectProvider: (...args: Parameters<typeof actualUseConnectProvider>) =>
     isConnectGoogleMocked
       ? {
-          commandAction: commandActionFor(googleState),
+          commandAction: commandActionFor(googleState, args[0]),
           connect: mock(),
           refresh: mock(),
           isAvailable: true,
@@ -37,7 +47,7 @@ mock.module("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle", () => ({
           isRefreshing: false,
           state: googleState,
         }
-      : actualUseConnectGoogle(...args),
+      : actualUseConnectProvider(...args),
 }));
 
 afterAll(() => {
@@ -126,6 +136,25 @@ describe("AccountSectionHeader", () => {
     await user.click(
       screen.getByRole("button", {
         name: `Reconnect Google Calendar for ${EMAIL}`,
+      }),
+    );
+    expect(onSelect).toHaveBeenCalledTimes(1);
+  });
+
+  it("names a Microsoft reconnect action with Outlook copy", async () => {
+    const user = userEvent.setup({ delay: null });
+    googleState = "RECONNECT_REQUIRED";
+
+    renderHeader({
+      provider: "microsoft",
+      state: "actionRequired",
+      stateReason: "authorizationRevoked",
+      connectionState: "RECONNECT_REQUIRED",
+    });
+
+    await user.click(
+      screen.getByRole("button", {
+        name: `${RECONNECT_CALENDAR_LABEL.microsoft} for ${EMAIL}`,
       }),
     );
     expect(onSelect).toHaveBeenCalledTimes(1);

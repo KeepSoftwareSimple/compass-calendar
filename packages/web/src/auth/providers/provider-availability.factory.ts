@@ -1,6 +1,13 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 
+const PROVIDER_KINDS: readonly ProviderKind[] = [
+  "google",
+  "microsoft",
+  "apple",
+];
+const NO_CONNECTABLE: ProviderKind[] = [];
+
 export type BackendProviderAvailability =
   | "available"
   | "unavailable"
@@ -58,6 +65,7 @@ export function createProviderAvailability({
     apple: unavailableFlags,
   };
   let loadPromise: Promise<void> | undefined;
+  let connectableCache: ProviderKind[] = NO_CONNECTABLE;
 
   const emit = () => {
     for (const listener of listeners) {
@@ -81,6 +89,18 @@ export function createProviderAvailability({
       return isGoogleAuthConfigured && ready;
     }
     return ready;
+  };
+
+  const connectableSnapshot = (): ProviderKind[] => {
+    const next = PROVIDER_KINDS.filter((kind) => snapshotFor(kind, "connect"));
+    if (
+      next.length === connectableCache.length &&
+      next.every((kind, index) => kind === connectableCache[index])
+    ) {
+      return connectableCache;
+    }
+    connectableCache = next.length === 0 ? NO_CONNECTABLE : next;
+    return connectableCache;
   };
 
   const load = async (): Promise<void> => {
@@ -120,6 +140,20 @@ export function createProviderAvailability({
     return available;
   };
 
+  const useConnectableProviders = (): ProviderKind[] => {
+    const connectable = useSyncExternalStore(
+      subscribe,
+      connectableSnapshot,
+      connectableSnapshot,
+    );
+
+    useEffect(() => {
+      void load();
+    }, []);
+
+    return connectable;
+  };
+
   const useIsGoogleAvailable = (): boolean =>
     useIsProviderAvailable("google", "signIn");
 
@@ -133,6 +167,7 @@ export function createProviderAvailability({
       apple: unavailableFlags,
     };
     loadPromise = undefined;
+    connectableCache = NO_CONNECTABLE;
     emit();
   };
 
@@ -171,5 +206,6 @@ export function createProviderAvailability({
     useIsGoogleAvailable,
     useIsConnectGoogleAvailable,
     useIsProviderAvailable,
+    useConnectableProviders,
   };
 }

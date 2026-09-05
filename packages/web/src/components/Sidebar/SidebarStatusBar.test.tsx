@@ -56,15 +56,15 @@ import {
 // mock.module is process-wide and not reliably restorable, so - as in
 // AccountSectionHeader.test.tsx - the real hook is captured up front and a
 // flag (flipped in afterAll) decides which one runs.
-const actualUseConnectGoogle = (
-  await import("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle")
-).useConnectGoogle;
+const actualUseConnectProvider = (
+  await import("@web/auth/providers/useConnectProvider")
+).useConnectProvider;
 let isConnectGoogleMocked = true;
 let googleState: GoogleUiState = "HEALTHY";
 let isConnecting = false;
 let connection: GoogleSyncConnectionSummary | null = null;
-mock.module("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle", () => ({
-  useConnectGoogle: (...args: Parameters<typeof actualUseConnectGoogle>) =>
+mock.module("@web/auth/providers/useConnectProvider", () => ({
+  useConnectProvider: (...args: Parameters<typeof actualUseConnectProvider>) =>
     isConnectGoogleMocked
       ? {
           commandAction: null,
@@ -76,7 +76,7 @@ mock.module("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle", () => ({
           isRefreshing: false,
           state: googleState,
         }
-      : actualUseConnectGoogle(...args),
+      : actualUseConnectProvider(...args),
 }));
 
 // Do not mock.module google.sync.refresh here: process-wide mocks poison

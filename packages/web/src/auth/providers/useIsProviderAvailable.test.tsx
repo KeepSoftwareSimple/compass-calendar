@@ -32,4 +32,29 @@ describe("useIsProviderAvailable", () => {
     });
     expect(getConfig).toHaveBeenCalledTimes(1);
   });
+
+  it("lists every provider whose connect flag is true", async () => {
+    getConfig.mockClear();
+    getConfig.mockResolvedValue({
+      google: { isConfigured: true },
+      providers: {
+        google: { signIn: true, connect: true },
+        microsoft: { signIn: false, connect: true },
+        apple: { signIn: false, connect: false },
+      },
+    });
+    const { resetProviderAvailabilityForTests, useConnectableProviders } =
+      createProviderAvailability({
+        getConfig,
+        isGoogleAuthConfigured: true,
+      });
+    resetProviderAvailabilityForTests();
+
+    const { result } = renderHook(() => useConnectableProviders());
+
+    expect(result.current).toEqual([]);
+    await waitFor(() => {
+      expect(result.current).toEqual(["google", "microsoft"]);
+    });
+  });
 });

@@ -18,6 +18,9 @@ import { type ApiRequestConfig } from "@web/api/api.types";
 import { BaseApi } from "@web/api/base/base.api";
 import { createApiError } from "@web/api/util/api.util";
 import { session } from "@web/auth/compass/session/Session";
+import { setGoogleAvailabilityForTests } from "@web/auth/google/hooks/useIsGoogleAvailable/useIsGoogleAvailable";
+import { emptyCalendarsCopy } from "@web/auth/providers/provider-copy.util";
+import { setProviderAvailabilityForTests } from "@web/auth/providers/useIsProviderAvailable";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { isCalendarHidden } from "@web/calendars/calendar-visibility.storage";
@@ -51,16 +54,17 @@ mock.module("@web/auth/compass/session/useSession", () => ({
     isSessionMocked ? mockUseSession(...args) : actualUseSession(...args),
 }));
 
-const actualUseConnectGoogle = (
-  await import("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle")
-).useConnectGoogle;
+const actualUseConnectProvider = (
+  await import("@web/auth/providers/useConnectProvider")
+).useConnectProvider;
 let isConnectGoogleMocked = true;
 // Mirrors the real hook's one behavior these tests depend on: scoping to a
 // connection reports that account's own state. (The real scoping is covered
 // directly in useConnectGoogle.scope.test.tsx.) Restored in beforeEach, since
 // a test that swaps in mockReturnValue would otherwise poison later ones.
 const defaultUseConnectGoogle = (
-  options?: Parameters<typeof actualUseConnectGoogle>[0],
+  _kind?: unknown,
+  options?: Parameters<typeof actualUseConnectProvider>[1],
 ) => ({
   commandAction: null,
   connect: mock(),
@@ -69,11 +73,11 @@ const defaultUseConnectGoogle = (
   state: options?.connection?.connectionState ?? ("NOT_CONNECTED" as const),
 });
 const mockUseConnectGoogle = mock(defaultUseConnectGoogle);
-mock.module("@web/auth/google/hooks/useConnectGoogle/useConnectGoogle", () => ({
-  useConnectGoogle: (...args: Parameters<typeof actualUseConnectGoogle>) =>
+mock.module("@web/auth/providers/useConnectProvider", () => ({
+  useConnectProvider: (...args: Parameters<typeof actualUseConnectProvider>) =>
     isConnectGoogleMocked
       ? mockUseConnectGoogle(...args)
-      : actualUseConnectGoogle(...args),
+      : actualUseConnectProvider(...args),
 }));
 
 // The no-accounts-yet header (covered in CalendarListHeader.test.tsx) reads
@@ -145,6 +149,7 @@ const renderCalendarList = (
 
   if (connections) {
     userMetadataActions.set({
+      connections,
       google: { connectionState: "HEALTHY", connections },
     });
   }
@@ -840,5 +845,26 @@ describe("CalendarList", () => {
     expect(screen.queryByText(/no calendars yet/i)).not.toBeInTheDocument();
 
     signOutSpy.mockRestore();
+  });
+
+  it("shows today's Google empty-list copy when only Google can connect", () => {
+    setGoogleAvailabilityForTests("available");
+    renderCalendarList([], { authenticated: true, connections: [] });
+
+    expect(
+      screen.getByText("Connect Google to see your calendars."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows Microsoft empty-list copy for a Microsoft-only deploy", () => {
+    setProviderAvailabilityForTests("microsoft", "available");
+    renderCalendarList([], { authenticated: true, connections: [] });
+
+    expect(
+      screen.getByText(emptyCalendarsCopy(["microsoft"])),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Connect Google to see your calendars."),
+    ).not.toBeInTheDocument();
   });
 });

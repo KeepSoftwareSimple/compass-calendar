@@ -1,7 +1,7 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
 import classNames from "classnames";
 import { type FC } from "react";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   accountCalendarListId,
   toggleAccountCollapsed,
@@ -22,7 +22,7 @@ import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
  */
 export const AccountSectionHeader: FC<{
   accountEmail: string;
-  connection: GoogleSyncConnectionSummary | undefined;
+  connection: SyncConnectionSummary | undefined;
 }> = ({ accountEmail, connection }) => {
   const {
     actionLabel,

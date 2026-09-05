@@ -1,10 +1,15 @@
 import { type FC } from "react";
-import { useConnectGoogle } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
 import {
   getSidebarSyncStatus,
   SSE_DEGRADED_STATUS,
 } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle.util";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/google/state/google.sync.refresh";
+import { connectionProvider } from "@web/auth/providers/provider-copy.util";
+import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
+import {
+  selectPrimarySyncConnection,
+  useUserMetadataStore,
+} from "@web/auth/state/user-metadata.store";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { SYNC_STATUS_VARIANT_CLASSNAME } from "@web/calendars/sync-status.types";
 import { useHasPendingEventMutations } from "@web/events/mutations/useEventPending";
@@ -68,7 +73,11 @@ export const SidebarStatusBar: FC = () => {
   // collapse to the aggregate "IMPORTING" state, and only the connection's
   // own lastHealthyAt tells getSidebarSyncStatus the account was already
   // established and should stay quiet.
-  const { connection, isConnecting, state } = useConnectGoogle();
+  const primary = useUserMetadataStore(selectPrimarySyncConnection);
+  const { connection, isConnecting, state } = useConnectProvider(
+    connectionProvider(primary),
+    { connection: primary },
+  );
   const refreshSnapshot = useGoogleSyncRefreshSnapshot();
   const sseDegraded = useSseDegraded();
   const syncStatus = getSidebarSyncStatus({

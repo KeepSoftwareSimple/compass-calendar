@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
-import * as realConnectGoogle from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
+import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import {
   resetBillingGateAttentionForTests,
   setBillingGateOwnsScreen,
@@ -24,9 +24,9 @@ import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 const mockRefresh = mock();
 
 mockModuleForFile(
-  "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle",
-  realConnectGoogle,
-  { useConnectGoogle: () => ({ refresh: mockRefresh }) },
+  "@web/auth/providers/useConnectProvider",
+  realConnectProvider,
+  { useConnectProvider: () => ({ refresh: mockRefresh }) },
 );
 
 describe("GoogleDelayedToast", () => {

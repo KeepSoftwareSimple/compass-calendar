@@ -5,8 +5,10 @@ import userEvent from "@testing-library/user-event";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realAuthStateUtil from "@web/auth/compass/state/auth.state.util";
 import * as realUserHook from "@web/auth/compass/user/hooks/useUser";
-import * as realConnectGoogle from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
 import { type GoogleUiState } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle.types";
+import { setGoogleAvailabilityForTests } from "@web/auth/google/hooks/useIsGoogleAvailable/useIsGoogleAvailable";
+import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
+import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import * as realAuthModal from "@web/components/AuthModal/hooks/useAuthModal";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -33,13 +35,16 @@ const googleCommandActionFor = (state: GoogleUiState) => {
 };
 let mockIsConnecting = false;
 let mockIsRefreshing = false;
-const mockUseConnectGoogle = mock(() => ({
-  state: mockGoogleState,
-  isAvailable: true,
-  isConnecting: mockIsConnecting,
-  isRefreshing: mockIsRefreshing,
-  commandAction: googleCommandActionFor(mockGoogleState),
-}));
+const mockUseConnectProvider = mock(
+  (_kind: "google" | "microsoft" | "apple") => ({
+    state: mockGoogleState,
+    isAvailable: true,
+    isConnecting: mockIsConnecting,
+    isRefreshing: mockIsRefreshing,
+    connect: mockConnectGoogle,
+    commandAction: googleCommandActionFor(mockGoogleState),
+  }),
+);
 
 mockModuleForFile(
   "@web/auth/compass/state/auth.state.util",
@@ -55,9 +60,9 @@ mockModuleForFile("@web/auth/compass/user/hooks/useUser", realUserHook, {
 });
 
 mockModuleForFile(
-  "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle",
-  realConnectGoogle,
-  { useConnectGoogle: mockUseConnectGoogle },
+  "@web/auth/providers/useConnectProvider",
+  realConnectProvider,
+  { useConnectProvider: mockUseConnectProvider },
 );
 
 mockModuleForFile(
@@ -88,6 +93,35 @@ const renderHeader = () =>
     </QueryClientProvider>,
   );
 
+const seedOwnConnection = (
+  connectionState: "HEALTHY" | "IMPORTING" | "ATTENTION" | "RECONNECT_REQUIRED",
+) => {
+  const connection = {
+    id: "conn-1",
+    state:
+      connectionState === "RECONNECT_REQUIRED"
+        ? "actionRequired"
+        : connectionState === "ATTENTION"
+          ? "delayed"
+          : connectionState === "IMPORTING"
+            ? "importing"
+            : "healthy",
+    stateReason:
+      connectionState === "RECONNECT_REQUIRED" ? "authorizationRevoked" : null,
+    lastSyncedAt: new Date().toISOString(),
+    lastHealthyAt:
+      connectionState === "IMPORTING" ? null : new Date().toISOString(),
+    accountEmail: mockEmail ?? null,
+    connectionState,
+    canSuggestContacts: false,
+  };
+  userMetadataActions.set({
+    connections: [connection],
+    google: { connectionState, connections: [connection] },
+  });
+  return connection;
+};
+
 describe("CalendarListHeader", () => {
   beforeEach(() => {
     mockEmail = undefined;
@@ -96,9 +130,10 @@ describe("CalendarListHeader", () => {
     mockIsRefreshing = false;
     mockIsAnonymousDirty = false;
     mockOpenModal.mockClear();
-    mockUseConnectGoogle.mockClear();
+    mockUseConnectProvider.mockClear();
     mockConnectGoogle.mockClear();
     userMetadataActions.clear();
+    setGoogleAvailabilityForTests("available");
   });
 
   it("shows a connect Google button when authenticated and Google is not connected", async () => {
@@ -112,7 +147,7 @@ describe("CalendarListHeader", () => {
       screen.getByRole("heading", { name: "ahab@pequod.com" }),
     ).toBeInTheDocument();
     const connectButton = screen.getByRole("button", {
-      name: "Connect Google Calendar",
+      name: CONNECT_CALENDAR_LABEL.google,
     });
     await user.click(connectButton);
     expect(mockConnectGoogle).toHaveBeenCalledTimes(1);
@@ -122,6 +157,7 @@ describe("CalendarListHeader", () => {
     const user = userEvent.setup();
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "HEALTHY";
+    seedOwnConnection("HEALTHY");
 
     renderHeader();
 
@@ -140,6 +176,7 @@ describe("CalendarListHeader", () => {
     const user = userEvent.setup();
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "IMPORTING";
+    seedOwnConnection("IMPORTING");
 
     renderHeader();
 
@@ -157,6 +194,7 @@ describe("CalendarListHeader", () => {
     const user = userEvent.setup();
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "ATTENTION";
+    seedOwnConnection("ATTENTION");
 
     renderHeader();
 
@@ -176,6 +214,7 @@ describe("CalendarListHeader", () => {
     const user = userEvent.setup();
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "RECONNECT_REQUIRED";
+    seedOwnConnection("RECONNECT_REQUIRED");
 
     renderHeader();
 
@@ -196,6 +235,7 @@ describe("CalendarListHeader", () => {
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "RECONNECT_REQUIRED";
     mockIsConnecting = true;
+    seedOwnConnection("RECONNECT_REQUIRED");
 
     renderHeader();
 
@@ -227,6 +267,7 @@ describe("CalendarListHeader", () => {
     mockEmail = "ahab@pequod.com";
     mockGoogleState = "ATTENTION";
     mockIsRefreshing = true;
+    seedOwnConnection("ATTENTION");
 
     renderHeader();
 
@@ -251,6 +292,7 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
+      connections: [connection],
       google: {
         connectionState: "IMPORTING",
         connections: [connection],
@@ -294,6 +336,7 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
+      connections: [otherAccountsBrokenConnection, ownConnection],
       google: {
         connectionState: "RECONNECT_REQUIRED",
         connections: [otherAccountsBrokenConnection, ownConnection],
@@ -302,7 +345,7 @@ describe("CalendarListHeader", () => {
 
     renderHeader();
 
-    expect(mockUseConnectGoogle).toHaveBeenCalledWith({
+    expect(mockUseConnectProvider).toHaveBeenCalledWith("google", {
       connection: ownConnection,
     });
   });

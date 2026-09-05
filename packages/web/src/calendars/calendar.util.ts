@@ -1,5 +1,5 @@
 import { type Calendar } from "@core/types/calendar.contracts";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { isCalendarReconnectRequired } from "@web/auth/google/state/google.reconnect.calendar";
 
 export function getLocalCalendar(calendars: Calendar[]): Calendar | undefined {
@@ -112,7 +112,7 @@ export function spansMultipleAccounts(calendars: Calendar[]): boolean {
 
 export interface AccountGroup {
   accountEmail: string;
-  connection: GoogleSyncConnectionSummary | undefined;
+  connection: SyncConnectionSummary | undefined;
   calendars: Calendar[];
 }
 
@@ -130,7 +130,7 @@ export interface AccountGroup {
  */
 export function groupCalendarsByAccount(
   calendars: Calendar[],
-  connections: GoogleSyncConnectionSummary[],
+  connections: SyncConnectionSummary[],
   compassEmail?: string | null,
 ): { groups: AccountGroup[]; ungrouped: Calendar[] } {
   const groups: AccountGroup[] = [];

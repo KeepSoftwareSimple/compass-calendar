@@ -1,5 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { PointerHint } from "@web/components/PointerHint/PointerHint";
 import {
   initialShortcutShowcaseState,
@@ -108,6 +109,37 @@ describe("PointerHint", () => {
 
     expect(screen.getByRole("status")).toHaveTextContent(
       "Press G to reconnect Google Calendar.",
+    );
+  });
+
+  it("teaches the reconnect shortcut with Outlook copy for a Microsoft connection", () => {
+    userMetadataActions.set({
+      connections: [
+        {
+          id: "conn-ms",
+          provider: "microsoft",
+          state: "actionRequired",
+          stateReason: "authorizationRevoked",
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "ada@outlook.com",
+          connectionState: "RECONNECT_REQUIRED",
+          canSuggestContacts: false,
+        },
+      ],
+      google: { connectionState: "RECONNECT_REQUIRED", connections: [] },
+    });
+    render(<PointerHint />);
+
+    act(() => {
+      pointerConfusionActions.triggerHintForTests({
+        actionId: POINTER_ACTIONS.reconnectGoogle,
+        shortcutKey: "G",
+      });
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Press G to reconnect Outlook.",
     );
   });
 

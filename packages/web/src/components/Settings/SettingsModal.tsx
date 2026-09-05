@@ -1,9 +1,8 @@
 import { type FC, Suspense, useEffect, useRef, useState } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { useSession } from "@web/auth/compass/session/useSession";
-import { useConnectGoogle } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle";
 import {
   formatLastSyncedLabel,
   getGoogleSyncStatus,
@@ -12,8 +11,14 @@ import {
 } from "@web/auth/google/hooks/useConnectGoogle/useConnectGoogle.util";
 import { useDisconnectGoogleAccount } from "@web/auth/google/hooks/useDisconnectGoogleAccount";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/google/state/google.sync.refresh";
+import { ProviderConnectChooser } from "@web/auth/providers/ProviderConnectChooser";
 import {
-  selectGoogleSyncConnections,
+  connectionProvider,
+  defaultCalendarGroupLabel,
+} from "@web/auth/providers/provider-copy.util";
+import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
+import {
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { PlanSection } from "@web/billing/PlanSection";
@@ -74,7 +79,7 @@ const navButtonClassName = (current: boolean) =>
     : "c-focus-ring flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm text-text-muted transition-colors hover:bg-surface-overlay hover:text-text";
 
 /**
- * The app's Settings menu (Mod+,): Accounts (timezone, calendars, Google
+ * The app's Settings menu (Mod+,): Accounts (timezone, calendars, provider
  * connections, export / delete / log out) and Billing (plan) as sibling
  * pages. ESC steps back a level - out of an open disconnect
  * confirmation first, then out of a dirty Booking form's discard
@@ -131,7 +136,7 @@ export const SettingsModal: FC = () => {
   }, [page]);
 
   const { data } = useCalendarsQuery();
-  const connections = useUserMetadataStore(selectGoogleSyncConnections);
+  const connections = useUserMetadataStore(selectSyncConnections);
   const accountEmailOrder = useConnectedAccountEmails();
   // useDefaultTargetCalendar subscribes to session reconnect overrides, so
   // writableCalendars recomputes when a 410 lands before Sync metadata catches up.
@@ -312,7 +317,7 @@ export const SettingsModal: FC = () => {
 
 interface DefaultCalendarPickerProps {
   calendars: Calendar[];
-  connections: GoogleSyncConnectionSummary[];
+  connections: SyncConnectionSummary[];
   resolvedDefault: Calendar | undefined;
 }
 
@@ -345,7 +350,13 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
         {groups
           .filter((group) => group.calendars.length > 0)
           .map((group) => (
-            <optgroup key={group.accountEmail} label={group.accountEmail}>
+            <optgroup
+              key={group.accountEmail}
+              label={defaultCalendarGroupLabel(
+                group.accountEmail,
+                connectionProvider(group.connection),
+              )}
+            >
               {group.calendars.map((calendar) => (
                 <option key={calendar.id} value={calendar.id}>
                   {calendar.name}
@@ -365,7 +376,7 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
 
 interface AccountsSectionProps {
   confirmingId: string | null;
-  connections: GoogleSyncConnectionSummary[];
+  connections: SyncConnectionSummary[];
   resolvedDefault: Calendar | undefined;
   setConfirmingId: (id: string | null) => void;
   showShortcuts: boolean;
@@ -378,9 +389,6 @@ const AccountsSection: FC<AccountsSectionProps> = ({
   setConfirmingId,
   showShortcuts,
 }) => {
-  const { connect, isAvailable, isConnecting } = useConnectGoogle({
-    newAccount: true,
-  });
   const { disconnect, disconnectingId } = useDisconnectGoogleAccount();
 
   return (
@@ -407,27 +415,16 @@ const AccountsSection: FC<AccountsSectionProps> = ({
         )}
       </div>
 
-      {isAvailable ? (
-        <OverlayPanelActions align="start">
-          <OverlayPanelActionButton
-            aria-busy={isConnecting || undefined}
-            disabled={isConnecting}
-            onClick={connect}
-            shortcut="A"
-            showShortcut={showShortcuts}
-            variant="primary"
-            {...settingsShortcutAttrs("add-account")}
-          >
-            {isConnecting ? "Opening Google…" : "Add account"}
-          </OverlayPanelActionButton>
-        </OverlayPanelActions>
-      ) : null}
+      <ProviderConnectChooser
+        showShortcuts={showShortcuts}
+        variant="settings"
+      />
     </div>
   );
 };
 
 interface AccountRowProps {
-  connection: GoogleSyncConnectionSummary;
+  connection: SyncConnectionSummary;
   disconnect: (connectionId: string, accountEmail: string) => Promise<void>;
   isConfirming: boolean;
   isDefault: boolean;
@@ -449,18 +446,16 @@ const AccountRow: FC<AccountRowProps> = ({
   isDisconnecting,
   setConfirming,
 }) => {
+  const { state } = useConnectProvider(connectionProvider(connection), {
+    connection,
+  });
   const accountEmail = connection.accountEmail ?? "Unknown account";
   const refreshSnapshot = useGoogleSyncRefreshSnapshot();
   const sseDegraded = useSseDegraded();
-  const syncStatus = getGoogleSyncStatus(
-    connection.connectionState ?? "NOT_CONNECTED",
-    connection,
-    Date.now(),
-    {
-      refreshGaveUp: refreshSnapshot.gaveUp,
-      refreshInFlight: refreshSnapshot.isRefreshing,
-    },
-  );
+  const syncStatus = getGoogleSyncStatus(state, connection, Date.now(), {
+    refreshGaveUp: refreshSnapshot.gaveUp,
+    refreshInFlight: refreshSnapshot.isRefreshing,
+  });
   // Only override an otherwise-healthy "Calendar connected" - a real
   // reconnect/attention/importing status already says something more
   // important and must not be preempted by the live-updates warning.
