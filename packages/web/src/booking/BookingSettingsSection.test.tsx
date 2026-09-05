@@ -1189,7 +1189,8 @@ describe("BookingSettingsSection", () => {
           ctx.status(403),
           ctx.json({
             code: "GOOGLE_NOT_CONNECTED",
-            message: "Connect a healthy Google account before enabling booking",
+            message:
+              "Connect a healthy calendar account before enabling booking",
           }),
         ),
       ),

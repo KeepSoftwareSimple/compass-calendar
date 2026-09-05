@@ -49,13 +49,13 @@ describe("collectExportData", () => {
     expect(typeof result.exportedAt).toBe("string");
   });
 
-  it("explains what the export contains and why Google-synced events are absent", async () => {
+  it("explains what the export contains and why synced events are absent", async () => {
     const result = await collectExportData();
 
     expect(result.about.whatThisIs.toLowerCase()).toContain("indexeddb");
-    expect(result.about.whatThisIs.toLowerCase()).toContain("google calendar");
+    expect(result.about.whatThisIs.toLowerCase()).toContain("calendar dump");
     expect(result.about.events.toLowerCase()).toContain("locally");
-    expect(result.about.events.toLowerCase()).toContain("google calendar");
+    expect(result.about.events.toLowerCase()).toContain("your calendar");
     expect(result.about.tasks.toLowerCase()).toContain("tasks");
   });
 

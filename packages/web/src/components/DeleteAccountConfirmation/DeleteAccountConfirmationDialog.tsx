@@ -10,7 +10,7 @@ export const DELETE_ACCOUNT_PHRASE = "Delete my Compass account";
 const INTRO_TEXT = [
   "This deletes your Compass account and data: your calendars, events, and settings. It can't be undone.",
   "If you have a Compass trial or subscription, it is canceled immediately and your saved payment details are removed. Previous payments aren't refunded automatically.",
-  "Your Google Calendar is not affected. Nothing there gets deleted, Compass just loses its access to it.",
+  "Your connected calendars are not affected. Nothing there gets deleted, Compass just loses its access to them.",
 ].join("\n\n");
 
 interface DeleteAccountConfirmationDialogProps {

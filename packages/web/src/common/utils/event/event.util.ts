@@ -224,13 +224,13 @@ const MUTATION_ERROR_TOAST_MESSAGES: Partial<
   Record<EventMutationError["code"], string>
 > = {
   UNSUPPORTED_OPERATION:
-    "Google doesn't allow this change for this event (like birthdays or holidays). Try deleting the entire series, or manage it in Google Calendar.",
+    "This calendar doesn't allow this change for this event (like birthdays or holidays). Try deleting the entire series, or manage it in your calendar.",
   CALENDAR_READ_ONLY:
     "This calendar is read-only, so its events can't be changed from Compass.",
   RECURRENCE_CONFLICT:
     "This event was changed somewhere else. Refresh to load the latest version, then try again.",
   GOOGLE_REVOKED:
-    "Google Calendar access expired or was revoked. Reconnect Google Calendar in Compass to resume syncing.",
+    "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
 };
 
 const showCatchallToast = (message: string) =>

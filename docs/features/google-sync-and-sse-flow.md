@@ -1,5 +1,10 @@
 # Google Sync And Server-Sent Events (SSE)
 
+Provider-neutral contracts, connection API, and capability gates live in
+the [calendar providers spec](./calendar-providers.md). This document is the
+Google-shaped sync and SSE walkthrough; new provider work should follow that
+spec instead of adding Google-only branches here.
+
 Google Calendar sync is owned entirely by the standalone **Sync service**
 (`packages/sync`) — the backend has no Google API calls or sync logic of its
 own. The backend's role is: proxy sync-related reads/writes to Sync, poll

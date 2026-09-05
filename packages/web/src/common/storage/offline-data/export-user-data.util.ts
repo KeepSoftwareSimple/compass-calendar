@@ -8,9 +8,9 @@ import {
 
 const EXPORT_ABOUT = {
   whatThisIs:
-    "Snapshot of data Compass stores in this browser (IndexedDB). It is not a full account or Google Calendar dump.",
+    "Snapshot of data Compass stores in this browser (IndexedDB). It is not a full account or calendar dump.",
   events:
-    "Only calendar events still stored locally in this browser. If you connected Google Calendar, those events live in Google Calendar (and on Compass's servers when signed in), so they will not appear here.",
+    "Only calendar events still stored locally in this browser. If you connected a calendar, those events live in your calendar (and on Compass's servers when signed in), so they will not appear here.",
   tasks:
     "Legacy to-do items from a Tasks feature we removed. Any still retained in this browser are listed below; they are cleared after a successful export.",
   someday:

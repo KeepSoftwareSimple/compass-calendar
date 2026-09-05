@@ -384,7 +384,7 @@ describe("EventController", () => {
     expect(json).toHaveBeenCalledWith({
       code: "ATTENDEES_UNSUPPORTED",
       message:
-        "Guests can only be added to events on a writable Google calendar",
+        "Guests can only be added to events on a writable calendar that can invite attendees",
       retryable: false,
     });
     expect(submitCommand).not.toHaveBeenCalled();
@@ -651,7 +651,7 @@ describe("EventController", () => {
     expect(json).toHaveBeenCalledWith({
       code: "GOOGLE_REVOKED",
       message:
-        "Google Calendar access expired or was revoked. Reconnect Google Calendar in Compass to resume syncing.",
+        "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
       retryable: false,
     });
   });
@@ -683,7 +683,7 @@ describe("EventController", () => {
     expect(json).toHaveBeenCalledWith({
       code: "UNSUPPORTED_OPERATION",
       message:
-        "Google doesn't allow this change for this event (for example birthday or holiday events). Try deleting the entire series, or manage it in Google Calendar.",
+        "This calendar doesn't allow this change for this event (for example birthday or holiday events). Try deleting the entire series, or manage it in your calendar.",
       retryable: false,
     });
   });

@@ -243,10 +243,11 @@ const readAllFromSync = async (userId: string, query: EventListQuery) => {
 //
 // `calendarId` is the create path's exact target. A replace carries no
 // calendarId (cross-calendar moves are rejected before this), so the check
-// degrades to "the principal has at least one writable Google calendar":
-// the browser only offers the editor on the event's own writable Google
-// calendar (WP-04) and sync's organizer guard refuses per-event misuse, so
-// this coarser backstop is about local-only/read-only accounts, not routing.
+// degrades to "the principal has at least one writable calendar that can
+// invite attendees": the browser only offers the editor on the event's own
+// writable inviting calendar (WP-04) and sync's organizer guard refuses
+// per-event misuse, so this coarser backstop is about local-only/read-only
+// accounts, not routing.
 const assertAttendeesSupported = async (
   client: SyncServiceClient,
   userId: string,
@@ -271,7 +272,7 @@ const assertAttendeesSupported = async (
   if (!supported) {
     throw eventMutationError(
       "ATTENDEES_UNSUPPORTED",
-      "Guests can only be added to events on a writable Google calendar",
+      "Guests can only be added to events on a writable calendar that can invite attendees",
     );
   }
 };
@@ -288,7 +289,7 @@ const mapSyncFailure = (reason: SyncCommandFailureReason) => {
     case "authorizationRevoked":
       return eventMutationError(
         "GOOGLE_REVOKED",
-        "Google Calendar access expired or was revoked. Reconnect Google Calendar in Compass to resume syncing.",
+        "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
       );
     case "unsupportedCapability":
       // The provider declined the operation for this specific event (e.g.
@@ -297,7 +298,7 @@ const mapSyncFailure = (reason: SyncCommandFailureReason) => {
       // PROVIDER_FAILURE's retryable 502.
       return eventMutationError(
         "UNSUPPORTED_OPERATION",
-        "Google doesn't allow this change for this event (for example birthday or holiday events). Try deleting the entire series, or manage it in Google Calendar.",
+        "This calendar doesn't allow this change for this event (for example birthday or holiday events). Try deleting the entire series, or manage it in your calendar.",
       );
     case "permanentProviderError":
       return eventMutationError(

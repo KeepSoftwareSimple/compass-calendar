@@ -12,10 +12,10 @@ type SendInvitationsDialogProps = {
 
 /**
  * Save-time "Send invitation emails?" choice, shown only when a save changed
- * the guest set. Send (the default, focused on open) has Google email the
+ * the guest set. Send (the default, focused on open) has the host email the
  * affected guests (`invitation: "all"`); Don't send saves silently
  * (`"none"`). Dismissing (Escape / backdrop) cancels the save and returns to
- * the form. Compass never sends email itself — Google does, via sendUpdates.
+ * the form. Compass never sends email itself — the calendar host does.
  */
 export function SendInvitationsDialog({ prompt }: SendInvitationsDialogProps) {
   const sendButtonRef = useRef<HTMLButtonElement>(null);
@@ -25,7 +25,7 @@ export function SendInvitationsDialog({ prompt }: SendInvitationsDialogProps) {
   return (
     <OverlayPanel
       title="Send invitation emails?"
-      message="Google will email the affected guests about this event."
+      message={`${prompt.hostLabel} will email the affected guests about this event.`}
       onDismiss={prompt.onCancel}
       initialFocusRef={sendButtonRef}
       variant="modal"

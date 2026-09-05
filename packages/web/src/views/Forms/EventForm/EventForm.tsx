@@ -17,6 +17,7 @@ import { type CalendarId } from "@core/types/domain-primitives";
 import { type AttendeeInput } from "@core/types/event-attendance.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
+import { canInviteOnCalendar } from "@web/calendars/calendar.util";
 import {
   isEventReadOnly,
   useCalendarLookup,
@@ -293,8 +294,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     const liveDetails =
       rsvpSource?.content.kind === "details" ? rsvpSource.content : undefined;
     // Attendee-editor gate (WP-04): guests are editable everywhere the whole
-    // write path can deliver them — a writable Google calendar and an event
-    // the user organizes. Repeating events included: sync refuses
+    // write path can deliver them — a writable calendar that can invite and an
+    // event the user organizes. Repeating events included: sync refuses
     // per-occurrence guest replacements, so a guest change on any instance
     // is saved series-wide (resolveRecurrenceScopeDecision widens the whole
     // save to "all"), and the field says so.
@@ -306,7 +307,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           ? calendarLookup.get(draft.values.calendarId)
           : defaultTargetCalendar
         : calendarLookup.get(draft.source.calendarId);
-    // Google auto-sets the organizer to the creating account, so "the user
+    // The host auto-sets the organizer to the creating account, so "the user
     // organizes this event" is organizer-email == calendar-account-email.
     // A missing organizer means Compass created the event on this account
     // (organizes it); a missing account email fails closed — sync refuses
@@ -318,10 +319,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         sourceDetails.organizer.email.toLowerCase() ===
           attendeeCalendar.accountEmail.toLowerCase());
     const showAttendeeEditor =
-      !isReadOnly &&
-      attendeeCalendar?.provider === "google" &&
-      attendeeCalendar.capabilities.canWrite &&
-      organizesEvent;
+      !isReadOnly && canInviteOnCalendar(attendeeCalendar) && organizesEvent;
     const guestEditIsSeriesWide =
       draft.kind === "edit" && draft.source.recurrence.kind !== "single";
     // RSVP gate (WP-08): show Going / Maybe / Decline when the calendar's
@@ -330,10 +328,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     // not an attendee or the event is local (no provider account email).
     // Deliberately NOT gated on writability: answering an invitation is
     // allowed on viewer-access calendars.
-    const rsvpAccountEmail =
-      attendeeCalendar?.provider === "google"
-        ? attendeeCalendar.accountEmail
-        : undefined;
+    const rsvpAccountEmail = attendeeCalendar?.accountEmail;
     const showRsvpControl =
       rsvpSource !== null &&
       rsvpAccountEmail !== undefined &&

@@ -41,11 +41,11 @@ describe("DeleteAccountConfirmationDialog", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("tells the user their Google Calendar data is left alone", () => {
+  it("tells the user their connected calendars are left alone", () => {
     setup();
 
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      /Your Google Calendar is not affected/i,
+      /Your connected calendars are not affected/i,
     );
   });
 

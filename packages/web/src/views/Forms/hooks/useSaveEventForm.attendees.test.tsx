@@ -66,11 +66,11 @@ const meetingEvent = (overrides: Partial<Event> = {}): Event =>
     ...overrides,
   });
 
-function createWrapper() {
+function createWrapper(calendar: Calendar = googleCalendar()) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  queryClient.setQueryData(calendarQueryKeys.all, [googleCalendar()]);
+  queryClient.setQueryData(calendarQueryKeys.all, [calendar]);
 
   function Wrapper({ children }: PropsWithChildren) {
     return (
@@ -332,5 +332,66 @@ describe("useSaveEventForm guest edits", () => {
     expect(variables?.input.scope).toBe("all");
     expect(variables?.input.content.attendees).toHaveLength(2);
     expect(variables?.input.invitation).toBe("all");
+  });
+
+  it("keeps attendee edits for a microsoft calendar that can invite", () => {
+    const { queryClient, Wrapper } = createWrapper(
+      googleCalendar({ provider: "microsoft" }),
+    );
+    const { result } = renderHook(() => useSaveEventForm(), {
+      wrapper: Wrapper,
+    });
+    const draft = editDraftOrThrow(meetingEvent());
+    draft.values.attendees = [
+      { email: "guest@example.com", displayName: null },
+      { email: "new-guest@example.com", displayName: null },
+    ];
+
+    act(() => {
+      result.current.saveEventForm(draft);
+    });
+
+    expect(result.current.invitationPrompt).not.toBeNull();
+    expect(result.current.invitationPrompt?.hostLabel).toBe("Microsoft");
+
+    act(() => {
+      result.current.invitationPrompt?.onSend();
+    });
+
+    const variables = replaceVariables(queryClient);
+    expect(variables?.input.content.attendees).toHaveLength(2);
+    expect(variables?.input.invitation).toBe("all");
+  });
+
+  it("drops a create guest edit when the target calendar cannot invite", () => {
+    const { queryClient, Wrapper } = createWrapper(
+      googleCalendar({
+        access: "reader",
+        capabilities: getCalendarCapabilities("reader"),
+      }),
+    );
+    const { result } = renderHook(() => useSaveEventForm(), {
+      wrapper: Wrapper,
+    });
+    const draft = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T10:00:00.000Z"),
+        new Date("2026-05-20T11:00:00.000Z"),
+      ),
+      undefined,
+      calendarId,
+    );
+    draft.values.attendees = [
+      { email: "new-guest@example.com", displayName: null },
+    ];
+
+    act(() => {
+      result.current.saveEventForm(draft);
+    });
+
+    expect(result.current.invitationPrompt).toBeNull();
+    const variables = createVariables(queryClient);
+    expect(variables?.input.content).not.toContainKey("attendees");
+    expect(variables?.input).not.toContainKey("invitation");
   });
 });

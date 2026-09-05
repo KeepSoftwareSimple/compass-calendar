@@ -337,7 +337,7 @@ describe("handleErrorResponse", () => {
     expect(onGoogleRevoked).not.toHaveBeenCalled();
   });
 
-  it("fails clearly when the Google revocation handler is not configured", async () => {
+  it("fails clearly when the calendar revocation handler is not configured", async () => {
     const error = createApiError({
       data: { code: "GOOGLE_REVOKED" },
       status: Status.UNAUTHORIZED,
@@ -345,7 +345,7 @@ describe("handleErrorResponse", () => {
 
     await expect(
       handleErrorResponse(error, { onGoogleRevoked: undefined }),
-    ).rejects.toThrow("Google revocation handler is not configured");
+    ).rejects.toThrow("Calendar revocation handler is not configured");
   });
 
   it("does not sign the user out on a 404 from a data endpoint", async () => {

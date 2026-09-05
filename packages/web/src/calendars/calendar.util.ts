@@ -217,13 +217,19 @@ export interface DefaultTargetCalendarOptions {
   reconnectRequiredEmails?: ReadonlySet<string> | readonly string[];
 }
 
-const isWritableGoogleCalendar = (
+const isWritableProviderCalendar = (
   calendar: Calendar,
   reconnectRequiredEmails: ReadonlySet<string> | null,
 ): boolean =>
-  calendar.provider === "google" &&
+  calendar.provider !== "local" &&
   calendar.capabilities.canWrite &&
   !calendarNeedsReconnect(calendar, reconnectRequiredEmails);
+
+/** True when the write path can deliver a guest list for this calendar. */
+export const canInviteOnCalendar = (calendar: Calendar | undefined): boolean =>
+  Boolean(
+    calendar?.capabilities.canInviteAttendees && calendar.capabilities.canWrite,
+  );
 
 /**
  * Where a new event lands: the user's chosen default if it is still usable,
@@ -248,7 +254,7 @@ export function getDefaultTargetCalendar(
     ? calendars.find((calendar) => calendar.id === preferredCalendarId)
     : undefined;
   // The local calendar is a valid explicit choice while disconnected, even
-  // though it is not a writable *Google* calendar.
+  // though it is not a writable *provider* calendar.
   if (
     preferred?.capabilities.canWrite &&
     !calendarNeedsReconnect(preferred, reconnectRequiredEmails) &&
@@ -260,7 +266,7 @@ export function getDefaultTargetCalendar(
   const primaries = calendars.filter(
     (calendar) =>
       calendar.isPrimary &&
-      isWritableGoogleCalendar(calendar, reconnectRequiredEmails),
+      isWritableProviderCalendar(calendar, reconnectRequiredEmails),
   );
   const byConnectionOrder = accountEmailOrder
     .map((email) =>

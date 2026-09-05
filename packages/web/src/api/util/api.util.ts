@@ -205,7 +205,7 @@ export const handleErrorResponse = async (
     getApiErrorCode(error) === "GOOGLE_REVOKED"
   ) {
     if (!onGoogleRevoked) {
-      throw new Error("Google revocation handler is not configured");
+      throw new Error("Calendar revocation handler is not configured");
     }
 
     onGoogleRevoked({

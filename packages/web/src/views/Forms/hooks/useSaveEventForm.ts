@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
+import { type Calendar } from "@core/types/calendar.contracts";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type CreateEventInput } from "@core/types/event-command.contracts";
+import { providerDisplayName } from "@core/types/sync/identity.contracts";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
+import { canInviteOnCalendar } from "@web/calendars/calendar.util";
 import { useDefaultTargetCalendar } from "@web/calendars/useDefaultTargetCalendar";
 import { RecurringEventUpdateScope } from "@web/common/types/web.event.types";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -27,7 +30,15 @@ export type EventInvitationPrompt = {
   onSend: () => void;
   onDontSend: () => void;
   onCancel: () => void;
+  hostLabel: string;
 } | null;
+
+const INVITATION_HOST_LABEL: Record<Calendar["provider"], string> = {
+  google: providerDisplayName("google"),
+  microsoft: providerDisplayName("microsoft"),
+  apple: providerDisplayName("apple"),
+  local: "Your calendar",
+};
 
 export function useSaveEventForm() {
   const closeEventForm = useCloseEventForm();
@@ -47,7 +58,7 @@ export function useSaveEventForm() {
   // Belt behind the editor's own render gates: a guest edit that could never
   // deliver is dropped back to preserve semantics instead of submitting a
   // command sync/backend will refuse. The UI cannot reach these states — the
-  // editor only renders on writable Google calendars the user organizes, and
+  // editor only renders on writable calendars that can invite attendees, and
   // a guest-changed recurring edit is saved as "all" automatically, whether
   // it started from the series base or from one occurrence — so this only
   // defends replayed or hand-built drafts.
@@ -76,11 +87,11 @@ export function useSaveEventForm() {
         return draft;
       }
 
-      // Create: guests only deliver to a writable Google calendar
+      // Create: guests only deliver to a writable calendar that can invite
       // (ATTENDEES_UNSUPPORTED backstop server-side).
       const calendarId = draft.values.calendarId ?? defaultTargetCalendarId;
       const calendar = calendars?.find((entry) => entry.id === calendarId);
-      if (calendar?.provider !== "google" || !calendar.capabilities.canWrite) {
+      if (!canInviteOnCalendar(calendar)) {
         console.warn(
           "[useSaveEventForm] dropped guest edit: target calendar cannot deliver a guest list",
         );
@@ -186,7 +197,7 @@ export function useSaveEventForm() {
       const normalized = normalizeGuestEdit(draft, applyTo);
 
       // A membership-changing guest edit needs the save-time invitation
-      // choice first — Google emails the guests itself via sendUpdates, so
+      // choice first — the host emails the guests itself via sendUpdates, so
       // this is the one moment the user decides whether it should.
       if (gridDraftGuestsChanged(normalized)) {
         setPendingInvitationSave({ draft: normalized, applyTo });
@@ -201,6 +212,11 @@ export function useSaveEventForm() {
   const invitationPrompt: EventInvitationPrompt = useMemo(() => {
     if (!pendingInvitationSave) return null;
     const { draft, applyTo } = pendingInvitationSave;
+    const calendarId =
+      draft.kind === "create"
+        ? (draft.values.calendarId ?? defaultTargetCalendarId)
+        : draft.source.calendarId;
+    const calendar = calendars?.find((entry) => entry.id === calendarId);
     const resolve = (invitation: InvitationIntentValue) => {
       setPendingInvitationSave(null);
       commitSave(draft, applyTo, invitation);
@@ -209,8 +225,9 @@ export function useSaveEventForm() {
       onSend: () => resolve("all"),
       onDontSend: () => resolve("none"),
       onCancel: () => setPendingInvitationSave(null),
+      hostLabel: INVITATION_HOST_LABEL[calendar?.provider ?? "local"],
     };
-  }, [commitSave, pendingInvitationSave]);
+  }, [calendars, commitSave, defaultTargetCalendarId, pendingInvitationSave]);
 
   return { saveEventForm, fieldErrors, clearFieldErrors, invitationPrompt };
 }

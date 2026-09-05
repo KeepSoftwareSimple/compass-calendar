@@ -111,6 +111,18 @@ describe("getDefaultTargetCalendar", () => {
     );
   });
 
+  it("prefers a writable microsoft primary the same way", () => {
+    const local = makeCalendar({ provider: "local" });
+    const primaryMicrosoft = makeCalendar({
+      provider: "microsoft",
+      isPrimary: true,
+      id: "507f1f77bcf86cd799439014" as Calendar["id"],
+    });
+    expect(getDefaultTargetCalendar([local, primaryMicrosoft])).toBe(
+      primaryMicrosoft,
+    );
+  });
+
   it("skips a reconnect-required account when choosing the default target", () => {
     const brokenPrimary = makeCalendar({
       provider: "google",

@@ -17,11 +17,11 @@ import { EventForm } from "@web/views/Forms/EventForm/EventForm";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 // WP-04 attendee-editor gating: the guest combobox renders wherever the whole
-// write path can deliver a guest edit — a writable Google calendar and an
-// event the user organizes — repeating events included, where the edit is
-// series-wide and the field says so. Everyone else keeps the read-only guest
-// list. Sibling to EventForm.readOnly.test.tsx (full form, no subcomponent
-// mocks) for the same isolation reasons.
+// write path can deliver a guest edit — a writable calendar that can invite
+// attendees and an event the user organizes — repeating events included, where
+// the edit is series-wide and the field says so. Everyone else keeps the
+// read-only guest list. Sibling to EventForm.readOnly.test.tsx (full form, no
+// subcomponent mocks) for the same isolation reasons.
 
 const ACCOUNT_EMAIL = "me@example.com";
 
@@ -120,7 +120,7 @@ describe("EventForm attendee editor gating", () => {
     document.body.removeAttribute("data-app-locked");
   });
 
-  it("renders the guest combobox (and not the read-only list) for an organized event on a writable Google calendar", () => {
+  it("renders the guest combobox (and not the read-only list) for an organized event on a writable calendar that can invite", () => {
     const calendar = makeCalendar();
     const draft = editDraftOrThrow(makeMeetingEvent(calendar.id));
 
@@ -228,7 +228,16 @@ describe("EventForm attendee editor gating", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps the read-only guest list on a read-only calendar", () => {
+  it("shows the editor on a microsoft calendar that can invite attendees", () => {
+    const calendar = makeCalendar({ provider: "microsoft" });
+    const draft = editDraftOrThrow(makeMeetingEvent(calendar.id));
+
+    renderEventForm(draft, [calendar]);
+
+    expect(screen.getByRole("combobox", { name: "Guests" })).toBeEnabled();
+  });
+
+  it("keeps the read-only guest list on a google calendar that cannot invite", () => {
     const calendar = makeCalendar({
       access: "reader",
       capabilities: getCalendarCapabilities("reader"),
@@ -249,10 +258,18 @@ describe("EventForm attendee editor gating", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows no editor on a non-Google (local) calendar", () => {
+  it("shows no editor on a local calendar", () => {
     const calendar = makeCalendar({
       provider: "local",
       accountEmail: undefined,
+      capabilities: {
+        canReadAvailability: true,
+        canReadDetails: true,
+        canWrite: true,
+        canManage: false,
+        canWatchEvents: false,
+        canInviteAttendees: false,
+      },
     });
     const event = createMockEvent({
       calendarId: calendar.id,
