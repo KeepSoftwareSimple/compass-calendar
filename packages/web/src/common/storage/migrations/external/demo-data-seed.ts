@@ -143,7 +143,7 @@ function generateDemoData() {
       // connected Google yet.
       conference: {
         url: "https://meet.google.com/abc-defg-hij",
-        label: "Google Meet",
+        label: "Video call",
       },
       organizer: { email: "avery@example.com", displayName: "Avery" },
       attendees: [
@@ -172,7 +172,7 @@ function generateDemoData() {
     createEventRecord({
       title: "Try Compass",
       description:
-        "Welcome! Click any empty time slot to create an event, or press C. When you're ready to sync Google Calendar, use the Connect Google Calendar button in the sidebar.",
+        "Welcome! Click any empty time slot to create an event, or press C. When you're ready to sync your calendar, use Connect calendar in the sidebar.",
       schedule: {
         kind: "timed",
         start: todayAt(10, 0),

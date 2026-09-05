@@ -1,5 +1,10 @@
 # Google Sync And Server-Sent Events (SSE)
 
+> **Multi-provider note:** Google is the first connected calendar host in
+> Compass. Product-wide provider behavior, capability gates, and connect flows
+> are specified in [`calendar-providers.md`](./calendar-providers.md). This
+> document covers the Google sync path and SSE wiring only.
+
 Google Calendar sync is owned entirely by the standalone **Sync service**
 (`packages/sync`) — the backend has no Google API calls or sync logic of its
 own. The backend's role is: proxy sync-related reads/writes to Sync, poll

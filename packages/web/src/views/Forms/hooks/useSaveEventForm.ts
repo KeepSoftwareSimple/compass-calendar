@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type CreateEventInput } from "@core/types/event-command.contracts";
+import { providerDisplayName } from "@core/types/sync/identity.contracts";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import { useDefaultTargetCalendar } from "@web/calendars/useDefaultTargetCalendar";
 import { RecurringEventUpdateScope } from "@web/common/types/web.event.types";
@@ -24,6 +25,7 @@ type InvitationIntentValue = NonNullable<CreateEventInput["invitation"]>;
  * waiting on the choice.
  */
 export type EventInvitationPrompt = {
+  invitationEmailHost: string;
   onSend: () => void;
   onDontSend: () => void;
   onCancel: () => void;
@@ -76,11 +78,14 @@ export function useSaveEventForm() {
         return draft;
       }
 
-      // Create: guests only deliver to a writable Google calendar
+      // Create: guests only deliver to a calendar that can invite attendees
       // (ATTENDEES_UNSUPPORTED backstop server-side).
       const calendarId = draft.values.calendarId ?? defaultTargetCalendarId;
       const calendar = calendars?.find((entry) => entry.id === calendarId);
-      if (calendar?.provider !== "google" || !calendar.capabilities.canWrite) {
+      if (
+        !calendar?.capabilities.canInviteAttendees ||
+        !calendar.capabilities.canWrite
+      ) {
         console.warn(
           "[useSaveEventForm] dropped guest edit: target calendar cannot deliver a guest list",
         );
@@ -201,16 +206,28 @@ export function useSaveEventForm() {
   const invitationPrompt: EventInvitationPrompt = useMemo(() => {
     if (!pendingInvitationSave) return null;
     const { draft, applyTo } = pendingInvitationSave;
+    const calendarId =
+      draft.values.calendarId ??
+      (draft.kind === "edit"
+        ? draft.source.calendarId
+        : defaultTargetCalendarId);
+    const calendar = calendars?.find((entry) => entry.id === calendarId);
+    const provider = calendar?.provider;
+    const invitationEmailHost =
+      provider === "google" || provider === "microsoft" || provider === "apple"
+        ? providerDisplayName(provider)
+        : "your calendar";
     const resolve = (invitation: InvitationIntentValue) => {
       setPendingInvitationSave(null);
       commitSave(draft, applyTo, invitation);
     };
     return {
+      invitationEmailHost,
       onSend: () => resolve("all"),
       onDontSend: () => resolve("none"),
       onCancel: () => setPendingInvitationSave(null),
     };
-  }, [commitSave, pendingInvitationSave]);
+  }, [calendars, commitSave, defaultTargetCalendarId, pendingInvitationSave]);
 
   return { saveEventForm, fieldErrors, clearFieldErrors, invitationPrompt };
 }

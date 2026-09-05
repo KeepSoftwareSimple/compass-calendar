@@ -67,7 +67,7 @@ const assertHealthyGoogleForEnable = async (userId: string): Promise<void> => {
   if (connection.connectionState !== "HEALTHY") {
     throw bookingError(
       "GOOGLE_NOT_CONNECTED",
-      "Connect a healthy Google account before enabling booking",
+      "Connect a healthy calendar account before enabling booking",
     );
   }
 };
@@ -102,7 +102,7 @@ const assertCalendarsForEnable = async (
   if (!destination) {
     throw bookingError(
       "DESTINATION_NOT_WRITABLE",
-      "Destination calendar must be a writable Google calendar",
+      "Destination calendar must be a writable calendar",
     );
   }
 

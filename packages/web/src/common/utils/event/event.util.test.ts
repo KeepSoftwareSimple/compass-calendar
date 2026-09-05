@@ -208,7 +208,7 @@ describe("handleError", () => {
     expect(mockCaptureException).not.toHaveBeenCalled();
     expect(mocks.error).toHaveBeenCalledTimes(1);
     const [message] = mocks.error.mock.calls[0] ?? [];
-    expect(message).toContain("Google doesn't allow this change");
+    expect(message).toContain("Your calendar doesn't allow this change");
     expect(message).not.toBe(
       "Something went wrong behind the scenes. Please try again later.",
     );

@@ -249,10 +249,47 @@ describe("EventForm attendee editor gating", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows no editor on a non-Google (local) calendar", () => {
+  it("keeps the read-only guest list on a Google read-only calendar", () => {
+    const calendar = makeCalendar({
+      provider: "google",
+      access: "reader",
+      capabilities: {
+        ...getCalendarCapabilities("reader"),
+        canInviteAttendees: false,
+      },
+    });
+    const draft = editDraftOrThrow(makeMeetingEvent(calendar.id));
+
+    renderEventForm(draft, [calendar]);
+
+    expect(
+      screen.queryByRole("combobox", { name: "Guests" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders the guest combobox for a Microsoft calendar with canInviteAttendees", () => {
+    const calendar = makeCalendar({
+      provider: "microsoft",
+      capabilities: {
+        ...getCalendarCapabilities("owner"),
+        canInviteAttendees: true,
+      },
+    });
+    const draft = editDraftOrThrow(makeMeetingEvent(calendar.id));
+
+    renderEventForm(draft, [calendar]);
+
+    expect(screen.getByRole("combobox", { name: "Guests" })).toBeEnabled();
+  });
+
+  it("shows no editor on a non-provider (local) calendar", () => {
     const calendar = makeCalendar({
       provider: "local",
       accountEmail: undefined,
+      capabilities: {
+        ...getCalendarCapabilities("owner"),
+        canInviteAttendees: false,
+      },
     });
     const event = createMockEvent({
       calendarId: calendar.id,

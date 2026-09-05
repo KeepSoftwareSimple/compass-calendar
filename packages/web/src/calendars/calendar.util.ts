@@ -217,11 +217,11 @@ export interface DefaultTargetCalendarOptions {
   reconnectRequiredEmails?: ReadonlySet<string> | readonly string[];
 }
 
-const isWritableGoogleCalendar = (
+const isWritableProviderCalendar = (
   calendar: Calendar,
   reconnectRequiredEmails: ReadonlySet<string> | null,
 ): boolean =>
-  calendar.provider === "google" &&
+  calendar.provider !== "local" &&
   calendar.capabilities.canWrite &&
   !calendarNeedsReconnect(calendar, reconnectRequiredEmails);
 
@@ -260,7 +260,7 @@ export function getDefaultTargetCalendar(
   const primaries = calendars.filter(
     (calendar) =>
       calendar.isPrimary &&
-      isWritableGoogleCalendar(calendar, reconnectRequiredEmails),
+      isWritableProviderCalendar(calendar, reconnectRequiredEmails),
   );
   const byConnectionOrder = accountEmailOrder
     .map((email) =>

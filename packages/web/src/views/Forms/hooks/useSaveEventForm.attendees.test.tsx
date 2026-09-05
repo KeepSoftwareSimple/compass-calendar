@@ -31,7 +31,7 @@ import { beforeEach, describe, expect, it } from "bun:test";
 
 const calendarId = CalendarIdSchema.parse("cccccccccccccccccccccccc");
 
-const googleCalendar = (overrides: Partial<Calendar> = {}): Calendar => ({
+const providerCalendar = (overrides: Partial<Calendar> = {}): Calendar => ({
   id: calendarId,
   name: "Work",
   description: "",
@@ -47,6 +47,8 @@ const googleCalendar = (overrides: Partial<Calendar> = {}): Calendar => ({
   accountEmail: "me@example.com",
   ...overrides,
 });
+
+const googleCalendar = providerCalendar;
 
 const meetingEvent = (overrides: Partial<Event> = {}): Event =>
   createMockEvent({
@@ -234,6 +236,46 @@ describe("useSaveEventForm guest edits", () => {
     });
     expect(result.current.invitationPrompt).not.toBeNull();
 
+    act(() => {
+      result.current.invitationPrompt?.onSend();
+    });
+
+    const variables = createVariables(queryClient);
+    expect(variables?.input.content.attendees).toEqual([
+      { email: "new-guest@example.com", displayName: null },
+    ]);
+    expect(variables?.input.invitation).toBe("all");
+  });
+
+  it("keeps attendee edits for any provider with canInviteAttendees", () => {
+    const { queryClient, Wrapper } = createWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [
+      providerCalendar({
+        provider: "microsoft",
+        capabilities: {
+          ...getCalendarCapabilities("owner"),
+          canInviteAttendees: true,
+        },
+      }),
+    ]);
+    const { result } = renderHook(() => useSaveEventForm(), {
+      wrapper: Wrapper,
+    });
+    const draft = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T10:00:00.000Z"),
+        new Date("2026-05-20T11:00:00.000Z"),
+      ),
+      undefined,
+      calendarId,
+    );
+    draft.values.attendees = [
+      { email: "new-guest@example.com", displayName: null },
+    ];
+
+    act(() => {
+      result.current.saveEventForm(draft);
+    });
     act(() => {
       result.current.invitationPrompt?.onSend();
     });

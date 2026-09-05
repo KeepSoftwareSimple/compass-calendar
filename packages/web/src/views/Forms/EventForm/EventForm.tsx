@@ -319,7 +319,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           attendeeCalendar.accountEmail.toLowerCase());
     const showAttendeeEditor =
       !isReadOnly &&
-      attendeeCalendar?.provider === "google" &&
+      attendeeCalendar?.capabilities.canInviteAttendees === true &&
       attendeeCalendar.capabilities.canWrite &&
       organizesEvent;
     const guestEditIsSeriesWide =
@@ -331,8 +331,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     // Deliberately NOT gated on writability: answering an invitation is
     // allowed on viewer-access calendars.
     const rsvpAccountEmail =
-      attendeeCalendar?.provider === "google"
-        ? attendeeCalendar.accountEmail
+      attendeeCalendar?.provider !== "local"
+        ? attendeeCalendar?.accountEmail
         : undefined;
     const showRsvpControl =
       rsvpSource !== null &&
