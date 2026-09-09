@@ -65,9 +65,27 @@ export async function fetchDayEvents(
   });
 
   const events = await repository.list(query);
-  return normalizeEventList(
-    events.filter((event) =>
-      eventMatchesRange(event, payload.startDate, payload.endDate),
+  const inRange = events.filter((event) =>
+    eventMatchesRange(event, payload.startDate, payload.endDate),
+  );
+  // Sync appends one series base row per series that has an instance in the
+  // (padded) window. The base's schedule is the FIRST occurrence, so for any
+  // series older than the window it fails the range test. Keep the base of
+  // every occurrence kept above: the grid never renders a base, but a
+  // scope-"all" edit rebases the occurrence's dates onto it. Dropping it once
+  // sent an occurrence's date as the series start, which moved a yearly
+  // birthday series forward by two years at the provider. A base whose only
+  // instance fell in the padding stays out, so an empty window stays empty.
+  const referencedSeries = new Set(
+    inRange.flatMap((event) =>
+      event.recurrence.kind === "occurrence" ? [event.recurrence.seriesId] : [],
     ),
   );
+  const bases = events.filter(
+    (event) =>
+      event.recurrence.kind === "series" &&
+      referencedSeries.has(event.id) &&
+      !inRange.includes(event),
+  );
+  return normalizeEventList([...inRange, ...bases]);
 }

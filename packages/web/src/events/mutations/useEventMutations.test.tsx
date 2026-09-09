@@ -446,6 +446,68 @@ describe("useEventMutations", () => {
     });
   });
 
+  test("remote promote all refuses to send an occurrence's dates when the series base is not cached", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const context = setup("remote");
+    const seriesId = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");
+    const birthday = composedOccurrence(seriesId, "2026-09-14T00:00:00.000Z", {
+      schedule: allDaySchedule("2026-09-14", "2026-09-15"),
+    });
+    // Only the occurrence is cached: the series base (first occurrence in
+    // 2024) never made it into the window's entry.
+    context.queryClient.setQueryData(
+      calendarKeyFor("remote"),
+      normalized(birthday),
+    );
+
+    const opportunity = replaceAndGetOpportunity(context, birthday.id, {
+      content: {
+        kind: "details",
+        title: "My Birthday",
+        description: "",
+        location: "",
+      },
+      schedule: allDaySchedule("2026-09-14", "2026-09-15"),
+    });
+
+    act(() =>
+      context.hook.result.current.mutations.promoteRecurring(
+        opportunity,
+        "all",
+      ),
+    );
+
+    // Refused before anything is queued: the ask closes with an error toast,
+    // and no mutation ran, so the narrow scope-"this" write is not coalesced
+    // away and still reaches the repository on its own.
+    expect(mocks.error).toHaveBeenCalledWith(
+      expect.stringMatching(/still loading/),
+      expect.anything(),
+    );
+    expect(
+      useRecurrenceScopeOpportunityStore.getState().opportunity,
+    ).toBeNull();
+    await waitFor(() => expect(context.calls).toHaveLength(1));
+    act(() => context.pending.resolve());
+    await waitFor(() =>
+      expect(context.hook.result.current.hasPending).toBe(false),
+    );
+    expect(context.errors).toEqual([]);
+    expect(context.calls).toEqual([
+      {
+        method: "replace",
+        value: {
+          id: birthday.id,
+          input: expect.objectContaining({
+            scope: "this",
+            schedule: allDaySchedule("2026-09-14", "2026-09-15"),
+          }),
+        },
+      },
+    ]);
+  });
+
   test("remote promote all rebases a middle all-day occurrence onto the series master", async () => {
     const context = setup("remote");
     const seriesId = EventIdSchema.parse("bbbbbbbbbbbbbbbbbbbbbbbb");
