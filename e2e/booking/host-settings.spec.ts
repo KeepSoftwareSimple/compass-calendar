@@ -340,15 +340,19 @@ test("second hours line aligns with the first", async ({ page }) => {
   );
   const mondayStart = settingsDialog.getByRole("combobox", {
     name: "Monday start",
+    exact: true,
   });
   const mondayStart2 = settingsDialog.getByRole("combobox", {
     name: "Monday start 2",
+    exact: true,
   });
   const mondayEnd = settingsDialog.getByRole("combobox", {
     name: "Monday end",
+    exact: true,
   });
   const mondayEnd2 = settingsDialog.getByRole("combobox", {
     name: "Monday end 2",
+    exact: true,
   });
   await expect(mondayStart2).toBeVisible();
 
