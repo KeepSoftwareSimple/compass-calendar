@@ -47,6 +47,8 @@ export type ProductEvent =
   | "shortcut_invoked"
   | "shortcut_suggestion_engaged"
   | "shortcut_unavailable_attempt"
+  | "pointer_hint_shown"
+  | "pointer_hint_dismissed"
   | "booking_settings_opened"
   | "booking_page_enabled"
   | "booking_link_copied"

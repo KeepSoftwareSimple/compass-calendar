@@ -133,7 +133,7 @@ const VIEW_BY_ROUTE = [
 ] as const;
 
 /** The calendar surface a shortcut was attempted on, from the URL alone. */
-function viewFromPathname(pathname: string): string {
+export function viewFromPathname(pathname: string): string {
   const match = VIEW_BY_ROUTE.find(
     ([route]) => pathname === route || pathname.startsWith(`${route}/`),
   );

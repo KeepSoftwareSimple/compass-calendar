@@ -4,6 +4,7 @@ import {
   type ProviderKind,
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
+import { track } from "@web/auth/posthog/track";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import IconButton from "@web/components/IconButton/IconButton";
 import {
@@ -20,12 +21,12 @@ import {
   POINTER_ACTIONS,
   pointerPassAttributes,
 } from "@web/shortcuts/keyboard-only/pointer-action";
+import { writePointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
-  pointerConfusionActions,
-  selectPointerConfusionAttempt,
-  selectPointerConfusionHintPulse,
-  usePointerConfusionStore,
-} from "@web/shortcuts/keyboard-only/pointer-confusion.store";
+  selectPointerHintAttempt,
+  selectPointerHintPulse,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   CONNECTION_BANNER_SHORTCUT_KEY,
@@ -53,7 +54,27 @@ const pointerHintMessage = ({
   showcaseActive: boolean;
   welcomeOpen: boolean;
 }): ReactNode => {
-  if (showcaseActive) return "Keyboard only. Follow the keys on screen.";
+  if (showcaseActive) return "Follow the keys on screen.";
+
+  // The click already did its job through a working control; only the key
+  // for next time is new information.
+  if (attempt?.performed) {
+    if (attempt.actionId === POINTER_ACTIONS.switchView) {
+      return (
+        <>
+          Next time, press <Key>W</Key>, <Key>D</Key>, or <Key>L</Key> to switch
+          views.
+        </>
+      );
+    }
+    if (attempt.shortcutKey) {
+      return (
+        <>
+          Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
+        </>
+      );
+    }
+  }
 
   if (
     attempt?.actionId === POINTER_ACTIONS.sidebarClose ||
@@ -165,18 +186,20 @@ const pointerHintMessage = ({
 
   return (
     <>
-      Compass is keyboard only. Press <Key>?</Key> for shortcuts.
+      Compass works from the keyboard. Press <Key>?</Key> to see every shortcut.
     </>
   );
 };
 
 /**
- * Teaches the keyboard model when confusion heuristics fire, not on every
- * blocked click. Mounted in RootShell so it shows with the sidebar closed too.
+ * Teaches the keyboard path on every click instead of silently ignoring it.
+ * The tracker pulses the store; this pill names the exact keys for the
+ * clicked target. Mounted in RootShell so it shows with the sidebar closed
+ * too. Top-center to stay clear of the Up Next banner's bottom-center spot.
  */
 export const PointerHint: FC = () => {
-  const pulse = usePointerConfusionStore(selectPointerConfusionHintPulse);
-  const attempt = usePointerConfusionStore(selectPointerConfusionAttempt);
+  const pulse = usePointerHintStore(selectPointerHintPulse);
+  const attempt = usePointerHintStore(selectPointerHintAttempt);
   const eventJumpKey = useEventJumpStore(selectEventJumpPointerHintKey);
   const showcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
   const welcomeOpen = useWelcomeGuideStore(selectWelcomeSurfaceOpen);
@@ -209,10 +232,11 @@ export const PointerHint: FC = () => {
       </span>
       <IconButton
         {...pointerPassAttributes}
-        aria-label="Dismiss keyboard tips permanently"
+        aria-label="Turn off keyboard tips"
         className="shrink-0 opacity-70 hover:opacity-100"
         onClick={() => {
-          pointerConfusionActions.dismissPermanently();
+          writePointerHintDismissedPermanently();
+          track("pointer_hint_dismissed");
           setIsVisible(false);
         }}
         size="small"
