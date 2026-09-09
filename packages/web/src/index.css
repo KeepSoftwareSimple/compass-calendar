@@ -692,7 +692,9 @@
 }
 
 @utility c-keycap {
-  @apply inline-flex min-h-4.5 items-center justify-center rounded border border-border bg-surface-panel px-1.5 py-0.5 font-medium text-text-muted leading-none;
+  /* text-text, not muted: 11px keycap glyphs fail WCAG AA when muted ink
+     anti-aliases on surface-panel (axe 3.92:1 on the Enter chip). */
+  @apply inline-flex min-h-4.5 items-center justify-center rounded border border-border bg-surface-panel px-1.5 py-0.5 font-medium text-text leading-none;
 
   font-size: var(--font-size-s);
 
