@@ -376,6 +376,8 @@ function usePrefetchAdjacentPublicMonths(
   const queryClient = useQueryClient();
   const previousMonthKey = shiftBookingMonthKey(monthKey, -1, timeZone);
   const nextMonthKey = shiftBookingMonthKey(monthKey, 1, timeZone);
+  // Flattened to primitives so the effect below re-runs on a real change
+  // rather than on `target`'s new object identity every render.
   const slug = target.kind === "page" ? target.slug : "";
   const reservationId =
     target.kind === "reservation" ? target.reservationId : "";
@@ -385,41 +387,28 @@ function usePrefetchAdjacentPublicMonths(
     if (!enabled || maxHorizonDays == null) {
       return;
     }
-    if (slug) {
-      void prefetchPublicBookingMonth(
-        queryClient,
-        slug,
-        previousMonthKey,
-        timeZone,
-        maxHorizonDays,
-      );
-      void prefetchPublicBookingMonth(
-        queryClient,
-        slug,
-        nextMonthKey,
-        timeZone,
-        maxHorizonDays,
-      );
-      return;
-    }
-    if (reservationId && token) {
-      void prefetchPublicBookingReservationMonth(
-        queryClient,
-        reservationId,
-        token,
-        previousMonthKey,
-        timeZone,
-        maxHorizonDays,
-      );
-      void prefetchPublicBookingReservationMonth(
-        queryClient,
-        reservationId,
-        token,
-        nextMonthKey,
-        timeZone,
-        maxHorizonDays,
-      );
-    }
+    // Both prefetchers no-op on a missing id or token, so the caller's
+    // `enabled` guard is the only one needed here.
+    const prefetchMonth = (cursor: string) =>
+      slug
+        ? prefetchPublicBookingMonth(
+            queryClient,
+            slug,
+            cursor,
+            timeZone,
+            maxHorizonDays,
+          )
+        : prefetchPublicBookingReservationMonth(
+            queryClient,
+            reservationId,
+            token,
+            cursor,
+            timeZone,
+            maxHorizonDays,
+          );
+
+    void prefetchMonth(previousMonthKey);
+    void prefetchMonth(nextMonthKey);
   }, [
     enabled,
     maxHorizonDays,

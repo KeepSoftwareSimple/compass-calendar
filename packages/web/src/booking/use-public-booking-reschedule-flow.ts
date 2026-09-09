@@ -1,15 +1,9 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef } from "react";
 import { RescheduleBookingReservationInputSchema } from "@core/types/booking.contracts";
-import dayjs from "@core/util/date/dayjs";
 import { PublicBookingNotFoundError } from "@web/api/public-booking.api";
 import { getErrorStatus } from "@web/api/util/api.util";
-import {
-  formatBookingDateKey,
-  formatBookingMonthKey,
-  listBookingAvailableDateKeysInMonth,
-} from "@web/booking/public-booking.format";
 import {
   isPublicBookingConflictError,
   prefetchPublicBookingReservationMonth,
@@ -26,11 +20,19 @@ import {
   publicCancelUrlForReservation,
   publicRescheduleUrlForReservation,
 } from "@web/booking/public-booking-search";
+import {
+  usePublicBookingSelectionKeys,
+  usePublicBookingSlotSelection,
+} from "@web/booking/use-public-booking-slot-selection";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
-import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
 
+/**
+ * The guest reschedule flow. The shared slot picker lives in
+ * `usePublicBookingSlotSelection`; what stays here is the token-guarded
+ * reservation lookup and confirming the new time.
+ */
 export function usePublicBookingRescheduleFlow() {
   const { reservationId } = useParams({
     from: ROOT_ROUTES.BOOK_RESCHEDULE,
@@ -52,16 +54,8 @@ export function usePublicBookingRescheduleFlow() {
       : "";
   const pageQuery = usePublicBookingPageQuery(bookingSlug);
 
-  const browserTimeZone = useMemo(getBrowserTimeZone, []);
-  const guestTimeZone = search.tz ?? browserTimeZone;
-  const selectedSlotStart = search.slot ?? null;
-  const slotDateKey = selectedSlotStart
-    ? formatBookingDateKey(selectedSlotStart, guestTimeZone)
-    : null;
-  const monthKey =
-    search.month ??
-    slotDateKey?.slice(0, 7) ??
-    formatBookingMonthKey(dayjs(), guestTimeZone);
+  const keys = usePublicBookingSelectionKeys(search);
+  const { guestTimeZone, monthKey, selectedSlotStart } = keys;
 
   const slotsQuery = usePublicBookingReservationSlotsQuery(
     canLoad && reservationQuery.data?.status === "confirmed"
@@ -75,25 +69,37 @@ export function usePublicBookingRescheduleFlow() {
   const rescheduleReservation =
     useReschedulePublicBookingReservationMutation(reservationId);
 
-  const [alertMessage, setAlertMessage] = useState<string | null>(null);
-  const alertRef = useRef<HTMLParagraphElement>(null);
-  const pickerHeadingRef = useRef<HTMLHeadingElement>(null);
   const submitInFlightRef = useRef(false);
-  const pendingPickerFocusRef = useRef(false);
 
-  useEffect(() => {
-    if (alertMessage) {
-      alertRef.current?.focus();
-    }
-  }, [alertMessage]);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: jump remounts the picker heading
-  useEffect(() => {
-    if (pendingPickerFocusRef.current) {
-      pendingPickerFocusRef.current = false;
-      pickerHeadingRef.current?.focus();
-    }
-  }, [monthKey, search.date]);
+  const selection = usePublicBookingSlotSelection({
+    search,
+    keys,
+    slotsQuery,
+    // Every month walk here is token-authenticated, so no token means no walk.
+    horizonDays: token ? (pageQuery.data?.maxHorizonDays ?? null) : null,
+    prefetchMonth: (nextMonthKey, maxHorizonDays) => {
+      void prefetchPublicBookingReservationMonth(
+        queryClient,
+        reservationId,
+        token,
+        nextMonthKey,
+        guestTimeZone,
+        maxHorizonDays,
+      );
+    },
+    resolveNextAvailableDate: (afterDateKey, todayKey, maxHorizonDays) =>
+      resolveNextAvailableReservationDate(
+        queryClient,
+        reservationId,
+        token,
+        monthKey,
+        afterDateKey,
+        guestTimeZone,
+        todayKey,
+        maxHorizonDays,
+      ),
+  });
+  const { setAlertMessage, updateSearch } = selection;
 
   usePrefetchAdjacentReservationMonths(
     reservationId,
@@ -106,82 +112,6 @@ export function usePublicBookingRescheduleFlow() {
       pageQuery.data.enabled &&
       slotsQuery.isSuccess,
   );
-
-  const todayKey = formatBookingDateKey(dayjs(), guestTimeZone);
-  const availableDateKeys = useMemo(
-    () =>
-      slotsQuery.data?.bookable
-        ? listBookingAvailableDateKeysInMonth(
-            slotsQuery.data.slots,
-            monthKey,
-            guestTimeZone,
-            todayKey,
-          )
-        : [],
-    [guestTimeZone, monthKey, slotsQuery.data, todayKey],
-  );
-
-  const selectedDateKey =
-    (search.date?.startsWith(monthKey) ? search.date : null) ??
-    (slotDateKey?.startsWith(monthKey) ? slotDateKey : null) ??
-    availableDateKeys[0] ??
-    null;
-
-  const slotsHasData = Boolean(slotsQuery.data);
-  const slotsFetching =
-    !slotsHasData && (slotsQuery.isPending || slotsQuery.isFetching);
-  const slotsError = Boolean(slotsQuery.isError && !slotsHasData);
-  const slotsPending = slotsFetching && !slotsError;
-
-  const updateSearch = (
-    patch: Partial<PublicBookingRescheduleSearch>,
-    { push = false }: { push?: boolean } = {},
-  ) => {
-    void navigate({
-      to: ".",
-      search: (previous: PublicBookingRescheduleSearch) => ({
-        ...previous,
-        ...patch,
-      }),
-      replace: !push,
-    });
-  };
-
-  const handleSelectSlot = (slotStart: string) => {
-    setAlertMessage(null);
-    updateSearch(
-      { slot: slotStart, date: formatBookingDateKey(slotStart, guestTimeZone) },
-      { push: true },
-    );
-  };
-
-  const handleSelectDay = (dateKey: string) => {
-    updateSearch({
-      date: dateKey,
-      slot: slotDateKey !== dateKey ? undefined : search.slot,
-    });
-  };
-
-  const handleMonthChange = (nextMonthKey: string) => {
-    setAlertMessage(null);
-    updateSearch({ month: nextMonthKey, date: undefined, slot: undefined });
-  };
-
-  const handleTimeZoneChange = (nextTimeZone: string) => {
-    if (nextTimeZone === guestTimeZone) {
-      return;
-    }
-    if (selectedSlotStart) {
-      updateSearch({ tz: nextTimeZone, month: undefined, date: undefined });
-      return;
-    }
-    const currentMonthInOldZone = formatBookingMonthKey(dayjs(), guestTimeZone);
-    updateSearch({
-      tz: nextTimeZone,
-      date: undefined,
-      month: monthKey === currentMonthInOldZone ? undefined : search.month,
-    });
-  };
 
   useAppShortcut(
     "Escape",
@@ -204,49 +134,6 @@ export function usePublicBookingRescheduleFlow() {
       ignoreInputs: false,
     },
   );
-
-  const handlePrefetchMonth = (nextMonthKey: string) => {
-    if (!pageQuery.data || !token) {
-      return;
-    }
-    void prefetchPublicBookingReservationMonth(
-      queryClient,
-      reservationId,
-      token,
-      nextMonthKey,
-      guestTimeZone,
-      pageQuery.data.maxHorizonDays,
-    );
-  };
-
-  const handleJumpToNextAvailable = async () => {
-    if (!pageQuery.data || !token) {
-      return;
-    }
-    const next = await resolveNextAvailableReservationDate(
-      queryClient,
-      reservationId,
-      token,
-      monthKey,
-      selectedDateKey,
-      guestTimeZone,
-      todayKey,
-      pageQuery.data.maxHorizonDays,
-    );
-    if (next) {
-      pendingPickerFocusRef.current = true;
-      setAlertMessage(null);
-      updateSearch({
-        month: next.monthKey,
-        date: next.dateKey,
-        slot: undefined,
-      });
-      return;
-    }
-    setAlertMessage(
-      `No open times in the next ${pageQuery.data.maxHorizonDays} days. Check back later.`,
-    );
-  };
 
   const handleConfirm = async () => {
     if (
@@ -318,19 +205,19 @@ export function usePublicBookingRescheduleFlow() {
     guestTimeZone,
     monthKey,
     selectedSlotStart,
-    selectedDateKey,
-    alertMessage,
-    slotsPending,
-    slotsError,
-    slotsFetching,
-    alertRef,
-    pickerHeadingRef,
-    handleSelectSlot,
-    handleSelectDay,
-    handleMonthChange,
-    handleTimeZoneChange,
-    handlePrefetchMonth,
-    handleJumpToNextAvailable,
+    selectedDateKey: selection.selectedDateKey,
+    alertMessage: selection.alertMessage,
+    slotsPending: selection.slotsPending,
+    slotsError: selection.slotsError,
+    slotsFetching: selection.slotsFetching,
+    alertRef: selection.alertRef,
+    pickerHeadingRef: selection.pickerHeadingRef,
+    handleSelectSlot: selection.handleSelectSlot,
+    handleSelectDay: selection.handleSelectDay,
+    handleMonthChange: selection.handleMonthChange,
+    handleTimeZoneChange: selection.handleTimeZoneChange,
+    handlePrefetchMonth: selection.handlePrefetchMonth,
+    handleJumpToNextAvailable: selection.handleJumpToNextAvailable,
     handleConfirm,
   };
 }
