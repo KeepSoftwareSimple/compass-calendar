@@ -610,7 +610,7 @@ describe("BookingSettingsSection", () => {
     expect(trigger).toHaveAccessibleName("Meeting timezone: UTC (UTC)");
   });
 
-  it("describes weekly hours from the muted timezone line and keeps the trigger in More options", async () => {
+  it("keeps the timezone trigger in More options", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
@@ -633,11 +633,10 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    const mondayStart = await screen.findByRole("combobox", {
+    await screen.findByRole("combobox", {
       name: "Monday start",
     });
-    expect(mondayStart).toHaveAccessibleDescription(/Times in/);
-    expect(mondayStart).toHaveAccessibleDescription(/More options/);
+    expect(screen.queryByText(/Times in/)).not.toBeInTheDocument();
 
     await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
     const address = screen.getByLabelText("Page address");
@@ -1035,6 +1034,9 @@ describe("BookingSettingsSection", () => {
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
     await user.keyboard("k");
     await user.keyboard("k");
+    expect(screen.getByText("Step 4 of 4")).toBeInTheDocument();
+    expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("UTC (UTC)")).toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", { name: /Turn on and copy link/ }),
     );
@@ -1097,6 +1099,10 @@ describe("BookingSettingsSection", () => {
     await user.keyboard("k");
     expect(await screen.findByText("Step 4 of 5")).toBeInTheDocument();
     expect(screen.getByLabelText("Destination calendar")).toBeInTheDocument();
+    await user.click(await screen.findByRole("button", { name: /^Continue/ }));
+    expect(await screen.findByText("Step 5 of 5")).toBeInTheDocument();
+    expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("UTC (UTC)")).toBeInTheDocument();
   });
 
   it("keeps the go-live step visible when enable fails", async () => {
