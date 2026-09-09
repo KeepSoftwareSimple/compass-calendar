@@ -90,6 +90,23 @@ describe("PublicBookingMonthGrid", () => {
     expect(screen.getByText("16")).toBeInTheDocument();
   });
 
+  it("marks an unavailable cell as disabled and announces no times available", () => {
+    renderGrid();
+
+    const cell = screen.getByText((_, element) => {
+      const text = element?.textContent?.replace(/\s+/g, " ").trim() ?? "";
+      return (
+        element?.getAttribute("aria-disabled") === "true" &&
+        /^\d+ no times available$/.test(text) &&
+        text.startsWith("16")
+      );
+    });
+    expect(cell).toHaveAttribute("aria-disabled", "true");
+    expect(cell.textContent?.replace(/\s+/g, " ").trim()).toMatch(
+      /no times available$/,
+    );
+  });
+
   it("keeps a single day in the tab order and moves with arrow keys", async () => {
     const user = userEvent.setup({ delay: null });
     const { selected } = renderGrid();

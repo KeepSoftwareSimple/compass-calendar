@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -16,21 +16,27 @@ menus for weekly hours, fewer host scheduling knobs, sidebar-only Mod chords,
 no horizontal scroll, and the stale-holiday-calendar booking gate fix. v1.9
 anchored Settings to the top, animated More options, let a day hold several
 hour blocks, moved meeting timezone under More options, and trimmed helper
-copy. The production gate stays off.
+copy. v1.10 shipped the staging meeting-flow fixes: Meet on insert, hours
+alignment, destination under More options, confirmation links only, host
+reconnect and bookability status, the setup wizard dead-end fixes, host
+new-meeting notice, sidebar discovery, an off page that keeps its
+link, and unavailable guest-month days that announce no times available.
+The production gate stays off.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
 
 ## Status
 
-v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, and v1.9 are implemented in the Compass
+v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, and v1.10 are implemented in the Compass
 monorepo (public `/meet/:username`, host Settings, backend APIs, guest
 cancel, guest reschedule, edit-details, one-click turn on, Essentials /
 More options, editable address, default hours, branded connect pills,
 funnel analytics, meeting copy, hold-Mod section chords, the on/off
 switch, a per-day weekly hours list that can hold several blocks, meeting
 timezone under More options, the guided first-run setup wizard, Start
-and End time menus, and the v1.8 booking gate fix). Booking
+and End time menus, the v1.8 booking gate fix, and the v1.10 meeting-flow
+fixes). Booking
 is enabled in development and staging (`runtime.nodeEnv` other than
 `production`) and disabled in production. Do not flip `isBookingEnabled`.
 A standalone Compass Booking product (separate brand, domain, or
@@ -168,7 +174,9 @@ focus uses the accent ring. Intended Tab order on the picker:
 1. **Skip to open times** (focus-revealed link) jumps to **Pick a time**,
    skipping the month grid.
 2. Timezone control, then previous/next month, then one tab stop on the
-   selected day (arrow keys move among days).
+   selected day (arrow keys move among available days). Unavailable days
+   stay out of the tab order, keep `aria-disabled="true"`, and include
+   an sr-only suffix `no times available`.
 3. One tab stop on that day's times (arrow keys move among slots, Home
    and End jump to first and last). Enter or Space on a day moves focus
    to the first slot. Enter or Space on a slot opens **Your details**
@@ -242,7 +250,7 @@ One booking-page record per user.
 | Duration | `15` / `30` / `45` / `60` minutes. Default `30`. Custom minutes later. |
 | Destination calendar | Writable calendar (`canWriteEvents`) on a healthy connection. Receives the created event. |
 | Blocking calendars | Calendars whose busy intervals occupy slots. Any calendar the host can read availability for, including `freeBusyReader`. Default: every imported calendar on the destination account. |
-| General availability | Weekly intervals in the **host booking timezone**. Empty weekday = unavailable. Default Mon-Fri 09:00-17:00, shown as one grouped hours row. Turning on requires at least one window (`AVAILABILITY_REQUIRED`). Default timezone: the timezone currently in the host's calendar view when they first enable booking, not UTC. An unconfigured admin GET uses the host's primary calendar timezone. |
+| General availability | Weekly intervals in the **host booking timezone**. Empty weekday = unavailable. Default Mon-Fri 09:00-17:00 as one block per weekday on the per-day list. Turning on requires at least one window (`AVAILABILITY_REQUIRED`). Default timezone: the timezone currently in the host's calendar view when they first enable booking, not UTC. An unconfigured admin GET uses the host's primary calendar timezone. |
 | Scheduling window | Minimum notice default **4 hours**, capped at **1440 hours** (the 60-day horizon in hours). Maximum horizon default **60 days**. The 60-day cap matches Sync's busy-query bound (`BUSY_QUERY_MAX_WINDOW_MS` in `packages/core/src/types/sync/availability.contracts.ts`). |
 
 **Slot grid:** 15-minute starts in the host timezone, filtered so a slot
@@ -574,8 +582,10 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
-| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
-| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
+| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
+| Sidebar discovery | `packages/web/src/components/Sidebar/MeetingPageNudge/` |
+| Description flattening | `packages/web/src/components/DescriptionEditor/plain-text-description.ts` |
+| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
 | Public web API client | `packages/web/src/api/public-booking.api.ts` |
 | E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
 
@@ -624,6 +634,10 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   host edit can be overwritten. Accepted for v1.3.
 - **Confirm is fail-closed.** When Sync reports `bookable: false`, slots
   disappear and confirm returns `409`.
+- **New-meetings claim has no `createdAt` index.**
+  `POST /api/booking/page/new-meetings/claim` filters confirmed
+  reservations by `createdAt`. Accepted for v1.10 while the production
+  gate stays off.
 - **Removed host settings may linger on old Mongo documents.** Buffer,
   max meetings per day, welcome text, and guest-invite permission were
   removed in Booking v1.8. Zod strips those keys on read; they are not
@@ -667,6 +681,19 @@ email.
 A signed-in host whose Meeting page is not live sees a sidebar card that
 opens Settings on the Meeting tab. Dismissing it is per browser; turning
 the page on hides it everywhere.
+
+Weekly hours on the configured form no longer show a timezone line. That
+line lived on the v1.9 live form (`Times in … Change it under Meeting
+timezone.`); v1.10 moved timezone to the wizard hours hint and the
+go-live summary only.
+
+The first-run wizard shows the destination step unless exactly one
+writable calendar exists. With zero writables it asks the host to
+connect, keeps Continue disabled, and does not reach go live. Steps after
+the first show Back. A taken address focuses the address field.
+
+Unavailable days on the guest month grid stay non-focusable and announce
+`no times available`.
 
 ### v1.9
 

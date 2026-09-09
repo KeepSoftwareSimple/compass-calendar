@@ -159,7 +159,9 @@ The one v1 scheduling page owned by a Compass user, shown to users as
 Meeting page. Settings configure it; guests open it at `/meet/:username`.
 Old `/book` username links redirect client-side. Host weekly hours are a
 per-day list; a weekday can hold several blocks. Meeting timezone is
-edited under More options.
+edited under More options. First-run uses a guided wizard. A signed-in
+host whose page is not live sees a sidebar card to set it up. A live page
+shows whether guests can book right now.
 _Avoid_: event type (v1 has one duration per user, not Calendly-style
 multiple event types)
 

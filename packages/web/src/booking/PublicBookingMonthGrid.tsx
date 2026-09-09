@@ -183,9 +183,11 @@ export function PublicBookingMonthGrid({
                     <div
                       key={day.dateKey}
                       aria-current={day.isToday ? "date" : undefined}
+                      aria-disabled="true"
                       className="flex h-10 w-full items-center justify-center rounded-md text-sm text-text-muted"
                     >
                       {day.dayOfMonth}
+                      <span className="sr-only"> no times available</span>
                     </div>
                   );
                 }
