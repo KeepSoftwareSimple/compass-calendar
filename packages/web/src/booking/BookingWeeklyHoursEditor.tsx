@@ -1,5 +1,5 @@
 import { Minus, Plus } from "@phosphor-icons/react";
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   type LocalTimeOfDay,
   type WeeklyAvailability,
@@ -121,15 +121,22 @@ export function BookingWeeklyHoursEditor({
   describedBy,
 }: BookingWeeklyHoursEditorProps) {
   const pendingFocusIdRef = useRef<string | null>(null);
+  const [focusToken, setFocusToken] = useState(0);
 
   useLayoutEffect(() => {
+    if (focusToken === 0) return;
     const id = pendingFocusIdRef.current;
     if (!id) return;
     const node = document.getElementById(id);
     if (!(node instanceof HTMLElement)) return;
     pendingFocusIdRef.current = null;
     node.focus();
-  }, [value]);
+  }, [focusToken]);
+
+  const requestFocus = (id: string) => {
+    pendingFocusIdRef.current = id;
+    setFocusToken((token) => token + 1);
+  };
 
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
@@ -170,10 +177,8 @@ export function BookingWeeklyHoursEditor({
                     className="size-8 text-text"
                     disabled={!canAddBlock(value, weekday)}
                     onClick={() => {
-                      pendingFocusIdRef.current = hoursSelectId(
-                        weekday,
-                        "start",
-                        blocks.length,
+                      requestFocus(
+                        hoursSelectId(weekday, "start", blocks.length),
                       );
                       onChange(addBlock(value, weekday));
                     }}
@@ -197,10 +202,8 @@ export function BookingWeeklyHoursEditor({
                         aria-label={`Remove ${weekdayLabel(weekday)} ${formatTimeLabel(block.start)} to ${formatTimeLabel(block.end)}`}
                         className="size-8 text-text"
                         onClick={() => {
-                          pendingFocusIdRef.current = hoursSelectId(
-                            weekday,
-                            "start",
-                            index - 1,
+                          requestFocus(
+                            hoursSelectId(weekday, "start", index - 1),
                           );
                           onChange(removeBlock(value, weekday, index));
                         }}

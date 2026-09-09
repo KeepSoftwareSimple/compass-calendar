@@ -310,7 +310,7 @@ test("essentials fit without scrolling at 1440x900", async ({ page }) => {
 });
 
 test.describe("reduced motion", () => {
-  test.use({ reducedMotion: "reduce" });
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
 
   test("opening More options and adding Monday hours does not move the dialog", async ({
     page,
