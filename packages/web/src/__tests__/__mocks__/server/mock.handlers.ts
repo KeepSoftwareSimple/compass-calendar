@@ -128,6 +128,12 @@ export const globalHandlers = [
       }),
     );
   }),
+  rest.get(`${ENV_WEB.API_BASEURL}/booking/page/status`, (_req, res, ctx) => {
+    return res(
+      ctx.status(Status.OK),
+      ctx.json({ bookable: true, reasons: [] }),
+    );
+  }),
   rest.get(`${ENV_WEB.API_BASEURL}/booking/pages/:slug`, (_req, res, ctx) => {
     return res(ctx.status(Status.NOT_FOUND), ctx.json({ code: "NOT_FOUND" }));
   }),

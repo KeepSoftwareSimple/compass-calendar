@@ -263,6 +263,16 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   button), or not connected (`Connect a calendar to turn your page
   back on.` with the connect buttons). The first-run connect prompt
   is only for a host who has no saved page.
+  When the page is live, a **Host status** line under the link reports
+  whether guests can book right now. It uses the same readiness probe
+  as guest slots (`GET /api/booking/page/status`). If they cannot, the
+  line is `Guests can't book right now:` plus the reason and the fix:
+  reconnect for `actionRequired` / `disconnected`; importing and delayed
+  copy for those connection states; calendar name plus catch-up or
+  remove-from-blocking copy for `stale` / `neverSynced` / `notImported`;
+  the existing paid-subscription sentence for billing. The Settings
+  nav **Meeting** button shows a warning dot and sr-only
+  `needs attention` while the page is live and not bookable.
 - **Essentials:** duration and weekly hours. These fit without scrolling
   at 1440x900.
 - **More options:** an uncontrolled native `<details>` that starts
@@ -488,6 +498,9 @@ Unauthenticated:
 Authenticated (host session + writable billing, same as event writes):
 
 - `GET /api/booking/page` — host page, including slug and copyable URL.
+- `GET /api/booking/page/status` — whether guests can book right now.
+  `{ bookable, reasons }` from the same readiness probe guest slots use.
+  A disabled page, or no record, answers `{ bookable: true, reasons: [] }`.
 - `PUT /api/booking/page` — replace settings. Accepts optional `slug`.
   Allocates slug on first enable when none is stored. `409` with
   `SLUG_TAKEN` when the requested address belongs to another host.
@@ -524,7 +537,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Slot engine | `packages/core/src/booking/compute-booking-slots.ts` |
 | Occupancy policy | `packages/core/src/booking/occupies-booking-slot.ts` |
 | Backend admin API | `packages/backend/src/booking/controllers/booking.controller.ts`, `services/booking-page.service.ts` |
-| Backend public API | `packages/backend/src/booking/booking.routes.config.ts`, `services/public-booking.service.ts` |
+| Backend public API | `packages/backend/src/booking/booking.routes.config.ts`, `services/public-booking.service.ts`, `services/booking-readiness.ts` |
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
@@ -541,7 +554,7 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
 
 | Event | Properties | When |
 | --- | --- | --- |
-| `booking_settings_opened` | `has_connection: boolean`, `is_live: boolean` | Settings > Meeting mounts (after the page is known, or immediately on the connect prompt) |
+| `booking_settings_opened` | `has_connection: boolean`, `is_live: boolean`, `is_bookable: boolean` | Settings > Meeting mounts (after the page is known, or immediately on the connect prompt) |
 | `booking_page_enabled` | `first_time: boolean` | Turn-on save succeeds. `first_time` is true when the page had no `bookingUrl` before this save |
 | `booking_link_copied` | `source: "button" \| "save"` | Successful copy from the Copy button, or auto-copy after a successful turn-on / save |
 | `booking_page_viewed` | `duration_minutes: number` | Public page query succeeds with `enabled: true`, once per slug |
@@ -592,15 +605,17 @@ on the real `events.insert` call (`conferenceDataVersion: 1`). Before this,
 the adapter passed the conference payload but the googleapis wrapper dropped
 the version flag, so Google ignored Meet.
 
-<<<<<<< HEAD
+The guest confirmation page dropped **Copy cancel link** and **Copy
+reschedule link**. Meeting actions are the two links only.
+
 A saved Meeting page stays on screen when the calendar connection is
 unhealthy. A banner above the status header tells the host to reconnect,
 wait for import, or connect again. The first-run connect prompt is only
 for hosts who have never saved a page.
-=======
-The guest confirmation page dropped **Copy cancel link** and **Copy
-reschedule link**. Meeting actions are the two links only.
->>>>>>> origin/main
+
+A live Meeting page shows whether guests can book right now, with the
+fix for each blocker, and the Settings Meeting nav warns when they
+cannot.
 
 Opening Settings no longer flashes the calendar behind the dialog on the
 first scroll: the panel is promoted at mount, and an inner wrapper owns

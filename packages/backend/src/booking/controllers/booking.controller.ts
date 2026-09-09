@@ -21,6 +21,17 @@ class BookingController {
     }
   };
 
+  getPageStatus = async (req: SessionRequest, res: Response) => {
+    try {
+      const userId = zObjectId.parse(req.session?.getUserId());
+      const response = await publicBookingService.getHostPageStatus(userId);
+      res.status(Status.OK).json(response);
+    } catch (error) {
+      const { status, body } = toBookingErrorResponse(error);
+      res.status(status).json(body);
+    }
+  };
+
   putPage = async (req: SessionRequest, res: Response) => {
     try {
       const userId = zObjectId.parse(req.session?.getUserId());
