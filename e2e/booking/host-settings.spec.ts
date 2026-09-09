@@ -496,3 +496,90 @@ test("shows why guests cannot book when a blocking calendar is stale", async ({
     include: "[role='dialog']",
   });
 });
+
+test("sidebar nudge opens Meeting settings and hides once the page is live", async ({
+  page,
+}) => {
+  const captured = await prepareSignedInBookingSettingsPage(page, {
+    configured: false,
+    openSettings: false,
+    completeOnboarding: true,
+  });
+
+  const nudge = page.getByRole("region", { name: "Meeting page" });
+  await expect(nudge).toBeVisible();
+  await nudge.getByRole("button", { name: "Set up meeting page" }).click();
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(settingsDialog).toBeVisible();
+  await expect(
+    settingsDialog.getByRole("button", { name: "Meeting" }),
+  ).toHaveAttribute("aria-current", "true");
+  await expect(
+    settingsDialog
+      .locator("p.text-text-muted")
+      .filter({ hasText: /^Step 1 of \d+$/ }),
+  ).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(settingsDialog).toHaveCount(0);
+
+  captured.setGetPayload({
+    enabled: true,
+    durationMinutes: 45,
+    destinationCalendarId: BOOKING_CALENDAR_ID,
+    blockingCalendarIds: [BOOKING_CALENDAR_ID],
+    timeZone: "America/New_York",
+    weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+    minNoticeHours: 4,
+    maxHorizonDays: 60,
+    id: "000000000000000000000001",
+    slug: "hostuser",
+    hostUserId: "000000000000000000000002",
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+    bookingUrl: "https://compasscalendar.com/meet/hostuser",
+  });
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { level: 1 }).getByRole("button"),
+  ).toBeVisible({ timeout: 15000 });
+  await page.waitForFunction(
+    () =>
+      (
+        window as Window & {
+          __COMPASS_E2E_HOOKS__?: { setAuthenticated: (v: boolean) => void };
+        }
+      ).__COMPASS_E2E_HOOKS__ !== undefined,
+  );
+  await page.evaluate(() => {
+    (
+      window as Window & {
+        __COMPASS_E2E_HOOKS__?: { setAuthenticated: (v: boolean) => void };
+      }
+    ).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
+  });
+  await page.waitForFunction(() => {
+    const bridge = (
+      window as Window & {
+        __COMPASS_E2E_STORE__?: { userMetadata?: unknown };
+      }
+    ).__COMPASS_E2E_STORE__;
+    return Boolean(bridge?.userMetadata);
+  });
+  await page.evaluate((metadata) => {
+    const bridge = (
+      window as Window & {
+        __COMPASS_E2E_STORE__?: {
+          userMetadata?: { set: (metadata: unknown) => void };
+        };
+      }
+    ).__COMPASS_E2E_STORE__;
+    bridge?.userMetadata?.set(metadata);
+  }, captured.hostMetadata);
+
+  await expect(page.getByRole("region", { name: "Meeting page" })).toHaveCount(
+    0,
+  );
+});

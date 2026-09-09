@@ -310,6 +310,12 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   field. Address **Continue** saves a disabled draft so the slug is reserved.
   **Turn on and copy link** on the last step saves with `enabled: true`,
   copies the link, and then shows the full form with the switch focused.
+- **Discovery:** a signed-in host whose page is not live sees a sidebar
+  card, **Let people book time with you**, under the calendar list. **Set
+  up meeting page** opens Settings on the Meeting tab. **Dismiss** hides
+  the card on that browser. Turning the page on hides it everywhere. The
+  card does not show on mobile, while the booking gate is off, or while
+  the first-event prompt is still pending.
 - **Timezone** uses the same searchable combobox as time travel. The
   trigger is one tab stop and still renders a stored non-canonical alias.
   It lives under More options on the configured form. The setup wizard
@@ -648,6 +654,10 @@ to the nav column while it loads.
 A host who returns to Compass after a guest booked sees one toast for the
 new meetings, with Show jumping to that week. Compass still does not send
 email.
+
+A signed-in host whose Meeting page is not live sees a sidebar card that
+opens Settings on the Meeting tab. Dismissing it is per browser; turning
+the page on hides it everywhere.
 
 ### v1.9
 

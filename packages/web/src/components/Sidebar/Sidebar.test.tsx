@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react";
+import { type PropsWithChildren } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
+import { SessionContext } from "@web/auth/compass/session/session.context";
+import {
+  initialFirstEventPromptState,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -112,5 +118,37 @@ describe("Sidebar", () => {
 
     expect(screen.getByText("Event details")).toBeTruthy();
     expect(screen.queryByText("Calendar picker")).toBeNull();
+  });
+
+  it("shows the meeting page nudge after the calendar list for an eligible user", async () => {
+    useFirstEventPromptStore.setState(
+      { ...initialFirstEventPromptState, isDone: true },
+      true,
+    );
+    const { wrapper: StoreWrapper } = createStoreWrapper();
+
+    function Wrapper({ children }: PropsWithChildren) {
+      return (
+        <StoreWrapper>
+          <SessionContext.Provider
+            value={{ authenticated: true, setAuthenticated: () => {} }}
+          >
+            {children}
+          </SessionContext.Provider>
+        </StoreWrapper>
+      );
+    }
+
+    render(<Sidebar {...sidebarProps} />, { wrapper: Wrapper });
+
+    expect(await screen.findByText("Calendar list")).toBeTruthy();
+    const nudge = await screen.findByRole("heading", {
+      name: "Let people book time with you",
+    });
+    const calendarList = screen.getByText("Calendar list");
+    expect(
+      calendarList.compareDocumentPosition(nudge) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 });
