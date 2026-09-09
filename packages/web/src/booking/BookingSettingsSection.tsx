@@ -88,6 +88,7 @@ const DURATION_OPTIONS: BookingDurationMinutes[] = [15, 30, 45, 60];
 
 const MORE_OPTIONS_FIELDS = new Set<BookingField>([
   "address",
+  "destination",
   "timezone",
   "blocking",
   "notice",
@@ -673,61 +674,6 @@ export function BookingSettingsSection({
           />
         </div>
 
-        <div>
-          <BookingFieldLabel htmlFor="booking-destination-calendar">
-            Destination calendar
-          </BookingFieldLabel>
-          <select
-            {...bookingFieldAttrs("destination")}
-            aria-describedby={
-              destinationCannotMintMeet ? destinationMeetWarningId : undefined
-            }
-            className={BOOKING_SELECT_CLASS_NAME}
-            id="booking-destination-calendar"
-            onChange={(event) =>
-              handleDestinationChange(event.target.value as CalendarId)
-            }
-            value={form.destinationCalendarId}
-          >
-            {writableCalendars.length === 0 ? (
-              <option value={BOOKING_PLACEHOLDER_CALENDAR_ID}>
-                No writable calendars
-              </option>
-            ) : (
-              <>
-                {writableGroups
-                  .filter((group) => group.calendars.length > 0)
-                  .map((group) => (
-                    <optgroup
-                      key={group.accountEmail}
-                      label={group.accountEmail}
-                    >
-                      {group.calendars.map((calendar) => (
-                        <option key={calendar.id} value={calendar.id}>
-                          {formatBookingDestinationOptionLabel(calendar)}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                {writableUngrouped.map((calendar) => (
-                  <option key={calendar.id} value={calendar.id}>
-                    {formatBookingDestinationOptionLabel(calendar)}
-                  </option>
-                ))}
-              </>
-            )}
-          </select>
-          {destinationConferenceHint ? (
-            <p
-              className="mt-1 text-sm text-warning"
-              id={destinationMeetWarningId}
-              role="status"
-            >
-              {destinationConferenceHint}
-            </p>
-          ) : null}
-        </div>
-
         <BookingMoreOptions forceOpen={forceOpenMoreOptions}>
           <BookingAddressField
             bookingUrl={savedPage?.bookingUrl ?? null}
@@ -736,6 +682,61 @@ export function BookingSettingsSection({
             savedSlug={savedSlug}
             slug={form.slug ?? ""}
           />
+
+          <div>
+            <BookingFieldLabel htmlFor="booking-destination-calendar">
+              Destination calendar
+            </BookingFieldLabel>
+            <select
+              {...bookingFieldAttrs("destination")}
+              aria-describedby={
+                destinationCannotMintMeet ? destinationMeetWarningId : undefined
+              }
+              className={BOOKING_SELECT_CLASS_NAME}
+              id="booking-destination-calendar"
+              onChange={(event) =>
+                handleDestinationChange(event.target.value as CalendarId)
+              }
+              value={form.destinationCalendarId}
+            >
+              {writableCalendars.length === 0 ? (
+                <option value={BOOKING_PLACEHOLDER_CALENDAR_ID}>
+                  No writable calendars
+                </option>
+              ) : (
+                <>
+                  {writableGroups
+                    .filter((group) => group.calendars.length > 0)
+                    .map((group) => (
+                      <optgroup
+                        key={group.accountEmail}
+                        label={group.accountEmail}
+                      >
+                        {group.calendars.map((calendar) => (
+                          <option key={calendar.id} value={calendar.id}>
+                            {formatBookingDestinationOptionLabel(calendar)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  {writableUngrouped.map((calendar) => (
+                    <option key={calendar.id} value={calendar.id}>
+                      {formatBookingDestinationOptionLabel(calendar)}
+                    </option>
+                  ))}
+                </>
+              )}
+            </select>
+            {destinationConferenceHint ? (
+              <p
+                className="mt-1 text-sm text-warning"
+                id={destinationMeetWarningId}
+                role="status"
+              >
+                {destinationConferenceHint}
+              </p>
+            ) : null}
+          </div>
 
           <div className="min-w-0" {...bookingFieldAttrs("timezone")}>
             <BookingTimezoneField

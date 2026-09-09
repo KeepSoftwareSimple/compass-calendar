@@ -417,7 +417,7 @@ describe("BookingSettingsSection", () => {
     ]);
   });
 
-  it("shows only address, blocking calendars, notice, and horizon in More options", async () => {
+  it("shows only address, destination calendar, blocking calendars, notice, and horizon in More options", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
@@ -440,6 +440,7 @@ describe("BookingSettingsSection", () => {
     await userEvent.setup({ delay: null }).click(summary);
 
     expect(screen.getByLabelText("Page address")).toBeInTheDocument();
+    expect(screen.getByLabelText("Destination calendar")).toBeInTheDocument();
     expect(screen.getByText("Blocking calendars")).toBeInTheDocument();
     expect(screen.getByLabelText("Minimum notice (hours)")).toBeInTheDocument();
     expect(screen.getByLabelText("Maximum horizon (days)")).toBeInTheDocument();
@@ -640,11 +641,18 @@ describe("BookingSettingsSection", () => {
 
     await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
     const address = screen.getByLabelText("Page address");
+    const destination = screen.getByRole("combobox", {
+      name: "Destination calendar",
+    });
     const trigger = screen.getByRole("button", {
       name: /^Meeting timezone:/,
     });
     expect(
-      address.compareDocumentPosition(trigger) &
+      address.compareDocumentPosition(destination) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(
+      destination.compareDocumentPosition(trigger) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
@@ -2857,6 +2865,9 @@ describe("BookingSettingsSection", () => {
         screen.getByRole("combobox", { name: "Destination calendar" }),
       );
     });
+    const summary = screen.getByText(BOOKING_MORE_OPTIONS_LABEL);
+    const details = summary.closest("details");
+    expect(details).toHaveAttribute("open");
   });
 });
 
