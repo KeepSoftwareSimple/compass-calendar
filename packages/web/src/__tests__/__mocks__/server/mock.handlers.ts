@@ -107,6 +107,12 @@ export const globalHandlers = [
       }),
     );
   }),
+  rest.post(
+    `${ENV_WEB.API_BASEURL}/booking/page/new-meetings/claim`,
+    (_req, res, ctx) => {
+      return res(ctx.status(Status.OK), ctx.json({ reservations: [] }));
+    },
+  ),
   rest.get(`${ENV_WEB.API_BASEURL}/booking/page`, (_req, res, ctx) => {
     return res(
       ctx.status(Status.OK),

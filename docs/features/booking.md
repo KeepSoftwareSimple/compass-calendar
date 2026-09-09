@@ -122,6 +122,16 @@ remains Booking page (`SettingsPage` includes `"booking"` in
 `packages/web/src/settings/settings.store.ts`). There is no dedicated
 `/booking` host app in v1.
 
+### Host notice
+
+When the host opens Compass, and again when the tab becomes visible after
+at least five minutes, Compass claims new confirmed bookings and shows one
+toast. One booking: `Bob booked a meeting: Thu, Sep 24, 12:00 PM`. Several:
+`3 meetings booked since you last looked. Latest: Bob, Thu, Sep 24, 12:00 PM`.
+Show moves the week view to that meeting. Times use the host's effective
+timezone. Cancelled reservations are never announced. Compass does not send
+email.
+
 ### Guest
 
 The guest is unauthenticated. They open the public URL, pick a day on
@@ -491,6 +501,11 @@ Authenticated (host session + writable billing, same as event writes):
 - `PUT /api/booking/page` — replace settings. Accepts optional `slug`.
   Allocates slug on first enable when none is stored. `409` with
   `SLUG_TAKEN` when the requested address belongs to another host.
+- `POST /api/booking/page/new-meetings/claim` — stamp `hostNoticedAt` and
+  return confirmed reservations created since the previous notice (or
+  page `createdAt`). `{ reservations: [] }` when there is no page or it is
+  off. Cancelled reservations are omitted. Concurrent claims do not
+  double-report.
 - Enabling without a healthy calendar connection is a typed `403`
   (`CALENDAR_NOT_CONNECTED`; `GOOGLE_NOT_CONNECTED` remains an alias).
 - Enabling with zero weekly hours is a typed `400` (`AVAILABILITY_REQUIRED`).
@@ -592,21 +607,23 @@ on the real `events.insert` call (`conferenceDataVersion: 1`). Before this,
 the adapter passed the conference payload but the googleapis wrapper dropped
 the version flag, so Google ignored Meet.
 
-<<<<<<< HEAD
 A saved Meeting page stays on screen when the calendar connection is
 unhealthy. A banner above the status header tells the host to reconnect,
 wait for import, or connect again. The first-run connect prompt is only
 for hosts who have never saved a page.
-=======
+
 The guest confirmation page dropped **Copy cancel link** and **Copy
 reschedule link**. Meeting actions are the two links only.
->>>>>>> origin/main
 
 Opening Settings no longer flashes the calendar behind the dialog on the
 first scroll: the panel is promoted at mount, and an inner wrapper owns
 overflow so the transform transition is not on the scroll container. The
 Meeting tab's lazy chunk reserves height so the dialog does not collapse
 to the nav column while it loads.
+
+A host who returns to Compass after a guest booked sees one toast for the
+new meetings, with Show jumping to that week. Compass still does not send
+email.
 
 ### v1.9
 

@@ -532,3 +532,20 @@ export const allocateBookingSlug = (
     }
   }
 };
+
+export const BookingNewMeetingsClaimReservationSchema = z.strictObject({
+  id: BookingReservationIdSchema,
+  guestName: z.string().trim().min(1).max(256),
+  slotStart: DateTimeSchema,
+  slotEnd: DateTimeSchema,
+});
+export type BookingNewMeetingsClaimReservation = z.infer<
+  typeof BookingNewMeetingsClaimReservationSchema
+>;
+
+export const BookingNewMeetingsClaimResponseSchema = z.strictObject({
+  reservations: z.array(BookingNewMeetingsClaimReservationSchema).readonly(),
+});
+export type BookingNewMeetingsClaimResponse = z.infer<
+  typeof BookingNewMeetingsClaimResponseSchema
+>;

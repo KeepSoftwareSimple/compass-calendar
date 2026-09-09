@@ -7,6 +7,7 @@ import {
   BOOKING_MAX_HORIZON_DAYS,
   BOOKING_MAX_MIN_NOTICE_HOURS,
   BOOKING_PLACEHOLDER_CALENDAR_ID,
+  BookingNewMeetingsClaimResponseSchema,
   BookingPageSchema,
   BookingReservationSlotsQuerySchema,
   BookingSlugSchema,
@@ -662,5 +663,29 @@ describe("HTTP booking contracts", () => {
 
   it("rejects reserved slug reschedule", () => {
     expect(BookingSlugSchema.safeParse("reschedule").success).toBe(false);
+  });
+});
+
+describe("BookingNewMeetingsClaimResponseSchema", () => {
+  it("accepts an empty claim", () => {
+    expect(
+      BookingNewMeetingsClaimResponseSchema.safeParse({ reservations: [] })
+        .success,
+    ).toBe(true);
+  });
+
+  it("accepts a confirmed reservation payload", () => {
+    expect(
+      BookingNewMeetingsClaimResponseSchema.safeParse({
+        reservations: [
+          {
+            id: objectId(),
+            guestName: "Bob",
+            slotStart: dateTime(),
+            slotEnd: "2026-08-30T12:30:00.000Z",
+          },
+        ],
+      }).success,
+    ).toBe(true);
   });
 });
