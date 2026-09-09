@@ -144,7 +144,7 @@ export const OverlayPanel = ({
     align === "start" ? "items-start" : "items-center",
     variant === "modal" && [
       widthClassName,
-      "max-h-[90vh] max-w-[90vw] overflow-y-auto rounded-xl p-8",
+      "max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl will-change-transform",
       "transition-transform duration-400 ease-out data-closing:scale-105 motion-reduce:transition-none",
       panelClassName ??
         "gap-6 bg-surface-panel shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)]",
@@ -152,6 +152,11 @@ export const OverlayPanel = ({
     variant === "status" &&
       "max-w-sm gap-3 rounded-lg border border-border bg-surface/90 px-6 py-5 shadow-lg",
     variant === "status" && panelClassName,
+  );
+
+  const scrollBodyClasses = classNames(
+    "flex min-h-0 w-full flex-1 flex-col gap-6 overflow-y-auto p-8",
+    align === "start" ? "items-start" : "items-center",
   );
 
   const titleClasses = classNames(
@@ -204,6 +209,32 @@ export const OverlayPanel = ({
     }
   };
 
+  const panelBody = (
+    <>
+      {icon}
+      {title && (
+        <div className="flex w-full items-center justify-between gap-3">
+          {variant === "modal" ? (
+            <h2 id={titleId} className={titleClasses}>
+              {title}
+            </h2>
+          ) : (
+            <div id={titleId} className={titleClasses}>
+              {title}
+            </div>
+          )}
+          {titleAction}
+        </div>
+      )}
+      {message && (
+        <p id={messageId} className={messageClasses}>
+          {message}
+        </p>
+      )}
+      {children}
+    </>
+  );
+
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: The backdrop catches outside clicks, Tab/Mod+Enter, and in-tree Escape. Document Escape (useOverlayEscape) covers the case where focus is on body.
     <div
@@ -228,27 +259,11 @@ export const OverlayPanel = ({
         aria-describedby={message ? messageId : undefined}
         aria-live={role === "status" ? "polite" : undefined}
       >
-        {icon}
-        {title && (
-          <div className="flex w-full items-center justify-between gap-3">
-            {variant === "modal" ? (
-              <h2 id={titleId} className={titleClasses}>
-                {title}
-              </h2>
-            ) : (
-              <div id={titleId} className={titleClasses}>
-                {title}
-              </div>
-            )}
-            {titleAction}
-          </div>
+        {variant === "modal" ? (
+          <div className={scrollBodyClasses}>{panelBody}</div>
+        ) : (
+          panelBody
         )}
-        {message && (
-          <p id={messageId} className={messageClasses}>
-            {message}
-          </p>
-        )}
-        {children}
       </div>
     </div>
   );

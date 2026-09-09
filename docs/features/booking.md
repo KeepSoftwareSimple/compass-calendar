@@ -245,6 +245,8 @@ group. Hours are a per-day list: a checkbox, short label, Start and
 End menus, and an action cell. Settings is anchored to
 the top of the viewport and grows downward; More options animates
 open over about 200 ms, and reduced motion disables the animation.
+The dialog panel is a compositor layer at mount. An inner wrapper
+scrolls, so the first wheel tick does not re-rasterize the backdrop.
 
 - **Status:** a **Meeting page** switch reflects whether the page is
   live. When on, it shows the meeting link with Copy and
@@ -581,6 +583,12 @@ the version flag, so Google ignored Meet.
 
 The guest confirmation page dropped **Copy cancel link** and **Copy
 reschedule link**. Meeting actions are the two links only.
+
+Opening Settings no longer flashes the calendar behind the dialog on the
+first scroll: the panel is promoted at mount, and an inner wrapper owns
+overflow so the transform transition is not on the scroll container. The
+Meeting tab's lazy chunk reserves height so the dialog does not collapse
+to the nav column while it loads.
 
 ### v1.9
 

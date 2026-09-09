@@ -17,6 +17,18 @@ const openMoreOptions = async (settingsDialog: Locator) => {
   await settingsDialog.getByText("More options", { exact: true }).click();
 };
 
+const scrollSettingsDialog = async (
+  settingsDialog: Locator,
+  scrollTop: number,
+) =>
+  settingsDialog.evaluate((el, top) => {
+    const scroller =
+      (el.querySelector(":scope > .overflow-y-auto") as HTMLElement | null) ??
+      el;
+    scroller.scrollTop = top;
+    return scroller.scrollTop;
+  }, scrollTop);
+
 test("settings booking page shows a copyable public link after save", async ({
   page,
 }) => {
@@ -105,9 +117,7 @@ test("keyboard hint sits in the nav column and the last control stays above Save
   await expect(hint).toBeVisible();
 
   await lastControl.scrollIntoViewIfNeeded();
-  await settingsDialog.evaluate((el) => {
-    el.scrollTop = el.scrollHeight;
-  });
+  await scrollSettingsDialog(settingsDialog, 10_000);
 
   const lastBox = await lastControl.boundingBox();
   const saveBarTop = await save.evaluate((el) => {
@@ -296,9 +306,7 @@ test("essentials fit without scrolling at 1440x900", async ({ page }) => {
   const summary = settingsDialog.getByText("More options", { exact: true });
   await expect(summary).toBeVisible();
 
-  await settingsDialog.evaluate((el) => {
-    el.scrollTop = 0;
-  });
+  await scrollSettingsDialog(settingsDialog, 0);
 
   const dialogBox = await settingsDialog.boundingBox();
   const summaryBox = await summary.boundingBox();
@@ -307,6 +315,17 @@ test("essentials fit without scrolling at 1440x900", async ({ page }) => {
   expect(summaryBox!.y + summaryBox!.height).toBeLessThanOrEqual(
     dialogBox!.y + dialogBox!.height,
   );
+});
+
+test("settings dialog body scrolls on an inner wrapper", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 700 });
+  await prepareSignedInBookingSettingsPage(page);
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await openMoreOptions(settingsDialog);
+  const before = await scrollSettingsDialog(settingsDialog, 0);
+  expect(before).toBe(0);
+  const after = await scrollSettingsDialog(settingsDialog, 80);
+  expect(after).toBeGreaterThan(0);
 });
 
 test("second hours line aligns with the first", async ({ page }) => {

@@ -28,7 +28,13 @@ describe("OverlayPanel", () => {
 
     const dialog = screen.getByRole("dialog", { name: "Settings" });
     expect(dialog.className).toContain("max-h-[90vh]");
-    expect(dialog.className).toContain("overflow-y-auto");
+    expect(dialog.className).toContain("will-change-transform");
+    expect(dialog.className).toContain("transition-transform");
+    expect(dialog.className).not.toContain("overflow-y-auto");
+    const scroller = dialog.firstElementChild;
+    expect(scroller).not.toBeNull();
+    expect(scroller?.className).toContain("overflow-y-auto");
+    expect(dialog.parentElement?.className).toContain("bg-background/85");
   });
 
   it("centers the backdrop by default", () => {

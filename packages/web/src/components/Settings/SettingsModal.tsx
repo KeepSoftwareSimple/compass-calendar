@@ -265,7 +265,9 @@ export const SettingsModal: FC = () => {
           {page === "billing" ? (
             <PlanSection showShortcuts={areHintsVisible} />
           ) : page === "booking" && IS_BOOKING_ENABLED ? (
-            <Suspense fallback={null}>
+            <Suspense
+              fallback={<div aria-hidden className="min-h-[28rem] w-full" />}
+            >
               <BookingSettingsSection
                 dismissGuardRef={bookingDismissGuardRef}
                 onDiscardUnsaved={dismissToPalette}
