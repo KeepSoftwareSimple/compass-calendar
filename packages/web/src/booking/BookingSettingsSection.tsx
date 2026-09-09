@@ -599,7 +599,13 @@ export function BookingSettingsSection({
       return;
     }
 
-    if (setupStep === "duration" || setupStep === "destination") {
+    if (setupStep === "duration") {
+      advanceSetupStep();
+      return;
+    }
+
+    if (setupStep === "destination") {
+      if (writableCalendars.length === 0) return;
       advanceSetupStep();
       return;
     }

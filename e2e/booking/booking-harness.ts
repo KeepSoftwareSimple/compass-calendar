@@ -124,6 +124,15 @@ const googleCalendar = {
   accountEmail: HOST_ACCOUNT_EMAIL,
 };
 
+const readOnlyGoogleCalendar = {
+  ...googleCalendar,
+  capabilities: {
+    ...googleCalendar.capabilities,
+    canWrite: false,
+    canManage: false,
+  },
+};
+
 const compassCalendar = {
   id: COMPASS_CALENDAR_ID,
   name: "Compass",
@@ -999,6 +1008,8 @@ export interface HostBookingSettingsStubOptions {
     bookable: boolean;
     reasons: Array<Record<string, unknown>>;
   };
+  /** When true, host calendars load but none are writable. */
+  noWritableCalendars?: boolean;
 }
 
 export interface CapturedHostBookingRequests {
@@ -1115,9 +1126,10 @@ export async function prepareSignedInBookingSettingsPage(
     const path = url.pathname;
 
     if (path.endsWith("/api/calendars")) {
-      return route.fulfill(
-        jsonResponse({ calendars: [googleCalendar, compassCalendar] }),
-      );
+      const calendars = options.noWritableCalendars
+        ? [readOnlyGoogleCalendar]
+        : [googleCalendar, compassCalendar];
+      return route.fulfill(jsonResponse({ calendars }));
     }
 
     if (path.endsWith("/api/event") && request.method() === "GET") {

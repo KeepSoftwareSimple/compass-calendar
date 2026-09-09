@@ -286,11 +286,18 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
 - **First run:** before any draft exists, Meeting settings open a guided
   setup wizard: one question per screen with "Step N of M", a title, one
   sentence, and **Continue** (Mod+Enter). Steps are address, weekly hours,
-  duration, destination calendar (only when more than one writable calendar
-  exists), then go live. Plain Enter continues from the address input or the
-  Continue button; `k` continues and `j` goes back when focus is not in an
-  editable target; Esc goes back one step (on step 1 it closes Settings).
-  Address **Continue** saves a disabled draft so the slug is reserved.
+  duration, destination calendar (hidden only when exactly one writable
+  calendar exists; with zero writable calendars the destination step shows
+  "Connect a calendar you can write to before going live." and connect
+  buttons, **Continue** stays disabled, and go live is unreachable until a
+  writable calendar exists), then go live. Every step after the first shows
+  a **Back** button beside **Continue**. The keyboard hint row labels its
+  keys ("Enter Continue", "Esc Back", "K Next", "J Back"). Plain Enter
+  continues from the address input or the Continue button; `k` continues and
+  `j` goes back when focus is not in an editable target; Esc goes back one
+  step (on step 1 it closes Settings). When the address step fails with
+  "That address is already taken. Try another.", focus moves to the address
+  field. Address **Continue** saves a disabled draft so the slug is reserved.
   **Turn on and copy link** on the last step saves with `enabled: true`,
   copies the link, and then shows the full form with the switch focused.
 - **Timezone** uses the same searchable combobox as time travel. The
