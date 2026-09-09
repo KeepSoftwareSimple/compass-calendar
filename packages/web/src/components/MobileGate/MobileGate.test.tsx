@@ -43,10 +43,25 @@ describe("MobileGate", () => {
   });
 
   describe("Intro", () => {
-    it("pitches the game with play and skip actions", () => {
+    it("leads with the desktop pitch, then the game with play and skip actions", () => {
       render(<MobileGate />);
 
-      expect(screen.getByText("Time Block Party")).toBeInTheDocument();
+      // The product comes first so phone visitors don't mistake the game
+      // for the app; the game is framed as a bonus while they're here.
+      expect(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Compass is a keyboard-first calendar",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "It's built for the desktop, so it doesn't run on phones yet. While you're here, we made you a little game for fun.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { level: 2, name: "Time Block Party" }),
+      ).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: /^play$/i }),
       ).toBeInTheDocument();

@@ -535,11 +535,8 @@ describe("PublicBookingPage", () => {
       durationMinutes: 30,
     });
     expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy reschedule link" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /^Copy / }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeInTheDocument();
@@ -1538,10 +1535,7 @@ describe("PublicBookingConfirmedPage", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText("Guest User")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Copy cancel link" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Copy reschedule link" }),
+      screen.queryByRole("button", { name: /^Copy / }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Edit details" }),
@@ -1558,11 +1552,8 @@ describe("PublicBookingConfirmedPage", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy reschedule link" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /^Copy / }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Edit details" }),
     ).toBeInTheDocument();
@@ -1682,10 +1673,7 @@ describe("PublicBookingConfirmedPage", () => {
       }),
     ).toHaveFocus();
     expect(
-      screen.queryByRole("button", { name: "Copy cancel link" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Copy reschedule link" }),
+      screen.queryByRole("button", { name: /^Copy / }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "Reschedule this meeting" }),
@@ -1721,17 +1709,8 @@ describe("PublicBookingConfirmedPage", () => {
     ).toHaveFocus();
   });
 
-  it("copies the cancel URL when history state includes it", async () => {
+  it("shows cancel and reschedule links from confirmation history state", async () => {
     const user = userEvent.setup({ delay: null });
-    const written: string[] = [];
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: async (value: string) => {
-          written.push(value);
-        },
-      },
-    });
 
     server.use(
       pageHandler(),
@@ -1783,15 +1762,9 @@ describe("PublicBookingConfirmedPage", () => {
       }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/token=abc/)).not.toBeInTheDocument();
-    await user.click(
-      await screen.findByRole("button", { name: "Copy cancel link" }),
-    );
-
-    expect(written).toEqual([
-      "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
-    ]);
-    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Copied");
+    expect(
+      screen.queryByRole("button", { name: /^Copy / }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens Edit details from confirmation, prefills, and shows saved values", async () => {

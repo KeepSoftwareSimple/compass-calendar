@@ -4,7 +4,6 @@ import {
   BOOKING_CONFERENCE_INVITE_COPY,
   resolveBookingConference,
 } from "@web/booking/booking-conference.copy";
-import { PublicBookingCopyGuestAction } from "@web/booking/PublicBookingCopyGuestAction";
 import { PublicBookingLayout } from "@web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@web/booking/PublicBookingSlotSummary";
 import { PUBLIC_BOOKING_HEADING_CLASS } from "@web/booking/PublicBookingStatusMessage";
@@ -102,18 +101,20 @@ export function PublicBookingConfirmationView({
             aria-label="Meeting actions"
           >
             {cancelUrl ? (
-              <PublicBookingCopyGuestAction
-                copyLabel="Copy cancel link"
-                linkLabel="Cancel this meeting"
-                url={cancelUrl}
-              />
+              <a
+                href={cancelUrl}
+                className="c-focus-ring text-accent text-sm underline"
+              >
+                Cancel this meeting
+              </a>
             ) : null}
             {rescheduleUrl ? (
-              <PublicBookingCopyGuestAction
-                copyLabel="Copy reschedule link"
-                linkLabel="Reschedule this meeting"
-                url={rescheduleUrl}
-              />
+              <a
+                href={rescheduleUrl}
+                className="c-focus-ring text-accent text-sm underline"
+              >
+                Reschedule this meeting
+              </a>
             ) : null}
           </div>
         ) : null}

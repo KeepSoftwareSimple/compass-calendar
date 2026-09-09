@@ -46,10 +46,10 @@ describe("PublicBookingConfirmationView", () => {
       screen.getByRole("link", { name: "Cancel this meeting" }),
     ).toHaveAttribute("href", cancelUrl);
     expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /^Copy / }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Copy reschedule link" }),
+      screen.queryByRole("link", { name: "Reschedule this meeting" }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByText("A Google Meet invite is on its way to your email."),
@@ -79,25 +79,22 @@ describe("PublicBookingConfirmationView", () => {
       screen.getByRole("link", { name: "Reschedule this meeting" }),
     ).toHaveAttribute("href", rescheduleUrl);
     expect(
-      screen.getByRole("button", { name: "Copy reschedule link" }),
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("group", { name: "Meeting actions" }),
     ).toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
 
     heading.focus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
-    ).toHaveFocus();
     await user.tab();
     expect(
       screen.getByRole("link", { name: "Cancel this meeting" }),
     ).toHaveFocus();
     await user.tab();
     expect(
-      screen.getByRole("button", { name: "Copy reschedule link" }),
+      screen.getByRole("link", { name: "Reschedule this meeting" }),
     ).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: /^Copy / }),
+    ).not.toBeInTheDocument();
   });
 
   it("promises a calendar invite when the destination cannot mint Meet", () => {
@@ -179,10 +176,10 @@ describe("PublicBookingConfirmationView", () => {
     );
 
     expect(
-      screen.queryByRole("button", { name: "Copy cancel link" }),
+      screen.queryByRole("button", { name: /^Copy / }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Copy reschedule link" }),
+      screen.queryByRole("group", { name: "Meeting actions" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("link", { name: "cancel this meeting" }),
@@ -199,76 +196,6 @@ describe("PublicBookingConfirmationView", () => {
     expect(
       screen.queryByText(/To cancel, use the link in that invite/),
     ).not.toBeInTheDocument();
-  });
-
-  it("copies the cancel URL from the secondary button", async () => {
-    const user = userEvent.setup({ delay: null });
-    const written: string[] = [];
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: mock((value: string) => {
-          written.push(value);
-          return Promise.resolve();
-        }),
-      },
-    });
-
-    render(
-      <PublicBookingConfirmationView
-        cancelUrl={cancelUrl}
-        durationMinutes={30}
-        hostDisplayName="Tyler Dane"
-        guestName="Ada Lovelace"
-        notes={null}
-        slotStart={slotStart}
-        timeZone={timeZone}
-      />,
-    );
-
-    await user.click(screen.getByRole("button", { name: "Copy cancel link" }));
-
-    expect(written).toEqual([cancelUrl]);
-    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Copied");
-  });
-
-  it("copies the reschedule URL from the secondary button", async () => {
-    const user = userEvent.setup({ delay: null });
-    const written: string[] = [];
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: {
-        writeText: mock((value: string) => {
-          written.push(value);
-          return Promise.resolve();
-        }),
-      },
-    });
-
-    render(
-      <PublicBookingConfirmationView
-        cancelUrl={cancelUrl}
-        rescheduleUrl={rescheduleUrl}
-        durationMinutes={30}
-        hostDisplayName="Tyler Dane"
-        guestName="Ada Lovelace"
-        notes={null}
-        slotStart={slotStart}
-        timeZone={timeZone}
-      />,
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: "Copy reschedule link" }),
-    );
-
-    expect(written).toEqual([rescheduleUrl]);
-    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Copied");
   });
 
   it("shows notes and Edit details when provided", async () => {

@@ -261,7 +261,7 @@ describe("PublicBookingCancelPage", () => {
     );
     expect(router.state.location.search).toEqual({ token: "abc" });
     expect(
-      screen.getByRole("button", { name: "Copy cancel link" }),
+      screen.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Edit details" }),
