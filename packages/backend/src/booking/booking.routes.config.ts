@@ -110,6 +110,16 @@ const adminPagePutLimiter = rateLimit({
   keyGenerator: bookingAdminKey,
 });
 
+// Claim is a write (stamps hostNoticedAt). Same 20/min budget as PUT,
+// separate bucket so a save storm cannot starve the toast claim.
+const adminNewMeetingsClaimLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: bookingAdminKey,
+});
+
 /**
  * Host admin routes require a session. Public guest routes are unauthenticated.
  */
@@ -122,6 +132,11 @@ export class BookingRoutes extends CommonRoutesConfig {
     if (!isBookingEnabled(CONFIG.NODE_ENV)) {
       return this.app;
     }
+
+    this.app
+      .route(`/api/booking/page/new-meetings/claim`)
+      .all(verifySession())
+      .post(adminNewMeetingsClaimLimiter, bookingController.claimNewMeetings);
 
     this.app
       .route(`/api/booking/page/status`)

@@ -78,6 +78,27 @@ class BookingPageRepository {
 
     return BookingPageRecordSchema.parse(result);
   }
+
+  /**
+   * Stamp `hostNoticedAt` only when the document still matches the snapshot
+   * the caller read, so concurrent claims cannot both report the same rows.
+   */
+  async stampHostNoticedAt(
+    userId: ObjectId,
+    expectedHostNoticedAt: Date | undefined,
+    now: Date,
+  ): Promise<boolean> {
+    const filter =
+      expectedHostNoticedAt === undefined
+        ? { userId, hostNoticedAt: { $exists: false } }
+        : { userId, hostNoticedAt: expectedHostNoticedAt };
+    const result = await mongoService.bookingPage.findOneAndUpdate(
+      filter,
+      { $set: { hostNoticedAt: now } },
+      { returnDocument: "after" },
+    );
+    return result !== null;
+  }
 }
 
 export const bookingPageRepository = new BookingPageRepository();
