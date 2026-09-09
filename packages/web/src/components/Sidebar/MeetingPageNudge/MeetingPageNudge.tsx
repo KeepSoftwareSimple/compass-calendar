@@ -28,7 +28,7 @@ export function MeetingPageNudge({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 className="text-sm font-medium text-text">
+          <h2 className="font-medium text-sm text-text">
             Let people book time with you
           </h2>
           <p className="text-text leading-relaxed">
