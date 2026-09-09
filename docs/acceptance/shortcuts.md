@@ -351,7 +351,7 @@ The sidebar month picker is a keyboard cursor, not a click target. `I` (or hold 
 ### Expected Results
 
 - After `I`, the first day of the highlighted week row has focus and the whole row shows the focus ring.
-- Each arrow moves the ring one row; the calendar grid does not move yet.
+- Each arrow moves the ring to the next week; the calendar grid does not move yet.
 - After `Mod+Shift+.`, the next month is shown and focus is still on a day in that month.
 - Enter anchors the week view on the focused row and the muted week capsule matches the visible window. Today is an ink circle, not an accent fill.
 - Clicks do not navigate. Hovering the picker shows `I focuses the picker`. Focusing it replaces that with up/down arrow keycaps and `move by week`. After an arrow, `Enter opens it` appears with `Enter` as a keycap. The keyboard hint says to press `I`, then use the arrow keys and Enter.
@@ -497,7 +497,7 @@ Settings > Meeting hold-Mod reveals only sidebar digits `1` / `2` / `3` and Ente
 
 ### Expected Results
 
-- Chips `1`, `2` (when billing is present), `3`, and the save bar's `Enter` appear while Mod is held. The nav hint **Hold Mod to see shortcuts.** hides while chips are visible. No Meeting field, legend, summary, or icon button shows a chip.
+- Chips `1`, `2` (when billing is present), `3`, and the save bar's `Enter` appear while Mod is held. The nav hint **Hold Mod to see shortcuts.** hides while chips are visible. No Meeting field, legend, summary, weekly hours plus or minus, or icon button shows a chip.
 - Extra digit chords change focus to nothing and toggle nothing.
 - Holding Mod and pressing U does not write to the clipboard.
 - Releasing Mod hides the nav chips and restores the nav hint.

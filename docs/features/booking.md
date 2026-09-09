@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -10,23 +10,26 @@ reschedule) is specified here and implemented. v1.6 shipped one-click
 turn on, Essentials / More options, editable address, default hours,
 branded connect pills, and funnel analytics. v1.7 shipped the Meeting
 page redesign: `/meet` URLs, meeting copy, hold-Mod section chords, the
-on/off switch, grouped weekly hours rows, and the first-run address
+on/off switch, a per-day weekly hours list, and the first-run address
 screen. v1.8 replaced that screen with a guided setup wizard, Start and End
 menus for weekly hours, fewer host scheduling knobs, sidebar-only Mod chords,
-no horizontal scroll, and the stale-holiday-calendar booking gate fix. The
-production gate stays off.
+no horizontal scroll, and the stale-holiday-calendar booking gate fix. v1.9
+anchored Settings to the top, animated More options, let a day hold several
+hour blocks, moved meeting timezone under More options, and trimmed helper
+copy. The production gate stays off.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
 
 ## Status
 
-v1, v1.1, v1.3, v1.5, v1.6, v1.7, and v1.8 are implemented in the Compass
+v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, and v1.9 are implemented in the Compass
 monorepo (public `/meet/:username`, host Settings, backend APIs, guest
 cancel, guest reschedule, edit-details, one-click turn on, Essentials /
 More options, editable address, default hours, branded connect pills,
 funnel analytics, meeting copy, hold-Mod section chords, the on/off
-switch, grouped weekly hours, the guided first-run setup wizard, Start
+switch, a per-day weekly hours list that can hold several blocks, meeting
+timezone under More options, the guided first-run setup wizard, Start
 and End time menus, and the v1.8 booking gate fix). Booking
 is enabled in development and staging (`runtime.nodeEnv` other than
 `production`) and disabled in production. Do not flip `isBookingEnabled`.
@@ -505,7 +508,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
-| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
+| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
 | Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingCopyGuestAction.tsx`, `PublicBookingEditDetailsForm.tsx` |
 | Public web API client | `packages/web/src/api/public-booking.api.ts` |
 | E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
@@ -559,6 +562,25 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   max meetings per day, welcome text, and guest-invite permission were
   removed in Booking v1.8. Zod strips those keys on read; they are not
   in the wire contract or Settings UI.
+
+## Changelog
+
+### v1.9
+
+Settings > Meeting now anchors to the top of the viewport, More options
+animates open (reduced motion skips it), weekly hours are a per-day list
+that can hold several blocks, meeting timezone lives under More options,
+and helper copy is gone from the live form.
+
+v1.8 treated extra intervals on a weekday as out of scope. v1.9 reversed
+that: a day can have several blocks, and Start and End menus are bounded
+by neighbouring blocks so they cannot overlap. These are not current
+behaviour; they were removed or reversed in v1.9: `Unavailable:` on an
+unchecked day, Add hours seeding a first row, a weekday belongs to at
+most one row, keeps only the first interval, grouped weekly hours rows,
+`weekly-hours.rows.ts`, Live at, the always-visible slug helper
+(`3 to 32 lowercase letters, digits, or hyphens.`), and the
+Pending, maybe invite footnote.
 
 ## Related docs
 

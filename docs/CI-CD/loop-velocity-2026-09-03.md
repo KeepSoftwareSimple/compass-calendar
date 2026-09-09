@@ -131,7 +131,7 @@ it appears. Exit with bun's pass/fail, not with the leak.
 
 ### 7. Every PR conflicts with every other PR
 
-Each WP appends one row to `.agents/ledger.md`, so every squash merge on main
+Each WP appends a ledger line to `.agents/ledger.md`, so every squash merge on main
 conflicts with every open PR. That is why #3285 carried eight `merge(main)`
 commits, each of which cost a full CI round. Handoff files under
 `.agents/handoffs/<issue>.md` already hold the same information.

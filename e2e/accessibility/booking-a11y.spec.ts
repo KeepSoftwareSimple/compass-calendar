@@ -423,6 +423,28 @@ test.describe("settings booking section", () => {
     });
   });
 
+  test("two Tuesday blocks with More options open have no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page);
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: "Add hours to Tuesday" }),
+    );
+    await expect(
+      settingsDialog.getByRole("combobox", { name: "Tuesday start 2" }),
+    ).toBeVisible();
+    await settingsDialog.getByText("More options", { exact: true }).click();
+    await expect(settingsDialog.getByLabel("Page address")).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("button", { name: /Meeting timezone:/ }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      checkpoint: "settings booking two blocks more options",
+      include: "[role='dialog']",
+    });
+  });
+
   test("address errors have no automatically detectable accessibility violations", async ({
     page,
   }) => {

@@ -309,6 +309,28 @@ test("essentials fit without scrolling at 1440x900", async ({ page }) => {
   );
 });
 
+test.describe("reduced motion", () => {
+  test.use({ contextOptions: { reducedMotion: "reduce" } });
+
+  test("opening More options and adding Monday hours does not move the dialog", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page);
+
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    const topBefore = (await settingsDialog.boundingBox())?.y;
+    await openMoreOptions(settingsDialog);
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: "Add hours to Monday" }),
+    );
+    await expect(
+      settingsDialog.getByRole("combobox", { name: "Monday start 2" }),
+    ).toBeVisible();
+    const topAfter = (await settingsDialog.boundingBox())?.y;
+    expect(topAfter).toBe(topBefore);
+  });
+});
+
 test("settings dialog never scrolls horizontally with more options open", async ({
   page,
 }) => {

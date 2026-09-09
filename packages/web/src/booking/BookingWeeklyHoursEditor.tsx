@@ -1,4 +1,5 @@
 import { Minus, Plus } from "@phosphor-icons/react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   type LocalTimeOfDay,
   type WeeklyAvailability,
@@ -42,6 +43,12 @@ const blockSelectLabel = (
   return index === 0 ? `${day} ${kind}` : `${day} ${kind} ${index + 1}`;
 };
 
+const hoursSelectId = (
+  weekday: IsoWeekday,
+  kind: "start" | "end",
+  index: number,
+): string => `booking-hours-${weekday}-${kind}-${index}`;
+
 const renderMenus = (
   value: WeeklyAvailability,
   weekday: IsoWeekday,
@@ -63,6 +70,7 @@ const renderMenus = (
         aria-describedby={describedBy}
         aria-label={blockSelectLabel(weekday, "start", index)}
         className={BOOKING_SELECT_CLASS_NAME}
+        id={hoursSelectId(weekday, "start", index)}
         onChange={(event) =>
           onChange(
             updateBlock(value, weekday, index, {
@@ -83,6 +91,7 @@ const renderMenus = (
         aria-describedby={describedBy}
         aria-label={blockSelectLabel(weekday, "end", index)}
         className={BOOKING_SELECT_CLASS_NAME}
+        id={hoursSelectId(weekday, "end", index)}
         onChange={(event) =>
           onChange(
             updateBlock(value, weekday, index, {
@@ -111,6 +120,24 @@ export function BookingWeeklyHoursEditor({
   disabled = false,
   describedBy,
 }: BookingWeeklyHoursEditorProps) {
+  const pendingFocusIdRef = useRef<string | null>(null);
+  const [focusToken, setFocusToken] = useState(0);
+
+  useLayoutEffect(() => {
+    if (focusToken === 0) return;
+    const id = pendingFocusIdRef.current;
+    if (!id) return;
+    const node = document.getElementById(id);
+    if (!(node instanceof HTMLElement)) return;
+    pendingFocusIdRef.current = null;
+    node.focus();
+  }, [focusToken]);
+
+  const requestFocus = (id: string) => {
+    pendingFocusIdRef.current = id;
+    setFocusToken((token) => token + 1);
+  };
+
   return (
     <fieldset className="flex flex-col gap-2" disabled={disabled}>
       <legend className="mb-1 text-sm text-text">Weekly hours</legend>
@@ -149,7 +176,12 @@ export function BookingWeeklyHoursEditor({
                     aria-label={`Add hours to ${weekdayLabel(weekday)}`}
                     className="size-8 text-text"
                     disabled={!canAddBlock(value, weekday)}
-                    onClick={() => onChange(addBlock(value, weekday))}
+                    onClick={() => {
+                      requestFocus(
+                        hoursSelectId(weekday, "start", blocks.length),
+                      );
+                      onChange(addBlock(value, weekday));
+                    }}
                     size="small"
                   >
                     <Plus aria-hidden="true" size={16} />
@@ -160,7 +192,7 @@ export function BookingWeeklyHoursEditor({
             {blocks.slice(1).map((block, offset) => {
               const index = offset + 1;
               return (
-                <div className="c-grow-in" key={`${weekday}-${index}`}>
+                <div className="c-grow-in" key={`${weekday}-${block.start}`}>
                   <div className={HOURS_LINE_CLASS_NAME}>
                     <span />
                     <span />
@@ -169,9 +201,12 @@ export function BookingWeeklyHoursEditor({
                       <IconButton
                         aria-label={`Remove ${weekdayLabel(weekday)} ${formatTimeLabel(block.start)} to ${formatTimeLabel(block.end)}`}
                         className="size-8 text-text"
-                        onClick={() =>
-                          onChange(removeBlock(value, weekday, index))
-                        }
+                        onClick={() => {
+                          requestFocus(
+                            hoursSelectId(weekday, "start", index - 1),
+                          );
+                          onChange(removeBlock(value, weekday, index));
+                        }}
                         size="small"
                       >
                         <Minus aria-hidden="true" size={16} />

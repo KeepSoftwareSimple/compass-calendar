@@ -31,6 +31,27 @@ const renderEditor = (
 const lastCall = (onChange: ReturnType<typeof renderEditor>) =>
   onChange.mock.calls[onChange.mock.calls.length - 1]?.[0];
 
+const renderStatefulEditor = (
+  initial: WeeklyAvailability = DEFAULT_WEEKLY_AVAILABILITY,
+) => {
+  const onChange = mock((_next: WeeklyAvailability) => {});
+  function Harness() {
+    const [value, setValue] = useState(initial);
+    return (
+      <BookingWeeklyHoursEditor
+        describedBy="booking-hours-timezone"
+        onChange={(next) => {
+          onChange(next);
+          setValue(next);
+        }}
+        value={value}
+      />
+    );
+  }
+  render(<Harness />);
+  return onChange;
+};
+
 const mondayStart = () =>
   screen.getByRole("combobox", { name: "Monday start" });
 const mondayEnd = () => screen.getByRole("combobox", { name: "Monday end" });
@@ -89,23 +110,9 @@ describe("BookingWeeklyHoursEditor", () => {
     );
   });
 
-  it("Add hours to Tuesday emits two intervals and renders Tuesday start 2", async () => {
+  it("Add hours to Tuesday emits two intervals and focuses Tuesday start 2", async () => {
     const user = userEvent.setup({ delay: null });
-    const onChange = mock((_next: WeeklyAvailability) => {});
-    function Harness() {
-      const [value, setValue] = useState(DEFAULT_WEEKLY_AVAILABILITY);
-      return (
-        <BookingWeeklyHoursEditor
-          describedBy="booking-hours-timezone"
-          onChange={(next) => {
-            onChange(next);
-            setValue(next);
-          }}
-          value={value}
-        />
-      );
-    }
-    render(<Harness />);
+    const onChange = renderStatefulEditor();
 
     await user.click(
       screen.getByRole("button", { name: "Add hours to Tuesday" }),
@@ -115,19 +122,24 @@ describe("BookingWeeklyHoursEditor", () => {
       { weekday: 2, start: "09:00", end: "17:00" },
       { weekday: 2, start: "18:00", end: "19:00" },
     ]);
-    expect(
-      screen.getByRole("combobox", { name: "Tuesday start 2" }),
-    ).toHaveAttribute("aria-describedby", "booking-hours-timezone");
+    const secondStart = screen.getByRole("combobox", {
+      name: "Tuesday start 2",
+    });
+    expect(secondStart).toHaveAttribute(
+      "aria-describedby",
+      "booking-hours-timezone",
+    );
+    expect(secondStart).toHaveFocus();
   });
 
-  it("renders Tuesday start 2 and the minus button removes it", async () => {
+  it("renders Tuesday start 2 and the minus button removes it and focuses Tuesday start", async () => {
     const user = userEvent.setup({ delay: null });
     const twoBlocks: WeeklyAvailability = [
       ...DEFAULT_WEEKLY_AVAILABILITY.filter((entry) => entry.weekday !== 2),
       { weekday: 2, start: "09:00", end: "17:00" },
       { weekday: 2, start: "18:00", end: "19:00" },
     ];
-    const onChange = renderEditor(twoBlocks);
+    const onChange = renderStatefulEditor(twoBlocks);
 
     expect(
       screen.getByRole("combobox", { name: "Tuesday start 2" }),
@@ -140,6 +152,9 @@ describe("BookingWeeklyHoursEditor", () => {
     expect(lastCall(onChange)?.filter((entry) => entry.weekday === 2)).toEqual([
       { weekday: 2, start: "09:00", end: "17:00" },
     ]);
+    expect(
+      screen.getByRole("combobox", { name: "Tuesday start" }),
+    ).toHaveFocus();
   });
 
   it("Tuesday end options never include a time at or before start, and never after Tuesday start 2", () => {
