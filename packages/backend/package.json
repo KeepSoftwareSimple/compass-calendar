@@ -16,7 +16,7 @@
     "mongodb": "^7.2.0",
     "rrule": "^2.7.2",
     "supertokens-node": "^23.0.1",
-    "stripe": "^18.5.0",
+    "stripe": "^22.6.1",
     "tslib": "^2.4.0",
     "zod": "^4.5.4"
   },
