@@ -11,6 +11,9 @@ export interface SetupStepDefinition {
   sentence: string;
 }
 
+export const SETUP_DESTINATION_ZERO_CALENDARS_SENTENCE =
+  "Connect a calendar you can write to before going live.";
+
 export const SETUP_STEPS: readonly SetupStepDefinition[] = [
   {
     id: "address",
@@ -44,20 +47,26 @@ const SETUP_STEP_BY_ID = new Map(
   SETUP_STEPS.map((step) => [step.id, step] as const),
 );
 
-export function setupStepDefinition(id: SetupStepId): SetupStepDefinition {
+export function setupStepDefinition(
+  id: SetupStepId,
+  writableCalendarCount?: number,
+): SetupStepDefinition {
   const step = SETUP_STEP_BY_ID.get(id);
   if (step == null) {
     throw new Error(`Unknown setup step: ${id}`);
   }
+  if (id === "destination" && writableCalendarCount === 0) {
+    return { ...step, sentence: SETUP_DESTINATION_ZERO_CALENDARS_SENTENCE };
+  }
   return step;
 }
 
-/** Ordered step ids for the wizard; destination appears only with 2+ writable calendars. */
+/** Ordered step ids for the wizard; destination is hidden only with exactly one writable calendar. */
 export function visibleSetupSteps(
   writableCalendarCount: number,
 ): readonly SetupStepId[] {
   const steps: SetupStepId[] = ["address", "hours", "duration"];
-  if (writableCalendarCount >= 2) {
+  if (writableCalendarCount !== 1) {
     steps.push("destination");
   }
   steps.push("live");

@@ -7,7 +7,10 @@ import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { BookingSetupAddressStep } from "@web/booking/setup/BookingSetupAddressStep";
-import { BookingSetupDestinationStep } from "@web/booking/setup/BookingSetupDestinationStep";
+import {
+  BookingSetupDestinationStep,
+  destinationStepCanContinue,
+} from "@web/booking/setup/BookingSetupDestinationStep";
 import { BookingSetupDurationStep } from "@web/booking/setup/BookingSetupDurationStep";
 import { BookingSetupGoLiveStep } from "@web/booking/setup/BookingSetupGoLiveStep";
 import { BookingSetupHoursStep } from "@web/booking/setup/BookingSetupHoursStep";
@@ -64,7 +67,7 @@ const focusStepFirstControl = (
     case "destination":
       root
         .querySelector<HTMLElement>("#booking-setup-destination-calendar")
-        ?.focus();
+        ?.focus() ?? root.querySelector<HTMLElement>("button")?.focus();
       break;
     case "live":
       continueRefFallback(root)?.focus();
@@ -99,20 +102,30 @@ export function BookingSetupWizard({
   writableCalendars,
 }: BookingSetupWizardProps) {
   const stepBodyRef = useRef<HTMLDivElement>(null);
-  const stepMeta = setupStepDefinition(setupStep);
+  const stepMeta = setupStepDefinition(setupStep, writableCalendarCount);
   const { current, total } = setupStepProgress(
     setupStep,
     writableCalendarCount,
   );
   const isGoLive = setupStep === "live";
+  const isFirstStep = setupStep === "address";
+  const canContinue =
+    setupStep !== "destination" ||
+    destinationStepCanContinue(writableCalendarCount);
 
   useEffect(() => {
+    if (setupStep === "address" && forceAddressInvalid) {
+      stepBodyRef.current
+        ?.querySelector<HTMLElement>("#booking-address")
+        ?.focus();
+      return;
+    }
     if (setupStep === "live") {
       continueRef.current?.focus();
       return;
     }
     focusStepFirstControl(setupStep, stepBodyRef.current);
-  }, [continueRef, setupStep]);
+  }, [continueRef, forceAddressInvalid, setupStep]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target;
@@ -122,6 +135,7 @@ export function BookingSetupWizard({
       (event.key === "k" || event.key === "K") &&
       !isEditableKeyboardTarget(event)
     ) {
+      if (!canContinue) return;
       event.preventDefault();
       onContinue();
       return;
@@ -145,6 +159,7 @@ export function BookingSetupWizard({
         target.type === "");
     const isContinueButton = target === continueRef.current;
     if (!isTextInput && !isContinueButton) return;
+    if (!canContinue) return;
 
     event.preventDefault();
     onContinue();
@@ -219,13 +234,26 @@ export function BookingSetupWizard({
           <span>Continue</span>
           <ShortcutKeys keys="Esc" />
           <span>Back</span>
-          <ShortcutKeys keys={["J", "K"]} />
+          <ShortcutKeys keys="K" />
+          <span>Next</span>
+          <ShortcutKeys keys="J" />
+          <span>Back</span>
         </span>
         <OverlayPanelActions>
+          {!isFirstStep ? (
+            <OverlayPanelActionButton
+              disabled={isPending}
+              onClick={onBack}
+              showShortcut={false}
+              variant="secondary"
+            >
+              Back
+            </OverlayPanelActionButton>
+          ) : null}
           <OverlayPanelActionButton
             aria-busy={isPending || undefined}
             aria-keyshortcuts="Meta+Enter Control+Enter"
-            disabled={isPending}
+            disabled={isPending || !canContinue}
             onClick={onContinue}
             ref={continueRef}
             shortcut={["Mod", "Enter"]}

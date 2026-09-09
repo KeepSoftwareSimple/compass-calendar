@@ -1,14 +1,13 @@
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
+import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
 import {
   bookingDestinationConferenceHint,
   formatBookingDestinationOptionLabel,
 } from "@web/booking/booking-conference.copy";
+import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import { groupCalendarsByAccount } from "@web/calendars/calendar.util";
-
-const BOOKING_SELECT_CLASS_NAME =
-  "c-focus-ring w-full rounded border border-border bg-surface-overlay px-2 py-1 text-sm text-text hover:bg-surface-panel";
 
 interface BookingSetupDestinationStepProps {
   connections: SyncConnectionSummary[];
@@ -23,6 +22,10 @@ export function BookingSetupDestinationStep({
   onChange,
   writableCalendars,
 }: BookingSetupDestinationStepProps) {
+  if (writableCalendars.length === 0) {
+    return <ConnectProviderChooser variant="prompt" />;
+  }
+
   const { groups: writableGroups, ungrouped: writableUngrouped } =
     groupCalendarsByAccount(writableCalendars, connections);
   const destinationCalendar = writableCalendars.find(
@@ -75,4 +78,10 @@ export function BookingSetupDestinationStep({
       ) : null}
     </div>
   );
+}
+
+export function destinationStepCanContinue(
+  writableCalendarCount: number,
+): boolean {
+  return writableCalendarCount > 0;
 }

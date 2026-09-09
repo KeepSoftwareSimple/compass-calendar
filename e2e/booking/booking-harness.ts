@@ -995,6 +995,8 @@ export interface HostBookingSettingsStubOptions {
     start: string;
     end: string;
   }>;
+  /** When false, stub calendars are read-only so the host has none writable. */
+  writableCalendars?: boolean;
 }
 
 export interface CapturedHostBookingRequests {
@@ -1111,9 +1113,19 @@ export async function prepareSignedInBookingSettingsPage(
     const path = url.pathname;
 
     if (path.endsWith("/api/calendars")) {
-      return route.fulfill(
-        jsonResponse({ calendars: [googleCalendar, compassCalendar] }),
-      );
+      const calendars =
+        options.writableCalendars === false
+          ? [
+              {
+                ...googleCalendar,
+                capabilities: {
+                  ...googleCalendar.capabilities,
+                  canWrite: false,
+                },
+              },
+            ]
+          : [googleCalendar, compassCalendar];
+      return route.fulfill(jsonResponse({ calendars }));
     }
 
     if (path.endsWith("/api/event") && request.method() === "GET") {
