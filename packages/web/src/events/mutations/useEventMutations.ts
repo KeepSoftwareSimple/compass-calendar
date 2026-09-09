@@ -189,6 +189,29 @@ function snapshotSeriesMasterSchedule(
   return master?.recurrence.kind === "series" ? master.schedule : undefined;
 }
 
+const SERIES_BASE_MISSING_MESSAGE =
+  "This series is still loading. Reload the page and try again.";
+
+// A remote scope-"all" edit addressed through an occurrence needs the series
+// base to rebase the occurrence's dates onto. Without it the absolute dates
+// would become the series start: sync moves the master to them and shifts
+// every instance by the same distance. Checked BEFORE a mutation is queued,
+// because a queued promotion coalesces the narrow write away and a failure
+// after that point would lose both edits.
+function isMissingSeriesBase(
+  source: EventRepositorySource,
+  scope: RecurrenceScope,
+  id: EventId,
+  seriesMasterSchedule: EventSchedule | undefined,
+): boolean {
+  return (
+    source === "remote" &&
+    scope === "all" &&
+    decodeOccurrenceId(id) !== null &&
+    seriesMasterSchedule === undefined
+  );
+}
+
 function resolveRemoteReplaceSchedule(
   source: EventRepositorySource,
   id: EventId,
@@ -199,7 +222,8 @@ function resolveRemoteReplaceSchedule(
 
   const parts = decodeOccurrenceId(id);
   if (!parts) return input;
-  if (!seriesMasterSchedule) return input;
+  // Backstop for the entry-point check above; never send absolute dates.
+  if (!seriesMasterSchedule) throw new Error(SERIES_BASE_MISSING_MESSAGE);
 
   return {
     ...input,
@@ -968,6 +992,21 @@ export function useEventMutations(
         ) {
           return false;
         }
+        const seriesMasterSchedule =
+          source === "remote" && payload.input.scope === "all"
+            ? snapshotSeriesMasterSchedule(queryClient, source, payload.id)
+            : undefined;
+        if (
+          isMissingSeriesBase(
+            source,
+            payload.input.scope,
+            payload.id,
+            seriesMasterSchedule,
+          )
+        ) {
+          showErrorToast(SERIES_BASE_MISSING_MESSAGE);
+          return false;
+        }
         const writeKey = seriesWriteKey(
           original,
           payload.input.scope,
@@ -1004,10 +1043,7 @@ export function useEventMutations(
             writeKey,
             opportunityId,
             callbacks,
-            seriesMasterSchedule:
-              source === "remote" && payload.input.scope === "all"
-                ? snapshotSeriesMasterSchedule(queryClient, source, payload.id)
-                : undefined,
+            seriesMasterSchedule,
           },
           callbacks,
         );
@@ -1079,6 +1115,30 @@ export function useEventMutations(
           recurrenceScopeOpportunityActions.complete(opportunity.id);
           return;
         }
+        const seriesMasterSchedule =
+          opportunity.kind === "replace" &&
+          source === "remote" &&
+          scope === "all"
+            ? snapshotSeriesMasterSchedule(
+                queryClient,
+                source,
+                opportunity.original.id as EventId,
+              )
+            : undefined;
+        if (
+          opportunity.kind === "replace" &&
+          isMissingSeriesBase(
+            source,
+            scope,
+            opportunity.original.id as EventId,
+            seriesMasterSchedule,
+          )
+        ) {
+          showErrorToast(SERIES_BASE_MISSING_MESSAGE);
+          dismissRecurrenceScopeToast(opportunity.id);
+          recurrenceScopeOpportunityActions.complete(opportunity.id);
+          return;
+        }
         // Broader recurring operations rewrite/split this series, so its
         // narrow client snapshots are no longer safe to replay. Keep history
         // for unrelated events the user changed while this toast was live.
@@ -1102,10 +1162,7 @@ export function useEventMutations(
               // deleted/overridden cache entry cannot lose the promotion.
               writeKey: id,
               originalOverride: opportunity.original,
-              seriesMasterSchedule:
-                source === "remote" && scope === "all"
-                  ? snapshotSeriesMasterSchedule(queryClient, source, id)
-                  : undefined,
+              seriesMasterSchedule,
             },
             { onSuccess, onSettled },
           );
