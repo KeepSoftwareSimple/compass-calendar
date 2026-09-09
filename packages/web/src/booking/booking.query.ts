@@ -5,6 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ZodError } from "zod/v4";
 import {
   type AdminPutBookingPageInput,
@@ -12,6 +13,7 @@ import {
 } from "@core/types/booking.contracts";
 import { BookingApi } from "@web/api/booking.api";
 import { getApiErrorCode, isApiError } from "@web/api/util/api.util";
+import { useUserMetadataStore } from "@web/auth/state/user-metadata.store";
 import { billingQueryKeys } from "@web/billing/billing.query";
 import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import { BOOKING_AVAILABILITY_REQUIRED_MESSAGE } from "@web/booking/booking.util";
@@ -20,6 +22,7 @@ import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 
 export const bookingQueryKeys = {
   page: ["booking", "page"] as const,
+  status: ["booking", "page", "status"] as const,
 };
 
 export function bookingPageQueryOptions() {
@@ -30,9 +33,32 @@ export function bookingPageQueryOptions() {
   });
 }
 
+export function bookingStatusQueryOptions() {
+  return queryOptions({
+    queryKey: bookingQueryKeys.status,
+    queryFn: () => BookingApi.getPageStatus(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: "always" as const,
+  });
+}
+
 export function useBookingPageQuery(enabled: boolean) {
   return useQuery({
     ...bookingPageQueryOptions(),
+    enabled,
+  });
+}
+
+export function useBookingStatusQuery(enabled: boolean) {
+  const queryClient = useQueryClient();
+  const metadata = useUserMetadataStore((state) => state.current);
+  useEffect(() => {
+    if (!enabled) return;
+    void metadata;
+    void queryClient.invalidateQueries({ queryKey: bookingQueryKeys.status });
+  }, [enabled, metadata, queryClient]);
+  return useQuery({
+    ...bookingStatusQueryOptions(),
     enabled,
   });
 }
@@ -110,6 +136,7 @@ export function useSaveBookingPageMutation() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(bookingQueryKeys.page, data);
+      void queryClient.invalidateQueries({ queryKey: bookingQueryKeys.status });
     },
     onError: (error) => handleBookingSaveError(error, queryClient),
   });

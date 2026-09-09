@@ -113,6 +113,12 @@ export const globalHandlers = [
       return res(ctx.status(Status.OK), ctx.json({ reservations: [] }));
     },
   ),
+  rest.get(`${ENV_WEB.API_BASEURL}/booking/page/status`, (_req, res, ctx) => {
+    return res(
+      ctx.status(Status.OK),
+      ctx.json({ bookable: true, reasons: [] }),
+    );
+  }),
   rest.get(`${ENV_WEB.API_BASEURL}/booking/page`, (_req, res, ctx) => {
     return res(
       ctx.status(Status.OK),

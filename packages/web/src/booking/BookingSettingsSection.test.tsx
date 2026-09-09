@@ -286,6 +286,7 @@ describe("BookingSettingsSection", () => {
     expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
       has_connection: false,
       is_live: false,
+      is_bookable: false,
     });
   });
 
@@ -1505,6 +1506,7 @@ describe("BookingSettingsSection", () => {
     expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
       has_connection: false,
       is_live: false,
+      is_bookable: false,
     });
   });
 
@@ -1544,9 +1546,12 @@ describe("BookingSettingsSection", () => {
     );
 
     await screen.findByLabelText("Page address");
-    expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
-      has_connection: true,
-      is_live: true,
+    await waitFor(() => {
+      expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
+        has_connection: true,
+        is_live: true,
+        is_bookable: true,
+      });
     });
   });
 

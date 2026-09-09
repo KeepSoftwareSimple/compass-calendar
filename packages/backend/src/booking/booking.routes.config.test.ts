@@ -38,6 +38,7 @@ describe("BookingRoutes production gate", () => {
     expect(bookingRoutePaths(app)).toContain(
       "/api/booking/page/new-meetings/claim",
     );
+    expect(bookingRoutePaths(app)).toContain("/api/booking/page/status");
     expect(bookingRoutePaths(app)).toContain("/api/booking/pages/:slug");
   });
 });

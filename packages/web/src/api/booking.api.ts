@@ -5,6 +5,8 @@ import {
   type AdminPutBookingPageInput,
   type BookingNewMeetingsClaimResponse,
   BookingNewMeetingsClaimResponseSchema,
+  type BookingPageStatusResponse,
+  BookingPageStatusResponseSchema,
   isSavedBookingPage,
 } from "@core/types/booking.contracts";
 import { BaseApi } from "@web/api/base/base.api";
@@ -18,6 +20,11 @@ const BookingApi = {
   async getPage(): Promise<AdminGetBookingPageResult> {
     const response = await BaseApi.get<unknown>(`/booking/page`);
     return parseBookingPage(response.data);
+  },
+
+  async getPageStatus(): Promise<BookingPageStatusResponse> {
+    const response = await BaseApi.get<unknown>(`/booking/page/status`);
+    return BookingPageStatusResponseSchema.parse(response.data);
   },
 
   async putPage(

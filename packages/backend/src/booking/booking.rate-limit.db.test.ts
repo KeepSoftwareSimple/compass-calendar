@@ -149,6 +149,12 @@ describe("Host admin booking rate limits", () => {
       .get("/api/booking/page")
       .set("Cookie", sessionCookie(userId));
 
+  const getAdminPageStatus = (userId: string) =>
+    baseDriver
+      .getServer()
+      .get("/api/booking/page/status")
+      .set("Cookie", sessionCookie(userId));
+
   const putAdminPage = (userId: string) =>
     baseDriver
       .getServer()
@@ -169,6 +175,16 @@ describe("Host admin booking rate limits", () => {
       await getAdminPage(userId);
     }
     const throttled = await getAdminPage(userId);
+    expect(throttled.status).toBe(429);
+  });
+
+  it("throttles GET /api/booking/page/status after 60 requests in a minute", async () => {
+    const { user } = await UtilDriver.setupTestUser();
+    const userId = user._id.toString();
+    for (let i = 0; i < 60; i += 1) {
+      await getAdminPageStatus(userId);
+    }
+    const throttled = await getAdminPageStatus(userId);
     expect(throttled.status).toBe(429);
   });
 

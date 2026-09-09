@@ -93,6 +93,14 @@ const adminPageGetLimiter = rateLimit({
   keyGenerator: bookingAdminKey,
 });
 
+const adminPageStatusGetLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: bookingAdminKey,
+});
+
 // PUT is a save. A host retries a handful of times, not sixty.
 const adminPagePutLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -129,6 +137,11 @@ export class BookingRoutes extends CommonRoutesConfig {
       .route(`/api/booking/page/new-meetings/claim`)
       .all(verifySession())
       .post(adminNewMeetingsClaimLimiter, bookingController.claimNewMeetings);
+
+    this.app
+      .route(`/api/booking/page/status`)
+      .all(verifySession())
+      .get(adminPageStatusGetLimiter, bookingController.getPageStatus);
 
     this.app
       .route(`/api/booking/page`)

@@ -995,6 +995,10 @@ export interface HostBookingSettingsStubOptions {
     start: string;
     end: string;
   }>;
+  pageStatus?: {
+    bookable: boolean;
+    reasons: Array<Record<string, unknown>>;
+  };
 }
 
 export interface CapturedHostBookingRequests {
@@ -1118,6 +1122,15 @@ export async function prepareSignedInBookingSettingsPage(
 
     if (path.endsWith("/api/event") && request.method() === "GET") {
       return route.fulfill(jsonResponse({ events: [] }));
+    }
+
+    if (
+      path.endsWith("/api/booking/page/status") &&
+      request.method() === "GET"
+    ) {
+      return route.fulfill(
+        jsonResponse(options.pageStatus ?? { bookable: true, reasons: [] }),
+      );
     }
 
     if (path.endsWith("/api/booking/page") && request.method() === "GET") {

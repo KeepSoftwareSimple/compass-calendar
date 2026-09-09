@@ -8,6 +8,8 @@ import { BaseError } from "@core/errors/errors.base";
 import { Logger } from "@core/logger/winston.logger";
 import {
   BookingDurationMinutesSchema,
+  type BookingPageStatusResponse,
+  BookingPageStatusResponseSchema,
   BookingReservationSlotsQuerySchema,
   BookingSlotsQuerySchema,
   type BookingSlotsResponse,
@@ -36,7 +38,6 @@ import {
   type BusyAvailabilityResponse,
 } from "@core/types/sync/availability.contracts";
 import dayjs from "@core/util/date/dayjs";
-import { assertBillingAllowsWrites } from "@backend/billing/billing.guard";
 import { bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
@@ -51,6 +52,12 @@ import {
   bookingReservationRepository,
   confirmedReservationScanRange,
 } from "@backend/booking/booking-reservation.repository";
+import {
+  emptyBookableStatus,
+  hostAllowsGuestWrites,
+  mapProbeToStatus,
+  probeBookability,
+} from "@backend/booking/services/booking-readiness";
 import { type CalendarBookingPort } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
@@ -62,21 +69,6 @@ const logger = Logger("app:booking.public");
 
 const GUEST_PAGE_NOT_ACCEPTING_BOOKINGS =
   "This page is not accepting meetings.";
-
-const isBillingRequiredError = (error: unknown): boolean =>
-  error instanceof BaseError && error.code === "BILLING_REQUIRED";
-
-const hostAllowsGuestWrites = async (userId: ObjectId): Promise<boolean> => {
-  try {
-    await assertBillingAllowsWrites(userId.toString());
-    return true;
-  } catch (error) {
-    if (isBillingRequiredError(error)) {
-      return false;
-    }
-    throw error;
-  }
-};
 
 const assertHostAllowsGuestWrites = async (userId: ObjectId): Promise<void> => {
   if (!(await hostAllowsGuestWrites(userId))) {
@@ -396,17 +388,30 @@ export class PublicBookingService {
     );
   }
 
+  async getHostPageStatus(
+    userId: ObjectId,
+  ): Promise<BookingPageStatusResponse> {
+    const page = await bookingPageRepository.findByUserId(userId);
+    if (!page?.enabled) {
+      return emptyBookableStatus();
+    }
+    const now = new Date();
+    const probe = await probeBookability(
+      page,
+      {
+        start: now,
+        end: dayjs(now).add(page.maxHorizonDays, "day").toDate(),
+      },
+      this.calendarBooking,
+    );
+    return BookingPageStatusResponseSchema.parse(mapProbeToStatus(probe));
+  }
+
   async getSlots(
     slug: string,
     rawQuery: unknown,
   ): Promise<BookingSlotsResponse> {
     const page = await resolveEnabledPage(slug);
-    if (!(await hostAllowsGuestWrites(page.userId))) {
-      return BookingSlotsResponseSchema.parse({
-        slots: [],
-        bookable: false,
-      });
-    }
     const query = parseSlotsQuery(rawQuery);
     return this.computeSlotsForPage(page, query);
   }
@@ -425,12 +430,6 @@ export class PublicBookingService {
       throw reservationNotFound();
     }
     const page = await resolveReservationPublicPage(reservation);
-    if (!(await hostAllowsGuestWrites(page.userId))) {
-      return BookingSlotsResponseSchema.parse({
-        slots: [],
-        bookable: false,
-      });
-    }
     parseSlotsQuery({
       start: query.start,
       end: query.end,
@@ -459,39 +458,39 @@ export class PublicBookingService {
     const windowEnd =
       requestedEnd.getTime() > horizonEnd.getTime() ? horizonEnd : requestedEnd;
 
-    if (windowEnd.getTime() <= windowStart.getTime()) {
-      return BookingSlotsResponseSchema.parse({
-        slots: [],
-        bookable: true,
-      });
-    }
-
-    const availability = await this.calendarBooking.getAvailability(
-      page.userId.toString(),
-      {
-        calendarIds: page.blockingCalendarIds,
-        start: DateTimeSchema.parse(query.start),
-        end: DateTimeSchema.parse(windowEnd.toISOString()),
-        ...(options.excludeEventIds
-          ? { excludeEventIds: options.excludeEventIds }
-          : {}),
-      },
+    const probe = await probeBookability(
+      page,
+      { start: windowStart, end: windowEnd },
+      this.calendarBooking,
+      { excludeEventIds: options.excludeEventIds },
     );
 
-    if (!availability.bookable) {
-      publicBookingSlotsLog.unbookable({
-        slug: page.bookingSlug ?? "",
-        userId: page.userId.toString(),
-        complete: availability.complete,
-        issueReasons: availability.issues.map((issue) => issue.reason),
-        issueCalendarIds: availability.issues.map((issue) => issue.calendarId),
-        connectionStates: availability.connections.map(
-          (connection) => connection.state,
-        ),
-      });
+    if (!probe.bookable) {
+      if (probe.availability) {
+        publicBookingSlotsLog.unbookable({
+          slug: page.bookingSlug ?? "",
+          userId: page.userId.toString(),
+          complete: probe.availability.complete,
+          issueReasons: probe.availability.issues.map((issue) => issue.reason),
+          issueCalendarIds: probe.availability.issues.map(
+            (issue) => issue.calendarId,
+          ),
+          connectionStates: probe.availability.connections.map(
+            (connection) => connection.state,
+          ),
+        });
+      }
       return BookingSlotsResponseSchema.parse({
         slots: [],
         bookable: false,
+      });
+    }
+
+    const availability = probe.availability;
+    if (!availability) {
+      return BookingSlotsResponseSchema.parse({
+        slots: [],
+        bookable: true,
       });
     }
 
