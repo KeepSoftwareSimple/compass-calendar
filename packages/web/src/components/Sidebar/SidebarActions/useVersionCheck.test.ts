@@ -1,6 +1,8 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { act } from "react";
+import * as realEnvConstants from "@web/common/constants/env.constants";
 import {
+  afterAll,
   afterEach,
   beforeEach,
   describe,
@@ -13,16 +15,19 @@ import {
 
 let mockIsDev = false;
 const fetchMock = mock();
-const originalFetch = globalThis.fetch;
+const envConstantsSnapshot = { ...realEnvConstants };
 
 const MIN_HIDDEN_DURATION_MS = 30_000;
 const BACKUP_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 async function renderVersionCheckHook() {
+  // Snapshot first: mock.module rebinds the live import, so spreading
+  // realEnvConstants inside the factory would copy the mock into itself and
+  // drop ENV_WEB for every later file in the shard.
   mock.module("@web/common/constants/env.constants", () => ({
+    ...envConstantsSnapshot,
     IS_DEV: mockIsDev,
   }));
-
   const moduleUrl = new URL(
     `./useVersionCheck.ts?test=${Math.random().toString(36).slice(2)}`,
     import.meta.url,
@@ -36,6 +41,7 @@ describe("useVersionCheck", () => {
   let visibilityState = "visible";
   let intervalCallback: (() => void) | undefined;
   let setIntervalSpy: ReturnType<typeof spyOn>;
+  let fetchSpy: ReturnType<typeof spyOn>;
 
   /** Lets checkVersion's fetch → json → setState chain finish inside act (microtasks). */
   const flushVersionCheckAsync = async () => {
@@ -71,13 +77,26 @@ describe("useVersionCheck", () => {
       ok: true,
       json: async () => ({ version: "dev" }),
     });
-    global.fetch = fetchMock as unknown as typeof fetch;
+    // spyOn so afterEach can restore MSW's fetch patch. Assigning
+    // global.fetch and putting back a copy taken at module load (before
+    // server.listen) leaves BaseApi talking to native fetch, so later
+    // mutation tests never hit their PUT/POST handlers.
+    fetchSpy = spyOn(globalThis, "fetch").mockImplementation(
+      fetchMock as unknown as typeof fetch,
+    );
   });
 
   afterEach(() => {
-    globalThis.fetch = originalFetch;
+    fetchSpy.mockRestore();
     setSystemTime();
     setIntervalSpy.mockRestore();
+  });
+
+  afterAll(() => {
+    mock.module(
+      "@web/common/constants/env.constants",
+      () => envConstantsSnapshot,
+    );
   });
 
   it("checks version on initial mount", async () => {
