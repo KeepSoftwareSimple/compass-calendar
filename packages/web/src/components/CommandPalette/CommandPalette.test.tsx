@@ -10,6 +10,7 @@ import {
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import * as Track from "@web/auth/posthog/track";
 import { type AppAccess } from "@web/billing/useAppAccess";
 import { onViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
@@ -25,7 +26,15 @@ import {
 } from "@web/settings/settings.store";
 import { usePointerSuppression } from "@web/shortcuts/keyboard-only/usePointerSuppression";
 import { recordRecentCommand } from "./recent-commands.store";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const mockNavigate = mock();
 // Bun's mock.module is process-wide, so mock the router's useNavigate directly
@@ -185,6 +194,30 @@ describe("CommandPalette", () => {
 
     const row = rowLabel("Create event").closest("button") as HTMLElement;
     expect(within(row).getByText("Premium")).toBeInTheDocument();
+  });
+
+  it("records a click unavailable attempt for a Premium create action", () => {
+    authenticated = true;
+    access = {
+      kind: "server",
+      status: "awaiting_checkout",
+      isReadOnly: true,
+      trialEndsAt: null,
+    };
+    const track = spyOn(Track, "track");
+    renderPalette();
+
+    fireEvent.click(rowLabel("Create event").closest("button") as HTMLElement);
+
+    expect(track).toHaveBeenCalledWith(
+      "shortcut_unavailable_attempt",
+      expect.objectContaining({
+        invocation_method: "click",
+        reason_code: "billing_locked",
+        shortcut_type: "create-event",
+      }),
+    );
+    track.mockRestore();
   });
 
   it("renders all sections with items and focuses the input on mount", () => {

@@ -297,7 +297,9 @@ describe("useAppShortcut", () => {
         expect.objectContaining({
           action_id: "calendar.create_timed_event",
           context: "settingsModal",
+          invocation_method: "keyboard",
           reason_code: "overlay_open",
+          shortcut_type: "create-event",
         }),
       );
       setAppLockReason("settingsModal", false);

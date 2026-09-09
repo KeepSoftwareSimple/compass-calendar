@@ -48,6 +48,7 @@ import {
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
+import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useTimezoneCmdItems } from "@web/timezone/useTimezoneCmdItems";
 import { filterSections, getLabelMatchRanges } from "./command-palette.search";
 import { type CommandItem, type CommandSection } from "./command-palette.types";
@@ -308,12 +309,18 @@ export const CommandPalette = ({
     ? eventCommandPaletteItems.map((item) => ({
         ...item,
         badge: "Premium",
-        onClick: () =>
+        onClick: () => {
+          if (item.id === "create-event") {
+            recordShortcutUnavailableAttempt("create-event", "billing_locked", {
+              invocationMethod: "click",
+            });
+          }
           promptShortcutUpgrade({
             featureArea: "event_creation",
             actionId: "calendar.create_timed_event",
             source: "command_palette",
-          }),
+          });
+        },
       }))
     : eventCommandPaletteItems;
   const navigate = useNavigate();

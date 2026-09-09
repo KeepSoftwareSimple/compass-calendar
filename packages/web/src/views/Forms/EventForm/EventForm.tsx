@@ -441,7 +441,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       handleIgnoredKeys(e);
     };
 
-    const onSubmitForm = () => {
+    const onSubmitForm = (
+      invocationMethod: "keyboard" | "click" = "keyboard",
+    ) => {
       // Belt for the read-only gate above: the Save button doesn't render,
       // but Enter/Mod+Enter shortcuts below call this directly regardless
       // of what's on screen, so the block has to live here too (packet 08
@@ -483,7 +485,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           : { kind: "timed", start, end, timeZone: schedule.timeZone },
       );
 
-      shortcutHintProgressActions.demonstrate("save-draft");
+      shortcutHintProgressActions.demonstrate("save-draft", invocationMethod);
       onSubmit(withSchedule);
     };
 
@@ -936,7 +938,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                   ))}
                 </ul>
               ) : null}
-              <SaveSection onSubmit={onSubmitForm} />
+              <SaveSection onSubmit={() => onSubmitForm("click")} />
             </>
           )}
         </EventFormShell>

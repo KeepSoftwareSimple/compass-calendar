@@ -13,28 +13,60 @@ import {
   writeShortcutUsageProfile,
 } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import {
+  getHintPlainText,
   getShortcutHint,
   type RankedShortcutHint,
+  type ShortcutHint,
   type ShortcutHintId,
 } from "@web/shortcuts/tips/shortcut-tips.data";
 
 const IMPRESSION_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRESENTATION_DEDUPE_MS = 30 * 1000;
 
+export type ShortcutInvocationMethod = "keyboard" | "click";
+
 type ActiveSuggestion = Pick<
   RankedShortcutHint,
   "actionId" | "featureArea" | "id" | "reasonCode"
->;
+> & { suggestionText: string };
+
+type SuggestionPresentation = Omit<ActiveSuggestion, "suggestionText"> & {
+  suggestionText?: string;
+  parts?: ShortcutHint["parts"];
+};
 
 let activeSuggestion: ActiveSuggestion | null = null;
 const lastPresentationByKey = new Map<string, number>();
+
+const hintIdentityProperties = (
+  hint: Pick<ShortcutHint, "actionId" | "featureArea" | "id" | "parts">,
+) => ({
+  action_id: hint.actionId,
+  feature_area: hint.featureArea,
+  shortcut_type: hint.id,
+  suggestion_text: getHintPlainText(hint),
+});
 
 const suggestionProperties = (suggestion: ActiveSuggestion) => ({
   action_id: suggestion.actionId,
   feature_area: suggestion.featureArea,
   rank: 1,
   reason_code: suggestion.reasonCode,
+  shortcut_type: suggestion.id,
   source: "sidebar_status",
+  suggestion_text: suggestion.suggestionText,
+});
+
+const resolvePresentedSuggestion = (
+  suggestion: SuggestionPresentation,
+): ActiveSuggestion => ({
+  actionId: suggestion.actionId,
+  featureArea: suggestion.featureArea,
+  id: suggestion.id,
+  reasonCode: suggestion.reasonCode,
+  suggestionText:
+    suggestion.suggestionText ??
+    getHintPlainText({ parts: suggestion.parts ?? [] }),
 });
 
 const emptyUsage = (): ShortcutActionUsage => ({
@@ -63,19 +95,20 @@ function updateUsage(
  * presentations are locally deduplicated for 30 seconds.
  */
 export function beginShortcutSuggestionPresentation(
-  suggestion: ActiveSuggestion,
+  suggestion: SuggestionPresentation,
   now = Date.now(),
 ): () => void {
-  activeSuggestion = suggestion;
+  const presented = resolvePresentedSuggestion(suggestion);
+  activeSuggestion = presented;
 
-  const dedupeKey = `${suggestion.id}:${suggestion.reasonCode}`;
+  const dedupeKey = `${presented.id}:${presented.reasonCode}:${presented.suggestionText}`;
   const lastPresentation = lastPresentationByKey.get(dedupeKey);
   if (
     lastPresentation === undefined ||
     now - lastPresentation >= PRESENTATION_DEDUPE_MS
   ) {
     lastPresentationByKey.set(dedupeKey, now);
-    updateUsage(suggestion.actionId, (current) => {
+    updateUsage(presented.actionId, (current) => {
       const isRecent =
         current.lastShownAt !== undefined &&
         now - current.lastShownAt < IMPRESSION_WINDOW_MS;
@@ -86,13 +119,13 @@ export function beginShortcutSuggestionPresentation(
       };
     });
     track("shortcut_suggestion_shown", {
-      ...suggestionProperties(suggestion),
+      ...suggestionProperties(presented),
       outcome: "shown",
     });
   }
 
   return () => {
-    if (activeSuggestion === suggestion) activeSuggestion = null;
+    if (activeSuggestion === presented) activeSuggestion = null;
   };
 }
 
@@ -101,9 +134,10 @@ export function beginShortcutSuggestionPresentation(
 export function recordShortcutInvocation(
   hintId: ShortcutHintId,
   now = Date.now(),
+  invocationMethod: ShortcutInvocationMethod = "keyboard",
 ): void {
   const hint = getShortcutHint(hintId);
-  const engaged = activeSuggestion?.actionId === hint.actionId;
+  const wasSuggested = activeSuggestion?.actionId === hint.actionId;
   updateUsage(hint.actionId, (current) => ({
     ...current,
     invocations: current.invocations + 1,
@@ -111,17 +145,24 @@ export function recordShortcutInvocation(
   }));
 
   track("shortcut_invoked", {
-    action_id: hint.actionId,
-    feature_area: hint.featureArea,
+    ...hintIdentityProperties(hint),
+    invocation_method: invocationMethod,
     outcome: "succeeded",
     reason_code: "registered_shortcut",
-    source: "keyboard",
+    source: invocationMethod,
+    suggestion_text:
+      wasSuggested && activeSuggestion
+        ? activeSuggestion.suggestionText
+        : getHintPlainText(hint),
+    was_suggested: wasSuggested,
   });
 
-  if (engaged && activeSuggestion) {
+  if (wasSuggested && activeSuggestion) {
     track("shortcut_suggestion_engaged", {
       ...suggestionProperties(activeSuggestion),
+      invocation_method: invocationMethod,
       outcome: "invoked",
+      was_suggested: true,
     });
   }
 }
@@ -160,10 +201,12 @@ function registeredHotkeyLabel(hotkey: RegisterableHotkey): string {
 }
 
 export type ShortcutUnavailableAttempt = {
+  /** How the user tried to run the shortcut. Defaults from `event`. */
+  invocationMethod?: ShortcutInvocationMethod;
   /** The hotkey as registered, never the raw key the user typed. */
-  hotkey: RegisterableHotkey;
+  hotkey?: RegisterableHotkey;
   /** The keydown/keyup that matched the registration. */
-  event: Pick<
+  event?: Pick<
     KeyboardEvent,
     "altKey" | "ctrlKey" | "metaKey" | "shiftKey" | "repeat"
   >;
@@ -186,23 +229,33 @@ export type ShortcutUnavailableReason = "billing_locked" | "overlay_open";
 export function recordShortcutUnavailableAttempt(
   hintId: ShortcutHintId,
   reasonCode: ShortcutUnavailableReason,
-  attempt: ShortcutUnavailableAttempt,
+  attempt: ShortcutUnavailableAttempt = {},
 ): void {
   const hint = getShortcutHint(hintId);
-  const { event } = attempt;
+  const invocationMethod =
+    attempt.invocationMethod ?? (attempt.event ? "keyboard" : "click");
+  const { event, hotkey } = attempt;
+
   track("shortcut_unavailable_attempt", {
-    action_id: hint.actionId,
-    active_element: document.activeElement?.tagName.toLowerCase() ?? "none",
-    context: lockContext(),
-    feature_area: hint.featureArea,
-    is_repeat: event.repeat,
+    ...hintIdentityProperties(hint),
+    invocation_method: invocationMethod,
     outcome: "unavailable",
     reason_code: reasonCode,
-    shortcut_key: registeredHotkeyLabel(attempt.hotkey),
-    source: "keyboard",
+    source: invocationMethod,
     view: viewFromPathname(window.location.pathname),
-    was_modifier_held:
-      event.altKey || event.ctrlKey || event.metaKey || event.shiftKey,
+    ...(hotkey !== undefined
+      ? { shortcut_key: registeredHotkeyLabel(hotkey) }
+      : {}),
+    ...(event
+      ? {
+          active_element:
+            document.activeElement?.tagName.toLowerCase() ?? "none",
+          context: lockContext(),
+          is_repeat: event.repeat,
+          was_modifier_held:
+            event.altKey || event.ctrlKey || event.metaKey || event.shiftKey,
+        }
+      : { context: lockContext() }),
   });
 }
 
