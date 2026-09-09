@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  BOOKING_CALENDAR_ID,
   buildBookableSlot,
   dispatchClick,
   dispatchFill,
@@ -531,6 +532,78 @@ test.describe("settings booking section", () => {
     } finally {
       await releaseSettingsMod(page);
     }
+  });
+
+  test("reconnect banner has no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page, {
+      connectionState: "RECONNECT_REQUIRED",
+      enabled: true,
+    });
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    await expect(
+      settingsDialog.getByRole("switch", { name: "Meeting page" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(
+      settingsDialog.getByRole("status").filter({
+        hasText: "Guests can't book right now",
+      }),
+    ).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("button", { name: "Reconnect Google Calendar" }),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      checkpoint: "settings booking reconnect banner",
+      include: "[role='dialog']",
+    });
+  });
+
+  test("unbookable host status has no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page, {
+      pageStatus: {
+        bookable: false,
+        reasons: [
+          {
+            kind: "calendar",
+            reason: "stale",
+            calendarId: BOOKING_CALENDAR_ID,
+          },
+        ],
+      },
+    });
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    await expect(
+      settingsDialog.getByText("Guests can't book right now"),
+    ).toBeVisible();
+    await expectNoAxeViolations(page, {
+      checkpoint: "settings booking host status",
+      include: "[role='dialog']",
+    });
+  });
+
+  test("sidebar meeting page nudge has no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page, {
+      configured: false,
+      openSettings: false,
+      completeOnboarding: true,
+    });
+    const nudge = page.getByRole("region", { name: "Meeting page" });
+    await expect(
+      nudge.getByRole("heading", { name: "Let people book time with you" }),
+    ).toBeVisible();
+    await expect(
+      nudge.getByRole("button", { name: "Set up meeting page" }),
+    ).toBeVisible();
+    await expect(nudge.getByRole("button", { name: "Dismiss" })).toBeVisible();
+    await expectNoAxeViolations(page, {
+      checkpoint: "sidebar meeting page nudge",
+      include: "[aria-label='Meeting page']",
+    });
   });
 
   test("not-live status has no automatically detectable accessibility violations", async ({

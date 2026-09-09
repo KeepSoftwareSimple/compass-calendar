@@ -52,7 +52,7 @@ RSVP](../features/attendees.md).
 - Sync Google writer/people adapters: `packages/sync/src/providers/google/google-event-writer.adapter.ts`, `packages/sync/src/providers/google/google-people.adapter.ts`
 - E2e coverage: `e2e/attendees/`
 
-## Booking (v1 / v1.8)
+## Booking (v1 / v1.10)
 
 Product spec: [Compass Calendar Booking](../features/booking.md).
 
@@ -62,20 +62,26 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
 - Slot engine: `packages/core/src/booking/compute-booking-slots.ts`
 - Backend admin: `packages/backend/src/booking/controllers/booking.controller.ts`,
   `services/booking-page.service.ts`
-- Backend public API: `packages/backend/src/booking/services/public-booking.service.ts`
+- Backend public API: `packages/backend/src/booking/services/public-booking.service.ts`,
+  `services/booking-readiness.ts`
 - Calendar port: `packages/backend/src/booking/services/calendar-booking.port.ts`,
   `services/calendar-booking.service.ts`
 - Occupancy: `packages/sync/src/domain/occurrence-projection.ts`,
   `packages/sync/src/domain/busy-query.service.ts`,
   `POST /internal/availability/busy`
 - Host Settings: `packages/web/src/booking/BookingSettingsSection.tsx`,
-  `packages/web/src/booking/setup/`, `BookingWeeklyHoursEditor.tsx`,
-  `weekly-hours.ts`,
+  `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`,
+  `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`,
+  `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`,
   `packages/web/src/components/Switch/Switch.tsx`
+- Description flattening: `packages/web/src/components/DescriptionEditor/plain-text-description.ts`
+- Sidebar discovery: `packages/web/src/components/Sidebar/MeetingPageNudge/`
 - Public guest UI: `packages/web/src/booking/PublicBookingPage.tsx`,
-  `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`,
+  `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`,
+  `PublicBookingCancelPage.tsx`,
   `PublicBookingReschedulePage.tsx`
-- Web API client: `packages/web/src/api/public-booking.api.ts`
+- Web API client: `packages/web/src/api/public-booking.api.ts`,
+  `packages/web/src/api/booking.api.ts`
 - E2e: `e2e/booking/`, `e2e/accessibility/booking-a11y.spec.ts`
 - Architecture: [Product Suite Boundaries](../architecture/product-suite-boundaries.md)
 

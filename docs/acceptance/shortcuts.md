@@ -29,6 +29,7 @@ Use this guide to validate:
 - toggling the sidebar (])
 - undoing / redoing with the keyboard (Cmd+Z / Cmd+Shift+Z)
 - confirming Settings > Meeting hold-Mod reveals only sidebar digits and Save Enter
+- confirming the first-run Meeting wizard Continue / Back keys (Enter, Esc, K, J)
 - confirming that shortcuts do not fire while typing in inputs
 
 Do not use this guide to validate:
@@ -504,6 +505,33 @@ Settings > Meeting hold-Mod reveals only sidebar digits `1` / `2` / `3` and Ente
 
 ---
 
+## Scenario 19: First-run Meeting Wizard Continue and Back
+
+### UX
+
+The first-run Meeting wizard Continue and Back keys are Enter, Esc, K,
+and J. Hints label them (`Enter Continue`, `Esc Back`, `K Next`,
+`J Back`). Those keys do not fire while typing in an input, except
+Enter from the address field.
+
+### Steps
+
+1. Open Settings and go to Meeting with no saved page.
+2. Confirm the address step shows **Continue** and hides **Back**.
+3. Press Enter.
+4. Confirm weekly hours shows **Back**.
+5. Press J, then K.
+
+### Expected Results
+
+- Step 1 has Continue and no Back. The hint row includes Enter Continue.
+- After Enter, Step 2 shows Back. The hint row includes Esc Back, K Next,
+  and J Back.
+- J returns to the address step. K returns to weekly hours.
+- With focus in the address field, K does not continue. Enter does.
+
+---
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping shortcut-related changes:
@@ -530,3 +558,4 @@ If time is limited, run these checks before shipping shortcut-related changes:
 20. On Day view, hold Mod then a column digit (2+) focuses that writable calendar column; Shift+Arrow / `C` seed a draft there.
 21. Cmd+C / Ctrl+C copies a focused event; Cmd+V / Ctrl+V pastes a duplicate at the original time without requiring focus. A later copy replaces the clipboard. Empty paste is a no-op. Copy/paste do not fire while typing in an input (native text clipboard). Cmd+D is unchanged.
 22. In Settings > Meeting, hold Mod to reveal chips `1`/`2`/`3` and Enter; extra digits focus nothing; U with Mod held does not copy.
+23. On the first-run Meeting wizard, Enter continues, Esc and J go back after step 1, and K continues when focus is not in an editable target.
