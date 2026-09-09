@@ -9,10 +9,14 @@ import {
 import { welcomeGuideActions } from "@web/components/WelcomeModal/welcome.guide.store";
 import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import {
-  pointerConfusionActions,
-  usePointerConfusionStore,
-} from "@web/shortcuts/keyboard-only/pointer-confusion.store";
-import { resetPointerHintPersistenceForTests } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+  readPointerHintDismissedPermanently,
+  resetPointerHintPersistenceForTests,
+} from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import {
+  initialPointerHintState,
+  pointerHintActions,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   eventJumpActions,
@@ -24,7 +28,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 describe("PointerHint", () => {
   beforeEach(() => {
     resetPointerHintPersistenceForTests();
-    pointerConfusionActions.resetForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true);
     useEventJumpStore.setState(initialEventJumpState, true);
     welcomeGuideActions.setFirstVisitOpen(false);
@@ -33,23 +37,23 @@ describe("PointerHint", () => {
 
   afterEach(() => {
     resetPointerHintPersistenceForTests();
-    pointerConfusionActions.resetForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState, true);
     useEventJumpStore.setState(initialEventJumpState, true);
     welcomeGuideActions.setFirstVisitOpen(false);
     welcomeGuideActions.close();
   });
 
-  it("stays hidden until the confusion heuristic fires", () => {
+  it("stays hidden until a click pulses", () => {
     render(<PointerHint />);
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Compass is keyboard only. Press ? for shortcuts.",
+      "Compass works from the keyboard. Press ? to see every shortcut.",
     );
   });
 
@@ -58,7 +62,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -72,7 +76,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -85,7 +89,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.startTrial,
         shortcutKey: "S",
       });
@@ -100,7 +104,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.reconnectGoogle,
         shortcutKey: "G",
       });
@@ -115,7 +119,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.datePick,
       });
     });
@@ -129,7 +133,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.upNextDismiss,
         shortcutKey: "Esc",
       });
@@ -144,7 +148,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.sidebarClose,
       });
     });
@@ -158,7 +162,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.sidebarOpen,
       });
     });
@@ -172,7 +176,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.goToToday,
       });
     });
@@ -186,7 +190,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.switchView,
       });
     });
@@ -200,7 +204,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: "unknown",
         shortcutKey: "Mod+K",
       });
@@ -216,11 +220,11 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "Keyboard only. Follow the keys on screen.",
+      "Follow the keys on screen.",
     );
   });
 
@@ -229,7 +233,7 @@ describe("PointerHint", () => {
 
     act(() => {
       eventJumpActions.setPointerHint({ eventId: "event-1", key: "W2" });
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.eventOpen,
         eventId: "event-1",
       });
@@ -244,7 +248,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: POINTER_ACTIONS.eventOpen,
         eventId: "event-1",
       });
@@ -259,7 +263,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: "grid.timed",
         gridDate: "2026-08-29",
         gridTimeKey: "1130",
@@ -276,7 +280,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: "grid.timed",
         gridDate: "2026-08-29",
         gridTimeKey: "1830",
@@ -293,7 +297,7 @@ describe("PointerHint", () => {
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({
+      pointerHintActions.pulse({
         actionId: "grid.all-day",
         gridDate: "2026-08-29",
       });
@@ -304,21 +308,51 @@ describe("PointerHint", () => {
     );
   });
 
-  it("dismisses permanently from the hint control", async () => {
+  it("tells a working control's key for next time", () => {
+    render(<PointerHint />);
+
+    act(() => {
+      pointerHintActions.pulse({
+        actionId: "unknown",
+        shortcutKey: ["Mod", "K"],
+        performed: true,
+      });
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /^Next time, press .+\.$/,
+    );
+    expect(screen.getByRole("status")).not.toHaveTextContent("Press Mod");
+  });
+
+  it("names the view keys after the view switcher is clicked", () => {
+    render(<PointerHint />);
+
+    act(() => {
+      pointerHintActions.pulse({
+        actionId: POINTER_ACTIONS.switchView,
+        performed: true,
+      });
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Next time, press W, D, or L to switch views.",
+    );
+  });
+
+  it("turns tips off from the hint control", async () => {
     const user = userEvent.setup();
     render(<PointerHint />);
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     await user.click(
-      screen.getByRole("button", {
-        name: "Dismiss keyboard tips permanently",
-      }),
+      screen.getByRole("button", { name: "Turn off keyboard tips" }),
     );
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
-    expect(usePointerConfusionStore.getState().score).toBe(0);
+    expect(readPointerHintDismissedPermanently()).toBe(true);
   });
 });

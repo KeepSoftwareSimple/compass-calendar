@@ -2,7 +2,6 @@ import "@testing-library/jest-dom";
 import {
   act,
   fireEvent,
-  renderHook,
   screen,
   waitFor,
   within,
@@ -24,7 +23,6 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { usePointerSuppression } from "@web/shortcuts/keyboard-only/usePointerSuppression";
 import { recordRecentCommand } from "./recent-commands.store";
 import {
   afterAll,
@@ -344,21 +342,6 @@ describe("CommandPalette", () => {
     });
     expect(isOpen()).toBe(false);
     unsubscribe();
-  });
-
-  it("runs Enter selection while pointer suppression blocks clicks", () => {
-    // Mount the same capture-phase click blocker RootShell uses in production.
-    const { unmount: unmountMode } = renderHook(() => usePointerSuppression());
-
-    renderPalette();
-    const input = getInput();
-    fireEvent.change(input, { target: { value: "Show shortcuts" } });
-    fireEvent.keyDown(input, { key: "Enter" });
-
-    expect(onShowShortcuts).toHaveBeenCalledTimes(1);
-    expect(isOpen()).toBe(false);
-
-    unmountMode();
   });
 
   it("resets the active option to the first after typing", () => {
