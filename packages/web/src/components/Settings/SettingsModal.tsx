@@ -1,4 +1,5 @@
 import { type FC, Suspense, useEffect, useRef, useState } from "react";
+import { isSavedBookingPage } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { providerDisplayName } from "@core/types/sync/identity.contracts";
@@ -25,6 +26,11 @@ import { getPlanBadge } from "@web/billing/planBadge";
 import { useUpgradeConfirmation } from "@web/billing/UpgradeConfirmation/hooks/useUpgradeConfirmation";
 import { useAppAccess } from "@web/billing/useAppAccess";
 import { LazyBookingSettingsSection as BookingSettingsSection } from "@web/booking/BookingSettingsSection.lazy";
+import {
+  useBookingPageQuery,
+  useBookingStatusQuery,
+} from "@web/booking/booking.query";
+import { BOOKING_NAV_NEEDS_ATTENTION } from "@web/booking/booking-bookability.copy";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
   compareCalendars,
@@ -144,6 +150,15 @@ export const SettingsModal: FC = () => {
 
   const { data } = useCalendarsQuery();
   const connections = useUserMetadataStore(selectSyncConnections);
+  const showBookingNav = authenticated && IS_BOOKING_ENABLED;
+  const { data: bookingPage } = useBookingPageQuery(isOpen && showBookingNav);
+  const isLiveBookingPage =
+    isSavedBookingPage(bookingPage) && bookingPage.enabled === true;
+  const { data: bookingStatus } = useBookingStatusQuery(
+    isOpen && showBookingNav && isLiveBookingPage,
+  );
+  const bookingNeedsAttention =
+    isLiveBookingPage && bookingStatus?.bookable === false;
   const accountEmailOrder = useConnectedAccountEmails();
   // useDefaultTargetCalendar subscribes to session reconnect overrides, so
   // writableCalendars recomputes when a 410 lands before Sync metadata catches up.
@@ -251,7 +266,18 @@ export const SettingsModal: FC = () => {
               type="button"
               {...settingsShortcutAttrs("nav-booking")}
             >
-              Meeting
+              <span className="flex items-center gap-2">
+                Meeting
+                {bookingNeedsAttention ? (
+                  <span
+                    aria-hidden
+                    className="size-1.5 shrink-0 rounded-full bg-warning"
+                  />
+                ) : null}
+                {bookingNeedsAttention ? (
+                  <span className="sr-only">{BOOKING_NAV_NEEDS_ATTENTION}</span>
+                ) : null}
+              </span>
               {areHintsVisible ? <ShortcutKeys keys="3" /> : null}
             </button>
           ) : null}

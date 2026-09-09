@@ -42,6 +42,7 @@ import { BookingWeeklyHoursEditor } from "@web/booking/BookingWeeklyHoursEditor"
 import {
   bookingSaveErrorInline,
   useBookingPageQuery,
+  useBookingStatusQuery,
   useSaveBookingPageMutation,
 } from "@web/booking/booking.query";
 import {
@@ -250,6 +251,9 @@ export function BookingSettingsSection({
   ]);
 
   const { data: serverPage, isPending } = useBookingPageQuery(true);
+  const isLiveSavedPage =
+    isSavedBookingPage(serverPage) && serverPage.enabled === true;
+  const statusQuery = useBookingStatusQuery(isLiveSavedPage);
   const saveMutation = useSaveBookingPageMutation();
   const [form, setForm] = useState<AdminPutBookingPageInput>(() =>
     buildInitialForm(
@@ -382,16 +386,27 @@ export function BookingSettingsSection({
       track("booking_settings_opened", {
         has_connection: false,
         is_live: false,
+        is_bookable: false,
       });
       return;
     }
     if (isSeedingForm) return;
+    const isLive =
+      isSavedBookingPage(serverPage) && serverPage.enabled === true;
+    if (isLive && !statusQuery.isFetched) return;
     settingsOpenedRef.current = true;
     track("booking_settings_opened", {
       has_connection: true,
-      is_live: isSavedBookingPage(serverPage) && serverPage.enabled === true,
+      is_live: isLive,
+      is_bookable: isLive && statusQuery.data?.bookable === true,
     });
-  }, [hasHealthyConnection, isSeedingForm, serverPage]);
+  }, [
+    hasHealthyConnection,
+    isSeedingForm,
+    serverPage,
+    statusQuery.data?.bookable,
+    statusQuery.isFetched,
+  ]);
 
   const showFirstRunConnectPrompt =
     !hasHealthyConnection &&
@@ -646,9 +661,12 @@ export function BookingSettingsSection({
         <BookingStatusHeader
           addressPreview={addressPreview}
           bookingUrl={savedPage?.bookingUrl ?? null}
+          calendars={calendars}
+          connections={connections}
           isLive={isLive}
           isPending={saveMutation.isPending}
           onToggle={(next) => submit(next)}
+          status={statusQuery.data}
         />
 
         <div className="max-w-[50%]">

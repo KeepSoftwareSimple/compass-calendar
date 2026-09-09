@@ -444,3 +444,36 @@ test("keeps the meeting form visible when Google needs reconnecting", async ({
     include: "[role='dialog']",
   });
 });
+
+test("shows why guests cannot book when a blocking calendar is stale", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    pageStatus: {
+      bookable: false,
+      reasons: [
+        {
+          kind: "calendar",
+          reason: "stale",
+          calendarId: BOOKING_CALENDAR_ID,
+        },
+      ],
+    },
+  });
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(
+    settingsDialog.getByText("Guests can't book right now"),
+  ).toBeVisible();
+  await expect(
+    settingsDialog.getByText(
+      "Work hasn't synced recently. Guests can book once it catches up.",
+    ),
+  ).toBeVisible();
+  await expect(
+    settingsDialog.getByRole("button", { name: /Meeting/ }),
+  ).toContainText("needs attention");
+  await expectNoAxeViolations(page, {
+    checkpoint: "settings booking stale calendar status",
+    include: "[role='dialog']",
+  });
+});

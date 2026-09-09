@@ -1,3 +1,7 @@
+import { type BookingPageStatusResponse } from "@core/types/booking.contracts";
+import { type Calendar } from "@core/types/calendar.contracts";
+import { type SyncConnectionSummary } from "@core/types/user.types";
+import { BookingBookabilityNotice } from "@web/booking/BookingBookabilityNotice";
 import { BookingCopyLink } from "@web/booking/BookingCopyLink";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { Switch } from "@web/components/Switch/Switch";
@@ -8,6 +12,9 @@ interface BookingStatusHeaderProps {
   onToggle: (next: boolean) => void;
   bookingUrl: string | null;
   addressPreview: string | null;
+  calendars: readonly Calendar[];
+  connections: readonly SyncConnectionSummary[];
+  status: BookingPageStatusResponse | undefined;
 }
 
 export function BookingStatusHeader({
@@ -16,6 +23,9 @@ export function BookingStatusHeader({
   onToggle,
   bookingUrl,
   addressPreview,
+  calendars,
+  connections,
+  status,
 }: BookingStatusHeaderProps) {
   return (
     <div className="flex flex-col gap-2">
@@ -43,6 +53,13 @@ export function BookingStatusHeader({
           ) : null}
         </>
       )}
+      {isLive && status ? (
+        <BookingBookabilityNotice
+          calendars={calendars}
+          connections={connections}
+          status={status}
+        />
+      ) : null}
     </div>
   );
 }

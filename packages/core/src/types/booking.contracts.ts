@@ -10,6 +10,9 @@ import {
   type TimeZone,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
+import { CalendarFreshnessIssueReasonSchema } from "@core/types/sync/availability.contracts";
+import { ConnectionStateSchema } from "@core/types/sync/connection.contracts";
+import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
 import { ObjectIdStringSchema } from "@core/types/type.utils";
 
 export const BOOKING_RESERVED_SLUGS = [
@@ -256,6 +259,39 @@ export const BookingSlotsResponseSchema = z.strictObject({
   bookable: z.boolean(),
 });
 export type BookingSlotsResponse = z.infer<typeof BookingSlotsResponseSchema>;
+
+export const BookingPageStatusReasonKindSchema = z.enum([
+  "connection",
+  "calendar",
+  "billing",
+]);
+export type BookingPageStatusReasonKind = z.infer<
+  typeof BookingPageStatusReasonKindSchema
+>;
+
+export const BookingPageStatusReasonSchema = z.strictObject({
+  kind: BookingPageStatusReasonKindSchema,
+  reason: z.union([
+    CalendarFreshnessIssueReasonSchema,
+    ConnectionStateSchema,
+    z.literal("BILLING_REQUIRED"),
+  ]),
+  calendarId: CalendarIdSchema.optional(),
+  connectionState: ConnectionStateSchema.optional(),
+  provider: ProviderKindSchema.optional(),
+  accountEmail: z.string().min(1).max(320).optional(),
+});
+export type BookingPageStatusReason = z.infer<
+  typeof BookingPageStatusReasonSchema
+>;
+
+export const BookingPageStatusResponseSchema = z.strictObject({
+  bookable: z.boolean(),
+  reasons: z.array(BookingPageStatusReasonSchema),
+});
+export type BookingPageStatusResponse = z.infer<
+  typeof BookingPageStatusResponseSchema
+>;
 
 /** Same shape the guest form and public reservation service enforce. */
 export const GUEST_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

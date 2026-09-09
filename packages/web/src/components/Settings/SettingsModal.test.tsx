@@ -735,6 +735,66 @@ describe("SettingsModal", () => {
     expect(screen.getByRole("button", { name: "Meeting" })).toBeInTheDocument();
   });
 
+  it("marks Meeting as needing attention when the live page is not bookable", async () => {
+    const calendar = createMockCalendar({ name: "Work" });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            id: createObjectIdString(),
+            slug: "hostuser",
+            hostUserId: createObjectIdString(),
+            enabled: true,
+            durationMinutes: 30,
+            destinationCalendarId: calendar.id,
+            blockingCalendarIds: [calendar.id],
+            timeZone: "UTC",
+            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+            minNoticeHours: 4,
+            maxHorizonDays: 60,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            bookingUrl: "https://compasscalendar.com/meet/hostuser",
+          }),
+        ),
+      ),
+      rest.get(`${bookingPageUrl}/status`, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            bookable: false,
+            reasons: [
+              {
+                kind: "calendar",
+                reason: "stale",
+                calendarId: calendar.id,
+              },
+            ],
+          }),
+        ),
+      ),
+    );
+
+    renderSettings({
+      authenticated: true,
+      calendars: [calendar],
+    });
+
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("button", { name: /Meeting/ })).getByText(
+          "needs attention",
+        ),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("does not mark Meeting as needing attention when the page is bookable", async () => {
+    renderSettings({ authenticated: true });
+
+    const meeting = screen.getByRole("button", { name: "Meeting" });
+    expect(within(meeting).queryByText("needs attention")).toBeNull();
+  });
+
   it("hides Booking for a signed-out session", () => {
     renderSettings({ authenticated: false });
 

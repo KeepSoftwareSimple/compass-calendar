@@ -581,6 +581,75 @@ describe("PublicBookingService", () => {
     });
   });
 
+  it("reports a stale blocking calendar on host status and keeps slots unbookable", async () => {
+    const { userId, slug, calendarId } = await enableBookingPage();
+    getAvailability.mockImplementation(async () => ({
+      ...busyResponse(false),
+      complete: false,
+      issues: [{ calendarId, reason: "stale" }],
+    }));
+
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: false,
+      reasons: [{ kind: "calendar", reason: "stale", calendarId }],
+    });
+    await expect(
+      service.getSlots(slug, {
+        start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+        end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+        timeZone: "UTC",
+      }),
+    ).resolves.toEqual({ slots: [], bookable: false });
+  });
+
+  it("reports an actionRequired connection on host status", async () => {
+    const { userId } = await enableBookingPage();
+    getAvailability.mockImplementation(async () => ({
+      ...busyResponse(false),
+      connections: [
+        {
+          connectionId: new ObjectId().toString(),
+          state: "actionRequired",
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+        },
+      ],
+    }));
+
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: false,
+      reasons: [
+        {
+          kind: "connection",
+          reason: "actionRequired",
+          connectionState: "actionRequired",
+        },
+      ],
+    });
+  });
+
+  it("answers bookable with no reasons for a disabled page", async () => {
+    const { userId } = await enableBookingPage("Disabled Host", {
+      enabled: false,
+    });
+
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: true,
+      reasons: [],
+    });
+    expect(getAvailability).not.toHaveBeenCalled();
+  });
+
+  it("answers bookable with no reasons when the host has no page", async () => {
+    const userId = await createNamedUser("No Page Host");
+
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: true,
+      reasons: [],
+    });
+    expect(getAvailability).not.toHaveBeenCalled();
+  });
+
   it("does not occupy a slot for a needsAction invite", async () => {
     const { slug } = await enableBookingPage();
     getAvailability.mockImplementation(async () => ({

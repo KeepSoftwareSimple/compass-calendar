@@ -8,6 +8,7 @@ import {
   BOOKING_MAX_MIN_NOTICE_HOURS,
   BOOKING_PLACEHOLDER_CALENDAR_ID,
   BookingPageSchema,
+  BookingPageStatusResponseSchema,
   BookingReservationSlotsQuerySchema,
   BookingSlugSchema,
   buildDefaultAdminPutInput,
@@ -662,5 +663,47 @@ describe("HTTP booking contracts", () => {
 
   it("rejects reserved slug reschedule", () => {
     expect(BookingSlugSchema.safeParse("reschedule").success).toBe(false);
+  });
+});
+
+describe("BookingPageStatusResponseSchema", () => {
+  it("accepts a bookable empty status", () => {
+    expect(
+      BookingPageStatusResponseSchema.safeParse({
+        bookable: true,
+        reasons: [],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts calendar, connection, and billing reasons", () => {
+    expect(
+      BookingPageStatusResponseSchema.safeParse({
+        bookable: false,
+        reasons: [
+          {
+            kind: "calendar",
+            reason: "stale",
+            calendarId: calendarId(),
+          },
+          {
+            kind: "connection",
+            reason: "actionRequired",
+            connectionState: "actionRequired",
+            provider: "google",
+          },
+          { kind: "billing", reason: "BILLING_REQUIRED" },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects invented reason strings", () => {
+    expect(
+      BookingPageStatusResponseSchema.safeParse({
+        bookable: false,
+        reasons: [{ kind: "calendar", reason: "offline" }],
+      }).success,
+    ).toBe(false);
   });
 });
