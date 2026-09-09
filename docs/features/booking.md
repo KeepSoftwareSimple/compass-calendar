@@ -271,14 +271,16 @@ open over about 200 ms, and reduced motion disables the animation.
   copies the link, and then shows the full form with the switch focused.
 - **Timezone** uses the same searchable combobox as time travel. The
   trigger is one tab stop and still renders a stored non-canonical alias.
-  Under weekly hours a muted line reads the city and abbreviation and
-  points to More options. Every Start and End menu is described by that
-  line.
+  It lives under More options. The first-run hours step still says
+  "Times are in {city} ({abbr}). You can change this later." The go-live
+  summary has a Timezone row with that same label. The configured form
+  has no timezone footnote under Weekly hours.
 - **Weekly hours** are a list of the seven ISO weekdays, Monday first.
-  Each line is a checkbox named with the full weekday, the short label,
-  a Start menu, the word "to", an End menu, and one action cell. Menus
-  step by 15 minutes with 12-hour labels (`9:00 AM`). An unchecked day
-  shows only the checkbox and label and keeps the same line height.
+  Each line is a six-column grid with a fixed 1rem checkbox track so extra
+  blocks on a day line up with the first. Each line is a checkbox named
+  with the full weekday, the short label, a Start menu, the word "to", an
+  End menu, and one action cell. Menus step by 15 minutes with 12-hour
+  labels (`9:00 AM`). An unchecked day keeps the same column widths.
   The default is Monday to Friday, 9:00 AM to 5:00 PM. **Add hours to
   Monday** on a day's first line adds a second block under that day;
   each extra line's action cell removes that block. Start and End
@@ -574,6 +576,11 @@ Guest bookings onto a Google destination calendar now request Google Meet
 on the real `events.insert` call (`conferenceDataVersion: 1`). Before this,
 the adapter passed the conference payload but the googleapis wrapper dropped
 the version flag, so Google ignored Meet.
+
+The configured Meeting form no longer shows a timezone footnote under
+Weekly hours. Extra hour blocks on a day share the first line's left edge
+and width. The first-run go-live summary gained a Timezone row; the wizard
+hours step still names the zone.
 
 ### v1.9
 

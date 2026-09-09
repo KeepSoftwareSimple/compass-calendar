@@ -610,7 +610,7 @@ describe("BookingSettingsSection", () => {
     expect(trigger).toHaveAccessibleName("Meeting timezone: UTC (UTC)");
   });
 
-  it("describes weekly hours from the muted timezone line and keeps the trigger in More options", async () => {
+  it("keeps the timezone trigger in More options", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
@@ -633,11 +633,10 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    const mondayStart = await screen.findByRole("combobox", {
+    await screen.findByRole("combobox", {
       name: "Monday start",
     });
-    expect(mondayStart).toHaveAccessibleDescription(/Times in/);
-    expect(mondayStart).toHaveAccessibleDescription(/More options/);
+    expect(screen.queryByText(/Times in/)).not.toBeInTheDocument();
 
     await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
     const address = screen.getByLabelText("Page address");
@@ -1011,6 +1010,7 @@ describe("BookingSettingsSection", () => {
     setClipboard({ writeText });
     const savedBodies: unknown[] = [];
     userMetadataActions.set(healthyGoogleMetadata);
+    setPinnedTimeZone(HOST_TIME_ZONE);
 
     server.use(
       rest.get(bookingPageUrl, (_req, res, ctx) =>
@@ -1035,6 +1035,8 @@ describe("BookingSettingsSection", () => {
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
     await user.keyboard("k");
     await user.keyboard("k");
+    expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("Chicago (CDT)")).toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", { name: /Turn on and copy link/ }),
     );
@@ -1102,6 +1104,7 @@ describe("BookingSettingsSection", () => {
   it("keeps the go-live step visible when enable fails", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
+    setPinnedTimeZone(HOST_TIME_ZONE);
 
     server.use(
       rest.get(bookingPageUrl, (_req, res, ctx) =>
@@ -1134,6 +1137,8 @@ describe("BookingSettingsSection", () => {
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
     await user.keyboard("k");
     await user.keyboard("k");
+    expect(screen.getByText("Timezone")).toBeInTheDocument();
+    expect(screen.getByText("Chicago (CDT)")).toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", { name: /Turn on and copy link/ }),
     );

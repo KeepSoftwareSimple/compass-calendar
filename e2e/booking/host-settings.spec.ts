@@ -331,6 +331,41 @@ test.describe("reduced motion", () => {
   });
 });
 
+test("second hours line aligns with the first", async ({ page }) => {
+  await prepareSignedInBookingSettingsPage(page);
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await dispatchClick(
+    settingsDialog.getByRole("button", { name: "Add hours to Monday" }),
+  );
+  const mondayStart = settingsDialog.getByRole("combobox", {
+    name: "Monday start",
+  });
+  const mondayStart2 = settingsDialog.getByRole("combobox", {
+    name: "Monday start 2",
+  });
+  const mondayEnd = settingsDialog.getByRole("combobox", {
+    name: "Monday end",
+  });
+  const mondayEnd2 = settingsDialog.getByRole("combobox", {
+    name: "Monday end 2",
+  });
+  await expect(mondayStart2).toBeVisible();
+
+  const startBox = await mondayStart.boundingBox();
+  const start2Box = await mondayStart2.boundingBox();
+  const endBox = await mondayEnd.boundingBox();
+  const end2Box = await mondayEnd2.boundingBox();
+  expect(startBox).not.toBeNull();
+  expect(start2Box).not.toBeNull();
+  expect(endBox).not.toBeNull();
+  expect(end2Box).not.toBeNull();
+  expect(start2Box!.x).toBe(startBox!.x);
+  expect(start2Box!.width).toBe(startBox!.width);
+  expect(end2Box!.x).toBe(endBox!.x);
+  expect(end2Box!.width).toBe(endBox!.width);
+});
+
 test("settings dialog never scrolls horizontally with more options open", async ({
   page,
 }) => {

@@ -201,6 +201,7 @@ export function BookingSetupWizard({
             destinationCalendar={destinationCalendar}
             durationMinutes={form.durationMinutes}
             slug={form.slug ?? ""}
+            timeZone={form.timeZone}
             weeklyAvailability={form.weeklyAvailability}
           />
         ) : null}
