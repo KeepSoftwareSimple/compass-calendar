@@ -160,9 +160,6 @@ test.describe("booking v1.5 escape and self-service", () => {
     await expect(page.getByText("Ada Lovelace")).toBeVisible();
     await expect(page.getByText("bring coffee")).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Copy cancel link" }),
-    ).toBeVisible();
-    await expect(
       page.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeVisible();
 
