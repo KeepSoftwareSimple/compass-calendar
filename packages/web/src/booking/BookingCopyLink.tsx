@@ -10,11 +10,15 @@ import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 
 interface BookingCopyLinkProps {
   bookingUrl: string;
+  showOpen?: boolean;
 }
 
 const ICON_SIZE = 18;
 
-export function BookingCopyLink({ bookingUrl }: BookingCopyLinkProps) {
+export function BookingCopyLink({
+  bookingUrl,
+  showOpen = true,
+}: BookingCopyLinkProps) {
   const { copied, copy } = useCopiedFlag(bookingUrl, (didCopy) => {
     if (didCopy) {
       track("booking_link_copied", { source: "button" });
@@ -47,17 +51,19 @@ export function BookingCopyLink({ bookingUrl }: BookingCopyLinkProps) {
             {copied ? <Check size={ICON_SIZE} /> : <Copy size={ICON_SIZE} />}
           </IconButton>
         </TooltipWrapper>
-        <TooltipWrapper description="Open meeting page">
-          <a
-            aria-label="Open meeting page"
-            className={iconButtonClassName("small")}
-            href={bookingUrl}
-            rel="noreferrer"
-            target="_blank"
-          >
-            <ArrowSquareOut size={ICON_SIZE} />
-          </a>
-        </TooltipWrapper>
+        {showOpen ? (
+          <TooltipWrapper description="Open meeting page">
+            <a
+              aria-label="Open meeting page"
+              className={iconButtonClassName("small")}
+              href={bookingUrl}
+              rel="noreferrer"
+              target="_blank"
+            >
+              <ArrowSquareOut size={ICON_SIZE} />
+            </a>
+          </TooltipWrapper>
+        ) : null}
       </div>
     </div>
   );

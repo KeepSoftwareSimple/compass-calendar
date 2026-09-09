@@ -2614,6 +2614,115 @@ describe("BookingSettingsSection", () => {
     );
   });
 
+  it("keeps a copyable meeting link when a configured page is off", async () => {
+    userMetadataActions.set(healthyGoogleMetadata);
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            enabled: false,
+            durationMinutes: 30,
+            destinationCalendarId: writableCalendar.id,
+            blockingCalendarIds: [writableCalendar.id],
+            timeZone: "UTC",
+            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+            minNoticeHours: 4,
+            maxHorizonDays: 60,
+            isConfigured: true,
+            suggestedSlug: "hostuser",
+          }),
+        ),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    const meetingLink = await screen.findByLabelText("Meeting link");
+    expect(meetingLink).toHaveValue(`${window.location.origin}/meet/hostuser`);
+    expect(
+      screen.getByRole("button", { name: "Copy meeting link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Open meeting page" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Off. Guests can use this link once you turn it on."),
+    ).toBeInTheDocument();
+  });
+
+  it("does not show a copyable meeting link on a first-run page", async () => {
+    userMetadataActions.set(healthyGoogleMetadata);
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(unconfiguredPage())),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "Pick your address" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Meeting link")).not.toBeInTheDocument();
+  });
+
+  it("does not change the off-page meeting link when the address is edited unsaved", async () => {
+    const user = userEvent.setup({ delay: null });
+    userMetadataActions.set(healthyGoogleMetadata);
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            enabled: false,
+            durationMinutes: 30,
+            destinationCalendarId: writableCalendar.id,
+            blockingCalendarIds: [writableCalendar.id],
+            timeZone: "UTC",
+            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+            minNoticeHours: 4,
+            maxHorizonDays: 60,
+            isConfigured: true,
+            suggestedSlug: "hostuser",
+          }),
+        ),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    const meetingLink = await screen.findByLabelText("Meeting link");
+    const savedUrl = `${window.location.origin}/meet/hostuser`;
+    expect(meetingLink).toHaveValue(savedUrl);
+
+    await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
+    const address = screen.getByLabelText("Page address");
+    await user.clear(address);
+    await user.type(address, "newhost");
+
+    expect(screen.getByLabelText("Meeting link")).toHaveValue(savedUrl);
+  });
+
   it("turns off a live page", async () => {
     const user = userEvent.setup({ delay: null });
     const { port, mocks } = createTestToastPort();

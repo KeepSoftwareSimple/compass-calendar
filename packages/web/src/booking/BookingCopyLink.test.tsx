@@ -68,6 +68,25 @@ describe("BookingCopyLink", () => {
     expect(openLink).toHaveAttribute("rel", "noreferrer");
   });
 
+  it("hides the open-page link when showOpen is false", () => {
+    render(
+      <BookingCopyLink
+        bookingUrl="https://compasscalendar.com/meet/hostuser"
+        showOpen={false}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("link", { name: "Open meeting page" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Meeting link")).toHaveValue(
+      "https://compasscalendar.com/meet/hostuser",
+    );
+    expect(
+      screen.getByRole("button", { name: "Copy meeting link" }),
+    ).toBeInTheDocument();
+  });
+
   it("explains the copy icon in a tooltip", async () => {
     const user = userEvent.setup({ delay: null });
     render(
