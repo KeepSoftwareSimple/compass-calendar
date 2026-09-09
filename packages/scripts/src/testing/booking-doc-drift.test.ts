@@ -17,11 +17,16 @@ const STALE_BOOKING_TERMS =
 const STALE_V19_BOOKING_TERMS =
   /grouped weekly hours|weekly-hours\.rows|\bUnavailable:|\bLive at\b|Pending, maybe|keeps only the first interval|a weekday belongs to at most one row/i;
 
+const STALE_V110_BOOKING_TERMS =
+  /Times in .*Change it under|Copy cancel link|Copy reschedule link|Essentials: duration, weekly hours, and destination/i;
+
 const STALE_MEETING_MOD_CHORDS = /\bMod\+(?:[4-9]|U)\b/;
 
 const REMOVED_IN_V18 = /removed in Booking v1\.8/i;
 const REMOVED_IN_V19 =
   /removed or reversed in v1\.9|reversed in v1\.9|removed in Booking v1\.9/i;
+const REMOVED_IN_V110 =
+  /removed or reversed in v1\.10|reversed in v1\.10|dropped in v1\.10|no longer shows the v1\.9 timezone helper line/i;
 
 function inChangelogSection(lines: string[], index: number): boolean {
   for (let cursor = index; cursor >= 0; cursor -= 1) {
@@ -33,10 +38,19 @@ function inChangelogSection(lines: string[], index: number): boolean {
 }
 
 function lineAllowedInBookingSpec(line: string, nearby: string[]): boolean {
-  if (REMOVED_IN_V18.test(line) || REMOVED_IN_V19.test(line)) return true;
+  if (
+    REMOVED_IN_V18.test(line) ||
+    REMOVED_IN_V19.test(line) ||
+    REMOVED_IN_V110.test(line)
+  ) {
+    return true;
+  }
   if (
     nearby.some(
-      (other) => REMOVED_IN_V18.test(other) || REMOVED_IN_V19.test(other),
+      (other) =>
+        REMOVED_IN_V18.test(other) ||
+        REMOVED_IN_V19.test(other) ||
+        REMOVED_IN_V110.test(other),
     )
   ) {
     return true;
@@ -50,17 +64,35 @@ function staleLines(
     includeMeetingModChords: boolean;
     allowV18RemovalBlock?: boolean;
     allowV19Changelog?: boolean;
+    allowV110Changelog?: boolean;
   },
 ): string[] {
   const lines = content.split("\n");
   return lines.flatMap((line, index) => {
     const matchesV18Term = STALE_BOOKING_TERMS.test(line);
     const matchesV19Term = STALE_V19_BOOKING_TERMS.test(line);
+    const matchesV110Term = STALE_V110_BOOKING_TERMS.test(line);
     const matchesMeetingMod =
       options.includeMeetingModChords && STALE_MEETING_MOD_CHORDS.test(line);
-    if (!matchesV18Term && !matchesV19Term && !matchesMeetingMod) return [];
+    if (
+      !matchesV18Term &&
+      !matchesV19Term &&
+      !matchesV110Term &&
+      !matchesMeetingMod
+    ) {
+      return [];
+    }
 
     if (options.allowV19Changelog && matchesV19Term && !matchesV18Term) {
+      if (inChangelogSection(lines, index)) return [];
+    }
+
+    if (
+      options.allowV110Changelog &&
+      matchesV110Term &&
+      !matchesV18Term &&
+      !matchesV19Term
+    ) {
       if (inChangelogSection(lines, index)) return [];
     }
 
@@ -74,13 +106,14 @@ function staleLines(
 }
 
 describe("booking doc drift", () => {
-  it("docs/features/booking.md has no stale terms outside the removal wart and v1.9 changelog", () => {
+  it("docs/features/booking.md has no stale terms outside the removal wart and v1.9/v1.10 changelog", () => {
     const content = readFileSync(BOOKING_SPEC_PATH, "utf8");
     expect(
       staleLines(content, {
         includeMeetingModChords: true,
         allowV18RemovalBlock: true,
         allowV19Changelog: true,
+        allowV110Changelog: true,
       }),
     ).toEqual([]);
   });

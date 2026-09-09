@@ -90,6 +90,17 @@ describe("PublicBookingMonthGrid", () => {
     expect(screen.getByText("16")).toBeInTheDocument();
   });
 
+  it("marks unavailable days as disabled with an explanation for screen readers", () => {
+    renderGrid();
+
+    const unavailable = screen.getByText("16").closest("[aria-disabled]");
+    expect(unavailable).toHaveAttribute("aria-disabled", "true");
+    expect(
+      unavailable?.textContent?.trim().endsWith("no times available"),
+    ).toBe(true);
+    expect(unavailable).not.toHaveAttribute("tabindex");
+  });
+
   it("keeps a single day in the tab order and moves with arrow keys", async () => {
     const user = userEvent.setup({ delay: null });
     const { selected } = renderGrid();

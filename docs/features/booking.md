@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -16,21 +16,30 @@ menus for weekly hours, fewer host scheduling knobs, sidebar-only Mod chords,
 no horizontal scroll, and the stale-holiday-calendar booking gate fix. v1.9
 anchored Settings to the top, animated More options, let a day hold several
 hour blocks, moved meeting timezone under More options, and trimmed helper
-copy. The production gate stays off.
+copy. v1.10 fixed Google Meet on insert, aligned weekly hours, moved
+destination calendar under More options, dropped confirmation copy buttons,
+formatted meeting descriptions with linked paragraphs, kept the meeting tab
+visible on broken connections, surfaced host bookability status, stopped
+Settings scroll flash, fixed setup wizard dead-ends, toasts new bookings,
+added a sidebar setup nudge, and kept the meeting link when the page is off.
+The production gate stays off.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
 
 ## Status
 
-v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, and v1.9 are implemented in the Compass
-monorepo (public `/meet/:username`, host Settings, backend APIs, guest
-cancel, guest reschedule, edit-details, one-click turn on, Essentials /
+v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, and v1.10 are implemented in
+the Compass monorepo (public `/meet/:username`, host Settings, backend APIs,
+guest cancel, guest reschedule, edit-details, one-click turn on, Essentials /
 More options, editable address, default hours, branded connect pills,
 funnel analytics, meeting copy, hold-Mod section chords, the on/off
 switch, a per-day weekly hours list that can hold several blocks, meeting
-timezone under More options, the guided first-run setup wizard, Start
-and End time menus, and the v1.8 booking gate fix). Booking
+timezone under More options (configured form only; the wizard hours step
+shows timezone inline), the guided first-run setup wizard, Start and End
+time menus, the v1.8 booking gate fix, Google Meet on insert,
+host bookability status, connection banners, new-booking toasts, and the
+sidebar setup nudge). Booking
 is enabled in development and staging (`runtime.nodeEnv` other than
 `production`) and disabled in production. Do not flip `isBookingEnabled`.
 A standalone Compass Booking product (separate brand, domain, or
@@ -556,9 +565,6 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
   calendar write gate)
 - Flipping the production gate
 - Host reservation inbox
-- Meet URL on the confirmation screen (Google creates conference
-  asynchronously; the invite email already has it once
-  `conferenceDataVersion` is forwarded on insert)
 
 ## Implementation
 
@@ -574,9 +580,10 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
-| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
-| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
-| Public web API client | `packages/web/src/api/public-booking.api.ts` |
+| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx`, `packages/web/src/components/Sidebar/MeetingPageNudge/` |
+| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx`, `PublicBookingMonthGrid.tsx` |
+| Description formatting | `packages/web/src/components/DescriptionEditor/plain-text-description.ts` |
+| Public web API client | `packages/web/src/api/public-booking.api.ts`, `packages/web/src/api/booking.api.ts` |
 | E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
 
 ### Analytics
@@ -628,6 +635,9 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   max meetings per day, welcome text, and guest-invite permission were
   removed in Booking v1.8. Zod strips those keys on read; they are not
   in the wire contract or Settings UI.
+- **New-meetings claim has no `createdAt` index.** The host-notice query
+  filters reservations by `createdAt` after the previous notice stamp.
+  Accepted for v1.10 while booking stays off in production.
 
 ## Changelog
 
@@ -667,6 +677,17 @@ email.
 A signed-in host whose Meeting page is not live sees a sidebar card that
 opens Settings on the Meeting tab. Dismissing it is per browser; turning
 the page on hides it everywhere.
+
+The configured Meeting form no longer shows the v1.9 timezone helper line
+(`Times in … Change it under More options.`). The wizard hours step and
+go-live summary still show timezone inline.
+
+The setup wizard no longer dead-ends when no writable calendar exists: the
+destination step always appears, shows connect pills, and blocks Continue
+until a calendar is writable. Back and address focus behave on every step.
+
+Unavailable days on the guest month grid expose `aria-disabled="true"` and
+screen-reader text that the day has no open times.
 
 ### v1.9
 
