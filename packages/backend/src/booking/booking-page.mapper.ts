@@ -81,7 +81,7 @@ export const mapPutInputToRecordFields = (
   input: AdminPutBookingPageInput,
 ): Omit<
   BookingPageRecord,
-  "_id" | "userId" | "bookingSlug" | "createdAt" | "updatedAt"
+  "_id" | "userId" | "bookingSlug" | "createdAt" | "updatedAt" | "hostNoticedAt"
 > => {
   const { slug: _slug, ...withoutSlug } = input;
   return pickAdminPutBookingPageInput(withoutSlug);

@@ -162,6 +162,12 @@ describe("Host admin booking rate limits", () => {
       .set("Cookie", sessionCookie(userId))
       .send({});
 
+  const claimNewMeetings = (userId: string) =>
+    baseDriver
+      .getServer()
+      .post("/api/booking/page/new-meetings/claim")
+      .set("Cookie", sessionCookie(userId));
+
   it("throttles GET /api/booking/page after 60 requests in a minute", async () => {
     const { user } = await UtilDriver.setupTestUser();
     const userId = user._id.toString();
@@ -209,6 +215,26 @@ describe("Host admin booking rate limits", () => {
       await putAdminPage(busy._id.toString());
     }
     const response = await putAdminPage(quiet._id.toString());
+    expect(response.status).not.toBe(429);
+  });
+
+  it("throttles POST /api/booking/page/new-meetings/claim after 20 requests in a minute", async () => {
+    const { user } = await UtilDriver.setupTestUser();
+    const userId = user._id.toString();
+    for (let i = 0; i < 20; i += 1) {
+      await claimNewMeetings(userId);
+    }
+    const throttled = await claimNewMeetings(userId);
+    expect(throttled.status).toBe(429);
+  });
+
+  it("does not throttle a different host's claim bucket", async () => {
+    const { user: busy } = await UtilDriver.setupTestUser();
+    const { user: quiet } = await UtilDriver.setupTestUser();
+    for (let i = 0; i < 21; i += 1) {
+      await claimNewMeetings(busy._id.toString());
+    }
+    const response = await claimNewMeetings(quiet._id.toString());
     expect(response.status).not.toBe(429);
   });
 });

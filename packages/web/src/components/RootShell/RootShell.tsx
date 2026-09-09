@@ -16,6 +16,7 @@ import {
 import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
+import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
 import { AuthModalProvider } from "@web/components/AuthModal/AuthModalProvider";
@@ -68,6 +69,10 @@ export function RootShell() {
   // Must stay mounted on every route, including Life, so the 5-minute
   // heads-up still fires while the calendar grid is not on screen.
   useUpcomingEventNotifier();
+  // Claims new guest bookings once per load (and on return to the tab
+  // after five minutes). No-ops when booking is off or the session is
+  // anonymous.
+  useNewMeetingsNotice();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

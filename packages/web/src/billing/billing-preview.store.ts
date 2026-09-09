@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { setBillingGateOwnsScreen } from "@web/billing/billing-gate-attention";
+import { flushDeferredNewMeetingsToast } from "@web/booking/NewMeetingsToast";
 import { flushDeferredGoogleDelayedToast } from "@web/common/utils/toast/google-delayed.toast";
 import { flushDeferredGoogleReconnectToast } from "@web/common/utils/toast/google-reconnect.toast";
 
@@ -32,6 +33,7 @@ export const billingPreviewActions = {
     setBillingGateOwnsScreen(false);
     flushDeferredGoogleReconnectToast();
     flushDeferredGoogleDelayedToast();
+    flushDeferredNewMeetingsToast();
   },
   /**
    * Bring the gate back. Called when a write is refused with

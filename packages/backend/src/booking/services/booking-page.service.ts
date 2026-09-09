@@ -4,6 +4,8 @@ import {
   type AdminPutBookingPageInput,
   AdminPutBookingPageInputSchema,
   allocateBookingSlug,
+  type BookingNewMeetingsClaimResponse,
+  BookingNewMeetingsClaimResponseSchema,
   buildDefaultAdminPutInput,
 } from "@core/types/booking.contracts";
 import { type TimeZone, TimeZoneSchema } from "@core/types/domain-primitives";
@@ -16,6 +18,7 @@ import {
   mapPutInputToRecordFields,
 } from "@backend/booking/booking-page.mapper";
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
+import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import calendarService from "@backend/calendar/services/calendar.service";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
@@ -261,6 +264,44 @@ class BookingPageService {
       "INVALID_INPUT",
       "Could not persist meeting page due to slug collision",
     );
+  }
+
+  async claimNewMeetings(
+    userId: ObjectId,
+  ): Promise<BookingNewMeetingsClaimResponse> {
+    const page = await bookingPageRepository.findByUserId(userId);
+    if (!page?.enabled) {
+      return BookingNewMeetingsClaimResponseSchema.parse({
+        reservations: [],
+      });
+    }
+
+    const since = page.hostNoticedAt ?? page.createdAt;
+    const now = new Date();
+    const stamped = await bookingPageRepository.stampHostNoticedAt(
+      userId,
+      page.hostNoticedAt,
+      now,
+    );
+    if (!stamped) {
+      return BookingNewMeetingsClaimResponseSchema.parse({
+        reservations: [],
+      });
+    }
+
+    const records =
+      await bookingReservationRepository.listConfirmedCreatedSince(
+        page._id,
+        since,
+      );
+    return BookingNewMeetingsClaimResponseSchema.parse({
+      reservations: records.map((record) => ({
+        id: record._id.toString(),
+        guestName: record.guestName,
+        slotStart: record.slotStart.toISOString(),
+        slotEnd: record.slotEnd.toISOString(),
+      })),
+    });
   }
 }
 
