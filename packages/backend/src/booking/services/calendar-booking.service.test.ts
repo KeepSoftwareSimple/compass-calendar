@@ -157,10 +157,13 @@ describe("CalendarBookingService", () => {
       submitCommand,
     } as unknown as SyncServiceClient);
 
+    const description =
+      "Cancel: https://compasscalendar.com/cancel/x\n\nReschedule: https://compasscalendar.com/reschedule/x";
+
     await service.createBookingEvent(userId(), {
       calendarId: calendarId(),
       title: "Ada and Tyler",
-      description: "Cancel: https://compasscalendar.com/cancel/x",
+      description,
       start: "2026-09-01T15:00:00.000Z",
       end: "2026-09-01T15:30:00.000Z",
       timeZone: "America/Denver",
@@ -170,6 +173,7 @@ describe("CalendarBookingService", () => {
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
     const [, request] = submitCommand.mock.calls[0] ?? [];
+    expect(request.input.content.description).toBe(description);
     expect(request.input).toMatchObject({
       kind: "create",
       invitation: "all",

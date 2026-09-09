@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DescriptionEditor } from "@web/components/DescriptionEditor/DescriptionEditor";
 import { describe, expect, it, mock } from "bun:test";
@@ -183,6 +183,50 @@ describe("DescriptionEditor", () => {
     expect(textbox.innerHTML).not.toContain("javascript:");
     expect(screen.queryByRole("link")).toBeNull();
     expect(textbox.textContent).toBe("click me");
+  });
+
+  it("renders plain-text booking descriptions as three paragraphs with links", () => {
+    const cancelUrl = "https://x/meet/cancel/1?token=a";
+    const rescheduleUrl = "https://x/meet/reschedule/1?token=b";
+    render(
+      <DescriptionEditor
+        value={`Recovered\n\nCancel: ${cancelUrl}\n\nReschedule: ${rescheduleUrl}`}
+        onChange={mock()}
+        editable={false}
+        resetKey="test-booking-plain"
+      />,
+    );
+
+    const textbox = screen.getByRole("textbox", { name: "Description" });
+    const region = within(textbox);
+    expect(region.getByText("Recovered")).toBeTruthy();
+    expect(region.getByText(/^Cancel:/)).toBeTruthy();
+    expect(region.getByText(/^Reschedule:/)).toBeTruthy();
+    expect((textbox.innerHTML.match(/<p>/g) ?? []).length).toBe(3);
+    expect(screen.getByRole("link", { name: cancelUrl })).toHaveAttribute(
+      "href",
+      cancelUrl,
+    );
+    expect(screen.getByRole("link", { name: rescheduleUrl })).toHaveAttribute(
+      "href",
+      rescheduleUrl,
+    );
+  });
+
+  it("leaves existing HTML descriptions untouched", () => {
+    render(
+      <DescriptionEditor
+        value='<p>Notes</p><p><a href="https://example.com/meet">https://example.com/meet</a></p>'
+        onChange={mock()}
+        editable={false}
+        resetKey="test-booking-html"
+      />,
+    );
+
+    const textbox = screen.getByRole("textbox", { name: "Description" });
+    expect(within(textbox).getByText("Notes")).toBeTruthy();
+    expect((textbox.innerHTML.match(/<p>/g) ?? []).length).toBe(2);
+    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 
   it("re-syncs contenteditable when editable flips on the same event", () => {

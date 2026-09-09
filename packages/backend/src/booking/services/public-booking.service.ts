@@ -207,7 +207,11 @@ const bookingEventDescription = (
   cancelUrl: string,
   rescheduleUrl: string,
 ): string =>
-  [notes?.trim() || null, `Cancel: ${cancelUrl}\nReschedule: ${rescheduleUrl}`]
+  [
+    notes?.trim() || null,
+    `Cancel: ${cancelUrl}`,
+    `Reschedule: ${rescheduleUrl}`,
+  ]
     .filter(Boolean)
     .join("\n\n");
 

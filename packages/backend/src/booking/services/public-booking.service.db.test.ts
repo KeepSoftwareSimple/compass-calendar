@@ -1438,10 +1438,8 @@ describe("PublicBookingService", () => {
     const eventInput = createBookingEvent.mock.calls[0]?.[1] as {
       description: string;
     };
-    expect(eventInput.description).toContain("bring coffee");
-    expect(eventInput.description).toContain(`Cancel: ${created.cancelUrl}`);
-    expect(eventInput.description).toContain(
-      `Reschedule: ${created.rescheduleUrl}`,
+    expect(eventInput.description).toBe(
+      `bring coffee\n\nCancel: ${created.cancelUrl}\n\nReschedule: ${created.rescheduleUrl}`,
     );
   });
 
@@ -1504,9 +1502,7 @@ describe("PublicBookingService", () => {
     const description = (
       updateBookingEvent.mock.calls[0]?.[1] as { description: string }
     ).description;
-    expect(description).toContain("bring tea");
-    expect(description).toContain("Cancel:");
-    expect(description).toContain("Reschedule:");
+    expect(description).toMatch(/^bring tea\n\nCancel: .+\n\nReschedule: .+$/);
     const stored = await bookingReservationRepository.findById(reservationId);
     expect(stored?.guestName).toBe("Grace Hopper");
     expect(stored?.notes).toBe("bring tea");

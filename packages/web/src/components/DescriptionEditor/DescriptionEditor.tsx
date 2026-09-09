@@ -11,6 +11,10 @@ import { StarterKit } from "@tiptap/starter-kit";
 import classNames from "classnames";
 import DOMPurify from "dompurify";
 import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import {
+  looksLikeHtml,
+  plainTextToDescriptionHtml,
+} from "@web/components/DescriptionEditor/plain-text-description";
 import { Divider } from "@web/components/Divider/Divider";
 
 // Google's description HTML is untrusted input - strip everything but the
@@ -94,7 +98,10 @@ export const DescriptionEditor = ({
   // resetKey only, matching useEditor's own [resetKey] below.
   // biome-ignore lint/correctness/useExhaustiveDependencies: keyed on resetKey only, see the comment above
   const initialContent = useMemo(
-    () => sanitizeDescriptionHtml(value),
+    () =>
+      sanitizeDescriptionHtml(
+        looksLikeHtml(value) ? value : plainTextToDescriptionHtml(value),
+      ),
     [resetKey],
   );
 
