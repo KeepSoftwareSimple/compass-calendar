@@ -36,5 +36,6 @@ export const BookingPageRecordSchema = z.object({
   maxHorizonDays: z.number().int().positive().max(BOOKING_MAX_HORIZON_DAYS),
   createdAt: z.date(),
   updatedAt: z.date(),
+  hostNoticedAt: z.date().optional(),
 });
 export type BookingPageRecord = z.infer<typeof BookingPageRecordSchema>;

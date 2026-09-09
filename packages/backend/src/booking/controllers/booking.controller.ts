@@ -43,6 +43,17 @@ class BookingController {
     }
   };
 
+  claimNewMeetings = async (req: SessionRequest, res: Response) => {
+    try {
+      const userId = zObjectId.parse(req.session?.getUserId());
+      const response = await bookingPageService.claimNewMeetings(userId);
+      res.status(Status.OK).json(response);
+    } catch (error) {
+      const { status, body } = toBookingErrorResponse(error);
+      res.status(status).json(body);
+    }
+  };
+
   getPublicPage = async (req: Request, res: Response) => {
     try {
       const response = await publicBookingService.getPublicPage(

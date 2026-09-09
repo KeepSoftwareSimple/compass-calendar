@@ -10,6 +10,7 @@ import {
   initialUserMetadataState,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
+import { resetBillingGateAttentionForTests } from "@web/billing/billing-gate-attention";
 import {
   initialBillingPreviewState,
   useBillingPreviewStore,
@@ -22,6 +23,7 @@ import {
   initialCheckoutPanelState,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
+import { resetNewMeetingsNoticeForTests } from "@web/booking/useNewMeetingsNotice";
 import { resetCalendarVisibilityStoreForTests } from "@web/calendars/calendar-visibility.store";
 import { resetCollapsedAccountsStoreForTests } from "@web/calendars/collapsed-accounts.store";
 import { resetDefaultCalendarStoreForTests } from "@web/calendars/default-calendar.store";
@@ -119,6 +121,8 @@ const storeResets: StoreReset[] = [
   () => useEventJumpStore.setState(initialEventJumpState, true),
   () => usePageJumpHintStore.setState(initialPageJumpHintState, true),
   () => useBillingPreviewStore.setState(initialBillingPreviewState, true),
+  resetBillingGateAttentionForTests,
+  resetNewMeetingsNoticeForTests,
   () => useCheckoutPanelStore.setState(initialCheckoutPanelState, true),
   () => useCardUpdateStore.setState(initialCardUpdateState, true),
   resetShortcutHintProgressStoreForTests,

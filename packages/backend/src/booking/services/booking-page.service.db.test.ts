@@ -18,6 +18,7 @@ import {
 import * as billingGuard from "@backend/billing/billing.guard";
 import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
+import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import bookingPageService from "@backend/booking/services/booking-page.service";
 import calendarService from "@backend/calendar/services/calendar.service";
 import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
@@ -619,6 +620,148 @@ describe("BookingPageService", () => {
       }),
     );
   });
+
+  const insertReservation = async (
+    pageId: ObjectId,
+    overrides: {
+      guestName?: string;
+      status?: "confirmed" | "cancelled";
+      slotStart?: Date;
+    } = {},
+  ) => {
+    const slotStart = overrides.slotStart ?? new Date();
+    const record = await bookingReservationRepository.insert({
+      _id: new ObjectId(),
+      pageId,
+      slotStart,
+      slotEnd: new Date(slotStart.getTime() + 30 * 60 * 1000),
+      guestName: overrides.guestName ?? "Bob",
+      guestEmail: "bob@example.com",
+      notes: null,
+      guestTimeZone: "UTC",
+      status: "confirmed",
+      calendarEventId: "evt-1",
+      cancelTokenHash: "c".repeat(64),
+    });
+    if (overrides.status === "cancelled") {
+      await bookingReservationRepository.markCancelled(record._id);
+    }
+    return record;
+  };
+
+  it("claims confirmed bookings created after hostNoticedAt and stamps", async () => {
+    const userId = await createNamedUser("Claim Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    const page = await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    expect("id" in page).toBe(true);
+    const pageId = new ObjectId("id" in page ? page.id : "");
+
+    await insertReservation(pageId, {
+      guestName: "Ada",
+      slotStart: new Date("2026-09-24T16:00:00.000Z"),
+    });
+    await insertReservation(pageId, {
+      guestName: "Bob",
+      slotStart: new Date("2026-09-24T17:00:00.000Z"),
+    });
+
+    const first = await bookingPageService.claimNewMeetings(userId);
+    expect(first.reservations.map((row) => row.guestName)).toEqual([
+      "Ada",
+      "Bob",
+    ]);
+    const stamped = await bookingPageRepository.findByUserId(userId);
+    expect(stamped?.hostNoticedAt).toBeInstanceOf(Date);
+
+    const second = await bookingPageService.claimNewMeetings(userId);
+    expect(second.reservations).toEqual([]);
+  });
+
+  it("returns none for a disabled page and does not stamp", async () => {
+    const userId = await createNamedUser("Off Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    const page = await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        enabled: false,
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const stored = await bookingPageRepository.findByUserId(userId);
+    expect(stored).not.toBeNull();
+    await insertReservation(stored!._id);
+
+    const claimed = await bookingPageService.claimNewMeetings(userId);
+    expect(claimed.reservations).toEqual([]);
+    const after = await bookingPageRepository.findByUserId(userId);
+    expect(after?.hostNoticedAt).toBeUndefined();
+    expect("bookingUrl" in page).toBe(false);
+  });
+
+  it("returns none when the host has no page", async () => {
+    const userId = await createNamedUser("No Page Claim");
+    const claimed = await bookingPageService.claimNewMeetings(userId);
+    expect(claimed.reservations).toEqual([]);
+  });
+
+  it("never returns a cancelled reservation", async () => {
+    const userId = await createNamedUser("Cancel Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const stored = await bookingPageRepository.findByUserId(userId);
+    expect(stored).not.toBeNull();
+    await insertReservation(stored!._id, {
+      guestName: "Cancelled",
+      status: "cancelled",
+      slotStart: new Date("2026-09-24T16:00:00.000Z"),
+    });
+    await insertReservation(stored!._id, {
+      guestName: "Live",
+      slotStart: new Date("2026-09-24T17:00:00.000Z"),
+    });
+
+    const claimed = await bookingPageService.claimNewMeetings(userId);
+    expect(claimed.reservations.map((row) => row.guestName)).toEqual(["Live"]);
+  });
+
+  it("keeps hostNoticedAt across a settings save", async () => {
+    const userId = await createNamedUser("Stamp Survive");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    const input = samplePutInput({
+      destinationCalendarId: calendar.id,
+      blockingCalendarIds: [calendar.id],
+    });
+    await bookingPageService.putAdminPage(userId, input);
+    await bookingPageService.claimNewMeetings(userId);
+    const stamped = await bookingPageRepository.findByUserId(userId);
+    expect(stamped?.hostNoticedAt).toBeInstanceOf(Date);
+
+    await bookingPageService.putAdminPage(userId, {
+      ...input,
+      durationMinutes: 45,
+    });
+    const after = await bookingPageRepository.findByUserId(userId);
+    expect(after?.hostNoticedAt?.getTime()).toBe(
+      stamped?.hostNoticedAt?.getTime(),
+    );
+  });
 });
 
 describe("BookingController", () => {
@@ -650,5 +793,12 @@ describe("BookingController", () => {
     expect(response.body).toEqual(
       expect.objectContaining({ enabled: false, durationMinutes: 30 }),
     );
+  });
+
+  it("POST /api/booking/page/new-meetings/claim requires a session", async () => {
+    const response = await baseDriver
+      .getServer()
+      .post("/api/booking/page/new-meetings/claim");
+    expect(response.status).toBe(Status.UNAUTHORIZED);
   });
 });
