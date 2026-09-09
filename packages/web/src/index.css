@@ -789,6 +789,10 @@
     @apply inline;
   }
 
+  & a {
+    @apply underline decoration-1 underline-offset-2 text-text;
+  }
+
   & p.is-editor-empty:first-child::before {
     @apply pointer-events-none float-left h-0 text-text-muted;
     content: attr(data-placeholder);

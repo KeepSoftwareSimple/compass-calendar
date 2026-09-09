@@ -217,9 +217,11 @@ permalink carries `?token=`. Reschedule links stay history state only
 
 **Event title:** `{Guest name} and {Host name}`.
 
-**Event description:** guest notes (if any), plus cancel and reschedule
-URLs. Guests cannot add other attendees, so those URLs are safe in the
-description every invitee sees.
+**Event description:** three blocks separated by blank lines: guest notes
+(when present), `Cancel: <url>`, and `Reschedule: <url>`. In Compass the
+description editor renders each block as its own paragraph and autolinks
+bare URLs. Guests cannot add other attendees, so those URLs are safe in
+the description every invitee sees.
 
 ## Host inputs
 
