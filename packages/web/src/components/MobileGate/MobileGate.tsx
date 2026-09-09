@@ -24,7 +24,10 @@ import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-acti
  * The mobile landing experience: instead of a cold "use a desktop" wall,
  * visitors get Time Block Party, a short drag-the-event-into-place game, and
  * the desktop handoff (copy link + waitlist) arrives with their score at the
- * end. The intro's skip link goes straight to the handoff.
+ * end. The intro leads with what Compass actually is (a keyboard-first
+ * desktop calendar) before pitching the game, so first-time phone visitors
+ * don't mistake the game for the product. The intro's skip link goes
+ * straight to the handoff.
  */
 export const MobileGate: React.FC<{
   /** Test seam: start from a mid-game or finished state. */
@@ -74,12 +77,21 @@ export const MobileGate: React.FC<{
         <div className="flex min-h-dvh items-center justify-center p-4">
           <div className="flex w-[400px] max-w-[90vw] flex-col items-center rounded border border-border bg-surface p-8 text-center">
             <h1 className="mb-3 font-medium font-sans text-2xl text-text">
-              Time Block Party
+              Compass is a keyboard-first calendar
             </h1>
-            <p className="mb-8 font-sans text-base text-text-muted leading-relaxed">
-              Compass turns your week into blocks of time. Drag each event to
-              its spot on the calendar and rack up points.
+            <p className="mb-6 font-sans text-base text-text-muted leading-relaxed">
+              It&apos;s built for the desktop, so it doesn&apos;t run on phones
+              yet. While you&apos;re here, we made you a little game for fun.
             </p>
+            <div className="mb-6 w-full rounded border border-border bg-surface-overlay px-4 py-3">
+              <h2 className="font-medium font-sans text-lg text-text">
+                Time Block Party
+              </h2>
+              <p className="mt-1 font-sans text-sm text-text-muted leading-relaxed">
+                Compass turns your week into blocks of time. Drag each event to
+                its spot on the calendar and rack up points.
+              </p>
+            </div>
             <button
               type="button"
               onClick={() => setGame((state) => startGame(state, Date.now()))}
