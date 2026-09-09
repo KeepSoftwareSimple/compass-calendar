@@ -269,14 +269,16 @@ open over about 200 ms, and reduced motion disables the animation.
   copies the link, and then shows the full form with the switch focused.
 - **Timezone** uses the same searchable combobox as time travel. The
   trigger is one tab stop and still renders a stored non-canonical alias.
-  Under weekly hours a muted line reads the city and abbreviation and
-  points to More options. Every Start and End menu is described by that
-  line.
+  It lives under More options on the configured form. The setup wizard
+  hours step shows a muted line with the city and abbreviation. The
+  go-live summary lists a **Timezone** row with the same label.
 - **Weekly hours** are a list of the seven ISO weekdays, Monday first.
   Each line is a checkbox named with the full weekday, the short label,
   a Start menu, the word "to", an End menu, and one action cell. Menus
   step by 15 minutes with 12-hour labels (`9:00 AM`). An unchecked day
-  shows only the checkbox and label and keeps the same line height.
+  shows only the checkbox and label and keeps the same line height and
+  column widths. Extra lines under a day align with the first line's
+  Start and End menus.
   The default is Monday to Friday, 9:00 AM to 5:00 PM. **Add hours to
   Monday** on a day's first line adds a second block under that day;
   each extra line's action cell removes that block. Start and End

@@ -309,6 +309,49 @@ test("essentials fit without scrolling at 1440x900", async ({ page }) => {
   );
 });
 
+test("second hours line aligns with the first", async ({ page }) => {
+  await prepareSignedInBookingSettingsPage(page);
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await dispatchClick(
+    settingsDialog.getByRole("button", { name: "Add hours to Monday" }),
+  );
+  await expect(
+    settingsDialog.getByRole("combobox", { name: "Monday start 2" }),
+  ).toBeVisible();
+
+  const mondayStart = settingsDialog.getByRole("combobox", {
+    name: "Monday start",
+    exact: true,
+  });
+  const mondayStart2 = settingsDialog.getByRole("combobox", {
+    name: "Monday start 2",
+    exact: true,
+  });
+  const mondayEnd = settingsDialog.getByRole("combobox", {
+    name: "Monday end",
+    exact: true,
+  });
+  const mondayEnd2 = settingsDialog.getByRole("combobox", {
+    name: "Monday end 2",
+    exact: true,
+  });
+
+  const startBox = await mondayStart.boundingBox();
+  const start2Box = await mondayStart2.boundingBox();
+  const endBox = await mondayEnd.boundingBox();
+  const end2Box = await mondayEnd2.boundingBox();
+
+  expect(startBox).not.toBeNull();
+  expect(start2Box).not.toBeNull();
+  expect(endBox).not.toBeNull();
+  expect(end2Box).not.toBeNull();
+  expect(start2Box!.x).toBe(startBox!.x);
+  expect(start2Box!.width).toBe(startBox!.width);
+  expect(end2Box!.x).toBe(endBox!.x);
+  expect(end2Box!.width).toBe(endBox!.width);
+});
+
 test.describe("reduced motion", () => {
   test.use({ contextOptions: { reducedMotion: "reduce" } });
 

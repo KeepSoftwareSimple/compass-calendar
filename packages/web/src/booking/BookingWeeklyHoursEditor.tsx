@@ -32,7 +32,7 @@ interface BookingWeeklyHoursEditorProps {
 }
 
 const HOURS_LINE_CLASS_NAME =
-  "grid min-h-8 grid-cols-[auto_2.5rem_1fr_auto_1fr_2rem] items-center gap-2";
+  "grid min-h-8 grid-cols-[1rem_2.5rem_1fr_auto_1fr_2rem] items-center gap-2";
 
 const blockSelectLabel = (
   weekday: IsoWeekday,

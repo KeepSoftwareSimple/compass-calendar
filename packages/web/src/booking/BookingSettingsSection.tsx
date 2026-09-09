@@ -36,10 +36,7 @@ import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
 import { BookingSaveBar } from "@web/booking/BookingSaveBar";
 import { BookingStatusHeader } from "@web/booking/BookingStatusHeader";
-import {
-  BookingTimezoneField,
-  formatBookingTimezoneLabel,
-} from "@web/booking/BookingTimezoneField";
+import { BookingTimezoneField } from "@web/booking/BookingTimezoneField";
 import { BookingWeeklyHoursEditor } from "@web/booking/BookingWeeklyHoursEditor";
 import {
   bookingSaveErrorInline,
@@ -669,16 +666,11 @@ export function BookingSettingsSection({
 
         <div className="flex flex-col gap-1" {...bookingFieldAttrs("hours")}>
           <BookingWeeklyHoursEditor
-            describedBy="booking-hours-timezone"
             onChange={(weeklyAvailability) =>
               updateForm({ weeklyAvailability })
             }
             value={form.weeklyAvailability}
           />
-          <p className="text-sm text-text-muted" id="booking-hours-timezone">
-            Times in {formatBookingTimezoneLabel(form.timeZone)}. Change it
-            under More options.
-          </p>
         </div>
 
         <div>
