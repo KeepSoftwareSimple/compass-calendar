@@ -491,6 +491,7 @@ test.describe("settings booking section", () => {
     page,
   }) => {
     await prepareSignedInBookingSettingsPage(page, {
+      configured: false,
       healthyConnection: false,
     });
     const settingsDialog = page.getByRole("dialog", { name: "Settings" });

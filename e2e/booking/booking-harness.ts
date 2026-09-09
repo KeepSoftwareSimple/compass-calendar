@@ -984,6 +984,12 @@ export interface HostBookingSettingsStubOptions {
   configured?: boolean;
   /** When false, Settings > Booking shows the connect pills. */
   healthyConnection?: boolean;
+  connectionState?:
+    | "NOT_CONNECTED"
+    | "RECONNECT_REQUIRED"
+    | "IMPORTING"
+    | "HEALTHY"
+    | "ATTENTION";
   weeklyAvailability?: Array<{
     weekday: 1 | 2 | 3 | 4 | 5 | 6 | 7;
     start: string;
@@ -1003,7 +1009,10 @@ export async function prepareSignedInBookingSettingsPage(
   const bookingUrl =
     options.bookingUrl ?? `https://compasscalendar.com/meet/${slug}`;
   const configured = options.configured ?? true;
-  const healthyConnection = options.healthyConnection ?? true;
+  const connectionState =
+    options.connectionState ??
+    (options.healthyConnection === false ? "NOT_CONNECTED" : "HEALTHY");
+  const healthyConnection = connectionState === "HEALTHY";
   const enabled = options.enabled ?? configured;
   const weeklyAvailability =
     options.weeklyAvailability ?? DEFAULT_WEEKLY_AVAILABILITY;
@@ -1052,6 +1061,7 @@ export async function prepareSignedInBookingSettingsPage(
           connections: [
             {
               id: "e2e-connection-1",
+              provider: "google" as const,
               state: "healthy",
               stateReason: null,
               lastSyncedAt: null,
@@ -1063,13 +1073,37 @@ export async function prepareSignedInBookingSettingsPage(
           ],
         },
       }
-    : {
-        google: {
-          connectionState: "NOT_CONNECTED" as const,
+    : connectionState === "RECONNECT_REQUIRED" ||
+        connectionState === "IMPORTING" ||
+        connectionState === "ATTENTION"
+      ? {
+          google: {
+            connectionState,
+            connections: [
+              {
+                id: "e2e-connection-1",
+                provider: "google" as const,
+                state:
+                  connectionState === "IMPORTING"
+                    ? "importing"
+                    : "actionRequired",
+                stateReason: null,
+                lastSyncedAt: null,
+                lastHealthyAt: null,
+                accountEmail: HOST_ACCOUNT_EMAIL,
+                connectionState,
+                canSuggestContacts: false,
+              },
+            ],
+          },
+        }
+      : {
+          google: {
+            connectionState: "NOT_CONNECTED" as const,
+            connections: [],
+          },
           connections: [],
-        },
-        connections: [],
-      };
+        };
 
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -1184,7 +1218,11 @@ export async function prepareSignedInBookingSettingsPage(
       .querySelector<HTMLElement>('[data-settings-shortcut="nav-booking"]')
       ?.click();
   });
-  if (!healthyConnection) {
+  if (connectionState === "RECONNECT_REQUIRED") {
+    await expect(
+      settingsDialog.getByRole("button", { name: "Reconnect Google Calendar" }),
+    ).toBeVisible({ timeout: 15000 });
+  } else if (!healthyConnection) {
     await expect(
       settingsDialog.getByRole("button", { name: "Connect Google Calendar" }),
     ).toBeVisible({ timeout: 15000 });
