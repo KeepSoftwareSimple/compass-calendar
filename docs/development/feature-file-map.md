@@ -71,8 +71,8 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `POST /internal/availability/busy`
 - Host Settings: `packages/web/src/booking/BookingSettingsSection.tsx`,
   `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`,
-  `BookingConnectionBanner.tsx`, `BookingWeeklyHoursEditor.tsx`,
-  `weekly-hours.ts`, `useNewMeetingsNotice.ts`,
+  `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`,
+  `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`,
   `packages/web/src/components/Switch/Switch.tsx`
 - Description flattening: `packages/web/src/components/DescriptionEditor/plain-text-description.ts`
 - Sidebar discovery: `packages/web/src/components/Sidebar/MeetingPageNudge/`
@@ -80,7 +80,8 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`,
   `PublicBookingCancelPage.tsx`,
   `PublicBookingReschedulePage.tsx`
-- Web API client: `packages/web/src/api/public-booking.api.ts`
+- Web API client: `packages/web/src/api/public-booking.api.ts`,
+  `packages/web/src/api/booking.api.ts`
 - E2e: `e2e/booking/`, `e2e/accessibility/booking-a11y.spec.ts`
 - Architecture: [Product Suite Boundaries](../architecture/product-suite-boundaries.md)
 
