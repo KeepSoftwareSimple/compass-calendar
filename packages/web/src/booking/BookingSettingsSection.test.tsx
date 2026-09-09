@@ -15,7 +15,10 @@ import {
   createMockCalendar,
   createMockConnection,
 } from "@web/__tests__/utils/factories/calendar.factory";
-import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
+import {
+  CONNECT_CALENDAR_LABEL,
+  RECONNECT_CALENDAR_LABEL,
+} from "@web/auth/providers/provider-copy.util";
 import {
   resetProviderAvailabilityForTests,
   setProviderAvailabilityForTests,
@@ -171,7 +174,7 @@ function findStickyAncestor(element: HTMLElement): HTMLElement | null {
 }
 
 describe("BookingSettingsSection", () => {
-  it("shows a connect prompt when no healthy connection exists", () => {
+  it("shows a connect prompt when no healthy connection exists", async () => {
     setProviderAvailabilityForTests("google", "available", "connect");
     userMetadataActions.set({
       google: {
@@ -179,6 +182,11 @@ describe("BookingSettingsSection", () => {
         connections: [],
       },
     });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(unconfiguredPage())),
+      ),
+    );
 
     const { wrapper } = createStoreWrapper();
     render(
@@ -189,15 +197,20 @@ describe("BookingSettingsSection", () => {
     );
 
     expect(
-      screen.getByText(/Connect a Google account to enable your meeting page/),
+      await screen.findByText(
+        /Connect a Google account to enable your meeting page/,
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: CONNECT_CALENDAR_LABEL.google }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("switch", { name: "Meeting page" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Duration")).not.toBeInTheDocument();
   });
 
-  it("shows provider-neutral empty-env copy when no connect provider is configured", () => {
+  it("shows provider-neutral empty-env copy when no connect provider is configured", async () => {
     setProviderAvailabilityForTests("google", "unavailable", "connect");
     setProviderAvailabilityForTests("microsoft", "unavailable", "connect");
     setProviderAvailabilityForTests("apple", "unavailable", "connect");
@@ -207,6 +220,11 @@ describe("BookingSettingsSection", () => {
         connections: [],
       },
     });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(unconfiguredPage())),
+      ),
+    );
 
     const { wrapper } = createStoreWrapper();
     render(
@@ -217,9 +235,100 @@ describe("BookingSettingsSection", () => {
     );
 
     expect(
-      screen.getByText(BOOKING_CONNECT_EMPTY_ENV_COPY),
+      await screen.findByText(BOOKING_CONNECT_EMPTY_ENV_COPY),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  });
+
+  it("keeps the form and shows a reconnect banner when Google needs reconnecting", async () => {
+    setProviderAvailabilityForTests("google", "available", "connect");
+    userMetadataActions.set({
+      google: {
+        connectionState: "RECONNECT_REQUIRED",
+        connections: [
+          createMockConnection("host@example.com", {
+            connectionState: "RECONNECT_REQUIRED",
+            state: "actionRequired",
+          }),
+        ],
+      },
+    });
+    const bookingUrl = "https://compasscalendar.com/meet/hostuser";
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            ...savedOffPage(),
+            enabled: true,
+            bookingUrl,
+          }),
+        ),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    expect(
+      await screen.findByRole("switch", { name: "Meeting page" }),
+    ).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByLabelText("Meeting link")).toHaveValue(bookingUrl);
+    expect(screen.getByText(/needs reconnecting/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: RECONNECT_CALENDAR_LABEL.google }),
+    ).toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
+      has_connection: false,
+      is_live: false,
+    });
+  });
+
+  it("keeps the form and shows an importing banner with no reconnect button", async () => {
+    userMetadataActions.set({
+      google: {
+        connectionState: "IMPORTING",
+        connections: [
+          createMockConnection("host@example.com", {
+            connectionState: "IMPORTING",
+            state: "importing",
+          }),
+        ],
+      },
+    });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(
+          ctx.json({
+            ...savedOffPage(),
+            enabled: true,
+            bookingUrl: "https://compasscalendar.com/meet/hostuser",
+          }),
+        ),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    expect(
+      await screen.findByRole("switch", { name: "Meeting page" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/still importing/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: RECONNECT_CALENDAR_LABEL.google }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows booking settings when a healthy non-google connection exists", async () => {
@@ -1368,7 +1477,7 @@ describe("BookingSettingsSection", () => {
     expect(warning).toHaveAttribute("role", "status");
   });
 
-  it("fires booking_settings_opened when the connect prompt mounts", () => {
+  it("fires booking_settings_opened when the connect prompt mounts", async () => {
     setProviderAvailabilityForTests("google", "available", "connect");
     userMetadataActions.set({
       google: {
@@ -1376,6 +1485,11 @@ describe("BookingSettingsSection", () => {
         connections: [],
       },
     });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(unconfiguredPage())),
+      ),
+    );
 
     const { wrapper } = createStoreWrapper();
     render(
@@ -1385,6 +1499,9 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
+    await screen.findByText(
+      /Connect a Google account to enable your meeting page/,
+    );
     expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
       has_connection: false,
       is_live: false,

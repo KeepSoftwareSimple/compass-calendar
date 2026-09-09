@@ -30,6 +30,7 @@ import {
   bookingAddressPrefix,
 } from "@web/booking/BookingAddressField";
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
+import { BookingConnectionBanner } from "@web/booking/BookingConnectionBanner";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
@@ -248,8 +249,7 @@ export function BookingSettingsSection({
     writableCalendars.length,
   ]);
 
-  const { data: serverPage, isPending } =
-    useBookingPageQuery(hasHealthyConnection);
+  const { data: serverPage, isPending } = useBookingPageQuery(true);
   const saveMutation = useSaveBookingPageMutation();
   const [form, setForm] = useState<AdminPutBookingPageInput>(() =>
     buildInitialForm(
@@ -393,7 +393,12 @@ export function BookingSettingsSection({
     });
   }, [hasHealthyConnection, isSeedingForm, serverPage]);
 
-  if (!hasHealthyConnection) {
+  const showFirstRunConnectPrompt =
+    !hasHealthyConnection &&
+    ((serverPage != null && isUnconfiguredBookingPage(serverPage)) ||
+      (!isPending && serverPage == null));
+
+  if (showFirstRunConnectPrompt) {
     return <BookingConnectPrompt />;
   }
 
@@ -632,6 +637,12 @@ export function BookingSettingsSection({
         className="flex flex-col gap-2"
         disabled={isReadOnly || saveMutation.isPending}
       >
+        {!hasHealthyConnection ? (
+          <BookingConnectionBanner
+            aggregateState={googleConnectionState}
+            connections={connections}
+          />
+        ) : null}
         <BookingStatusHeader
           addressPreview={addressPreview}
           bookingUrl={savedPage?.bookingUrl ?? null}

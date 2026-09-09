@@ -1,5 +1,6 @@
 import { expect, type Locator, test } from "@playwright/test";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
+import { expectNoAxeViolations } from "../utils/axe-assertion";
 import {
   BOOKING_CALENDAR_ID,
   COMPASS_CALENDAR_ID,
@@ -418,4 +419,28 @@ test("settings dialog never scrolls horizontally with more options open", async 
   await noHorizontalOverflow();
   await page.setViewportSize({ width: 1024, height: 768 });
   await noHorizontalOverflow();
+});
+
+test("keeps the meeting form visible when Google needs reconnecting", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    connectionState: "RECONNECT_REQUIRED",
+    enabled: true,
+  });
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(
+    settingsDialog.getByRole("switch", { name: "Meeting page" }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    settingsDialog.getByRole("textbox", { name: "Meeting link" }),
+  ).toBeVisible();
+  await expect(settingsDialog.getByText(/needs reconnecting/)).toBeVisible();
+  await expect(
+    settingsDialog.getByRole("button", { name: "Reconnect Google Calendar" }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, {
+    checkpoint: "settings booking reconnect banner",
+    include: "[role='dialog']",
+  });
 });

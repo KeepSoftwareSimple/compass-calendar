@@ -250,6 +250,15 @@ open over about 200 ms, and reduced motion disables the animation.
   live. When on, it shows the meeting link with Copy and
   **Open meeting page**. When off, it shows "Off. Turn it on to share
   your link." and the address the page will use.
+  Once a page has been saved, a broken calendar connection does not
+  hide the switch or the link. A status banner above the header says
+  what is wrong: reconnect (`Guests can't book right now.` plus the
+  reconnect sentence and a **Reconnect Google Calendar** button, or
+  the matching label for another provider), importing (`Your calendar
+  is still importing. Guests can book once it finishes.` with no
+  button), or not connected (`Connect a calendar to turn your page
+  back on.` with the connect buttons). The first-run connect prompt
+  is only for a host who has no saved page.
 - **Essentials:** duration and weekly hours. These fit without scrolling
   at 1440x900.
 - **More options:** an uncontrolled native `<details>` that starts
@@ -514,7 +523,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
-| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
+| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
 | Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingCopyGuestAction.tsx`, `PublicBookingEditDetailsForm.tsx` |
 | Public web API client | `packages/web/src/api/public-booking.api.ts` |
 | E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
@@ -577,6 +586,11 @@ Guest bookings onto a Google destination calendar now request Google Meet
 on the real `events.insert` call (`conferenceDataVersion: 1`). Before this,
 the adapter passed the conference payload but the googleapis wrapper dropped
 the version flag, so Google ignored Meet.
+
+A saved Meeting page stays on screen when the calendar connection is
+unhealthy. A banner above the status header tells the host to reconnect,
+wait for import, or connect again. The first-run connect prompt is only
+for hosts who have never saved a page.
 
 ### v1.9
 
