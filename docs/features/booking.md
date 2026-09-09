@@ -369,8 +369,9 @@ Guest-only. Hosts keep editing or deleting the calendar event in Compass.
 There is no host reservation inbox.
 
 - Reuses `cancelTokenHash` / `?token=`. No second secret.
-- Confirmation shows **Reschedule** (link + **Copy reschedule link**) next
-  to cancel when history state has `rescheduleUrl`. Cold permalink has
+- Confirmation shows a **Meeting actions** group with **Cancel this
+  meeting** and **Reschedule this meeting** as links only, when those
+  URLs exist. There are no copy-link buttons. Cold permalink has
   neither reschedule secret. Cancel and edit use `?token=` on the
   confirmation URL (see Guest cancel and edit details).
 - `/meet/reschedule/:id?token=` reuses the public month/slot picker. Do
@@ -514,7 +515,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
 | Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
-| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingCopyGuestAction.tsx`, `PublicBookingEditDetailsForm.tsx` |
+| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
 | Public web API client | `packages/web/src/api/public-booking.api.ts` |
 | E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
 
@@ -581,6 +582,9 @@ The configured Meeting form no longer shows a timezone footnote under
 Weekly hours. Extra hour blocks on a day share the first line's left edge
 and width. The first-run go-live summary gained a Timezone row; the wizard
 hours step still names the zone.
+
+The guest confirmation page dropped **Copy cancel link** and **Copy
+reschedule link**. Meeting actions are the two links only.
 
 ### v1.9
 

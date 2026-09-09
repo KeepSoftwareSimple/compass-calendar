@@ -316,7 +316,7 @@ test.describe("public booking page", () => {
       /\/meet\/confirmed\/000000000000000000000099\?token=abc$/,
     );
     await expect(
-      page.getByRole("button", { name: "Copy cancel link" }),
+      page.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeVisible();
 
     await page.reload({ waitUntil: "domcontentloaded" });
@@ -331,10 +331,10 @@ test.describe("public booking page", () => {
       /\/meet\/confirmed\/000000000000000000000099\?token=abc$/,
     );
     await expect(
-      page.getByRole("button", { name: "Copy cancel link" }),
+      page.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Cancel this meeting" }),
+      page.getByRole("link", { name: "Reschedule this meeting" }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Edit details" }),
@@ -348,9 +348,7 @@ test.describe("public booking page", () => {
     await expect(
       page.getByRole("heading", { name: "You're meeting with Tyler Dane" }),
     ).toBeFocused();
-    await expect(
-      page.getByRole("button", { name: "Copy cancel link" }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^Copy / })).toHaveCount(0);
     await expect(
       page.getByRole("link", { name: "Cancel this meeting" }),
     ).toHaveCount(0);
@@ -363,37 +361,6 @@ test.describe("public booking page", () => {
     await expect(
       page.getByText(/To cancel, use the link in that invite/),
     ).toHaveCount(0);
-  });
-
-  test("copies the cancel link from the confirmation page", async ({
-    page,
-    context,
-  }) => {
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    const { slotStart } = buildBookableSlot();
-    await preparePublicBookingPage(page);
-
-    await page
-      .getByRole("button", { name: formatSlotButtonLabel(slotStart) })
-      .click();
-    await page.getByLabel("Name").fill("Guest User");
-    await page.getByLabel("Email").fill("guest@example.com");
-    await page.getByRole("button", { name: "Confirm meeting" }).click();
-
-    await expect(
-      page.getByRole("link", { name: "Cancel this meeting" }),
-    ).toHaveAttribute(
-      "href",
-      "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
-    );
-    await page.getByRole("button", { name: "Copy cancel link" }).click();
-    await expect(page.getByRole("button", { name: "Copied" })).toBeVisible();
-    await expect(page.getByRole("status")).toHaveText("Copied");
-    await expect
-      .poll(async () => page.evaluate(() => navigator.clipboard.readText()))
-      .toBe(
-        "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
-      );
   });
 
   test("shows a calm state for a cancelled confirmation permalink", async ({
