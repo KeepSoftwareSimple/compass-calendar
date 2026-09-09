@@ -85,24 +85,28 @@ export interface GoogleEventsApi {
 
 export type GoogleEventsApiFactory = (accessToken: string) => GoogleEventsApi;
 
-const defaultApiFactory: GoogleEventsApiFactory = (accessToken) => {
-  const auth = new OAuth2Client();
-  auth.setCredentials({ access_token: accessToken });
-  const gcal: gCalendar = calendar({
-    version: "v3",
-    auth,
-    timeout: GOOGLE_REQUEST_TIMEOUT_MS,
-  });
+// Thin googleapis wrapper so tests can drive the real insert/patch param
+// mapping without OAuth. `conferenceDataVersion` must reach
+// `events.insert` or Google ignores `conferenceData.createRequest`.
+export const googleEventsApiFromClient = (gcal: gCalendar): GoogleEventsApi => {
   // An If-Match precondition is passed as a request header; googleapis takes
   // per-call gaxios options as the second argument.
   const ifMatchOptions = (ifMatch: string | null) =>
     ifMatch ? { headers: { "If-Match": ifMatch } } : undefined;
   return {
-    async insert({ calendarId, requestBody, sendUpdates }) {
+    async insert({
+      calendarId,
+      requestBody,
+      sendUpdates,
+      conferenceDataVersion,
+    }) {
       const { data } = await gcal.events.insert({
         calendarId,
         requestBody,
         sendUpdates,
+        ...(conferenceDataVersion !== undefined
+          ? { conferenceDataVersion }
+          : {}),
       });
       return data;
     },
@@ -146,6 +150,17 @@ const defaultApiFactory: GoogleEventsApiFactory = (accessToken) => {
       return data;
     },
   };
+};
+
+const defaultApiFactory: GoogleEventsApiFactory = (accessToken) => {
+  const auth = new OAuth2Client();
+  auth.setCredentials({ access_token: accessToken });
+  const gcal: gCalendar = calendar({
+    version: "v3",
+    auth,
+    timeout: GOOGLE_REQUEST_TIMEOUT_MS,
+  });
+  return googleEventsApiFromClient(gcal);
 };
 
 // Google implementation of the event mutation port. Create is idempotent at a

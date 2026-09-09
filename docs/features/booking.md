@@ -208,10 +208,12 @@ holds the app lock first.
 On confirm, Compass creates a timed event on the host's destination
 calendar, invites the guest, and adds a conference link when the
 destination supports one (Google Meet, Microsoft Teams, or none). The
-provider emails the invite. Compass shows a confirmation screen with the
-booked time (guest timezone) and names that conference kind. Cancel and
-edit-details are present when the permalink carries `?token=`.
-Reschedule links stay history state only (v1.3).
+Google insert request includes `conferenceDataVersion: 1` so Meet is
+actually minted on the event. The provider emails the invite. Compass
+shows a confirmation screen with the booked time (guest timezone) and
+names that conference kind. Cancel and edit-details are present when the
+permalink carries `?token=`. Reschedule links stay history state only
+(v1.3).
 
 **Event title:** `{Guest name} and {Host name}`.
 
@@ -492,7 +494,8 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 - Flipping the production gate
 - Host reservation inbox
 - Meet URL on the confirmation screen (Google creates conference
-  asynchronously; the invite email already has it)
+  asynchronously; the invite email already has it once
+  `conferenceDataVersion` is forwarded on insert)
 
 ## Implementation
 
@@ -564,6 +567,13 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   in the wire contract or Settings UI.
 
 ## Changelog
+
+### v1.10
+
+Guest bookings onto a Google destination calendar now request Google Meet
+on the real `events.insert` call (`conferenceDataVersion: 1`). Before this,
+the adapter passed the conference payload but the googleapis wrapper dropped
+the version flag, so Google ignored Meet.
 
 ### v1.9
 
