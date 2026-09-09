@@ -7,6 +7,7 @@ import {
   DEFAULT_WEEKLY_AVAILABILITY,
   type WeeklyAvailability,
 } from "@core/types/booking.contracts";
+import { getCalendarCapabilities } from "@core/types/calendar.contracts";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -1221,6 +1222,53 @@ describe("BookingSettingsSection", () => {
     expect(await screen.findByText("Step 5 of 5")).toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
     expect(screen.getByText("UTC (UTC)")).toBeInTheDocument();
+  });
+
+  it("shows the destination connect prompt and disables Continue with zero writable calendars", async () => {
+    const user = userEvent.setup({ delay: null });
+    setProviderAvailabilityForTests("google", "available", "connect");
+    const readOnlyCalendar = createMockCalendar({
+      id: CalendarIdSchema.parse(createObjectIdString()),
+      name: "Shared",
+      accountEmail: "host@example.com",
+      access: "reader",
+      capabilities: getCalendarCapabilities("reader"),
+    });
+    userMetadataActions.set(healthyGoogleMetadata);
+
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(unconfiguredPage())),
+      ),
+      rest.put(bookingPageUrl, async (req, res, ctx) => {
+        const body = await req.json();
+        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+      }),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [readOnlyCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    await user.click(await screen.findByRole("button", { name: /^Continue/ }));
+    await user.keyboard("k");
+    await user.keyboard("k");
+    expect(await screen.findByText("Step 4 of 5")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Connect a calendar you can write to before going live.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: CONNECT_CALENDAR_LABEL.google }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Continue/ })).toBeDisabled();
+    expect(screen.queryByText("Step 5 of 5")).not.toBeInTheDocument();
   });
 
   it("keeps the go-live step visible when enable fails", async () => {

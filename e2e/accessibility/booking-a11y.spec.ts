@@ -651,6 +651,47 @@ test.describe("settings booking section", () => {
     });
   });
 
+  test("first-run zero-calendar destination step has no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareSignedInBookingSettingsPage(page, {
+      configured: false,
+      enabled: false,
+      noWritableCalendars: true,
+    });
+    const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /Continue/ }),
+    );
+    await expect(
+      settingsDialog
+        .locator("p.text-text-muted")
+        .filter({ hasText: /^Step 2 of \d+$/ }),
+    ).toBeVisible();
+    await page.keyboard.press("k");
+    await page.keyboard.press("k");
+    await expect(
+      settingsDialog
+        .locator("p.text-text-muted")
+        .filter({ hasText: /^Step 4 of 5$/ }),
+    ).toBeVisible();
+    await expect(
+      settingsDialog.getByText(
+        "Connect a calendar you can write to before going live.",
+      ),
+    ).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("button", { name: "Connect Google Calendar" }),
+    ).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("button", { name: /Continue/ }),
+    ).toBeDisabled();
+    await expectNoAxeViolations(page, {
+      checkpoint: "settings booking first-run zero-calendar destination",
+      include: "[role='dialog']",
+    });
+  });
+
   test("first-run go-live step has no automatically detectable accessibility violations", async ({
     page,
   }) => {

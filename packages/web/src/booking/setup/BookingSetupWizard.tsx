@@ -15,6 +15,8 @@ import {
   type SetupStepId,
   setupStepDefinition,
   setupStepProgress,
+  setupStepSentence,
+  visibleSetupSteps,
 } from "@web/booking/setup/setup-steps";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
@@ -49,6 +51,7 @@ interface BookingSetupWizardProps {
 const focusStepFirstControl = (
   stepId: SetupStepId,
   root: HTMLElement | null,
+  writableCalendarCount: number,
 ) => {
   if (root == null) return;
   switch (stepId) {
@@ -62,6 +65,10 @@ const focusStepFirstControl = (
       root.querySelector<HTMLElement>('[role="radio"][tabindex="0"]')?.focus();
       break;
     case "destination":
+      if (writableCalendarCount === 0) {
+        root.querySelector<HTMLElement>("button")?.focus();
+        break;
+      }
       root
         .querySelector<HTMLElement>("#booking-setup-destination-calendar")
         ?.focus();
@@ -100,19 +107,39 @@ export function BookingSetupWizard({
 }: BookingSetupWizardProps) {
   const stepBodyRef = useRef<HTMLDivElement>(null);
   const stepMeta = setupStepDefinition(setupStep);
+  const stepSentence = setupStepSentence(setupStep, writableCalendarCount);
   const { current, total } = setupStepProgress(
     setupStep,
     writableCalendarCount,
   );
   const isGoLive = setupStep === "live";
+  const isFirstStep = setupStep === visibleSetupSteps(writableCalendarCount)[0];
+  const canContinue =
+    !(setupStep === "destination" && writableCalendarCount === 0) && !isPending;
 
   useEffect(() => {
+    if (setupStep === "address" && (forceAddressInvalid || setupError)) {
+      stepBodyRef.current
+        ?.querySelector<HTMLElement>("#booking-address")
+        ?.focus();
+      return;
+    }
     if (setupStep === "live") {
       continueRef.current?.focus();
       return;
     }
-    focusStepFirstControl(setupStep, stepBodyRef.current);
-  }, [continueRef, setupStep]);
+    focusStepFirstControl(
+      setupStep,
+      stepBodyRef.current,
+      writableCalendarCount,
+    );
+  }, [
+    continueRef,
+    forceAddressInvalid,
+    setupError,
+    setupStep,
+    writableCalendarCount,
+  ]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const target = event.target;
@@ -122,6 +149,7 @@ export function BookingSetupWizard({
       (event.key === "k" || event.key === "K") &&
       !isEditableKeyboardTarget(event)
     ) {
+      if (!canContinue) return;
       event.preventDefault();
       onContinue();
       return;
@@ -145,6 +173,7 @@ export function BookingSetupWizard({
         target.type === "");
     const isContinueButton = target === continueRef.current;
     if (!isTextInput && !isContinueButton) return;
+    if (!canContinue) return;
 
     event.preventDefault();
     onContinue();
@@ -161,7 +190,7 @@ export function BookingSetupWizard({
       </p>
       <div className="flex flex-col gap-2">
         <h2 className="font-medium text-lg text-text">{stepMeta.title}</h2>
-        <p className="text-sm text-text">{stepMeta.sentence}</p>
+        <p className="text-sm text-text">{stepSentence}</p>
       </div>
 
       <div ref={stepBodyRef}>
@@ -219,13 +248,21 @@ export function BookingSetupWizard({
           <span>Continue</span>
           <ShortcutKeys keys="Esc" />
           <span>Back</span>
-          <ShortcutKeys keys={["J", "K"]} />
+          <ShortcutKeys keys="K" />
+          <span>Next</span>
+          <ShortcutKeys keys="J" />
+          <span>Back</span>
         </span>
         <OverlayPanelActions>
+          {!isFirstStep ? (
+            <OverlayPanelActionButton onClick={onBack} type="button">
+              Back
+            </OverlayPanelActionButton>
+          ) : null}
           <OverlayPanelActionButton
             aria-busy={isPending || undefined}
             aria-keyshortcuts="Meta+Enter Control+Enter"
-            disabled={isPending}
+            disabled={!canContinue}
             onClick={onContinue}
             ref={continueRef}
             shortcut={["Mod", "Enter"]}
