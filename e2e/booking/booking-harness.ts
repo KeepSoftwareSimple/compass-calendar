@@ -999,10 +999,16 @@ export interface HostBookingSettingsStubOptions {
     bookable: boolean;
     reasons: Array<Record<string, unknown>>;
   };
+  /** When false, stay on week view instead of opening Settings. */
+  openSettings?: boolean;
+  /** Mark welcome, showcase, and first-event as done so sidebar nudges can show. */
+  completeOnboarding?: boolean;
 }
 
 export interface CapturedHostBookingRequests {
   putBodies: Array<Record<string, unknown>>;
+  hostMetadata: Record<string, unknown>;
+  setGetPayload: (next: Record<string, unknown>) => void;
 }
 
 export async function prepareSignedInBookingSettingsPage(
@@ -1020,17 +1026,36 @@ export async function prepareSignedInBookingSettingsPage(
   const enabled = options.enabled ?? configured;
   const weeklyAvailability =
     options.weeklyAvailability ?? DEFAULT_WEEKLY_AVAILABILITY;
-  const captured: CapturedHostBookingRequests = { putBodies: [] };
 
-  await page.addInitScript((accountEmail) => {
-    (
-      window as Window & { __COMPASS_E2E_TEST__?: boolean }
-    ).__COMPASS_E2E_TEST__ = true;
-    localStorage.setItem(
-      "compass.auth",
-      JSON.stringify({ hasAuthenticated: true, lastKnownEmail: accountEmail }),
-    );
-  }, HOST_ACCOUNT_EMAIL);
+  await page.addInitScript(
+    ({ accountEmail, completeOnboarding }) => {
+      (
+        window as Window & { __COMPASS_E2E_TEST__?: boolean }
+      ).__COMPASS_E2E_TEST__ = true;
+      localStorage.setItem(
+        "compass.auth",
+        JSON.stringify({
+          hasAuthenticated: true,
+          lastKnownEmail: accountEmail,
+        }),
+      );
+      if (completeOnboarding) {
+        localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+        localStorage.setItem(
+          "compass.onboarding.has-seen-shortcut-showcase",
+          "true",
+        );
+        localStorage.setItem(
+          "compass.onboarding.first-event-done",
+          "dismissed",
+        );
+      }
+    },
+    {
+      accountEmail: HOST_ACCOUNT_EMAIL,
+      completeOnboarding: options.completeOnboarding === true,
+    },
+  );
 
   const bookingPagePayload = {
     enabled,
@@ -1058,6 +1083,13 @@ export async function prepareSignedInBookingSettingsPage(
   let getPayload: Record<string, unknown> = configured
     ? { ...bookingPagePayload, ...savedPageFields }
     : { ...bookingPagePayload, enabled: false, ...setupPageFields };
+  const captured: CapturedHostBookingRequests = {
+    putBodies: [],
+    hostMetadata: {},
+    setGetPayload: (next) => {
+      getPayload = next;
+    },
+  };
   const hostMetadata = healthyConnection
     ? {
         google: {
@@ -1108,6 +1140,8 @@ export async function prepareSignedInBookingSettingsPage(
           },
           connections: [],
         };
+
+  captured.hostMetadata = hostMetadata;
 
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -1222,6 +1256,10 @@ export async function prepareSignedInBookingSettingsPage(
   }, hostMetadata);
 
   await page.keyboard.press("Escape");
+  if (options.openSettings === false) {
+    return captured;
+  }
+
   await page.keyboard.press("Control+Comma");
 
   const settingsDialog = page.getByRole("dialog", { name: "Settings" });

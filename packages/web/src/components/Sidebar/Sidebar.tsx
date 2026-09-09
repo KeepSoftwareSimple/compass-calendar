@@ -7,6 +7,7 @@ import {
 } from "@web/events/stores/draft.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 import { CalendarList } from "./CalendarList/CalendarList";
+import { MeetingPageNudge } from "./MeetingPageNudge/MeetingPageNudge";
 import { SidebarShell } from "./SidebarShell";
 import { TasksRemovalNotice } from "./TasksRemovalNotice/TasksRemovalNotice";
 import { UpNextCard } from "./UpNextCard/UpNextCard";
@@ -78,6 +79,7 @@ export function Sidebar({
           </Suspense>
           <UpNextCard />
           <CalendarList />
+          <MeetingPageNudge />
           <TasksRemovalNotice />
         </div>
       )}
