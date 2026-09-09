@@ -32,7 +32,7 @@ const {
 const { clearAppLockReasons, setAppLockReason } = await import(
   "@web/shortcuts/app-lock"
 );
-const { getShortcutHint } = await import(
+const { getHintPlainText, getShortcutHint } = await import(
   "@web/shortcuts/tips/shortcut-tips.data"
 );
 const { readShortcutUsageProfile } = await import(
@@ -86,7 +86,9 @@ describe("shortcut telemetry", () => {
       outcome: "shown",
       rank: 1,
       reason_code: "calendar_idle",
+      shortcut_type: "page-jump",
       source: "sidebar_status",
+      suggestion_text: getHintPlainText(suggestion),
     });
     expect(
       readShortcutUsageProfile().actions["calendar.page_jump"],
@@ -109,17 +111,25 @@ describe("shortcut telemetry", () => {
     expect(capture).toHaveBeenNthCalledWith(1, "shortcut_invoked", {
       action_id: "calendar.page_jump",
       feature_area: "calendar_navigation",
+      invocation_method: "keyboard",
       outcome: "succeeded",
       reason_code: "registered_shortcut",
+      shortcut_type: "page-jump",
       source: "keyboard",
+      suggestion_text: getHintPlainText(getShortcutHint("page-jump")),
+      was_suggested: true,
     });
     expect(capture).toHaveBeenNthCalledWith(2, "shortcut_suggestion_engaged", {
       action_id: "calendar.page_jump",
       feature_area: "calendar_navigation",
+      invocation_method: "keyboard",
       outcome: "invoked",
       rank: 1,
       reason_code: "local_discovery",
+      shortcut_type: "page-jump",
       source: "sidebar_status",
+      suggestion_text: getHintPlainText(getShortcutHint("page-jump")),
+      was_suggested: true,
     });
     expect(
       readShortcutUsageProfile().actions["calendar.page_jump"],
@@ -152,11 +162,14 @@ describe("shortcut telemetry", () => {
       active_element: "input",
       context: "billingGate+overlayPanel:settings+settingsModal",
       feature_area: "event_editing",
+      invocation_method: "keyboard",
       is_repeat: true,
       outcome: "unavailable",
       reason_code: "billing_locked",
       shortcut_key: "Tab",
+      shortcut_type: "edge-focus",
       source: "keyboard",
+      suggestion_text: getHintPlainText(getShortcutHint("edge-focus")),
       view: "week_view",
       was_modifier_held: false,
     });
@@ -181,10 +194,62 @@ describe("shortcut telemetry", () => {
       "shortcut_unavailable_attempt",
       expect.objectContaining({
         context: "unknown",
+        invocation_method: "keyboard",
         reason_code: "overlay_open",
         shortcut_key: "Shift+ArrowLeft",
+        shortcut_type: "nudge",
         view: "day_view",
         was_modifier_held: true,
+      }),
+    );
+  });
+
+  it("marks an independent invocation as not suggested", () => {
+    recordShortcutInvocation("create-event", 200_000);
+
+    expect(capture).toHaveBeenCalledWith("shortcut_invoked", {
+      action_id: "calendar.create_timed_event",
+      feature_area: "event_creation",
+      invocation_method: "keyboard",
+      outcome: "succeeded",
+      reason_code: "registered_shortcut",
+      shortcut_type: "create-event",
+      source: "keyboard",
+      suggestion_text: getHintPlainText(getShortcutHint("create-event")),
+      was_suggested: false,
+    });
+    expect(capture).not.toHaveBeenCalledWith(
+      "shortcut_suggestion_engaged",
+      expect.anything(),
+    );
+  });
+
+  it("records click invocation method and click unavailable attempts", () => {
+    recordShortcutInvocation("save-draft", 200_000, "click");
+
+    expect(capture).toHaveBeenCalledWith(
+      "shortcut_invoked",
+      expect.objectContaining({
+        invocation_method: "click",
+        shortcut_type: "save-draft",
+        source: "click",
+        was_suggested: false,
+      }),
+    );
+
+    capture.mockClear();
+    recordShortcutUnavailableAttempt("create-event", "billing_locked", {
+      invocationMethod: "click",
+    });
+
+    expect(capture).toHaveBeenCalledWith(
+      "shortcut_unavailable_attempt",
+      expect.objectContaining({
+        invocation_method: "click",
+        reason_code: "billing_locked",
+        shortcut_type: "create-event",
+        source: "click",
+        suggestion_text: getHintPlainText(getShortcutHint("create-event")),
       }),
     );
   });

@@ -7,7 +7,10 @@ import {
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 import { beginShortcutSuggestionPresentation } from "@web/shortcuts/tips/shortcut-telemetry";
-import { type RankedShortcutHint } from "@web/shortcuts/tips/shortcut-tips.data";
+import {
+  getHintPlainText,
+  type RankedShortcutHint,
+} from "@web/shortcuts/tips/shortcut-tips.data";
 
 const isWriteHint = (featureArea: RankedShortcutHint["featureArea"]) =>
   featureArea === "event_creation" || featureArea === "event_editing";
@@ -21,6 +24,7 @@ export const ShortcutTipIndicator: FC<{
   locked?: boolean;
 }> = ({ hint, locked = false }) => {
   const { actionId, featureArea, id, reasonCode } = hint;
+  const suggestionText = getHintPlainText(hint);
   useEffect(
     () =>
       beginShortcutSuggestionPresentation({
@@ -28,8 +32,9 @@ export const ShortcutTipIndicator: FC<{
         featureArea,
         id,
         reasonCode,
+        suggestionText,
       }),
-    [actionId, featureArea, id, reasonCode],
+    [actionId, featureArea, id, reasonCode, suggestionText],
   );
 
   const showLock = locked && isWriteHint(featureArea);

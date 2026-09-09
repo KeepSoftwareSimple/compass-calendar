@@ -88,7 +88,7 @@ const partPlainText = (part: ShortcutTipPart): string => {
 export const getPartsPlainText = (parts: readonly ShortcutTipPart[]): string =>
   parts.map(partPlainText).join("");
 
-export const getHintPlainText = (hint: ShortcutHint): string =>
+export const getHintPlainText = (hint: Pick<ShortcutHint, "parts">): string =>
   getPartsPlainText(hint.parts);
 
 const [createKey] = KEYMAP.createEvent.keycaps;

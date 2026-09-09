@@ -5,7 +5,10 @@ import {
   subscribeToStorageKey,
 } from "@web/common/utils/external-store.util";
 import { useShortcutShowcaseStore } from "@web/components/ShortcutShowcase/showcase.store";
-import { recordShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
+import {
+  recordShortcutInvocation,
+  type ShortcutInvocationMethod,
+} from "@web/shortcuts/tips/shortcut-telemetry";
 import { type ShortcutHintId } from "@web/shortcuts/tips/shortcut-tips.data";
 import {
   readShortcutHintProgress,
@@ -46,10 +49,13 @@ export const shortcutHintProgressActions = {
    * Records that the user performed a taught primitive. No-ops while the
    * Shortcut Showcase is open so practice does not skip real-calendar tips.
    */
-  demonstrate: (id: ShortcutHintId): void => {
+  demonstrate: (
+    id: ShortcutHintId,
+    invocationMethod: ShortcutInvocationMethod = "keyboard",
+  ): void => {
     if (useShortcutShowcaseStore.getState().isActive) return;
 
-    recordShortcutInvocation(id);
+    recordShortcutInvocation(id, Date.now(), invocationMethod);
 
     const current = progressStore.get();
     if (current[current.length - 1] === id) return;
