@@ -62,6 +62,11 @@ function resetBrowserState() {
 }
 
 beforeEach(() => {
+  // bun's fake clock is process-global across files in a shard. A leaked
+  // pin makes later findBy/waitFor hang forever because Date.now never
+  // advances past their timeout. Reset before the test, not only after,
+  // so a previous afterEach that threw still cannot poison this file.
+  setSystemTime();
   installDefaultWebTestSeams();
 });
 
@@ -70,6 +75,7 @@ beforeAll(async () => {
   server.listen({ onUnhandledRequest: "error" });
 });
 afterEach(async () => {
+  setSystemTime();
   await Promise.resolve();
   cleanup();
   resetDocument();
@@ -78,10 +84,6 @@ afterEach(async () => {
   resetWebTestSeams();
   billingPreviewActions.exit();
   HotkeyManager.resetInstance();
-  // bun's fake clock is process-global across files in a shard. A leaked
-  // pin makes later findBy/waitFor hang forever because Date.now never
-  // advances past their timeout.
-  setSystemTime();
   BaseApi.defaults.adapter = undefined;
   server.resetHandlers();
 });
