@@ -60,6 +60,31 @@ class BookingReservationRepository {
     return rows.map((row) => ConfirmedSlotRowSchema.parse(row).slotStart);
   }
 
+  /**
+   * Confirmed rows created after `since`, oldest first.
+   *
+   * No dedicated `createdAt` index: `{ pageId, status, slotStart }` already
+   * serves the `{ pageId, status }` prefix, and reservations per page are
+   * few. Always state `status: "confirmed"` so the partial unique sibling
+   * can also apply.
+   */
+  async listConfirmedCreatedSince(
+    pageId: ObjectId,
+    since: Date,
+    limit = 20,
+  ): Promise<BookingReservationRecord[]> {
+    const rows = await mongoService.bookingReservation
+      .find({
+        pageId,
+        status: "confirmed",
+        createdAt: { $gt: since },
+      })
+      .sort({ createdAt: 1 })
+      .limit(limit)
+      .toArray();
+    return rows.map((row) => BookingReservationRecordSchema.parse(row));
+  }
+
   async listConfirmedOverlapping(
     pageId: ObjectId,
     slotStart: Date,

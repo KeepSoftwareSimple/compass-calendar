@@ -3,6 +3,8 @@ import {
   type AdminGetBookingPageResult,
   AdminGetBookingPageSetupResponseSchema,
   type AdminPutBookingPageInput,
+  type BookingNewMeetingsClaimResponse,
+  BookingNewMeetingsClaimResponseSchema,
   type BookingPageStatusResponse,
   BookingPageStatusResponseSchema,
   isSavedBookingPage,
@@ -30,6 +32,13 @@ const BookingApi = {
   ): Promise<AdminGetBookingPageResult> {
     const response = await BaseApi.put<unknown>(`/booking/page`, input);
     return parseBookingPage(response.data);
+  },
+
+  async claimNewMeetings(): Promise<BookingNewMeetingsClaimResponse> {
+    const response = await BaseApi.post<unknown>(
+      `/booking/page/new-meetings/claim`,
+    );
+    return BookingNewMeetingsClaimResponseSchema.parse(response.data);
   },
 };
 
