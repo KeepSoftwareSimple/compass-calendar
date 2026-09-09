@@ -4,6 +4,9 @@ type StorageKey =
   | "compass.onboarding.has-seen-anonymous-save-toast"
   | "compass.onboarding.has-dismissed-demo-events-banner"
   | "compass.onboarding.has-dismissed-tasks-removal-notice"
+  // Set when the host dismisses the sidebar meeting-page nudge. Device-local;
+  // turning the page on hides the card everywhere without this key.
+  | "compass.onboarding.has-dismissed-meeting-page-nudge"
   // Set when the user finishes or skips the Shortcut Showcase, so it never
   // auto-launches twice (palette replay ignores it).
   | "compass.onboarding.has-seen-shortcut-showcase"
@@ -63,6 +66,7 @@ export const STORAGE_KEYS: Record<
   | "HAS_SEEN_ANONYMOUS_SAVE_TOAST"
   | "HAS_DISMISSED_DEMO_EVENTS_BANNER"
   | "HAS_DISMISSED_TASKS_REMOVAL_NOTICE"
+  | "HAS_DISMISSED_MEETING_PAGE_NUDGE"
   | "HAS_SEEN_SHORTCUT_SHOWCASE"
   | "SHORTCUT_SHOWCASE_STEP"
   | "HAS_PENDING_SHOWCASE_OFFER"
@@ -96,6 +100,8 @@ export const STORAGE_KEYS: Record<
     "compass.onboarding.has-dismissed-demo-events-banner",
   HAS_DISMISSED_TASKS_REMOVAL_NOTICE:
     "compass.onboarding.has-dismissed-tasks-removal-notice",
+  HAS_DISMISSED_MEETING_PAGE_NUDGE:
+    "compass.onboarding.has-dismissed-meeting-page-nudge",
   HAS_SEEN_SHORTCUT_SHOWCASE: "compass.onboarding.has-seen-shortcut-showcase",
   SHORTCUT_SHOWCASE_STEP: "compass.onboarding.shortcut-showcase-step",
   HAS_PENDING_SHOWCASE_OFFER: "compass.onboarding.has-pending-showcase-offer",
