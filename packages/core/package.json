@@ -6,7 +6,7 @@
   "private": true,
   "main": "",
   "dependencies": {
-    "@googleapis/calendar": "^14.1.0",
+    "@googleapis/calendar": "^16.0.0",
     "@opentelemetry/api-logs": "^0.220.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.220.0",
     "@opentelemetry/resources": "^2.9.0",
