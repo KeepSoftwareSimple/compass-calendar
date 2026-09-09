@@ -5,6 +5,7 @@ import {
   deriveGoogleEventId,
   type GoogleEventsApi,
   GoogleEventWriter,
+  googleEventsApiFromClient,
 } from "@sync/providers/google/google-event-writer.adapter";
 import { googleInstanceEventId } from "@sync/providers/google/google-instance-id";
 import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
@@ -1132,6 +1133,45 @@ describe("GoogleEventWriter", () => {
       .catch((e) => e)) as ProviderWriteError;
 
     expect(error.reason).toBe("permanentProviderError");
+  });
+});
+
+describe("googleEventsApiFromClient", () => {
+  it("forwards conferenceDataVersion on insert only when it is set", async () => {
+    const insertCalls: unknown[] = [];
+    const insert = async (params: unknown) => {
+      insertCalls.push(params);
+      return { data: scriptedEvent("abc12deadbeef00000000000") };
+    };
+    const unused = async () => ({
+      data: scriptedEvent("abc12deadbeef00000000000"),
+    });
+    const api = googleEventsApiFromClient({
+      events: {
+        insert,
+        patch: unused,
+        delete: unused,
+        get: unused,
+        instances: unused,
+      },
+    } as never);
+
+    await api.insert({
+      calendarId: "cal",
+      requestBody: {},
+      sendUpdates: "all",
+      conferenceDataVersion: 1,
+    });
+    await api.insert({
+      calendarId: "cal",
+      requestBody: {},
+      sendUpdates: "none",
+    });
+
+    expect(insertCalls[0]).toEqual(
+      expect.objectContaining({ conferenceDataVersion: 1 }),
+    );
+    expect(insertCalls[1]).not.toHaveProperty("conferenceDataVersion");
   });
 });
 
