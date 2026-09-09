@@ -544,7 +544,9 @@ test.describe("settings booking section", () => {
       settingsDialog.getByRole("switch", { name: "Meeting page" }),
     ).toHaveAttribute("aria-checked", "false");
     await expect(
-      settingsDialog.getByText("Off. Turn it on to share your link."),
+      settingsDialog.getByText(
+        "Off. Guests can use this link once you turn it on.",
+      ),
     ).toBeVisible();
     await expectNoAxeViolations(page, {
       checkpoint: "settings booking not live",

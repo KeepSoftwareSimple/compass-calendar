@@ -11,6 +11,7 @@ interface BookingStatusHeaderProps {
   isPending: boolean;
   onToggle: (next: boolean) => void;
   bookingUrl: string | null;
+  savedUrl: string | null;
   addressPreview: string | null;
   calendars: readonly Calendar[];
   connections: readonly SyncConnectionSummary[];
@@ -22,6 +23,7 @@ export function BookingStatusHeader({
   isPending,
   onToggle,
   bookingUrl,
+  savedUrl,
   addressPreview,
   calendars,
   connections,
@@ -41,6 +43,13 @@ export function BookingStatusHeader({
         bookingUrl ? (
           <BookingCopyLink bookingUrl={bookingUrl} />
         ) : null
+      ) : savedUrl ? (
+        <>
+          <BookingCopyLink bookingUrl={savedUrl} showOpen={false} />
+          <p className="text-sm text-text">
+            Off. Guests can use this link once you turn it on.
+          </p>
+        </>
       ) : (
         <>
           <p className="text-sm text-text">

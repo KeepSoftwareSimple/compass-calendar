@@ -97,6 +97,20 @@ const MORE_OPTIONS_FIELDS = new Set<BookingField>([
   "horizon",
 ]);
 
+/** Public URL for a saved page that is currently off. Typed-but-unsaved slugs never qualify. */
+function savedMeetingLinkUrl(
+  page: AdminGetBookingPageResult | undefined,
+): string | null {
+  if (!page) return null;
+  if (isSavedBookingPage(page)) {
+    return page.enabled === true ? null : page.bookingUrl;
+  }
+  if (page.isConfigured) {
+    return `${bookingAddressPrefix(null)}${page.suggestedSlug}`;
+  }
+  return null;
+}
+
 /** Copy the public link, then report whichever of the two outcomes happened. */
 const copyBookingLinkThenToast = (
   bookingUrl: string,
@@ -661,6 +675,7 @@ export function BookingSettingsSection({
         <BookingStatusHeader
           addressPreview={addressPreview}
           bookingUrl={savedPage?.bookingUrl ?? null}
+          savedUrl={savedMeetingLinkUrl(serverPage)}
           calendars={calendars}
           connections={connections}
           isLive={isLive}

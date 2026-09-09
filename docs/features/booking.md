@@ -262,8 +262,13 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
 
 - **Status:** a **Meeting page** switch reflects whether the page is
   live. When on, it shows the meeting link with Copy and
-  **Open meeting page**. When off, it shows "Off. Turn it on to share
-  your link." and the address the page will use.
+  **Open meeting page**. When off and the page has been saved, it
+  still shows the meeting link with Copy (not Open, because the public
+  page answers not found) and the line "Off. Guests can use this link
+  once you turn it on." When off and the host has never saved a page,
+  it shows "Off. Turn it on to share your link." and "It will be at"
+  plus the address. Typed-but-unsaved address edits do not change the
+  copyable link until Save.
   Once a page has been saved, a broken calendar connection does not
   hide the switch or the link. A status banner above the header says
   what is wrong: reconnect (`Guests can't book right now.` plus the
@@ -643,6 +648,10 @@ first scroll: the panel is promoted at mount, and an inner wrapper owns
 overflow so the transform transition is not on the scroll container. The
 Meeting tab's lazy chunk reserves height so the dialog does not collapse
 to the nav column while it loads.
+
+An off Meeting page that already has an address still shows the meeting
+link with Copy, without Open, and the line that guests can use the link
+once the page is on.
 
 A host who returns to Compass after a guest booked sees one toast for the
 new meetings, with Show jumping to that week. Compass still does not send

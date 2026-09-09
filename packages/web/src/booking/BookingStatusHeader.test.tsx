@@ -47,6 +47,7 @@ const renderHeader = (
     <BookingStatusHeader
       addressPreview={null}
       bookingUrl={bookingUrl}
+      savedUrl={null}
       calendars={[workCalendar]}
       connections={reasonOverrides.connections ?? [connection]}
       isLive
@@ -206,5 +207,60 @@ describe("BookingStatusHeader", () => {
     expect(
       screen.queryByRole("button", { name: RECONNECT_CALENDAR_LABEL.google }),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows a copyable meeting link without Open when the page is off", () => {
+    const { wrapper } = createStoreWrapper();
+    render(
+      <BookingStatusHeader
+        addressPreview={`${window.location.origin}/meet/hostuser`}
+        bookingUrl={null}
+        savedUrl={bookingUrl}
+        calendars={[workCalendar]}
+        connections={[]}
+        isLive={false}
+        isPending={false}
+        onToggle={() => undefined}
+        status={undefined}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.getByLabelText("Meeting link")).toHaveValue(bookingUrl);
+    expect(
+      screen.getByRole("button", { name: "Copy meeting link" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Open meeting page" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Off. Guests can use this link once you turn it on."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows It will be at for a first-run page with no saved link", () => {
+    const { wrapper } = createStoreWrapper();
+    render(
+      <BookingStatusHeader
+        addressPreview={`${window.location.origin}/meet/hostuser`}
+        bookingUrl={null}
+        savedUrl={null}
+        calendars={[workCalendar]}
+        connections={[]}
+        isLive={false}
+        isPending={false}
+        onToggle={() => undefined}
+        status={undefined}
+      />,
+      { wrapper },
+    );
+
+    expect(screen.queryByLabelText("Meeting link")).not.toBeInTheDocument();
+    expect(
+      screen.getByText("Off. Turn it on to share your link."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(`It will be at ${window.location.origin}/meet/hostuser`),
+    ).toBeInTheDocument();
   });
 });
