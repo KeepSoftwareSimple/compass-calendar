@@ -236,78 +236,92 @@ export const PlanSection: FC<PlanSectionProps> = ({
             ) : (
               <p className="text-sm text-text-muted">Loading checkout...</p>
             )
-          ) : (
-            <OverlayPanelActions align="start">
-              <OverlayPanelActionButton
-                ref={updateCardButtonRef}
-                disabled={isSubmitting}
-                onClick={cardUpdateActions.open}
-                shortcut="U"
-                showShortcut={showShortcuts}
-                variant="secondary"
-                {...settingsShortcutAttrs("update-card")}
-              >
-                Update card
-              </OverlayPanelActionButton>
-            </OverlayPanelActions>
-          )}
+          ) : null}
 
-          {canManageCancellation ? (
+          {!isCardUpdateOpen || canManageCancellation ? (
             <OverlayPanelActions align="start">
-              {summary.cancelAtPeriodEnd ? (
+              {!isCardUpdateOpen ? (
                 <OverlayPanelActionButton
+                  ref={updateCardButtonRef}
                   disabled={isSubmitting}
-                  onClick={handleResume}
-                  shortcut="R"
+                  onClick={cardUpdateActions.open}
+                  shortcut="U"
                   showShortcut={showShortcuts}
                   variant="secondary"
-                  {...settingsShortcutAttrs("resume-subscription")}
+                  {...settingsShortcutAttrs("update-card")}
                 >
-                  Resume subscription
+                  Update card
                 </OverlayPanelActionButton>
-              ) : (
-                <OverlayPanelActionButton
-                  disabled={isSubmitting || confirmOpen}
-                  onClick={() => setConfirmOpen(true)}
-                  shortcut="C"
-                  showShortcut={showShortcuts}
-                  variant="secondary"
-                  {...settingsShortcutAttrs("cancel-subscription")}
-                >
-                  Cancel subscription
-                </OverlayPanelActionButton>
-              )}
+              ) : null}
+              {canManageCancellation ? (
+                summary.cancelAtPeriodEnd ? (
+                  <OverlayPanelActionButton
+                    disabled={isSubmitting}
+                    onClick={handleResume}
+                    shortcut="R"
+                    showShortcut={showShortcuts}
+                    variant="secondary"
+                    {...settingsShortcutAttrs("resume-subscription")}
+                  >
+                    Resume subscription
+                  </OverlayPanelActionButton>
+                ) : (
+                  <OverlayPanelActionButton
+                    disabled={isSubmitting || confirmOpen}
+                    onClick={() => setConfirmOpen(true)}
+                    shortcut="C"
+                    showShortcut={showShortcuts}
+                    variant="destructive"
+                    {...settingsShortcutAttrs("cancel-subscription")}
+                  >
+                    Cancel subscription
+                  </OverlayPanelActionButton>
+                )
+              ) : null}
             </OverlayPanelActions>
           ) : null}
 
           {receipts.length > 0 ? (
-            <div>
-              <p className="mb-1 block text-sm text-text">Receipts</p>
-              <ul className="flex flex-col gap-1">
+            <table className="w-full border-collapse text-sm text-text">
+              <caption className="mb-1 caption-top text-left text-sm text-text">
+                Receipts
+              </caption>
+              <thead className="sr-only">
+                <tr>
+                  <th scope="col">Date</th>
+                  <th scope="col">Amount</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Receipt</th>
+                </tr>
+              </thead>
+              <tbody>
                 {receipts.map((invoice) => (
-                  <li
-                    className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm text-text"
-                    key={invoice.id}
-                  >
-                    <span>{formatBillingDate(invoice.createdAt)}</span>
-                    <span>
+                  <tr key={invoice.id}>
+                    <td className="w-full py-0.5 pr-3 whitespace-nowrap">
+                      {formatBillingDate(invoice.createdAt)}
+                    </td>
+                    <td className="px-3 py-0.5 text-right tabular-nums whitespace-nowrap">
                       {formatBillingMoney(invoice.amountPaid, invoice.currency)}
-                    </span>
-                    <span>{formatInvoiceStatus(invoice.status)}</span>
-                    {invoice.hostedInvoiceUrl ? (
-                      <a
-                        className="text-text underline-offset-4 hover:underline"
-                        href={invoice.hostedInvoiceUrl}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        Receipt
-                      </a>
-                    ) : null}
-                  </li>
+                    </td>
+                    <td className="px-3 py-0.5 whitespace-nowrap">
+                      {formatInvoiceStatus(invoice.status)}
+                    </td>
+                    <td className="py-0.5 pl-3 whitespace-nowrap">
+                      {invoice.hostedInvoiceUrl ? (
+                        <a
+                          className="text-text underline-offset-4 hover:underline"
+                          href={invoice.hostedInvoiceUrl}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          Receipt
+                        </a>
+                      ) : null}
+                    </td>
+                  </tr>
                 ))}
-              </ul>
-            </div>
+              </tbody>
+            </table>
           ) : null}
         </>
       ) : null}
