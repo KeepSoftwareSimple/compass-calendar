@@ -277,5 +277,3 @@ export function BookingSetupWizard({
     </div>
   );
 }
-
-export { focusStepFirstControl };

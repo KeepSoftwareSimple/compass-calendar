@@ -32,6 +32,7 @@ import {
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
 import { BookingConnectionBanner } from "@web/booking/BookingConnectionBanner";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
+import { BookingDestinationCalendarOptions } from "@web/booking/BookingDestinationCalendarOptions";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
@@ -46,6 +47,7 @@ import {
   useSaveBookingPageMutation,
 } from "@web/booking/booking.query";
 import {
+  BOOKING_DURATION_OPTIONS,
   bookingSlugParseMessage,
   defaultBlockingCalendarIdsForDestination,
   getAvailabilityReadableCalendars,
@@ -58,7 +60,6 @@ import {
 } from "@web/booking/booking.util";
 import {
   bookingDestinationConferenceHint,
-  formatBookingDestinationOptionLabel,
   resolveBookingConference,
 } from "@web/booking/booking-conference.copy";
 import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
@@ -77,7 +78,6 @@ import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
   compareCalendars,
   getWritableCalendars,
-  groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
 import { useConnectedAccountEmails } from "@web/calendars/useDefaultTargetCalendar";
@@ -85,8 +85,6 @@ import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { DiscardUnsavedChangesDialog } from "@web/views/Forms/EventForm/DiscardUnsavedChangesDialog";
-
-const DURATION_OPTIONS: BookingDurationMinutes[] = [15, 30, 45, 60];
 
 const MORE_OPTIONS_FIELDS = new Set<BookingField>([
   "address",
@@ -443,8 +441,6 @@ export function BookingSettingsSection({
       : null;
   const addressPrefix = bookingAddressPrefix(savedPage?.bookingUrl ?? null);
   const addressPreview = form.slug ? `${addressPrefix}${form.slug}` : null;
-  const { groups: writableGroups, ungrouped: writableUngrouped } =
-    groupCalendarsByAccount(writableCalendars, connections);
   const destinationCalendar = writableCalendars.find(
     (calendar) => calendar.id === form.destinationCalendarId,
   );
@@ -707,7 +703,7 @@ export function BookingSettingsSection({
             }
             value={form.durationMinutes}
           >
-            {DURATION_OPTIONS.map((minutes) => (
+            {BOOKING_DURATION_OPTIONS.map((minutes) => (
               <option key={minutes} value={minutes}>
                 {minutes} minutes
               </option>
@@ -754,27 +750,10 @@ export function BookingSettingsSection({
                   No writable calendars
                 </option>
               ) : (
-                <>
-                  {writableGroups
-                    .filter((group) => group.calendars.length > 0)
-                    .map((group) => (
-                      <optgroup
-                        key={group.accountEmail}
-                        label={group.accountEmail}
-                      >
-                        {group.calendars.map((calendar) => (
-                          <option key={calendar.id} value={calendar.id}>
-                            {formatBookingDestinationOptionLabel(calendar)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  {writableUngrouped.map((calendar) => (
-                    <option key={calendar.id} value={calendar.id}>
-                      {formatBookingDestinationOptionLabel(calendar)}
-                    </option>
-                  ))}
-                </>
+                <BookingDestinationCalendarOptions
+                  calendars={writableCalendars}
+                  connections={connections}
+                />
               )}
             </select>
             {destinationConferenceHint ? (
