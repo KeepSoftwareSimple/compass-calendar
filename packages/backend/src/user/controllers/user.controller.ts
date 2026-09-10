@@ -1,11 +1,18 @@
 import { type Request, type Response } from "express";
+import { ZodError } from "zod/v4";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
+import {
+  type HiddenEventIdsResponse,
+  HiddenEventIdsResponseSchema,
+  SetEventHiddenInputSchema,
+} from "@core/types/event-visibility.contracts";
 import { zObjectId } from "@core/types/type.utils";
 import { type UserMetadata, type UserProfile } from "@core/types/user.types";
 import { toClientErrorPayload } from "@backend/common/errors/handlers/error.handler";
 import { type SReqBody } from "@backend/common/types/express.types";
+import hiddenEventService from "@backend/user/services/hidden-event.service";
 import userService from "@backend/user/services/user.service";
 import userMetadataService from "@backend/user/services/user-metadata.service";
 import { type Summary_Delete } from "@backend/user/types/user.types";
@@ -13,6 +20,18 @@ import { type Summary_Delete } from "@backend/user/types/user.types";
 const logger = Logger("app:user.controller");
 
 const sendUserError = (res: Response, e: unknown) => {
+  if (e instanceof ZodError) {
+    logger.warn(
+      `User input rejected: ${e.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join("; ")}`,
+    );
+    res.status(Status.BAD_REQUEST).json({
+      code: "INVALID_INPUT",
+      message: "Invalid input",
+    });
+    return;
+  }
   if (e instanceof BaseError) {
     res.status(e.statusCode).json(toClientErrorPayload(e));
     return;
@@ -98,6 +117,42 @@ class UserController {
       });
 
       res.status(Status.OK).json(metadata);
+    } catch (e) {
+      sendUserError(res, e);
+    }
+  };
+
+  getHiddenEvents = async (
+    req: Request<never, HiddenEventIdsResponse, never, never>,
+    res: Response,
+  ) => {
+    try {
+      const user = zObjectId.parse(req.session?.getUserId());
+      const hiddenEventIds = await hiddenEventService.listHiddenEventIds(user);
+
+      res
+        .status(Status.OK)
+        .json(HiddenEventIdsResponseSchema.parse({ hiddenEventIds }));
+    } catch (e) {
+      sendUserError(res, e);
+    }
+  };
+
+  setEventHidden = async (
+    req: SReqBody<{ eventId: string; hidden: boolean }>,
+    res: Response,
+  ) => {
+    try {
+      const user = zObjectId.parse(req.session?.getUserId());
+      const input = SetEventHiddenInputSchema.parse(req.body);
+      const hiddenEventIds = await hiddenEventService.setEventHidden(
+        user,
+        input,
+      );
+
+      res
+        .status(Status.OK)
+        .json(HiddenEventIdsResponseSchema.parse({ hiddenEventIds }));
     } catch (e) {
       sendUserError(res, e);
     }
