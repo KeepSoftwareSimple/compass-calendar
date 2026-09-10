@@ -234,6 +234,80 @@ type CompassE2EWindow = Window & {
   __COMPASS_E2E_HOOKS__?: { setAuthenticated: (value: boolean) => void };
 };
 
+async function waitForCalendarExperienceReady(page: Page) {
+  await getViewSwitcherButton(page).waitFor({
+    state: "visible",
+    timeout: 15000,
+  });
+
+  await page.waitForFunction(
+    () => (window as CompassE2EWindow).__COMPASS_E2E_HOOKS__ !== undefined,
+  );
+  await page.evaluate(() => {
+    (window as CompassE2EWindow).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
+  });
+
+  // useSSEConnection.ts invalidates the calendars query when `authenticated`
+  // flips; wait for that refetch to land before handing control to the test.
+  await expect(
+    page
+      .locator("#sidebar")
+      .getByRole("button", { name: /calendar$/ })
+      .first(),
+  ).toBeVisible({
+    timeout: 10000,
+  });
+}
+
+function gridEventCard(page: Page, title: string, hidden: boolean) {
+  const prefix = hidden ? "^Hidden Timed event: " : "^Timed event: ";
+  return page.locator("#mainGrid").getByRole("button", {
+    name: new RegExp(`${prefix}${title}`),
+  });
+}
+
+async function expectEventCardWidth(
+  page: Page,
+  title: string,
+  hidden: boolean,
+) {
+  const card = gridEventCard(page, title, hidden);
+  await expect(card).toBeVisible();
+  const box = await card.boundingBox();
+  expect(box).not.toBeNull();
+  if (hidden) {
+    expect(box!.width).toBeLessThan(12);
+  } else {
+    expect(box!.width).toBeGreaterThan(12);
+  }
+  return card;
+}
+
+async function hideFocusedEventViaMenu(page: Page) {
+  await page.keyboard.press("m");
+  const hideItem = page
+    .getByRole("menu")
+    .getByRole("menuitem", { name: "Hide event", exact: true });
+  await expect(hideItem).toBeVisible();
+  await hideItem.click();
+}
+
+// Playwright's page.keyboard.press is unreliable for bare letters in headless
+// Chromium on Linux. Dispatch a real keydown on the focused card instead.
+async function pressBareLetterOnFocusedCard(page: Page, letter: string) {
+  await page.evaluate((key) => {
+    const target = document.activeElement ?? document;
+    target.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+      }),
+    );
+  }, letter);
+}
+
 /**
  * Sets up the packet-08 authenticated experience over route-stubbed APIs: an
  * e2e-mode window flag (skips the real SuperTokens check), a pre-seeded
@@ -242,6 +316,8 @@ type CompassE2EWindow = Window & {
  * handlers for every endpoint the calendar sidebar/CalendarSelect/read-only
  * form/availability query touch. Visibility is client-owned (S39 A2): the
  * event list returns every fixture event; the web filters via localStorage.
+ * Hidden-event ids persist in this harness across reload so GET/PUT
+ * `/api/user/hidden-events` round-trips like the real backend.
  */
 async function setupCalendarExperiencePage(
   page: Page,
@@ -264,6 +340,7 @@ async function setupCalendarExperiencePage(
     google: { connectionState: "HEALTHY" },
   };
   const microsoftConnect = Boolean(options.microsoftConnect || hasMicrosoft);
+  const hiddenEventIds = new Set<string>();
 
   await page.addInitScript(() => {
     (window as CompassE2EWindow).__COMPASS_E2E_TEST__ = true;
@@ -308,6 +385,23 @@ async function setupCalendarExperiencePage(
     if (pathname.endsWith("/api/user/metadata")) {
       return json(metadata);
     }
+    if (pathname.endsWith("/api/user/hidden-events") && method === "GET") {
+      return json({ hiddenEventIds: [...hiddenEventIds] });
+    }
+    if (pathname.endsWith("/api/user/hidden-events") && method === "PUT") {
+      const body = request.postDataJSON() as {
+        eventId?: unknown;
+        hidden?: unknown;
+      };
+      if (typeof body.eventId === "string") {
+        if (body.hidden === true) {
+          hiddenEventIds.add(body.eventId);
+        } else if (body.hidden === false) {
+          hiddenEventIds.delete(body.eventId);
+        }
+      }
+      return json({ hiddenEventIds: [...hiddenEventIds] });
+    }
     if (pathname.endsWith("/api/config")) {
       return json({
         version: E2E_APP_CONFIG_VERSION,
@@ -336,28 +430,7 @@ async function setupCalendarExperiencePage(
   });
 
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await getViewSwitcherButton(page).waitFor({
-    state: "visible",
-    timeout: 15000,
-  });
-
-  await page.waitForFunction(
-    () => (window as CompassE2EWindow).__COMPASS_E2E_HOOKS__ !== undefined,
-  );
-  await page.evaluate(() => {
-    (window as CompassE2EWindow).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
-  });
-
-  // useSSEConnection.ts invalidates the calendars query when `authenticated`
-  // flips; wait for that refetch to land before handing control to the test.
-  await expect(
-    page
-      .locator("#sidebar")
-      .getByRole("button", { name: /calendar$/ })
-      .first(),
-  ).toBeVisible({
-    timeout: 10000,
-  });
+  await waitForCalendarExperienceReady(page);
 
   return harness;
 }
@@ -590,7 +663,7 @@ test("a read-only event opens as a read-only form", async ({ page }) => {
   expect(harness.mutationRequests).toHaveLength(0);
 });
 
-test("a read-only event's context menu offers view and duplicate but not delete", async ({
+test("a read-only event's context menu offers view, duplicate, and hide but not delete", async ({
   page,
 }) => {
   await setupCalendarExperiencePage(page);
@@ -605,7 +678,55 @@ test("a read-only event's context menu offers view and duplicate but not delete"
   const menu = page.getByRole("menu");
   await expect(menu.getByRole("menuitem", { name: "View" })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Duplicate" })).toBeVisible();
+  await expect(
+    menu.getByRole("menuitem", { name: "Hide event", exact: true }),
+  ).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Delete" })).toHaveCount(0);
+});
+
+test("a read-only event can be hidden from the menu, shown with x, and stays hidden after reload", async ({
+  page,
+}) => {
+  await setupCalendarExperiencePage(page);
+  const card = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: EVENT_B_TITLE })
+    .last();
+
+  await card.focus();
+  await hideFocusedEventViaMenu(page);
+  const hiddenCard = await expectEventCardWidth(page, EVENT_B_TITLE, true);
+
+  await hiddenCard.focus();
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectEventCardWidth(page, EVENT_B_TITLE, false);
+
+  const shownCard = gridEventCard(page, EVENT_B_TITLE, false);
+  await shownCard.focus();
+  await hideFocusedEventViaMenu(page);
+  await expectEventCardWidth(page, EVENT_B_TITLE, true);
+
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await waitForCalendarExperienceReady(page);
+  await expectEventCardWidth(page, EVENT_B_TITLE, true);
+});
+
+test("a writable event can be hidden from the menu and shown with x", async ({
+  page,
+}) => {
+  await setupCalendarExperiencePage(page);
+  const card = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: EVENT_A_TITLE })
+    .last();
+
+  await card.focus();
+  await hideFocusedEventViaMenu(page);
+  const hiddenCard = await expectEventCardWidth(page, EVENT_A_TITLE, true);
+
+  await hiddenCard.focus();
+  await pressBareLetterOnFocusedCard(page, "x");
+  await expectEventCardWidth(page, EVENT_A_TITLE, false);
 });
 
 test("sidebar lists a Microsoft calendar under its account heading", async ({
