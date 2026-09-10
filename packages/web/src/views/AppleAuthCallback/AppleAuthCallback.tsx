@@ -10,6 +10,7 @@ import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-a
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
   trackSignupCompleted,
+  trackSignupFailed,
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
@@ -97,10 +98,16 @@ export function AppleAuthCallbackView() {
 
     didRun.current = true;
 
-    void completeAppleAuthCallback({
+    // Same one-shot hazard as the provider callback: an uncaught rejection
+    // here strands the user on the spinner below with no way to retry.
+    completeAppleAuthCallback({
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
+    }).catch(() => {
+      trackSignupFailed("oauth_callback_crashed", { method: "apple" });
+      showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
+      router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
   }, [completeAuthentication, location.searchStr, router]);
 

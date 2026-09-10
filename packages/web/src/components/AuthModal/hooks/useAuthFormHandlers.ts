@@ -10,6 +10,7 @@ import {
 } from "@web/auth/compass/schemas/auth.schemas";
 import {
   trackSignupCompleted,
+  trackSignupFailed,
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
@@ -84,13 +85,16 @@ export function useAuthFormHandlers({
             shortcutShowcaseActions.offerAfterSignupIfPending();
             return;
           case "FIELD_ERROR":
+            trackSignupFailed("email_field_error", { method: "email" });
             setSubmitError(response.formFields[0]?.error ?? "Sign up failed");
             return;
           case "SIGN_UP_NOT_ALLOWED":
+            trackSignupFailed("email_not_allowed", { method: "email" });
             setSubmitError(response.reason);
             return;
         }
       } catch (error) {
+        trackSignupFailed("email_request_failed", { method: "email" });
         setSubmitError(getAuthSubmitErrorMessage(error, "Unable to sign up"));
       } finally {
         setIsSubmitting(false);

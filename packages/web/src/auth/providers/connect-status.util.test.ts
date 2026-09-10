@@ -1,5 +1,6 @@
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import * as userMetadataUtil from "@web/auth/compass/user/util/user-metadata.util";
+import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   readConnectStatus,
@@ -64,6 +65,23 @@ describe("connect-status.util", () => {
       expect(readConnectStatus("?provider=google&status=pending")).toBeNull();
       expect(readConnectStatus("")).toBeNull();
     });
+
+    // These two are redirected by the sync callback. Dropping them here left
+    // the user on the calendar after a failed connect with no toast at all.
+    it("reads the sync callback's stateMismatch and consentRequired", () => {
+      expect(
+        readConnectStatus("?provider=google&status=stateMismatch"),
+      ).toEqual({
+        provider: "google",
+        status: "stateMismatch",
+      });
+      expect(
+        readConnectStatus("?provider=microsoft&status=consentRequired"),
+      ).toEqual({
+        provider: "microsoft",
+        status: "consentRequired",
+      });
+    });
   });
 
   describe("showConnectStatusToast", () => {
@@ -82,6 +100,33 @@ describe("connect-status.util", () => {
       expect(mocks.success).toHaveBeenCalledWith(
         "Microsoft connected.",
         expect.objectContaining({ toastId: "connect-success" }),
+      );
+    });
+
+    it("explains an expired connection link", () => {
+      showConnectStatusToast({ provider: "google", status: "stateMismatch" });
+      runToastAfterPaint();
+      expect(mocks.error).toHaveBeenCalledWith(
+        "That connection link expired. Please try connecting again from Settings.",
+        expect.objectContaining({
+          autoClose: false,
+          toastId: "connect-state-mismatch",
+        }),
+      );
+    });
+
+    it("explains that an admin has to approve Compass", () => {
+      showConnectStatusToast({
+        provider: "microsoft",
+        status: "consentRequired",
+      });
+      runToastAfterPaint();
+      expect(mocks.error).toHaveBeenCalledWith(
+        CONSENT_REQUIRED_COPY,
+        expect.objectContaining({
+          autoClose: false,
+          toastId: "connect-consent-required",
+        }),
       );
     });
   });
