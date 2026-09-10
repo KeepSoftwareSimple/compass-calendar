@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.json",
   "include": [
+    "packages/scripts/src/testing/node-test-globals.d.ts",
     "packages/core/src/**/*.ts",
     "packages/backend/src/**/*.ts",
     "packages/sync/src/**/*.ts",
@@ -9,11 +10,35 @@
   ],
   "exclude": [],
   "compilerOptions": {
-    "composite": false,
-    "declaration": false,
+    "composite": true,
+    "declaration": true,
     "declarationMap": false,
     "types": ["bun-types", "bun-types/test-globals", "node"],
     "noEmit": true,
-    "outDir": "build/node/tests"
+    "outDir": "build/node/tests",
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "paths": {
+      "@core/types/domain-primitives": [
+        "./packages/core/src/util/test/typecheck/domain-primitives.ts"
+      ],
+      "@core/types/sync/identity.contracts": [
+        "./packages/core/src/util/test/typecheck/identity.contracts.ts"
+      ],
+      "@core/types/sync/event.contracts": [
+        "./packages/core/src/util/test/typecheck/event.contracts.ts"
+      ],
+      "@core/types/sync/change-feed.contracts": [
+        "./packages/core/src/util/test/typecheck/change-feed.contracts.ts"
+      ],
+      "@core/types/booking.contracts": [
+        "./packages/core/src/util/test/typecheck/booking.contracts.ts"
+      ],
+      "@core/*": ["./packages/core/src/*"],
+      "@web/*": ["./packages/web/src/*"],
+      "@backend/*": ["./packages/backend/src/*"],
+      "@sync/*": ["./packages/sync/src/*"],
+      "@scripts/*": ["./packages/scripts/src/*"]
+    }
   }
 }
