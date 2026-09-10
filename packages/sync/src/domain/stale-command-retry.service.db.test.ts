@@ -7,13 +7,20 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
+  cloudCommandDeps,
+  fakeCredentialCustody,
+} from "@sync/__tests__/helpers/command-scenario";
+import {
   fakeAdapters,
   seedProviderCalendar,
 } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { submitCloudCommand } from "@sync/domain/cloud-command.service";
 import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
-import { retryStaleCommands } from "@sync/domain/stale-command-retry.service";
+import {
+  retryStaleCommands,
+  type StaleCommandRetryDeps,
+} from "@sync/domain/stale-command-retry.service";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import {
   type ProviderCreateInput,
@@ -81,12 +88,6 @@ class FakeCreateWriter implements ProviderEventWriter {
   }
 }
 
-const tokenSource = () => ({
-  getValidAccessToken: async () => "access-token",
-  discardRevoked: async () => {},
-  invalidateAccessToken: async () => {},
-});
-
 describe("retryStaleCommands", () => {
   let mongo: SyncMongoService;
   let commands: CommandRepository;
@@ -117,28 +118,26 @@ describe("retryStaleCommands", () => {
     }),
   };
 
-  const baseDeps = (writer: ProviderEventWriter) => ({
-    commands,
-    events,
-    calendars,
-    occurrences,
-    resources,
-    markers,
-    connections,
-    execution: "active" as const,
-    provider: {
-      resolveAdapters: () =>
-        fakeAdapters(
-          {
-            listEventPage: async () => {
-              throw new Error("reader unused in stale-command-retry tests");
-            },
-          },
-          { writer },
-        ),
-      custody: tokenSource(),
-    },
-  });
+  const baseDeps = (writer: ProviderEventWriter): StaleCommandRetryDeps =>
+    cloudCommandDeps(
+      { commands, events, calendars, occurrences, resources, markers },
+      {
+        connections,
+        execution: "active",
+        provider: {
+          resolveAdapters: () =>
+            fakeAdapters(
+              {
+                listEventPage: async () => {
+                  throw new Error("reader unused in stale-command-retry tests");
+                },
+              },
+              { writer },
+            ),
+          custody: fakeCredentialCustody(),
+        },
+      },
+    );
 
   // Seed a provider-linked event stuck deletionPending, plus its still-pending
   // delete command - the state a transient provider failure leaves behind

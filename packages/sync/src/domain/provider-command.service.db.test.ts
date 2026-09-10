@@ -15,10 +15,13 @@ import {
   FakeProviderEventWriter,
   failingTokenSource,
   newCommandIds,
+  providerDeleteDeps,
+  providerMutationDeps,
   RevokedAuthAdapter,
   seedCommandCalendar,
   seedLinkedEvent,
   storeCommandCredential,
+  stubConnectionLookup,
   TEST_CREDENTIAL_ENCRYPTION_KEY,
   tokenSource,
 } from "@sync/__tests__/helpers/command-scenario";
@@ -142,6 +145,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -196,6 +200,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -230,6 +235,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -262,6 +268,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -281,6 +288,7 @@ describe("executeProviderCreate", () => {
       events,
       occurrences,
       resources,
+      connections: stubConnectionLookup(),
       writer,
       custody: tokenSource(),
     };
@@ -313,14 +321,10 @@ describe("executeProviderCreate", () => {
     await resources.activateGeneration(tenantId, principalId, resource._id, 1);
 
     await executeProviderCreate(
-      {
-        commands,
-        events,
-        occurrences,
-        resources,
-        writer: new FakeProviderEventWriter(),
-        custody: tokenSource(),
-      },
+      providerMutationDeps(
+        { commands, events, occurrences, resources },
+        new FakeProviderEventWriter(),
+      ),
       command,
       calendar,
       now,
@@ -346,6 +350,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -371,6 +376,7 @@ describe("executeProviderCreate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -407,13 +413,11 @@ describe("executeProviderCreate", () => {
     );
 
     const result = await executeProviderCreate(
-      {
-        commands,
-        events,
-        occurrences,
+      providerMutationDeps(
+        { commands, events, occurrences, resources },
         writer,
-        custody,
-      },
+        { custody },
+      ),
       command,
       calendar,
       now,
@@ -434,15 +438,15 @@ describe("executeProviderCreate", () => {
     const writer = new FakeProviderEventWriter();
 
     const result = await executeProviderCreate(
-      {
-        commands,
-        events,
-        occurrences,
+      providerMutationDeps(
+        { commands, events, occurrences, resources },
         writer,
-        custody: failingTokenSource(
-          new ProviderAuthError("refreshFailed", "temporary"),
-        ),
-      },
+        {
+          custody: failingTokenSource(
+            new ProviderAuthError("refreshFailed", "temporary"),
+          ),
+        },
+      ),
       command,
       calendar,
       now,
@@ -528,6 +532,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -567,6 +572,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -620,6 +626,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -647,6 +654,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -673,6 +681,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -701,6 +710,7 @@ describe("executeProviderUpdate", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -718,15 +728,15 @@ describe("executeProviderUpdate", () => {
     const writer = new FakeProviderEventWriter();
 
     const result = await executeProviderUpdate(
-      {
-        commands,
-        events,
-        occurrences,
+      providerMutationDeps(
+        { commands, events, occurrences, resources },
         writer,
-        custody: failingTokenSource(
-          new ProviderAuthError("authorizationRevoked", "revoked"),
-        ),
-      },
+        {
+          custody: failingTokenSource(
+            new ProviderAuthError("authorizationRevoked", "revoked"),
+          ),
+        },
+      ),
       command,
       event,
       calendar,
@@ -758,7 +768,11 @@ describe("executeProviderUpdate", () => {
     );
 
     const result = await executeProviderUpdate(
-      { commands, events, occurrences, writer, custody },
+      providerMutationDeps(
+        { commands, events, occurrences, resources },
+        writer,
+        { custody },
+      ),
       command,
       event,
       calendar,
@@ -878,6 +892,7 @@ describe("executeProviderUpdate on provider-managed events", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -908,6 +923,7 @@ describe("executeProviderUpdate on provider-managed events", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -943,6 +959,7 @@ describe("executeProviderUpdate on provider-managed events", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -974,6 +991,7 @@ describe("executeProviderUpdate on provider-managed events", () => {
         events,
         occurrences,
         resources,
+        connections: stubConnectionLookup(),
         writer,
         custody: tokenSource(),
       },
@@ -1060,14 +1078,10 @@ describe("executeProviderDelete", () => {
     expect(await occurrenceCount()).toBe(1);
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
         writer,
-        custody: tokenSource(),
-        markers,
-      },
+      ),
       command,
       event,
       calendar,
@@ -1096,14 +1110,10 @@ describe("executeProviderDelete", () => {
     await events.deleteById(tenantId, principalId, event._id);
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
         writer,
-        custody: tokenSource(),
-        markers,
-      },
+      ),
       command,
       event,
       calendar,
@@ -1225,14 +1235,10 @@ describe("executeProviderDelete", () => {
     });
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
-        writer: new FakeProviderEventWriter(),
-        custody: tokenSource(),
-        markers,
-      },
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
+        new FakeProviderEventWriter(),
+      ),
       command,
       master,
       calendar,
@@ -1352,14 +1358,10 @@ describe("executeProviderDelete", () => {
     });
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
-        writer: new FakeProviderEventWriter(),
-        custody: tokenSource(),
-        markers,
-      },
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
+        new FakeProviderEventWriter(),
+      ),
       command,
       ghostMaster,
       calendar,
@@ -1378,14 +1380,10 @@ describe("executeProviderDelete", () => {
     writer.deleteError = new ProviderWriteError("transient", "blip");
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
         writer,
-        custody: tokenSource(),
-        markers,
-      },
+      ),
       command,
       event,
       calendar,
@@ -1406,14 +1404,10 @@ describe("executeProviderDelete", () => {
     );
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
         writer,
-        custody: tokenSource(),
-        markers,
-      },
+      ),
       command,
       event,
       calendar,
@@ -1434,16 +1428,15 @@ describe("executeProviderDelete", () => {
     const writer = new FakeProviderEventWriter();
 
     const result = await executeProviderDelete(
-      {
-        commands,
-        events,
-        occurrences,
+      providerDeleteDeps(
+        { commands, events, occurrences, resources, markers },
         writer,
-        custody: failingTokenSource(
-          new ProviderAuthError("authorizationRevoked", "revoked"),
-        ),
-        markers,
-      },
+        {
+          custody: failingTokenSource(
+            new ProviderAuthError("authorizationRevoked", "revoked"),
+          ),
+        },
+      ),
       command,
       event,
       calendar,
@@ -1597,13 +1590,8 @@ describe("executeProviderSeriesUpdate", () => {
     return stored;
   };
 
-  const deps = (writer: ProviderEventWriter) => ({
-    commands,
-    events,
-    occurrences,
-    writer,
-    custody: tokenSource(),
-  });
+  const deps = (writer: ProviderEventWriter) =>
+    providerMutationDeps({ commands, events, occurrences, resources }, writer);
 
   it("patches the whole series and reprojects with the edited content", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
@@ -2247,17 +2235,13 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       })
     ).record;
 
-  const deps = (writer: FakeProviderEventWriter) => ({
-    commands,
-    events,
-    occurrences,
-    writer,
-    custody: tokenSource(),
-  });
-  const deleteDeps = (writer: FakeProviderEventWriter) => ({
-    ...deps(writer),
-    markers,
-  });
+  const deps = (writer: FakeProviderEventWriter) =>
+    providerMutationDeps({ commands, events, occurrences, resources }, writer);
+  const deleteDeps = (writer: FakeProviderEventWriter) =>
+    providerDeleteDeps(
+      { commands, events, occurrences, resources, markers },
+      writer,
+    );
 
   describe("executeProviderOccurrenceUpdate", () => {
     it("resolves the instance, patches IT (not the master), and stores its own provider identity", async () => {

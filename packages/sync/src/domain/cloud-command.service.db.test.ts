@@ -9,13 +9,17 @@ import {
 import {
   bindCommandRepos,
   COMMAND_NOW,
+  cloudCommandDeps,
   FakeProviderEventWriter,
+  fakeCredentialCustody,
   newCommandIds,
   seedCommandCalendar,
+  stubConnectionLookup,
 } from "@sync/__tests__/helpers/command-scenario";
 import { fakeAdapters } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
+  type CloudCommandDeps,
   ProviderWriteUnavailableError,
   submitCloudCommand,
 } from "@sync/domain/cloud-command.service";
@@ -119,11 +123,7 @@ const provider = (writer: ProviderEventWriter) => ({
       },
       { writer },
     ),
-  custody: {
-    getValidAccessToken: async () => "access-token",
-    discardRevoked: async () => {},
-    invalidateAccessToken: async () => {},
-  },
+  custody: fakeCredentialCustody(),
 });
 
 describe("submitCloudCommand provider dispatch", () => {
@@ -143,19 +143,17 @@ describe("submitCloudCommand provider dispatch", () => {
 
   const commandDeps = (
     writer?: FakeProviderEventWriter,
-    extra: Record<string, unknown> = {},
-  ) => ({
-    commands,
-    events,
-    calendars,
-    occurrences,
-    resources,
-    markers,
-    connections,
-    execution: "active" as const,
-    ...(writer ? { provider: provider(writer) } : {}),
-    ...extra,
-  });
+    extra: Partial<Pick<CloudCommandDeps, "execution" | "provider">> = {},
+  ) =>
+    cloudCommandDeps(
+      { commands, events, calendars, occurrences, resources, markers },
+      {
+        connections,
+        execution: "active",
+        ...(writer ? { provider: provider(writer) } : {}),
+        ...extra,
+      },
+    );
 
   const submitFor = (
     tenantId: TenantId,
@@ -369,15 +367,11 @@ describe("submitCloudCommand provider dispatch", () => {
     expectedVersion: null,
   });
 
-  const deps = () => ({
-    commands,
-    events,
-    calendars,
-    occurrences,
-    resources,
-    markers,
-    execution: "passive" as const,
-  });
+  const deps = () =>
+    cloudCommandDeps(
+      { commands, events, calendars, occurrences, resources, markers },
+      { connections, execution: "passive" },
+    );
 
   it("refuses a delete of a provider-linked event when passive, rather than stranding it pending", async () => {
     const tenantId = objectId() as TenantId;
@@ -2023,15 +2017,11 @@ describe("submitCloudCommand provider dispatch", () => {
 // typed. "preserve"/legacy stays byte-identical (covered by every pre-existing
 // test in this file, none of which set attendeesEdit).
 describe("cloud-only attendeesEdit replace", () => {
-  const deps = () => ({
-    commands,
-    events,
-    calendars,
-    occurrences,
-    resources,
-    markers,
-    execution: "active" as const,
-  });
+  const deps = () =>
+    cloudCommandDeps(
+      { commands, events, calendars, occurrences, resources, markers },
+      { connections: stubConnectionLookup(), execution: "active" },
+    );
 
   const attendee = (
     email: string,

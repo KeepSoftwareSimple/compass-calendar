@@ -3,6 +3,7 @@ import {
   type ProviderAdapters,
   type ResolveProviderAdapters,
 } from "@sync/providers/provider-adapters";
+import { type ProviderAuthAdapter } from "@sync/providers/provider-auth.port";
 import {
   type ProviderEvent,
   type ProviderEventRead,
@@ -12,12 +13,18 @@ import {
   type ProviderEventReader,
   type ProviderEventReadInput,
 } from "@sync/providers/provider-event-reader.port";
+import { type ProviderNotificationAdapter } from "@sync/providers/provider-notifications.port";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.contracts";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
+
+export const defaultCalendarListFields = {
+  eventLabels: [] as const,
+  createsGoogleMeet: true as const,
+};
 
 type CalendarUpsertInput = Parameters<
   ProviderCalendarRepository["upsertByProviderCalendar"]
@@ -46,6 +53,8 @@ export const seedProviderCalendar = (
       canReadBusy: true,
       canInviteAttendees: true,
     },
+    eventLabels: [],
+    createsGoogleMeet: true,
     ...overrides,
   });
 
@@ -182,10 +191,17 @@ export const fakeTokenSource = {
   invalidateAccessToken: async () => {},
 };
 
-const noopAuthAdapter = {
+const noopAuthAdapter: ProviderAuthAdapter = {
+  buildAuthorizationUrl: () => {
+    throw new Error("noopAuthAdapter: buildAuthorizationUrl not scripted");
+  },
+  exchangeAuthorizationCode: async () => {
+    throw new Error("noopAuthAdapter: exchangeAuthorizationCode not scripted");
+  },
   refreshAccessToken: async () => ({
     accessToken: "access-token",
     expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    grantedScopes: [],
   }),
   revoke: async () => {},
 };
@@ -206,13 +222,14 @@ const noopWriter = {
   },
 };
 
-const noopNotifications = {
-  watch: async (input: { channelId: string }) => ({
+const noopNotifications: ProviderNotificationAdapter = {
+  watch: async (input) => ({
     channelId: input.channelId,
     resourceId: "provider-resource",
     expiresAt: new Date("2099-01-01T00:00:00.000Z"),
   }),
   stopChannel: async () => {},
+  parseNotification: () => null,
 };
 
 const noopDiscovery = {
