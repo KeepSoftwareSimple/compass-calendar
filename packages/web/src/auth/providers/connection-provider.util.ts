@@ -1,3 +1,4 @@
+import { type Calendar } from "@core/types/calendar.contracts";
 import {
   type ProviderKind,
   providerDisplayName,
@@ -14,6 +15,12 @@ export const ALL_PROVIDER_KINDS: ProviderKind[] = [
 export const connectionProviderKind = (
   connection?: Pick<SyncConnectionSummary, "provider"> | null,
 ): ProviderKind => connection?.provider ?? "google";
+
+/** The provider account a calendar belongs to; undefined for the local calendar. */
+export const calendarProviderKind = (
+  calendar: Pick<Calendar, "provider">,
+): ProviderKind | undefined =>
+  calendar.provider === "local" ? undefined : calendar.provider;
 
 export const openingProviderLabel = (kind: ProviderKind): string =>
   kind === "google"

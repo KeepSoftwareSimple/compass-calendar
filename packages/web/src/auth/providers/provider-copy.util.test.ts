@@ -4,7 +4,6 @@ import {
   CONNECT_CALENDAR_LABEL,
   calendarProductName,
   connectionProvider,
-  defaultCalendarGroupLabel,
   emptyCalendarsCopy,
   openingProviderCopy,
   RECONNECT_BANNER_MESSAGE,
@@ -32,9 +31,6 @@ describe("provider copy", () => {
     expect(openingProviderCopy("google")).toBe("Opening Google…");
     expect(emptyCalendarsCopy(["google"])).toBe(
       "Connect Google to see your calendars.",
-    );
-    expect(defaultCalendarGroupLabel("ahab@pequod.com", "google")).toBe(
-      "ahab@pequod.com (Google)",
     );
     expect(reconnectToastTitle("google", "lance@example.com")).toBe(
       "Google Calendar disconnected (lance@example.com)",
@@ -68,9 +64,6 @@ describe("provider copy", () => {
     expect(openingProviderCopy("microsoft")).toBe("Opening Microsoft…");
     expect(emptyCalendarsCopy(["microsoft"])).toBe(
       "Connect Microsoft to see your calendars.",
-    );
-    expect(defaultCalendarGroupLabel("ada@outlook.com", "microsoft")).toBe(
-      "ada@outlook.com (Microsoft)",
     );
     expect(reconnectPointerHint("microsoft")).toBe(
       "Press G to reconnect Microsoft Calendar.",

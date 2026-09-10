@@ -578,6 +578,7 @@ describe("SettingsModal", () => {
   it("labels a Microsoft account optgroup with Microsoft provider copy", () => {
     const work = createMockCalendar({
       name: "Work",
+      provider: "microsoft",
       accountEmail: "user@outlook.com",
     });
 
@@ -596,6 +597,54 @@ describe("SettingsModal", () => {
     expect(
       within(combobox).getByRole("group", {
         name: "user@outlook.com (Microsoft)",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks each account row with its provider and badges only the default account", () => {
+    // The same address connected on both providers: the rows are told apart
+    // by the provider mark, and only the account owning the default
+    // calendar wears the Default badge.
+    const googlePrimary = createMockCalendar({
+      name: "Google primary",
+      isPrimary: true,
+      accountEmail: "lance@gmail.com",
+    });
+    const microsoftPrimary = createMockCalendar({
+      name: "Microsoft primary",
+      isPrimary: true,
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+    });
+
+    renderSettings({
+      connections: [
+        connection({ id: "google-conn", accountEmail: "lance@gmail.com" }),
+        connection({
+          id: "ms-conn",
+          accountEmail: "lance@gmail.com",
+          provider: "microsoft",
+        }),
+      ],
+      calendars: [googlePrimary, microsoftPrimary],
+    });
+
+    expect(screen.getByRole("img", { name: "Google" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Microsoft" })).toBeInTheDocument();
+
+    const badge = screen.getByText("Default");
+    expect(badge.parentElement).toHaveTextContent("lance@gmail.com");
+    expect(
+      within(badge.parentElement ?? badge).getByRole("img", { name: "Google" }),
+    ).toBeInTheDocument();
+
+    const combobox = screen.getByRole("combobox", { name: "Default Calendar" });
+    expect(
+      within(combobox).getByRole("group", { name: "lance@gmail.com (Google)" }),
+    ).toBeInTheDocument();
+    expect(
+      within(combobox).getByRole("group", {
+        name: "lance@gmail.com (Microsoft)",
       }),
     ).toBeInTheDocument();
   });

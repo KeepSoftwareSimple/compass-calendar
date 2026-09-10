@@ -110,13 +110,6 @@ export function bookingConnectPromptCopy(
   return "Connect a calendar account to enable your meeting page. Guests book through a public link and Compass creates events on your calendar.";
 }
 
-export function defaultCalendarGroupLabel(
-  accountEmail: string,
-  kind: ProviderKind,
-): string {
-  return `${accountEmail} (${providerDisplayName(kind)})`;
-}
-
 export function reconnectToastTitle(
   kind: ProviderKind,
   accountEmail?: string | null,

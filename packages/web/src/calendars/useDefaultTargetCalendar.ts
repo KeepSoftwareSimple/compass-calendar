@@ -5,10 +5,14 @@ import {
   useGoogleReconnectRequiredVersion,
 } from "@web/auth/providers/reconnect.state";
 import {
-  selectGoogleSyncConnections,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
-import { getDefaultTargetCalendar } from "@web/calendars/calendar.util";
+import {
+  type AccountRef,
+  connectionAccount,
+  getDefaultTargetCalendar,
+} from "@web/calendars/calendar.util";
 import { useDefaultCalendarId } from "@web/calendars/default-calendar.store";
 
 /**
@@ -35,15 +39,23 @@ export function useDefaultTargetCalendar(
   });
 }
 
-/** Connected account emails in connection order (oldest first). */
-export function useConnectedAccountEmails(): string[] {
-  const connections = useUserMetadataStore(selectGoogleSyncConnections);
+/** Connected accounts in connection order (oldest first). */
+export function useConnectedAccounts(): AccountRef[] {
+  const connections = useUserMetadataStore(selectSyncConnections);
 
   return useMemo(
     () =>
-      connections
-        .map((connection) => connection.accountEmail)
-        .filter((email): email is string => Boolean(email)),
+      connections.flatMap((connection) => connectionAccount(connection) ?? []),
     [connections],
+  );
+}
+
+/** The same accounts as emails, for callers that only order calendars by account. */
+export function useConnectedAccountEmails(): string[] {
+  const accounts = useConnectedAccounts();
+
+  return useMemo(
+    () => accounts.map((account) => account.accountEmail),
+    [accounts],
   );
 }
