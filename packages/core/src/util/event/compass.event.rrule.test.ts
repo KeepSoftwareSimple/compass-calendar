@@ -467,8 +467,6 @@ describe("CompassEventRRule: ", () => {
     const denver = "America/Denver";
     // A real Thursday; both real Thursday, MDT.
     const thursday = "2026-07-23T19:00:00-06:00";
-    const endOfThursday = "2026-07-23T20:00:00-06:00";
-
     it("expands BYDAY=SA onto Saturday, not the previous local day", () => {
       const rule = ["RRULE:FREQ=WEEKLY;BYDAY=SA"];
       const baseEvent = createMockBaseEvent(

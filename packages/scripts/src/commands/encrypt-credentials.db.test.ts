@@ -1,5 +1,5 @@
-import { faker } from "@faker-js/faker";
 import { encryptCredentials } from "@scripts/commands/encrypt-credentials/backfill";
+import { ObjectId } from "mongodb";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
@@ -8,7 +8,7 @@ import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { describe, expect, it } from "bun:test";
 import { randomBytes } from "node:crypto";
 
-const objectId = () => faker.database.mongodbObjectId();
+const objectId = () => new ObjectId().toHexString();
 
 const KEY = randomBytes(32).toString("base64");
 const NOW = new Date("2026-09-04T12:00:00.000Z");

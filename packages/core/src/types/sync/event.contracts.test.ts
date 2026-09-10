@@ -31,7 +31,7 @@ const dstCrossingSchedule = {
   start: "2026-03-08T01:30:00-07:00",
   end: "2026-03-08T03:30:00-06:00",
   timeZone: "America/Denver",
-};
+} as const;
 
 const allDaySchedule = {
   kind: "allDay",

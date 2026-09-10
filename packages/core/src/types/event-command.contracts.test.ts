@@ -18,20 +18,20 @@ const content = {
   title: "Standup",
   description: "",
   location: "",
-};
+} as const;
 const timedSchedule = {
   kind: "timed",
   start: "2026-07-14T09:00:00-06:00",
   end: "2026-07-14T10:00:00-06:00",
   timeZone: "America/Denver",
-};
+} as const;
 describe("Event Command Contracts", () => {
   describe("CreateEventInputSchema", () => {
     const base = () => ({
       calendarId: calendarId(),
       content,
       schedule: timedSchedule,
-      recurrence: { kind: "single" },
+      recurrence: { kind: "single" as const },
     });
 
     it("parses without an id", () => {
@@ -145,8 +145,8 @@ describe("Event Command Contracts", () => {
     const base = (overrides: Record<string, unknown> = {}) => ({
       content,
       schedule: timedSchedule,
-      recurrence: { kind: "preserve" },
-      scope: "this",
+      recurrence: { kind: "preserve" as const },
+      scope: "this" as const,
       ...overrides,
     });
 
@@ -248,7 +248,7 @@ describe("Event Command Contracts", () => {
     });
 
     it("parses a legacy payload without an invitation to an identical output", () => {
-      const legacy = { scope: "all" };
+      const legacy = { scope: "all" as const };
 
       expect(DeleteEventInputSchema.parse(legacy)).toStrictEqual(legacy);
     });
