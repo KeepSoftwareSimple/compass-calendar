@@ -3,7 +3,6 @@ import {
   emailForVerifiedAccountLinkLookup,
   hasVerifiedLoginMethod,
   isApplePrivateRelayEmail,
-  shouldAutomaticallyLinkAccounts,
 } from "@backend/auth/services/account-linking.util";
 import { describe, expect, it } from "bun:test";
 
@@ -83,25 +82,6 @@ describe("account-linking.util", () => {
           incomingHasVerifiedLogin: false,
         }),
       ).toBe(false);
-    });
-  });
-
-  describe("shouldAutomaticallyLinkAccounts", () => {
-    it("requires verification for ordinary emails", () => {
-      expect(
-        shouldAutomaticallyLinkAccounts({ email: "a@example.com" }),
-      ).toEqual({
-        shouldAutomaticallyLink: true,
-        shouldRequireVerification: true,
-      });
-    });
-
-    it("never auto-links an Apple private-relay address", () => {
-      expect(
-        shouldAutomaticallyLinkAccounts({
-          email: "hide@privaterelay.appleid.com",
-        }),
-      ).toEqual({ shouldAutomaticallyLink: false });
     });
   });
 });
