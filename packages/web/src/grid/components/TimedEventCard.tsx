@@ -66,6 +66,7 @@ interface TimedEventCardProps {
   /** Calendar backgroundColor for focus chrome; null falls back to --text. */
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isHidden?: boolean;
   isSelected?: boolean;
   motionMode: "dragging" | "idle" | "resizing";
   onBlur?: () => void;
@@ -84,6 +85,7 @@ const TimedEventCardBase = (
     event,
     focusColor = null,
     interactionAttributes,
+    isHidden = false,
     isSelected = false,
     motionMode,
     onBlur,
@@ -106,12 +108,14 @@ const TimedEventCardBase = (
     "minute",
   );
   const showRepeatIcon =
+    !isHidden &&
     isRecurring &&
     !isPlaceholder &&
     durationMinutes >= REPEAT_ICON_MIN_DURATION_MINUTES &&
     position.width >= REPEAT_ICON_MIN_WIDTH;
 
   const showTimeLabel =
+    !isHidden &&
     !event.isAllDay &&
     (isDraft || !isInPast) &&
     position.height >= MIN_EVENT_HEIGHT_FOR_TIME_LABEL &&
@@ -187,7 +191,7 @@ const TimedEventCardBase = (
     "--event-focus-color": focusColorCss,
     height: position.height || 0,
     left: position.left,
-    opacity: isPlaceholder ? 0.5 : undefined,
+    opacity: isHidden ? 0.6 : isPlaceholder ? 0.5 : undefined,
     top: position.top,
     width: position.width || 0,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
@@ -231,6 +235,7 @@ const TimedEventCardBase = (
     ? `${recurringPrefix}All-day event: ${eventTitle}`
     : `${recurringPrefix}Timed event: ${eventTitle}, ${timeRange ?? "time not set"}`;
   const samplePrefix = event.isDemo ? "Sample " : "";
+  const hiddenPrefix = isHidden ? "Hidden " : "";
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
@@ -242,8 +247,9 @@ const TimedEventCardBase = (
         : "";
   const accessibleLabel =
     (calendarIdentity
-      ? `${samplePrefix}${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
-      : `${samplePrefix}${baseAccessibleLabel}`) + edgeFocusSuffix;
+      ? `${hiddenPrefix}${samplePrefix}${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
+      : `${hiddenPrefix}${samplePrefix}${baseAccessibleLabel}`) +
+    edgeFocusSuffix;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: Grid events are draggable/resizable blocks, not native buttons.
@@ -255,8 +261,10 @@ const TimedEventCardBase = (
       ref={ref}
       role="button"
       tabIndex={0}
+      title={isHidden ? event.title : undefined}
       className={cn(
-        "absolute min-h-2.5 overflow-hidden rounded-xs pr-0.75 pl-1.25 transition-[background-color,filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        "absolute min-h-2.5 overflow-hidden pr-0.75 pl-1.25 transition-[background-color,filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+        isHidden ? "rounded-full" : "rounded-xs",
         "bg-(--event-bg) hover:bg-(--event-hover-bg)",
         "hover:cursor-pointer",
         eventFocusOutlineClass(focusedEdge),
@@ -282,29 +290,31 @@ const TimedEventCardBase = (
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {calendarIdentity && (
+      {!isHidden && calendarIdentity && (
         <div
           aria-hidden="true"
           className="absolute inset-y-0 left-0 w-[3px]"
           style={calendarAccentStyle(calendarIdentity)}
         />
       )}
-      <div
-        className="flex flex-col flex-wrap items-start"
-        style={{ color: contentColor }}
-        {...{ [EVENT_CONTENT_ATTRIBUTE]: "true" }}
-      >
-        <span style={titleStyle}>{event.title}</span>
-        {!event.isAllDay && showTimeLabel && (
-          <span
-            className="relative"
-            {...{ [EVENT_TIME_LABEL_ATTRIBUTE]: "true" }}
-            style={{ ...timeLabelStyle, zIndex: ZIndex.LAYER_3 }}
-          >
-            {timeRange}
-          </span>
-        )}
-      </div>
+      {!isHidden && (
+        <div
+          className="flex flex-col flex-wrap items-start"
+          style={{ color: contentColor }}
+          {...{ [EVENT_CONTENT_ATTRIBUTE]: "true" }}
+        >
+          <span style={titleStyle}>{event.title}</span>
+          {!event.isAllDay && showTimeLabel && (
+            <span
+              className="relative"
+              {...{ [EVENT_TIME_LABEL_ATTRIBUTE]: "true" }}
+              style={{ ...timeLabelStyle, zIndex: ZIndex.LAYER_3 }}
+            >
+              {timeRange}
+            </span>
+          )}
+        </div>
+      )}
       {showRepeatIcon && <EventRepeatIcon baseColor={bgColor} />}
     </div>
   );

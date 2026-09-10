@@ -18,6 +18,7 @@ import {
 } from "@web/__tests__/__mocks__/mock.render";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { createCompassQueryClient } from "@web/api/query-client";
@@ -39,10 +40,14 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import { TIMED_EVENT_FAN_INDENT } from "@web/grid/grid.constants";
+import {
+  HIDDEN_EVENT_STRIP_WIDTH,
+  TIMED_EVENT_FAN_INDENT,
+} from "@web/grid/grid.constants";
 import * as realUsegridmeasurements from "@web/grid/hooks/useGridMeasurements";
 import { type GridMeasurements } from "@web/grid/types/grid.types";
 import * as realUsedateinview from "@web/views/Day/hooks/navigation/useDateInView";
+import { dayEventRegistry } from "@web/views/Day/interaction/registry/day-event.registry";
 import {
   afterEach,
   beforeEach,
@@ -138,8 +143,12 @@ const EventFormProbe = () => {
 const { DayCalendarGrid } =
   require("./DayCalendarGrid") as typeof import("./DayCalendarGrid");
 
-const renderDayCalendarGrid = (calendars?: Calendar[]) => {
+const renderDayCalendarGrid = (
+  calendars?: Calendar[],
+  hiddenEventIds: readonly string[] = [],
+) => {
   const queryClient = createCompassQueryClient();
+  seedHiddenEventIds(queryClient, hiddenEventIds);
   if (calendars) {
     queryClient.setQueryData(calendarQueryKeys.all, calendars);
     // Seeded fixtures must survive the calendars query mount-fetch. Without
@@ -304,6 +313,7 @@ afterEach(() => {
     delete (HTMLElement.prototype as { scroll?: unknown }).scroll;
   }
   resetDraft();
+  dayEventRegistry.clear();
   // Storage clearing + the hidden-ids store resync are both handled by the
   // global test-lifecycle afterEach (resetBrowserState + resetAllStores).
 });
@@ -436,6 +446,57 @@ describe("DayCalendarGrid", () => {
     expect(Number(early.style.zIndex)).toBeLessThan(Number(late.style.zIndex));
     expect(parseFloat(solo.style.width)).toBeGreaterThan(
       parseFloat(early.style.width),
+    );
+  });
+
+  it("renders hidden timed and all-day events as strips outside the drag registry", () => {
+    const hiddenTimed = createTimedEvent({
+      _id: "hidden-timed",
+      endDate: "2026-05-20T10:30:00.000",
+      startDate: "2026-05-20T09:00:00.000",
+      title: "Hidden timed",
+    });
+    const visibleTimed = createTimedEvent({
+      _id: "visible-timed",
+      endDate: "2026-05-20T10:45:00.000",
+      startDate: "2026-05-20T09:30:00.000",
+      title: "Visible timed",
+    });
+    const hiddenAllDay = createTimedEvent({
+      _id: "hidden-all-day",
+      endDate: "2026-05-21T00:00:00.000",
+      isAllDay: true,
+      startDate: "2026-05-20T00:00:00.000",
+      title: "Hidden all day",
+    });
+    setDayEvents([hiddenTimed, visibleTimed, hiddenAllDay]);
+
+    renderDayCalendarGrid(undefined, [hiddenTimed._id!, hiddenAllDay._id!]);
+
+    const visibleCard = screen.getByRole("button", {
+      name: /timed event: visible timed/i,
+    });
+    const hiddenTimedCard = screen.getByRole("button", {
+      name: /^Hidden Timed event: Hidden timed/,
+    });
+    const hiddenAllDayCard = screen.getByRole("button", {
+      name: /^Hidden All-day event: Hidden all day/,
+    });
+
+    expect(Number(visibleCard.style.zIndex)).toBe(ZIndex.LAYER_1);
+    expect(parseFloat(hiddenTimedCard.style.width)).toBe(
+      HIDDEN_EVENT_STRIP_WIDTH,
+    );
+    expect(parseFloat(hiddenAllDayCard.style.width)).toBe(
+      HIDDEN_EVENT_STRIP_WIDTH,
+    );
+    expect(parseFloat(visibleCard.style.width)).toBeGreaterThan(
+      HIDDEN_EVENT_STRIP_WIDTH,
+    );
+    expect(dayEventRegistry.resolve(hiddenTimed._id!, "timed")).toBeNull();
+    expect(dayEventRegistry.resolve(hiddenAllDay._id!, "all-day")).toBeNull();
+    expect(dayEventRegistry.resolve(visibleTimed._id!, "timed")).toBe(
+      visibleCard,
     );
   });
 
