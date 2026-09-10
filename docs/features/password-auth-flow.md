@@ -32,8 +32,9 @@ Compass still treats the MongoDB `userId` as the canonical identity.
 
 SuperTokens is configured so that:
 
-- AccountLinking is initialized with automatic linking that requires
-  verification
+- SuperTokens automatic account linking is not enabled; SuperTokens Cloud
+  rejects `createPrimaryUser` with 402, so Compass joins same-email logins
+  in `userService.getCanonicalCompassUserId`
 - password sign-up ensures there is an external user id mapping, and that external id is a Mongo `ObjectId` string
 - backend user upserts can canonicalize to an existing Compass user id by
   normalized email when both sides already have a verified login method, then
@@ -43,8 +44,10 @@ SuperTokens is configured so that:
 
 Important constraints:
 
-- SuperTokens `AccountLinking` joins verified Google and Microsoft logins that
-  share an email into one Compass user.
+- Compass joins verified Google and Microsoft logins that share an email into
+  one Compass user in `userService.getCanonicalCompassUserId`. SuperTokens
+  automatic account linking stays off because the SuperTokens Cloud plan lacks
+  the feature.
 - Unverified email/password accounts do not link to a Google or Microsoft
   login until the email is verified.
 - Apple private-relay addresses never auto-link. Identity is the Apple `sub`.
