@@ -260,9 +260,11 @@ async function waitForCalendarExperienceReady(page: Page) {
 }
 
 function gridEventCard(page: Page, title: string, hidden: boolean) {
+  // Require the calendar suffix so a leftover draft overlay (no calendar
+  // identity) cannot match the same title as the committed grid card.
   const prefix = hidden ? "^Hidden Timed event: " : "^Timed event: ";
   return page.locator("#mainGrid").getByRole("button", {
-    name: new RegExp(`${prefix}${title}`),
+    name: new RegExp(`${prefix}${title}.*calendar`),
   });
 }
 
@@ -289,7 +291,10 @@ async function hideFocusedEventViaMenu(page: Page) {
     .getByRole("menu")
     .getByRole("menuitem", { name: "Hide event", exact: true });
   await expect(hideItem).toBeVisible();
-  await hideItem.click();
+  // Enter, not click: a pointer click on the item can fall through to the
+  // grid after the menu unmounts and open a draft overlay on the same slot.
+  await hideItem.focus();
+  await page.keyboard.press("Enter");
 }
 
 // Playwright's page.keyboard.press is unreliable for bare letters in headless
@@ -366,6 +371,7 @@ async function setupCalendarExperiencePage(
       route.fulfill({
         status,
         contentType: "application/json",
+        headers: { "cache-control": "no-store" },
         body: JSON.stringify(body),
       });
 
@@ -386,7 +392,12 @@ async function setupCalendarExperiencePage(
       return json(metadata);
     }
     if (pathname.endsWith("/api/user/hidden-events") && method === "GET") {
-      return json({ hiddenEventIds: [...hiddenEventIds] });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "cache-control": "no-store" },
+        body: JSON.stringify({ hiddenEventIds: [...hiddenEventIds] }),
+      });
     }
     if (pathname.endsWith("/api/user/hidden-events") && method === "PUT") {
       const body = request.postDataJSON() as {
@@ -400,7 +411,12 @@ async function setupCalendarExperiencePage(
           hiddenEventIds.delete(body.eventId);
         }
       }
-      return json({ hiddenEventIds: [...hiddenEventIds] });
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        headers: { "cache-control": "no-store" },
+        body: JSON.stringify({ hiddenEventIds: [...hiddenEventIds] }),
+      });
     }
     if (pathname.endsWith("/api/config")) {
       return json({
@@ -703,7 +719,12 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
 
   const shownCard = gridEventCard(page, EVENT_B_TITLE, false);
   await shownCard.focus();
+  const hidePut = page.waitForRequest(
+    (req) =>
+      req.method() === "PUT" && req.url().includes("/api/user/hidden-events"),
+  );
   await hideFocusedEventViaMenu(page);
+  await hidePut;
   await expectEventCardWidth(page, EVENT_B_TITLE, true);
 
   await page.reload({ waitUntil: "domcontentloaded" });
