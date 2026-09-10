@@ -37,6 +37,17 @@ const sortAvailability = (
         left.weekday - right.weekday || left.start.localeCompare(right.start),
     );
 
+/** Swap one weekday's intervals for `intervals`, leaving the other days alone. */
+const withDayIntervals = (
+  value: WeeklyAvailability,
+  weekday: IsoWeekday,
+  intervals: readonly WeeklyAvailabilityInterval[],
+): WeeklyAvailability =>
+  sortAvailability([
+    ...value.filter((entry) => entry.weekday !== weekday),
+    ...intervals,
+  ]);
+
 export function intervalsForDay(
   value: WeeklyAvailability,
   weekday: IsoWeekday,
@@ -76,8 +87,7 @@ export function addBlock(
   value: WeeklyAvailability,
   weekday: IsoWeekday,
 ): WeeklyAvailability {
-  const day = intervalsForDay(value, weekday);
-  const last = day[day.length - 1];
+  const last = intervalsForDay(value, weekday).at(-1);
   if (last == null) return value;
   const startMinutes = localTimeToMinutes(last.end) + 60;
   if (startMinutes >= localTimeToMinutes(LAST_TIME)) return value;
@@ -93,22 +103,12 @@ export function removeBlock(
   weekday: IsoWeekday,
   index: number,
 ): WeeklyAvailability {
-  const target = intervalsForDay(value, weekday)[index];
-  if (target == null) return sortAvailability(value);
-  let removed = false;
-  return sortAvailability(
-    value.filter((entry) => {
-      if (
-        !removed &&
-        entry.weekday === weekday &&
-        entry.start === target.start &&
-        entry.end === target.end
-      ) {
-        removed = true;
-        return false;
-      }
-      return true;
-    }),
+  const day = intervalsForDay(value, weekday);
+  if (day[index] == null) return sortAvailability(value);
+  return withDayIntervals(
+    value,
+    weekday,
+    day.filter((_, position) => position !== index),
   );
 }
 
@@ -133,20 +133,12 @@ export function updateBlock(
       end = next.start;
     }
   }
-  let replaced = false;
-  return sortAvailability(
-    value.map((entry) => {
-      if (
-        replaced ||
-        entry.weekday !== weekday ||
-        entry.start !== current.start ||
-        entry.end !== current.end
-      ) {
-        return entry;
-      }
-      replaced = true;
-      return { ...entry, start, end };
-    }),
+  return withDayIntervals(
+    value,
+    weekday,
+    day.map((entry, position) =>
+      position === index ? { ...entry, start, end } : entry,
+    ),
   );
 }
 

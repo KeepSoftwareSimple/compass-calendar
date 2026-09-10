@@ -73,18 +73,10 @@ const focusStepFirstControl = (
         .querySelector<HTMLElement>("#booking-setup-destination-calendar")
         ?.focus();
       break;
-    case "live":
-      continueRefFallback(root)?.focus();
-      break;
     default:
       break;
   }
 };
-
-const continueRefFallback = (root: HTMLElement) =>
-  root.querySelector<HTMLButtonElement>(
-    '[data-settings-shortcut="save-booking"]',
-  );
 
 export function BookingSetupWizard({
   bookingUrl,
@@ -145,23 +137,19 @@ export function BookingSetupWizard({
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
-    if (
-      (event.key === "k" || event.key === "K") &&
-      !isEditableKeyboardTarget(event)
-    ) {
-      if (!canContinue) return;
-      event.preventDefault();
-      onContinue();
-      return;
-    }
-
-    if (
-      (event.key === "j" || event.key === "J") &&
-      !isEditableKeyboardTarget(event)
-    ) {
-      event.preventDefault();
-      onBack();
-      return;
+    if (!isEditableKeyboardTarget(event)) {
+      const navKey = event.key.toLowerCase();
+      if (navKey === "k") {
+        if (!canContinue) return;
+        event.preventDefault();
+        onContinue();
+        return;
+      }
+      if (navKey === "j") {
+        event.preventDefault();
+        onBack();
+        return;
+      }
     }
 
     if (event.key !== "Enter" || event.shiftKey || event.altKey) return;

@@ -2,9 +2,7 @@ import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
-import { BookingDestinationCalendarOptions } from "@web/booking/BookingDestinationCalendarOptions";
-import { bookingDestinationConferenceHint } from "@web/booking/booking-conference.copy";
-import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
+import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 
 interface BookingSetupDestinationStepProps {
   connections: SyncConnectionSummary[];
@@ -23,42 +21,18 @@ export function BookingSetupDestinationStep({
     return <ConnectProviderChooser variant="prompt" />;
   }
 
-  const destinationCalendar = writableCalendars.find(
-    (calendar) => calendar.id === destinationCalendarId,
-  );
-  const destinationConferenceHint = destinationCalendar
-    ? bookingDestinationConferenceHint(destinationCalendar)
-    : null;
-  const destinationMeetWarningId = "booking-setup-destination-meet-warning";
-
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col">
       <label className="sr-only" htmlFor="booking-setup-destination-calendar">
         Destination calendar
       </label>
-      <select
-        aria-describedby={
-          destinationConferenceHint ? destinationMeetWarningId : undefined
-        }
-        className={BOOKING_SELECT_CLASS_NAME}
+      <BookingDestinationCalendarField
+        connections={connections}
         id="booking-setup-destination-calendar"
-        onChange={(event) => onChange(event.target.value as CalendarId)}
+        onChange={onChange}
         value={destinationCalendarId}
-      >
-        <BookingDestinationCalendarOptions
-          calendars={writableCalendars}
-          connections={connections}
-        />
-      </select>
-      {destinationConferenceHint ? (
-        <p
-          className="text-sm text-warning"
-          id={destinationMeetWarningId}
-          role="status"
-        >
-          {destinationConferenceHint}
-        </p>
-      ) : null}
+        writableCalendars={writableCalendars}
+      />
     </div>
   );
 }
