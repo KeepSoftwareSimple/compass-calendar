@@ -1,5 +1,6 @@
 import type express from "express";
 import rateLimit from "express-rate-limit";
+import { type SessionRequest } from "supertokens-node/framework/express";
 import { verifySession } from "@backend/auth/session/session.middleware";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
 import userController from "./controllers/user.controller";
@@ -9,6 +10,17 @@ const accountDeletionLimiter = rateLimit({
   limit: 3,
   standardHeaders: true,
   legacyHeaders: false,
+});
+
+const hiddenEventsKey = (req: express.Request): string =>
+  `hidden-events:${(req as SessionRequest).session?.getUserId?.() ?? "unknown"}`;
+
+const hiddenEventsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: hiddenEventsKey,
 });
 
 /**
@@ -74,6 +86,26 @@ export class UserRoutes extends CommonRoutesConfig {
       .all(verifySession())
       .get(userController.getMetadata)
       .post(userController.updateMetadata);
+
+    /**
+     * GET /api/user/hidden-events
+     * Lists the current user's hidden event ids.
+     *
+     * PUT /api/user/hidden-events
+     * Hides or shows one event for the current user. Body is
+     * `{ eventId, hidden }`. Returns the full list so occurrence ids with
+     * `::` never need to be encoded in the path.
+     *
+     * @auth Required - Supertokens session
+     * @returns {Object} { hiddenEventIds: string[] }
+     * @throws {401} Unauthorized - Invalid or missing session
+     * @throws {400} Bad Request - Invalid input
+     */
+    this.app
+      .route("/api/user/hidden-events")
+      .all(verifySession())
+      .get(hiddenEventsLimiter, userController.getHiddenEvents)
+      .put(hiddenEventsLimiter, userController.setEventHidden);
 
     return this.app;
   }

@@ -19,6 +19,7 @@ import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { Collections } from "@backend/common/constants/collections";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { type EventRecord } from "@backend/event/event.record";
+import { type HiddenEventRecord } from "@backend/user/hidden-event.record";
 import { type PendingAccountDeletionRecord } from "@backend/user/pending-account-deletion.record";
 
 const logger = Logger("app:mongo.service");
@@ -31,6 +32,7 @@ interface InternalClient {
   bookingReservation: Collection<BookingReservationRecord>;
   calendar: Collection<CalendarRecord>;
   event: Collection<EventRecord>;
+  hiddenEvent: Collection<HiddenEventRecord>;
   pendingAccountDeletion: Collection<PendingAccountDeletionRecord>;
   user: Collection<Schema_User>;
 }
@@ -65,6 +67,10 @@ class MongoService {
 
   get bookingReservation(): InternalClient["bookingReservation"] {
     return this.#accessInternalCollectionProps("bookingReservation");
+  }
+
+  get hiddenEvent(): InternalClient["hiddenEvent"] {
+    return this.#accessInternalCollectionProps("hiddenEvent");
   }
 
   /**
@@ -130,6 +136,7 @@ class MongoService {
       ),
       calendar: db.collection<CalendarRecord>(Collections.CALENDAR),
       event: db.collection<EventRecord>(Collections.EVENT),
+      hiddenEvent: db.collection<HiddenEventRecord>(Collections.HIDDEN_EVENT),
       pendingAccountDeletion: db.collection<PendingAccountDeletionRecord>(
         Collections.PENDING_ACCOUNT_DELETION,
       ),
