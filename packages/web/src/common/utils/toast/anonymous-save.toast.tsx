@@ -1,6 +1,6 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
-import { track } from "@web/auth/posthog/track";
+import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
@@ -65,7 +65,7 @@ async function openSignUpFromOutsideRouter(): Promise<void> {
 
 export const AnonymousSaveToast = ({ toastId }: AnonymousSaveToastProps) => {
   const handleSignUp = () => {
-    track("signup_started", { source: "anon_nudge" });
+    trackSignupStarted("anon_nudge");
     void openSignUpFromOutsideRouter();
     getToast().dismiss(toastId);
   };

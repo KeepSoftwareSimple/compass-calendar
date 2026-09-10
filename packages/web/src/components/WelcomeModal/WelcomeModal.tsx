@@ -2,6 +2,10 @@ import classNames from "classnames";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
+import {
+  trackSignupStarted,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   CONNECT_CALENDAR_LABEL,
@@ -132,6 +136,7 @@ export function WelcomeModal() {
       if (!shownRef.current) {
         shownRef.current = true;
         track("welcome_modal_shown");
+        trackSignupStep("welcome_viewed");
       }
     }
   }, [visible]);
@@ -215,7 +220,7 @@ export function WelcomeModal() {
     markWelcomeSeen();
     if (cta === "sign_up") {
       shortcutShowcaseActions.deferUntilSignup();
-      track("signup_started", { source: "welcome_modal" });
+      trackSignupStarted("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
     openModal(cta === "log_in" ? "login" : "signUp");
@@ -232,7 +237,7 @@ export function WelcomeModal() {
     markWelcomeSeen();
     shortcutShowcaseActions.deferUntilSignup();
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
-    track("signup_started", { source: `welcome_modal_${kind}` });
+    trackSignupStarted(`welcome_modal_${kind}`);
     startSignIn(kind);
   };
 

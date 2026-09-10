@@ -3,6 +3,10 @@ import { useEffect, useRef } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
+import {
+  trackSignupCompleted,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { completeProviderAuthorization } from "@web/auth/providers/authorization/complete-provider-authorization";
 import { isSignInProviderKind } from "@web/auth/providers/authorization/provider-authorization.constants";
@@ -26,6 +30,10 @@ export async function completeProviderAuthCallback({
   navigate,
   search,
 }: CompleteProviderAuthCallbackOptions): Promise<void> {
+  // Before any branch: a user who came back from the provider is counted even
+  // when the exchange below fails.
+  trackSignupStep("oauth_callback_returned", { method: provider });
+
   const result = await completeProviderAuthorization({
     provider,
     authApi: AuthApi,
@@ -36,8 +44,9 @@ export async function completeProviderAuthCallback({
   if (result.status === "failed") {
     showErrorToast(result.message);
   } else if (result.isNewUser) {
-    track("signup_completed", { method: provider });
+    trackSignupCompleted(provider);
     track("calendar_connected", { source: `signup_${provider}` });
+    trackSignupStep("calendar_connected", { method: provider });
     shortcutShowcaseActions.offerAfterSignupIfPending();
   } else {
     track("login_completed", { method: provider });
