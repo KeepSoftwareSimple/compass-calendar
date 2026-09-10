@@ -353,7 +353,8 @@ validate_backend_config_version() {
   require_env BACKEND_API_URL || return 1
 
   local url expected actual body
-  url="${BACKEND_API_URL%/}/api/config"
+  # BACKEND_API_URL already includes /api, same join as validate_backend_health.
+  url="${BACKEND_API_URL%/}/config"
   expected=$(expected_version) || return 1
 
   if is_local_url "$url" && [ -n "${SSH_TARGET:-}" ]; then
