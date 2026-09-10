@@ -52,13 +52,15 @@ class FakeChannelsApi implements GoogleChannelsApi {
     if (this.behavior.calendarListWatch instanceof Error) {
       throw this.behavior.calendarListWatch;
     }
-    return (
-      this.behavior.calendarListWatch ??
+    const channel = this.behavior.calendarListWatch ??
       this.behavior.watch ?? {
         resourceId: "res-list-1",
         expiration: "1767312000000",
-      }
-    );
+      };
+    if (channel instanceof Error) {
+      throw channel;
+    }
+    return channel;
   }
 
   async stopChannel(

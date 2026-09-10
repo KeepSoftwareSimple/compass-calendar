@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type DeletionMarkerRecordInput } from "@sync/storage/contracts/deletion-marker.contracts";
 import {
@@ -42,7 +43,7 @@ describe("DeletionMarkerRepository", () => {
     // No event content is stored — only identity/version/source/timestamps.
     const doc = await db
       .collection("deletion_markers")
-      .findOne({ _id: marker._id });
+      .findOne(stringIdFilter(marker._id));
     expect(Object.keys(doc ?? {}).sort()).toEqual(
       [
         "_id",

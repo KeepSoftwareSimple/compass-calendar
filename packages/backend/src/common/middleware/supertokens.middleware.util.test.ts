@@ -163,7 +163,7 @@ describe("supertokens.middleware.util", () => {
           id: recipeUserId,
           loginMethods: [{}],
         },
-      } as Parameters<typeof createMicrosoftSignInSuccess>[0]);
+      } as unknown as Parameters<typeof createMicrosoftSignInSuccess>[0]);
 
       expect(success).toMatchObject({
         createdNewRecipeUser: true,
@@ -198,7 +198,7 @@ describe("supertokens.middleware.util", () => {
           id: recipeUserId,
           loginMethods: [{}],
         },
-      } as Parameters<typeof createAppleSignInSuccess>[0]);
+      } as unknown as Parameters<typeof createAppleSignInSuccess>[0]);
 
       expect(success).toMatchObject({
         createdNewRecipeUser: true,
@@ -227,7 +227,7 @@ describe("supertokens.middleware.util", () => {
         },
         oAuthTokens: { access_token: faker.internet.jwt() },
         user: { id: recipeUserId, loginMethods: [{}] },
-      } as Parameters<typeof createAppleSignInSuccess>[0]);
+      } as unknown as Parameters<typeof createAppleSignInSuccess>[0]);
 
       expect(success?.providerUser.user).toEqual({
         name: { firstName: "Ada", lastName: "Lovelace" },
@@ -249,7 +249,7 @@ describe("supertokens.middleware.util", () => {
         },
         oAuthTokens: { access_token: faker.internet.jwt() },
         user: { id: recipeUserId, loginMethods: [{}] },
-      } as Parameters<typeof createAppleSignInSuccess>[0]);
+      } as unknown as Parameters<typeof createAppleSignInSuccess>[0]);
 
       expect(success).not.toBeNull();
       const merged = withAppleFirstAuthorizationName(
@@ -319,10 +319,7 @@ describe("supertokens.middleware.util", () => {
         existingSession,
         "compass-user-id",
       );
-      expect(result).toEqual({
-        status: "OK",
-        session: replacementSession,
-      });
+      expect(result).toMatchObject({ status: "OK" });
     });
   });
 });

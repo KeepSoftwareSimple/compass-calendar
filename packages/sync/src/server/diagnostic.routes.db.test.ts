@@ -5,6 +5,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { defaultCalendarListFields } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -93,6 +94,7 @@ describe("GET /internal/diagnostics/connections/:diagnosticKey", () => {
       providerCalendarId: "primary",
       displayName: "Primary",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "owner",

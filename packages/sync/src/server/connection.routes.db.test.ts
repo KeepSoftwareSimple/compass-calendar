@@ -18,9 +18,11 @@ import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
 } from "@sync/__tests__/helpers/credential-encryption";
 import {
+  defaultCalendarListFields,
   ensureEventsResource,
   seedProviderCalendar,
 } from "@sync/__tests__/helpers/fixtures";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import {
@@ -851,9 +853,12 @@ describe("GET /sync/google", () => {
     expect(linked.capabilities).toContain("suggestContacts");
     // The granted scopes ride the credential for the suggestions route.
     const stored = await credentials.findByConnection(linked._id);
-    expect(stored?.scopes).toContain(
-      "https://www.googleapis.com/auth/contacts.other.readonly",
-    );
+    expect(stored?.credentialKind).toBe("oauthRefresh");
+    if (stored?.credentialKind === "oauthRefresh") {
+      expect(stored.scopes).toContain(
+        "https://www.googleapis.com/auth/contacts.other.readonly",
+      );
+    }
   });
 
   it("derives no suggestContacts when contacts scopes were left unchecked", async () => {
@@ -1381,6 +1386,7 @@ describe("GET /internal/calendars", () => {
       providerCalendarId: objectId(),
       displayName: overrides.displayName ?? "My Calendar",
       color: null,
+      ...defaultCalendarListFields,
       active: overrides.active ?? true,
       primary: false,
       accessRole: "owner",
@@ -2088,7 +2094,7 @@ describe("POST /internal/connections/credential", () => {
     expect(stored?.credentialKind).toBe("password");
     const raw = await mongo.db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: body.connectionId });
+      .findOne(stringIdFilter(body.connectionId));
     expect(JSON.stringify(raw)).not.toContain(secret);
     if (stored?.credentialKind === "password") {
       expect(

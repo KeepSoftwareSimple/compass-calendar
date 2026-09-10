@@ -377,6 +377,7 @@ describe("normalizeGoogleEvent", () => {
       } catch (e) {
         return e;
       }
+      throw new Error("expected normalizeGoogleEvent to throw");
     })() as ProviderEventError;
 
     expect(error).toBeInstanceOf(ProviderEventError);

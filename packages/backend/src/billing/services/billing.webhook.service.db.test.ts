@@ -695,7 +695,9 @@ describe("Stripe webhook", () => {
 
       await processStripeEvent(setupEvent(userId.toString()), stripe);
 
-      expect((sessionsRetrieve.mock.calls as unknown[][])[0]?.[0]).toBe("cs_setup_1");
+      expect((sessionsRetrieve.mock.calls as unknown[][])[0]?.[0]).toBe(
+        "cs_setup_1",
+      );
       expect((sessionsRetrieve.mock.calls as unknown[][])[0]?.[1]).toEqual({
         expand: ["setup_intent"],
       });
@@ -814,10 +816,12 @@ describe("Stripe webhook", () => {
         ),
       );
       spyOn(stripeBillingGateway, "retrieveCheckoutSession").mockImplementation(
-        mock(() => Promise.resolve(retrievedSetupSession(userId.toString()))),
+        mock(() =>
+          Promise.resolve(retrievedSetupSession(userId.toString())),
+        ) as unknown as typeof stripeBillingGateway.retrieveCheckoutSession,
       );
       spyOn(stripeBillingGateway, "updateCustomer").mockImplementation(
-        customersUpdate,
+        customersUpdate as unknown as typeof stripeBillingGateway.updateCustomer,
       );
       spyOn(stripeBillingGateway, "updateSubscription").mockImplementation(
         subscriptionsUpdate,

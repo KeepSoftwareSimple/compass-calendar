@@ -287,7 +287,8 @@ describe("UserService", () => {
         })
         .toArray();
       expect(calendars).toHaveLength(1);
-      expect(calendars[0]?._id.toString()).toBe(first?._id.toString());
+      expect(first).toBeDefined();
+      expect(calendars[0]?._id.toString()).toBe(String(first!._id));
     });
 
     // Handing one to everyone who signs in would put a calendar they never

@@ -9,6 +9,7 @@ import {
   singleEvent as single,
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   SyncJobWorker,
@@ -36,6 +37,15 @@ import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource
 const objectId = () => faker.database.mongodbObjectId();
 const now = () => new Date("2026-07-10T00:00:00.000Z");
 const OWNER = "worker-under-test";
+
+const googleProviderCapabilities = [
+  "readEvents",
+  "writeEvents",
+  "readBusy",
+  "inviteAttendees",
+  "changeNotifications",
+  "incrementalChanges",
+] as const;
 
 describe("SyncJobWorker", () => {
   const storage = setupSyncStorage(import.meta.url);
@@ -547,12 +557,12 @@ describe("SyncJobWorker", () => {
       },
     } as unknown as FakeReader;
 
-    let beat: (() => void | Promise<void>) | null = null;
+    let onHeartbeat: (() => void) | undefined;
     const w = new SyncJobWorker(deps(gatedReader), OWNER, {
       now: movingNow,
       leaseMs: 300_000,
-      scheduleHeartbeat: (b) => {
-        beat = b;
+      scheduleHeartbeat: (beat) => {
+        onHeartbeat = beat;
         return () => {};
       },
     });
@@ -560,14 +570,14 @@ describe("SyncJobWorker", () => {
     const run = w.runOnce();
     // Wait until the worker has claimed the job and scheduled its heartbeat
     // (claimDueJob is a real round-trip, so a bare setTimeout(0) can beat it).
-    while (!beat) await new Promise((r) => setTimeout(r, 5));
+    while (!onHeartbeat) await new Promise((r) => setTimeout(r, 5));
 
     const claimed = await jobByKey(`incrementalPull:${resource._id}`);
     const claimedLease = (claimed?.leaseExpiresAt as Date).getTime();
 
     // Advance time and fire one heartbeat; the lease must move forward.
     clock += 60_000;
-    await beat?.();
+    onHeartbeat!();
 
     const beaten = await jobByKey(`incrementalPull:${resource._id}`);
     expect((beaten?.leaseExpiresAt as Date).getTime()).toBe(clock + 300_000);
@@ -587,7 +597,7 @@ describe("SyncJobWorker", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .deleteOne({ _id: resource._id });
+      .deleteOne(stringIdFilter(resource._id));
 
     await worker(new FakeReader([])).runOnce();
 
@@ -629,10 +639,12 @@ describe("SyncJobWorker", () => {
       providerCalendarId: calendar.providerCalendarId,
       displayName: calendar.displayName,
       color: calendar.color,
+      eventLabels: calendar.eventLabels,
       active: true,
       primary: calendar.primary,
       accessRole: calendar.accessRole,
       capabilities: calendar.capabilities,
+      createsGoogleMeet: calendar.createsGoogleMeet,
     });
     const requeued = await enqueue(resource, "initialImport");
     expect(requeued.state).toBe("pending");
@@ -663,7 +675,7 @@ describe("SyncJobWorker", () => {
       runAfter: now(),
       coalescingKey: `calendarListSync:${connection._id}`,
     });
-    const failingDiscovery: SyncJobWorkerDeps["discovery"] = {
+    const failingDiscovery: ProviderCalendarAdapter = {
       discoverCalendars: async () => {
         throw new ProviderCalendarError(
           "discoveryFailed",

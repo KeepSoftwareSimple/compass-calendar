@@ -9,7 +9,7 @@ import {
   singleEvent as single,
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
-import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   dispatchSyncJob,
@@ -602,7 +602,7 @@ describe("dispatchSyncJob", () => {
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
       .updateOne(
-        { _id: mongoObjectId(calendar._id) },
+        stringIdFilter(calendar._id),
         { $set: { active: false } },
       );
 
@@ -645,7 +645,7 @@ describe("dispatchSyncJob", () => {
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
       .updateOne(
-        { _id: mongoObjectId(calendar._id) },
+        stringIdFilter(calendar._id),
         { $set: { active: false } },
       );
 

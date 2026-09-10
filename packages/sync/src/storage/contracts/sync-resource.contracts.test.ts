@@ -7,7 +7,12 @@ import { describe, expect, it } from "bun:test";
 
 describe("ResourceBootstrapStateSchema", () => {
   it("parses every known state", () => {
-    for (const state of ["importing", "watching", "catchingUp", "ready"]) {
+    for (const state of [
+      "importing",
+      "watching",
+      "catchingUp",
+      "ready",
+    ] as const) {
       expect(ResourceBootstrapStateSchema.parse(state)).toBe(state);
     }
   });

@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -84,7 +85,7 @@ describe("bootstrap-recovery sweep (enqueueForResources + listStalledBootstraps)
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
       .updateOne(
-        { _id: resource._id },
+        stringIdFilter(resource._id),
         { $set: { bootstrapState, updatedAt } },
       );
     return { ...resource, bootstrapState, updatedAt };

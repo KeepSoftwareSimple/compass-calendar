@@ -248,7 +248,10 @@ describe("config.constants", () => {
         },
       },
       sync: {
-        ...baseRawConfig.sync,
+        mongoUri: baseRawConfig.sync!.mongoUri,
+        internalAuthToken: baseRawConfig.sync!.internalAuthToken,
+        callbackBaseUrl: baseRawConfig.sync!.callbackBaseUrl,
+        serviceUrl: baseRawConfig.sync!.serviceUrl,
         credentialEncryptionKey: key,
       },
     });
@@ -291,7 +294,12 @@ describe("config.constants", () => {
     expect(() =>
       parseRawConfig({
         ...baseRawConfig,
-        sync: { ...baseRawConfig.sync, serviceUrl: undefined },
+        sync: {
+          mongoUri: baseRawConfig.sync!.mongoUri,
+          internalAuthToken: baseRawConfig.sync!.internalAuthToken,
+          callbackBaseUrl: baseRawConfig.sync!.callbackBaseUrl,
+          serviceUrl: undefined,
+        },
       }),
     ).toThrow();
   });

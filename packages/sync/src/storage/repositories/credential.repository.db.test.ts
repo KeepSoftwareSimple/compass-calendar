@@ -1,12 +1,12 @@
 import { faker } from "@faker-js/faker";
-import { type Db } from "mongodb";
+import { type Db, type Document } from "mongodb";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
   toStoredOauthCredentialUpsert,
 } from "@sync/__tests__/helpers/credential-encryption";
-import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
@@ -56,7 +56,7 @@ describe("CredentialRepository", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: mongoObjectId(input.connectionId) });
+      .findOne(stringIdFilter(input.connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(JSON.stringify(raw)).not.toContain("refresh-token-secret");
   });
@@ -94,7 +94,7 @@ describe("CredentialRepository", () => {
   it("reencrypts a legacy plaintext refresh token", async () => {
     const input = baseCredential();
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: mongoObjectId(input.connectionId),
+      _id: input.connectionId,
       credentialKind: "oauthRefresh",
       provider: input.provider,
       refreshToken: input.refreshToken,
@@ -104,7 +104,7 @@ describe("CredentialRepository", () => {
       scopes: input.scopes,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    } as Document);
 
     const sealed = toStoredOauthCredentialUpsert(
       TEST_CREDENTIAL_ENCRYPTION_KEY,
@@ -120,7 +120,7 @@ describe("CredentialRepository", () => {
     expect(updated?.refreshTokenCiphertext).toBe(sealed.refreshTokenCiphertext);
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: mongoObjectId(input.connectionId) });
+      .findOne(stringIdFilter(input.connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(
       decryptCredentialAtRest(TEST_CREDENTIAL_ENCRYPTION_KEY, {
@@ -166,12 +166,12 @@ describe("CredentialRepository", () => {
 
     const inConnections = await db
       .collection(SYNC_COLLECTIONS.providerConnections)
-      .findOne({ _id: mongoObjectId(input.connectionId) });
+      .findOne(stringIdFilter(input.connectionId));
     expect(inConnections).toBeNull();
 
     const inCredentials = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: mongoObjectId(input.connectionId) });
+      .findOne(stringIdFilter(input.connectionId));
     expect(inCredentials).not.toBeNull();
   });
 
@@ -199,7 +199,7 @@ describe("CredentialRepository", () => {
   it("parses a document stored without credentialKind as oauthRefresh", async () => {
     const connectionId = objectId() as ConnectionId;
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: mongoObjectId(connectionId),
+      _id: connectionId,
       provider: "google",
       refreshToken: "legacy-refresh",
       accessToken: null,
@@ -208,7 +208,7 @@ describe("CredentialRepository", () => {
       scopes: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    } as Document);
 
     const read = await repo.findByConnection(connectionId);
     expect(read).toMatchObject({
@@ -238,7 +238,7 @@ describe("CredentialRepository", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: mongoObjectId(connectionId) });
+      .findOne(stringIdFilter(connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(raw).not.toHaveProperty("accessToken");
   });

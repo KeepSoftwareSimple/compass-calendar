@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { syncCalendarList } from "@sync/domain/calendar-list-sync.service";
 import {
@@ -135,11 +136,15 @@ describe("syncCalendarList", () => {
         resourceKind: "events",
         calendarId: calendar?._id,
       })
-    )?._id as string;
+    )?._id;
+    const resourceIdString = resourceId ? String(resourceId) : undefined;
+    if (!resourceIdString) {
+      throw new Error("Expected events resource for calendar");
+    }
     await resources.updateSubscription(
       conn.tenantId,
       conn.principalId,
-      resourceId,
+      resourceIdString,
       {
         subscriptionId: "channel-1",
         subscriptionResourceId: "resource-1",
@@ -147,7 +152,7 @@ describe("syncCalendarList", () => {
         subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
       },
     );
-    return resourceId;
+    return resourceIdString;
   };
 
   it("discovers calendars, persists them, and enqueues an import per active calendar", async () => {
@@ -407,7 +412,7 @@ describe("syncCalendarList", () => {
     const goneEventsResource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: goneEventsResourceId });
+      .findOne(stringIdFilter(goneEventsResourceId));
     expect(goneEventsResource?.subscriptionId).toBeNull();
     expect(goneEventsResource?.subscriptionExpiresAt).toBeNull();
   });
@@ -452,7 +457,7 @@ describe("syncCalendarList", () => {
     const hidesEventsResource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: hidesEventsResourceId });
+      .findOne(stringIdFilter(hidesEventsResourceId));
     expect(hidesEventsResource?.subscriptionId).toBeNull();
     expect(hidesEventsResource?.subscriptionExpiresAt).toBeNull();
     // The reason the channel is cleared at all: the calendar itself went
@@ -563,7 +568,7 @@ describe("syncCalendarList", () => {
     );
 
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain(goneCalendar?._id as string);
+    expect(warnings[0]).toContain(String(goneCalendar?._id));
     expect(warnings[0]).toContain(conn._id);
   });
 
@@ -702,7 +707,6 @@ describe("syncCalendarList", () => {
     // A notification arriving while the provider is being read moves the
     // marker AFTER the pass captured it, so the compare-and-clear must fail.
     const discovery: ProviderCalendarAdapter = {
-      provider: "google",
       discoverCalendars: async (input) => {
         const resource = await calendarListResource(conn);
         await resources.markChangeNotified(

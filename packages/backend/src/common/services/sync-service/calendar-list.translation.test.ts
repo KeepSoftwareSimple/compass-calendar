@@ -112,7 +112,11 @@ describe("syncCalendarToBrowser", () => {
 
   it("carries the owning account's email when the caller supplies one", () => {
     const result = syncCalendarToBrowser(providerCalendar(), {
-      account: { email: "bob@acme.co" },
+      account: {
+        providerAccountId: "bob-subject",
+        email: "bob@acme.co",
+        displayName: null,
+      },
     });
     expect(result.accountEmail).toBe("bob@acme.co");
   });

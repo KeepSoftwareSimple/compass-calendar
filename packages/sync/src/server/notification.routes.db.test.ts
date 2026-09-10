@@ -5,6 +5,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { type SyncConfig } from "@sync/config/sync.config";
@@ -167,7 +168,7 @@ describe("POST /sync/notifications/google", () => {
     expect(res.status).toBe(200);
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resourceId });
+      .findOne(stringIdFilter(resourceId));
     expect(stored?.["changeNotifiedAt"]).toBeInstanceOf(Date);
   });
 
@@ -182,7 +183,7 @@ describe("POST /sync/notifications/google", () => {
 
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resourceId });
+      .findOne(stringIdFilter(resourceId));
     expect(stored?.["changeNotifiedAt"]).toBeNull();
   });
 
@@ -302,7 +303,7 @@ describe("POST /sync/notifications/google", () => {
 
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resource._id });
+      .findOne(stringIdFilter(String(resource._id)));
     expect(stored?.["syncCursor"]).toBeNull();
     // Only the cursor: the sweep's staleness clock must not advance on the
     // strength of a pass that has merely been scheduled. Read raw, so the key is
@@ -328,7 +329,7 @@ describe("POST /sync/notifications/google", () => {
 
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resource._id });
+      .findOne(stringIdFilter(String(resource._id)));
     expect(stored?.["syncCursor"]).toBe("stored-token");
   });
 
@@ -356,7 +357,7 @@ describe("POST /sync/notifications/google", () => {
 
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resource._id });
+      .findOne(stringIdFilter(String(resource._id)));
     expect(stored?.["syncCursor"]).toBe("stored-token");
   });
 
@@ -385,7 +386,7 @@ describe("POST /sync/notifications/google", () => {
     expect(await jobCount(`calendarListSync:${resource.connectionId}`)).toBe(1);
     const stored = await mongo.db
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resource._id });
+      .findOne(stringIdFilter(String(resource._id)));
     expect(stored?.["syncCursor"]).toBeNull();
   });
 

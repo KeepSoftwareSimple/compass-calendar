@@ -4,6 +4,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -122,7 +123,7 @@ describe("POST /internal/availability/busy", () => {
     for (const [start, end] of intervals) {
       const eventId = objectId();
       await mongo.db.collection(SYNC_COLLECTIONS.eventOccurrences).insertOne({
-        _id: objectId(),
+        _id: mongoObjectId(objectId()),
         tenantId,
         principalId,
         eventId,

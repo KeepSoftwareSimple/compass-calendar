@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -158,7 +159,7 @@ describe("reconcile sweep (enqueueForResources + listStaleEvents)", () => {
     const resource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resourceId });
+      .findOne(stringIdFilter(resourceId));
     expect(resource?.lastSuccessAt).toEqual(
       new Date("2026-07-02T00:00:00.000Z"),
     );

@@ -130,10 +130,12 @@ describe("oauth-state", () => {
   });
 
   it("rejects a structurally malformed token", () => {
-    expect(verifyOAuthState(SECRET, "no-dot-here", 1).reason).toBe("malformed");
-    expect(verifyOAuthState(SECRET, ".onlysig", 1).reason).toBe("malformed");
-    expect(verifyOAuthState(SECRET, "onlypayload.", 1).reason).toBe(
-      "malformed",
-    );
+    for (const token of ["no-dot-here", ".onlysig", "onlypayload."]) {
+      const result = verifyOAuthState(SECRET, token, 1);
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.reason).toBe("malformed");
+      }
+    }
   });
 });

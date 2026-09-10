@@ -1,5 +1,8 @@
 import { faker } from "@faker-js/faker";
-import { type CommandSubmitRequest } from "@core/types/sync/command.contracts";
+import {
+  type CommandSubmitRequest,
+  type SyncCommandInput,
+} from "@core/types/sync/command.contracts";
 import { BOOKING_CONFIRMATION_MAX_AGE_MS } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
@@ -25,6 +28,15 @@ const submitRequestFrom = (submitCommand: {
     throw new Error("Expected submitCommand to have been called");
   }
   return request as CommandSubmitRequest;
+};
+
+const createInputFrom = (
+  request: CommandSubmitRequest,
+): Extract<SyncCommandInput, { kind: "create" }> => {
+  if (request.input.kind !== "create") {
+    throw new Error("Expected create command input");
+  }
+  return request.input;
 };
 
 const busyResponse = {
@@ -184,22 +196,23 @@ describe("CalendarBookingService", () => {
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
     const request = submitRequestFrom(submitCommand);
-    expect(request.input.content.description).toBe(description);
-    expect(request.input).toMatchObject({
+    const input = createInputFrom(request);
+    expect(input.content.description).toBe(description);
+    expect(input).toMatchObject({
       kind: "create",
       invitation: "all",
       attendeesEdit: "replace",
       createConference: true,
       guestsCanInviteOthers: false,
     });
-    expect(request.input.content.attendees).toEqual([
+    expect(input.content.attendees).toEqual([
       {
         email: "ada@example.com",
         displayName: "Ada Lovelace",
         responseStatus: "needsAction",
       },
     ]);
-    expect(request.input.content.conference).toBeNull();
+    expect(input.content.conference).toBeNull();
   });
 
   it("omits createConference when the destination cannot mint a link", async () => {
@@ -228,8 +241,9 @@ describe("CalendarBookingService", () => {
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
     const request = submitRequestFrom(submitCommand);
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(request);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
   });
 
   it("rejects empty guest email before submit", async () => {
@@ -311,8 +325,12 @@ describe("CalendarBookingService", () => {
     expect(request.idempotencyKey.startsWith(`update:${eventId}:`)).toBe(true);
     expect(request.idempotencyKey).toContain("2026-09-01T15:00:00.000Z");
     expect(request.input).not.toHaveProperty("createConference");
-    expect(request.input.content.attendees).toEqual([]);
-    expect(request.input.content.conference).toBeNull();
+    if (request.input.kind === "update") {
+      expect(request.input.content.attendees).toEqual([]);
+      expect(request.input.content.conference).toBeNull();
+    } else {
+      throw new Error("Expected update command input");
+    }
   });
 
   it("submits delete with invitation all", async () => {

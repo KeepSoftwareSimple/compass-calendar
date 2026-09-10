@@ -261,7 +261,7 @@ export function setupBackendTestSeams(): void {
   registerUserMetadataStore(metadata);
   registerUserIdMappingStore(mappings);
   registerTestVerifySession(
-    createTestVerifySession() as Parameters<
+    createTestVerifySession() as unknown as Parameters<
       typeof registerTestVerifySession
     >[0],
   );

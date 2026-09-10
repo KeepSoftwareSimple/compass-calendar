@@ -105,7 +105,7 @@ describe("runProviderWrite", () => {
           error: mock(),
           info: mock(),
           debug: mock(),
-        }) as LoggerInstance,
+        }) as unknown as LoggerInstance,
     );
 
     await expect(

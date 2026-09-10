@@ -361,6 +361,7 @@ describe("normalizeMicrosoftEvent", () => {
       } catch (e) {
         return e;
       }
+      throw new Error("expected normalizeMicrosoftEvent to throw");
     })() as ProviderEventError;
 
     expect(error).toBeInstanceOf(ProviderEventError);

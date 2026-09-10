@@ -44,7 +44,9 @@ describe("microsoftAuthService", () => {
             value: { connections: [] },
             correlationId: "corr-1",
           }),
-        }) as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
+        }) as unknown as ReturnType<
+          typeof syncServiceFactory.getSyncServiceClient
+        >,
     );
     ({ microsoftAuthService } = await import("./microsoft.auth.service"));
   });
@@ -96,7 +98,7 @@ describe("microsoftAuthService", () => {
       { provider: string; refreshToken: string },
     ];
     expect(request.provider).toBe("microsoft");
-    expect(request.refreshToken).toBe(success.oAuthTokens.refresh_token);
+    expect(request.refreshToken).toBe(success.oAuthTokens.refresh_token ?? "");
   });
 
   it("treats a second sign-in of the same microsoft subject as SIGNIN", async () => {

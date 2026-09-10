@@ -1,5 +1,7 @@
 import { faker } from "@faker-js/faker";
+import { type Document, type Filter } from "mongodb";
 import { type Attendee } from "@core/types/event-attendance.contracts";
+import { type EventColorSlot } from "@core/types/event-color.contracts";
 import { type RecurrenceEdit } from "@core/types/event-command.contracts";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
 import {
@@ -336,7 +338,7 @@ describe("executeProviderCreate", () => {
       .find({ tenantId, principalId, calendarId: calendar._id, generation: 1 })
       .toArray();
     expect(atActive).toHaveLength(1);
-    expect(atActive[0]?.["_id"]).toBe(command.eventId);
+    expect(String(atActive[0]?.["_id"])).toBe(command.eventId);
   });
 
   it("leaves the command pending on a transient write failure", async () => {
@@ -2154,7 +2156,7 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
         principalId,
         "recurrence.kind": "seriesMaster",
         _id: { $ne: masterId },
-      })
+      } as unknown as Filter<Document>)
       .toArray();
 
   const thisScopeCommand = async (
@@ -2668,10 +2670,10 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       const remainders = await otherSeriesMaster(principalId, master._id);
       expect(remainders).toHaveLength(1);
       expect(writer.createCalls[0]?.providerEventId).toBe(
-        remainders[0]?.["_id"],
+        String(remainders[0]?.["_id"]),
       );
       expect(remainders[0]?.["content"]).toMatchObject({ title: "Split" });
-      const remainderId = remainders[0]?.["_id"] as EventId;
+      const remainderId = String(remainders[0]?.["_id"]) as EventId;
       expect(await occurrenceStartsFor(remainderId)).toEqual([
         SECOND_START_UTC,
         "2026-07-28T15:00:00.000Z",
@@ -3444,7 +3446,7 @@ describe("executeProviderRsvp", () => {
     opts: {
       organizer?: { email: string; displayName: string | null } | null;
       attendees?: Attendee[];
-      color?: string;
+      color?: EventColorSlot;
     } = {},
   ) => ({
     title,
@@ -3537,7 +3539,7 @@ describe("executeProviderRsvp", () => {
   const providerSingle = (
     version: string,
     attendees: Attendee[],
-    opts: { color?: string } = {},
+    opts: { color?: EventColorSlot } = {},
   ): ProviderEvent => ({
     kind: "event",
     providerEventId: "g-evt-1",

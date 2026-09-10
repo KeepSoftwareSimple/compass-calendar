@@ -5,6 +5,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { queryBusyIntervals } from "@sync/domain/busy-query.service";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -47,7 +48,7 @@ describe("queryBusyIntervals", () => {
       .db()
       .collection(SYNC_COLLECTIONS.eventOccurrences)
       .insertOne({
-        _id: objectId(),
+        _id: mongoObjectId(objectId()),
         tenantId,
         principalId,
         eventId,

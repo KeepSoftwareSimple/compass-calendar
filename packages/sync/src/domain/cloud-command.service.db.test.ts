@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { type Document, type Filter } from "mongodb";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
 import {
   type EventId,
@@ -1482,7 +1483,7 @@ describe("submitCloudCommand provider dispatch", () => {
         principalId,
         "recurrence.kind": "seriesMaster",
         _id: { $ne: masterId },
-      })
+      } as unknown as Filter<Document>)
       .toArray();
 
   it("splits a cloud series into a truncated original and an edited remainder", async () => {
@@ -1524,10 +1525,9 @@ describe("submitCloudCommand provider dispatch", () => {
     expect(remainders).toHaveLength(1);
     const remainder = remainders[0];
     expect(remainder?.["content"]).toMatchObject({ title: "Split" });
-    expect(await occurrenceStartsFor(remainder?.["_id"] as EventId)).toEqual([
-      "2026-07-21T15:00:00.000Z",
-      "2026-07-28T15:00:00.000Z",
-    ]);
+    expect(
+      await occurrenceStartsFor(String(remainder?.["_id"]) as EventId),
+    ).toEqual(["2026-07-21T15:00:00.000Z", "2026-07-28T15:00:00.000Z"]);
   });
 
   it("upserts a single remainder master across two splits at the same point", async () => {

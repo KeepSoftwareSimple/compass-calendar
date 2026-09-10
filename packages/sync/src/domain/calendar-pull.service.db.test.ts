@@ -621,7 +621,6 @@ describe("pullCalendarChanges", () => {
       // Stamps the marker as a side effect of the provider read — i.e. the
       // notification lands after this pull has already seen the provider.
       const reader: ProviderEventReader = {
-        provider: "google",
         listEventPage: async () => {
           await resources.markChangeNotified(
             calendar.tenantId,

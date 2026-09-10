@@ -5,6 +5,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -140,7 +141,7 @@ describe("R-SEC-03 isolation matrix", () => {
     const end = "2026-07-14T10:00:00.000Z";
     const eventId = objectId();
     await mongo.db.collection(SYNC_COLLECTIONS.eventOccurrences).insertOne({
-      _id: objectId(),
+      _id: mongoObjectId(objectId()),
       tenantId,
       principalId,
       eventId,
@@ -550,7 +551,7 @@ describe("R-SEC-03 isolation matrix", () => {
         eventId,
       });
       expect(row).not.toBeNull();
-      const commandId = row?._id as string;
+      const commandId = String(row?._id);
 
       expect(
         await commands.findById(

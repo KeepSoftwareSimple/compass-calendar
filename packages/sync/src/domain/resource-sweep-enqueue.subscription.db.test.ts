@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -188,7 +189,7 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
     const resource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resourceId });
+      .findOne(stringIdFilter(resourceId));
     expect(resource?.subscriptionExpiresAt).toEqual(
       new Date("2026-07-10T02:00:00.000Z"),
     );

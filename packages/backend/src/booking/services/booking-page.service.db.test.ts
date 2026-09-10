@@ -482,7 +482,10 @@ describe("BookingPageService", () => {
       provider: "microsoft" as const,
     };
     const calendar = writableCalendar();
-    mockHealthySync([calendar], connection);
+    mockHealthySync(
+      [calendar],
+      connection as unknown as ReturnType<typeof healthyConnection>,
+    );
     const input = samplePutInput({
       destinationCalendarId: calendar.id,
       blockingCalendarIds: [calendar.id],

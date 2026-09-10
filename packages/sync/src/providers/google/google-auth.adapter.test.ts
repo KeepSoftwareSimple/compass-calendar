@@ -89,7 +89,7 @@ function adapterWith(client: FakeGoogleClient) {
     CLIENT_ID,
     CLIENT_SECRET,
     (redirectUri) => {
-      redirectUris.push(redirectUri);
+      redirectUris.push(redirectUri ?? "");
       return client;
     },
   );

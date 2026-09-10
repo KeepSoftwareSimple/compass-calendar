@@ -285,7 +285,7 @@ describe("googleAuthService", () => {
 
       expect(result).toEqual({
         cUserId: compassUserId,
-        refreshToken: oAuthTokens.refresh_token,
+        refreshToken: oAuthTokens.refresh_token ?? null,
       });
       expect(updatedUser?._id.toString()).toBe(compassUserId);
       expect(updatedUser?.google?.googleId).toBe(gUser.sub);

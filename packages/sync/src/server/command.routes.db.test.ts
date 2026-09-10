@@ -9,6 +9,7 @@ import {
   seedOauthCredential,
   TEST_CREDENTIAL_ENCRYPTION_KEY,
 } from "@sync/__tests__/helpers/credential-encryption";
+import { defaultCalendarListFields } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -253,6 +254,7 @@ describe("POST /internal/commands", () => {
       providerCalendarId: objectId(),
       displayName: "Google",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "owner",
@@ -607,6 +609,7 @@ describe("POST /internal/commands", () => {
       providerCalendarId: "primary@google.com",
       displayName: "Google",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "editor",

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { type Document } from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type ConnectionState } from "@core/types/sync/connection.contracts";
 import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
@@ -127,7 +128,7 @@ describe("computeBusyAvailability", () => {
           endAt: new Date(end),
           busy: true,
           cancelled: false,
-        });
+        } as Document);
     }
     return calendarId;
   };
@@ -235,7 +236,7 @@ describe("computeBusyAvailability", () => {
         endAt: new Date("2026-07-14T10:30:00.000Z"),
         busy: true,
         cancelled: false,
-      });
+      } as Document);
 
     const result = await run([localCalendarId], [localCalendarId]);
 

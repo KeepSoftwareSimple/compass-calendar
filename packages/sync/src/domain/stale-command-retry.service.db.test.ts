@@ -356,7 +356,10 @@ describe("retryStaleCommands", () => {
       {
         ...baseDeps(writer),
         connections: {
-          findById: async () => ({ account: { email: self.email } }),
+          findById: async () => ({
+            account: { email: self.email },
+            provider: "google",
+          }),
         },
       },
       before(),

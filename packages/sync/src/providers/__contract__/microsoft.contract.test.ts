@@ -136,7 +136,9 @@ describeAuthCases("microsoft", () => buildAdapter(), [
       });
       const fixture = exchangeFixture as ExchangeSuccessFixture;
       expect(result.account.providerAccountId).toBe(fixture.idTokenClaims.oid);
-      expect(result.refreshToken).toBe(fixture.tokenResponse.refresh_token);
+      expect(result).toMatchObject({
+        refreshToken: fixture.tokenResponse.refresh_token,
+      });
       expect(result.grantedScopes).toEqual([
         "openid",
         "profile",
@@ -166,7 +168,7 @@ describeAuthCases(
           refreshToken: fixture.tokenResponse.refresh_token!,
         });
         expect(refreshed.accessToken).toBe(
-          (refreshSuccessFixture as MicrosoftTokenResponse).access_token,
+          (refreshSuccessFixture as MicrosoftTokenResponse).access_token ?? "",
         );
         expect(refreshed.grantedScopes).toEqual([
           "Calendars.ReadWrite",
@@ -376,7 +378,9 @@ describe("microsoft reader contract", () => {
     }
     expect(pages).toBe(2);
     expect(page.nextPageToken).toBeNull();
-    expect(page.nextSyncToken).toBe(readerCorpus.page2.deltaLink);
+    expect(page.nextSyncToken ?? null).toBe(
+      readerCorpus.page2.deltaLink ?? null,
+    );
   });
 
   it("maps an expired cursor to cursorExpired", async () => {

@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
 import { type SyncJobId } from "@core/types/sync/identity.contracts";
-import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   JOB_PRIORITY,
@@ -275,7 +275,7 @@ describe("JobRepository", () => {
       await db
         .collection("jobs")
         .updateOne(
-          { _id: mongoObjectId(created._id) },
+          stringIdFilter(created._id),
           { $set: { requeuedCount: 3 } },
         );
 
