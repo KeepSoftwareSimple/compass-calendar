@@ -14,6 +14,7 @@ import {
   contextMenuStyle,
   cursorReference,
 } from "@web/components/ContextMenu/contextMenu.floating";
+import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
 import { useDeleteEvent } from "@web/views/Forms/hooks/useDeleteEvent";
 import { useDuplicateEvent } from "@web/views/Forms/hooks/useDuplicateEvent";
 import { useSetEventColor } from "@web/views/Forms/hooks/useSetEventColor";
@@ -33,6 +34,7 @@ export const useDayCalendarContextMenu = ({
   const duplicateContextMenuEvent = useDuplicateEvent(contextMenuEventId);
   const deleteContextMenuEvent = useDeleteEvent(contextMenuEventId);
   const setContextMenuEventColor = useSetEventColor(contextMenuEventId);
+  const toggleEventHidden = useToggleEventHidden();
 
   const { context, refs, floatingStyles } = useFloating({
     ...CONTEXT_MENU_FLOATING_OPTIONS,
@@ -93,13 +95,21 @@ export const useDayCalendarContextMenu = ({
       setColor: (color) => {
         setContextMenuEventColor(color);
       },
+      toggleHidden: () => {
+        if (!contextMenuEventId) {
+          return;
+        }
+        toggleEventHidden(contextMenuEventId);
+      },
     }),
     [
       contextMenuEvent,
+      contextMenuEventId,
       deleteContextMenuEvent,
       duplicateContextMenuEvent,
       onOpenEvent,
       setContextMenuEventColor,
+      toggleEventHidden,
     ],
   );
 

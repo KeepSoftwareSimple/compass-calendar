@@ -622,6 +622,7 @@ describe("DayCalendarGrid", () => {
       expect(screen.getByText("Edit")).toBeInTheDocument();
     });
     expect(screen.getByText("Duplicate")).toBeInTheDocument();
+    expect(screen.getByText("Hide event")).toBeInTheDocument();
     expect(screen.getByText("Delete")).toBeInTheDocument();
     expect(screen.queryByText("Delete Event")).not.toBeInTheDocument();
   });
