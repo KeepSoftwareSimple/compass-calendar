@@ -32,7 +32,7 @@ import {
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
 import { BookingConnectionBanner } from "@web/booking/BookingConnectionBanner";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
-import { BookingDestinationCalendarOptions } from "@web/booking/BookingDestinationCalendarOptions";
+import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
@@ -58,10 +58,6 @@ import {
   toBookingPageInput,
   validateBookingForm,
 } from "@web/booking/booking.util";
-import {
-  bookingDestinationConferenceHint,
-  resolveBookingConference,
-} from "@web/booking/booking-conference.copy";
 import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import {
   type BookingField,
@@ -444,17 +440,6 @@ export function BookingSettingsSection({
   const destinationCalendar = writableCalendars.find(
     (calendar) => calendar.id === form.destinationCalendarId,
   );
-  const destinationConference = destinationCalendar
-    ? resolveBookingConference(
-        destinationCalendar.conference,
-        destinationCalendar.createsGoogleMeet,
-      )
-    : "meet";
-  const destinationCannotMintMeet = destinationConference === "none";
-  const destinationConferenceHint = destinationCalendar
-    ? bookingDestinationConferenceHint(destinationCalendar)
-    : null;
-  const destinationMeetWarningId = "booking-destination-meet-warning";
   const updateForm = (patch: Partial<AdminPutBookingPageInput>) => {
     setForm((current) => ({ ...current, ...patch }));
     setSaveError(null);
@@ -733,38 +718,14 @@ export function BookingSettingsSection({
             <BookingFieldLabel htmlFor="booking-destination-calendar">
               Destination calendar
             </BookingFieldLabel>
-            <select
-              {...bookingFieldAttrs("destination")}
-              aria-describedby={
-                destinationCannotMintMeet ? destinationMeetWarningId : undefined
-              }
-              className={BOOKING_SELECT_CLASS_NAME}
+            <BookingDestinationCalendarField
+              connections={connections}
+              field="destination"
               id="booking-destination-calendar"
-              onChange={(event) =>
-                handleDestinationChange(event.target.value as CalendarId)
-              }
+              onChange={handleDestinationChange}
               value={form.destinationCalendarId}
-            >
-              {writableCalendars.length === 0 ? (
-                <option value={BOOKING_PLACEHOLDER_CALENDAR_ID}>
-                  No writable calendars
-                </option>
-              ) : (
-                <BookingDestinationCalendarOptions
-                  calendars={writableCalendars}
-                  connections={connections}
-                />
-              )}
-            </select>
-            {destinationConferenceHint ? (
-              <p
-                className="mt-1 text-sm text-warning"
-                id={destinationMeetWarningId}
-                role="status"
-              >
-                {destinationConferenceHint}
-              </p>
-            ) : null}
+              writableCalendars={writableCalendars}
+            />
           </div>
 
           <div className="min-w-0" {...bookingFieldAttrs("timezone")}>
