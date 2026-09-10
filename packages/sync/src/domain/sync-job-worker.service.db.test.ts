@@ -557,7 +557,7 @@ describe("SyncJobWorker", () => {
       },
     } as unknown as FakeReader;
 
-    let onHeartbeat: (() => void) | undefined;
+    let onHeartbeat: (() => void | Promise<void>) | undefined;
     const w = new SyncJobWorker(deps(gatedReader), OWNER, {
       now: movingNow,
       leaseMs: 300_000,
@@ -577,7 +577,7 @@ describe("SyncJobWorker", () => {
 
     // Advance time and fire one heartbeat; the lease must move forward.
     clock += 60_000;
-    onHeartbeat!();
+    await onHeartbeat?.();
 
     const beaten = await jobByKey(`incrementalPull:${resource._id}`);
     expect((beaten?.leaseExpiresAt as Date).getTime()).toBe(clock + 300_000);
