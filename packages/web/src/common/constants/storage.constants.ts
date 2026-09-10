@@ -35,6 +35,9 @@ type StorageKey =
   // S39 A2: client-owned calendar visibility (default visible). Device-local,
   // matching other compass.* prefs — not synced across browsers.
   | "compass.calendars.hidden-ids"
+  // Client-owned, device-local, anonymous fallback only. Signed-in users
+  // persist hidden event ids on the server.
+  | "compass.events.hidden-ids"
   // Which calendar new events are created on. Device-local like the rest;
   // an unknown or stale id falls back to the derived default.
   | "compass.calendars.default-id"
@@ -55,10 +58,8 @@ type StorageKey =
   // written "true" right after the browser grants permission, so a stale flag
   // can never outlive a revoked grant (the permission is re-read on load).
   | "compass.notifications.enabled"
-  // Keyboard-only hint guardrails (lifetime cap, permanent dismiss, spacing).
-  | "compass.pointer-hint.lifetime-count"
-  | "compass.pointer-hint.dismissed-permanently"
-  | "compass.pointer-hint.last-shown-at";
+  // The X on the keyboard hint turns tips off for this browser.
+  | "compass.pointer-hint.dismissed-permanently";
 
 export const STORAGE_KEYS: Record<
   | "AUTH"
@@ -71,7 +72,7 @@ export const STORAGE_KEYS: Record<
   | "SHORTCUT_SHOWCASE_STEP"
   | "HAS_PENDING_SHOWCASE_OFFER"
   | "FIRST_EVENT_DONE"
-  | "HAS_DISMISSED_CONNECT_CALENDAR_PROMPT"
+  | "CONNECT_CALENDAR_PROMPT_SNOOZED_AT"
   | "SHORTCUT_TIPS_MUTED"
   | "SHORTCUT_TIPS_DEMONSTRATED"
   | "SHORTCUT_PERSONALIZATION"
@@ -80,6 +81,7 @@ export const STORAGE_KEYS: Record<
   | "SIDEBAR_OPEN"
   | "THEME"
   | "HIDDEN_CALENDAR_IDS"
+  | "HIDDEN_EVENT_IDS"
   | "DEFAULT_CALENDAR_ID"
   | "COLLAPSED_ACCOUNTS"
   | "RECENT_COMMANDS"
@@ -87,9 +89,7 @@ export const STORAGE_KEYS: Record<
   | "TIME_TRAVEL_TIMEZONE"
   | "TIMEZONE_MISMATCH_SNOOZED_BROWSER"
   | "NOTIFICATIONS_ENABLED"
-  | "POINTER_HINT_LIFETIME_COUNT"
-  | "POINTER_HINT_DISMISSED_PERMANENTLY"
-  | "POINTER_HINT_LAST_SHOWN_AT",
+  | "POINTER_HINT_DISMISSED_PERMANENTLY",
   StorageKey
 > = {
   AUTH: "compass.auth",
@@ -106,7 +106,9 @@ export const STORAGE_KEYS: Record<
   SHORTCUT_SHOWCASE_STEP: "compass.onboarding.shortcut-showcase-step",
   HAS_PENDING_SHOWCASE_OFFER: "compass.onboarding.has-pending-showcase-offer",
   FIRST_EVENT_DONE: "compass.onboarding.first-event-done",
-  HAS_DISMISSED_CONNECT_CALENDAR_PROMPT:
+  // Holds an epoch-ms timestamp. Older browsers hold the literal "true" from
+  // when dismissing was permanent; the reader treats that as a lapsed snooze.
+  CONNECT_CALENDAR_PROMPT_SNOOZED_AT:
     "compass.onboarding.has-dismissed-connect-calendar-prompt",
   SHORTCUT_TIPS_MUTED: "compass.shortcuts.tips-muted",
   SHORTCUT_TIPS_DEMONSTRATED: "compass.shortcuts.tips-demonstrated",
@@ -116,6 +118,7 @@ export const STORAGE_KEYS: Record<
   SIDEBAR_OPEN: "compass.view.sidebar-open",
   THEME: "compass.theme",
   HIDDEN_CALENDAR_IDS: "compass.calendars.hidden-ids",
+  HIDDEN_EVENT_IDS: "compass.events.hidden-ids",
   DEFAULT_CALENDAR_ID: "compass.calendars.default-id",
   COLLAPSED_ACCOUNTS: "compass.calendars.collapsed-accounts",
   RECENT_COMMANDS: "compass.commands.recent",
@@ -124,8 +127,6 @@ export const STORAGE_KEYS: Record<
   TIMEZONE_MISMATCH_SNOOZED_BROWSER:
     "compass.timezone.mismatch-snoozed-browser",
   NOTIFICATIONS_ENABLED: "compass.notifications.enabled",
-  POINTER_HINT_LIFETIME_COUNT: "compass.pointer-hint.lifetime-count",
   POINTER_HINT_DISMISSED_PERMANENTLY:
     "compass.pointer-hint.dismissed-permanently",
-  POINTER_HINT_LAST_SHOWN_AT: "compass.pointer-hint.last-shown-at",
 } as const;

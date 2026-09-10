@@ -73,6 +73,7 @@ test("welcomes a first-time user and seeds sample events", async ({
 
   const title = createEventTitle("First-run event");
   await openTimedEventFormWithKeyboard(page);
+  await expect(prompt).toBeHidden();
   await fillTitleAndSaveEventForm(page, title);
 
   // The prompt celebrates the first real event, then retires.

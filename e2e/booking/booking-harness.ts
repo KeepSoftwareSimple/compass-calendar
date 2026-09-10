@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 /** ObjectId-shaped id for stubbed Google calendar in host settings e2e. */
 export const BOOKING_CALENDAR_ID = "64b7f0a1c2d3e4f5a6b7c8d9";
@@ -988,6 +989,7 @@ export interface HostBookingSettingsStubOptions {
   slug?: string;
   bookingUrl?: string;
   microsoftConnect?: boolean;
+  appleConnect?: boolean;
   enabled?: boolean;
   /** When false, GET returns the setup shape with `suggestedSlug`. */
   configured?: boolean;
@@ -1211,6 +1213,7 @@ export async function prepareSignedInBookingSettingsPage(
     if (path.endsWith("/api/config")) {
       return route.fulfill(
         jsonResponse({
+          version: E2E_APP_CONFIG_VERSION,
           google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },
@@ -1218,7 +1221,10 @@ export async function prepareSignedInBookingSettingsPage(
               signIn: false,
               connect: Boolean(options.microsoftConnect) || !healthyConnection,
             },
-            apple: { signIn: false, connect: !healthyConnection },
+            apple: {
+              signIn: false,
+              connect: Boolean(options.appleConnect) || !healthyConnection,
+            },
           },
         }),
       );

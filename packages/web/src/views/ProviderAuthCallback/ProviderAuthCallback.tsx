@@ -3,11 +3,21 @@ import { useEffect, useRef } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
+import {
+  trackSignupCompleted,
+  trackSignupFailed,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { completeProviderAuthorization } from "@web/auth/providers/authorization/complete-provider-authorization";
-import { isSignInProviderKind } from "@web/auth/providers/authorization/provider-authorization.constants";
+import {
+  isSignInProviderKind,
+  PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
+} from "@web/auth/providers/authorization/provider-authorization.constants";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
+import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import { getToast } from "@web/common/utils/toast/toast.port";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 
@@ -26,6 +36,10 @@ export async function completeProviderAuthCallback({
   navigate,
   search,
 }: CompleteProviderAuthCallbackOptions): Promise<void> {
+  // Before any branch: a user who came back from the provider is counted even
+  // when the exchange below fails.
+  trackSignupStep("oauth_callback_returned", { method: provider });
+
   const result = await completeProviderAuthorization({
     provider,
     authApi: AuthApi,
@@ -34,10 +48,21 @@ export async function completeProviderAuthCallback({
   });
 
   if (result.status === "failed") {
-    showErrorToast(result.message);
+    trackSignupFailed(result.reason, {
+      method: provider,
+      step: "oauth_callback_returned",
+    });
+    // Cancelling is a choice, not a fault. An error toast for it reads as a
+    // Compass failure and discourages the retry that would have worked.
+    if (result.reason === "oauth_user_cancelled") {
+      getToast().info(result.message, getToastDefaultOptions());
+    } else {
+      showErrorToast(result.message);
+    }
   } else if (result.isNewUser) {
-    track("signup_completed", { method: provider });
+    trackSignupCompleted(provider);
     track("calendar_connected", { source: `signup_${provider}` });
+    trackSignupStep("calendar_connected", { method: provider });
     shortcutShowcaseActions.offerAfterSignupIfPending();
   } else {
     track("login_completed", { method: provider });
@@ -66,11 +91,20 @@ export function ProviderAuthCallbackView() {
       return;
     }
 
-    void completeProviderAuthCallback({
+    // `didRun` makes this a one-shot: if the promise rejects with nothing to
+    // catch it, the user sits on the spinner below permanently, with no toast
+    // and no way to retry. The storage reads inside swallow their own errors
+    // today, so this is a backstop rather than a fix for a reproduced case,
+    // but the failure mode it guards is unrecoverable.
+    completeProviderAuthCallback({
       provider: providerParam,
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
+    }).catch(() => {
+      trackSignupFailed("oauth_callback_crashed", { method: providerParam });
+      showErrorToast(PROVIDER_AUTHORIZATION_ERROR_MESSAGE);
+      router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
   }, [completeAuthentication, location.searchStr, providerParam, router]);
 

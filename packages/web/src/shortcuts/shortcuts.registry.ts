@@ -4,6 +4,7 @@ import {
 } from "@web/components/Sidebar/MonthPicker/useMonthPickerShortcuts";
 import { EDIT_SEQUENCE_LETTER_FIELDS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { type Shortcut } from "@web/shortcuts/global.shortcut.types";
+import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 
@@ -279,14 +280,20 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     // Shift+F10 also opens this menu on platforms that have a context-menu key
-    // (the browser turns it into a contextmenu event, which pointer-block lets
-    // through). It is deliberately not listed here: it would be a second row
+    // (the browser turns it into a contextmenu event). It is deliberately not
+    // listed here: it would be a second row
     // with this exact label, and m already teaches the capability.
     id: "edit-menu",
     keys: ["m"],
     label: "Open event menu",
     section: "edit",
     requiresWrite: true,
+  },
+  {
+    id: "edit-hide",
+    keys: [HIDE_EVENT_LETTER],
+    label: "Hide or show focused event",
+    section: "edit",
   },
   {
     id: "edit-save",

@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  selectPointerConfusionAttempt,
-  selectPointerConfusionDeadClickPulse,
-  usePointerConfusionStore,
-} from "@web/shortcuts/keyboard-only/pointer-confusion.store";
+  selectPointerHintAttempt,
+  selectPointerHintPulse,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 
 export const KEYCAP_FLASH_MS = 700;
 
-/** The shortcut key currently flashing after a dead click, or null. */
+/** The shortcut key currently flashing after a click, or null. */
 export function useFlashedWelcomeShortcut(): string | null {
-  const pulse = usePointerConfusionStore(selectPointerConfusionDeadClickPulse);
-  const attempt = usePointerConfusionStore(selectPointerConfusionAttempt);
+  const pulse = usePointerHintStore(selectPointerHintPulse);
+  const attempt = usePointerHintStore(selectPointerHintAttempt);
   const [flashedKey, setFlashedKey] = useState<string | null>(null);
   const lastPulseRef = useRef(pulse);
 

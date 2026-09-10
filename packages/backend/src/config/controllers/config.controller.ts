@@ -1,6 +1,7 @@
 import { type Request, type Response } from "express";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type AppConfig, AppConfigSchema } from "@core/types/config.types";
+import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import { isMicrosoftOffered } from "@core/util/env.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import {
@@ -24,6 +25,7 @@ class ConfigController {
 
     res.json(
       AppConfigSchema.parse({
+        version: normalizeDeployVersion(CONFIG.VERSION),
         google: {
           isConfigured: google,
         },

@@ -6,6 +6,7 @@ import { useCallback, useMemo, useState } from "react";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { getMicrosoftSignInClientId } from "./provider-authorization.config";
 import { assignAuthorizationRedirect } from "./provider-authorization.redirect";
@@ -82,6 +83,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
         createdAt: Date.now(),
       });
       track("oauth_redirect_started", { provider: "google", intent });
+      trackSignupStep("oauth_redirect_started", { method: "google" });
       return startGoogleAuthorization();
     }, [intent, onStart, startGoogleAuthorization, state]),
   };
@@ -113,6 +115,7 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
           createdAt: Date.now(),
         });
         track("oauth_redirect_started", { provider: "microsoft", intent });
+        trackSignupStep("oauth_redirect_started", { method: "microsoft" });
 
         try {
           assignAuthorizationRedirect(

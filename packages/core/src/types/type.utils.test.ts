@@ -25,7 +25,7 @@ describe("IDSchemaV4", () => {
 
 describe("TimezoneSchema", () => {
   it("validates a correct timezone string", () => {
-    const timezone = faker.date.timeZone();
+    const timezone = faker.location.timeZone();
 
     expect(TimezoneSchema.safeParse(timezone).success).toBe(true);
   });

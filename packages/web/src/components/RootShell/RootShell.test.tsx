@@ -31,7 +31,7 @@ import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { RootShell } from "@web/components/RootShell/RootShell";
 import { useSettingsStore } from "@web/settings/settings.store";
-import { pointerConfusionActions } from "@web/shortcuts/keyboard-only/pointer-confusion.store";
+import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   afterAll,
   afterEach,
@@ -146,9 +146,13 @@ describe("RootShell billing gates", () => {
     expect(
       screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "You're looking around in read-only mode.",
-    );
+    // The click also pulses the keyboard hint (another status), so find the
+    // banner by its copy rather than by role alone.
+    expect(
+      screen
+        .getByText("You're looking around in read-only mode.")
+        .closest("[role='status']"),
+    ).not.toBeNull();
   });
 
   it("does not honor the look-around once the trial is spent", async () => {
@@ -303,11 +307,11 @@ describe("RootShell calendar onboarding on /life", () => {
     await renderShell("/life", { anonymous: true });
 
     act(() => {
-      pointerConfusionActions.triggerHintForTests({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(
-      screen.queryByText(/Compass is keyboard only/i),
+      screen.queryByText(/Compass works from the keyboard/i),
     ).not.toBeInTheDocument();
   });
 

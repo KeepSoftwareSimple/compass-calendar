@@ -1,5 +1,12 @@
+import {
+  POSTHOG_ERROR_TRACKING_PROPERTY,
+  posthogErrorTrackingSqlPropertyColumns,
+} from "@core/constants/posthog-error-tracking.properties";
 import { describe, expect, it } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
+
+const POSTHOG_ERROR_TRACKING_CONSTANTS_PATH =
+  "packages/core/src/constants/posthog-error-tracking.properties.ts";
 
 // Structural invariants of the error-autofix guard and prompt. Documentation
 // prose lives in docs/CI-CD/error-autofix-routine.md and is not pinned here.
@@ -57,5 +64,18 @@ describe("error-autofix Routine contract", () => {
       "never add `automerge-candidate`, in any mode",
     );
     expect(prompt).not.toContain(".agents/handoffs");
+  });
+
+  it("keeps the autofix prompt aligned with PostHog error property constants", () => {
+    const prompt = readFileSync(".github/prompts/error-autofix.md", "utf8");
+    expect(prompt).toContain(POSTHOG_ERROR_TRACKING_CONSTANTS_PATH);
+    for (const column of posthogErrorTrackingSqlPropertyColumns().split(
+      ",\n       ",
+    )) {
+      expect(prompt).toContain(column.trim());
+    }
+    for (const name of Object.values(POSTHOG_ERROR_TRACKING_PROPERTY)) {
+      expect(prompt).toContain(`properties.${name}`);
+    }
   });
 });

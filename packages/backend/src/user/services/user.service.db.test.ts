@@ -1020,6 +1020,58 @@ describe("UserService", () => {
       cleanupSpy.mockRestore();
     });
 
+    it("deletes hidden event rows and counts them in the summary", async () => {
+      const user = await UserDriver.createUser();
+      const userId = user._id.toString();
+
+      const resolveSpy = spyOn(
+        supertokensUserCleanupService,
+        "resolveByExternalUserId",
+      ).mockResolvedValue({
+        externalUserIds: [],
+        superTokensUserIds: [],
+      });
+      const revokeSpy = spyOn(
+        compassAuthService,
+        "revokeSessionsByUser",
+      ).mockResolvedValue({ sessionsRevoked: 0 });
+      const cleanupSpy = spyOn(
+        supertokensUserCleanupService,
+        "cleanupResolvedTarget",
+      ).mockResolvedValue({
+        superTokensUsers: 0,
+        superTokensMappings: 0,
+        superTokensMetadata: 0,
+      });
+
+      await mongoService.hiddenEvent.insertMany([
+        {
+          _id: mongoService.objectId(),
+          userId: user._id,
+          eventId: "evt-1",
+          createdAt: new Date("2026-01-01T00:00:00.000Z"),
+        },
+        {
+          _id: mongoService.objectId(),
+          userId: user._id,
+          eventId: "evt-2",
+          createdAt: new Date("2026-01-02T00:00:00.000Z"),
+        },
+      ]);
+
+      const summary: Summary_Delete =
+        await userService.deleteCompassDataForUser(userId);
+
+      expect(summary.hiddenEvents).toBe(2);
+      expect(
+        await mongoService.hiddenEvent.countDocuments({ userId: user._id }),
+      ).toBe(0);
+
+      resolveSpy.mockRestore();
+      revokeSpy.mockRestore();
+      cleanupSpy.mockRestore();
+    });
+
     it("deletes events owned by an archived calendar", async () => {
       const user = await UserDriver.createUser();
       const userId = user._id.toString();

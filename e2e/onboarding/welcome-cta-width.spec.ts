@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1600, height: 900 } });
@@ -10,7 +11,10 @@ test("keeps Google and email signup buttons the same width", async ({
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ google: { isConfigured: true } }),
+      body: JSON.stringify({
+        version: E2E_APP_CONFIG_VERSION,
+        google: { isConfigured: true },
+      }),
     });
   });
 

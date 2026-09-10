@@ -33,7 +33,8 @@ import {
 } from "@web/components/WelcomeModal/welcome.guide.store";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
-import { usePointerConfusionTracker } from "@web/shortcuts/keyboard-only/usePointerConfusionTracker";
+import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
+import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
 import {
   useCalendarShellShortcuts,
@@ -63,9 +64,10 @@ export function RootShell() {
   usePlanChangeToasts();
   useNavigationShortcuts();
   useCalendarShellShortcuts();
-  usePointerConfusionTracker(!isLifeView);
+  usePointerHintTracker(!isLifeView);
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
+  useHideEventShortcut();
   // Must stay mounted on every route, including Life, so the 5-minute
   // heads-up still fires while the calendar grid is not on screen.
   useUpcomingEventNotifier();

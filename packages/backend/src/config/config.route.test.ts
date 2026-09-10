@@ -1,11 +1,13 @@
 import { NodeEnv } from "@core/constants/core.constants";
 import { Status } from "@core/errors/status.codes";
+import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { describe, expect, it } from "bun:test";
 
 describe("GET /api/config", () => {
   const baseDriver = new BaseDriver();
+  const expectedVersion = () => normalizeDeployVersion(CONFIG.VERSION);
 
   it("returns Google availability from backend configuration", async () => {
     const originalClientId = CONFIG.GOOGLE_CLIENT_ID;
@@ -20,6 +22,7 @@ describe("GET /api/config", () => {
         .expect(Status.OK);
 
       expect(response.body).toEqual({
+        version: expectedVersion(),
         google: {
           isConfigured: false,
         },
@@ -58,6 +61,7 @@ describe("GET /api/config", () => {
         .expect(Status.OK);
 
       expect(response.body).toEqual({
+        version: expectedVersion(),
         google: {
           isConfigured: false,
         },
@@ -80,6 +84,20 @@ describe("GET /api/config", () => {
     } finally {
       CONFIG.GOOGLE_CLIENT_ID = originalClientId;
       CONFIG.GOOGLE_CLIENT_SECRET = originalClientSecret;
+    }
+  });
+
+  it("exposes the deployed version from runtime.version", async () => {
+    const original = CONFIG.VERSION;
+    CONFIG.VERSION = "v9.8.7";
+    try {
+      const response = await baseDriver
+        .getServer()
+        .get("/api/config")
+        .expect(Status.OK);
+      expect(response.body.version).toBe("9.8.7");
+    } finally {
+      CONFIG.VERSION = original;
     }
   });
 

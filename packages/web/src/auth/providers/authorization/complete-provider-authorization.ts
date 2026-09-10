@@ -4,10 +4,12 @@ import {
 } from "@core/types/auth.types";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type ApiError } from "@web/api/api.types";
+import { type SignupFailureReason } from "@web/auth/posthog/signup-funnel";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import {
   GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
   MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+  PROVIDER_AUTH_CANCELLED_MESSAGE,
   PROVIDER_AUTH_SCOPES_REQUIRED,
   PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
 } from "./provider-authorization.constants";
@@ -51,6 +53,8 @@ export type CompleteProviderAuthorizationResult =
       message: string;
       returnPath: string;
       status: "failed";
+      /** Why it failed, so the callback can both report and count it. */
+      reason: SignupFailureReason;
     };
 
 const AUTHORIZATION_ERROR_MESSAGE: Record<ProviderKind, string> = {
@@ -67,10 +71,12 @@ const CONSENT_RETRY_ERROR_CODES_BY_PROVIDER: Partial<
 
 const fail = (
   provider: ProviderKind,
+  reason: SignupFailureReason,
   returnPath: string = DEFAULT_CALENDAR_ROUTE,
   message = AUTHORIZATION_ERROR_MESSAGE[provider],
 ): CompleteProviderAuthorizationResult => ({
   message,
+  reason,
   returnPath,
   status: "failed",
 });
@@ -102,21 +108,37 @@ export async function completeProviderAuthorization({
   const state = params.get("state");
 
   if (!state) {
-    return fail(provider);
+    return fail(provider, "oauth_missing_state");
   }
 
   const savedIntent = readProviderAuthorizationIntent(provider, state);
   clearProviderAuthorizationIntent(provider, state);
   const returnPath = savedIntent?.returnPath ?? DEFAULT_CALENDAR_ROUTE;
 
-  if (!savedIntent || params.get("error")) {
-    return fail(provider, returnPath);
+  // Declining at the consent screen is its own outcome. Reported separately
+  // so it stops inflating the generic-error count, and so the callback can
+  // show calm copy instead of an error toast.
+  if (params.get("error") === "access_denied") {
+    return fail(
+      provider,
+      "oauth_user_cancelled",
+      returnPath,
+      PROVIDER_AUTH_CANCELLED_MESSAGE,
+    );
+  }
+
+  if (!savedIntent) {
+    return fail(provider, "oauth_missing_intent", returnPath);
+  }
+
+  if (params.get("error")) {
+    return fail(provider, "oauth_exchange_failed", returnPath);
   }
 
   const code = params.get("code");
 
   if (!code) {
-    return fail(provider, returnPath);
+    return fail(provider, "oauth_missing_code", returnPath);
   }
 
   const requiredScopes = PROVIDER_AUTH_SCOPES_REQUIRED[provider];
@@ -126,7 +148,12 @@ export async function completeProviderAuthorization({
   );
 
   if (isMissingRequiredScope) {
-    return fail(provider, returnPath, MISSING_PROVIDER_SCOPES_ERROR_MESSAGE);
+    return fail(
+      provider,
+      "oauth_missing_scopes",
+      returnPath,
+      MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+    );
   }
 
   const payload = buildProviderAuthCodePayload({
@@ -157,9 +184,14 @@ export async function completeProviderAuthorization({
     }
 
     if (parsedError?.message) {
-      return fail(provider, returnPath, parsedError.message);
+      return fail(
+        provider,
+        "oauth_exchange_failed",
+        returnPath,
+        parsedError.message,
+      );
     }
 
-    return fail(provider, returnPath);
+    return fail(provider, "oauth_exchange_failed", returnPath);
   }
 }

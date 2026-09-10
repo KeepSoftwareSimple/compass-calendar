@@ -13,6 +13,7 @@ import {
   SyncJobTerminalFailureEventSchema,
   SyncReconcileSweepEventSchema,
 } from "@core/types/sync/health.contracts";
+import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import {
   isTransientMongoNetworkError,
   withTransientMongoRetry,
@@ -117,6 +118,7 @@ export function createSyncService(
   const identity = buildServiceIdentity({
     environment: config.NODE_ENV,
     execution: config.EXECUTION,
+    version: normalizeDeployVersion(config.VERSION),
   });
   const readiness = new ReadinessRegistry();
   const shutdown = new ShutdownCoordinator();
@@ -207,7 +209,7 @@ async function start(): Promise<void> {
     nodeEnv: config.NODE_ENV,
     posthogKey: config.POSTHOG_KEY,
     posthogHost: config.POSTHOG_HOST,
-    version: config.VERSION,
+    version: normalizeDeployVersion(config.VERSION),
   });
 
   // Build the mongo service before the app so the internal connection API can

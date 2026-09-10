@@ -31,6 +31,7 @@ Use this guide to validate:
 - confirming Settings > Meeting hold-Mod reveals only sidebar digits and Save Enter
 - confirming the first-run Meeting wizard Continue / Back keys (Enter, Esc, K, J)
 - confirming that shortcuts do not fire while typing in inputs
+- hiding and showing an event with `x`, from the event menu, and confirming the strip stays focusable
 
 Do not use this guide to validate:
 
@@ -355,34 +356,36 @@ The sidebar month picker is a keyboard cursor, not a click target. `I` (or hold 
 - Each arrow moves the ring to the next week; the calendar grid does not move yet.
 - After `Mod+Shift+.`, the next month is shown and focus is still on a day in that month.
 - Enter anchors the week view on the focused row and the muted week capsule matches the visible window. Today is an ink circle, not an accent fill.
-- Clicks do not navigate. Hovering the picker shows `I focuses the picker`. Focusing it replaces that with up/down arrow keycaps and `move by week`. After an arrow, `Enter opens it` appears with `Enter` as a keycap. The keyboard hint says to press `I`, then use the arrow keys and Enter.
+- Clicks do not navigate, and a click shows the keyboard hint. Hovering the picker shows `I focuses the picker`. Focusing it replaces that with up/down arrow keycaps and `move by week`. After an arrow, `Enter opens it` appears with `Enter` as a keycap. The keyboard hint says to press `I`, then use the arrow keys and Enter.
 
 ---
 
-## Scenario 13: The Mouse Is Permanently Inert
+## Scenario 13: The Mouse Teaches the Keyboard
 
 ### UX
 
-Compass is the keyboard calendar: pointer clicks, right-clicks, and double-clicks do not perform the clicked action (scroll and hover still work). A blocked click on a known action shows a transient, contextual hint with the keyboard path for that action. Clicking an event also activates its jump assignments and selects that event, so the displayed token plus Enter works immediately without first pressing `H`. Keyboard activation is unaffected: Enter/Space on a native button still works, Shift+F10 still opens the focused event's context menu, and `M` opens it directly. Phone sessions are the exception: MobileGate opts out of pointer suppression so Copy and Waitlist can be tapped.
+Compass is the keyboard calendar. Clicks are not blocked (text selection, copy buttons, and native buttons work), but the calendar itself does not respond to the mouse: event cards and empty grid slots have no click handlers. Every click teaches instead of failing silently. A click on a dead target shows a transient top-center hint with the exact keyboard path and arms it: clicking an event turns on jump mode, focuses that event, and names its token, so the token plus Enter opens it without first pressing `H`; clicking an empty grid slot names the HHMM digits that create an event there. A click on a working control that carries a shortcut performs the action and shows "Next time, press ..." so the key is learned without a failed click. The X on the hint turns tips off for that browser; the armed paths keep working with tips off. The hint tone is never a reprimand: it names the key, not the mistake.
 
-`/life` is the exception: it is a public lead magnet, so pointer clicks work there like a normal page. The calendar views stay keyboard-only.
+`/life` is the exception: it is a public lead magnet, so the hint is off there. Phone sessions are also exempt: MobileGate opts out of the hint so Copy and Waitlist tap normally.
 
 ### Steps
 
 1. Navigate to `/week` with at least one event visible.
-2. Click an event, note its contextual event token, type that token, and press Enter.
-3. Close the form, then click the sidebar toggle and press the suggested `]` key.
-4. Try right-clicking an event.
-5. Tab to any native button and press Enter.
+2. Click an event, note its contextual event token, and press Enter.
+3. Click an empty timed-grid slot, note the digits, and type them.
+4. Click the sidebar toggle in the header.
+5. Click the X on a hint, then click an event again.
+6. Tab to any native button and press Enter.
 
 ### Expected Results
 
-- Clicking an event does not open it, but jump chips appear, the event is selected, and the hint identifies that event's exact token plus `Enter`; the shown sequence opens the event without an initial `H`.
-- Clicking either sidebar control does not toggle the sidebar; the hint says to press `]` and uses open/close language matching the current state.
+- Clicking an event does not open it, but jump chips appear, the event is focused, and the hint says `Press <token>, then Enter to open this event.`; Enter alone opens it.
 - Clicking an empty timed-grid slot does not open a draft; the hint shows the matching HHMM digits (`1200`, `1830`) and typing those digits creates an event at that time.
 - Clicking the all-day row teaches `Shift+C`.
-- Unannotated controls retain the generic keyboard-only fallback while contextual coverage is expanded.
-- Right-click does not open the context menu; `M` (or Shift+F10) on a focused event does.
+- Clicking the sidebar toggle toggles the sidebar and the hint says `Next time, press ]`.
+- Clicking the view switcher opens it and the hint says `Next time, press W, D, or L to switch views.`
+- Unannotated controls that look clickable get `Compass works from the keyboard. Press ? to see every shortcut.`; clicking whitespace shows nothing.
+- After the X, no hint appears, but clicking an event still focuses it and Enter still opens it.
 - Keyboard shortcuts and Enter/Space activation of buttons continue to work.
 - `F` focuses the newest action toast or banner; Tab moves within it, Escape dismisses.
 

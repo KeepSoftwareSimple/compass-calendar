@@ -1,4 +1,5 @@
 import { type Db } from "mongodb";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import {
   captureSafely,
   type PostHogCaptureClient,
@@ -14,7 +15,10 @@ import {
   type ProviderKind,
 } from "@core/types/sync/identity.contracts";
 import { type ProviderRegistry } from "@sync/providers/provider-registry";
-import { type StructuredServiceIdentity } from "@sync/service-identity";
+import {
+  type StructuredServiceIdentity,
+  SYNC_SERVICE_NAME,
+} from "@sync/service-identity";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 
@@ -63,10 +67,10 @@ export async function computeHealthSnapshotForProvider(
   ]);
 
   return SyncHealthSnapshotSchema.parse({
-    environment: deps.identity.environment,
+    [POSTHOG_ERROR_TRACKING_PROPERTY.environment]: deps.identity.environment,
     execution: deps.identity.execution,
     provider,
-    service: "compass-sync",
+    [POSTHOG_ERROR_TRACKING_PROPERTY.service]: SYNC_SERVICE_NAME,
     connections,
     jobs,
     subscriptions,
@@ -229,9 +233,18 @@ async function summarizeSubscriptions(
       // `$eq: null` matches a missing field too, which is what a resource
       // predating the field looks like — deliberately counted, since such a
       // resource has equally never been observed receiving a push.
+      //
+      // Live channels only, the same population as healthy + renewSoon. The
+      // push-delivery alarm compares this number against that population, so
+      // an expired channel counted here is a phantom: staging fired the alarm
+      // on 2026-09-09 with its one live channel receiving pushes fine, because
+      // a dead connection's channel had expired unrenewed without ever being
+      // notified and made neverNotified >= live on its own. Google cannot
+      // notify an expired channel, so it says nothing about delivery.
       collection.countDocuments({
         ...eventsFilter,
         subscriptionId: { $ne: null },
+        subscriptionExpiresAt: { $gte: now },
         pushLastReceivedAt: null,
       }),
     ]);

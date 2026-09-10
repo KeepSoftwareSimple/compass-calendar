@@ -89,20 +89,12 @@
     <link rel="icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!--
-      One combined stylesheet, not three: each render-blocking cross-origin
-      <link> costs its own round-trip before first paint, which dominates for
-      the distant cold-cache visitors who see the worst LCP. css2 requires the
-      family params in alphabetical order.
-
-      Rubik is the body font (and so the LCP text); its axis is capped at 700
-      because nothing uses 800/900 (heaviest in use: font-bold). Italic stays
-      - LifeQuote renders one, and the description editor can mark any text
-      italic.
-    -->
+    <!-- Font CSS must not delay the HTML shell or welcome text. -->
     <link
       href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&family=Rubik:ital,wght@0,300..700;1,300..700&family=VT323&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
 
     <!--
@@ -114,10 +106,45 @@
       every boot-critical chunk, appended to head by inject-module-preloads.ts.
     -->
     <link rel="stylesheet" href="/index.css" />
+    <!-- Self-contained shell styles need no JavaScript or web fonts. -->
+    <style>
+      body { margin: 0; }
+      #boot-shell {
+        box-sizing: border-box;
+        min-height: 100vh;
+        padding: 2rem;
+        background: var(--background, #f3eee2);
+        color: var(--text, #403a2f);
+        font: 1rem/1.5 system-ui, sans-serif;
+      }
+      [data-theme="dark-abyss"] #boot-shell {
+        background: var(--background, #06090f);
+        color: var(--text, #d2d9e1);
+      }
+      #boot-shell h1 { margin: 0; font-size: 1.5rem; }
+      #boot-grid {
+        height: 65vh;
+        margin-top: 2rem;
+        border: 1px solid currentColor;
+        border-radius: .5rem;
+        opacity: .12;
+        background-image:
+          linear-gradient(to right, currentColor 1px, transparent 1px),
+          linear-gradient(to bottom, currentColor 1px, transparent 1px);
+        background-size: calc(100% / 7) 100%, 100% 4rem;
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main id="boot-shell" aria-busy="true" aria-label="Compass Calendar">
+        <h1>Compass Calendar</h1>
+        <p role="status">Loading your calendar…</p>
+        <div id="boot-grid" aria-hidden="true"></div>
+        <noscript>Enable JavaScript to use Compass Calendar.</noscript>
+      </main>
+    </div>
     <script type="module" src="/index.js"></script>
   </body>
 </html>

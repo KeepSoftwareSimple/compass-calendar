@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useConnectedAccountEmails } from "@web/calendars/useDefaultTargetCalendar";
+import { useConnectedAccounts } from "@web/calendars/useDefaultTargetCalendar";
 import { PageJumpHintOverlay } from "@web/shortcuts/page-jump/PageJumpHintOverlay";
 import {
   buildCalendarPageJumpTargets,
@@ -14,10 +14,10 @@ import { usePageJumpShortcut } from "@web/shortcuts/page-jump/usePageJumpShortcu
  * their own lists.
  */
 export function PageJumpHints({ targets }: { targets?: PageJumpTargets }) {
-  const accountEmails = useConnectedAccountEmails();
+  const accounts = useConnectedAccounts();
   const resolvedTargets = useMemo(
-    () => targets ?? buildCalendarPageJumpTargets(accountEmails),
-    [accountEmails, targets],
+    () => targets ?? buildCalendarPageJumpTargets(accounts),
+    [accounts, targets],
   );
   const { areHintsVisible } = usePageJumpShortcut(resolvedTargets);
   return (

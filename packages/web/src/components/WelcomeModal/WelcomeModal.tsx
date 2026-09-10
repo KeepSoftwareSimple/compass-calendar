@@ -2,6 +2,10 @@ import classNames from "classnames";
 import { useContext, useEffect, useId, useRef, useState } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
+import {
+  trackSignupStarted,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   CONNECT_CALENDAR_LABEL,
@@ -33,9 +37,9 @@ type WelcomeStep = 1 | 2 | 3;
 const WELCOME_STEPS: readonly WelcomeStep[] = [1, 2, 3];
 
 const PRIMARY_CTA_CLASS =
-  "c-button c-button-primary c-button-elevated inline-flex h-10 w-full items-center justify-center rounded-full";
+  "c-button c-button-primary c-button-elevated inline-flex h-10 w-full items-center justify-center rounded-full data-busy:pointer-events-none data-busy:opacity-60";
 const TEXT_CTA_CLASS =
-  "c-focus-ring inline-flex items-center rounded-md px-2 py-1 text-text-muted text-xs hover:bg-surface-overlay hover:text-text";
+  "c-focus-ring inline-flex items-center rounded-md px-2 py-1 text-text-muted text-xs hover:bg-surface-overlay hover:text-text data-busy:pointer-events-none data-busy:opacity-60";
 
 function WelcomeSteps({ step }: { step: WelcomeStep }) {
   return (
@@ -94,6 +98,10 @@ export function WelcomeModal() {
   // hidingForAuthRef still blocks Explore and shortcuts during that wait.
   const hidingForAuthRef = useRef(false);
   const providerHandoffRef = useRef(false);
+  // The refs above decide behavior without re-rendering. This mirror gives
+  // the buttons a visible busy state on the very first click, so nobody
+  // clicks "Log in" three times while the auth modal is still on its way.
+  const [handingOff, setHandingOff] = useState(false);
   // Each screen has one primary button, and Enter is its native activation.
   // On the last screen that is email signup rather than Google: Enter on an
   // OAuth redirect would fling a first-time visitor off-site.
@@ -112,11 +120,13 @@ export function WelcomeModal() {
   useEffect(() => {
     if (isAuthModalOpen) return;
     hidingForAuthRef.current = false;
+    setHandingOff(false);
   }, [isAuthModalOpen]);
 
   useEffect(() => {
     if (isLoading) return;
     providerHandoffRef.current = false;
+    setHandingOff(false);
   }, [isLoading]);
 
   const shownRef = useRef(false);
@@ -126,6 +136,7 @@ export function WelcomeModal() {
       if (!shownRef.current) {
         shownRef.current = true;
         track("welcome_modal_shown");
+        trackSignupStep("welcome_viewed");
       }
     }
   }, [visible]);
@@ -154,6 +165,14 @@ export function WelcomeModal() {
   // practice start, so only the step and explore actions check it.
   const isHandingOff = () =>
     hidingForAuthRef.current || providerHandoffRef.current || isLoading;
+  const busy = closing || handingOff || isLoading;
+  // Not `disabled`: that would blur the focused primary button and drop the
+  // wrapper's shortcut layer and the focus trap. Pointer-events off is enough
+  // to make repeat clicks inert while the keyboard keeps working.
+  const busyProps = {
+    "aria-busy": busy,
+    "data-busy": busy ? "" : undefined,
+  } as const;
 
   const advance = () => {
     if (closing || isHandingOff()) return;
@@ -190,15 +209,18 @@ export function WelcomeModal() {
     skipFocusRestoreRef.current = true;
     startShowcaseAfterDismissRef.current = false;
     hidingForAuthRef.current = true;
+    setHandingOff(true);
     cancelDismiss();
   };
 
   const handOffToAuth = (cta: "log_in" | "sign_up") => {
+    // A repeat click while the auth modal is on its way must not open it twice.
+    if (hidingForAuthRef.current) return;
     beginAuthHandoff();
     markWelcomeSeen();
     if (cta === "sign_up") {
       shortcutShowcaseActions.deferUntilSignup();
-      track("signup_started", { source: "welcome_modal" });
+      trackSignupStarted("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
     openModal(cta === "log_in" ? "login" : "signUp");
@@ -210,11 +232,12 @@ export function WelcomeModal() {
     skipFocusRestoreRef.current = true;
     startShowcaseAfterDismissRef.current = false;
     providerHandoffRef.current = true;
+    setHandingOff(true);
     cancelDismiss();
     markWelcomeSeen();
     shortcutShowcaseActions.deferUntilSignup();
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
-    track("signup_started", { source: `welcome_modal_${kind}` });
+    trackSignupStarted(`welcome_modal_${kind}`);
     startSignIn(kind);
   };
 
@@ -296,7 +319,8 @@ export function WelcomeModal() {
             <button
               type="button"
               onClick={() => handOffToAuth("log_in")}
-              className="c-button-compact c-button-secondary rounded-3xl px-4 py-1.5 text-xs"
+              className="c-button-compact c-button-secondary rounded-3xl px-4 py-1.5 text-xs data-busy:pointer-events-none data-busy:opacity-60"
+              {...busyProps}
             >
               Log in
               <ShortcutHint className="ml-2">i</ShortcutHint>
@@ -325,6 +349,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={advance}
                 className={PRIMARY_CTA_CLASS}
+                {...busyProps}
               >
                 Get started for free
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
@@ -358,6 +383,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={advance}
                 className={PRIMARY_CTA_CLASS}
+                {...busyProps}
               >
                 Next
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
@@ -407,6 +433,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={() => handOffToAuth("sign_up")}
                 className={PRIMARY_CTA_CLASS}
+                {...busyProps}
               >
                 {hasSignInProviders ? "Sign up with email" : "Sign up"}
                 <ShortcutHint className="ml-2">U</ShortcutHint>
@@ -415,6 +442,7 @@ export function WelcomeModal() {
                 type="button"
                 onClick={explore}
                 className={TEXT_CTA_CLASS}
+                {...busyProps}
               >
                 Explore without an account
                 <ShortcutHint className="ml-2">S</ShortcutHint>

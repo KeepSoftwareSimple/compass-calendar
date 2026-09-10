@@ -1,5 +1,7 @@
 import { NodeEnv } from "@core/constants/core.constants";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { HTTP_SERVER_LIMITS } from "@core/server/http-server";
+import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import { createSyncService, type SyncService } from "@sync/app";
 import { type SyncConfig } from "@sync/config/sync.config";
 import { ReadinessRegistry } from "@sync/lifecycle/readiness";
@@ -32,6 +34,7 @@ describe("buildSyncApp", () => {
         name: "compass-sync",
         environment: NodeEnv.Test,
         execution: "passive",
+        version: "dev",
       },
       readiness: new ReadinessRegistry(),
     });
@@ -81,14 +84,22 @@ describe("Sync HTTP server health endpoints", () => {
   });
 
   it("reports ready with 200 once a registered dependency check passes", async () => {
-    service = createSyncService(testConfig());
+    service = createSyncService(
+      testConfig({ VERSION: "v1.2.3" } as Partial<SyncConfig>),
+    );
     service.readiness.register("storage", () => true);
     const base = await listen(service);
 
     const res = await fetch(`${base}/health/ready`);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { status: string };
+    const body = (await res.json()) as {
+      status: string;
+      version?: string;
+    };
     expect(body.status).toBe("ready");
+    expect(body[POSTHOG_ERROR_TRACKING_PROPERTY.version]).toBe(
+      normalizeDeployVersion("v1.2.3"),
+    );
   });
 
   it("reflects the active execution mode on liveness", async () => {

@@ -16,14 +16,26 @@ Internal documentation for engineers and agents working in the Compass repo.
 - Attendees, contact suggestions, or RSVP: [Attendees, Contacts, And RSVP](./features/attendees.md), [Feature File Map](./development/feature-file-map.md#attendees-contacts-and-rsvp)
 - Event caching, reads, or optimistic writes: [Event Caching](./frontend/event-caching.md)
 - Dragging/resizing events on the week grid: [Week Drag Interaction](./frontend/week-drag-interaction.md)
-- Keyboard shortcuts, event jump, or pointer suppression: [Shortcut Commandments](./frontend/shortcut-commandments.md), [Shortcuts](./acceptance/shortcuts.md), [Contextual Pointer Guidance](./frontend/contextual-pointer-guidance.md), [Feature File Map](./development/feature-file-map.md#keyboard-shortcuts)
+- Keyboard shortcuts, event jump, or pointer hints: [Shortcut Commandments](./frontend/shortcut-commandments.md), [Shortcuts](./acceptance/shortcuts.md), [Contextual Pointer Guidance](./frontend/contextual-pointer-guidance.md), [Feature File Map](./development/feature-file-map.md#keyboard-shortcuts)
 - Welcome, Shortcut Showcase, or the first-event handoff prompt: [Feature File Map](./development/feature-file-map.md#welcome-showcase-and-first-event-handoff), [Frontend Runtime Flow](./frontend/frontend-runtime-flow.md#welcome-showcase-and-first-event-handoff)
 - Breakpoints, sidebar collapse, or layout at different viewport sizes: [Responsive Layout](./frontend/responsive-layout.md)
 - Local-first or storage behavior: [Offline Storage And Migrations](./features/offline-storage-and-migrations.md)
 - Backend routes and API behavior: [Backend Route Map](./backend/README.md), [Backend Request Flow](./backend/backend-request-flow.md), [Backend Error Handling](./backend/backend-error-handling.md)
 - Trial, pricing, or Stripe: [Billing And Trial](./features/billing.md)
 - Public booking pages or availability rules: [Compass Calendar Booking (v1)](./features/booking.md)
+- Hiding or showing an event on the grid: [Hidden Events](./features/hidden-events.md), [Feature File Map](./development/feature-file-map.md#hidden-events)
 - A new calendar integration or Google-sync behavior: [Calendar providers](./features/calendar-providers.md), [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md), the `packages/sync` domain code directly
+
+## Features
+
+- [Attendees, Contacts, And RSVP](./features/attendees.md)
+- [Billing And Trial](./features/billing.md)
+- [Compass Calendar Booking (v1)](./features/booking.md)
+- [Calendar providers](./features/calendar-providers.md)
+- [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md)
+- [Hidden Events](./features/hidden-events.md)
+- [Offline Storage And Migrations](./features/offline-storage-and-migrations.md)
+- [Password Auth Flow](./features/password-auth-flow.md)
 
 ## Architecture And Domain
 

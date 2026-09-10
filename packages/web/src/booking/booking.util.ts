@@ -2,6 +2,7 @@ import {
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
   BOOKING_PLACEHOLDER_CALENDAR_ID,
+  type BookingDurationMinutes,
   BookingSlugSchema,
   pickAdminPutBookingPageInput,
   type WeeklyAvailabilityInterval,
@@ -13,6 +14,10 @@ import { getLocalCalendar } from "@web/calendars/calendar.util";
 
 export const BOOKING_AVAILABILITY_REQUIRED_MESSAGE =
   "Add weekly hours before turning on your meeting page.";
+
+export const BOOKING_DURATION_OPTIONS: readonly BookingDurationMinutes[] = [
+  15, 30, 45, 60,
+];
 
 export function getAvailabilityReadableCalendars(
   calendars: Calendar[],

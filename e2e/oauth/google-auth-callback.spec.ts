@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 const CALLBACK_PATH = "/auth/google/callback";
 const INTENT_STORAGE_PREFIX = "compass.googleAuthorizationIntent";
@@ -69,7 +70,10 @@ const prepareGoogleAuthCallbackPage = async (
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ google: { isConfigured: true } }),
+        body: JSON.stringify({
+          version: E2E_APP_CONFIG_VERSION,
+          google: { isConfigured: true },
+        }),
       });
     }
 
@@ -115,6 +119,38 @@ test("finishes a saved Google sign-in callback", async ({ page }) => {
       getIntentStorageKey(state),
     ),
   ).toBeNull();
+});
+
+// Cancelling at Google's consent screen used to share the generic
+// authorization error, so a deliberate choice read as a Compass crash.
+test("returns the user calmly after a consent-screen cancel", async ({
+  page,
+}) => {
+  const state = "cancelled-state";
+  const apiMocks = await prepareGoogleAuthCallbackPage(page);
+
+  await page.goto("/week");
+  await page.evaluate(
+    ({ key, value }) => {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    },
+    {
+      key: getIntentStorageKey(state),
+      value: { intent: "signIn", returnPath: "/week", createdAt: Date.now() },
+    },
+  );
+
+  await page.goto(
+    `${CALLBACK_PATH}?state=${encodeURIComponent(state)}&error=access_denied`,
+  );
+
+  await expect(
+    page.getByText(
+      "No problem, nothing was connected. You can sign in anytime.",
+    ),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/week$/);
+  expect(apiMocks.loginOrSignupRequests).toHaveLength(0);
 });
 
 // WP-06: the optional contacts grant rides the SAME sign-in callback. Either

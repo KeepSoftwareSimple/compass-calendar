@@ -10,6 +10,8 @@ import {
 } from "@web/auth/state/user-metadata.store";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
+  accountKey,
+  accountLabel,
   compareCalendars,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
@@ -39,6 +41,11 @@ export const CalendarList: FC = () => {
   const collapsedKeys = useCollapsedAccountKeys();
 
   const isAnonymous = !email;
+  // CalendarListHeader renders a working connect button under exactly this
+  // condition, so the empty-state text below would only restate the problem
+  // directly beneath the control that solves it.
+  const showConnectCta =
+    authenticated && connections.length === 0 && availableProviders.length > 0;
   // Session expiry already surfaces SessionExpiredToast — don't also show
   // "Couldn't load calendars" / Retry (or a false empty-list story) for it.
   const showCalendarsLoadError = shouldShowContextualLoadError(isError, error);
@@ -102,28 +109,27 @@ export const CalendarList: FC = () => {
           </button>
         </div>
       ) : calendars.length === 0 && groups.length === 0 ? (
-        <p className="text-text-muted text-xs">
-          {authenticated &&
-          connections.length === 0 &&
-          availableProviders.length > 0
-            ? "Connect a calendar provider to see your calendars."
-            : "No calendars yet."}
-        </p>
+        showConnectCta ? null : (
+          <p className="text-text-muted text-xs">No calendars yet.</p>
+        )
       ) : (
         <div className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <section
-              aria-label={`Calendars for ${group.accountEmail}`}
-              key={group.accountEmail}
-              {...pageJumpAttrs(calendarAccountJumpId(group.accountEmail))}
-            >
-              <AccountSectionHeader
-                accountEmail={group.accountEmail}
-                connection={group.connection}
-              />
-              {renderCollapsible(group.accountEmail, group.calendars)}
-            </section>
-          ))}
+          {groups.map((group) => {
+            const key = accountKey(group);
+            return (
+              <section
+                aria-label={`Calendars for ${accountLabel(group)}`}
+                key={key}
+                {...pageJumpAttrs(calendarAccountJumpId(key))}
+              >
+                <AccountSectionHeader
+                  account={group}
+                  connection={group.connection}
+                />
+                {renderCollapsible(key, group.calendars)}
+              </section>
+            );
+          })}
           {ungrouped.length > 0 ? (
             groups.length > 0 && email ? (
               <section aria-label={`Calendars for ${email}`}>

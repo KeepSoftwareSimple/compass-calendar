@@ -27,6 +27,7 @@ import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-prin
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import eventService from "@backend/event/services/event.service";
 import { findCanonicalCompassUser } from "@backend/user/queries/user.queries";
+import hiddenEventService from "@backend/user/services/hidden-event.service";
 import { type Summary_Delete } from "@backend/user/types/user.types";
 
 const logger = Logger("app:user.service");
@@ -246,6 +247,12 @@ class UserService {
           session,
         );
         summary.calendars = calendars.deletedCount;
+
+        const hiddenEvents = await hiddenEventService.deleteAllByUser(
+          _id,
+          session,
+        );
+        summary.hiddenEvents = hiddenEvents.deletedCount;
 
         // delete user
         const userDel = await mongoService.user.deleteOne({ _id }, { session });

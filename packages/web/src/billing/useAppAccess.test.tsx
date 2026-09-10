@@ -29,6 +29,7 @@ const stubConfig = (isConfigured: boolean, enforcement = true) => {
     rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
       res(
         ctx.json({
+          version: "dev",
           google: { isConfigured: false },
           billing: {
             isConfigured,
@@ -255,6 +256,7 @@ describe("useAppAccess", () => {
         res(
           ctx.delay(500),
           ctx.json({
+            version: "dev",
             google: { isConfigured: false },
             billing: {
               isConfigured: true,

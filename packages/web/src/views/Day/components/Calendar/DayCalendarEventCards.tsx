@@ -4,6 +4,7 @@ import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
+import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
 import {
   getAllDayEventPosition,
   getTimedEventPosition,
@@ -27,6 +28,7 @@ interface DayEventCardProps {
   event: GridEvent;
   focusColor?: string | null;
   isActiveDraft: boolean;
+  isHidden?: boolean;
   isPlaceholder: boolean;
   isReadOnly: boolean;
   measurements: GridMeasurements;
@@ -44,6 +46,7 @@ export const DayAllDayCalendarEvent = ({
   event,
   focusColor = null,
   isActiveDraft,
+  isHidden = false,
   isPlaceholder,
   isReadOnly,
   measurements,
@@ -56,7 +59,7 @@ export const DayAllDayCalendarEvent = ({
   // non-read-only card.
   const hasEventIdentity = Boolean(event._id);
   const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly;
+    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
   const registrationRef = useDayEventRegistrationRef({
     eventId: event._id,
     eventType: "all-day",
@@ -79,6 +82,9 @@ export const DayAllDayCalendarEvent = ({
     measurements,
     visibleDates,
   });
+  const displayPosition = isHidden
+    ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH }
+    : position;
 
   return (
     <AllDayEventCard
@@ -86,13 +92,14 @@ export const DayAllDayCalendarEvent = ({
       event={event}
       focusColor={focusColor}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       isPlaceholder={isPlaceholder}
       onEventKeyDown={onOpenEvent}
       position={{
-        ...position,
+        ...displayPosition,
         zIndex: isActiveDraft
           ? ZIndex.MAX
-          : (position.zIndex ?? ZIndex.LAYER_1),
+          : (displayPosition.zIndex ?? ZIndex.LAYER_1),
       }}
       ref={registrationRef}
     />
@@ -106,6 +113,7 @@ export const DayTimedCalendarEvent = ({
   event,
   focusColor = null,
   isActiveDraft,
+  isHidden = false,
   isPlaceholder,
   isReadOnly,
   measurements,
@@ -118,7 +126,7 @@ export const DayTimedCalendarEvent = ({
   // non-read-only card.
   const hasEventIdentity = Boolean(event._id);
   const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly;
+    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
   const isDeck = Boolean(deckLayout);
   const [isFocused, setIsFocused] = useState(false);
   const registrationRef = useDayEventRegistrationRef({
@@ -151,6 +159,7 @@ export const DayTimedCalendarEvent = ({
     columnIndex,
     deckLayout,
     event,
+    isHidden,
     isPlaceholder,
     measurements,
     visibleDates,
@@ -167,6 +176,7 @@ export const DayTimedCalendarEvent = ({
       event={event}
       focusColor={focusColor}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       isSelected={isActiveDraft}
       motionMode="idle"
       onBlur={isDeck ? () => setIsFocused(false) : undefined}
@@ -182,6 +192,7 @@ const getDayTimedEventPosition = ({
   columnIndex,
   deckLayout,
   event,
+  isHidden,
   isPlaceholder,
   measurements,
   visibleDates,
@@ -189,6 +200,7 @@ const getDayTimedEventPosition = ({
   columnIndex: number;
   deckLayout: TimedDeckLayout | null;
   event: GridEvent;
+  isHidden: boolean;
   isPlaceholder: boolean;
   measurements: GridMeasurements;
   visibleDates: GridVisibleDate[];
@@ -200,5 +212,5 @@ const getDayTimedEventPosition = ({
     visibleDates,
   });
 
-  return applyTimedEventDisplayPosition(position, deckLayout);
+  return applyTimedEventDisplayPosition(position, deckLayout, isHidden);
 };

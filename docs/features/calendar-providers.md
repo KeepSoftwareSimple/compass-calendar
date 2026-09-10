@@ -47,6 +47,10 @@ each with a tracking issue:
   Calendar, parallel to Google Calendar). "Outlook" is not shown in the product
   UI; command-palette search still accepts "outlook" as a keyword for
   Manage Accounts.
+- **An account is provider + email, never email alone.** The same address can
+  be a Google account and a Microsoft account, so the web app keys sidebar
+  sections, collapse state, and Settings rows by `accountKey` (provider + email)
+  and shows a provider mark (the monochrome logo) beside every account email.
 - **No em-dashes** in user-facing copy.
 
 ## Capability matrix
@@ -241,13 +245,14 @@ video link and says so.
 `user.identities[]` records `{provider, subjectId, email}` per login method
 (milestone I). Identity is the provider subject, never email alone.
 
-The same verified email across login methods resolves to one Compass user
-through SuperTokens AccountLinking (`shouldAutomaticallyLink: true`,
-`shouldRequireVerification: true`). Google and Microsoft emails from the
-id_token count as verified when the token says so. Email/password accounts
-link only after email verification. Apple private-relay addresses
-(`@privaterelay.appleid.com`) never link automatically; Sign in with Apple
-identifies by `sub`.
+Compass resolves the same verified email across Google and Microsoft to one
+Compass user in `userService.getCanonicalCompassUserId`. SuperTokens automatic
+account linking is deliberately not enabled because the SuperTokens Cloud plan
+lacks the feature and the core rejects `createPrimaryUser` with 402. Google and
+Microsoft emails from the id_token count as verified when the token says so.
+Email/password accounts link only after email verification. Apple private-relay
+addresses (`@privaterelay.appleid.com`) never link automatically; Sign in with
+Apple identifies by `sub`.
 
 Linking merges `identities[]` and keeps every calendar connection of both
 users.

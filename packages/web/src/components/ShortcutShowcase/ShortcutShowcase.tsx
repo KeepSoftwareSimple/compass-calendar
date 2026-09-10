@@ -1,5 +1,6 @@
 import { type FC, useContext, useEffect, useRef, useState } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
+import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { SHOWCASE_REVEAL_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
@@ -155,7 +156,7 @@ const ShowcaseTakeover: FC = () => {
 
   const skipToSignup = () => {
     shortcutShowcaseActions.skip("signup", gameContext());
-    track("signup_started", { source: "shortcut_showcase" });
+    trackSignupStarted("shortcut_showcase");
     openModal("signUp");
   };
 
@@ -163,7 +164,7 @@ const ShowcaseTakeover: FC = () => {
   const signUpFromEndScreen = () => {
     shortcutShowcaseActions.markSeen();
     shortcutShowcaseActions.finish();
-    track("signup_started", { source: "shortcut_showcase" });
+    trackSignupStarted("shortcut_showcase");
     openModal("signUp");
   };
 

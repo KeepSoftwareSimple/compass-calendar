@@ -6,14 +6,14 @@
   "private": true,
   "main": "",
   "dependencies": {
-    "@googleapis/calendar": "^14.1.0",
-    "@opentelemetry/api-logs": "^0.220.0",
-    "@opentelemetry/exporter-logs-otlp-http": "^0.220.0",
+    "@googleapis/calendar": "^16.0.0",
+    "@opentelemetry/api-logs": "^0.222.0",
+    "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
     "@opentelemetry/resources": "^2.9.0",
-    "@opentelemetry/sdk-logs": "^0.220.0",
+    "@opentelemetry/sdk-logs": "^0.222.0",
     "bson": "^7.2.0",
     "dayjs": "^1.11.19",
-    "google-auth-library": "^10.5.0",
+    "google-auth-library": "^11.0.2",
     "lodash": "^4.18.1",
     "logform": "^2.7.0",
     "posthog-node": "^5.47.0",
@@ -24,7 +24,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.6.0",
+    "@faker-js/faker": "^10.5.0",
     "@types/lodash": "^4.17.24",
     "mongodb": "^7.2.0",
     "supertokens-node": "^23.0.1",

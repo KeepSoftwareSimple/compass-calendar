@@ -144,6 +144,36 @@ describe("WelcomeModal", () => {
     ).toBeNull();
   });
 
+  it("marks the Log in pill busy on the first click so a repeat click is inert", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeModal />);
+    const login = screen.getByRole("button", { name: "Log in" });
+    expect(login.getAttribute("aria-busy")).toBe("false");
+
+    await user.click(login);
+    expect(login.getAttribute("aria-busy")).toBe("true");
+
+    await user.click(login);
+    expect(mockOpenModal).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks the explore action busy while its fade runs", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeModal />);
+    await goToChooseScreen(user);
+    const explore = screen.getByRole("button", {
+      name: "Explore without an account",
+    });
+    expect(explore.getAttribute("aria-busy")).toBe("false");
+
+    await user.click(explore);
+    expect(explore.getAttribute("aria-busy")).toBe("true");
+
+    await waitFor(() => {
+      expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+    });
+  });
+
   it("does not restore underlay focus when handing off to auth", async () => {
     const user = userEvent.setup();
 
