@@ -29,6 +29,14 @@ export const MISSING_PROVIDER_SCOPES_ERROR_MESSAGE =
 export const GOOGLE_AUTHORIZATION_ERROR_MESSAGE =
   "We couldn't connect your Google account. Please try again.";
 
+/**
+ * Cancelling at the provider's consent screen is a choice, not a crash. It
+ * used to share the generic authorization error, which read as a Compass
+ * failure and gave no hint that trying again was all it took.
+ */
+export const PROVIDER_AUTH_CANCELLED_MESSAGE =
+  "No problem, nothing was connected. You can sign in anytime.";
+
 export function isSignInProviderKind(value: string): value is ProviderKind {
   return ProviderKindSchema.safeParse(value).success;
 }
