@@ -127,6 +127,8 @@ describe("purgeExpiredDisconnectedConnections", () => {
         canWriteEvents: true,
         canInviteAttendees: false,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     await events.upsertByProviderIdentity({
       tenantId: tenantId as TenantId,

@@ -13,6 +13,7 @@ import {
   ProviderWriteUnavailableError,
   submitCloudCommand,
 } from "@sync/domain/cloud-command.service";
+import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
 import {
   type ProviderRegistry,
   resolveAdaptersFrom,
@@ -26,12 +27,22 @@ import {
   respondInternalError,
 } from "@sync/server/internal-http";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
+import { type ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { syncRepositories } from "@sync/storage/sync-repositories";
 
 export const COMMANDS_PATH = "/internal/commands";
 
 const logger = Logger("sync:command.routes");
+
+const connectionLookup = (
+  repo: Pick<ProviderConnectionRepository, "findById">,
+): ProviderConnectionLookup => ({
+  findById: async (tenantId, principalId, id) => {
+    const row = await repo.findById(tenantId, principalId, id);
+    return row ? { account: row.account, provider: row.provider } : null;
+  },
+});
 
 export interface CommandApiDeps {
   authMiddleware: RequestHandler;
@@ -112,7 +123,7 @@ export function registerCommandRoutes(
             calendars: repos.calendars,
             occurrences: repos.eventOccurrences,
             resources: repos.syncResources,
-            connections: repos.connections,
+            connections: connectionLookup(repos.connections),
             markers: repos.deletionMarkers,
             execution: deps.execution,
             provider,

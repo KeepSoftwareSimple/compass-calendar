@@ -131,6 +131,9 @@ export type GoogleSyncConnectionSummary = SyncConnectionSummary;
 // rejects a nested `google.connection` object on an interface extends clause,
 // even though every field is JSON-safe.
 export type UserMetadata = SupertokensUserMetadata.JSONObject & {
+  sync?: {
+    importGCal?: string | null;
+  };
   // Every connected provider account. WP-08b reads this; until then the
   // overlap `google.connections` copy stays so the existing web keeps working.
   connections?: SyncConnectionSummary[];

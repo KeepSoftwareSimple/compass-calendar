@@ -9,7 +9,7 @@ function unused<K extends keyof StripeBillingGateway>(
 }
 
 export function stubBillingGateway(
-  overrides: Partial<StripeBillingGateway>,
+  overrides: Record<string, unknown> = {},
 ): StripeBillingGateway {
   return {
     createCustomer: unused("createCustomer"),
@@ -23,5 +23,5 @@ export function stubBillingGateway(
     listInvoices: unused("listInvoices"),
     constructWebhookEvent: unused("constructWebhookEvent"),
     ...overrides,
-  };
+  } as StripeBillingGateway;
 }

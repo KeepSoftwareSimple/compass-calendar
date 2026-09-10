@@ -2,6 +2,10 @@ import { ObjectId } from "mongodb";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AdminPutBookingPageInputSchema } from "@core/types/booking.contracts";
+import {
+  type CommandSubmitRequest,
+  type SyncCommandInput,
+} from "@core/types/sync/command.contracts";
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { UserDriver } from "@backend/__tests__/drivers/user.driver";
 import {
@@ -120,6 +124,31 @@ const appleConnection = () => ({
   },
 });
 
+type TestSyncConnection =
+  | ReturnType<typeof healthyConnection>
+  | ReturnType<typeof appleConnection>
+  | ReturnType<typeof microsoftConnection>;
+
+const submitRequestFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): CommandSubmitRequest => {
+  const request = submitCommand.mock.calls[0]?.[1];
+  if (!request) {
+    throw new Error("Expected submitCommand to have been called");
+  }
+  return request as CommandSubmitRequest;
+};
+
+const createInputFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): Extract<SyncCommandInput, { kind: "create" }> => {
+  const request = submitRequestFrom(submitCommand);
+  if (request.input.kind !== "create") {
+    throw new Error("Expected a create command submit");
+  }
+  return request.input;
+};
+
 const microsoftConnection = (withTeams = true) => ({
   ...healthyConnection(),
   provider: "microsoft" as const,
@@ -212,7 +241,7 @@ describe("PublicBookingService", () => {
 
   const mockHealthySync = (
     calendars: ReturnType<typeof writableCalendar>[],
-    connection: ReturnType<typeof healthyConnection> = healthyConnection(),
+    connection: TestSyncConnection = healthyConnection(),
   ) => {
     const wired = calendars.map((calendar) => ({
       ...calendar,
@@ -348,7 +377,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
-    expect(createBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (createBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
     });
     expect(response.reservationId).toBeTruthy();
@@ -371,7 +402,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
-    expect(createBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (createBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       start: slotStart,
       end: `${BOOKING_MONDAY}T10:30:00.000Z`,
     });
@@ -574,7 +607,7 @@ describe("PublicBookingService", () => {
     });
 
     expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy.mock.calls[0]?.[0]).toMatchObject({
+    expect((logSpy.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
       slug,
       userId: userId.toString(),
       issueCalendarIds: [calendarId],
@@ -875,10 +908,10 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
-    expect(request.input.content.description).toContain(
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
+    expect(input.content.description).toContain(
       "Zoom: https://example.com/meet",
     );
 
@@ -934,9 +967,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(true);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(true);
+    expect(input.content.conference).toBeNull();
 
     const publicReservation = await bookingService.getPublicReservation(
       new ObjectId(created.reservationId),
@@ -988,9 +1021,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
   });
 
   it("clamps a requested window that extends past the host horizon", async () => {
@@ -1023,7 +1056,9 @@ describe("PublicBookingService", () => {
     for (const slot of response.slots) {
       expect(Date.parse(slot.slotStart)).toBeLessThan(horizonMs + 1000);
     }
-    const availabilityQuery = getAvailability.mock.calls[0]?.[1] as {
+    const availabilityQuery = (
+      getAvailability.mock.calls as unknown[][]
+    )[0]?.[1] as {
       end: string;
     };
     expect(Date.parse(availabilityQuery.end)).toBeLessThanOrEqual(
@@ -1402,7 +1437,9 @@ describe("PublicBookingService", () => {
     ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
-    expect(deleteBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (deleteBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       eventId: "our-evt",
     });
     const survivors =
@@ -1446,10 +1483,10 @@ describe("PublicBookingService", () => {
       ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
       expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(logSpy.mock.calls[0]?.[0]).toMatchObject({
+      expect((logSpy.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
         result: "SYNC_UNAVAILABLE",
       });
-      expect(logSpy.mock.calls[0]?.[1]).toMatchObject({
+      expect((logSpy.mock.calls as unknown[][])[0]?.[1]).toMatchObject({
         tenantId: userId.toString(),
         principalId: userId.toString(),
         calendarId,
@@ -1504,7 +1541,9 @@ describe("PublicBookingService", () => {
       durationMinutes: 30,
     });
 
-    const eventInput = createBookingEvent.mock.calls[0]?.[1] as {
+    const eventInput = (
+      createBookingEvent.mock.calls as unknown[][]
+    )[0]?.[1] as {
       description: string;
     };
     expect(eventInput.description).toBe(
@@ -1538,9 +1577,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(true);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(true);
+    expect(input.content.conference).toBeNull();
   });
 
   it("patches guest name and notes and submits an event update", async () => {
@@ -1565,11 +1604,15 @@ describe("PublicBookingService", () => {
     expect(patched.guestName).toBe("Grace Hopper");
     expect(patched.notes).toBe("bring tea");
     expect(updateBookingEvent).toHaveBeenCalledTimes(1);
-    expect(updateBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       title: "Grace Hopper and Host User",
     });
     const description = (
-      updateBookingEvent.mock.calls[0]?.[1] as { description: string }
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
+        description: string;
+      }
     ).description;
     expect(description).toMatch(/^bring tea\n\nCancel: .+\n\nReschedule: .+$/);
     const stored = await bookingReservationRepository.findById(reservationId);
@@ -1695,7 +1738,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(updateBookingEvent).toHaveBeenCalledTimes(1);
-    expect(updateBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       start: `${BOOKING_MONDAY}T11:00:00.000Z`,
       end: `${BOOKING_MONDAY}T11:30:00.000Z`,
     });
@@ -1907,7 +1952,9 @@ describe("PublicBookingService", () => {
       booked,
     );
     const createdEventId = await createBookingEvent.mock.results[0]?.value;
-    expect(getAvailability.mock.calls.at(-1)?.[1]).toMatchObject({
+    expect(
+      (getAvailability.mock.calls as unknown[][]).at(-1)?.[1],
+    ).toMatchObject({
       excludeEventIds: [createdEventId],
     });
   });
@@ -1975,7 +2022,7 @@ describe("Public booking routes", () => {
   const mockHealthySync = (
     calendars: ReturnType<typeof writableCalendar>[],
     availability = busyResponse(true),
-    connection: ReturnType<typeof healthyConnection> = healthyConnection(),
+    connection: TestSyncConnection = healthyConnection(),
   ) => {
     const wired = calendars.map((calendar) => ({
       ...calendar,

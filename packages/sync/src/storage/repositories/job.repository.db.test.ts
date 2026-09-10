@@ -1,6 +1,7 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
 import { type SyncJobId } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   JOB_PRIORITY,
@@ -273,7 +274,10 @@ describe("JobRepository", () => {
       expect(await repo.fail(created._id, "owner")).toBe(true);
       await db
         .collection("jobs")
-        .updateOne({ _id: created._id }, { $set: { requeuedCount: 3 } });
+        .updateOne(
+          { _id: mongoObjectId(created._id) },
+          { $set: { requeuedCount: 3 } },
+        );
 
       const { job, outcome } = await repo.enqueueUrgent(
         enqueue({

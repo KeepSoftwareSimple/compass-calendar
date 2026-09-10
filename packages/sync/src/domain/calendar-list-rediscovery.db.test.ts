@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { rediscoverStaleCalendarLists } from "@sync/domain/calendar-list-rediscovery.service";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -224,7 +225,10 @@ describe("calendar-list rediscovery sweep (rediscoverStaleCalendarLists)", () =>
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .updateOne({ _id: legacy._id }, { $unset: { lastFullListAt: "" } });
+      .updateOne(
+        { _id: mongoObjectId(legacy._id) },
+        { $unset: { lastFullListAt: "" } },
+      );
 
     const enqueued = await rediscoverStaleCalendarLists(
       deps(),

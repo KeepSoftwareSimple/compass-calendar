@@ -52,13 +52,13 @@ describe("refreshPrincipalCalendars", () => {
     // One call per distinct connection touched, not per resource.
     expect(requeueFailedByConnection).toHaveBeenCalledTimes(1);
     expect(enqueueUrgent).toHaveBeenCalledTimes(3);
-    expect(enqueueUrgent.mock.calls[0]?.[0]).toMatchObject({
+    expect((enqueueUrgent.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
       kind: "calendarListSync",
       resourceId: null,
       coalescingKey: "calendarListSync:c1",
       priority: JOB_PRIORITY.user,
     });
-    expect(enqueueUrgent.mock.calls[1]?.[0]).toMatchObject({
+    expect((enqueueUrgent.mock.calls as unknown[][])[1]?.[0]).toMatchObject({
       kind: "incrementalPull",
       resourceId: "r1",
       coalescingKey: "incrementalPull:r1",

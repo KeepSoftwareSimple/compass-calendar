@@ -6,7 +6,8 @@
     "packages/backend/src/**/*.ts",
     "packages/sync/src/**/*.ts",
     "packages/scripts/src/**/*.ts",
-    "packages/scripts/src/**/*.d.ts"
+    "packages/scripts/src/**/*.d.ts",
+    "**/*.json"
   ],
   "exclude": [],
   "compilerOptions": {

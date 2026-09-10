@@ -92,6 +92,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
 
     const listResource = await resources.ensure({
@@ -151,6 +153,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: false,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const slowerResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -204,6 +208,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -274,6 +280,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -319,6 +327,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -377,6 +387,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -443,6 +455,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -491,6 +505,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -529,6 +545,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -598,6 +616,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -714,6 +734,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,

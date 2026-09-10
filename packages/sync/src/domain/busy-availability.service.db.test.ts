@@ -205,6 +205,8 @@ describe("computeBusyAvailability", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
 
     const result = await run([calA, ghost._id as SyncEventCalendarId]);

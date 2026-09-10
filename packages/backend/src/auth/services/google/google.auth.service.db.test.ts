@@ -45,7 +45,7 @@ describe("googleAuthService", () => {
         value: { connections: [] },
         correlationId: "corr-1",
       }),
-    } as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
+    } as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
     ({ googleAuthService } = await import("./google.auth.service"));
   });
   beforeEach(() => setupTestDb(import.meta.url));

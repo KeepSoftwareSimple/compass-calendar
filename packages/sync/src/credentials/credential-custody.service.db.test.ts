@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { TEST_CREDENTIAL_ENCRYPTION_KEY } from "@sync/__tests__/helpers/credential-encryption";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
 import { ProviderNotConfiguredError } from "@sync/providers/provider-adapters";
@@ -346,7 +347,7 @@ describe("CredentialCustody", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne({ _id: mongoObjectId(connectionId) });
     expect(raw).not.toHaveProperty("refreshToken");
     expect(raw?.refreshTokenCiphertext).toBeString();
     expect(JSON.stringify(raw)).not.toContain("stored-refresh-token");
@@ -363,7 +364,7 @@ describe("CredentialCustody", () => {
     });
     const custody = makeCustody(adapter);
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: connectionId,
+      _id: mongoObjectId(connectionId),
       credentialKind: "oauthRefresh",
       provider: "google",
       refreshToken: "legacy-plaintext-token",
@@ -379,7 +380,7 @@ describe("CredentialCustody", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne({ _id: mongoObjectId(connectionId) });
     expect(raw).not.toHaveProperty("refreshToken");
     expect(raw?.refreshTokenCiphertext).toBeString();
     expect(JSON.stringify(raw)).not.toContain("legacy-plaintext-token");
@@ -397,7 +398,7 @@ describe("CredentialCustody", () => {
     });
     const custody = new CredentialCustody(repo, () => adapter, fixedNow);
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: connectionId,
+      _id: mongoObjectId(connectionId),
       credentialKind: "oauthRefresh",
       provider: "google",
       refreshToken: "legacy-plaintext-token",
@@ -415,7 +416,7 @@ describe("CredentialCustody", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne({ _id: mongoObjectId(connectionId) });
     expect(raw?.refreshToken).toBe("legacy-plaintext-token");
     expect(raw).not.toHaveProperty("refreshTokenCiphertext");
     expect(adapter.refreshCalls).toBe(1);
@@ -490,7 +491,7 @@ describe("CredentialCustody", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne({ _id: mongoObjectId(connectionId) });
     expect(raw).not.toBeNull();
     const serialized = JSON.stringify(raw);
     expect(serialized).not.toContain(secret);

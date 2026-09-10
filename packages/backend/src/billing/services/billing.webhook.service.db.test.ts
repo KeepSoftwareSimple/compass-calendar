@@ -110,7 +110,7 @@ describe("Stripe webhook", () => {
     expect((res.status as ReturnType<typeof mock>).mock.calls[0]?.[0]).toBe(
       Status.BAD_REQUEST,
     );
-    expect(json.mock.calls[0]?.[0]).toEqual({
+    expect((json.mock.calls as unknown[][])[0]?.[0]).toEqual({
       error: "No signatures found matching the expected signature",
     });
   });
@@ -695,15 +695,15 @@ describe("Stripe webhook", () => {
 
       await processStripeEvent(setupEvent(userId.toString()), stripe);
 
-      expect(sessionsRetrieve.mock.calls[0]?.[0]).toBe("cs_setup_1");
-      expect(sessionsRetrieve.mock.calls[0]?.[1]).toEqual({
+      expect((sessionsRetrieve.mock.calls as unknown[][])[0]?.[0]).toBe("cs_setup_1");
+      expect((sessionsRetrieve.mock.calls as unknown[][])[0]?.[1]).toEqual({
         expand: ["setup_intent"],
       });
-      expect(customersUpdate.mock.calls[0]).toEqual([
+      expect((customersUpdate.mock.calls as unknown[][])[0]).toEqual([
         "cus_setup",
         { invoice_settings: { default_payment_method: "pm_new" } },
       ]);
-      expect(subscriptionsUpdate.mock.calls[0]).toEqual([
+      expect((subscriptionsUpdate.mock.calls as unknown[][])[0]).toEqual([
         "sub_setup",
         { default_payment_method: "pm_new" },
       ]);

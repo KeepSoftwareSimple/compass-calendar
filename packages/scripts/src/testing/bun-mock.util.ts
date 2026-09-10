@@ -8,7 +8,7 @@ export type MockWithCalls<T extends (...args: unknown[]) => unknown> =
     };
   };
 
-export function typedMock<T extends (...args: never[]) => unknown>(
+export function typedMock<T extends (...args: unknown[]) => unknown>(
   implementation: T,
 ): MockWithCalls<T> {
   return mock(implementation) as MockWithCalls<T>;

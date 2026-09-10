@@ -1,10 +1,14 @@
+import { faker } from "@faker-js/faker";
 import { encryptCredentials } from "@scripts/commands/encrypt-credentials/backfill";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { describe, expect, it } from "bun:test";
 import { randomBytes } from "node:crypto";
+
+const objectId = () => faker.database.mongodbObjectId();
 
 const KEY = randomBytes(32).toString("base64");
 const NOW = new Date("2026-09-04T12:00:00.000Z");
@@ -13,19 +17,22 @@ describe("encrypt-credentials (db)", () => {
   const storage = setupSyncStorage(import.meta.url);
 
   it("dry-run reports matches without writing", async () => {
-    const connectionId = "conn-1" as ConnectionId;
-    await storage.db().collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: connectionId,
-      credentialKind: "oauthRefresh",
-      provider: "google",
-      refreshToken: "legacy-token",
-      accessToken: null,
-      accessTokenExpiresAt: null,
-      refreshFailureCount: 0,
-      scopes: [],
-      createdAt: NOW,
-      updatedAt: NOW,
-    });
+    const connectionId = objectId() as ConnectionId;
+    await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.credentials)
+      .insertOne({
+        _id: mongoObjectId(connectionId),
+        credentialKind: "oauthRefresh",
+        provider: "google",
+        refreshToken: "legacy-token",
+        accessToken: null,
+        accessTokenExpiresAt: null,
+        refreshFailureCount: 0,
+        scopes: [],
+        createdAt: NOW,
+        updatedAt: NOW,
+      });
 
     const report = await encryptCredentials(
       storage.db().collection(SYNC_COLLECTIONS.credentials),
@@ -37,18 +44,18 @@ describe("encrypt-credentials (db)", () => {
     const raw = await storage
       .db()
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne({ _id: mongoObjectId(connectionId) });
     expect(raw?.refreshToken).toBe("legacy-token");
     expect(raw).not.toHaveProperty("refreshTokenCiphertext");
   });
 
   it("encrypts plaintext rows and is idempotent and resumable", async () => {
-    const firstId = "conn-a" as ConnectionId;
-    const secondId = "conn-b" as ConnectionId;
+    const firstId = objectId() as ConnectionId;
+    const secondId = objectId() as ConnectionId;
     const collection = storage.db().collection(SYNC_COLLECTIONS.credentials);
     await collection.insertMany([
       {
-        _id: firstId,
+        _id: mongoObjectId(firstId),
         credentialKind: "oauthRefresh",
         provider: "google",
         refreshToken: "token-a",
@@ -60,7 +67,7 @@ describe("encrypt-credentials (db)", () => {
         updatedAt: NOW,
       },
       {
-        _id: secondId,
+        _id: mongoObjectId(secondId),
         credentialKind: "oauthRefresh",
         provider: "microsoft",
         refreshToken: "token-b",
@@ -96,7 +103,9 @@ describe("encrypt-credentials (db)", () => {
       [firstId, "token-a"],
       [secondId, "token-b"],
     ] as const) {
-      const raw = await collection.findOne({ _id: connectionId });
+      const raw = await collection.findOne({
+        _id: mongoObjectId(connectionId),
+      });
       expect(raw).not.toHaveProperty("refreshToken");
       expect(raw?.refreshTokenCiphertext).toBeString();
       expect(

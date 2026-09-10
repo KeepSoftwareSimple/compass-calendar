@@ -32,6 +32,7 @@ const discovered = (
     canReadBusy: true,
     canInviteAttendees: true,
   },
+  eventLabels: [],
   createsGoogleMeet: true,
 });
 

@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { type CommandSubmitRequest } from "@core/types/sync/command.contracts";
 import { BOOKING_CONFIRMATION_MAX_AGE_MS } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
@@ -15,6 +16,16 @@ import {
 
 const userId = () => faker.database.mongodbObjectId();
 const calendarId = () => faker.database.mongodbObjectId();
+
+const submitRequestFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): CommandSubmitRequest => {
+  const request = submitCommand.mock.calls[0]?.[1];
+  if (!request) {
+    throw new Error("Expected submitCommand to have been called");
+  }
+  return request as CommandSubmitRequest;
+};
 
 const busyResponse = {
   intervals: [],
@@ -94,9 +105,9 @@ describe("CalendarBookingService", () => {
         unbackedCalendarIds: [localId],
       }),
     );
-    expect(queryBusyAvailability.mock.calls[0]?.[1]).not.toHaveProperty(
-      "excludeEventIds",
-    );
+    expect(
+      (queryBusyAvailability.mock.calls as unknown[][])[0]?.[1],
+    ).not.toHaveProperty("excludeEventIds");
   });
 
   it("forwards excludeEventIds on the busy query when provided", async () => {
@@ -172,7 +183,7 @@ describe("CalendarBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
+    const request = submitRequestFrom(submitCommand);
     expect(request.input.content.description).toBe(description);
     expect(request.input).toMatchObject({
       kind: "create",
@@ -216,7 +227,7 @@ describe("CalendarBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
+    const request = submitRequestFrom(submitCommand);
     expect(request.input.createConference).toBe(false);
     expect(request.input.content.conference).toBeNull();
   });
@@ -274,7 +285,7 @@ describe("CalendarBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const request = submitCommand.mock.calls[0]?.[1];
+    const request = submitRequestFrom(submitCommand);
     expect(request).toMatchObject({
       eventId,
       expectedVersion: null,

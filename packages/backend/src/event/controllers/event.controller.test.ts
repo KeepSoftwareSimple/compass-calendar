@@ -185,9 +185,9 @@ describe("EventController", () => {
     expect(json).toHaveBeenCalledWith({ events: [] });
     expect(listFullEvents).toHaveBeenCalledTimes(1);
     // The ownership read must be scoped to active calendars.
-    expect(listCalendars.mock.calls[0]?.[1]).toEqual({ activeOnly: true });
+    expect((listCalendars.mock.calls as unknown[][])[0]?.[1]).toEqual({ activeOnly: true });
     const pageQuery = (
-      listFullEvents.mock.calls[0] as never as [
+      (listFullEvents.mock.calls as unknown[][])[0] as never as [
         unknown,
         { calendarIds: string[] },
       ]
@@ -554,7 +554,7 @@ describe("EventController", () => {
 
     expect(res.status).toHaveBeenCalledWith(Status.OK);
     const request = (
-      submitCommand.mock.calls[0] as never as [unknown, { input: unknown }]
+      (submitCommand.mock.calls as unknown[][])[0] as never as [unknown, { input: unknown }]
     )[1];
     expect(request.input).toMatchObject({
       kind: "create",
@@ -563,7 +563,7 @@ describe("EventController", () => {
     });
     // The optimistic response event carries the intended guests.
     const responseBody = (
-      json.mock.calls[0] as never as [
+      (json.mock.calls as unknown[][])[0] as never as [
         { event: { content: { attendees?: unknown } } },
       ]
     )[0];
@@ -681,7 +681,7 @@ describe("EventController", () => {
 
     expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
     const request = (
-      submitCommand.mock.calls[0] as never as [unknown, { input: unknown }]
+      (submitCommand.mock.calls as unknown[][])[0] as never as [unknown, { input: unknown }]
     )[1];
     expect(request.input).toMatchObject({ kind: "delete", invitation: "all" });
   });
@@ -821,7 +821,7 @@ describe("EventController", () => {
     expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
     expect(submitCommand).toHaveBeenCalledTimes(1);
     const request = (
-      submitCommand.mock.calls[0] as never as [
+      (submitCommand.mock.calls as unknown[][])[0] as never as [
         unknown,
         { eventId: string; input: unknown; idempotencyKey: string },
       ]
@@ -871,7 +871,7 @@ describe("EventController", () => {
 
     expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
     const request = (
-      submitCommand.mock.calls[0] as never as [
+      (submitCommand.mock.calls as unknown[][])[0] as never as [
         unknown,
         { eventId: string; input: unknown },
       ]

@@ -14,12 +14,14 @@ import {
 import { isMicrosoftConsentRequired } from "@sync/providers/microsoft/microsoft-consent";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
 
+type ExchangeInput = Parameters<
+  MicrosoftTokenEndpoint["exchangeAuthorizationCode"]
+>[0];
+type RefreshInput = Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[0];
+
 class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
-  exchangeInputs: Parameters<
-    MicrosoftTokenEndpoint["exchangeAuthorizationCode"]
-  >[] = [];
-  refreshInputs: Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[] =
-    [];
+  exchangeInputs: ExchangeInput[] = [];
+  refreshInputs: RefreshInput[] = [];
 
   constructor(
     private readonly behavior: {
@@ -31,7 +33,7 @@ class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
   ) {}
 
   exchangeAuthorizationCode(
-    input: Parameters<MicrosoftTokenEndpoint["exchangeAuthorizationCode"]>[0],
+    input: ExchangeInput,
   ): Promise<MicrosoftTokenResponse> {
     this.exchangeInputs.push(input);
     if (this.behavior.exchangeError) {
@@ -40,9 +42,7 @@ class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
     return Promise.resolve(this.behavior.exchangeResponse ?? {});
   }
 
-  refreshAccessToken(
-    input: Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[0],
-  ): Promise<MicrosoftTokenResponse> {
+  refreshAccessToken(input: RefreshInput): Promise<MicrosoftTokenResponse> {
     this.refreshInputs.push(input);
     if (this.behavior.refreshError) {
       return Promise.reject(this.behavior.refreshError);

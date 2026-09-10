@@ -88,7 +88,7 @@ describe("handleGoogleAuth", () => {
             adoptCalls.push(args);
             return { ok: true, value: {}, correlationId: "corr-1" };
           },
-        }) as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
+        }) as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
     );
   });
 

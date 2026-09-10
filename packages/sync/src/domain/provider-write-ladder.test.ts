@@ -122,7 +122,7 @@ describe("runProviderWrite", () => {
     });
 
     expect(warn).toHaveBeenCalledTimes(1);
-    const [message] = warn.mock.calls[0] ?? [];
+    const [message] = (warn.mock.calls as unknown[][])[0] ?? [];
     expect(message).toContain("Google declined to change this event");
     expect(message).toContain("HTTP 400");
     expect(message).toContain("reason invalid");

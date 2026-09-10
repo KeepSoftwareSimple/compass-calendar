@@ -9,6 +9,7 @@ import {
   singleEvent as single,
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   dispatchSyncJob,
@@ -65,6 +66,7 @@ const notifications = {
     };
   },
   stopChannel: async () => {},
+  parseNotification: () => null,
 };
 
 // A calendar-discovery adapter that returns one active calendar, so a
@@ -85,6 +87,7 @@ const discovery = {
           canReadBusy: true,
           canInviteAttendees: true,
         },
+        eventLabels: [],
         createsGoogleMeet: true,
       },
     ],
@@ -191,7 +194,7 @@ describe("dispatchSyncJob", () => {
     reader: FakeReader,
     custody: SyncJobDispatchDeps["custody"] = tokenSource,
     notificationsOverride = notifications,
-    discoveryOverride = discovery,
+    discoveryOverride: ProviderCalendarAdapter = discovery,
   ): SyncJobDispatchDeps => ({
     events,
     occurrences,
@@ -375,7 +378,9 @@ describe("dispatchSyncJob", () => {
           resource._id,
           new Date(`2026-07-10T00:00:0${reads.length}.000Z`),
         );
-        return page([single(`e-${reads.length}`)], `cursor-${reads.length}`);
+        return page([single(`e-${reads.length}`)], {
+          nextSyncToken: `cursor-${reads.length}`,
+        });
       },
     };
 
@@ -596,7 +601,10 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne({ _id: calendar._id }, { $set: { active: false } });
+      .updateOne(
+        { _id: mongoObjectId(calendar._id) },
+        { $set: { active: false } },
+      );
 
     const reader = new FakeReader([]);
     const outcome = await dispatchSyncJob(
@@ -636,7 +644,10 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne({ _id: calendar._id }, { $set: { active: false } });
+      .updateOne(
+        { _id: mongoObjectId(calendar._id) },
+        { $set: { active: false } },
+      );
 
     const outcome = await dispatchSyncJob(
       deps(new FakeReader([])),
@@ -820,7 +831,9 @@ describe("dispatchSyncJob", () => {
     }
     expect(discarded).toEqual([]);
     const after = await credentials.findByConnection(calendar.connectionId);
-    expect(after?.refreshFailureCount).toBe(3);
+    expect(
+      (after as { refreshFailureCount?: number } | null)?.refreshFailureCount,
+    ).toBe(3);
   });
 
   it("does not drop a refreshFailed job just because other retries already ran", async () => {
@@ -1514,6 +1527,7 @@ describe("dispatchSyncJob", () => {
       discardRevoked: async (id) => {
         discarded.push(id);
       },
+      invalidateAccessToken: async () => {},
     };
 
     const outcome = await dispatchSyncJob(
@@ -1635,7 +1649,7 @@ describe("dispatchSyncJob", () => {
           if (provider === "microsoft") {
             throw new ProviderNotConfiguredError("microsoft");
           }
-          return fakeResolveAdapters(reader)();
+          return fakeResolveAdapters(reader)(provider, stubbedConnection!);
         },
       },
       jobFor(resource, "initialImport"),

@@ -60,7 +60,7 @@ describe("appleAuthService", () => {
             value: { connections: [] },
             correlationId: "corr-1",
           }),
-        }) as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
+        }) as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
     );
     ({ appleAuthService } = await import("./apple.auth.service"));
   });

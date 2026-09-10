@@ -44,7 +44,7 @@ describe("microsoftAuthService", () => {
             value: { connections: [] },
             correlationId: "corr-1",
           }),
-        }) as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
+        }) as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
     );
     ({ microsoftAuthService } = await import("./microsoft.auth.service"));
   });
