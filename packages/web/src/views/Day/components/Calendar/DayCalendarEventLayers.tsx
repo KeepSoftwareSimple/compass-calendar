@@ -11,6 +11,7 @@ import {
 } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridEventDraft } from "@web/events/event-draft.types";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import {
@@ -59,6 +60,7 @@ export const DayCalendarAllDayEventsLayer = ({
 }: DayAllDayEventsProps) => {
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
+  const hiddenEventIds = useHiddenEventIds();
   const marginLeft = useGridMarginLeft();
 
   return (
@@ -77,6 +79,7 @@ export const DayCalendarAllDayEventsLayer = ({
           event={event}
           focusColor={resolveCalendarFocusColor(calendarLookup, event)}
           isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
+          isHidden={Boolean(event._id && hiddenEventIds.has(event._id))}
           isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
           isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
           key={event._id ?? "all-day-draft"}
@@ -100,6 +103,7 @@ export const DayCalendarTimedEventsLayer = ({
 }: DayTimedEventsProps) => {
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
+  const hiddenEventIds = useHiddenEventIds();
   const savedEventIds = useMemo(
     () => getCalendarEventIdSet(timedEvents),
     [timedEvents],
@@ -122,8 +126,10 @@ export const DayCalendarTimedEventsLayer = ({
       columnEvents.push(event);
       eventsByColumn.set(columnIndex, columnEvents);
     }
-    return [...eventsByColumn.values()].flatMap(createTimedEventLayout);
-  }, [getCalendarColumnIndex, renderedEvents]);
+    return [...eventsByColumn.values()].flatMap((columnEvents) =>
+      createTimedEventLayout(columnEvents, hiddenEventIds),
+    );
+  }, [getCalendarColumnIndex, hiddenEventIds, renderedEvents]);
 
   return (
     <div id={ID_GRID_EVENTS_TIMED}>
@@ -135,6 +141,7 @@ export const DayCalendarTimedEventsLayer = ({
           event={event}
           focusColor={resolveCalendarFocusColor(calendarLookup, event)}
           isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
+          isHidden={Boolean(event._id && hiddenEventIds.has(event._id))}
           isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
           isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
           key={event._id ?? "timed-draft"}

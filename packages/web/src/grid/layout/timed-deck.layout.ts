@@ -5,6 +5,7 @@ import {
   DECK_INDENT,
   DECK_MIN_WIDTH,
   DECK_RIGHT_RESERVE,
+  HIDDEN_EVENT_STRIP_WIDTH,
   TIMED_EVENT_FAN_GUTTER,
   TIMED_EVENT_FAN_INDENT,
   TIMED_EVENT_MIN_WIDTH,
@@ -29,14 +30,19 @@ interface DeckCandidate {
   start: Dayjs;
 }
 
+const NO_HIDDEN_EVENT_IDS: ReadonlySet<string> = new Set();
+
 export const createTimedEventLayout = (
   events: GridEvent[],
+  hiddenEventIds: ReadonlySet<string> = NO_HIDDEN_EVENT_IDS,
 ): TimedEventLayoutItem[] => {
   const items: TimedEventLayoutItem[] = events.map((event) => ({
     deckLayout: null,
     event,
   }));
-  const candidates = items.map(toDeckCandidate);
+  const candidates = items
+    .filter((item) => !item.event._id || !hiddenEventIds.has(item.event._id))
+    .map(toDeckCandidate);
 
   for (const dayBucket of bucketByStartDay(candidates)) {
     for (const group of groupByOverlap(dayBucket)) {
@@ -54,7 +60,12 @@ export const createTimedEventLayout = (
 export const applyTimedEventDisplayPosition = (
   position: EventPosition,
   deckLayout: TimedDeckLayout | null,
+  isHidden = false,
 ): EventPosition => {
+  if (isHidden) {
+    return { ...position, width: HIDDEN_EVENT_STRIP_WIDTH };
+  }
+
   const cardWidth = getTimedEventCardWidth(position.width);
 
   if (!deckLayout) {

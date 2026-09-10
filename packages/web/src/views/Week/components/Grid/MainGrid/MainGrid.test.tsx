@@ -15,6 +15,7 @@ import {
   seedPendingEventMutations,
 } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -27,7 +28,10 @@ import {
   initialDraftState,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import { DECK_INDENT } from "@web/grid/grid.constants";
+import {
+  DECK_INDENT,
+  HIDDEN_EVENT_STRIP_WIDTH,
+} from "@web/grid/grid.constants";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import {
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
@@ -40,6 +44,7 @@ import { Categories_Event } from "@web/common/types/web.event.types";
 
 let pendingEventIds: string[] = [];
 let seededWeekEvents: CompassEvent[] = [];
+let seededHiddenEventIds: readonly string[] = [];
 
 // DateTimeSchema requires an explicit offset; several fixtures below already
 // carry one ("Z"), but normalize defensively.
@@ -77,6 +82,7 @@ function Provider({ children }: PropsWithChildren) {
     const client = createCompassQueryClient();
     seedPendingEventMutations(client, pendingEventIds);
     seedEventQueries(client, seededWeekEvents.map(toStrictEvent));
+    seedHiddenEventIds(client, seededHiddenEventIds);
     return client;
   });
 
@@ -96,6 +102,7 @@ afterEach(() => {
   weekEventRegistry.clear();
   pendingEventIds = [];
   seededWeekEvents = [];
+  seededHiddenEventIds = [];
   useDraftStore.setState(initialDraftState);
 });
 
@@ -499,5 +506,44 @@ describe("saved Week event ownership", () => {
 
     fireEvent.blur(back);
     expect(Number(back.style.zIndex)).toBe(initialBackZIndex);
+  });
+
+  it("renders a hidden overlap as a strip so the neighbour keeps solo width", () => {
+    const hidden = createSavedEvent({
+      endDate: "2024-01-15T19:30:00.000Z",
+      startDate: "2024-01-15T18:30:00.000Z",
+      title: "Hidden overlap",
+    });
+    const visible = createSavedEvent({
+      endDate: "2024-01-15T19:45:00.000Z",
+      startDate: "2024-01-15T19:00:00.000Z",
+      title: "Visible overlap",
+    });
+    seededHiddenEventIds = [hidden._id!];
+    seedGrid([hidden, visible]);
+
+    render(
+      <Provider>
+        <MainGridEvents
+          measurements={measurements}
+          weekProps={createWeekProps()}
+        />
+      </Provider>,
+    );
+
+    const visibleCard = screen.getByRole("button", {
+      name: /timed event: visible overlap/i,
+    });
+    const hiddenCard = screen.getByRole("button", {
+      name: /^Hidden Timed event: Hidden overlap/,
+    });
+
+    expect(Number(visibleCard.style.zIndex)).toBe(ZIndex.LAYER_1);
+    expect(parseFloat(hiddenCard.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    expect(parseFloat(visibleCard.style.width)).toBeGreaterThan(
+      HIDDEN_EVENT_STRIP_WIDTH,
+    );
+    expect(weekEventRegistry.resolve(hidden._id!, "timed")).toBeNull();
+    expect(weekEventRegistry.resolve(visible._id!, "timed")).toBe(visibleCard);
   });
 });

@@ -19,6 +19,7 @@ interface Props {
   event: GridEventEntity;
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isHidden?: boolean;
   measurements: Measurements_Grid;
   motionMode?: GridEventMotionMode;
   onEventKeyDown?: (event: GridEventEntity) => void;
@@ -36,6 +37,7 @@ const GridEventBase = (
     event: _event,
     focusColor = null,
     interactionAttributes,
+    isHidden = false,
     measurements,
     motionMode = "idle",
     onEventKeyDown,
@@ -76,7 +78,7 @@ const GridEventBase = (
   });
   const position = shouldUseDraftSizing
     ? basePosition
-    : applyTimedEventDisplayPosition(basePosition, deckLayout);
+    : applyTimedEventDisplayPosition(basePosition, deckLayout, isHidden);
 
   const shouldFloatAboveDeck = isDragging || isResizing || (isDraft && !isDeck);
   const zIndex = shouldFloatAboveDeck
@@ -102,6 +104,7 @@ const GridEventBase = (
       focusColor={focusColor}
       onFocus={isDeck ? () => setIsFocused(true) : undefined}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       motionMode={motionMode}
       onEventKeyDown={onEventKeyDown}
       position={{ ...position, zIndex }}
@@ -119,6 +122,7 @@ export const GridEventMemo = memo(GridEvent, (prev, next) => {
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
     prev.interactionAttributes === next.interactionAttributes &&
+    prev.isHidden === next.isHidden &&
     prev.measurements === next.measurements &&
     prev.motionMode === next.motionMode &&
     // The visible window can move without the event or measurements changing
