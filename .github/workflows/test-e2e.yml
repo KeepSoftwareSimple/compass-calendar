@@ -88,7 +88,7 @@ jobs:
           - shard: 1
             specs: e2e/accessibility e2e/allday
           - shard: 2
-            specs: e2e/booking e2e/oauth e2e/auth
+            specs: e2e/booking e2e/oauth e2e/auth e2e/billing
           - shard: 3
             specs: e2e/timed
           - shard: 4

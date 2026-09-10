@@ -188,6 +188,31 @@ describe("PlanSection", () => {
     expect(receipt).toHaveAttribute("href", "https://invoice.stripe.com/paid");
     expect(receipt).toHaveAttribute("target", "_blank");
     expect(receipt).toHaveAttribute("rel", "noreferrer");
+
+    const receipts = screen.getByRole("table", { name: "Receipts" });
+    expect(
+      within(receipts).getByRole("columnheader", { name: "Date" }),
+    ).toBeInTheDocument();
+    expect(
+      within(receipts).getByRole("columnheader", { name: "Amount" }),
+    ).toBeInTheDocument();
+    expect(
+      within(receipts).getByRole("columnheader", { name: "Status" }),
+    ).toBeInTheDocument();
+    expect(
+      within(receipts).getByRole("columnheader", { name: "Receipt" }),
+    ).toBeInTheDocument();
+    expect(within(receipts).getAllByRole("row")).toHaveLength(3);
+  });
+
+  it("puts update card and cancel on one row, with cancel in red", async () => {
+    await renderPlan();
+
+    const update = await screen.findByRole("button", { name: "Update card" });
+    const cancel = screen.getByRole("button", { name: "Cancel subscription" });
+    expect(update.parentElement).toBe(cancel.parentElement);
+    expect(cancel).toHaveClass("bg-error");
+    expect(update).not.toHaveClass("bg-error");
   });
 
   it("opens confirm with C and cancels at period end", async () => {
@@ -272,6 +297,11 @@ describe("PlanSection", () => {
     expect(
       screen.queryByRole("button", { name: "Cancel subscription" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Update card" }).parentElement,
+    ).toBe(
+      screen.getByRole("button", { name: "Resume subscription" }).parentElement,
+    );
     expect(screen.getByText(`Ends ${PERIOD_END_LABEL}`)).toBeInTheDocument();
 
     await user.keyboard("r");

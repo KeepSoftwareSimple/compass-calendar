@@ -5,6 +5,7 @@ import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { getApiErrorMessage, getErrorStatus } from "@web/api/util/api.util";
 import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.util";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   APPLE_CREDENTIAL_INVALID_MESSAGE,
@@ -27,6 +28,7 @@ function connectedCopy(): string {
 
 export function finishCredentialConnect(provider: ProviderKind): void {
   track("calendar_connected", { source: "credential_form", provider });
+  trackSignupStep("calendar_connected", { method: provider });
   getToast().success(connectedCopy(), {
     ...getToastDefaultOptions(),
     toastId: SUCCESS_TOAST_ID,

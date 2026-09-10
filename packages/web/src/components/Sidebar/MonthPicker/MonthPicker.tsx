@@ -42,8 +42,8 @@ const headerActionsClassName = "!ml-2.5";
 const DAY_SELECTOR = ".react-datepicker__day";
 const TAB_STOP_DAY_SELECTOR = '.react-datepicker__day[tabindex="0"]';
 
-/** Day clicks are inert: the picker is keyboard driven and the confusion
- * tracker turns repeated clicks into a hint (data-pointer-action below). */
+/** Day clicks are inert: the picker is keyboard driven and the pointer hint
+ * teaches the keyboard path on click (data-pointer-action below). */
 const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
   const target = event.target;
   if (!(target instanceof Element) || !target.closest(DAY_SELECTOR)) return;

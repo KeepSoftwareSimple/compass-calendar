@@ -1,7 +1,11 @@
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { completeProviderAuthorization } from "./complete-provider-authorization";
-import { PROVIDER_AUTH_SCOPES_REQUIRED } from "./provider-authorization.constants";
+import {
+  MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+  PROVIDER_AUTH_CANCELLED_MESSAGE,
+  PROVIDER_AUTH_SCOPES_REQUIRED,
+} from "./provider-authorization.constants";
 import {
   consumeGoogleAuthNeedsConsentRetry,
   readProviderAuthorizationIntent,
@@ -129,8 +133,93 @@ describe("completeProviderAuthorization", () => {
       status: "failed",
       message: "Google did not grant a fresh authorization. Please try again.",
       returnPath: "/week",
+      reason: "oauth_exchange_failed",
     });
 
     expect(consumeGoogleAuthNeedsConsentRetry()).toBe(true);
+  });
+
+  // Declining at the consent screen used to share the generic authorization
+  // error, which read as a Compass crash and hid a whole class of drop-off
+  // inside the error count.
+  it("reports a consent-screen cancel as its own calm outcome", async () => {
+    const deps = makeDeps();
+    writeProviderAuthorizationIntent("google", "state-5", {
+      intent: "signIn",
+      returnPath: "/week",
+      createdAt: Date.now(),
+    });
+
+    await expect(
+      completeProviderAuthorization({
+        provider: "google",
+        ...deps,
+        search: "?state=state-5&error=access_denied",
+      }),
+    ).resolves.toEqual({
+      status: "failed",
+      message: PROVIDER_AUTH_CANCELLED_MESSAGE,
+      returnPath: "/week",
+      reason: "oauth_user_cancelled",
+    });
+
+    expect(deps.authApi.loginOrSignup).not.toHaveBeenCalled();
+  });
+
+  it("names the reason for each early return", async () => {
+    const deps = makeDeps();
+    // The stored intent is consumed on read, so each case seeds its own.
+    const seed = (state: string) =>
+      writeProviderAuthorizationIntent("google", state, {
+        intent: "signIn",
+        returnPath: "/week",
+        createdAt: Date.now(),
+      });
+
+    seed("state-6a");
+    await expect(
+      completeProviderAuthorization({
+        provider: "google",
+        ...deps,
+        search: "?code=abc",
+      }),
+    ).resolves.toMatchObject({ reason: "oauth_missing_state" });
+
+    await expect(
+      completeProviderAuthorization({
+        provider: "google",
+        ...deps,
+        search: "?state=unknown-state&code=abc",
+      }),
+    ).resolves.toMatchObject({ reason: "oauth_missing_intent" });
+
+    seed("state-6b");
+    await expect(
+      completeProviderAuthorization({
+        provider: "google",
+        ...deps,
+        search: "?state=state-6b",
+      }),
+    ).resolves.toMatchObject({ reason: "oauth_missing_code" });
+  });
+
+  it("reports short scopes separately from a generic failure", async () => {
+    const deps = makeDeps();
+    writeProviderAuthorizationIntent("google", "state-7", {
+      intent: "signIn",
+      returnPath: "/week",
+      createdAt: Date.now(),
+    });
+
+    await expect(
+      completeProviderAuthorization({
+        provider: "google",
+        ...deps,
+        search: callbackSearch("state-7", "openid email"),
+      }),
+    ).resolves.toMatchObject({
+      reason: "oauth_missing_scopes",
+      message: MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+    });
   });
 });

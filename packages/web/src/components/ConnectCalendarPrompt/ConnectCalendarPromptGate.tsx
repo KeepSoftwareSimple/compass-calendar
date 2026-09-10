@@ -14,7 +14,7 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { ConnectCalendarPrompt } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPrompt";
 import {
-  selectConnectCalendarPromptDismissed,
+  selectConnectCalendarPromptSnoozed,
   useConnectCalendarPromptStore,
 } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import {
@@ -28,8 +28,8 @@ export const ConnectCalendarPromptGate: FC = () => {
   const { isOpen: isAuthModalOpen } = useContext(AuthModalContext);
   const connections = useUserMetadataStore(selectSyncConnections);
   const metadataStatus = useUserMetadataStore(selectUserMetadataStatus);
-  const isDismissed = useConnectCalendarPromptStore(
-    selectConnectCalendarPromptDismissed,
+  const isSnoozed = useConnectCalendarPromptStore(
+    selectConnectCalendarPromptSnoozed,
   );
   const availableProviders = useAvailableConnectProviders();
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
@@ -40,7 +40,7 @@ export const ConnectCalendarPromptGate: FC = () => {
     authenticated &&
     metadataStatus === "loaded" &&
     connections.length === 0 &&
-    !isDismissed &&
+    !isSnoozed &&
     availableProviders.length > 0 &&
     persistentBrowserStore.isAvailable() &&
     !isAuthModalOpen &&

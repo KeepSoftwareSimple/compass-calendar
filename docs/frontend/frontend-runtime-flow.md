@@ -62,7 +62,7 @@ Files:
 - `packages/web/src/components/FirstEventPrompt/`
 
 `RootShell` mounts the welcome modal, Shortcut Showcase, the first-event
-prompt, global navigation / calendar-shell shortcuts, and pointer suppression.
+prompt, global navigation / calendar-shell shortcuts, and the click hint tracker.
 Those calendar-onboarding overlays are skipped on `/life` and on mobile OSes
 (the overlays would paint over `MobileGate`, so a phone user sees the gate
 first instead of a walkthrough they cannot use). Pointer suppression is also

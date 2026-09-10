@@ -46,12 +46,12 @@ test("text can be selected in the event title field", async ({ page }) => {
   expect(selected).toBe(true);
 });
 
-test("keyboard-only hint is not shown on the first mouse click", async ({
+test("the first click on an event teaches its jump key and Enter opens it", async ({
   page,
 }) => {
   await prepareCalendarPage(page);
 
-  const title = createEventTitle("No Immediate Hint");
+  const title = createEventTitle("Teach On Click");
   await openTimedEventFormWithKeyboard(page);
   await fillTitleAndSaveEventForm(page, title);
   await expectTimedEventVisible(page, title);
@@ -61,7 +61,40 @@ test("keyboard-only hint is not shown on the first mouse click", async ({
     .getByRole("button", { name: title });
 
   await eventButton.click({ force: true });
-  await expect(page.locator("[data-pointer-hint]")).toHaveCount(0);
+  const hint = page.locator("[data-pointer-hint]");
+  await expect(hint).toContainText("then Enter to open this event");
+
+  // The click focused the event, so the taught Enter works right away.
+  await page.keyboard.press("Enter");
+  await expect(getFormTitleInput(page)).toHaveValue(title);
+});
+
+test("an empty grid click teaches the digits that create there", async ({
+  page,
+}) => {
+  await prepareCalendarPage(page);
+
+  const grid = page.locator("#mainGrid");
+  const box = await grid.boundingBox();
+  if (!box) throw new Error("timed grid is not visible");
+  await page.mouse.click(box.x + box.width * 0.6, box.y + box.height * 0.5);
+
+  const hint = page.locator("[data-pointer-hint]");
+  await expect(hint).toContainText("to create an event at");
+  const digits = await hint.locator("kbd").first().innerText();
+  expect(digits).toMatch(/^\d{3,4}$/);
+  const timeLabel = (await hint.innerText()).match(/at (.+?)\.\s*$/)?.[1];
+  expect(timeLabel).toBeTruthy();
+  // "7:15 AM" -> "7:15"; the draft's name reads "Untitled event, 7:15 - 8:15 AM".
+  const startClock = (timeLabel ?? "").replace(/\s*[AP]M$/i, "");
+
+  // Typed time places a draft at the clicked slot; the form opens on Enter.
+  await page.keyboard.type(digits);
+  await expect(
+    grid.getByRole("button", {
+      name: new RegExp(`Untitled event, ${startClock} `),
+    }),
+  ).toBeVisible();
 });
 
 test("keyboard activation of native buttons still works", async ({ page }) => {

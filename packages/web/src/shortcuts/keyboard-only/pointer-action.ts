@@ -20,7 +20,7 @@ export const POINTER_ACTION_ATTRIBUTE = "data-pointer-action";
 export const POINTER_EVENT_ID_ATTRIBUTE = "data-pointer-event-id";
 export const POINTER_SHORTCUT_ATTRIBUTE = "data-pointer-shortcut";
 export const POINTER_PROVIDER_ATTRIBUTE = "data-pointer-provider";
-/** Opt a subtree out of capture-phase pointer suppression (MobileGate). */
+/** Opt a subtree out of the click hint (MobileGate, welcome, copy buttons). */
 export const POINTER_PASS_ATTRIBUTE = "data-pointer-pass";
 export const POINTER_EVENT_JUMP_REQUEST = "compass:pointer-event-jump";
 export const POINTER_GRID_CREATE_REQUEST = "compass:pointer-grid-create";
@@ -42,8 +42,16 @@ export type PointerActionId =
 
 export type PointerShortcutKey = string | string[];
 
+/**
+ * "Blocked" is historical: clicks pass through since #3171. The attempt now
+ * describes what a click aimed at so the hint can name the keyboard path,
+ * whether the click did nothing (`performed` false) or already ran the
+ * action through a working control (`performed` true).
+ */
 export type BlockedPointerAttempt = {
   actionId: PointerActionId | "grid.timed" | "grid.all-day" | "unknown";
+  /** True when the clicked control performs the action itself. */
+  performed?: boolean;
   eventId?: string;
   shortcutKey?: PointerShortcutKey;
   gridDate?: string;
@@ -52,10 +60,31 @@ export type BlockedPointerAttempt = {
   provider?: ProviderKind;
 };
 
+/**
+ * Keys to advertise after a working annotated control is clicked and the
+ * element carries no `data-pointer-shortcut` of its own.
+ */
+export const POINTER_ACTION_KEYS: Partial<
+  Record<PointerActionId, readonly string[]>
+> = {
+  [POINTER_ACTIONS.sidebarClose]: ["]"],
+  [POINTER_ACTIONS.sidebarOpen]: ["]"],
+  [POINTER_ACTIONS.goToToday]: ["T"],
+  [POINTER_ACTIONS.switchView]: ["W", "D", "L"],
+  [POINTER_ACTIONS.upNextDismiss]: ["Esc"],
+  [POINTER_ACTIONS.startTrial]: ["S"],
+  [POINTER_ACTIONS.reconnectGoogle]: ["G"],
+};
+
 const POINTER_ACTION_IDS = new Set<string>(Object.values(POINTER_ACTIONS));
 
 const isPointerActionId = (value: string): value is PointerActionId =>
   POINTER_ACTION_IDS.has(value);
+
+export const pointerActionKeys = (
+  actionId: BlockedPointerAttempt["actionId"],
+): readonly string[] | undefined =>
+  isPointerActionId(actionId) ? POINTER_ACTION_KEYS[actionId] : undefined;
 
 export const resolveBlockedPointerAttempt = (
   path: EventTarget[],

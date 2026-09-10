@@ -292,6 +292,65 @@ describe("computeHealthSnapshot", () => {
     expect(snapshot.subscriptions.neverNotified).toBe(0);
   });
 
+  // The push-delivery alarm compares neverNotified against the LIVE channels
+  // (healthy + renewSoon), so the gauge must count the same population. It
+  // did not: staging fired the alarm on 2026-09-09 while its only live channel
+  // was receiving pushes, because a dead connection's channel had expired
+  // unrenewed without ever being notified and made neverNotified >= live on
+  // its own. Google cannot notify an expired channel; it says nothing about
+  // delivery.
+  it("does not count an expired subscription that was never notified", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const googleConnection = await seedConnection("google", "healthy");
+    const connectionId = googleConnection._id as ConnectionId;
+
+    const live = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.updateSubscription(tenantId, principalId, live._id, {
+      subscriptionId: "ch-live",
+      subscriptionResourceId: "res-live",
+      subscriptionToken: "tok-live",
+      subscriptionExpiresAt: new Date(
+        NOW.getTime() + HEALTH_SUBSCRIPTION_RENEW_BEFORE_MS + 60_000,
+      ),
+    });
+    await resources.markChangeNotified(
+      tenantId,
+      principalId,
+      live._id,
+      new Date(NOW.getTime() - 60_000),
+    );
+
+    const expired = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.updateSubscription(tenantId, principalId, expired._id, {
+      subscriptionId: "ch-expired",
+      subscriptionResourceId: "res-expired",
+      subscriptionToken: "tok-expired",
+      subscriptionExpiresAt: new Date(NOW.getTime() - 60_000),
+    });
+
+    const snapshot = await computeHealthSnapshotForProvider(deps(), "google");
+    expect(snapshot.subscriptions).toEqual({
+      healthy: 1,
+      renewSoon: 0,
+      expired: 1,
+      missing: 0,
+      neverNotified: 0,
+    });
+  });
+
   it("emits one PostHog event per registered provider", async () => {
     const captured: Array<{
       event: string;

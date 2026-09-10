@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import IconButton from "@web/components/IconButton/IconButton";
 import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
-import { pointerConfusionActions } from "@web/shortcuts/keyboard-only/pointer-confusion.store";
 
 const COPIED_RESET_MS = 1500;
 const ICON_SIZE = 16;
@@ -15,7 +14,7 @@ export interface CopyButtonProps {
   /** Accessible name, e.g. "copy guest@example.com". */
   label: string;
   className?: string;
-  /** Called after a successful copy (for confusion-score telemetry). */
+  /** Called after a successful copy. */
   onCopied?: () => void;
 }
 
@@ -47,7 +46,6 @@ export function CopyButton({
     void copyText(text).then((didCopy) => {
       if (!didCopy) return;
       onCopied?.();
-      pointerConfusionActions.recordCopyButtonClick();
       setCopied(true);
       if (timeoutRef.current !== null) {
         window.clearTimeout(timeoutRef.current);

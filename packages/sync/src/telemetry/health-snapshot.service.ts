@@ -229,9 +229,18 @@ async function summarizeSubscriptions(
       // `$eq: null` matches a missing field too, which is what a resource
       // predating the field looks like — deliberately counted, since such a
       // resource has equally never been observed receiving a push.
+      //
+      // Live channels only, the same population as healthy + renewSoon. The
+      // push-delivery alarm compares this number against that population, so
+      // an expired channel counted here is a phantom: staging fired the alarm
+      // on 2026-09-09 with its one live channel receiving pushes fine, because
+      // a dead connection's channel had expired unrenewed without ever being
+      // notified and made neverNotified >= live on its own. Google cannot
+      // notify an expired channel, so it says nothing about delivery.
       collection.countDocuments({
         ...eventsFilter,
         subscriptionId: { $ne: null },
+        subscriptionExpiresAt: { $gte: now },
         pushLastReceivedAt: null,
       }),
     ]);

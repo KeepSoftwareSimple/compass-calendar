@@ -121,7 +121,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Pointer suppression (mouse permanently inert; keyboard clicks pass): `packages/web/src/shortcuts/keyboard-only/`
 - Escape ownership (modals/form before lower handlers): `packages/web/src/shortcuts/escape-ownership.ts`
 - App lock (suppress shortcuts while a modal owns the UI): `packages/web/src/shortcuts/app-lock.ts`
-- Mount point for global + pointer-suppression hooks: `packages/web/src/components/RootShell/RootShell.tsx`
+- Mount point for global + pointer-hint hooks: `packages/web/src/components/RootShell/RootShell.tsx`
 - Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md)
 
 ## Welcome, Showcase, And First-Event Handoff

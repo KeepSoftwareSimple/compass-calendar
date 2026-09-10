@@ -1,6 +1,10 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { pointerConfusionActions } from "@web/shortcuts/keyboard-only/pointer-confusion.store";
+import {
+  initialPointerHintState,
+  pointerHintActions,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { useFlashedWelcomeShortcut } from "./useFlashedWelcomeShortcut";
 import { WelcomeGuideBody } from "./WelcomeGuideBody";
 import { afterEach, describe, expect, it, mock } from "bun:test";
@@ -30,7 +34,7 @@ const captureLinkClick = (name: string) => {
 
 describe("WelcomeGuideBody", () => {
   afterEach(() => {
-    pointerConfusionActions.resetForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
   });
 
   it("explains that numbered shortcuts open the FAQ", () => {
@@ -148,7 +152,7 @@ describe("WelcomeGuideBody", () => {
     );
   });
 
-  it("flashes the matching FAQ key after a blocked click, then clears", async () => {
+  it("flashes the matching FAQ key after a click, then clears", async () => {
     renderWelcomeGuide();
 
     const question = screen.getByRole("button", {
@@ -158,7 +162,7 @@ describe("WelcomeGuideBody", () => {
     expect(hintWrap?.className).not.toMatch(/c-keycap-flash/);
 
     act(() => {
-      pointerConfusionActions.recordDeadClick({
+      pointerHintActions.pulse({
         actionId: "unknown",
         shortcutKey: "1",
       });
@@ -167,7 +171,7 @@ describe("WelcomeGuideBody", () => {
     expect(hintWrap?.className).toMatch(/c-keycap-flash/);
 
     act(() => {
-      pointerConfusionActions.recordDeadClick({ actionId: "unknown" });
+      pointerHintActions.pulse({ actionId: "unknown" });
     });
 
     expect(hintWrap?.className).not.toMatch(/c-keycap-flash/);
@@ -177,7 +181,7 @@ describe("WelcomeGuideBody", () => {
     const first = renderWelcomeGuide();
 
     act(() => {
-      pointerConfusionActions.recordDeadClick({
+      pointerHintActions.pulse({
         actionId: "unknown",
         shortcutKey: "1",
       });

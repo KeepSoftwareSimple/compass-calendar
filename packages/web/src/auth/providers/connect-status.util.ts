@@ -4,17 +4,31 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.util";
+import {
+  type SignupFailureReason,
+  trackSignupFailed,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
+import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import {
   GOOGLE_CONNECT_FAILED_TOAST_ID,
   getToastDefaultOptions,
 } from "@web/common/constants/toast.constants";
 import { getToast } from "@web/common/utils/toast/toast.port";
 
+/**
+ * Must stay in step with every status the sync callback can redirect with
+ * (`packages/sync/src/server/connection.routes.ts`). A status missing here
+ * makes `readConnectStatus` return null, which means the user lands on the
+ * calendar after a failed connect with no explanation at all.
+ */
 export type ConnectStatus =
   | "connected"
   | "declined"
   | "missingScopes"
+  | "stateMismatch"
+  | "consentRequired"
   | "error";
 
 export type ConnectRedirect = {
@@ -26,6 +40,8 @@ const STATUS_VALUES: readonly ConnectStatus[] = [
   "connected",
   "declined",
   "missingScopes",
+  "stateMismatch",
+  "consentRequired",
   "error",
 ];
 
@@ -39,6 +55,20 @@ const DECLINED_TOAST_ID: Record<ProviderKind, string> = {
   google: "google-connect-declined",
   microsoft: "connect-declined",
   apple: "connect-declined",
+};
+
+const STATE_MISMATCH_TOAST_ID = "connect-state-mismatch";
+const CONSENT_REQUIRED_TOAST_ID = "connect-consent-required";
+
+const FAILURE_REASON: Record<
+  Exclude<ConnectStatus, "connected">,
+  SignupFailureReason
+> = {
+  declined: "connect_declined",
+  missingScopes: "connect_missing_scopes",
+  stateMismatch: "connect_state_mismatch",
+  consentRequired: "connect_consent_required",
+  error: "connect_error",
 };
 
 const MISSING_SCOPES_TOAST_ID: Record<ProviderKind, string> = {
@@ -89,9 +119,16 @@ function errorCopy(provider: ProviderKind): string {
 
 function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
   const toast = getToast();
+  if (status !== "connected") {
+    trackSignupFailed(FAILURE_REASON[status], {
+      method: provider,
+      step: "calendar_connected",
+    });
+  }
   switch (status) {
     case "connected":
       track("calendar_connected", { source: "connect_redirect", provider });
+      trackSignupStep("calendar_connected", { method: provider });
       toast.success(connectedCopy(provider), {
         ...getToastDefaultOptions(),
         toastId: SUCCESS_TOAST_ID[provider],
@@ -112,6 +149,23 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
           toastId: MISSING_SCOPES_TOAST_ID[provider],
         },
       );
+      return;
+    case "stateMismatch":
+      toast.error(
+        "That connection link expired. Please try connecting again from Settings.",
+        {
+          ...getToastDefaultOptions(),
+          autoClose: false,
+          toastId: STATE_MISMATCH_TOAST_ID,
+        },
+      );
+      return;
+    case "consentRequired":
+      toast.error(CONSENT_REQUIRED_COPY, {
+        ...getToastDefaultOptions(),
+        autoClose: false,
+        toastId: CONSENT_REQUIRED_TOAST_ID,
+      });
       return;
     case "error":
       toast.error(errorCopy(provider), {

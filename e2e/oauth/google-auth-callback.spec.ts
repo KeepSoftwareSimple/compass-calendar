@@ -117,6 +117,38 @@ test("finishes a saved Google sign-in callback", async ({ page }) => {
   ).toBeNull();
 });
 
+// Cancelling at Google's consent screen used to share the generic
+// authorization error, so a deliberate choice read as a Compass crash.
+test("returns the user calmly after a consent-screen cancel", async ({
+  page,
+}) => {
+  const state = "cancelled-state";
+  const apiMocks = await prepareGoogleAuthCallbackPage(page);
+
+  await page.goto("/week");
+  await page.evaluate(
+    ({ key, value }) => {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    },
+    {
+      key: getIntentStorageKey(state),
+      value: { intent: "signIn", returnPath: "/week", createdAt: Date.now() },
+    },
+  );
+
+  await page.goto(
+    `${CALLBACK_PATH}?state=${encodeURIComponent(state)}&error=access_denied`,
+  );
+
+  await expect(
+    page.getByText(
+      "No problem, nothing was connected. You can sign in anytime.",
+    ),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/week$/);
+  expect(apiMocks.loginOrSignupRequests).toHaveLength(0);
+});
+
 // WP-06: the optional contacts grant rides the SAME sign-in callback. Either
 // outcome — granted or denied — must land the user signed in on /week with a
 // healthy connection; only the suggestContacts capability differs.
