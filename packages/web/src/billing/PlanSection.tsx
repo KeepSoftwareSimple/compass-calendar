@@ -283,7 +283,7 @@ export const PlanSection: FC<PlanSectionProps> = ({
 
           {receipts.length > 0 ? (
             <table className="w-full border-collapse text-sm text-text">
-              <caption className="mb-1 caption-top text-left text-sm text-text">
+              <caption className="mb-1 caption-top text-left font-normal text-sm text-text">
                 Receipts
               </caption>
               <thead className="sr-only">
