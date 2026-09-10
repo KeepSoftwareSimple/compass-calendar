@@ -1,3 +1,4 @@
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
@@ -99,8 +100,9 @@ class ErrorHandler {
       meta.correlationId = context.correlationId;
     }
     if (error instanceof BaseError) {
-      meta.result = error.result;
-      meta.errorType = error.code ?? error.constructor.name;
+      meta[POSTHOG_ERROR_TRACKING_PROPERTY.result] = error.result;
+      meta[POSTHOG_ERROR_TRACKING_PROPERTY.errorType] =
+        error.code ?? error.constructor.name;
     }
     logger[logLevelForError(error)](error.message || String(error), meta);
   }

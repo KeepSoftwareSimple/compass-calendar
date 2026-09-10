@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 const CALLBACK_PATH = "/auth/google/callback";
 const INTENT_STORAGE_PREFIX = "compass.googleAuthorizationIntent";
@@ -69,7 +70,10 @@ const prepareGoogleAuthCallbackPage = async (
       return route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({ google: { isConfigured: true } }),
+        body: JSON.stringify({
+          version: E2E_APP_CONFIG_VERSION,
+          google: { isConfigured: true },
+        }),
       });
     }
 

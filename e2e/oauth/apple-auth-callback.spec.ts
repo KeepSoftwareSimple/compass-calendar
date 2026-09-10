@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 const CALLBACK_PATH = "/auth/apple/callback";
 const INTENT_STORAGE_PREFIX = "compass.appleAuthorizationIntent";
@@ -49,6 +50,7 @@ const prepareAppleAuthCallbackPage = async (page: Page) => {
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          version: E2E_APP_CONFIG_VERSION,
           google: { isConfigured: true },
           apple: { signIn: true, calendar: false },
         }),

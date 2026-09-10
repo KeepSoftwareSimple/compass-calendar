@@ -1,4 +1,5 @@
 import { type Db } from "mongodb";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import {
   captureSafely,
   type PostHogCaptureClient,
@@ -14,7 +15,10 @@ import {
   type ProviderKind,
 } from "@core/types/sync/identity.contracts";
 import { type ProviderRegistry } from "@sync/providers/provider-registry";
-import { type StructuredServiceIdentity } from "@sync/service-identity";
+import {
+  type StructuredServiceIdentity,
+  SYNC_SERVICE_NAME,
+} from "@sync/service-identity";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 
@@ -63,10 +67,10 @@ export async function computeHealthSnapshotForProvider(
   ]);
 
   return SyncHealthSnapshotSchema.parse({
-    environment: deps.identity.environment,
+    [POSTHOG_ERROR_TRACKING_PROPERTY.environment]: deps.identity.environment,
     execution: deps.identity.execution,
     provider,
-    service: "compass-sync",
+    [POSTHOG_ERROR_TRACKING_PROPERTY.service]: SYNC_SERVICE_NAME,
     connections,
     jobs,
     subscriptions,

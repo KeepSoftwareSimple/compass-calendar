@@ -1,4 +1,5 @@
 import { expect, type Page } from "@playwright/test";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 /**
  * Signed-in calendar harness for the attendee e2e specs (Google by default,
@@ -330,6 +331,7 @@ export const prepareSignedInGooglePage = async (
     if (path.endsWith("/api/config")) {
       return route.fulfill(
         json({
+          version: E2E_APP_CONFIG_VERSION,
           google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },

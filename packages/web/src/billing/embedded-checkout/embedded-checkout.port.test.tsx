@@ -107,6 +107,7 @@ describe("useStripePublishableKey", () => {
       rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
         res(
           ctx.json({
+            version: "dev",
             google: { isConfigured: false },
             billing: {
               isConfigured: true,

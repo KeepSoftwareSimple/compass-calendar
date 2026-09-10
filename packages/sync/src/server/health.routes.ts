@@ -1,4 +1,5 @@
 import { type Express, type Request, type Response } from "express";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { Status } from "@core/errors/status.codes";
 import { type ReadinessRegistry } from "@sync/lifecycle/readiness";
 import { type StructuredServiceIdentity } from "@sync/service-identity";
@@ -38,6 +39,7 @@ export function registerHealthRoutes(
     res.status(report.ready ? Status.OK : Status.SERVICE_UNAVAILABLE).json({
       status: report.ready ? "ready" : "not_ready",
       checks: report.checks,
+      [POSTHOG_ERROR_TRACKING_PROPERTY.version]: deps.identity.version,
     });
   });
 }

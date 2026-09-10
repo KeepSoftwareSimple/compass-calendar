@@ -23,29 +23,37 @@ MCP tools to pull the actual signal before doing anything else:
 
 - Stack trace and exception type/message
 - Occurrence count, affected users, first/last seen
-- Event properties: `environment`, `service`, `version`, `namespace`,
-  `result`, `errorType` (some historical issues predate these and will be
-  generic)
+- Event properties listed in
+  `packages/core/src/constants/posthog-error-tracking.properties.ts`
+  (`POSTHOG_ERROR_TRACKING_PROPERTY`: environment, service, version,
+  namespace, result, errorType). Some historical issues predate these and
+  will be generic.
 - Whether this is `staging` or `production` (staging and prod currently
   share one PostHog project — a staging-only error is not urgent and should
   never justify an `automerge-candidate` label)
 
-The backend and sync services set `environment`/`service`/`version` as custom
-event properties, so PostHog's `environment` and `release` context groups do
-not return them — `query-error-tracking-issue-events` will look like the
-event carries nothing but `$exception_*` and `$lib`. Read them with SQL
-instead, substituting the issue's UUID:
+The backend and sync services set those keys as custom event properties (see
+`POSTHOG_ERROR_TRACKING_PROPERTY` in
+`packages/core/src/constants/posthog-error-tracking.properties.ts`), so
+PostHog's `environment` and `release` context groups do not return them —
+`query-error-tracking-issue-events` will look like the event carries nothing
+but `$exception_*` and `$lib`. Read them with SQL instead, substituting the
+issue's UUID and using the exact property names from that constants file:
 
 ```sql
 SELECT timestamp, properties.environment, properties.service,
-       properties.version, properties.namespace, properties.errorType,
-       properties.result
+       properties.version, properties.namespace, properties.result,
+       properties.errorType
 FROM events
 WHERE event = '$exception'
   AND properties.$exception_issue_id = '<issue-uuid>'
 ORDER BY timestamp DESC
 LIMIT 10
 ```
+
+If those property names ever change, update the constants file and this
+query together. `packages/scripts/src/testing/error-autofix-routine.test.ts`
+asserts they stay aligned.
 
 An issue can span both environments, so check every row rather than the
 first one: `staging` on one occurrence does not make the issue staging-only.

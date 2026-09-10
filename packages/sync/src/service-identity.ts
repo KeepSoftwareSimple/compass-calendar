@@ -21,15 +21,18 @@ export interface StructuredServiceIdentity {
   readonly name: string;
   readonly environment: NodeEnv;
   readonly execution: "passive" | "active";
+  readonly version: string;
 }
 
 export function buildServiceIdentity(input: {
   environment: NodeEnv;
   execution: "passive" | "active";
+  version: string;
 }): StructuredServiceIdentity {
   return {
     name: SYNC_SERVICE_NAME,
     environment: input.environment,
     execution: input.execution,
+    version: input.version,
   };
 }
