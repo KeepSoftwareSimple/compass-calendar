@@ -47,7 +47,7 @@
         "zod": "^4.5.4",
       },
       "devDependencies": {
-        "@faker-js/faker": "^9.6.0",
+        "@faker-js/faker": "^10.5.0",
         "@types/cors": "^2.8.12",
         "@types/express": "^4.17.13",
         "@types/lodash": "^4.17.24",
@@ -82,7 +82,7 @@
         "zod": "^4.5.4",
       },
       "devDependencies": {
-        "@faker-js/faker": "^9.6.0",
+        "@faker-js/faker": "^10.5.0",
         "@types/lodash": "^4.17.24",
         "mongodb": "^7.2.0",
         "supertokens-node": "^23.0.1",
@@ -125,7 +125,7 @@
         "zod": "^4.5.4",
       },
       "devDependencies": {
-        "@faker-js/faker": "^9.6.0",
+        "@faker-js/faker": "^10.5.0",
         "@types/express": "^4.17.13",
         "@types/node": "^22.13.10",
         "mongodb-memory-server": "^9.2.0",
@@ -169,7 +169,7 @@
         "zustand": "^5.0.14",
       },
       "devDependencies": {
-        "@faker-js/faker": "^9.6.0",
+        "@faker-js/faker": "^10.5.0",
         "@tailwindcss/postcss": "^4.1.14",
         "@tanstack/react-query-devtools": "^5",
         "@testing-library/dom": "^9.3.0",
@@ -303,7 +303,7 @@
 
     "@emotion/weak-memoize": ["@emotion/weak-memoize@0.4.0", "", {}, "sha512-snKqtPW01tN0ui7yu9rGv69aJXr/a/Ywvl11sUjNtEcRc+ng/mQriFL0wLXMef74iHa/EkftbDzU9F8iFbH+zg=="],
 
-    "@faker-js/faker": ["@faker-js/faker@9.9.0", "", {}, "sha512-OEl393iCOoo/z8bMezRlJu+GlRGlsKbUAN7jKB6LhnKoqKve5DXRpalbItIIcwnCjs1k/FOPjFzcA6Qn+H+YbA=="],
+    "@faker-js/faker": ["@faker-js/faker@10.6.0", "", {}, "sha512-3RQHgEtvL1Frl/d1cSreo7qhJ3Gk1OdNUai/CtZ8G+wYeRQnJih3s9xJ9/kgYekPQRdwgh0HXRPqMlzWGwivIQ=="],
 
     "@floating-ui/core": ["@floating-ui/core@1.7.5", "", { "dependencies": { "@floating-ui/utils": "^0.2.11" } }, "sha512-1Ih4WTWyw0+lKyFMcBHGbb5U5FtuHJuujoyyr5zTaWS5EYMeT6Jb2AuDeftsCsEuchO+mM2ij5+q9crhydzLhQ=="],
 

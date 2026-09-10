@@ -24,7 +24,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@faker-js/faker": "^9.6.0",
+    "@faker-js/faker": "^10.5.0",
     "@types/lodash": "^4.17.24",
     "mongodb": "^7.2.0",
     "supertokens-node": "^23.0.1",
