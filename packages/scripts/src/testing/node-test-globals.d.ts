@@ -15,7 +15,7 @@ declare module "bun:test" {
 
 declare global {
   // bun:test exports Mock, but many node tests use it without importing.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  type Mock<T extends (...args: any[]) => any = (...args: any[]) => any> =
-    BunMock<T>;
+  type Mock<
+    T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown,
+  > = BunMock<T>;
 }

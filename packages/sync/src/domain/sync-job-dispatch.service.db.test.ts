@@ -601,10 +601,7 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne(
-        stringIdFilter(calendar._id),
-        { $set: { active: false } },
-      );
+      .updateOne(stringIdFilter(calendar._id), { $set: { active: false } });
 
     const reader = new FakeReader([]);
     const outcome = await dispatchSyncJob(
@@ -644,10 +641,7 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne(
-        stringIdFilter(calendar._id),
-        { $set: { active: false } },
-      );
+      .updateOne(stringIdFilter(calendar._id), { $set: { active: false } });
 
     const outcome = await dispatchSyncJob(
       deps(new FakeReader([])),

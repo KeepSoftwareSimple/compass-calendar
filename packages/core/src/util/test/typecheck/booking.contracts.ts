@@ -43,16 +43,13 @@ export const BOOKING_MAX_HORIZON_DAYS = 60;
 /** Hours in the longest bookable horizon; notice beyond this can never yield a slot. */
 export const BOOKING_MAX_MIN_NOTICE_HOURS = BOOKING_MAX_HORIZON_DAYS * 24;
 
-export const BookingPageIdSchema =
-  ObjectIdStringSchema;
+export const BookingPageIdSchema = ObjectIdStringSchema;
 export type BookingPageId = z.infer<typeof BookingPageIdSchema>;
 
-export const BookingUserIdSchema =
-  ObjectIdStringSchema;
+export const BookingUserIdSchema = ObjectIdStringSchema;
 export type BookingUserId = z.infer<typeof BookingUserIdSchema>;
 
-export const BookingReservationIdSchema =
-  ObjectIdStringSchema;
+export const BookingReservationIdSchema = ObjectIdStringSchema;
 export type BookingReservationId = z.infer<typeof BookingReservationIdSchema>;
 
 export const BookingSlugSchema = z

@@ -84,10 +84,9 @@ describe("bootstrap-recovery sweep (enqueueForResources + listStalledBootstraps)
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .updateOne(
-        stringIdFilter(resource._id),
-        { $set: { bootstrapState, updatedAt } },
-      );
+      .updateOne(stringIdFilter(resource._id), {
+        $set: { bootstrapState, updatedAt },
+      });
     return { ...resource, bootstrapState, updatedAt };
   };
 

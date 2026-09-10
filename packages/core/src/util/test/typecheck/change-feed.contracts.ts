@@ -82,12 +82,7 @@ export const SyncInvalidationSchema = z.discriminatedUnion("kind", [
 ]);
 export type SyncInvalidation = z.infer<typeof SyncInvalidationSchema>;
 
-export const ChangeFeedCursorSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(1024)
-  ;
+export const ChangeFeedCursorSchema = z.string().trim().min(1).max(1024);
 export type ChangeFeedCursor = z.infer<typeof ChangeFeedCursorSchema>;
 
 export const InvalidationEnvelopeSchema = z.strictObject({

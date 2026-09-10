@@ -27,7 +27,7 @@ import {
 import userService from "@backend/user/services/user.service";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
-const asMock = <T extends (...args: any[]) => any>(fn: T): Mock<T> =>
+const asMock = <T extends (...args: unknown[]) => unknown>(fn: T): Mock<T> =>
   fn as unknown as Mock<T>;
 
 const getFirstCallArg = <T>(mockFn: unknown): T => {

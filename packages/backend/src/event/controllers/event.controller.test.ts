@@ -185,7 +185,9 @@ describe("EventController", () => {
     expect(json).toHaveBeenCalledWith({ events: [] });
     expect(listFullEvents).toHaveBeenCalledTimes(1);
     // The ownership read must be scoped to active calendars.
-    expect((listCalendars.mock.calls as unknown[][])[0]?.[1]).toEqual({ activeOnly: true });
+    expect((listCalendars.mock.calls as unknown[][])[0]?.[1]).toEqual({
+      activeOnly: true,
+    });
     const pageQuery = (
       (listFullEvents.mock.calls as unknown[][])[0] as never as [
         unknown,
@@ -554,7 +556,10 @@ describe("EventController", () => {
 
     expect(res.status).toHaveBeenCalledWith(Status.OK);
     const request = (
-      (submitCommand.mock.calls as unknown[][])[0] as never as [unknown, { input: unknown }]
+      (submitCommand.mock.calls as unknown[][])[0] as never as [
+        unknown,
+        { input: unknown },
+      ]
     )[1];
     expect(request.input).toMatchObject({
       kind: "create",
@@ -681,7 +686,10 @@ describe("EventController", () => {
 
     expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
     const request = (
-      (submitCommand.mock.calls as unknown[][])[0] as never as [unknown, { input: unknown }]
+      (submitCommand.mock.calls as unknown[][])[0] as never as [
+        unknown,
+        { input: unknown },
+      ]
     )[1];
     expect(request.input).toMatchObject({ kind: "delete", invitation: "all" });
   });

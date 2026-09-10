@@ -274,10 +274,7 @@ describe("JobRepository", () => {
       expect(await repo.fail(created._id, "owner")).toBe(true);
       await db
         .collection("jobs")
-        .updateOne(
-          stringIdFilter(created._id),
-          { $set: { requeuedCount: 3 } },
-        );
+        .updateOne(stringIdFilter(created._id), { $set: { requeuedCount: 3 } });
 
       const { job, outcome } = await repo.enqueueUrgent(
         enqueue({

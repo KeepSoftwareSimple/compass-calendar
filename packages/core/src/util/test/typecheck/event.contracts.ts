@@ -28,20 +28,10 @@ import {
 // never appear here. Schedule reuses the app-facing EventScheduleSchema
 // (event.contracts.ts) since timed-vs-all-day/DST semantics are identical.
 
-export const ClientEventIdSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(256)
-  ;
+export const ClientEventIdSchema = z.string().trim().min(1).max(256);
 export type ClientEventId = z.infer<typeof ClientEventIdSchema>;
 
-export const ProviderEventVersionSchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(1024)
-  ;
+export const ProviderEventVersionSchema = z.string().trim().min(1).max(1024);
 export type ProviderEventVersion = z.infer<typeof ProviderEventVersionSchema>;
 
 export const SyncEventOriginSchema = z.enum(["compass", "provider"]);
@@ -158,12 +148,7 @@ export type SyncEventCalendarId = z.infer<typeof SyncEventCalendarIdSchema>;
 // One derived, display-ready instance within the rolling sync horizon (12
 // months past / 18 months future). Never expand a non-ending series to
 // completion; project only the bounded window a query needs.
-export const OccurrenceKeySchema = z
-  .string()
-  .trim()
-  .min(1)
-  .max(512)
-  ;
+export const OccurrenceKeySchema = z.string().trim().min(1).max(512);
 export type OccurrenceKey = z.infer<typeof OccurrenceKeySchema>;
 
 // A full-fidelity event row for the browser calendar read. It carries
