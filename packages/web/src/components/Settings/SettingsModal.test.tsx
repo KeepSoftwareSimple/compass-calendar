@@ -1,5 +1,12 @@
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { rest } from "msw";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
@@ -802,8 +809,10 @@ describe("SettingsModal", () => {
 
     try {
       renderSettings({ authenticated: false, connections: [] });
-      userMetadataActions.set({
-        google: { connectionState: "NOT_CONNECTED", connections: [] },
+      act(() => {
+        userMetadataActions.set({
+          google: { connectionState: "NOT_CONNECTED", connections: [] },
+        });
       });
 
       await user.click(
@@ -814,6 +823,7 @@ describe("SettingsModal", () => {
       expect(beginConnection).not.toHaveBeenCalled();
       expect(toastMocks.error).not.toHaveBeenCalled();
     } finally {
+      cleanup();
       beginConnection.mockRestore();
       resetUseStartProviderAuthorizationForTests();
       resetProviderAvailabilityForTests();
