@@ -297,16 +297,16 @@ export const PlanSection: FC<PlanSectionProps> = ({
               <tbody>
                 {receipts.map((invoice) => (
                   <tr key={invoice.id}>
-                    <td className="w-full py-0.5 pr-3 whitespace-nowrap">
+                    <td className="w-full whitespace-nowrap py-0.5 pr-3">
                       {formatBillingDate(invoice.createdAt)}
                     </td>
-                    <td className="px-3 py-0.5 text-right tabular-nums whitespace-nowrap">
+                    <td className="whitespace-nowrap px-3 py-0.5 text-right tabular-nums">
                       {formatBillingMoney(invoice.amountPaid, invoice.currency)}
                     </td>
-                    <td className="px-3 py-0.5 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-3 py-0.5">
                       {formatInvoiceStatus(invoice.status)}
                     </td>
-                    <td className="py-0.5 pl-3 whitespace-nowrap">
+                    <td className="whitespace-nowrap py-0.5 pl-3">
                       {invoice.hostedInvoiceUrl ? (
                         <a
                           className="text-text underline-offset-4 hover:underline"
