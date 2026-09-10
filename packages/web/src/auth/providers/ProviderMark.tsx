@@ -8,11 +8,9 @@ import { GoogleLogo } from "@web/components/Icons/GoogleLogo";
 import { MicrosoftLogo } from "@web/components/Icons/MicrosoftLogo";
 
 /**
- * One monochrome logo per provider kind. Exhaustive on purpose: adding a
- * provider to ProviderKindSchema fails type-check here until its logo is
- * registered, so every account surface picks it up without a code path per
- * provider. The logos are decorative (aria-hidden); use them bare only next
- * to text that already names the provider.
+ * One monochrome logo per provider kind, exhaustive so a new provider cannot
+ * ship without one. The logos are decorative (aria-hidden); use them bare
+ * only next to text that already names the provider.
  */
 export const PROVIDER_LOGO: Record<ProviderKind, FC<{ size?: number }>> = {
   google: GoogleLogo,

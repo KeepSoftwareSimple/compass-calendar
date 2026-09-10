@@ -12,15 +12,9 @@ import {
   SSE_DEGRADED_STATUS,
 } from "@web/auth/providers/connect.util";
 import { MICROSOFT_SELF_HOSTING_DOC_URL } from "@web/auth/providers/connection-health-copy.util";
-import {
-  calendarProviderKind,
-  connectionProviderKind,
-} from "@web/auth/providers/connection-provider.util";
+import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import { ProviderMark } from "@web/auth/providers/ProviderMark";
-import {
-  CALENDAR_HOST_EXPLAINER,
-  defaultCalendarGroupLabel,
-} from "@web/auth/providers/provider-copy.util";
+import { CALENDAR_HOST_EXPLAINER } from "@web/auth/providers/provider-copy.util";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
 import { useDisconnectGoogleAccount } from "@web/auth/providers/useDisconnectAccount";
 import {
@@ -39,7 +33,11 @@ import {
 import { BOOKING_NAV_NEEDS_ATTENTION } from "@web/booking/booking-bookability.copy";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
+  accountKey,
+  accountLabel,
+  calendarAccount,
   compareCalendars,
+  connectionAccount,
   getWritableCalendars,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
@@ -395,13 +393,7 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
         {groups
           .filter((group) => group.calendars.length > 0)
           .map((group) => (
-            <optgroup
-              key={group.key}
-              label={defaultCalendarGroupLabel(
-                group.accountEmail,
-                group.provider,
-              )}
-            >
+            <optgroup key={accountKey(group)} label={accountLabel(group)}>
               {group.calendars.map((calendar) => (
                 <option key={calendar.id} value={calendar.id}>
                   {calendar.name}
@@ -435,6 +427,8 @@ const AccountsSection: FC<AccountsSectionProps> = ({
   showShortcuts,
 }) => {
   const { disconnect, disconnectingId } = useDisconnectGoogleAccount();
+  const defaultAccount = resolvedDefault && calendarAccount(resolvedDefault);
+  const defaultKey = defaultAccount && accountKey(defaultAccount);
 
   return (
     <div className="flex flex-col gap-3">
@@ -442,24 +436,24 @@ const AccountsSection: FC<AccountsSectionProps> = ({
         {connections.length === 0 ? (
           <p className="text-sm text-text-muted">No accounts connected yet.</p>
         ) : (
-          connections.map((connection) => (
-            <AccountRow
-              connection={connection}
-              disconnect={disconnect}
-              isConfirming={confirmingId === connection.id}
-              isDefault={
-                resolvedDefault !== undefined &&
-                connection.accountEmail === resolvedDefault.accountEmail &&
-                connectionProviderKind(connection) ===
-                  calendarProviderKind(resolvedDefault)
-              }
-              isDisconnecting={disconnectingId === connection.id}
-              key={connection.id}
-              setConfirming={(confirming) =>
-                setConfirmingId(confirming ? connection.id : null)
-              }
-            />
-          ))
+          connections.map((connection) => {
+            const account = connectionAccount(connection);
+            return (
+              <AccountRow
+                connection={connection}
+                disconnect={disconnect}
+                isConfirming={confirmingId === connection.id}
+                isDefault={
+                  account !== undefined && accountKey(account) === defaultKey
+                }
+                isDisconnecting={disconnectingId === connection.id}
+                key={connection.id}
+                setConfirming={(confirming) =>
+                  setConfirmingId(confirming ? connection.id : null)
+                }
+              />
+            );
+          })
         )}
       </div>
 
@@ -480,7 +474,7 @@ const AccountsSection: FC<AccountsSectionProps> = ({
 
 interface AccountRowProps {
   connection: SyncConnectionSummary;
-  disconnect: (connectionId: string, accountEmail: string) => Promise<void>;
+  disconnect: (connection: SyncConnectionSummary) => Promise<void>;
   isConfirming: boolean;
   isDefault: boolean;
   isDisconnecting: boolean;
@@ -590,9 +584,7 @@ const AccountRow: FC<AccountRowProps> = ({
             className={`${OUTLINE_BUTTON_CLASSNAME} text-error`}
             disabled={isDisconnecting}
             onClick={() =>
-              void disconnect(connection.id, accountEmail).finally(() =>
-                setConfirming(false),
-              )
+              void disconnect(connection).finally(() => setConfirming(false))
             }
             onPointerEnter={focusOnPointerEnter}
             ref={confirmButtonRef}

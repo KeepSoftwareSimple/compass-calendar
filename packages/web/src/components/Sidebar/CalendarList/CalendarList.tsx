@@ -3,7 +3,6 @@ import { type Calendar } from "@core/types/calendar.contracts";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { useUser } from "@web/auth/compass/user/hooks/useUser";
-import { defaultCalendarGroupLabel } from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import {
   selectSyncConnections,
@@ -11,6 +10,8 @@ import {
 } from "@web/auth/state/user-metadata.store";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
+  accountKey,
+  accountLabel,
   compareCalendars,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
@@ -113,21 +114,22 @@ export const CalendarList: FC = () => {
         )
       ) : (
         <div className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <section
-              aria-label={`Calendars for ${defaultCalendarGroupLabel(group.accountEmail, group.provider)}`}
-              key={group.key}
-              {...pageJumpAttrs(calendarAccountJumpId(group.key))}
-            >
-              <AccountSectionHeader
-                accountKey={group.key}
-                accountEmail={group.accountEmail}
-                connection={group.connection}
-                provider={group.provider}
-              />
-              {renderCollapsible(group.key, group.calendars)}
-            </section>
-          ))}
+          {groups.map((group) => {
+            const key = accountKey(group);
+            return (
+              <section
+                aria-label={`Calendars for ${accountLabel(group)}`}
+                key={key}
+                {...pageJumpAttrs(calendarAccountJumpId(key))}
+              >
+                <AccountSectionHeader
+                  account={group}
+                  connection={group.connection}
+                />
+                {renderCollapsible(key, group.calendars)}
+              </section>
+            );
+          })}
           {ungrouped.length > 0 ? (
             groups.length > 0 && email ? (
               <section aria-label={`Calendars for ${email}`}>

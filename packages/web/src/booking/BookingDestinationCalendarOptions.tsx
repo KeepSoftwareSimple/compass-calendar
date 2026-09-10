@@ -1,7 +1,10 @@
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { formatBookingDestinationOptionLabel } from "@web/booking/booking-conference.copy";
-import { groupCalendarsByAccount } from "@web/calendars/calendar.util";
+import {
+  accountKey,
+  groupCalendarsByAccount,
+} from "@web/calendars/calendar.util";
 
 interface BookingDestinationCalendarOptionsProps {
   calendars: Calendar[];
@@ -18,7 +21,7 @@ export function BookingDestinationCalendarOptions({
       {groups
         .filter((group) => group.calendars.length > 0)
         .map((group) => (
-          <optgroup key={group.key} label={group.accountEmail}>
+          <optgroup key={accountKey(group)} label={group.accountEmail}>
             {group.calendars.map((calendar) => (
               <option key={calendar.id} value={calendar.id}>
                 {formatBookingDestinationOptionLabel(calendar)}

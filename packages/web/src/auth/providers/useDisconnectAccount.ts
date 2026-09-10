@@ -1,19 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { AuthApi } from "@web/api/auth.api";
 import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.util";
-import {
-  calendarProviderKind,
-  connectionProviderKind,
-} from "@web/auth/providers/connection-provider.util";
 import { clearAccountReconnectRequired } from "@web/auth/providers/reconnect.state";
-import {
-  selectSyncConnections,
-  userMetadataActions,
-  useUserMetadataStore,
-} from "@web/auth/state/user-metadata.store";
+import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
+import {
+  accountKey,
+  calendarAccount,
+  connectionAccount,
+} from "@web/calendars/calendar.util";
 import {
   ACCOUNT_DISCONNECTED_TOAST_ID,
   GOOGLE_REVOKED_TOAST_ID,
@@ -31,14 +29,18 @@ import { eventQueryKeys } from "@web/events/queries/event.query.keys";
  * instance.
  */
 export function useDisconnectGoogleAccount(): {
-  disconnect: (connectionId: string, accountEmail: string) => Promise<void>;
+  disconnect: (connection: SyncConnectionSummary) => Promise<void>;
   disconnectingId: string | null;
 } {
   const queryClient = useQueryClient();
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
   const disconnect = useCallback(
-    (connectionId: string, accountEmail: string) => {
+    (connection: SyncConnectionSummary) => {
+      const connectionId = connection.id;
+      const accountEmail = connection.accountEmail ?? "Unknown account";
+      const account = connectionAccount(connection);
+      const key = account && accountKey(account);
       setDisconnectingId(connectionId);
       return AuthApi.disconnectGoogleConnection(connectionId)
         .then(async () => {
@@ -54,22 +56,16 @@ export function useDisconnectGoogleAccount(): {
           // caches right away - the calendars refetch below can still race
           // backend cleanup and return them for a beat, which was leaving the
           // disconnected account visible in the Accounts panel and the
-          // Default Calendar picker. Match on provider as well as email so a
-          // same-address account on another provider keeps its calendars.
-          const provider = connectionProviderKind(
-            selectSyncConnections(useUserMetadataStore.getState()).find(
-              (connection) => connection.id === connectionId,
-            ),
-          );
+          // Default Calendar picker. Only this account's calendars go; a
+          // same-address account on another provider keeps its own.
           userMetadataActions.removeConnection(connectionId);
           queryClient.setQueryData<Calendar[]>(
             calendarQueryKeys.all,
             (calendars) =>
-              calendars?.filter(
-                (calendar) =>
-                  calendar.accountEmail !== accountEmail ||
-                  calendarProviderKind(calendar) !== provider,
-              ),
+              calendars?.filter((calendar) => {
+                const owner = calendarAccount(calendar);
+                return !owner || accountKey(owner) !== key;
+              }),
           );
 
           // The account's calendars and its events both disappear, and the

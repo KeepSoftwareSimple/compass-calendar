@@ -5,6 +5,7 @@ import {
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
 import {
+  accountKey,
   canInviteOnCalendar,
   compareCalendars,
   getDefaultTargetCalendar,
@@ -530,7 +531,7 @@ describe("groupCalendarsByAccount", () => {
     );
 
     expect(ungrouped).toEqual([]);
-    expect(groups.map((group) => group.key)).toEqual([
+    expect(groups.map(accountKey)).toEqual([
       "google:lance@gmail.com",
       "microsoft:lance@gmail.com",
     ]);
@@ -570,7 +571,10 @@ describe("groupCalendarsByAccount", () => {
     );
 
     expect(ungrouped).toEqual([]);
-    expect(groups[0]?.key).toBe("microsoft:lance@gmail.com");
+    expect(groups[0]).toMatchObject({
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+    });
     expect(groups[0]?.calendars).toEqual([local]);
     expect(groups[1]?.calendars).toEqual([googleCal]);
   });

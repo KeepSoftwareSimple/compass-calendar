@@ -69,10 +69,8 @@ const renderHeader = (overrides: Partial<SyncConnectionSummary> = {}): void => {
   const provider = connectionProviderKind(connection);
   render(
     <AccountSectionHeader
-      accountEmail={EMAIL}
-      accountKey={accountKey(provider, EMAIL)}
+      account={{ provider, accountEmail: EMAIL }}
       connection={connection}
-      provider={provider}
     />,
     { wrapper },
   );
@@ -99,7 +97,9 @@ describe("AccountSectionHeader", () => {
   });
 
   it("starts collapsed when the account's key is already in the collapsed store", () => {
-    toggleAccountCollapsed(accountKey("google", EMAIL));
+    toggleAccountCollapsed(
+      accountKey({ provider: "google", accountEmail: EMAIL }),
+    );
 
     renderHeader();
 
@@ -111,7 +111,9 @@ describe("AccountSectionHeader", () => {
   it("keeps collapse state per provider, not per email", () => {
     // The same address connected on Microsoft was collapsed; the Google
     // account with that address must still start expanded.
-    toggleAccountCollapsed(accountKey("microsoft", EMAIL));
+    toggleAccountCollapsed(
+      accountKey({ provider: "microsoft", accountEmail: EMAIL }),
+    );
 
     renderHeader();
 

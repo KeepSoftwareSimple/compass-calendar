@@ -1,5 +1,8 @@
 import { type Calendar } from "@core/types/calendar.contracts";
-import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import {
+  type ProviderKind,
+  providerDisplayName,
+} from "@core/types/sync/identity.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   calendarProviderKind,
@@ -116,23 +119,44 @@ export function spansMultipleAccounts(calendars: Calendar[]): boolean {
 }
 
 /**
- * The web app's identity for one connected account. An email alone is not
- * enough: the same address can back a Google account and a Microsoft
- * account (a Gmail address used as a Microsoft login, or the reverse), and
- * both `Calendar` and `SyncConnectionSummary` carry `provider` next to
- * `accountEmail`, so the pair is what every account-shaped key uses.
+ * The web app's identity for one connected account: provider + email. An
+ * email alone is not enough, since the same address can be a Google account
+ * and a Microsoft account, and both `Calendar` and `SyncConnectionSummary`
+ * already carry `provider` next to `accountEmail`.
  */
-export const accountKey = (
-  provider: ProviderKind,
-  accountEmail: string,
-): string => `${provider}:${accountEmail}`;
-
 export interface AccountRef {
-  /** `accountKey(provider, accountEmail)`: React keys, DOM ids, collapse state. */
-  key: string;
   provider: ProviderKind;
   accountEmail: string;
 }
+
+/** String form, for React keys, DOM ids, collapse state, and page-jump ids. */
+export const accountKey = ({ provider, accountEmail }: AccountRef): string =>
+  `${provider}:${accountEmail}`;
+
+/** Human form: "ahab@pequod.com (Google)". */
+export const accountLabel = ({ provider, accountEmail }: AccountRef): string =>
+  `${accountEmail} (${providerDisplayName(provider)})`;
+
+/** Undefined when the connection reported no email. */
+export const connectionAccount = (
+  connection: Pick<SyncConnectionSummary, "provider" | "accountEmail">,
+): AccountRef | undefined =>
+  connection.accountEmail
+    ? {
+        provider: connectionProviderKind(connection),
+        accountEmail: connection.accountEmail,
+      }
+    : undefined;
+
+/** Undefined for the local calendar and for accounts that reported no email. */
+export const calendarAccount = (
+  calendar: Pick<Calendar, "provider" | "accountEmail">,
+): AccountRef | undefined => {
+  const provider = calendarProviderKind(calendar);
+  return provider && calendar.accountEmail
+    ? { provider, accountEmail: calendar.accountEmail }
+    : undefined;
+};
 
 export interface AccountGroup extends AccountRef {
   connection: SyncConnectionSummary | undefined;
@@ -160,49 +184,36 @@ export function groupCalendarsByAccount(
   const groups: AccountGroup[] = [];
   const byKey = new Map<string, AccountGroup>();
   const ungrouped: Calendar[] = [];
+  const ensureGroup = (
+    account: AccountRef,
+    connection: SyncConnectionSummary | undefined,
+  ): AccountGroup => {
+    const key = accountKey(account);
+    let group = byKey.get(key);
+    if (!group) {
+      group = { ...account, connection, calendars: [] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    return group;
+  };
 
   // Seed in connection order so accounts appear oldest-connected first,
   // regardless of the order calendars came back in.
   for (const connection of connections) {
-    const { accountEmail } = connection;
-    if (!accountEmail) continue;
-    const provider = connectionProviderKind(connection);
-    const key = accountKey(provider, accountEmail);
-    if (byKey.has(key)) continue;
-    const group: AccountGroup = {
-      key,
-      provider,
-      accountEmail,
-      connection,
-      calendars: [],
-    };
-    byKey.set(key, group);
-    groups.push(group);
+    const account = connectionAccount(connection);
+    if (account) ensureGroup(account, connection);
   }
 
   for (const calendar of calendars) {
-    const { accountEmail } = calendar;
-    const provider = calendarProviderKind(calendar);
-    if (!accountEmail || !provider) {
+    const account = calendarAccount(calendar);
+    if (!account) {
       ungrouped.push(calendar);
       continue;
     }
-    const key = accountKey(provider, accountEmail);
-    let group = byKey.get(key);
-    if (!group) {
-      // A calendar whose account has no connection summary yet (metadata and
-      // the calendar list can load a moment apart). Still give it a section.
-      group = {
-        key,
-        provider,
-        accountEmail,
-        connection: undefined,
-        calendars: [],
-      };
-      byKey.set(key, group);
-      groups.push(group);
-    }
-    group.calendars.push(calendar);
+    // A calendar whose account has no connection summary yet (metadata and
+    // the calendar list can load a moment apart) still gets a section.
+    ensureGroup(account, undefined).calendars.push(calendar);
   }
 
   return nestLocalCalendarInMatchingGroup(groups, ungrouped, compassEmail);

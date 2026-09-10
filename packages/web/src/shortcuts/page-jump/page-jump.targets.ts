@@ -23,8 +23,11 @@
  * and each account) are omitted so those chips still appear when mounted.
  */
 
-import { defaultCalendarGroupLabel } from "@web/auth/providers/provider-copy.util";
-import { type AccountRef } from "@web/calendars/calendar.util";
+import {
+  type AccountRef,
+  accountKey,
+  accountLabel,
+} from "@web/calendars/calendar.util";
 import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 
 export const PAGE_JUMP_ATTRIBUTE = "data-page-jump";
@@ -82,7 +85,6 @@ const withPickDigits = (
     digit: PICK_KEY_LABELS[index] ?? "",
   }));
 
-/** `accountKey` is provider-scoped, so same-email accounts get distinct ids. */
 export const calendarAccountJumpId = (
   accountKey: string,
 ): `${typeof CALENDAR_ACCOUNT_JUMP_ID_PREFIX}${string}` =>
@@ -100,11 +102,8 @@ const calendarListJumpTargets = (
   accounts.length === 0
     ? [CALENDARS_LIST_TARGET]
     : accounts.map((account) => ({
-        id: calendarAccountJumpId(account.key),
-        label: defaultCalendarGroupLabel(
-          account.accountEmail,
-          account.provider,
-        ),
+        id: calendarAccountJumpId(accountKey(account)),
+        label: accountLabel(account),
       }));
 
 /**

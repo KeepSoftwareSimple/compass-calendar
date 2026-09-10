@@ -4,9 +4,7 @@ import {
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
-import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
-import { type AccountRef, accountKey } from "@web/calendars/calendar.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 
 /**
@@ -63,12 +61,4 @@ export function createMockConnection(
     provider: "google",
     ...overrides,
   };
-}
-
-/** The provider-scoped account ref a connection or calendar group resolves to. */
-export function createMockAccountRef(
-  accountEmail: string,
-  provider: ProviderKind = "google",
-): AccountRef {
-  return { key: accountKey(provider, accountEmail), provider, accountEmail };
 }

@@ -1,5 +1,4 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { createMockAccountRef } from "@web/__tests__/utils/factories/calendar.factory";
 import { PageJumpHintOverlay } from "@web/shortcuts/page-jump/PageJumpHintOverlay";
 import {
   buildCalendarPageJumpTargets,
@@ -157,13 +156,14 @@ describe("PageJumpHintOverlay", () => {
     addAnchor("view-select");
     addAnchor("month-picker");
     addAnchor("up-next");
-    const work = createMockAccountRef("ahab@pequod.com");
-    const personal = createMockAccountRef("ahab@gmail.com");
-    addAnchor(calendarAccountJumpId(work.key));
-    addAnchor(calendarAccountJumpId(personal.key));
+    addAnchor(calendarAccountJumpId("google:ahab@pequod.com"));
+    addAnchor(calendarAccountJumpId("google:ahab@gmail.com"));
     render(
       <PageJumpHintOverlay
-        targets={buildCalendarPageJumpTargets([work, personal])}
+        targets={buildCalendarPageJumpTargets([
+          { provider: "google", accountEmail: "ahab@pequod.com" },
+          { provider: "google", accountEmail: "ahab@gmail.com" },
+        ])}
         visible={true}
       />,
     );

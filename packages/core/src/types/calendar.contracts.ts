@@ -4,13 +4,16 @@ import {
   HexColorSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
-import { type ProviderCapability } from "@core/types/sync/identity.contracts";
+import {
+  type ProviderCapability,
+  ProviderKindSchema,
+} from "@core/types/sync/identity.contracts";
 
-export const CalendarProviderSchema = z.enum([
-  "local",
-  "google",
-  "microsoft",
-  "apple",
+// "local" is the browser-only calendar; everything else is a connected
+// provider account, so the type is `"local" | ProviderKind` by construction.
+export const CalendarProviderSchema = z.union([
+  z.literal("local"),
+  ProviderKindSchema,
 ]);
 export type CalendarProvider = z.infer<typeof CalendarProviderSchema>;
 

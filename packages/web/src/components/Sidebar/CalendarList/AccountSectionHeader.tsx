@@ -1,9 +1,9 @@
 import { CaretDownIcon } from "@phosphor-icons/react";
 import classNames from "classnames";
 import { type FC } from "react";
-import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { ProviderMark } from "@web/auth/providers/ProviderMark";
+import { type AccountRef, accountKey } from "@web/calendars/calendar.util";
 import {
   accountCalendarListId,
   toggleAccountCollapsed,
@@ -11,26 +11,23 @@ import {
 } from "@web/calendars/collapsed-accounts.store";
 import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
 /**
- * Heading for one connected account's calendars: the account email and its
+ * Heading for one connected account's calendars: the account email and
  * provider mark (together the collapse toggle for its calendar rows, see
  * CalendarList.tsx), that account's own sync status, and its own
- * reconnect/refresh action. The mark is what tells two accounts apart when
- * the same address is connected on two providers. Every
- * connected account gets one, a lone account included - one account and five
- * accounts render the same shape, so the two can't drift apart the way a
- * separate single-account header did.
+ * reconnect/refresh action. Every connected account gets one, a lone account
+ * included - one account and five accounts render the same shape, so the two
+ * can't drift apart the way a separate single-account header did.
  *
  * Adding/disconnecting accounts lives in the command palette's "Add account" /
  * "Show accounts" items - not a permanent row or icon here, which stayed noisy
  * for accounts with many subcalendars.
  */
 export const AccountSectionHeader: FC<{
-  /** `accountKey(provider, email)`: the collapse-state and aria-controls key. */
-  accountKey: string;
-  accountEmail: string;
-  provider: ProviderKind;
+  account: AccountRef;
   connection: SyncConnectionSummary | undefined;
-}> = ({ accountKey, accountEmail, provider, connection }) => {
+}> = ({ account, connection }) => {
+  const key = accountKey(account);
+  const { accountEmail, provider } = account;
   const {
     actionLabel,
     commandAction,
@@ -39,16 +36,16 @@ export const AccountSectionHeader: FC<{
     isRefreshing,
     syncStatus,
   } = useAccountHeaderStatus(connection);
-  const isCollapsed = useCollapsedAccountKeys().has(accountKey);
+  const isCollapsed = useCollapsedAccountKeys().has(key);
 
   return (
     <div className="mb-1.5">
       <h2 className="mb-0.5 font-semibold text-sm leading-none">
         <button
-          aria-controls={accountCalendarListId(accountKey)}
+          aria-controls={accountCalendarListId(key)}
           aria-expanded={!isCollapsed}
           className="c-focus-ring group flex w-full min-w-0 items-center gap-1 rounded-xs text-left"
-          onClick={() => toggleAccountCollapsed(accountKey)}
+          onClick={() => toggleAccountCollapsed(key)}
           type="button"
         >
           <CaretDownIcon

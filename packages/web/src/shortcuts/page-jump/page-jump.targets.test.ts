@@ -1,4 +1,5 @@
-import { createMockAccountRef as account } from "@web/__tests__/utils/factories/calendar.factory";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { type AccountRef, accountKey } from "@web/calendars/calendar.util";
 import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 import {
   buildCalendarPageJumpTargets,
@@ -13,6 +14,11 @@ import {
   type PageJumpTargetId,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { afterEach, describe, expect, it } from "bun:test";
+
+const account = (
+  accountEmail: string,
+  provider: ProviderKind = "google",
+): AccountRef => ({ provider, accountEmail });
 
 const addAnchor = (id: PageJumpTargetId): HTMLElement => {
   const anchor = document.createElement("section");
@@ -173,12 +179,12 @@ describe("buildDayPageJumpTargets", () => {
       { digit: "4", id: "up-next", label: "Up next" },
       {
         digit: "5",
-        id: calendarAccountJumpId(work.key),
+        id: calendarAccountJumpId(accountKey(work)),
         label: "ahab@pequod.com (Google)",
       },
       {
         digit: "6",
-        id: calendarAccountJumpId(personal.key),
+        id: calendarAccountJumpId(accountKey(personal)),
         label: "ahab@gmail.com (Google)",
       },
     ]);
@@ -198,7 +204,7 @@ describe("buildDayPageJumpTargets", () => {
 
     expect(targets).toHaveLength(PICK_KEY_LABELS.length);
     expect(targets.at(-1)).toMatchObject({
-      id: calendarAccountJumpId(account("c@x.com").key),
+      id: calendarAccountJumpId(accountKey(account("c@x.com"))),
       digit: PICK_KEY_LABELS.at(-1),
     });
     expect(
@@ -334,7 +340,9 @@ describe("focusPageJumpTarget", () => {
   });
 
   it("finds an account anchor whose key contains CSS-significant characters", () => {
-    const id = calendarAccountJumpId(account("tyler+work@gmail.com").key);
+    const id = calendarAccountJumpId(
+      accountKey(account("tyler+work@gmail.com")),
+    );
     const anchor = addAnchor(id);
     const toggle = document.createElement("button");
     anchor.append(toggle);

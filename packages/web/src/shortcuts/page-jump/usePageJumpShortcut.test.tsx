@@ -1,6 +1,5 @@
 import { resolveModifier } from "@tanstack/react-hotkeys";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createMockAccountRef } from "@web/__tests__/utils/factories/calendar.factory";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -206,7 +205,7 @@ describe("usePageJumpShortcut", () => {
       const firstAnchor = document.createElement("section");
       firstAnchor.setAttribute(
         PAGE_JUMP_ATTRIBUTE,
-        calendarAccountJumpId(createMockAccountRef("ahab@pequod.com").key),
+        calendarAccountJumpId("google:ahab@pequod.com"),
       );
       firstAnchor.append(first);
       document.body.append(firstAnchor);
@@ -215,7 +214,7 @@ describe("usePageJumpShortcut", () => {
       const secondAnchor = document.createElement("section");
       secondAnchor.setAttribute(
         PAGE_JUMP_ATTRIBUTE,
-        calendarAccountJumpId(createMockAccountRef("ahab@gmail.com").key),
+        calendarAccountJumpId("google:ahab@gmail.com"),
       );
       secondAnchor.append(second);
       document.body.append(secondAnchor);
@@ -223,8 +222,8 @@ describe("usePageJumpShortcut", () => {
       renderHook(() =>
         usePageJumpShortcut(
           buildCalendarPageJumpTargets([
-            createMockAccountRef("ahab@pequod.com"),
-            createMockAccountRef("ahab@gmail.com"),
+            { provider: "google", accountEmail: "ahab@pequod.com" },
+            { provider: "google", accountEmail: "ahab@gmail.com" },
           ]),
         ),
       );

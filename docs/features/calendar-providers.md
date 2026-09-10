@@ -49,7 +49,7 @@ each with a tracking issue:
   Manage Accounts.
 - **An account is provider + email, never email alone.** The same address can
   be a Google account and a Microsoft account, so the web app keys sidebar
-  sections, collapse state, and Settings rows by `accountKey(provider, email)`
+  sections, collapse state, and Settings rows by `accountKey` (provider + email)
   and shows a provider mark (the monochrome logo) beside every account email.
 - **No em-dashes** in user-facing copy.
 

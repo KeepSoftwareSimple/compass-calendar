@@ -3,9 +3,9 @@ import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 
 // Collapsed account keys only - absence means expanded (default). A Set of
-// `accountKey(provider, email)` strings; unknown or malformed storage (and
-// the email-only keys an older build wrote) falls back to expanded rather
-// than hiding every account's calendars.
+// `accountKey` strings; unknown or malformed storage (and the email-only keys
+// an older build wrote) falls back to expanded rather than hiding every
+// account's calendars.
 const CollapsedAccountsSchema = z.array(z.string().trim().min(1)).readonly();
 
 export function readCollapsedAccountKeys(): ReadonlySet<string> {

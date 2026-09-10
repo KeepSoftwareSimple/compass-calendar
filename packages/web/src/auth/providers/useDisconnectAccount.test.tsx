@@ -55,7 +55,7 @@ describe("useDisconnectGoogleAccount", () => {
     const { result } = renderHook(() => useDisconnectGoogleAccount(), {
       wrapper,
     });
-    await act(() => result.current.disconnect("ms-conn", EMAIL));
+    await act(() => result.current.disconnect(microsoft));
 
     expect(disconnect).toHaveBeenCalledWith("ms-conn");
     // No calendar query is observed here, so the invalidation does not
