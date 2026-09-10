@@ -148,7 +148,7 @@ describe("ConnectProviderChooser", () => {
     const user = userEvent.setup();
     available = ["google", "microsoft", "apple"];
 
-    render(<ConnectProviderChooser idleLabel="Add account" />);
+    renderChooser(<ConnectProviderChooser idleLabel="Add account" />);
 
     await user.click(screen.getByRole("button", { name: /Add account/ }));
 
