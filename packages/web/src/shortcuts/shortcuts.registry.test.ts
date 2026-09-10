@@ -102,6 +102,9 @@ describe("shortcuts.registry", () => {
       expect(byId["focus-notice"]?.keys).toEqual(["f"]);
       expect(byId["edit-menu"]?.keys).toEqual(["m"]);
       expect(byId["edit-menu"]?.label).toBe("Open event menu");
+      expect(byId["edit-hide"]?.keys).toEqual(["x"]);
+      expect(byId["edit-hide"]?.label).toBe("Hide or show focused event");
+      expect(byId["edit-hide"]?.requiresWrite).toBeUndefined();
 
       // Shift+F10 still opens the menu where the OS has that key; it is just
       // not advertised, since it would duplicate the m row's label.
