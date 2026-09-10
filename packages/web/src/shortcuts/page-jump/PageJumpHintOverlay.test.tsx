@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import { createMockAccountRef } from "@web/__tests__/utils/factories/calendar.factory";
 import { PageJumpHintOverlay } from "@web/shortcuts/page-jump/PageJumpHintOverlay";
 import {
   buildCalendarPageJumpTargets,
@@ -156,24 +157,23 @@ describe("PageJumpHintOverlay", () => {
     addAnchor("view-select");
     addAnchor("month-picker");
     addAnchor("up-next");
-    addAnchor(calendarAccountJumpId("ahab@pequod.com"));
-    addAnchor(calendarAccountJumpId("ahab@gmail.com"));
+    const work = createMockAccountRef("ahab@pequod.com");
+    const personal = createMockAccountRef("ahab@gmail.com");
+    addAnchor(calendarAccountJumpId(work.key));
+    addAnchor(calendarAccountJumpId(personal.key));
     render(
       <PageJumpHintOverlay
-        targets={buildCalendarPageJumpTargets([
-          "ahab@pequod.com",
-          "ahab@gmail.com",
-        ])}
+        targets={buildCalendarPageJumpTargets([work, personal])}
         visible={true}
       />,
     );
 
     expect(chipDigits()).toEqual(["1", "2", "3", "4", "5"]);
     expect(screen.getByRole("status").textContent).toContain(
-      "4 for ahab@pequod.com",
+      "4 for ahab@pequod.com (google)",
     );
     expect(screen.getByRole("status").textContent).toContain(
-      "5 for ahab@gmail.com",
+      "5 for ahab@gmail.com (google)",
     );
   });
 });

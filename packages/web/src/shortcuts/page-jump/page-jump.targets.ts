@@ -23,6 +23,8 @@
  * and each account) are omitted so those chips still appear when mounted.
  */
 
+import { defaultCalendarGroupLabel } from "@web/auth/providers/provider-copy.util";
+import { type AccountRef } from "@web/calendars/calendar.util";
 import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 
 export const PAGE_JUMP_ATTRIBUTE = "data-page-jump";
@@ -80,10 +82,11 @@ const withPickDigits = (
     digit: PICK_KEY_LABELS[index] ?? "",
   }));
 
+/** `accountKey` is provider-scoped, so same-email accounts get distinct ids. */
 export const calendarAccountJumpId = (
-  accountEmail: string,
+  accountKey: string,
 ): `${typeof CALENDAR_ACCOUNT_JUMP_ID_PREFIX}${string}` =>
-  `${CALENDAR_ACCOUNT_JUMP_ID_PREFIX}${accountEmail}`;
+  `${CALENDAR_ACCOUNT_JUMP_ID_PREFIX}${accountKey}`;
 
 /**
  * Sidebar calendar slots after month picker / Up next: one numbered target
@@ -92,13 +95,16 @@ export const calendarAccountJumpId = (
  * calendar rows.
  */
 const calendarListJumpTargets = (
-  accountEmails: readonly string[],
+  accounts: readonly AccountRef[],
 ): PageJumpTargetDraft[] =>
-  accountEmails.length === 0
+  accounts.length === 0
     ? [CALENDARS_LIST_TARGET]
-    : accountEmails.map((accountEmail) => ({
-        id: calendarAccountJumpId(accountEmail),
-        label: accountEmail,
+    : accounts.map((account) => ({
+        id: calendarAccountJumpId(account.key),
+        label: defaultCalendarGroupLabel(
+          account.accountEmail,
+          account.provider,
+        ),
       }));
 
 /**
@@ -107,13 +113,13 @@ const calendarListJumpTargets = (
  * physical top-row keys are omitted — no chip, no binding.
  */
 export const buildCalendarPageJumpTargets = (
-  accountEmails: readonly string[] = [],
+  accounts: readonly AccountRef[] = [],
 ): PageJumpTargets =>
   withPickDigits([
     VIEW_SELECT_TARGET,
     MONTH_PICKER_TARGET,
     UP_NEXT_TARGET,
-    ...calendarListJumpTargets(accountEmails),
+    ...calendarListJumpTargets(accounts),
   ]);
 
 /** No-account Week map. Prefer `buildCalendarPageJumpTargets` when accounts exist. */
@@ -146,10 +152,10 @@ export const dayColumnJumpId = (
  */
 export const buildDayPageJumpTargets = (
   calendars: readonly DayColumnJumpCalendar[],
-  accountEmails: readonly string[] = [],
+  accounts: readonly AccountRef[] = [],
 ): PageJumpTargets => {
   const [viewSelect, ...sidebarTargets] =
-    buildCalendarPageJumpTargets(accountEmails);
+    buildCalendarPageJumpTargets(accounts);
   const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarTargets.length;
   const columnTargets = calendars
     .slice(0, Math.max(0, maxColumns))
@@ -170,7 +176,7 @@ export const pageJumpAttrs = (
 
 /**
  * Match by attribute value rather than interpolating `id` into a selector:
- * account emails can contain CSS-significant characters (`+`, `.`).
+ * account keys can contain CSS-significant characters (`:`, `+`, `.`).
  */
 export const getPageJumpAnchor = (id: PageJumpTargetId): HTMLElement | null => {
   for (const element of document.querySelectorAll<HTMLElement>(

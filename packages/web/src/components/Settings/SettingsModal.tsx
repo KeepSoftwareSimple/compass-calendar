@@ -2,7 +2,6 @@ import { type FC, Suspense, useEffect, useRef, useState } from "react";
 import { isSavedBookingPage } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
-import { providerDisplayName } from "@core/types/sync/identity.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
@@ -13,8 +12,15 @@ import {
   SSE_DEGRADED_STATUS,
 } from "@web/auth/providers/connect.util";
 import { MICROSOFT_SELF_HOSTING_DOC_URL } from "@web/auth/providers/connection-health-copy.util";
-import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
-import { CALENDAR_HOST_EXPLAINER } from "@web/auth/providers/provider-copy.util";
+import {
+  calendarProviderKind,
+  connectionProviderKind,
+} from "@web/auth/providers/connection-provider.util";
+import { ProviderMark } from "@web/auth/providers/ProviderMark";
+import {
+  CALENDAR_HOST_EXPLAINER,
+  defaultCalendarGroupLabel,
+} from "@web/auth/providers/provider-copy.util";
 import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
 import { useDisconnectGoogleAccount } from "@web/auth/providers/useDisconnectAccount";
 import {
@@ -390,8 +396,11 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
           .filter((group) => group.calendars.length > 0)
           .map((group) => (
             <optgroup
-              key={group.accountEmail}
-              label={`${group.accountEmail} (${providerDisplayName(connectionProviderKind(group.connection))})`}
+              key={group.key}
+              label={defaultCalendarGroupLabel(
+                group.accountEmail,
+                group.provider,
+              )}
             >
               {group.calendars.map((calendar) => (
                 <option key={calendar.id} value={calendar.id}>
@@ -439,7 +448,10 @@ const AccountsSection: FC<AccountsSectionProps> = ({
               disconnect={disconnect}
               isConfirming={confirmingId === connection.id}
               isDefault={
-                connection.accountEmail === resolvedDefault?.accountEmail
+                resolvedDefault !== undefined &&
+                connection.accountEmail === resolvedDefault.accountEmail &&
+                connectionProviderKind(connection) ===
+                  calendarProviderKind(resolvedDefault)
               }
               isDisconnecting={disconnectingId === connection.id}
               key={connection.id}
@@ -476,7 +488,8 @@ interface AccountRowProps {
 }
 
 /**
- * One connected account: email, its own full sync status (including when
+ * One connected account: email with its provider mark (the same address can
+ * be connected on two providers), its own full sync status (including when
  * healthy - the sidebar hides that, but this is the one place a user comes
  * to check), a "Default" badge when it owns the default calendar, and a
  * two-step disconnect (not undoable without redoing the whole OAuth flow).
@@ -532,6 +545,7 @@ const AccountRow: FC<AccountRowProps> = ({
     <div className="flex items-center justify-between gap-2">
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-1.5">
+          <ProviderMark provider={connectionProviderKind(connection)} />
           <p className="truncate text-sm text-text" translate="no">
             {accountEmail}
           </p>

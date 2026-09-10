@@ -3,8 +3,16 @@ import { useCallback, useState } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.util";
+import {
+  calendarProviderKind,
+  connectionProviderKind,
+} from "@web/auth/providers/connection-provider.util";
 import { clearAccountReconnectRequired } from "@web/auth/providers/reconnect.state";
-import { userMetadataActions } from "@web/auth/state/user-metadata.store";
+import {
+  selectSyncConnections,
+  userMetadataActions,
+  useUserMetadataStore,
+} from "@web/auth/state/user-metadata.store";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import {
   ACCOUNT_DISCONNECTED_TOAST_ID,
@@ -46,13 +54,21 @@ export function useDisconnectGoogleAccount(): {
           // caches right away - the calendars refetch below can still race
           // backend cleanup and return them for a beat, which was leaving the
           // disconnected account visible in the Accounts panel and the
-          // Default Calendar picker.
+          // Default Calendar picker. Match on provider as well as email so a
+          // same-address account on another provider keeps its calendars.
+          const provider = connectionProviderKind(
+            selectSyncConnections(useUserMetadataStore.getState()).find(
+              (connection) => connection.id === connectionId,
+            ),
+          );
           userMetadataActions.removeConnection(connectionId);
           queryClient.setQueryData<Calendar[]>(
             calendarQueryKeys.all,
             (calendars) =>
               calendars?.filter(
-                (calendar) => calendar.accountEmail !== accountEmail,
+                (calendar) =>
+                  calendar.accountEmail !== accountEmail ||
+                  calendarProviderKind(calendar) !== provider,
               ),
           );
 

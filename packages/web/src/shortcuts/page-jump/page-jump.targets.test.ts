@@ -1,3 +1,4 @@
+import { createMockAccountRef as account } from "@web/__tests__/utils/factories/calendar.factory";
 import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 import {
   buildCalendarPageJumpTargets,
@@ -43,8 +44,8 @@ describe("buildCalendarPageJumpTargets", () => {
   });
 
   it("replaces the list-level calendars slot with one target per account", () => {
-    const work = "ahab@pequod.com";
-    const personal = "ahab@gmail.com";
+    const work = account("ahab@pequod.com");
+    const personal = account("ahab@gmail.com");
     const targets = buildCalendarPageJumpTargets([work, personal]);
 
     expect(
@@ -53,17 +54,43 @@ describe("buildCalendarPageJumpTargets", () => {
       { digit: "1", id: "view-select", label: "View dropdown" },
       { digit: "2", id: "month-picker", label: "Month picker" },
       { digit: "3", id: "up-next", label: "Up next" },
-      { digit: "4", id: calendarAccountJumpId(work), label: work },
-      { digit: "5", id: calendarAccountJumpId(personal), label: personal },
+      {
+        digit: "4",
+        id: "calendar-account:google:ahab@pequod.com",
+        label: "ahab@pequod.com (Google)",
+      },
+      {
+        digit: "5",
+        id: "calendar-account:google:ahab@gmail.com",
+        label: "ahab@gmail.com (Google)",
+      },
+    ]);
+  });
+
+  it("gives same-email accounts on different providers distinct targets", () => {
+    const targets = buildCalendarPageJumpTargets([
+      account("lance@gmail.com", "google"),
+      account("lance@gmail.com", "microsoft"),
+    ]);
+
+    expect(targets.slice(3).map(({ id, label }) => ({ id, label }))).toEqual([
+      {
+        id: "calendar-account:google:lance@gmail.com",
+        label: "lance@gmail.com (Google)",
+      },
+      {
+        id: "calendar-account:microsoft:lance@gmail.com",
+        label: "lance@gmail.com (Microsoft)",
+      },
     ]);
   });
 
   it("omits extra accounts that would overflow the top-row keys", () => {
-    const emails = Array.from(
+    const accounts = Array.from(
       { length: PICK_KEY_LABELS.length },
-      (_, index) => `account${index}@x.com`,
+      (_, index) => account(`account${index}@x.com`),
     );
-    const targets = buildCalendarPageJumpTargets(emails);
+    const targets = buildCalendarPageJumpTargets(accounts);
 
     expect(targets).toHaveLength(PICK_KEY_LABELS.length);
     expect(targets[0]).toMatchObject({ id: "view-select" });
@@ -130,8 +157,8 @@ describe("buildDayPageJumpTargets", () => {
   });
 
   it("replaces the list-level calendars slot with one target per account", () => {
-    const work = "ahab@pequod.com";
-    const personal = "ahab@gmail.com";
+    const work = account("ahab@pequod.com");
+    const personal = account("ahab@gmail.com");
     const targets = buildDayPageJumpTargets(
       [{ id: "cal-work", name: "Work" }],
       [work, personal],
@@ -144,24 +171,34 @@ describe("buildDayPageJumpTargets", () => {
       { digit: "2", id: dayColumnJumpId("cal-work"), label: "Work" },
       { digit: "3", id: "month-picker", label: "Month picker" },
       { digit: "4", id: "up-next", label: "Up next" },
-      { digit: "5", id: calendarAccountJumpId(work), label: work },
-      { digit: "6", id: calendarAccountJumpId(personal), label: personal },
+      {
+        digit: "5",
+        id: calendarAccountJumpId(work.key),
+        label: "ahab@pequod.com (Google)",
+      },
+      {
+        digit: "6",
+        id: calendarAccountJumpId(personal.key),
+        label: "ahab@gmail.com (Google)",
+      },
     ]);
   });
 
   it("omits extra columns so per-account sidebar slots still fit", () => {
-    const emails = ["a@x.com", "b@x.com", "c@x.com"];
-    const sidebarCount = buildCalendarPageJumpTargets(emails).length - 1;
+    const accounts = ["a@x.com", "b@x.com", "c@x.com"].map((email) =>
+      account(email),
+    );
+    const sidebarCount = buildCalendarPageJumpTargets(accounts).length - 1;
     const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarCount;
     const calendars = Array.from({ length: maxColumns + 3 }, (_, index) => ({
       id: `cal-${index}`,
       name: `Calendar ${index}`,
     }));
-    const targets = buildDayPageJumpTargets(calendars, emails);
+    const targets = buildDayPageJumpTargets(calendars, accounts);
 
     expect(targets).toHaveLength(PICK_KEY_LABELS.length);
     expect(targets.at(-1)).toMatchObject({
-      id: calendarAccountJumpId("c@x.com"),
+      id: calendarAccountJumpId(account("c@x.com").key),
       digit: PICK_KEY_LABELS.at(-1),
     });
     expect(
@@ -296,8 +333,8 @@ describe("focusPageJumpTarget", () => {
     expect(clicks).toBe(0);
   });
 
-  it("finds an account anchor whose email contains CSS-significant characters", () => {
-    const id = calendarAccountJumpId("tyler+work@gmail.com");
+  it("finds an account anchor whose key contains CSS-significant characters", () => {
+    const id = calendarAccountJumpId(account("tyler+work@gmail.com").key);
     const anchor = addAnchor(id);
     const toggle = document.createElement("button");
     anchor.append(toggle);

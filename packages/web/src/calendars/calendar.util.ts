@@ -1,5 +1,10 @@
 import { type Calendar } from "@core/types/calendar.contracts";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
+import {
+  calendarProviderKind,
+  connectionProviderKind,
+} from "@web/auth/providers/connection-provider.util";
 import { isCalendarReconnectRequired } from "@web/auth/providers/reconnect.calendar";
 
 export function getLocalCalendar(calendars: Calendar[]): Calendar | undefined {
@@ -110,23 +115,42 @@ export function spansMultipleAccounts(calendars: Calendar[]): boolean {
   );
 }
 
-export interface AccountGroup {
+/**
+ * The web app's identity for one connected account. An email alone is not
+ * enough: the same address can back a Google account and a Microsoft
+ * account (a Gmail address used as a Microsoft login, or the reverse), and
+ * both `Calendar` and `SyncConnectionSummary` carry `provider` next to
+ * `accountEmail`, so the pair is what every account-shaped key uses.
+ */
+export const accountKey = (
+  provider: ProviderKind,
+  accountEmail: string,
+): string => `${provider}:${accountEmail}`;
+
+export interface AccountRef {
+  /** `accountKey(provider, accountEmail)`: React keys, DOM ids, collapse state. */
+  key: string;
+  provider: ProviderKind;
   accountEmail: string;
+}
+
+export interface AccountGroup extends AccountRef {
   connection: SyncConnectionSummary | undefined;
   calendars: Calendar[];
 }
 
 /**
- * Bucket calendars by the account they belong to, in connection order, with
- * anything lacking an account email (the local calendar) left ungrouped.
- * Empty groups are kept so a connected-but-still-importing account still
- * renders its section header. Callers that cannot show an empty optgroup
- * (the Settings default-calendar select) skip those groups inline.
+ * Bucket calendars by the account (provider + email) they belong to, in
+ * connection order, with anything lacking an account (the local calendar)
+ * left ungrouped. Empty groups are kept so a connected-but-still-importing
+ * account still renders its section header. Callers that cannot show an
+ * empty optgroup (the Settings default-calendar select) skip those groups
+ * inline.
  *
  * When `compassEmail` matches a group's account email (case-insensitive),
- * nest the local Compass calendar under that Google section instead of
- * leaving it ungrouped. Callers that paint a second "Compass email" parent
- * then only do so when no Google account shares the login address.
+ * nest the local Compass calendar under that section instead of leaving it
+ * ungrouped. Callers that paint a second "Compass email" parent then only
+ * do so when no connected account shares the login address.
  */
 export function groupCalendarsByAccount(
   calendars: Calendar[],
@@ -134,31 +158,48 @@ export function groupCalendarsByAccount(
   compassEmail?: string | null,
 ): { groups: AccountGroup[]; ungrouped: Calendar[] } {
   const groups: AccountGroup[] = [];
-  const byEmail = new Map<string, AccountGroup>();
+  const byKey = new Map<string, AccountGroup>();
   const ungrouped: Calendar[] = [];
 
   // Seed in connection order so accounts appear oldest-connected first,
   // regardless of the order calendars came back in.
   for (const connection of connections) {
     const { accountEmail } = connection;
-    if (!accountEmail || byEmail.has(accountEmail)) continue;
-    const group: AccountGroup = { accountEmail, connection, calendars: [] };
-    byEmail.set(accountEmail, group);
+    if (!accountEmail) continue;
+    const provider = connectionProviderKind(connection);
+    const key = accountKey(provider, accountEmail);
+    if (byKey.has(key)) continue;
+    const group: AccountGroup = {
+      key,
+      provider,
+      accountEmail,
+      connection,
+      calendars: [],
+    };
+    byKey.set(key, group);
     groups.push(group);
   }
 
   for (const calendar of calendars) {
     const { accountEmail } = calendar;
-    if (!accountEmail) {
+    const provider = calendarProviderKind(calendar);
+    if (!accountEmail || !provider) {
       ungrouped.push(calendar);
       continue;
     }
-    let group = byEmail.get(accountEmail);
+    const key = accountKey(provider, accountEmail);
+    let group = byKey.get(key);
     if (!group) {
       // A calendar whose account has no connection summary yet (metadata and
       // the calendar list can load a moment apart). Still give it a section.
-      group = { accountEmail, connection: undefined, calendars: [] };
-      byEmail.set(accountEmail, group);
+      group = {
+        key,
+        provider,
+        accountEmail,
+        connection: undefined,
+        calendars: [],
+      };
+      byKey.set(key, group);
       groups.push(group);
     }
     group.calendars.push(calendar);
@@ -175,8 +216,8 @@ const nestLocalCalendarInMatchingGroup = (
   const normalizedCompassEmail = compassEmail?.trim().toLowerCase();
   if (!normalizedCompassEmail) return { groups, ungrouped };
 
-  // Connection order is already the group order; first match wins if two
-  // accounts somehow share an email.
+  // Connection order is already the group order; when accounts on two
+  // providers share the login email, the oldest-connected one wins.
   const matchingGroup = groups.find(
     (group) =>
       group.accountEmail.trim().toLowerCase() === normalizedCompassEmail,

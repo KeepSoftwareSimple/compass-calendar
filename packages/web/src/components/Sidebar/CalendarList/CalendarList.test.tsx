@@ -380,20 +380,28 @@ describe("CalendarList", () => {
     });
 
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@pequod.com (Google)",
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@gmail.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@gmail.com (Google)",
+      }),
     ).toBeInTheDocument();
     // Each account's calendars live under its own section, not one flat list.
     expect(
       within(
-        screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
+        screen.getByRole("region", {
+          name: "Calendars for ahab@pequod.com (Google)",
+        }),
       ).getByText("Work"),
     ).toBeInTheDocument();
     expect(
       within(
-        screen.getByRole("region", { name: "Calendars for ahab@gmail.com" }),
+        screen.getByRole("region", {
+          name: "Calendars for ahab@gmail.com (Google)",
+        }),
       ).getByText("Personal"),
     ).toBeInTheDocument();
   });
@@ -416,11 +424,21 @@ describe("CalendarList", () => {
     });
 
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
-    ).toHaveAttribute("data-page-jump", "calendar-account:ahab@pequod.com");
+      screen.getByRole("region", {
+        name: "Calendars for ahab@pequod.com (Google)",
+      }),
+    ).toHaveAttribute(
+      "data-page-jump",
+      "calendar-account:google:ahab@pequod.com",
+    );
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@gmail.com" }),
-    ).toHaveAttribute("data-page-jump", "calendar-account:ahab@gmail.com");
+      screen.getByRole("region", {
+        name: "Calendars for ahab@gmail.com (Google)",
+      }),
+    ).toHaveAttribute(
+      "data-page-jump",
+      "calendar-account:google:ahab@gmail.com",
+    );
     expect(
       screen.getByRole("region", { name: "Calendars" }),
     ).not.toHaveAttribute("data-page-jump");
@@ -443,7 +461,9 @@ describe("CalendarList", () => {
 
     expect(screen.queryByText(HEADER_EMAIL)).not.toBeInTheDocument();
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@pequod.com (Google)",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -506,10 +526,14 @@ describe("CalendarList", () => {
     });
 
     const healthy = within(
-      screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@pequod.com (Google)",
+      }),
     );
     const broken = within(
-      screen.getByRole("region", { name: "Calendars for ahab@gmail.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@gmail.com (Google)",
+      }),
     );
     // Neither account's own section renders status text - it moved to the
     // sidebar's pinned bottom bar (see SidebarStatusBar.test.tsx) so a
@@ -533,11 +557,11 @@ describe("CalendarList", () => {
     });
 
     const section = screen.getByRole("region", {
-      name: "Calendars for ahab@pequod.com",
+      name: "Calendars for ahab@pequod.com (Google)",
     });
     expect(within(section).getByText("Work")).toBeInTheDocument();
     expect(
-      within(section).getByRole("button", { name: "ahab@pequod.com" }),
+      within(section).getByRole("button", { name: "ahab@pequod.com Google" }),
     ).toHaveAttribute("aria-expanded", "true");
   });
 
@@ -582,7 +606,9 @@ describe("CalendarList", () => {
     for (const email of ["ahab@pequod.com", "ahab@gmail.com"]) {
       expect(
         within(
-          screen.getByRole("region", { name: `Calendars for ${email}` }),
+          screen.getByRole("region", {
+            name: `Calendars for ${email} (Google)`,
+          }),
         ).queryByText("Compass"),
       ).not.toBeInTheDocument();
     }
@@ -616,10 +642,12 @@ describe("CalendarList", () => {
     });
 
     expect(
-      screen.getByRole("region", { name: "Calendars for ahab@pequod.com" }),
+      screen.getByRole("region", {
+        name: "Calendars for ahab@pequod.com (Google)",
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "ahab@pequod.com" }),
+      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
     ).toBeInTheDocument();
   });
 
@@ -661,7 +689,9 @@ describe("CalendarList", () => {
     });
 
     expect(screen.getByText("Work")).toBeInTheDocument();
-    const toggle = screen.getByRole("button", { name: "ahab@pequod.com" });
+    const toggle = screen.getByRole("button", {
+      name: "ahab@pequod.com Google",
+    });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
     await user.click(toggle);
@@ -673,6 +703,67 @@ describe("CalendarList", () => {
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText("Work")).toBeInTheDocument();
+  });
+
+  it("keeps same-email Google and Microsoft accounts in separate sections with their own collapse", async () => {
+    // A Gmail address can also be a Microsoft personal-account login.
+    const googleCal = makeCalendar({
+      name: "Google primary",
+      accountEmail: "lance@gmail.com",
+    });
+    const microsoftCal = makeCalendar({
+      name: "Microsoft primary",
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+    });
+
+    const user = userEvent.setup({ delay: null });
+    renderCalendarList([googleCal, microsoftCal], {
+      connections: [
+        makeConnection("lance@gmail.com"),
+        makeConnection("lance@gmail.com", { provider: "microsoft" }),
+      ],
+    });
+
+    const googleSection = screen.getByRole("region", {
+      name: "Calendars for lance@gmail.com (Google)",
+    });
+    const microsoftSection = screen.getByRole("region", {
+      name: "Calendars for lance@gmail.com (Microsoft)",
+    });
+    expect(googleSection).toHaveAttribute(
+      "data-page-jump",
+      "calendar-account:google:lance@gmail.com",
+    );
+    expect(microsoftSection).toHaveAttribute(
+      "data-page-jump",
+      "calendar-account:microsoft:lance@gmail.com",
+    );
+    expect(
+      within(googleSection).getByText("Google primary"),
+    ).toBeInTheDocument();
+    expect(
+      within(googleSection).getByRole("img", { name: "Google" }),
+    ).toBeInTheDocument();
+    expect(
+      within(microsoftSection).getByText("Microsoft primary"),
+    ).toBeInTheDocument();
+    expect(
+      within(microsoftSection).getByRole("img", { name: "Microsoft" }),
+    ).toBeInTheDocument();
+
+    // Collapsing one account leaves the same-address account alone.
+    await user.click(
+      within(googleSection).getByRole("button", {
+        name: "lance@gmail.com Google",
+      }),
+    );
+    expect(
+      within(googleSection).queryByText("Google primary"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(microsoftSection).getByText("Microsoft primary"),
+    ).toBeInTheDocument();
   });
 
   it("nests Compass under the Google account that matches the Compass login email", () => {
@@ -695,18 +786,20 @@ describe("CalendarList", () => {
     });
 
     const matchingSection = screen.getByRole("region", {
-      name: "Calendars for ahab@pequod.com",
+      name: "Calendars for ahab@pequod.com (Google)",
     });
     expect(within(matchingSection).getByText("Work")).toBeInTheDocument();
     expect(within(matchingSection).getByText("Compass")).toBeInTheDocument();
     expect(
       screen.queryAllByRole("region", {
-        name: "Calendars for ahab@pequod.com",
+        name: "Calendars for ahab@pequod.com (Google)",
       }),
     ).toHaveLength(1);
     expect(
       within(
-        screen.getByRole("region", { name: "Calendars for ahab@gmail.com" }),
+        screen.getByRole("region", {
+          name: "Calendars for ahab@gmail.com (Google)",
+        }),
       ).queryByText("Compass"),
     ).not.toBeInTheDocument();
   });
@@ -725,7 +818,9 @@ describe("CalendarList", () => {
     });
 
     expect(screen.getByText("Compass")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "ahab@pequod.com" }));
+    await user.click(
+      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
+    );
     expect(screen.queryByText("Compass")).not.toBeInTheDocument();
     expect(screen.queryByText("Work")).not.toBeInTheDocument();
   });
@@ -749,8 +844,12 @@ describe("CalendarList", () => {
       ],
     });
 
-    await user.click(screen.getByRole("button", { name: "ahab@pequod.com" }));
-    await user.click(screen.getByRole("button", { name: "ahab@gmail.com" }));
+    await user.click(
+      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "ahab@gmail.com Google" }),
+    );
 
     expect(screen.getByText("Compass")).toBeInTheDocument();
   });

@@ -18,7 +18,7 @@ export function BookingDestinationCalendarOptions({
       {groups
         .filter((group) => group.calendars.length > 0)
         .map((group) => (
-          <optgroup key={group.accountEmail} label={group.accountEmail}>
+          <optgroup key={group.key} label={group.accountEmail}>
             {group.calendars.map((calendar) => (
               <option key={calendar.id} value={calendar.id}>
                 {formatBookingDestinationOptionLabel(calendar)}

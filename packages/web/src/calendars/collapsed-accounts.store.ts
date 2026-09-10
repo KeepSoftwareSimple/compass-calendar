@@ -12,10 +12,12 @@ import {
 /**
  * Deterministic id shared between an account's heading (aria-controls) and
  * its calendar list (id) - the two are separate sibling components, so this
- * can't be a useId(). Keys are account emails.
+ * can't be a useId(). Keys are `accountKey(provider, email)` values (see
+ * calendar.util.ts), never bare emails: the same address can be two
+ * accounts on two providers.
  */
-export function accountCalendarListId(accountEmail: string): string {
-  return `account-calendars-${accountEmail}`;
+export function accountCalendarListId(accountKey: string): string {
+  return `account-calendars-${accountKey}`;
 }
 
 const collapsedStore = createExternalStore<ReadonlySet<string>>(

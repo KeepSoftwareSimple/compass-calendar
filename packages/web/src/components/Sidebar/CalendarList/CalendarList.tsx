@@ -3,6 +3,7 @@ import { type Calendar } from "@core/types/calendar.contracts";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { useUser } from "@web/auth/compass/user/hooks/useUser";
+import { defaultCalendarGroupLabel } from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import {
   selectSyncConnections,
@@ -114,15 +115,17 @@ export const CalendarList: FC = () => {
         <div className="flex flex-col gap-3">
           {groups.map((group) => (
             <section
-              aria-label={`Calendars for ${group.accountEmail}`}
-              key={group.accountEmail}
-              {...pageJumpAttrs(calendarAccountJumpId(group.accountEmail))}
+              aria-label={`Calendars for ${defaultCalendarGroupLabel(group.accountEmail, group.provider)}`}
+              key={group.key}
+              {...pageJumpAttrs(calendarAccountJumpId(group.key))}
             >
               <AccountSectionHeader
+                accountKey={group.key}
                 accountEmail={group.accountEmail}
                 connection={group.connection}
+                provider={group.provider}
               />
-              {renderCollapsible(group.accountEmail, group.calendars)}
+              {renderCollapsible(group.key, group.calendars)}
             </section>
           ))}
           {ungrouped.length > 0 ? (
