@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "compass",
@@ -63,7 +64,7 @@
       "name": "@compass/core",
       "version": "1.0.0",
       "dependencies": {
-        "@googleapis/calendar": "^14.1.0",
+        "@googleapis/calendar": "^16.0.0",
         "@opentelemetry/api-logs": "^0.220.0",
         "@opentelemetry/exporter-logs-otlp-http": "^0.220.0",
         "@opentelemetry/resources": "^2.9.0",
@@ -110,7 +111,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@compass/core": "1.0.0",
-        "@googleapis/calendar": "^14.1.0",
+        "@googleapis/calendar": "^16.0.0",
         "@googleapis/people": "^8.0.0",
         "express": "^4.17.1",
         "express-rate-limit": "^7.5.0",
@@ -314,7 +315,7 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.11", "", {}, "sha512-RiB/yIh78pcIxl6lLMG0CgBXAZ2Y0eVHqMPYugu+9U0AeT6YBeiJpf7lbdJNIugFP5SIjwNRgo4DhR1Qxi26Gg=="],
 
-    "@googleapis/calendar": ["@googleapis/calendar@14.2.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-oo6bikN3dl7n43vvknpPzJlCD8FZbs82h4bZLfDAx1wWRUkIusg6++RFQvOKF46rNXsUePqyVwnFx+8oOOyK1A=="],
+    "@googleapis/calendar": ["@googleapis/calendar@16.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-Z/8Jdf4hMvmMlBMhP0whZNPSixEpYv4mC5RJfrlvrnqpf/rV68MJ+8M9MmyqUt7/SQp2zRfVmEqkk+csB2Cgmg=="],
 
     "@googleapis/people": ["@googleapis/people@8.0.0", "", { "dependencies": { "googleapis-common": "^8.0.0" } }, "sha512-YGdkT345sCCGhPYbwaM9D9lBsuWqzLs2EIba1DU0lpKPjNTrpT5amWCA0V781pgBtmhuygGZA1pz6MdUyzwQuw=="],
 
