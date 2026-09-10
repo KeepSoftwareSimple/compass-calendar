@@ -988,6 +988,7 @@ export interface HostBookingSettingsStubOptions {
   slug?: string;
   bookingUrl?: string;
   microsoftConnect?: boolean;
+  appleConnect?: boolean;
   enabled?: boolean;
   /** When false, GET returns the setup shape with `suggestedSlug`. */
   configured?: boolean;
@@ -1218,7 +1219,10 @@ export async function prepareSignedInBookingSettingsPage(
               signIn: false,
               connect: Boolean(options.microsoftConnect) || !healthyConnection,
             },
-            apple: { signIn: false, connect: !healthyConnection },
+            apple: {
+              signIn: false,
+              connect: Boolean(options.appleConnect) || !healthyConnection,
+            },
           },
         }),
       );

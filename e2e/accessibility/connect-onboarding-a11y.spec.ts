@@ -130,10 +130,13 @@ test("the signed-in connect-calendar prompt has no automatically detectable acce
   });
 });
 
-test("the add-account chooser with Google and Microsoft has no automatically detectable accessibility violations", async ({
+test("the add-account chooser with Google, Microsoft, and Apple has no automatically detectable accessibility violations", async ({
   page,
 }) => {
-  await prepareSignedInBookingSettingsPage(page, { microsoftConnect: true });
+  await prepareSignedInBookingSettingsPage(page, {
+    microsoftConnect: true,
+    appleConnect: true,
+  });
   const settingsDialog = page.getByRole("dialog", { name: "Settings" });
   await settingsDialog.getByRole("button", { name: "Accounts" }).click();
   const addAccount = settingsDialog.getByRole("button", {
@@ -143,7 +146,13 @@ test("the add-account chooser with Google and Microsoft has no automatically det
   await addAccount.click();
   await expect(settingsDialog.getByRole("menu")).toBeVisible();
   await expect(
+    settingsDialog.getByRole("menuitem", { name: "Google" }),
+  ).toBeVisible();
+  await expect(
     settingsDialog.getByRole("menuitem", { name: "Microsoft" }),
+  ).toBeVisible();
+  await expect(
+    settingsDialog.getByRole("menuitem", { name: "Apple" }),
   ).toBeVisible();
 
   await expectNoAxeViolations(page, {
