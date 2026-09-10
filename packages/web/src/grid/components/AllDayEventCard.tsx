@@ -38,6 +38,7 @@ export interface AllDayEventCardProps {
   /** Calendar backgroundColor for focus chrome; null falls back to --text. */
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isHidden?: boolean;
   isPlaceholder: boolean;
   onEventKeyDown?: (event: GridEvent) => void;
   onMouseEnter?: (e: MouseEvent<HTMLDivElement>) => void;
@@ -51,6 +52,7 @@ const AllDayEventCardBase = (
     event,
     focusColor = null,
     interactionAttributes,
+    isHidden = false,
     isPlaceholder,
     onEventKeyDown,
     onMouseEnter,
@@ -66,7 +68,10 @@ const AllDayEventCardBase = (
   const isInPast = dayjs().isAfter(dayjs(event.endDate));
   const isRecurring = isRecurringEvent(event);
   const showRepeatIcon =
-    isRecurring && !isPlaceholder && position.width >= REPEAT_ICON_MIN_WIDTH;
+    !isHidden &&
+    isRecurring &&
+    !isPlaceholder &&
+    position.width >= REPEAT_ICON_MIN_WIDTH;
   // Past events recede in the direction of the theme's grid, matching
   // TimedEventCard: the dark theme's light steel fill dims slightly, the
   // light theme's ink fill fades toward the paper. Only the fill moves — a
@@ -97,14 +102,14 @@ const AllDayEventCardBase = (
     "--event-focus-color": focusColorCss,
     height: position.height,
     left: position.left,
-    opacity: isPlaceholder ? 0.5 : undefined,
+    opacity: isHidden ? 0.6 : isPlaceholder ? 0.5 : undefined,
     top: position.top,
     width: position.width,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
     boxShadow: edgeFocusShadow,
   } as CSSProperties;
 
-  const baseAccessibleLabel = `${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
+  const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
@@ -129,8 +134,10 @@ const AllDayEventCardBase = (
       ref={ref}
       role="button"
       tabIndex={0}
+      title={isHidden ? event.title : undefined}
       className={cn(
-        "absolute min-h-2.5 overflow-hidden rounded-xs bg-(--event-bg) pr-0.75 pl-1.25 transition-[background-color,filter] duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-(--event-hover-bg)",
+        "absolute min-h-2.5 overflow-hidden bg-(--event-bg) pr-0.75 pl-1.25 transition-[background-color,filter] duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-(--event-hover-bg)",
+        isHidden ? "rounded-full" : "rounded-xs",
         {
           "hover:cursor-pointer": !isPlaceholder,
           "outline outline-dashed outline-1 outline-text-muted/50":
@@ -151,27 +158,29 @@ const AllDayEventCardBase = (
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {calendarIdentity && (
+      {!isHidden && calendarIdentity && (
         <div
           aria-hidden="true"
           className="absolute inset-y-0 left-0 w-[3px]"
           style={calendarAccentStyle(calendarIdentity)}
         />
       )}
-      <div
-        className={cn("flex min-w-0 items-center", {
-          // Reserve room so a long title truncates before the bottom-right icon.
-          "pr-3.5": showRepeatIcon,
-        })}
-      >
-        <span
-          className="relative min-w-0 truncate text-xs"
-          style={{ color: titleColor }}
+      {!isHidden && (
+        <div
+          className={cn("flex min-w-0 items-center", {
+            // Reserve room so a long title truncates before the bottom-right icon.
+            "pr-3.5": showRepeatIcon,
+          })}
         >
-          {event.title}
-          {"\u00A0"}
-        </span>
-      </div>
+          <span
+            className="relative min-w-0 truncate text-xs"
+            style={{ color: titleColor }}
+          >
+            {event.title}
+            {"\u00A0"}
+          </span>
+        </div>
+      )}
       {showRepeatIcon && <EventRepeatIcon baseColor={bgColor} />}
     </div>
   );

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -36,6 +37,7 @@ test("keeps billing receipts aligned and plan actions on one row", async ({
     if (path.endsWith("/api/config")) {
       return route.fulfill(
         jsonResponse({
+          version: E2E_APP_CONFIG_VERSION,
           google: { isConfigured: true },
           billing: {
             isConfigured: true,

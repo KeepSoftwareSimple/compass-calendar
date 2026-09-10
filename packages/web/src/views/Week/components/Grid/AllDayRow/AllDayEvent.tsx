@@ -3,6 +3,7 @@ import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
+import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
 import { getAllDayEventPosition } from "@web/grid/layout/event.position";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
@@ -12,6 +13,7 @@ interface Props {
   event: GridEvent;
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isHidden?: boolean;
   isPlaceholder: boolean;
   measurements: Measurements_Grid;
   weekDays: WeekProps["component"]["weekDays"];
@@ -24,6 +26,7 @@ const AllDayEventBase = (
     event,
     focusColor = null,
     interactionAttributes,
+    isHidden = false,
     isPlaceholder,
     measurements,
     weekDays,
@@ -42,6 +45,9 @@ const AllDayEventBase = (
     measurements,
     visibleDates,
   });
+  const displayPosition = isHidden
+    ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH }
+    : position;
 
   return (
     <AllDayEventCard
@@ -49,9 +55,10 @@ const AllDayEventBase = (
       event={event}
       focusColor={focusColor}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       isPlaceholder={isPlaceholder}
       onEventKeyDown={onKeyDown}
-      position={position}
+      position={displayPosition}
       ref={ref}
     />
   );
@@ -65,6 +72,7 @@ export const AllDayEventMemo = memo(AllDayEvent, (prev, next) => {
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
     prev.interactionAttributes === next.interactionAttributes &&
+    prev.isHidden === next.isHidden &&
     prev.isPlaceholder === next.isPlaceholder &&
     prev.measurements === next.measurements &&
     // The visible window can move without the event or measurements changing

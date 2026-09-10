@@ -1,4 +1,4 @@
-import { Copy, PenNib, Trash } from "@phosphor-icons/react";
+import { Copy, Eye, EyeSlash, PenNib, Trash } from "@phosphor-icons/react";
 import type React from "react";
 import { createContext, useContext } from "react";
 import {
@@ -15,11 +15,18 @@ import {
   eventColorLabel,
 } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import {
+  useHiddenEventIds,
+  useToggleEventHidden,
+} from "@web/events/hidden/hidden-events.query";
 import { draftActions } from "@web/events/stores/draft.store";
 import {
   digitPickIndex,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
+import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
+import { isBareLetterKey } from "@web/shortcuts/is-bare-letter-key";
 import { useDeleteEvent } from "@web/views/Forms/hooks/useDeleteEvent";
 import { useDuplicateEvent } from "@web/views/Forms/hooks/useDuplicateEvent";
 import { useSetEventColor } from "@web/views/Forms/hooks/useSetEventColor";
@@ -29,6 +36,7 @@ export interface ContextMenuAction {
   label: string;
   onClick: () => void;
   icon: React.ReactNode;
+  keys?: string[];
 }
 
 // Supplied by ContextMenu so each item can wire into floating-ui's roving-focus
@@ -51,6 +59,7 @@ export interface ContextMenuItemsActions {
   duplicate: () => void;
   edit: () => void;
   setColor: (color: EventColorSlot | null) => void;
+  toggleHidden: () => void;
 }
 
 interface ContextMenuItemsProps {
@@ -85,6 +94,7 @@ export function ContextMenuItemsView({
     event.calendarId,
     event.isBusy ?? false,
   );
+  const isHidden = useHiddenEventIds().has(event._id ?? "");
 
   const menuActions: ContextMenuAction[] = [
     {
@@ -98,6 +108,17 @@ export function ContextMenuItemsView({
       label: "Duplicate",
       onClick: actions.duplicate,
       icon: <Copy aria-hidden="true" size={20} />,
+    },
+    {
+      id: "hide",
+      label: isHidden ? "Show event" : "Hide event",
+      keys: [HIDE_EVENT_LETTER],
+      onClick: actions.toggleHidden,
+      icon: isHidden ? (
+        <Eye aria-hidden="true" size={20} />
+      ) : (
+        <EyeSlash aria-hidden="true" size={20} />
+      ),
     },
     ...(isReadOnly
       ? []
@@ -122,7 +143,19 @@ export function ContextMenuItemsView({
     // role="none" keeps the menu -> menuitem ownership valid across this
     // container. Escape ownership is registered via useFloatingLayer on
     // ContextMenu; the id remains a stable test/DOM anchor.
-    <div id={ID_CONTEXT_MENU_ITEMS} role="none">
+    <div
+      id={ID_CONTEXT_MENU_ITEMS}
+      role="none"
+      onKeyDown={(keyEvent) => {
+        if (!isBareLetterKey(keyEvent.nativeEvent, HIDE_EVENT_LETTER)) {
+          return;
+        }
+        keyEvent.preventDefault();
+        keyEvent.stopPropagation();
+        actions.toggleHidden();
+        close();
+      }}
+    >
       {menuActions.map((item, index) => {
         const select = () => {
           item.onClick();
@@ -145,6 +178,7 @@ export function ContextMenuItemsView({
           >
             {item.icon}
             <span className="text-l">{item.label}</span>
+            {item.keys && <ShortcutKeys keys={item.keys} className="ml-auto" />}
           </button>
         );
       })}
@@ -223,6 +257,7 @@ export function ContextMenuItems({ event, close }: ContextMenuItemsProps) {
   const deleteEvent = useDeleteEvent(eventId);
   const duplicateEvent = useDuplicateEvent(eventId);
   const setEventColor = useSetEventColor(eventId);
+  const toggleEventHidden = useToggleEventHidden();
 
   const menuActions: ContextMenuItemsActions = {
     delete: () => {
@@ -237,6 +272,9 @@ export function ContextMenuItems({ event, close }: ContextMenuItemsProps) {
     },
     setColor: (color) => {
       setEventColor(color);
+    },
+    toggleHidden: () => {
+      toggleEventHidden(eventId);
     },
   };
 

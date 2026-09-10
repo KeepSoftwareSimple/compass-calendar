@@ -13,23 +13,13 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { openingProviderLabel } from "@web/auth/providers/connection-provider.util";
+import { PROVIDER_LOGO } from "@web/auth/providers/ProviderMark";
 import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
-import { AppleLogo } from "@web/components/AuthModal/components/AppleButton";
-import { GoogleLogo } from "@web/components/AuthModal/components/GoogleButton";
-import { MicrosoftLogo } from "@web/components/AuthModal/components/MicrosoftButton";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
-
-type ProviderMenuIcon = typeof MicrosoftLogo;
-
-const PROVIDER_MENU_ICON: Record<ProviderKind, ProviderMenuIcon> = {
-  google: GoogleLogo,
-  microsoft: MicrosoftLogo,
-  apple: AppleLogo,
-};
 
 const SIDEBAR_PRIMARY_CLASSNAME =
   "c-button-compact c-button-primary mb-2 w-full rounded-xs px-2 py-1.5 text-left text-xs";
@@ -207,7 +197,7 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
       role="menu"
     >
       {available.map((kind, index) => {
-        const Icon = PROVIDER_MENU_ICON[kind];
+        const Icon = PROVIDER_LOGO[kind];
         return (
           <button
             className="c-focus-ring flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-text hover:bg-surface-panel"

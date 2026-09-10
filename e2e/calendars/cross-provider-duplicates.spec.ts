@@ -3,6 +3,7 @@ import {
   ensureSidebarOpen,
   getViewSwitcherButton,
 } from "../utils/event-test-utils";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -226,6 +227,7 @@ async function setupCrossProviderDuplicatesPage(page: Page) {
     }
     if (pathname.endsWith("/api/config")) {
       return json({
+        version: E2E_APP_CONFIG_VERSION,
         providers: {
           google: { signIn: true, connect: true },
           microsoft: { signIn: false, connect: true },

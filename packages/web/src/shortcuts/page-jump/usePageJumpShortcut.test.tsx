@@ -205,7 +205,7 @@ describe("usePageJumpShortcut", () => {
       const firstAnchor = document.createElement("section");
       firstAnchor.setAttribute(
         PAGE_JUMP_ATTRIBUTE,
-        calendarAccountJumpId("ahab@pequod.com"),
+        calendarAccountJumpId("google:ahab@pequod.com"),
       );
       firstAnchor.append(first);
       document.body.append(firstAnchor);
@@ -214,14 +214,17 @@ describe("usePageJumpShortcut", () => {
       const secondAnchor = document.createElement("section");
       secondAnchor.setAttribute(
         PAGE_JUMP_ATTRIBUTE,
-        calendarAccountJumpId("ahab@gmail.com"),
+        calendarAccountJumpId("google:ahab@gmail.com"),
       );
       secondAnchor.append(second);
       document.body.append(secondAnchor);
 
       renderHook(() =>
         usePageJumpShortcut(
-          buildCalendarPageJumpTargets(["ahab@pequod.com", "ahab@gmail.com"]),
+          buildCalendarPageJumpTargets([
+            { provider: "google", accountEmail: "ahab@pequod.com" },
+            { provider: "google", accountEmail: "ahab@gmail.com" },
+          ]),
         ),
       );
 

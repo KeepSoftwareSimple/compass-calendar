@@ -10,6 +10,8 @@ import {
 } from "@web/auth/state/user-metadata.store";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
+  accountKey,
+  accountLabel,
   compareCalendars,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
@@ -112,19 +114,22 @@ export const CalendarList: FC = () => {
         )
       ) : (
         <div className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <section
-              aria-label={`Calendars for ${group.accountEmail}`}
-              key={group.accountEmail}
-              {...pageJumpAttrs(calendarAccountJumpId(group.accountEmail))}
-            >
-              <AccountSectionHeader
-                accountEmail={group.accountEmail}
-                connection={group.connection}
-              />
-              {renderCollapsible(group.accountEmail, group.calendars)}
-            </section>
-          ))}
+          {groups.map((group) => {
+            const key = accountKey(group);
+            return (
+              <section
+                aria-label={`Calendars for ${accountLabel(group)}`}
+                key={key}
+                {...pageJumpAttrs(calendarAccountJumpId(key))}
+              >
+                <AccountSectionHeader
+                  account={group}
+                  connection={group.connection}
+                />
+                {renderCollapsible(key, group.calendars)}
+              </section>
+            );
+          })}
           {ungrouped.length > 0 ? (
             groups.length > 0 && email ? (
               <section aria-label={`Calendars for ${email}`}>

@@ -8,6 +8,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { identitiesProviderSubjectFilter } from "@backend/user/queries/user.queries";
 import {
   ensureUserIndexes,
+  HIDDEN_EVENT_USER_EVENT_INDEX,
   USER_IDENTITIES_PROVIDER_SUBJECT_INDEX,
 } from "@backend/user/user-indexes";
 import {
@@ -95,5 +96,31 @@ describe("user indexes", () => {
       .queryPlanner?.winningPlan;
     const used = indexNamesFromPlan(plan);
     expect(used).toContain(USER_IDENTITIES_PROVIDER_SUBJECT_INDEX);
+  });
+
+  it("rejects a second hiddenEvent row for the same user and event id", async () => {
+    const userId = new ObjectId();
+    await mongoService.hiddenEvent.insertOne({
+      _id: new ObjectId(),
+      userId,
+      eventId: "evt-1",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+
+    await expect(
+      mongoService.hiddenEvent.insertOne({
+        _id: new ObjectId(),
+        userId,
+        eventId: "evt-1",
+        createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      }),
+    ).rejects.toMatchObject({ code: 11000 });
+  });
+
+  it("creates the unique hidden event index", async () => {
+    const indexes = await mongoService.hiddenEvent.indexes();
+    expect(indexes.map((index) => index.name)).toContain(
+      HIDDEN_EVENT_USER_EVENT_INDEX,
+    );
   });
 });

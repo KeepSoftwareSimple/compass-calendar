@@ -156,6 +156,7 @@ export const globalHandlers = [
     return res(
       ctx.status(Status.OK),
       ctx.json({
+        version: "dev",
         google: { isConfigured: false },
         billing: {
           isConfigured: false,

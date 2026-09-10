@@ -9,6 +9,7 @@ import {
 import { ID_GRID_EVENTS_TIMED } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import {
   mergeGridEventWithDraftOverlay,
   useGridDraftOverlay,
@@ -53,6 +54,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
   const weekDays = weekProps.component.weekDays;
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
+  const hiddenEventIds = useHiddenEventIds();
   // While the user is actively changing a series' recurrence, its saved
   // sibling occurrences are stale (they reflect the rule before this edit) -
   // the draft's own recurring-preview cards are the live truth for the
@@ -82,8 +84,8 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
     ],
   );
   const timedEventItems = useMemo(
-    () => createTimedEventLayout(visibleTimedEvents),
-    [visibleTimedEvents],
+    () => createTimedEventLayout(visibleTimedEvents, hiddenEventIds),
+    [hiddenEventIds, visibleTimedEvents],
   );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,
@@ -97,13 +99,14 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
           item.event,
         ),
         focusColor: resolveCalendarFocusColor(calendarLookup, item.event),
+        isHidden: Boolean(item.event._id && hiddenEventIds.has(item.event._id)),
         // Read-only (unwritable calendar or busy content) events never
         // attach interaction attributes/registration below, so the drag/
         // resize engine can't find them as a target - blocked before any
         // optimistic state change (packet 08 step 8).
         isReadOnly: isGridEventScheduleLocked(calendarLookup, item.event),
       })),
-    [timedEventItems, calendarLookup],
+    [timedEventItems, calendarLookup, hiddenEventIds],
   );
 
   const { onEventKeyDown, onOpenReadOnlyDetails } =
@@ -113,7 +116,14 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
     <div id={ID_GRID_EVENTS_TIMED}>
       {!isLoadingWeekView &&
         timedEventItemsWithIdentity.map(
-          ({ deckLayout, event, calendarIdentity, focusColor, isReadOnly }) => {
+          ({
+            deckLayout,
+            event,
+            calendarIdentity,
+            focusColor,
+            isHidden,
+            isReadOnly,
+          }) => {
             const isPlaceholder = event._id === draftId;
             const eventForDisplay = mergeGridEventWithDraftOverlay(
               event,
@@ -135,6 +145,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
                 deckLayout={deckLayout}
                 event={eventForDisplay}
                 focusColor={focusColorForDisplay}
+                isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}
                 key={`initial-${event._id}`}
@@ -155,6 +166,7 @@ interface MainGridEventItemProps {
   deckLayout: TimedDeckLayout | null;
   event: GridEvent;
   focusColor: string | null;
+  isHidden: boolean;
   isPlaceholder: boolean;
   isReadOnly: boolean;
   measurements: Measurements_Grid;
@@ -168,6 +180,7 @@ const MainGridEventItem = ({
   deckLayout,
   event,
   focusColor,
+  isHidden,
   isPlaceholder,
   isReadOnly,
   measurements,
@@ -181,7 +194,7 @@ const MainGridEventItem = ({
   // cards only.
   const hasEventIdentity = Boolean(event._id);
   const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly;
+    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
   const registrationRef = useWeekEventRegistrationRef({
     eventId: event._id,
     eventType: "timed",
@@ -206,6 +219,7 @@ const MainGridEventItem = ({
       event={event}
       focusColor={focusColor}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       measurements={measurements}
       onEventKeyDown={isReadOnly ? onOpenReadOnlyDetails : onEventKeyDown}
       ref={registrationRef}

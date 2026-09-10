@@ -156,13 +156,13 @@ describe("PageJumpHintOverlay", () => {
     addAnchor("view-select");
     addAnchor("month-picker");
     addAnchor("up-next");
-    addAnchor(calendarAccountJumpId("ahab@pequod.com"));
-    addAnchor(calendarAccountJumpId("ahab@gmail.com"));
+    addAnchor(calendarAccountJumpId("google:ahab@pequod.com"));
+    addAnchor(calendarAccountJumpId("google:ahab@gmail.com"));
     render(
       <PageJumpHintOverlay
         targets={buildCalendarPageJumpTargets([
-          "ahab@pequod.com",
-          "ahab@gmail.com",
+          { provider: "google", accountEmail: "ahab@pequod.com" },
+          { provider: "google", accountEmail: "ahab@gmail.com" },
         ])}
         visible={true}
       />,
@@ -170,10 +170,10 @@ describe("PageJumpHintOverlay", () => {
 
     expect(chipDigits()).toEqual(["1", "2", "3", "4", "5"]);
     expect(screen.getByRole("status").textContent).toContain(
-      "4 for ahab@pequod.com",
+      "4 for ahab@pequod.com (google)",
     );
     expect(screen.getByRole("status").textContent).toContain(
-      "5 for ahab@gmail.com",
+      "5 for ahab@gmail.com (google)",
     );
   });
 });

@@ -349,6 +349,38 @@ validate_backend_health() {
   check_passed "backend-health"
 }
 
+validate_backend_config_version() {
+  require_env BACKEND_API_URL || return 1
+
+  local url expected actual body
+  # BACKEND_API_URL already includes /api, same join as validate_backend_health.
+  url="${BACKEND_API_URL%/}/config"
+  expected=$(expected_version) || return 1
+
+  if is_local_url "$url" && [ -n "${SSH_TARGET:-}" ]; then
+    body=$(ssh_remote "curl -fsS -L --max-time 20 $(printf '%q' "$url")" 2>&1)
+  else
+    body=$(curl -fsS -L --max-time 20 "$url" 2>&1)
+  fi
+  if [ $? -ne 0 ]; then
+    printf '%s\n' "$body" >&2
+    return 1
+  fi
+
+  actual=$(printf '%s' "$body" | extract_version_json)
+  if [ -z "$actual" ]; then
+    record_failure "backend-config-version" "missing version field"
+    return 1
+  fi
+
+  if [ "$actual" != "$expected" ]; then
+    record_failure "backend-config-version" "expected $expected, got $actual"
+    return 1
+  fi
+
+  check_passed "backend-config-version"
+}
+
 # The Sync service owns /sync/* -- Google's OAuth redirect (/sync/google) and
 # the push webhook (/sync/notifications/google). Those paths are reverse-proxied
 # by a Caddyfile that lives on the host and NOT in this repo, so an edit for an
@@ -607,6 +639,7 @@ run_all_checks() {
     SUPPRESS_FRONTEND_FINISH=1 validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true
   fi
   run_check "backend-health" validate_backend_health
+  run_check "backend-config-version" validate_backend_config_version
   run_check "sync-webhook-route" validate_sync_webhook_route
   run_check "compass-status" ssh_remote "cd ~/compass && ./compass status"
   run_check "compose-services" remote_check_stack

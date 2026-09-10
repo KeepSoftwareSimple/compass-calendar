@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 const CALLBACK_PATH = "/auth/microsoft/callback";
 const INTENT_STORAGE_PREFIX = "compass.providerAuthorizationIntent.microsoft";
@@ -62,6 +63,7 @@ const prepareMicrosoftAuthCallbackPage = async (
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          version: E2E_APP_CONFIG_VERSION,
           providers: {
             microsoft: { signIn: true, connect: true },
           },

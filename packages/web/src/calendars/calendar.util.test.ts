@@ -2,8 +2,10 @@ import {
   type Calendar,
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
+import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
 import {
+  accountKey,
   canInviteOnCalendar,
   compareCalendars,
   getDefaultTargetCalendar,
@@ -435,8 +437,13 @@ describe("spansMultipleAccounts", () => {
 });
 
 describe("groupCalendarsByAccount", () => {
-  const connection = (accountEmail: string): GoogleSyncConnectionSummary => ({
-    id: `conn-${accountEmail}`,
+  // `provider` stays absent by default so the legacy (Google) payload path
+  // is what most cases exercise.
+  const connection = (
+    accountEmail: string,
+    provider?: ProviderKind,
+  ): GoogleSyncConnectionSummary => ({
+    id: `conn-${provider ?? "google"}-${accountEmail}`,
     state: "healthy",
     stateReason: null,
     lastSyncedAt: null,
@@ -444,12 +451,18 @@ describe("groupCalendarsByAccount", () => {
     accountEmail,
     connectionState: "HEALTHY",
     canSuggestContacts: false,
+    ...(provider ? { provider } : {}),
   });
 
   it("buckets by account in connection order and leaves the local calendar ungrouped", () => {
-    const work = makeCalendar({ name: "Work", accountEmail: "old@x.com" });
+    const work = makeCalendar({
+      name: "Work",
+      provider: "google",
+      accountEmail: "old@x.com",
+    });
     const personal = makeCalendar({
       name: "Personal",
+      provider: "google",
       accountEmail: "new@x.com",
       id: "507f1f77bcf86cd799439012" as Calendar["id"],
     });
@@ -472,7 +485,11 @@ describe("groupCalendarsByAccount", () => {
   });
 
   it("groups a lone connected account too - no two-account threshold", () => {
-    const work = makeCalendar({ name: "Work", accountEmail: "old@x.com" });
+    const work = makeCalendar({
+      name: "Work",
+      provider: "google",
+      accountEmail: "old@x.com",
+    });
 
     const { groups } = groupCalendarsByAccount(
       [work],
@@ -489,6 +506,77 @@ describe("groupCalendarsByAccount", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.accountEmail).toBe("old@x.com");
     expect(groups[0]?.calendars).toEqual([]);
+  });
+
+  it("keeps same-email Google and Microsoft accounts as separate groups", () => {
+    // A Gmail address can also be a Microsoft personal-account login, so the
+    // email alone does not identify an account: the provider does.
+    const googleCal = makeCalendar({
+      name: "Google primary",
+      provider: "google",
+      accountEmail: "lance@gmail.com",
+    });
+    const microsoftCal = makeCalendar({
+      name: "Microsoft primary",
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+      id: "507f1f77bcf86cd799439012" as Calendar["id"],
+    });
+    const google = connection("lance@gmail.com", "google");
+    const microsoft = connection("lance@gmail.com", "microsoft");
+
+    const { groups, ungrouped } = groupCalendarsByAccount(
+      [microsoftCal, googleCal],
+      [google, microsoft],
+    );
+
+    expect(ungrouped).toEqual([]);
+    expect(groups.map(accountKey)).toEqual([
+      "google:lance@gmail.com",
+      "microsoft:lance@gmail.com",
+    ]);
+    expect(groups[0]).toMatchObject({
+      provider: "google",
+      accountEmail: "lance@gmail.com",
+      connection: google,
+      calendars: [googleCal],
+    });
+    expect(groups[1]).toMatchObject({
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+      connection: microsoft,
+      calendars: [microsoftCal],
+    });
+  });
+
+  it("nests the local calendar under the oldest-connected account sharing the login email", () => {
+    const googleCal = makeCalendar({
+      name: "Google primary",
+      provider: "google",
+      accountEmail: "lance@gmail.com",
+    });
+    const local = makeCalendar({
+      name: "Compass",
+      provider: "local",
+      id: "507f1f77bcf86cd799439013" as Calendar["id"],
+    });
+
+    const { groups, ungrouped } = groupCalendarsByAccount(
+      [googleCal, local],
+      [
+        connection("lance@gmail.com", "microsoft"),
+        connection("lance@gmail.com", "google"),
+      ],
+      "lance@gmail.com",
+    );
+
+    expect(ungrouped).toEqual([]);
+    expect(groups[0]).toMatchObject({
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+    });
+    expect(groups[0]?.calendars).toEqual([local]);
+    expect(groups[1]?.calendars).toEqual([googleCal]);
   });
 
   it("nests the local calendar under the Google account that matches compassEmail", () => {

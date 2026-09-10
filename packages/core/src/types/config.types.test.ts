@@ -4,6 +4,7 @@ import { describe, expect, it } from "bun:test";
 describe("AppConfigSchema", () => {
   it("defaults billing.publishableKey to null when the field is omitted", () => {
     const parsed = AppConfigSchema.parse({
+      version: "0.5.4",
       google: { isConfigured: false },
       billing: {
         isConfigured: false,
@@ -17,6 +18,7 @@ describe("AppConfigSchema", () => {
 
   it("derives providers from google.isConfigured when providers is omitted", () => {
     const parsed = AppConfigSchema.parse({
+      version: "dev",
       google: { isConfigured: true },
     });
 

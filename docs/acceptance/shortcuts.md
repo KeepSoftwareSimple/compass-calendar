@@ -31,6 +31,7 @@ Use this guide to validate:
 - confirming Settings > Meeting hold-Mod reveals only sidebar digits and Save Enter
 - confirming the first-run Meeting wizard Continue / Back keys (Enter, Esc, K, J)
 - confirming that shortcuts do not fire while typing in inputs
+- hiding and showing an event with `x`, from the event menu, and confirming the strip stays focusable
 
 Do not use this guide to validate:
 

@@ -4,13 +4,16 @@ import {
   HexColorSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
-import { type ProviderCapability } from "@core/types/sync/identity.contracts";
+import {
+  type ProviderCapability,
+  ProviderKindSchema,
+} from "@core/types/sync/identity.contracts";
 
-export const CalendarProviderSchema = z.enum([
-  "local",
-  "google",
-  "microsoft",
-  "apple",
+// "local" is the browser-only calendar; everything else is a connected
+// provider account, so the type is `"local" | ProviderKind` by construction.
+export const CalendarProviderSchema = z.union([
+  z.literal("local"),
+  ProviderKindSchema,
 ]);
 export type CalendarProvider = z.infer<typeof CalendarProviderSchema>;
 
@@ -120,11 +123,12 @@ export const CalendarSchema = z.strictObject({
   // calendar's provider (`CONFERENCE_BY_PROVIDER`) and whether that calendar
   // can actually create a conference link.
   conference: CalendarConferenceSchema.optional(),
-  // Email of the connected provider account this calendar belongs to. This is
-  // the calendar's only account identity on the wire: emails are unique per
-  // user (one Google account = one connection), so grouping and labelling key
-  // off it directly. Absent for the local calendar, and for provider accounts
-  // that reported no email.
+  // Email of the connected provider account this calendar belongs to. With
+  // `provider` it forms the calendar's account identity on the wire: one
+  // email backs at most one account per provider, but the same address can
+  // be a Google account and a Microsoft account, so grouping and labelling
+  // key off (provider, accountEmail), never the email alone. Absent for the
+  // local calendar, and for provider accounts that reported no email.
   accountEmail: z.string().optional(),
 });
 export type Calendar = z.infer<typeof CalendarSchema>;

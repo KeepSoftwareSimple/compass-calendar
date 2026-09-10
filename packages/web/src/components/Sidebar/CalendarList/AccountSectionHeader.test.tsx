@@ -5,10 +5,15 @@ import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
 import { type GoogleUiState } from "@web/auth/providers/connect.types";
+import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
+import { accountKey } from "@web/calendars/calendar.util";
 import { toggleAccountCollapsed } from "@web/calendars/collapsed-accounts.store";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const EMAIL = "ahab@pequod.com";
+// The provider mark sits inside the collapse toggle, so the button's
+// accessible name is the email followed by the provider.
+const GOOGLE_TOGGLE_NAME = `${EMAIL} Google`;
 
 const actualUseConnectProvider = (
   await import("@web/auth/providers/useConnectProvider")
@@ -60,10 +65,12 @@ const { AccountSectionHeader } = (await import(
 
 const renderHeader = (overrides: Partial<SyncConnectionSummary> = {}): void => {
   const { wrapper } = createStoreWrapper();
+  const connection = createMockConnection(EMAIL, overrides);
+  const provider = connectionProviderKind(connection);
   render(
     <AccountSectionHeader
-      accountEmail={EMAIL}
-      connection={createMockConnection(EMAIL, overrides)}
+      account={{ provider, accountEmail: EMAIL }}
+      connection={connection}
     />,
     { wrapper },
   );
@@ -79,7 +86,7 @@ describe("AccountSectionHeader", () => {
     const user = userEvent.setup({ delay: null });
     renderHeader();
 
-    const toggle = screen.getByRole("button", { name: EMAIL });
+    const toggle = screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
     await user.click(toggle);
@@ -90,14 +97,44 @@ describe("AccountSectionHeader", () => {
   });
 
   it("starts collapsed when the account's key is already in the collapsed store", () => {
-    toggleAccountCollapsed(EMAIL);
+    toggleAccountCollapsed(
+      accountKey({ provider: "google", accountEmail: EMAIL }),
+    );
 
     renderHeader();
 
-    expect(screen.getByRole("button", { name: EMAIL })).toHaveAttribute(
-      "aria-expanded",
-      "false",
+    expect(
+      screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME }),
+    ).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps collapse state per provider, not per email", () => {
+    // The same address connected on Microsoft was collapsed; the Google
+    // account with that address must still start expanded.
+    toggleAccountCollapsed(
+      accountKey({ provider: "microsoft", accountEmail: EMAIL }),
     );
+
+    renderHeader();
+
+    expect(
+      screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME }),
+    ).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("names the account's provider with a mark beside the email", () => {
+    renderHeader();
+
+    expect(screen.getByRole("img", { name: "Google" })).toBeInTheDocument();
+  });
+
+  it("marks a Microsoft connection as Microsoft", () => {
+    renderHeader({ provider: "microsoft" });
+
+    expect(screen.getByRole("img", { name: "Microsoft" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `${EMAIL} Microsoft` }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("stays quiet - no status line, no action - while the account is healthy", () => {

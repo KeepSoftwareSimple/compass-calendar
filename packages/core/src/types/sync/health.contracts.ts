@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { DateTimeSchema } from "@core/types/domain-primitives";
 import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
+
+const syncServiceName = "compass-sync" as const;
 
 // Sanitized, bounded-cardinality sync health snapshot (R-OPS / S44).
 // Emitted as `sync_health_snapshot` every five minutes. Counts and ages only —
@@ -56,10 +59,10 @@ export const SyncHealthFreshnessSchema = z.strictObject({
 export type SyncHealthFreshness = z.infer<typeof SyncHealthFreshnessSchema>;
 
 export const SyncHealthSnapshotSchema = z.strictObject({
-  environment: z.string().min(1),
+  [POSTHOG_ERROR_TRACKING_PROPERTY.environment]: z.string().min(1),
   execution: z.enum(["passive", "active"]),
   provider: ProviderKindSchema,
-  service: z.literal("compass-sync"),
+  [POSTHOG_ERROR_TRACKING_PROPERTY.service]: z.literal(syncServiceName),
   connections: SyncHealthConnectionCountsSchema,
   jobs: SyncHealthJobBacklogSchema,
   subscriptions: SyncHealthSubscriptionCountsSchema,

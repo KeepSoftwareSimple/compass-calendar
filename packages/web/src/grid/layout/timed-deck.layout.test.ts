@@ -6,6 +6,7 @@ import {
   DECK_MIN_WIDTH,
   DECK_RIGHT_RESERVE,
   EVENT_WIDTH_MINIMUM,
+  HIDDEN_EVENT_STRIP_WIDTH,
   TIMED_EVENT_COLUMN_INSET,
   TIMED_EVENT_FAN_GUTTER,
   TIMED_EVENT_FAN_INDENT,
@@ -142,6 +143,20 @@ describe("createTimedEventLayout", () => {
 
     expect(deckOf(laid, "morning")).toBeNull();
     expect(deckOf(laid, "afternoon")).toBeNull();
+  });
+
+  it("excludes a hidden event from overlap fanning", () => {
+    const events = [
+      event("visible-a", "2026-05-20T09:00:00", "2026-05-20T10:00:00"),
+      event("hidden", "2026-05-20T09:30:00", "2026-05-20T10:30:00"),
+      event("visible-b", "2026-05-20T09:45:00", "2026-05-20T10:15:00"),
+    ];
+
+    const laid = createTimedEventLayout(events, new Set(["hidden"]));
+
+    expect(deckOf(laid, "visible-a")).toEqual({ order: 0, groupSize: 2 });
+    expect(deckOf(laid, "visible-b")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "hidden")).toBeNull();
   });
 });
 
@@ -285,5 +300,17 @@ describe("applyTimedEventDisplayPosition", () => {
     expect(front.left + front.width).toBe(
       narrowPosition.left + narrowPosition.width,
     );
+  });
+
+  it("returns the strip width and original left when hidden", () => {
+    const someDeck = { order: 1, groupSize: 2 };
+    const position = applyTimedEventDisplayPosition(
+      widePosition,
+      someDeck,
+      true,
+    );
+
+    expect(position.width).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    expect(position.left).toBe(widePosition.left);
   });
 });

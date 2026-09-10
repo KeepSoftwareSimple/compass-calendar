@@ -6,6 +6,7 @@ import {
   GRID_EVENT_TITLE_COMPACT_FONT_SIZE,
   GRID_EVENT_TITLE_COMPACT_LINE_HEIGHT,
   GRID_EVENT_TITLE_FONT_SIZE,
+  HIDDEN_EVENT_STRIP_WIDTH,
 } from "@web/grid/grid.constants";
 import {
   initialEdgeFocusState,
@@ -529,5 +530,62 @@ describe("EventCard", () => {
     expect(card).toHaveAttribute("data-edge-focus", "endDate");
     expect(card.style.boxShadow).toContain("3px 0 0 0 #3b82f6");
     expect(card.className).not.toContain("ring-accent");
+  });
+
+  it("renders a hidden timed event as a nameless strip that still opens on Enter", () => {
+    const onEventKeyDown = mock();
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent({
+          startDate: "2099-01-15T09:00:00.000Z",
+          endDate: "2099-01-15T10:00:00.000Z",
+        })}
+        isHidden
+        motionMode="idle"
+        onEventKeyDown={onEventKeyDown}
+        position={{ ...position, width: HIDDEN_EVENT_STRIP_WIDTH }}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Hidden Timed event: Planning block, 9 - 10 AM",
+    });
+    expect(parseFloat(card.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    expect(card.style.opacity).toBe("0.6");
+    expect(card).toHaveAttribute("title", "Planning block");
+    expect(screen.queryByText("Planning block")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onEventKeyDown).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders a hidden all-day event as a nameless strip that still opens on Enter", () => {
+    const onEventKeyDown = mock();
+
+    render(
+      <AllDayEventCard
+        event={createEvent({
+          isAllDay: true,
+          title: "Conference",
+        })}
+        isHidden
+        isPlaceholder={false}
+        onEventKeyDown={onEventKeyDown}
+        position={{ ...position, width: HIDDEN_EVENT_STRIP_WIDTH }}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Hidden All-day event: Conference",
+    });
+    expect(parseFloat(card.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    expect(card.style.opacity).toBe("0.6");
+    expect(card).toHaveAttribute("title", "Conference");
+    expect(screen.queryByText("Conference")).not.toBeInTheDocument();
+
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(onEventKeyDown).toHaveBeenCalledTimes(1);
   });
 });

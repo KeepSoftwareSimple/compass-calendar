@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { type PostHogCaptureClient } from "@core/logger/posthog-capture";
 import {
   type ConnectionId,
@@ -86,6 +87,7 @@ describe("computeHealthSnapshot", () => {
   const identity = buildServiceIdentity({
     environment: NodeEnv.Test,
     execution: "passive",
+    version: "0.5.4",
   });
 
   const deps = () => ({
@@ -373,7 +375,9 @@ describe("computeHealthSnapshot", () => {
       "microsoft",
     ]);
     expect(captured[0]?.event).toBe("sync_health_snapshot");
-    expect(captured[0]?.properties["service"]).toBe("compass-sync");
+    expect(
+      captured[0]?.properties[POSTHOG_ERROR_TRACKING_PROPERTY.service],
+    ).toBe("compass-sync");
     assertNoSafetyCanary(captured[0]?.properties);
   });
 
