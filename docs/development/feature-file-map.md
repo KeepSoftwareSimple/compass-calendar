@@ -118,6 +118,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Sidebar tip progress (demonstrated primitives): `packages/web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
 - Global shell shortcuts (sidebar `]`, palette, settings, navigation): `packages/web/src/shortcuts/useGlobalShortcuts.ts`
 - Event-jump chips (`H`): `packages/web/src/shortcuts/shift-hint/`
+- Hide/show focused event (`x`): `packages/web/src/shortcuts/hide-event/useHideEventShortcut.ts`
 - Pointer suppression (mouse permanently inert; keyboard clicks pass): `packages/web/src/shortcuts/keyboard-only/`
 - Escape ownership (modals/form before lower handlers): `packages/web/src/shortcuts/escape-ownership.ts`
 - App lock (suppress shortcuts while a modal owns the UI): `packages/web/src/shortcuts/app-lock.ts`
