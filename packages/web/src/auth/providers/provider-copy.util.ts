@@ -20,6 +20,23 @@ export const CALENDAR_PRODUCT_NAME: Record<ProviderKind, string> = {
 /** Heading for the first-connect onboarding step and the multi-provider chooser. */
 export const CONNECT_THE_CALENDAR_YOU_USE = "Connect the calendar you use";
 
+/**
+ * The connect step is where Compass starts being useful, and where a new user
+ * is asked to hand over calendar access before they have seen it do anything.
+ * These three lines answer why, what changes, and what Compass can reach.
+ */
+export const CONNECT_CALENDAR_WHY =
+  "Compass works on your real calendar, so it needs to read and write the events already on it.";
+
+export const CONNECT_CALENDAR_BENEFITS: readonly string[] = [
+  "Your existing events show up in the week, right away.",
+  "Edits sync both ways, so your other apps stay in step.",
+  "Every keyboard shortcut works on real events, not a demo.",
+];
+
+export const CONNECT_CALENDAR_REASSURANCE =
+  "Compass only touches calendar events, and you can disconnect the account anytime from Settings.";
+
 /** Spec host-explainer: Apple Calendar.app is not the same as iCloud hosting. */
 export const CALENDAR_HOST_EXPLAINER =
   "If you view your calendar in Apple Calendar, it may still be hosted by Google or Microsoft.";
