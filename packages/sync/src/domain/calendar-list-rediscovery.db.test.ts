@@ -111,21 +111,23 @@ describe("calendar-list rediscovery sweep (rediscoverStaleCalendarLists)", () =>
 
     expect(enqueued).toBe(1);
     const record = await resourceById(stale._id);
-    expect(record?.syncCursor).toBeNull();
+    expect(record?.["syncCursor"]).toBeNull();
     // lastFullListAt is the staleness key the sweep selects on; clearing the
     // cursor must not also stamp it, or the resource would look satisfied for a
     // day on the strength of a pass that has not run yet.
-    expect(record?.lastFullListAt).toEqual(
+    expect(record?.["lastFullListAt"]).toEqual(
       new Date("2026-08-01T00:00:00.000Z"),
     );
-    expect(record?.lastSuccessAt).toEqual(new Date("2026-08-01T00:00:00.000Z"));
+    expect(record?.["lastSuccessAt"]).toEqual(
+      new Date("2026-08-01T00:00:00.000Z"),
+    );
 
     const job = await jobByKey(`calendarListSync:${stale.connectionId}`);
-    expect(job?.kind).toBe("calendarListSync");
+    expect(job?.["kind"]).toBe("calendarListSync");
     // Connection-scoped, not resource-scoped: matches registerConnection's
     // own enqueue shape so the two never race on different coalescing keys.
-    expect(job?.resourceId).toBeNull();
-    expect(job?.tenantId).toBe(stale.tenantId);
+    expect(job?.["resourceId"]).toBeNull();
+    expect(job?.["tenantId"]).toBe(stale.tenantId);
   });
 
   it("skips a resource fully re-listed more recently than the threshold", async () => {
@@ -279,7 +281,7 @@ describe("calendar-list rediscovery sweep (rediscoverStaleCalendarLists)", () =>
         }),
     ).toBe(1);
     const record = await resourceById(stale._id);
-    expect(record?.syncCursor).toBeNull();
+    expect(record?.["syncCursor"]).toBeNull();
   });
 
   it("excludes a resource whose connection has no stored credential, however stale", async () => {

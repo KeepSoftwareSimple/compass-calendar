@@ -1,5 +1,11 @@
 import { faker } from "@faker-js/faker";
 import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
   type CommandSubmitRequest,
   type SyncCommandInput,
 } from "@core/types/sync/command.contracts";
@@ -75,9 +81,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(result.bookable).toBe(true);
@@ -92,7 +98,7 @@ describe("CalendarBookingService", () => {
 
   it("allowlists the Compass-local calendar as unbacked busy", async () => {
     mock.restore();
-    const localId = calendarId();
+    const localId = calendarId() as CalendarId;
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue({
       _id: { toHexString: () => localId },
     } as never);
@@ -106,9 +112,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.getAvailability(userId(), {
-      calendarIds: [localId, calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [localId, calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(queryBusyAvailability).toHaveBeenCalledWith(
@@ -131,12 +137,12 @@ describe("CalendarBookingService", () => {
       queryBusyAvailability,
       submitCommand: mock(async () => ({ ok: true as const, value: {} })),
     } as unknown as SyncServiceClient);
-    const excluded = [faker.database.mongodbObjectId()];
+    const excluded = [faker.database.mongodbObjectId()] as EventId[];
 
     await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
       excludeEventIds: excluded,
     });
 
@@ -159,9 +165,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(result.bookable).toBe(false);
@@ -184,12 +190,12 @@ describe("CalendarBookingService", () => {
       "Cancel: https://compasscalendar.com/cancel/x\n\nReschedule: https://compasscalendar.com/reschedule/x";
 
     await service.createBookingEvent(userId(), {
-      calendarId: calendarId(),
+      calendarId: calendarId() as CalendarId,
       title: "Ada and Tyler",
       description,
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
       createConference: true,
     });
@@ -229,12 +235,12 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.createBookingEvent(userId(), {
-      calendarId: calendarId(),
+      calendarId: calendarId() as CalendarId,
       title: "Ada and Tyler",
       description: "Zoom: https://example.com/meet",
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
       createConference: false,
     });
@@ -261,12 +267,12 @@ describe("CalendarBookingService", () => {
 
     await expect(
       service.createBookingEvent(userId(), {
-        calendarId: calendarId(),
+        calendarId: calendarId() as CalendarId,
         title: "Ada and Tyler",
         description: "",
-        start: "2026-09-01T15:00:00.000Z",
-        end: "2026-09-01T15:30:00.000Z",
-        timeZone: "America/Denver",
+        start: "2026-09-01T15:00:00.000Z" as DateTime,
+        end: "2026-09-01T15:30:00.000Z" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
         guest: { email: "   ", displayName: null },
         createConference: true,
       }),
@@ -275,7 +281,7 @@ describe("CalendarBookingService", () => {
   });
 
   it("submits a booking update with the new title", async () => {
-    const eventId = faker.database.mongodbObjectId();
+    const eventId = faker.database.mongodbObjectId() as EventId;
     const submitCommand = mock(async () => ({
       ok: true as const,
       value: { commandId: faker.database.mongodbObjectId() },
@@ -289,12 +295,12 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.updateBookingEvent(userId(), {
-      eventId,
+      eventId: eventId as EventId,
       title: "Grace and Tyler",
       description: "bring tea",
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Grace Hopper" },
     });
 
@@ -316,9 +322,9 @@ describe("CalendarBookingService", () => {
         },
         schedule: {
           kind: "timed",
-          start: "2026-09-01T15:00:00.000Z",
-          end: "2026-09-01T15:30:00.000Z",
-          timeZone: "America/Denver",
+          start: "2026-09-01T15:00:00.000Z" as DateTime,
+          end: "2026-09-01T15:30:00.000Z" as DateTime,
+          timeZone: "America/Denver" as TimeZone,
         },
       },
     });
@@ -334,7 +340,7 @@ describe("CalendarBookingService", () => {
   });
 
   it("submits delete with invitation all", async () => {
-    const eventId = faker.database.mongodbObjectId();
+    const eventId = faker.database.mongodbObjectId() as EventId;
     const submitCommand = mock(async () => ({
       ok: true as const,
       value: { commandId: faker.database.mongodbObjectId() },
@@ -347,7 +353,7 @@ describe("CalendarBookingService", () => {
       submitCommand,
     } as unknown as SyncServiceClient);
 
-    await service.deleteBookingEvent(userId(), { eventId });
+    await service.deleteBookingEvent(userId(), { eventId: eventId as EventId });
 
     expect(submitCommand).toHaveBeenCalledWith(
       expect.any(Object),

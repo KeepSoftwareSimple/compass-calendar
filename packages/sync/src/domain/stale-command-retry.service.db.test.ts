@@ -1,9 +1,15 @@
 import { faker } from "@faker-js/faker";
 import {
-  type ConnectionId,
+  type CalendarId,
+  type DateTime,
   type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
+  type ConnectionId,
   type IdempotencyKey,
   type PrincipalId,
+  type ProviderEventId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
@@ -66,7 +72,7 @@ class FakeCreateWriter implements ProviderEventWriter {
   createError: Error | null = null;
   createCalls: ProviderCreateInput[] = [];
   result: ProviderWriteResult = {
-    providerEventId: "g-created-1",
+    providerEventId: "g-created-1" as ProviderEventId,
     providerVersion: "etag-created",
   };
   async createEvent(input: ProviderCreateInput): Promise<ProviderWriteResult> {
@@ -106,9 +112,9 @@ describe("retryStaleCommands", () => {
 
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
 
   const connections: ProviderConnectionLookup = {
@@ -330,11 +336,14 @@ describe("retryStaleCommands", () => {
       },
       patchEvent: async (input) => {
         patchCalls.push(input);
-        return { providerEventId: "g-evt-1", providerVersion: "etag-2" };
+        return {
+          providerEventId: "g-evt-1" as ProviderEventId,
+          providerVersion: "etag-2",
+        };
       },
       fetchEvent: async () => ({
         kind: "event",
-        providerEventId: "g-evt-1",
+        providerEventId: "g-evt-1" as ProviderEventId,
         providerVersion: "etag-1",
         providerUpdatedAt: null,
         content: {
@@ -388,7 +397,7 @@ describe("retryStaleCommands", () => {
     const stored = await commands.findById(tenantId, principalId, command._id);
     expect(stored?.outcome.state).toBe("confirmed");
     const event = await events.findById(tenantId, principalId, eventId);
-    expect(event?.providerEventId).toBe("g-created-1");
+    expect(event?.providerEventId).toBe("g-created-1" as ProviderEventId);
   });
 
   it("leaves a create pending and reports it still stale on a repeated transient failure", async () => {
@@ -517,7 +526,7 @@ describe("retryStaleCommands", () => {
     const tenantId = objectId() as TenantId;
     const principalId = objectId() as PrincipalId;
     const eventId = objectId() as EventId;
-    const calendarId = objectId();
+    const calendarId = objectId() as CalendarId;
 
     await events.put({
       _id: eventId,

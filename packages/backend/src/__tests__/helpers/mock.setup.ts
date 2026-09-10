@@ -244,7 +244,7 @@ export function getTestLoggerInfoCalls(
   namespace = "",
 ): Array<[string, ...unknown[]]> {
   const logger = testLoggers.get(namespace);
-  return (logger?.info.mock?.calls ?? []) as Array<[string, ...unknown[]]>;
+  return (logger?.["info"]?.mock.calls ?? []) as Array<[string, ...unknown[]]>;
 }
 
 export function setupBackendTestSeams(): void {

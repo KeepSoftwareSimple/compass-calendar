@@ -1,4 +1,6 @@
 import { generateKeyPair, type KeyLike, SignJWT } from "jose";
+import { type DateOnly } from "@core/types/domain-primitives";
+import { type ProviderAccountId } from "@core/types/sync/identity.contracts";
 import {
   assertWriterRejectsStaleVersion,
   CONTRACT_CONTENT,
@@ -135,7 +137,9 @@ describeAuthCases("microsoft", () => buildAdapter(), [
         redirectUri: "https://staging.example.com/sync/microsoft",
       });
       const fixture = exchangeFixture as ExchangeSuccessFixture;
-      expect(result.account.providerAccountId).toBe(fixture.idTokenClaims.oid);
+      expect(result.account.providerAccountId).toBe(
+        fixture.idTokenClaims.oid as ProviderAccountId,
+      );
       expect(result).toMatchObject({
         refreshToken: fixture.tokenResponse.refresh_token,
       });
@@ -297,8 +301,8 @@ describe("microsoft normalizer contract", () => {
     expect(read.busy).toBe(false);
     expect(read.schedule).toEqual({
       kind: "allDay",
-      start: "2022-02-22",
-      end: "2022-02-23",
+      start: "2022-02-22" as DateOnly,
+      end: "2022-02-23" as DateOnly,
     });
   });
 

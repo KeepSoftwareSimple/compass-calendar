@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { type EventId } from "@core/types/domain-primitives";
 import {
   AvailabilityQuerySchema,
   CreateEventInputSchema,
@@ -58,7 +59,7 @@ describe("Event Command Contracts", () => {
         ...base(),
         externalReference: {
           provider: "google",
-          eventId: "abc",
+          eventId: "abc" as EventId,
           recurringEventId: null,
         },
       };
@@ -76,7 +77,7 @@ describe("Event Command Contracts", () => {
       const legacy = base();
       const parsed = CreateEventInputSchema.parse(legacy);
 
-      expect(parsed).toStrictEqual(legacy);
+      expect<unknown>(parsed).toStrictEqual(legacy);
     });
 
     it("accepts content attendees alongside an invitation intent", () => {
@@ -186,7 +187,7 @@ describe("Event Command Contracts", () => {
       const legacy = base();
       const parsed = ReplaceEventInputSchema.parse(legacy);
 
-      expect(parsed).toStrictEqual(legacy);
+      expect<unknown>(parsed).toStrictEqual(legacy);
     });
 
     it("accepts a replace with two attendees and invitation all", () => {

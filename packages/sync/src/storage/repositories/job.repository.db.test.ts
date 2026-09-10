@@ -1,6 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
-import { type SyncJobId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type SyncJobId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
@@ -13,9 +18,9 @@ const objectId = () => faker.database.mongodbObjectId();
 
 const enqueue = (overrides: Partial<JobEnqueue> = {}): JobEnqueue =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    connectionId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    connectionId: objectId() as ConnectionId,
     resourceId: null,
     commandId: null,
     kind: "incrementalPull",
@@ -185,8 +190,8 @@ describe("JobRepository", () => {
       const imports = await db
         .collection("jobs")
         .findOne({ coalescingKey: "import-due" });
-      expect(imports?.state).toBe("pending");
-      expect(imports?.leaseOwner).toBeNull();
+      expect(imports?.["state"]).toBe("pending");
+      expect(imports?.["leaseOwner"]).toBeNull();
     });
 
     it("excludeKinds returns null rather than claiming an excluded job when nothing else is due", async () => {
@@ -217,8 +222,8 @@ describe("JobRepository", () => {
       const stillClaimed = await db
         .collection("jobs")
         .findOne({ _id: created._id as never });
-      expect(stillClaimed?.state).toBe("claimed");
-      expect(stillClaimed?.leaseOwner).toBe("stalled-worker");
+      expect(stillClaimed?.["state"]).toBe("claimed");
+      expect(stillClaimed?.["leaseOwner"]).toBe("stalled-worker");
     });
 
     it("enqueueUrgent boosts a pending job without pushing back an earlier runAfter", async () => {
@@ -475,13 +480,13 @@ describe("JobRepository", () => {
       const peer = await db
         .collection("jobs")
         .findOne({ _id: staying!._id as never });
-      expect(peer?.state).toBe("claimed");
-      expect(peer?.leaseOwner).toBe("staying-worker");
+      expect(peer?.["state"]).toBe("claimed");
+      expect(peer?.["leaseOwner"]).toBe("staying-worker");
       const released = await db
         .collection("jobs")
         .findOne({ _id: leaving!._id as never });
-      expect(released?.state).toBe("pending");
-      expect(released?.leaseOwner).toBeNull();
+      expect(released?.["state"]).toBe("pending");
+      expect(released?.["leaseOwner"]).toBeNull();
     });
   });
 
@@ -671,12 +676,12 @@ describe("JobRepository", () => {
       expect(await repo.requeue(id, NOW)).toBe(true);
 
       const after = await db.collection("jobs").findOne({ _id: id as never });
-      expect(after?.state).toBe("pending");
-      expect(after?.attempt).toBe(0);
-      expect(after?.leaseOwner).toBeNull();
-      expect(after?.failureClass).toBeNull();
-      expect(after?.runAfter).toEqual(NOW);
-      expect(after?.requeuedCount).toBe(1);
+      expect(after?.["state"]).toBe("pending");
+      expect(after?.["attempt"]).toBe(0);
+      expect(after?.["leaseOwner"]).toBeNull();
+      expect(after?.["failureClass"]).toBeNull();
+      expect(after?.["runAfter"]).toEqual(NOW);
+      expect(after?.["requeuedCount"]).toBe(1);
     });
 
     it("does not requeue a job that is not currently failed", async () => {
@@ -858,12 +863,12 @@ describe("JobRepository", () => {
       expect(winning).not.toContain("COLLSCAN");
       // With runAfter leading after state, future backoff rows are not examined.
       expect(
-        plan.executionStats?.totalKeysExamined ?? Infinity,
+        plan["executionStats"]?.totalKeysExamined ?? Infinity,
       ).toBeLessThanOrEqual(1);
     });
 
     it("connection overdue filter is served by connection_runafter", async () => {
-      const connectionId = objectId();
+      const connectionId = objectId() as ConnectionId;
       await repo.enqueue(
         enqueue({
           connectionId: connectionId as JobEnqueue["connectionId"],

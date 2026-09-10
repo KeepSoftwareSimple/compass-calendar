@@ -3,6 +3,7 @@ import {
   CONTACTS_FEATURE_SCOPES,
   MICROSOFT_SCOPES,
 } from "@core/providers/microsoft.scopes";
+import { type ProviderAccountId } from "@core/types/sync/identity.contracts";
 import {
   MICROSOFT_AUTHORIZE_URL,
   MicrosoftAuthAdapter,
@@ -231,7 +232,9 @@ describe("MicrosoftAuthAdapter", () => {
         redirectUri: "https://staging.example.com/sync/microsoft",
       });
 
-      expect(result.account.providerAccountId).toBe("microsoft-oid-123");
+      expect(result.account.providerAccountId).toBe(
+        "microsoft-oid-123" as ProviderAccountId,
+      );
       expect(result.account.email).toBe("user@contoso.com");
       expect(result.account.displayName).toBe("Contoso User");
       expect(result.refreshToken).toBe("refresh-token-value");

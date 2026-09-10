@@ -1,4 +1,9 @@
 import { faker } from "@faker-js/faker";
+import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import {
   ensureEventsResource,
@@ -88,7 +93,7 @@ describe("SyncJobWorker", () => {
       account: {
         email: "user@example.com",
         displayName: "User",
-        providerAccountId: "google-subject",
+        providerAccountId: "google-subject" as ProviderAccountId,
       },
       capabilities: [
         "readEvents",
@@ -240,11 +245,11 @@ describe("SyncJobWorker", () => {
 
   it("re-derives connection health after a successful pull settles", async () => {
     const connection = await connections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-1",
+        providerAccountId: "acct-1" as ProviderAccountId,
         email: "user@example.com",
         displayName: "User",
       },
@@ -317,8 +322,8 @@ describe("SyncJobWorker", () => {
       await jobs.findById(resource.tenantId, resource.principalId, pull._id),
     ).toBeNull();
     const repair = await jobByKey(`repair:${resource._id}`);
-    expect(repair?.kind).toBe("repair");
-    expect(repair?.state).toBe("pending");
+    expect(repair?.["kind"]).toBe("repair");
+    expect(repair?.["state"]).toBe("pending");
   });
 
   it("reschedules a repair that did not complete instead of deleting it", async () => {
@@ -573,15 +578,17 @@ describe("SyncJobWorker", () => {
     while (!onHeartbeat) await new Promise((r) => setTimeout(r, 5));
 
     const claimed = await jobByKey(`incrementalPull:${resource._id}`);
-    const claimedLease = (claimed?.leaseExpiresAt as Date).getTime();
+    const claimedLease = (claimed?.["leaseExpiresAt"] as Date).getTime();
 
     // Advance time and fire one heartbeat; the lease must move forward.
     clock += 60_000;
     await onHeartbeat?.();
 
     const beaten = await jobByKey(`incrementalPull:${resource._id}`);
-    expect((beaten?.leaseExpiresAt as Date).getTime()).toBe(clock + 300_000);
-    expect((beaten?.leaseExpiresAt as Date).getTime()).toBeGreaterThan(
+    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBe(
+      clock + 300_000,
+    );
+    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBeGreaterThan(
       claimedLease,
     );
 
@@ -652,11 +659,11 @@ describe("SyncJobWorker", () => {
 
   it("settles a durable calendarList discovery failure instead of burning the retry ladder", async () => {
     const connection = await connections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-not-cal",
+        providerAccountId: "acct-not-cal" as ProviderAccountId,
         email: "nocal@example.com",
         displayName: "No Cal",
       },

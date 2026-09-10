@@ -103,8 +103,8 @@ describe("bootstrap-recovery sweep (enqueueForResources + listStalledBootstraps)
 
     expect(enqueued).toBe(1);
     const job = await jobByKey(`bootstrapCatchup:${stalled._id}`);
-    expect(job?.kind).toBe("bootstrapCatchup");
-    expect(job?.resourceId).toBe(stalled._id);
+    expect(job?.["kind"]).toBe("bootstrapCatchup");
+    expect(job?.["resourceId"]).toBe(stalled._id);
   });
 
   it("skips a resource whose bootstrap already reached ready", async () => {

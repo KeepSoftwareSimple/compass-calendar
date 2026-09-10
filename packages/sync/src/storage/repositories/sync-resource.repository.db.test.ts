@@ -1,5 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import { type CalendarId } from "@core/types/domain-primitives";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -13,11 +19,11 @@ const upsert = (
   overrides: Partial<SyncResourceUpsert> = {},
 ): SyncResourceUpsert =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    connectionId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    connectionId: objectId() as ConnectionId,
     resourceKind: "events",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     ...overrides,
   }) as SyncResourceUpsert;
 
@@ -96,9 +102,9 @@ describe("SyncResourceRepository", () => {
 
   it("ensures one resource per (connection, kind, calendar)", async () => {
     const key = {
-      connectionId: objectId(),
+      connectionId: objectId() as ConnectionId,
       resourceKind: "events" as const,
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
     };
     const first = await repo.ensure(upsert(key));
     const second = await repo.ensure(upsert(key));
@@ -108,7 +114,7 @@ describe("SyncResourceRepository", () => {
 
   it("ensures one calendar-list resource per connection", async () => {
     const key = {
-      connectionId: objectId(),
+      connectionId: objectId() as ConnectionId,
       resourceKind: "calendarList" as const,
       calendarId: null,
     };
@@ -153,12 +159,16 @@ describe("SyncResourceRepository", () => {
   });
 
   it("keeps the calendar-list resource distinct from event resources", async () => {
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     await repo.ensure(
       upsert({ connectionId, resourceKind: "calendarList", calendarId: null }),
     );
     await repo.ensure(
-      upsert({ connectionId, resourceKind: "events", calendarId: objectId() }),
+      upsert({
+        connectionId,
+        resourceKind: "events",
+        calendarId: objectId() as CalendarId,
+      }),
     );
     expect(await db.collection("sync_resources").countDocuments()).toBe(2);
   });

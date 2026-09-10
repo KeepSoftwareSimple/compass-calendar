@@ -2,6 +2,11 @@ import { allday } from "@core/__mocks__/v1/events/gcal/gcal.allday";
 import { cancelled } from "@core/__mocks__/v1/events/gcal/gcal.cancelled";
 import { recurring } from "@core/__mocks__/v1/events/gcal/gcal.recurring";
 import { timed } from "@core/__mocks__/v1/events/gcal/gcal.timed";
+import {
+  type DateOnly,
+  type DateTime,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { type gSchema$Event } from "@core/types/gcal";
 import { normalizeGoogleEvent } from "@sync/providers/google/google-event.normalizer";
 import {
@@ -67,7 +72,7 @@ describe("normalizeGoogleEvent", () => {
 
     // The fixture's stored offset disagrees with its zone; re-anchoring corrects
     // the offset while keeping the same absolute moment.
-    expect(read.schedule.timeZone).toBe("America/Chicago");
+    expect(read.schedule.timeZone).toBe("America/Chicago" as TimeZone);
     expect(Date.parse(read.schedule.start)).toBe(
       Date.parse("2012-10-26T13:00:00-06:00"),
     );
@@ -109,8 +114,8 @@ describe("normalizeGoogleEvent", () => {
       throw new Error("expected timed");
     }
 
-    expect(winter.schedule.start).toBe("2025-01-15T09:00:00-05:00");
-    expect(summer.schedule.start).toBe("2025-07-15T09:00:00-04:00");
+    expect(winter.schedule.start).toBe("2025-01-15T09:00:00-05:00" as DateTime);
+    expect(summer.schedule.start).toBe("2025-07-15T09:00:00-04:00" as DateTime);
   });
 
   it("normalizes an all-day, free (transparent) event", () => {
@@ -119,8 +124,8 @@ describe("normalizeGoogleEvent", () => {
     expect(read.busy).toBe(false);
     expect(read.schedule).toEqual({
       kind: "allDay",
-      start: "2022-02-22",
-      end: "2022-02-23",
+      start: "2022-02-22" as DateOnly,
+      end: "2022-02-23" as DateOnly,
     });
     // No description/location on this fixture; absence becomes empty string
     // for both, matching the editable-write side's "no location" convention.
@@ -143,7 +148,7 @@ describe("normalizeGoogleEvent", () => {
   });
 
   it("maps a recurring instance to its series link and occurrence id", () => {
-    const read = asProviderEvent(normalizeGoogleEvent(recurring[1]));
+    const read = asProviderEvent(normalizeGoogleEvent(recurring[1]!));
     if (read.recurrence.kind !== "instance")
       throw new Error("expected instance");
 
@@ -250,7 +255,7 @@ describe("normalizeGoogleEvent", () => {
     );
 
     expect(read.content.organizer?.displayName).toBeNull();
-    expect(read.content.attendees[0].displayName).toBeNull();
+    expect(read.content.attendees[0]!.displayName).toBeNull();
   });
 
   it("reads a conference url from hangoutLink and from conferenceData", () => {
@@ -310,7 +315,7 @@ describe("normalizeGoogleEvent", () => {
     );
     if (read.schedule.kind !== "timed") throw new Error("expected timed");
 
-    expect(read.schedule.timeZone).toBe("UTC");
+    expect(read.schedule.timeZone).toBe("UTC" as TimeZone);
     expect(Date.parse(read.schedule.start)).toBe(
       Date.parse("2025-01-15T09:00:00-05:00"),
     );
@@ -333,7 +338,7 @@ describe("normalizeGoogleEvent", () => {
     );
     if (read.schedule.kind !== "timed") throw new Error("expected timed");
 
-    expect(read.schedule.timeZone).toBe("UTC");
+    expect(read.schedule.timeZone).toBe("UTC" as TimeZone);
     expect(Date.parse(read.schedule.start)).toBe(
       Date.parse("2025-01-15T09:00:00-07:00"),
     );

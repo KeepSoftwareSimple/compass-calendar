@@ -3,6 +3,11 @@ import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AdminPutBookingPageInputSchema } from "@core/types/booking.contracts";
 import {
+  type CalendarId,
+  type DateTime,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
   type CommandSubmitRequest,
   type SyncCommandInput,
 } from "@core/types/sync/command.contracts";
@@ -302,7 +307,7 @@ describe("PublicBookingService", () => {
       guestName: "Rival Guest",
       guestEmail: "rival@example.com",
       notes: null,
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "rival-evt",
       cancelTokenHash: "b".repeat(64),
@@ -391,7 +396,7 @@ describe("PublicBookingService", () => {
 
   it("confirms at the pinned duration and calls createBookingEvent once", async () => {
     const { slug } = await enableBookingPage();
-    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z` as DateTime;
 
     const response = await service.createReservation(slug, {
       slotStart,
@@ -409,7 +414,9 @@ describe("PublicBookingService", () => {
       end: `${BOOKING_MONDAY}T10:30:00.000Z`,
     });
     expect(response.slotStart).toBe(slotStart);
-    expect(response.slotEnd).toBe(`${BOOKING_MONDAY}T10:30:00.000Z`);
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T10:30:00.000Z` as DateTime,
+    );
   });
 
   it("rejects confirm when pinned duration does not match the page", async () => {
@@ -624,7 +631,13 @@ describe("PublicBookingService", () => {
 
     await expect(service.getHostPageStatus(userId)).resolves.toEqual({
       bookable: false,
-      reasons: [{ kind: "calendar", reason: "stale", calendarId }],
+      reasons: [
+        {
+          kind: "calendar",
+          reason: "stale",
+          calendarId: calendarId as CalendarId,
+        },
+      ],
     });
     await expect(
       service.getSlots(slug, {
@@ -1174,7 +1187,7 @@ describe("PublicBookingService", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: null,
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "past-evt",
       cancelTokenHash: hashCancelToken(token),
@@ -1205,7 +1218,7 @@ describe("PublicBookingService", () => {
 
     expect(publicReservation).toEqual({
       slotStart: created.slotStart,
-      guestTimeZone: "Europe/London",
+      guestTimeZone: "Europe/London" as TimeZone,
       durationMinutes: 30,
       hostDisplayName: "Host User",
       status: "confirmed",
@@ -1344,7 +1357,7 @@ describe("PublicBookingService", () => {
       );
       expect(response.bookable).toBe(true);
       expect(response.slots.map((slot) => slot.slotStart)).toContain(
-        `${BOOKING_MONDAY}T10:00:00Z`,
+        `${BOOKING_MONDAY}T10:00:00Z` as DateTime,
       );
     } finally {
       listSpy.mockRestore();
@@ -1366,7 +1379,7 @@ describe("PublicBookingService", () => {
     });
 
     expect(response.slots.map((slot) => slot.slotStart)).toContain(
-      `${BOOKING_MONDAY}T09:30:00Z`,
+      `${BOOKING_MONDAY}T09:30:00Z` as DateTime,
     );
   });
 
@@ -1386,7 +1399,9 @@ describe("PublicBookingService", () => {
       durationMinutes: 30,
     });
 
-    expect(created.slotStart).toBe(`${BOOKING_MONDAY}T09:30:00.000Z`);
+    expect(created.slotStart).toBe(
+      `${BOOKING_MONDAY}T09:30:00.000Z` as DateTime,
+    );
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
   });
 
@@ -1686,7 +1701,7 @@ describe("PublicBookingService", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: "bring coffee",
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "past-evt",
       cancelTokenHash: hashCancelToken(token),
@@ -1745,9 +1760,13 @@ describe("PublicBookingService", () => {
       end: `${BOOKING_MONDAY}T11:30:00.000Z`,
     });
     expect(createBookingEvent).not.toHaveBeenCalled();
-    expect(response.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
-    expect(response.slotEnd).toBe(`${BOOKING_MONDAY}T11:30:00.000Z`);
-    expect(response.guestTimeZone).toBe("America/Denver");
+    expect(response.slotStart).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
+    );
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T11:30:00.000Z` as DateTime,
+    );
+    expect(response.guestTimeZone).toBe("America/Denver" as TimeZone);
     expect(response.status).toBe("confirmed");
     expect(response).not.toHaveProperty("guestEmail");
     expect(response).not.toHaveProperty("cancelUrl");
@@ -1825,8 +1844,8 @@ describe("PublicBookingService", () => {
     });
 
     expect(updateBookingEvent).not.toHaveBeenCalled();
-    expect(again.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
-    expect(again.guestTimeZone).toBe("America/Denver");
+    expect(again.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z` as DateTime);
+    expect(again.guestTimeZone).toBe("America/Denver" as TimeZone);
   });
 
   it("rejects reschedule onto another confirmed reservation", async () => {
@@ -2127,7 +2146,7 @@ describe("Public booking routes", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: "secret notes",
-      guestTimeZone: "Europe/London",
+      guestTimeZone: "Europe/London" as TimeZone,
       status: "confirmed",
       calendarEventId: "evt-1",
       cancelTokenHash: "a".repeat(64),

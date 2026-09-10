@@ -3,6 +3,8 @@ import { NodeEnv } from "@core/constants/core.constants";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { type PrincipalPurgeResponse } from "@core/types/sync/principal.contracts";
@@ -93,7 +95,7 @@ const seedConnection = (
     principalId: principalId as PrincipalId,
     provider: "google",
     account: {
-      providerAccountId: objectId(),
+      providerAccountId: objectId() as ProviderAccountId,
       email: "purge@example.com",
       displayName: null,
     },
@@ -134,9 +136,9 @@ describe("DELETE /internal/principal", () => {
   });
 
   it("revokes credentials and hard-deletes every principal-scoped row", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const stranger = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const stranger = objectId() as PrincipalId;
 
     const connections = new ProviderConnectionRepository(mongo.db);
     const credentials = new CredentialRepository(mongo.db);
@@ -160,10 +162,10 @@ describe("DELETE /internal/principal", () => {
       scopes: ["https://www.googleapis.com/auth/calendar.events"],
     });
     await calendars.upsertByProviderCalendar({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: mine._id,
-      providerCalendarId: "primary",
+      providerCalendarId: "primary" as ProviderCalendarSourceId,
       displayName: "Primary",
       color: null,
       ...defaultCalendarListFields,
@@ -178,15 +180,15 @@ describe("DELETE /internal/principal", () => {
       },
     });
     await resources.ensure({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: mine._id,
       resourceKind: "calendarList",
       calendarId: null,
     });
     await jobs.enqueue({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: mine._id,
       resourceId: null,
       commandId: null,
@@ -196,8 +198,8 @@ describe("DELETE /internal/principal", () => {
       coalescingKey: `purge-test:${mine._id}`,
     });
     await invalidations.append({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       invalidation: { kind: "connection", connectionId: mine._id },
       emittedAt: new Date(),
     });
@@ -219,19 +221,13 @@ describe("DELETE /internal/principal", () => {
 
     expect(adapter.revoked).toEqual(["mine-refresh"]);
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
     expect(await credentials.findByConnection(mine._id)).toBeNull();
     expect(await credentials.findByConnection(theirs._id)).not.toBeNull();
-    expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        stranger as PrincipalId,
-      ),
-    ).toHaveLength(1);
+    expect(await connections.listByPrincipal(tenantId, stranger)).toHaveLength(
+      1,
+    );
   });
 
   it("is idempotent and works in passive mode without an auth adapter", async () => {

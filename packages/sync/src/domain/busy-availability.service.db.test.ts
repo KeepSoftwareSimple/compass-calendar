@@ -6,6 +6,8 @@ import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
@@ -52,7 +54,7 @@ describe("computeBusyAvailability", () => {
       principalId,
       provider: "google",
       account: {
-        providerAccountId: `acct-${accountSeq}`,
+        providerAccountId: `acct-${accountSeq}` as ProviderAccountId,
         email: `user${accountSeq}@gmail.com`,
         displayName: "User",
       },
@@ -194,7 +196,7 @@ describe("computeBusyAvailability", () => {
       tenantId,
       principalId,
       connectionId: conn,
-      providerCalendarId: "ghost@google.com",
+      providerCalendarId: "ghost@google.com" as ProviderCalendarSourceId,
       displayName: "Ghost",
       color: null,
       active: true,

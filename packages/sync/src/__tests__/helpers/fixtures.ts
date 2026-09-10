@@ -1,4 +1,9 @@
 import { faker } from "@faker-js/faker";
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
+import {
+  type ProviderCalendarSourceId,
+  type ProviderEventId,
+} from "@core/types/sync/identity.contracts";
 import {
   type ProviderAdapters,
   type ResolveProviderAdapters,
@@ -41,7 +46,7 @@ export const seedProviderCalendar = (
     tenantId: objectId() as ProviderCalendarRecord["tenantId"],
     principalId: objectId() as ProviderCalendarRecord["principalId"],
     connectionId: objectId() as ProviderCalendarRecord["connectionId"],
-    providerCalendarId: "primary@google.com",
+    providerCalendarId: "primary@google.com" as ProviderCalendarSourceId,
     displayName: "Google",
     color: null,
     active: true,
@@ -113,15 +118,15 @@ export const ensureEventsResource = async (
 // The timed schedule most db tests give their scripted provider events.
 export const TIMED_SCHEDULE = {
   kind: "timed" as const,
-  start: "2026-07-14T09:00:00-06:00",
-  end: "2026-07-14T10:00:00-06:00",
-  timeZone: "America/Denver",
+  start: "2026-07-14T09:00:00-06:00" as DateTime,
+  end: "2026-07-14T10:00:00-06:00" as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 };
 
 // One single (non-recurring) provider event, ready for a scripted page.
 export const singleEvent = (id: string, title = id): ProviderEvent => ({
   kind: "event",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   providerUpdatedAt: null,
   content: {

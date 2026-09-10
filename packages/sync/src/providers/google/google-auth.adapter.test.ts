@@ -3,6 +3,7 @@ import {
   CONTACTS_FEATURE_SCOPES,
   GOOGLE_SCOPES,
 } from "@core/providers/google.scopes";
+import { type ProviderAccountId } from "@core/types/sync/identity.contracts";
 import {
   GoogleAuthAdapter,
   type GoogleOAuthClient,
@@ -119,10 +120,10 @@ describe("GoogleAuthAdapter", () => {
       // The redirect URI is passed through to the client that mints the URL.
       expect(redirectUris).toEqual(["https://staging.example.com/sync/google"]);
       const options = client.authUrlOptions[0];
-      expect(options.access_type).toBe("offline");
-      expect(options.prompt).toBe("consent");
-      expect(options.state).toBe("opaque-state");
-      expect(options.scope).toEqual([...GOOGLE_SCOPES]);
+      expect(options!.access_type).toBe("offline");
+      expect(options!.prompt).toBe("consent");
+      expect(options!.state).toBe("opaque-state");
+      expect(options!.scope).toEqual([...GOOGLE_SCOPES]);
       expect(url).toContain("state=opaque-state");
     });
 
@@ -139,8 +140,8 @@ describe("GoogleAuthAdapter", () => {
       // Without select_account, a browser signed into one Google account
       // re-authorizes that same account and the user never gets to pick.
       // consent must stay so the exchange still returns a refresh token.
-      expect(client.authUrlOptions[0].prompt).toBe("select_account consent");
-      expect(client.authUrlOptions[0].access_type).toBe("offline");
+      expect(client.authUrlOptions[0]!.prompt).toBe("select_account consent");
+      expect(client.authUrlOptions[0]!.access_type).toBe("offline");
     });
 
     it("appends optional feature scopes after the base scopes", () => {
@@ -153,7 +154,7 @@ describe("GoogleAuthAdapter", () => {
         extraScopes: CONTACTS_FEATURE_SCOPES,
       });
 
-      expect(client.authUrlOptions[0].scope).toEqual([
+      expect(client.authUrlOptions[0]!.scope).toEqual([
         ...GOOGLE_SCOPES,
         "https://www.googleapis.com/auth/contacts.readonly",
         "https://www.googleapis.com/auth/contacts.other.readonly",
@@ -177,8 +178,8 @@ describe("GoogleAuthAdapter", () => {
       // The optional-scope rollout must not change what a plain connect asks
       // Google for — same URL, base scopes only.
       expect(emptyList).toBe(withoutField);
-      expect(client.authUrlOptions[0].scope).toEqual([...GOOGLE_SCOPES]);
-      expect(client.authUrlOptions[1].scope).toEqual([...GOOGLE_SCOPES]);
+      expect(client.authUrlOptions[0]!.scope).toEqual([...GOOGLE_SCOPES]);
+      expect(client.authUrlOptions[1]!.scope).toEqual([...GOOGLE_SCOPES]);
     });
   });
 
@@ -203,7 +204,9 @@ describe("GoogleAuthAdapter", () => {
         redirectUri: "https://staging.example.com/sync/google",
       });
 
-      expect(result.account.providerAccountId).toBe("google-subject-123");
+      expect(result.account.providerAccountId).toBe(
+        "google-subject-123" as ProviderAccountId,
+      );
       expect(result.account.email).toBe("user@example.com");
       expect(result.account.displayName).toBe("Ada Lovelace");
       expect(result.refreshToken).toBe("refresh-token-value");
@@ -252,7 +255,9 @@ describe("GoogleAuthAdapter", () => {
         redirectUri: "https://x/sync/google",
       });
 
-      expect(result.account.providerAccountId).toBe("google-subject-123");
+      expect(result.account.providerAccountId).toBe(
+        "google-subject-123" as ProviderAccountId,
+      );
       expect(result.account.email).toBeNull();
       expect(result.account.displayName).toBeNull();
     });

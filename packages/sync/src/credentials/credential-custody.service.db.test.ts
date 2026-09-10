@@ -349,7 +349,7 @@ describe("CredentialCustody", () => {
       .collection(SYNC_COLLECTIONS.credentials)
       .findOne(stringIdFilter(connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
-    expect(raw?.refreshTokenCiphertext).toBeString();
+    expect(raw?.["refreshTokenCiphertext"]).toBeString();
     expect(JSON.stringify(raw)).not.toContain("stored-refresh-token");
   });
 
@@ -382,7 +382,7 @@ describe("CredentialCustody", () => {
       .collection(SYNC_COLLECTIONS.credentials)
       .findOne(stringIdFilter(connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
-    expect(raw?.refreshTokenCiphertext).toBeString();
+    expect(raw?.["refreshTokenCiphertext"]).toBeString();
     expect(JSON.stringify(raw)).not.toContain("legacy-plaintext-token");
     expect(adapter.refreshCalls).toBe(1);
   });
@@ -417,7 +417,7 @@ describe("CredentialCustody", () => {
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
       .findOne(stringIdFilter(connectionId));
-    expect(raw?.refreshToken).toBe("legacy-plaintext-token");
+    expect(raw?.["refreshToken"]).toBe("legacy-plaintext-token");
     expect(raw).not.toHaveProperty("refreshTokenCiphertext");
     expect(adapter.refreshCalls).toBe(1);
   });

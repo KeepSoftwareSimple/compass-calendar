@@ -117,11 +117,11 @@ describe("GoogleEventReaderAdapter", () => {
       },
     });
 
-    expect(api.calls[0].window).toEqual({
+    expect(api.calls[0]!.window).toEqual({
       timeMin: "2026-06-01T00:00:00Z",
       timeMax: "2026-09-01T00:00:00Z",
     });
-    expect(api.calls[0].syncToken).toBeUndefined();
+    expect(api.calls[0]!.syncToken).toBeUndefined();
   });
 
   it("forwards the stored cursor and page token for a resumed full pass", async () => {
@@ -135,8 +135,8 @@ describe("GoogleEventReaderAdapter", () => {
       pageToken: "page-2",
     });
 
-    expect(api.calls[0].syncToken).toBe("sync-token-0");
-    expect(api.calls[0].pageToken).toBe("page-2");
+    expect(api.calls[0]!.syncToken).toBe("sync-token-0");
+    expect(api.calls[0]!.pageToken).toBe("page-2");
   });
 
   it("keeps cancellations in the page (an incremental deletion)", async () => {

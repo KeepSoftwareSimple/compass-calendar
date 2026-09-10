@@ -90,9 +90,9 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
 
     expect(enqueued).toBe(1);
     const job = await jobByKey(`subscriptionMaintain:${expiring._id}`);
-    expect(job?.kind).toBe("subscriptionMaintain");
-    expect(job?.resourceId).toBe(expiring._id);
-    expect(job?.tenantId).toBe(expiring.tenantId);
+    expect(job?.["kind"]).toBe("subscriptionMaintain");
+    expect(job?.["resourceId"]).toBe(expiring._id);
+    expect(job?.["tenantId"]).toBe(expiring.tenantId);
   });
 
   it("skips a subscription that expires after the threshold", async () => {
@@ -146,8 +146,8 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
 
     expect(enqueued).toBe(1);
     const job = await jobByKey(`subscriptionMaintain:${resource._id}`);
-    expect(job?.kind).toBe("subscriptionMaintain");
-    expect(job?.resourceId).toBe(resource._id);
+    expect(job?.["kind"]).toBe("subscriptionMaintain");
+    expect(job?.["resourceId"]).toBe(resource._id);
   });
 
   it("coalesces repeated sweeps into one job per resource", async () => {
@@ -185,12 +185,12 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
       .find({})
       .toArray();
     expect(enqueuedJobs).toHaveLength(1);
-    const resourceId = enqueuedJobs[0]?.resourceId as string;
+    const resourceId = enqueuedJobs[0]?.["resourceId"] as string;
     const resource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
       .findOne(stringIdFilter(resourceId));
-    expect(resource?.subscriptionExpiresAt).toEqual(
+    expect(resource?.["subscriptionExpiresAt"]).toEqual(
       new Date("2026-07-10T02:00:00.000Z"),
     );
   });

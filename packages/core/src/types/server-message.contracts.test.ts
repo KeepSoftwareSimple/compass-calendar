@@ -189,7 +189,7 @@ describe("Server Message Contracts", () => {
       const connectionId = calendarId();
       const messages = revokedConnectionServerMessages(connectionId);
 
-      expect(messages).toEqual([
+      expect<unknown>(messages).toEqual([
         {
           type: "syncStatusChanged",
           sync: {

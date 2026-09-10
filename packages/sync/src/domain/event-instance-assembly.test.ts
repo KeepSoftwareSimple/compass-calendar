@@ -1,5 +1,15 @@
 import { faker } from "@faker-js/faker";
 import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   type EventRecord,
   EventRecordSchema,
 } from "@sync/storage/contracts/event.contracts";
@@ -14,9 +24,9 @@ const objectId = () => faker.database.mongodbObjectId();
 
 const timed = (start: string, end: string) => ({
   kind: "timed" as const,
-  start,
-  end,
-  timeZone: "America/Denver",
+  start: start as DateTime,
+  end: end as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 });
 
 const baseContent = {
@@ -31,10 +41,10 @@ const baseContent = {
 const makeEvent = (overrides: Partial<EventRecord> = {}): EventRecord =>
   EventRecordSchema.parse({
     _id: objectId(),
-    tenantId: objectId(),
-    principalId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     origin: "compass",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     clientEventId: null,
     connectionId: null,
     providerEventId: null,
@@ -57,14 +67,14 @@ const makeOccurrence = (
   overrides: Partial<EventOccurrenceRecord> = {},
 ): EventOccurrenceRecord => {
   const startAt = overrides.startAt ?? new Date("2026-07-14T15:00:00.000Z");
-  const eventId = overrides.eventId ?? objectId();
+  const eventId = overrides.eventId ?? (objectId() as EventId);
   return EventOccurrenceRecordSchema.parse({
     _id: objectId(),
-    tenantId: objectId(),
-    principalId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     eventId,
     occurrenceKey: `${eventId}:${startAt.toISOString()}`,
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     schedule: timed("2026-07-14T09:00:00-06:00", "2026-07-14T09:15:00-06:00"),
     startAt,
     endAt: overrides.endAt ?? new Date(startAt.getTime() + 15 * 60_000),
@@ -137,7 +147,7 @@ describe("assembleEventInstances", () => {
       recurrence: {
         kind: "exception",
         seriesId: master._id,
-        recurrenceId: "2026-07-14T15:00:00.000Z",
+        recurrenceId: "2026-07-14T15:00:00.000Z" as DateTime,
         cancelled: false,
       },
       providerMetadata: managedMetadata,
@@ -209,8 +219,8 @@ describe("assembleEventInstances", () => {
     expect(instance?.content).toEqual(baseContent);
     // The instance schedule comes from the occurrence, timestamps from the event.
     expect(instance?.schedule).toEqual(occurrence.schedule);
-    expect(instance?.createdAt).toBe("2026-07-01T00:00:00.000Z");
-    expect(instance?.updatedAt).toBe("2026-07-02T00:00:00.000Z");
+    expect(instance?.createdAt).toBe("2026-07-01T00:00:00.000Z" as DateTime);
+    expect(instance?.updatedAt).toBe("2026-07-02T00:00:00.000Z" as DateTime);
   });
 
   it("carries event content.color onto assembled instance content", () => {
@@ -322,7 +332,10 @@ describe("assembleEventInstances", () => {
       occurrences.map((o) =>
         o.recurrence.kind === "occurrence" ? o.recurrence.recurrenceId : null,
       ),
-    ).toEqual(["2026-07-13T15:00:00.000Z", "2026-07-14T15:00:00.000Z"]);
+    ).toEqual([
+      "2026-07-13T15:00:00.000Z" as DateTime,
+      "2026-07-14T15:00:00.000Z" as DateTime,
+    ]);
   });
 
   it("addresses an overridden instance by its ORIGINAL start, linked to the master", () => {
@@ -340,7 +353,7 @@ describe("assembleEventInstances", () => {
       recurrence: {
         kind: "exception",
         seriesId: master._id,
-        recurrenceId: "2026-07-14T15:00:00.000Z",
+        recurrenceId: "2026-07-14T15:00:00.000Z" as DateTime,
         cancelled: false,
       },
     });
@@ -363,7 +376,7 @@ describe("assembleEventInstances", () => {
       override?.recurrence.kind === "occurrence"
         ? override.recurrence.recurrenceId
         : null,
-    ).toBe("2026-07-14T15:00:00.000Z");
+    ).toBe("2026-07-14T15:00:00.000Z" as DateTime);
     // Content is the override's, schedule is the moved occurrence's.
     expect(override?.content.title).toBe("Standup (moved)");
     expect(override?.schedule).toEqual(movedOccurrence.schedule);
@@ -379,7 +392,7 @@ describe("assembleEventInstances", () => {
       recurrence: {
         kind: "exception",
         seriesId: master._id,
-        recurrenceId: "2026-07-14T15:00:00.000Z",
+        recurrenceId: "2026-07-14T15:00:00.000Z" as DateTime,
         cancelled: false,
       },
     });
@@ -414,7 +427,7 @@ describe("assembleEventInstances", () => {
   });
 
   it("skips an occurrence whose owning event is missing, without throwing", () => {
-    const orphan = makeOccurrence({ eventId: objectId() });
+    const orphan = makeOccurrence({ eventId: objectId() as EventId });
 
     expect(assembleEventInstances([orphan], byId())).toEqual([]);
   });

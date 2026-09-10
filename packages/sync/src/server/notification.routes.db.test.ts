@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
+import { type CalendarId } from "@core/types/domain-primitives";
 import {
   type ConnectionId,
   type PrincipalId,
@@ -85,7 +86,7 @@ describe("POST /sync/notifications/google", () => {
       principalId,
       connectionId: objectId() as ConnectionId,
       resourceKind: kind,
-      calendarId: kind === "events" ? objectId() : null,
+      calendarId: kind === "events" ? (objectId() as CalendarId) : null,
     });
     await resources.updateSubscription(tenantId, principalId, resource._id, {
       subscriptionId: CHANNEL,

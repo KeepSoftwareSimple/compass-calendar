@@ -166,7 +166,7 @@ describe("GoogleNotificationAdapter watch/stop", () => {
     });
 
     // Requested one hour out...
-    expect(api.watchCalls[0].requestBody.expiration).toBe(
+    expect(api.watchCalls[0]!.requestBody.expiration).toBe(
       String(new Date("2026-01-01T01:00:00Z").getTime()),
     );
     // ...but the returned expiry (2026-01-01T00:00:00 + provider value) wins.

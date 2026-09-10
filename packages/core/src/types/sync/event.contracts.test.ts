@@ -1,5 +1,12 @@
 import { faker } from "@faker-js/faker";
 import {
+  type CalendarId,
+  type DateOnly,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
   AttendeeSchema,
   ConferenceSchema,
   OrganizerSchema,
@@ -14,14 +21,18 @@ import {
   SyncEventSchema,
   SyncInstanceRecurrenceSchema,
 } from "@core/types/sync/event.contracts";
+import {
+  type ConnectionId,
+  type ProviderEventId,
+} from "@core/types/sync/identity.contracts";
 
 const objectId = () => faker.database.mongodbObjectId();
 
 const timedSchedule = {
   kind: "timed",
-  start: "2026-07-14T09:00:00-06:00",
-  end: "2026-07-14T10:00:00-06:00",
-  timeZone: "America/Denver",
+  start: "2026-07-14T09:00:00-06:00" as DateTime,
+  end: "2026-07-14T10:00:00-06:00" as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 };
 
 // 2026-03-08 is the US spring-forward transition; 09:00-10:00 local crosses
@@ -35,17 +46,17 @@ const dstCrossingSchedule = {
 
 const allDaySchedule = {
   kind: "allDay",
-  start: "2026-07-14",
-  end: "2026-07-15",
+  start: "2026-07-14" as DateOnly,
+  end: "2026-07-15" as DateOnly,
 };
 
 const unlinkedOwnership = { kind: "unlinked" };
 
 const linkedOwnership = () => ({
   kind: "linked",
-  connectionId: objectId(),
-  calendarId: objectId(),
-  providerEventId: "abc123@google.com",
+  connectionId: objectId() as ConnectionId,
+  calendarId: objectId() as CalendarId,
+  providerEventId: "abc123@google.com" as ProviderEventId,
   providerVersion: "etag-1",
   providerUpdatedAt: "2026-07-20T12:00:00.000Z",
   deliveryState: "confirmed",
@@ -89,7 +100,7 @@ describe("Sync event contracts", () => {
     it("round-trips a DST-crossing timed schedule unchanged", () => {
       const event = baseEvent({ schedule: dstCrossingSchedule });
       const parsed = SyncEventSchema.parse(event);
-      expect(
+      expect<unknown>(
         SyncEventSchema.parse(JSON.parse(JSON.stringify(parsed))).schedule,
       ).toEqual(dstCrossingSchedule);
     });
@@ -338,8 +349,8 @@ describe("Sync event contracts", () => {
     };
 
     const baseInstance = (overrides: Record<string, unknown> = {}) => ({
-      eventId: objectId(),
-      calendarId: objectId(),
+      eventId: objectId() as EventId,
+      calendarId: objectId() as CalendarId,
       content: baseInstanceContent,
       schedule: timedSchedule,
       recurrence: { kind: "single" },
@@ -395,7 +406,7 @@ describe("Sync event contracts", () => {
     });
 
     it("rejects a calendarId that isn't a 24-character hex id", () => {
-      const instance = baseInstance({ calendarId: "not-an-id" });
+      const instance = baseInstance({ calendarId: "not-an-id" as CalendarId });
       expect(SyncEventInstanceSchema.safeParse(instance).success).toBe(false);
     });
 

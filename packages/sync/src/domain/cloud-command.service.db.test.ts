@@ -1,10 +1,16 @@
 import { faker } from "@faker-js/faker";
 import { type Document, type Filter } from "mongodb";
+import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
 import {
-  type EventId,
   type IdempotencyKey,
   type PrincipalId,
+  type ProviderEventId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
@@ -69,7 +75,7 @@ const providerWriter = () => {
   writer.matchFetchedById = false;
   writer.fetched = {
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: "etag-1",
     providerUpdatedAt: null,
     content: {
@@ -82,16 +88,16 @@ const providerWriter = () => {
     },
     schedule: {
       kind: "timed",
-      start: "2026-07-14T09:00:00-06:00",
-      end: "2026-07-14T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T09:00:00-06:00" as DateTime,
+      end: "2026-07-14T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
     busy: true,
     recurrence: { kind: "single" },
   };
   writer.fetchedInstance = {
     kind: "event",
-    providerEventId: "g-inst-1",
+    providerEventId: "g-inst-1" as ProviderEventId,
     providerVersion: "etag-1",
     providerUpdatedAt: null,
     content: {
@@ -104,9 +110,9 @@ const providerWriter = () => {
     },
     schedule: {
       kind: "timed",
-      start: "2026-07-21T09:00:00-06:00",
-      end: "2026-07-21T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-21T09:00:00-06:00" as DateTime,
+      end: "2026-07-21T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
     busy: true,
     recurrence: { kind: "single" },
@@ -322,7 +328,7 @@ describe("submitCloudCommand provider dispatch", () => {
       tenantId,
       principalId,
       origin: "compass",
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
       clientEventId: null,
       connectionId: null,
       providerEventId: null,
@@ -340,9 +346,9 @@ describe("submitCloudCommand provider dispatch", () => {
       },
       schedule: {
         kind: "timed",
-        start: "2026-07-14T09:00:00-06:00",
-        end: "2026-07-14T10:00:00-06:00",
-        timeZone: "America/Denver",
+        start: "2026-07-14T09:00:00-06:00" as DateTime,
+        end: "2026-07-14T10:00:00-06:00" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
       },
       recurrence: { kind: "single" },
       lifecycleState: "active",
@@ -642,7 +648,7 @@ describe("submitCloudCommand provider dispatch", () => {
 
     expect(command.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       {
         email: "self@example.com",
         displayName: null,
@@ -2040,9 +2046,9 @@ describe("cloud-only attendeesEdit replace", () => {
 
   const schedule = {
     kind: "timed",
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
 
   const seedCloudEvent = (
@@ -2056,7 +2062,7 @@ describe("cloud-only attendeesEdit replace", () => {
       tenantId,
       principalId,
       origin: "compass",
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
       clientEventId: null,
       connectionId: null,
       providerEventId: null,

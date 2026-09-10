@@ -1,5 +1,17 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import {
+  type CalendarId,
+  type DateOnly,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import { type OccurrenceKey } from "@core/types/sync/event.contracts";
+import {
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type EventOccurrenceRecord } from "@sync/storage/contracts/event-occurrence.contracts";
 import {
@@ -14,16 +26,16 @@ const occurrence = (
   overrides: Partial<OccurrenceInput> = {},
 ): OccurrenceInput =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    eventId: objectId(),
-    occurrenceKey: `${objectId()}:2026-07-14T09:00:00-06:00`,
-    calendarId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    eventId: objectId() as EventId,
+    occurrenceKey: `${objectId()}:2026-07-14T09:00:00-06:00` as OccurrenceKey,
+    calendarId: objectId() as CalendarId,
     schedule: {
       kind: "timed",
-      start: "2026-07-14T09:00:00-06:00",
-      end: "2026-07-14T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T09:00:00-06:00" as DateTime,
+      end: "2026-07-14T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
     startAt: new Date("2026-07-14T09:00:00-06:00"),
     endAt: new Date("2026-07-14T10:00:00-06:00"),
@@ -47,8 +59,8 @@ describe("EventOccurrenceRepository", () => {
   it("materializes occurrences for an event", async () => {
     const eventId = objectId() as OccurrenceInput["eventId"];
     await repo.replaceForEvent(eventId, 0, [
-      occurrence({ eventId, occurrenceKey: `${eventId}:a` }),
-      occurrence({ eventId, occurrenceKey: `${eventId}:b` }),
+      occurrence({ eventId, occurrenceKey: `${eventId}:a` as OccurrenceKey }),
+      occurrence({ eventId, occurrenceKey: `${eventId}:b` as OccurrenceKey }),
     ]);
     expect(await db.collection("event_occurrences").countDocuments()).toBe(2);
   });
@@ -57,23 +69,35 @@ describe("EventOccurrenceRepository", () => {
     const target = objectId() as OccurrenceInput["eventId"];
     const other = objectId() as OccurrenceInput["eventId"];
     await repo.replaceForEvent(target, 0, [
-      occurrence({ eventId: target, occurrenceKey: `${target}:old` }),
+      occurrence({
+        eventId: target,
+        occurrenceKey: `${target}:old` as OccurrenceKey,
+      }),
     ]);
     await repo.replaceForEvent(other, 0, [
-      occurrence({ eventId: other, occurrenceKey: `${other}:x` }),
+      occurrence({
+        eventId: other,
+        occurrenceKey: `${other}:x` as OccurrenceKey,
+      }),
     ]);
 
     // Rebuild the target with new occurrences; the other event is untouched.
     await repo.replaceForEvent(target, 0, [
-      occurrence({ eventId: target, occurrenceKey: `${target}:new1` }),
-      occurrence({ eventId: target, occurrenceKey: `${target}:new2` }),
+      occurrence({
+        eventId: target,
+        occurrenceKey: `${target}:new1` as OccurrenceKey,
+      }),
+      occurrence({
+        eventId: target,
+        occurrenceKey: `${target}:new2` as OccurrenceKey,
+      }),
     ]);
 
     const targetDocs = await db
       .collection("event_occurrences")
       .find({ eventId: target })
       .toArray();
-    expect(targetDocs.map((d) => d.occurrenceKey).sort()).toEqual([
+    expect(targetDocs.map((d) => d["occurrenceKey"]).sort()).toEqual([
       `${target}:new1`,
       `${target}:new2`,
     ]);
@@ -89,7 +113,7 @@ describe("EventOccurrenceRepository", () => {
     // The SAME occurrence (same eventId + occurrenceKey) in two generations: the
     // unique index includes generation, so a repair building generation 1 does
     // not collide with the live generation 0.
-    const key = `${eventId}:instant`;
+    const key = `${eventId}:instant` as OccurrenceKey;
     await repo.replaceForEvent(eventId, 0, [
       occurrence({ eventId, occurrenceKey: key, generation: 0 }),
     ]);
@@ -104,7 +128,7 @@ describe("EventOccurrenceRepository", () => {
   it("clears occurrences when replaced with an empty set", async () => {
     const eventId = objectId() as OccurrenceInput["eventId"];
     await repo.replaceForEvent(eventId, 0, [
-      occurrence({ eventId, occurrenceKey: `${eventId}:a` }),
+      occurrence({ eventId, occurrenceKey: `${eventId}:a` as OccurrenceKey }),
     ]);
     await repo.replaceForEvent(eventId, 0, []);
     expect(
@@ -123,15 +147,24 @@ describe("EventOccurrenceRepository", () => {
           eventId: eventA,
           generation: 0,
           occurrences: [
-            occurrence({ eventId: eventA, occurrenceKey: `${eventA}:a1` }),
-            occurrence({ eventId: eventA, occurrenceKey: `${eventA}:a2` }),
+            occurrence({
+              eventId: eventA,
+              occurrenceKey: `${eventA}:a1` as OccurrenceKey,
+            }),
+            occurrence({
+              eventId: eventA,
+              occurrenceKey: `${eventA}:a2` as OccurrenceKey,
+            }),
           ],
         },
         {
           eventId: eventB,
           generation: 0,
           occurrences: [
-            occurrence({ eventId: eventB, occurrenceKey: `${eventB}:b1` }),
+            occurrence({
+              eventId: eventB,
+              occurrenceKey: `${eventB}:b1` as OccurrenceKey,
+            }),
           ],
         },
         // An empty occurrence set (e.g. a fully-truncated recurring series)
@@ -140,7 +173,7 @@ describe("EventOccurrenceRepository", () => {
       ]);
 
       const docs = await db.collection("event_occurrences").find({}).toArray();
-      expect(docs.map((d) => d.occurrenceKey).sort()).toEqual(
+      expect(docs.map((d) => d["occurrenceKey"]).sort()).toEqual(
         [`${eventA}:a1`, `${eventA}:a2`, `${eventB}:b1`].sort(),
       );
     });
@@ -149,10 +182,16 @@ describe("EventOccurrenceRepository", () => {
       const eventA = objectId() as OccurrenceInput["eventId"];
       const eventB = objectId() as OccurrenceInput["eventId"];
       await repo.replaceForEvent(eventA, 0, [
-        occurrence({ eventId: eventA, occurrenceKey: `${eventA}:old` }),
+        occurrence({
+          eventId: eventA,
+          occurrenceKey: `${eventA}:old` as OccurrenceKey,
+        }),
       ]);
       await repo.replaceForEvent(eventB, 0, [
-        occurrence({ eventId: eventB, occurrenceKey: `${eventB}:old` }),
+        occurrence({
+          eventId: eventB,
+          occurrenceKey: `${eventB}:old` as OccurrenceKey,
+        }),
       ]);
 
       await repo.replaceForEvents([
@@ -160,20 +199,26 @@ describe("EventOccurrenceRepository", () => {
           eventId: eventA,
           generation: 0,
           occurrences: [
-            occurrence({ eventId: eventA, occurrenceKey: `${eventA}:new` }),
+            occurrence({
+              eventId: eventA,
+              occurrenceKey: `${eventA}:new` as OccurrenceKey,
+            }),
           ],
         },
         {
           eventId: eventB,
           generation: 0,
           occurrences: [
-            occurrence({ eventId: eventB, occurrenceKey: `${eventB}:new` }),
+            occurrence({
+              eventId: eventB,
+              occurrenceKey: `${eventB}:new` as OccurrenceKey,
+            }),
           ],
         },
       ]);
 
       const docs = await db.collection("event_occurrences").find({}).toArray();
-      expect(docs.map((d) => d.occurrenceKey).sort()).toEqual(
+      expect(docs.map((d) => d["occurrenceKey"]).sort()).toEqual(
         [`${eventA}:new`, `${eventB}:new`].sort(),
       );
     });
@@ -181,7 +226,10 @@ describe("EventOccurrenceRepository", () => {
     it("is a no-op for an empty entry list", async () => {
       const eventId = objectId() as OccurrenceInput["eventId"];
       await repo.replaceForEvent(eventId, 0, [
-        occurrence({ eventId, occurrenceKey: `${eventId}:kept` }),
+        occurrence({
+          eventId,
+          occurrenceKey: `${eventId}:kept` as OccurrenceKey,
+        }),
       ]);
 
       await repo.replaceForEvents([]);
@@ -193,10 +241,10 @@ describe("EventOccurrenceRepository", () => {
   });
 
   describe("listByCalendarRange", () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const calA = objectId();
-    const calB = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const calA = objectId() as CalendarId;
+    const calB = objectId() as CalendarId;
 
     beforeEach(async () => {
       const mk = (calendarId: string, day: number) =>
@@ -204,13 +252,13 @@ describe("EventOccurrenceRepository", () => {
           tenantId: tenantId as OccurrenceInput["tenantId"],
           principalId: principalId as OccurrenceInput["principalId"],
           eventId: objectId() as OccurrenceInput["eventId"],
-          occurrenceKey: `${calendarId}:${day}`,
+          occurrenceKey: `${calendarId}:${day}` as OccurrenceKey,
           calendarId: calendarId as OccurrenceInput["calendarId"],
           schedule: {
             kind: "timed",
-            start: `2026-07-${day}T09:00:00-06:00`,
-            end: `2026-07-${day}T10:00:00-06:00`,
-            timeZone: "America/Denver",
+            start: `2026-07-${day}T09:00:00-06:00` as DateTime,
+            end: `2026-07-${day}T10:00:00-06:00` as DateTime,
+            timeZone: "America/Denver" as TimeZone,
           },
           startAt: new Date(`2026-07-${day}T09:00:00-06:00`),
         });
@@ -269,7 +317,7 @@ describe("EventOccurrenceRepository", () => {
       // (_id) tie-break in the composite cursor must not skip or repeat any.
       const tenant2 = objectId() as OccurrenceInput["tenantId"];
       const principal2 = objectId() as OccurrenceInput["principalId"];
-      const cal = objectId();
+      const cal = objectId() as CalendarId;
       const sameInstant = new Date("2026-07-14T09:00:00-06:00");
       const eventId = objectId() as OccurrenceInput["eventId"];
       await repo.replaceForEvent(
@@ -280,7 +328,7 @@ describe("EventOccurrenceRepository", () => {
             tenantId: tenant2,
             principalId: principal2,
             eventId,
-            occurrenceKey: `${cal}:tie:${i}`,
+            occurrenceKey: `${cal}:tie:${i}` as OccurrenceKey,
             calendarId: cal as OccurrenceInput["calendarId"],
             startAt: sameInstant,
           }),
@@ -325,7 +373,7 @@ describe("EventOccurrenceRepository", () => {
             tenantId: tenant,
             principalId: principal,
             eventId: eventId as OccurrenceInput["eventId"],
-            occurrenceKey: key,
+            occurrenceKey: key as OccurrenceKey,
             calendarId: cal,
             startAt: at,
             generation: gen,
@@ -348,7 +396,7 @@ describe("EventOccurrenceRepository", () => {
         ...range,
       });
       expect(live).toHaveLength(1);
-      expect(live[0]?.occurrenceKey).toBe(`${cal}:live`);
+      expect(live[0]?.occurrenceKey).toBe(`${cal}:live` as OccurrenceKey);
       // Reading generation 1 (post-activation) shows only the repair's row.
       const repaired = await repo.listByCalendarRange({
         tenantId: tenant,
@@ -357,7 +405,7 @@ describe("EventOccurrenceRepository", () => {
         ...range,
       });
       expect(repaired).toHaveLength(1);
-      expect(repaired[0]?.occurrenceKey).toBe(`${cal}:repair`);
+      expect(repaired[0]?.occurrenceKey).toBe(`${cal}:repair` as OccurrenceKey);
     });
 
     it("includes all-day UTC-midnight starts for America/Denver local-midnight windows", async () => {
@@ -381,13 +429,13 @@ describe("EventOccurrenceRepository", () => {
               tenantId: tenant,
               principalId: principal,
               eventId: allDayEventId,
-              occurrenceKey: `${cal}:allday`,
+              occurrenceKey: `${cal}:allday` as OccurrenceKey,
               calendarId: cal,
               title: "from gcal",
               schedule: {
                 kind: "allDay",
-                start: "2026-08-06",
-                end: "2026-08-07",
+                start: "2026-08-06" as DateOnly,
+                end: "2026-08-07" as DateOnly,
               },
               startAt: new Date("2026-08-06T00:00:00.000Z"),
               endAt: new Date("2026-08-07T00:00:00.000Z"),
@@ -402,14 +450,14 @@ describe("EventOccurrenceRepository", () => {
               tenantId: tenant,
               principalId: principal,
               eventId: timedEventId,
-              occurrenceKey: `${cal}:timed`,
+              occurrenceKey: `${cal}:timed` as OccurrenceKey,
               calendarId: cal,
               title: "live sync???",
               schedule: {
                 kind: "timed",
-                start: "2026-08-06T11:30:00-06:00",
-                end: "2026-08-06T13:00:00-06:00",
-                timeZone: "America/Denver",
+                start: "2026-08-06T11:30:00-06:00" as DateTime,
+                end: "2026-08-06T13:00:00-06:00" as DateTime,
+                timeZone: "America/Denver" as TimeZone,
               },
               startAt: new Date("2026-08-06T11:30:00-06:00"),
               endAt: new Date("2026-08-06T13:00:00-06:00"),
@@ -424,15 +472,15 @@ describe("EventOccurrenceRepository", () => {
               tenantId: tenant,
               principalId: principal,
               eventId: zeroDurationEventId,
-              occurrenceKey: `${cal}:zero`,
+              occurrenceKey: `${cal}:zero` as OccurrenceKey,
               calendarId: cal,
               title: "reminder",
               busy: false,
               schedule: {
                 kind: "timed",
-                start: "2026-08-06T15:00:00-06:00",
-                end: "2026-08-06T15:00:00-06:00",
-                timeZone: "America/Denver",
+                start: "2026-08-06T15:00:00-06:00" as DateTime,
+                end: "2026-08-06T15:00:00-06:00" as DateTime,
+                timeZone: "America/Denver" as TimeZone,
               },
               startAt: new Date("2026-08-06T15:00:00-06:00"),
               endAt: new Date("2026-08-06T15:00:00-06:00"),
@@ -447,13 +495,13 @@ describe("EventOccurrenceRepository", () => {
               tenantId: tenant,
               principalId: principal,
               eventId: priorAllDayEventId,
-              occurrenceKey: `${cal}:prior`,
+              occurrenceKey: `${cal}:prior` as OccurrenceKey,
               calendarId: cal,
               title: "yesterday",
               schedule: {
                 kind: "allDay",
-                start: "2026-08-05",
-                end: "2026-08-06",
+                start: "2026-08-05" as DateOnly,
+                end: "2026-08-06" as DateOnly,
               },
               startAt: new Date("2026-08-05T00:00:00.000Z"),
               endAt: new Date("2026-08-06T00:00:00.000Z"),
@@ -471,7 +519,11 @@ describe("EventOccurrenceRepository", () => {
         limit: 100,
       });
       const keys = page.map((o) => o.occurrenceKey).sort();
-      expect(keys).toEqual([`${cal}:allday`, `${cal}:timed`, `${cal}:zero`]);
+      expect(keys).toEqual([
+        `${cal}:allday` as OccurrenceKey,
+        `${cal}:timed` as OccurrenceKey,
+        `${cal}:zero` as OccurrenceKey,
+      ]);
     });
   });
 
@@ -501,14 +553,14 @@ describe("EventOccurrenceRepository", () => {
               principalId,
               calendarId,
               eventId: eventIn,
-              occurrenceKey: `${eventIn}:in`,
+              occurrenceKey: `${eventIn}:in` as OccurrenceKey,
               startAt: inLookbackStart,
               endAt: windowEnd,
               schedule: {
                 kind: "timed",
-                start: inLookbackStart.toISOString(),
-                end: windowEnd.toISOString(),
-                timeZone: "UTC",
+                start: inLookbackStart.toISOString() as DateTime,
+                end: windowEnd.toISOString() as DateTime,
+                timeZone: "UTC" as TimeZone,
               },
             }),
           ],
@@ -522,14 +574,14 @@ describe("EventOccurrenceRepository", () => {
               principalId,
               calendarId,
               eventId: eventOut,
-              occurrenceKey: `${eventOut}:out`,
+              occurrenceKey: `${eventOut}:out` as OccurrenceKey,
               startAt: outOfLookbackStart,
               endAt: windowEnd,
               schedule: {
                 kind: "timed",
-                start: outOfLookbackStart.toISOString(),
-                end: windowEnd.toISOString(),
-                timeZone: "UTC",
+                start: outOfLookbackStart.toISOString() as DateTime,
+                end: windowEnd.toISOString() as DateTime,
+                timeZone: "UTC" as TimeZone,
               },
             }),
           ],

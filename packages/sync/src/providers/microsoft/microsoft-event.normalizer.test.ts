@@ -1,3 +1,4 @@
+import { type DateOnly } from "@core/types/domain-primitives";
 import {
   type GraphEvent,
   normalizeMicrosoftEvent,
@@ -86,8 +87,8 @@ describe("normalizeMicrosoftEvent", () => {
     expect(read.busy).toBe(false);
     expect(read.schedule).toEqual({
       kind: "allDay",
-      start: "2022-02-22",
-      end: "2022-02-23",
+      start: "2022-02-22" as DateOnly,
+      end: "2022-02-23" as DateOnly,
     });
   });
 

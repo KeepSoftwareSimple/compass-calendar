@@ -1,3 +1,4 @@
+import { type DateTime } from "@core/types/domain-primitives";
 import {
   SYNC_HEALTH_SNAPSHOT_EVENT,
   type SyncHealthSnapshot,
@@ -39,7 +40,7 @@ const sample = (): SyncHealthSnapshot => ({
     p99Ms: 40_000,
     percentOver30s: 11.1,
   },
-  computedAt: "2026-07-25T02:00:00.000Z",
+  computedAt: "2026-07-25T02:00:00.000Z" as DateTime,
   computeMs: 42,
 });
 

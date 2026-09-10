@@ -1,14 +1,21 @@
 import { faker } from "@faker-js/faker";
 import { type Document, type Filter } from "mongodb";
+import {
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { type Attendee } from "@core/types/event-attendance.contracts";
 import { type EventColorSlot } from "@core/types/event-color.contracts";
 import { type RecurrenceEdit } from "@core/types/event-command.contracts";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
-  type EventId,
   type IdempotencyKey,
   type PrincipalId,
+  type ProviderCalendarSourceId,
+  type ProviderEventId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
@@ -119,7 +126,8 @@ describe("executeProviderCreate", () => {
   const seed = async (invitation = "none") => {
     const ids = newCommandIds();
     const calendar = await seedCommandCalendar(calendars, ids, {
-      providerCalendarId: "primary@group.calendar.google.com",
+      providerCalendarId:
+        "primary@group.calendar.google.com" as ProviderCalendarSourceId,
     });
     const { record: command } = await commands.submit({
       tenantId: ids.tenantId,
@@ -159,12 +167,12 @@ describe("executeProviderCreate", () => {
     expect(result.outcome.state).toBe("confirmed");
     expect(
       result.outcome.state === "confirmed" && result.outcome.providerEventId,
-    ).toBe("g-evt-1");
+    ).toBe("g-evt-1" as ProviderEventId);
 
     // Called with the raw provider calendar id and the deterministic event id.
     expect(writer.calls).toHaveLength(1);
-    expect(writer.calls[0].calendarId).toBe(calendar.providerCalendarId);
-    expect(writer.calls[0].providerEventId).toBe(command.eventId);
+    expect(writer.calls[0]!.calendarId).toBe(calendar.providerCalendarId);
+    expect(writer.calls[0]!.providerEventId).toBe(command.eventId);
 
     const stored = await events.findById(
       tenantId,
@@ -172,8 +180,8 @@ describe("executeProviderCreate", () => {
       command.eventId,
     );
     expect(stored?.connectionId).toBe(calendar.connectionId);
-    expect(stored?.providerEventId).toBe("g-evt-1");
-    expect(stored?.providerVersion).toBe("etag-1");
+    expect(stored?.providerEventId).toBe("g-evt-1" as ProviderEventId);
+    expect(stored?.providerVersion).toBe("etag-1" as ProviderEventVersion);
     expect(stored?.deliveryState).toBe("confirmed");
     expect(stored?.providerMetadata).toBeNull();
 
@@ -191,7 +199,7 @@ describe("executeProviderCreate", () => {
     const { tenantId, principalId, calendar, command } = await seed();
     const writer = new FakeProviderEventWriter();
     writer.result = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-1",
       icalUid: "g-evt-1@google.com",
     };
@@ -223,7 +231,7 @@ describe("executeProviderCreate", () => {
     const { tenantId, principalId, calendar, command } = await seed();
     const writer = new FakeProviderEventWriter();
     writer.result = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-1",
       conference: {
         url: "https://meet.google.com/abc-defg-hij",
@@ -279,7 +287,7 @@ describe("executeProviderCreate", () => {
       now,
     );
 
-    expect(writer.calls[0].invitation).toBe("all");
+    expect(writer.calls[0]!.invitation).toBe("all");
   });
 
   it("converges on one event when executed twice (idempotent write)", async () => {
@@ -462,9 +470,9 @@ describe("executeProviderCreate", () => {
 describe("executeProviderUpdate", () => {
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
   const content = (title: string) => ({
     title,
@@ -476,7 +484,7 @@ describe("executeProviderUpdate", () => {
   });
   const providerEvent = (title: string, version: string): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: content(title),
@@ -546,11 +554,11 @@ describe("executeProviderUpdate", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].expectedVersion).toBe("etag-1");
-    expect(writer.patchCalls[0].invitation).toBe("all");
+    expect(writer.patchCalls[0]!.expectedVersion).toBe("etag-1");
+    expect(writer.patchCalls[0]!.invitation).toBe("all");
     const stored = await events.findById(tenantId, principalId, event._id);
     expect(stored?.content.title).toBe("New");
-    expect(stored?.providerVersion).toBe("etag-2");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
 
     // The occurrence projection is rebuilt with the edited title.
     const occ = await mongo.db
@@ -588,7 +596,7 @@ describe("executeProviderUpdate", () => {
     // No second write — the replay is recognized from the fetch.
     expect(writer.patchCalls).toHaveLength(0);
     const stored = await events.findById(tenantId, principalId, event._id);
-    expect(stored?.providerVersion).toBe("etag-2");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
   });
 
   it("recognizes a replay even when read-reflected fields drifted", async () => {
@@ -600,7 +608,7 @@ describe("executeProviderUpdate", () => {
     // conflict on an edit that already succeeded.
     writer.fetched = {
       kind: "event",
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-2",
       providerUpdatedAt: null,
       content: {
@@ -794,9 +802,9 @@ describe("executeProviderUpdate", () => {
 describe("executeProviderUpdate on provider-managed events", () => {
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
   const content = (title: string, extras: Record<string, unknown> = {}) => ({
     title,
@@ -813,7 +821,7 @@ describe("executeProviderUpdate on provider-managed events", () => {
     extras: Partial<ProviderEvent> = {},
   ): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: content(title),
@@ -937,17 +945,17 @@ describe("executeProviderUpdate on provider-managed events", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].providerManaged).toBe(true);
+    expect(writer.patchCalls[0]!.providerManaged).toBe(true);
     const stored = await events.findById(tenantId, principalId, event._id);
     expect(stored?.content.color).toBe("coral");
-    expect(stored?.providerVersion).toBe("etag-2");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
   });
 
   it("fails schedule edits as unsupportedCapability without patching", async () => {
     const movedSchedule = {
       ...schedule,
-      start: "2026-07-14T10:00:00-06:00",
-      end: "2026-07-14T11:00:00-06:00",
+      start: "2026-07-14T10:00:00-06:00" as DateTime,
+      end: "2026-07-14T11:00:00-06:00" as DateTime,
     };
     const { calendar, event, command } = await seedManaged({
       commandSchedule: movedSchedule,
@@ -1013,9 +1021,9 @@ describe("executeProviderUpdate on provider-managed events", () => {
 describe("executeProviderDelete", () => {
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
 
   // Seed a provider-linked event plus a delete command for it.
@@ -1092,7 +1100,7 @@ describe("executeProviderDelete", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.deleteCalls).toHaveLength(1);
-    expect(writer.deleteCalls[0].invitation).toBe("all");
+    expect(writer.deleteCalls[0]!.invitation).toBe("all");
     // Local content is gone, a content-free marker remains, occurrences cleared.
     expect(await events.findById(tenantId, principalId, event._id)).toBeNull();
     expect(await occurrenceCount()).toBe(0);
@@ -1231,7 +1239,7 @@ describe("executeProviderDelete", () => {
       tenantId,
       principalId,
       idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
-      eventId: masterId,
+      eventId: masterId as EventId,
       input: { kind: "delete", invitation: "none", scope: "all" } as never,
       expectedVersion: null,
     });
@@ -1354,7 +1362,7 @@ describe("executeProviderDelete", () => {
       tenantId,
       principalId,
       idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
-      eventId: masterId,
+      eventId: masterId as EventId,
       input: { kind: "delete", invitation: "none", scope: "all" } as never,
       expectedVersion: null,
     });
@@ -1456,9 +1464,9 @@ describe("executeProviderSeriesUpdate", () => {
   // A weekly series of four occurrences starting 2026-07-14 09:00 Denver.
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
   const weekly4 = ["RRULE:FREQ=WEEKLY;COUNT=4"];
   const weekly2 = ["RRULE:FREQ=WEEKLY;COUNT=2"];
@@ -1477,7 +1485,7 @@ describe("executeProviderSeriesUpdate", () => {
     rules: readonly string[],
   ): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: content(title),
@@ -1604,7 +1612,7 @@ describe("executeProviderSeriesUpdate", () => {
     const writer = new FakeProviderEventWriter();
     writer.fetched = providerSeries("Old", "etag-1", weekly4);
     writer.patchResult = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-2",
     };
 
@@ -1619,13 +1627,13 @@ describe("executeProviderSeriesUpdate", () => {
     expect(result.outcome.state).toBe("confirmed");
     // Preserve re-writes the master's own rules; the whole series is patched.
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].recurrence).toEqual({
+    expect(writer.patchCalls[0]!.recurrence).toEqual({
       kind: "series",
       rules: [...weekly4],
     });
     const stored = await events.findById(tenantId, principalId, master._id);
     expect(stored?.content.title).toBe("New");
-    expect(stored?.providerVersion).toBe("etag-2");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
     expect(stored?.recurrence).toEqual({
       kind: "seriesMaster",
       rules: [...weekly4],
@@ -1648,7 +1656,7 @@ describe("executeProviderSeriesUpdate", () => {
     const writer = new FakeProviderEventWriter();
     writer.fetched = providerSeries("Old", "etag-1", weekly4);
     writer.patchResult = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-2",
     };
 
@@ -1662,7 +1670,7 @@ describe("executeProviderSeriesUpdate", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].recurrence).toEqual({
+    expect(writer.patchCalls[0]!.recurrence).toEqual({
       kind: "series",
       rules: [...weekly2],
     });
@@ -1756,13 +1764,13 @@ describe("executeProviderSeriesUpdate", () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     // An override on the 2nd instant and a cancellation on the 3rd.
     const override = await putException(master, {
-      providerEventId: "g-inst-override",
+      providerEventId: "g-inst-override" as ProviderEventId,
       recurrenceId: "2026-07-21T09:00:00-06:00",
       cancelled: false,
       title: "Moved",
     });
     await putException(master, {
-      providerEventId: "g-inst-cancelled",
+      providerEventId: "g-inst-cancelled" as ProviderEventId,
       recurrenceId: "2026-07-28T09:00:00-06:00",
       cancelled: true,
       title: "Old",
@@ -1790,7 +1798,7 @@ describe("executeProviderSeriesUpdate", () => {
       (call) => call.providerEventId === "g-inst-override",
     );
     expect(overridePatch).toMatchObject({
-      providerEventId: "g-inst-override",
+      providerEventId: "g-inst-override" as ProviderEventId,
       expectedVersion: null,
       invitation: "all",
       calendarId: calendar.providerCalendarId,
@@ -1798,9 +1806,9 @@ describe("executeProviderSeriesUpdate", () => {
       content: expect.objectContaining({ title: "New" }),
       schedule: {
         kind: "timed",
-        start: "2026-07-21T09:00:00-06:00",
-        end: "2026-07-21T10:00:00-06:00",
-        timeZone: "America/Denver",
+        start: "2026-07-21T09:00:00-06:00" as DateTime,
+        end: "2026-07-21T10:00:00-06:00" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
       },
     });
     // The override is gone; the cancelled tombstone survives the edit.
@@ -1831,7 +1839,7 @@ describe("executeProviderSeriesUpdate", () => {
   it("leaves the override local when provider override align is transient", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     const override = await putException(master, {
-      providerEventId: "g-inst-override",
+      providerEventId: "g-inst-override" as ProviderEventId,
       recurrenceId: "2026-07-21T09:00:00-06:00",
       cancelled: false,
       title: "Moved",
@@ -1870,16 +1878,16 @@ describe("executeProviderSeriesUpdate", () => {
   it("aligns discarded overrides to a series time change", async () => {
     const { calendar, master } = await seedMaster();
     await putException(master, {
-      providerEventId: "g-inst-override",
+      providerEventId: "g-inst-override" as ProviderEventId,
       recurrenceId: "2026-07-21T09:00:00-06:00",
       cancelled: false,
       title: "Moved",
     });
     const movedSchedule = {
       kind: "timed" as const,
-      start: "2026-07-14T10:00:00-06:00",
-      end: "2026-07-14T11:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T10:00:00-06:00" as DateTime,
+      end: "2026-07-14T11:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     };
     const command = await editAllCommand(master, {
       title: "New",
@@ -1903,16 +1911,16 @@ describe("executeProviderSeriesUpdate", () => {
     );
     expect(overridePatch?.schedule).toEqual({
       kind: "timed",
-      start: "2026-07-21T10:00:00-06:00",
-      end: "2026-07-21T11:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-21T10:00:00-06:00" as DateTime,
+      end: "2026-07-21T11:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     });
   });
 
   it("continues edit-all when the override is already gone at the provider", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     const override = await putException(master, {
-      providerEventId: "g-inst-override",
+      providerEventId: "g-inst-override" as ProviderEventId,
       recurrenceId: "2026-07-21T09:00:00-06:00",
       cancelled: false,
       title: "Moved",
@@ -1954,7 +1962,7 @@ describe("executeProviderSeriesUpdate", () => {
   it("converts a series to a single event, dropping every exception", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();
     await putException(master, {
-      providerEventId: "g-inst-cancelled",
+      providerEventId: "g-inst-cancelled" as ProviderEventId,
       recurrenceId: "2026-07-28T09:00:00-06:00",
       cancelled: true,
       title: "Old",
@@ -1976,11 +1984,13 @@ describe("executeProviderSeriesUpdate", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     // The provider write removes recurrence.
-    expect(writer.patchCalls[0].recurrence).toEqual({ kind: "single" });
+    expect(writer.patchCalls[0]!.recurrence).toEqual({ kind: "single" });
     // Convert-to-single also cancels every discarded exception at the provider
     // (including former cancellations) so a later pull cannot resurrect them.
     expect(writer.deleteCalls).toEqual([
-      expect.objectContaining({ providerEventId: "g-inst-cancelled" }),
+      expect.objectContaining({
+        providerEventId: "g-inst-cancelled" as ProviderEventId,
+      }),
     ]);
     const stored = await events.findById(tenantId, principalId, master._id);
     expect(stored?.recurrence).toEqual({ kind: "single" });
@@ -2001,7 +2011,7 @@ describe("executeProviderSeriesUpdate", () => {
     const writer = new FakeProviderEventWriter();
     writer.fetched = providerSeries("Old", "etag-1", weekly4);
     writer.patchResult = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-2",
     };
 
@@ -2061,9 +2071,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
   // exactly, so results are directly comparable.
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
   const weekly3 = ["RRULE:FREQ=WEEKLY;COUNT=3"];
   const SECOND_START = "2026-07-21T09:00:00-06:00";
@@ -2082,9 +2092,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     version: string,
     instanceSchedule = {
       kind: "timed" as const,
-      start: SECOND_START,
-      end: "2026-07-21T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: SECOND_START as DateTime,
+      end: "2026-07-21T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
   ): ProviderEvent => ({
     kind: "event",
@@ -2110,7 +2120,7 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     rules: readonly string[],
   ): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-series-1",
+    providerEventId: "g-series-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: content(title),
@@ -2125,7 +2135,7 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     const master = await seedLinkedEvent(events, {
       ids,
       calendarId: calendar._id,
-      providerEventId: "g-series-1",
+      providerEventId: "g-series-1" as ProviderEventId,
       content: content("Old"),
       schedule,
       recurrence: { kind: "seriesMaster", rules: [...weekly3] },
@@ -2285,7 +2295,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       // The exception carries the INSTANCE's own provider identity, not the
       // master's — sharing the master's would collide the unique
       // provider_event_identity index.
-      expect(exceptions[0]?.providerEventId).toBe("g-inst-1");
+      expect(exceptions[0]?.providerEventId).toBe(
+        "g-inst-1" as ProviderEventId,
+      );
       expect(exceptions[0]?.content.title).toBe("Moved");
       // The master no longer projects the overridden instant.
       expect(await occurrenceStartsFor(master._id)).not.toContain(
@@ -2516,7 +2528,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
         principalId,
         master._id,
       );
-      expect(exceptions[0]?.providerEventId).toBe("g-inst-unreadable");
+      expect(exceptions[0]?.providerEventId).toBe(
+        "g-inst-unreadable" as ProviderEventId,
+      );
     });
 
     it("does not delete the series master when lookup returns the master's id", async () => {
@@ -2648,7 +2662,7 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       const writer = new FakeProviderEventWriter();
       writer.fetchEventResult = providerSeries("Old", "etag-1", weekly3);
       writer.createResult = {
-        providerEventId: "g-remainder-1",
+        providerEventId: "g-remainder-1" as ProviderEventId,
         providerVersion: "etag-1",
       };
 
@@ -2778,9 +2792,9 @@ describe("attendeesEdit replace", () => {
 
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
 
   const attendee = (
@@ -2889,7 +2903,7 @@ describe("attendeesEdit replace", () => {
     attendees: Attendee[],
   ): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: contentWith(title, {
@@ -2946,8 +2960,8 @@ describe("attendeesEdit replace", () => {
       attendee("d@example.com", "needsAction", "Dee"),
     ];
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].attendees).toEqual(expectedMerged);
-    expect(writer.patchCalls[0].invitation).toBe("all");
+    expect(writer.patchCalls[0]!.attendees).toEqual(expectedMerged);
+    expect(writer.patchCalls[0]!.invitation).toBe("all");
     // The merged membership lands on the sync record at confirm, so reads
     // reflect it before the next Google round-trip.
     const stored = await events.findById(tenantId, principalId, event._id);
@@ -2974,7 +2988,7 @@ describe("attendeesEdit replace", () => {
     );
 
     expect(result.outcome.state).toBe("confirmed");
-    expect(writer.patchCalls[0].attendees).toEqual([]);
+    expect(writer.patchCalls[0]!.attendees).toEqual([]);
     const stored = await events.findById(tenantId, principalId, event._id);
     expect(stored?.content.attendees).toEqual([]);
   });
@@ -3059,7 +3073,9 @@ describe("attendeesEdit replace", () => {
     );
 
     expect(result.outcome.state).toBe("confirmed");
-    expect(writer.patchCalls[0].attendees).toEqual([attendee("a@example.com")]);
+    expect(writer.patchCalls[0]!.attendees).toEqual([
+      attendee("a@example.com"),
+    ]);
   });
 
   it("confirms a landed attendee-only edit on replay — email sets, order- and status-insensitive", async () => {
@@ -3090,7 +3106,7 @@ describe("attendeesEdit replace", () => {
     expect(writer.patchCalls).toHaveLength(0);
     expect(
       result.outcome.state === "confirmed" && result.outcome.providerVersion,
-    ).toBe("etag-7");
+    ).toBe("etag-7" as ProviderEventVersion);
   });
 
   it("still patches when the landed membership differs from the intent", async () => {
@@ -3116,7 +3132,7 @@ describe("attendeesEdit replace", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       attendee("a@example.com", "accepted"),
       attendee("b@example.com"),
     ]);
@@ -3152,7 +3168,7 @@ describe("attendeesEdit replace", () => {
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
     expect(writer.patchCalls[0]).not.toHaveProperty("attendees");
-    expect(writer.patchCalls[0].content.attendees).toEqual(storedAttendees);
+    expect(writer.patchCalls[0]!.content.attendees).toEqual(storedAttendees);
     // The stored record keeps its own attendee list (mergeUpdateContent), not
     // the command's echoed one.
     const stored = await events.findById(tenantId, principalId, event._id);
@@ -3211,7 +3227,7 @@ describe("attendeesEdit replace", () => {
 
     expect(result.outcome.state).toBe("confirmed");
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       attendee("a@example.com", "accepted"),
       attendee("b@example.com"),
     ]);
@@ -3365,8 +3381,8 @@ describe("attendeesEdit replace", () => {
       attendee("b@example.com"),
     ];
     expect(writer.calls).toHaveLength(1);
-    expect(writer.calls[0].attendees).toEqual(expected);
-    expect(writer.calls[0].invitation).toBe("all");
+    expect(writer.calls[0]!.attendees).toEqual(expected);
+    expect(writer.calls[0]!.invitation).toBe("all");
     const stored = await events.findById(
       tenantId,
       principalId,
@@ -3428,9 +3444,9 @@ describe("executeProviderRsvp", () => {
 
   const schedule = {
     kind: "timed" as const,
-    start: "2026-07-14T09:00:00-06:00",
-    end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    start: "2026-07-14T09:00:00-06:00" as DateTime,
+    end: "2026-07-14T10:00:00-06:00" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
   };
   const weekly3 = ["RRULE:FREQ=WEEKLY;COUNT=3"];
   const SECOND_START_UTC = "2026-07-21T15:00:00.000Z";
@@ -3542,7 +3558,7 @@ describe("executeProviderRsvp", () => {
     opts: { color?: EventColorSlot } = {},
   ): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-evt-1",
+    providerEventId: "g-evt-1" as ProviderEventId,
     providerVersion: version,
     providerUpdatedAt: null,
     content: contentWith("Invited", {
@@ -3584,23 +3600,23 @@ describe("executeProviderRsvp", () => {
     // entry's responseStatus changed; every other entry — and the self
     // entry's own email casing and displayName — is byte-identical to the
     // freshly fetched provider state.
-    expect(patch.attendees).toEqual([
+    expect(patch!.attendees).toEqual([
       attendee("organizer@example.com", "accepted", "Org"),
       attendee("Self@Example.COM", "declined"),
       attendee("other@example.com", "tentative", "Oth"),
     ]);
-    expect(patch.attendees?.[0]).toEqual(fetchedList[0] as Attendee);
-    expect(patch.attendees?.[2]).toEqual(fetchedList[2] as Attendee);
+    expect(patch!.attendees?.[0]).toEqual(fetchedList[0] as Attendee);
+    expect(patch!.attendees?.[2]).toEqual(fetchedList[2] as Attendee);
     // Never emails the guest list, and never conditions on a version: a
     // concurrent sibling RSVP must not block this one.
-    expect(patch.invitation).toBe("none");
-    expect(patch.expectedVersion).toBeNull();
-    expect(patch.providerEventId).toBe("g-evt-1");
+    expect(patch!.invitation).toBe("none");
+    expect(patch!.expectedVersion).toBeNull();
+    expect(patch!.providerEventId).toBe("g-evt-1");
     // The echoed body carries the fetched content minus color/colorHex, so
     // the patch cannot touch Google's color or label state.
-    expect(patch.content.title).toBe("Invited");
-    expect(patch.content).not.toHaveProperty("color");
-    expect(patch.content).not.toHaveProperty("colorHex");
+    expect(patch!.content.title).toBe("Invited");
+    expect(patch!.content).not.toHaveProperty("color");
+    expect(patch!.content).not.toHaveProperty("colorHex");
 
     // The answer lands on the stored record before the next Google
     // round-trip.
@@ -3610,10 +3626,10 @@ describe("executeProviderRsvp", () => {
       attendee("Self@Example.COM", "declined"),
       attendee("other@example.com", "tentative", "Oth"),
     ]);
-    expect(stored?.providerVersion).toBe("etag-2");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
     expect(
       result.outcome.state === "confirmed" && result.outcome.providerVersion,
-    ).toBe("etag-2");
+    ).toBe("etag-2" as ProviderEventVersion);
   });
 
   it("confirms a replay without a second write when the provider already holds the answer", async () => {
@@ -3638,7 +3654,7 @@ describe("executeProviderRsvp", () => {
     expect(writer.patchCalls).toHaveLength(0);
     expect(
       result.outcome.state === "confirmed" && result.outcome.providerVersion,
-    ).toBe("etag-7");
+    ).toBe("etag-7" as ProviderEventVersion);
   });
 
   it("allows the organizer to RSVP their own event", async () => {
@@ -3667,7 +3683,7 @@ describe("executeProviderRsvp", () => {
     );
 
     expect(result.outcome.state).toBe("confirmed");
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       attendee(SELF, "tentative"),
       attendee("guest@example.com", "needsAction"),
     ]);
@@ -3821,7 +3837,7 @@ describe("executeProviderRsvp", () => {
 
   const providerInstance = (attendees: Attendee[]): ProviderEvent => ({
     kind: "event",
-    providerEventId: "g-inst-1",
+    providerEventId: "g-inst-1" as ProviderEventId,
     providerVersion: "etag-inst-1",
     providerUpdatedAt: null,
     content: contentWith("Invited", {
@@ -3830,9 +3846,9 @@ describe("executeProviderRsvp", () => {
     }) as ProviderEvent["content"],
     schedule: {
       kind: "timed",
-      start: "2026-07-21T09:00:00-06:00",
-      end: "2026-07-21T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-21T09:00:00-06:00" as DateTime,
+      end: "2026-07-21T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
     busy: true,
     recurrence: {
@@ -3860,7 +3876,7 @@ describe("executeProviderRsvp", () => {
       attendee(SELF, "accepted"),
     ]);
     writer.patchResult = {
-      providerEventId: "g-inst-1",
+      providerEventId: "g-inst-1" as ProviderEventId,
       providerVersion: "etag-inst-2",
     };
 
@@ -3886,10 +3902,10 @@ describe("executeProviderRsvp", () => {
     // patch targets the RESOLVED instance id, with no recurrence key.
     expect(writer.fetchEventCalls).toHaveLength(0);
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].providerEventId).toBe("g-inst-1");
-    expect(writer.patchCalls[0].recurrence).toEqual({ kind: "instance" });
-    expect(writer.patchCalls[0].invitation).toBe("none");
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.providerEventId).toBe("g-inst-1");
+    expect(writer.patchCalls[0]!.recurrence).toEqual({ kind: "instance" });
+    expect(writer.patchCalls[0]!.invitation).toBe("none");
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       attendee("organizer@example.com", "accepted"),
       attendee(SELF, "declined"),
     ]);
@@ -3902,15 +3918,17 @@ describe("executeProviderRsvp", () => {
       attendee("organizer@example.com", "accepted"),
       attendee(SELF, "accepted"),
     ]);
-    expect(master?.providerVersion).toBe("etag-1");
+    expect(master?.providerVersion).toBe("etag-1" as ProviderEventVersion);
     const exceptions = await events.findSeriesExceptions(
       tenantId,
       principalId,
       event._id,
     );
     expect(exceptions).toHaveLength(1);
-    expect(exceptions[0]?.providerEventId).toBe("g-inst-1");
-    expect(exceptions[0]?.providerVersion).toBe("etag-inst-2");
+    expect(exceptions[0]?.providerEventId).toBe("g-inst-1" as ProviderEventId);
+    expect(exceptions[0]?.providerVersion).toBe(
+      "etag-inst-2" as ProviderEventVersion,
+    );
     expect(exceptions[0]?.content.attendees).toEqual([
       attendee("organizer@example.com", "accepted"),
       attendee(SELF, "declined"),
@@ -3950,7 +3968,7 @@ describe("executeProviderRsvp", () => {
       recurrence: { kind: "seriesMaster", rules: weekly3 },
     };
     writer.patchResult = {
-      providerEventId: "g-evt-1",
+      providerEventId: "g-evt-1" as ProviderEventId,
       providerVersion: "etag-2",
     };
 
@@ -3966,14 +3984,14 @@ describe("executeProviderRsvp", () => {
     expect(writer.fetchInstanceCalls).toHaveLength(0);
     expect(writer.fetchEventCalls).toHaveLength(1);
     expect(writer.patchCalls).toHaveLength(1);
-    expect(writer.patchCalls[0].providerEventId).toBe("g-evt-1");
+    expect(writer.patchCalls[0]!.providerEventId).toBe("g-evt-1");
     // The master's own current rules are re-written unchanged
     // (self-describing), mirroring how a "preserve" series edit writes.
-    expect(writer.patchCalls[0].recurrence).toEqual({
+    expect(writer.patchCalls[0]!.recurrence).toEqual({
       kind: "series",
       rules: weekly3,
     });
-    expect(writer.patchCalls[0].attendees).toEqual([
+    expect(writer.patchCalls[0]!.attendees).toEqual([
       attendee("organizer@example.com", "accepted"),
       attendee(SELF, "declined"),
     ]);
@@ -4050,7 +4068,7 @@ describe("executeProviderRsvp", () => {
     expect(writer.patchCalls).toHaveLength(0);
     expect(
       result.outcome.state === "confirmed" && result.outcome.providerVersion,
-    ).toBe("etag-inst-1");
+    ).toBe("etag-inst-1" as ProviderEventVersion);
     // The already-landed answer still converges locally onto the exception.
     const exceptions = await events.findSeriesExceptions(
       tenantId,

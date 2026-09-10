@@ -3,6 +3,7 @@ import { NodeEnv } from "@core/constants/core.constants";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
@@ -106,7 +107,7 @@ describe("R-SEC-03 isolation matrix", () => {
       principalId: principalId as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: `acct-${accountSeq}`,
+        providerAccountId: `acct-${accountSeq}` as ProviderAccountId,
         email: `u${accountSeq}@example.com`,
         displayName: null,
       },
@@ -273,8 +274,8 @@ describe("R-SEC-03 isolation matrix", () => {
 
   describe("POST /internal/commands", () => {
     it("cannot update another principal's event", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
       const attacker = objectId();
       await startService();
       const eventId = await createCloudEvent(tenantId, owner);
@@ -318,17 +319,13 @@ describe("R-SEC-03 isolation matrix", () => {
       // would — versionConflict, not a side channel that would let them
       // distinguish "exists but not mine" from "doesn't exist".)
       expect(body.command.outcome.state).toBe("failed");
-      const stored = await events.findById(
-        tenantId as TenantId,
-        owner as PrincipalId,
-        eventId as never,
-      );
+      const stored = await events.findById(tenantId, owner, eventId as never);
       expect(stored?.content.title).toBe("Owner event");
     });
 
     it("cannot delete another principal's event", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
       const attacker = objectId();
       await startService();
       const eventId = await createCloudEvent(tenantId, owner);
@@ -351,19 +348,15 @@ describe("R-SEC-03 isolation matrix", () => {
       // Idempotent delete of an absent (to the attacker) event confirms locally
       // without touching the owner's row.
       expect(body.command.outcome.state).toBe("confirmed");
-      const stored = await events.findById(
-        tenantId as TenantId,
-        owner as PrincipalId,
-        eventId as never,
-      );
+      const stored = await events.findById(tenantId, owner, eventId as never);
       expect(stored).not.toBeNull();
       expect(stored?.content.title).toBe("Owner event");
     });
 
     it("cannot update an event under the wrong tenant", async () => {
-      const ownerTenant = objectId();
+      const ownerTenant = objectId() as TenantId;
       const wrongTenant = objectId();
-      const principalId = objectId();
+      const principalId = objectId() as PrincipalId;
       await startService();
       const eventId = await createCloudEvent(ownerTenant, principalId);
 
@@ -404,8 +397,8 @@ describe("R-SEC-03 isolation matrix", () => {
       // than leaking existence via a silently pending write.
       expect(body.command.outcome.state).toBe("failed");
       const stored = await events.findById(
-        ownerTenant as TenantId,
-        principalId as PrincipalId,
+        ownerTenant,
+        principalId,
         eventId as never,
       );
       expect(stored?.content.title).toBe("Owner event");
@@ -414,10 +407,10 @@ describe("R-SEC-03 isolation matrix", () => {
 
   describe("DELETE /internal/principal", () => {
     it("does not purge another principal or another tenant", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
-      const stranger = objectId();
-      const otherTenant = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
+      const stranger = objectId() as PrincipalId;
+      const otherTenant = objectId() as TenantId;
       await startService();
 
       const ownerConn = await seedConnection(tenantId, owner);
@@ -430,83 +423,49 @@ describe("R-SEC-03 isolation matrix", () => {
       });
       expect(res.status).toBe(200);
 
+      expect(await connections.findById(tenantId, owner, ownerConn)).toBeNull();
       expect(
-        await connections.findById(
-          tenantId as TenantId,
-          owner as PrincipalId,
-          ownerConn,
-        ),
-      ).toBeNull();
-      expect(
-        await connections.findById(
-          tenantId as TenantId,
-          stranger as PrincipalId,
-          strangerConn,
-        ),
+        await connections.findById(tenantId, stranger, strangerConn),
       ).not.toBeNull();
       expect(
-        await connections.findById(
-          otherTenant as TenantId,
-          owner as PrincipalId,
-          otherTenantConn,
-        ),
+        await connections.findById(otherTenant, owner, otherTenantConn),
       ).not.toBeNull();
     });
   });
 
   describe("repository ownership probes", () => {
     it("refuses markDisconnected / deleteById under the wrong principal or tenant", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
-      const attacker = objectId();
-      const wrongTenant = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
+      const attacker = objectId() as PrincipalId;
+      const wrongTenant = objectId() as TenantId;
       const connectionId = await seedConnection(tenantId, owner);
 
       expect(
-        await connections.markDisconnected(
-          tenantId as TenantId,
-          attacker as PrincipalId,
-          connectionId,
-        ),
+        await connections.markDisconnected(tenantId, attacker, connectionId),
       ).toBe(false);
       expect(
-        await connections.markDisconnected(
-          wrongTenant as TenantId,
-          owner as PrincipalId,
-          connectionId,
-        ),
+        await connections.markDisconnected(wrongTenant, owner, connectionId),
       ).toBe(false);
       expect(
-        await connections.deleteById(
-          tenantId as TenantId,
-          attacker as PrincipalId,
-          connectionId,
-        ),
+        await connections.deleteById(tenantId, attacker, connectionId),
       ).toBe(false);
       expect(
-        await connections.deleteById(
-          wrongTenant as TenantId,
-          owner as PrincipalId,
-          connectionId,
-        ),
+        await connections.deleteById(wrongTenant, owner, connectionId),
       ).toBe(false);
       expect(
-        await connections.findById(
-          tenantId as TenantId,
-          owner as PrincipalId,
-          connectionId,
-        ),
+        await connections.findById(tenantId, owner, connectionId),
       ).not.toBeNull();
     });
 
     it("does not let a foreign principal advance a sync-resource cursor", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
-      const attacker = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
+      const attacker = objectId() as PrincipalId;
       const connectionId = await seedConnection(tenantId, owner);
       const resource = await resources.ensure({
-        tenantId: tenantId as TenantId,
-        principalId: owner as PrincipalId,
+        tenantId: tenantId,
+        principalId: owner,
         connectionId,
         resourceKind: "calendarList",
         calendarId: null,
@@ -514,35 +473,27 @@ describe("R-SEC-03 isolation matrix", () => {
 
       // Owner-scoped filter matches nothing for the attacker — silent no-op.
       await resources.advanceCursor(
-        tenantId as TenantId,
-        attacker as PrincipalId,
+        tenantId,
+        attacker,
         resource._id,
         "stolen-cursor",
         new Date(),
       );
 
-      const still = await resources.findById(
-        tenantId as TenantId,
-        owner as PrincipalId,
-        resource._id,
-      );
+      const still = await resources.findById(tenantId, owner, resource._id);
       expect(still?.syncCursor).toBeNull();
     });
 
     it("scopes command findById to the owning principal and tenant", async () => {
-      const tenantId = objectId();
-      const owner = objectId();
-      const attacker = objectId();
-      const wrongTenant = objectId();
+      const tenantId = objectId() as TenantId;
+      const owner = objectId() as PrincipalId;
+      const attacker = objectId() as PrincipalId;
+      const wrongTenant = objectId() as TenantId;
       await startService();
       const eventId = await createCloudEvent(tenantId, owner);
 
       const commands = new CommandRepository(mongo.db);
-      const mine = await commands.listNonterminal(
-        tenantId as TenantId,
-        owner as PrincipalId,
-        10,
-      );
+      const mine = await commands.listNonterminal(tenantId, owner, 10);
       // Create confirms immediately, so list nonterminal may be empty — look up
       // by scanning the collection for the owner's command id instead.
       const row = await mongo.db.collection(SYNC_COLLECTIONS.commands).findOne({
@@ -554,25 +505,13 @@ describe("R-SEC-03 isolation matrix", () => {
       const commandId = String(row?._id);
 
       expect(
-        await commands.findById(
-          tenantId as TenantId,
-          attacker as PrincipalId,
-          commandId as never,
-        ),
+        await commands.findById(tenantId, attacker, commandId as never),
       ).toBeNull();
       expect(
-        await commands.findById(
-          wrongTenant as TenantId,
-          owner as PrincipalId,
-          commandId as never,
-        ),
+        await commands.findById(wrongTenant, owner, commandId as never),
       ).toBeNull();
       expect(
-        await commands.findById(
-          tenantId as TenantId,
-          owner as PrincipalId,
-          commandId as never,
-        ),
+        await commands.findById(tenantId, owner, commandId as never),
       ).not.toBeNull();
       expect(mine).toBeDefined();
     });

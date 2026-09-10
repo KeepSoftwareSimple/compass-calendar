@@ -1,9 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
 import { type PostHogCaptureClient } from "@core/logger/posthog-capture";
+import { type DateTime } from "@core/types/domain-primitives";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
   type ProviderCapability,
   type ProviderKind,
   type TenantId,
@@ -104,7 +106,7 @@ describe("computeHealthSnapshot", () => {
       principalId: objectId() as PrincipalId,
       provider,
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "h@example.com",
         displayName: null,
       },
@@ -213,7 +215,7 @@ describe("computeHealthSnapshot", () => {
     expect(google?.freshness.sampleSize).toBe(2);
     expect(google?.freshness.p50Ms).toBeGreaterThan(0);
     expect(google?.freshness.percentOver30s).toBeGreaterThan(0);
-    expect(google?.computedAt).toBe(NOW.toISOString());
+    expect(google?.computedAt).toBe(NOW.toISOString() as DateTime);
 
     expect(microsoft?.connections.healthy).toBe(1);
     expect(microsoft?.jobs.pending).toBe(0);

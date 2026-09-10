@@ -1,5 +1,13 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import { type CalendarId } from "@core/types/domain-primitives";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderEventId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type DeletionMarkerRecordInput } from "@sync/storage/contracts/deletion-marker.contracts";
@@ -14,12 +22,12 @@ const markerInput = (
   overrides: Partial<DeletionMarkerRecordInput> = {},
 ): DeletionMarkerRecordInput =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    connectionId: objectId(),
-    calendarId: objectId(),
-    providerEventId: "evt-deleted",
-    providerVersion: "etag-9",
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    connectionId: objectId() as ConnectionId,
+    calendarId: objectId() as CalendarId,
+    providerEventId: "evt-deleted" as ProviderEventId,
+    providerVersion: "etag-9" as ProviderEventVersion,
     deletionSource: "compass",
     deletedAt: new Date("2026-07-20T12:00:00.000Z"),
     ...overrides,
@@ -62,22 +70,25 @@ describe("DeletionMarkerRepository", () => {
 
   it("is idempotent on provider identity (re-confirmation refreshes, not duplicates)", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-1",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-1" as ProviderEventId,
     };
     const first = await repo.record(
-      markerInput({ ...identity, providerVersion: "v1" }),
+      markerInput({
+        ...identity,
+        providerVersion: "v1" as ProviderEventVersion,
+      }),
     );
     const second = await repo.record(
       markerInput({
         ...identity,
-        providerVersion: "v2",
+        providerVersion: "v2" as ProviderEventVersion,
         deletedAt: new Date("2026-07-21T12:00:00.000Z"),
       }),
     );
     expect(second._id).toBe(first._id);
-    expect(second.providerVersion).toBe("v2");
+    expect(second.providerVersion).toBe("v2" as ProviderEventVersion);
     expect(await db.collection("deletion_markers").countDocuments()).toBe(1);
   });
 

@@ -1,8 +1,7 @@
 import { encryptCredentials } from "@scripts/commands/encrypt-credentials/backfill";
-import { ObjectId } from "mongodb";
+import { type Document, ObjectId } from "mongodb";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
-import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { describe, expect, it } from "bun:test";
@@ -20,9 +19,11 @@ describe("encrypt-credentials (db)", () => {
     const connectionId = objectId() as ConnectionId;
     await storage
       .db()
-      .collection(SYNC_COLLECTIONS.credentials)
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      )
       .insertOne({
-        _id: mongoObjectId(connectionId),
+        _id: connectionId,
         credentialKind: "oauthRefresh",
         provider: "google",
         refreshToken: "legacy-token",
@@ -35,7 +36,11 @@ describe("encrypt-credentials (db)", () => {
       });
 
     const report = await encryptCredentials(
-      storage.db().collection(SYNC_COLLECTIONS.credentials),
+      storage
+        .db()
+        .collection<Document & { _id: ConnectionId }>(
+          SYNC_COLLECTIONS.credentials,
+        ),
       { dryRun: true, batchSize: 50, encryptionKey: KEY, now: NOW },
     );
 
@@ -43,19 +48,25 @@ describe("encrypt-credentials (db)", () => {
     expect(report.modified).toBe(0);
     const raw = await storage
       .db()
-      .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: mongoObjectId(connectionId) });
-    expect(raw?.refreshToken).toBe("legacy-token");
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      )
+      .findOne({ _id: connectionId });
+    expect(raw?.["refreshToken"]).toBe("legacy-token");
     expect(raw).not.toHaveProperty("refreshTokenCiphertext");
   });
 
   it("encrypts plaintext rows and is idempotent and resumable", async () => {
     const firstId = objectId() as ConnectionId;
     const secondId = objectId() as ConnectionId;
-    const collection = storage.db().collection(SYNC_COLLECTIONS.credentials);
+    const collection = storage
+      .db()
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      );
     await collection.insertMany([
       {
-        _id: mongoObjectId(firstId),
+        _id: firstId,
         credentialKind: "oauthRefresh",
         provider: "google",
         refreshToken: "token-a",
@@ -67,7 +78,7 @@ describe("encrypt-credentials (db)", () => {
         updatedAt: NOW,
       },
       {
-        _id: mongoObjectId(secondId),
+        _id: secondId,
         credentialKind: "oauthRefresh",
         provider: "microsoft",
         refreshToken: "token-b",
@@ -104,16 +115,16 @@ describe("encrypt-credentials (db)", () => {
       [secondId, "token-b"],
     ] as const) {
       const raw = await collection.findOne({
-        _id: mongoObjectId(connectionId),
+        _id: connectionId,
       });
       expect(raw).not.toHaveProperty("refreshToken");
-      expect(raw?.refreshTokenCiphertext).toBeString();
+      expect(raw?.["refreshTokenCiphertext"]).toBeString();
       expect(
         decryptCredentialAtRest(KEY, {
-          ciphertext: String(raw?.refreshTokenCiphertext),
-          iv: String(raw?.refreshTokenIv),
-          tag: String(raw?.refreshTokenTag),
-          keyVersion: Number(raw?.keyVersion),
+          ciphertext: String(raw?.["refreshTokenCiphertext"]),
+          iv: String(raw?.["refreshTokenIv"]),
+          tag: String(raw?.["refreshTokenTag"]),
+          keyVersion: Number(raw?.["keyVersion"]),
         }),
       ).toBe(plaintext);
       expect(JSON.stringify(raw)).not.toContain(plaintext);

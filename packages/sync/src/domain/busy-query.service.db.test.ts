@@ -209,7 +209,7 @@ describe("queryBusyIntervals", () => {
   });
 
   it("drops an excluded event before merge and keeps overlapping host busy", async () => {
-    const bookingId = objectId();
+    const bookingId = objectId() as EventId;
     await seed({
       calendarId: calendarA,
       start: "2026-07-14T10:00Z",
@@ -224,7 +224,7 @@ describe("queryBusyIntervals", () => {
 
     const result = await query(
       [{ calendarId: calendarA, generation: 0 }],
-      [bookingId as EventId],
+      [bookingId],
     );
 
     expect(iso(result)).toEqual([

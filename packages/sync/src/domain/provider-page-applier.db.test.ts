@@ -1,3 +1,5 @@
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
+import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import { seedProviderCalendar } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { ProviderPageApplier } from "@sync/domain/provider-page-applier";
@@ -21,9 +23,9 @@ const now = () => new Date("2026-07-10T00:00:00.000Z");
 
 const schedule = {
   kind: "timed" as const,
-  start: "2026-07-14T09:00:00-06:00",
-  end: "2026-07-14T10:00:00-06:00",
-  timeZone: "America/Denver",
+  start: "2026-07-14T09:00:00-06:00" as DateTime,
+  end: "2026-07-14T10:00:00-06:00" as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 };
 const content = (title: string) => ({
   title,
@@ -35,7 +37,7 @@ const content = (title: string) => ({
 });
 const single = (id: string): ProviderEvent => ({
   kind: "event",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   providerUpdatedAt: null,
   content: content(id),
@@ -49,7 +51,7 @@ const master = (id: string): ProviderEvent => ({
 });
 const standaloneCancellation = (id: string): ProviderEventCancellation => ({
   kind: "cancellation",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   series: null,
 });
@@ -59,7 +61,7 @@ const seriesCancellation = (
   recurrenceId: string,
 ): ProviderEventCancellation => ({
   kind: "cancellation",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   series: { seriesProviderId, recurrenceId },
 });
@@ -96,7 +98,7 @@ describe("ProviderPageApplier", () => {
       events.findByProviderIdentity(calendar.tenantId, calendar.principalId, {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       });
 
     // Busy with no correlation key is the overwhelming default: no bag at all.
@@ -124,7 +126,7 @@ describe("ProviderPageApplier", () => {
       events.findByProviderIdentity(calendar.tenantId, calendar.principalId, {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       });
 
     expect((await byId("managed"))?.providerMetadata).toEqual({
@@ -138,10 +140,10 @@ describe("ProviderPageApplier", () => {
     const run = applier(calendar);
 
     await run.applyPage([
-      { ...single("opaque"), providerEventId: "opaque" },
+      { ...single("opaque"), providerEventId: "opaque" as ProviderEventId },
       {
         ...single("transparent"),
-        providerEventId: "transparent",
+        providerEventId: "transparent" as ProviderEventId,
         busy: false,
       },
     ]);
@@ -199,7 +201,7 @@ describe("ProviderPageApplier", () => {
       events.findByProviderIdentity(calendar.tenantId, calendar.principalId, {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       });
 
     await applier(calendar).applyPage([
@@ -222,7 +224,7 @@ describe("ProviderPageApplier", () => {
       events.findByProviderIdentity(calendar.tenantId, calendar.principalId, {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       });
 
     await applier(calendar).applyPage([
@@ -242,7 +244,7 @@ describe("ProviderPageApplier", () => {
       events.findByProviderIdentity(calendar.tenantId, calendar.principalId, {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       });
 
     await applier(calendar).applyPage([
@@ -272,7 +274,7 @@ describe("ProviderPageApplier", () => {
       {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId: "m_c",
+        providerEventId: "m_c" as ProviderEventId,
       },
     );
     expect(cancelled?.providerMetadata).toBeNull();
@@ -301,7 +303,7 @@ describe("ProviderPageApplier", () => {
         {
           connectionId: calendar.connectionId,
           calendarId: calendar._id,
-          providerEventId: "gone",
+          providerEventId: "gone" as ProviderEventId,
         },
       ),
     ).toBeNull();
@@ -368,7 +370,7 @@ describe("ProviderPageApplier", () => {
   it("keeps customizations when a pull changes the provider schedule", async () => {
     const calendar = await seedCalendar();
     const run = applier(calendar);
-    const providerEventId = "managed-schedule";
+    const providerEventId = "managed-schedule" as ProviderEventId;
 
     await run.applyPage([
       { ...single(providerEventId), providerManaged: true },
@@ -379,7 +381,7 @@ describe("ProviderPageApplier", () => {
       {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       },
     );
     if (!existing) throw new Error("seed failed");
@@ -390,9 +392,9 @@ describe("ProviderPageApplier", () => {
 
     const movedSchedule = {
       kind: "timed" as const,
-      start: "2026-07-14T10:00:00-06:00",
-      end: "2026-07-14T11:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T10:00:00-06:00" as DateTime,
+      end: "2026-07-14T11:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     };
     await run.applyPage([
       {
@@ -409,7 +411,7 @@ describe("ProviderPageApplier", () => {
       {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId,
+        providerEventId: providerEventId as ProviderEventId,
       },
     );
     expect(updated?.schedule).toEqual(movedSchedule);

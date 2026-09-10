@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
 import {
   type PrincipalId,
+  type ProviderAccountId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
@@ -87,7 +88,7 @@ describe("POST /internal/availability/busy", () => {
       principalId,
       provider: "google",
       account: {
-        providerAccountId: `acct-${accountSeq}`,
+        providerAccountId: `acct-${accountSeq}` as ProviderAccountId,
         email: `u${accountSeq}@gmail.com`,
         displayName: "User",
       },

@@ -1,4 +1,4 @@
-import { type Collection, type Document, type ObjectId } from "mongodb";
+import { type Collection, type Document } from "mongodb";
 import { encryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 
@@ -15,7 +15,7 @@ type PlaintextOauthCredentialRow = {
 };
 
 export async function encryptCredentials(
-  credentials: Collection<Document>,
+  credentials: Collection<Document & { _id: ConnectionId }>,
   options: {
     dryRun: boolean;
     batchSize: number;
@@ -58,7 +58,7 @@ export async function encryptCredentials(
 
     for (const row of batch) {
       const existing = await credentials.findOne({
-        _id: row._id as unknown as ObjectId,
+        _id: row._id,
         refreshToken: { $type: "string" },
       });
       if (!existing || typeof existing["refreshToken"] !== "string") {
@@ -69,7 +69,7 @@ export async function encryptCredentials(
       const plaintext = existing["refreshToken"];
       const sealed = encryptCredentialAtRest(options.encryptionKey, plaintext);
       const result = await credentials.updateOne(
-        { _id: row._id as unknown as ObjectId, refreshToken: plaintext },
+        { _id: row._id, refreshToken: plaintext },
         {
           $set: {
             refreshTokenCiphertext: sealed.ciphertext,

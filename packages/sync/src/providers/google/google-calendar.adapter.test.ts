@@ -140,10 +140,10 @@ describe("GoogleCalendarAdapter", () => {
       calendars.map((c) => [c.providerCalendarId, c]),
     );
 
-    expect(byId["labeled"].eventLabels).toEqual([
+    expect(byId["labeled"]!.eventLabels).toEqual([
       { id: "label-1", hex: "#009688" },
     ]);
-    expect(byId["unlabeled"].eventLabels).toEqual([]);
+    expect(byId["unlabeled"]!.eventLabels).toEqual([]);
     expect(api.labelCalls).toEqual(["labeled", "unlabeled"]);
   });
 
@@ -211,24 +211,24 @@ describe("GoogleCalendarAdapter", () => {
       calendars.map((c) => [c.providerCalendarId, c]),
     );
 
-    expect(byId["owner"].accessRole).toBe("owner");
-    expect(byId["writer"].accessRole).toBe("editor");
-    expect(byId["reader"].accessRole).toBe("viewer");
-    expect(byId["fbr"].accessRole).toBe("busyOnly");
+    expect(byId["owner"]!.accessRole).toBe("owner");
+    expect(byId["writer"]!.accessRole).toBe("editor");
+    expect(byId["reader"]!.accessRole).toBe("viewer");
+    expect(byId["fbr"]!.accessRole).toBe("busyOnly");
 
-    expect(byId["writer"].capabilities).toEqual({
+    expect(byId["writer"]!.capabilities).toEqual({
       canReadEvents: true,
       canWriteEvents: true,
       canReadBusy: true,
       canInviteAttendees: true,
     });
-    expect(byId["reader"].capabilities).toEqual({
+    expect(byId["reader"]!.capabilities).toEqual({
       canReadEvents: true,
       canWriteEvents: false,
       canReadBusy: true,
       canInviteAttendees: false,
     });
-    expect(byId["fbr"].capabilities).toEqual({
+    expect(byId["fbr"]!.capabilities).toEqual({
       canReadEvents: false,
       canWriteEvents: false,
       canReadBusy: true,
@@ -369,8 +369,8 @@ describe("GoogleCalendarAdapter", () => {
     });
 
     expect(calendars).toHaveLength(1);
-    expect(calendars[0].providerCalendarId).toBe("no-color");
-    expect(calendars[0].color).toBeNull();
+    expect(calendars[0]!.providerCalendarId).toBe("no-color");
+    expect(calendars[0]!.color).toBeNull();
   });
 
   it("treats missing conference types as Meet-capable", async () => {
@@ -383,7 +383,7 @@ describe("GoogleCalendarAdapter", () => {
       accessToken: "at",
     });
 
-    expect(calendars[0].createsGoogleMeet).toBe(true);
+    expect(calendars[0]!.createsGoogleMeet).toBe(true);
   });
 
   it("maps hangoutsMeet as Meet-capable", async () => {
@@ -406,7 +406,7 @@ describe("GoogleCalendarAdapter", () => {
       accessToken: "at",
     });
 
-    expect(calendars[0].createsGoogleMeet).toBe(true);
+    expect(calendars[0]!.createsGoogleMeet).toBe(true);
   });
 
   it("maps a calendar without hangoutsMeet as not Meet-capable", async () => {
@@ -429,7 +429,7 @@ describe("GoogleCalendarAdapter", () => {
       accessToken: "at",
     });
 
-    expect(calendars[0].createsGoogleMeet).toBe(false);
+    expect(calendars[0]!.createsGoogleMeet).toBe(false);
   });
 
   it("returns a null cursor when the provider sends no sync token", async () => {
@@ -458,8 +458,8 @@ describe("GoogleCalendarAdapter", () => {
     });
 
     expect(tokensSeen).toEqual(["account-a", "account-b"]);
-    expect(first.calendars[0].providerCalendarId).toBe("account-a");
-    expect(second.calendars[0].providerCalendarId).toBe("account-b");
+    expect(first.calendars[0]!.providerCalendarId).toBe("account-a");
+    expect(second.calendars[0]!.providerCalendarId).toBe("account-b");
   });
 
   it("maps a 401 to authExpired so the caller can remint the access token", async () => {

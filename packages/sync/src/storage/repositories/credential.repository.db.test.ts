@@ -124,10 +124,10 @@ describe("CredentialRepository", () => {
     expect(raw).not.toHaveProperty("refreshToken");
     expect(
       decryptCredentialAtRest(TEST_CREDENTIAL_ENCRYPTION_KEY, {
-        ciphertext: String(raw?.refreshTokenCiphertext),
-        iv: String(raw?.refreshTokenIv),
-        tag: String(raw?.refreshTokenTag),
-        keyVersion: Number(raw?.keyVersion),
+        ciphertext: String(raw?.["refreshTokenCiphertext"]),
+        iv: String(raw?.["refreshTokenIv"]),
+        tag: String(raw?.["refreshTokenTag"]),
+        keyVersion: Number(raw?.["keyVersion"]),
       }),
     ).toBe("refresh-token-secret");
   });
