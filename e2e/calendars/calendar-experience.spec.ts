@@ -4,6 +4,7 @@ import {
   getViewSwitcherButton,
   openTimedEventFormWithKeyboard,
 } from "../utils/event-test-utils";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 // Wide enough for all 7 week columns (track needs GRID_MARGIN_LEFT +
 // 7 * DAY_COLUMN_MIN_USABLE_WIDTH beside the sidebar). At the default
@@ -309,6 +310,7 @@ async function setupCalendarExperiencePage(
     }
     if (pathname.endsWith("/api/config")) {
       return json({
+        version: E2E_APP_CONFIG_VERSION,
         providers: {
           google: { signIn: true, connect: true },
           microsoft: { signIn: false, connect: microsoftConnect },

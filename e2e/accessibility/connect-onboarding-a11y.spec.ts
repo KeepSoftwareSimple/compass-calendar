@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import { prepareSignedInMicrosoftPage } from "../attendees/attendee-harness";
 import { prepareSignedInBookingSettingsPage } from "../booking/booking-harness";
 import { expectNoAxeViolations } from "../utils/axe-assertion";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1600, height: 900 } });
@@ -60,6 +61,7 @@ async function prepareSignedInZeroConnectionsPage(
     if (path.endsWith("/api/config")) {
       return route.fulfill(
         jsonResponse({
+          version: E2E_APP_CONFIG_VERSION,
           google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },

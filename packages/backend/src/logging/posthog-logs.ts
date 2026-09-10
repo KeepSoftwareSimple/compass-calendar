@@ -1,4 +1,5 @@
 import { startOtelLogs, stopOtelLogs } from "@core/logger/otel-logs";
+import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 
 export function startPostHogLogs(): void {
@@ -7,7 +8,7 @@ export function startPostHogLogs(): void {
     nodeEnv: CONFIG.NODE_ENV,
     posthogKey: CONFIG.POSTHOG_KEY,
     posthogHost: CONFIG.POSTHOG_HOST,
-    version: CONFIG.VERSION,
+    version: normalizeDeployVersion(CONFIG.VERSION),
   });
 }
 

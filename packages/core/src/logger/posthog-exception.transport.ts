@@ -1,5 +1,6 @@
 import { type TransformableInfo } from "logform";
 import TransportStream from "winston-transport";
+import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import {
   type DescribedError,
   describeErrorChain,
@@ -73,8 +74,12 @@ export class PostHogExceptionTransport extends TransportStream {
     const message = String(info.message || "Error");
     const stack = info["stack"] ? String(info["stack"]) : undefined;
     const userId = info["userId"] ? String(info["userId"]) : undefined;
-    const errorType = info["errorType"] ? String(info["errorType"]) : undefined;
-    const result = info["result"] ? String(info["result"]) : undefined;
+    const errorType = info[POSTHOG_ERROR_TRACKING_PROPERTY.errorType]
+      ? String(info[POSTHOG_ERROR_TRACKING_PROPERTY.errorType])
+      : undefined;
+    const result = info[POSTHOG_ERROR_TRACKING_PROPERTY.result]
+      ? String(info[POSTHOG_ERROR_TRACKING_PROPERTY.result])
+      : undefined;
 
     // Bare `new Error(message)` groups every call site sharing a generic
     // ErrorMetadata description (e.g. "Not sure why error occurred. See
@@ -93,10 +98,11 @@ export class PostHogExceptionTransport extends TransportStream {
 
     const context = getPostHogContext();
     if (context) {
-      properties["environment"] = context.environment;
-      properties["service"] = context.service;
+      properties[POSTHOG_ERROR_TRACKING_PROPERTY.environment] =
+        context.environment;
+      properties[POSTHOG_ERROR_TRACKING_PROPERTY.service] = context.service;
       if (context.version) {
-        properties["version"] = context.version;
+        properties[POSTHOG_ERROR_TRACKING_PROPERTY.version] = context.version;
       }
     }
 

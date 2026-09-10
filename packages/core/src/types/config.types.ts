@@ -10,6 +10,8 @@ const defaultProviderFlags = { signIn: false, connect: false };
 
 export const AppConfigSchema = z
   .object({
+    /** Deployed release tag or build SHA (matches PostHog `version`). */
+    version: z.string().min(1),
     google: z.object({
       isConfigured: z.boolean(),
     }),

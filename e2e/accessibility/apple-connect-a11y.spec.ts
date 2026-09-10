@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { expectNoAxeViolations } from "../utils/axe-assertion";
 import { prepareCalendarPage } from "../utils/event-test-utils";
+import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 type CompassE2EStoreWindow = Window & {
   __COMPASS_E2E_STORE__?: {
@@ -22,6 +23,7 @@ test("the Connect Apple Calendar form is accessible when open", async ({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify({
+          version: E2E_APP_CONFIG_VERSION,
           providers: {
             google: { signIn: true, connect: true },
             microsoft: { signIn: false, connect: false },
