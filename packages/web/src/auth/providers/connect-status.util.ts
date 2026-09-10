@@ -4,6 +4,7 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.util";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   GOOGLE_CONNECT_FAILED_TOAST_ID,
@@ -92,6 +93,7 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
   switch (status) {
     case "connected":
       track("calendar_connected", { source: "connect_redirect", provider });
+      trackSignupStep("calendar_connected", { method: provider });
       toast.success(connectedCopy(provider), {
         ...getToastDefaultOptions(),
         toastId: SUCCESS_TOAST_ID[provider],

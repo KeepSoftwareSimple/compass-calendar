@@ -8,6 +8,10 @@ import {
   type ResetPasswordFormData,
   type SignUpFormData,
 } from "@web/auth/compass/schemas/auth.schemas";
+import {
+  trackSignupCompleted,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
@@ -53,6 +57,7 @@ export function useAuthFormHandlers({
 
   const handleSignUp = useCallback(
     async (data: SignUpFormData) => {
+      trackSignupStep("signup_form_submitted", { method: "email" });
       setIsSubmitting(true);
       setSubmitError(null);
 
@@ -74,7 +79,7 @@ export function useAuthFormHandlers({
             await completeAuthentication({
               email: response.user.emails[0] ?? data.email,
             });
-            track("signup_completed", { method: "email" });
+            trackSignupCompleted("email");
             closeModal();
             shortcutShowcaseActions.offerAfterSignupIfPending();
             return;

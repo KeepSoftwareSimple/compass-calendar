@@ -8,6 +8,10 @@ import {
 } from "@web/auth/apple/authorization/apple-authorization.storage";
 import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-authorization.util";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
+import {
+  trackSignupCompleted,
+  trackSignupStep,
+} from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
@@ -26,6 +30,8 @@ export async function completeAppleAuthCallback({
   navigate,
   search,
 }: CompleteAppleAuthCallbackOptions): Promise<void> {
+  trackSignupStep("oauth_callback_returned", { method: "apple" });
+
   const params = new URLSearchParams(search);
   const state = params.get("state");
 
@@ -66,7 +72,7 @@ export async function completeAppleAuthCallback({
     });
 
     if (result.createdNewRecipeUser) {
-      track("signup_completed", { method: "apple" });
+      trackSignupCompleted("apple");
     } else {
       track("login_completed", { method: "apple" });
     }

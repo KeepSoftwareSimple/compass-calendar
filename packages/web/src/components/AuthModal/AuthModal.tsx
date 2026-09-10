@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
@@ -27,7 +28,11 @@ import { LogInForm } from "./forms/LogInForm";
 import { ResetPasswordForm } from "./forms/ResetPasswordForm";
 import { SignUpForm } from "./forms/SignUpForm";
 import { useAuthFormHandlers } from "./hooks/useAuthFormHandlers";
-import { type AuthSearch, useAuthModal } from "./hooks/useAuthModal";
+import {
+  type AuthSearch,
+  type AuthView,
+  useAuthModal,
+} from "./hooks/useAuthModal";
 
 function getInitialAuthToken(search: AuthSearch): string | undefined {
   const authParam = search.auth?.toLowerCase();
@@ -87,10 +92,20 @@ export const AuthModal: FC = () => {
   });
 
   const [signUpName, setSignUpName] = useState("");
+  // Counted once per view no matter how often the modal is closed and
+  // reopened, matching how WelcomeModal dedupes its own step events.
+  const openedViewsRef = useRef(new Set<AuthView>());
   const prevViewRef = useRef(currentView);
   // OverlayPanel would otherwise seat the view-switch chip (first focusable).
   const emailInputRef = useRef<HTMLInputElement>(null);
   const pricingLinkRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (!isOpen || currentView !== "signUp") return;
+    if (openedViewsRef.current.has(currentView)) return;
+    openedViewsRef.current.add(currentView);
+    trackSignupStep("auth_modal_opened", { method: "email" });
+  }, [currentView, isOpen]);
 
   useEffect(() => {
     if (prevViewRef.current !== "signUp" && currentView === "signUp") {
