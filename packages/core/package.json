@@ -13,7 +13,7 @@
     "@opentelemetry/sdk-logs": "^0.220.0",
     "bson": "^7.2.0",
     "dayjs": "^1.11.19",
-    "google-auth-library": "^10.5.0",
+    "google-auth-library": "^11.0.2",
     "lodash": "^4.18.1",
     "logform": "^2.7.0",
     "posthog-node": "^5.47.0",
