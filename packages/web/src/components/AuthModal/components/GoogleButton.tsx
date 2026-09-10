@@ -6,7 +6,7 @@ import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
  * Monochrome Google "G" logo SVG
  * Based on the official Google "G" but rendered in black for monochromatic design
  */
-const GoogleGLogo = ({ size = 18 }: { size?: number }) => (
+export const GoogleLogo = ({ size = 18 }: { size?: number }) => (
   <svg
     width={size}
     height={size}
@@ -67,7 +67,7 @@ export const GoogleButton = ({
         ...style,
       }}
     >
-      <GoogleGLogo size={18} />
+      <GoogleLogo size={18} />
       <span>{label}</span>
       {shortcutKey ? (
         <ShortcutHint className="shrink-0">{shortcutKey}</ShortcutHint>

@@ -114,6 +114,20 @@ describe("ConnectProviderChooser", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
+  it("shows a logo on every add-account menu item", async () => {
+    const user = userEvent.setup();
+    available = ["google", "microsoft", "apple"];
+
+    render(<ConnectProviderChooser idleLabel="Add account" />);
+
+    await user.click(screen.getByRole("button", { name: /Add account/ }));
+
+    for (const name of ["Google", "Microsoft", "Apple"] as const) {
+      const item = screen.getByRole("menuitem", { name });
+      expect(item.innerHTML).toContain("<svg");
+    }
+  });
+
   it("renders branded connect pills for the prompt variant", async () => {
     const user = userEvent.setup();
     available = ["google", "microsoft", "apple"];

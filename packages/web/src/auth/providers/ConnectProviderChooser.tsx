@@ -17,14 +17,19 @@ import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
+import { AppleLogo } from "@web/components/AuthModal/components/AppleButton";
+import { GoogleLogo } from "@web/components/AuthModal/components/GoogleButton";
 import { MicrosoftLogo } from "@web/components/AuthModal/components/MicrosoftButton";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
 
-const PROVIDER_MENU_ICON: Partial<Record<ProviderKind, typeof MicrosoftLogo>> =
-  {
-    microsoft: MicrosoftLogo,
-  };
+type ProviderMenuIcon = typeof MicrosoftLogo;
+
+const PROVIDER_MENU_ICON: Record<ProviderKind, ProviderMenuIcon> = {
+  google: GoogleLogo,
+  microsoft: MicrosoftLogo,
+  apple: AppleLogo,
+};
 
 const SIDEBAR_PRIMARY_CLASSNAME =
   "c-button-compact c-button-primary mb-2 w-full rounded-xs px-2 py-1.5 text-left text-xs";
@@ -213,7 +218,7 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
             role="menuitem"
             type="button"
           >
-            {Icon ? <Icon size={14} /> : null}
+            <Icon size={14} />
             {providerDisplayName(kind)}
           </button>
         );

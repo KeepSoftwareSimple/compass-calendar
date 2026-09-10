@@ -2,7 +2,11 @@ import classNames from "classnames";
 import type React from "react";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 
-const AppleLogo = ({ size = 18 }: { size?: number }) => (
+/**
+ * Monochrome Apple logo SVG, rendered in currentColor to match the Google
+ * and Microsoft buttons' single-ink treatment.
+ */
+export const AppleLogo = ({ size = 18 }: { size?: number }) => (
   <svg
     width={size}
     height={size}
