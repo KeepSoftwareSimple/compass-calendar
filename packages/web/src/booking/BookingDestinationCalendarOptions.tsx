@@ -4,8 +4,8 @@ import { formatBookingDestinationOptionLabel } from "@web/booking/booking-confer
 import { groupCalendarsByAccount } from "@web/calendars/calendar.util";
 
 interface BookingDestinationCalendarOptionsProps {
-  calendars: readonly Calendar[];
-  connections: readonly SyncConnectionSummary[];
+  calendars: Calendar[];
+  connections: SyncConnectionSummary[];
 }
 
 export function BookingDestinationCalendarOptions({
