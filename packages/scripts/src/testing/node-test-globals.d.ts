@@ -15,7 +15,7 @@ declare module "bun:test" {
 
 declare global {
   // bun:test exports Mock, but many node tests use it without importing.
-  type Mock<
-    T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown,
-  > = BunMock<T>;
+  // biome-ignore lint/suspicious/noExplicitAny: global Mock must accept arbitrary mock signatures
+  type Mock<T extends (...args: any[]) => any = (...args: any[]) => any> =
+    BunMock<T>;
 }
