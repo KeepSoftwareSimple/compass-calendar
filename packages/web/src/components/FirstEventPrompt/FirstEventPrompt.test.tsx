@@ -14,6 +14,11 @@ import {
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
 import {
+  createGridEventDraft,
+  timedGridSchedule,
+} from "@web/events/grid-event-draft.adapter";
+import { draftActions } from "@web/events/stores/draft.store";
+import {
   initialSettingsState,
   settingsActions,
   useSettingsStore,
@@ -26,6 +31,7 @@ const markShowcaseSeen = () => {
 
 describe("FirstEventPrompt", () => {
   beforeEach(() => {
+    draftActions.discard();
     useFirstEventPromptStore.setState({ ...initialFirstEventPromptState });
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
     useSettingsStore.setState(initialSettingsState);
@@ -35,6 +41,7 @@ describe("FirstEventPrompt", () => {
   });
 
   afterEach(() => {
+    draftActions.discard();
     useFirstEventPromptStore.setState({ ...initialFirstEventPromptState });
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
     useSettingsStore.setState(initialSettingsState);
@@ -83,6 +90,36 @@ describe("FirstEventPrompt", () => {
     expect(
       screen.queryByRole("complementary", { name: "Create your first event" }),
     ).toBeNull();
+  });
+
+  it("hides while the event form is open, then returns when discarded", () => {
+    markShowcaseSeen();
+    render(<FirstEventPrompt />);
+    expect(
+      screen.getByRole("complementary", { name: "Create your first event" }),
+    ).toBeTruthy();
+
+    act(() => {
+      draftActions.startGridDraft({
+        activity: "createShortcut",
+        draft: createGridEventDraft(
+          timedGridSchedule(
+            new Date("2026-05-20T09:00:00.000"),
+            new Date("2026-05-20T10:00:00.000"),
+          ),
+        ),
+      });
+    });
+
+    expect(
+      screen.queryByRole("complementary", { name: "Create your first event" }),
+    ).toBeNull();
+    expect(persistentBrowserStore.get(STORAGE_KEYS.FIRST_EVENT_DONE)).toBe("");
+
+    act(() => draftActions.discard());
+    expect(
+      screen.getByRole("complementary", { name: "Create your first event" }),
+    ).toBeTruthy();
   });
 
   it("shows the handoff copy and a C keycap once the showcase has been seen", () => {
