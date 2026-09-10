@@ -7,6 +7,9 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
   CALENDAR_HOST_EXPLAINER,
+  CONNECT_CALENDAR_BENEFITS,
+  CONNECT_CALENDAR_REASSURANCE,
+  CONNECT_CALENDAR_WHY,
   CONNECT_THE_CALENDAR_YOU_USE,
 } from "@web/auth/providers/provider-copy.util";
 import * as realAvailableProviders from "@web/auth/providers/useAvailableConnectProviders";
@@ -16,6 +19,10 @@ import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { CONNECT_CALENDAR_LATER_LABEL } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPrompt";
+import {
+  CONNECT_CALENDAR_SNOOZE_MS,
+  isConnectCalendarPromptSnoozed,
+} from "@web/components/ConnectCalendarPrompt/connect-calendar.storage";
 import {
   initialConnectCalendarPromptState,
   useConnectCalendarPromptStore,
@@ -112,10 +119,10 @@ describe("ConnectCalendarPromptGate", () => {
     mockConnectApple.mockClear();
     useConnectCalendarPromptStore.setState({
       ...initialConnectCalendarPromptState,
-      isDismissed: false,
+      isSnoozed: false,
     });
     persistentBrowserStore.set(
-      STORAGE_KEYS.HAS_DISMISSED_CONNECT_CALENDAR_PROMPT,
+      STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
       "",
     );
     userMetadataActions.set(emptyMetadata);
@@ -133,6 +140,12 @@ describe("ConnectCalendarPromptGate", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(CONNECT_THE_CALENDAR_YOU_USE)).toBeInTheDocument();
     expect(screen.getByText(CALENDAR_HOST_EXPLAINER)).toBeInTheDocument();
+    // The value case is the point of this step, not decoration.
+    expect(screen.getByText(CONNECT_CALENDAR_WHY)).toBeInTheDocument();
+    expect(screen.getByText(CONNECT_CALENDAR_REASSURANCE)).toBeInTheDocument();
+    for (const benefit of CONNECT_CALENDAR_BENEFITS) {
+      expect(screen.getByText(benefit)).toBeInTheDocument();
+    }
     expect(
       screen.getByRole("button", { name: CONNECT_CALENDAR_LATER_LABEL }),
     ).toBeInTheDocument();
@@ -154,17 +167,52 @@ describe("ConnectCalendarPromptGate", () => {
     ).toBeNull();
   });
 
-  it("does not render after dismissal", () => {
+  it("does not render inside the snooze window", () => {
     persistentBrowserStore.set(
-      STORAGE_KEYS.HAS_DISMISSED_CONNECT_CALENDAR_PROMPT,
-      "true",
+      STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
+      String(Date.now()),
     );
-    useConnectCalendarPromptStore.setState({ isDismissed: true });
+    useConnectCalendarPromptStore.setState({
+      isSnoozed: isConnectCalendarPromptSnoozed(),
+    });
     renderGate();
 
     expect(
       screen.queryByRole("dialog", { name: CONNECT_THE_CALENDAR_YOU_USE }),
     ).toBeNull();
+  });
+
+  it("renders again once the snooze window has passed", () => {
+    persistentBrowserStore.set(
+      STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
+      String(Date.now() - CONNECT_CALENDAR_SNOOZE_MS - 1),
+    );
+    useConnectCalendarPromptStore.setState({
+      isSnoozed: isConnectCalendarPromptSnoozed(),
+    });
+    renderGate();
+
+    expect(
+      screen.getByRole("dialog", { name: CONNECT_THE_CALENDAR_YOU_USE }),
+    ).toBeInTheDocument();
+  });
+
+  // Browsers that dismissed the prompt when dismissal was permanent still
+  // hold the literal "true". They are exactly the users this change is for,
+  // so it has to read as a lapsed snooze rather than hide the prompt forever.
+  it("renders again for a browser carrying the legacy permanent dismissal", () => {
+    persistentBrowserStore.set(
+      STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
+      "true",
+    );
+    useConnectCalendarPromptStore.setState({
+      isSnoozed: isConnectCalendarPromptSnoozed(),
+    });
+    renderGate();
+
+    expect(
+      screen.getByRole("dialog", { name: CONNECT_THE_CALENDAR_YOU_USE }),
+    ).toBeInTheDocument();
   });
 
   it("routes each provider button to its connect flow", async () => {
@@ -187,8 +235,9 @@ describe("ConnectCalendarPromptGate", () => {
     expect(mockConnectApple).toHaveBeenCalledTimes(1);
   });
 
-  it("persists dismissal from I'll do this later", async () => {
+  it("records a snooze timestamp when the user skips for now", async () => {
     const user = userEvent.setup();
+    const before = Date.now();
     renderGate();
 
     await user.click(
@@ -197,14 +246,16 @@ describe("ConnectCalendarPromptGate", () => {
 
     await waitFor(
       () => {
-        expect(
+        const stored = Number(
           persistentBrowserStore.get(
-            STORAGE_KEYS.HAS_DISMISSED_CONNECT_CALENDAR_PROMPT,
+            STORAGE_KEYS.CONNECT_CALENDAR_PROMPT_SNOOZED_AT,
           ),
-        ).toBe("true");
+        );
+        expect(Number.isFinite(stored)).toBe(true);
+        expect(stored).toBeGreaterThanOrEqual(before);
       },
       { timeout: 1000 },
     );
-    expect(useConnectCalendarPromptStore.getState().isDismissed).toBe(true);
+    expect(useConnectCalendarPromptStore.getState().isSnoozed).toBe(true);
   });
 });

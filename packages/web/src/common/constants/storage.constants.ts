@@ -69,7 +69,7 @@ export const STORAGE_KEYS: Record<
   | "SHORTCUT_SHOWCASE_STEP"
   | "HAS_PENDING_SHOWCASE_OFFER"
   | "FIRST_EVENT_DONE"
-  | "HAS_DISMISSED_CONNECT_CALENDAR_PROMPT"
+  | "CONNECT_CALENDAR_PROMPT_SNOOZED_AT"
   | "SHORTCUT_TIPS_MUTED"
   | "SHORTCUT_TIPS_DEMONSTRATED"
   | "SHORTCUT_PERSONALIZATION"
@@ -102,7 +102,9 @@ export const STORAGE_KEYS: Record<
   SHORTCUT_SHOWCASE_STEP: "compass.onboarding.shortcut-showcase-step",
   HAS_PENDING_SHOWCASE_OFFER: "compass.onboarding.has-pending-showcase-offer",
   FIRST_EVENT_DONE: "compass.onboarding.first-event-done",
-  HAS_DISMISSED_CONNECT_CALENDAR_PROMPT:
+  // Holds an epoch-ms timestamp. Older browsers hold the literal "true" from
+  // when dismissing was permanent; the reader treats that as a lapsed snooze.
+  CONNECT_CALENDAR_PROMPT_SNOOZED_AT:
     "compass.onboarding.has-dismissed-connect-calendar-prompt",
   SHORTCUT_TIPS_MUTED: "compass.shortcuts.tips-muted",
   SHORTCUT_TIPS_DEMONSTRATED: "compass.shortcuts.tips-demonstrated",
