@@ -23,7 +23,19 @@ Internal documentation for engineers and agents working in the Compass repo.
 - Backend routes and API behavior: [Backend Route Map](./backend/README.md), [Backend Request Flow](./backend/backend-request-flow.md), [Backend Error Handling](./backend/backend-error-handling.md)
 - Trial, pricing, or Stripe: [Billing And Trial](./features/billing.md)
 - Public booking pages or availability rules: [Compass Calendar Booking (v1)](./features/booking.md)
+- Hiding or showing an event on the grid: [Hidden Events](./features/hidden-events.md), [Feature File Map](./development/feature-file-map.md#hidden-events)
 - A new calendar integration or Google-sync behavior: [Calendar providers](./features/calendar-providers.md), [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md), the `packages/sync` domain code directly
+
+## Features
+
+- [Attendees, Contacts, And RSVP](./features/attendees.md)
+- [Billing And Trial](./features/billing.md)
+- [Compass Calendar Booking (v1)](./features/booking.md)
+- [Calendar providers](./features/calendar-providers.md)
+- [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md)
+- [Hidden Events](./features/hidden-events.md)
+- [Offline Storage And Migrations](./features/offline-storage-and-migrations.md)
+- [Password Auth Flow](./features/password-auth-flow.md)
 
 ## Architecture And Domain
 

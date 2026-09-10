@@ -107,3 +107,25 @@ test("Add account starts Microsoft OAuth from the chooser", async ({
 
   expect(beginBody).toMatchObject({ provider: "microsoft" });
 });
+
+test("Add account menu shows a logo for Google, Microsoft, and Apple", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    microsoftConnect: true,
+    appleConnect: true,
+  });
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await settingsDialog.getByRole("button", { name: "Accounts" }).click();
+  await settingsDialog.getByRole("button", { name: "Add account" }).click();
+
+  const menu = settingsDialog.getByRole("menu");
+  await expect(menu).toBeVisible();
+
+  for (const name of ["Google", "Microsoft", "Apple"] as const) {
+    const item = settingsDialog.getByRole("menuitem", { name });
+    await expect(item).toBeVisible();
+    await expect(item.locator("svg")).toHaveCount(1);
+  }
+});

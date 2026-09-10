@@ -34,6 +34,21 @@ Use this document to find the first files to inspect for common Compass changes.
 - Backend event routes: `packages/backend/src/event/event.routes.config.ts`
 - Backend event controller/service: `packages/backend/src/event/controllers/event.controller.ts`, `packages/backend/src/event/services/event.service.ts`
 
+## Hidden Events
+
+Product overview: [Hidden Events](../features/hidden-events.md).
+
+- Shared contracts (`HiddenEventIdsResponseSchema`, `SetEventHiddenInputSchema`): `packages/core/src/types/event-visibility.contracts.ts`
+- Web query, optimistic toggle, localStorage fallback: `packages/web/src/events/hidden/hidden-events.query.ts`, `hidden-events.api.ts`, `hidden-events.storage.ts`
+- Timed-deck layout (hidden ids out of overlap grouping): `packages/web/src/grid/layout/timed-deck.layout.ts`
+- Strip width: `packages/web/src/grid/grid.constants.ts` (`HIDDEN_EVENT_STRIP_WIDTH`)
+- Cards (8px `rounded-full` strip, `Hidden ` accessible prefix): `packages/web/src/grid/components/TimedEventCard.tsx`, `AllDayEventCard.tsx`
+- Context menu Hide / Show event: `packages/web/src/components/ContextMenu/ContextMenuItems.tsx`
+- Bare `x` shortcut: `packages/web/src/shortcuts/hide-event/useHideEventShortcut.ts`
+- Legend row `edit-hide`: `packages/web/src/shortcuts/shortcuts.registry.ts`
+- Backend Mongo record, unique index, GET/PUT `/api/user/hidden-events`: `packages/backend/src/user/hidden-event.record.ts`, `packages/backend/src/user/user-indexes.ts`, `packages/backend/src/user/services/hidden-event.service.ts`, `packages/backend/src/user/user.routes.config.ts`, `packages/backend/src/user/controllers/user.controller.ts`
+- E2e: `e2e/calendars/calendar-experience.spec.ts`
+
 ## Attendees, Contacts, And RSVP
 
 Full flow diagram, invitation-intent semantics, merge/replay rules, contacts
