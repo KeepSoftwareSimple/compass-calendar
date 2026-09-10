@@ -7,6 +7,7 @@ import { buildDefaultAdminPutInput } from "@core/types/booking.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { SessionContext } from "@web/auth/compass/session/session.context";
 import * as realAvailableProviders from "@web/auth/providers/useAvailableConnectProviders";
 import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import { BOOKING_SAVE_ERROR_COPY } from "@web/booking/booking.query";
@@ -52,27 +53,31 @@ const renderWizard = (
   const onBack = mock(() => {});
   const onContinue = mock(() => {});
   render(
-    <HotkeysProvider>
-      <BookingSetupWizard
-        bookingUrl={null}
-        continueRef={continueRef}
-        destinationCalendar={undefined}
-        form={defaultForm}
-        isPending={false}
-        onAddressChange={mock(() => {})}
-        onBack={onBack}
-        onContinue={onContinue}
-        onDestinationChange={mock(() => {})}
-        onDurationChange={mock(() => {})}
-        onHoursChange={mock(() => {})}
-        setupError={null}
-        setupStep="address"
-        syncConnections={[]}
-        writableCalendarCount={0}
-        writableCalendars={[]}
-        {...props}
-      />
-    </HotkeysProvider>,
+    <SessionContext.Provider
+      value={{ authenticated: true, setAuthenticated: mock() }}
+    >
+      <HotkeysProvider>
+        <BookingSetupWizard
+          bookingUrl={null}
+          continueRef={continueRef}
+          destinationCalendar={undefined}
+          form={defaultForm}
+          isPending={false}
+          onAddressChange={mock(() => {})}
+          onBack={onBack}
+          onContinue={onContinue}
+          onDestinationChange={mock(() => {})}
+          onDurationChange={mock(() => {})}
+          onHoursChange={mock(() => {})}
+          setupError={null}
+          setupStep="address"
+          syncConnections={[]}
+          writableCalendarCount={0}
+          writableCalendars={[]}
+          {...props}
+        />
+      </HotkeysProvider>
+    </SessionContext.Provider>,
   );
   return { continueRef, onBack, onContinue };
 };

@@ -1,10 +1,20 @@
 import "@testing-library/jest-dom";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactElement } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { SessionContext } from "@web/auth/compass/session/session.context";
+import {
+  registerUseStartProviderAuthorizationForTests,
+  resetUseStartProviderAuthorizationForTests,
+} from "@web/auth/providers/authorization/useStartProviderAuthorization";
 import * as realAvailableProviders from "@web/auth/providers/useAvailableConnectProviders";
 import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
+import {
+  resetProviderAvailabilityForTests,
+  setProviderAvailabilityForTests,
+} from "@web/auth/providers/useIsProviderAvailable";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 let available: ProviderKind[] = ["google"];
@@ -57,6 +67,20 @@ const { ConnectProviderChooser } = (await import(
   chooserModuleUrl.href
 )) as typeof import("./ConnectProviderChooser");
 
+const renderChooser = (
+  ui: ReactElement,
+  options: { authenticated?: boolean } = {},
+) => {
+  const authenticated = options.authenticated ?? true;
+  return render(
+    <SessionContext.Provider
+      value={{ authenticated, setAuthenticated: mock() }}
+    >
+      {ui}
+    </SessionContext.Provider>,
+  );
+};
+
 describe("ConnectProviderChooser", () => {
   beforeEach(() => {
     available = ["google"];
@@ -68,10 +92,14 @@ describe("ConnectProviderChooser", () => {
 
   afterEach(() => {
     cleanup();
+    resetUseStartProviderAuthorizationForTests();
+    resetProviderAvailabilityForTests();
   });
 
   it("renders a single Google button and no chooser menu when only Google is available", () => {
-    render(<ConnectProviderChooser idleLabel="Connect Google Calendar" />);
+    renderChooser(
+      <ConnectProviderChooser idleLabel="Connect Google Calendar" />,
+    );
 
     expect(
       screen.getByRole("button", { name: "Connect Google Calendar" }),
@@ -86,7 +114,9 @@ describe("ConnectProviderChooser", () => {
     const user = userEvent.setup();
     available = ["google", "microsoft"];
 
-    render(<ConnectProviderChooser idleLabel="Connect the calendar you use" />);
+    renderChooser(
+      <ConnectProviderChooser idleLabel="Connect the calendar you use" />,
+    );
 
     const trigger = screen.getByRole("button", {
       name: /Connect the calendar you use/,
@@ -118,7 +148,7 @@ describe("ConnectProviderChooser", () => {
     const user = userEvent.setup();
     available = ["google", "microsoft", "apple"];
 
-    render(<ConnectProviderChooser idleLabel="Add account" />);
+    renderChooser(<ConnectProviderChooser idleLabel="Add account" />);
 
     await user.click(screen.getByRole("button", { name: /Add account/ }));
 
@@ -132,7 +162,7 @@ describe("ConnectProviderChooser", () => {
     const user = userEvent.setup();
     available = ["google", "microsoft", "apple"];
 
-    render(<ConnectProviderChooser variant="prompt" />);
+    renderChooser(<ConnectProviderChooser variant="prompt" />);
 
     expect(
       screen.getByRole("button", { name: "Connect Google Calendar" }),
@@ -156,7 +186,7 @@ describe("ConnectProviderChooser", () => {
     available = ["google", "microsoft", "apple"];
     connectingKind = "microsoft";
 
-    render(<ConnectProviderChooser variant="prompt" />);
+    renderChooser(<ConnectProviderChooser variant="prompt" />);
 
     const busy = screen.getByRole("button", { name: "Opening Microsoft…" });
     expect(busy).toHaveAttribute("aria-busy", "true");
@@ -167,5 +197,63 @@ describe("ConnectProviderChooser", () => {
     expect(
       screen.getByRole("button", { name: "Connect Apple Calendar" }),
     ).toBeDisabled();
+  });
+
+  describe("when signed out", () => {
+    const startGoogleAuthorization = mock();
+    const startMicrosoftAuthorization = mock();
+    const startAppleAuthorization = mock();
+
+    beforeEach(() => {
+      startGoogleAuthorization.mockClear();
+      startMicrosoftAuthorization.mockClear();
+      startAppleAuthorization.mockClear();
+      registerUseStartProviderAuthorizationForTests((provider) => ({
+        loading: false,
+        startAuthorization: {
+          google: startGoogleAuthorization,
+          microsoft: startMicrosoftAuthorization,
+          apple: startAppleAuthorization,
+        }[provider],
+      }));
+      resetProviderAvailabilityForTests();
+      setProviderAvailabilityForTests("google", "available");
+    });
+
+    it("keeps the Connect Google Calendar label and starts sign-in, not connect", async () => {
+      const user = userEvent.setup();
+      renderChooser(
+        <ConnectProviderChooser idleLabel="Connect Google Calendar" />,
+        { authenticated: false },
+      );
+
+      const button = screen.getByRole("button", {
+        name: "Connect Google Calendar",
+      });
+      await user.click(button);
+
+      expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+      expect(mockConnectGoogle).not.toHaveBeenCalled();
+    });
+
+    it("shows Opening Google… when the sign-in hook reports loading", () => {
+      registerUseStartProviderAuthorizationForTests((provider) => ({
+        loading: provider === "google",
+        startAuthorization: {
+          google: startGoogleAuthorization,
+          microsoft: startMicrosoftAuthorization,
+          apple: startAppleAuthorization,
+        }[provider],
+      }));
+
+      renderChooser(
+        <ConnectProviderChooser idleLabel="Connect Google Calendar" />,
+        { authenticated: false },
+      );
+
+      const busy = screen.getByRole("button", { name: "Opening Google…" });
+      expect(busy).toHaveAttribute("aria-busy", "true");
+      expect(busy).toBeDisabled();
+    });
   });
 });

@@ -40,6 +40,7 @@ export type SignupSource =
   | `welcome_modal_${ProviderKind}`
   | "anon_nudge"
   | "command_palette"
+  | "connect_chooser"
   | "shortcut_showcase";
 
 export type SignupFailureReason =

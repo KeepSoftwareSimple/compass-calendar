@@ -12,11 +12,14 @@ import {
   type ProviderKind,
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
+import { useSession } from "@web/auth/compass/session/useSession";
+import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { openingProviderLabel } from "@web/auth/providers/connection-provider.util";
 import { PROVIDER_LOGO } from "@web/auth/providers/ProviderMark";
 import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
+import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
@@ -48,6 +51,8 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
   shortcut,
   shortcutAttrs,
 }) => {
+  const { authenticated } = useSession();
+  const signIn = useSignInProviders();
   const available = useAvailableConnectProviders();
   const google = useConnectProvider("google", { newAccount });
   const microsoft = useConnectProvider("microsoft", { newAccount });
@@ -61,7 +66,10 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
   const rootRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const connectingKind = available.find((kind) => byKind[kind].isConnecting);
+  const kinds = authenticated ? available : signIn.available;
+  const connectingKind = authenticated
+    ? available.find((kind) => byKind[kind].isConnecting)
+    : signIn.loadingKind;
   const isConnecting = connectingKind != null;
   const firstItemRef = useRef<HTMLButtonElement>(null);
 
@@ -81,11 +89,16 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [menuOpen]);
 
-  if (available.length === 0) return null;
+  if (kinds.length === 0) return null;
 
   const runConnect = (kind: ProviderKind) => {
     setMenuOpen(false);
-    byKind[kind].connect();
+    if (authenticated) {
+      byKind[kind].connect();
+      return;
+    }
+    trackSignupStarted("connect_chooser");
+    signIn.startSignIn(kind);
   };
 
   const onMenuKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -138,7 +151,7 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
   if (variant === "prompt") {
     return (
       <SignInProviderButtons
-        available={available}
+        available={kinds}
         busyLabel={openingProviderLabel}
         labels={CONNECT_CALENDAR_LABEL}
         loadingKind={connectingKind ?? null}
@@ -152,8 +165,9 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
     ? openingProviderLabel(connectingKind ?? "google")
     : idleLabel;
 
-  if (available.length === 1) {
-    const kind = available[0];
+  if (kinds.length === 1) {
+    const kind = kinds[0];
+    if (kind === undefined) return null;
     const singleLabel = isConnecting
       ? buttonLabel
       : (byKind[kind].commandAction?.label ?? idleLabel);
@@ -196,7 +210,7 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
       onKeyDown={onMenuKeyDown}
       role="menu"
     >
-      {available.map((kind, index) => {
+      {kinds.map((kind, index) => {
         const Icon = PROVIDER_LOGO[kind];
         return (
           <button

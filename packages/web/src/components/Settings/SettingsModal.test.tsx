@@ -1,5 +1,12 @@
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { rest } from "msw";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
@@ -17,9 +24,17 @@ import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.fact
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { AuthApi } from "@web/api/auth.api";
 import {
+  registerUseStartProviderAuthorizationForTests,
+  resetUseStartProviderAuthorizationForTests,
+} from "@web/auth/providers/authorization/useStartProviderAuthorization";
+import {
   markAccountReconnectRequired,
   resetGoogleReconnectRequiredForTests,
 } from "@web/auth/providers/reconnect.state";
+import {
+  resetProviderAvailabilityForTests,
+  setProviderAvailabilityForTests,
+} from "@web/auth/providers/useIsProviderAvailable";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationProvider";
 import { type AppAccess } from "@web/billing/useAppAccess";
@@ -776,6 +791,44 @@ describe("SettingsModal", () => {
     renderSettings({ authenticated: false });
 
     expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
+  });
+
+  it("starts Google sign-up from Connect Google Calendar when signed out", async () => {
+    const user = userEvent.setup({ delay: null });
+    const startGoogleAuthorization = mock();
+    const { port: toastPort, mocks: toastMocks } = createTestToastPort();
+    registerToastPort(toastPort);
+    registerUseStartProviderAuthorizationForTests((provider) => ({
+      loading: false,
+      startAuthorization:
+        provider === "google" ? startGoogleAuthorization : mock(),
+    }));
+    resetProviderAvailabilityForTests();
+    setProviderAvailabilityForTests("google", "available");
+    const beginConnection = spyOn(AuthApi, "beginConnection");
+
+    try {
+      renderSettings({ authenticated: false, connections: [] });
+      act(() => {
+        userMetadataActions.set({
+          google: { connectionState: "NOT_CONNECTED", connections: [] },
+        });
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "Connect Google Calendar" }),
+      );
+
+      expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+      expect(beginConnection).not.toHaveBeenCalled();
+      expect(toastMocks.error).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      beginConnection.mockRestore();
+      resetUseStartProviderAuthorizationForTests();
+      resetProviderAvailabilityForTests();
+      resetToastPort();
+    }
   });
 
   it("shows Booking for a signed-in user", () => {
