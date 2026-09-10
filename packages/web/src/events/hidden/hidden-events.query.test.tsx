@@ -130,7 +130,7 @@ describe("hidden-events.query", () => {
     expect(mocks.error).toHaveBeenCalledTimes(1);
     expect(mocks.error).toHaveBeenCalledWith(
       HIDDEN_EVENT_FAILURE_MESSAGE,
-      expect.anything(),
+      expect.objectContaining({ role: "alert" }),
     );
   });
 });

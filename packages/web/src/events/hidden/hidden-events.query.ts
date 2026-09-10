@@ -107,7 +107,9 @@ export function useToggleEventHidden(): (eventId: string) => void {
     },
     onError: (_error, _input, context) => {
       queryClient.setQueryData(queryKey, context?.snapshot ?? []);
-      showErrorToast(HIDDEN_EVENT_FAILURE_MESSAGE);
+      showErrorToast(HIDDEN_EVENT_FAILURE_MESSAGE, {
+        options: { role: "alert" },
+      });
     },
     onSuccess: (list) => {
       queryClient.setQueryData(queryKey, list);
