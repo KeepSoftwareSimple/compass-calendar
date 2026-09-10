@@ -11,6 +11,8 @@ export const BOOKING_IMPORTING_STATUS_COPY =
   "Your calendar is still importing. Guests can book once it finishes.";
 export const BOOKING_DELAYED_STATUS_COPY =
   "Your calendar sync is delayed. Compass is retrying.";
+export const BOOKING_CONNECT_TO_RESUME_COPY =
+  "Connect a calendar to turn your page back on.";
 
 const reconnectStates = new Set<ConnectionState>([
   "actionRequired",

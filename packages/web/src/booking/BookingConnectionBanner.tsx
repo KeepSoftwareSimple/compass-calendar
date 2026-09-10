@@ -7,19 +7,18 @@ import {
   connectionProvider,
   RECONNECT_BANNER_MESSAGE,
 } from "@web/auth/providers/provider-copy.util";
-import { BookingReconnectButton } from "@web/booking/BookingReconnectButton";
+import { BookingReconnectNotice } from "@web/booking/BookingReconnectNotice";
+import {
+  BOOKING_CONNECT_TO_RESUME_COPY,
+  BOOKING_IMPORTING_STATUS_COPY,
+  BOOKING_NOT_BOOKABLE_PREFIX,
+} from "@web/booking/booking-bookability.copy";
+import {
+  reconnectActionTargets,
+  reconnectRequiredConnections,
+} from "@web/booking/booking-reconnect";
 
-const FALLBACK_RECONNECT_CONNECTION: SyncConnectionSummary = {
-  id: "booking-reconnect-fallback",
-  provider: "google",
-  state: "actionRequired",
-  stateReason: null,
-  lastSyncedAt: null,
-  lastHealthyAt: null,
-  accountEmail: null,
-  connectionState: "RECONNECT_REQUIRED",
-  canSuggestContacts: false,
-};
+const FALLBACK_RECONNECT_ID = "booking-reconnect-fallback";
 
 interface BookingConnectionBannerProps {
   aggregateState: GoogleConnectionState;
@@ -30,9 +29,7 @@ export function BookingConnectionBanner({
   aggregateState,
   connections,
 }: BookingConnectionBannerProps) {
-  const reconnecting = connections.filter(
-    (connection) => connection.connectionState === "RECONNECT_REQUIRED",
-  );
+  const reconnecting = reconnectRequiredConnections(connections);
   const importing = connections.some(
     (connection) => connection.connectionState === "IMPORTING",
   );
@@ -43,27 +40,23 @@ export function BookingConnectionBanner({
     !showReconnect && (importing || aggregateState === "IMPORTING");
 
   if (showReconnect) {
-    const targets =
-      reconnecting.length > 0 ? reconnecting : [FALLBACK_RECONNECT_CONNECTION];
-    const kind = connectionProvider(targets[0]);
+    const kind = connectionProvider(
+      reconnectActionTargets(connections, FALLBACK_RECONNECT_ID)[0],
+    );
     return (
-      <div className="flex flex-col items-start gap-2" role="status">
-        <p className="text-sm text-text">
-          Guests can't book right now. {RECONNECT_BANNER_MESSAGE[kind]}
-        </p>
-        {targets.map((connection) => (
-          <BookingReconnectButton connection={connection} key={connection.id} />
-        ))}
-      </div>
+      <BookingReconnectNotice
+        connections={connections}
+        fallbackId={FALLBACK_RECONNECT_ID}
+        message={`${BOOKING_NOT_BOOKABLE_PREFIX}. ${RECONNECT_BANNER_MESSAGE[kind]}`}
+        role="status"
+      />
     );
   }
 
   if (showImporting) {
     return (
       <div className="flex flex-col items-start gap-2" role="status">
-        <p className="text-sm text-text">
-          Your calendar is still importing. Guests can book once it finishes.
-        </p>
+        <p className="text-sm text-text">{BOOKING_IMPORTING_STATUS_COPY}</p>
       </div>
     );
   }
@@ -71,8 +64,7 @@ export function BookingConnectionBanner({
   return (
     <div className="flex flex-col items-start gap-2" role="status">
       <p className="text-sm text-text">
-        Guests can't book right now. Connect a calendar to turn your page back
-        on.
+        {BOOKING_NOT_BOOKABLE_PREFIX}. {BOOKING_CONNECT_TO_RESUME_COPY}
       </p>
       <ConnectProviderChooser variant="prompt" />
     </div>
