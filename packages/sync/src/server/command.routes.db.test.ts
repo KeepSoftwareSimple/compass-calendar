@@ -1,14 +1,25 @@
 import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
 import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import { type ClientEventId } from "@core/types/sync/event.contracts";
+import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
+  type ProviderEventId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
   seedOauthCredential,
   TEST_CREDENTIAL_ENCRYPTION_KEY,
 } from "@sync/__tests__/helpers/credential-encryption";
+import { defaultCalendarListFields } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -72,10 +83,10 @@ const signedHeaders = (
 // they ride on the signed headers.
 const createRequest = (overrides: Record<string, unknown> = {}) => ({
   idempotencyKey: `idem-${objectId()}`,
-  eventId: objectId(),
+  eventId: objectId() as EventId,
   input: {
     kind: "create",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     content: {
       title: "Lunch",
       description: "",
@@ -86,9 +97,9 @@ const createRequest = (overrides: Record<string, unknown> = {}) => ({
     },
     schedule: {
       kind: "timed",
-      start: "2026-07-14T12:00:00-06:00",
-      end: "2026-07-14T13:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T12:00:00-06:00" as DateTime,
+      end: "2026-07-14T13:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     },
     recurrence: { kind: "single" },
   },
@@ -124,8 +135,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("confirms a cloud-only create and writes the canonical event", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const request = createRequest();
     // No connection/provider is seeded and the service is passive: a cloud
     // create needs neither.
@@ -145,8 +156,8 @@ describe("POST /internal/commands", () => {
 
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       request.eventId as never,
     );
     expect(stored).not.toBeNull();
@@ -158,8 +169,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("is idempotent on a repeated upload", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const request = createRequest();
     await startService();
 
@@ -178,8 +189,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("recovers an interrupted acknowledgement by confirming on retry", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const request = createRequest();
     await startService();
 
@@ -205,17 +216,13 @@ describe("POST /internal/commands", () => {
     expect(body.command.outcome.state).toBe("confirmed");
     const events = new EventRepository(mongo.db);
     expect(
-      await events.findById(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-        request.eventId as never,
-      ),
+      await events.findById(tenantId, principalId, request.eventId as never),
     ).not.toBeNull();
   });
 
   it("maps a series create to a stored series master", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const request = createRequest({
       input: {
         ...createRequest().input,
@@ -228,8 +235,8 @@ describe("POST /internal/commands", () => {
 
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       request.eventId as never,
     );
     expect(stored?.recurrence).toEqual({
@@ -239,8 +246,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("refuses a create targeting a provider calendar when the writer is unavailable", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService();
 
     // A connected provider calendar; a create aimed at it must not be confirmed
@@ -250,9 +257,10 @@ describe("POST /internal/commands", () => {
       tenantId: tenantId as TenantId,
       principalId: principalId as PrincipalId,
       connectionId: objectId() as ConnectionId,
-      providerCalendarId: objectId(),
+      providerCalendarId: objectId() as ProviderCalendarSourceId,
       displayName: "Google",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "owner",
@@ -279,13 +287,13 @@ describe("POST /internal/commands", () => {
   });
 
   it("fails a move command as unsupportedCapability rather than stranding it pending", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     // move has no executor anywhere yet - leaving it pending would strand the
     // write forever while the caller sees success (nothing rejects a merely
     // "pending" outcome), so it fails explicitly instead.
     const request = createRequest({
-      input: { kind: "move", calendarId: objectId() },
+      input: { kind: "move", calendarId: objectId() as CalendarId },
     });
     await startService();
 
@@ -304,8 +312,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("updates a cloud event's content and confirms", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     // Create the event, then update it (both keyed on the same event id).
     const created = createRequest();
     await startService();
@@ -338,16 +346,16 @@ describe("POST /internal/commands", () => {
     expect(body.command.outcome.state).toBe("confirmed");
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       created.eventId as never,
     );
     expect(stored?.content.title).toBe("Renamed");
   });
 
   it("converts a single event into a series and confirms", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const created = createRequest();
     await startService();
     await submit(tenantId, principalId, created);
@@ -372,8 +380,8 @@ describe("POST /internal/commands", () => {
     expect(body.command.outcome.state).toBe("confirmed");
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       created.eventId as never,
     );
     expect(stored?.recurrence).toEqual({
@@ -383,8 +391,8 @@ describe("POST /internal/commands", () => {
   });
 
   it("deletes a cloud event and confirms", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const created = createRequest();
     await startService();
     await submit(tenantId, principalId, created);
@@ -427,13 +435,13 @@ describe("POST /internal/commands", () => {
   });
 
   it("confirms an idempotent delete of an already-absent event", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService();
 
     const del = {
       idempotencyKey: `idem-${objectId()}`,
-      eventId: objectId(),
+      eventId: objectId() as EventId,
       input: { kind: "delete", scope: "all" },
       expectedVersion: null,
     };
@@ -446,13 +454,13 @@ describe("POST /internal/commands", () => {
   });
 
   it("fails an update of a missing event instead of stranding it pending", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService();
 
     const update = {
       idempotencyKey: `idem-${objectId()}`,
-      eventId: objectId(),
+      eventId: objectId() as EventId,
       input: {
         kind: "update",
         content: {
@@ -478,9 +486,9 @@ describe("POST /internal/commands", () => {
   });
 
   it("promotes an anonymous device event, preserving its clientEventId", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const clientEventId = `device-${objectId()}`;
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const clientEventId = `device-${objectId()}` as ClientEventId;
     const request = createRequest({
       input: { ...createRequest().input, clientEventId },
     });
@@ -491,18 +499,18 @@ describe("POST /internal/commands", () => {
     expect(res.status).toBe(200);
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       request.eventId as never,
     );
     expect(stored?.clientEventId).toBe(clientEventId);
   });
 
   it("converges a resumed promotion to one cloud event via the stable id", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const clientEventId = `device-${objectId()}`;
-    const eventId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const clientEventId = `device-${objectId()}` as ClientEventId;
+    const eventId = objectId() as EventId;
     const input = { ...createRequest().input, clientEventId };
     await startService();
 
@@ -526,16 +534,16 @@ describe("POST /internal/commands", () => {
     expect(await mongo.db.collection("events").countDocuments()).toBe(1);
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
       eventId as never,
     );
     expect(stored?.clientEventId).toBe(clientEventId);
   });
 
   it("refuses to overwrite another principal's event with a reused id", async () => {
-    const tenantId = objectId();
-    const owner = objectId();
+    const tenantId = objectId() as TenantId;
+    const owner = objectId() as PrincipalId;
     const attacker = objectId();
     const request = createRequest();
     await startService();
@@ -554,8 +562,8 @@ describe("POST /internal/commands", () => {
     expect(res.status).toBe(500);
     const events = new EventRepository(mongo.db);
     const stored = await events.findById(
-      tenantId as TenantId,
-      owner as PrincipalId,
+      tenantId,
+      owner,
       request.eventId as never,
     );
     // The owner still owns the untouched event.
@@ -583,15 +591,15 @@ describe("POST /internal/commands", () => {
     // WP-07: the full inline path — signed request → rsvp dispatch → self
     // entry rewrite at the (fake) provider → confirm → invalidation outbox
     // rows, which are what the Compass API's SSE eventsChanged derives from.
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const connections = new ProviderConnectionRepository(mongo.db);
     const connection = await connections.upsertByProviderAccount({
       tenantId: tenantId as TenantId,
       principalId: principalId as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "self@example.com",
         displayName: null,
       },
@@ -604,9 +612,10 @@ describe("POST /internal/commands", () => {
       tenantId: tenantId as TenantId,
       principalId: principalId as PrincipalId,
       connectionId: connection._id,
-      providerCalendarId: "primary@google.com",
+      providerCalendarId: "primary@google.com" as ProviderCalendarSourceId,
       displayName: "Google",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "editor",
@@ -625,7 +634,7 @@ describe("POST /internal/commands", () => {
       scopes: ["https://www.googleapis.com/auth/calendar.events"],
     });
     const events = new EventRepository(mongo.db);
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const self = {
       email: "self@example.com",
       displayName: null,
@@ -633,9 +642,9 @@ describe("POST /internal/commands", () => {
     };
     const schedule = {
       kind: "timed" as const,
-      start: "2026-07-14T09:00:00-06:00",
-      end: "2026-07-14T10:00:00-06:00",
-      timeZone: "America/Denver",
+      start: "2026-07-14T09:00:00-06:00" as DateTime,
+      end: "2026-07-14T10:00:00-06:00" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
     };
     const content = {
       title: "Invited",
@@ -680,11 +689,14 @@ describe("POST /internal/commands", () => {
         input: ProviderPatchInput,
       ): Promise<ProviderWriteResult> => {
         patchCalls.push(input);
-        return { providerEventId: "g-evt-1", providerVersion: "etag-2" };
+        return {
+          providerEventId: "g-evt-1" as ProviderEventId,
+          providerVersion: "etag-2",
+        };
       },
       fetchEvent: async (): Promise<ProviderEvent> => ({
         kind: "event",
-        providerEventId: "g-evt-1",
+        providerEventId: "g-evt-1" as ProviderEventId,
         providerVersion: "etag-1",
         providerUpdatedAt: null,
         content,
@@ -742,7 +754,7 @@ describe("POST /internal/commands", () => {
     ]);
     // The stored record reflects the answer before any Google round-trip.
     const stored = await events.findById(
-      tenantId as TenantId,
+      tenantId,
       principalId as never,
       eventId as never,
     );
@@ -776,7 +788,7 @@ describe("POST /internal/commands", () => {
 
     const res = await submit(objectId(), objectId(), {
       idempotencyKey: `idem-${objectId()}`,
-      eventId: objectId(),
+      eventId: objectId() as EventId,
       input: {
         kind: "rsvp",
         responseStatus: "needsAction",

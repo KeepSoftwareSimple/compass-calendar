@@ -12,6 +12,7 @@ import {
 import { type ContactSuggestion } from "@core/types/contact.contracts";
 import {
   type PrincipalId,
+  type ProviderAccountId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import {
@@ -146,7 +147,7 @@ describe("GET /internal/contacts/suggestions", () => {
       principalId: principalId as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "me@example.com",
         displayName: null,
       },
@@ -173,7 +174,7 @@ describe("GET /internal/contacts/suggestions", () => {
       principalId: principalId as PrincipalId,
       provider: "microsoft",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "me@outlook.com",
         displayName: null,
       },
@@ -303,15 +304,15 @@ describe("GET /internal/contacts/suggestions", () => {
   });
 
   it("refuses typed when no connection has the contacts capability", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     // A connection WITHOUT the contacts grant (calendar-only capabilities).
     await connections.upsertByProviderAccount({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       provider: "google",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "me@example.com",
         displayName: null,
       },

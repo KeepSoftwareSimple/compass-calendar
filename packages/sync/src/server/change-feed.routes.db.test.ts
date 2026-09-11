@@ -1,7 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { ObjectId } from "mongodb";
 import { NodeEnv } from "@core/constants/core.constants";
-import { type ConnectionId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import {
@@ -104,16 +108,16 @@ describe("GET /internal/changes", () => {
   });
 
   it("delivers appended invalidations on resume and advances the cursor", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const connectionId = objectId() as ConnectionId;
     await startService();
 
     // Seed so "from now" watermarks at a real outbox id (avoids same-second
     // ObjectId races against a freshly minted empty-outbox cursor).
     await invalidations.append({
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       invalidation: {
         kind: "command",
         commandId: objectId() as never,
@@ -126,14 +130,14 @@ describe("GET /internal/changes", () => {
     };
 
     await invalidations.append({
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       invalidation: { kind: "connection", connectionId },
       emittedAt: new Date(),
     });
     await invalidations.append({
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       invalidation: {
         kind: "event",
         eventId: objectId() as never,
@@ -158,9 +162,9 @@ describe("GET /internal/changes", () => {
       "connection",
       "event",
     ]);
-    expect(typeof page.invalidations[0].emittedAt).toBe("string");
+    expect(typeof page.invalidations[0]!.emittedAt).toBe("string");
     // Wire envelopes never carry event content — only the invalidation union.
-    expect(Object.keys(page.invalidations[0]).sort()).toEqual([
+    expect(Object.keys(page.invalidations[0]!).sort()).toEqual([
       "emittedAt",
       "invalidation",
     ]);
@@ -172,16 +176,16 @@ describe("GET /internal/changes", () => {
   });
 
   it("never leaks another principal's invalidations", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const mine = objectId();
-    const other = objectId();
+    const other = objectId() as PrincipalId;
     await startService();
 
     const boot = (await (await get(tenantId, mine)).json()) as {
       nextCursor: string;
     };
     await invalidations.append({
-      tenantId,
+      tenantId: tenantId,
       principalId: other,
       invalidation: {
         kind: "connection",
@@ -269,10 +273,10 @@ describe("GET /internal/changes/all (the multiplexed, cross-tenant feed)", () =>
 
   it("delivers invalidations across DIFFERENT tenants/principals, each tagged with its owner", async () => {
     await startService();
-    const tenantA = objectId();
-    const principalA = objectId();
-    const tenantB = objectId();
-    const principalB = objectId();
+    const tenantA = objectId() as TenantId;
+    const principalA = objectId() as PrincipalId;
+    const tenantB = objectId() as TenantId;
+    const principalB = objectId() as PrincipalId;
 
     const boot = (await (await getGlobal()).json()) as { nextCursor: string };
 

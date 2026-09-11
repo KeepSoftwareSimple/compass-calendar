@@ -1,3 +1,4 @@
+import { TimezoneSchema } from "@core/types/type.utils";
 import {
   ianaZoneToWindows,
   listWindowsZones,
@@ -21,10 +22,9 @@ describe("windows-zones", () => {
   });
 
   it("maps every Windows zone to a supported IANA name", () => {
-    const supported = new Set(Intl.supportedValuesOf("timeZone"));
     for (const windowsZone of listWindowsZones()) {
       const iana = windowsZoneToIana(windowsZone);
-      expect(supported.has(iana)).toBe(true);
+      expect(TimezoneSchema.safeParse(iana).success).toBe(true);
     }
   });
 });
