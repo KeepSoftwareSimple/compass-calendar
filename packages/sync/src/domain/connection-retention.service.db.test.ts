@@ -1,7 +1,12 @@
 import { faker } from "@faker-js/faker";
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
+  type ProviderEventId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
@@ -75,7 +80,7 @@ describe("purgeExpiredDisconnectedConnections", () => {
       principalId: principalId as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "cache@example.com",
         displayName: null,
       },
@@ -95,9 +100,9 @@ describe("purgeExpiredDisconnectedConnections", () => {
   };
 
   it("purges cache for connections disconnected before the retention cutoff", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const otherPrincipal = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const otherPrincipal = objectId() as PrincipalId;
 
     const expired = await seedConnection(
       tenantId,
@@ -112,10 +117,10 @@ describe("purgeExpiredDisconnectedConnections", () => {
     const live = await seedConnection(tenantId, otherPrincipal, null);
 
     const calendar = await calendars.upsertByProviderCalendar({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: expired._id,
-      providerCalendarId: "primary",
+      providerCalendarId: "primary" as ProviderCalendarSourceId,
       displayName: "Primary",
       color: null,
       active: true,
@@ -127,16 +132,18 @@ describe("purgeExpiredDisconnectedConnections", () => {
         canWriteEvents: true,
         canInviteAttendees: false,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     await events.upsertByProviderIdentity({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       origin: "provider",
       calendarId: calendar._id,
       clientEventId: null,
       connectionId: expired._id,
-      providerEventId: "gcal-1",
-      providerVersion: "etag-1",
+      providerEventId: "gcal-1" as ProviderEventId,
+      providerVersion: "etag-1" as ProviderEventVersion,
       providerUpdatedAt: NOW,
       deliveryState: "confirmed",
       providerMetadata: null,
@@ -150,9 +157,9 @@ describe("purgeExpiredDisconnectedConnections", () => {
       },
       schedule: {
         kind: "timed",
-        start: "2026-07-14T09:00:00-06:00",
-        end: "2026-07-14T10:00:00-06:00",
-        timeZone: "America/Denver",
+        start: "2026-07-14T09:00:00-06:00" as DateTime,
+        end: "2026-07-14T10:00:00-06:00" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
       },
       recurrence: { kind: "single" },
       lifecycleState: "active",
@@ -184,15 +191,15 @@ describe("purgeExpiredDisconnectedConnections", () => {
       .collection<EventOccurrenceRecord>(SYNC_COLLECTIONS.eventOccurrences)
       .insertOne(occurrence);
     await syncResources.ensure({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: expired._id,
       resourceKind: "calendarList",
       calendarId: null,
     });
     await jobs.enqueue({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: expired._id,
       resourceId: null,
       commandId: null,
@@ -209,16 +216,12 @@ describe("purgeExpiredDisconnectedConnections", () => {
 
     expect(purged).toBe(1);
     expect(
-      await connections.findById(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-        expired._id,
-      ),
+      await connections.findById(tenantId, principalId, expired._id),
     ).toBeNull();
     expect(
       await calendars.listByConnection(
-        tenantId as TenantId,
-        principalId as PrincipalId,
+        tenantId,
+        principalId,
         expired._id as ConnectionId,
       ),
     ).toHaveLength(0);
@@ -235,18 +238,10 @@ describe("purgeExpiredDisconnectedConnections", () => {
         .countDocuments({ calendarId: calendar._id }),
     ).toBe(0);
     expect(
-      await connections.findById(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-        recent._id,
-      ),
+      await connections.findById(tenantId, principalId, recent._id),
     ).not.toBeNull();
     expect(
-      await connections.findById(
-        tenantId as TenantId,
-        otherPrincipal as PrincipalId,
-        live._id,
-      ),
+      await connections.findById(tenantId, otherPrincipal, live._id),
     ).not.toBeNull();
   });
 
@@ -268,14 +263,14 @@ describe("purgeExpiredDisconnectedConnections", () => {
   });
 
   it("skips purge when the connection reconnects before processing", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const expiredAt = new Date(RETENTION_CUTOFF.getTime() - 60_000);
     const connection = await seedConnection(tenantId, principalId, expiredAt);
 
     await connections.upsertByProviderAccount({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       provider: "google",
       account: {
         providerAccountId: connection.account.providerAccountId,
@@ -294,17 +289,13 @@ describe("purgeExpiredDisconnectedConnections", () => {
 
     expect(purged).toBe(0);
     expect(
-      await connections.findById(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-        connection._id,
-      ),
+      await connections.findById(tenantId, principalId, connection._id),
     ).not.toBeNull();
   });
 
   it("bounds the sweep and takes the oldest disconnect first", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const older = await seedConnection(
       tenantId,
       principalId,
@@ -324,17 +315,10 @@ describe("purgeExpiredDisconnectedConnections", () => {
 
     expect(purged).toBe(1);
     expect(
-      await connections.findById(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-        older._id,
-      ),
+      await connections.findById(tenantId, principalId, older._id),
     ).toBeNull();
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(1);
   });
 });

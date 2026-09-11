@@ -1,4 +1,9 @@
 import { faker } from "@faker-js/faker";
+import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import {
   ensureEventsResource,
@@ -9,6 +14,7 @@ import {
   singleEvent as single,
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   SyncJobWorker,
@@ -36,6 +42,15 @@ import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource
 const objectId = () => faker.database.mongodbObjectId();
 const now = () => new Date("2026-07-10T00:00:00.000Z");
 const OWNER = "worker-under-test";
+
+const googleProviderCapabilities = [
+  "readEvents",
+  "writeEvents",
+  "readBusy",
+  "inviteAttendees",
+  "changeNotifications",
+  "incrementalChanges",
+] as const;
 
 describe("SyncJobWorker", () => {
   const storage = setupSyncStorage(import.meta.url);
@@ -78,7 +93,7 @@ describe("SyncJobWorker", () => {
       account: {
         email: "user@example.com",
         displayName: "User",
-        providerAccountId: "google-subject",
+        providerAccountId: "google-subject" as ProviderAccountId,
       },
       capabilities: [
         "readEvents",
@@ -230,11 +245,11 @@ describe("SyncJobWorker", () => {
 
   it("re-derives connection health after a successful pull settles", async () => {
     const connection = await connections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-1",
+        providerAccountId: "acct-1" as ProviderAccountId,
         email: "user@example.com",
         displayName: "User",
       },
@@ -307,8 +322,8 @@ describe("SyncJobWorker", () => {
       await jobs.findById(resource.tenantId, resource.principalId, pull._id),
     ).toBeNull();
     const repair = await jobByKey(`repair:${resource._id}`);
-    expect(repair?.kind).toBe("repair");
-    expect(repair?.state).toBe("pending");
+    expect(repair?.["kind"]).toBe("repair");
+    expect(repair?.["state"]).toBe("pending");
   });
 
   it("reschedules a repair that did not complete instead of deleting it", async () => {
@@ -547,12 +562,12 @@ describe("SyncJobWorker", () => {
       },
     } as unknown as FakeReader;
 
-    let beat: (() => void | Promise<void>) | null = null;
+    let onHeartbeat: (() => void | Promise<void>) | undefined;
     const w = new SyncJobWorker(deps(gatedReader), OWNER, {
       now: movingNow,
       leaseMs: 300_000,
-      scheduleHeartbeat: (b) => {
-        beat = b;
+      scheduleHeartbeat: (beat) => {
+        onHeartbeat = beat;
         return () => {};
       },
     });
@@ -560,18 +575,20 @@ describe("SyncJobWorker", () => {
     const run = w.runOnce();
     // Wait until the worker has claimed the job and scheduled its heartbeat
     // (claimDueJob is a real round-trip, so a bare setTimeout(0) can beat it).
-    while (!beat) await new Promise((r) => setTimeout(r, 5));
+    while (!onHeartbeat) await new Promise((r) => setTimeout(r, 5));
 
     const claimed = await jobByKey(`incrementalPull:${resource._id}`);
-    const claimedLease = (claimed?.leaseExpiresAt as Date).getTime();
+    const claimedLease = (claimed?.["leaseExpiresAt"] as Date).getTime();
 
     // Advance time and fire one heartbeat; the lease must move forward.
     clock += 60_000;
-    await beat?.();
+    await onHeartbeat?.();
 
     const beaten = await jobByKey(`incrementalPull:${resource._id}`);
-    expect((beaten?.leaseExpiresAt as Date).getTime()).toBe(clock + 300_000);
-    expect((beaten?.leaseExpiresAt as Date).getTime()).toBeGreaterThan(
+    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBe(
+      clock + 300_000,
+    );
+    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBeGreaterThan(
       claimedLease,
     );
 
@@ -587,7 +604,7 @@ describe("SyncJobWorker", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .deleteOne({ _id: resource._id });
+      .deleteOne(stringIdFilter(resource._id));
 
     await worker(new FakeReader([])).runOnce();
 
@@ -629,10 +646,12 @@ describe("SyncJobWorker", () => {
       providerCalendarId: calendar.providerCalendarId,
       displayName: calendar.displayName,
       color: calendar.color,
+      eventLabels: calendar.eventLabels,
       active: true,
       primary: calendar.primary,
       accessRole: calendar.accessRole,
       capabilities: calendar.capabilities,
+      createsGoogleMeet: calendar.createsGoogleMeet,
     });
     const requeued = await enqueue(resource, "initialImport");
     expect(requeued.state).toBe("pending");
@@ -640,11 +659,11 @@ describe("SyncJobWorker", () => {
 
   it("settles a durable calendarList discovery failure instead of burning the retry ladder", async () => {
     const connection = await connections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-not-cal",
+        providerAccountId: "acct-not-cal" as ProviderAccountId,
         email: "nocal@example.com",
         displayName: "No Cal",
       },
@@ -663,7 +682,7 @@ describe("SyncJobWorker", () => {
       runAfter: now(),
       coalescingKey: `calendarListSync:${connection._id}`,
     });
-    const failingDiscovery: SyncJobWorkerDeps["discovery"] = {
+    const failingDiscovery: ProviderCalendarAdapter = {
       discoverCalendars: async () => {
         throw new ProviderCalendarError(
           "discoveryFailed",

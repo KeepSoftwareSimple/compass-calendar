@@ -1,6 +1,10 @@
 import { faker } from "@faker-js/faker";
 import { type NextFunction, type Request, type Response } from "express";
 import {
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   createInternalAuthMiddleware,
   INTERNAL_AUTH_HEADERS,
   type InternalAuthedRequest,
@@ -73,8 +77,8 @@ function run(req: Partial<InternalAuthedRequest>): {
 
 describe("internal auth middleware adapter", () => {
   it("attaches the signed context and calls next on a valid request", () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const { req, res, nextCalls } = run({
       headers: signedHeaders(tenantId, principalId),
     });
@@ -91,8 +95,8 @@ describe("internal auth middleware adapter", () => {
   });
 
   it("derives principal from the signed header, never the request body", () => {
-    const tenantId = objectId();
-    const signedPrincipal = objectId();
+    const tenantId = objectId() as TenantId;
+    const signedPrincipal = objectId() as PrincipalId;
     const forgedPrincipal = objectId();
 
     // A body claiming a different principal must be ignored: the middleware

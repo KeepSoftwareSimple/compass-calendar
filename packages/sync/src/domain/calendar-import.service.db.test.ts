@@ -1,3 +1,4 @@
+import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import {
   pageOf as page,
   seedProviderCalendar,
@@ -148,7 +149,7 @@ describe("importCalendarEvents", () => {
 
     await importCalendarEvents(deps(reader), calendar, now);
 
-    expect(reader.calls[0].window).not.toBeNull();
+    expect(reader.calls[0]!.window).not.toBeNull();
     expect(reader.calls.at(-1)?.window).toBeNull();
   });
 
@@ -180,7 +181,7 @@ describe("importCalendarEvents", () => {
       {
         connectionId: calendar.connectionId,
         calendarId: calendar._id,
-        providerEventId: "m",
+        providerEventId: "m" as ProviderEventId,
       },
     );
     expect(stored?.recurrence.kind).toBe("seriesMaster");
@@ -479,7 +480,7 @@ describe("importCalendarEvents", () => {
 
     // No windowed call at all; the first (and only) read resumes the full pass.
     expect(reader.calls.every((c) => c.window === null)).toBe(true);
-    expect(reader.calls[0].pageToken).toBe("resume-token");
+    expect(reader.calls[0]!.pageToken).toBe("resume-token");
   });
 });
 
@@ -496,7 +497,7 @@ async function masterId(
     {
       connectionId: calendar.connectionId,
       calendarId: calendar._id,
-      providerEventId,
+      providerEventId: providerEventId as ProviderEventId,
     },
   );
   if (!record)

@@ -1,3 +1,4 @@
+import { type ProviderCapability } from "@core/types/sync/identity.contracts";
 import { googleCapabilitiesFromScopes } from "@sync/providers/google/google-capabilities";
 
 const EMAIL = "https://www.googleapis.com/auth/userinfo.email";
@@ -9,27 +10,27 @@ const CONTACTS_OTHER =
 
 describe("googleCapabilitiesFromScopes", () => {
   it("grants full read+write capabilities for the events scope", () => {
-    expect(googleCapabilitiesFromScopes([EMAIL, EVENTS]).sort()).toEqual(
-      [
-        "changeNotifications",
-        "incrementalChanges",
-        "inviteAttendees",
-        "readBusy",
-        "readEvents",
-        "writeEvents",
-      ].sort(),
-    );
+    const caps = [...googleCapabilitiesFromScopes([EMAIL, EVENTS])].sort();
+    const expected: ProviderCapability[] = [
+      "changeNotifications",
+      "incrementalChanges",
+      "inviteAttendees",
+      "readBusy",
+      "readEvents",
+      "writeEvents",
+    ];
+    expect(caps).toEqual([...expected].sort());
   });
 
   it("grants read-only capabilities for the readonly scope", () => {
-    expect(googleCapabilitiesFromScopes([EMAIL, READONLY]).sort()).toEqual(
-      [
-        "changeNotifications",
-        "incrementalChanges",
-        "readBusy",
-        "readEvents",
-      ].sort(),
-    );
+    const caps = [...googleCapabilitiesFromScopes([EMAIL, READONLY])].sort();
+    const expected: ProviderCapability[] = [
+      "changeNotifications",
+      "incrementalChanges",
+      "readBusy",
+      "readEvents",
+    ];
+    expect(caps).toEqual([...expected].sort());
     // No write or invite without the events scope.
     expect(googleCapabilitiesFromScopes([READONLY])).not.toContain(
       "writeEvents",
@@ -50,15 +51,17 @@ describe("googleCapabilitiesFromScopes", () => {
   // Contacts scopes are optional and independently declinable, so EITHER one
   // is enough for the capability — partial grants are a normal outcome of the
   // consent screen, not an error.
-  it.each([
+  for (const scopes of [
     [CONTACTS],
     [CONTACTS_OTHER],
     [CONTACTS, CONTACTS_OTHER],
-  ])("grants suggestContacts from a contacts grant (%#)", (...scopes) => {
-    expect(googleCapabilitiesFromScopes([EMAIL, EVENTS, ...scopes])).toContain(
-      "suggestContacts",
-    );
-  });
+  ] as const) {
+    it(`grants suggestContacts from a contacts grant (${scopes.join(",")})`, () => {
+      expect(
+        googleCapabilitiesFromScopes([EMAIL, EVENTS, ...scopes]),
+      ).toContain("suggestContacts");
+    });
+  }
 
   it("does not grant suggestContacts without a contacts scope", () => {
     expect(

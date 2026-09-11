@@ -271,7 +271,7 @@ describe("caldav-client", () => {
       ifMatch: '"etag-1"',
     });
     expect(put.status).toBe(200);
-    expect(put.headers.etag).toBe('"etag-1"');
+    expect(put.headers["etag"]).toBe('"etag-1"');
 
     const del = await client.delete(
       "https://caldav.icloud.com/event.ics",
