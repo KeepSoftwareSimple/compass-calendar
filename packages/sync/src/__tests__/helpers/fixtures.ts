@@ -26,11 +26,6 @@ import { type SyncResourceRepository } from "@sync/storage/repositories/sync-res
 
 const objectId = () => faker.database.mongodbObjectId();
 
-export const defaultCalendarListFields = {
-  eventLabels: [] as const,
-  createsGoogleMeet: true as const,
-};
-
 type CalendarUpsertInput = Parameters<
   ProviderCalendarRepository["upsertByProviderCalendar"]
 >[0];
