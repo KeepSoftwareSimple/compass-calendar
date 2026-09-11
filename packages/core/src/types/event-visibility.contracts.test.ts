@@ -1,9 +1,8 @@
+import { type EventId, EventIdSchema } from "@core/types/domain-primitives";
 import {
   HiddenEventIdsResponseSchema,
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
-import { EventIdSchema } from "@core/types/domain-primitives";
-import type { EventId } from "@core/types/domain-primitives";
 import { describe, expect, it } from "bun:test";
 
 const eventId = (value: string) => EventIdSchema.parse(value);
@@ -45,7 +44,9 @@ describe("HiddenEventIdsResponseSchema", () => {
 
   it("rejects an empty eventId", () => {
     expect(
-      HiddenEventIdsResponseSchema.safeParse({ hiddenEventIds: ["" as EventId] }).success,
+      HiddenEventIdsResponseSchema.safeParse({
+        hiddenEventIds: ["" as EventId],
+      }).success,
     ).toBe(false);
   });
 });

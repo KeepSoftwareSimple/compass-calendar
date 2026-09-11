@@ -154,7 +154,9 @@ describe("GoogleAuthAdapter", () => {
         loginHint: "reconnect@example.com",
       });
 
-      expect(client.authUrlOptions[0]!.login_hint).toBe("reconnect@example.com");
+      expect(client.authUrlOptions[0]!.login_hint).toBe(
+        "reconnect@example.com",
+      );
       expect(client.authUrlOptions[0]!.prompt).toBe("consent");
     });
 
