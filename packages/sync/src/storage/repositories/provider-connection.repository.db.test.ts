@@ -1,5 +1,10 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { deriveDiagnosticKey } from "@sync/safety/diagnostic-key";
 import { type ProviderConnectionUpsert } from "@sync/storage/contracts/provider-connection.contracts";
@@ -11,11 +16,11 @@ const baseUpsert = (
   overrides: Partial<ProviderConnectionUpsert> = {},
 ): ProviderConnectionUpsert =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     provider: "google",
     account: {
-      providerAccountId: "acct-1",
+      providerAccountId: "acct-1" as ProviderAccountId,
       email: "user@gmail.com",
       displayName: "User",
     },
@@ -75,8 +80,8 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("reconnecting the same account updates one document, not two", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const first = await repo.upsertByProviderAccount(
       baseUpsert({ tenantId, principalId }),
     );
@@ -92,14 +97,14 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("keeps multiple accounts for one principal isolated", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await repo.upsertByProviderAccount(
       baseUpsert({
         tenantId,
         principalId,
         account: {
-          providerAccountId: "acct-1",
+          providerAccountId: "acct-1" as ProviderAccountId,
           email: "a@x.com",
           displayName: null,
         },
@@ -110,7 +115,7 @@ describe("ProviderConnectionRepository", () => {
         tenantId,
         principalId,
         account: {
-          providerAccountId: "acct-2",
+          providerAccountId: "acct-2" as ProviderAccountId,
           email: "b@x.com",
           displayName: null,
         },
@@ -121,8 +126,8 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("updates capabilities on reconnect", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await repo.upsertByProviderAccount(
       baseUpsert({ tenantId, principalId, capabilities: ["readEvents"] }),
     );
@@ -141,8 +146,8 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("keeps prior lastHealthyAt when the same account reconnects", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const created = await repo.upsertByProviderAccount(
       baseUpsert({ tenantId, principalId }),
     );
@@ -171,9 +176,9 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("does not leak one principal's connections to another", async () => {
-    const tenantId = objectId();
-    const mine = objectId();
-    const theirs = objectId();
+    const tenantId = objectId() as TenantId;
+    const mine = objectId() as PrincipalId;
+    const theirs = objectId() as PrincipalId;
     const created = await repo.upsertByProviderAccount(
       baseUpsert({ tenantId, principalId: mine }),
     );
@@ -184,8 +189,8 @@ describe("ProviderConnectionRepository", () => {
   });
 
   it("rejects an actionRequired upsert with no reason before any write lands", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await expect(
       repo.upsertByProviderAccount(
         baseUpsert({
@@ -202,10 +207,14 @@ describe("ProviderConnectionRepository", () => {
 
   it("rejects a raw duplicate insert violating the unique account identity", async () => {
     const shared = {
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
-      account: { providerAccountId: "dup", email: null, displayName: null },
+      account: {
+        providerAccountId: "dup" as ProviderAccountId,
+        email: null,
+        displayName: null,
+      },
     };
     const collection = db.collection("provider_connections");
     await collection.insertOne({ _id: objectId(), ...shared } as never);

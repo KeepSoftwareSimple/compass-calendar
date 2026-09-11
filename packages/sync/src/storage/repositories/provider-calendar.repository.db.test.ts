@@ -1,5 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderCalendarSourceId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type ProviderCalendarUpsert } from "@sync/storage/contracts/provider-calendar.contracts";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -10,10 +16,10 @@ const baseUpsert = (
   overrides: Partial<ProviderCalendarUpsert> = {},
 ): ProviderCalendarUpsert =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    connectionId: objectId(),
-    providerCalendarId: "primary",
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    connectionId: objectId() as ConnectionId,
+    providerCalendarId: "primary" as ProviderCalendarSourceId,
     displayName: "Personal",
     color: "#9fe1e7",
     active: true,
@@ -45,7 +51,7 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("keeps the Sync id stable when the calendar is renamed", async () => {
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     const first = await repo.upsertByProviderCalendar(
       baseUpsert({ connectionId, displayName: "Personal" }),
     );
@@ -57,15 +63,15 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("stores multiple calendars for one connection", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     await repo.upsertByProviderCalendar(
       baseUpsert({
         tenantId,
         principalId,
         connectionId,
-        providerCalendarId: "primary",
+        providerCalendarId: "primary" as ProviderCalendarSourceId,
       }),
     );
     await repo.upsertByProviderCalendar(
@@ -73,7 +79,7 @@ describe("ProviderCalendarRepository", () => {
         tenantId,
         principalId,
         connectionId,
-        providerCalendarId: "work@group",
+        providerCalendarId: "work@group" as ProviderCalendarSourceId,
       }),
     );
     const all = await repo.listByConnection(
@@ -85,7 +91,7 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("updates provider facts and capabilities on re-discovery", async () => {
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     await repo.upsertByProviderCalendar(
       baseUpsert({ connectionId, active: true, accessRole: "owner" }),
     );
@@ -108,7 +114,7 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("updates createsGoogleMeet on re-discovery", async () => {
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     await repo.upsertByProviderCalendar(
       baseUpsert({ connectionId, createsGoogleMeet: true }),
     );
@@ -119,10 +125,10 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("does not leak calendars across principals", async () => {
-    const tenantId = objectId();
-    const connectionId = objectId();
-    const mine = objectId();
-    const theirs = objectId();
+    const tenantId = objectId() as TenantId;
+    const connectionId = objectId() as ConnectionId;
+    const mine = objectId() as PrincipalId;
+    const theirs = objectId() as PrincipalId;
     await repo.upsertByProviderCalendar(
       baseUpsert({ tenantId, principalId: mine, connectionId }),
     );
@@ -132,7 +138,7 @@ describe("ProviderCalendarRepository", () => {
   });
 
   it("persists and updates the calendar's custom event-color labels", async () => {
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     const created = await repo.upsertByProviderCalendar(
       baseUpsert({
         connectionId,
@@ -154,9 +160,9 @@ describe("ProviderCalendarRepository", () => {
 
   it("rejects a duplicate (connection, provider-calendar) identity", async () => {
     const shared = {
-      tenantId: objectId(),
-      principalId: objectId(),
-      connectionId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      connectionId: objectId() as ConnectionId,
       providerCalendarId: "primary",
     };
     const collection = db.collection("provider_calendars");
