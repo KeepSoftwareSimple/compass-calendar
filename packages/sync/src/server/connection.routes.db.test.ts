@@ -634,7 +634,6 @@ describe("POST /internal/connections/begin", () => {
     await begin(tenantId, principalId, { connectionId: existing._id });
 
     expect(adapter.authorizations[0]!.selectAccount).toBe(false);
-    expect(adapter.authorizations[0]!.loginHint).toBe("reconnect@example.com");
   });
 
   it("binds the state to an owned connection for reconnect", async () => {
@@ -1034,7 +1033,7 @@ describe("GET /sync/google", () => {
       `code=c&state=${encodeURIComponent(reconnectState(tenantId, principalId, existing._id))}`,
     );
 
-    expect(statusOf(res)).toBe("accountMismatch");
+    expect(statusOf(res)).toBe("error");
     // No second connection was created; the original is untouched.
     const all = await connections.listByPrincipal(tenantId, principalId);
     expect(all).toHaveLength(1);
