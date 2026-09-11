@@ -44,11 +44,23 @@ test("does not toast success after a Microsoft connected redirect", async ({
 }) => {
   await stubAnonymousApis(page);
 
+  const metadata = page.waitForResponse("**/user/metadata**");
   await page.goto("/week?provider=microsoft&status=connected", {
     waitUntil: "domcontentloaded",
   });
+  await metadata;
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 
-  await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
+  await expect(
+    page.getByRole("region", {
+      name: "Week calendar horizontal scroll area",
+    }),
+  ).toBeVisible();
   await expect(page.getByText("Microsoft connected.")).toHaveCount(0);
 });
 
