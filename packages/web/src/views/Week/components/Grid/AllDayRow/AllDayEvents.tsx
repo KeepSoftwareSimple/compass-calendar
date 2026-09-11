@@ -8,6 +8,7 @@ import {
 } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_ALLDAY } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import {
   mergeGridEventWithDraftOverlay,
@@ -76,7 +77,7 @@ export const AllDayEvents = ({
         event,
         calendarIdentity: resolveCalendarCardIdentity(calendarLookup, event),
         focusColor: resolveCalendarFocusColor(calendarLookup, event),
-        isHidden: Boolean(event._id && hiddenEventIds.has(event._id)),
+        isHidden: isEventIdHidden(event._id, hiddenEventIds),
         // Read-only (unwritable calendar or busy content) events never
         // attach interaction attributes/registration below, so the drag/
         // resize engine can't find them as a target - blocked before any

@@ -2,10 +2,14 @@ import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
+  EMPTY_HIDDEN_EVENT_IDS,
+  isEventIdHidden,
+} from "@web/events/hidden/hidden-event-id";
+import {
+  applyHiddenEventStripWidth,
   DECK_INDENT,
   DECK_MIN_WIDTH,
   DECK_RIGHT_RESERVE,
-  HIDDEN_EVENT_STRIP_WIDTH,
   TIMED_EVENT_FAN_GUTTER,
   TIMED_EVENT_FAN_INDENT,
   TIMED_EVENT_MIN_WIDTH,
@@ -21,6 +25,7 @@ export interface TimedDeckLayout {
 export interface TimedEventLayoutItem {
   deckLayout: TimedDeckLayout | null;
   event: GridEvent;
+  isHidden: boolean;
 }
 
 interface DeckCandidate {
@@ -30,18 +35,17 @@ interface DeckCandidate {
   start: Dayjs;
 }
 
-const NO_HIDDEN_EVENT_IDS: ReadonlySet<string> = new Set();
-
 export const createTimedEventLayout = (
   events: GridEvent[],
-  hiddenEventIds: ReadonlySet<string> = NO_HIDDEN_EVENT_IDS,
+  hiddenEventIds: ReadonlySet<string> = EMPTY_HIDDEN_EVENT_IDS,
 ): TimedEventLayoutItem[] => {
   const items: TimedEventLayoutItem[] = events.map((event) => ({
     deckLayout: null,
     event,
+    isHidden: isEventIdHidden(event._id, hiddenEventIds),
   }));
   const candidates = items
-    .filter((item) => !item.event._id || !hiddenEventIds.has(item.event._id))
+    .filter((item) => !item.isHidden)
     .map(toDeckCandidate);
 
   for (const dayBucket of bucketByStartDay(candidates)) {
@@ -63,7 +67,7 @@ export const applyTimedEventDisplayPosition = (
   isHidden = false,
 ): EventPosition => {
   if (isHidden) {
-    return { ...position, width: HIDDEN_EVENT_STRIP_WIDTH };
+    return applyHiddenEventStripWidth(position, true);
   }
 
   const cardWidth = getTimedEventCardWidth(position.width);
@@ -83,6 +87,15 @@ export const applyTimedEventDisplayPosition = (
     deckLayout,
     TIMED_EVENT_FAN_INDENT,
   );
+};
+
+export const timedDeckBoxShadow = (isFocused: boolean): string => {
+  const ring = "0 0 0 0.75px var(--background)";
+  const drop = isFocused
+    ? "0 6px 14px -3px rgba(0,0,0,0.55)"
+    : "0 3px 6px -2px rgba(0,0,0,0.4)";
+  const highlight = `inset 0 1px 0 rgba(255,255,255,${isFocused ? 0.1 : 0.07})`;
+  return `${ring}, ${drop}, ${highlight}`;
 };
 
 export const applyTimedDeckPosition = (

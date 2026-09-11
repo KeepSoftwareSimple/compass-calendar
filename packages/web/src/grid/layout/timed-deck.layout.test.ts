@@ -157,6 +157,10 @@ describe("createTimedEventLayout", () => {
     expect(deckOf(laid, "visible-a")).toEqual({ order: 0, groupSize: 2 });
     expect(deckOf(laid, "visible-b")).toEqual({ order: 1, groupSize: 2 });
     expect(deckOf(laid, "hidden")).toBeNull();
+    expect(laid.find((item) => item.event._id === "hidden")?.isHidden).toBe(
+      true,
+    );
+    expect(laid.filter((item) => item.isHidden)).toHaveLength(1);
   });
 });
 
