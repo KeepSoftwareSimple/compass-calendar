@@ -66,6 +66,44 @@ describe("error-autofix Routine contract", () => {
     expect(prompt).not.toContain(".agents/handoffs");
   });
 
+  it("re-enters the loop on recurrence, failed runs, and the sweep", () => {
+    const workflow = readFileSync(
+      ".github/workflows/error-autofix.yml",
+      "utf8",
+    );
+    expect(workflow).toContain("types: [opened, reopened]");
+    expect(workflow).toContain('cron: "17 * * * *"');
+    expect(workflow).toContain("Sweep production exceptions into autofix");
+    expect(workflow).toContain("autofix-sweep.sh");
+    expect(workflow).toContain("autofix-unstick.sh");
+    expect(workflow).toContain("failure() && steps.agent.outcome == 'failure'");
+    expect(workflow).toContain("needs.autofix.result == 'success'");
+    expect(existsSync(".github/scripts/autofix-sweep.sh")).toBe(true);
+    expect(existsSync(".github/scripts/autofix-unstick.sh")).toBe(true);
+
+    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
+    expect(unit).toContain("bash .github/scripts/autofix-preflight.test.sh");
+    expect(unit).toContain("bash .github/scripts/autofix-unstick.test.sh");
+    expect(unit).toContain("bash .github/scripts/autofix-sweep.test.sh");
+    expect(unit).toContain("bash .github/scripts/autofix-lib.test.sh");
+
+    const prompt = readFileSync(".github/prompts/error-autofix.md", "utf8");
+    expect(prompt).toContain("Recurrence on an already-seen fingerprint");
+    expect(prompt).toContain("error-tracking-issues-partial-update");
+    expect(prompt).toContain("Do **not** resolve ops/transient or unknown");
+
+    const postdeploy = readFileSync(
+      ".github/scripts/autofix-postdeploy-notify.sh",
+      "utf8",
+    );
+    expect(postdeploy).toContain("resolve_linked_posthog_issue");
+
+    const routine = readFileSync("docs/CI-CD/error-autofix-routine.md", "utf8");
+    expect(routine).toContain("Failed agent run");
+    expect(routine).toContain("Production recurrence on a closed GitHub issue");
+    expect(routine).toContain("Sweep with no GitHub issue");
+  });
+
   it("keeps the autofix prompt aligned with PostHog error property constants", () => {
     const prompt = readFileSync(".github/prompts/error-autofix.md", "utf8");
     expect(prompt).toContain(POSTHOG_ERROR_TRACKING_CONSTANTS_PATH);
