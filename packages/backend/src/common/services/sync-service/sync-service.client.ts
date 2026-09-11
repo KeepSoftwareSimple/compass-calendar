@@ -1,3 +1,4 @@
+import { backOff } from "exponential-backoff";
 import { type z } from "zod/v4";
 import {
   encryptAdoptAuthorizationCredential,
@@ -77,6 +78,17 @@ const PRINCIPAL_PATH = "/internal/principal";
 const CONTACTS_SUGGESTIONS_PATH = "/internal/contacts/suggestions";
 
 const DEFAULT_TIMEOUT_MS = 5_000;
+
+// Restarting Sync leaves the backend holding pooled keep-alive sockets that
+// are already dead, so the next write fails with ECONNRESET before Sync is
+// even reachable again. That failure returns in milliseconds, which makes a
+// couple of retries nearly free and spares the user a toast on an edit that
+// was always going to succeed. Two retries at ~100ms then ~300ms (full
+// jitter) add under half a second in the worst case.
+const RETRY_ATTEMPTS = 3;
+const RETRY_STARTING_DELAY_MS = 100;
+// Not mongo.service.ts's `timeMultiple: 5`, which is tuned for its 1s start.
+const RETRY_TIME_MULTIPLE = 3;
 // Provider create/update/delete run inline inside POST /internal/commands.
 // The default read deadline is too short for a Google round-trip; aborting
 // mid-delete leaves Sync applying the mutation while Compass API returns an
@@ -129,6 +141,38 @@ export type SyncClientResult<T> =
   | { ok: true; value: T; correlationId: string }
   | { ok: false; error: SyncClientError };
 
+// What a retry reports to the caller's logger. Same log-safe fields as
+// SyncClientError plus which attempt failed and what it was reaching for.
+export interface SyncClientRetryInfo {
+  kind: SyncClientErrorKind;
+  status?: number;
+  attempt: number;
+  correlationId: string;
+  method: string;
+  path: string;
+}
+
+// `unavailable` with no status is the #send catch: ECONNRESET or a refused
+// connection, which is the dead-pooled-socket case a retry exists for. With
+// a status it is Sync's readiness window (503), equally worth retrying.
+// Excluded: 429, which is Sync's own shared 300/min internal limiter, where
+// retrying tightly only deepens the backlog it is reporting; and `timeout`,
+// where the caller has already waited out the whole deadline and a retry
+// would just double the wait before the same failure.
+function isRetryableSyncError(error: SyncClientError): boolean {
+  return error.kind === "unavailable" && error.status !== 429;
+}
+
+// `backOff` retries on a *thrown* error, but #send returns a typed result and
+// deliberately never throws. This sentinel carries a failed result through
+// backOff's throw-based control flow; it never escapes this module.
+class RetryableSyncFailure extends Error {
+  constructor(readonly syncError: SyncClientError) {
+    super("retryable sync failure");
+    this.name = "RetryableSyncFailure";
+  }
+}
+
 type FetchFn = (
   url: string,
   init: {
@@ -155,6 +199,9 @@ export interface SyncServiceClientOptions {
   secret: string;
   // Per-request deadline; a slow/hung service fails as `timeout` not a hang.
   timeoutMs?: number;
+  // Called once per retry. The client has no logger of its own; the factory
+  // wires this to one so a self-healed blip still leaves a trail.
+  onRetry?: (info: SyncClientRetryInfo) => void;
   // Injectable seams for tests.
   fetch?: FetchFn;
   now?: () => number;
@@ -201,6 +248,7 @@ export class SyncServiceClient {
   readonly #fetch: FetchFn;
   readonly #now: () => number;
   readonly #newCorrelationId: () => string;
+  readonly #onRetry?: (info: SyncClientRetryInfo) => void;
 
   constructor(options: SyncServiceClientOptions) {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, "");
@@ -209,6 +257,7 @@ export class SyncServiceClient {
     this.#fetch = options.fetch ?? (globalThis.fetch as unknown as FetchFn);
     this.#now = options.now ?? Date.now;
     this.#newCorrelationId = options.newCorrelationId ?? randomUUID;
+    this.#onRetry = options.onRetry;
   }
 
   // The caller's provider connections, scoped to the signed principal. A read;
@@ -566,16 +615,21 @@ export class SyncServiceClient {
     timeoutMs?: number;
   }): Promise<SyncClientResult<T>> {
     const correlationId = input.correlationId ?? this.#newCorrelationId();
-    const timestamp = this.#now();
-    const headers: Record<string, string> = {
-      "content-type": "application/json",
-      "x-sync-tenant": input.principal.tenantId,
-      "x-sync-principal": input.principal.principalId,
-      "x-sync-timestamp": String(timestamp),
-      "x-sync-signature": signRequest(this.#secret, timestamp, input.principal),
-      "x-correlation-id": correlationId,
-    };
-    return this.#send({ ...input, headers, correlationId });
+    return this.#sendWithRetry(input, correlationId, () => {
+      const timestamp = this.#now();
+      return {
+        "content-type": "application/json",
+        "x-sync-tenant": input.principal.tenantId,
+        "x-sync-principal": input.principal.principalId,
+        "x-sync-timestamp": String(timestamp),
+        "x-sync-signature": signRequest(
+          this.#secret,
+          timestamp,
+          input.principal,
+        ),
+        "x-correlation-id": correlationId,
+      };
+    });
   }
 
   // Same signed-request/timeout/parse machinery as #request, for a route that
@@ -593,14 +647,81 @@ export class SyncServiceClient {
     timeoutMs?: number;
   }): Promise<SyncClientResult<T>> {
     const correlationId = input.correlationId ?? this.#newCorrelationId();
-    const timestamp = this.#now();
-    const headers: Record<string, string> = {
-      "content-type": "application/json",
-      "x-sync-timestamp": String(timestamp),
-      "x-sync-signature": signServiceRequest(this.#secret, timestamp),
-      "x-correlation-id": correlationId,
+    return this.#sendWithRetry(input, correlationId, () => {
+      const timestamp = this.#now();
+      return {
+        "content-type": "application/json",
+        "x-sync-timestamp": String(timestamp),
+        "x-sync-signature": signServiceRequest(this.#secret, timestamp),
+        "x-correlation-id": correlationId,
+      };
+    });
+  }
+
+  // Retries a transient connection failure a couple of times before the
+  // caller ever sees it. Headers are rebuilt per attempt rather than reused:
+  // Sync's verifier rejects a timestamp outside its freshness window, so
+  // replaying attempt 1's signature is fragile by construction. The
+  // correlationId is held constant so one user action stays one id in
+  // Sync's logs.
+  async #sendWithRetry<T>(
+    input: {
+      method: "GET" | "POST" | "DELETE";
+      path: string;
+      query?: URLSearchParams;
+      body?: unknown;
+      schema?: z.ZodType<T>;
+      timeoutMs?: number;
+    },
+    correlationId: string,
+    buildHeaders: () => Record<string, string>,
+  ): Promise<SyncClientResult<T>> {
+    // Retries have to fit inside the deadline the caller was promised, so a
+    // nominally 5s read can never quietly become a 15s one. submitCommand's
+    // 30s budget affords more retry room than a 5s read for free, which is
+    // why reads and writes need no separate policy.
+    const retryDeadline = this.#now() + (input.timeoutMs ?? this.#timeoutMs);
+    let attempt = 0;
+
+    const attemptSend = async (): Promise<SyncClientResult<T>> => {
+      attempt += 1;
+      const result = await this.#send({
+        ...input,
+        headers: buildHeaders(),
+        correlationId,
+      });
+      if (result.ok || !isRetryableSyncError(result.error)) return result;
+      if (this.#now() >= retryDeadline) return result;
+      throw new RetryableSyncFailure(result.error);
     };
-    return this.#send({ ...input, headers, correlationId });
+
+    try {
+      return await backOff(attemptSend, {
+        jitter: "full",
+        numOfAttempts: RETRY_ATTEMPTS,
+        startingDelay: RETRY_STARTING_DELAY_MS,
+        timeMultiple: RETRY_TIME_MULTIPLE,
+        retry: (error: unknown) => {
+          if (!(error instanceof RetryableSyncFailure)) return false;
+          this.#onRetry?.({
+            kind: error.syncError.kind,
+            status: error.syncError.status,
+            attempt,
+            correlationId,
+            method: input.method,
+            path: input.path,
+          });
+          return true;
+        },
+      });
+    } catch (error) {
+      // The last attempt still failed: unwrap the sentinel back into the
+      // typed result the caller expects.
+      if (error instanceof RetryableSyncFailure) {
+        return { ok: false, error: error.syncError };
+      }
+      throw error;
+    }
   }
 
   async #send<T>(input: {
