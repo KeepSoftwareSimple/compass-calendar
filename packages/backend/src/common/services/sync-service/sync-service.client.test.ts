@@ -560,6 +560,51 @@ describe("SyncServiceClient", () => {
     expect(result.error.detail).toContain("content-type=text/html");
   });
 
+  // A 200 with the correct content-type whose body still fails to parse: the
+  // reverse-proxy theory above doesn't apply, so the parse error's own
+  // name/message is the only way to tell a genuinely malformed body (a
+  // SyntaxError from response.json()'s internal JSON.parse) apart from a body
+  // stream that failed mid-read (e.g. a connection reset while Sync was still
+  // writing the response). Discarding that error, as the code did before,
+  // reproduces the same uninformative "body is not JSON" message for both.
+  it("carries the parse error's name and message when a 200 application/json body is not JSON", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      headers: contentType("application/json"),
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    }));
+
+    const result = await client(fn).listConnections(principal());
+
+    if (result.ok) throw new Error("expected invalidResponse");
+    expect(result.error.kind).toBe("invalidResponse");
+    expect(result.error.detail).toContain(
+      "SyntaxError: Unexpected end of JSON input",
+    );
+    expect(result.error.detail).toContain("content-type=application/json");
+  });
+
+  // A body-stream failure (connection reset mid-read) throws a different
+  // error shape than a JSON syntax error. The detail must distinguish them,
+  // not flatten both into the same "body is not JSON" message.
+  it("distinguishes a body-stream failure from a JSON syntax error", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      headers: contentType("application/json"),
+      json: async () => {
+        throw new TypeError("terminated");
+      },
+    }));
+
+    const result = await client(fn).listConnections(principal());
+
+    if (result.ok) throw new Error("expected invalidResponse");
+    expect(result.error.detail).toContain("TypeError: terminated");
+    expect(result.error.detail).not.toContain("SyntaxError");
+  });
+
   it("lists full events with a signed GET the real Sync verifier accepts", async () => {
     const who = principal();
     const calendarA = objectId() as CalendarId;

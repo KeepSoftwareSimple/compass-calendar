@@ -660,16 +660,26 @@ export class SyncServiceClient {
       let body: unknown;
       try {
         body = await response.json();
-      } catch {
-        // The body was not JSON at all — HTML the reverse proxy returned in
-        // front of Sync. The content-type is what tells the two apart.
+      } catch (error) {
+        // The body was not JSON at all. This collapses two very different
+        // failures into one message: a reverse proxy returning HTML in front
+        // of Sync (content-type gives that away), or the body stream itself
+        // failing mid-read (a truncated/reset connection, e.g. Sync exiting
+        // while the response was still being written) even though the
+        // content-type header is legitimately application/json. The parse
+        // error's own name/message is what tells those apart, so carry it
+        // instead of discarding it.
+        const reason =
+          error instanceof Error
+            ? `${error.name}: ${error.message}`
+            : String(error);
         return errorResult(
           "invalidResponse",
           correlationId,
           200,
           contentType
-            ? `body is not JSON; content-type=${contentType}`
-            : "body is not JSON",
+            ? `body is not JSON (${reason}); content-type=${contentType}`
+            : `body is not JSON (${reason})`,
         );
       }
       const parsed = input.schema.safeParse(body);
