@@ -32,5 +32,6 @@ packages/web/node_modules/
 packages/web/build/
 playwright-report/
 test-results/
+test-results.xml
 perf-reports/
 tmp/
