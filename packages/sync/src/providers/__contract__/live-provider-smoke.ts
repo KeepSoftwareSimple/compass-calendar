@@ -115,11 +115,15 @@ export async function runMicrosoftLiveSmoke(input: {
       );
     }
 
+    // Exchange bumps an item's change key in the seconds after creation, so
+    // an If-Match on the create-time etag races it (HTTP 412
+    // ErrorIrresolvableConflict, seen live). Patch against the version just
+    // read, as the domain does.
     const patched = await adapters.writer.patchEvent({
       accessToken,
       calendarId,
       providerEventId: created.providerEventId,
-      expectedVersion: created.providerVersion,
+      expectedVersion: readBack.providerVersion,
       content: { ...content, title: `compass-smoke ${input.runId} updated` },
       schedule,
       recurrence: { kind: "single" },
@@ -127,7 +131,7 @@ export async function runMicrosoftLiveSmoke(input: {
     });
     if (
       !patched.providerVersion ||
-      patched.providerVersion === created.providerVersion
+      patched.providerVersion === readBack.providerVersion
     ) {
       throw new LiveSmokeError(
         "microsoft",
