@@ -130,7 +130,11 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_bots: "posthog"
+          # posthog[bot] opens the issues. github-actions[bot] is the actor
+          # when the sweep or the one-shot retry dispatches this workflow
+          # with the default GITHUB_TOKEN; dispatching already requires
+          # write access, so this widens nothing.
+          allowed_bots: "posthog,github-actions"
           # Scoped on purpose. The agent's output carries PostHog query
           # results and whatever it reads out of the repo, and this repo is
           # public, so bot-triggered runs stay redacted. But a redacted run
