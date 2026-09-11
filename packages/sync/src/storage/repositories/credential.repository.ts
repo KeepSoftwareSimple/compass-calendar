@@ -1,4 +1,4 @@
-import { type Collection, type Db, type Document } from "mongodb";
+import { type Collection, type Db } from "mongodb";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
@@ -41,7 +41,7 @@ const PLAINTEXT_REFRESH_TOKEN_FIELD = { refreshToken: "" } as const;
 // written; no connection query touches this collection, so a connection read
 // can never surface a token. The repository never logs credential material.
 export class CredentialRepository {
-  private readonly collection: Collection<Document>;
+  private readonly collection: Collection<CredentialRecord>;
 
   constructor(db: Db) {
     this.collection = db.collection(SYNC_COLLECTIONS.credentials);
