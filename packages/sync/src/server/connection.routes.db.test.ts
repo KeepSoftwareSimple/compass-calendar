@@ -907,7 +907,7 @@ describe("GET /sync/google", () => {
     const res = await hitCallback("code=auth-code&state=forged.signature");
 
     expect(res.status).toBe(302);
-    expect(statusOf(res)).toBe("accountMismatch");
+    expect(statusOf(res)).toBe("error");
     expect(adapter.exchanges).toHaveLength(0);
     expect(
       await connections.listByPrincipal(tenantId, principalId),
@@ -1033,7 +1033,7 @@ describe("GET /sync/google", () => {
       `code=c&state=${encodeURIComponent(reconnectState(tenantId, principalId, existing._id))}`,
     );
 
-    expect(statusOf(res)).toBe("error");
+    expect(statusOf(res)).toBe("accountMismatch");
     // No second connection was created; the original is untouched.
     const all = await connections.listByPrincipal(tenantId, principalId);
     expect(all).toHaveLength(1);
