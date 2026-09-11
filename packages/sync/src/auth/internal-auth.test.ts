@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker";
 import {
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   DEFAULT_FRESHNESS_MS,
   INTERNAL_AUTH_HEADERS,
   signInternalRequest,
@@ -38,8 +42,8 @@ const signedHeaders = (
 
 describe("verifyInternalRequest", () => {
   it("accepts a correctly signed, fresh request and derives context from signed headers", () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const headers = signedHeaders({
       tenantId,
       principalId,

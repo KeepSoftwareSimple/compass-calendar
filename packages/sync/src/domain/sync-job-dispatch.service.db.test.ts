@@ -1,4 +1,11 @@
 import { faker } from "@faker-js/faker";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderAccountId,
+  type SyncJobId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import {
   ensureEventsResource,
@@ -9,6 +16,7 @@ import {
   singleEvent as single,
   fakeTokenSource as tokenSource,
 } from "@sync/__tests__/helpers/fixtures";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
   dispatchSyncJob,
@@ -65,6 +73,7 @@ const notifications = {
     };
   },
   stopChannel: async () => {},
+  parseNotification: () => null,
 };
 
 // A calendar-discovery adapter that returns one active calendar, so a
@@ -85,6 +94,7 @@ const discovery = {
           canReadBusy: true,
           canInviteAttendees: true,
         },
+        eventLabels: [],
         createsGoogleMeet: true,
       },
     ],
@@ -104,7 +114,7 @@ const defaultGoogleConnection = (
   account: {
     email: "user@example.com",
     displayName: "User",
-    providerAccountId: "google-subject",
+    providerAccountId: "google-subject" as ProviderAccountId,
   },
   capabilities: [
     "readEvents",
@@ -191,7 +201,7 @@ describe("dispatchSyncJob", () => {
     reader: FakeReader,
     custody: SyncJobDispatchDeps["custody"] = tokenSource,
     notificationsOverride = notifications,
-    discoveryOverride = discovery,
+    discoveryOverride: ProviderCalendarAdapter = discovery,
   ): SyncJobDispatchDeps => ({
     events,
     occurrences,
@@ -225,7 +235,7 @@ describe("dispatchSyncJob", () => {
     kind: JobRecord["kind"],
   ): JobRecord =>
     ({
-      _id: objectId(),
+      _id: objectId() as SyncJobId,
       tenantId: resource.tenantId,
       principalId: resource.principalId,
       connectionId: resource.connectionId,
@@ -264,7 +274,7 @@ describe("dispatchSyncJob", () => {
       .find({ principalId: calendar.principalId })
       .toArray();
     expect(feed).toHaveLength(1);
-    expect(feed[0]?.invalidation).toEqual({
+    expect(feed[0]?.["invalidation"]).toEqual({
       kind: "calendar",
       connectionId: calendar.connectionId,
       calendarId: calendar._id,
@@ -302,7 +312,7 @@ describe("dispatchSyncJob", () => {
       .find({ principalId: calendar.principalId })
       .toArray();
     expect(feed).toHaveLength(1);
-    expect(feed[0]?.invalidation).toEqual({
+    expect(feed[0]?.["invalidation"]).toEqual({
       kind: "calendar",
       connectionId: calendar.connectionId,
       calendarId: calendar._id,
@@ -375,7 +385,9 @@ describe("dispatchSyncJob", () => {
           resource._id,
           new Date(`2026-07-10T00:00:0${reads.length}.000Z`),
         );
-        return page([single(`e-${reads.length}`)], `cursor-${reads.length}`);
+        return page([single(`e-${reads.length}`)], {
+          nextSyncToken: `cursor-${reads.length}`,
+        });
       },
     };
 
@@ -596,7 +608,7 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne({ _id: calendar._id }, { $set: { active: false } });
+      .updateOne(stringIdFilter(calendar._id), { $set: { active: false } });
 
     const reader = new FakeReader([]);
     const outcome = await dispatchSyncJob(
@@ -636,7 +648,7 @@ describe("dispatchSyncJob", () => {
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.providerCalendars)
-      .updateOne({ _id: calendar._id }, { $set: { active: false } });
+      .updateOne(stringIdFilter(calendar._id), { $set: { active: false } });
 
     const outcome = await dispatchSyncJob(
       deps(new FakeReader([])),
@@ -820,7 +832,9 @@ describe("dispatchSyncJob", () => {
     }
     expect(discarded).toEqual([]);
     const after = await credentials.findByConnection(calendar.connectionId);
-    expect(after?.refreshFailureCount).toBe(3);
+    expect(
+      (after as { refreshFailureCount?: number } | null)?.refreshFailureCount,
+    ).toBe(3);
   });
 
   it("does not drop a refreshFailed job just because other retries already ran", async () => {
@@ -1188,11 +1202,11 @@ describe("dispatchSyncJob", () => {
   async function seedConnectedCalendar() {
     const realConnections = new ProviderConnectionRepository(storage.db());
     const connection = await realConnections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-1",
+        providerAccountId: "acct-1" as ProviderAccountId,
         email: "user@example.com",
         displayName: "User",
       },
@@ -1237,7 +1251,7 @@ describe("dispatchSyncJob", () => {
       .toArray();
     return feed.filter(
       (row) =>
-        (row.invalidation as { kind?: string } | undefined)?.kind ===
+        (row["invalidation"] as { kind?: string } | undefined)?.kind ===
         "connection",
     );
   }
@@ -1328,10 +1342,10 @@ describe("dispatchSyncJob", () => {
     principalId: string,
   ): JobRecord =>
     ({
-      _id: objectId(),
-      tenantId,
-      principalId,
-      connectionId,
+      _id: objectId() as SyncJobId,
+      tenantId: tenantId as TenantId,
+      principalId: principalId as PrincipalId,
+      connectionId: connectionId as ConnectionId,
       resourceId: null,
       commandId: null,
       kind: "calendarListSync",
@@ -1348,13 +1362,13 @@ describe("dispatchSyncJob", () => {
     }) as JobRecord;
 
   it("routes calendarListSync to discovery and settles done", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
     } as ProviderConnectionRecord;
 
     const outcome = await dispatchSyncJob(
@@ -1390,13 +1404,13 @@ describe("dispatchSyncJob", () => {
   });
 
   it("re-lists when a notification lands mid-discovery, then clears the marker", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
     } as ProviderConnectionRecord;
     // The first pass gets a change notification while it is reading the
     // provider (its enqueue coalesced onto this very job and vanished); the
@@ -1434,17 +1448,17 @@ describe("dispatchSyncJob", () => {
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
       .findOne({ connectionId, resourceKind: "calendarList" });
-    expect(resource?.changeNotifiedAt).toBeNull();
+    expect(resource?.["changeNotifiedAt"]).toBeNull();
   });
 
   it("skips the watch followup when the provider refused calendar-list watch", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
     } as ProviderConnectionRecord;
     // Seed a cursored calendarList resource marked unwatchable: the pass runs
     // incrementally (no full-pass clear of the verdict), so the followup gate
@@ -1495,13 +1509,13 @@ describe("dispatchSyncJob", () => {
   });
 
   it("drops a revoked calendarListSync with a reason, like the resource-based kinds", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
     } as ProviderConnectionRecord;
     const discarded: string[] = [];
     const revokedCustody: SyncJobDispatchDeps["custody"] = {
@@ -1514,6 +1528,7 @@ describe("dispatchSyncJob", () => {
       discardRevoked: async (id) => {
         discarded.push(id);
       },
+      invalidateAccessToken: async () => {},
     };
 
     const outcome = await dispatchSyncJob(
@@ -1530,13 +1545,13 @@ describe("dispatchSyncJob", () => {
   });
 
   it("drops a durable calendarList discovery failure and marks the calendarList resource", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       provider: "google",
     } as ProviderConnectionRecord;
     const failingDiscovery: ProviderCalendarAdapter = {
@@ -1576,13 +1591,13 @@ describe("dispatchSyncJob", () => {
   });
 
   it("rethrows a transient calendarList discovery failure for the worker retry ladder", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     stubbedConnection = {
       _id: connectionId,
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       provider: "google",
     } as ProviderConnectionRecord;
     const transientDiscovery: ProviderCalendarAdapter = {
@@ -1635,7 +1650,7 @@ describe("dispatchSyncJob", () => {
           if (provider === "microsoft") {
             throw new ProviderNotConfiguredError("microsoft");
           }
-          return fakeResolveAdapters(reader)();
+          return fakeResolveAdapters(reader)(provider, stubbedConnection!);
         },
       },
       jobFor(resource, "initialImport"),

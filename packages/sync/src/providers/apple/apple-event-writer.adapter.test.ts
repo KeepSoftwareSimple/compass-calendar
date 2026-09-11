@@ -1,3 +1,4 @@
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
 import { type EventSchedule } from "@core/types/event.contracts";
 import { type SyncEventContent } from "@core/types/sync/event.contracts";
 import {
@@ -21,7 +22,7 @@ function response(
   } = {},
 ): CaldavResponse {
   const headers: Record<string, string> = {};
-  if (options.etag) headers.etag = options.etag;
+  if (options.etag) headers["etag"] = options.etag;
   return {
     status,
     headers,
@@ -145,9 +146,9 @@ const content = (
 
 const schedule: EventSchedule = {
   kind: "timed",
-  start: "2025-01-15T09:00:00-05:00",
-  end: "2025-01-15T10:00:00-05:00",
-  timeZone: "America/New_York",
+  start: "2025-01-15T09:00:00-05:00" as DateTime,
+  end: "2025-01-15T10:00:00-05:00" as DateTime,
+  timeZone: "America/New_York" as TimeZone,
 };
 
 describe("AppleEventWriter createEvent", () => {

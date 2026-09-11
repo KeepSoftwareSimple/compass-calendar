@@ -1,4 +1,10 @@
 import { faker } from "@faker-js/faker";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { syncCalendarList } from "@sync/domain/calendar-list-sync.service";
 import {
@@ -32,6 +38,7 @@ const discovered = (
     canReadBusy: true,
     canInviteAttendees: true,
   },
+  eventLabels: [],
   createsGoogleMeet: true,
 });
 
@@ -85,9 +92,9 @@ describe("syncCalendarList", () => {
 
   const connection = (): ProviderConnectionRecord =>
     ({
-      _id: objectId(),
-      tenantId: objectId(),
-      principalId: objectId(),
+      _id: objectId() as ConnectionId,
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
     }) as ProviderConnectionRecord;
 
   const deps = (discovery: FakeDiscovery) => ({
@@ -126,7 +133,7 @@ describe("syncCalendarList", () => {
     providerCalendarId: string,
   ) => {
     const calendar = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === providerCalendarId,
+      (d) => d["providerCalendarId"] === providerCalendarId,
     );
     const resourceId = (
       await storage.db().collection(SYNC_COLLECTIONS.syncResources).findOne({
@@ -134,11 +141,15 @@ describe("syncCalendarList", () => {
         resourceKind: "events",
         calendarId: calendar?._id,
       })
-    )?._id as string;
+    )?._id;
+    const resourceIdString = resourceId ? String(resourceId) : undefined;
+    if (!resourceIdString) {
+      throw new Error("Expected events resource for calendar");
+    }
     await resources.updateSubscription(
       conn.tenantId,
       conn.principalId,
-      resourceId,
+      resourceIdString,
       {
         subscriptionId: "channel-1",
         subscriptionResourceId: "resource-1",
@@ -146,7 +157,7 @@ describe("syncCalendarList", () => {
         subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
       },
     );
-    return resourceId;
+    return resourceIdString;
   };
 
   it("discovers calendars, persists them, and enqueues an import per active calendar", async () => {
@@ -178,7 +189,7 @@ describe("syncCalendarList", () => {
     const enqueued = await importJobs();
     expect(enqueued).toHaveLength(2);
     // The discovery cursor is stored on the calendarList resource for next pass.
-    expect((await calendarListResource(conn))?.syncCursor).toBe("cur-1");
+    expect((await calendarListResource(conn))?.["syncCursor"]).toBe("cur-1");
     expect(discovery.cursors).toEqual([undefined]); // first pass is a full list
   });
 
@@ -193,7 +204,7 @@ describe("syncCalendarList", () => {
 
     const docs = await calendarDocs(conn);
     const byId = Object.fromEntries(
-      docs.map((doc) => [doc.providerCalendarId, doc.createsGoogleMeet]),
+      docs.map((doc) => [doc["providerCalendarId"], doc["createsGoogleMeet"]]),
     );
     expect(byId["primary"]).toBe(true);
     expect(byId["resource"]).toBe(false);
@@ -215,8 +226,10 @@ describe("syncCalendarList", () => {
     expect(eventsResources).toHaveLength(1);
     // The enqueued import targets that events resource.
     const [job] = await importJobs();
-    expect(job?.resourceId).toBe(eventsResources[0]?._id);
-    expect(job?.coalescingKey).toBe(`initialImport:${eventsResources[0]?._id}`);
+    expect(job?.["resourceId"]).toBe(eventsResources[0]?._id);
+    expect(job?.["coalescingKey"]).toBe(
+      `initialImport:${eventsResources[0]?._id}`,
+    );
   });
 
   // Run a full pass, mark the connection's events resource unwatchable at
@@ -316,10 +329,10 @@ describe("syncCalendarList", () => {
     );
 
     const docs = await calendarDocs(conn);
-    const gone = docs.find((d) => d.providerCalendarId === "gone");
-    const primary = docs.find((d) => d.providerCalendarId === "primary");
-    expect(gone?.active).toBe(false);
-    expect(primary?.active).toBe(true);
+    const gone = docs.find((d) => d["providerCalendarId"] === "gone");
+    const primary = docs.find((d) => d["providerCalendarId"] === "primary");
+    expect(gone?.["active"]).toBe(false);
+    expect(primary?.["active"]).toBe(true);
   });
 
   it("clears a prior discovery failure even when rediscovery returns no cursor", async () => {
@@ -350,11 +363,11 @@ describe("syncCalendarList", () => {
     );
 
     const after = await calendarListResource(conn);
-    expect(after?.lastReadFailureAt).toBeNull();
-    expect(after?.lastReadFailureDetail).toBeNull();
-    expect(after?.lastSuccessAt).toEqual(now());
+    expect(after?.["lastReadFailureAt"]).toBeNull();
+    expect(after?.["lastReadFailureDetail"]).toBeNull();
+    expect(after?.["lastSuccessAt"]).toEqual(now());
     // Null discovery cursor must not wipe/store a cursor — next pass full-lists.
-    expect(after?.syncCursor).toBeNull();
+    expect(after?.["syncCursor"]).toBeNull();
   });
 
   it("stamps lastAttemptAt on the calendarList resource before it can fail", async () => {
@@ -369,7 +382,9 @@ describe("syncCalendarList", () => {
 
     await syncCalendarList(deps(discovery), conn, now);
 
-    expect((await calendarListResource(conn))?.lastAttemptAt).toEqual(now());
+    expect((await calendarListResource(conn))?.["lastAttemptAt"]).toEqual(
+      now(),
+    );
   });
 
   it("clears the local push channel of a retired calendar's events resource", async () => {
@@ -406,9 +421,9 @@ describe("syncCalendarList", () => {
     const goneEventsResource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: goneEventsResourceId });
-    expect(goneEventsResource?.subscriptionId).toBeNull();
-    expect(goneEventsResource?.subscriptionExpiresAt).toBeNull();
+      .findOne(stringIdFilter(goneEventsResourceId));
+    expect(goneEventsResource?.["subscriptionId"]).toBeNull();
+    expect(goneEventsResource?.["subscriptionExpiresAt"]).toBeNull();
   });
 
   it("clears the push channel when a calendar is upserted inactive on an incremental pass", async () => {
@@ -451,15 +466,15 @@ describe("syncCalendarList", () => {
     const hidesEventsResource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: hidesEventsResourceId });
-    expect(hidesEventsResource?.subscriptionId).toBeNull();
-    expect(hidesEventsResource?.subscriptionExpiresAt).toBeNull();
+      .findOne(stringIdFilter(hidesEventsResourceId));
+    expect(hidesEventsResource?.["subscriptionId"]).toBeNull();
+    expect(hidesEventsResource?.["subscriptionExpiresAt"]).toBeNull();
     // The reason the channel is cleared at all: the calendar itself went
     // inactive, which is what drops it out of the sidebar.
     const hides = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "hides",
+      (d) => d["providerCalendarId"] === "hides",
     );
-    expect(hides?.active).toBe(false);
+    expect(hides?.["active"]).toBe(false);
   });
 
   it("stamps lastFullListAt on a full pass", async () => {
@@ -475,7 +490,9 @@ describe("syncCalendarList", () => {
       now,
     );
 
-    expect((await calendarListResource(conn))?.lastFullListAt).toEqual(now());
+    expect((await calendarListResource(conn))?.["lastFullListAt"]).toEqual(
+      now(),
+    );
   });
 
   it("does not stamp lastFullListAt on an incremental pass", async () => {
@@ -506,8 +523,8 @@ describe("syncCalendarList", () => {
     );
 
     const resource = await calendarListResource(conn);
-    expect(resource?.lastFullListAt).toEqual(now()); // still the FULL pass's stamp
-    expect(resource?.lastSuccessAt).toEqual(later()); // which advanced regardless
+    expect(resource?.["lastFullListAt"]).toEqual(now()); // still the FULL pass's stamp
+    expect(resource?.["lastSuccessAt"]).toEqual(later()); // which advanced regardless
   });
 
   it("does not stamp lastFullListAt when a full list comes back empty", async () => {
@@ -525,7 +542,7 @@ describe("syncCalendarList", () => {
     // Read raw, so the key is ABSENT rather than defaulted to null — `?? null`
     // accepts either, since both mean "never fully listed" to the sweep's filter.
     expect(
-      (await calendarListResource(conn))?.lastFullListAt ?? null,
+      (await calendarListResource(conn))?.["lastFullListAt"] ?? null,
     ).toBeNull();
   });
 
@@ -544,7 +561,7 @@ describe("syncCalendarList", () => {
       now,
     );
     const goneCalendar = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "gone",
+      (d) => d["providerCalendarId"] === "gone",
     );
     const warnings: string[] = [];
 
@@ -562,7 +579,7 @@ describe("syncCalendarList", () => {
     );
 
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain(goneCalendar?._id as string);
+    expect(warnings[0]).toContain(String(goneCalendar?._id));
     expect(warnings[0]).toContain(conn._id);
   });
 
@@ -587,9 +604,9 @@ describe("syncCalendarList", () => {
     );
 
     const primary = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "primary",
+      (d) => d["providerCalendarId"] === "primary",
     );
-    expect(primary?.active).toBe(true);
+    expect(primary?.["active"]).toBe(true);
   });
 
   it("does not retire absent calendars on an incremental pass", async () => {
@@ -616,9 +633,9 @@ describe("syncCalendarList", () => {
 
     expect(incremental.cursors).toEqual(["cur-1"]); // resumed from the stored cursor
     const team = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "team",
+      (d) => d["providerCalendarId"] === "team",
     );
-    expect(team?.active).toBe(true);
+    expect(team?.["active"]).toBe(true);
   });
 
   it("updates the stored display name when rediscovery reports a rename", async () => {
@@ -657,9 +674,9 @@ describe("syncCalendarList", () => {
     );
 
     const renamed = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "mens-group",
+      (d) => d["providerCalendarId"] === "mens-group",
     );
-    expect(renamed?.displayName).toBe("journey-mens-group");
+    expect(renamed?.["displayName"]).toBe("journey-mens-group");
   });
 
   it("clears a change marker the pass has served", async () => {
@@ -689,7 +706,7 @@ describe("syncCalendarList", () => {
     );
 
     expect(result.changedDuringSync).toBe(false);
-    expect((await calendarListResource(conn))?.changeNotifiedAt).toBeNull();
+    expect((await calendarListResource(conn))?.["changeNotifiedAt"]).toBeNull();
   });
 
   it("keeps the marker and reports changedDuringSync when a notification lands mid-pass", async () => {
@@ -701,7 +718,6 @@ describe("syncCalendarList", () => {
     // A notification arriving while the provider is being read moves the
     // marker AFTER the pass captured it, so the compare-and-clear must fail.
     const discovery: ProviderCalendarAdapter = {
-      provider: "google",
       discoverCalendars: async (input) => {
         const resource = await calendarListResource(conn);
         await resources.markChangeNotified(
@@ -721,7 +737,7 @@ describe("syncCalendarList", () => {
     );
 
     expect(result.changedDuringSync).toBe(true);
-    expect((await calendarListResource(conn))?.changeNotifiedAt).toEqual(
+    expect((await calendarListResource(conn))?.["changeNotifiedAt"]).toEqual(
       midPassStamp,
     );
   });
@@ -751,12 +767,14 @@ describe("syncCalendarList", () => {
     expect(expired.cursors).toEqual(["cur-1", undefined]);
     // Because the fallback was a full list, the absent "stale" calendar is retired.
     const stale = (await calendarDocs(conn)).find(
-      (d) => d.providerCalendarId === "stale",
+      (d) => d["providerCalendarId"] === "stale",
     );
-    expect(stale?.active).toBe(false);
+    expect(stale?.["active"]).toBe(false);
     // And it counts as a full enumeration for the rediscovery clock — the
     // fallback re-listed everything, so the sweep has nothing left to force.
-    expect((await calendarListResource(conn))?.lastFullListAt).toEqual(now());
+    expect((await calendarListResource(conn))?.["lastFullListAt"]).toEqual(
+      now(),
+    );
   });
 
   it("throws on a non-cursor discovery failure so the worker retries", async () => {

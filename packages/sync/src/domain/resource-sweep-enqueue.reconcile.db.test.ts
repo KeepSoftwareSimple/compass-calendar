@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -102,9 +103,9 @@ describe("reconcile sweep (enqueueForResources + listStaleEvents)", () => {
 
     expect(enqueued).toBe(1);
     const job = await jobByKey(`incrementalPull:${stale._id}`);
-    expect(job?.kind).toBe("incrementalPull");
-    expect(job?.resourceId).toBe(stale._id);
-    expect(job?.tenantId).toBe(stale.tenantId);
+    expect(job?.["kind"]).toBe("incrementalPull");
+    expect(job?.["resourceId"]).toBe(stale._id);
+    expect(job?.["tenantId"]).toBe(stale.tenantId);
   });
 
   it("skips a resource synced more recently than the threshold", async () => {
@@ -154,12 +155,12 @@ describe("reconcile sweep (enqueueForResources + listStaleEvents)", () => {
       .find({})
       .toArray();
     expect(jobs2).toHaveLength(1);
-    const resourceId = jobs2[0]?.resourceId as string;
+    const resourceId = jobs2[0]?.["resourceId"] as string;
     const resource = await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .findOne({ _id: resourceId });
-    expect(resource?.lastSuccessAt).toEqual(
+      .findOne(stringIdFilter(resourceId));
+    expect(resource?.["lastSuccessAt"]).toEqual(
       new Date("2026-07-02T00:00:00.000Z"),
     );
   });

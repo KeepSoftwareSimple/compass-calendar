@@ -1,7 +1,7 @@
 import { faker } from "@faker-js/faker";
+import { type EventId } from "@core/types/domain-primitives";
 import {
   type ConnectionId,
-  type EventId,
   type IdempotencyKey,
   type PrincipalId,
   type TenantId,
@@ -11,6 +11,10 @@ import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
 } from "@sync/__tests__/helpers/credential-encryption";
 import { seedProviderCalendar } from "@sync/__tests__/helpers/fixtures";
+import { type SyncExecutionMode } from "@sync/config/sync.config";
+import { type CredentialCustody } from "@sync/credentials/credential-custody.service";
+import { type CloudCommandDeps } from "@sync/domain/cloud-command.service";
+import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
 import { type AccessTokenSource } from "@sync/domain/provider-write-ladder";
 import {
   type ProviderAuthAdapter,
@@ -155,10 +159,85 @@ export async function seedLinkedEvent(
   return event;
 }
 
+export const stubConnectionLookup = (
+  email = "user@example.com",
+): ProviderConnectionLookup => ({
+  findById: async () => ({
+    account: { email },
+    provider: "google",
+  }),
+});
+
+export const fakeCredentialCustody = (): CredentialCustody =>
+  ({
+    getValidAccessToken: async () => "access-token",
+    discardRevoked: async () => {},
+    invalidateAccessToken: async () => {},
+  }) as unknown as CredentialCustody;
+
+export const cloudCommandDeps = (
+  repoSlice: Pick<
+    CommandRepos,
+    | "commands"
+    | "events"
+    | "calendars"
+    | "occurrences"
+    | "resources"
+    | "markers"
+  >,
+  options: {
+    execution?: SyncExecutionMode;
+    connections?: ProviderConnectionLookup;
+    provider?: CloudCommandDeps["provider"];
+  } = {},
+): CloudCommandDeps => ({
+  ...repoSlice,
+  connections: options.connections ?? stubConnectionLookup(),
+  execution: options.execution ?? "active",
+  provider: options.provider,
+});
+
 export const tokenSource = (token = "access-token"): AccessTokenSource => ({
   getValidAccessToken: async () => token,
   discardRevoked: async () => {},
   invalidateAccessToken: async () => {},
+});
+
+export type ProviderCommandRepos = Pick<
+  CommandRepos,
+  "commands" | "events" | "occurrences" | "resources" | "markers"
+>;
+
+export const providerMutationDeps = (
+  repoSlice: Pick<
+    CommandRepos,
+    "commands" | "events" | "occurrences" | "resources"
+  >,
+  writer: ProviderEventWriter,
+  options: {
+    custody?: AccessTokenSource;
+    connections?: ProviderConnectionLookup;
+  } = {},
+) => ({
+  commands: repoSlice.commands,
+  events: repoSlice.events,
+  occurrences: repoSlice.occurrences,
+  resources: repoSlice.resources,
+  connections: options.connections ?? stubConnectionLookup(),
+  writer,
+  custody: options.custody ?? tokenSource(),
+});
+
+export const providerDeleteDeps = (
+  repos: ProviderCommandRepos,
+  writer: ProviderEventWriter,
+  options: {
+    custody?: AccessTokenSource;
+    connections?: ProviderConnectionLookup;
+  } = {},
+) => ({
+  ...providerMutationDeps(repos, writer, options),
+  markers: repos.markers,
 });
 
 export const failingTokenSource = (error: unknown): AccessTokenSource => ({

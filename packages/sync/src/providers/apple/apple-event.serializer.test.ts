@@ -1,3 +1,8 @@
+import {
+  type DateOnly,
+  type DateTime,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { type EventSchedule } from "@core/types/event.contracts";
 import {
   type AppleEventResourceInput,
@@ -68,12 +73,12 @@ function eventToSerializeInput(event: ProviderEvent): AppleEventSerializeInput {
 
 function roundTripEvent(icsBody: string): ProviderEvent {
   const [read] = normalizeAppleEventResource(resource(icsBody));
-  const event = asEvent(read);
+  const event = asEvent(read!);
   const serialized = serializeAppleEventCreate(eventToSerializeInput(event));
   const [roundTripped] = normalizeAppleEventResource(
     resource(serialized, { etag: event.providerVersion }),
   );
-  return asEvent(roundTripped);
+  return asEvent(roundTripped!);
 }
 
 function expectEventsEqual(
@@ -97,9 +102,9 @@ describe("serializeAppleEventCreate", () => {
       },
       schedule: {
         kind: "timed",
-        start: "2025-01-15T09:00:00Z",
-        end: "2025-01-15T10:00:00Z",
-        timeZone: "UTC",
+        start: "2025-01-15T09:00:00Z" as DateTime,
+        end: "2025-01-15T10:00:00Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "single" },
       busy: true,
@@ -172,7 +177,7 @@ END:VEVENT`,
     },
   ])("round-trips a $name event through normalize", ({ body }) => {
     const [read] = normalizeAppleEventResource(resource(body));
-    const event = asEvent(read);
+    const event = asEvent(read!);
     const roundTripped = roundTripEvent(body);
     expectEventsEqual(roundTripped, event);
   });
@@ -206,9 +211,9 @@ END:VEVENT`);
       },
       schedule: {
         kind: "timed",
-        start: "2025-01-15T09:00:00Z",
-        end: "2025-01-15T10:00:00Z",
-        timeZone: "UTC",
+        start: "2025-01-15T09:00:00Z" as DateTime,
+        end: "2025-01-15T10:00:00Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "single" },
       busy: true,
@@ -246,9 +251,9 @@ END:VEVENT`);
       },
       schedule: {
         kind: "timed",
-        start: "2025-01-15T10:00:00Z",
-        end: "2025-01-15T11:00:00Z",
-        timeZone: "UTC",
+        start: "2025-01-15T10:00:00Z" as DateTime,
+        end: "2025-01-15T11:00:00Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "single" },
       busy: true,
@@ -286,9 +291,9 @@ END:VEVENT`);
       },
       schedule: {
         kind: "timed",
-        start: "2025-01-16T10:00:00Z",
-        end: "2025-01-16T11:00:00Z",
-        timeZone: "UTC",
+        start: "2025-01-16T10:00:00Z" as DateTime,
+        end: "2025-01-16T11:00:00Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "instance" },
       busy: true,
@@ -345,9 +350,9 @@ describe("serializeAppleEventCreate schedule encoding", () => {
       },
       schedule: {
         kind: "timed",
-        start: "2025-01-15T09:00:00-05:00",
-        end: "2025-01-15T10:00:00-05:00",
-        timeZone: "America/New_York",
+        start: "2025-01-15T09:00:00-05:00" as DateTime,
+        end: "2025-01-15T10:00:00-05:00" as DateTime,
+        timeZone: "America/New_York" as TimeZone,
       },
       recurrence: { kind: "single" },
       busy: true,
@@ -372,8 +377,8 @@ describe("serializeAppleEventCreate schedule encoding", () => {
       },
       schedule: {
         kind: "allDay",
-        start: "2025-02-22",
-        end: "2025-02-23",
+        start: "2025-02-22" as DateOnly,
+        end: "2025-02-23" as DateOnly,
       } satisfies EventSchedule,
       recurrence: { kind: "single" },
       busy: false,

@@ -163,7 +163,7 @@ describe("MicrosoftCalendarAdapter", () => {
 
     expect(byId).toEqual({
       hex: "#AABBCC",
-      enum: MICROSOFT_CALENDAR_COLOR_HEX.lightGreen,
+      enum: MICROSOFT_CALENDAR_COLOR_HEX["lightGreen"]!,
       auto: null,
     });
   });

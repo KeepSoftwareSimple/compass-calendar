@@ -1,8 +1,14 @@
 import { faker } from "@faker-js/faker";
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
+import {
+  type ProviderCalendarSourceId,
+  type ProviderEventId,
+} from "@core/types/sync/identity.contracts";
 import {
   type ProviderAdapters,
   type ResolveProviderAdapters,
 } from "@sync/providers/provider-adapters";
+import { type ProviderAuthAdapter } from "@sync/providers/provider-auth.port";
 import {
   type ProviderEvent,
   type ProviderEventRead,
@@ -12,12 +18,18 @@ import {
   type ProviderEventReader,
   type ProviderEventReadInput,
 } from "@sync/providers/provider-event-reader.port";
+import { type ProviderNotificationAdapter } from "@sync/providers/provider-notifications.port";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.contracts";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
+
+export const defaultCalendarListFields = {
+  eventLabels: [] as const,
+  createsGoogleMeet: true as const,
+};
 
 type CalendarUpsertInput = Parameters<
   ProviderCalendarRepository["upsertByProviderCalendar"]
@@ -34,7 +46,7 @@ export const seedProviderCalendar = (
     tenantId: objectId() as ProviderCalendarRecord["tenantId"],
     principalId: objectId() as ProviderCalendarRecord["principalId"],
     connectionId: objectId() as ProviderCalendarRecord["connectionId"],
-    providerCalendarId: "primary@google.com",
+    providerCalendarId: "primary@google.com" as ProviderCalendarSourceId,
     displayName: "Google",
     color: null,
     active: true,
@@ -46,6 +58,8 @@ export const seedProviderCalendar = (
       canReadBusy: true,
       canInviteAttendees: true,
     },
+    eventLabels: [],
+    createsGoogleMeet: true,
     ...overrides,
   });
 
@@ -104,15 +118,15 @@ export const ensureEventsResource = async (
 // The timed schedule most db tests give their scripted provider events.
 export const TIMED_SCHEDULE = {
   kind: "timed" as const,
-  start: "2026-07-14T09:00:00-06:00",
-  end: "2026-07-14T10:00:00-06:00",
-  timeZone: "America/Denver",
+  start: "2026-07-14T09:00:00-06:00" as DateTime,
+  end: "2026-07-14T10:00:00-06:00" as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 };
 
 // One single (non-recurring) provider event, ready for a scripted page.
 export const singleEvent = (id: string, title = id): ProviderEvent => ({
   kind: "event",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   providerUpdatedAt: null,
   content: {
@@ -182,10 +196,17 @@ export const fakeTokenSource = {
   invalidateAccessToken: async () => {},
 };
 
-const noopAuthAdapter = {
+const noopAuthAdapter: ProviderAuthAdapter = {
+  buildAuthorizationUrl: () => {
+    throw new Error("noopAuthAdapter: buildAuthorizationUrl not scripted");
+  },
+  exchangeAuthorizationCode: async () => {
+    throw new Error("noopAuthAdapter: exchangeAuthorizationCode not scripted");
+  },
   refreshAccessToken: async () => ({
     accessToken: "access-token",
     expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    grantedScopes: [],
   }),
   revoke: async () => {},
 };
@@ -206,13 +227,14 @@ const noopWriter = {
   },
 };
 
-const noopNotifications = {
-  watch: async (input: { channelId: string }) => ({
+const noopNotifications: ProviderNotificationAdapter = {
+  watch: async (input) => ({
     channelId: input.channelId,
     resourceId: "provider-resource",
     expiresAt: new Date("2099-01-01T00:00:00.000Z"),
   }),
   stopChannel: async () => {},
+  parseNotification: () => null,
 };
 
 const noopDiscovery = {

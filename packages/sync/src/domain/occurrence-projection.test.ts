@@ -1,6 +1,20 @@
 import { faker } from "@faker-js/faker";
+import {
+  type CalendarId,
+  type DateOnly,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { type EventSchedule } from "@core/types/event.contracts";
-import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
+import {
+  type OccurrenceKey,
+  type SyncEventRecurrence,
+} from "@core/types/sync/event.contracts";
+import {
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import {
   occurrenceScheduleAfterSeriesEdit,
   type ProjectionHorizon,
@@ -18,10 +32,19 @@ const HORIZON: ProjectionHorizon = {
 };
 
 const timed = (start: string, end: string, timeZone = "America/Denver") =>
-  ({ kind: "timed", start, end, timeZone }) as EventSchedule;
+  ({
+    kind: "timed",
+    start: start as DateTime,
+    end: end as DateTime,
+    timeZone,
+  }) as EventSchedule;
 
 const allDay = (start: string, end: string) =>
-  ({ kind: "allDay", start, end }) as EventSchedule;
+  ({
+    kind: "allDay",
+    start: start as DateOnly,
+    end: end as DateOnly,
+  }) as EventSchedule;
 
 const event = (
   schedule: EventSchedule,
@@ -29,11 +52,11 @@ const event = (
   overrides: Partial<EventRecord> = {},
 ): EventRecord =>
   ({
-    _id: objectId(),
-    tenantId: objectId(),
-    principalId: objectId(),
+    _id: objectId() as EventId,
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     origin: "compass",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     clientEventId: null,
     connectionId: null,
     providerEventId: null,
@@ -79,7 +102,9 @@ describe("projectOccurrences", () => {
       expect(occ?.startAt.toISOString()).toBe("2026-07-14T15:00:00.000Z");
       // Half-open end: the timed end instant.
       expect(occ?.endAt?.toISOString()).toBe("2026-07-14T16:00:00.000Z");
-      expect(occ?.occurrenceKey).toBe(`${e._id}:2026-07-14T15:00:00.000Z`);
+      expect(occ?.occurrenceKey).toBe(
+        `${e._id}:2026-07-14T15:00:00.000Z` as OccurrenceKey,
+      );
     });
 
     it("projects one occurrence for an all-day single event", () => {
@@ -268,12 +293,12 @@ describe("projectOccurrences", () => {
       );
       const occ = projectOccurrences(e, HORIZON);
       const starts = occ.map((o) =>
-        o.schedule.kind === "timed" ? o.schedule.start : "",
+        o.schedule.kind === "timed" ? o.schedule.start : ("" as DateTime),
       );
       expect(starts).toEqual([
-        "2026-03-01T09:00:00-07:00",
-        "2026-03-08T09:00:00-06:00",
-        "2026-03-15T09:00:00-06:00",
+        "2026-03-01T09:00:00-07:00" as DateTime,
+        "2026-03-08T09:00:00-06:00" as DateTime,
+        "2026-03-15T09:00:00-06:00" as DateTime,
       ]);
     });
 
@@ -410,7 +435,7 @@ describe("projectOccurrences", () => {
       ]);
       const extra = occ.at(-1);
       if (extra?.schedule.kind !== "timed") throw new Error("expected timed");
-      expect(extra.schedule.timeZone).toBe("America/Denver");
+      expect(extra.schedule.timeZone).toBe("America/Denver" as TimeZone);
       expect(extra.endAt?.getTime()).toBe(
         extra.startAt.getTime() + 30 * 60 * 1000,
       );

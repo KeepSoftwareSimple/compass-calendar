@@ -5,6 +5,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { mongoObjectId } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { queryBusyIntervals } from "@sync/domain/busy-query.service";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -47,7 +48,7 @@ describe("queryBusyIntervals", () => {
       .db()
       .collection(SYNC_COLLECTIONS.eventOccurrences)
       .insertOne({
-        _id: objectId(),
+        _id: mongoObjectId(objectId()),
         tenantId,
         principalId,
         eventId,
@@ -208,7 +209,7 @@ describe("queryBusyIntervals", () => {
   });
 
   it("drops an excluded event before merge and keeps overlapping host busy", async () => {
-    const bookingId = objectId();
+    const bookingId = objectId() as EventId;
     await seed({
       calendarId: calendarA,
       start: "2026-07-14T10:00Z",
@@ -223,7 +224,7 @@ describe("queryBusyIntervals", () => {
 
     const result = await query(
       [{ calendarId: calendarA, generation: 0 }],
-      [bookingId as EventId],
+      [bookingId],
     );
 
     expect(iso(result)).toEqual([

@@ -1,8 +1,11 @@
 import { faker } from "@faker-js/faker";
 import { encryptCredentialAtRest } from "@core/security/credential-at-rest";
 import {
+  type PrincipalId,
+  type ProviderAccountId,
   type ProviderCalendarId,
   type ProviderCalendarSourceId,
+  type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
@@ -39,11 +42,11 @@ describe("refreshConnectionState", () => {
 
   async function seedImportingConnection() {
     const connection = await connections.upsertByProviderAccount({
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "acct-1",
+        providerAccountId: "acct-1" as ProviderAccountId,
         email: "user@example.com",
         displayName: "User",
       },
@@ -92,6 +95,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
 
     const listResource = await resources.ensure({
@@ -151,6 +156,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: false,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const slowerResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -204,6 +211,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -274,6 +283,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -319,6 +330,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -377,6 +390,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -443,6 +458,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -491,6 +508,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -529,6 +548,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -598,6 +619,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,
@@ -714,6 +737,8 @@ describe("refreshConnectionState", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
     const listResource = await resources.ensure({
       tenantId: connection.tenantId,

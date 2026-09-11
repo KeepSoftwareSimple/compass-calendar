@@ -1,4 +1,6 @@
 import { generateKeyPair, type KeyLike, SignJWT } from "jose";
+import { type DateOnly } from "@core/types/domain-primitives";
+import { type ProviderAccountId } from "@core/types/sync/identity.contracts";
 import {
   assertWriterRejectsStaleVersion,
   CONTRACT_CONTENT,
@@ -135,8 +137,12 @@ describeAuthCases("microsoft", () => buildAdapter(), [
         redirectUri: "https://staging.example.com/sync/microsoft",
       });
       const fixture = exchangeFixture as ExchangeSuccessFixture;
-      expect(result.account.providerAccountId).toBe(fixture.idTokenClaims.oid);
-      expect(result.refreshToken).toBe(fixture.tokenResponse.refresh_token);
+      expect(result.account.providerAccountId).toBe(
+        fixture.idTokenClaims.oid as ProviderAccountId,
+      );
+      expect(result).toMatchObject({
+        refreshToken: fixture.tokenResponse.refresh_token,
+      });
       expect(result.grantedScopes).toEqual([
         "openid",
         "profile",
@@ -166,7 +172,7 @@ describeAuthCases(
           refreshToken: fixture.tokenResponse.refresh_token!,
         });
         expect(refreshed.accessToken).toBe(
-          (refreshSuccessFixture as MicrosoftTokenResponse).access_token,
+          (refreshSuccessFixture as MicrosoftTokenResponse).access_token ?? "",
         );
         expect(refreshed.grantedScopes).toEqual([
           "Calendars.ReadWrite",
@@ -295,8 +301,8 @@ describe("microsoft normalizer contract", () => {
     expect(read.busy).toBe(false);
     expect(read.schedule).toEqual({
       kind: "allDay",
-      start: "2022-02-22",
-      end: "2022-02-23",
+      start: "2022-02-22" as DateOnly,
+      end: "2022-02-23" as DateOnly,
     });
   });
 
@@ -376,7 +382,9 @@ describe("microsoft reader contract", () => {
     }
     expect(pages).toBe(2);
     expect(page.nextPageToken).toBeNull();
-    expect(page.nextSyncToken).toBe(readerCorpus.page2.deltaLink);
+    expect(page.nextSyncToken ?? null).toBe(
+      readerCorpus.page2.deltaLink ?? null,
+    );
   });
 
   it("maps an expired cursor to cursorExpired", async () => {
