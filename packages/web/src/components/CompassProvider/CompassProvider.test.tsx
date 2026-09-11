@@ -1,7 +1,7 @@
 import { HotkeyManager } from "@tanstack/react-hotkeys";
 import { useQueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
@@ -18,9 +18,7 @@ beforeEach(() => {
 
 test("provides the injected query client", () => {
   server.use(
-    rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-      res(ctx.json({ version: "dev", google: { isConfigured: false } })),
-    ),
+    http.get(`${ENV_WEB.API_BASEURL}/config`, () => HttpResponse.json({ version: "dev", google: { isConfigured: false } })),
   );
   const queryClient = createCompassQueryClient();
 
@@ -44,9 +42,7 @@ test("provides the injected query client", () => {
 
 test("Escape dismisses the toast (proves the hook is actually mounted)", () => {
   server.use(
-    rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-      res(ctx.json({ version: "dev", google: { isConfigured: false } })),
-    ),
+    http.get(`${ENV_WEB.API_BASEURL}/config`, () => HttpResponse.json({ version: "dev", google: { isConfigured: false } })),
   );
   const { port, mocks } = createTestToastPort();
   registerToastPort(port);

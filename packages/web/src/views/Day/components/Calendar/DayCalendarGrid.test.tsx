@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { act } from "react";
 import {
   type Calendar,
@@ -157,9 +157,7 @@ const renderDayCalendarGrid = (
     // CI). Keep the handler local — a global default breaks suites that
     // expect the legacy undefined calendarIds read.
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/calendars`, (_req, res, ctx) =>
-        res(ctx.json(calendars)),
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/calendars`, () => HttpResponse.json(calendars)),
     );
   }
 

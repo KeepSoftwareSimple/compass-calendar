@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { type Attendee } from "@core/types/event-attendance.contracts";
@@ -55,13 +55,13 @@ const renderControl = (event: Event) => {
 const captureRsvpRequests = () => {
   const requests: Array<{ path: string; body: unknown }> = [];
   server.use(
-    rest.post(
-      `${ENV_WEB.API_BASEURL}/event/:id/rsvp`,
-      async (req, res, ctx) => {
-        requests.push({ path: req.url.pathname, body: await req.json() });
-        return res(ctx.status(204));
-      },
-    ),
+    http.post(`${ENV_WEB.API_BASEURL}/event/:id/rsvp`, async ({ request }) => {
+      requests.push({
+        path: new URL(request.url).pathname,
+        body: await request.json(),
+      });
+      return new HttpResponse(null, { status: 204 });
+    }),
   );
   return requests;
 };

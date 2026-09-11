@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { SessionContext } from "@web/auth/compass/session/session.context";
@@ -26,18 +26,16 @@ const createWrapper = (authenticated = false, client?: QueryClient) => {
 
 const stubConfig = (isConfigured: boolean, enforcement = true) => {
   server.use(
-    rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-      res(
-        ctx.json({
-          version: "dev",
-          google: { isConfigured: false },
-          billing: {
-            isConfigured,
-            enforcement,
-            trialLengthDays: 7,
-          },
-        }),
-      ),
+    http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
+      HttpResponse.json({
+        version: "dev",
+        google: { isConfigured: false },
+        billing: {
+          isConfigured,
+          enforcement,
+          trialLengthDays: 7,
+        },
+      }),
     ),
   );
 };
@@ -49,8 +47,8 @@ const stubBilling = (body: {
   cancelAtPeriodEnd?: boolean;
 }) => {
   server.use(
-    rest.get(`${ENV_WEB.API_BASEURL}/billing/status`, (_req, res, ctx) =>
-      res(ctx.json(body)),
+    http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () =>
+      HttpResponse.json(body),
     ),
   );
 };
@@ -119,16 +117,16 @@ describe("useAppAccess", () => {
   it("fails open while authenticated billing status is loading", () => {
     stubConfig(true);
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/billing/status`, (_req, res, ctx) =>
-        res(
-          ctx.delay(500),
-          ctx.json({
-            subscriptionStatus: "active",
-            trialEndsAt: null,
-            isReadOnly: false,
-          }),
-        ),
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 500);
+        });
+        return HttpResponse.json({
+          subscriptionStatus: "active",
+          trialEndsAt: null,
+          isReadOnly: false,
+        });
+      }),
     );
 
     const { result } = renderHook(() => useAppAccess(), {
@@ -140,8 +138,9 @@ describe("useAppAccess", () => {
   it("fails open when billing status fetch fails", async () => {
     stubConfig(true);
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/billing/status`, (_req, res, ctx) =>
-        res(ctx.status(500)),
+      http.get(
+        `${ENV_WEB.API_BASEURL}/billing/status`,
+        () => new HttpResponse(null, { status: 500 }),
       ),
     );
 
@@ -210,9 +209,9 @@ describe("useAppAccess", () => {
     stubConfig(true);
     let billingHits = 0;
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/billing/status`, (_req, res, ctx) => {
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () => {
         billingHits += 1;
-        return res(ctx.status(401));
+        return new HttpResponse(null, { status: 401 });
       }),
     );
 
@@ -252,20 +251,20 @@ describe("useAppAccess", () => {
 
   it("fails open while config is pending", () => {
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-        res(
-          ctx.delay(500),
-          ctx.json({
-            version: "dev",
-            google: { isConfigured: false },
-            billing: {
-              isConfigured: true,
-              enforcement: true,
-              trialLengthDays: 7,
-            },
-          }),
-        ),
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/config`, async () => {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 500);
+        });
+        return HttpResponse.json({
+          version: "dev",
+          google: { isConfigured: false },
+          billing: {
+            isConfigured: true,
+            enforcement: true,
+            trialLengthDays: 7,
+          },
+        });
+      }),
     );
 
     const { result } = renderHook(() => useAppAccess(), {
@@ -286,9 +285,9 @@ describe("useAppAccess", () => {
     });
     let billingHits = 0;
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/billing/status`, (_req, res, ctx) => {
+      http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () => {
         billingHits += 1;
-        return res(ctx.status(401));
+        return new HttpResponse(null, { status: 401 });
       }),
     );
 
