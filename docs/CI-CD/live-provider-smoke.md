@@ -50,29 +50,40 @@ On each connected account, create a calendar named exactly `compass-smoke`
 and leave it writable. The suite refuses to run if that calendar is missing
 and never writes to any other calendar.
 
-## Minting SMOKE_MICROSOFT_REFRESH_TOKEN
+## Setting up Microsoft in one run
 
 There is no Microsoft-provided way to generate a long-lived refresh token
-from the admin center, so use the repo's own script. It runs the same
-authorization-code exchange the app uses, against a local redirect URI that
-is already registered on the Entra app:
+from the admin center, and hand-copying one between shells is how the
+Microsoft leg ended up storing a token that never refreshed. Use the repo's
+script instead; it does the whole setup and only writes secrets it has just
+proven to work:
 
 ```bash
 bun run microsoft:mint-token
 ```
 
-It reads `MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` from the
-environment or `compass.yaml`, prints a Microsoft sign-in URL, and waits on
-`http://localhost:3010/sync/microsoft` for the OAuth redirect. Open the URL,
-sign in with the dedicated smoke-test Microsoft account (not a real user's),
-and the script prints the refresh token and granted scopes. The script never
-sees the account password, only the OAuth redirect.
+What it does, in order:
 
-Paste the printed value into the Environment:
+1. Resolves the target repo (`gh repo view`, or `--repo owner/name`) and
+   Environment (`provider-smoke`, or `--env`), and prints both.
+2. Takes the client id from `MICROSOFT_CLIENT_ID` or the Environment's
+   `MICROSOFT_CLIENT_ID` variable, and the client secret from
+   `MICROSOFT_CLIENT_SECRET` or a hidden terminal prompt.
+3. Opens Microsoft sign-in on the registered local redirect
+   `http://localhost:3010/sync/microsoft`. Sign in with the dedicated
+   smoke-test Microsoft account, not a real user's. The script never sees the
+   password, only the OAuth redirect.
+4. Exchanges the code, then refreshes the new token once, which is the first
+   call the nightly job makes. A token that fails here never gets stored.
+5. Finds a writable `compass-smoke` calendar on the account, creating it if
+   it is missing.
+6. Writes `MICROSOFT_CLIENT_ID` (variable), `MICROSOFT_CLIENT_SECRET` and
+   `SMOKE_MICROSOFT_REFRESH_TOKEN` (secrets) to the Environment with `gh`.
+   The token is never printed.
 
-```bash
-gh secret set SMOKE_MICROSOFT_REFRESH_TOKEN --env provider-smoke --body "<token>"
-```
+Pass `--print-only` to stop after step 5 and print the token instead of
+writing anything, for example when the smoke job runs somewhere other than
+GitHub Actions.
 
 Refresh tokens for this app are long-lived but not permanent; re-run the
 script if the smoke job starts reporting `authorizationRevoked` for
