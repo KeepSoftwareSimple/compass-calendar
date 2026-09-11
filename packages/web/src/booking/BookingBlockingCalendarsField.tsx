@@ -5,6 +5,7 @@ import { BookingCheckboxRow } from "@web/booking/BookingCheckboxRow";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import {
   accountKey,
+  accountLabel,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
 
@@ -57,7 +58,7 @@ export function BookingBlockingCalendarsField({
               key={accountKey(group)}
             >
               {showAccountCaption ? (
-                <p className="text-text-muted text-xs">{group.accountEmail}</p>
+                <p className="text-text-muted text-xs">{accountLabel(group)}</p>
               ) : null}
               {group.calendars.map(renderBlockingCalendar)}
             </div>

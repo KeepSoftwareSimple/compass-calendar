@@ -4,7 +4,7 @@ import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
-import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
+import { applyHiddenEventStripWidth } from "@web/grid/grid.constants";
 import {
   getAllDayEventPosition,
   getTimedEventPosition,
@@ -12,6 +12,7 @@ import {
 import {
   applyTimedEventDisplayPosition,
   type TimedDeckLayout,
+  timedDeckBoxShadow,
 } from "@web/grid/layout/timed-deck.layout";
 import {
   type GridMeasurements,
@@ -82,9 +83,7 @@ export const DayAllDayCalendarEvent = ({
     measurements,
     visibleDates,
   });
-  const displayPosition = isHidden
-    ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH }
-    : position;
+  const displayPosition = applyHiddenEventStripWidth(position, isHidden);
 
   return (
     <AllDayEventCard
@@ -145,15 +144,7 @@ export const DayTimedCalendarEvent = ({
         : undefined,
     [event._id, hasEventIdentity, isReadOnly],
   );
-  const deckBoxShadow = (() => {
-    if (!isDeck) return undefined;
-    const ring = `0 0 0 0.75px var(--background)`;
-    const drop = isFocused
-      ? "0 6px 14px -3px rgba(0,0,0,0.55)"
-      : "0 3px 6px -2px rgba(0,0,0,0.4)";
-    const highlight = `inset 0 1px 0 rgba(255,255,255,${isFocused ? 0.1 : 0.07})`;
-    return `${ring}, ${drop}, ${highlight}`;
-  })();
+  const deckBoxShadow = isDeck ? timedDeckBoxShadow(isFocused) : undefined;
   const shouldFloatAboveDeck = isActiveDraft && !isDeck;
   const position = getDayTimedEventPosition({
     columnIndex,

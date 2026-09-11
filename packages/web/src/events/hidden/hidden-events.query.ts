@@ -10,6 +10,7 @@ import {
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import { EMPTY_HIDDEN_EVENT_IDS } from "@web/events/hidden/hidden-event-id";
 import { HiddenEventsApi } from "@web/events/hidden/hidden-events.api";
 import {
   readHiddenEventIds,
@@ -26,22 +27,8 @@ export const hiddenEventsQueryKeys = {
   source: (source: EventRepositorySource) => ["hidden-events", source] as const,
 };
 
-export const EMPTY_HIDDEN_EVENT_IDS: ReadonlySet<string> = Object.freeze(
-  new Set<string>(),
-);
-
-const hiddenEventIdSetCache = new WeakMap<
-  readonly string[],
-  ReadonlySet<string>
->();
-
 function selectHiddenEventIdSet(ids: readonly string[]): ReadonlySet<string> {
-  let cached = hiddenEventIdSetCache.get(ids);
-  if (!cached) {
-    cached = new Set(ids);
-    hiddenEventIdSetCache.set(ids, cached);
-  }
-  return cached;
+  return new Set(ids);
 }
 
 function withHiddenEventId(

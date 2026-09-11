@@ -31,15 +31,14 @@ import {
   useBookingStatusQuery,
 } from "@web/booking/booking.query";
 import { BOOKING_NAV_NEEDS_ATTENTION } from "@web/booking/booking-bookability.copy";
+import { AccountGroupedCalendarOptions } from "@web/calendars/AccountGroupedCalendarOptions";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
   accountKey,
-  accountLabel,
   calendarAccount,
   compareCalendars,
   connectionAccount,
   getWritableCalendars,
-  groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
 import {
   setDefaultCalendarId,
@@ -374,8 +373,6 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
 
   if (calendars.length === 0) return null;
 
-  const { groups, ungrouped } = groupCalendarsByAccount(calendars, connections);
-
   return (
     <div>
       <label
@@ -390,22 +387,11 @@ const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
         onChange={(e) => setDefaultCalendarId(e.target.value as CalendarId)}
         value={value}
       >
-        {groups
-          .filter((group) => group.calendars.length > 0)
-          .map((group) => (
-            <optgroup key={accountKey(group)} label={accountLabel(group)}>
-              {group.calendars.map((calendar) => (
-                <option key={calendar.id} value={calendar.id}>
-                  {calendar.name}
-                </option>
-              ))}
-            </optgroup>
-          ))}
-        {ungrouped.map((calendar) => (
-          <option key={calendar.id} value={calendar.id}>
-            {calendar.name}
-          </option>
-        ))}
+        <AccountGroupedCalendarOptions
+          calendars={calendars}
+          connections={connections}
+          optionLabel={(calendar) => calendar.name}
+        />
       </select>
     </div>
   );

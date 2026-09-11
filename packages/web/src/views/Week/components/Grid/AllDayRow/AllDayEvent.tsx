@@ -3,7 +3,7 @@ import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
-import { HIDDEN_EVENT_STRIP_WIDTH } from "@web/grid/grid.constants";
+import { applyHiddenEventStripWidth } from "@web/grid/grid.constants";
 import { getAllDayEventPosition } from "@web/grid/layout/event.position";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
@@ -45,9 +45,7 @@ const AllDayEventBase = (
     measurements,
     visibleDates,
   });
-  const displayPosition = isHidden
-    ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH }
-    : position;
+  const displayPosition = applyHiddenEventStripWidth(position, isHidden);
 
   return (
     <AllDayEventCard

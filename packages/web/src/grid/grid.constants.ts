@@ -38,6 +38,13 @@ export const TIMED_EVENT_MIN_WIDTH = 280;
 export const TIMED_EVENT_FAN_INDENT = 44;
 export const TIMED_EVENT_FAN_GUTTER = 120;
 export const HIDDEN_EVENT_STRIP_WIDTH = 8;
+
+export function applyHiddenEventStripWidth<T extends { width: number }>(
+  position: T,
+  isHidden: boolean,
+): T {
+  return isHidden ? { ...position, width: HIDDEN_EVENT_STRIP_WIDTH } : position;
+}
 export const GRID_PADDING_BOTTOM = 20;
 export const GRID_TIME_COLUMN_WIDTH = 50;
 export const GRID_MARGIN_LEFT = GRID_TIME_COLUMN_WIDTH;

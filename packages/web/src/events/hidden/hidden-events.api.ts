@@ -5,10 +5,13 @@ import {
 } from "@core/types/event-visibility.contracts";
 import { BaseApi } from "@web/api/base/base.api";
 
+const parseHiddenEventIds = (data: unknown): readonly string[] =>
+  HiddenEventIdsResponseSchema.parse(data).hiddenEventIds;
+
 const HiddenEventsApi = {
   list: async (): Promise<readonly string[]> => {
     const response = await BaseApi.get<unknown>("/user/hidden-events");
-    return HiddenEventIdsResponseSchema.parse(response.data).hiddenEventIds;
+    return parseHiddenEventIds(response.data);
   },
 
   set: async (input: SetEventHiddenInput): Promise<readonly string[]> => {
@@ -16,7 +19,7 @@ const HiddenEventsApi = {
       "/user/hidden-events",
       SetEventHiddenInputSchema.parse(input),
     );
-    return HiddenEventIdsResponseSchema.parse(response.data).hiddenEventIds;
+    return parseHiddenEventIds(response.data);
   },
 };
 
