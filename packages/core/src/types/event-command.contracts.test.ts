@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { type EventId } from "@core/types/domain-primitives";
 import {
   AvailabilityQuerySchema,
   CreateEventInputSchema,
@@ -18,20 +19,20 @@ const content = {
   title: "Standup",
   description: "",
   location: "",
-};
+} as const;
 const timedSchedule = {
   kind: "timed",
   start: "2026-07-14T09:00:00-06:00",
   end: "2026-07-14T10:00:00-06:00",
   timeZone: "America/Denver",
-};
+} as const;
 describe("Event Command Contracts", () => {
   describe("CreateEventInputSchema", () => {
     const base = () => ({
       calendarId: calendarId(),
       content,
       schedule: timedSchedule,
-      recurrence: { kind: "single" },
+      recurrence: { kind: "single" as const },
     });
 
     it("parses without an id", () => {
@@ -58,7 +59,7 @@ describe("Event Command Contracts", () => {
         ...base(),
         externalReference: {
           provider: "google",
-          eventId: "abc",
+          eventId: "abc" as EventId,
           recurringEventId: null,
         },
       };
@@ -76,7 +77,7 @@ describe("Event Command Contracts", () => {
       const legacy = base();
       const parsed = CreateEventInputSchema.parse(legacy);
 
-      expect(parsed).toStrictEqual(legacy);
+      expect<unknown>(parsed).toStrictEqual(legacy);
     });
 
     it("accepts content attendees alongside an invitation intent", () => {
@@ -145,8 +146,8 @@ describe("Event Command Contracts", () => {
     const base = (overrides: Record<string, unknown> = {}) => ({
       content,
       schedule: timedSchedule,
-      recurrence: { kind: "preserve" },
-      scope: "this",
+      recurrence: { kind: "preserve" as const },
+      scope: "this" as const,
       ...overrides,
     });
 
@@ -186,7 +187,7 @@ describe("Event Command Contracts", () => {
       const legacy = base();
       const parsed = ReplaceEventInputSchema.parse(legacy);
 
-      expect(parsed).toStrictEqual(legacy);
+      expect<unknown>(parsed).toStrictEqual(legacy);
     });
 
     it("accepts a replace with two attendees and invitation all", () => {
@@ -248,7 +249,7 @@ describe("Event Command Contracts", () => {
     });
 
     it("parses a legacy payload without an invitation to an identical output", () => {
-      const legacy = { scope: "all" };
+      const legacy = { scope: "all" as const };
 
       expect(DeleteEventInputSchema.parse(legacy)).toStrictEqual(legacy);
     });

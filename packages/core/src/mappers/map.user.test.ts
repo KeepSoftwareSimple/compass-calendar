@@ -1,3 +1,4 @@
+import { type TokenPayload } from "google-auth-library";
 import { BaseError } from "../errors/errors.base";
 import {
   mapUserToCompass,
@@ -36,7 +37,7 @@ describe("Map to Compass", () => {
   });
   it("throws error if missing email", () => {
     expect(() => {
-      mapUserToCompass({});
+      mapUserToCompass({} as TokenPayload);
     }).toThrow(BaseError);
   });
 

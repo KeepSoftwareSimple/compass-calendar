@@ -192,7 +192,9 @@ describe("toCompass", () => {
       expect(cEvent.recurrence?.eventId).not.toBe(
         gEventInstance.recurringEventId,
       );
-      expect(cEvent.gRecurringEventId).toBe(gEventInstance.recurringEventId);
+      expect(cEvent.gRecurringEventId).toBe(
+        gEventInstance.recurringEventId ?? undefined,
+      );
     });
   });
 });

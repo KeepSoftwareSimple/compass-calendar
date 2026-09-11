@@ -1,8 +1,10 @@
 import { faker } from "@faker-js/faker";
 import {
+  type ConnectionId,
   ConnectionIdSchema,
   IdempotencyKeySchema,
   PrincipalIdSchema,
+  type ProviderAccountId,
   ProviderAccountIdSchema,
   ProviderCalendarIdSchema,
   ProviderCalendarSourceIdSchema,
@@ -56,7 +58,7 @@ describe("Sync identity contracts", () => {
     });
 
     it("round-trips through JSON unchanged", () => {
-      const id = faker.database.mongodbObjectId();
+      const id = faker.database.mongodbObjectId() as ConnectionId;
       const parsed = schema.parse(id);
       expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(id);
     });
@@ -86,7 +88,7 @@ describe("Sync identity contracts", () => {
     it("round-trips through JSON unchanged", () => {
       const parsed = schema.parse("stable-opaque-id");
       expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(
-        "stable-opaque-id",
+        "stable-opaque-id" as ProviderAccountId,
       );
     });
   });

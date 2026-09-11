@@ -23,7 +23,7 @@ describe("POST /api/billing/payment-method/session limiter", () => {
     const layer = stack?.find(
       (entry) =>
         entry.route?.path === "/api/billing/payment-method/session" &&
-        entry.route.methods.post,
+        entry.route.methods["post"],
     );
     const handles = (layer?.route?.stack ?? []).map((item) => item.handle);
     expect(handles).toContain(sessionWriteLimiter);

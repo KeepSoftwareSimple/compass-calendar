@@ -24,7 +24,11 @@ describe("promise.middleware", () => {
       promise: mock() as Res_Promise["promise"],
     } as unknown as Res_Promise;
 
-    requestMiddleware()(mockReq as Request, mockRes, mockNext);
+    requestMiddleware()(
+      mockReq as Request,
+      mockRes,
+      mockNext as unknown as NextFunction,
+    );
   });
 
   it("sends an empty body for NO_CONTENT status-only payloads", async () => {

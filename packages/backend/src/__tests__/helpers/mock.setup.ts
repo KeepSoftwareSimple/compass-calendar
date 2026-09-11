@@ -62,7 +62,7 @@ export const revokeSessionMock = mock(async () => {});
 function createTestVerifySession(): ReturnType<
   typeof import("supertokens-node/recipe/session/framework/express").verifySession
 > {
-  return (_options?: VerifySessionOptions) => {
+  const factory = (_options?: VerifySessionOptions) => {
     return (req: SessionRequest, res: Response, next?: NextFunction) => {
       try {
         const cookies = (req.headers.cookie?.split(";") ?? [])?.reduce(
@@ -119,7 +119,7 @@ function createTestVerifySession(): ReturnType<
               antiCsrfToken: null,
             };
           },
-        } as SessionContainerInterface;
+        } as unknown as SessionContainerInterface;
 
         return next?.();
       } catch (error) {
@@ -131,6 +131,9 @@ function createTestVerifySession(): ReturnType<
       }
     };
   };
+  return factory as unknown as ReturnType<
+    typeof import("supertokens-node/recipe/session/framework/express").verifySession
+  >;
 }
 
 const testLoggers = new Map<string, Record<string, ReturnType<typeof mock>>>();
@@ -147,7 +150,7 @@ function registerTestLoggerFactory(): void {
   const factory: LoggerFactoryFn = (name?: string) => {
     const key = name ?? "";
     const existing = testLoggers.get(key);
-    if (existing) return existing as ReturnType<LoggerFactoryFn>;
+    if (existing) return existing as unknown as ReturnType<LoggerFactoryFn>;
 
     const logger = {
       debug: mock(),
@@ -157,7 +160,7 @@ function registerTestLoggerFactory(): void {
       verbose: mock(),
     };
     testLoggers.set(key, logger);
-    return logger as ReturnType<LoggerFactoryFn>;
+    return logger as unknown as ReturnType<LoggerFactoryFn>;
   };
 
   registerLoggerFactory(factory);
@@ -241,7 +244,7 @@ export function getTestLoggerInfoCalls(
   namespace = "",
 ): Array<[string, ...unknown[]]> {
   const logger = testLoggers.get(namespace);
-  return (logger?.info.mock?.calls ?? []) as Array<[string, ...unknown[]]>;
+  return (logger?.["info"]?.mock.calls ?? []) as Array<[string, ...unknown[]]>;
 }
 
 export function setupBackendTestSeams(): void {
@@ -257,7 +260,11 @@ export function setupBackendTestSeams(): void {
 
   registerUserMetadataStore(metadata);
   registerUserIdMappingStore(mappings);
-  registerTestVerifySession(createTestVerifySession());
+  registerTestVerifySession(
+    createTestVerifySession() as unknown as Parameters<
+      typeof registerTestVerifySession
+    >[0],
+  );
 }
 
 function applyPreloadSpies(): void {

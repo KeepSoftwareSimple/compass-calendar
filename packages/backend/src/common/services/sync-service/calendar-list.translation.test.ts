@@ -5,6 +5,12 @@ import {
   ProviderCalendarSchema,
   type ProviderConnection,
 } from "@core/types/sync/connection.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { syncCalendarsToBrowser } from "./calendar-list.translation";
 import { describe, expect, it } from "bun:test";
 
@@ -15,9 +21,9 @@ const providerCalendar = (
 ): ProviderCalendar =>
   ProviderCalendarSchema.parse({
     id: objectId(),
-    tenantId: objectId(),
-    principalId: objectId(),
-    connectionId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    connectionId: objectId() as ConnectionId,
     providerCalendarId: "primary@group.calendar.google.com",
     displayName: "Work",
     color: "#33b679",
@@ -61,7 +67,7 @@ describe("syncCalendarToBrowser", () => {
     const calendar = providerCalendar();
     // Option 2: calendars are sync-owned, so no id bridge — the browser uses
     // sync's id verbatim.
-    expect(syncCalendarToBrowser(calendar).id).toBe(calendar.id);
+    expect<unknown>(syncCalendarToBrowser(calendar).id).toBe(calendar.id);
   });
 
   it("maps display name, primary, and active through", () => {
@@ -112,7 +118,11 @@ describe("syncCalendarToBrowser", () => {
 
   it("carries the owning account's email when the caller supplies one", () => {
     const result = syncCalendarToBrowser(providerCalendar(), {
-      account: { email: "bob@acme.co" },
+      account: {
+        providerAccountId: "bob-subject" as ProviderAccountId,
+        email: "bob@acme.co",
+        displayName: null,
+      },
     });
     expect(result.accountEmail).toBe("bob@acme.co");
   });

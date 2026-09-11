@@ -137,7 +137,9 @@ describe("UserController", () => {
         Status.NOT_FOUND,
       );
 
-      expect(response.error).toEqual(UserError.UserNotFound);
+      expect(
+        (response.body as { error?: typeof UserError.UserNotFound }).error,
+      ).toEqual(UserError.UserNotFound);
     });
   });
 });

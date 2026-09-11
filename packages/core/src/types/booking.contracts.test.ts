@@ -28,7 +28,7 @@ import {
   toPublicBookingPage,
   WeeklyAvailabilityIntervalSchema,
 } from "@core/types/booking.contracts";
-import { TimeZoneSchema } from "@core/types/domain-primitives";
+import { type TimeZone, TimeZoneSchema } from "@core/types/domain-primitives";
 import { describe, expect, it } from "bun:test";
 
 const calendarId = () => faker.database.mongodbObjectId();
@@ -220,7 +220,7 @@ describe("PublicBookingPageSchema", () => {
     expect(pub).toEqual({
       hostDisplayName: "Tyler Dane",
       durationMinutes: 30,
-      timeZone: "America/Denver",
+      timeZone: "America/Denver" as TimeZone,
       enabled: true,
       maxHorizonDays: 60,
       createsGoogleMeet: true,
@@ -295,7 +295,7 @@ describe("buildDefaultAdminPutInput", () => {
       durationMinutes: 30,
       destinationCalendarId: BOOKING_PLACEHOLDER_CALENDAR_ID,
       blockingCalendarIds: [BOOKING_PLACEHOLDER_CALENDAR_ID],
-      timeZone: "America/Denver",
+      timeZone: "America/Denver" as TimeZone,
       weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
       minNoticeHours: 4,
       maxHorizonDays: BOOKING_MAX_HORIZON_DAYS,

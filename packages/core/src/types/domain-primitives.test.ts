@@ -1,12 +1,20 @@
 import { faker } from "@faker-js/faker";
 import {
+  type CalendarId,
   CalendarIdSchema,
   DateOnlySchema,
   DateTimeSchema,
+  type EventId,
   EventIdSchema,
   RRuleSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import { describe, expect, expectTypeOf, it } from "bun:test";
 
 describe("Domain Primitives", () => {
   describe("EventIdSchema", () => {
@@ -112,4 +120,11 @@ describe("Domain Primitives", () => {
       expect(RRuleSchema.safeParse(["RRULE:FREQ=WEEKLY"]).success).toBe(true);
     });
   });
+});
+
+it("keeps production identity brands distinct in the node test project", () => {
+  expectTypeOf<string>().not.toMatchTypeOf<EventId>();
+  expectTypeOf<EventId>().not.toMatchTypeOf<CalendarId>();
+  expectTypeOf<ConnectionId>().not.toMatchTypeOf<PrincipalId>();
+  expectTypeOf<PrincipalId>().not.toMatchTypeOf<TenantId>();
 });

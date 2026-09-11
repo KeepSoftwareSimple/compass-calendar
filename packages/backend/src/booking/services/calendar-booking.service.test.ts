@@ -1,4 +1,14 @@
 import { faker } from "@faker-js/faker";
+import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
+  type CommandSubmitRequest,
+  type SyncCommandInput,
+} from "@core/types/sync/command.contracts";
 import { BOOKING_CONFIRMATION_MAX_AGE_MS } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
@@ -15,6 +25,25 @@ import {
 
 const userId = () => faker.database.mongodbObjectId();
 const calendarId = () => faker.database.mongodbObjectId();
+
+const submitRequestFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): CommandSubmitRequest => {
+  const request = submitCommand.mock.calls[0]?.[1];
+  if (!request) {
+    throw new Error("Expected submitCommand to have been called");
+  }
+  return request as CommandSubmitRequest;
+};
+
+const createInputFrom = (
+  request: CommandSubmitRequest,
+): Extract<SyncCommandInput, { kind: "create" }> => {
+  if (request.input.kind !== "create") {
+    throw new Error("Expected create command input");
+  }
+  return request.input;
+};
 
 const busyResponse = {
   intervals: [],
@@ -52,9 +81,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(result.bookable).toBe(true);
@@ -69,7 +98,7 @@ describe("CalendarBookingService", () => {
 
   it("allowlists the Compass-local calendar as unbacked busy", async () => {
     mock.restore();
-    const localId = calendarId();
+    const localId = calendarId() as CalendarId;
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue({
       _id: { toHexString: () => localId },
     } as never);
@@ -83,9 +112,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.getAvailability(userId(), {
-      calendarIds: [localId, calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [localId, calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(queryBusyAvailability).toHaveBeenCalledWith(
@@ -94,9 +123,9 @@ describe("CalendarBookingService", () => {
         unbackedCalendarIds: [localId],
       }),
     );
-    expect(queryBusyAvailability.mock.calls[0]?.[1]).not.toHaveProperty(
-      "excludeEventIds",
-    );
+    expect(
+      (queryBusyAvailability.mock.calls as unknown[][])[0]?.[1],
+    ).not.toHaveProperty("excludeEventIds");
   });
 
   it("forwards excludeEventIds on the busy query when provided", async () => {
@@ -108,12 +137,12 @@ describe("CalendarBookingService", () => {
       queryBusyAvailability,
       submitCommand: mock(async () => ({ ok: true as const, value: {} })),
     } as unknown as SyncServiceClient);
-    const excluded = [faker.database.mongodbObjectId()];
+    const excluded = [faker.database.mongodbObjectId()] as EventId[];
 
     await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
       excludeEventIds: excluded,
     });
 
@@ -136,9 +165,9 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
-      calendarIds: [calendarId()],
-      start: "2026-09-01T12:00:00.000Z",
-      end: "2026-09-02T12:00:00.000Z",
+      calendarIds: [calendarId() as CalendarId],
+      start: "2026-09-01T12:00:00.000Z" as DateTime,
+      end: "2026-09-02T12:00:00.000Z" as DateTime,
     });
 
     expect(result.bookable).toBe(false);
@@ -161,34 +190,35 @@ describe("CalendarBookingService", () => {
       "Cancel: https://compasscalendar.com/cancel/x\n\nReschedule: https://compasscalendar.com/reschedule/x";
 
     await service.createBookingEvent(userId(), {
-      calendarId: calendarId(),
+      calendarId: calendarId() as CalendarId,
       title: "Ada and Tyler",
       description,
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
       createConference: true,
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.content.description).toBe(description);
-    expect(request.input).toMatchObject({
+    const request = submitRequestFrom(submitCommand);
+    const input = createInputFrom(request);
+    expect(input.content.description).toBe(description);
+    expect(input).toMatchObject({
       kind: "create",
       invitation: "all",
       attendeesEdit: "replace",
       createConference: true,
       guestsCanInviteOthers: false,
     });
-    expect(request.input.content.attendees).toEqual([
+    expect(input.content.attendees).toEqual([
       {
         email: "ada@example.com",
         displayName: "Ada Lovelace",
         responseStatus: "needsAction",
       },
     ]);
-    expect(request.input.content.conference).toBeNull();
+    expect(input.content.conference).toBeNull();
   });
 
   it("omits createConference when the destination cannot mint a link", async () => {
@@ -205,20 +235,21 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.createBookingEvent(userId(), {
-      calendarId: calendarId(),
+      calendarId: calendarId() as CalendarId,
       title: "Ada and Tyler",
       description: "Zoom: https://example.com/meet",
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
       createConference: false,
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
+    const request = submitRequestFrom(submitCommand);
+    const input = createInputFrom(request);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
   });
 
   it("rejects empty guest email before submit", async () => {
@@ -236,12 +267,12 @@ describe("CalendarBookingService", () => {
 
     await expect(
       service.createBookingEvent(userId(), {
-        calendarId: calendarId(),
+        calendarId: calendarId() as CalendarId,
         title: "Ada and Tyler",
         description: "",
-        start: "2026-09-01T15:00:00.000Z",
-        end: "2026-09-01T15:30:00.000Z",
-        timeZone: "America/Denver",
+        start: "2026-09-01T15:00:00.000Z" as DateTime,
+        end: "2026-09-01T15:30:00.000Z" as DateTime,
+        timeZone: "America/Denver" as TimeZone,
         guest: { email: "   ", displayName: null },
         createConference: true,
       }),
@@ -250,7 +281,7 @@ describe("CalendarBookingService", () => {
   });
 
   it("submits a booking update with the new title", async () => {
-    const eventId = faker.database.mongodbObjectId();
+    const eventId = faker.database.mongodbObjectId() as EventId;
     const submitCommand = mock(async () => ({
       ok: true as const,
       value: { commandId: faker.database.mongodbObjectId() },
@@ -264,17 +295,17 @@ describe("CalendarBookingService", () => {
     } as unknown as SyncServiceClient);
 
     await service.updateBookingEvent(userId(), {
-      eventId,
+      eventId: eventId as EventId,
       title: "Grace and Tyler",
       description: "bring tea",
-      start: "2026-09-01T15:00:00.000Z",
-      end: "2026-09-01T15:30:00.000Z",
-      timeZone: "America/Denver",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Grace Hopper" },
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const request = submitCommand.mock.calls[0]?.[1];
+    const request = submitRequestFrom(submitCommand);
     expect(request).toMatchObject({
       eventId,
       expectedVersion: null,
@@ -291,21 +322,25 @@ describe("CalendarBookingService", () => {
         },
         schedule: {
           kind: "timed",
-          start: "2026-09-01T15:00:00.000Z",
-          end: "2026-09-01T15:30:00.000Z",
-          timeZone: "America/Denver",
+          start: "2026-09-01T15:00:00.000Z" as DateTime,
+          end: "2026-09-01T15:30:00.000Z" as DateTime,
+          timeZone: "America/Denver" as TimeZone,
         },
       },
     });
     expect(request.idempotencyKey.startsWith(`update:${eventId}:`)).toBe(true);
     expect(request.idempotencyKey).toContain("2026-09-01T15:00:00.000Z");
     expect(request.input).not.toHaveProperty("createConference");
-    expect(request.input.content.attendees).toEqual([]);
-    expect(request.input.content.conference).toBeNull();
+    if (request.input.kind === "update") {
+      expect(request.input.content.attendees).toEqual([]);
+      expect(request.input.content.conference).toBeNull();
+    } else {
+      throw new Error("Expected update command input");
+    }
   });
 
   it("submits delete with invitation all", async () => {
-    const eventId = faker.database.mongodbObjectId();
+    const eventId = faker.database.mongodbObjectId() as EventId;
     const submitCommand = mock(async () => ({
       ok: true as const,
       value: { commandId: faker.database.mongodbObjectId() },
@@ -318,7 +353,7 @@ describe("CalendarBookingService", () => {
       submitCommand,
     } as unknown as SyncServiceClient);
 
-    await service.deleteBookingEvent(userId(), { eventId });
+    await service.deleteBookingEvent(userId(), { eventId: eventId as EventId });
 
     expect(submitCommand).toHaveBeenCalledWith(
       expect.any(Object),

@@ -1,12 +1,13 @@
 import { faker } from "@faker-js/faker";
+import { type CalendarId, type EventId } from "@core/types/domain-primitives";
 import { syncInvalidationToServerMessages } from "@backend/servers/sse/sync-invalidation.to-server-message";
 
 const objectId = () => faker.database.mongodbObjectId();
 
 describe("syncInvalidationToServerMessages", () => {
   it("maps an event invalidation to eventsChanged", () => {
-    const eventId = objectId();
-    const calendarId = objectId();
+    const eventId = objectId() as EventId;
+    const calendarId = objectId() as CalendarId;
     expect(
       syncInvalidationToServerMessages({
         kind: "event",
@@ -24,7 +25,7 @@ describe("syncInvalidationToServerMessages", () => {
   });
 
   it("maps a calendar invalidation to calendarsChanged and eventsChanged", () => {
-    const calendarId = objectId();
+    const calendarId = objectId() as CalendarId;
     expect(
       syncInvalidationToServerMessages({
         kind: "calendar",
@@ -57,7 +58,7 @@ describe("syncInvalidationToServerMessages", () => {
       { type: "calendarsChanged", calendarIds: [] },
       {
         type: "eventsChanged",
-        calendarId: "000000000000000000000000",
+        calendarId: "000000000000000000000000" as CalendarId,
         eventIds: [],
         reason: "reconciled",
       },
