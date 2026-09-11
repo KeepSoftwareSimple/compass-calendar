@@ -2,8 +2,10 @@ name: Error autofix
 
 # Reacts to GitHub issues that PostHog's error-tracking integration files
 # automatically (author posthog[bot]), plus an hourly sweep that feeds
-# production recurrences back into this same agent. See
-# .github/prompts/error-autofix.md and docs/CI-CD/error-autofix-routine.md.
+# production recurrences back into this same agent, and an hourly watchdog
+# that escalates any autofix PR stuck without automerge-candidate or
+# autofix:needs-human. See .github/prompts/error-autofix.md and
+# docs/CI-CD/error-autofix-routine.md.
 #
 # Kill switch: repo variable ERROR_AUTOFIX_ENABLED (default false/unset).
 # Mode: repo variable AUTOFIX_MODE — triage | pr | merge.
@@ -60,6 +62,34 @@ jobs:
           DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
           POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
         run: .github/scripts/autofix-sweep.sh
+
+  pr-watchdog:
+    # Catches an autofix PR that never got `automerge-candidate` (or a human
+    # `autofix:needs-human` escalation) from autofix-merge-guard.sh, which
+    # only runs once, reactively, right after the triggering workflow run.
+    # See docs/CI-CD/error-autofix-routine.md#pr-watchdog (PR #3655, issue
+    # #2901).
+    if: >-
+      vars.ERROR_AUTOFIX_ENABLED == 'true' &&
+      github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+    concurrency:
+      group: error-autofix-pr-watchdog
+      cancel-in-progress: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Watch for autofix PRs stuck without a terminal label
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          AUTOFIX_MODE: ${{ vars.AUTOFIX_MODE }}
+        run: .github/scripts/autofix-pr-watchdog.sh
 
   autofix:
     # workflow_dispatch skips the posthog[bot] author check: dispatching
