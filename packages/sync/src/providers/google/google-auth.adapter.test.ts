@@ -143,6 +143,20 @@ describe("GoogleAuthAdapter", () => {
       expect(client.authUrlOptions[0].access_type).toBe("offline");
     });
 
+    it("passes login_hint on reconnect so the same account is pre-selected", () => {
+      const client = new FakeGoogleClient();
+      const { adapter } = adapterWith(client);
+
+      adapter.buildAuthorizationUrl({
+        state: "opaque-state",
+        redirectUri: "https://staging.example.com/sync/google",
+        loginHint: "reconnect@example.com",
+      });
+
+      expect(client.authUrlOptions[0].login_hint).toBe("reconnect@example.com");
+      expect(client.authUrlOptions[0].prompt).toBe("consent");
+    });
+
     it("appends optional feature scopes after the base scopes", () => {
       const client = new FakeGoogleClient();
       const { adapter } = adapterWith(client);

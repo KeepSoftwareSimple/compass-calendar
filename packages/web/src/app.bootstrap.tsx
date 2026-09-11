@@ -4,9 +4,8 @@ import "react-toastify/dist/ReactToastify.css";
 import "./common/styles/toastify-theme.css";
 import { sessionInit } from "@web/auth/compass/session/SessionProvider";
 import {
+  applyConnectRedirect,
   readConnectStatus,
-  refreshUserMetadataAfterConnect,
-  showConnectStatusToast,
 } from "@web/auth/providers/connect-status.util";
 import { configureGoogleRevocationApiHandler } from "@web/auth/providers/revocation-api.config";
 import {
@@ -46,7 +45,6 @@ export async function bootstrapApp(): Promise<void> {
     showDbInitErrorToast(dbInitError);
   }
   if (connectStatus) {
-    showConnectStatusToast(connectStatus);
-    refreshUserMetadataAfterConnect(connectStatus.status);
+    void applyConnectRedirect(connectStatus);
   }
 }

@@ -27,8 +27,9 @@ export interface GetWritableCalendarsOptions {
    */
   hasConnectedAccount?: boolean;
   /**
-   * Account emails that currently need Google reconnect. Their calendars stay
-   * visible on the grid as read-only but must not be offered as create targets.
+   * Account keys (`provider:email`) that currently need reconnect. Their
+   * calendars stay visible on the grid as read-only but must not be offered
+   * as create targets. Email-only values still match for older callers.
    * Defaults to the session reconnect-required set.
    */
   reconnectRequiredEmails?: ReadonlySet<string> | readonly string[];
@@ -48,9 +49,15 @@ const calendarNeedsReconnect = (
   reconnectRequiredEmails: ReadonlySet<string> | null,
 ): boolean => {
   if (!calendar.accountEmail) return false;
+  const email = calendar.accountEmail.toLowerCase();
+  const provider = calendarProviderKind(calendar);
   if (reconnectRequiredEmails) {
+    const keyed = provider
+      ? reconnectRequiredEmails.has(`${provider}:${email}`)
+      : false;
     return (
-      reconnectRequiredEmails.has(calendar.accountEmail.toLowerCase()) ||
+      keyed ||
+      reconnectRequiredEmails.has(email) ||
       isCalendarReconnectRequired(calendar)
     );
   }

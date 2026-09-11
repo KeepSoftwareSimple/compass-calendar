@@ -24,6 +24,7 @@ export interface GoogleOAuthClient {
     scope: string[];
     state?: string;
     include_granted_scopes?: boolean;
+    login_hint?: string;
   }): string;
   getToken(code: string): Promise<{ tokens: Credentials }>;
   verifyIdToken(options: { idToken: string; audience: string }): Promise<{
@@ -65,6 +66,7 @@ export class GoogleAuthAdapter implements ProviderAuthAdapter {
     state: string;
     redirectUri: string;
     selectAccount?: boolean;
+    loginHint?: string;
     extraScopes?: readonly string[];
   }): string {
     return this.#makeClient(input.redirectUri).generateAuthUrl({
@@ -80,6 +82,7 @@ export class GoogleAuthAdapter implements ProviderAuthAdapter {
       // the caller asked for them, so a plain connect URL stays byte-identical.
       scope: [...GOOGLE_SCOPES, ...(input.extraScopes ?? [])],
       state: input.state,
+      ...(input.loginHint ? { login_hint: input.loginHint } : {}),
     });
   }
 

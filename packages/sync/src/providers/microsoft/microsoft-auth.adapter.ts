@@ -92,6 +92,7 @@ export class MicrosoftAuthAdapter implements ProviderAuthAdapter {
     state: string;
     redirectUri: string;
     selectAccount?: boolean;
+    loginHint?: string;
     extraScopes?: readonly string[];
   }): string {
     const url = new URL(MICROSOFT_AUTHORIZE_URL);
@@ -106,6 +107,9 @@ export class MicrosoftAuthAdapter implements ProviderAuthAdapter {
     url.searchParams.set("redirect_uri", input.redirectUri);
     if (input.selectAccount) {
       url.searchParams.set("prompt", "select_account");
+    }
+    if (input.loginHint) {
+      url.searchParams.set("login_hint", input.loginHint);
     }
     return url.toString();
   }

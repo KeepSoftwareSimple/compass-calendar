@@ -3,6 +3,7 @@ import * as userMetadataUtil from "@web/auth/compass/user/util/user-metadata.uti
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
+  applyConnectRedirect,
   readConnectStatus,
   refreshUserMetadataAfterConnect,
   showConnectStatusToast,
@@ -68,7 +69,7 @@ describe("connect-status.util", () => {
 
     // These two are redirected by the sync callback. Dropping them here left
     // the user on the calendar after a failed connect with no toast at all.
-    it("reads the sync callback's stateMismatch and consentRequired", () => {
+    it("reads the sync callback's stateMismatch, consentRequired, and accountMismatch", () => {
       expect(
         readConnectStatus("?provider=google&status=stateMismatch"),
       ).toEqual({
@@ -81,33 +82,33 @@ describe("connect-status.util", () => {
         provider: "microsoft",
         status: "consentRequired",
       });
+      expect(
+        readConnectStatus("?provider=microsoft&status=accountMismatch"),
+      ).toEqual({
+        provider: "microsoft",
+        status: "accountMismatch",
+      });
     });
   });
 
   describe("showConnectStatusToast", () => {
-    it("keeps the Google connected toast unchanged", () => {
+    it("does not toast success after a connected redirect", () => {
       showConnectStatusToast({ provider: "google", status: "connected" });
       runToastAfterPaint();
-      expect(mocks.success).toHaveBeenCalledWith(
-        "Google Calendar connected.",
-        expect.objectContaining({ toastId: "google-connect-success" }),
-      );
+      expect(mocks.success).not.toHaveBeenCalled();
     });
 
-    it("shows a Microsoft connected toast", () => {
+    it("does not toast success for a Microsoft connected redirect", () => {
       showConnectStatusToast({ provider: "microsoft", status: "connected" });
       runToastAfterPaint();
-      expect(mocks.success).toHaveBeenCalledWith(
-        "Microsoft connected.",
-        expect.objectContaining({ toastId: "connect-success" }),
-      );
+      expect(mocks.success).not.toHaveBeenCalled();
     });
 
     it("explains an expired connection link", () => {
       showConnectStatusToast({ provider: "google", status: "stateMismatch" });
       runToastAfterPaint();
       expect(mocks.error).toHaveBeenCalledWith(
-        "That connection link expired. Please try connecting again from Settings.",
+        "That connection link expired. Please try connecting again.",
         expect.objectContaining({
           autoClose: false,
           toastId: "connect-state-mismatch",
@@ -128,6 +129,48 @@ describe("connect-status.util", () => {
           toastId: "connect-consent-required",
         }),
       );
+    });
+
+    it("explains a reconnect that consented as a different account", () => {
+      showConnectStatusToast({
+        provider: "microsoft",
+        status: "accountMismatch",
+      });
+      runToastAfterPaint();
+      expect(mocks.error).toHaveBeenCalledWith(
+        "That wasn't the same account. Reconnect again and pick the account Compass already has.",
+        expect.objectContaining({
+          autoClose: false,
+          toastId: "connect-account-mismatch",
+        }),
+      );
+    });
+
+    it("explains a generic connect error without sending the user to Settings", () => {
+      showConnectStatusToast({ provider: "microsoft", status: "error" });
+      runToastAfterPaint();
+      expect(mocks.error).toHaveBeenCalledWith(
+        "We couldn't connect your Microsoft account. Please try again.",
+        expect.objectContaining({ autoClose: false }),
+      );
+    });
+  });
+
+  describe("applyConnectRedirect", () => {
+    it("force-refreshes metadata for every OAuth return", async () => {
+      const refreshSpy = spyOn(
+        userMetadataUtil,
+        "refreshUserMetadata",
+      ).mockResolvedValue(undefined);
+
+      await applyConnectRedirect({ provider: "google", status: "connected" });
+      expect(refreshSpy).toHaveBeenCalledWith({ force: true });
+
+      refreshSpy.mockClear();
+      await applyConnectRedirect({ provider: "microsoft", status: "error" });
+      expect(refreshSpy).toHaveBeenCalledWith({ force: true });
+
+      refreshSpy.mockRestore();
     });
   });
 

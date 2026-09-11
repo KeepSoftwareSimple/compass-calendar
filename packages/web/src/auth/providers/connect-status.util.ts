@@ -10,11 +10,18 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
+import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
+import { clearAccountReconnectRequired } from "@web/auth/providers/reconnect.state";
+import {
+  selectSyncConnections,
+  useUserMetadataStore,
+} from "@web/auth/state/user-metadata.store";
 import {
   GOOGLE_CONNECT_FAILED_TOAST_ID,
   getToastDefaultOptions,
 } from "@web/common/constants/toast.constants";
+import { dismissGoogleReconnectToastIfRecovered } from "@web/common/utils/toast/google-reconnect.toast";
 import { getToast } from "@web/common/utils/toast/toast.port";
 
 /**
@@ -29,6 +36,7 @@ export type ConnectStatus =
   | "missingScopes"
   | "stateMismatch"
   | "consentRequired"
+  | "accountMismatch"
   | "error";
 
 export type ConnectRedirect = {
@@ -42,14 +50,9 @@ const STATUS_VALUES: readonly ConnectStatus[] = [
   "missingScopes",
   "stateMismatch",
   "consentRequired",
+  "accountMismatch",
   "error",
 ];
-
-const SUCCESS_TOAST_ID: Record<ProviderKind, string> = {
-  google: "google-connect-success",
-  microsoft: "connect-success",
-  apple: "connect-success",
-};
 
 const DECLINED_TOAST_ID: Record<ProviderKind, string> = {
   google: "google-connect-declined",
@@ -59,6 +62,7 @@ const DECLINED_TOAST_ID: Record<ProviderKind, string> = {
 
 const STATE_MISMATCH_TOAST_ID = "connect-state-mismatch";
 const CONSENT_REQUIRED_TOAST_ID = "connect-consent-required";
+const ACCOUNT_MISMATCH_TOAST_ID = "connect-account-mismatch";
 
 const FAILURE_REASON: Record<
   Exclude<ConnectStatus, "connected">,
@@ -68,6 +72,7 @@ const FAILURE_REASON: Record<
   missingScopes: "connect_missing_scopes",
   stateMismatch: "connect_state_mismatch",
   consentRequired: "connect_consent_required",
+  accountMismatch: "connect_account_mismatch",
   error: "connect_error",
 };
 
@@ -75,12 +80,6 @@ const MISSING_SCOPES_TOAST_ID: Record<ProviderKind, string> = {
   google: "google-connect-missing-scopes",
   microsoft: "connect-missing-scopes",
   apple: "connect-missing-scopes",
-};
-
-const CONNECTED_COPY: Record<ProviderKind, string> = {
-  google: "Google Calendar connected.",
-  microsoft: "Microsoft connected.",
-  apple: "Apple connected.",
 };
 
 export function readConnectStatus(
@@ -103,18 +102,51 @@ export function showConnectStatusToast(redirect: ConnectRedirect): void {
   });
 }
 
-export function refreshUserMetadataAfterConnect(status: ConnectStatus): void {
-  if (status !== "connected") return;
+/**
+ * Refresh metadata for every OAuth return, then toast from confirmed state.
+ * A `connected` redirect never claims success while that provider still has a
+ * reconnect-required row, and does not toast when import/health already
+ * covers it.
+ */
+export async function applyConnectRedirect(
+  redirect: ConnectRedirect,
+): Promise<void> {
+  await refreshUserMetadata({ force: true });
+  if (redirect.status === "connected") {
+    clearReconnectOverrideForProvider(redirect.provider);
+    dismissGoogleReconnectToastIfRecovered(
+      selectSyncConnections(useUserMetadataStore.getState()),
+    );
+    track("calendar_connected", {
+      source: "connect_redirect",
+      provider: redirect.provider,
+    });
+    trackSignupStep("calendar_connected", { method: redirect.provider });
+    return;
+  }
+  showConnectStatusToast(redirect);
+}
+
+export function refreshUserMetadataAfterConnect(_status?: ConnectStatus): void {
   void refreshUserMetadata({ force: true });
 }
 
-function connectedCopy(provider: ProviderKind): string {
-  return CONNECTED_COPY[provider];
+function clearReconnectOverrideForProvider(provider: ProviderKind): void {
+  const connections = selectSyncConnections(useUserMetadataStore.getState());
+  for (const connection of connections) {
+    if (connectionProviderKind(connection) !== provider) continue;
+    if (connection.connectionState === "RECONNECT_REQUIRED") continue;
+    clearAccountReconnectRequired({
+      connectionId: connection.id,
+      accountEmail: connection.accountEmail,
+      provider: connectionProviderKind(connection),
+    });
+  }
 }
 
 function errorCopy(provider: ProviderKind): string {
   const name = providerDisplayName(provider);
-  return `We couldn't connect your ${name} account. Please try again from Settings.`;
+  return `We couldn't connect your ${name} account. Please try again.`;
 }
 
 function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
@@ -127,12 +159,6 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
   }
   switch (status) {
     case "connected":
-      track("calendar_connected", { source: "connect_redirect", provider });
-      trackSignupStep("calendar_connected", { method: provider });
-      toast.success(connectedCopy(provider), {
-        ...getToastDefaultOptions(),
-        toastId: SUCCESS_TOAST_ID[provider],
-      });
       return;
     case "declined":
       toast.info(
@@ -142,7 +168,7 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
       return;
     case "missingScopes":
       toast.error(
-        "Compass needs calendar permission to sync. Reconnect from Settings and leave the calendar box checked.",
+        "Compass needs calendar permission to sync. Reconnect and leave the calendar box checked.",
         {
           ...getToastDefaultOptions(),
           autoClose: false,
@@ -152,7 +178,7 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
       return;
     case "stateMismatch":
       toast.error(
-        "That connection link expired. Please try connecting again from Settings.",
+        "That connection link expired. Please try connecting again.",
         {
           ...getToastDefaultOptions(),
           autoClose: false,
@@ -166,6 +192,16 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
         autoClose: false,
         toastId: CONSENT_REQUIRED_TOAST_ID,
       });
+      return;
+    case "accountMismatch":
+      toast.error(
+        "That wasn't the same account. Reconnect again and pick the account Compass already has.",
+        {
+          ...getToastDefaultOptions(),
+          autoClose: false,
+          toastId: ACCOUNT_MISMATCH_TOAST_ID,
+        },
+      );
       return;
     case "error":
       toast.error(errorCopy(provider), {

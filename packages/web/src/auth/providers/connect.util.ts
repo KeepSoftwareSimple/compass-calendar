@@ -13,7 +13,11 @@ import {
   pickAggregateSidebarStatus,
   type SidebarStatusEntry,
 } from "@web/auth/providers/connection-health-copy.util";
-import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
+import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
+import {
+  CONSENT_REQUIRED_COPY,
+  RECONNECT_BANNER_MESSAGE,
+} from "@web/auth/providers/provider-copy.util";
 import {
   isAccountReconnectRequired,
   isConnectionReconnectRequired,
@@ -60,7 +64,10 @@ export const connectionHasReconnectRequired = (
   connection?.connectionState === "RECONNECT_REQUIRED" ||
   connection?.state === "disconnected" ||
   isConnectionReconnectRequired(connection?.id) ||
-  isAccountReconnectRequired(connection?.accountEmail);
+  isAccountReconnectRequired(
+    connection?.accountEmail,
+    connectionProviderKind(connection),
+  );
 
 /** Aggregate UI state or a specific connection needs reconnect. */
 export const connectionNeedsReconnect = (
@@ -242,7 +249,12 @@ export const getGoogleConnectionConfig = (
 
 export const calendarReconnectBannerMessage = (
   provider: ProviderKind,
-): string => `${providerDisplayName(provider)} Calendar needs reconnecting.`;
+  accountEmail?: string | null,
+): string => {
+  const named = accountEmail?.trim();
+  if (named) return `${named} needs reconnecting.`;
+  return RECONNECT_BANNER_MESSAGE[provider];
+};
 
 const delayedSettingsStatus = (
   connection: GoogleSyncConnectionSummary,
@@ -412,6 +424,13 @@ export type CalendarConnectionBannerKind =
   | "importFailed"
   | "delayed";
 
+const BANNER_KIND_RANK: Record<CalendarConnectionBannerKind, number> = {
+  reconnect: 0,
+  consentRequired: 1,
+  importFailed: 2,
+  delayed: 3,
+};
+
 // Persistent in-calendar banner. Reconnect wins, then a failed first import,
 // then an established account's delayed catch-up. First-import-in-progress
 // stays on the grid overlay, not this banner.
@@ -426,6 +445,35 @@ export const getCalendarConnectionBannerKind = (
     return "delayed";
   }
   return null;
+};
+
+export type CalendarBannerTarget = {
+  connection: GoogleSyncConnectionSummary;
+  kind: CalendarConnectionBannerKind;
+};
+
+/**
+ * Highest-precedence connection the week/day banner should speak for.
+ * Walks every provider account so a Microsoft reconnect cannot hide behind a
+ * healthy Google primary, and a Google row stays quiet when only Microsoft
+ * needs help.
+ */
+export const pickCalendarBannerTarget = (
+  connections: readonly GoogleSyncConnectionSummary[],
+): CalendarBannerTarget | null => {
+  let best: (CalendarBannerTarget & { rank: number }) | null = null;
+  for (const connection of connections) {
+    const kind = getCalendarConnectionBannerKind(
+      connection.connectionState,
+      connection,
+    );
+    if (!kind) continue;
+    const rank = BANNER_KIND_RANK[kind];
+    if (!best || rank < best.rank) {
+      best = { connection, kind, rank };
+    }
+  }
+  return best ? { connection: best.connection, kind: best.kind } : null;
 };
 
 /**
@@ -559,6 +607,14 @@ export const getAggregateSidebarSyncStatus = ({
 }): SyncStatus | null => {
   const entries: SidebarStatusEntry[] = [];
   for (const connection of connections) {
+    // Banner + per-account Reconnect already own action-required. Repeating
+    // it on the footer stacked a third sentence on the same problem.
+    if (
+      connectionHasReconnectRequired(connection) ||
+      connectionNeedsAdminConsent(connection)
+    ) {
+      continue;
+    }
     const status = getSidebarSyncStatus({
       connection,
       isConnecting,

@@ -1,30 +1,31 @@
 import { type FC } from "react";
-import { getCalendarConnectionBannerKind } from "@web/auth/providers/connect.util";
+import { pickCalendarBannerTarget } from "@web/auth/providers/connect.util";
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
+import { useGoogleReconnectRequiredVersion } from "@web/auth/providers/reconnect.state";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
 import {
-  selectPrimaryGoogleSyncConnection,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { CalendarConnectionBanner } from "@web/components/CalendarConnectionBanner/CalendarConnectionBanner";
 
 export const CalendarConnectionBannerGate: FC = () => {
-  const primaryConnection = useUserMetadataStore(
-    selectPrimaryGoogleSyncConnection,
-  );
-  const provider = connectionProviderKind(primaryConnection);
-  const { connect, connection, refresh, state } = useConnectProvider(
+  const connections = useUserMetadataStore(selectSyncConnections);
+  useGoogleReconnectRequiredVersion();
+  const target = pickCalendarBannerTarget(connections);
+  const provider = connectionProviderKind(target?.connection);
+  const { connect, refresh } = useConnectProvider(
     provider,
-    primaryConnection ? { connection: primaryConnection } : undefined,
+    target?.connection ? { connection: target.connection } : undefined,
   );
-  const kind = getCalendarConnectionBannerKind(state, connection);
-  if (!kind) return null;
+  if (!target) return null;
 
   return (
     <CalendarConnectionBanner
-      kind={kind}
-      onAction={kind === "reconnect" ? connect : () => refresh()}
-      provider={connectionProviderKind(connection)}
+      kind={target.kind}
+      onAction={target.kind === "reconnect" ? connect : () => refresh()}
+      provider={provider}
+      accountEmail={target.connection.accountEmail}
     />
   );
 };
