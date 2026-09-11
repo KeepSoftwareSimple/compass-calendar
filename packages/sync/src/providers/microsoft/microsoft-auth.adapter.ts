@@ -105,9 +105,15 @@ export class MicrosoftAuthAdapter implements ProviderAuthAdapter {
     );
     url.searchParams.set("state", input.state);
     url.searchParams.set("redirect_uri", input.redirectUri);
-    if (input.selectAccount) {
-      url.searchParams.set("prompt", "select_account");
-    }
+    // offline_access + consent guarantees a refresh token even on
+    // re-authorization, which Microsoft otherwise omits after the first
+    // consent. select_account additionally forces the chooser, so adding an
+    // account cannot silently re-authorize the one already connected.
+    // Microsoft takes prompt as a space-delimited list, same as Google.
+    url.searchParams.set(
+      "prompt",
+      input.selectAccount ? "select_account consent" : "consent",
+    );
     if (input.loginHint) {
       url.searchParams.set("login_hint", input.loginHint);
     }
