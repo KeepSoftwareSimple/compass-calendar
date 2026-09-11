@@ -96,7 +96,6 @@ async function main(): Promise<void> {
   const authorizeUrl = adapter.buildAuthorizationUrl({
     state,
     redirectUri: redirect,
-    selectAccount: true,
   });
 
   console.log("Open this URL and sign in with the smoke-test account:\n");
