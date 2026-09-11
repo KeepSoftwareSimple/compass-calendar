@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import {
   DateTimeSchema,
@@ -469,7 +469,7 @@ export type EventMutationDependencies = {
   source?: EventRepositorySource;
   repository?: EventRepository;
   markWrite?: () => Promise<unknown>;
-  reportError?: (error: Error) => void;
+  reportError?: (error: Error, onRetry?: () => void) => void;
 };
 
 export function useEventMutations(
@@ -488,6 +488,14 @@ export function useEventMutations(
       ? showAnonymousSaveToastIfEligible
       : undefined;
   const reportError = dependencies.reportError ?? handleError;
+
+  // Re-dispatch seams for the "Try again" toast, filled in below once the
+  // mutations exist. onError can't reach its own mutation object, and going
+  // back through `.mutate` (rather than re-calling mutationFn) is what
+  // re-applies the optimistic edit and re-runs rollback on a second failure.
+  const redispatch = useRef<
+    Partial<Record<EventMutationOperation, (variables: never) => void>>
+  >({});
 
   // Shared by the create and replace optimistic callbacks: the query-cache
   // ranges a series expansion should materialize instances into.
@@ -621,7 +629,13 @@ export function useEventMutations(
           queryKey: billingQueryKeys.status,
         });
       }
-      reportError(error);
+      reportError(error, () =>
+        // A fresh object, not the original: the write-serialization queue
+        // identifies a mutation by its variables *reference*, so replaying
+        // the same one resolves back to this failed mutation and the retry
+        // is skipped as superseded by itself.
+        redispatch.current[operation]?.({ ...variables } as never),
+      );
       const opportunityId = (variables as { opportunityId?: number })
         .opportunityId;
       if (opportunityId) {
@@ -933,6 +947,13 @@ export function useEventMutations(
       },
     ),
   );
+
+  redispatch.current = {
+    create: createMutation.mutate,
+    replace: replaceMutation.mutate,
+    delete: deleteMutation.mutate,
+    rsvp: rsvpMutation.mutate,
+  };
 
   // Undo recording happens here at the `.mutate()` boundary: it's the one
   // place every caller funnels through and the cache still holds the

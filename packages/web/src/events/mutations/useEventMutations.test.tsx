@@ -181,6 +181,9 @@ const setup = (source: EventRepositorySource = "local") => {
   };
   const markedWrites: string[] = [];
   const errors: Error[] = [];
+  // The retry the toast would offer, captured alongside each error so a test
+  // can invoke it the way the "Try again" button does.
+  const retries: Array<(() => void) | undefined> = [];
   const wrapper = ({ children }: PropsWithChildren) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
@@ -190,13 +193,25 @@ const setup = (source: EventRepositorySource = "local") => {
         source,
         repository,
         markWrite: async () => markedWrites.push("marked"),
-        reportError: (error) => errors.push(error),
+        reportError: (error, onRetry) => {
+          errors.push(error);
+          retries.push(onRetry);
+        },
       }),
       hasPending: useHasPendingEventMutations(),
     }),
     { wrapper },
   );
-  return { calls, errors, hook, markedWrites, pending, queryClient, source };
+  return {
+    calls,
+    errors,
+    hook,
+    markedWrites,
+    pending,
+    queryClient,
+    retries,
+    source,
+  };
 };
 
 const replacePayload = (
@@ -1271,6 +1286,57 @@ describe("useEventMutations", () => {
       expect(
         context.queryClient.getQueryState(calendarKey)?.isInvalidated,
       ).toBe(true);
+    });
+  });
+
+  test("re-dispatches the identical replace when the offered retry is taken", async () => {
+    // A Sync blip fails the save, the edit rolls back, and the user clicks
+    // "Try again". Re-dispatching must send the same payload: the command's
+    // idempotency key is a hash of it, so an identical replay dedupes in
+    // Sync rather than applying twice.
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Changed",
+            description: "",
+            location: "",
+          },
+        }),
+      ),
+    );
+
+    await waitFor(() => expect(context.calls).toHaveLength(1));
+    act(() => context.pending.rejectNext(new Error("sync unavailable")));
+
+    await waitFor(() => {
+      expect(context.errors[0]?.message).toBe("sync unavailable");
+      // Rollback still happens first: the grid shows the truth, and the
+      // retry is what re-applies the edit.
+      expect(
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content,
+      ).toMatchObject({ title: "Original" });
+    });
+
+    const retry = context.retries[0];
+    if (!retry) throw new Error("expected a retry to be offered");
+    act(() => retry());
+
+    await waitFor(() => expect(context.calls).toHaveLength(2));
+    expect(context.calls[1]).toEqual(context.calls[0]!);
+
+    act(() => context.pending.resolve());
+    await waitFor(() => {
+      expect(
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id].content,
+      ).toMatchObject({ title: "Changed" });
     });
   });
 
