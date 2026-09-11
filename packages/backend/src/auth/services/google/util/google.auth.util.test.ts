@@ -31,7 +31,9 @@ describe("determineGoogleAuthMode", () => {
 
   it("returns SIGNIN when a Compass user is already linked", async () => {
     const user = { _id: new ObjectId() };
-    spyOn(userQueries, "findCanonicalCompassUser").mockResolvedValue(user);
+    spyOn(userQueries, "findCanonicalCompassUser").mockResolvedValue(
+      user as Awaited<ReturnType<typeof userQueries.findCanonicalCompassUser>>,
+    );
 
     await expect(
       determineGoogleAuthMode(faker.string.uuid(), null, false),
@@ -45,7 +47,9 @@ describe("determineGoogleAuthMode", () => {
   it("reuses a same-email Compass user when Google is not linked yet", async () => {
     const user = { _id: new ObjectId() };
     const googleUserId = faker.string.uuid();
-    spyOn(userQueries, "findCanonicalCompassUser").mockResolvedValueOnce(user);
+    spyOn(userQueries, "findCanonicalCompassUser").mockResolvedValueOnce(
+      user as Awaited<ReturnType<typeof userQueries.findCanonicalCompassUser>>,
+    );
 
     await expect(
       determineGoogleAuthMode(googleUserId, " Existing@Example.com ", false),

@@ -11,13 +11,13 @@ describe("createPostHogCaptureClient", () => {
       apiKey: "phc_test",
       host: "https://us.i.posthog.com",
       lib: "compass-sync",
-      fetch: (async (input, init) => {
+      fetch: (async (input: RequestInfo | URL, init?: RequestInit) => {
         calls.push({
           url: String(input),
           body: JSON.parse(String(init?.body)),
         });
         return { ok: true, status: 200 } as Response;
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     });
 
     await client.capture({
@@ -57,7 +57,7 @@ describe("createPostHogCaptureClient", () => {
       lib: "compass-sync",
       fetch: (async () => {
         throw new Error("network down");
-      }) as typeof fetch,
+      }) as unknown as typeof fetch,
     });
 
     await expect(

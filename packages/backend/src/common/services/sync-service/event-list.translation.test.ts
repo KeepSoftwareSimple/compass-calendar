@@ -1,4 +1,11 @@
 import { faker } from "@faker-js/faker";
+import {
+  type CalendarId,
+  type DateOnly,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { EventSchema } from "@core/types/event.contracts";
 import {
   type SyncEventInstance,
@@ -23,14 +30,14 @@ const baseInstance = (
   overrides: Partial<SyncEventInstance> = {},
 ): SyncEventInstance =>
   SyncEventInstanceSchema.parse({
-    eventId: objectId(),
-    calendarId: objectId(),
+    eventId: objectId() as EventId,
+    calendarId: objectId() as CalendarId,
     content: baseContent,
     schedule: {
       kind: "timed",
-      start: "2026-07-14T09:00:00.000Z",
-      end: "2026-07-14T09:30:00.000Z",
-      timeZone: "UTC",
+      start: "2026-07-14T09:00:00.000Z" as DateTime,
+      end: "2026-07-14T09:30:00.000Z" as DateTime,
+      timeZone: "UTC" as TimeZone,
     },
     recurrence: { kind: "single" },
     createdAt: "2026-07-01T00:00:00.000Z",
@@ -55,7 +62,7 @@ describe("syncEventInstanceToBrowser", () => {
       attendees: [],
       conference: null,
     });
-    expect(event.calendarId).toBe(instance.calendarId);
+    expect<unknown>(event.calendarId).toBe(instance.calendarId);
   });
 
   it("carries the cross-copy key through to the browser event", () => {
@@ -102,15 +109,17 @@ describe("syncEventInstanceToBrowser", () => {
   });
 
   it("composes an occurrence id and sets seriesId to the owning eventId", () => {
-    const eventId = objectId();
-    const recurrenceId = "2026-07-14T09:00:00.000Z";
+    const eventId = objectId() as EventId;
+    const recurrenceId = "2026-07-14T09:00:00.000Z" as DateTime;
     const instance = baseInstance({
       eventId,
       recurrence: { kind: "occurrence", recurrenceId },
     });
     const event = syncEventInstanceToBrowser(instance);
 
-    expect(event.id).toBe(composeOccurrenceId({ eventId, recurrenceId }));
+    expect(event.id).toBe(
+      composeOccurrenceId({ eventId, recurrenceId }) as EventId,
+    );
     expect(event.recurrence).toEqual({ kind: "occurrence", seriesId: eventId });
   });
 
@@ -118,11 +127,11 @@ describe("syncEventInstanceToBrowser", () => {
     const instance = baseInstance({
       schedule: {
         kind: "allDay",
-        start: "2026-07-14",
-        end: "2026-07-15",
+        start: "2026-07-14" as DateOnly,
+        end: "2026-07-15" as DateOnly,
       },
-      createdAt: "2026-06-01T12:00:00.000Z",
-      updatedAt: "2026-06-02T12:00:00.000Z",
+      createdAt: "2026-06-01T12:00:00.000Z" as DateTime,
+      updatedAt: "2026-06-02T12:00:00.000Z" as DateTime,
     });
     const event = syncEventInstanceToBrowser(instance);
 

@@ -6,6 +6,7 @@ import {
   BOOKING_MAX_MIN_NOTICE_HOURS,
   DEFAULT_WEEKLY_AVAILABILITY,
 } from "@core/types/booking.contracts";
+import { type TimeZone } from "@core/types/domain-primitives";
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { UserDriver } from "@backend/__tests__/drivers/user.driver";
 import { UtilDriver } from "@backend/__tests__/drivers/util.driver";
@@ -185,7 +186,9 @@ describe("BookingPageService", () => {
 
   it("returns the host calendar timezone on GET before any PUT, not UTC", async () => {
     const { user } = await UtilDriver.setupTestUser();
-    await seedGoogleCalendar(user._id, { timeZone: "America/Chicago" });
+    await seedGoogleCalendar(user._id, {
+      timeZone: "America/Chicago" as TimeZone,
+    });
 
     const page = await bookingPageService.getAdminPage(user._id);
 
@@ -482,7 +485,10 @@ describe("BookingPageService", () => {
       provider: "microsoft" as const,
     };
     const calendar = writableCalendar();
-    mockHealthySync([calendar], connection);
+    mockHealthySync(
+      [calendar],
+      connection as unknown as ReturnType<typeof healthyConnection>,
+    );
     const input = samplePutInput({
       destinationCalendarId: calendar.id,
       blockingCalendarIds: [calendar.id],
@@ -638,7 +644,7 @@ describe("BookingPageService", () => {
       guestName: overrides.guestName ?? "Bob",
       guestEmail: "bob@example.com",
       notes: null,
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "evt-1",
       cancelTokenHash: "c".repeat(64),

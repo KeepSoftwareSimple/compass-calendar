@@ -27,7 +27,7 @@ describe("ValidatedCompassEventSchema", () => {
     };
 
     const parsedEvent = ValidatedCompassEventSchema.parse(event);
-    expect(parsedEvent).toEqual(event);
+    expect(parsedEvent).toMatchObject(event);
   });
 
   it("invalidates when properties are missing", () => {

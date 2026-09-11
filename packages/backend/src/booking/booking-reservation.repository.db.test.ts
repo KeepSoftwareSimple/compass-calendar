@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { type TimeZone } from "@core/types/domain-primitives";
 import {
   cleanupCollections,
   cleanupTestDb,
@@ -33,7 +34,7 @@ const insertReservation = async (
     guestName: overrides.guestName,
     guestEmail: "guest@example.com",
     notes: null,
-    guestTimeZone: "UTC",
+    guestTimeZone: "UTC" as TimeZone,
     status: "confirmed",
     calendarEventId: "evt-1",
     cancelTokenHash: "d".repeat(64),
