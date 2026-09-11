@@ -49,6 +49,8 @@ chmod +x "${STUB_DIR}/gh"
 run_preflight() {
   : >"$OUTPUT"
   : >"$GH_LOG"
+  # Do not inherit GITHUB_EVENT_* from the Actions runner: a pull_request
+  # job would otherwise make the reopen retry look like an opened event.
   PATH="${STUB_DIR}:${PATH}" \
     GITHUB_OUTPUT="$OUTPUT" \
     GH_REPO="example/compass" \
@@ -57,8 +59,8 @@ run_preflight() {
     AUTOFIX_TEST_STATE="${AUTOFIX_TEST_STATE:-OPEN}" \
     AUTOFIX_TEST_POSTHOG_COUNT="${AUTOFIX_TEST_POSTHOG_COUNT:-0}" \
     AUTOFIX_TEST_MERGED_COUNT="${AUTOFIX_TEST_MERGED_COUNT:-0}" \
-    GITHUB_EVENT_NAME="${GITHUB_EVENT_NAME:-issues}" \
-    GITHUB_EVENT_ACTION="${GITHUB_EVENT_ACTION:-opened}" \
+    GITHUB_EVENT_NAME="${AUTOFIX_TEST_EVENT_NAME:-issues}" \
+    GITHUB_EVENT_ACTION="${AUTOFIX_TEST_EVENT_ACTION:-opened}" \
     AUTOFIX_RETRY_ATTEMPT="${AUTOFIX_RETRY_ATTEMPT:-0}" \
     bash "${ROOT}/.github/scripts/autofix-preflight.sh" 42 >/dev/null
 }
@@ -114,10 +116,10 @@ assert_output "proceed=true" "autofix:failed is a retry"
 assert_gh_contains "--remove-label autofix:failed" x "retry clears the failed label"
 
 AUTOFIX_TEST_LABELS="autofix"
-GITHUB_EVENT_ACTION=reopened
+AUTOFIX_TEST_EVENT_ACTION=reopened
 run_preflight
 assert_output "proceed=true" "reopened event retries even with autofix"
-GITHUB_EVENT_ACTION=opened
+AUTOFIX_TEST_EVENT_ACTION=opened
 
 AUTOFIX_TEST_LABELS=""
 AUTOFIX_RETRY_ATTEMPT=1

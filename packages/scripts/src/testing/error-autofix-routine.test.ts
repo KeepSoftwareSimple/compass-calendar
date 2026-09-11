@@ -87,6 +87,16 @@ describe("error-autofix Routine contract", () => {
     expect(unit).toContain("bash .github/scripts/autofix-sweep.test.sh");
     expect(unit).toContain("bash .github/scripts/autofix-lib.test.sh");
 
+    const preflightTest = readFileSync(
+      ".github/scripts/autofix-preflight.test.sh",
+      "utf8",
+    );
+    expect(preflightTest).toContain("AUTOFIX_TEST_EVENT_NAME");
+    expect(preflightTest).toContain("AUTOFIX_TEST_EVENT_ACTION");
+    expect(preflightTest).not.toContain(
+      'GITHUB_EVENT_NAME="${GITHUB_EVENT_NAME:-issues}"',
+    );
+
     const prompt = readFileSync(".github/prompts/error-autofix.md", "utf8");
     expect(prompt).toContain("Recurrence on an already-seen fingerprint");
     expect(prompt).toContain("error-tracking-issues-partial-update");
