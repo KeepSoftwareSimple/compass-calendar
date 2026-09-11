@@ -9,6 +9,7 @@ import {
 import { CalendarIdSchema, EventIdSchema } from "@core/types/domain-primitives";
 import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
+import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import {
   seedPendingEventMutations,
   toNormalizedEventQueryData,
@@ -20,6 +21,7 @@ import { ID_EVENT_FORM, ID_SIDEBAR } from "@web/common/constants/web.constants";
 import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   createGridEventDraft,
   getGridDraftId,
@@ -37,6 +39,10 @@ import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
+import {
+  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+  SHORTCUT_UNAVAILABLE_TOAST_ID,
+} from "@web/shortcuts/prompt-shortcut-unavailable";
 import {
   eventJumpActions,
   useEventJumpStore,
@@ -1438,6 +1444,32 @@ describe("useWeekShortcutOwner edge focus", () => {
     expect(input.schedule.start).toBe("2026-05-22");
     expect(input.schedule.end).toBe("2026-05-25");
   });
+
+  it("explains that Tab cannot pick an edge while the event form is open", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const button = addCalendarTarget();
+    button.focus();
+    draftActions.startGridDraft({
+      activity: "keyboardEdit",
+      draft: createGridEventDraft(
+        timedGridSchedule(
+          new Date("2026-05-20T09:00:00.000"),
+          new Date("2026-05-20T10:00:00.000"),
+        ),
+        EVENT_1_ID,
+      ),
+    });
+    renderShortcuts();
+
+    pressKey("Tab");
+
+    expect(useEdgeFocusStore.getState().eventId).toBeNull();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+      expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
+    );
+  });
 });
 
 describe("useWeekShortcutOwner draft edge focus", () => {
@@ -1475,6 +1507,8 @@ describe("useWeekShortcutOwner draft edge focus", () => {
   });
 
   it("does not cycle edge focus on a draft while the form is open", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
     seedFocusedKeyboardPlaceDraft();
     draftActions.setFormOpen(true);
     renderShortcuts();
@@ -1482,6 +1516,29 @@ describe("useWeekShortcutOwner draft edge focus", () => {
     pressKey("Tab");
 
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+      expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
+    );
+  });
+
+  it("does not explain blocked edge-focus while Tab is navigating the event form", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    seedFocusedKeyboardPlaceDraft();
+    draftActions.setFormOpen(true);
+    const form = document.createElement("form");
+    form.setAttribute("name", ID_EVENT_FORM);
+    const input = document.createElement("input");
+    form.appendChild(input);
+    document.body.appendChild(form);
+    input.focus();
+    renderShortcuts();
+
+    pressKey("Tab", {}, input);
+
+    expect(useEdgeFocusStore.getState().eventId).toBeNull();
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   it("moves only the draft start edge with Shift+ArrowUp when that edge is focused", () => {

@@ -71,6 +71,10 @@ import {
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
+import {
+  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+  promptShortcutUnavailableWhileEditingEvent,
+} from "@web/shortcuts/prompt-shortcut-unavailable";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
@@ -549,8 +553,15 @@ export function useGridEventEditShortcuts({
   };
 
   const cycleEdgeFocus = (keyboardEvent: KeyboardEvent) => {
-    if (isEventFormOpen() || isEditableKeyboardTarget(keyboardEvent)) return;
-    if (isFocusInSidebar()) return;
+    // Form fields and the sidebar keep native Tab. Explain when the form is
+    // open and Tab would otherwise no-op on the grid.
+    if (isEditableKeyboardTarget(keyboardEvent) || isFocusInSidebar()) return;
+    if (isEventFormOpen()) {
+      if (!isEventFormKeyboardTarget(keyboardEvent)) {
+        promptShortcutUnavailableWhileEditingEvent();
+      }
+      return;
+    }
 
     const event =
       getFocusedMutableCalendarEvent() ?? getFocusedFormClosedDraft();
@@ -761,8 +772,13 @@ export function useGridEventEditShortcuts({
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,
+    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
     telemetryHintId: "edge-focus",
   });
-  useAppShortcut("Shift+Tab", cycleEdgeFocus, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
+  useAppShortcut("Shift+Tab", cycleEdgeFocus, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+    telemetryHintId: "edge-focus",
+  });
   useAppShortcut("Escape", onEscape, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
 }
