@@ -14,12 +14,6 @@
       "port": 9080
     },
     {
-      "name": "Debug Web",
-      "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "debug:web"],
-      "port": 8080
-    },
-    {
       "name": "Web build (static)",
       "runtimeExecutable": "bunx",
       "runtimeArgs": [
