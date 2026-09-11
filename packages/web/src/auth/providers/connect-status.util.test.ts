@@ -5,7 +5,6 @@ import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   applyConnectRedirect,
   readConnectStatus,
-  refreshUserMetadataAfterConnect,
   showConnectStatusToast,
 } from "./connect-status.util";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
@@ -168,20 +167,6 @@ describe("connect-status.util", () => {
 
       refreshSpy.mockClear();
       await applyConnectRedirect({ provider: "microsoft", status: "error" });
-      expect(refreshSpy).toHaveBeenCalledWith({ force: true });
-
-      refreshSpy.mockRestore();
-    });
-  });
-
-  describe("refreshUserMetadataAfterConnect", () => {
-    it("force-refreshes metadata after a completed connect", () => {
-      const refreshSpy = spyOn(
-        userMetadataUtil,
-        "refreshUserMetadata",
-      ).mockResolvedValue(undefined);
-
-      refreshUserMetadataAfterConnect("connected");
       expect(refreshSpy).toHaveBeenCalledWith({ force: true });
 
       refreshSpy.mockRestore();
