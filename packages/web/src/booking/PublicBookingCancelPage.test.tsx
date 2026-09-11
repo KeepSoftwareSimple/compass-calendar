@@ -6,7 +6,8 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { Status } from "@core/errors/status.codes";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -19,12 +20,10 @@ const cancelPath = `/meet/cancel/${reservationId}?token=abc`;
 const slotStart = "2026-09-15T15:00:00.000Z";
 
 function reservationGetHandler(overrides: Record<string, unknown> = {}) {
-  return rest.get(
+  return http.get(
     `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}`,
-    (_req, res, ctx) =>
-      res(
-        ctx.status(Status.OK),
-        ctx.json({
+    () =>
+      jsonResponse({
           slotStart,
           guestTimeZone: "UTC",
           durationMinutes: 30,
@@ -34,8 +33,7 @@ function reservationGetHandler(overrides: Record<string, unknown> = {}) {
           guestName: "Guest User",
           notes: null,
           ...overrides,
-        }),
-      ),
+        }, Status.OK),
   );
 }
 
@@ -62,11 +60,11 @@ describe("PublicBookingCancelPage", () => {
 
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        async (_req, res, ctx) => {
+        async ({ request }) => {
           cancelPosts += 1;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -98,12 +96,12 @@ describe("PublicBookingCancelPage", () => {
 
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        async (_req, res, ctx) => {
+        async ({ request }) => {
           cancelPosts += 1;
           await hold;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -147,10 +145,10 @@ describe("PublicBookingCancelPage", () => {
 
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.INTERNAL_SERVER), ctx.json({})),
+        () =>
+          jsonResponse({}, Status.INTERNAL_SERVER),
       ),
     );
 
@@ -172,11 +170,11 @@ describe("PublicBookingCancelPage", () => {
     let cancelPosts = 0;
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) => {
+        () => {
           cancelPosts += 1;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -210,11 +208,11 @@ describe("PublicBookingCancelPage", () => {
     let cancelPosts = 0;
     server.use(
       reservationGetHandler({ status: "cancelled" }),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) => {
+        () => {
           cancelPosts += 1;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -235,11 +233,11 @@ describe("PublicBookingCancelPage", () => {
     let cancelPosts = 0;
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) => {
+        () => {
           cancelPosts += 1;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -279,12 +277,12 @@ describe("PublicBookingCancelPage", () => {
 
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        async (_req, res, ctx) => {
+        async ({ request }) => {
           cancelPosts += 1;
           await hold;
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -341,16 +339,16 @@ describe("PublicBookingCancelPage", () => {
 
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        async (req, res, ctx) => {
-          const body = (await req.json()) as { token?: string };
+        async ({ request, params }) => {
+          const body = (await request.json()) as { token?: string };
           tokens.push(body.token ?? "");
           if (failNext) {
             failNext = false;
-            return res(ctx.status(Status.INTERNAL_SERVER), ctx.json({}));
+            return jsonResponse({}, Status.INTERNAL_SERVER);
           }
-          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+          return jsonResponse({ ok: true }, Status.OK);
         },
       ),
     );
@@ -383,11 +381,11 @@ describe("PublicBookingCancelPage", () => {
     let cancelPosts = 0;
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) => {
+        () => {
           cancelPosts += 1;
-          return res(ctx.status(Status.NOT_FOUND), ctx.json({}));
+          return jsonResponse({}, Status.NOT_FOUND);
         },
       ),
     );
@@ -409,9 +407,9 @@ describe("PublicBookingCancelPage", () => {
     const user = userEvent.setup({ delay: null });
     server.use(
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
-        (_req, res, ctx) => res(ctx.status(Status.OK), ctx.json({ ok: true })),
+        () => jsonResponse({ ok: true }, Status.OK),
       ),
     );
 
@@ -442,12 +440,10 @@ describe("PublicBookingCancelPage", () => {
 
   it("hides Meet another time when bookingSlug is missing", async () => {
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}`,
-        (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json({
+        () =>
+          jsonResponse({
               slotStart,
               guestTimeZone: "UTC",
               durationMinutes: 30,
@@ -455,8 +451,7 @@ describe("PublicBookingCancelPage", () => {
               status: "cancelled",
               guestName: "Guest User",
               notes: null,
-            }),
-          ),
+            }, Status.OK),
       ),
     );
 

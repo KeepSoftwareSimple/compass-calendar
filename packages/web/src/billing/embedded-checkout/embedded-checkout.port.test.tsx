@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -104,9 +105,8 @@ describe("fetchEmbeddedCheckoutClientSecret", () => {
 describe("useStripePublishableKey", () => {
   it("reads billing.publishableKey from app config", async () => {
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-        res(
-          ctx.json({
+      http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
+        jsonResponse({
             version: "dev",
             google: { isConfigured: false },
             billing: {
@@ -116,7 +116,6 @@ describe("useStripePublishableKey", () => {
               publishableKey: "pk_test_live",
             },
           }),
-        ),
       ),
     );
 

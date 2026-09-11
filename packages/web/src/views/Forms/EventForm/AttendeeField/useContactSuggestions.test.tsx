@@ -1,5 +1,6 @@
 import { renderHook } from "@testing-library/react";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
@@ -35,9 +36,9 @@ const serveSuggestions = (
 ) => {
   const queries: string[] = [];
   server.use(
-    rest.get(SUGGESTIONS_URL, (req, res, ctx) => {
-      queries.push(req.url.searchParams.get("q") ?? "");
-      return res(ctx.status(200), ctx.json({ suggestions }));
+    http.get(SUGGESTIONS_URL, ({ request }) => {
+      queries.push(new URL(request.url).searchParams.get("q") ?? "");
+      return jsonResponse({ suggestions }, 200);
     }),
   );
   return queries;
@@ -138,7 +139,7 @@ describe("useContactSuggestions", () => {
   it("resolves empty on a proxy failure — silent fallback, nothing thrown", async () => {
     seedCapability(true);
     server.use(
-      rest.get(SUGGESTIONS_URL, (_req, res, ctx) => res(ctx.status(503))),
+      http.get(SUGGESTIONS_URL, () => new HttpResponse(null, { status: 503 })),
     );
     const { result } = renderSuggestions();
     const source = result.current.suggestionSource;

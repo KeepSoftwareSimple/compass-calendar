@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { type PropsWithChildren } from "react";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
@@ -85,7 +86,7 @@ describe("MeetingPageNudge", () => {
 
   it("renders for a signed-in user with no live page", async () => {
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) => res(ctx.json(savedOffPage))),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage)),
     );
     renderNudge();
 
@@ -106,7 +107,7 @@ describe("MeetingPageNudge", () => {
 
   it("opens Settings on the Meeting tab from Set up meeting page", async () => {
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) => res(ctx.json(savedOffPage))),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage)),
     );
     const user = userEvent.setup({ delay: null });
     renderNudge();
@@ -121,7 +122,7 @@ describe("MeetingPageNudge", () => {
 
   it("hides after Dismiss and sets the storage key", async () => {
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) => res(ctx.json(savedOffPage))),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage)),
     );
     const user = userEvent.setup({ delay: null });
     renderNudge();
@@ -136,7 +137,7 @@ describe("MeetingPageNudge", () => {
 
   it("hides when the meeting page is live", async () => {
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) => res(ctx.json(livePage))),
+      http.get(bookingPageUrl, () => jsonResponse(livePage)),
     );
     const { queryClient } = renderNudge();
 

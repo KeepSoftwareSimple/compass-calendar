@@ -2,7 +2,7 @@ import "@testing-library/jest-dom";
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import {
   DEFAULT_WEEKLY_AVAILABILITY,
   type WeeklyAvailability,
@@ -10,6 +10,7 @@ import {
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import {
@@ -199,9 +200,7 @@ describe("BookingSettingsSection", () => {
       },
     });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper } = createStoreWrapper();
@@ -237,9 +236,7 @@ describe("BookingSettingsSection", () => {
       },
     });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper } = createStoreWrapper();
@@ -271,14 +268,12 @@ describe("BookingSettingsSection", () => {
     });
     const bookingUrl = "https://compasscalendar.com/meet/hostuser";
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            enabled: true,
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          enabled: true,
+          bookingUrl,
+        }),
       ),
     );
 
@@ -319,14 +314,12 @@ describe("BookingSettingsSection", () => {
       },
     });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            enabled: true,
-            bookingUrl: "https://compasscalendar.com/meet/hostuser",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          enabled: true,
+          bookingUrl: "https://compasscalendar.com/meet/hostuser",
+        }),
       ),
     );
 
@@ -360,14 +353,12 @@ describe("BookingSettingsSection", () => {
     });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+        }),
       ),
     );
 
@@ -405,28 +396,24 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            durationMinutes: 45,
-            timeZone: "America/New_York",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          durationMinutes: 45,
+          timeZone: "America/New_York",
+        }),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            id: createObjectIdString(),
-            slug,
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        );
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          id: createObjectIdString(),
+          slug,
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        });
       }),
     );
 
@@ -493,11 +480,11 @@ describe("BookingSettingsSection", () => {
     };
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) => res(ctx.json(savedPage))),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = (await req.json()) as Record<string, unknown>;
+      http.get(bookingPageUrl, () => jsonResponse(savedPage)),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = (await request.json()) as Record<string, unknown>;
         savedBodies.push(body);
-        return res(ctx.json({ ...savedPage, ...body }));
+        return jsonResponse({ ...savedPage, ...body });
       }),
     );
 
@@ -546,11 +533,7 @@ describe("BookingSettingsSection", () => {
   it("shows only address, destination calendar, blocking calendars, notice, and horizon in More options", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -589,11 +572,7 @@ describe("BookingSettingsSection", () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
 
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -623,8 +602,8 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json({ ...savedOffPage(), enabled: true })),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({ ...savedOffPage(), enabled: true }),
       ),
     );
 
@@ -648,27 +627,25 @@ describe("BookingSettingsSection", () => {
     setPinnedTimeZone(HOST_TIME_ZONE);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            enabled: false,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            // Fallback when the host has no calendar timezone yet. Settings
-            // still seeds the calendar-view zone for an unconfigured page.
-            timeZone: "UTC",
-            weeklyAvailability: [],
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            isConfigured: false,
-            suggestedSlug: "hostuser",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          // Fallback when the host has no calendar timezone yet. Settings
+          // still seeds the calendar-view zone for an unconfigured page.
+          timeZone: "UTC",
+          weeklyAvailability: [],
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          isConfigured: false,
+          suggestedSlug: "hostuser",
+        }),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = (await req.json()) as Record<string, unknown>;
-        return res(ctx.json(putSavedPage(body)));
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        return jsonResponse(putSavedPage(body));
       }),
     );
 
@@ -699,22 +676,20 @@ describe("BookingSettingsSection", () => {
     setPinnedTimeZone(HOST_TIME_ZONE);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            enabled: false,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "UTC",
-            weeklyAvailability: [],
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            // Saved, never enabled. UTC here is a deliberate choice.
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "UTC",
+          weeklyAvailability: [],
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          // Saved, never enabled. UTC here is a deliberate choice.
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        }),
       ),
     );
 
@@ -741,13 +716,11 @@ describe("BookingSettingsSection", () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            timeZone: "America/Denver",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          timeZone: "America/Denver",
+        }),
       ),
     );
 
@@ -789,16 +762,14 @@ describe("BookingSettingsSection", () => {
     registerToastPort(port);
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(400),
-          ctx.json({
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "TIMEZONE_REQUIRED",
             message: "Timezone is required",
-          }),
+          },
+          400,
         ),
       ),
     );
@@ -835,9 +806,7 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper, queryClient } = createStoreWrapper();
@@ -873,14 +842,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json(putSavedPage(savedBody as Record<string, unknown>)),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse(putSavedPage(savedBody as Record<string, unknown>));
       }),
     );
 
@@ -914,14 +879,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json(putSavedPage(savedBody as Record<string, unknown>)),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse(putSavedPage(savedBody as Record<string, unknown>));
       }),
     );
 
@@ -954,14 +915,9 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(409),
-          ctx.json({ code: "SLUG_TAKEN", message: "taken" }),
-        ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, () =>
+        jsonResponse({ code: "SLUG_TAKEN", message: "taken" }, 409),
       ),
     );
 
@@ -991,12 +947,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) => {
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, () => {
         putCount += 1;
-        return res(ctx.status(500));
+        return new HttpResponse(null, { status: 500 });
       }),
     );
 
@@ -1031,14 +985,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json(putSavedPage(savedBody as Record<string, unknown>)),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse(putSavedPage(savedBody as Record<string, unknown>));
       }),
     );
 
@@ -1066,12 +1016,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = await req.json();
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = await request.json();
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1099,12 +1047,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = await req.json();
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = await request.json();
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1146,13 +1092,11 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = await req.json();
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = await request.json();
         savedBodies.push(body);
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1207,12 +1151,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = await req.json();
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = await request.json();
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1252,12 +1194,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = await req.json();
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = await request.json();
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1291,21 +1231,19 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = (await req.json()) as { enabled?: boolean };
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request }) => {
+        const body = (await request.json()) as { enabled?: boolean };
         if (body.enabled === true) {
-          return res(
-            ctx.status(400),
-            ctx.json({
+          return HttpResponse.json(
+            {
               code: "AVAILABILITY_REQUIRED",
               message: "Add weekly hours before turning on your meeting page.",
-            }),
+            },
+            { status: 400 },
           );
         }
-        return res(ctx.json(putSavedPage(body as Record<string, unknown>)));
+        return jsonResponse(putSavedPage(body as Record<string, unknown>));
       }),
     );
 
@@ -1339,18 +1277,14 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            isConfigured: true,
-            suggestedSlug: "tyler-dane",
-          }),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          isConfigured: true,
+          suggestedSlug: "tyler-dane",
+        });
       }),
     );
 
@@ -1388,12 +1322,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) => {
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () => {
         putCount += 1;
-        return res(ctx.status(500));
+        return new HttpResponse(null, { status: 500 });
       }),
     );
 
@@ -1428,16 +1360,14 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(409),
-          ctx.json({
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "SLUG_TAKEN",
             message: "That address is already taken",
-          }),
+          },
+          409,
         ),
       ),
     );
@@ -1473,9 +1403,7 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper, queryClient } = createStoreWrapper();
@@ -1500,25 +1428,23 @@ describe("BookingSettingsSection", () => {
 
     const bookingUrl = "https://compasscalendar.com/meet/hostuser";
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            enabled: true,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "America/New_York",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          enabled: true,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "America/New_York",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1550,9 +1476,7 @@ describe("BookingSettingsSection", () => {
       },
     });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper } = createStoreWrapper();
@@ -1577,25 +1501,23 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
     const bookingUrl = "https://compasscalendar.com/meet/hostuser";
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            enabled: true,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "America/New_York",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          enabled: true,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "America/New_York",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1627,21 +1549,17 @@ describe("BookingSettingsSection", () => {
     setClipboard({ writeText });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) =>
-        res(
-          ctx.json({
-            ...((await req.json()) as Record<string, unknown>),
-            id: createObjectIdString(),
-            slug,
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request, params }) =>
+        jsonResponse({
+          ...((await request.json()) as Record<string, unknown>),
+          id: createObjectIdString(),
+          slug,
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1679,38 +1597,34 @@ describe("BookingSettingsSection", () => {
     setClipboard({ writeText });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            enabled: false,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "America/New_York",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "America/New_York",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) =>
-        res(
-          ctx.json({
-            ...((await req.json()) as Record<string, unknown>),
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.put(bookingPageUrl, async ({ request, params }) =>
+        jsonResponse({
+          ...((await request.json()) as Record<string, unknown>),
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1737,11 +1651,7 @@ describe("BookingSettingsSection", () => {
   it("always shows Mod+Enter keycaps on Save when hold-Mod hints are off", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -1770,8 +1680,8 @@ describe("BookingSettingsSection", () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json({ ...savedOffPage(), enabled: true })),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({ ...savedOffPage(), enabled: true }),
       ),
     );
 
@@ -1819,8 +1729,8 @@ describe("BookingSettingsSection", () => {
     const writeText = mock(() => Promise.resolve());
     setClipboard({ writeText });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json({ ...savedOffPage(), enabled: true })),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({ ...savedOffPage(), enabled: true }),
       ),
     );
 
@@ -1850,21 +1760,17 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) =>
-        res(
-          ctx.json({
-            ...((await req.json()) as Record<string, unknown>),
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) =>
+        jsonResponse({
+          ...((await request.json()) as Record<string, unknown>),
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1898,21 +1804,17 @@ describe("BookingSettingsSection", () => {
     setClipboard({ writeText });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) =>
-        res(
-          ctx.json({
-            ...((await req.json()) as Record<string, unknown>),
-            id: createObjectIdString(),
-            slug,
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) =>
+        jsonResponse({
+          ...((await request.json()) as Record<string, unknown>),
+          id: createObjectIdString(),
+          slug,
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
     );
 
@@ -1941,21 +1843,17 @@ describe("BookingSettingsSection", () => {
     let putCount = 0;
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
       // Saving while disabled allocates no slug, so the response carries no
       // bookingUrl and there is nothing to copy.
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
+      http.put(bookingPageUrl, async ({ request, params }) => {
         putCount += 1;
-        const body = (await req.json()) as Record<string, unknown>;
-        return res(
-          ctx.json({
-            ...body,
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        );
+        const body = (await request.json()) as Record<string, unknown>;
+        return jsonResponse({
+          ...body,
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        });
       }),
     );
 
@@ -1990,14 +1888,12 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: primary.id,
-            blockingCalendarIds: [primary.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: primary.id,
+          blockingCalendarIds: [primary.id],
+        }),
       ),
     );
 
@@ -2033,14 +1929,12 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: noMeet.id,
-            blockingCalendarIds: [noMeet.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: noMeet.id,
+          blockingCalendarIds: [noMeet.id],
+        }),
       ),
     );
 
@@ -2082,14 +1976,12 @@ describe("BookingSettingsSection", () => {
     });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: appleCalendar.id,
-            blockingCalendarIds: [appleCalendar.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: appleCalendar.id,
+          blockingCalendarIds: [appleCalendar.id],
+        }),
       ),
     );
 
@@ -2137,14 +2029,12 @@ describe("BookingSettingsSection", () => {
     });
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: microsoftCalendar.id,
-            blockingCalendarIds: [microsoftCalendar.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: microsoftCalendar.id,
+          blockingCalendarIds: [microsoftCalendar.id],
+        }),
       ),
     );
 
@@ -2170,14 +2060,12 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+        }),
       ),
     );
 
@@ -2206,14 +2094,12 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: "000000000000000000000001",
-            blockingCalendarIds: ["000000000000000000000001"],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: "000000000000000000000001",
+          blockingCalendarIds: ["000000000000000000000001"],
+        }),
       ),
     );
 
@@ -2242,15 +2128,13 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            destinationCalendarId: "000000000000000000000001",
-            blockingCalendarIds: ["000000000000000000000001"],
-            weeklyAvailability: [],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          destinationCalendarId: "000000000000000000000001",
+          blockingCalendarIds: ["000000000000000000000001"],
+          weeklyAvailability: [],
+        }),
       ),
     );
 
@@ -2282,12 +2166,10 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) => {
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () => {
         putCount += 1;
-        return res(ctx.status(500));
+        return new HttpResponse(null, { status: 500 });
       }),
     );
 
@@ -2328,11 +2210,7 @@ describe("BookingSettingsSection", () => {
   it("renders Monday through Friday as 9-5 on a fresh unconfigured page", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -2370,19 +2248,15 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = (await req.json()) as {
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = (await request.json()) as {
           weeklyAvailability?: WeeklyAvailability;
         };
-        return res(
-          ctx.json({
-            ...savedOffPage(),
-            ...savedBody,
-          }),
-        );
+        return jsonResponse({
+          ...savedOffPage(),
+          ...savedBody,
+        });
       }),
     );
 
@@ -2422,21 +2296,19 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+        }),
       ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(403),
-          ctx.json({
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "CALENDAR_NOT_CONNECTED",
             message:
               "Connect a healthy calendar account before enabling your meeting page",
-          }),
+          },
+          403,
         ),
       ),
     );
@@ -2476,20 +2348,18 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+        }),
       ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(400),
-          ctx.json({
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "BLOCKING_CALENDAR_INVALID",
             message: "Calendar is not readable",
-          }),
+          },
+          400,
         ),
       ),
     );
@@ -2524,18 +2394,14 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        });
       }),
     );
 
@@ -2576,18 +2442,14 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        });
       }),
     );
 
@@ -2637,22 +2499,18 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        });
       }),
     );
 
@@ -2682,21 +2540,19 @@ describe("BookingSettingsSection", () => {
   it("keeps a copyable meeting link when a configured page is off", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            enabled: false,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "UTC",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "UTC",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        }),
       ),
     );
 
@@ -2725,9 +2581,7 @@ describe("BookingSettingsSection", () => {
   it("does not show a copyable meeting link on a first-run page", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredPage())),
-      ),
+      http.get(bookingPageUrl, () => jsonResponse(unconfiguredPage())),
     );
 
     const { wrapper, queryClient } = createStoreWrapper();
@@ -2749,21 +2603,19 @@ describe("BookingSettingsSection", () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            enabled: false,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "UTC",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "UTC",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        }),
       ),
     );
 
@@ -2797,39 +2649,35 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            enabled: true,
-            durationMinutes: 30,
-            destinationCalendarId: writableCalendar.id,
-            blockingCalendarIds: [writableCalendar.id],
-            timeZone: "UTC",
-            weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
-            minNoticeHours: 4,
-            maxHorizonDays: 60,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          enabled: true,
+          durationMinutes: 30,
+          destinationCalendarId: writableCalendar.id,
+          blockingCalendarIds: [writableCalendar.id],
+          timeZone: "UTC",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        }),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            id: createObjectIdString(),
-            slug: "hostuser",
-            hostUserId: createObjectIdString(),
-            ...(savedBody as object),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            bookingUrl,
-          }),
-        );
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          id: createObjectIdString(),
+          slug: "hostuser",
+          hostUserId: createObjectIdString(),
+          ...(savedBody as object),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          bookingUrl,
+        });
       }),
     );
 
@@ -2862,18 +2710,14 @@ describe("BookingSettingsSection", () => {
     let savedBody: unknown;
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(
-          ctx.json({
-            ...(savedBody as object),
-            isConfigured: true,
-            suggestedSlug: "hostuser",
-          }),
-        );
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse({
+          ...(savedBody as object),
+          isConfigured: true,
+          suggestedSlug: "hostuser",
+        });
       }),
     );
 
@@ -2918,16 +2762,14 @@ describe("BookingSettingsSection", () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(400),
-          ctx.json({
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "AVAILABILITY_REQUIRED",
             message: "Weekly availability is required",
-          }),
+          },
+          400,
         ),
       ),
     );
@@ -2958,11 +2800,7 @@ describe("BookingSettingsSection", () => {
   it("does not focus or toggle the switch with Mod+4", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -2988,11 +2826,7 @@ describe("BookingSettingsSection", () => {
   it("hides the blocking-calendar account caption for a single account", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -3030,13 +2864,11 @@ describe("BookingSettingsSection", () => {
       },
     });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            ...savedOffPage(),
-            blockingCalendarIds: [writableCalendar.id, secondCalendar.id],
-          }),
-        ),
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
+          ...savedOffPage(),
+          blockingCalendarIds: [writableCalendar.id, secondCalendar.id],
+        }),
       ),
     );
 
@@ -3071,11 +2903,7 @@ describe("BookingSettingsSection", () => {
 
   it("keeps More options closed by default", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -3095,11 +2923,7 @@ describe("BookingSettingsSection", () => {
   it("opens More options when a field inside the collapsed group becomes invalid", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
-    server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-    );
+    server.use(http.get(bookingPageUrl, () => jsonResponse(savedOffPage())));
 
     const { wrapper, queryClient } = createStoreWrapper();
     queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
@@ -3125,16 +2949,14 @@ describe("BookingSettingsSection", () => {
 
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(savedOffPage())),
-      ),
-      rest.put(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.status(400),
-          ctx.json({
+      http.get(bookingPageUrl, () => jsonResponse(savedOffPage())),
+      http.put(bookingPageUrl, () =>
+        jsonResponse(
+          {
             code: "DESTINATION_NOT_WRITABLE",
             message: "Calendar is not writable",
-          }),
+          },
+          400,
         ),
       ),
     );

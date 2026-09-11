@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -83,13 +84,13 @@ describe("hidden-events.query", () => {
     const putBodies: unknown[] = [];
 
     server.use(
-      rest.get(hiddenEventsUrl, (_req, res, ctx) =>
-        res(ctx.json({ hiddenEventIds: [] })),
+      http.get(hiddenEventsUrl, () =>
+        jsonResponse({ hiddenEventIds: [] }),
       ),
-      rest.put(hiddenEventsUrl, async (req, res, ctx) => {
-        putBodies.push(await req.json());
+      http.put(hiddenEventsUrl, async ({ request, params }) => {
+        putBodies.push(await request.json());
         await putHold;
-        return res(ctx.status(500), ctx.json({ message: "fail" }));
+        return jsonResponse({ message: "fail" }, 500);
       }),
     );
 

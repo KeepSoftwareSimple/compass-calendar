@@ -1,6 +1,7 @@
-import { rest } from "msw";
+import { http } from "msw";
 import { SetEventHiddenInputSchema } from "@core/types/event-visibility.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { HiddenEventsApi } from "@web/events/hidden/hidden-events.api";
 import { describe, expect, it } from "bun:test";
@@ -10,8 +11,8 @@ const hiddenEventsUrl = `${ENV_WEB.API_BASEURL}/user/hidden-events`;
 describe("HiddenEventsApi", () => {
   it("throws when a list response fails the schema", async () => {
     server.use(
-      rest.get(hiddenEventsUrl, (_req, res, ctx) =>
-        res(ctx.json({ hiddenEventIds: [], extra: true })),
+      http.get(hiddenEventsUrl, () =>
+        jsonResponse({ hiddenEventIds: [], extra: true }),
       ),
     );
 
@@ -20,8 +21,8 @@ describe("HiddenEventsApi", () => {
 
   it("throws when a set response fails the schema", async () => {
     server.use(
-      rest.put(hiddenEventsUrl, (_req, res, ctx) =>
-        res(ctx.json({ hiddenEventIds: "evt-1" })),
+      http.put(hiddenEventsUrl, () =>
+        jsonResponse({ hiddenEventIds: "evt-1" }),
       ),
     );
 

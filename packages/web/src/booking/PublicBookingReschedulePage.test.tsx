@@ -6,7 +6,8 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { Status } from "@core/errors/status.codes";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -26,12 +27,10 @@ const slotStart = (() => {
 const slotEnd = new Date(Date.parse(slotStart) + 30 * 60 * 1000).toISOString();
 
 function reservationGetHandler(overrides: Record<string, unknown> = {}) {
-  return rest.get(
+  return http.get(
     `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}`,
-    (_req, res, ctx) =>
-      res(
-        ctx.status(Status.OK),
-        ctx.json({
+    () =>
+      jsonResponse({
           slotStart,
           guestTimeZone: "UTC",
           durationMinutes: 30,
@@ -41,25 +40,21 @@ function reservationGetHandler(overrides: Record<string, unknown> = {}) {
           guestName: "Guest User",
           notes: null,
           ...overrides,
-        }),
-      ),
+        }, Status.OK),
   );
 }
 
 function pageHandler() {
-  return rest.get(
+  return http.get(
     `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-    (_req, res, ctx) =>
-      res(
-        ctx.status(Status.OK),
-        ctx.json({
+    () =>
+      jsonResponse({
           hostDisplayName: "Tyler Dane",
           durationMinutes: 30,
           timeZone: "America/Chicago",
           enabled: true,
           maxHorizonDays: 60,
-        }),
-      ),
+        }, Status.OK),
   );
 }
 
@@ -67,11 +62,11 @@ function reservationSlotsHandler(
   onRequest?: (url: URL) => void,
   slots = [{ slotStart, slotEnd }],
 ) {
-  return rest.get(
+  return http.get(
     `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/slots`,
-    (req, res, ctx) => {
-      onRequest?.(req.url);
-      return res(ctx.status(Status.OK), ctx.json({ bookable: true, slots }));
+    ({ request }) => {
+      onRequest?.(new URL(request.url));
+      return jsonResponse({ bookable: true, slots }, Status.OK);
     },
   );
 }
@@ -101,13 +96,11 @@ describe("PublicBookingReschedulePage", () => {
       reservationGetHandler(),
       pageHandler(),
       reservationSlotsHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/reschedule`,
-        async (req, res, ctx) => {
-          posts.push(await req.json());
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async ({ request, params }) => {
+          posts.push(await request.json());
+          return jsonResponse({
               reservationId,
               slotStart,
               slotEnd,
@@ -116,8 +109,7 @@ describe("PublicBookingReschedulePage", () => {
               hostDisplayName: "Tyler Dane",
               status: "confirmed",
               bookingSlug: "tylerdane",
-            }),
-          );
+            }, Status.OK);
         },
       ),
     );
@@ -166,14 +158,12 @@ describe("PublicBookingReschedulePage", () => {
       reservationGetHandler(),
       pageHandler(),
       reservationSlotsHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/reschedule`,
-        async (_req, res, ctx) => {
+        async ({ request }) => {
           posts += 1;
           await gate;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+          return jsonResponse({
               reservationId,
               slotStart,
               slotEnd,
@@ -182,8 +172,7 @@ describe("PublicBookingReschedulePage", () => {
               hostDisplayName: "Tyler Dane",
               status: "confirmed",
               bookingSlug: "tylerdane",
-            }),
-          );
+            }, Status.OK);
         },
       ),
     );
@@ -233,9 +222,9 @@ describe("PublicBookingReschedulePage", () => {
       reservationGetHandler(),
       pageHandler(),
       reservationSlotsHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/reschedule`,
-        (_req, res, ctx) => res(ctx.status(Status.CONFLICT), ctx.json({})),
+        () => jsonResponse({}, Status.CONFLICT),
       ),
     );
 

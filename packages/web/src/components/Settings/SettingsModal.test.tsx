@@ -8,7 +8,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import {
@@ -840,9 +841,8 @@ describe("SettingsModal", () => {
   it("marks Meeting as needing attention when the live page is not bookable", async () => {
     const calendar = createMockCalendar({ name: "Work" });
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(
-          ctx.json({
+      http.get(bookingPageUrl, () =>
+        jsonResponse({
             id: createObjectIdString(),
             slug: "hostuser",
             hostUserId: createObjectIdString(),
@@ -858,11 +858,9 @@ describe("SettingsModal", () => {
             updatedAt: new Date().toISOString(),
             bookingUrl: "https://compasscalendar.com/meet/hostuser",
           }),
-        ),
       ),
-      rest.get(`${bookingPageUrl}/status`, (_req, res, ctx) =>
-        res(
-          ctx.json({
+      http.get(`${bookingPageUrl}/status`, () =>
+        jsonResponse({
             bookable: false,
             reasons: [
               {
@@ -872,7 +870,6 @@ describe("SettingsModal", () => {
               },
             ],
           }),
-        ),
       ),
     );
 
@@ -1395,9 +1392,9 @@ describe("SettingsModal", () => {
     const calendar = createMockCalendar({ name: "Work" });
     let savedBody: unknown;
     server.use(
-      rest.put(`${ENV_WEB.API_BASEURL}/booking/page`, async (req, res, ctx) => {
-        savedBody = await req.json();
-        return res(ctx.json(savedBody as object));
+      http.put(`${ENV_WEB.API_BASEURL}/booking/page`, async ({ request, params }) => {
+        savedBody = await request.json();
+        return jsonResponse(savedBody as object);
       }),
     );
     renderSettings({
@@ -1421,12 +1418,12 @@ describe("SettingsModal", () => {
     const calendar = createMockCalendar({ name: "Work" });
     const calendarId = CalendarIdSchema.parse(calendar.id);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredBookingPage(calendarId))),
+      http.get(bookingPageUrl, () =>
+        jsonResponse(unconfiguredBookingPage(calendarId)),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = (await req.json()) as Record<string, unknown>;
-        return res(ctx.json(putSavedBookingPage(calendarId, body)));
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        return jsonResponse(putSavedBookingPage(calendarId, body));
       }),
     );
     renderSettings({
@@ -1447,8 +1444,8 @@ describe("SettingsModal", () => {
     const calendar = createMockCalendar({ name: "Work" });
     const calendarId = CalendarIdSchema.parse(calendar.id);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredBookingPage(calendarId))),
+      http.get(bookingPageUrl, () =>
+        jsonResponse(unconfiguredBookingPage(calendarId)),
       ),
     );
     renderSettings({
@@ -1490,12 +1487,12 @@ describe("SettingsModal", () => {
     const calendar = createMockCalendar({ name: "Work" });
     const calendarId = CalendarIdSchema.parse(calendar.id);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredBookingPage(calendarId))),
+      http.get(bookingPageUrl, () =>
+        jsonResponse(unconfiguredBookingPage(calendarId)),
       ),
-      rest.put(bookingPageUrl, async (req, res, ctx) => {
-        const body = (await req.json()) as Record<string, unknown>;
-        return res(ctx.json(putSavedBookingPage(calendarId, body)));
+      http.put(bookingPageUrl, async ({ request, params }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        return jsonResponse(putSavedBookingPage(calendarId, body));
       }),
     );
     renderSettings({
@@ -1521,8 +1518,8 @@ describe("SettingsModal", () => {
     const calendar = createMockCalendar({ name: "Work" });
     const calendarId = CalendarIdSchema.parse(calendar.id);
     server.use(
-      rest.get(bookingPageUrl, (_req, res, ctx) =>
-        res(ctx.json(unconfiguredBookingPage(calendarId))),
+      http.get(bookingPageUrl, () =>
+        jsonResponse(unconfiguredBookingPage(calendarId)),
       ),
     );
     renderSettings({

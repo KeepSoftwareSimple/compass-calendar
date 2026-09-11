@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
+import { jsonResponse } from "@web/__tests__/helpers/msw-v2";
 import { act, type PropsWithChildren } from "react";
 import { type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
@@ -87,11 +88,9 @@ const setup = (repository?: EventRepository) => {
 const captureReplaceBody = () => {
   const bodies: unknown[] = [];
   server.use(
-    rest.put(`${ENV_WEB.API_BASEURL}/event/:id`, async (req, res, ctx) => {
-      bodies.push(await req.json());
-      return res(
-        ctx.json({ event: meetingEvent({ id: req.params.id as EventId }) }),
-      );
+    http.put(`${ENV_WEB.API_BASEURL}/event/:id`, async ({ request, params }) => {
+      bodies.push(await request.json());
+      return jsonResponse({ event: meetingEvent({ id: params.id as EventId }) });
     }),
   );
   return bodies;
