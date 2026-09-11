@@ -159,7 +159,7 @@ describe("MicrosoftAuthAdapter", () => {
       expect(url.searchParams.get("redirect_uri")).toBe(
         "https://staging.example.com/sync/microsoft",
       );
-      expect(url.searchParams.get("prompt")).toBeNull();
+      expect(url.searchParams.get("prompt")).toBe("consent");
       expect(url.searchParams.get("scope")?.split(" ")).toEqual([
         ...MICROSOFT_SCOPES,
       ]);
@@ -179,7 +179,10 @@ describe("MicrosoftAuthAdapter", () => {
         }),
       );
 
-      expect(url.searchParams.get("prompt")).toBe("select_account");
+      // Without select_account, a browser signed into one Microsoft account
+      // re-authorizes that same account and the user never gets to pick.
+      // consent must stay so the exchange still returns a refresh token.
+      expect(url.searchParams.get("prompt")).toBe("select_account consent");
     });
 
     it("passes login_hint on reconnect so the same account is pre-selected", () => {
@@ -197,7 +200,7 @@ describe("MicrosoftAuthAdapter", () => {
       );
 
       expect(url.searchParams.get("login_hint")).toBe("ada@contoso.com");
-      expect(url.searchParams.get("prompt")).toBeNull();
+      expect(url.searchParams.get("prompt")).toBe("consent");
     });
 
     it("appends optional feature scopes after the base scopes", () => {

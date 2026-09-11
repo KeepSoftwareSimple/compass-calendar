@@ -43,6 +43,8 @@ export interface ProviderAuthAdapter {
     // Hint the provider to pre-select this account on reconnect. Without it
     // a signed-in browser session can consent as a different account, and
     // Compass refuses the grant rather than silently creating a second row.
+    // Adapters must still force consent so the exchange returns a refresh
+    // token; login_hint alone lets Microsoft skip re-consent and omit it.
     readonly loginHint?: string;
     // Optional feature scopes to request ON TOP of the adapter's base scopes
     // (e.g. the contacts scopes behind attendee suggestions). Absent or empty
