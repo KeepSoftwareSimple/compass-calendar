@@ -8,7 +8,10 @@ import {
   reconnectToastBody,
   reconnectToastTitle,
 } from "@web/auth/providers/provider-copy.util";
-import { type GoogleReconnectTarget } from "@web/auth/providers/reconnect.state";
+import {
+  type GoogleReconnectTarget,
+  isConnectionReconnectRequired,
+} from "@web/auth/providers/reconnect.state";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
 import {
   selectSyncConnections,
@@ -31,10 +34,6 @@ import { CONNECTION_BANNER_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useN
 
 let hasShownReconnectToastThisLoad = false;
 let lastReconnectTarget: GoogleReconnectTarget = {};
-
-/** True after any path has already raised the reconnect toast this page load. */
-export const hasShownGoogleReconnectToastThisLoad = (): boolean =>
-  hasShownReconnectToastThisLoad;
 
 export const clearGoogleReconnectToastGate = (): void => {
   hasShownReconnectToastThisLoad = false;
@@ -132,6 +131,7 @@ export function showGoogleReconnectToast(
       toastId: GOOGLE_REVOKED_TOAST_ID,
       accountEmail: target.accountEmail,
       connectionId: target.connectionId,
+      provider: target.provider ?? undefined,
     }),
     {
       toastId: GOOGLE_REVOKED_TOAST_ID,
@@ -158,4 +158,36 @@ export function flushDeferredGoogleReconnectToast(): void {
 
 export function dismissGoogleReconnectToast(): void {
   getToast().dismiss(GOOGLE_REVOKED_TOAST_ID);
+}
+
+/** Drop a live-410 toast once its target is no longer reconnect-required. */
+export function dismissGoogleReconnectToastIfRecovered(
+  connections: readonly SyncConnectionSummary[],
+): void {
+  const target = lastReconnectTarget;
+  if (!target.connectionId && !target.accountEmail) {
+    dismissGoogleReconnectToast();
+    clearGoogleReconnectToastGate();
+    return;
+  }
+
+  const targetStillBroken = connections.some((connection) => {
+    const matchesId =
+      Boolean(target.connectionId) && connection.id === target.connectionId;
+    const matchesAccount =
+      Boolean(target.accountEmail) &&
+      connection.accountEmail?.toLowerCase() ===
+        target.accountEmail?.toLowerCase() &&
+      (!target.provider || connectionProvider(connection) === target.provider);
+    if (!matchesId && !matchesAccount) return false;
+    return (
+      connection.connectionState === "RECONNECT_REQUIRED" ||
+      connection.state === "disconnected" ||
+      isConnectionReconnectRequired(connection.id)
+    );
+  });
+  if (targetStillBroken) return;
+
+  dismissGoogleReconnectToast();
+  clearGoogleReconnectToastGate();
 }

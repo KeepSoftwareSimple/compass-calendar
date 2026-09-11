@@ -30,6 +30,7 @@ import { shiftSeriesScheduleByOccurrenceEdit } from "@core/util/event/shift-seri
 import { decodeOccurrenceId } from "@core/util/occurrence-id";
 import { getApiErrorCode, isApiError } from "@web/api/util/api.util";
 import { track } from "@web/auth/posthog/track";
+import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import { isCalendarReconnectRequired } from "@web/auth/providers/reconnect.calendar";
 import {
   selectGoogleSyncConnections,
@@ -536,10 +537,15 @@ export function useEventMutations(
 
       const connection = selectGoogleSyncConnections(
         useUserMetadataStore.getState(),
-      ).find((entry) => entry.accountEmail === calendar.accountEmail);
+      ).find(
+        (entry) =>
+          entry.accountEmail === calendar.accountEmail &&
+          connectionProviderKind(entry) === calendar.provider,
+      );
       showGoogleReconnectToast({
         connectionId: connection?.id,
         accountEmail: calendar.accountEmail,
+        provider: calendar.provider === "local" ? undefined : calendar.provider,
       });
       console.warn(
         `[useEventMutations] blocked write on reconnect-required calendar ${calendarId}`,

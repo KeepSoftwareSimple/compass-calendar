@@ -59,8 +59,8 @@ export function createGoogleAuthUtil({
 
     // Refresh metadata so Sync's actionRequired row can confirm the account,
     // but keep last-known events and the remote repository so healthy sibling
-    // accounts continue CRUD. Named toast also lands from metadata side
-    // effects once Sync identifies the broken connection.
+    // accounts continue CRUD. Named toast lands here for the live revoke
+    // interrupt; the calendar banner is the persistent reminder.
     refreshUserMetadata();
 
     closeStream();

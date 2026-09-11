@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import {
-  getGoogleReconnectRequiredAccountEmails,
+  getReconnectRequiredAccountKeys,
   useGoogleReconnectRequiredVersion,
 } from "@web/auth/providers/reconnect.state";
 import {
@@ -30,7 +30,7 @@ export function useDefaultTargetCalendar(
   const preferredCalendarId = useDefaultCalendarId();
   const accountEmailOrder = useConnectedAccountEmails();
   useGoogleReconnectRequiredVersion();
-  const reconnectRequiredEmails = getGoogleReconnectRequiredAccountEmails();
+  const reconnectRequiredEmails = getReconnectRequiredAccountKeys();
 
   return getDefaultTargetCalendar(calendars, {
     preferredCalendarId,

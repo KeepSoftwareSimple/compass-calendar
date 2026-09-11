@@ -181,6 +181,24 @@ describe("MicrosoftAuthAdapter", () => {
       expect(url.searchParams.get("prompt")).toBe("select_account");
     });
 
+    it("passes login_hint on reconnect so the same account is pre-selected", () => {
+      const adapter = adapterWith(
+        new FakeTokenEndpoint(),
+        new FakeIdTokenVerifier(),
+      );
+
+      const url = new URL(
+        adapter.buildAuthorizationUrl({
+          state: "opaque-state",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+          loginHint: "ada@contoso.com",
+        }),
+      );
+
+      expect(url.searchParams.get("login_hint")).toBe("ada@contoso.com");
+      expect(url.searchParams.get("prompt")).toBeNull();
+    });
+
     it("appends optional feature scopes after the base scopes", () => {
       const adapter = adapterWith(
         new FakeTokenEndpoint(),

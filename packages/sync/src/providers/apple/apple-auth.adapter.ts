@@ -41,6 +41,7 @@ export class AppleAuthAdapter implements PasswordCredentialAuthAdapter {
     state: string;
     redirectUri: string;
     selectAccount?: boolean;
+    loginHint?: string;
     extraScopes?: readonly string[];
   }): string {
     throw new ProviderAuthError(

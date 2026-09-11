@@ -36,17 +36,19 @@ interface CalendarConnectionBannerProps {
   kind: CalendarConnectionBannerKind;
   onAction: () => void;
   provider?: ProviderKind;
+  accountEmail?: string | null;
 }
 
 export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
   kind,
   onAction,
   provider = "google",
+  accountEmail,
 }) => {
   const { message, action } =
     kind === "reconnect"
       ? {
-          message: calendarReconnectBannerMessage(provider),
+          message: calendarReconnectBannerMessage(provider, accountEmail),
           action: "Reconnect",
         }
       : kind === "consentRequired"

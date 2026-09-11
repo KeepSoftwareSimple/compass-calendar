@@ -58,6 +58,7 @@ export type SignupFailureReason =
   | "connect_missing_scopes"
   | "connect_state_mismatch"
   | "connect_consent_required"
+  | "connect_account_mismatch"
   | "connect_error";
 
 type StepProperties = {
