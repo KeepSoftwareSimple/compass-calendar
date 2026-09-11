@@ -9,9 +9,14 @@ import {
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { setAppLockReason } from "@web/shortcuts/app-lock";
 import {
+  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+  SHORTCUT_UNAVAILABLE_TOAST_ID,
+} from "@web/shortcuts/prompt-shortcut-unavailable";
+import {
   useAppShortcut,
   useAppShortcutUp,
   WRITE_CREATE_SHORTCUT,
+  WRITE_EDIT_SHORTCUT,
 } from "@web/shortcuts/useAppShortcut";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
@@ -269,6 +274,72 @@ describe("useAppShortcut", () => {
     });
     expect(mocks.toast).not.toHaveBeenCalled();
     setAppLockReason("settingsModal", false);
+  });
+
+  it("explains overlayUnavailableMessage when a non-billing overlay owns the keyboard", async () => {
+    setAppLockReason("settingsModal", true);
+
+    renderHook(() =>
+      useAppShortcut("Tab", mockHandler, {
+        overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+        telemetryHintId: "edge-focus",
+      }),
+    );
+
+    dispatchKeyEvent("Tab", "keydown");
+
+    await waitFor(() => {
+      expect(mockHandler).not.toHaveBeenCalled();
+      expect(mocks.toast).toHaveBeenCalledWith(
+        EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+        expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
+      );
+    });
+    setAppLockReason("settingsModal", false);
+  });
+
+  it("does not show overlayUnavailableMessage while the onboarding game owns the keys", async () => {
+    setAppLockReason("shortcutShowcase", true);
+
+    renderHook(() =>
+      useAppShortcut("Tab", mockHandler, {
+        overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+        telemetryHintId: "edge-focus",
+      }),
+    );
+
+    dispatchKeyEvent("Tab", "keydown");
+
+    await waitFor(() => {
+      expect(mockHandler).not.toHaveBeenCalled();
+    });
+    expect(mocks.toast).not.toHaveBeenCalled();
+    setAppLockReason("shortcutShowcase", false);
+  });
+
+  it("prefers the billing upgrade prompt over overlayUnavailableMessage", async () => {
+    setBillingWriteLock({ locked: true, status: "awaiting_checkout" });
+    setAppLockReason("billingGate", true);
+
+    renderHook(() =>
+      useAppShortcut("Tab", mockHandler, {
+        ...WRITE_EDIT_SHORTCUT,
+        overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+        telemetryHintId: "edge-focus",
+      }),
+    );
+
+    dispatchKeyEvent("Tab", "keydown");
+
+    await waitFor(() => {
+      expect(mockHandler).not.toHaveBeenCalled();
+      expect(mocks.toast).toHaveBeenCalled();
+    });
+    expect(mocks.toast).not.toHaveBeenCalledWith(
+      EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
+      expect.anything(),
+    );
+    setAppLockReason("billingGate", false);
   });
 
   describe("unavailable-attempt telemetry", () => {
