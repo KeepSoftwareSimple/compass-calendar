@@ -15,7 +15,7 @@ type PlaintextOauthCredentialRow = {
 };
 
 export async function encryptCredentials(
-  credentials: Collection<Document>,
+  credentials: Collection<Document & { _id: ConnectionId }>,
   options: {
     dryRun: boolean;
     batchSize: number;

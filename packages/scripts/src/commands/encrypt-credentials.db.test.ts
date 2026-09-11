@@ -1,10 +1,13 @@
 import { encryptCredentials } from "@scripts/commands/encrypt-credentials/backfill";
+import { type Document, ObjectId } from "mongodb";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { describe, expect, it } from "bun:test";
 import { randomBytes } from "node:crypto";
+
+const objectId = () => new ObjectId().toHexString();
 
 const KEY = randomBytes(32).toString("base64");
 const NOW = new Date("2026-09-04T12:00:00.000Z");
@@ -13,22 +16,31 @@ describe("encrypt-credentials (db)", () => {
   const storage = setupSyncStorage(import.meta.url);
 
   it("dry-run reports matches without writing", async () => {
-    const connectionId = "conn-1" as ConnectionId;
-    await storage.db().collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: connectionId,
-      credentialKind: "oauthRefresh",
-      provider: "google",
-      refreshToken: "legacy-token",
-      accessToken: null,
-      accessTokenExpiresAt: null,
-      refreshFailureCount: 0,
-      scopes: [],
-      createdAt: NOW,
-      updatedAt: NOW,
-    });
+    const connectionId = objectId() as ConnectionId;
+    await storage
+      .db()
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      )
+      .insertOne({
+        _id: connectionId,
+        credentialKind: "oauthRefresh",
+        provider: "google",
+        refreshToken: "legacy-token",
+        accessToken: null,
+        accessTokenExpiresAt: null,
+        refreshFailureCount: 0,
+        scopes: [],
+        createdAt: NOW,
+        updatedAt: NOW,
+      });
 
     const report = await encryptCredentials(
-      storage.db().collection(SYNC_COLLECTIONS.credentials),
+      storage
+        .db()
+        .collection<Document & { _id: ConnectionId }>(
+          SYNC_COLLECTIONS.credentials,
+        ),
       { dryRun: true, batchSize: 50, encryptionKey: KEY, now: NOW },
     );
 
@@ -36,16 +48,22 @@ describe("encrypt-credentials (db)", () => {
     expect(report.modified).toBe(0);
     const raw = await storage
       .db()
-      .collection(SYNC_COLLECTIONS.credentials)
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      )
       .findOne({ _id: connectionId });
-    expect(raw?.refreshToken).toBe("legacy-token");
+    expect(raw?.["refreshToken"]).toBe("legacy-token");
     expect(raw).not.toHaveProperty("refreshTokenCiphertext");
   });
 
   it("encrypts plaintext rows and is idempotent and resumable", async () => {
-    const firstId = "conn-a" as ConnectionId;
-    const secondId = "conn-b" as ConnectionId;
-    const collection = storage.db().collection(SYNC_COLLECTIONS.credentials);
+    const firstId = objectId() as ConnectionId;
+    const secondId = objectId() as ConnectionId;
+    const collection = storage
+      .db()
+      .collection<Document & { _id: ConnectionId }>(
+        SYNC_COLLECTIONS.credentials,
+      );
     await collection.insertMany([
       {
         _id: firstId,
@@ -96,15 +114,17 @@ describe("encrypt-credentials (db)", () => {
       [firstId, "token-a"],
       [secondId, "token-b"],
     ] as const) {
-      const raw = await collection.findOne({ _id: connectionId });
+      const raw = await collection.findOne({
+        _id: connectionId,
+      });
       expect(raw).not.toHaveProperty("refreshToken");
-      expect(raw?.refreshTokenCiphertext).toBeString();
+      expect(raw?.["refreshTokenCiphertext"]).toBeString();
       expect(
         decryptCredentialAtRest(KEY, {
-          ciphertext: String(raw?.refreshTokenCiphertext),
-          iv: String(raw?.refreshTokenIv),
-          tag: String(raw?.refreshTokenTag),
-          keyVersion: Number(raw?.keyVersion),
+          ciphertext: String(raw?.["refreshTokenCiphertext"]),
+          iv: String(raw?.["refreshTokenIv"]),
+          tag: String(raw?.["refreshTokenTag"]),
+          keyVersion: Number(raw?.["keyVersion"]),
         }),
       ).toBe(plaintext);
       expect(JSON.stringify(raw)).not.toContain(plaintext);
