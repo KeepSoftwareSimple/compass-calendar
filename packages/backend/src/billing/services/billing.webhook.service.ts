@@ -2,8 +2,8 @@ import type Stripe from "stripe";
 import { Logger } from "@core/logger/winston.logger";
 import { billingAnalytics } from "@backend/billing/billing.analytics";
 import {
+  isStripeSubscriptionStatus,
   STRIPE_TO_COMPASS_STATUS,
-  type StripeSubscriptionStatus,
 } from "@backend/billing/billing.constants";
 import {
   type StripeBillingGateway,
@@ -70,14 +70,13 @@ export async function applySubscription(
   subscription: Stripe.Subscription,
   eventCreatedAt: Date,
 ): Promise<void> {
-  const status =
-    STRIPE_TO_COMPASS_STATUS[subscription.status as StripeSubscriptionStatus];
-  if (!status) {
+  if (!isStripeSubscriptionStatus(subscription.status)) {
     logger.warn(
       `Ignoring unmapped Stripe subscription status ${subscription.status}`,
     );
     return;
   }
+  const status = STRIPE_TO_COMPASS_STATUS[subscription.status];
 
   const priceId = subscription.items.data[0]?.price?.id;
   const currentPeriodEnd = toDate(
