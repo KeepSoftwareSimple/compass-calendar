@@ -1,5 +1,8 @@
+import { Logger } from "@core/logger/winston.logger";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { SyncServiceClient } from "./sync-service.client";
+
+const logger = Logger("app:sync-service.client");
 
 // Build a client from an explicit URL + secret. Kept separate from the config
 // singleton so it is testable without the global CONFIG.
@@ -12,6 +15,16 @@ export function buildSyncServiceClient(options: {
     baseUrl: options.serviceUrl,
     secret: options.secret,
     timeoutMs: options.timeoutMs,
+    // `warn`, not `error`: a retry that goes on to succeed is a self-healed
+    // blip, and filing it as an exception would bury the failures that
+    // actually reached a user. An exhausted retry is still logged by the
+    // caller (event.controller's send), so this never double-reports.
+    onRetry: (info) =>
+      logger.warn(
+        `Retrying sync request ${info.method} ${info.path} after ${info.kind}` +
+          `${info.status === undefined ? "" : ` (${info.status})`}` +
+          ` [attempt=${info.attempt} correlationId=${info.correlationId}]`,
+      ),
   });
 }
 

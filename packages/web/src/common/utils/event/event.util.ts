@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import { Origin } from "@core/constants/core.constants";
 import { YEAR_MONTH_DAY_COMPACT_FORMAT } from "@core/constants/date.constants";
 import { Status } from "@core/errors/status.codes";
@@ -17,6 +18,7 @@ import { isBackendUnavailableError } from "@web/api/util/backend-unavailable-err
 import { getUserId } from "@web/auth/compass/session/session.util";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import {
+  EVENT_SAVE_RETRYABLE_TOAST_ID,
   EVENT_SAVE_UNAVAILABLE_TOAST_ID,
   GENERIC_ERROR_TOAST_ID,
 } from "@web/common/constants/toast.constants";
@@ -27,6 +29,7 @@ import {
 } from "@web/common/types/web.event.types";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import { RetryableSaveToast } from "@web/common/utils/toast/retryable-save.toast";
 import {
   calendarEventIdValueSelector,
   readCalendarEventIdFromElement,
@@ -232,12 +235,20 @@ const MUTATION_ERROR_TOAST_MESSAGES: Partial<
     "This event was changed somewhere else. Refresh to load the latest version, then try again.",
   GOOGLE_REVOKED:
     "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
+  SYNC_UNAVAILABLE:
+    "Couldn't save that change, the calendar service is briefly unavailable. Your edit was not applied.",
+  // Covers a failed round-trip and a response that broke the contract, so
+  // the copy must not claim which one happened.
+  PROVIDER_FAILURE:
+    "Couldn't save that change, the calendar service had a problem. Your edit was not applied.",
+  MAINTENANCE:
+    "Couldn't save that change, Compass is updating the calendar service. Your edit was not applied.",
 };
 
 const showCatchallToast = (message: string) =>
   showErrorToast(message, { toastId: GENERIC_ERROR_TOAST_ID });
 
-export const handleError = (error: Error) => {
+export const handleError = (error: Error, onRetry?: () => void) => {
   if (isBackendUnavailableError(error)) {
     // No HTTP response reached us at all (offline, DNS, dropped connection)
     // or a 502/503/504 - the optimistic edit is about to roll back with
@@ -277,10 +288,28 @@ export const handleError = (error: Error) => {
     // actually happened when we have copy for it (a generic toast on a
     // deterministic refusal reads as "try again", which can never work).
     // No error-tracking capture either way — these are expected outcomes.
-    showCatchallToast(
+    const message =
       MUTATION_ERROR_TOAST_MESSAGES[mutationError.code] ??
-        CATCHALL_TOAST_MESSAGE,
-    );
+      CATCHALL_TOAST_MESSAGE;
+
+    // The backend already decided whether the same request could succeed
+    // (RETRYABLE_BY_CODE in event.error.ts). When it can, hand the user the
+    // retry instead of making them redo the edit. Retrying is safe: the
+    // command's idempotency key is a hash of the payload, so a replay
+    // dedupes rather than applying twice.
+    if (mutationError.retryable && onRetry) {
+      showErrorToast(
+        createElement(RetryableSaveToast, {
+          message,
+          toastId: EVENT_SAVE_RETRYABLE_TOAST_ID,
+          onRetry,
+        }),
+        { toastId: EVENT_SAVE_RETRYABLE_TOAST_ID },
+      );
+      return;
+    }
+
+    showCatchallToast(message);
     return;
   }
 

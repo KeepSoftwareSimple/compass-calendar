@@ -6,6 +6,7 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { type ApiError, type ApiResponse } from "@web/api/api.types";
 import * as realPosthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
 import {
+  EVENT_SAVE_RETRYABLE_TOAST_ID,
   EVENT_SAVE_UNAVAILABLE_TOAST_ID,
   GENERIC_ERROR_TOAST_ID,
 } from "@web/common/constants/toast.constants";
@@ -212,6 +213,95 @@ describe("handleError", () => {
     expect(message).toBe(
       "Google doesn't allow this change for this event (for example events created from an email, birthdays, or holidays). Delete it or manage it in your calendar.",
     );
+  });
+
+  it("explains a brief sync outage instead of the catch-all", () => {
+    // The 503 a Sync restart produces. It used to land on "Something went
+    // wrong behind the scenes", which reads as a crash rather than the
+    // recoverable blip it is.
+    const error = createServerError(Status.SERVICE_UNAVAILABLE);
+    error.response = {
+      status: Status.SERVICE_UNAVAILABLE,
+      data: {
+        code: "SYNC_UNAVAILABLE",
+        message: "backend contract message, not toast copy",
+        retryable: true,
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error);
+
+    expect(mockCaptureException).not.toHaveBeenCalled();
+    const [message] = mocks.error.mock.calls[0] ?? [];
+    expect(message).toBe(
+      "Couldn't save that change, the calendar service is briefly unavailable. Your edit was not applied.",
+    );
+  });
+
+  it("offers a retry the caller can re-dispatch when the backend says retryable", () => {
+    const onRetry = mock(() => {});
+    const error = createServerError(Status.SERVICE_UNAVAILABLE);
+    error.response = {
+      status: Status.SERVICE_UNAVAILABLE,
+      data: {
+        code: "SYNC_UNAVAILABLE",
+        message: "backend contract message, not toast copy",
+        retryable: true,
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error, onRetry);
+
+    expect(mocks.error).toHaveBeenCalledTimes(1);
+    const [content, options] = mocks.error.mock.calls[0] ?? [];
+    // Its own toastId: a recoverable save failure must not dedupe against
+    // the generic error toast.
+    expect(options).toMatchObject({ toastId: EVENT_SAVE_RETRYABLE_TOAST_ID });
+    expect(EVENT_SAVE_RETRYABLE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
+
+    const props = (content as { props: { onRetry: () => void } }).props;
+    props.onRetry();
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the plain toast when a retryable failure has no retry to offer", () => {
+    // handleError is also called from paths with no mutation to re-dispatch;
+    // those must not render a dead "Try again" button.
+    const error = createServerError(Status.SERVICE_UNAVAILABLE);
+    error.response = {
+      status: Status.SERVICE_UNAVAILABLE,
+      data: {
+        code: "SYNC_UNAVAILABLE",
+        message: "backend contract message, not toast copy",
+        retryable: true,
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error);
+
+    expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+      toastId: GENERIC_ERROR_TOAST_ID,
+    });
+  });
+
+  it("does not offer a retry on a refusal the backend marked final", () => {
+    const onRetry = mock(() => {});
+    const error = createServerError(Status.FORBIDDEN);
+    error.response = {
+      status: Status.FORBIDDEN,
+      data: {
+        code: "CALENDAR_READ_ONLY",
+        message: "Calendar is read-only",
+        retryable: false,
+      },
+    } as ApiResponse<unknown>;
+
+    handleError(error, onRetry);
+
+    expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+      toastId: GENERIC_ERROR_TOAST_ID,
+    });
+    expect(onRetry).not.toHaveBeenCalled();
   });
 
   it("does not toast a BILLING_REQUIRED refusal — the gate is the feedback", () => {

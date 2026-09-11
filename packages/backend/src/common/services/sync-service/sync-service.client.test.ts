@@ -1039,6 +1039,208 @@ describe("SyncServiceClient", () => {
     expect(result.error.kind).toBe("timeout");
   });
 
+  // Restarting Sync leaves the backend holding dead pooled sockets, so the
+  // next write fails with ECONNRESET before Sync is reachable again. That
+  // used to surface as an error toast on an edit that would have succeeded.
+  describe("transient failure retry", () => {
+    const failThen = (
+      failures: Array<{ status: number } | "connection-failure">,
+    ) => {
+      let call = 0;
+      const calls: Array<Record<string, string>> = [];
+      const fn: SyncServiceClientOptions["fetch"] = async (_url, init) => {
+        calls.push(init.headers);
+        const scripted = failures[call];
+        call += 1;
+        if (scripted === "connection-failure") throw new Error("ECONNRESET");
+        if (scripted) {
+          return { status: scripted.status, json: async () => ({}) };
+        }
+        return { status: 200, json: async () => okBody() };
+      };
+      return { fn, calls, attempts: () => call };
+    };
+
+    it("retries a dropped connection and succeeds", async () => {
+      const { fn, attempts } = failThen(["connection-failure"]);
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      if (!result.ok) throw new Error(`expected ok, got ${result.error.kind}`);
+      expect(result.value.bookable).toBe(true);
+      expect(attempts()).toBe(2);
+    });
+
+    it("retries a 503 readiness window and succeeds", async () => {
+      const { fn, attempts } = failThen([{ status: 503 }, { status: 503 }]);
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(true);
+      expect(attempts()).toBe(3);
+    });
+
+    it("does not retry a 429", async () => {
+      // Sync's own shared 300/min limiter. Retrying tightly would only
+      // deepen the backlog it is reporting.
+      const { fn, attempts } = failThen([{ status: 429 }]);
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(attempts()).toBe(1);
+    });
+
+    it("does not retry a timeout", async () => {
+      // The caller already waited out the full deadline; a retry would just
+      // double the wait before the same failure.
+      let call = 0;
+      const fn: SyncServiceClientOptions["fetch"] = (_url, init) => {
+        call += 1;
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            const error = new Error("aborted");
+            error.name = "AbortError";
+            reject(error);
+          });
+        });
+      };
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.kind).toBe("timeout");
+      expect(call).toBe(1);
+    });
+
+    it("gives up after three attempts and returns the typed failure", async () => {
+      const { fn, attempts } = failThen([
+        "connection-failure",
+        "connection-failure",
+        "connection-failure",
+        "connection-failure",
+      ]);
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.kind).toBe("unavailable");
+      expect(attempts()).toBe(3);
+    });
+
+    it("re-signs every attempt while holding the correlation id steady", async () => {
+      // Sync rejects a timestamp outside its freshness window, so a retry
+      // must carry a fresh signature rather than replaying the first one.
+      let clock = NOW;
+      const { fn, calls } = failThen(["connection-failure"]);
+      const retryClient = new SyncServiceClient({
+        baseUrl: BASE_URL,
+        secret: SECRET,
+        timeoutMs: 5_000,
+        fetch: fn,
+        now: () => {
+          clock += 1_000;
+          return clock;
+        },
+        newCorrelationId: () => "corr-retry",
+      });
+
+      await retryClient.queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(calls).toHaveLength(2);
+      expect(calls[0]?.["x-correlation-id"]).toBe("corr-retry");
+      expect(calls[1]?.["x-correlation-id"]).toBe("corr-retry");
+      expect(calls[1]?.["x-sync-timestamp"]).not.toBe(
+        calls[0]?.["x-sync-timestamp"],
+      );
+      expect(calls[1]?.["x-sync-signature"]).not.toBe(
+        calls[0]?.["x-sync-signature"],
+      );
+    });
+
+    it("reports every retry so a self-healed blip is not silent", async () => {
+      const { fn } = failThen(["connection-failure", { status: 503 }]);
+      const seen: Array<{ kind: string; status?: number; attempt: number }> =
+        [];
+
+      const retryClient = new SyncServiceClient({
+        baseUrl: BASE_URL,
+        secret: SECRET,
+        timeoutMs: 5_000,
+        fetch: fn,
+        now: () => NOW,
+        newCorrelationId: () => "corr-1",
+        onRetry: (info) =>
+          seen.push({
+            kind: info.kind,
+            status: info.status,
+            attempt: info.attempt,
+          }),
+      });
+
+      await retryClient.queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(seen).toEqual([
+        { kind: "unavailable", status: undefined, attempt: 1 },
+        { kind: "unavailable", status: 503, attempt: 2 },
+      ]);
+    });
+
+    it("stops retrying once the caller's deadline has passed", async () => {
+      // Retries must fit inside the timeout the caller was promised, so a
+      // nominally 50ms read cannot quietly become a multi-second one.
+      const { fn, attempts } = failThen([
+        "connection-failure",
+        "connection-failure",
+        "connection-failure",
+      ]);
+      let clock = NOW;
+      const deadlineClient = new SyncServiceClient({
+        baseUrl: BASE_URL,
+        secret: SECRET,
+        timeoutMs: 50,
+        fetch: fn,
+        // Each read of the clock jumps past the 50ms budget.
+        now: () => {
+          clock += 500;
+          return clock;
+        },
+        newCorrelationId: () => "corr-1",
+      });
+
+      const result = await deadlineClient.queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(false);
+      expect(attempts()).toBe(1);
+    });
+  });
+
   it("keeps submitCommand open longer than the default read deadline", async () => {
     // Default client timeout is 20ms; a 50ms response must still succeed for
     // commands (provider deletes run inline and routinely exceed the read
