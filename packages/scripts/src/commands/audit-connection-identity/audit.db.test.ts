@@ -1,6 +1,11 @@
 import { auditConnectionIdentity } from "@scripts/commands/audit-connection-identity/audit";
 import { ObjectId } from "mongodb";
 import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   cleanupCollections,
   cleanupTestDb,
   setupTestDb,
@@ -69,10 +74,14 @@ describe("auditConnectionIdentity provider filter (db)", () => {
   ) => {
     connections = new ProviderConnectionRepository(syncStorage.db());
     return connections.upsertByProviderAccount({
-      tenantId: principalId,
-      principalId,
+      tenantId: principalId as TenantId,
+      principalId: principalId as PrincipalId,
       provider,
-      account: { providerAccountId, email, displayName: null },
+      account: {
+        providerAccountId: providerAccountId as ProviderAccountId,
+        email,
+        displayName: null,
+      },
       capabilities: ["readEvents", "readBusy", "writeEvents"],
       state: "healthy",
       stateReason: null,

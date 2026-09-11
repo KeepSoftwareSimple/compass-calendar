@@ -47,7 +47,7 @@ printf '%s' "$DETECT_CODE_CHANGES_TEST_FILES"
         DETECT_CODE_CHANGES_TEST_LOG: log,
         DETECT_CODE_CHANGES_TEST_STATUS: String(ghStatus),
         GITHUB_OUTPUT: output,
-        PATH: `${bin}:${process.env.PATH}`,
+        PATH: `${bin}:${process.env["PATH"]}`,
       },
     },
   );

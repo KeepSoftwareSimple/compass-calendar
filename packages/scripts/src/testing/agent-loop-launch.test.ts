@@ -75,7 +75,7 @@ printf '%s' "$AGENT_LOOP_TEST_STATUS"
         CURSOR_API_KEY: "test-key",
         GITHUB_OUTPUT: output,
         GITHUB_REPOSITORY: "example/compass",
-        PATH: `${bin}:${process.env.PATH}`,
+        PATH: `${bin}:${process.env["PATH"]}`,
       },
     },
   );
@@ -119,7 +119,7 @@ exit 1
       AGENT_LOOP_MILESTONES: "Compass Booking v1",
       GITHUB_OUTPUT: output,
       GITHUB_REPOSITORY: "example/compass",
-      PATH: `${bin}:${process.env.PATH}`,
+      PATH: `${bin}:${process.env["PATH"]}`,
     },
   });
 
@@ -177,7 +177,7 @@ printf '%s\\n' "$*" >> "$AGENT_LOOP_TEST_LOG"
           AGENT_LOOP_TEST_LOG: log,
           GITHUB_OUTPUT: output,
           GITHUB_REPOSITORY: "example/compass",
-          PATH: `${bin}:${process.env.PATH}`,
+          PATH: `${bin}:${process.env["PATH"]}`,
           CURSOR_API_KEY: "",
         },
       },
