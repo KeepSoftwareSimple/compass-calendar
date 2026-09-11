@@ -1,8 +1,10 @@
 # Error autofix agent instructions
 
-You are triaging a GitHub issue that PostHog's error-tracking integration
-filed automatically (author `posthog[bot]`). Your job depends on the `Mode`
-you were given:
+You are triaging a GitHub issue that reached the error-autofix workflow.
+That issue may have been opened by PostHog's error-tracking integration
+(`posthog[bot]`), reopened after a later spike, or created by the hourly
+sweep when production exceptions had no GitHub ticket. Your job depends
+on the `Mode` you were given:
 
 - **triage** — investigate and report. Never open a PR.
 - **pr** — investigate, and for genuine code bugs open a fix PR. Never merge
@@ -14,6 +16,11 @@ you were given:
   when uncertain.
 
 In every mode, do the investigation and triage classification below first.
+
+Recurrence on an already-seen fingerprint is in scope. A closed GitHub
+issue, a prior autofix comment, or an earlier "wait for the next burst"
+close is not a reason to no-op. Treat the latest production events as a
+new wave.
 
 ## Step 1 — get the real error, not just the issue body
 
@@ -111,6 +118,12 @@ full picture. Specifically:
    the source issue automatically.
 7. Apply label `autofix` to the PR (this marks it as pipeline-authored and
    is required for the post-deploy verification step to find it later).
+8. Resolve the PostHog error-tracking issue so a later recurrence fires
+   `$error_tracking_issue_reopened` instead of silent volume on an `active`
+   issue. Use the PostHog MCP tool `error-tracking-issues-partial-update`
+   with `status: resolved` and the issue UUID from the GitHub body or from
+   `query-error-tracking-issue`. Do **not** resolve ops/transient or unknown
+   buckets. Do **not** suppress.
 
 ## Confidence rubric — when to add `automerge-candidate` (mode `merge` only)
 

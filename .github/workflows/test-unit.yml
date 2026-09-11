@@ -125,6 +125,10 @@ jobs:
           bash .github/scripts/agent-loop-next.test.sh
           bash .github/scripts/agent-loop-merge-guard.test.sh
           bash .github/scripts/detect-code-changes.test.sh
+          bash .github/scripts/autofix-preflight.test.sh
+          bash .github/scripts/autofix-unstick.test.sh
+          bash .github/scripts/autofix-sweep.test.sh
+          bash .github/scripts/autofix-lib.test.sh
 
   # A skipped MATRIX job collapses to one check run, so the `unit` rollup
   # below would see `skipped` for a docs-only PR only if every leg started.

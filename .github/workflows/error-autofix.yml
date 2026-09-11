@@ -1,9 +1,9 @@
 name: Error autofix
 
 # Reacts to GitHub issues that PostHog's error-tracking integration files
-# automatically (author posthog[bot]). See .github/prompts/error-autofix.md
-# for the agent's triage/fix/confidence rubric, and
-# docs/CI-CD (or the compass-calendar-internal plan) for the rollout phases.
+# automatically (author posthog[bot]), plus an hourly sweep that feeds
+# production recurrences back into this same agent. See
+# .github/prompts/error-autofix.md and docs/CI-CD/error-autofix-routine.md.
 #
 # Kill switch: repo variable ERROR_AUTOFIX_ENABLED (default false/unset).
 # Mode: repo variable AUTOFIX_MODE — triage | pr | merge.
@@ -13,42 +13,89 @@ name: Error autofix
 #           the deterministic gate below agrees.
 # Manual re-runs: "Re-run jobs" on a failed run reuses the workflow file
 # snapshot from that run, so fixes to this file never apply — dispatch a
-# fresh run instead, passing the PostHog issue number. Remove the issue's
-# autofix label first or preflight will skip it as already handled.
+# fresh run instead, passing the PostHog issue number. A failed agent run
+# now unsticks the autofix label and retries once on its own.
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
+  schedule:
+    # Offset from the agent-loop hourly job so the two watchdogs do not
+    # stampede the same minute.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       issue_number:
-        description: "PostHog error issue number to (re-)run the autofix flow for"
-        required: true
+        description: "GitHub issue number to (re-)run the autofix flow for. Leave blank to run the production sweep."
+        required: false
         type: string
-
-concurrency:
-  group: error-autofix
-  cancel-in-progress: false
+      retry:
+        description: "Set by the automatic one-shot retry after an agent failure"
+        required: false
+        type: boolean
+        default: false
 
 jobs:
-  autofix:
-    # workflow_dispatch skips the posthog[bot] author check: dispatching
-    # already requires write access, and the operator names the issue.
+  sweep:
     if: >-
       vars.ERROR_AUTOFIX_ENABLED == 'true' &&
-      (github.event_name == 'workflow_dispatch' ||
-       github.event.issue.user.login == 'posthog[bot]')
+      (github.event_name == 'schedule' ||
+       (github.event_name == 'workflow_dispatch' &&
+        inputs.issue_number == ''))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+      actions: write
+    concurrency:
+      group: error-autofix-sweep
+      cancel-in-progress: true
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Sweep production exceptions into autofix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+        run: .github/scripts/autofix-sweep.sh
+
+  autofix:
+    # workflow_dispatch skips the posthog[bot] author check: dispatching
+    # already requires write access, and the operator (or sweep) names the
+    # issue. Reopened issues may be sweep-created; those carry an autofix*
+    # label instead of a posthog[bot] author.
+    if: >-
+      vars.ERROR_AUTOFIX_ENABLED == 'true' &&
+      (
+        (github.event_name == 'workflow_dispatch' &&
+         inputs.issue_number != '') ||
+        (github.event_name == 'issues' &&
+         github.event.action == 'opened' &&
+         github.event.issue.user.login == 'posthog[bot]') ||
+        (github.event_name == 'issues' &&
+         github.event.action == 'reopened' &&
+         (github.event.issue.user.login == 'posthog[bot]' ||
+          contains(join(github.event.issue.labels.*.name, ','), 'autofix')))
+      )
     env:
       ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+      AUTOFIX_RETRY_ATTEMPT: ${{ github.event_name == 'workflow_dispatch' && inputs.retry && '1' || '0' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: write
       pull-requests: write
       issues: write
+      actions: write
       # Required by claude-code-action's OIDC exchange: with no github_token
       # passed (see below), it authenticates via the runner's OIDC token to
       # mint the Claude GitHub App installation token.
       id-token: write
+    concurrency:
+      group: error-autofix
+      cancel-in-progress: false
     outputs:
       proceed: ${{ steps.preflight.outputs.proceed }}
     steps:
@@ -62,6 +109,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          AUTOFIX_RETRY_ATTEMPT: ${{ env.AUTOFIX_RETRY_ATTEMPT }}
         run: .github/scripts/autofix-preflight.sh "${ISSUE_NUMBER}"
 
       - name: Write PostHog MCP config
@@ -77,6 +125,7 @@ jobs:
       # agent-opened PR would sit with zero checks and never satisfy the
       # required-status-checks gate added in Phase 3.
       - name: Run autofix agent
+        id: agent
         if: steps.preflight.outputs.proceed == 'true'
         uses: anthropics/claude-code-action@v1
         with:
@@ -88,7 +137,8 @@ jobs:
           # reports API-level failures (an expired token, exhausted quota)
           # as a bare `is_error: true` with no cause, which is undebuggable
           # without the real message. An operator dispatching by hand already
-          # has write access, so those runs get the full output.
+          # has write access, so those runs get the full output. The
+          # automatic retry is also a workflow_dispatch, so it is unredacted.
           show_full_output: ${{ github.event_name == 'workflow_dispatch' }}
           prompt: |
             Read .github/prompts/error-autofix.md and follow it exactly.
@@ -99,9 +149,20 @@ jobs:
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,mcp__posthog__*"
             --mcp-config ${{ runner.temp }}/posthog-mcp.json
 
+      - name: Unstick failed agent
+        if: failure() && steps.agent.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: .github/scripts/autofix-unstick.sh "${ISSUE_NUMBER}"
+
   gate-and-merge:
     needs: autofix
-    if: vars.AUTOFIX_MODE == 'merge' && needs.autofix.outputs.proceed == 'true'
+    if: >-
+      vars.AUTOFIX_MODE == 'merge' &&
+      needs.autofix.result == 'success' &&
+      needs.autofix.outputs.proceed == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
