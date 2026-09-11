@@ -48,7 +48,8 @@
     "build:sync": "bun packages/scripts/src/commands/build.sync.ts",
     "build:web": "cd packages/web && bun run build.ts",
     "sync:backup": "bun packages/scripts/src/commands/sync-backup.ts",
-    "sync:restore": "bun packages/scripts/src/commands/sync-restore.ts"
+    "sync:restore": "bun packages/scripts/src/commands/sync-restore.ts",
+    "microsoft:mint-token": "bun packages/scripts/src/commands/microsoft-mint-refresh-token.ts"
   },
   "dependencies": {
     "@compass/backend": "*",
