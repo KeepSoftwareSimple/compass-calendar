@@ -107,9 +107,9 @@ kind to a `ProviderRegistration`: `adapters`, `scopes`, `capabilities`,
 credential custody, and the public routes resolve adapters per connection
 through `registry.get(kind)`.
 
-Google registers when `google.clientId` / `google.clientSecret` are set.
-Microsoft and Apple config is read into `SyncConfig` but those kinds are not
-registered until M-09 / A-08.
+Google registers when `google.clientId` / `google.clientSecret` are set,
+Microsoft when `microsoft.clientId` / `microsoft.clientSecret` are set, and
+Apple when its config is present.
 
 `ProviderAdapters` on a registration:
 
@@ -290,6 +290,46 @@ Each alias names the release that removes it.
   leave `providerManaged` unset; their writers ignore the hint. On patch, the
   writer receives `providerManaged: true` on the input and sends only the body
   fields that provider accepts (Google: `colorId` and attendees).
+
+## Microsoft registration and staging proof
+
+The hosted Compass app is registered in the SIMPLE SOFTWARE LLC tenant
+(`keepsoftwaresimple.onmicrosoft.com`) as a **verified publisher** (Microsoft
+AI Cloud Partner Program ID 7157084, publisher domain
+`keepsoftwaresimple.com`, verified 2026-09-11). Consent screens show the
+verified badge; no "unverified app" warning. Audience is any Entra tenant plus
+personal Microsoft accounts, matching the `/common` endpoints the adapter
+uses. Delegated Graph permissions: `User.Read`, `offline_access`,
+`Calendars.ReadWrite`, and `People.Read` (the last only for the contacts
+feature).
+
+Two redirect URI shapes are registered per deployment, both on the frontend
+origin (the frontend proxies `/sync` to the sync service):
+
+| Flow | URI shape |
+|---|---|
+| Connect a calendar (sync service, `callbackBaseUrl`) | `<origin>/sync/microsoft` |
+| Sign in with Microsoft (web, `window.location.origin`) | `<origin>/auth/microsoft/callback` |
+
+Origins: `https://compasscalendar.com`, `https://staging.compasscalendar.com`,
+`https://selfhosted.compasscalendar.com`, plus `http://localhost:3010`
+(sync) and `http://localhost:9080` (web) for development. The client id is
+public and baked into the web bundle at build time; the client secret lives
+only in `compass.yaml` and the GitHub Environments.
+
+Founder proof on staging, 2026-09-11 (#3208): sign in with Microsoft with the
+verified badge, calendars connected, an event created in Compass appeared in
+Outlook, an edit made in Outlook synced back to Compass after a reload, and a
+booking completed through `/meet`. The live smoke (`live-provider-smoke.yml`)
+now exercises the Microsoft adapters nightly; see
+[`docs/CI-CD/live-provider-smoke.md`](../CI-CD/live-provider-smoke.md).
+
+Findings from the first live runs, tracked separately: #3659 (booking
+availability did not block a slot occupied on a Microsoft calendar), #3662
+(`prompt=select_account consent` is rejected by Microsoft, so connecting a
+second Microsoft account fails), and #3664 (the smoke job is green when every
+provider is skipped). Exchange aligns recurring occurrences to whole minutes;
+`fetchInstanceAt` matches at minute precision for that reason.
 
 ## Microsoft Graph event reads
 
