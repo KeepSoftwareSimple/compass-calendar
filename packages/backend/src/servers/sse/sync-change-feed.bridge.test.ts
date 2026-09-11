@@ -1,6 +1,16 @@
 import { faker } from "@faker-js/faker";
-import { type CalendarId, type EventId } from "@core/types/domain-primitives";
+import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+} from "@core/types/domain-primitives";
 import { type ServerMessage } from "@core/types/server-message.contracts";
+import { type ChangeFeedCursor } from "@core/types/sync/change-feed.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { FakeScheduler } from "@backend/__tests__/helpers/fake-scheduler";
 import {
   SyncChangeFeedBridge,
@@ -78,23 +88,26 @@ describe("SyncChangeFeedBridge", () => {
           kind: "ok",
           invalidations: [
             {
-              invalidation: { kind: "connection", connectionId: objectId() },
-              emittedAt: "2026-07-30T00:00:00.000Z",
-              tenantId: userA,
-              principalId: userA,
+              invalidation: {
+                kind: "connection",
+                connectionId: objectId() as ConnectionId,
+              },
+              emittedAt: "2026-07-30T00:00:00.000Z" as DateTime,
+              tenantId: userA as TenantId,
+              principalId: userA as PrincipalId,
             },
             {
               invalidation: {
                 kind: "event",
-                eventId: objectId(),
-                calendarId: objectId(),
+                eventId: objectId() as EventId,
+                calendarId: objectId() as CalendarId,
               },
-              emittedAt: "2026-07-30T00:00:01.000Z",
-              tenantId: userB,
-              principalId: userB,
+              emittedAt: "2026-07-30T00:00:01.000Z" as DateTime,
+              tenantId: userB as TenantId,
+              principalId: userB as PrincipalId,
             },
           ],
-          nextCursor: objectId(),
+          nextCursor: objectId() as ChangeFeedCursor,
         },
       },
     ]);
@@ -125,8 +138,8 @@ describe("SyncChangeFeedBridge", () => {
   });
 
   it("carries the cursor forward across ticks", async () => {
-    const cursor1 = objectId();
-    const cursor2 = objectId();
+    const cursor1 = objectId() as ChangeFeedCursor;
+    const cursor2 = objectId() as ChangeFeedCursor;
     const scheduler = new FakeScheduler();
     const client = new FakeClient([
       {
@@ -161,13 +174,21 @@ describe("SyncChangeFeedBridge", () => {
       {
         ok: true,
         correlationId: "c1",
-        value: { kind: "ok", invalidations: [], nextCursor: objectId() },
+        value: {
+          kind: "ok",
+          invalidations: [],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
       },
       { ok: true, correlationId: "c2", value: { kind: "resyncRequired" } },
       {
         ok: true,
         correlationId: "c3",
-        value: { kind: "ok", invalidations: [], nextCursor: objectId() },
+        value: {
+          kind: "ok",
+          invalidations: [],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
       },
     ]);
     const sse = new FakeSse([userA, userB]);
@@ -182,7 +203,7 @@ describe("SyncChangeFeedBridge", () => {
     await scheduler.fireNext(); // next tick resumes from null again
     bridge.stop();
 
-    expect(client.calls).toEqual([null, client.calls[1], null]);
+    expect(client.calls).toEqual([null, client.calls[1]!, null]);
     const eventsChangedRecipients = sse.published
       .filter((p) => p.message.type === "eventsChanged")
       .map((p) => p.userId);
@@ -217,7 +238,11 @@ describe("SyncChangeFeedBridge", () => {
       {
         ok: true,
         correlationId: "c1",
-        value: { kind: "ok", invalidations: [], nextCursor: objectId() },
+        value: {
+          kind: "ok",
+          invalidations: [],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
       },
     ]);
     const bridge = new SyncChangeFeedBridge(
@@ -241,19 +266,26 @@ describe("SyncChangeFeedBridge", () => {
           kind: "ok",
           invalidations: [
             {
-              invalidation: { kind: "connection", connectionId: objectId() },
-              emittedAt: "2026-07-30T00:00:00.000Z",
-              tenantId: objectId(),
-              principalId: objectId(),
+              invalidation: {
+                kind: "connection",
+                connectionId: objectId() as ConnectionId,
+              },
+              emittedAt: "2026-07-30T00:00:00.000Z" as DateTime,
+              tenantId: objectId() as TenantId,
+              principalId: objectId() as PrincipalId,
             },
           ],
-          nextCursor: objectId(),
+          nextCursor: objectId() as ChangeFeedCursor,
         },
       },
       {
         ok: true,
         correlationId: "c2",
-        value: { kind: "ok", invalidations: [], nextCursor: objectId() },
+        value: {
+          kind: "ok",
+          invalidations: [],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
       },
     ]);
     const sse = new FakeSse();

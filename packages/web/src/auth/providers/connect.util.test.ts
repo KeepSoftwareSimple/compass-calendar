@@ -8,6 +8,7 @@ import {
   getSidebarSyncStatus,
   isFirstImportFailed,
   isFirstImportInProgress,
+  pickCalendarBannerTarget,
 } from "./connect.util";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -659,6 +660,61 @@ describe("getCalendarConnectionBannerKind", () => {
     expect(
       getCalendarConnectionBannerKind("HEALTHY", makeConnection()),
     ).toBeNull();
+  });
+});
+
+describe("pickCalendarBannerTarget", () => {
+  const makeConnection = (
+    overrides: Partial<GoogleSyncConnectionSummary> = {},
+  ): GoogleSyncConnectionSummary => ({
+    id: "c1",
+    state: "healthy",
+    stateReason: null,
+    lastSyncedAt: null,
+    lastHealthyAt: "2026-07-24T11:45:00.000Z",
+    accountEmail: "a@example.com",
+    connectionState: "HEALTHY",
+    canSuggestContacts: false,
+    ...overrides,
+  });
+
+  it("picks a Microsoft reconnect over a healthy Google primary", () => {
+    const google = makeConnection({
+      id: "google-1",
+      provider: "google",
+      accountEmail: "shared@example.com",
+    });
+    const microsoft = makeConnection({
+      id: "ms-1",
+      provider: "microsoft",
+      accountEmail: "shared@example.com",
+      state: "actionRequired",
+      stateReason: "authorizationRevoked",
+      connectionState: "RECONNECT_REQUIRED",
+    });
+
+    expect(pickCalendarBannerTarget([google, microsoft])).toEqual({
+      connection: microsoft,
+      kind: "reconnect",
+    });
+  });
+
+  it("does not invent a Google banner when only Microsoft needs reconnect", () => {
+    const microsoft = makeConnection({
+      id: "ms-1",
+      provider: "microsoft",
+      state: "actionRequired",
+      stateReason: "authorizationRevoked",
+      connectionState: "RECONNECT_REQUIRED",
+    });
+
+    expect(pickCalendarBannerTarget([microsoft])?.connection.provider).toBe(
+      "microsoft",
+    );
+  });
+
+  it("returns null when every connection is healthy", () => {
+    expect(pickCalendarBannerTarget([makeConnection()])).toBeNull();
   });
 });
 

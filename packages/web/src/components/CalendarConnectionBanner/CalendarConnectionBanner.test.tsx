@@ -65,6 +65,24 @@ describe("CalendarConnectionBanner", () => {
     );
   });
 
+  it("names the account when a reconnect banner has an email", () => {
+    const onAction = mock();
+    render(
+      <HotkeysProvider>
+        <CalendarConnectionBanner
+          kind="reconnect"
+          onAction={onAction}
+          provider="microsoft"
+          accountEmail="lance.essert@gmail.com"
+        />
+      </HotkeysProvider>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "lance.essert@gmail.com needs reconnecting.",
+    );
+  });
+
   it("renders the consentRequired copy whole with a learn-more action", async () => {
     const onAction = mock();
     render(

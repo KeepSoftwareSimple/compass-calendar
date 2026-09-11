@@ -1,11 +1,12 @@
 import { faker } from "@faker-js/faker";
-import { type Db } from "mongodb";
+import { type Db, type Document } from "mongodb";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
   toStoredOauthCredentialUpsert,
 } from "@sync/__tests__/helpers/credential-encryption";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
@@ -55,7 +56,7 @@ describe("CredentialRepository", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: input.connectionId });
+      .findOne(stringIdFilter(input.connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(JSON.stringify(raw)).not.toContain("refresh-token-secret");
   });
@@ -103,7 +104,7 @@ describe("CredentialRepository", () => {
       scopes: input.scopes,
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    } as Document);
 
     const sealed = toStoredOauthCredentialUpsert(
       TEST_CREDENTIAL_ENCRYPTION_KEY,
@@ -119,14 +120,14 @@ describe("CredentialRepository", () => {
     expect(updated?.refreshTokenCiphertext).toBe(sealed.refreshTokenCiphertext);
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: input.connectionId });
+      .findOne(stringIdFilter(input.connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(
       decryptCredentialAtRest(TEST_CREDENTIAL_ENCRYPTION_KEY, {
-        ciphertext: String(raw?.refreshTokenCiphertext),
-        iv: String(raw?.refreshTokenIv),
-        tag: String(raw?.refreshTokenTag),
-        keyVersion: Number(raw?.keyVersion),
+        ciphertext: String(raw?.["refreshTokenCiphertext"]),
+        iv: String(raw?.["refreshTokenIv"]),
+        tag: String(raw?.["refreshTokenTag"]),
+        keyVersion: Number(raw?.["keyVersion"]),
       }),
     ).toBe("refresh-token-secret");
   });
@@ -165,12 +166,12 @@ describe("CredentialRepository", () => {
 
     const inConnections = await db
       .collection(SYNC_COLLECTIONS.providerConnections)
-      .findOne({ _id: input.connectionId });
+      .findOne(stringIdFilter(input.connectionId));
     expect(inConnections).toBeNull();
 
     const inCredentials = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: input.connectionId });
+      .findOne(stringIdFilter(input.connectionId));
     expect(inCredentials).not.toBeNull();
   });
 
@@ -207,7 +208,7 @@ describe("CredentialRepository", () => {
       scopes: [],
       createdAt: new Date(),
       updatedAt: new Date(),
-    });
+    } as Document);
 
     const read = await repo.findByConnection(connectionId);
     expect(read).toMatchObject({
@@ -237,7 +238,7 @@ describe("CredentialRepository", () => {
 
     const raw = await db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: connectionId });
+      .findOne(stringIdFilter(connectionId));
     expect(raw).not.toHaveProperty("refreshToken");
     expect(raw).not.toHaveProperty("accessToken");
   });

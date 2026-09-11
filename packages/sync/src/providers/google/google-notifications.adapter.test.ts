@@ -52,13 +52,15 @@ class FakeChannelsApi implements GoogleChannelsApi {
     if (this.behavior.calendarListWatch instanceof Error) {
       throw this.behavior.calendarListWatch;
     }
-    return (
-      this.behavior.calendarListWatch ??
+    const channel = this.behavior.calendarListWatch ??
       this.behavior.watch ?? {
         resourceId: "res-list-1",
         expiration: "1767312000000",
-      }
-    );
+      };
+    if (channel instanceof Error) {
+      throw channel;
+    }
+    return channel;
   }
 
   async stopChannel(
@@ -164,7 +166,7 @@ describe("GoogleNotificationAdapter watch/stop", () => {
     });
 
     // Requested one hour out...
-    expect(api.watchCalls[0].requestBody.expiration).toBe(
+    expect(api.watchCalls[0]!.requestBody.expiration).toBe(
       String(new Date("2026-01-01T01:00:00Z").getTime()),
     );
     // ...but the returned expiry (2026-01-01T00:00:00 + provider value) wins.

@@ -47,6 +47,9 @@ export class BaseDriver {
       this.http!.on("error", reject);
     });
 
+    if (!this.serverUri) {
+      throw new Error("Server URI was not resolved");
+    }
     return this.serverUri;
   }
 

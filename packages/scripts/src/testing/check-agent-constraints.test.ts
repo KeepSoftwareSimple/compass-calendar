@@ -149,7 +149,7 @@ describe("formatHit", () => {
     });
     expect(text).toContain("self-host/Dockerfile.backend:1 bun-pin");
     expect(text).toContain("oven/bun:1.2.18 but CI pins 1.3.14");
-    expect(text).toContain(RULE_HELP["bun-pin"]);
+    expect(text).toContain(RULE_HELP["bun-pin"]!);
   });
 
   it("documents every rule the scanner can emit", () => {

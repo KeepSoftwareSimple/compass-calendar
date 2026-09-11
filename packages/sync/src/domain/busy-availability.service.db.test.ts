@@ -1,10 +1,13 @@
 import { faker } from "@faker-js/faker";
+import { type Document } from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type ConnectionState } from "@core/types/sync/connection.contracts";
 import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
@@ -51,7 +54,7 @@ describe("computeBusyAvailability", () => {
       principalId,
       provider: "google",
       account: {
-        providerAccountId: `acct-${accountSeq}`,
+        providerAccountId: `acct-${accountSeq}` as ProviderAccountId,
         email: `user${accountSeq}@gmail.com`,
         displayName: "User",
       },
@@ -127,7 +130,7 @@ describe("computeBusyAvailability", () => {
           endAt: new Date(end),
           busy: true,
           cancelled: false,
-        });
+        } as Document);
     }
     return calendarId;
   };
@@ -193,7 +196,7 @@ describe("computeBusyAvailability", () => {
       tenantId,
       principalId,
       connectionId: conn,
-      providerCalendarId: "ghost@google.com",
+      providerCalendarId: "ghost@google.com" as ProviderCalendarSourceId,
       displayName: "Ghost",
       color: null,
       active: true,
@@ -205,6 +208,8 @@ describe("computeBusyAvailability", () => {
         canReadBusy: true,
         canInviteAttendees: true,
       },
+      eventLabels: [],
+      createsGoogleMeet: true,
     });
 
     const result = await run([calA, ghost._id as SyncEventCalendarId]);
@@ -233,7 +238,7 @@ describe("computeBusyAvailability", () => {
         endAt: new Date("2026-07-14T10:30:00.000Z"),
         busy: true,
         cancelled: false,
-      });
+      } as Document);
 
     const result = await run([localCalendarId], [localCalendarId]);
 

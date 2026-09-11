@@ -1,7 +1,7 @@
 import { type EventSchedule } from "@core/types/event.contracts";
 import { type SyncEventContent } from "@core/types/sync/event.contracts";
+import { type GraphEvent } from "@sync/providers/microsoft/microsoft-event.normalizer";
 import {
-  type GraphEvent,
   type MicrosoftEventWriteApi,
   MicrosoftEventWriter,
 } from "@sync/providers/microsoft/microsoft-event-writer.adapter";

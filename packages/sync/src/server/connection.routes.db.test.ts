@@ -7,9 +7,12 @@ import {
   encryptCredentialConnectPayload,
   encryptInternalCredential,
 } from "@core/security/internal-credential-envelope";
+import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import dayjs from "@core/util/date/dayjs";
@@ -18,9 +21,11 @@ import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
 } from "@sync/__tests__/helpers/credential-encryption";
 import {
+  defaultCalendarListFields,
   ensureEventsResource,
   seedProviderCalendar,
 } from "@sync/__tests__/helpers/fixtures";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import {
@@ -110,12 +115,14 @@ class FakeAuthAdapter implements ProviderAuthAdapter {
     state: string;
     redirectUri: string;
     selectAccount?: boolean;
+    loginHint?: string;
     extraScopes?: readonly string[];
   }> = [];
   buildAuthorizationUrl(input: {
     state: string;
     redirectUri: string;
     selectAccount?: boolean;
+    loginHint?: string;
     extraScopes?: readonly string[];
   }): string {
     this.authorizations.push(input);
@@ -124,7 +131,7 @@ class FakeAuthAdapter implements ProviderAuthAdapter {
   exchanges: Array<{ code: string; redirectUri: string }> = [];
   exchangeResult: ProviderAuthorization = {
     account: {
-      providerAccountId: "google-sub-1",
+      providerAccountId: "google-sub-1" as ProviderAccountId,
       email: "connected@example.com",
       displayName: "Connected User",
     },
@@ -207,7 +214,7 @@ const seedConnection = (
     principalId: principalId as PrincipalId,
     provider: "google",
     account: {
-      providerAccountId: objectId(),
+      providerAccountId: objectId() as ProviderAccountId,
       email,
       displayName: null,
     },
@@ -305,8 +312,8 @@ describe("GET /internal/connections", () => {
   });
 
   it("returns the caller's connections mapped to the wire contract", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedHealthyConnection(tenantId, principalId, "me@example.com");
     await startService();
 
@@ -326,11 +333,11 @@ describe("GET /internal/connections", () => {
       account: { email: "me@example.com", displayName: null },
     });
     // Timestamps are ISO strings on the wire, not Dates.
-    expect(typeof body.connections[0].createdAt).toBe("string");
+    expect(typeof body.connections[0]!["createdAt"]).toBe("string");
   });
 
   it("scopes results to the authenticated principal", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const mine = objectId();
     const other = objectId();
     await seedConnection(repo, tenantId, mine, "mine@example.com");
@@ -345,7 +352,7 @@ describe("GET /internal/connections", () => {
       connections: Array<{ account: { email: string } }>;
     };
     expect(body.connections).toHaveLength(1);
-    expect(body.connections[0].account.email).toBe("mine@example.com");
+    expect(body.connections[0]!.account.email).toBe("mine@example.com");
   });
 
   it("returns an empty list for a principal with no connections", async () => {
@@ -368,8 +375,8 @@ describe("GET /internal/connections", () => {
   });
 
   it("rejects a request whose signature does not match", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService();
 
     const headers = signedHeaders(tenantId, principalId);
@@ -381,8 +388,8 @@ describe("GET /internal/connections", () => {
   });
 
   it("serves reads in passive mode (they touch no provider)", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedConnection(repo, tenantId, principalId, "passive@example.com");
     await startService(testConfig({ EXECUTION: "passive" }));
 
@@ -445,8 +452,8 @@ describe("DELETE /internal/connections/:id", () => {
   };
 
   it("revokes, deletes the credential, and marks the connection disconnected", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const id = await seedConnected(tenantId, principalId);
     await startService(activeConfig(), adapter);
 
@@ -468,8 +475,8 @@ describe("DELETE /internal/connections/:id", () => {
   });
 
   it("refuses to disconnect in passive mode rather than half-disconnecting", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const id = await seedConnected(tenantId, principalId);
     await startService(testConfig({ EXECUTION: "passive" }), adapter);
 
@@ -485,7 +492,7 @@ describe("DELETE /internal/connections/:id", () => {
   });
 
   it("returns 404 for a connection the principal does not own, revoking nothing", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const owner = objectId();
     const stranger = objectId();
     const id = await seedConnected(tenantId, owner);
@@ -568,15 +575,15 @@ describe("POST /internal/connections/begin", () => {
   });
 
   it("returns a consent url whose state binds the flow to the caller", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await begin(tenantId, principalId);
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { authorizationUrl: string };
-    const { state, redirectUri } = adapter.authorizations[0];
+    const { state, redirectUri } = adapter.authorizations[0]!;
     expect(body.authorizationUrl).toContain(state);
     expect(redirectUri).toBe(`http://localhost:3010${OAUTH_CALLBACK_PATH}`);
 
@@ -592,12 +599,12 @@ describe("POST /internal/connections/begin", () => {
     await begin(objectId(), objectId());
 
     // Nothing to choose between yet, and the chooser is an extra click.
-    expect(adapter.authorizations[0].selectAccount).toBe(false);
+    expect(adapter.authorizations[0]!.selectAccount).toBe(false);
   });
 
   it("forces the account chooser when the principal already has a connection", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedConnection(
       connections,
       tenantId,
@@ -610,12 +617,12 @@ describe("POST /internal/connections/begin", () => {
 
     // Otherwise Google re-authorizes the connected account and nothing
     // appears to happen.
-    expect(adapter.authorizations[0].selectAccount).toBe(true);
+    expect(adapter.authorizations[0]!.selectAccount).toBe(true);
   });
 
   it("never forces the account chooser on reconnect (it is account-pinned)", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const existing = await seedConnection(
       connections,
       tenantId,
@@ -626,12 +633,12 @@ describe("POST /internal/connections/begin", () => {
 
     await begin(tenantId, principalId, { connectionId: existing._id });
 
-    expect(adapter.authorizations[0].selectAccount).toBe(false);
+    expect(adapter.authorizations[0]!.selectAccount).toBe(false);
   });
 
   it("binds the state to an owned connection for reconnect", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const existing = await seedConnection(
       connections,
       tenantId,
@@ -645,13 +652,13 @@ describe("POST /internal/connections/begin", () => {
     });
 
     expect(res.status).toBe(200);
-    const { state } = adapter.authorizations[0];
+    const { state } = adapter.authorizations[0]!;
     const verified = verifyOAuthState(STATE_SECRET, state, Date.now());
     expect(verified.ok && verified.payload.connectionId).toBe(existing._id);
   });
 
   it("refuses to reconnect a connection the principal does not own", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const owner = objectId();
     const stranger = objectId();
     const existing = await seedConnection(
@@ -671,18 +678,20 @@ describe("POST /internal/connections/begin", () => {
   });
 
   it("rejects a malformed reconnect connection id", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
-    const res = await begin(tenantId, principalId, { connectionId: "nope" });
+    const res = await begin(tenantId, principalId, {
+      connectionId: "nope" as ConnectionId,
+    });
 
     expect(res.status).toBe(400);
   });
 
   it("asks for both contacts scopes when begin carries the contacts feature", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await begin(tenantId, principalId, {
@@ -690,15 +699,15 @@ describe("POST /internal/connections/begin", () => {
     });
 
     expect(res.status).toBe(200);
-    expect(adapter.authorizations[0].extraScopes).toEqual([
+    expect(adapter.authorizations[0]!.extraScopes).toEqual([
       "https://www.googleapis.com/auth/contacts.readonly",
       "https://www.googleapis.com/auth/contacts.other.readonly",
     ]);
   });
 
   it("keeps a plain begin's adapter input identical to before features existed", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     // No features field, and an explicitly empty one — both must produce the
@@ -713,8 +722,8 @@ describe("POST /internal/connections/begin", () => {
   });
 
   it("rejects an unknown feature", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await begin(tenantId, principalId, {
@@ -727,8 +736,8 @@ describe("POST /internal/connections/begin", () => {
   });
 
   it("refuses to begin in passive mode", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(testConfig({ EXECUTION: "passive" }), adapter);
 
     const res = await begin(tenantId, principalId);
@@ -794,8 +803,8 @@ describe("GET /sync/google", () => {
   });
 
   it("links the connection and stores the credential on a valid callback", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await hitCallback(
@@ -805,20 +814,19 @@ describe("GET /sync/google", () => {
     expect(res.status).toBe(302);
     expect(statusOf(res)).toBe("connected");
     // The code was exchanged against the same redirect_uri begin would use.
-    expect(adapter.exchanges[0].redirectUri).toBe(
+    expect(adapter.exchanges[0]!.redirectUri).toBe(
       `http://localhost:3010${OAUTH_CALLBACK_PATH}`,
     );
 
-    const linked = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
+    const linked = await connections.listByPrincipal(tenantId, principalId);
     expect(linked).toHaveLength(1);
-    expect(linked[0].account.providerAccountId).toBe("google-sub-1");
-    expect(linked[0].state).toBe("importing");
-    expect(linked[0].capabilities).toContain("writeEvents");
+    expect(linked[0]!.account.providerAccountId).toBe(
+      "google-sub-1" as ProviderAccountId,
+    );
+    expect(linked[0]!.state).toBe("importing");
+    expect(linked[0]!.capabilities).toContain("writeEvents");
 
-    const stored = await credentials.findByConnection(linked[0]._id);
+    const stored = await credentials.findByConnection(linked[0]!._id);
     expect(
       stored?.credentialKind === "oauthRefresh"
         ? openOauthRefreshToken(TEST_CREDENTIAL_ENCRYPTION_KEY, stored)
@@ -827,8 +835,8 @@ describe("GET /sync/google", () => {
   });
 
   it("derives suggestContacts when the callback's grant includes a contacts scope", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     // A partial contacts grant (only other-contacts) still counts.
     adapter.exchangeResult = {
       ...adapter.exchangeResult,
@@ -844,21 +852,21 @@ describe("GET /sync/google", () => {
     );
 
     expect(statusOf(res)).toBe("connected");
-    const [linked] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
-    expect(linked.capabilities).toContain("suggestContacts");
+    const [linked] = await connections.listByPrincipal(tenantId, principalId);
+    expect(linked!.capabilities).toContain("suggestContacts");
     // The granted scopes ride the credential for the suggestions route.
-    const stored = await credentials.findByConnection(linked._id);
-    expect(stored?.scopes).toContain(
-      "https://www.googleapis.com/auth/contacts.other.readonly",
-    );
+    const stored = await credentials.findByConnection(linked!._id);
+    expect(stored?.credentialKind).toBe("oauthRefresh");
+    if (stored?.credentialKind === "oauthRefresh") {
+      expect(stored.scopes).toContain(
+        "https://www.googleapis.com/auth/contacts.other.readonly",
+      );
+    }
   });
 
   it("derives no suggestContacts when contacts scopes were left unchecked", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await hitCallback(
@@ -867,39 +875,33 @@ describe("GET /sync/google", () => {
 
     // Declining the optional scopes is a NORMAL connect, not an error.
     expect(statusOf(res)).toBe("connected");
-    const [linked] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
-    expect(linked.capabilities).not.toContain("suggestContacts");
+    const [linked] = await connections.listByPrincipal(tenantId, principalId);
+    expect(linked!.capabilities).not.toContain("suggestContacts");
   });
 
   it("enqueues calendar-list discovery to bootstrap the new connection", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     await hitCallback(
       `code=auth-code&state=${encodeURIComponent(validState(tenantId, principalId))}`,
     );
 
-    const [linked] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
+    const [linked] = await connections.listByPrincipal(tenantId, principalId);
     // The connect enqueues one calendarListSync job for the new connection; it is
     // the only trigger that starts the sync chain.
     const job = await mongo.db
       .collection(SYNC_COLLECTIONS.jobs)
-      .findOne({ coalescingKey: `calendarListSync:${linked._id}` });
-    expect(job?.kind).toBe("calendarListSync");
-    expect(job?.connectionId).toBe(linked._id);
-    expect(job?.resourceId).toBeNull();
+      .findOne({ coalescingKey: `calendarListSync:${linked!._id}` });
+    expect(job?.["kind"]).toBe("calendarListSync");
+    expect(job?.["connectionId"]).toBe(linked!._id);
+    expect(job?.["resourceId"]).toBeNull();
   });
 
   it("redirects with an error and links nothing when the state is invalid", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter);
 
     const res = await hitCallback("code=auth-code&state=forged.signature");
@@ -908,10 +910,7 @@ describe("GET /sync/google", () => {
     expect(statusOf(res)).toBe("error");
     expect(adapter.exchanges).toHaveLength(0);
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
   });
 
@@ -930,8 +929,8 @@ describe("GET /sync/google", () => {
   // a generic "couldn't update your calendar" with no mention of the real
   // cause (leaving the calendar box unchecked on Google's consent screen).
   it("redirects with missingScopes and links nothing when calendar access was not granted", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     adapter.exchangeResult = {
       ...adapter.exchangeResult,
       // Only identity was granted - both calendar scopes withheld.
@@ -945,10 +944,7 @@ describe("GET /sync/google", () => {
 
     expect(statusOf(res)).toBe("missingScopes");
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
   });
 
@@ -969,8 +965,8 @@ describe("GET /sync/google", () => {
     });
 
   it("re-authorizes the named connection when the account matches", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const existing = await seedConnection(
       connections,
       tenantId,
@@ -1007,18 +1003,15 @@ describe("GET /sync/google", () => {
 
     expect(statusOf(res)).toBe("connected");
     // Still one connection — the same one, re-authorized, not a duplicate.
-    const all = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
+    const all = await connections.listByPrincipal(tenantId, principalId);
     expect(all).toHaveLength(1);
-    expect(all[0]._id).toBe(existing._id);
-    expect(all[0].lastHealthyAt).toEqual(healthyAt);
+    expect(all[0]!._id).toBe(existing._id);
+    expect(all[0]!.lastHealthyAt).toEqual(healthyAt);
   });
 
   it("refuses and links nothing when reconnect consents with a different account", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const existing = await seedConnection(
       connections,
       tenantId,
@@ -1029,7 +1022,7 @@ describe("GET /sync/google", () => {
     adapter.exchangeResult = {
       ...adapter.exchangeResult,
       account: {
-        providerAccountId: "some-other-google-sub",
+        providerAccountId: "some-other-google-sub" as ProviderAccountId,
         email: "other@example.com",
         displayName: null,
       },
@@ -1040,21 +1033,18 @@ describe("GET /sync/google", () => {
       `code=c&state=${encodeURIComponent(reconnectState(tenantId, principalId, existing._id))}`,
     );
 
-    expect(statusOf(res)).toBe("error");
+    expect(statusOf(res)).toBe("accountMismatch");
     // No second connection was created; the original is untouched.
-    const all = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
-    );
+    const all = await connections.listByPrincipal(tenantId, principalId);
     expect(all).toHaveLength(1);
-    expect(all[0].account.providerAccountId).toBe(
+    expect(all[0]!.account.providerAccountId).toBe(
       existing.account.providerAccountId,
     );
   });
 
   it("redirects with an error when the code exchange fails", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     adapter.exchangeError = new Error("bad code");
     await startService(activeConfig(), adapter);
 
@@ -1064,10 +1054,7 @@ describe("GET /sync/google", () => {
 
     expect(statusOf(res)).toBe("error");
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
   });
 
@@ -1092,8 +1079,8 @@ describe("GET /sync/google", () => {
   };
 
   it("rejects a google state presented on another provider callback with stateMismatch", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(activeConfig(), adapter, registryWithMicrosoft(adapter));
 
     const res = await fetch(
@@ -1105,16 +1092,13 @@ describe("GET /sync/google", () => {
     expect(statusOf(res)).toBe("stateMismatch");
     expect(adapter.exchanges).toHaveLength(0);
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
   });
 
   it("refuses to complete a callback in passive mode", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService(testConfig({ EXECUTION: "passive" }), adapter);
 
     const res = await hitCallback(
@@ -1157,10 +1141,10 @@ describe("POST /internal/connections/adopt-google-authorization", () => {
   });
 
   it("adopts a signed Google authorization and bootstraps its import", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const account = {
-      providerAccountId: "google-sub-from-signin",
+      providerAccountId: "google-sub-from-signin" as ProviderAccountId,
       email: "connected@example.com",
       displayName: "Connected User",
     };
@@ -1190,12 +1174,12 @@ describe("POST /internal/connections/adopt-google-authorization", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({});
     const [connection] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
     );
     expect(connection?.state).toBe("importing");
     expect(connection?.account.providerAccountId).toBe(
-      "google-sub-from-signin",
+      "google-sub-from-signin" as ProviderAccountId,
     );
     const stored = await credentials.findByConnection(connection!._id);
     expect(
@@ -1206,15 +1190,15 @@ describe("POST /internal/connections/adopt-google-authorization", () => {
     const job = await mongo.db.collection(SYNC_COLLECTIONS.jobs).findOne({
       coalescingKey: `calendarListSync:${connection!._id}`,
     });
-    expect(job?.kind).toBe("calendarListSync");
+    expect(job?.["kind"]).toBe("calendarListSync");
   });
 
   it("rejects an envelope replayed under another principal", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const sourcePrincipalId = objectId();
-    const targetPrincipalId = objectId();
+    const targetPrincipalId = objectId() as PrincipalId;
     const account = {
-      providerAccountId: "google-sub-from-signin",
+      providerAccountId: "google-sub-from-signin" as ProviderAccountId,
       email: "connected@example.com",
       displayName: "Connected User",
     };
@@ -1245,10 +1229,7 @@ describe("POST /internal/connections/adopt-google-authorization", () => {
 
     expect(res.status).toBe(500);
     await expect(
-      connections.listByPrincipal(
-        tenantId as TenantId,
-        targetPrincipalId as PrincipalId,
-      ),
+      connections.listByPrincipal(tenantId, targetPrincipalId),
     ).resolves.toEqual([]);
   });
 
@@ -1300,10 +1281,10 @@ describe("POST /internal/connections/adopt-authorization", () => {
   });
 
   it("adopts a signed Microsoft authorization and bootstraps its import", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const account = {
-      providerAccountId: "ms-oid-from-signin",
+      providerAccountId: "ms-oid-from-signin" as ProviderAccountId,
       email: "connected@example.com",
       displayName: "Connected User",
     };
@@ -1337,12 +1318,14 @@ describe("POST /internal/connections/adopt-authorization", () => {
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({});
     const [connection] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
     );
     expect(connection?.provider).toBe("microsoft");
     expect(connection?.state).toBe("importing");
-    expect(connection?.account.providerAccountId).toBe("ms-oid-from-signin");
+    expect(connection?.account.providerAccountId).toBe(
+      "ms-oid-from-signin" as ProviderAccountId,
+    );
     const stored = await credentials.findByConnection(connection!._id);
     expect(
       stored?.credentialKind === "oauthRefresh"
@@ -1377,10 +1360,12 @@ describe("GET /internal/calendars", () => {
     calendars.upsertByProviderCalendar({
       tenantId: tenantId as TenantId,
       principalId: principalId as PrincipalId,
-      connectionId: (overrides.connectionId ?? objectId()) as ConnectionId,
-      providerCalendarId: objectId(),
+      connectionId: (overrides.connectionId ??
+        (objectId() as ConnectionId)) as ConnectionId,
+      providerCalendarId: objectId() as ProviderCalendarSourceId,
       displayName: overrides.displayName ?? "My Calendar",
       color: null,
+      ...defaultCalendarListFields,
       active: overrides.active ?? true,
       primary: false,
       accessRole: "owner",
@@ -1407,8 +1392,8 @@ describe("GET /internal/calendars", () => {
   });
 
   it("returns the caller's calendars mapped to the wire contract", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedCalendar(tenantId, principalId, { displayName: "Work" });
     await startService();
 
@@ -1424,11 +1409,11 @@ describe("GET /internal/calendars", () => {
       displayName: "Work",
       accessRole: "owner",
     });
-    expect(typeof body.calendars[0].createdAt).toBe("string");
+    expect(typeof body.calendars[0]!["createdAt"]).toBe("string");
   });
 
   it("scopes results to the authenticated principal", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const mine = objectId();
     const other = objectId();
     await seedCalendar(tenantId, mine, { displayName: "Mine" });
@@ -1439,15 +1424,17 @@ describe("GET /internal/calendars", () => {
       calendars: Array<{ displayName: string }>;
     };
     expect(body.calendars).toHaveLength(1);
-    expect(body.calendars[0].displayName).toBe("Mine");
+    expect(body.calendars[0]!.displayName).toBe("Mine");
   });
 
   it("narrows to one connection when connectionId is given", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const conn = objectId();
     await seedCalendar(tenantId, principalId, { connectionId: conn });
-    await seedCalendar(tenantId, principalId, { connectionId: objectId() });
+    await seedCalendar(tenantId, principalId, {
+      connectionId: objectId() as ConnectionId,
+    });
     await startService();
 
     const body = (await (
@@ -1457,8 +1444,8 @@ describe("GET /internal/calendars", () => {
   });
 
   it("returns only active calendars when activeOnly=true", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedCalendar(tenantId, principalId, { active: true });
     await seedCalendar(tenantId, principalId, { active: false });
     await startService();
@@ -1520,7 +1507,7 @@ describe("GET /internal/events/full", () => {
     kind: "timed" as const,
     start: "2026-07-14T09:00:00-06:00",
     end: "2026-07-14T10:00:00-06:00",
-    timeZone: "America/Denver",
+    timeZone: "America/Denver" as TimeZone,
   };
 
   // Seed a full event record, validated through its schema.
@@ -1611,8 +1598,8 @@ describe("GET /internal/events/full", () => {
   });
 
   it("joins an occurrence to its single event and returns full content", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const calendarId = objectId() as EventRecord["calendarId"];
     const event = await seedEvent(tenantId, principalId, {
       calendarId,
@@ -1644,8 +1631,8 @@ describe("GET /internal/events/full", () => {
   // into an object (arrayLimit: 20), which made this route 400 for any user
   // with more than 20 calendars. Guards the "simple" parser in buildSyncApp.
   it("accepts more than 20 repeated calendarIds params", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const calendarId = objectId() as EventRecord["calendarId"];
     const event = await seedEvent(tenantId, principalId, { calendarId });
     await seedOccurrence(tenantId, principalId, {
@@ -1665,8 +1652,8 @@ describe("GET /internal/events/full", () => {
   });
 
   it("returns instance rows plus one back-filled series master row", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const calendarId = objectId() as EventRecord["calendarId"];
     const master = await seedEvent(tenantId, principalId, {
       calendarId,
@@ -1698,8 +1685,8 @@ describe("GET /internal/events/full", () => {
     // the exception event, not the master. The master is fetched only by the
     // route's second findByIds hop (via the exception's seriesId), so this proves
     // that hop actually runs and merges.
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const calendarId = objectId() as EventRecord["calendarId"];
     const master = await seedEvent(tenantId, principalId, {
       calendarId,
@@ -1749,7 +1736,7 @@ describe("GET /internal/events/full", () => {
   });
 
   it("scopes the read to the signed principal", async () => {
-    const tenantId = objectId();
+    const tenantId = objectId() as TenantId;
     const owner = objectId();
     const stranger = objectId();
     const calendarId = objectId() as EventRecord["calendarId"];
@@ -1782,8 +1769,8 @@ describe("GET /internal/events/full", () => {
     // for series roots that vanish from the SPA week query when BYDAY skips
     // the DTSTART weekday — the create week's narrow range must still see an
     // occurrence (and therefore the back-filled series master).
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const calendarId = objectId();
     await startService();
 
@@ -1810,9 +1797,9 @@ describe("GET /internal/events/full", () => {
           },
           schedule: {
             kind: "timed",
-            start: "2026-07-24T12:00:00-06:00",
-            end: "2026-07-24T13:00:00-06:00",
-            timeZone: "America/Denver",
+            start: "2026-07-24T12:00:00-06:00" as DateTime,
+            end: "2026-07-24T13:00:00-06:00" as DateTime,
+            timeZone: "America/Denver" as TimeZone,
           },
           // Friday start + Sunday BYDAY — the staging-shaped mismatch.
           recurrence: {
@@ -1910,8 +1897,8 @@ describe("POST /internal/connections/refresh", () => {
   };
 
   it("second POST over a pending job returns enqueued: 1 (boosted, not silent 0)", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await seedEventsResource(tenantId, principalId);
     await startService();
 
@@ -1945,8 +1932,8 @@ describe("POST /internal/connections/refresh", () => {
   });
 
   it("returns inFlight: 1 when the job is already claimed", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const { resource } = await seedEventsResource(tenantId, principalId);
     await jobs.enqueue({
       tenantId: resource.tenantId,
@@ -1984,7 +1971,7 @@ describe("POST /internal/connections/refresh", () => {
   });
 
   it("batch foreground refresh enqueues only stale ready resources", async () => {
-    const principalId = objectId();
+    const principalId = objectId() as PrincipalId;
     const { resource } = await seedEventsResource(principalId, principalId);
     await resources.setBootstrapState(
       resource.tenantId,
@@ -2061,8 +2048,8 @@ describe("POST /internal/connections/credential", () => {
   });
 
   it("creates a connection, stores an encrypted password, and enqueues calendarListSync", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const secret = "app-specific-password-xyz";
     await startService();
 
@@ -2077,18 +2064,22 @@ describe("POST /internal/connections/credential", () => {
     ]);
 
     const [connection] = await connections.listByPrincipal(
-      tenantId as TenantId,
-      principalId as PrincipalId,
+      tenantId,
+      principalId,
     );
     expect(connection?.provider).toBe("apple");
-    expect(connection?.account.providerAccountId).toBe("user@icloud.com");
+    expect(connection?.account.providerAccountId).toBe(
+      "user@icloud.com" as ProviderAccountId,
+    );
     expect(connection?.capabilities).toEqual([...APPLE_PROVIDER_CAPABILITIES]);
 
-    const stored = await credentials.findByConnection(body.connectionId);
+    const stored = await credentials.findByConnection(
+      body.connectionId as ConnectionId,
+    );
     expect(stored?.credentialKind).toBe("password");
     const raw = await mongo.db
       .collection(SYNC_COLLECTIONS.credentials)
-      .findOne({ _id: body.connectionId });
+      .findOne(stringIdFilter(body.connectionId));
     expect(JSON.stringify(raw)).not.toContain(secret);
     if (stored?.credentialKind === "password") {
       expect(
@@ -2104,7 +2095,7 @@ describe("POST /internal/connections/credential", () => {
     const job = await mongo.db.collection(SYNC_COLLECTIONS.jobs).findOne({
       coalescingKey: `calendarListSync:${body.connectionId}`,
     });
-    expect(job?.kind).toBe("calendarListSync");
+    expect(job?.["kind"]).toBe("calendarListSync");
 
     const logTail = readFileSync("logs/app.log")
       .subarray(logSizeBefore)
@@ -2113,8 +2104,8 @@ describe("POST /internal/connections/credential", () => {
   });
 
   it("coalesces calendarListSync when reconnecting the same username", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     await startService();
 
     const first = await connect(
@@ -2139,7 +2130,9 @@ describe("POST /internal/connections/credential", () => {
       .toArray();
     expect(jobs).toHaveLength(1);
 
-    const stored = await credentials.findByConnection(firstBody.connectionId);
+    const stored = await credentials.findByConnection(
+      firstBody.connectionId as ConnectionId,
+    );
     if (stored?.credentialKind === "password") {
       expect(
         decryptCredentialAtRest(TEST_CREDENTIAL_ENCRYPTION_KEY, {
@@ -2153,8 +2146,8 @@ describe("POST /internal/connections/credential", () => {
   });
 
   it("returns 401 invalidCredential when validation fails", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     appleAuth.validateError = new ProviderAuthError(
       "authorizationRevoked",
       "Apple rejected the app-specific password",
@@ -2171,16 +2164,13 @@ describe("POST /internal/connections/credential", () => {
     expect(res.status).toBe(401);
     expect(await res.json()).toEqual({ error: "invalidCredential" });
     expect(
-      await connections.listByPrincipal(
-        tenantId as TenantId,
-        principalId as PrincipalId,
-      ),
+      await connections.listByPrincipal(tenantId, principalId),
     ).toHaveLength(0);
   });
 
   it("returns 503 when validation is throttled", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     appleAuth.validateError = new ProviderAuthError(
       "refreshFailed",
       "Apple CalDAV throttled credential validation",

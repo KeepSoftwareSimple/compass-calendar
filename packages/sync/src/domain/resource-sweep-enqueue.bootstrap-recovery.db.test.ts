@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
+import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
@@ -83,10 +84,9 @@ describe("bootstrap-recovery sweep (enqueueForResources + listStalledBootstraps)
     await storage
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
-      .updateOne(
-        { _id: resource._id },
-        { $set: { bootstrapState, updatedAt } },
-      );
+      .updateOne(stringIdFilter(resource._id), {
+        $set: { bootstrapState, updatedAt },
+      });
     return { ...resource, bootstrapState, updatedAt };
   };
 
@@ -103,8 +103,8 @@ describe("bootstrap-recovery sweep (enqueueForResources + listStalledBootstraps)
 
     expect(enqueued).toBe(1);
     const job = await jobByKey(`bootstrapCatchup:${stalled._id}`);
-    expect(job?.kind).toBe("bootstrapCatchup");
-    expect(job?.resourceId).toBe(stalled._id);
+    expect(job?.["kind"]).toBe("bootstrapCatchup");
+    expect(job?.["resourceId"]).toBe(stalled._id);
   });
 
   it("skips a resource whose bootstrap already reached ready", async () => {

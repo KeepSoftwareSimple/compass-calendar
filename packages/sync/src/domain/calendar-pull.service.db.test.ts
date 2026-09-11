@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
+import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import {
   FakeReader,
   pageOf as page,
@@ -49,7 +50,7 @@ const master = (id: string): ProviderEvent => ({
 });
 const cancellation = (id: string): ProviderEventCancellation => ({
   kind: "cancellation",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   series: null,
 });
@@ -59,7 +60,7 @@ const seriesCancellation = (
   recurrenceId: string,
 ): ProviderEventCancellation => ({
   kind: "cancellation",
-  providerEventId: id,
+  providerEventId: id as ProviderEventId,
   providerVersion: `etag-${id}`,
   series: { seriesProviderId, recurrenceId },
 });
@@ -171,7 +172,7 @@ describe("pullCalendarChanges", () => {
       .db()
       .collection(SYNC_COLLECTIONS.syncResources)
       .findOne({ calendarId: calendar._id, resourceKind: "events" });
-    expect(stamped?.lastAttemptAt).toEqual(now());
+    expect(stamped?.["lastAttemptAt"]).toEqual(now());
   });
 
   it("reads from the stored cursor and advances to the new one", async () => {
@@ -183,8 +184,8 @@ describe("pullCalendarChanges", () => {
 
     const result = await pullCalendarChanges(deps(reader), calendar, now);
 
-    expect(reader.calls[0].cursor).toBe("cursor-0");
-    expect(reader.calls[0].window ?? null).toBeNull();
+    expect(reader.calls[0]!.cursor).toBe("cursor-0");
+    expect(reader.calls[0]!.window ?? null).toBeNull();
     if (result.status !== "applied") throw new Error("expected applied");
     expect(result.resource.syncCursor).toBe("cursor-1");
     expect(result.changed).toBe(1);
@@ -199,7 +200,7 @@ describe("pullCalendarChanges", () => {
 
     await pullCalendarChanges(deps(reader), calendar, now);
 
-    expect(reader.calls[0].colorLabels).toEqual(
+    expect(reader.calls[0]!.colorLabels).toEqual(
       new Map([["label-1", "#009688"]]),
     );
   });
@@ -438,12 +439,12 @@ describe("pullCalendarChanges", () => {
       .toArray();
     const atCancelled = occs.filter(
       (row) =>
-        new Date(row.startAt as Date).getTime() ===
+        new Date(row["startAt"] as Date).getTime() ===
         Date.parse(cancelledInstant),
     );
     expect(atCancelled).toHaveLength(1);
-    expect(atCancelled[0]?.cancelled).toBe(true);
-    expect(occs.filter((row) => row.cancelled !== true)).toHaveLength(2);
+    expect(atCancelled[0]?.["cancelled"]).toBe(true);
+    expect(occs.filter((row) => row["cancelled"] !== true)).toHaveLength(2);
   });
 
   it("deletes a standalone whose id looks like an instance when no master exists", async () => {
@@ -556,7 +557,7 @@ describe("pullCalendarChanges", () => {
     // First page carried no sync token, so the cursor moves to the last page's.
     expect(result.resource.syncCursor).toBe("cursor-1");
     expect(result.resource.pageCursor).toBeNull();
-    expect(reader.calls[1].pageToken).toBe("p2");
+    expect(reader.calls[1]!.pageToken).toBe("p2");
     expect(result.changed).toBe(2);
   });
 
@@ -621,7 +622,6 @@ describe("pullCalendarChanges", () => {
       // Stamps the marker as a side effect of the provider read — i.e. the
       // notification lands after this pull has already seen the provider.
       const reader: ProviderEventReader = {
-        provider: "google",
         listEventPage: async () => {
           await resources.markChangeNotified(
             calendar.tenantId,

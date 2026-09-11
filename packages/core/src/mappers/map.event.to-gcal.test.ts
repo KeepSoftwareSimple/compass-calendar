@@ -34,7 +34,7 @@ describe("toGcal", () => {
       // for example, these both match: 2022-01-01T03:00:00-5:00, 2022-01-01T03:00:00+10:00
       // the + or - is the 19th char in the str
       const _hasTzOffset = (dateStr: string) =>
-        ["-", "+"].includes(dateStr[19]);
+        ["-", "+"].includes(dateStr[19]!);
       _hasTzOffset(gEvent.start.dateTime);
       _hasTzOffset(gEvent.end.dateTime);
     } else {

@@ -18,14 +18,47 @@ since_hours_ago() {
   date -u -d "${1} hours ago" +%Y-%m-%dT%H:%M:%SZ
 }
 
-already_labeled() {
+issue_labels() {
   gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json labels \
-    --jq '.labels[].name' | grep -qx 'autofix'
+    --jq '.labels[].name'
+}
+
+has_label() {
+  printf '%s\n' "$1" | grep -qx "$2"
+}
+
+issue_state() {
+  gh issue view "$ISSUE_NUMBER" --repo "$REPO" --json state \
+    --jq '.state'
+}
+
+# A prior run that died before commenting or opening a PR leaves
+# autofix:failed (see autofix-unstick.sh). A GitHub reopen, the one-shot
+# automatic retry dispatch, or a closed issue the sweep is feeding back
+# in must not look "already handled" just because autofix is still on it.
+should_retry() {
+  local labels=$1
+  local state=$2
+  if has_label "$labels" 'autofix:failed'; then
+    return 0
+  fi
+  if [ "${GITHUB_EVENT_NAME:-}" = "issues" ] &&
+    [ "${GITHUB_EVENT_ACTION:-}" = "reopened" ]; then
+    return 0
+  fi
+  if [ "${AUTOFIX_RETRY_ATTEMPT:-0}" = "1" ]; then
+    return 0
+  fi
+  if [ "$state" = "CLOSED" ]; then
+    return 0
+  fi
+  return 1
 }
 
 # More than 3 posthog[bot] issues in 6h suggests a systemic incident (an
 # outage, a bad deploy) rather than N independent bugs — a human should
-# triage the incident, not N parallel agent runs.
+# triage the incident, not N parallel agent runs. The hourly sweep
+# retries these later because this path does not add the autofix label.
 too_many_recent_issues() {
   local since count
   since=$(since_hours_ago 6)
@@ -45,8 +78,20 @@ too_many_recent_merges() {
   [ "${count:-0}" -ge 2 ]
 }
 
+reopen_if_closed() {
+  local state=$1
+  if [ "$state" = "CLOSED" ]; then
+    gh issue reopen "$ISSUE_NUMBER" --repo "$REPO" >/dev/null
+    printf 'reopened closed issue #%s so autofix can comment\n' "$ISSUE_NUMBER"
+  fi
+}
+
 main() {
-  if already_labeled; then
+  local labels state
+  labels=$(issue_labels)
+  state=$(issue_state)
+
+  if has_label "$labels" 'autofix' && ! should_retry "$labels" "$state"; then
     printf 'issue #%s already has the autofix label; skipping\n' "$ISSUE_NUMBER"
     proceed false
     return 0
@@ -64,6 +109,11 @@ main() {
     return 0
   fi
 
+  reopen_if_closed "$state"
+  ensure_label autofix 5319E7 "Opened/handled by the error-autofix pipeline"
+  if has_label "$labels" 'autofix:failed'; then
+    gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --remove-label autofix:failed
+  fi
   gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label autofix
   proceed true
 }

@@ -18,10 +18,10 @@ import {
 const indexNamesFromPlan = (stage: unknown, names: string[] = []): string[] => {
   if (!stage || typeof stage !== "object") return names;
   const record = stage as Record<string, unknown>;
-  if (typeof record.indexName === "string") names.push(record.indexName);
-  if (record.inputStage) indexNamesFromPlan(record.inputStage, names);
-  if (Array.isArray(record.inputStages)) {
-    for (const child of record.inputStages) {
+  if (typeof record["indexName"] === "string") names.push(record["indexName"]);
+  if (record["inputStage"]) indexNamesFromPlan(record["inputStage"], names);
+  if (Array.isArray(record["inputStages"])) {
+    for (const child of record["inputStages"]) {
       indexNamesFromPlan(child, names);
     }
   }

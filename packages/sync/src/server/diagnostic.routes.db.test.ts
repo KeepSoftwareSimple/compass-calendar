@@ -3,8 +3,11 @@ import { NodeEnv } from "@core/constants/core.constants";
 import { type DiagnosticConnectionResponse } from "@core/types/sync/diagnostic.contracts";
 import {
   type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { defaultCalendarListFields } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { signInternalRequest } from "@sync/auth/internal-auth";
@@ -68,17 +71,17 @@ describe("GET /internal/diagnostics/connections/:diagnosticKey", () => {
   });
 
   it("resolves a diagnostic key to metadata without event content", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const connections = new ProviderConnectionRepository(mongo.db);
     const calendars = new ProviderCalendarRepository(mongo.db);
 
     const connection = await connections.upsertByProviderAccount({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       provider: "google",
       account: {
-        providerAccountId: objectId(),
+        providerAccountId: objectId() as ProviderAccountId,
         email: "support-lookup@example.com",
         displayName: null,
       },
@@ -87,12 +90,13 @@ describe("GET /internal/diagnostics/connections/:diagnosticKey", () => {
       stateReason: null,
     });
     await calendars.upsertByProviderCalendar({
-      tenantId: tenantId as TenantId,
-      principalId: principalId as PrincipalId,
+      tenantId: tenantId,
+      principalId: principalId,
       connectionId: connection._id,
-      providerCalendarId: "primary",
+      providerCalendarId: "primary" as ProviderCalendarSourceId,
       displayName: "Primary",
       color: null,
+      ...defaultCalendarListFields,
       active: true,
       primary: true,
       accessRole: "owner",

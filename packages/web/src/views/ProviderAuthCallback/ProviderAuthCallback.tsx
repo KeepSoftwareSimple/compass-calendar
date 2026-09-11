@@ -1,7 +1,8 @@
 import { useLocation, useParams, useRouter } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
+import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
+import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
   trackSignupCompleted,
@@ -18,7 +19,6 @@ import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
-import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
@@ -72,30 +72,21 @@ export async function completeProviderAuthCallback({
 }
 
 export function ProviderAuthCallbackView() {
-  const didRun = useRef(false);
   const { provider: providerParam } = useParams({ strict: false });
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
 
-  useEffect(() => {
-    if (didRun.current) {
-      return;
-    }
-
-    didRun.current = true;
-
+  useOneShotAuthCallback(() => {
     if (!providerParam || !isSignInProviderKind(providerParam)) {
       showErrorToast("We couldn't finish signing you in. Please try again.");
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
       return;
     }
 
-    // `didRun` makes this a one-shot: if the promise rejects with nothing to
-    // catch it, the user sits on the spinner below permanently, with no toast
-    // and no way to retry. The storage reads inside swallow their own errors
-    // today, so this is a backstop rather than a fix for a reproduced case,
-    // but the failure mode it guards is unrecoverable.
+    // The storage reads inside swallow their own errors today, so this catch
+    // is a backstop rather than a fix for a reproduced case, but the failure
+    // mode it guards (see `useOneShotAuthCallback`) is unrecoverable.
     completeProviderAuthCallback({
       provider: providerParam,
       completeAuthentication,
@@ -106,20 +97,7 @@ export function ProviderAuthCallbackView() {
       showErrorToast(PROVIDER_AUTHORIZATION_ERROR_MESSAGE);
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
-  }, [completeAuthentication, location.searchStr, providerParam, router]);
+  });
 
-  return (
-    <OverlayPanel
-      title="Just finishing up …"
-      message="Returning you to Compass."
-      role="status"
-      variant="status"
-      icon={
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-text"
-          aria-hidden="true"
-        />
-      }
-    />
-  );
+  return <AuthCallbackOverlay />;
 }

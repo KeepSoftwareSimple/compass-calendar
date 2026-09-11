@@ -14,7 +14,7 @@ describe("billingAnalytics.capture", () => {
     globalThis.fetch = (async () => {
       calls += 1;
       return { ok: true, status: 200 } as Response;
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await expect(
       billingAnalytics.capture({ event: "checkout_expired", userId: "u1" }),
@@ -28,10 +28,13 @@ describe("billingAnalytics.capture", () => {
       POSTHOG_HOST: "https://ph.example.test",
     });
     const bodies: unknown[] = [];
-    globalThis.fetch = (async (input, init) => {
+    globalThis.fetch = (async (
+      input: RequestInfo | URL,
+      init?: RequestInit,
+    ) => {
       bodies.push({ url: String(input), body: JSON.parse(String(init?.body)) });
       return { ok: true, status: 200 } as Response;
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await expect(
       billingAnalytics.capture({
@@ -62,7 +65,7 @@ describe("billingAnalytics.capture", () => {
     using _env = mockEnv({ POSTHOG_KEY: "phc_test" });
     globalThis.fetch = (async () => {
       throw new Error("network down");
-    }) as typeof fetch;
+    }) as unknown as typeof fetch;
 
     await expect(
       billingAnalytics.capture({ event: "checkout_expired", userId: "u1" }),

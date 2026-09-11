@@ -12,6 +12,22 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const healthy: UserMetadata = { google: { connectionState: "HEALTHY" } };
 const attention: UserMetadata = { google: { connectionState: "ATTENTION" } };
+const reconnectRequired: UserMetadata = {
+  google: { connectionState: "RECONNECT_REQUIRED" },
+  connections: [
+    {
+      id: "conn-1",
+      provider: "google",
+      state: "actionRequired",
+      stateReason: "authorizationRevoked",
+      lastSyncedAt: null,
+      lastHealthyAt: null,
+      accountEmail: "lance@example.com",
+      connectionState: "RECONNECT_REQUIRED",
+      canSuggestContacts: false,
+    },
+  ],
+};
 
 describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
   const { port, mocks } = createTestToastPort();
@@ -66,6 +82,22 @@ describe("applyUserMetadataSideEffects - delayed toast lifecycle", () => {
       expect.anything(),
       expect.objectContaining({ toastId: GOOGLE_DELAYED_TOAST_ID }),
     );
+  });
+});
+
+describe("applyUserMetadataSideEffects - reconnect toast", () => {
+  const { port, mocks } = createTestToastPort();
+
+  beforeEach(() => {
+    mocks.error.mockClear();
+    registerToastPort(port);
+    resetGoogleReconnectRequiredForTests();
+  });
+
+  it("does not raise a reconnect toast from metadata load", () => {
+    applyUserMetadataSideEffects(reconnectRequired);
+
+    expect(mocks.error).not.toHaveBeenCalled();
   });
 });
 

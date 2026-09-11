@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker";
-import { type ConnectionId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
@@ -19,14 +23,14 @@ describe("InvalidationRepository", () => {
   });
 
   it("appends a content-free invalidation with TTL expiry", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const connectionId = objectId() as ConnectionId;
     const emittedAt = new Date("2026-07-24T12:00:00.000Z");
 
     const row = await repo.append({
-      tenantId,
-      principalId,
+      tenantId: tenantId,
+      principalId: principalId,
       invalidation: { kind: "connection", connectionId },
       emittedAt,
     });
@@ -47,8 +51,8 @@ describe("InvalidationRepository", () => {
   });
 
   it("appendMany writes every invalidation with the same emittedAt/TTL", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const connectionId = objectId() as ConnectionId;
     const eventId = objectId() as never;
     const calendarId = objectId() as never;
@@ -81,24 +85,28 @@ describe("InvalidationRepository", () => {
   });
 
   it("appendMany is a no-op for an empty list", async () => {
-    const rows = await repo.appendMany(objectId(), objectId(), []);
+    const rows = await repo.appendMany(
+      objectId() as TenantId,
+      objectId() as PrincipalId,
+      [],
+    );
     expect(rows).toEqual([]);
   });
 
   it("keyset-lists only the caller's rows after a cursor", async () => {
-    const tenantId = objectId();
-    const mine = objectId();
-    const other = objectId();
+    const tenantId = objectId() as TenantId;
+    const mine = objectId() as PrincipalId;
+    const other = objectId() as PrincipalId;
     const connectionId = objectId() as ConnectionId;
 
     const first = await repo.append({
-      tenantId,
+      tenantId: tenantId,
       principalId: mine,
       invalidation: { kind: "connection", connectionId },
       emittedAt: new Date(),
     });
     const second = await repo.append({
-      tenantId,
+      tenantId: tenantId,
       principalId: mine,
       invalidation: {
         kind: "event",
@@ -108,7 +116,7 @@ describe("InvalidationRepository", () => {
       emittedAt: new Date(),
     });
     await repo.append({
-      tenantId,
+      tenantId: tenantId,
       principalId: other,
       invalidation: { kind: "connection", connectionId },
       emittedAt: new Date(),
@@ -132,20 +140,20 @@ describe("InvalidationRepository", () => {
     it("keyset-lists rows across every tenant/principal after a cursor", async () => {
       const connectionId = objectId() as ConnectionId;
       const first = await repo.append({
-        tenantId: objectId(),
-        principalId: objectId(),
+        tenantId: objectId() as TenantId,
+        principalId: objectId() as PrincipalId,
         invalidation: { kind: "connection", connectionId },
         emittedAt: new Date(),
       });
       const second = await repo.append({
-        tenantId: objectId(),
-        principalId: objectId(),
+        tenantId: objectId() as TenantId,
+        principalId: objectId() as PrincipalId,
         invalidation: { kind: "connection", connectionId },
         emittedAt: new Date(),
       });
       const third = await repo.append({
-        tenantId: objectId(),
-        principalId: objectId(),
+        tenantId: objectId() as TenantId,
+        principalId: objectId() as PrincipalId,
         invalidation: { kind: "connection", connectionId },
         emittedAt: new Date(),
       });
@@ -165,8 +173,8 @@ describe("InvalidationRepository", () => {
       const connectionId = objectId() as ConnectionId;
       for (let i = 0; i < 3; i += 1) {
         await repo.append({
-          tenantId: objectId(),
-          principalId: objectId(),
+          tenantId: objectId() as TenantId,
+          principalId: objectId() as PrincipalId,
           invalidation: { kind: "connection", connectionId },
           emittedAt: new Date(),
         });
@@ -181,14 +189,14 @@ describe("InvalidationRepository", () => {
 
       const connectionId = objectId() as ConnectionId;
       await repo.append({
-        tenantId: objectId(),
-        principalId: objectId(),
+        tenantId: objectId() as TenantId,
+        principalId: objectId() as PrincipalId,
         invalidation: { kind: "connection", connectionId },
         emittedAt: new Date(),
       });
       const last = await repo.append({
-        tenantId: objectId(),
-        principalId: objectId(),
+        tenantId: objectId() as TenantId,
+        principalId: objectId() as PrincipalId,
         invalidation: { kind: "connection", connectionId },
         emittedAt: new Date(),
       });

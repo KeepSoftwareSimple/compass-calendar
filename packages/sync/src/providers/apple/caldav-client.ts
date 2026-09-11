@@ -26,7 +26,10 @@ export interface ParsedPropstat {
   readonly props: Record<string, unknown>;
 }
 
-export type CaldavFetch = typeof fetch;
+export type CaldavFetch = (
+  url: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
 
 export type CaldavClientErrorReason =
   | "authExpired"

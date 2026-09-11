@@ -8,6 +8,21 @@ import { ProviderEventReadError } from "@sync/providers/provider-event-reader.po
 
 // A fake events.list API returning scripted pages in order, recording the
 // params it was called with so tests can assert window/cursor/pagination.
+const expectListPageError = async (
+  adapter: GoogleEventReaderAdapter,
+  input: Parameters<GoogleEventReaderAdapter["listEventPage"]>[0],
+): Promise<ProviderEventReadError> => {
+  try {
+    await adapter.listEventPage(input);
+    throw new Error("expected listEventPage to throw");
+  } catch (error) {
+    if (!(error instanceof ProviderEventReadError)) {
+      throw error;
+    }
+    return error;
+  }
+};
+
 class FakeEventListApi implements GoogleEventListApi {
   calls: Array<Parameters<GoogleEventListApi["listPage"]>[0]> = [];
   #pages: GoogleEventListPage[];
@@ -102,11 +117,11 @@ describe("GoogleEventReaderAdapter", () => {
       },
     });
 
-    expect(api.calls[0].window).toEqual({
+    expect(api.calls[0]!.window).toEqual({
       timeMin: "2026-06-01T00:00:00Z",
       timeMax: "2026-09-01T00:00:00Z",
     });
-    expect(api.calls[0].syncToken).toBeUndefined();
+    expect(api.calls[0]!.syncToken).toBeUndefined();
   });
 
   it("forwards the stored cursor and page token for a resumed full pass", async () => {
@@ -120,8 +135,8 @@ describe("GoogleEventReaderAdapter", () => {
       pageToken: "page-2",
     });
 
-    expect(api.calls[0].syncToken).toBe("sync-token-0");
-    expect(api.calls[0].pageToken).toBe("page-2");
+    expect(api.calls[0]!.syncToken).toBe("sync-token-0");
+    expect(api.calls[0]!.pageToken).toBe("page-2");
   });
 
   it("keeps cancellations in the page (an incremental deletion)", async () => {
@@ -381,9 +396,10 @@ describe("GoogleEventReaderAdapter", () => {
     const api = new FakeEventListApi([], rejected);
     const { adapter } = adapterWith(api);
 
-    const error = await adapter
-      .listEventPage({ accessToken: "tok", calendarId: "primary@google.com" })
-      .catch((e) => e as ProviderEventReadError);
+    const error = await expectListPageError(adapter, {
+      accessToken: "tok",
+      calendarId: "primary@google.com",
+    });
 
     // Without these, a durable readFailed row is guesswork to diagnose: the
     // message alone does not say which rejection Google gave.
@@ -395,9 +411,10 @@ describe("GoogleEventReaderAdapter", () => {
     const api = new FakeEventListApi([], { response: { status: 403 } });
     const { adapter } = adapterWith(api);
 
-    const error = await adapter
-      .listEventPage({ accessToken: "tok", calendarId: "primary@google.com" })
-      .catch((e) => e as ProviderEventReadError);
+    const error = await expectListPageError(adapter, {
+      accessToken: "tok",
+      calendarId: "primary@google.com",
+    });
 
     expect((error.cause as Error)?.message).toContain("HTTP 403");
   });
@@ -408,9 +425,10 @@ describe("GoogleEventReaderAdapter", () => {
     const api = new FakeEventListApi([], leaky);
     const { adapter } = adapterWith(api);
 
-    const error = await adapter
-      .listEventPage({ accessToken: "tok", calendarId: "primary@google.com" })
-      .catch((e) => e as ProviderEventReadError);
+    const error = await expectListPageError(adapter, {
+      accessToken: "tok",
+      calendarId: "primary@google.com",
+    });
 
     expect(error).toBeInstanceOf(ProviderEventReadError);
     expect(JSON.stringify(error.cause ?? {})).not.toContain(

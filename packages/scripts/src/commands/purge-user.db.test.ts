@@ -59,7 +59,7 @@ describe("purge-user (db)", () => {
       .db()
       .collection(SYNC_COLLECTIONS.jobs)
       .insertOne({
-        _id: new ObjectId().toString(),
+        _id: new ObjectId(),
         tenantId: userId.toString(),
         principalId: userId.toString(),
         // The jobs collection carries a unique index on coalescingKey, so a

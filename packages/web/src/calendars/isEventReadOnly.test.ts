@@ -58,6 +58,7 @@ describe("isEventReadOnly", () => {
     markAccountReconnectRequired({
       connectionId: "conn-1",
       accountEmail: "lance@example.com",
+      provider: "google",
     });
     const lookup = buildCalendarLookup([calendar]);
 

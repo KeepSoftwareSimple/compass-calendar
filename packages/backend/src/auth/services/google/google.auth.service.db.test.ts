@@ -45,7 +45,7 @@ describe("googleAuthService", () => {
         value: { connections: [] },
         correlationId: "corr-1",
       }),
-    } as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
+    } as unknown as ReturnType<typeof syncServiceFactory.getSyncServiceClient>);
     ({ googleAuthService } = await import("./google.auth.service"));
   });
   beforeEach(() => setupTestDb(import.meta.url));
@@ -285,7 +285,7 @@ describe("googleAuthService", () => {
 
       expect(result).toEqual({
         cUserId: compassUserId,
-        refreshToken: oAuthTokens.refresh_token,
+        refreshToken: oAuthTokens.refresh_token ?? null,
       });
       expect(updatedUser?._id.toString()).toBe(compassUserId);
       expect(updatedUser?.google?.googleId).toBe(gUser.sub);

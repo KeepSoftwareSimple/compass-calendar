@@ -99,14 +99,14 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
           item.event,
         ),
         focusColor: resolveCalendarFocusColor(calendarLookup, item.event),
-        isHidden: Boolean(item.event._id && hiddenEventIds.has(item.event._id)),
+        isHidden: item.isHidden,
         // Read-only (unwritable calendar or busy content) events never
         // attach interaction attributes/registration below, so the drag/
         // resize engine can't find them as a target - blocked before any
         // optimistic state change (packet 08 step 8).
         isReadOnly: isGridEventScheduleLocked(calendarLookup, item.event),
       })),
-    [timedEventItems, calendarLookup, hiddenEventIds],
+    [timedEventItems, calendarLookup],
   );
 
   const { onEventKeyDown, onOpenReadOnlyDetails } =

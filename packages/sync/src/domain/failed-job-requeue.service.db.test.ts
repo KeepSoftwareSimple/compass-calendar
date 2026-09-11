@@ -1,4 +1,9 @@
 import { faker } from "@faker-js/faker";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { requeueFailedJobs } from "@sync/domain/failed-job-requeue.service";
 import { type JobEnqueue } from "@sync/storage/contracts/job.contracts";
@@ -33,13 +38,13 @@ describe("requeueFailedJobs", () => {
     principalId: string;
     connectionId: string;
   }> => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const connectionId = objectId() as ConnectionId;
     const job = await jobs.enqueue({
-      tenantId,
-      principalId,
-      connectionId,
+      tenantId: tenantId,
+      principalId: principalId,
+      connectionId: connectionId,
       resourceId: null,
       commandId: null,
       kind: "incrementalPull",
@@ -88,9 +93,9 @@ describe("requeueFailedJobs", () => {
       .db()
       .collection("jobs")
       .findOne({ _id: id as never });
-    expect(raw?.state).toBe("pending");
-    expect(raw?.runAfter).toEqual(NOW);
-    expect(raw?.requeuedCount).toBe(1);
+    expect(raw?.["state"]).toBe("pending");
+    expect(raw?.["runAfter"]).toEqual(NOW);
+    expect(raw?.["requeuedCount"]).toBe(1);
   });
 
   it("leaves a job that has not cooled down yet failed", async () => {
@@ -227,8 +232,8 @@ describe("requeueFailedJobs", () => {
       .db()
       .collection("jobs")
       .findOne({ _id: id as never });
-    expect(raw?.state).toBe("pending");
+    expect(raw?.["state"]).toBe("pending");
     // Absence counted as zero, so the requeue is its first, not its last.
-    expect(raw?.requeuedCount).toBe(1);
+    expect(raw?.["requeuedCount"]).toBe(1);
   });
 });

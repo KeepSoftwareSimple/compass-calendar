@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { CalendarIdSchema } from "@core/types/domain-primitives";
+import { CalendarIdSchema, type TimeZone } from "@core/types/domain-primitives";
 import * as billingGuard from "@backend/billing/billing.guard";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
 import {
@@ -26,7 +26,7 @@ const page = (
     durationMinutes: 30,
     destinationCalendarId: destination,
     blockingCalendarIds: [destination],
-    timeZone: "UTC",
+    timeZone: "UTC" as TimeZone,
     weeklyAvailability: [{ weekday: 1, start: "09:00", end: "17:00" }],
     minNoticeHours: 4,
     maxHorizonDays: 60,

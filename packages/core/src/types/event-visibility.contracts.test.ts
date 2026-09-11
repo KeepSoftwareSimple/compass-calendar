@@ -1,16 +1,21 @@
+import { type EventId, EventIdSchema } from "@core/types/domain-primitives";
 import {
   HiddenEventIdsResponseSchema,
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
 import { describe, expect, it } from "bun:test";
 
+const eventId = (value: string) => EventIdSchema.parse(value);
+
 describe("HiddenEventIdsResponseSchema", () => {
   it("parses a valid response", () => {
     const parsed = HiddenEventIdsResponseSchema.parse({
-      hiddenEventIds: ["evt-1", "evt-2"],
+      hiddenEventIds: [eventId("evt-1"), eventId("evt-2")],
     });
 
-    expect(parsed).toEqual({ hiddenEventIds: ["evt-1", "evt-2"] });
+    expect(parsed).toEqual({
+      hiddenEventIds: [eventId("evt-1"), eventId("evt-2")],
+    });
   });
 
   it("accepts an empty list", () => {
@@ -20,7 +25,7 @@ describe("HiddenEventIdsResponseSchema", () => {
   });
 
   it("accepts a composed occurrence id", () => {
-    const occurrenceId = "evt-1::2026-07-14T15:00:00.000Z";
+    const occurrenceId = eventId("evt-1::2026-07-14T15:00:00.000Z");
     const parsed = HiddenEventIdsResponseSchema.parse({
       hiddenEventIds: [occurrenceId],
     });
@@ -31,7 +36,7 @@ describe("HiddenEventIdsResponseSchema", () => {
   it("rejects an extra key", () => {
     expect(
       HiddenEventIdsResponseSchema.safeParse({
-        hiddenEventIds: ["evt-1"],
+        hiddenEventIds: [eventId("evt-1")],
         extra: true,
       }).success,
     ).toBe(false);
@@ -39,7 +44,9 @@ describe("HiddenEventIdsResponseSchema", () => {
 
   it("rejects an empty eventId", () => {
     expect(
-      HiddenEventIdsResponseSchema.safeParse({ hiddenEventIds: [""] }).success,
+      HiddenEventIdsResponseSchema.safeParse({
+        hiddenEventIds: ["" as EventId],
+      }).success,
     ).toBe(false);
   });
 });
@@ -47,15 +54,15 @@ describe("HiddenEventIdsResponseSchema", () => {
 describe("SetEventHiddenInputSchema", () => {
   it("parses a valid input", () => {
     const parsed = SetEventHiddenInputSchema.parse({
-      eventId: "evt-1",
+      eventId: eventId("evt-1"),
       hidden: true,
     });
 
-    expect(parsed).toEqual({ eventId: "evt-1", hidden: true });
+    expect(parsed).toEqual({ eventId: eventId("evt-1"), hidden: true });
   });
 
   it("accepts a composed occurrence id", () => {
-    const occurrenceId = "evt-1::2026-07-14T15:00:00.000Z";
+    const occurrenceId = eventId("evt-1::2026-07-14T15:00:00.000Z");
     const parsed = SetEventHiddenInputSchema.parse({
       eventId: occurrenceId,
       hidden: false,
@@ -67,7 +74,7 @@ describe("SetEventHiddenInputSchema", () => {
   it("rejects an extra key", () => {
     expect(
       SetEventHiddenInputSchema.safeParse({
-        eventId: "evt-1",
+        eventId: eventId("evt-1"),
         hidden: true,
         extra: true,
       }).success,
@@ -77,7 +84,7 @@ describe("SetEventHiddenInputSchema", () => {
   it("rejects an empty eventId", () => {
     expect(
       SetEventHiddenInputSchema.safeParse({
-        eventId: "",
+        eventId: "" as EventId,
         hidden: true,
       }).success,
     ).toBe(false);

@@ -2,6 +2,15 @@ import { ObjectId } from "mongodb";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AdminPutBookingPageInputSchema } from "@core/types/booking.contracts";
+import {
+  type CalendarId,
+  type DateTime,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
+  type CommandSubmitRequest,
+  type SyncCommandInput,
+} from "@core/types/sync/command.contracts";
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { UserDriver } from "@backend/__tests__/drivers/user.driver";
 import {
@@ -120,6 +129,31 @@ const appleConnection = () => ({
   },
 });
 
+type TestSyncConnection =
+  | ReturnType<typeof healthyConnection>
+  | ReturnType<typeof appleConnection>
+  | ReturnType<typeof microsoftConnection>;
+
+const submitRequestFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): CommandSubmitRequest => {
+  const request = submitCommand.mock.calls[0]?.[1];
+  if (!request) {
+    throw new Error("Expected submitCommand to have been called");
+  }
+  return request as CommandSubmitRequest;
+};
+
+const createInputFrom = (submitCommand: {
+  mock: { calls: unknown[][] };
+}): Extract<SyncCommandInput, { kind: "create" }> => {
+  const request = submitRequestFrom(submitCommand);
+  if (request.input.kind !== "create") {
+    throw new Error("Expected a create command submit");
+  }
+  return request.input;
+};
+
 const microsoftConnection = (withTeams = true) => ({
   ...healthyConnection(),
   provider: "microsoft" as const,
@@ -212,7 +246,7 @@ describe("PublicBookingService", () => {
 
   const mockHealthySync = (
     calendars: ReturnType<typeof writableCalendar>[],
-    connection: ReturnType<typeof healthyConnection> = healthyConnection(),
+    connection: TestSyncConnection = healthyConnection(),
   ) => {
     const wired = calendars.map((calendar) => ({
       ...calendar,
@@ -273,7 +307,7 @@ describe("PublicBookingService", () => {
       guestName: "Rival Guest",
       guestEmail: "rival@example.com",
       notes: null,
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "rival-evt",
       cancelTokenHash: "b".repeat(64),
@@ -348,7 +382,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
-    expect(createBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (createBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
     });
     expect(response.reservationId).toBeTruthy();
@@ -360,7 +396,7 @@ describe("PublicBookingService", () => {
 
   it("confirms at the pinned duration and calls createBookingEvent once", async () => {
     const { slug } = await enableBookingPage();
-    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z` as DateTime;
 
     const response = await service.createReservation(slug, {
       slotStart,
@@ -371,12 +407,16 @@ describe("PublicBookingService", () => {
     });
 
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
-    expect(createBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (createBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       start: slotStart,
       end: `${BOOKING_MONDAY}T10:30:00.000Z`,
     });
     expect(response.slotStart).toBe(slotStart);
-    expect(response.slotEnd).toBe(`${BOOKING_MONDAY}T10:30:00.000Z`);
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T10:30:00.000Z` as DateTime,
+    );
   });
 
   it("rejects confirm when pinned duration does not match the page", async () => {
@@ -574,7 +614,7 @@ describe("PublicBookingService", () => {
     });
 
     expect(logSpy).toHaveBeenCalledTimes(1);
-    expect(logSpy.mock.calls[0]?.[0]).toMatchObject({
+    expect((logSpy.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
       slug,
       userId: userId.toString(),
       issueCalendarIds: [calendarId],
@@ -591,7 +631,13 @@ describe("PublicBookingService", () => {
 
     await expect(service.getHostPageStatus(userId)).resolves.toEqual({
       bookable: false,
-      reasons: [{ kind: "calendar", reason: "stale", calendarId }],
+      reasons: [
+        {
+          kind: "calendar",
+          reason: "stale",
+          calendarId: calendarId as CalendarId,
+        },
+      ],
     });
     await expect(
       service.getSlots(slug, {
@@ -875,10 +921,10 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
-    expect(request.input.content.description).toContain(
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
+    expect(input.content.description).toContain(
       "Zoom: https://example.com/meet",
     );
 
@@ -934,9 +980,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(true);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(true);
+    expect(input.content.conference).toBeNull();
 
     const publicReservation = await bookingService.getPublicReservation(
       new ObjectId(created.reservationId),
@@ -988,9 +1034,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(false);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(false);
+    expect(input.content.conference).toBeNull();
   });
 
   it("clamps a requested window that extends past the host horizon", async () => {
@@ -1023,7 +1069,9 @@ describe("PublicBookingService", () => {
     for (const slot of response.slots) {
       expect(Date.parse(slot.slotStart)).toBeLessThan(horizonMs + 1000);
     }
-    const availabilityQuery = getAvailability.mock.calls[0]?.[1] as {
+    const availabilityQuery = (
+      getAvailability.mock.calls as unknown[][]
+    )[0]?.[1] as {
       end: string;
     };
     expect(Date.parse(availabilityQuery.end)).toBeLessThanOrEqual(
@@ -1139,7 +1187,7 @@ describe("PublicBookingService", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: null,
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "past-evt",
       cancelTokenHash: hashCancelToken(token),
@@ -1170,7 +1218,7 @@ describe("PublicBookingService", () => {
 
     expect(publicReservation).toEqual({
       slotStart: created.slotStart,
-      guestTimeZone: "Europe/London",
+      guestTimeZone: "Europe/London" as TimeZone,
       durationMinutes: 30,
       hostDisplayName: "Host User",
       status: "confirmed",
@@ -1309,7 +1357,7 @@ describe("PublicBookingService", () => {
       );
       expect(response.bookable).toBe(true);
       expect(response.slots.map((slot) => slot.slotStart)).toContain(
-        `${BOOKING_MONDAY}T10:00:00Z`,
+        `${BOOKING_MONDAY}T10:00:00Z` as DateTime,
       );
     } finally {
       listSpy.mockRestore();
@@ -1331,7 +1379,7 @@ describe("PublicBookingService", () => {
     });
 
     expect(response.slots.map((slot) => slot.slotStart)).toContain(
-      `${BOOKING_MONDAY}T09:30:00Z`,
+      `${BOOKING_MONDAY}T09:30:00Z` as DateTime,
     );
   });
 
@@ -1351,7 +1399,9 @@ describe("PublicBookingService", () => {
       durationMinutes: 30,
     });
 
-    expect(created.slotStart).toBe(`${BOOKING_MONDAY}T09:30:00.000Z`);
+    expect(created.slotStart).toBe(
+      `${BOOKING_MONDAY}T09:30:00.000Z` as DateTime,
+    );
     expect(createBookingEvent).toHaveBeenCalledTimes(1);
   });
 
@@ -1402,7 +1452,9 @@ describe("PublicBookingService", () => {
     ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
-    expect(deleteBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (deleteBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       eventId: "our-evt",
     });
     const survivors =
@@ -1446,10 +1498,10 @@ describe("PublicBookingService", () => {
       ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
       expect(logSpy).toHaveBeenCalledTimes(1);
-      expect(logSpy.mock.calls[0]?.[0]).toMatchObject({
+      expect((logSpy.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
         result: "SYNC_UNAVAILABLE",
       });
-      expect(logSpy.mock.calls[0]?.[1]).toMatchObject({
+      expect((logSpy.mock.calls as unknown[][])[0]?.[1]).toMatchObject({
         tenantId: userId.toString(),
         principalId: userId.toString(),
         calendarId,
@@ -1504,7 +1556,9 @@ describe("PublicBookingService", () => {
       durationMinutes: 30,
     });
 
-    const eventInput = createBookingEvent.mock.calls[0]?.[1] as {
+    const eventInput = (
+      createBookingEvent.mock.calls as unknown[][]
+    )[0]?.[1] as {
       description: string;
     };
     expect(eventInput.description).toBe(
@@ -1538,9 +1592,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
-    const [, request] = submitCommand.mock.calls[0] ?? [];
-    expect(request.input.createConference).toBe(true);
-    expect(request.input.content.conference).toBeNull();
+    const input = createInputFrom(submitCommand);
+    expect(input.createConference).toBe(true);
+    expect(input.content.conference).toBeNull();
   });
 
   it("patches guest name and notes and submits an event update", async () => {
@@ -1565,11 +1619,15 @@ describe("PublicBookingService", () => {
     expect(patched.guestName).toBe("Grace Hopper");
     expect(patched.notes).toBe("bring tea");
     expect(updateBookingEvent).toHaveBeenCalledTimes(1);
-    expect(updateBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       title: "Grace Hopper and Host User",
     });
     const description = (
-      updateBookingEvent.mock.calls[0]?.[1] as { description: string }
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
+        description: string;
+      }
     ).description;
     expect(description).toMatch(/^bring tea\n\nCancel: .+\n\nReschedule: .+$/);
     const stored = await bookingReservationRepository.findById(reservationId);
@@ -1643,7 +1701,7 @@ describe("PublicBookingService", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: "bring coffee",
-      guestTimeZone: "UTC",
+      guestTimeZone: "UTC" as TimeZone,
       status: "confirmed",
       calendarEventId: "past-evt",
       cancelTokenHash: hashCancelToken(token),
@@ -1695,14 +1753,20 @@ describe("PublicBookingService", () => {
     });
 
     expect(updateBookingEvent).toHaveBeenCalledTimes(1);
-    expect(updateBookingEvent.mock.calls[0]?.[1]).toMatchObject({
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
       start: `${BOOKING_MONDAY}T11:00:00.000Z`,
       end: `${BOOKING_MONDAY}T11:30:00.000Z`,
     });
     expect(createBookingEvent).not.toHaveBeenCalled();
-    expect(response.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
-    expect(response.slotEnd).toBe(`${BOOKING_MONDAY}T11:30:00.000Z`);
-    expect(response.guestTimeZone).toBe("America/Denver");
+    expect(response.slotStart).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
+    );
+    expect(response.slotEnd).toBe(
+      `${BOOKING_MONDAY}T11:30:00.000Z` as DateTime,
+    );
+    expect(response.guestTimeZone).toBe("America/Denver" as TimeZone);
     expect(response.status).toBe("confirmed");
     expect(response).not.toHaveProperty("guestEmail");
     expect(response).not.toHaveProperty("cancelUrl");
@@ -1780,8 +1844,8 @@ describe("PublicBookingService", () => {
     });
 
     expect(updateBookingEvent).not.toHaveBeenCalled();
-    expect(again.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
-    expect(again.guestTimeZone).toBe("America/Denver");
+    expect(again.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z` as DateTime);
+    expect(again.guestTimeZone).toBe("America/Denver" as TimeZone);
   });
 
   it("rejects reschedule onto another confirmed reservation", async () => {
@@ -1907,7 +1971,9 @@ describe("PublicBookingService", () => {
       booked,
     );
     const createdEventId = await createBookingEvent.mock.results[0]?.value;
-    expect(getAvailability.mock.calls.at(-1)?.[1]).toMatchObject({
+    expect(
+      (getAvailability.mock.calls as unknown[][]).at(-1)?.[1],
+    ).toMatchObject({
       excludeEventIds: [createdEventId],
     });
   });
@@ -1975,7 +2041,7 @@ describe("Public booking routes", () => {
   const mockHealthySync = (
     calendars: ReturnType<typeof writableCalendar>[],
     availability = busyResponse(true),
-    connection: ReturnType<typeof healthyConnection> = healthyConnection(),
+    connection: TestSyncConnection = healthyConnection(),
   ) => {
     const wired = calendars.map((calendar) => ({
       ...calendar,
@@ -2080,7 +2146,7 @@ describe("Public booking routes", () => {
       guestName: "Ada Lovelace",
       guestEmail: "ada@example.com",
       notes: "secret notes",
-      guestTimeZone: "Europe/London",
+      guestTimeZone: "Europe/London" as TimeZone,
       status: "confirmed",
       calendarEventId: "evt-1",
       cancelTokenHash: "a".repeat(64),

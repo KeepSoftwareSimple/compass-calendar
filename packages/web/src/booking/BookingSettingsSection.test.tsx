@@ -2017,7 +2017,9 @@ describe("BookingSettingsSection", () => {
     const option = within(combobox).getByRole("option");
     expect(option.textContent).toBe("host@example.com (Google Meet)");
     expect(
-      within(combobox).getByRole("group", { name: "host@example.com" }),
+      within(combobox).getByRole("group", {
+        name: "host@example.com (Google)",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -3053,9 +3055,11 @@ describe("BookingSettingsSection", () => {
     await user.click(await screen.findByText(BOOKING_MORE_OPTIONS_LABEL));
 
     const blocking = screen.getByRole("group", { name: "Blocking calendars" });
-    expect(within(blocking).getByText("host@example.com")).toBeInTheDocument();
     expect(
-      within(blocking).getByText("second@example.com"),
+      within(blocking).getByText("host@example.com (Google)"),
+    ).toBeInTheDocument();
+    expect(
+      within(blocking).getByText("second@example.com (Google)"),
     ).toBeInTheDocument();
     expect(
       within(blocking).getByRole("checkbox", { name: "Work" }),

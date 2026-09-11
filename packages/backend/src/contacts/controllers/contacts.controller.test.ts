@@ -62,7 +62,9 @@ describe("ContactsController suggestions", () => {
     expect(res.status).toHaveBeenCalledWith(Status.OK);
     expect(json).toHaveBeenCalledWith({ suggestions });
     // Principal-scoped and query-forwarding.
-    expect(getContactSuggestions.mock.calls[0]?.[1]).toBe("ad");
+    expect((getContactSuggestions.mock.calls as unknown[][])[0]?.[1]).toBe(
+      "ad",
+    );
   });
 
   it("answers a sub-minimum query with a typed empty 200 and no sync call", async () => {

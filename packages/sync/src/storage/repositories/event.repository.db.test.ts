@@ -1,5 +1,19 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import {
+  type CalendarId,
+  type DateOnly,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderEventId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import {
@@ -11,9 +25,9 @@ const objectId = () => faker.database.mongodbObjectId();
 
 const timed = (start: string, end: string, timeZone = "America/Denver") => ({
   kind: "timed" as const,
-  start,
-  end,
-  timeZone,
+  start: start as DateTime,
+  end: end as DateTime,
+  timeZone: timeZone as TimeZone,
 });
 
 const baseContent = {
@@ -29,14 +43,14 @@ const linkedUpsert = (
   overrides: Partial<ProviderEventUpsert> = {},
 ): ProviderEventUpsert =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     origin: "provider",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     clientEventId: null,
-    connectionId: objectId(),
-    providerEventId: "evt-1",
-    providerVersion: "etag-1",
+    connectionId: objectId() as ConnectionId,
+    providerEventId: "evt-1" as ProviderEventId,
+    providerVersion: "etag-1" as ProviderEventVersion,
     providerUpdatedAt: new Date("2026-07-20T12:00:00.000Z"),
     deliveryState: "confirmed",
     providerMetadata: null,
@@ -51,11 +65,11 @@ const linkedUpsert = (
 
 const compassRecord = (overrides: Partial<EventRecord> = {}): EventRecord =>
   ({
-    _id: objectId(),
-    tenantId: objectId(),
-    principalId: objectId(),
+    _id: objectId() as EventId,
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
     origin: "compass",
-    calendarId: objectId(),
+    calendarId: objectId() as CalendarId,
     clientEventId: null,
     connectionId: null,
     providerEventId: null,
@@ -86,26 +100,32 @@ describe("EventRepository", () => {
 
   it("dedupes a linked event on provider identity across repeated reads", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-42",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-42" as ProviderEventId,
     };
     const first = await repo.upsertByProviderIdentity(
-      linkedUpsert({ ...identity, providerVersion: "etag-1" }),
+      linkedUpsert({
+        ...identity,
+        providerVersion: "etag-1" as ProviderEventVersion,
+      }),
     );
     const second = await repo.upsertByProviderIdentity(
-      linkedUpsert({ ...identity, providerVersion: "etag-2" }),
+      linkedUpsert({
+        ...identity,
+        providerVersion: "etag-2" as ProviderEventVersion,
+      }),
     );
     expect(second._id).toBe(first._id);
-    expect(second.providerVersion).toBe("etag-2");
+    expect(second.providerVersion).toBe("etag-2" as ProviderEventVersion);
     expect(await db.collection("events").countDocuments()).toBe(1);
   });
 
   it("preserves iCalUID atomically when a sparse upsert omits it", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-uid",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-uid" as ProviderEventId,
     };
     const first = await repo.upsertByProviderIdentity(
       linkedUpsert({
@@ -119,21 +139,21 @@ describe("EventRepository", () => {
     const second = await repo.upsertByProviderIdentity(
       linkedUpsert({
         ...identity,
-        providerVersion: "etag-2",
+        providerVersion: "etag-2" as ProviderEventVersion,
         providerMetadata: null,
       }),
       { preserveIcalUidWhenAbsent: true },
     );
     expect(second._id).toBe(first._id);
-    expect(second.providerVersion).toBe("etag-2");
+    expect(second.providerVersion).toBe("etag-2" as ProviderEventVersion);
     expect(second.providerMetadata).toEqual({ iCalUID: "kept@google.com" });
   });
 
   it("clears providerMetadata when preserve is off", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-clear",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-clear" as ProviderEventId,
     };
     await repo.upsertByProviderIdentity(
       linkedUpsert({
@@ -154,9 +174,9 @@ describe("EventRepository", () => {
   // See the PLANNER TRAP note in index-manifest.ts.
   it("provider-identity filter is served by the partial index, not a scan", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-plan",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-plan" as ProviderEventId,
     };
     await repo.upsertByProviderIdentity(linkedUpsert(identity));
 
@@ -174,7 +194,7 @@ describe("EventRepository", () => {
   });
 
   it("stores many unlinked Compass events (no provider identity collision)", async () => {
-    const principalId = objectId();
+    const principalId = objectId() as PrincipalId;
     await repo.put(compassRecord({ principalId }));
     await repo.put(compassRecord({ principalId }));
     expect(await db.collection("events").countDocuments()).toBe(2);
@@ -182,7 +202,11 @@ describe("EventRepository", () => {
 
   it("round-trips an all-day event", async () => {
     const record = compassRecord({
-      schedule: { kind: "allDay", start: "2026-07-14", end: "2026-07-15" },
+      schedule: {
+        kind: "allDay",
+        start: "2026-07-14" as DateOnly,
+        end: "2026-07-15" as DateOnly,
+      },
     });
     const saved = await repo.put(record);
     const read = await repo.findById(
@@ -192,8 +216,8 @@ describe("EventRepository", () => {
     );
     expect(read?.schedule).toEqual({
       kind: "allDay",
-      start: "2026-07-14",
-      end: "2026-07-15",
+      start: "2026-07-14" as DateOnly,
+      end: "2026-07-15" as DateOnly,
     });
   });
 
@@ -205,11 +229,11 @@ describe("EventRepository", () => {
       saved.principalId,
       saved._id,
     );
-    expect(read?.schedule).toEqual(dst);
+    expect<unknown>(read?.schedule).toEqual(dst);
   });
 
   it("round-trips a recurrence exception event", async () => {
-    const seriesId = objectId();
+    const seriesId = objectId() as EventId;
     const record = compassRecord({
       recurrence: {
         kind: "exception",
@@ -256,10 +280,10 @@ describe("EventRepository", () => {
       const mine = objectId() as EventRecord["principalId"];
       const theirs = objectId() as EventRecord["principalId"];
       const own = await repo.put(
-        compassRecord({ tenantId, principalId: mine }),
+        compassRecord({ tenantId, principalId: mine as PrincipalId }),
       );
       const foreign = await repo.put(
-        compassRecord({ tenantId, principalId: theirs }),
+        compassRecord({ tenantId, principalId: theirs as PrincipalId }),
       );
 
       const found = await repo.findByIds(tenantId, mine, [
@@ -330,9 +354,9 @@ describe("EventRepository", () => {
 
   it("leaves existing customizations untouched on upsertByProviderIdentity", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-custom",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-custom" as ProviderEventId,
     };
     const first = await repo.upsertByProviderIdentity(
       linkedUpsert({
@@ -345,7 +369,7 @@ describe("EventRepository", () => {
     const second = await repo.upsertByProviderIdentity(
       linkedUpsert({
         ...identity,
-        providerVersion: "etag-2",
+        providerVersion: "etag-2" as ProviderEventVersion,
         content: { ...baseContent, title: "Provider title" },
       }),
     );
@@ -355,9 +379,9 @@ describe("EventRepository", () => {
 
   it("preserves customizations on the iCalUID-preserving upsert path", async () => {
     const identity = {
-      connectionId: objectId(),
-      calendarId: objectId(),
-      providerEventId: "evt-custom-uid",
+      connectionId: objectId() as ConnectionId,
+      calendarId: objectId() as CalendarId,
+      providerEventId: "evt-custom-uid" as ProviderEventId,
     };
     const first = await repo.upsertByProviderIdentity(
       linkedUpsert({
@@ -372,7 +396,7 @@ describe("EventRepository", () => {
     const second = await repo.upsertByProviderIdentity(
       linkedUpsert({
         ...identity,
-        providerVersion: "etag-2",
+        providerVersion: "etag-2" as ProviderEventVersion,
         providerMetadata: null,
       }),
       { preserveIcalUidWhenAbsent: true },
@@ -402,9 +426,9 @@ describe("EventRepository", () => {
   });
 
   it("finds only the owner's exceptions of one series", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const seriesId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const seriesId = objectId() as EventId;
     const exception = (
       recurrenceId: string,
       overrides: Partial<EventRecord> = {},
@@ -433,8 +457,8 @@ describe("EventRepository", () => {
         principalId,
         recurrence: {
           kind: "exception",
-          seriesId: objectId(),
-          recurrenceId: "2026-07-21T09:00:00-06:00",
+          seriesId: objectId() as EventId,
+          recurrenceId: "2026-07-21T09:00:00-06:00" as DateTime,
           cancelled: false,
         } as EventRecord["recurrence"],
       }),
@@ -452,7 +476,9 @@ describe("EventRepository", () => {
       }),
     );
     await repo.put(
-      exception("2026-07-21T09:00:00-06:00", { principalId: objectId() }),
+      exception("2026-07-21T09:00:00-06:00", {
+        principalId: objectId() as PrincipalId,
+      }),
     );
 
     const found = await repo.findSeriesExceptions(
@@ -517,13 +543,13 @@ describe("EventRepository", () => {
   // form of the same instant. Without converging on the provider-identity
   // document, the series-keyed insert collides the unique index.
   it("converges upsertException onto an imported provider-identity exception", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const calendarId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as CalendarId;
+    const connectionId = objectId() as ConnectionId;
     const offsetRecurrenceId = "2026-08-10T13:00:00-06:00" as never;
     const utcRecurrenceId = "2026-08-10T19:00:00.000Z" as never;
-    const providerEventId = "g-series_20260810T190000Z";
+    const providerEventId = "g-series_20260810T190000Z" as ProviderEventId;
 
     const master = await repo.put(
       compassRecord({
@@ -531,8 +557,8 @@ describe("EventRepository", () => {
         principalId,
         calendarId,
         connectionId,
-        providerEventId: "g-series",
-        providerVersion: "etag-master",
+        providerEventId: "g-series" as ProviderEventId,
+        providerVersion: "etag-master" as ProviderEventVersion,
         origin: "provider",
         recurrence: {
           kind: "seriesMaster",
@@ -548,7 +574,7 @@ describe("EventRepository", () => {
         calendarId,
         connectionId,
         providerEventId,
-        providerVersion: "etag-inst",
+        providerVersion: "etag-inst" as ProviderEventVersion,
         content: { ...baseContent, title: "Imported override" },
         schedule: timed(
           "2026-08-10T14:00:00-06:00",
@@ -584,7 +610,7 @@ describe("EventRepository", () => {
     expect(updated._id).toBe(imported._id);
     expect(updated.content.title).toBe("Command override");
     expect(updated.providerEventId).toBe(providerEventId);
-    expect(updated.providerVersion).toBe("etag-inst-2");
+    expect(updated.providerVersion).toBe("etag-inst-2" as ProviderEventVersion);
     if (updated.recurrence.kind === "exception") {
       expect(updated.recurrence.seriesId).toBe(master._id);
       expect(updated.recurrence.recurrenceId).toBe(utcRecurrenceId);
@@ -598,13 +624,13 @@ describe("EventRepository", () => {
   });
 
   it("drops a series-keyed duplicate when converging on provider identity", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const calendarId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as CalendarId;
+    const connectionId = objectId() as ConnectionId;
     const offsetRecurrenceId = "2026-08-15T14:00:00-06:00" as never;
     const utcRecurrenceId = "2026-08-15T20:00:00.000Z" as never;
-    const providerEventId = "g-series_20260815T200000Z";
+    const providerEventId = "g-series_20260815T200000Z" as ProviderEventId;
 
     const master = await repo.put(
       compassRecord({
@@ -612,8 +638,8 @@ describe("EventRepository", () => {
         principalId,
         calendarId,
         connectionId,
-        providerEventId: "g-series",
-        providerVersion: "etag-master",
+        providerEventId: "g-series" as ProviderEventId,
+        providerVersion: "etag-master" as ProviderEventVersion,
         origin: "provider",
         recurrence: {
           kind: "seriesMaster",
@@ -647,7 +673,7 @@ describe("EventRepository", () => {
         calendarId,
         connectionId,
         providerEventId,
-        providerVersion: "etag-inst",
+        providerVersion: "etag-inst" as ProviderEventVersion,
         content: { ...baseContent, title: "Still at provider" },
         schedule: timed(
           "2026-08-15T14:00:00-06:00",
@@ -700,12 +726,12 @@ describe("EventRepository", () => {
   // scope-"this" delete must be adopted by the provider-identity upsert,
   // not collide it.
   it("adopts a series-keyed tombstone when importing a provider exception", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const calendarId = objectId();
-    const connectionId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as CalendarId;
+    const connectionId = objectId() as ConnectionId;
     const utcRecurrenceId = "2026-08-10T19:00:00.000Z" as never;
-    const providerEventId = "g-series_20260810T190000Z";
+    const providerEventId = "g-series_20260810T190000Z" as ProviderEventId;
 
     const master = await repo.put(
       compassRecord({
@@ -713,8 +739,8 @@ describe("EventRepository", () => {
         principalId,
         calendarId,
         connectionId,
-        providerEventId: "g-series",
-        providerVersion: "etag-master",
+        providerEventId: "g-series" as ProviderEventId,
+        providerVersion: "etag-master" as ProviderEventVersion,
         origin: "provider",
         recurrence: {
           kind: "seriesMaster",
@@ -746,7 +772,7 @@ describe("EventRepository", () => {
         calendarId,
         connectionId,
         providerEventId,
-        providerVersion: "etag-inst",
+        providerVersion: "etag-inst" as ProviderEventVersion,
         content: { ...baseContent, title: "Cancelled at provider" },
         schedule: timed(
           "2026-08-10T13:00:00-06:00",
