@@ -31,7 +31,10 @@ describe("microsoftGraphRequest", () => {
 
     expect(data).toEqual({ id: "cal-1" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
     expect(init.method).toBe("GET");
     expect(init.headers).toEqual({
       Authorization: "Bearer token-1",

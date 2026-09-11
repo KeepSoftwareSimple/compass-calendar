@@ -263,7 +263,6 @@ describe("ProviderRegistry", () => {
       account: {
         email: "user@icloud.com",
         providerAccountId: "user@icloud.com",
-        displayName: null,
       },
     });
     expect(bound).not.toBe(unbound);

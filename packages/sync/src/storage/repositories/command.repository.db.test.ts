@@ -1,5 +1,18 @@
 import { faker } from "@faker-js/faker";
 import { type Db } from "mongodb";
+import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
+import {
+  type IdempotencyKey,
+  type PrincipalId,
+  type ProviderEventId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type CommandSubmit } from "@sync/storage/contracts/command.contracts";
 import { CommandRepository } from "@sync/storage/repositories/command.repository";
@@ -8,9 +21,9 @@ const objectId = () => faker.database.mongodbObjectId();
 
 const timed = {
   kind: "timed",
-  start: "2026-07-14T09:00:00-06:00",
-  end: "2026-07-14T10:00:00-06:00",
-  timeZone: "America/Denver",
+  start: "2026-07-14T09:00:00-06:00" as DateTime,
+  end: "2026-07-14T10:00:00-06:00" as DateTime,
+  timeZone: "America/Denver" as TimeZone,
 };
 const content = {
   title: "Standup",
@@ -23,13 +36,13 @@ const content = {
 
 const submit = (overrides: Partial<CommandSubmit> = {}): CommandSubmit =>
   ({
-    tenantId: objectId(),
-    principalId: objectId(),
-    idempotencyKey: "key-1",
-    eventId: objectId(),
+    tenantId: objectId() as TenantId,
+    principalId: objectId() as PrincipalId,
+    idempotencyKey: "key-1" as IdempotencyKey,
+    eventId: objectId() as EventId,
     input: {
       kind: "create",
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
       content,
       schedule: timed,
       recurrence: { kind: "single" },
@@ -56,10 +69,14 @@ describe("CommandRepository", () => {
   });
 
   it("returns the existing command for a repeated idempotency key", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const first = await repo.submit(
-      submit({ tenantId, principalId, idempotencyKey: "dup" }),
+      submit({
+        tenantId,
+        principalId,
+        idempotencyKey: "dup" as IdempotencyKey,
+      }),
     );
     expect(first.inserted).toBe(true);
     // A retried submit must not create a second command or reset progress.
@@ -71,7 +88,11 @@ describe("CommandRepository", () => {
       1,
     );
     const second = await repo.submit(
-      submit({ tenantId, principalId, idempotencyKey: "dup" }),
+      submit({
+        tenantId,
+        principalId,
+        idempotencyKey: "dup" as IdempotencyKey,
+      }),
     );
 
     expect(second.inserted).toBe(false);
@@ -98,8 +119,8 @@ describe("CommandRepository", () => {
       command._id,
       {
         state: "confirmed",
-        providerEventId: "evt-1",
-        providerVersion: "etag-1",
+        providerEventId: "evt-1" as ProviderEventId,
+        providerVersion: "etag-1" as ProviderEventVersion,
       },
       1,
     );
@@ -124,7 +145,11 @@ describe("CommandRepository", () => {
       command.tenantId,
       command.principalId,
       command._id,
-      { state: "confirmed", providerEventId: "evt-1", providerVersion: "e-1" },
+      {
+        state: "confirmed",
+        providerEventId: "evt-1" as ProviderEventId,
+        providerVersion: "e-1" as ProviderEventVersion,
+      },
       2,
     );
     if (!confirmed) throw new Error("expected a confirmed command");
@@ -176,12 +201,14 @@ describe("CommandRepository", () => {
   });
 
   it("lists only nonterminal commands, oldest first", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
     const { record: a } = await repo.submit(
-      submit({ tenantId, principalId, idempotencyKey: "a" }),
+      submit({ tenantId, principalId, idempotencyKey: "a" as IdempotencyKey }),
     );
-    await repo.submit(submit({ tenantId, principalId, idempotencyKey: "b" }));
+    await repo.submit(
+      submit({ tenantId, principalId, idempotencyKey: "b" as IdempotencyKey }),
+    );
     // Terminate one; it should drop out of the nonterminal list.
     await repo.updateOutcome(
       tenantId,
@@ -193,13 +220,13 @@ describe("CommandRepository", () => {
 
     const pending = await repo.listNonterminal(tenantId, principalId, 100);
     expect(pending).toHaveLength(1);
-    expect(pending[0]?.idempotencyKey).toBe("b");
+    expect(pending[0]?.idempotencyKey).toBe("b" as IdempotencyKey);
   });
 
   it("reports a nonterminal command for an event, and none once it terminates", async () => {
-    const tenantId = objectId();
-    const principalId = objectId();
-    const eventId = objectId();
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const eventId = objectId() as EventId;
     const { record: command } = await repo.submit(
       submit({ tenantId, principalId, eventId }),
     );
@@ -239,8 +266,8 @@ describe("CommandRepository", () => {
 
   it("rejects a raw duplicate insert violating the idempotency index", async () => {
     const shared = {
-      tenantId: objectId(),
-      principalId: objectId(),
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
       idempotencyKey: "same",
     };
     const collection = db.collection("commands");
