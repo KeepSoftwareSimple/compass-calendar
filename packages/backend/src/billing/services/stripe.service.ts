@@ -402,6 +402,13 @@ const cardFromPaymentMethod = (
   };
 };
 
+type BillingInterval = NonNullable<
+  BillingSubscriptionResponse["price"]
+>["interval"];
+
+const isBillingInterval = (value: string): value is BillingInterval =>
+  value === "day" || value === "week" || value === "month" || value === "year";
+
 const mapPrice = (
   subscription: Stripe.Subscription,
 ): BillingSubscriptionResponse["price"] => {
@@ -409,7 +416,14 @@ const mapPrice = (
   if (!price || typeof price === "string") return null;
   const amount = price.unit_amount;
   const interval = price.recurring?.interval;
-  if (amount == null || !price.currency || !interval) return null;
+  if (
+    amount == null ||
+    !price.currency ||
+    !interval ||
+    !isBillingInterval(interval)
+  ) {
+    return null;
+  }
   return { amount, currency: price.currency, interval };
 };
 

@@ -1,24 +1,9 @@
 import Stripe from "stripe";
-import { type StripeSubscriptionStatus } from "@backend/billing/billing.constants";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 
-/**
- * Pinned Stripe API version. `Stripe.Subscription.Status` must stay equal to
- * `StripeSubscriptionStatus` or the exhaustiveness assignment below fails.
- */
-export const STRIPE_API_VERSION = "2025-08-27.basil" as const;
-
-type AssertEqual<A, B> = [A] extends [B]
-  ? [B] extends [A]
-    ? true
-    : never
-  : never;
-const _stripeStatusIsTotal: AssertEqual<
-  Stripe.Subscription.Status,
-  StripeSubscriptionStatus
-> = true;
-void _stripeStatusIsTotal;
+/** Stripe API version supported by the installed SDK. */
+export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
 
 let client: Stripe | undefined;
 

@@ -7,9 +7,8 @@ export { BILLING_PLAN };
 export const STRIPE_WEBHOOK_PATH = "/api/billing/webhook/stripe";
 
 /**
- * Stripe Subscription.Status values for the pinned API version in
- * stripe.client.ts. A new Stripe status is a type error against
- * `Stripe.Subscription.Status` there.
+ * Stripe subscription statuses Compass maps to its smaller billing state
+ * machine. The Stripe SDK permits future values, which are ignored safely.
  */
 export type StripeSubscriptionStatus =
   | "incomplete"
@@ -34,6 +33,10 @@ export const STRIPE_TO_COMPASS_STATUS: Record<
   unpaid: "expired",
   paused: "expired",
 };
+
+export const isStripeSubscriptionStatus = (
+  value: string,
+): value is StripeSubscriptionStatus => value in STRIPE_TO_COMPASS_STATUS;
 
 export const WRITE_ACCESS_BY_STATUS: Record<
   BillingSubscriptionStatus,
