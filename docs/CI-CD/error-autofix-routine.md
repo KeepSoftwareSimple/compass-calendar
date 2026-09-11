@@ -16,6 +16,9 @@ APPROVAL: AUTOFIX_MODE=triage|pr|merge; automerge-candidate + merge-guard
 STOP: repo var ERROR_AUTOFIX_ENABLED
 HEARTBEAT: Discord via existing notify scripts on skip/fail/needs-human
 VERIFIER: .github/scripts/autofix-merge-guard.sh (not the LLM)
+PR_WATCHDOG: hourly, escalates open autofix-labeled PRs with neither
+  automerge-candidate nor autofix:needs-human after
+  AUTOFIX_WATCHDOG_GRACE_MINUTES
 ```
 
 Sources of truth:
@@ -29,6 +32,7 @@ Sources of truth:
 | Failed-run unstick + one-shot retry | `.github/scripts/autofix-unstick.sh` |
 | Hourly production sweep (no LLM) | `.github/scripts/autofix-sweep.sh` |
 | Merge-guard Verifier (size) | `.github/scripts/autofix-merge-guard.sh` |
+| Stuck-PR watchdog (no automerge-candidate escalation) | `.github/scripts/autofix-pr-watchdog.sh` |
 | Shared notify helpers | `.github/scripts/autofix-lib.sh` |
 
 PostHog (project 165441) GitHub HogFunctions that feed this workflow:
@@ -106,6 +110,32 @@ second agent:
 Cap: `AUTOFIX_SWEEP_MAX_DISPATCHES` (default 2). Remaining rows wait for
 the next hour.
 
+## PR watchdog
+
+`.github/scripts/autofix-pr-watchdog.sh` runs hourly, as a job sibling to
+`sweep` sharing the same `17 * * * *` cron (no new schedule entry). Motivated
+by PR #3655 / issue #2901: the agent opened a clean, mergeable PR in
+`AUTOFIX_MODE=merge` but never applied `automerge-candidate`, and nothing —
+not `autofix-merge-guard.sh` (single-shot, reactive, tied to that one
+triggering run) nor the sweep (issue-level only, never looks at PRs) — ever
+revisited it. The PR sat open with zero distinguishing signal until a human
+happened to check by hand.
+
+The watchdog re-lists every open `autofix`-labeled PR on each tick and
+escalates (adds `autofix:needs-human`, Discord notify) any PR that is past
+`AUTOFIX_WATCHDOG_GRACE_MINUTES` (default 60, anchored to the `autofix` job's
+45-minute timeout plus `gate-and-merge`'s 15-minute timeout) with neither
+`automerge-candidate` nor `autofix:needs-human` already on it. The escalation
+label already present is what prevents re-notification on later runs — no
+extra bookkeeping needed.
+
+The condition to escalate is mode-agnostic (age + missing both labels),
+because the live `AUTOFIX_MODE` variable can drift after a PR opened. Only
+the notify wording depends on the current mode: "needs a merge decision" in
+`merge` mode, or "waiting for manual merge; flagging since it's stale"
+otherwise — a `pr`-mode PR silently waiting for a human is the same
+no-signal problem, just business-as-usual rather than a miss.
+
 ## Drills (documented, not run)
 
 Operator checklist. Mark `documented` unless a human authorizes a live
@@ -123,6 +153,7 @@ staging drill.
 | Failed agent run | Discord; issue comment with run URL; `autofix` removed; `autofix:failed`; one automatic retry; second failure → `autofix:needs-human` |
 | Production recurrence on a closed GitHub issue | Sweep or reopen/spike GitHub alert; preflight reopens; fresh agent run; not skipped as already labeled |
 | Sweep with no GitHub issue | Actions bot opens an issue; `workflow_dispatch`; agent runs |
+| Autofix PR opened but never labeled automerge-candidate, past grace | Watchdog adds `autofix:needs-human` once age &gt; `AUTOFIX_WATCHDOG_GRACE_MINUTES`; Discord notify; no re-notify on subsequent hourly runs |
 
 ## Recovery packet
 

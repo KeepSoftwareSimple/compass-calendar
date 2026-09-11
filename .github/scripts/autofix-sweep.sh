@@ -23,14 +23,6 @@ log() {
   printf '%s\n' "$*"
 }
 
-iso_to_epoch() {
-  date -u -d "$1" +%s 2>/dev/null || date -u -d "${1%.*}Z" +%s
-}
-
-now_epoch() {
-  date -u +%s
-}
-
 hogql_query() {
   cat <<EOF
 SELECT

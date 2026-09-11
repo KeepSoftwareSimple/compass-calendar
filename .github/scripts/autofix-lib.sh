@@ -9,6 +9,14 @@ notify() {
   "$AUTOFIX_SCRIPT_DIR/discord-notify.sh" "$1" || true
 }
 
+iso_to_epoch() {
+  date -u -d "$1" +%s 2>/dev/null || date -u -d "${1%.*}Z" +%s
+}
+
+now_epoch() {
+  date -u +%s
+}
+
 # Best-effort: `gh issue edit --add-label` fails if the label does not exist
 # yet. Creating it is a no-op when it already does.
 ensure_label() {
