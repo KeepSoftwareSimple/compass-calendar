@@ -44,6 +44,7 @@ main() {
     gh issue comment "$issue_number" --repo "$REPO" \
       --body "${tag} is live on staging via #${pr_number}. Production deploy: \`${prod_cmd}\`" \
       2>/dev/null || true
+    resolve_linked_posthog_issue "$issue_number" || true
   fi
 
   notify "Autofix release ${tag} verified on staging (PR #${pr_number}). Production deploy ready: \`${prod_cmd}\`"

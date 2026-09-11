@@ -128,7 +128,7 @@ describe("AppleEventReaderAdapter", () => {
     const api = new ScriptedAppleEventReaderApi({
       calendarQuery: async () => hrefs,
       calendarMultiget: async (_calendarUrl, batch) =>
-        batch.map((href, index) =>
+        (batch as string[]).map((href, index) =>
           resource(href, `uid-${index}`, `Event ${index}`),
         ),
       fetchSyncToken: async () => "sync-token-final",

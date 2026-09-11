@@ -1,5 +1,12 @@
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { rest } from "msw";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
@@ -17,9 +24,17 @@ import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.fact
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { AuthApi } from "@web/api/auth.api";
 import {
+  registerUseStartProviderAuthorizationForTests,
+  resetUseStartProviderAuthorizationForTests,
+} from "@web/auth/providers/authorization/useStartProviderAuthorization";
+import {
   markAccountReconnectRequired,
   resetGoogleReconnectRequiredForTests,
 } from "@web/auth/providers/reconnect.state";
+import {
+  resetProviderAvailabilityForTests,
+  setProviderAvailabilityForTests,
+} from "@web/auth/providers/useIsProviderAvailable";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationProvider";
 import { type AppAccess } from "@web/billing/useAppAccess";
@@ -578,6 +593,7 @@ describe("SettingsModal", () => {
   it("labels a Microsoft account optgroup with Microsoft provider copy", () => {
     const work = createMockCalendar({
       name: "Work",
+      provider: "microsoft",
       accountEmail: "user@outlook.com",
     });
 
@@ -596,6 +612,54 @@ describe("SettingsModal", () => {
     expect(
       within(combobox).getByRole("group", {
         name: "user@outlook.com (Microsoft)",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks each account row with its provider and badges only the default account", () => {
+    // The same address connected on both providers: the rows are told apart
+    // by the provider mark, and only the account owning the default
+    // calendar wears the Default badge.
+    const googlePrimary = createMockCalendar({
+      name: "Google primary",
+      isPrimary: true,
+      accountEmail: "lance@gmail.com",
+    });
+    const microsoftPrimary = createMockCalendar({
+      name: "Microsoft primary",
+      isPrimary: true,
+      provider: "microsoft",
+      accountEmail: "lance@gmail.com",
+    });
+
+    renderSettings({
+      connections: [
+        connection({ id: "google-conn", accountEmail: "lance@gmail.com" }),
+        connection({
+          id: "ms-conn",
+          accountEmail: "lance@gmail.com",
+          provider: "microsoft",
+        }),
+      ],
+      calendars: [googlePrimary, microsoftPrimary],
+    });
+
+    expect(screen.getByRole("img", { name: "Google" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Microsoft" })).toBeInTheDocument();
+
+    const badge = screen.getByText("Default");
+    expect(badge.parentElement).toHaveTextContent("lance@gmail.com");
+    expect(
+      within(badge.parentElement ?? badge).getByRole("img", { name: "Google" }),
+    ).toBeInTheDocument();
+
+    const combobox = screen.getByRole("combobox", { name: "Default Calendar" });
+    expect(
+      within(combobox).getByRole("group", { name: "lance@gmail.com (Google)" }),
+    ).toBeInTheDocument();
+    expect(
+      within(combobox).getByRole("group", {
+        name: "lance@gmail.com (Microsoft)",
       }),
     ).toBeInTheDocument();
   });
@@ -727,6 +791,44 @@ describe("SettingsModal", () => {
     renderSettings({ authenticated: false });
 
     expect(screen.queryByRole("button", { name: "Log out" })).toBeNull();
+  });
+
+  it("starts Google sign-up from Connect Google Calendar when signed out", async () => {
+    const user = userEvent.setup({ delay: null });
+    const startGoogleAuthorization = mock();
+    const { port: toastPort, mocks: toastMocks } = createTestToastPort();
+    registerToastPort(toastPort);
+    registerUseStartProviderAuthorizationForTests((provider) => ({
+      loading: false,
+      startAuthorization:
+        provider === "google" ? startGoogleAuthorization : mock(),
+    }));
+    resetProviderAvailabilityForTests();
+    setProviderAvailabilityForTests("google", "available");
+    const beginConnection = spyOn(AuthApi, "beginConnection");
+
+    try {
+      renderSettings({ authenticated: false, connections: [] });
+      act(() => {
+        userMetadataActions.set({
+          google: { connectionState: "NOT_CONNECTED", connections: [] },
+        });
+      });
+
+      await user.click(
+        screen.getByRole("button", { name: "Connect Google Calendar" }),
+      );
+
+      expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+      expect(beginConnection).not.toHaveBeenCalled();
+      expect(toastMocks.error).not.toHaveBeenCalled();
+    } finally {
+      cleanup();
+      beginConnection.mockRestore();
+      resetUseStartProviderAuthorizationForTests();
+      resetProviderAvailabilityForTests();
+      resetToastPort();
+    }
   });
 
   it("shows Booking for a signed-in user", () => {

@@ -13,7 +13,7 @@ import { useConnectGoogle } from "@web/auth/providers/useConnectProvider";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import { getWritableCalendars } from "@web/calendars/calendar.util";
 import {
-  useConnectedAccountEmails,
+  useConnectedAccounts,
   useDefaultTargetCalendar,
 } from "@web/calendars/useDefaultTargetCalendar";
 import { type GridEvent } from "@web/common/types/web.event.types";
@@ -126,13 +126,13 @@ export function DayCalendarGrid() {
     isDisplayedEvent,
     visibleDates,
   } = useDayCalendarColumns({ allDayEvents, dateInView, timedEvents });
-  const connectedAccountEmails = useConnectedAccountEmails();
+  const connectedAccounts = useConnectedAccounts();
   const writableDisplayedCalendars = useMemo(
     () =>
       getWritableCalendars(displayedCalendars, {
-        hasConnectedAccount: connectedAccountEmails.length > 0,
+        hasConnectedAccount: connectedAccounts.length > 0,
       }),
-    [connectedAccountEmails.length, displayedCalendars],
+    [connectedAccounts.length, displayedCalendars],
   );
   const writableCalendarIds = useMemo(
     () =>
@@ -143,11 +143,8 @@ export function DayCalendarGrid() {
   );
   const pageJumpTargets = useMemo(
     () =>
-      buildDayPageJumpTargets(
-        writableDisplayedCalendars,
-        connectedAccountEmails,
-      ),
-    [connectedAccountEmails, writableDisplayedCalendars],
+      buildDayPageJumpTargets(writableDisplayedCalendars, connectedAccounts),
+    [connectedAccounts, writableDisplayedCalendars],
   );
   const [focusedColumnKey, setFocusedColumnKey] = useState<string | null>(null);
   const { gridRefs, measurements } = useGridMeasurements({

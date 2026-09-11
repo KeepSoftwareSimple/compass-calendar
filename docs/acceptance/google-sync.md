@@ -329,19 +329,22 @@ save an event.
 2. In a separate browser tab, go to `myaccount.google.com/permissions`.
 3. Find Compass and remove its access.
 4. Return to Compass and wait for the app to detect the revocation (may require triggering a sync action or waiting for the next background sync cycle).
-5. Before creating or editing any event, inspect the bottom-left toast, the
-   sidebar account status, and Settings → Accounts for the affected account.
+5. Before creating or editing any event, inspect the calendar banner, the
+   sidebar account Reconnect action, and Settings → Accounts for the affected
+   account.
 6. Attempt to create an event only after confirming the reconnect-required UX
    is already visible (this step checks that CRUD is not the first signal).
 
 ### Expected Results
 
-- As soon as revocation is known, a reconnect toast appears that **names the
-  affected account** (for example “Google Calendar disconnected
-  (`lance.essert@gmail.com`)”) with **Reconnect Google Calendar**.
-- Sidebar status for the affected account shows reconnect-required copy and a
-  **Reconnect Google Calendar** action — not “Calendar connected”, not
-  “Syncing in the background…”, and not a calm/healthy state.
+- As soon as revocation is known, the week/day banner names the affected
+  account (or “Google Calendar needs reconnecting.” when the email is
+  unknown) with **Reconnect**. The sidebar account row shows **Reconnect
+  Google Calendar**. The sidebar footer does not repeat the reconnect
+  sentence.
+- A named reconnect toast appears only for a live revoke (`410` /
+  `GOOGLE_REVOKED`) or a blocked write, not again from a metadata refresh
+  while the banner is already on screen.
 - Settings → Accounts for the affected account matches the sidebar: it does
   not claim “Calendar connected” / “Updated just now” while reconnect is
   required.
@@ -372,22 +375,22 @@ leave a stale “everything is fine” or stale “please reconnect” message b
 1. Start from Scenario 7 after revocation has been detected at least once.
 2. Leave the tab open for at least one background sync / focus-refresh cycle
    (wait ~30–60 seconds, or hide the tab for 30+ seconds and return).
-3. Open Settings → Accounts and compare it with the sidebar status and any
-   visible toast.
+3. Open Settings → Accounts and compare it with the calendar banner, the
+   sidebar account CTA, and any live-revoke toast.
 4. If Google events briefly reappear or the grid goes blank, keep watching the
    status surfaces rather than interacting with events.
-5. Complete reconnect from the toast or account CTA, then confirm every
-   reconnect warning clears.
+5. Complete reconnect from the banner, sidebar account CTA, or live-revoke
+   toast, then confirm every reconnect warning clears.
 
 ### Expected Results
 
-- Throughout the wait, toast / sidebar / Settings never contradict each other
+- Throughout the wait, banner / sidebar / Settings never contradict each other
   for more than a brief transition: reconnect-required and healthy/syncing
   must not be shown as simultaneous truths for the affected account.
 - A reconnect toast does not linger after the account is healthy again.
-- After a successful reconnect, sidebar and Settings both settle to “Calendar
-  connected” (optional “Updated …” timestamp), with no reconnect CTA and no
-  disconnected toast.
+- After a successful reconnect, the banner is gone, the sidebar account CTA
+  is gone, and Settings settles to “Calendar connected” (optional
+  “Updated …” timestamp). OAuth return does not toast “Calendar connected.”
 - Attempting create/edit/delete on the affected account is hard-blocked and
   steers the user back to reconnect rather than sending a doomed `410`.
 - UpNext / “All clear” is unrelated to sync health and is not required to
@@ -400,26 +403,28 @@ leave a stale “everything is fine” or stale “please reconnect” message b
 ### UX
 
 After revocation, the user can reconnect Google using the same flow as the
-initial connection (sidebar/Settings CTA or the reconnect toast). A new import
-runs and Google events repopulate the calendar. All previously action-required
-surfaces clear together.
+initial connection (banner, sidebar/Settings CTA, or a live-revoke toast). A
+new import runs and Google events repopulate the calendar. All previously
+action-required surfaces clear together.
 
 ### Steps
 
 1. Complete Scenario 7 so the connection is in the reconnect-required state.
-2. Choose either the toast **Reconnect Google Calendar** action or the matching
-   sidebar / Settings CTA.
+2. Choose the banner **Reconnect** action, the matching sidebar / Settings
+   CTA, or a live-revoke toast if one is visible.
 3. Complete the Google authorization redirect.
 4. Wait for the import to complete.
 
 ### Expected Results
 
 - The Google authorization redirect returns to Compass without error.
-- The sidebar shows “Adding your calendar…” with the syncing shimmer during import.
+- Compass does not toast “Google Calendar connected.” The sidebar shows
+  “Adding your calendar…” with the syncing shimmer during import.
 - Google events repopulate the calendar after import completes.
 - The sidebar status returns to “Calendar connected” (HEALTHY).
 - Settings → Accounts matches the sidebar healthy state.
-- The reconnect toast is dismissed once reconnect is no longer required.
+- The reconnect banner, account CTA, and any live-revoke toast are dismissed
+  once reconnect is no longer required.
 - Previously revoked-and-removed events reappear if they still exist in Google Calendar.
 
 ---
@@ -632,12 +637,14 @@ If time is limited, run these checks before shipping Google sync changes:
 7. An ATTENTION state shows warning status copy and a **Refresh calendar** button.
 8. After the refresh completes, status returns to HEALTHY.
 9. Returning to a HEALTHY/ATTENTION tab after 30+ seconds hidden triggers a silent refresh with no failure toast.
-10. Revoking access shows reconnect-required UX early (named-account toast +
-    account status) before any failed event create/edit; last-known events
-    stay visible read-only and writes to that account are hard-blocked.
-11. While reconnect is required, toast / sidebar / Settings tell one story for
-    the affected account — never “disconnected” beside “Calendar connected”
-    or “Syncing in the background…”. A healthy sibling account keeps working.
+10. Revoking access shows reconnect-required UX early (calendar banner +
+    per-account Reconnect CTA; named toast only on live `410` / blocked
+    write) before any failed event create/edit; last-known events stay
+    visible read-only and writes to that account are hard-blocked.
+11. While reconnect is required, banner / sidebar / Settings tell one story
+    for the affected account — never “disconnected” beside “Calendar
+    connected” or “Syncing in the background…”. A healthy sibling account
+    (including the other provider on the same email) keeps working.
 12. Re-connecting after revocation triggers a fresh import, restores writes,
     and clears every reconnect warning together.
 13. Hiding/showing a calendar in the sidebar persists across reload, and the server excludes hidden-calendar events from event reads.

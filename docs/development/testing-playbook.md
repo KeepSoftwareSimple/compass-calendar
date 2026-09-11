@@ -60,9 +60,8 @@ Unit workflow (`test-unit.yml`):
   even when an earlier one fails, so one run reports every class of error.
   Every constraint hit prints how to fix it and which allowlist documents
   exceptions.
-- `bun run type-check:tests` type-checks the core/backend/sync/scripts test
-  files (`tsconfig.tests.json`). It is informational until the backlog it
-  exposed is cleared; run it on the test files you touch.
+- `bun run type-check` includes core/backend/sync/scripts tests via
+  `tsconfig.tests.json` referenced from `tsconfig.typecheck.json`.
 
 Local parity commands:
 

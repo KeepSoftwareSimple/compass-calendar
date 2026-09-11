@@ -1,6 +1,5 @@
 import * as corsLib from "cors";
 import superTokensNode from "supertokens-node";
-import AccountLinking from "supertokens-node/recipe/accountlinking";
 import Dashboard from "supertokens-node/recipe/dashboard";
 import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
@@ -27,10 +26,14 @@ import {
 import userService from "@backend/user/services/user.service";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
-type MockCallSource = { mock: { calls: unknown[][] } };
+// biome-ignore lint/suspicious/noExplicitAny: mock helpers need permissive function typing
+const asMock = <T extends (...args: any[]) => any>(fn: T): Mock<T> =>
+  fn as unknown as Mock<T>;
 
-const getFirstCallArg = <T>(mockFn: MockCallSource): T => {
-  const firstCall = mockFn.mock.calls.at(0);
+const getFirstCallArg = <T>(mockFn: unknown): T => {
+  const firstCall = (mockFn as { mock: { calls: unknown[][] } }).mock.calls.at(
+    0,
+  );
 
   if (!firstCall) {
     throw new Error("Expected the mock to have been called");
@@ -48,12 +51,11 @@ describe("supertokens.middleware", () => {
     ]);
     spyOn(superTokensNode, "convertToRecipeUserId").mockImplementation(
       (id: string) =>
-        `recipe_${id}` as ReturnType<
+        `recipe_${id}` as unknown as ReturnType<
           typeof superTokensNode.convertToRecipeUserId
         >,
     );
     spyOn(Dashboard, "init");
-    spyOn(AccountLinking, "init");
     spyOn(EmailPassword, "init");
     spyOn(Session, "getAllSessionHandlesForUser");
     spyOn(Session, "createNewSession");
@@ -70,7 +72,7 @@ describe("supertokens.middleware", () => {
     spyOn(userService, "upsertUserFromAuth").mockResolvedValue({
       user: { userId: "compass-user-id" },
       isNewUser: false,
-    });
+    } as Awaited<ReturnType<typeof userService.upsertUserFromAuth>>);
     spyOn(
       supertokensMiddlewareUtil,
       "buildResetPasswordLink",
@@ -90,14 +92,13 @@ describe("supertokens.middleware", () => {
     spyOn(
       supertokensMiddlewareUtil,
       "ensureExternalUserIdMapping",
-    ).mockResolvedValue(undefined);
+    ).mockResolvedValue("external-user-id");
     spyOn(supertokensMiddlewareUtil, "getFormFieldValue").mockReturnValue(
-      undefined,
+      undefined as unknown as string,
     );
 
     (corsLib.default as Mock).mockClear();
     (superTokensNode.init as Mock).mockClear();
-    (AccountLinking.init as Mock).mockClear();
     (Dashboard.init as Mock).mockClear();
     (EmailPassword.init as Mock).mockClear();
     (Session.getAllSessionHandlesForUser as Mock).mockClear();
@@ -124,9 +125,6 @@ describe("supertokens.middleware", () => {
     // the `recipeList` composition.
     (ThirdParty.init as Mock).mockReturnValue({
       recipe: "thirdparty",
-    } as never);
-    (AccountLinking.init as Mock).mockReturnValue({
-      recipe: "accountlinking",
     } as never);
     (EmailPassword.init as Mock).mockReturnValue({
       recipe: "emailpassword",
@@ -167,56 +165,12 @@ describe("supertokens.middleware", () => {
       expect(initArg.framework).toBe("express");
 
       expect(initArg.recipeList).toEqual([
-        { recipe: "accountlinking" },
         { recipe: "thirdparty" },
         { recipe: "emailpassword" },
         { recipe: "dashboard" },
         { recipe: "session" },
         { recipe: "usermetadata" },
       ]);
-    });
-
-    it("requires verification for automatic account linking and skips Apple relay emails", async () => {
-      initSupertokens();
-
-      expect(AccountLinking.init).toHaveBeenCalledTimes(1);
-      const accountLinkingConfig = getFirstCallArg<{
-        shouldDoAutomaticAccountLinking: (
-          newAccountInfo: { email?: string },
-          user: undefined,
-          session: undefined,
-          tenantId: string,
-          userContext: Record<string, unknown>,
-        ) => Promise<
-          | { shouldAutomaticallyLink: false }
-          | {
-              shouldAutomaticallyLink: true;
-              shouldRequireVerification: boolean;
-            }
-        >;
-      }>(AccountLinking.init);
-
-      await expect(
-        accountLinkingConfig.shouldDoAutomaticAccountLinking(
-          { email: "user@example.com" },
-          undefined,
-          undefined,
-          "public",
-          {},
-        ),
-      ).resolves.toEqual({
-        shouldAutomaticallyLink: true,
-        shouldRequireVerification: true,
-      });
-      await expect(
-        accountLinkingConfig.shouldDoAutomaticAccountLinking(
-          { email: "hide@privaterelay.appleid.com" },
-          undefined,
-          undefined,
-          "public",
-          {},
-        ),
-      ).resolves.toEqual({ shouldAutomaticallyLink: false });
     });
 
     it("uses configured public URLs for SuperTokens domains", () => {
@@ -280,7 +234,6 @@ describe("supertokens.middleware", () => {
       }>(superTokensNode.init);
 
       expect(initArg.recipeList).toEqual([
-        { recipe: "accountlinking" },
         { recipe: "emailpassword" },
         { recipe: "dashboard" },
         { recipe: "session" },
@@ -325,7 +278,6 @@ describe("supertokens.middleware", () => {
       }>(superTokensNode.init);
 
       expect(initArg.recipeList).toEqual([
-        { recipe: "accountlinking" },
         { recipe: "emailpassword" },
         { recipe: "dashboard" },
         { recipe: "session" },
@@ -783,8 +735,10 @@ describe("supertokens.middleware", () => {
       (getFormFieldValue as Mock)
         .mockReturnValueOnce("user@example.com")
         .mockReturnValueOnce("User Name");
-      Session.createNewSession.mockResolvedValue(compassSession as never);
-      Session.revokeSession.mockResolvedValue(true);
+      asMock(Session.createNewSession).mockResolvedValue(
+        compassSession as never,
+      );
+      asMock(Session.revokeSession).mockResolvedValue(true);
       const overridden = emailPasswordConfig.override.apis(
         originalImplementation,
       );
@@ -841,8 +795,10 @@ describe("supertokens.middleware", () => {
         }),
       };
       (getFormFieldValue as Mock).mockReturnValueOnce("user@example.com");
-      Session.createNewSession.mockResolvedValue(compassSession as never);
-      Session.revokeSession.mockResolvedValue(true);
+      asMock(Session.createNewSession).mockResolvedValue(
+        compassSession as never,
+      );
+      asMock(Session.revokeSession).mockResolvedValue(true);
       const overridden = emailPasswordConfig.override.apis(
         originalImplementation,
       );
@@ -898,11 +854,13 @@ describe("supertokens.middleware", () => {
       (createGoogleSignInSuccess as Mock).mockImplementation(
         buildSuccessFromResponse,
       );
-      userService.getCanonicalCompassUserId.mockResolvedValue(
+      asMock(userService.getCanonicalCompassUserId).mockResolvedValue(
         "compass-user-id",
       );
-      Session.createNewSession.mockResolvedValue(compassSession as never);
-      Session.revokeSession.mockResolvedValue(true);
+      asMock(Session.createNewSession).mockResolvedValue(
+        compassSession as never,
+      );
+      asMock(Session.revokeSession).mockResolvedValue(true);
 
       initSupertokens();
 
@@ -975,9 +933,11 @@ describe("supertokens.middleware", () => {
 
     it("creates a cors middleware using SuperTokens CORS headers", () => {
       const corsReturn = mock();
-      corsLib.default.mockReturnValue(corsReturn);
+      asMock(corsLib.default).mockReturnValue(corsReturn);
 
-      superTokensNode.getAllCORSHeaders.mockReturnValue(["st-auth-mode"]);
+      asMock(superTokensNode.getAllCORSHeaders).mockReturnValue([
+        "st-auth-mode",
+      ]);
 
       const middleware = supertokensCors();
 
@@ -1003,7 +963,7 @@ describe("supertokens.middleware", () => {
       const originalAllowedOrigins = CONFIG.ORIGINS_ALLOWED;
       const originalFrontendUrl = CONFIG.FRONTEND_URL;
       const corsReturn = mock();
-      corsLib.default.mockReturnValue(corsReturn);
+      asMock(corsLib.default).mockReturnValue(corsReturn);
 
       CONFIG.ORIGINS_ALLOWED = [];
       CONFIG.FRONTEND_URL = "https://compass.example.com/day";

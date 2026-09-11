@@ -303,6 +303,10 @@ describe("shortcut menu sections", () => {
           keys: ["Enter"],
           label: "Open focused event",
         });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["x"],
+          label: "Hide or show focused event",
+        });
       }
     });
 

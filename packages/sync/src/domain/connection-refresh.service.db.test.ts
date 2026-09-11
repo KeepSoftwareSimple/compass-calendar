@@ -1,4 +1,10 @@
 import { faker } from "@faker-js/faker";
+import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type ProviderCalendarSourceId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedProviderCalendar } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
@@ -124,11 +130,11 @@ describe("refreshPrincipalCalendars (db)", () => {
   it("foreground refresh only enqueues ready resources without a recent attempt", async () => {
     const { resources, jobs, calendars, connections } = deps();
     const connection = await connections.upsertByProviderAccount({
-      tenantId: faker.database.mongodbObjectId(),
-      principalId: faker.database.mongodbObjectId(),
+      tenantId: faker.database.mongodbObjectId() as TenantId,
+      principalId: faker.database.mongodbObjectId() as PrincipalId,
       provider: "google",
       account: {
-        providerAccountId: "foreground-refresh@gmail.com",
+        providerAccountId: "foreground-refresh@gmail.com" as ProviderAccountId,
         email: "foreground-refresh@gmail.com",
         displayName: "Foreground refresh",
       },
@@ -150,7 +156,7 @@ describe("refreshPrincipalCalendars (db)", () => {
         tenantId: staleCalendar.tenantId,
         principalId: staleCalendar.principalId,
         connectionId: staleCalendar.connectionId,
-        providerCalendarId: "recent@google.com",
+        providerCalendarId: "recent@google.com" as ProviderCalendarSourceId,
         primary: false,
       },
     );
@@ -159,7 +165,7 @@ describe("refreshPrincipalCalendars (db)", () => {
         tenantId: staleCalendar.tenantId,
         principalId: staleCalendar.principalId,
         connectionId: staleCalendar.connectionId,
-        providerCalendarId: "importing@google.com",
+        providerCalendarId: "importing@google.com" as ProviderCalendarSourceId,
         primary: false,
       });
     const stale = await resources.ensure({

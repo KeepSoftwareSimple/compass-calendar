@@ -6,6 +6,21 @@ import {
 } from "@sync/providers/microsoft/microsoft-event-reader.adapter";
 import { ProviderEventReadError } from "@sync/providers/provider-event-reader.port";
 
+const expectListPageError = async (
+  adapter: MicrosoftEventReaderAdapter,
+  input: Parameters<MicrosoftEventReaderAdapter["listEventPage"]>[0],
+): Promise<ProviderEventReadError> => {
+  try {
+    await adapter.listEventPage(input);
+    throw new Error("expected listEventPage to throw");
+  } catch (error) {
+    if (!(error instanceof ProviderEventReadError)) {
+      throw error;
+    }
+    return error;
+  }
+};
+
 class FakeEventListApi implements MicrosoftEventListApi {
   calls: Array<Parameters<MicrosoftEventListApi["listPage"]>[0]> = [];
   #pages: MicrosoftEventListPage[];
@@ -289,9 +304,10 @@ describe("MicrosoftEventReaderAdapter", () => {
     const api = new FakeEventListApi([], rejected);
     const { adapter } = adapterWith(api);
 
-    const error = await adapter
-      .listEventPage({ accessToken: "tok", calendarId: "cal-1" })
-      .catch((e) => e as ProviderEventReadError);
+    const error = await expectListPageError(adapter, {
+      accessToken: "tok",
+      calendarId: "cal-1",
+    });
 
     expect((error.cause as Error)?.message).toContain("HTTP 404");
     expect((error.cause as Error)?.message).toContain("ErrorItemNotFound");
@@ -303,9 +319,10 @@ describe("MicrosoftEventReaderAdapter", () => {
     const api = new FakeEventListApi([], leaky);
     const { adapter } = adapterWith(api);
 
-    const error = await adapter
-      .listEventPage({ accessToken: "tok", calendarId: "cal-1" })
-      .catch((e) => e as ProviderEventReadError);
+    const error = await expectListPageError(adapter, {
+      accessToken: "tok",
+      calendarId: "cal-1",
+    });
 
     expect(error).toBeInstanceOf(ProviderEventReadError);
     expect(JSON.stringify(error.cause ?? {})).not.toContain(

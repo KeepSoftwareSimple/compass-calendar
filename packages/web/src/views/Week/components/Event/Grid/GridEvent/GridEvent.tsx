@@ -8,6 +8,7 @@ import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
   applyTimedEventDisplayPosition,
   type TimedDeckLayout,
+  timedDeckBoxShadow,
 } from "@web/grid/layout/timed-deck.layout";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
@@ -19,6 +20,7 @@ interface Props {
   event: GridEventEntity;
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isHidden?: boolean;
   measurements: Measurements_Grid;
   motionMode?: GridEventMotionMode;
   onEventKeyDown?: (event: GridEventEntity) => void;
@@ -36,6 +38,7 @@ const GridEventBase = (
     event: _event,
     focusColor = null,
     interactionAttributes,
+    isHidden = false,
     measurements,
     motionMode = "idle",
     onEventKeyDown,
@@ -76,22 +79,14 @@ const GridEventBase = (
   });
   const position = shouldUseDraftSizing
     ? basePosition
-    : applyTimedEventDisplayPosition(basePosition, deckLayout);
+    : applyTimedEventDisplayPosition(basePosition, deckLayout, isHidden);
 
   const shouldFloatAboveDeck = isDragging || isResizing || (isDraft && !isDeck);
   const zIndex = shouldFloatAboveDeck
     ? ZIndex.MAX
     : (position.zIndex ?? ZIndex.LAYER_1);
 
-  const deckBoxShadow = (() => {
-    if (!isDeck) return undefined;
-    const ring = `0 0 0 0.75px var(--background)`;
-    const drop = isFocused
-      ? "0 6px 14px -3px rgba(0,0,0,0.55)"
-      : "0 3px 6px -2px rgba(0,0,0,0.4)";
-    const highlight = `inset 0 1px 0 rgba(255,255,255,${isFocused ? 0.1 : 0.07})`;
-    return `${ring}, ${drop}, ${highlight}`;
-  })();
+  const deckBoxShadow = isDeck ? timedDeckBoxShadow(isFocused) : undefined;
   return (
     <TimedEventCard
       onBlur={isDeck ? () => setIsFocused(false) : undefined}
@@ -102,6 +97,7 @@ const GridEventBase = (
       focusColor={focusColor}
       onFocus={isDeck ? () => setIsFocused(true) : undefined}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       motionMode={motionMode}
       onEventKeyDown={onEventKeyDown}
       position={{ ...position, zIndex }}
@@ -119,6 +115,7 @@ export const GridEventMemo = memo(GridEvent, (prev, next) => {
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
     prev.interactionAttributes === next.interactionAttributes &&
+    prev.isHidden === next.isHidden &&
     prev.measurements === next.measurements &&
     prev.motionMode === next.motionMode &&
     // The visible window can move without the event or measurements changing

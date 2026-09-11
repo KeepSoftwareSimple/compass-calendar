@@ -3,6 +3,7 @@ import {
   CONTACTS_FEATURE_SCOPES,
   MICROSOFT_SCOPES,
 } from "@core/providers/microsoft.scopes";
+import { type ProviderAccountId } from "@core/types/sync/identity.contracts";
 import {
   MICROSOFT_AUTHORIZE_URL,
   MicrosoftAuthAdapter,
@@ -14,12 +15,14 @@ import {
 import { isMicrosoftConsentRequired } from "@sync/providers/microsoft/microsoft-consent";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
 
+type ExchangeInput = Parameters<
+  MicrosoftTokenEndpoint["exchangeAuthorizationCode"]
+>[0];
+type RefreshInput = Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[0];
+
 class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
-  exchangeInputs: Parameters<
-    MicrosoftTokenEndpoint["exchangeAuthorizationCode"]
-  >[] = [];
-  refreshInputs: Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[] =
-    [];
+  exchangeInputs: ExchangeInput[] = [];
+  refreshInputs: RefreshInput[] = [];
 
   constructor(
     private readonly behavior: {
@@ -31,7 +34,7 @@ class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
   ) {}
 
   exchangeAuthorizationCode(
-    input: Parameters<MicrosoftTokenEndpoint["exchangeAuthorizationCode"]>[0],
+    input: ExchangeInput,
   ): Promise<MicrosoftTokenResponse> {
     this.exchangeInputs.push(input);
     if (this.behavior.exchangeError) {
@@ -40,9 +43,7 @@ class FakeTokenEndpoint implements MicrosoftTokenEndpoint {
     return Promise.resolve(this.behavior.exchangeResponse ?? {});
   }
 
-  refreshAccessToken(
-    input: Parameters<MicrosoftTokenEndpoint["refreshAccessToken"]>[0],
-  ): Promise<MicrosoftTokenResponse> {
+  refreshAccessToken(input: RefreshInput): Promise<MicrosoftTokenResponse> {
     this.refreshInputs.push(input);
     if (this.behavior.refreshError) {
       return Promise.reject(this.behavior.refreshError);
@@ -158,7 +159,7 @@ describe("MicrosoftAuthAdapter", () => {
       expect(url.searchParams.get("redirect_uri")).toBe(
         "https://staging.example.com/sync/microsoft",
       );
-      expect(url.searchParams.get("prompt")).toBeNull();
+      expect(url.searchParams.get("prompt")).toBe("consent");
       expect(url.searchParams.get("scope")?.split(" ")).toEqual([
         ...MICROSOFT_SCOPES,
       ]);
@@ -178,7 +179,28 @@ describe("MicrosoftAuthAdapter", () => {
         }),
       );
 
-      expect(url.searchParams.get("prompt")).toBe("select_account");
+      // Without select_account, a browser signed into one Microsoft account
+      // re-authorizes that same account and the user never gets to pick.
+      // consent must stay so the exchange still returns a refresh token.
+      expect(url.searchParams.get("prompt")).toBe("select_account consent");
+    });
+
+    it("passes login_hint on reconnect so the same account is pre-selected", () => {
+      const adapter = adapterWith(
+        new FakeTokenEndpoint(),
+        new FakeIdTokenVerifier(),
+      );
+
+      const url = new URL(
+        adapter.buildAuthorizationUrl({
+          state: "opaque-state",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+          loginHint: "ada@contoso.com",
+        }),
+      );
+
+      expect(url.searchParams.get("login_hint")).toBe("ada@contoso.com");
+      expect(url.searchParams.get("prompt")).toBe("consent");
     });
 
     it("appends optional feature scopes after the base scopes", () => {
@@ -231,7 +253,9 @@ describe("MicrosoftAuthAdapter", () => {
         redirectUri: "https://staging.example.com/sync/microsoft",
       });
 
-      expect(result.account.providerAccountId).toBe("microsoft-oid-123");
+      expect(result.account.providerAccountId).toBe(
+        "microsoft-oid-123" as ProviderAccountId,
+      );
       expect(result.account.email).toBe("user@contoso.com");
       expect(result.account.displayName).toBe("Contoso User");
       expect(result.refreshToken).toBe("refresh-token-value");

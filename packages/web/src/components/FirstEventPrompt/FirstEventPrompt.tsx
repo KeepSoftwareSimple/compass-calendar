@@ -18,6 +18,10 @@ import {
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
+  selectIsEventFormOpen,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
+import {
   selectIsAboutOpen,
   selectIsSettingsOpen,
   useSettingsStore,
@@ -104,15 +108,19 @@ export const FirstEventPrompt: FC = () => {
   const isDone = useFirstEventPromptStore(selectFirstEventDone);
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
   const isAboutOpen = useSettingsStore(selectIsAboutOpen);
+  const isFormOpen = useDraftStore(selectIsEventFormOpen);
   // Without storage (private mode), completion and dismissal can never
   // persist, so the card would haunt every reload; better to not show it.
   // Sit above the auth modal in z-index, so stay hidden while login/signup
-  // is open even if the showcase flag is already set. Settings and About
-  // paint below this tooltip layer, so hide rather than compete.
+  // is open even if the showcase flag is already set. Settings, About, and
+  // the event form paint below this tooltip layer, so hide rather than
+  // compete. Opening the form is not completion: cancel brings the card
+  // back, and a real create still celebrates after the form closes.
   const isLive =
     !isAuthModalOpen &&
     !isSettingsOpen &&
     !isAboutOpen &&
+    !isFormOpen &&
     !isDone &&
     persistentBrowserStore.isAvailable() &&
     isShowcaseHandoffEligible(isShowcaseActive, seenThisSession);

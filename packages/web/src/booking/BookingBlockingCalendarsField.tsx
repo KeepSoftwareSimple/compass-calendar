@@ -3,7 +3,11 @@ import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { BookingCheckboxRow } from "@web/booking/BookingCheckboxRow";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
-import { groupCalendarsByAccount } from "@web/calendars/calendar.util";
+import {
+  accountKey,
+  accountLabel,
+  groupCalendarsByAccount,
+} from "@web/calendars/calendar.util";
 
 interface BookingBlockingCalendarsFieldProps {
   availabilityCalendars: Calendar[];
@@ -51,10 +55,10 @@ export function BookingBlockingCalendarsField({
           {groupsWithCalendars.map((group) => (
             <div
               className="flex min-w-0 flex-col gap-2"
-              key={group.accountEmail}
+              key={accountKey(group)}
             >
               {showAccountCaption ? (
-                <p className="text-text-muted text-xs">{group.accountEmail}</p>
+                <p className="text-text-muted text-xs">{accountLabel(group)}</p>
               ) : null}
               {group.calendars.map(renderBlockingCalendar)}
             </div>

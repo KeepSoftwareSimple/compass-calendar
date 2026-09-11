@@ -1,4 +1,9 @@
 import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   decryptAdoptAuthorizationCredential,
   decryptCredentialConnectPayload,
   decryptInternalCredential,
@@ -10,10 +15,10 @@ import { describe, expect, it } from "bun:test";
 
 describe("internal credential envelope", () => {
   const context = {
-    tenantId: "64b7f9c2e1a2b3c4d5e6f7a8",
-    principalId: "64b7f9c2e1a2b3c4d5e6f7a8",
+    tenantId: "64b7f9c2e1a2b3c4d5e6f7a8" as TenantId,
+    principalId: "64b7f9c2e1a2b3c4d5e6f7a8" as PrincipalId,
     account: {
-      providerAccountId: "google-sub-1",
+      providerAccountId: "google-sub-1" as ProviderAccountId,
       email: "connected@example.com",
       displayName: "Connected User",
     },
@@ -60,7 +65,7 @@ describe("internal credential envelope", () => {
     expect(() =>
       decryptInternalCredential("shared-secret", envelope, {
         ...context,
-        principalId: "64b7f9c2e1a2b3c4d5e6f7a9",
+        principalId: "64b7f9c2e1a2b3c4d5e6f7a9" as PrincipalId,
       }),
     ).toThrow();
     expect(() =>
@@ -142,7 +147,7 @@ describe("internal credential envelope", () => {
     expect(() =>
       decryptCredentialConnectPayload("shared-secret", envelope, {
         tenantId: context.tenantId,
-        principalId: "64b7f9c2e1a2b3c4d5e6f7a9",
+        principalId: "64b7f9c2e1a2b3c4d5e6f7a9" as PrincipalId,
         provider: "apple",
       }),
     ).toThrow();

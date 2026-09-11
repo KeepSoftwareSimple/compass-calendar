@@ -8,10 +8,6 @@ type LoginMethodFields = {
   identities?: Schema_UserIdentity[];
 };
 
-export type AutomaticAccountLinkingDecision =
-  | { shouldAutomaticallyLink: false }
-  | { shouldAutomaticallyLink: true; shouldRequireVerification: true };
-
 export function isApplePrivateRelayEmail(email: string): boolean {
   return normalizeEmail(email).endsWith(`@${APPLE_PRIVATE_RELAY_DOMAIN}`);
 }
@@ -42,16 +38,4 @@ export function canReuseCompassUserByEmail(args: {
   return (
     hasVerifiedLoginMethod(args.existing) === args.incomingHasVerifiedLogin
   );
-}
-
-export function shouldAutomaticallyLinkAccounts(args: {
-  email?: string;
-}): AutomaticAccountLinkingDecision {
-  if (args.email && isApplePrivateRelayEmail(args.email)) {
-    return { shouldAutomaticallyLink: false };
-  }
-  return {
-    shouldAutomaticallyLink: true,
-    shouldRequireVerification: true,
-  };
 }

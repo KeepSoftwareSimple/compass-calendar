@@ -8,7 +8,7 @@ Compass uses GitHub Actions for continuous integration, Docker Hub for image dis
 | E2E (`test-e2e.yml`) | Push / PR / merge_group to `main` | Playwright e2e in four shards behind one required `e2e` gate (PRs that touch only docs, or only `packages/backend`, `packages/sync`, `packages/scripts`, skip the shards; merge queue and `main` always run them) |
 | CodeQL | Push / PR to `main` | Static security analysis |
 | Performance budget | Push to `main` (web/core/lock/budget), nightly schedule, `workflow_dispatch`; PR only when `.github/perf/**` or the workflow file changes | Lighthouse budget (not a required merge check). Desktop script transfer is calibrated to 1,060 KB as of 2026-09-07 (main measured 1,034,338 bytes). |
-| Error autofix (`error-autofix.yml`) | `posthog[bot]` issue / `workflow_dispatch` | Governed Routine: triage or fix PostHog error issues |
+| Error autofix (`error-autofix.yml`) | `posthog[bot]` issue opened/reopened, hourly sweep, `workflow_dispatch` | Governed Routine: triage or fix PostHog error issues; sweep re-enters missed recurrences |
 | Error autofix post-deploy (`error-autofix-postdeploy.yml`) | `Release on main` completed | Notifies Discord/GitHub of autofix release outcome |
 | Agent review (`agent-review.yml`) | `workflow_dispatch` only (parked). Kill switch `AGENT_REVIEW_ENABLED` still in the job `if:`. Restore `pull_request` types to turn it on. | Independent read-only diff review posted as a PR comment (not a required check) |
 | Agent loop (`agent-loop.yml`) | `workflow_dispatch` / hourly cron / `agent-automerge` labeled or merged; `Release on main` smokes only | Governed Routine: next milestone WP → Cursor API → merge-guard → merge queue → staging smoke |

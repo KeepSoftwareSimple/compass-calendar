@@ -1,4 +1,9 @@
 import {
+  type DateOnly,
+  type DateTime,
+  type TimeZone,
+} from "@core/types/domain-primitives";
+import {
   type AppleEventResourceInput,
   normalizeAppleEventResource,
 } from "@sync/providers/apple/apple-event.normalizer";
@@ -71,7 +76,7 @@ DESCRIPTION:Daily sync
 LOCATION:Room A
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
 
     expect(event.providerEventId).toBe("timed-uid@icloud.com");
     expect(event.providerVersion).toBe('"etag-1"');
@@ -84,7 +89,7 @@ END:VEVENT`),
     expect(event.content.location).toBe("Room A");
     expect(event.schedule.kind).toBe("timed");
     if (event.schedule.kind !== "timed") throw new Error("expected timed");
-    expect(event.schedule.timeZone).toBe("America/New_York");
+    expect(event.schedule.timeZone).toBe("America/New_York" as TimeZone);
     expect(Date.parse(event.schedule.start)).toBe(
       Date.parse("2025-01-15T09:00:00-05:00"),
     );
@@ -101,12 +106,12 @@ DTEND:20250115T100000
 SUMMARY:Floating
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
     if (event.schedule.kind !== "timed") throw new Error("expected timed");
 
-    expect(event.schedule.timeZone).toBe("America/Los_Angeles");
-    expect(event.schedule.start).toBe("2025-01-15T09:00:00-08:00");
-    expect(event.schedule.end).toBe("2025-01-15T10:00:00-08:00");
+    expect(event.schedule.timeZone).toBe("America/Los_Angeles" as TimeZone);
+    expect(event.schedule.start).toBe("2025-01-15T09:00:00-08:00" as DateTime);
+    expect(event.schedule.end).toBe("2025-01-15T10:00:00-08:00" as DateTime);
   });
 
   it("normalizes an all-day event", () => {
@@ -120,13 +125,13 @@ SUMMARY:Holiday
 TRANSP:TRANSPARENT
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
 
     expect(event.busy).toBe(false);
     expect(event.schedule).toEqual({
       kind: "allDay",
-      start: "2025-02-22",
-      end: "2025-02-23",
+      start: "2025-02-22" as DateOnly,
+      end: "2025-02-23" as DateOnly,
     });
   });
 
@@ -143,7 +148,7 @@ EXDATE;TZID=America/New_York:20250122T090000
 SUMMARY:Weekly
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
 
     expect(event.recurrence).toEqual({
       kind: "seriesMaster",
@@ -266,7 +271,7 @@ ATTENDEE;CN=Delegated;PARTSTAT=DELEGATED:mailto:delegated@example.com
 ATTENDEE;CN=No Email:mailto:
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
 
     expect(event.content.organizer).toEqual({
       email: "host@example.com",
@@ -312,7 +317,7 @@ URL:https://example.com/meet
 END:VEVENT`),
     );
 
-    expect(asEvent(read).content.conference).toEqual({
+    expect(asEvent(read!).content.conference).toEqual({
       url: "https://example.com/meet",
       label: "Link",
     });
@@ -339,7 +344,7 @@ DTEND:20250115T100000Z
 END:VEVENT`),
     );
 
-    expect(asEvent(read).providerUpdatedAt).toBe("2025-01-03T10:10:10.000Z");
+    expect(asEvent(read!).providerUpdatedAt).toBe("2025-01-03T10:10:10.000Z");
   });
 
   it("derives timed end from DURATION when DTEND is absent", () => {
@@ -351,7 +356,7 @@ DTSTART:20250115T090000Z
 DURATION:PT1H30M
 END:VEVENT`),
     );
-    const event = asEvent(read);
+    const event = asEvent(read!);
     if (event.schedule.kind !== "timed") throw new Error("expected timed");
 
     expect(

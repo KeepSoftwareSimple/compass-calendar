@@ -1,4 +1,8 @@
 import { type ConnectionListResponse } from "@core/types/sync/connection.contracts";
+import {
+  type ConnectionId,
+  type ProviderAccountId,
+} from "@core/types/sync/identity.contracts";
 import { providerConnection } from "@backend/__tests__/factories/provider-connection.factory";
 import { resolveGoogleConnectionFromSync } from "./google-connection-status";
 import {
@@ -91,18 +95,18 @@ describe("resolveGoogleConnectionFromSync", () => {
         connections: [
           {
             ...connection("healthy", null),
-            id: "c-first",
+            id: "c-first" as ConnectionId,
             account: {
-              providerAccountId: "a1",
+              providerAccountId: "a1" as ProviderAccountId,
               email: "first@example.com",
               displayName: null,
             },
           },
           {
             ...connection("actionRequired", "authorizationRevoked"),
-            id: "c-second",
+            id: "c-second" as ConnectionId,
             account: {
-              providerAccountId: "a2",
+              providerAccountId: "a2" as ProviderAccountId,
               email: "second@example.com",
               displayName: null,
             },
@@ -144,18 +148,18 @@ describe("resolveGoogleConnectionFromSync", () => {
         connections: [
           {
             ...connection("disconnected", null),
-            id: "c-disconnected",
+            id: "c-disconnected" as ConnectionId,
             account: {
-              providerAccountId: "a-old",
+              providerAccountId: "a-old" as ProviderAccountId,
               email: "old@example.com",
               displayName: null,
             },
           },
           {
             ...connection("healthy", null),
-            id: "c-healthy",
+            id: "c-healthy" as ConnectionId,
             account: {
-              providerAccountId: "a-new",
+              providerAccountId: "a-new" as ProviderAccountId,
               email: "new@example.com",
               displayName: null,
             },

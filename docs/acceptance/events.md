@@ -19,6 +19,7 @@ Use this guide to validate:
 - Google revocation and SSE-driven query refresh
 - picking a target calendar when creating/duplicating events, and read-only
   calendar/busy-event behavior
+- hiding and showing an event from the menu or with `x`
 
 Do not use this guide to validate:
 
@@ -31,10 +32,11 @@ Do not use this guide to validate:
 2. Start the backend if you need events to persist across page reloads.
 3. Log in with any account that does not need Google connected (password-only is fine).
 4. Navigate to the Week view (`/week`) or Day view (`/day`) depending on the scenario.
-5. Scenarios 14 and 15 need a read-only Google calendar (a `reader` or
+5. Scenario 14 needs a read-only Google calendar (a `reader` or
    `freeBusyReader` calendar) in addition to a writable one — see
-   `google-sync.md` to connect Google and import one. Skip those two
-   scenarios if only writable calendars are available.
+   `google-sync.md` to connect Google and import one. Skip that scenario
+   if only writable calendars are available. Scenario 15 (hide/show)
+   works on any event.
 
 Helpful notes:
 
@@ -324,8 +326,8 @@ action is unavailable.
 - Pressing `M` opens the event in a read-only form: fields are disabled,
   no Save button appears, and a note reads "Read-only. You don't have
   permission to edit this event."
-- The right-click context menu shows "View" (not "Edit"), "Duplicate", and
-  no Delete option.
+- The right-click context menu shows "View" (not "Edit"), "Duplicate",
+  "Hide event" (outside the read-only filter), and no Delete option.
 - The event cannot be picked up and dragged to a new time or day; no drag
   preview appears.
 - No resize cursor or resize handle appears at the event's edges.
@@ -405,6 +407,37 @@ title, description, or attendees.
 
 ---
 
+## Scenario 15: Hide And Show An Event
+
+### UX
+
+Any event, including one on a read-only calendar, can be hidden from the
+grid without changing the event. It remains as a narrow color strip. Showing
+it restores the full card. The preference is per occurrence and per user.
+
+### Steps
+
+1. Focus a timed event on the week grid and press `M`.
+2. Choose "Hide event".
+3. Focus the strip and press `X`.
+4. Hide the event again, then reload the page (signed in, backend running).
+
+### Expected Results
+
+- The menu item is labeled "Hide event" (or "Show event" when it is already
+  hidden). It appears after Duplicate on writable, read-only, and busy
+  events. Delete stays absent on read-only events.
+- After hiding, the card is still a button whose accessible name starts with
+  "Hidden ", the strip is about 8px wide, and it stays focusable.
+- Pressing `X` on the focused strip restores the original name and width.
+- After reload while signed in, the event is still hidden (the list came
+  from `GET /api/user/hidden-events`). Anonymous sessions persist in
+  `localStorage` instead.
+- A failed save toasts "Couldn't update event visibility. The change was
+  undone." and the card returns to its previous size.
+
+---
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping event-related changes:
@@ -417,6 +450,9 @@ If time is limited, run these checks before shipping event-related changes:
 6. Dragging an event to a new slot moves it and persists after reload.
 7. Resizing an event updates the duration and persists after reload.
 8. Cmd+D duplicates an event with the same properties.
+9. Hiding an event from the menu (including a read-only event) turns it
+   into a focusable strip whose name starts with "Hidden "; `X` shows it
+   again.
 9. Cmd+Z / Ctrl+Z after deletion restores the event.
 10. A new/duplicate event form offers only writable calendars, defaulting to
     primary; an existing event's form shows its calendar as read-only text.

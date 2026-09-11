@@ -33,9 +33,11 @@ const mockResolveRevokedAccount = mock(
   (): {
     connectionId: string;
     accountEmail: string;
+    provider: "google";
   } | null => ({
     connectionId: "conn-1",
     accountEmail: "lance@example.com",
+    provider: "google",
   }),
 );
 
@@ -163,13 +165,17 @@ describe("google-auth.util", () => {
       expect(mockMarkAccountReconnectRequired).toHaveBeenCalledWith({
         connectionId: "conn-1",
         accountEmail: "lance@example.com",
+        provider: "google",
       });
       expect(mockShowReconnectToast).toHaveBeenCalledWith({
         connectionId: "conn-1",
         accountEmail: "lance@example.com",
+        provider: "google",
       });
       expect(mockRefreshUserMetadata).toHaveBeenCalledTimes(1);
-      expect(isAccountReconnectRequired("lance@example.com")).toBe(true);
+      expect(isAccountReconnectRequired("lance@example.com", "google")).toBe(
+        true,
+      );
       expect(hasGoogleReconnectRequired()).toBe(true);
     });
 

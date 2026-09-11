@@ -1,8 +1,18 @@
 import { faker } from "@faker-js/faker";
-import { type ConnectionId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderCalendarId,
+  type ProviderCalendarSourceId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
-import { maintainSubscription } from "@sync/domain/subscription-maintenance.service";
+import { type AccessTokenSource } from "@sync/domain/provider-write-ladder";
+import {
+  maintainSubscription,
+  type SubscriptionMaintenanceDeps,
+} from "@sync/domain/subscription-maintenance.service";
 import {
   type NotificationChannel,
   type ProviderNotificationAdapter,
@@ -72,9 +82,11 @@ class FakeNotifications implements ProviderNotificationAdapter {
     });
     if (this.#stopError) throw this.#stopError;
   };
+
+  parseNotification = () => null;
 }
 
-const custody = {
+const custody: AccessTokenSource = {
   getValidAccessToken: async () => "access-token",
   discardRevoked: async () => {},
   invalidateAccessToken: async () => {},
@@ -87,7 +99,7 @@ describe("maintainSubscription", () => {
   const maintenanceDeps = (
     notifications: FakeNotifications,
     supportsChangeNotifications = true,
-  ) => ({
+  ): SubscriptionMaintenanceDeps => ({
     resources,
     notifications,
     custody,
@@ -103,11 +115,11 @@ describe("maintainSubscription", () => {
   // calendar id); only those two fields matter to the operation.
   const calendar = (connectionId: string): ProviderCalendarRecord =>
     ({
-      _id: objectId(),
-      tenantId: objectId(),
-      principalId: objectId(),
-      connectionId,
-      providerCalendarId: "primary@google.com",
+      _id: objectId() as ProviderCalendarId,
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      connectionId: connectionId as ConnectionId,
+      providerCalendarId: "primary@google.com" as ProviderCalendarSourceId,
       displayName: "Google",
       color: null,
       active: true,

@@ -8,6 +8,8 @@ import {
 } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_ALLDAY } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
+import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import {
   mergeGridEventWithDraftOverlay,
   useGridDraftOverlay,
@@ -50,6 +52,7 @@ export const AllDayEvents = ({
   const draftId = useDraftStore(selectDraftId);
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
+  const hiddenEventIds = useHiddenEventIds();
   // The query covers the full week; only mount events overlapping the visible
   // window so off-window events never land in the DOM or the interaction
   // registry.
@@ -74,13 +77,14 @@ export const AllDayEvents = ({
         event,
         calendarIdentity: resolveCalendarCardIdentity(calendarLookup, event),
         focusColor: resolveCalendarFocusColor(calendarLookup, event),
+        isHidden: isEventIdHidden(event._id, hiddenEventIds),
         // Read-only (unwritable calendar or busy content) events never
         // attach interaction attributes/registration below, so the drag/
         // resize engine can't find them as a target - blocked before any
         // optimistic state change (packet 08 step 8).
         isReadOnly: isGridEventScheduleLocked(calendarLookup, event),
       })),
-    [visibleAllDayEvents, calendarLookup],
+    [visibleAllDayEvents, calendarLookup, hiddenEventIds],
   );
 
   const { onEventKeyDown, onOpenReadOnlyDetails } =
@@ -95,7 +99,7 @@ export const AllDayEvents = ({
     >
       {!isLoadingWeekView &&
         visibleAllDayEventsWithIdentity.map(
-          ({ event, calendarIdentity, focusColor, isReadOnly }) => {
+          ({ event, calendarIdentity, focusColor, isHidden, isReadOnly }) => {
             const isPlaceholder = event._id === draftId;
             // Never overlay timed draft dates onto a multi-day timed display
             // bar — that would replace YYYY-MM-DD span dates with datetimes.
@@ -117,6 +121,7 @@ export const AllDayEvents = ({
                 calendarIdentity={identityForDisplay}
                 event={eventForDisplay}
                 focusColor={focusColorForDisplay}
+                isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}
                 key={event._id}
@@ -136,6 +141,7 @@ interface AllDayEventItemProps {
   calendarIdentity: CalendarCardIdentity | null;
   event: GridEvent;
   focusColor: string | null;
+  isHidden: boolean;
   isPlaceholder: boolean;
   isReadOnly: boolean;
   measurements: Measurements_Grid;
@@ -148,6 +154,7 @@ const AllDayEventItem = ({
   calendarIdentity,
   event,
   focusColor,
+  isHidden,
   isPlaceholder,
   isReadOnly,
   measurements,
@@ -160,7 +167,7 @@ const AllDayEventItem = ({
   // separately via registry registration.
   const hasEventIdentity = Boolean(event._id);
   const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly;
+    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
   const registrationRef = useWeekEventRegistrationRef({
     eventId: event._id,
     eventType: "all-day",
@@ -184,6 +191,7 @@ const AllDayEventItem = ({
       event={event}
       focusColor={focusColor}
       interactionAttributes={interactionAttributes}
+      isHidden={isHidden}
       isPlaceholder={isPlaceholder}
       measurements={measurements}
       onKeyDown={isReadOnly ? onOpenReadOnlyDetails : onKeyDown}

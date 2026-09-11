@@ -2,13 +2,16 @@ import { BOOKING_PLACEHOLDER_CALENDAR_ID } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
-import { BookingDestinationCalendarOptions } from "@web/booking/BookingDestinationCalendarOptions";
-import { bookingDestinationConferenceHint } from "@web/booking/booking-conference.copy";
+import {
+  bookingDestinationConferenceHint,
+  formatBookingDestinationOptionLabel,
+} from "@web/booking/booking-conference.copy";
 import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import {
   type BookingField,
   bookingFieldAttrs,
 } from "@web/booking/booking-sequence.fields";
+import { AccountGroupedCalendarOptions } from "@web/calendars/AccountGroupedCalendarOptions";
 
 interface BookingDestinationCalendarFieldProps {
   connections: SyncConnectionSummary[];
@@ -56,9 +59,10 @@ export function BookingDestinationCalendarField({
             No writable calendars
           </option>
         ) : (
-          <BookingDestinationCalendarOptions
+          <AccountGroupedCalendarOptions
             calendars={writableCalendars}
             connections={connections}
+            optionLabel={formatBookingDestinationOptionLabel}
           />
         )}
       </select>

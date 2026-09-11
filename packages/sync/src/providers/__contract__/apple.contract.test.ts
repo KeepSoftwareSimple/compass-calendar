@@ -239,10 +239,14 @@ END:VCALENDAR`,
     },
     run: (reads) => {
       expect(reads).toHaveLength(2);
-      expect(reads[0]?.recurrence).toEqual({
-        kind: "seriesMaster",
-        rules: ["RRULE:FREQ=DAILY;COUNT=3"],
-      });
+      const master = reads[0];
+      expect(master?.kind).toBe("event");
+      if (master?.kind === "event") {
+        expect(master.recurrence).toEqual({
+          kind: "seriesMaster",
+          rules: ["RRULE:FREQ=DAILY;COUNT=3"],
+        });
+      }
       expect(reads[1]?.kind).toBe("event");
       if (reads[1]?.kind !== "event") return;
       expect(reads[1].recurrence.kind).toBe("instance");

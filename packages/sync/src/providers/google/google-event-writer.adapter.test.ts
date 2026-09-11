@@ -197,7 +197,9 @@ describe("GoogleEventWriter", () => {
     const result = await writer.createEvent(baseCreate);
 
     expect(tokens).toEqual(["at"]);
-    expect(api.calls.insert[0].requestBody.id).toBe("abc12deadbeef00000000000");
+    expect(api.calls.insert[0]!.requestBody.id).toBe(
+      "abc12deadbeef00000000000",
+    );
     expect(result).toEqual({
       providerEventId: "abc12deadbeef00000000000",
       providerVersion: '"v1"',
@@ -229,7 +231,7 @@ describe("GoogleEventWriter", () => {
 
     const result = await writer.createEvent(baseCreate);
 
-    expect(api.calls.get[0].eventId).toBe("abc12deadbeef00000000000");
+    expect(api.calls.get[0]!.eventId).toBe("abc12deadbeef00000000000");
     expect(result.providerVersion).toBe('"vGet"');
   });
 
@@ -291,8 +293,8 @@ describe("GoogleEventWriter", () => {
       ],
     });
 
-    expect(api.calls.insert[0].sendUpdates).toBe("all");
-    expect(api.calls.insert[0].requestBody.attendees).toEqual([
+    expect(api.calls.insert[0]!.sendUpdates).toBe("all");
+    expect(api.calls.insert[0]!.requestBody.attendees).toEqual([
       {
         email: "kept@example.com",
         displayName: "Kept",
@@ -320,8 +322,8 @@ describe("GoogleEventWriter", () => {
 
     // The exact body, sendUpdates included: retained statuses echo back, and
     // no other attendee-adjacent key (organizer, conferenceData) appears.
-    expect(api.calls.patch[0].sendUpdates).toBe("externalOnly");
-    expect(api.calls.patch[0].requestBody).toEqual({
+    expect(api.calls.patch[0]!.sendUpdates).toBe("externalOnly");
+    expect(api.calls.patch[0]!.requestBody).toEqual({
       summary: "Title",
       description: "Desc",
       location: null,
@@ -346,7 +348,7 @@ describe("GoogleEventWriter", () => {
 
     await writer.patchEvent({ ...basePatch, attendees: [] });
 
-    expect(api.calls.patch[0].requestBody.attendees).toEqual([]);
+    expect(api.calls.patch[0]!.requestBody.attendees).toEqual([]);
   });
 
   it("omits the attendees key when the write does not intend a guest edit", async () => {
@@ -370,7 +372,7 @@ describe("GoogleEventWriter", () => {
     });
     await writer.patchEvent(basePatch);
 
-    expect(api.calls.insert[0].requestBody).toEqual({
+    expect(api.calls.insert[0]!.requestBody).toEqual({
       id: "abc12deadbeef00000000000",
       summary: "Title",
       description: "Desc",
@@ -387,7 +389,7 @@ describe("GoogleEventWriter", () => {
       },
       recurrence: null,
     });
-    expect(api.calls.patch[0].requestBody).not.toHaveProperty("attendees");
+    expect(api.calls.patch[0]!.requestBody).not.toHaveProperty("attendees");
   });
 
   it("sends only colorId and attendees for a provider-managed patch", async () => {
@@ -440,14 +442,14 @@ describe("GoogleEventWriter", () => {
       ],
     });
 
-    expect(api.calls.insert[0].conferenceDataVersion).toBe(1);
-    expect(api.calls.insert[0].requestBody.conferenceData).toEqual({
+    expect(api.calls.insert[0]!.conferenceDataVersion).toBe(1);
+    expect(api.calls.insert[0]!.requestBody.conferenceData).toEqual({
       createRequest: {
         requestId: "abc12deadbeef00000000000",
         conferenceSolutionKey: { type: "hangoutsMeet" },
       },
     });
-    expect(api.calls.insert[0].requestBody.guestsCanInviteOthers).toBe(true);
+    expect(api.calls.insert[0]!.requestBody.guestsCanInviteOthers).toBe(true);
   });
 
   it("returns the Meet URL Google mints on create", async () => {
@@ -512,9 +514,11 @@ describe("GoogleEventWriter", () => {
       expectedVersion: '"v1"',
     });
 
-    expect(api.calls.patch[0].ifMatch).toBe('"v1"');
+    expect(api.calls.patch[0]!.ifMatch).toBe('"v1"');
     expect(result.providerVersion).toBe('"v2"');
-    expect(api.calls.patch[0].requestBody).not.toHaveProperty("conferenceData");
+    expect(api.calls.patch[0]!.requestBody).not.toHaveProperty(
+      "conferenceData",
+    );
     expect(api.calls.patch[0]).not.toHaveProperty("conferenceDataVersion");
   });
 
@@ -524,7 +528,7 @@ describe("GoogleEventWriter", () => {
 
     await writer.patchEvent(basePatch);
 
-    expect(api.calls.patch[0].ifMatch).toBeNull();
+    expect(api.calls.patch[0]!.ifMatch).toBeNull();
   });
 
   it("maps a precondition failure to versionConflict", async () => {
@@ -696,11 +700,11 @@ describe("GoogleEventWriter", () => {
     });
     await writer.patchEvent({ ...basePatch, recurrence: { kind: "single" } });
 
-    expect(api.calls.insert[0].requestBody.recurrence).toEqual([
+    expect(api.calls.insert[0]!.requestBody.recurrence).toEqual([
       "RRULE:FREQ=DAILY",
     ]);
     // A series-to-single edit must clear the rules, not omit the key.
-    expect(api.calls.patch[0].requestBody.recurrence).toBeNull();
+    expect(api.calls.patch[0]!.requestBody.recurrence).toBeNull();
   });
 
   it("omits the recurrence key entirely when patching a resolved instance", async () => {
@@ -712,7 +716,7 @@ describe("GoogleEventWriter", () => {
 
     await writer.patchEvent({ ...basePatch, recurrence: { kind: "instance" } });
 
-    expect(api.calls.patch[0].requestBody).not.toHaveProperty("recurrence");
+    expect(api.calls.patch[0]!.requestBody).not.toHaveProperty("recurrence");
   });
 
   it("nulls the unused schedule keys so Google never sees both a date and a dateTime", async () => {
@@ -722,12 +726,12 @@ describe("GoogleEventWriter", () => {
     await writer.createEvent({ ...baseCreate, schedule: timedSchedule });
     await writer.patchEvent({ ...basePatch, schedule: allDaySchedule });
 
-    expect(api.calls.insert[0].requestBody.start).toEqual({
+    expect(api.calls.insert[0]!.requestBody.start).toEqual({
       date: null,
       dateTime: "2025-01-15T09:00:00-05:00",
       timeZone: "America/New_York",
     });
-    expect(api.calls.patch[0].requestBody.start).toEqual({
+    expect(api.calls.patch[0]!.requestBody.start).toEqual({
       date: "2025-01-15",
       dateTime: null,
       timeZone: null,
@@ -744,9 +748,9 @@ describe("GoogleEventWriter", () => {
     });
     await writer.patchEvent({ ...basePatch, content: content() });
 
-    expect(api.calls.insert[0].requestBody.colorId).toBe("7");
+    expect(api.calls.insert[0]!.requestBody.colorId).toBe("7");
     expect(api.calls.patch).toHaveLength(1);
-    expect(api.calls.patch[0].requestBody).not.toHaveProperty("colorId");
+    expect(api.calls.patch[0]!.requestBody).not.toHaveProperty("colorId");
   });
 
   it("clears Google colorId when content.color is null", async () => {
@@ -759,7 +763,7 @@ describe("GoogleEventWriter", () => {
     });
 
     expect(api.calls.patch).toHaveLength(1);
-    expect(api.calls.patch[0].requestBody.colorId).toBeNull();
+    expect(api.calls.patch[0]!.requestBody.colorId).toBeNull();
     expect(api.calls.patch[0]).not.toHaveProperty("eventLabelVersion");
   });
 
@@ -785,7 +789,7 @@ describe("GoogleEventWriter", () => {
       ifMatch: '"v2"',
     });
     expect(api.calls.patch[1]).not.toHaveProperty("eventLabelVersion");
-    expect(api.calls.patch[1].requestBody).not.toHaveProperty("eventLabelId");
+    expect(api.calls.patch[1]!.requestBody).not.toHaveProperty("eventLabelId");
   });
 
   it("maps each invitation intent straight to sendUpdates", async () => {

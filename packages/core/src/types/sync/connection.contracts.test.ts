@@ -18,16 +18,22 @@ import {
   SyncCalendarListResponseSchema,
   toConnectionBeginRedirect,
 } from "@core/types/sync/connection.contracts";
+import {
+  type ConnectionId,
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 
 const objectId = () => faker.database.mongodbObjectId();
 
 const validConnection = () => ({
   id: objectId(),
-  tenantId: objectId(),
-  principalId: objectId(),
+  tenantId: objectId() as TenantId,
+  principalId: objectId() as PrincipalId,
   provider: "google",
   account: {
-    providerAccountId: "112233445566778899000",
+    providerAccountId: "112233445566778899000" as ProviderAccountId,
     email: "user@gmail.com",
     displayName: "Test User",
   },
@@ -42,9 +48,9 @@ const validConnection = () => ({
 
 const validCalendar = () => ({
   id: objectId(),
-  tenantId: objectId(),
-  principalId: objectId(),
-  connectionId: objectId(),
+  tenantId: objectId() as TenantId,
+  principalId: objectId() as PrincipalId,
+  connectionId: objectId() as ConnectionId,
   providerCalendarId: "primary",
   displayName: "Personal",
   color: "#9fe1e7",
@@ -213,7 +219,7 @@ describe("Sync connection contracts", () => {
         ConnectionBeginRequestSchema.parse({ features: ["contacts"] }),
       ).toEqual({ features: ["contacts"] });
       const withBoth = ConnectionBeginRequestSchema.safeParse({
-        connectionId: "507f1f77bcf86cd799439011",
+        connectionId: "507f1f77bcf86cd799439011" as ConnectionId,
         features: ["contacts"],
       });
       expect(withBoth.success).toBe(true);
@@ -263,7 +269,7 @@ describe("Sync connection contracts", () => {
     });
 
     it("accepts a connected result", () => {
-      const connectionId = objectId();
+      const connectionId = objectId() as ConnectionId;
       expect(
         ConnectionBeginResponseSchema.parse({
           kind: "connected",
@@ -327,7 +333,7 @@ describe("Sync connection contracts", () => {
             ciphertext: "Y2lwaGVydGV4dA==",
             authTag: "dGFn",
           },
-          principalId: objectId(),
+          principalId: objectId() as PrincipalId,
         }).success,
       ).toBe(false);
     });
@@ -335,17 +341,17 @@ describe("Sync connection contracts", () => {
 
   describe("ConnectionCredentialResponseSchema", () => {
     it("accepts a connection id", () => {
-      const connectionId = objectId();
+      const connectionId = objectId() as ConnectionId;
       expect(
         ConnectionCredentialResponseSchema.parse({ connectionId }),
-      ).toEqual({ connectionId });
+      ).toEqual({ connectionId: connectionId });
     });
   });
 
   describe("ProviderAccountFactsSchema", () => {
     it("accepts null display fields", () => {
       const facts = {
-        providerAccountId: "1122334455",
+        providerAccountId: "1122334455" as ProviderAccountId,
         email: null,
         displayName: null,
       };
@@ -354,7 +360,7 @@ describe("Sync connection contracts", () => {
 
     it("rejects unknown fields", () => {
       const facts = {
-        providerAccountId: "1122334455",
+        providerAccountId: "1122334455" as ProviderAccountId,
         email: null,
         displayName: null,
         refreshToken: "leak",
@@ -368,7 +374,7 @@ describe("Sync connection contracts", () => {
       expect(
         GoogleConnectionAdoptionRequestSchema.safeParse({
           account: {
-            providerAccountId: "1122334455",
+            providerAccountId: "1122334455" as ProviderAccountId,
             email: "connected@example.com",
             displayName: "Connected User",
           },
@@ -387,7 +393,7 @@ describe("Sync connection contracts", () => {
         ProviderConnectionAdoptionRequestSchema.safeParse({
           provider: "microsoft",
           account: {
-            providerAccountId: "1122334455",
+            providerAccountId: "1122334455" as ProviderAccountId,
             email: "connected@example.com",
             displayName: "Connected User",
           },
@@ -405,7 +411,7 @@ describe("Sync connection contracts", () => {
       expect(
         GoogleConnectionAdoptionRequestSchema.safeParse({
           account: {
-            providerAccountId: "1122334455",
+            providerAccountId: "1122334455" as ProviderAccountId,
             email: null,
             displayName: null,
           },
@@ -507,12 +513,15 @@ describe("Sync connection contracts", () => {
     });
 
     it("accepts a narrowed calendar query", () => {
-      const query = { connectionId: objectId(), activeOnly: true };
+      const query = {
+        connectionId: objectId() as ConnectionId,
+        activeOnly: true,
+      };
       expect(CalendarListQuerySchema.safeParse(query).success).toBe(true);
     });
 
     it("rejects principal scoping via the query body", () => {
-      const query = { principalId: objectId() };
+      const query = { principalId: objectId() as PrincipalId };
       expect(CalendarListQuerySchema.safeParse(query).success).toBe(false);
     });
   });

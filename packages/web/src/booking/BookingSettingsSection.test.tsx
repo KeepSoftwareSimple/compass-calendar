@@ -65,8 +65,23 @@ mock.module("@web/auth/posthog/track", () => ({
     isTrackMocked ? mockTrack(...args) : actualTrack.track(...args),
 }));
 
+// Booking settings is a signed-in surface. The chooser starts sign-up when
+// SessionContext is unsigned, so tests that only mark connect availability
+// would hide the Connect Google Calendar button.
+const actualUseSession = (await import("@web/auth/compass/session/useSession"))
+  .useSession;
+let isSessionMocked = true;
+mock.module("@web/auth/compass/session/useSession", () => ({
+  useSession: (...args: Parameters<typeof actualUseSession>) =>
+    isSessionMocked
+      ? { authenticated: true, setAuthenticated: mock() }
+      : actualUseSession(...args),
+}));
+
 afterAll(() => {
+  isAppAccessMocked = false;
   isTrackMocked = false;
+  isSessionMocked = false;
 });
 
 afterEach(() => {
@@ -2002,7 +2017,9 @@ describe("BookingSettingsSection", () => {
     const option = within(combobox).getByRole("option");
     expect(option.textContent).toBe("host@example.com (Google Meet)");
     expect(
-      within(combobox).getByRole("group", { name: "host@example.com" }),
+      within(combobox).getByRole("group", {
+        name: "host@example.com (Google)",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -3038,9 +3055,11 @@ describe("BookingSettingsSection", () => {
     await user.click(await screen.findByText(BOOKING_MORE_OPTIONS_LABEL));
 
     const blocking = screen.getByRole("group", { name: "Blocking calendars" });
-    expect(within(blocking).getByText("host@example.com")).toBeInTheDocument();
     expect(
-      within(blocking).getByText("second@example.com"),
+      within(blocking).getByText("host@example.com (Google)"),
+    ).toBeInTheDocument();
+    expect(
+      within(blocking).getByText("second@example.com (Google)"),
     ).toBeInTheDocument();
     expect(
       within(blocking).getByRole("checkbox", { name: "Work" }),

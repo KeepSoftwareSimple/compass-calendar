@@ -40,6 +40,7 @@ export type SignupSource =
   | `welcome_modal_${ProviderKind}`
   | "anon_nudge"
   | "command_palette"
+  | "connect_chooser"
   | "shortcut_showcase";
 
 export type SignupFailureReason =
@@ -57,6 +58,7 @@ export type SignupFailureReason =
   | "connect_missing_scopes"
   | "connect_state_mismatch"
   | "connect_consent_required"
+  | "connect_account_mismatch"
   | "connect_error";
 
 type StepProperties = {

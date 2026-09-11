@@ -3,10 +3,18 @@ import {
   decryptAdoptAuthorizationCredential,
   decryptInternalCredential,
 } from "@core/security/internal-credential-envelope";
+import { type CalendarId, type EventId } from "@core/types/domain-primitives";
 import { type BusyAvailabilityRequest } from "@core/types/sync/availability.contracts";
+import { type ChangeFeedCursor } from "@core/types/sync/change-feed.contracts";
 import { type CommandSubmitRequest } from "@core/types/sync/command.contracts";
 import { type EventInstanceListQuery } from "@core/types/sync/event.contracts";
-import { type ConnectionId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type IdempotencyKey,
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
 import {
   verifyInternalRequest,
   verifyServiceRequest,
@@ -78,7 +86,10 @@ const client = (fetchFn: SyncServiceClientOptions["fetch"]) =>
     newCorrelationId: () => "corr-1",
   });
 
-const principal = () => ({ tenantId: objectId(), principalId: objectId() });
+const principal = () => ({
+  tenantId: objectId() as TenantId,
+  principalId: objectId() as PrincipalId,
+});
 
 // A minimal Headers stand-in that answers the one header the client reads.
 const contentType = (value: string) => ({
@@ -134,8 +145,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("lists connections with a signed GET the real Sync verifier accepts", async () => {
@@ -161,8 +172,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("purges a principal with a signed DELETE the real Sync verifier accepts", async () => {
@@ -200,13 +211,13 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("disconnects one connection with a signed DELETE the real Sync verifier accepts", async () => {
     const who = principal();
-    const connectionId = "64b7f9c2e1a2b3c4d5e6f7ff";
+    const connectionId = "64b7f9c2e1a2b3c4d5e6f7ff" as ConnectionId;
     // Sync answers 204 with an empty body; reading it as JSON would throw.
     const { fn, calls } = fakeFetch(async () => ({
       status: 204,
@@ -231,7 +242,7 @@ describe("SyncServiceClient", () => {
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
     // Sync scopes the disconnect to the signed principal, so a foreign
     // connection id can never be disconnected through this client.
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("reports a disconnect of an unknown connection as notFound", async () => {
@@ -286,8 +297,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("lists active-only calendars with ?activeOnly=true when the option is set", async () => {
@@ -317,8 +328,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("fetches contact suggestions with a signed GET the real Sync verifier accepts", async () => {
@@ -348,8 +359,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("rejects a contact-suggestions body that does not match the contract", async () => {
@@ -386,7 +397,7 @@ describe("SyncServiceClient", () => {
 
   it("polls the change feed from now and with a resume cursor", async () => {
     const who = principal();
-    const cursor = objectId();
+    const cursor = objectId() as ChangeFeedCursor;
     const { fn, calls } = fakeFetch(async () => ({
       status: 200,
       json: async () => ({
@@ -428,10 +439,13 @@ describe("SyncServiceClient", () => {
         kind: "ok",
         invalidations: [
           {
-            invalidation: { kind: "connection", connectionId: objectId() },
+            invalidation: {
+              kind: "connection",
+              connectionId: objectId() as ConnectionId,
+            },
             emittedAt: "2026-07-30T00:00:00.000Z",
-            tenantId: objectId(),
-            principalId: objectId(),
+            tenantId: objectId() as TenantId,
+            principalId: objectId() as PrincipalId,
           },
         ],
         nextCursor: cursor,
@@ -548,8 +562,8 @@ describe("SyncServiceClient", () => {
 
   it("lists full events with a signed GET the real Sync verifier accepts", async () => {
     const who = principal();
-    const calendarA = objectId();
-    const calendarB = objectId();
+    const calendarA = objectId() as CalendarId;
+    const calendarB = objectId() as CalendarId;
     const { fn, calls } = fakeFetch(async () => ({
       status: 200,
       json: async () => ({ instances: [], nextCursor: null }),
@@ -583,8 +597,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("rejects a full-event body that does not match the contract", async () => {
@@ -594,7 +608,9 @@ describe("SyncServiceClient", () => {
     }));
 
     const result = await client(fn).listFullEvents(principal(), {
-      calendarIds: [objectId()] as EventInstanceListQuery["calendarIds"],
+      calendarIds: [
+        objectId() as CalendarId,
+      ] as EventInstanceListQuery["calendarIds"],
       start: "2026-07-14T09:00:00.000Z" as EventInstanceListQuery["start"],
       end: "2026-07-14T17:00:00.000Z" as EventInstanceListQuery["end"],
     });
@@ -606,11 +622,11 @@ describe("SyncServiceClient", () => {
 
   it("submits a command with a signed POST the real Sync verifier accepts", async () => {
     const who = principal();
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const submitRequest = {
-      idempotencyKey: "client-generated-key-1",
-      eventId,
-      input: { kind: "move", calendarId: objectId() },
+      idempotencyKey: "client-generated-key-1" as IdempotencyKey,
+      eventId: eventId,
+      input: { kind: "move", calendarId: objectId() as CalendarId },
       expectedVersion: null,
     } as CommandSubmitRequest;
     // A minimal valid command envelope the Sync service would return.
@@ -654,8 +670,8 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.tenantId).toBe(who.tenantId);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.tenantId).toBe(who.tenantId as TenantId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("rejects a command-submit body that does not match the contract", async () => {
@@ -665,9 +681,9 @@ describe("SyncServiceClient", () => {
     }));
 
     const result = await client(fn).submitCommand(principal(), {
-      idempotencyKey: "client-generated-key-2",
-      eventId: objectId(),
-      input: { kind: "move", calendarId: objectId() },
+      idempotencyKey: "client-generated-key-2" as IdempotencyKey,
+      eventId: objectId() as EventId,
+      input: { kind: "move", calendarId: objectId() as CalendarId },
       expectedVersion: null,
     } as CommandSubmitRequest);
 
@@ -683,9 +699,9 @@ describe("SyncServiceClient", () => {
     }));
 
     const result = await client(fn).submitCommand(principal(), {
-      idempotencyKey: "client-generated-key-3",
-      eventId: objectId(),
-      input: { kind: "move", calendarId: objectId() },
+      idempotencyKey: "client-generated-key-3" as IdempotencyKey,
+      eventId: objectId() as EventId,
+      input: { kind: "move", calendarId: objectId() as CalendarId },
       expectedVersion: null,
     } as CommandSubmitRequest);
 
@@ -724,7 +740,7 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("sends foreground principals in one service-authenticated batch", async () => {
@@ -755,7 +771,7 @@ describe("SyncServiceClient", () => {
     const who = principal();
     const request = {
       account: {
-        providerAccountId: "google-sub-1",
+        providerAccountId: "google-sub-1" as ProviderAccountId,
         email: "connected@example.com",
         displayName: "Connected User",
       },
@@ -796,7 +812,7 @@ describe("SyncServiceClient", () => {
       now: NOW,
     });
     if (!verdict.ok) throw new Error(`verify failed: ${verdict.reason}`);
-    expect(verdict.context.principalId).toBe(who.principalId);
+    expect(verdict.context.principalId).toBe(who.principalId as PrincipalId);
   });
 
   it("adopts a server-exchanged Microsoft authorization on the provider-neutral path", async () => {
@@ -804,7 +820,7 @@ describe("SyncServiceClient", () => {
     const request = {
       provider: "microsoft" as const,
       account: {
-        providerAccountId: "ms-oid-1",
+        providerAccountId: "ms-oid-1" as ProviderAccountId,
         email: "connected@example.com",
         displayName: "Connected User",
       },
@@ -852,9 +868,9 @@ describe("SyncServiceClient", () => {
       }),
     }));
 
-    const connectionId = objectId();
+    const connectionId = objectId() as ConnectionId;
     await client(fn).beginConnection(principal(), {
-      connectionId: connectionId as ConnectionId,
+      connectionId: connectionId,
     });
 
     expect(JSON.parse(calls[0]?.body ?? "{}")).toEqual({ connectionId });
@@ -983,7 +999,7 @@ describe("SyncServiceClient", () => {
     // commands (provider deletes run inline and routinely exceed the read
     // deadline).
     const who = principal();
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const commandBody = {
       id: objectId(),
       tenantId: who.tenantId,
@@ -1015,8 +1031,8 @@ describe("SyncServiceClient", () => {
     };
 
     const result = await client(fn).submitCommand(who, {
-      idempotencyKey: "slow-delete-key",
-      eventId,
+      idempotencyKey: "slow-delete-key" as IdempotencyKey,
+      eventId: eventId,
       input: {
         kind: "delete",
         invitation: "none",

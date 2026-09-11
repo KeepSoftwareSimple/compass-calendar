@@ -1,5 +1,4 @@
 import { useLocation, useRouter } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
 import { AuthApi } from "@web/api/auth.api";
 import { APPLE_AUTHORIZATION_ERROR_MESSAGE } from "@web/auth/apple/authorization/apple-authorization.constants";
 import {
@@ -7,6 +6,8 @@ import {
   readAppleAuthorizationIntent,
 } from "@web/auth/apple/authorization/apple-authorization.storage";
 import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-authorization.util";
+import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
+import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
   trackSignupCompleted,
@@ -16,7 +17,6 @@ import {
 import { track } from "@web/auth/posthog/track";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
-import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -86,20 +86,11 @@ export async function completeAppleAuthCallback({
 }
 
 export function AppleAuthCallbackView() {
-  const didRun = useRef(false);
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
 
-  useEffect(() => {
-    if (didRun.current) {
-      return;
-    }
-
-    didRun.current = true;
-
-    // Same one-shot hazard as the provider callback: an uncaught rejection
-    // here strands the user on the spinner below with no way to retry.
+  useOneShotAuthCallback(() => {
     completeAppleAuthCallback({
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
@@ -109,20 +100,7 @@ export function AppleAuthCallbackView() {
       showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
-  }, [completeAuthentication, location.searchStr, router]);
+  });
 
-  return (
-    <OverlayPanel
-      title="Just finishing up …"
-      message="Returning you to Compass."
-      role="status"
-      variant="status"
-      icon={
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-border border-t-text"
-          aria-hidden="true"
-        />
-      }
-    />
-  );
+  return <AuthCallbackOverlay />;
 }

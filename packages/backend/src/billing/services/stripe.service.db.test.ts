@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { type Schema_UserBilling } from "@core/types/user.types";
 import {
   cleanupCollections,
   cleanupTestDb,
@@ -61,7 +62,7 @@ describe("StripeService", () => {
 
     expect(result.clientSecret).toBe("cs_test_1");
     expect(customersCreate).toHaveBeenCalled();
-    const sessionArgs = sessionsCreate.mock.calls[0]?.[0] as {
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
       mode: string;
       client_reference_id: string;
       subscription_data: { trial_period_days: number };
@@ -99,7 +100,7 @@ describe("StripeService", () => {
     expect(sessionArgs.redirect_on_completion).toBe("never");
     expect(sessionArgs.success_url).toBeUndefined();
     expect(sessionArgs.cancel_url).toBeUndefined();
-    expect(sessionsCreate.mock.calls[0]?.[1]).toEqual({
+    expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
       idempotencyKey: `compass-checkout-v3-${userId.toString()}`,
     });
 
@@ -138,7 +139,7 @@ describe("StripeService", () => {
     await stripeService.createCheckoutSession(userId.toString());
 
     expect(customersCreate).not.toHaveBeenCalled();
-    const sessionArgs = sessionsCreate.mock.calls[0]?.[0] as {
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
       customer: string;
     };
     expect(sessionArgs.customer).toBe("cus_existing");
@@ -235,7 +236,7 @@ describe("StripeService", () => {
     const result = await stripeService.createCheckoutSession(userId.toString());
 
     expect(result.clientSecret).toBe("cs_test_stale");
-    const sessionArgs = sessionsCreate.mock.calls[0]?.[0] as {
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
       subscription_data: { trial_period_days?: number };
     };
     expect(sessionArgs.subscription_data.trial_period_days).toBeUndefined();
@@ -270,7 +271,7 @@ describe("StripeService", () => {
 
     await stripeService.createCheckoutSession(userId.toString());
 
-    const sessionArgs = sessionsCreate.mock.calls[0]?.[0] as {
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
       subscription_data: { trial_period_days?: number };
     };
     expect(sessionArgs.subscription_data.trial_period_days).toBeUndefined();
@@ -409,13 +410,13 @@ describe("StripeService", () => {
         isReadOnly: false,
         cancelAtPeriodEnd: false,
       });
-      expect(update.mock.calls[0]?.[0]).toBe("sub_trial");
-      expect(update.mock.calls[0]?.[1]).toEqual({
+      expect((update.mock.calls as unknown[][])[0]?.[0]).toBe("sub_trial");
+      expect((update.mock.calls as unknown[][])[0]?.[1]).toEqual({
         trial_end: "now",
         proration_behavior: "none",
         cancel_at_period_end: false,
       });
-      expect(update.mock.calls[0]?.[2]).toEqual({
+      expect((update.mock.calls as unknown[][])[0]?.[2]).toEqual({
         idempotencyKey: "compass-end-trial-v2-sub_trial",
       });
 
@@ -457,7 +458,7 @@ describe("StripeService", () => {
 
       expect(result.subscriptionStatus).toBe("active");
       expect(result.cancelAtPeriodEnd).toBe(false);
-      expect(update.mock.calls[0]?.[1]).toMatchObject({
+      expect((update.mock.calls as unknown[][])[0]?.[1]).toMatchObject({
         cancel_at_period_end: false,
       });
       const stored = await mongoService.user.findOne({ _id: userId });
@@ -522,7 +523,7 @@ describe("StripeService", () => {
     const periodEnd = new Date("2026-10-01T00:00:00.000Z");
     const trialEnd = new Date("2026-09-10T00:00:00.000Z");
 
-    const seedUser = async (billing: Record<string, unknown>) => {
+    const seedUser = async (billing: Schema_UserBilling) => {
       const userId = mongoService.objectId();
       await mongoService.user.insertOne({
         _id: userId,
@@ -612,12 +613,12 @@ describe("StripeService", () => {
         userId.toString(),
       );
 
-      expect(retrieve.mock.calls[0]?.[0]).toBe("sub_live");
-      expect(retrieve.mock.calls[0]?.[1]).toEqual({
+      expect((retrieve.mock.calls as unknown[][])[0]?.[0]).toBe("sub_live");
+      expect((retrieve.mock.calls as unknown[][])[0]?.[1]).toEqual({
         expand: ["default_payment_method"],
       });
       expect(customersRetrieve).not.toHaveBeenCalled();
-      expect(invoicesList.mock.calls[0]?.[0]).toEqual({
+      expect((invoicesList.mock.calls as unknown[][])[0]?.[0]).toEqual({
         customer: "cus_live",
         limit: 12,
       });
@@ -673,8 +674,10 @@ describe("StripeService", () => {
         userId.toString(),
       );
 
-      expect(customersRetrieve.mock.calls[0]?.[0]).toBe("cus_live");
-      expect(customersRetrieve.mock.calls[0]?.[1]).toEqual({
+      expect((customersRetrieve.mock.calls as unknown[][])[0]?.[0]).toBe(
+        "cus_live",
+      );
+      expect((customersRetrieve.mock.calls as unknown[][])[0]?.[1]).toEqual({
         expand: ["invoice_settings.default_payment_method"],
       });
       expect(result.paymentMethod).toEqual({
@@ -770,8 +773,10 @@ describe("StripeService", () => {
         true,
       );
 
-      expect(update.mock.calls[0]?.[0]).toBe("sub_live");
-      expect(update.mock.calls[0]?.[1]).toEqual({ cancel_at_period_end: true });
+      expect((update.mock.calls as unknown[][])[0]?.[0]).toBe("sub_live");
+      expect((update.mock.calls as unknown[][])[0]?.[1]).toEqual({
+        cancel_at_period_end: true,
+      });
       expect(result.cancelAtPeriodEnd).toBe(true);
       expect(result.subscriptionStatus).toBe("active");
       const stored = await mongoService.user.findOne({ _id: userId });
@@ -793,7 +798,7 @@ describe("StripeService", () => {
         false,
       );
 
-      expect(update.mock.calls[0]?.[1]).toEqual({
+      expect((update.mock.calls as unknown[][])[0]?.[1]).toEqual({
         cancel_at_period_end: false,
       });
       expect(result.cancelAtPeriodEnd).toBe(false);
@@ -873,7 +878,7 @@ describe("StripeService", () => {
       );
 
       expect(result).toEqual({ clientSecret: "seti_secret_1" });
-      expect(sessionsCreate.mock.calls[0]?.[0]).toEqual({
+      expect((sessionsCreate.mock.calls as unknown[][])[0]?.[0]).toEqual({
         mode: "setup",
         customer: "cus_card",
         payment_method_types: ["card"],
@@ -882,7 +887,9 @@ describe("StripeService", () => {
         client_reference_id: userId.toString(),
         setup_intent_data: { metadata: { compassUserId: userId.toString() } },
       });
-      expect(sessionsCreate.mock.calls[0]?.[1]).toBeUndefined();
+      expect(
+        (sessionsCreate.mock.calls as unknown[][])[0]?.[1],
+      ).toBeUndefined();
     });
 
     it("rejects with 409 and skips Stripe when the user has no customer id", async () => {

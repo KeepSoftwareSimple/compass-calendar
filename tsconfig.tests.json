@@ -1,16 +1,18 @@
 {
   "extends": "./tsconfig.json",
   "include": [
+    "packages/scripts/src/testing/node-test-globals.d.ts",
     "packages/core/src/**/*.ts",
     "packages/backend/src/**/*.ts",
     "packages/sync/src/**/*.ts",
     "packages/scripts/src/**/*.ts",
-    "packages/scripts/src/**/*.d.ts"
+    "packages/scripts/src/**/*.d.ts",
+    "**/*.json"
   ],
   "exclude": [],
   "compilerOptions": {
-    "composite": false,
-    "declaration": false,
+    "composite": true,
+    "declaration": true,
     "declarationMap": false,
     "types": ["bun-types", "bun-types/test-globals", "node"],
     "noEmit": true,

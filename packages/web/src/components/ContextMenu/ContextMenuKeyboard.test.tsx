@@ -30,6 +30,7 @@ const actions: ContextMenuItemsActions = {
   duplicate: mock(),
   edit: mock(),
   setColor: mock(),
+  toggleHidden: mock(),
 };
 
 // Mirrors how the day/week wrappers mount the menu: a virtual cursor reference
@@ -114,17 +115,20 @@ describe("ContextMenu keyboard operability", () => {
     expect(screen.getByRole("menuitem", { name: "Duplicate" })).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: "ArrowDown" });
+    expect(screen.getByRole("menuitem", { name: "Hide event" })).toHaveFocus();
+
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(screen.getByRole("menuitem", { name: "Delete" })).toHaveFocus();
 
     fireEvent.keyDown(menu, { key: "ArrowUp" });
-    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toHaveFocus();
+    expect(screen.getByRole("menuitem", { name: "Hide event" })).toHaveFocus();
   });
 
   it("exposes the menu with valid menu -> menuitem semantics", () => {
     render(<OpenMenuHarness />);
 
     expect(getMenu()).toBeInTheDocument();
-    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4);
     expect(screen.getAllByRole("menuitemradio").length).toBeGreaterThan(0);
   });
 
@@ -133,6 +137,7 @@ describe("ContextMenu keyboard operability", () => {
     await flushFocusSeat();
 
     const menu = getMenu();
+    fireEvent.keyDown(menu, { key: "ArrowDown" });
     fireEvent.keyDown(menu, { key: "ArrowDown" });
     fireEvent.keyDown(menu, { key: "ArrowDown" });
     expect(screen.getByRole("menuitem", { name: "Delete" })).toHaveFocus();

@@ -467,15 +467,13 @@ describe("CompassEventRRule: ", () => {
     const denver = "America/Denver";
     // A real Thursday; both real Thursday, MDT.
     const thursday = "2026-07-23T19:00:00-06:00";
-    const endOfThursday = "2026-07-23T20:00:00-06:00";
-
     it("expands BYDAY=SA onto Saturday, not the previous local day", () => {
       const rule = ["RRULE:FREQ=WEEKLY;BYDAY=SA"];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },
@@ -491,11 +489,11 @@ describe("CompassEventRRule: ", () => {
 
     it("expands BYDAY=FR onto Friday instead of silently reusing the draft's own day", () => {
       const rule = ["RRULE:FREQ=WEEKLY;BYDAY=FR"];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },
@@ -514,11 +512,11 @@ describe("CompassEventRRule: ", () => {
         .utc()
         .format("YYYYMMDD[T]HHmmss[Z]");
       const rule = [`RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=${until}`];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },
@@ -533,11 +531,11 @@ describe("CompassEventRRule: ", () => {
         .utc()
         .format("YYYYMMDD[T]HHmmss[Z]");
       const rule = [`RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=${until}`];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },
@@ -564,11 +562,11 @@ describe("CompassEventRRule: ", () => {
 
     it("until is null when the rule has no UNTIL", () => {
       const rule = ["RRULE:FREQ=WEEKLY;BYDAY=SA"];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },
@@ -592,11 +590,11 @@ describe("CompassEventRRule: ", () => {
 
     it("keeps the wall-clock time across the DST fallback boundary", () => {
       const rule = ["RRULE:FREQ=WEEKLY;BYDAY=TH;COUNT=20"];
-      const baseEvent = createMockBaseEvent({
-        startDate: thursday,
-        endDate: endOfThursday,
-        recurrence: { rule },
-      });
+      const baseEvent = createMockBaseEvent(
+        { startDate: thursday, recurrence: { rule } },
+        false,
+        { value: 1, unit: "hours" },
+      );
       const rrule = new CompassEventRRule(
         { ...baseEvent, _id: new ObjectId(baseEvent._id) },
         { tzid: denver },

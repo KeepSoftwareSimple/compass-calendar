@@ -5,6 +5,7 @@ import {
   SyncCommandOutcomeSchema,
   SyncCommandSchema,
 } from "@core/types/sync/command.contracts";
+import { type ClientEventId } from "@core/types/sync/event.contracts";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -130,7 +131,9 @@ describe("Sync command contracts", () => {
       const parsed = SyncCommandInputSchema.safeParse(promoted);
       expect(parsed.success).toBe(true);
       if (parsed.success && parsed.data.kind === "create") {
-        expect(parsed.data.clientEventId).toBe(promoted.clientEventId);
+        expect(parsed.data.clientEventId).toBe(
+          promoted.clientEventId as ClientEventId,
+        );
       }
     });
 

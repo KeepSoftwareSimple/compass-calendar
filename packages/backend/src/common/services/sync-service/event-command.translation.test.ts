@@ -1,6 +1,13 @@
 import { faker } from "@faker-js/faker";
+import {
+  type CalendarId,
+  type DateTime,
+  type EventId,
+  type TimeZone,
+} from "@core/types/domain-primitives";
 import { EventSchema } from "@core/types/event.contracts";
 import { CommandSubmitRequestSchema } from "@core/types/sync/command.contracts";
+import { type IdempotencyKey } from "@core/types/sync/identity.contracts";
 import {
   resolveCommandTarget,
   toCreateSubmitRequest,
@@ -16,9 +23,9 @@ const objectId = () => faker.database.mongodbObjectId();
 
 const timedSchedule = {
   kind: "timed" as const,
-  start: "2026-07-14T09:00:00.000Z",
-  end: "2026-07-14T10:00:00.000Z",
-  timeZone: "UTC",
+  start: "2026-07-14T09:00:00.000Z" as DateTime,
+  end: "2026-07-14T10:00:00.000Z" as DateTime,
+  timeZone: "UTC" as TimeZone,
 };
 
 describe("toSyncContent", () => {
@@ -123,26 +130,26 @@ describe("toSyncContent", () => {
 
 describe("resolveCommandTarget", () => {
   it("decodes a composed occurrence id into eventId + recurrenceId", () => {
-    const eventId = objectId();
-    const recurrenceId = "2026-07-14T09:00:00.000Z";
+    const eventId = objectId() as EventId;
+    const recurrenceId = "2026-07-14T09:00:00.000Z" as DateTime;
     const id = composeOccurrenceId({ eventId, recurrenceId });
 
     expect(resolveCommandTarget(id, "this")).toEqual({
-      eventId,
+      eventId: eventId as EventId,
       scope: "this",
-      recurrenceId,
+      recurrenceId: recurrenceId,
     });
   });
 
   it("drops recurrenceId when scope is all on a composed id", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const id = composeOccurrenceId({
       eventId,
       recurrenceId: "2026-07-14T09:00:00.000Z",
     });
 
     expect(resolveCommandTarget(id, "all")).toEqual({
-      eventId,
+      eventId: eventId as EventId,
       scope: "all",
       recurrenceId: null,
     });
@@ -150,9 +157,9 @@ describe("resolveCommandTarget", () => {
 
   it("coerces a plain id with scope this to all + null recurrenceId", () => {
     // Web sends scope "this" for singles; sync requires scope all ⇔ no recurrenceId.
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     expect(resolveCommandTarget(eventId, "this")).toEqual({
-      eventId,
+      eventId: eventId as EventId,
       scope: "all",
       recurrenceId: null,
     });
@@ -180,11 +187,11 @@ describe("resolveCommandTarget", () => {
 
 describe("toCreateSubmitRequest", () => {
   it("builds a create command and a parseable response Event", () => {
-    const calendarId = objectId();
-    const eventId = objectId();
+    const calendarId = objectId() as CalendarId;
+    const eventId = objectId() as EventId;
     const { request, responseEvent } = toCreateSubmitRequest({
       id: eventId,
-      calendarId,
+      calendarId: calendarId as CalendarId,
       content: {
         kind: "details",
         title: "Lunch",
@@ -197,7 +204,7 @@ describe("toCreateSubmitRequest", () => {
 
     expect(() => CommandSubmitRequestSchema.parse(request)).not.toThrow();
     expect(request.eventId).toBe(eventId);
-    expect(request.idempotencyKey).toBe(`create:${eventId}`);
+    expect(request.idempotencyKey).toBe(`create:${eventId}` as IdempotencyKey);
     expect(request.expectedVersion).toBeNull();
     expect(request.input).toMatchObject({
       kind: "create",
@@ -212,14 +219,16 @@ describe("toCreateSubmitRequest", () => {
 
   it("mints an eventId when the client omits one", () => {
     const { request } = toCreateSubmitRequest({
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
       content: { kind: "details", title: "X", description: "", location: "" },
       schedule: timedSchedule,
       recurrence: { kind: "single" },
     });
 
     expect(request.eventId).toMatch(/^[0-9a-f]{24}$/);
-    expect(request.idempotencyKey).toBe(`create:${request.eventId}`);
+    expect(request.idempotencyKey).toBe(
+      `create:${request.eventId}` as IdempotencyKey,
+    );
     expect(request.input).toMatchObject({
       kind: "create",
       clientEventId: null,
@@ -228,8 +237,8 @@ describe("toCreateSubmitRequest", () => {
 
   it("forwards restore:true from an undo-of-delete input", () => {
     const { request } = toCreateSubmitRequest({
-      id: objectId(),
-      calendarId: objectId(),
+      id: objectId() as EventId,
+      calendarId: objectId() as CalendarId,
       content: { kind: "details", title: "X", description: "", location: "" },
       schedule: timedSchedule,
       recurrence: { kind: "single" },
@@ -242,7 +251,7 @@ describe("toCreateSubmitRequest", () => {
 
   it("omits restore when the input does not set it", () => {
     const { request } = toCreateSubmitRequest({
-      calendarId: objectId(),
+      calendarId: objectId() as CalendarId,
       content: { kind: "details", title: "X", description: "", location: "" },
       schedule: timedSchedule,
       recurrence: { kind: "single" },
@@ -253,8 +262,8 @@ describe("toCreateSubmitRequest", () => {
 
   it("threads attendees and invitation into a schema-valid create command", () => {
     const { request, responseEvent } = toCreateSubmitRequest({
-      id: objectId(),
-      calendarId: objectId(),
+      id: objectId() as EventId,
+      calendarId: objectId() as CalendarId,
       content: {
         kind: "details",
         title: "Kickoff",
@@ -298,8 +307,8 @@ describe("toCreateSubmitRequest", () => {
 
   it("keeps a legacy create input on preserve with no notification", () => {
     const { request, responseEvent } = toCreateSubmitRequest({
-      id: objectId(),
-      calendarId: objectId(),
+      id: objectId() as EventId,
+      calendarId: objectId() as CalendarId,
       content: { kind: "details", title: "X", description: "", location: "" },
       schedule: timedSchedule,
       recurrence: { kind: "single" },
@@ -318,7 +327,7 @@ describe("toCreateSubmitRequest", () => {
 
 describe("toReplaceSubmitRequests", () => {
   it("emits a single update for a plain-id replace without a calendar move", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const { requests, responseEvent } = toReplaceSubmitRequests(eventId, {
       content: {
         kind: "details",
@@ -341,8 +350,8 @@ describe("toReplaceSubmitRequests", () => {
   });
 
   it("addresses an occurrence update with the decoded recurrenceId", () => {
-    const eventId = objectId();
-    const recurrenceId = "2026-07-14T09:00:00.000Z";
+    const eventId = objectId() as EventId;
+    const recurrenceId = "2026-07-14T09:00:00.000Z" as DateTime;
     const id = composeOccurrenceId({ eventId, recurrenceId });
     const { requests } = toReplaceSubmitRequests(id, {
       content: {
@@ -365,7 +374,7 @@ describe("toReplaceSubmitRequests", () => {
   });
 
   it("forwards restore:true without changing the update idempotency key", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const input = {
       content: {
         kind: "details" as const,
@@ -391,7 +400,7 @@ describe("toReplaceSubmitRequests", () => {
   });
 
   it("threads attendees and invitation into a schema-valid update command", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const { requests, responseEvent } = toReplaceSubmitRequests(eventId, {
       content: {
         kind: "details",
@@ -474,7 +483,7 @@ describe("toReplaceSubmitRequests", () => {
   // that predates attendee support must build the same submit request it
   // always did (invitation none, attendeesEdit preserve, [] attendee pad).
   it("builds a byte-identical submit request for a legacy replace payload", () => {
-    const eventId = "64b7f7f7f7f7f7f7f7f7f7f7";
+    const eventId = "64b7f7f7f7f7f7f7f7f7f7f7" as EventId;
     const { requests } = toReplaceSubmitRequests(eventId, {
       content: {
         kind: "details",
@@ -484,9 +493,9 @@ describe("toReplaceSubmitRequests", () => {
       },
       schedule: {
         kind: "timed",
-        start: "2026-07-14T09:00:00.000Z",
-        end: "2026-07-14T10:00:00.000Z",
-        timeZone: "UTC",
+        start: "2026-07-14T09:00:00.000Z" as DateTime,
+        end: "2026-07-14T10:00:00.000Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "preserve" },
       scope: "this",
@@ -539,9 +548,9 @@ describe("toReplaceSubmitRequests", () => {
       },
       schedule: {
         kind: "timed" as const,
-        start: "2026-07-14T09:00:00.000Z",
-        end: "2026-07-14T10:00:00.000Z",
-        timeZone: "UTC",
+        start: "2026-07-14T09:00:00.000Z" as DateTime,
+        end: "2026-07-14T10:00:00.000Z" as DateTime,
+        timeZone: "UTC" as TimeZone,
       },
       recurrence: { kind: "preserve" as const },
       scope: "this" as const,
@@ -552,7 +561,7 @@ describe("toReplaceSubmitRequests", () => {
     );
 
     expect(requests[0]?.idempotencyKey).toBe(
-      "update:0b7c2048556d01da12ae81970f090b767bc6a6bc",
+      "update:0b7c2048556d01da12ae81970f090b767bc6a6bc" as IdempotencyKey,
     );
     // invitation is per-submission delivery intent, deliberately outside the
     // hash (like restore): the same edit resubmitted with a different email
@@ -562,7 +571,7 @@ describe("toReplaceSubmitRequests", () => {
       { ...legacyInput, invitation: "all" },
     );
     expect(withInvitation[0]?.idempotencyKey).toBe(
-      "update:0b7c2048556d01da12ae81970f090b767bc6a6bc",
+      "update:0b7c2048556d01da12ae81970f090b767bc6a6bc" as IdempotencyKey,
     );
     // A guest-list edit rides inside content, so it mints a distinct key.
     const { requests: withGuests } = toReplaceSubmitRequests(
@@ -581,10 +590,10 @@ describe("toReplaceSubmitRequests", () => {
   });
 
   it("appends a move command when calendarId is present", () => {
-    const eventId = objectId();
-    const calendarId = objectId();
+    const eventId = objectId() as EventId;
+    const calendarId = objectId() as CalendarId;
     const { requests } = toReplaceSubmitRequests(eventId, {
-      calendarId,
+      calendarId: calendarId as CalendarId,
       content: { kind: "details", title: "X", description: "", location: "" },
       schedule: timedSchedule,
       recurrence: { kind: "single" },
@@ -600,8 +609,8 @@ describe("toReplaceSubmitRequests", () => {
 
 describe("toDeleteSubmitRequest", () => {
   it("builds a delete command from a composed occurrence id", () => {
-    const eventId = objectId();
-    const recurrenceId = "2026-07-14T09:00:00.000Z";
+    const eventId = objectId() as EventId;
+    const recurrenceId = "2026-07-14T09:00:00.000Z" as DateTime;
     const id = composeOccurrenceId({ eventId, recurrenceId });
     const request = toDeleteSubmitRequest(id, { scope: "this" });
 
@@ -621,7 +630,7 @@ describe("toDeleteSubmitRequest", () => {
   // (submitCloudCommand's terminalReplayIsStale), not the key's. Don't add a
   // nonce here.
   it("produces the same idempotency key for two identical deletes", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const first = toDeleteSubmitRequest(eventId, { scope: "all" });
     const second = toDeleteSubmitRequest(eventId, { scope: "all" });
 
@@ -631,7 +640,7 @@ describe("toDeleteSubmitRequest", () => {
   // Guest cancellation emails: the user's save-time choice flows onto the
   // delete command instead of the old hardcoded "none".
   it("threads invitation through a delete without changing its identity key", () => {
-    const eventId = "64b7f7f7f7f7f7f7f7f7f7f7";
+    const eventId = "64b7f7f7f7f7f7f7f7f7f7f7" as EventId;
     const request = toDeleteSubmitRequest(eventId, {
       scope: "all",
       invitation: "all",
@@ -644,11 +653,11 @@ describe("toDeleteSubmitRequest", () => {
     // delete AND one carrying an invitation both map to the same command, so
     // a timed-out delete retried with either shape never double-submits.
     expect(request.idempotencyKey).toBe(
-      "delete:b65cb27825e51d116acdcb198b1f11786dd971c4",
+      "delete:b65cb27825e51d116acdcb198b1f11786dd971c4" as IdempotencyKey,
     );
     const legacy = toDeleteSubmitRequest(eventId, { scope: "all" });
     expect(legacy.idempotencyKey).toBe(
-      "delete:b65cb27825e51d116acdcb198b1f11786dd971c4",
+      "delete:b65cb27825e51d116acdcb198b1f11786dd971c4" as IdempotencyKey,
     );
     if (legacy.input.kind !== "delete") return;
     expect(legacy.input.invitation).toBe("none");
@@ -660,7 +669,7 @@ describe("toRsvpSubmitRequest", () => {
   // composite occurrence id addresses exactly that occurrence — sync scope
   // "this" with the decoded recurrenceId, never the whole series.
   it("addresses one occurrence for scope single on a composite id", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const recurrenceId = "2026-07-21T15:00:00.000Z";
     const id = composeOccurrenceId({ eventId, recurrenceId });
     const request = toRsvpSubmitRequest(id, {
@@ -671,7 +680,7 @@ describe("toRsvpSubmitRequest", () => {
     expect(() => CommandSubmitRequestSchema.parse(request)).not.toThrow();
     expect(request.eventId).toBe(eventId);
     expect(request.expectedVersion).toBeNull();
-    expect(request.input).toEqual({
+    expect<unknown>(request.input).toEqual({
       kind: "rsvp",
       responseStatus: "declined",
       scope: "this",
@@ -680,7 +689,7 @@ describe("toRsvpSubmitRequest", () => {
   });
 
   it("targets the series master for scope all on a composite id", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const id = composeOccurrenceId({
       eventId,
       recurrenceId: "2026-07-21T15:00:00.000Z",
@@ -705,7 +714,7 @@ describe("toRsvpSubmitRequest", () => {
   // scope-"all" + null recurrenceId exactly like update/delete. Never
   // "thisAndFollowing" — sync refuses that typed for rsvp.
   it("coerces scope single on a plain id to the event itself (scope all, null recurrenceId)", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const request = toRsvpSubmitRequest(eventId, {
       responseStatus: "tentative",
       scope: "single",
@@ -723,7 +732,7 @@ describe("toRsvpSubmitRequest", () => {
   // Idempotency key = event + status + scope: the same answer replays the
   // same command; a different answer, target, or scope mints a new one.
   it("derives the idempotency key from event + status + scope", () => {
-    const eventId = objectId();
+    const eventId = objectId() as EventId;
     const id = composeOccurrenceId({
       eventId,
       recurrenceId: "2026-07-21T15:00:00.000Z",
@@ -749,7 +758,7 @@ describe("toRsvpSubmitRequest", () => {
 
     const otherEvent = toRsvpSubmitRequest(
       composeOccurrenceId({
-        eventId: objectId(),
+        eventId: objectId() as EventId,
         recurrenceId: "2026-07-21T15:00:00.000Z",
       }),
       accept,

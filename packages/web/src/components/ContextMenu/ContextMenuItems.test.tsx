@@ -15,7 +15,9 @@ import {
   toNormalizedEventQueryData,
 } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
+import { ID_CONTEXT_MENU_ITEMS } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -74,15 +76,20 @@ const renderWithTheme = (
     pendingEventIds = [],
     calendars,
     event,
+    hiddenEventIds,
   }: {
     pendingEventIds?: string[];
     calendars?: Calendar[];
     event?: GridEvent;
+    hiddenEventIds?: readonly string[];
   } = {},
 ) => {
   const queryClient = new QueryClient();
   seedPendingEventMutations(queryClient, pendingEventIds);
   queryClient.setQueryData(calendarQueryKeys.all, calendars ?? []);
+  if (hiddenEventIds) {
+    seedHiddenEventIds(queryClient, hiddenEventIds);
+  }
   if (event?._id) {
     queryClient.setQueryData(
       eventQueryKeys.week({
@@ -117,6 +124,7 @@ describe("ContextMenuItems", () => {
 
     expect(screen.getByText("Edit")).toBeInTheDocument();
     expect(screen.getByText("Duplicate")).toBeInTheDocument();
+    expect(screen.getByText("Hide event")).toBeInTheDocument();
     expect(screen.getByText("Delete")).toBeInTheDocument();
     expect(
       screen.getByRole("menuitemradio", { name: "Blue" }),
@@ -142,6 +150,7 @@ describe("ContextMenuItems", () => {
           duplicate: mock(),
           edit: mock(),
           setColor,
+          toggleHidden: mock(),
         }}
       />,
       { event },
@@ -168,6 +177,7 @@ describe("ContextMenuItems", () => {
           duplicate: mock(),
           edit: mock(),
           setColor,
+          toggleHidden: mock(),
         }}
       />,
       { event },
@@ -332,6 +342,9 @@ describe("ContextMenuItems read-only gate", () => {
       screen.getByRole("menuitem", { name: "Duplicate" }),
     ).toBeInTheDocument();
     expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("menuitem", { name: "Delete" }),
     ).not.toBeInTheDocument();
     expect(
@@ -357,6 +370,9 @@ describe("ContextMenuItems read-only gate", () => {
 
     expect(screen.getByRole("menuitem", { name: "View" })).toBeInTheDocument();
     expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
       screen.queryByRole("menuitem", { name: "Delete" }),
     ).not.toBeInTheDocument();
   });
@@ -378,7 +394,94 @@ describe("ContextMenuItems read-only gate", () => {
 
     expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
     expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
       screen.getByRole("menuitem", { name: "Delete" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("ContextMenuItems hide event", () => {
+  const mockToggleHidden = mock();
+
+  beforeEach(() => {
+    mockClose.mockClear();
+    mockToggleHidden.mockClear();
+    useDraftStore.setState({ gridDraft: null, status: null });
+  });
+
+  const renderView = (event: GridEvent) => {
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+
+    return renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor: mock(),
+          toggleHidden: mockToggleHidden,
+        }}
+      />,
+      { event },
+    );
+  };
+
+  it("keeps menuitem accessible names free of the x keycap", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Duplicate" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(4);
+  });
+
+  it("labels the item Show event when the id is already hidden", () => {
+    const event = createMockGridEvent({ title: "Hidden Event" });
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+      hiddenEventIds: [EVENT_ID],
+    });
+
+    expect(
+      screen.getByRole("menuitem", { name: "Show event" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("menuitem", { name: "Hide event" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("toggles hidden state from the item click and from x, then closes", async () => {
+    const user = userEvent.setup();
+    const event = createMockGridEvent({ title: "Test Event" });
+    renderView(event);
+
+    await user.click(screen.getByRole("menuitem", { name: "Hide event" }));
+    expect(mockToggleHidden).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
+
+    mockToggleHidden.mockClear();
+    mockClose.mockClear();
+    renderView(event);
+
+    fireEvent.keyDown(document.getElementById(ID_CONTEXT_MENU_ITEMS)!, {
+      key: "x",
+    });
+    expect(mockToggleHidden).toHaveBeenCalledTimes(1);
+    expect(mockClose).toHaveBeenCalledTimes(1);
   });
 });

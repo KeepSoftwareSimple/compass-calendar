@@ -808,4 +808,46 @@ describe("deploy health check script", () => {
     expect(result.stdout).toContain("COMPOSE_PROFILES=selfhosted,sync");
     expect(result.stdout).toContain("docker compose --project-name compass");
   });
+
+  it("joins BACKEND_API_URL onto /config the same way as /health", () => {
+    const script = readRepoFile(".github/scripts/deploy-health-check.sh");
+
+    expect(script).toContain('url="${BACKEND_API_URL%/}/health"');
+    expect(script).toContain('url="${BACKEND_API_URL%/}/config"');
+    expect(script).not.toContain('url="${BACKEND_API_URL%/}/api/config"');
+  });
+
+  it("probes /api/config when BACKEND_API_URL already ends in /api", async () => {
+    const requested: string[] = [];
+    const server = Bun.serve({
+      hostname: "127.0.0.1",
+      port: 0,
+      fetch(req) {
+        const path = new URL(req.url).pathname;
+        requested.push(path);
+        if (path === "/api/config") {
+          return Response.json({ version: "0.5.27" });
+        }
+        return new Response("not found", { status: 404 });
+      },
+    });
+
+    try {
+      const result = await runHealthScriptFunction(
+        "validate_backend_config_version; exit $?",
+        {
+          BACKEND_API_URL: `http://127.0.0.1:${server.port}/api`,
+          RELEASE_TAG: "v0.5.27",
+          SSH_TARGET: "",
+        },
+      );
+
+      expect(result.stderr).toBe("");
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("ok backend-config-version");
+      expect(requested).toEqual(["/api/config"]);
+    } finally {
+      server.stop(true);
+    }
+  });
 });

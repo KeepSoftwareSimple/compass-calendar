@@ -99,6 +99,15 @@ import { syncRepositories } from "@sync/storage/sync-repositories";
 
 const logger = Logger("sync:connection.routes");
 
+export class ReconnectAccountMismatchError extends Error {
+  readonly status = "accountMismatch" as const;
+
+  constructor() {
+    super("Reconnect account does not match the named connection");
+    this.name = "ReconnectAccountMismatchError";
+  }
+}
+
 export const CONNECTIONS_PATH = "/internal/connections";
 export const CALENDARS_PATH = "/internal/calendars";
 export const EVENTS_FULL_PATH = "/internal/events/full";
@@ -547,6 +556,7 @@ export function registerConnectionRoutes(
       // Optional connectionId means reconnect: validate it is a real id owned by
       // this principal, so the state cannot bind a flow to a foreign connection.
       let connectionId = null;
+      let loginHint: string | undefined;
       const rawConnectionId = (req.body as { connectionId?: unknown })
         ?.connectionId;
       if (rawConnectionId !== undefined && rawConnectionId !== null) {
@@ -565,6 +575,8 @@ export function registerConnectionRoutes(
             res.status(Status.NOT_FOUND).json({ error: "not_found" });
             return;
           }
+          const email = owned.account.email?.trim();
+          if (email) loginHint = email;
         } catch (error) {
           logger.error(
             "Failed to look up connection for reconnect",
@@ -625,6 +637,7 @@ export function registerConnectionRoutes(
           state,
           redirectUri: `${deps.callbackBaseUrl}${registration.callbackPath}`,
           selectAccount,
+          ...(loginHint ? { loginHint } : {}),
           // Undefined (not an empty array) when no feature was asked for, so a
           // plain begin's adapter input — and therefore its consent URL — stays
           // byte-identical to before features existed.
@@ -904,6 +917,9 @@ export function registerConnectionRoutes(
         await linkConnection(deps, verified.payload, authorization);
         return redirect("connected");
       } catch (error) {
+        if (error instanceof ReconnectAccountMismatchError) {
+          return redirect("accountMismatch");
+        }
         logger.error(
           "Failed to link connection after OAuth consent",
           redactedCause(error),
@@ -1168,7 +1184,7 @@ async function linkConnection(
       existing.account.providerAccountId !==
         authorization.account.providerAccountId
     ) {
-      throw new Error("Reconnect account does not match the named connection");
+      throw new ReconnectAccountMismatchError();
     }
   }
 

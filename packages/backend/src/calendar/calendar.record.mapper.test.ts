@@ -3,6 +3,7 @@ import {
   CalendarSchema,
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
+import { type CalendarId, type TimeZone } from "@core/types/domain-primitives";
 import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { mapCalendarRecord } from "@backend/calendar/calendar.record.mapper";
 import { describe, expect, it } from "bun:test";
@@ -15,7 +16,7 @@ describe("mapCalendarRecord", () => {
     userId: new ObjectId(),
     name: "Work",
     description: "",
-    timeZone: "America/Denver",
+    timeZone: "America/Denver" as TimeZone,
     foregroundColor: "#ffffff",
     backgroundColor: "#5b6cff",
     access: "writer",
@@ -32,7 +33,7 @@ describe("mapCalendarRecord", () => {
     const record = buildRecord();
     const calendar = mapCalendarRecord(record);
     expect(() => CalendarSchema.parse(calendar)).not.toThrow();
-    expect(calendar.id).toBe(record._id.toHexString());
+    expect(calendar.id).toBe(record._id.toHexString() as CalendarId);
     expect(calendar.provider).toBe("google");
   });
 

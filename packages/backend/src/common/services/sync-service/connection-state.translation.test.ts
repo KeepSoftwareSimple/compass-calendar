@@ -1,3 +1,8 @@
+import { type DateTime } from "@core/types/domain-primitives";
+import {
+  type ConnectionId,
+  type ProviderAccountId,
+} from "@core/types/sync/identity.contracts";
 import { providerConnection } from "@backend/__tests__/factories/provider-connection.factory";
 import {
   toGoogleConnectionState,
@@ -104,22 +109,22 @@ describe("toGoogleSyncConnectionSummary", () => {
   it("maps id, state, timestamps, account email, and the connection's own product state", () => {
     const record = {
       ...connection("delayed", "workOverdue"),
-      id: "c-summary",
+      id: "c-summary" as ConnectionId,
       account: {
-        providerAccountId: "a1",
+        providerAccountId: "a1" as ProviderAccountId,
         email: "user@example.com",
         displayName: "User",
       },
-      lastSyncedAt: "2026-07-24T10:00:00.000Z",
-      lastHealthyAt: "2026-07-23T10:00:00.000Z",
+      lastSyncedAt: "2026-07-24T10:00:00.000Z" as DateTime,
+      lastHealthyAt: "2026-07-23T10:00:00.000Z" as DateTime,
     };
     expect(toGoogleSyncConnectionSummary(record)).toEqual({
-      id: "c-summary",
+      id: "c-summary" as ConnectionId,
       provider: "google",
       state: "delayed",
       stateReason: "workOverdue",
-      lastSyncedAt: "2026-07-24T10:00:00.000Z",
-      lastHealthyAt: "2026-07-23T10:00:00.000Z",
+      lastSyncedAt: "2026-07-24T10:00:00.000Z" as DateTime,
+      lastHealthyAt: "2026-07-23T10:00:00.000Z" as DateTime,
       accountEmail: "user@example.com",
       // This connection's own state, so the browser can render one account's
       // status without knowing sync's vocabulary. delayed maps to ATTENTION.

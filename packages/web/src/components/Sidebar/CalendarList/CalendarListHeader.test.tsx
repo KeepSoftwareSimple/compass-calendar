@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { SessionContext } from "@web/auth/compass/session/session.context";
 import * as realAuthStateUtil from "@web/auth/compass/state/auth.state.util";
 import * as realUserHook from "@web/auth/compass/user/hooks/useUser";
 import { type GoogleUiState } from "@web/auth/providers/connect.types";
@@ -91,9 +92,13 @@ const { CalendarListHeader } = (await import(
 
 const renderHeader = () =>
   render(
-    <QueryClientProvider client={new QueryClient()}>
-      <CalendarListHeader />
-    </QueryClientProvider>,
+    <SessionContext.Provider
+      value={{ authenticated: true, setAuthenticated: mock() }}
+    >
+      <QueryClientProvider client={new QueryClient()}>
+        <CalendarListHeader />
+      </QueryClientProvider>
+    </SessionContext.Provider>,
   );
 
 describe("CalendarListHeader", () => {

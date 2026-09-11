@@ -1,4 +1,5 @@
 import { ObjectId } from "mongodb";
+import { type TimeZone } from "@core/types/domain-primitives";
 import {
   type CalendarRecord,
   CalendarRecordSchema,
@@ -58,7 +59,7 @@ export const buildEventRecord = (
     kind: "timed",
     start: new Date("2026-07-14T15:00:00.000Z"),
     end: new Date("2026-07-14T16:00:00.000Z"),
-    timeZone: "America/Denver",
+    timeZone: "America/Denver" as TimeZone,
   },
   recurrence: { kind: "single" },
   externalReference: null,

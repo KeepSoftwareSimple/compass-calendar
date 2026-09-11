@@ -269,7 +269,7 @@ describe("SidebarStatusBar", () => {
     );
   });
 
-  it("names the worse account when two connections disagree", () => {
+  it("keeps delayed copy in the footer when a sibling needs reconnect", () => {
     googleState = "RECONNECT_REQUIRED";
     const delayed = createMockConnection("work@example.com", {
       state: "delayed",
@@ -287,8 +287,26 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(
-      "home@example.com needs reconnecting",
+      "Calendar updates are delayed",
     );
+    expect(screen.queryByRole("status")).not.toHaveTextContent(
+      "needs reconnecting",
+    );
+  });
+
+  it("does not repeat reconnect copy in the footer", () => {
+    googleState = "RECONNECT_REQUIRED";
+    connection = createMockConnection("home@example.com", {
+      state: "actionRequired",
+      stateReason: "authorizationRevoked",
+      connectionState: "RECONNECT_REQUIRED",
+    });
+    seedSidebarConnections([connection], googleState);
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(/needs reconnecting/)).not.toBeInTheDocument();
   });
 
   it("shows Calendar updates are delayed for delayed workOverdue", () => {

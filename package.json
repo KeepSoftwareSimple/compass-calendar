@@ -37,7 +37,6 @@
     "test:scripts:fast": "bun packages/scripts/src/testing/test-parallel.ts scripts-fast -- --path-ignore-patterns '**/*.db.test.ts'",
     "test:scripts:db": "bun packages/scripts/src/testing/test-mongo-env.ts scripts -- './packages/scripts/src/**/*.db.test.ts'",
     "type-check": "bunx typescript@7.0.2 -b tsconfig.typecheck.json --noEmit",
-    "type-check:tests": "bunx typescript@7.0.2 -p tsconfig.tests.json --noEmit",
     "verify": "bun packages/scripts/src/testing/verify.ts",
     "build:backend": "bun packages/scripts/src/commands/build.backend.ts",
     "build:sync": "bun packages/scripts/src/commands/build.sync.ts",

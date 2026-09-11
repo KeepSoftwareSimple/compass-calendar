@@ -1,18 +1,23 @@
 import { type BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import {
+  type PrincipalId,
+  type ProviderAccountId,
+  type TenantId,
+} from "@core/types/sync/identity.contracts";
+import {
   adoptGoogleAuthorization,
   adoptProviderAuthorization,
 } from "./sync-connection-adoption";
 import { describe, expect, it } from "bun:test";
 
 const principal = {
-  tenantId: "64b7f9c2e1a2b3c4d5e6f7a8",
-  principalId: "64b7f9c2e1a2b3c4d5e6f7a8",
+  tenantId: "64b7f9c2e1a2b3c4d5e6f7a8" as TenantId,
+  principalId: "64b7f9c2e1a2b3c4d5e6f7a8" as PrincipalId,
 };
 const request = {
   account: {
-    providerAccountId: "google-sub-1",
+    providerAccountId: "google-sub-1" as ProviderAccountId,
     email: "connected@example.com",
     displayName: "Connected User",
   },
@@ -89,7 +94,7 @@ describe("adoptProviderAuthorization", () => {
     ...request,
     account: {
       ...request.account,
-      providerAccountId: "ms-oid-1",
+      providerAccountId: "ms-oid-1" as ProviderAccountId,
     },
   };
 

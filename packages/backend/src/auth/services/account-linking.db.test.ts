@@ -60,7 +60,9 @@ describe("account linking across login methods (db)", () => {
             value: { connections: [] },
             correlationId: "corr-1",
           }),
-        }) as ReturnType<typeof syncServiceFactory.getSyncServiceClient>,
+        }) as unknown as ReturnType<
+          typeof syncServiceFactory.getSyncServiceClient
+        >,
     );
     ({ googleAuthService } = await import(
       "@backend/auth/services/google/google.auth.service"

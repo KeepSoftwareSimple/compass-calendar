@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { prepareSignedInMicrosoftPage } from "../attendees/attendee-harness";
 import { prepareSignedInBookingSettingsPage } from "../booking/booking-harness";
 
@@ -23,9 +23,7 @@ function cssColorAlpha(color: string): number {
 
 test.use({ viewport: { width: 1600, height: 900 } });
 
-test("shows a Microsoft connected toast from the connect-status query", async ({
-  page,
-}) => {
+async function stubAnonymousApis(page: Page) {
   await page.addInitScript(() => {
     (
       window as Window & { __COMPASS_E2E_TEST__?: boolean }
@@ -39,12 +37,47 @@ test("shows a Microsoft connected toast from the connect-status query", async ({
       body: "{}",
     });
   });
+}
 
+test("does not toast success after a Microsoft connected redirect", async ({
+  page,
+}) => {
+  await stubAnonymousApis(page);
+
+  const metadata = page.waitForResponse("**/user/metadata**");
   await page.goto("/week?provider=microsoft&status=connected", {
     waitUntil: "domcontentloaded",
   });
+  await metadata;
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      }),
+  );
 
-  await expect(page.getByText("Microsoft connected.")).toBeVisible();
+  await expect(
+    page.getByRole("region", {
+      name: "Week calendar horizontal scroll area",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Microsoft connected.")).toHaveCount(0);
+});
+
+test("shows an account-mismatch toast from the connect-status query", async ({
+  page,
+}) => {
+  await stubAnonymousApis(page);
+
+  await page.goto("/week?provider=microsoft&status=accountMismatch", {
+    waitUntil: "domcontentloaded",
+  });
+
+  await expect(
+    page.getByText(
+      "That wasn't the same account. Reconnect again and pick the account Compass already has.",
+    ),
+  ).toBeVisible();
 });
 
 test("shows the admin-consent banner for a Microsoft connection", async ({
@@ -106,4 +139,26 @@ test("Add account starts Microsoft OAuth from the chooser", async ({
   ]);
 
   expect(beginBody).toMatchObject({ provider: "microsoft" });
+});
+
+test("Add account menu shows a logo for Google, Microsoft, and Apple", async ({
+  page,
+}) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    microsoftConnect: true,
+    appleConnect: true,
+  });
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await settingsDialog.getByRole("button", { name: "Accounts" }).click();
+  await settingsDialog.getByRole("button", { name: "Add account" }).click();
+
+  const menu = settingsDialog.getByRole("menu");
+  await expect(menu).toBeVisible();
+
+  for (const name of ["Google", "Microsoft", "Apple"] as const) {
+    const item = settingsDialog.getByRole("menuitem", { name });
+    await expect(item).toBeVisible();
+    await expect(item.locator("svg")).toHaveCount(1);
+  }
 });
