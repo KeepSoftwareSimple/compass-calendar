@@ -28,23 +28,11 @@ import { getToast } from "@web/common/utils/toast/toast.port";
  * Must stay in step with every status the sync callback can redirect with
  * (`packages/sync/src/server/connection.routes.ts`). A status missing here
  * makes `readConnectStatus` return null, which means the user lands on the
- * calendar after a failed connect with no explanation at all.
+ * calendar after a failed connect with no explanation at all. This list is the
+ * only place the statuses are spelled out: `ConnectStatus` derives from it, so
+ * adding one here is enough and the two can never drift apart.
  */
-export type ConnectStatus =
-  | "connected"
-  | "declined"
-  | "missingScopes"
-  | "stateMismatch"
-  | "consentRequired"
-  | "accountMismatch"
-  | "error";
-
-export type ConnectRedirect = {
-  provider: ProviderKind;
-  status: ConnectStatus;
-};
-
-const STATUS_VALUES: readonly ConnectStatus[] = [
+const CONNECT_STATUSES = [
   "connected",
   "declined",
   "missingScopes",
@@ -52,7 +40,14 @@ const STATUS_VALUES: readonly ConnectStatus[] = [
   "consentRequired",
   "accountMismatch",
   "error",
-];
+] as const;
+
+export type ConnectStatus = (typeof CONNECT_STATUSES)[number];
+
+export type ConnectRedirect = {
+  provider: ProviderKind;
+  status: ConnectStatus;
+};
 
 const DECLINED_TOAST_ID: Record<ProviderKind, string> = {
   google: "google-connect-declined",
@@ -82,6 +77,10 @@ const MISSING_SCOPES_TOAST_ID: Record<ProviderKind, string> = {
   apple: "connect-missing-scopes",
 };
 
+function isConnectStatus(value: string | null): value is ConnectStatus {
+  return (CONNECT_STATUSES as readonly string[]).includes(value ?? "");
+}
+
 export function readConnectStatus(
   search = window.location.search,
 ): ConnectRedirect | null {
@@ -89,10 +88,10 @@ export function readConnectStatus(
   const providerResult = ProviderKindSchema.safeParse(params.get("provider"));
   if (!providerResult.success) return null;
   const status = params.get("status");
-  if (!(STATUS_VALUES as readonly string[]).includes(status ?? "")) return null;
+  if (!isConnectStatus(status)) return null;
   return {
     provider: providerResult.data,
-    status: status as ConnectStatus,
+    status,
   };
 }
 
@@ -125,10 +124,6 @@ export async function applyConnectRedirect(
     return;
   }
   showConnectStatusToast(redirect);
-}
-
-export function refreshUserMetadataAfterConnect(_status?: ConnectStatus): void {
-  void refreshUserMetadata({ force: true });
 }
 
 function clearReconnectOverrideForProvider(provider: ProviderKind): void {
