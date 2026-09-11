@@ -13,16 +13,45 @@
       here; keep them in sync with settings/theme/theme.constants.ts and
       settings/theme/theme.util.ts. Light is the CSS default, so only dark
       needs touching. An explicit stored choice wins.
+
+      It also sizes the boot shell (see <body>) the way the app will size
+      itself on mount, so nothing shifts when React takes over: whether the
+      sidebar is open and how wide it is, and how many day columns fit.
+      Keep the numbers in sync with
+      common/storage/sidebar-open.storage.ts (compass.view.sidebar-open),
+      components/Sidebar/storage/sidebar-width.constants.ts (345, 240..480,
+      divider 32), components/AuthenticatedLayout/responsive.constants.ts
+      (1280), grid/grid.constants.ts (gutter 50, usable column width 140),
+      views/Week/util/week-window.util.ts (computeVisibleDayCount) and the
+      main column's pl-8 (32) in views/Week/WeekView.tsx. A stored width of
+      "0" falls back to 345 here where the app would clamp it to 240.
     -->
     <script>
       try {
-        const stored = localStorage.getItem("compass.theme");
-        if (stored === "dark-abyss") {
-          document.documentElement.setAttribute("data-theme", "dark-abyss");
+        const html = document.documentElement;
+        if (localStorage.getItem("compass.theme") === "dark-abyss") {
+          html.setAttribute("data-theme", "dark-abyss");
           document
             .querySelector('meta[name="theme-color"]')
             .setAttribute("content", "#06090f");
         }
+        const sidebarOpen =
+          innerWidth >= 1280 &&
+          localStorage.getItem("compass.view.sidebar-open") !== "false";
+        const sidebarWidth = Math.min(
+          480,
+          Math.max(
+            240,
+            Math.round(Number(localStorage.getItem("compass.sidebar.width"))) ||
+              345,
+          ),
+        );
+        const track = innerWidth - 32 - (sidebarOpen ? 32 + sidebarWidth : 0);
+        const cols = Math.min(7, Math.max(1, Math.floor((track - 50) / 140)));
+        html.dataset.bootSidebar = sidebarOpen ? "open" : "closed";
+        html.dataset.bootCols = String(cols);
+        html.style.setProperty("--boot-sidebar-width", `${sidebarWidth}px`);
+        html.style.setProperty("--boot-cols", String(cols));
       } catch {}
     </script>
 
@@ -106,32 +135,323 @@
       every boot-critical chunk, appended to head by inject-module-preloads.ts.
     -->
     <link rel="stylesheet" href="/index.css" />
-    <!-- Self-contained shell styles need no JavaScript or web fonts. -->
+    <!--
+      Boot shell: a static silhouette of views/Week/WeekView.tsx (header, day
+      labels, all-day band, 13-visible-hour timed grid with its hour gutter,
+      first-load spinner, sidebar) so the page looks like the calendar before
+      JavaScript arrives and the swap to React moves nothing. Colors and the
+      font come from the app tokens in index.css, which is render-blocking
+      and so already loaded; the hard-coded fallbacks only matter if that
+      stylesheet fails. Geometry mirrors CalendarHeader.tsx, DayLabels.tsx,
+      grid/components/AllDayGridRow.tsx, TimedGrid.tsx, HourLabelColumn.tsx,
+      Sidebar/ResizableSidebarPanel.tsx, SidebarShell.tsx and
+      SidebarActions.tsx.
+    -->
     <style>
       body { margin: 0; }
       #boot-shell {
-        box-sizing: border-box;
-        min-height: 100vh;
-        padding: 2rem;
+        display: flex;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
         background: var(--background, #f3eee2);
         color: var(--text, #403a2f);
-        font: 1rem/1.5 system-ui, sans-serif;
+        font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif);
       }
       [data-theme="dark-abyss"] #boot-shell {
         background: var(--background, #06090f);
-        color: var(--text, #d2d9e1);
+        color: var(--text, #c6d0d9);
       }
-      #boot-shell h1 { margin: 0; font-size: 1.5rem; }
-      #boot-grid {
-        height: 65vh;
-        margin-top: 2rem;
-        border: 1px solid currentColor;
-        border-radius: .5rem;
-        opacity: .12;
-        background-image:
-          linear-gradient(to right, currentColor 1px, transparent 1px),
-          linear-gradient(to bottom, currentColor 1px, transparent 1px);
-        background-size: calc(100% / 7) 100%, 100% 4rem;
+      .boot-sr {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      /* Main column: #mainSection (pt-5 pl-8), 48px header, then the track. */
+      .boot-main {
+        display: flex;
+        flex: 1;
+        min-width: 0;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+        padding: 20px 0 0 32px;
+      }
+      .boot-header {
+        display: flex;
+        flex: none;
+        align-items: center;
+        gap: 12px;
+        height: 48px;
+        color: var(--text-muted, #5e5847);
+      }
+      .boot-arrow {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        color: var(--text, #403a2f);
+      }
+      .boot-select {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text, #403a2f);
+      }
+      .boot-select h1 {
+        margin: 0;
+        font-size: 1.25rem;
+        line-height: 1.75rem;
+        font-weight: 400;
+      }
+      .boot-track {
+        position: relative;
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+        container-type: inline-size;
+      }
+
+      /* Day labels: 50px timezone corner, then one cell per visible day. */
+      .boot-days-row {
+        position: relative;
+        flex: none;
+        height: 32px;
+        margin-top: 10px;
+      }
+      .boot-tz {
+        position: absolute;
+        inset-block: 0;
+        left: 0;
+        width: 50px;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 2px;
+      }
+      .boot-tz span {
+        display: flex;
+        align-items: center;
+        min-height: 24px;
+        font-size: 10px;
+        line-height: 1;
+        color: var(--text-muted, #5e5847);
+      }
+      .boot-days {
+        position: absolute;
+        top: 0;
+        left: 50px;
+        height: 100%;
+        width: calc(100% - 50px);
+        display: grid;
+        align-items: end;
+        grid-template-columns: repeat(var(--boot-cols, 7), minmax(80px, 1fr));
+      }
+      .boot-day {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        gap: 4px;
+        padding: 0 4px;
+        color: var(--text-muted, #5e5847);
+      }
+      .boot-day b {
+        font-weight: 400;
+        font-size: clamp(1.125rem, 2.7cqw, 1.3rem);
+        line-height: 1;
+      }
+      .boot-day span {
+        font-size: clamp(0.8125rem, 2cqw, 1rem);
+        line-height: 1;
+      }
+      .boot-day.is-today { color: var(--accent, #2b2a27); }
+      .boot-day.is-today b {
+        color: transparent;
+        background: linear-gradient(var(--accent, #2b2a27), var(--accent-strong, #141412));
+        background-clip: text;
+        -webkit-background-clip: text;
+      }
+
+      /* Grid: all-day band over the scrolling timed grid (EventGrid.tsx). */
+      .boot-grid {
+        position: relative;
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+      }
+      .boot-allday {
+        position: relative;
+        flex: none;
+        min-height: 29px;
+        /* AllDayGridRow: 3 * ((100% - (GRID_Y_START 123 + GRID_PADDING_BOTTOM 20)) / 11) / 4 */
+        height: calc((100% - 143px) * 3 / 44);
+      }
+      .boot-timed {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+      }
+      .boot-timed::-webkit-scrollbar { width: 0; }
+      .boot-hours {
+        position: absolute;
+        top: calc(100% / 13 - 5px);
+        left: 0;
+        width: 50px;
+        height: 100%;
+        font-size: 10px;
+        line-height: 1.5;
+        text-align: center;
+        color: var(--text-muted, #5e5847);
+      }
+      .boot-hours div,
+      .boot-rows div { height: calc(100% / 13); }
+      .boot-rows {
+        position: absolute;
+        top: 0;
+        left: 50px;
+        width: calc(100% - 50px);
+        height: 100%;
+      }
+      .boot-rows div { border-bottom: 1px solid var(--border, hsl(40 20% 30% / 15%)); }
+      .boot-cols {
+        position: absolute;
+        top: 0;
+        left: 50px;
+        width: calc(100% - 50px);
+        display: grid;
+        grid-template-columns: repeat(var(--boot-cols, 7), minmax(80px, 1fr));
+      }
+      .boot-timed .boot-cols { height: calc(24 * 100% / 13); }
+      .boot-allday .boot-cols { height: 100%; }
+      .boot-allday .boot-cols::after {
+        content: "";
+        position: absolute;
+        inset-inline: 0;
+        bottom: 0;
+        height: 2px;
+        background: var(--border, hsl(40 20% 30% / 15%));
+      }
+      .boot-col {
+        position: relative;
+        height: 100%;
+        border-left: 1px solid var(--border, hsl(40 20% 30% / 15%));
+      }
+      .boot-col.is-past { background: var(--surface, #ece6d7); }
+      /* Now line (CalendarNowLine): today's column only, --boot-now % into the day. */
+      .boot-timed .boot-col.is-today::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: var(--boot-now, 0%);
+        height: 1px;
+        background: linear-gradient(var(--accent, #2b2a27), var(--accent-strong, #141412));
+      }
+      /* Fewer than seven columns fit: the head script says how many; hide the rest. */
+      [data-boot-cols="1"] .boot-day:nth-child(n + 2),
+      [data-boot-cols="1"] .boot-col:nth-child(n + 2),
+      [data-boot-cols="2"] .boot-day:nth-child(n + 3),
+      [data-boot-cols="2"] .boot-col:nth-child(n + 3),
+      [data-boot-cols="3"] .boot-day:nth-child(n + 4),
+      [data-boot-cols="3"] .boot-col:nth-child(n + 4),
+      [data-boot-cols="4"] .boot-day:nth-child(n + 5),
+      [data-boot-cols="4"] .boot-col:nth-child(n + 5),
+      [data-boot-cols="5"] .boot-day:nth-child(n + 6),
+      [data-boot-cols="5"] .boot-col:nth-child(n + 6),
+      [data-boot-cols="6"] .boot-day:nth-child(n + 7),
+      [data-boot-cols="6"] .boot-col:nth-child(n + 7) {
+        display: none;
+      }
+
+      /* First-load spinner, same 40px / 2px ring EventGrid shows over the grid. */
+      .boot-spin {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .boot-spin div {
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        border: 2px solid color-mix(in oklab, var(--text, #403a2f) 20%, transparent);
+        border-left-color: var(--text, #403a2f);
+        animation: bootSpin 1.1s linear infinite;
+      }
+      @keyframes bootSpin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-spin div { animation: none; }
+      }
+
+      /* Sidebar: 32px resize divider with a hairline, then the panel. */
+      .boot-divider {
+        position: relative;
+        flex: none;
+        width: 32px;
+      }
+      .boot-divider::after {
+        content: "";
+        position: absolute;
+        top: 4px;
+        bottom: 4px;
+        right: 0;
+        width: 1px;
+        border-radius: 9999px;
+        background: var(--border, hsl(40 20% 30% / 15%));
+      }
+      .boot-aside {
+        display: flex;
+        flex: none;
+        flex-direction: column;
+        width: var(--boot-sidebar-width, 345px);
+        height: 100%;
+        overflow: hidden;
+        padding-top: 20px;
+        background: var(--surface-panel, #e7e0cf);
+      }
+      .boot-aside-body {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+        gap: 24px;
+        padding: 0 16px 20px;
+      }
+      /* The app itself shows an empty 252px Suspense fallback for the month picker. */
+      .boot-month { flex: none; height: 252px; }
+      .boot-card {
+        flex: none;
+        min-height: 56px;
+        border-radius: 4px;
+        background: var(--surface, #ece6d7);
+      }
+      .boot-status { flex: none; min-height: 24px; }
+      .boot-actions {
+        flex: none;
+        height: 48px;
+        border-top: 1px solid var(--border, hsl(40 20% 30% / 15%));
+      }
+      [data-boot-sidebar="closed"] .boot-divider,
+      [data-boot-sidebar="closed"] .boot-aside {
+        display: none;
+      }
+      @media (max-width: 1279px) {
+        .boot-divider,
+        .boot-aside { display: none; }
       }
     </style>
   </head>
@@ -139,12 +459,185 @@
   <body>
     <div id="root">
       <main id="boot-shell" aria-busy="true" aria-label="Compass Calendar">
-        <h1>Compass Calendar</h1>
-        <p role="status">Loading your calendar…</p>
-        <div id="boot-grid" aria-hidden="true"></div>
+        <p class="boot-sr" role="status">Loading your calendar…</p>
+        <div class="boot-main">
+          <div class="boot-header">
+            <span class="boot-arrow" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="boot-arrow" aria-hidden="true">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <div class="boot-select">
+              <h1 id="boot-title"></h1>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <path d="M3 5.5L7 9.5L11 5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+          </div>
+          <div class="boot-track">
+            <div class="boot-days-row">
+              <div class="boot-tz"><span id="boot-tz"></span></div>
+              <div id="boot-days" class="boot-days">
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+                <div class="boot-day"><b></b><span></span></div>
+              </div>
+            </div>
+            <div class="boot-grid" aria-hidden="true">
+              <div class="boot-allday">
+                <div class="boot-cols">
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                </div>
+              </div>
+              <div id="boot-timed" class="boot-timed">
+                <div id="boot-hours" class="boot-hours">
+                  <div>1 AM</div>
+                  <div>2 AM</div>
+                  <div>3 AM</div>
+                  <div>4 AM</div>
+                  <div>5 AM</div>
+                  <div>6 AM</div>
+                  <div>7 AM</div>
+                  <div>8 AM</div>
+                  <div>9 AM</div>
+                  <div>10 AM</div>
+                  <div>11 AM</div>
+                  <div>12 PM</div>
+                  <div>1 PM</div>
+                  <div>2 PM</div>
+                  <div>3 PM</div>
+                  <div>4 PM</div>
+                  <div>5 PM</div>
+                  <div>6 PM</div>
+                  <div>7 PM</div>
+                  <div>8 PM</div>
+                  <div>9 PM</div>
+                  <div>10 PM</div>
+                  <div>11 PM</div>
+                </div>
+                <div id="boot-cols" class="boot-cols">
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                  <div class="boot-col"></div>
+                </div>
+                <div class="boot-rows">
+                  <div></div><div></div><div></div><div></div><div></div><div></div>
+                  <div></div><div></div><div></div><div></div><div></div><div></div>
+                  <div></div><div></div><div></div><div></div><div></div><div></div>
+                  <div></div><div></div><div></div><div></div><div></div><div></div>
+                </div>
+              </div>
+              <div class="boot-spin"><div></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="boot-divider" aria-hidden="true"></div>
+        <aside class="boot-aside" aria-hidden="true">
+          <div class="boot-aside-body">
+            <div class="boot-month"></div>
+            <div class="boot-card"></div>
+          </div>
+          <div class="boot-status"></div>
+          <div class="boot-actions"></div>
+        </aside>
         <noscript>Enable JavaScript to use Compass Calendar.</noscript>
       </main>
     </div>
+    <!--
+      Fills the boot shell with the visible week so React's first frame is
+      the same picture: heading, day labels, today, past-day shading, the now
+      line, the current hour label, the timezone corner, and the scroll
+      position. Runs after the render-blocking stylesheet, so clientHeight
+      is real. Keep in sync with views/Week/hooks/useWeek.ts (anchor:
+      /week/YYYY-MM-DD, else Sunday of this week), DayLabels.tsx ("Sep 1"
+      when a month starts mid-view), web.date.util.ts
+      (getCalendarHeadingLabel, getColorsByHour) and grid.util.ts
+      (getScrollToNowTop: now minus 150px). Uses the browser timezone; a
+      pinned Compass timezone is ignored here.
+    -->
+    <script>
+      try {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const match = location.pathname.match(/^\/week\/(\d{4})-(\d{2})-(\d{2})$/);
+        const cols = Number(document.documentElement.dataset.bootCols) || 7;
+        // The URL date is the first visible day. Bare /week starts on Sunday,
+        // or on today when only one column fits.
+        const start = match
+          ? new Date(+match[1], match[2] - 1, +match[3])
+          : new Date(
+              today.getFullYear(),
+              today.getMonth(),
+              today.getDate() - (cols === 1 ? 0 : today.getDay()),
+            );
+        const end = new Date(
+          start.getFullYear(),
+          start.getMonth(),
+          start.getDate() + cols - 1,
+        );
+        const fmt = (date, options) => date.toLocaleString("en-US", options);
+        const startsThisYear = start.getFullYear() === now.getFullYear();
+        const endsThisYear = end.getFullYear() === now.getFullYear();
+        document.getElementById("boot-title").textContent =
+          startsThisYear !== endsThisYear
+            ? `${fmt(start, { month: "short", year: "2-digit" })} - ${fmt(end, { month: "short", year: "2-digit" })}`
+            : fmt(start, { month: "long", year: "numeric" });
+        const days = document.getElementById("boot-days").children;
+        const columns = document.getElementById("boot-cols").children;
+        for (let i = 0; i < 7; i++) {
+          const day = new Date(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate() + i,
+          );
+          days[i].firstElementChild.textContent =
+            day.getDate() === 1 && day.getMonth() !== start.getMonth()
+              ? fmt(day, { month: "short", day: "numeric" })
+              : String(day.getDate());
+          days[i].lastElementChild.textContent = fmt(day, { weekday: "short" });
+          // Rounded so a 23- or 25-hour DST day still lands on a whole offset.
+          const offset = Math.round((day - today) / 864e5);
+          if (offset < 0) columns[i].classList.add("is-past");
+          if (offset === 0) {
+            days[i].classList.add("is-today");
+            columns[i].classList.add("is-today");
+          }
+        }
+        const minutes = now.getHours() * 60 + now.getMinutes();
+        document
+          .getElementById("boot-cols")
+          .style.setProperty("--boot-now", `${(minutes / 1440) * 100}%`);
+        const hourLabel = document.getElementById("boot-hours").children[
+          now.getHours() - 1
+        ];
+        if (hourLabel) hourLabel.style.color = "var(--accent)";
+        document.getElementById("boot-tz").textContent =
+          new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
+            .formatToParts(now)
+            .find((part) => part.type === "timeZoneName")?.value ?? "";
+        const timed = document.getElementById("boot-timed");
+        timed.scrollTop = (minutes * timed.clientHeight) / 13 / 60 - 150;
+      } catch {}
+    </script>
     <script type="module" src="/index.js"></script>
   </body>
 </html>

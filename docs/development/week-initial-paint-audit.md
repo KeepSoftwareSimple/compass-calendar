@@ -21,6 +21,49 @@ React replaces it at mount. This avoids introducing SSR infrastructure or
 changing storage/auth ordering. It improves first content, not time to an
 interactive calendar. The application stylesheet still blocks first paint.
 
+## Silhouette shell (September 11, 2026)
+
+The first shell was a padded page: a large "Compass Calendar" heading, a status
+line, and a faded generic grid. It painted early but looked nothing like the
+app, so the first impression was of a clunky skeleton and the swap to React
+was a visible layout jump.
+
+The shell is now a static silhouette of the week view built from the app's own
+CSS tokens (`index.css` is render-blocking, so they are available): the 48px
+header with arrows and the month heading, the day-label row, the all-day band,
+the 13-visible-hour timed grid with its hour gutter and lines, the same 40px
+spinner `EventGrid` shows during the first event load, and the sidebar. Two
+inline scripts fill it in, both wrapped in `try` so a failure leaves a
+seven-column, sidebar-open shell:
+
+- The head script (already the theme script) reads `compass.theme`,
+  `compass.view.sidebar-open`, `compass.sidebar.width` and `innerWidth`, and
+  sets `data-theme`, `data-boot-sidebar`, `data-boot-cols`,
+  `--boot-sidebar-width` and `--boot-cols` on `<html>`. These affect layout, so
+  they are decided before first paint.
+- The body script reads the clock and `/week/YYYY-MM-DD` and fills the heading,
+  the day numbers and weekday labels, today's accent, past-day shading, the now
+  line, the current hour label, the timezone corner, and pre-scrolls the grid
+  so now sits 150px from the top, exactly where `useScroll` puts it.
+
+`useScroll` now jumps to now in a layout effect instead of smooth-scrolling on
+mount; with a pre-scrolled shell the glide read as a rewind. Manual
+scroll-to-now (the "This Week" heading, `t`) is still smooth.
+
+The numbers are mirrored by hand and each script comment lists its sources:
+sidebar constants, the 1280px collapse breakpoint, the grid gutter and usable
+column width, `computeVisibleDayCount`, `useWeek`'s anchor rule, `DayLabels`,
+`getCalendarHeadingLabel`, `getColorsByHour` and `getScrollToNowTop`. Drift
+makes the shell subtly off, never broken.
+
+Known gaps: the first React commit removes the shell before the lazy `WeekView`
+chunk mounts, leaving a background-colored gap (a candidate for
+`ALWAYS_BOOT_SOURCES` in `inject-module-preloads.ts`, to be measured first);
+first-time visitors see the full-contrast silhouette before the welcome modal's
+scrim fades in; phones (which get `MobileGate`) and non-week routes briefly show
+the week silhouette; and a pinned Compass timezone is ignored, so those users
+can see the corner label, today, or the now line shift at the swap.
+
 ## LCP and fonts
 
 On a fresh desktop profile at 1440 × 900, Chromium's buffered
