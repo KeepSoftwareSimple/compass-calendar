@@ -598,6 +598,35 @@ describe("MicrosoftEventWriter", () => {
     }
   });
 
+  it("matches an occurrence Exchange aligned to the minute", async () => {
+    // Live Graph, 2026-09-11: a series created at 02:36:12.865Z came back
+    // with originalStart 02:36:00Z. Seconds and milliseconds are not part of
+    // the occurrence key on Microsoft.
+    const occurrence = (id: string, originalStart: string) => ({
+      ...scriptedEvent(id),
+      type: "occurrence" as const,
+      seriesMasterId: "series-1",
+      originalStart,
+    });
+    const api = new FakeWriteApi({
+      listInstances: [
+        occurrence("instance-earlier", "2026-09-12T02:35:00Z"),
+        occurrence("instance-1", "2026-09-12T02:36:00Z"),
+      ],
+    });
+    const { writer } = writerWith(api);
+
+    const read = await writer.fetchInstanceAt({
+      accessToken: "at",
+      calendarId: "cal",
+      seriesProviderEventId: "series-1",
+      originalStartAt: "2026-09-12T02:36:12.865Z",
+      scheduleKind: "timed",
+    });
+
+    expect(read?.providerEventId).toBe("instance-1");
+  });
+
   it("returns null when no instance matches the original start", async () => {
     const api = new FakeWriteApi({ listInstances: [] });
     const { writer } = writerWith(api);

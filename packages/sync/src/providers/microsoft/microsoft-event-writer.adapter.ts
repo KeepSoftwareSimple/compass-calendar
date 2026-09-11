@@ -401,14 +401,15 @@ function originalStartMatches(
   originalStartAt: string,
 ): boolean {
   if (!item.originalStart) return false;
-  return (
-    toCanonicalRecurrenceId(item.originalStart) ===
-    toCanonicalRecurrenceId(originalStartAt)
-  );
+  return toMinuteKey(item.originalStart) === toMinuteKey(originalStartAt);
 }
 
-function toCanonicalRecurrenceId(originalStart: string): string {
-  return new Date(originalStart).toISOString();
+// Exchange keys recurring occurrences at whole minutes: a series created at
+// 02:36:12.865Z materializes originalStart 02:36:00Z (observed live, 2026-09-11).
+// Graph recurrence frequencies are daily or coarser, so minute precision
+// cannot confuse two occurrences of one series.
+function toMinuteKey(at: string): string {
+  return dayjs.utc(at).startOf("minute").toISOString();
 }
 
 const MICROSOFT_WRITE_ERROR_POLICY: ProviderWriteErrorPolicy = {
