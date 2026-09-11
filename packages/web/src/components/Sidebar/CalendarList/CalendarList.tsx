@@ -13,6 +13,7 @@ import {
   accountKey,
   accountLabel,
   compareCalendars,
+  emailsSharedAcrossProviders,
   groupCalendarsByAccount,
 } from "@web/calendars/calendar.util";
 import {
@@ -64,6 +65,7 @@ export const CalendarList: FC = () => {
     () => groupCalendarsByAccount(calendars, connections, email),
     [calendars, connections, email],
   );
+  const sharedEmails = emailsSharedAcrossProviders(groups);
 
   const renderRows = (rows: Calendar[], id?: string) => (
     <ul className="flex flex-col gap-1.5" id={id}>
@@ -125,6 +127,9 @@ export const CalendarList: FC = () => {
                 <AccountSectionHeader
                   account={group}
                   connection={group.connection}
+                  showProviderOnHover={sharedEmails.has(
+                    group.accountEmail.trim().toLowerCase(),
+                  )}
                 />
                 {renderCollapsible(key, group.calendars)}
               </section>

@@ -144,6 +144,27 @@ export const accountKey = ({ provider, accountEmail }: AccountRef): string =>
 export const accountLabel = ({ provider, accountEmail }: AccountRef): string =>
   `${accountEmail} (${providerDisplayName(provider)})`;
 
+/**
+ * Emails that back more than one connected account (different providers).
+ * Those are the only sidebar rows whose provider mark is needed to tell
+ * them apart; unique addresses do not need it.
+ */
+export function emailsSharedAcrossProviders(
+  accounts: readonly Pick<AccountRef, "accountEmail">[],
+): ReadonlySet<string> {
+  const counts = new Map<string, number>();
+  for (const { accountEmail } of accounts) {
+    const email = accountEmail.trim().toLowerCase();
+    if (!email) continue;
+    counts.set(email, (counts.get(email) ?? 0) + 1);
+  }
+  const shared = new Set<string>();
+  for (const [email, count] of counts) {
+    if (count > 1) shared.add(email);
+  }
+  return shared;
+}
+
 /** Undefined when the connection reported no email. */
 export const connectionAccount = (
   connection: Pick<SyncConnectionSummary, "provider" | "accountEmail">,

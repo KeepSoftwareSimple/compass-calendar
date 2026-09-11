@@ -11,12 +11,14 @@ import {
 } from "@web/calendars/collapsed-accounts.store";
 import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
 /**
- * Heading for one connected account's calendars: the account email and
- * provider mark (together the collapse toggle for its calendar rows, see
- * CalendarList.tsx), that account's own sync status, and its own
- * reconnect/refresh action. Every connected account gets one, a lone account
- * included - one account and five accounts render the same shape, so the two
- * can't drift apart the way a separate single-account header did.
+ * Heading for one connected account's calendars: the account email (the
+ * collapse toggle for its calendar rows, see CalendarList.tsx), that
+ * account's own sync status, and its own reconnect/refresh action. The
+ * provider mark only appears on hover when the same address is connected on
+ * another provider - otherwise the logo next to every unique email is noise.
+ * Every connected account gets one, a lone account included - one account
+ * and five accounts render the same shape, so the two can't drift apart the
+ * way a separate single-account header did.
  *
  * Adding/disconnecting accounts lives in the command palette's "Add account" /
  * "Show accounts" items - not a permanent row or icon here, which stayed noisy
@@ -25,7 +27,8 @@ import { useAccountHeaderStatus } from "./useAccountHeaderStatus";
 export const AccountSectionHeader: FC<{
   account: AccountRef;
   connection: SyncConnectionSummary | undefined;
-}> = ({ account, connection }) => {
+  showProviderOnHover?: boolean;
+}> = ({ account, connection, showProviderOnHover = false }) => {
   const key = accountKey(account);
   const { accountEmail, provider } = account;
   const {
@@ -67,7 +70,11 @@ export const AccountSectionHeader: FC<{
           >
             {accountEmail}
           </span>
-          <ProviderMark provider={provider} size={12} />
+          {showProviderOnHover ? (
+            <span className="opacity-0 transition-opacity motion-reduce:transition-none group-hover:opacity-100 group-focus-visible:opacity-100">
+              <ProviderMark provider={provider} size={12} />
+            </span>
+          ) : null}
         </button>
       </h2>
       {isAvailable && commandAction != null && actionLabel != null ? (
