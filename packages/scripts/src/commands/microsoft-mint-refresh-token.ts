@@ -342,6 +342,9 @@ async function main(): Promise<void> {
 if (import.meta.main) {
   main().catch((error) => {
     console.error(error instanceof Error ? error.message : error);
+    if (error instanceof Error && error.cause instanceof Error) {
+      console.error(`Cause: ${error.cause.message}`);
+    }
     process.exit(1);
   });
 }
