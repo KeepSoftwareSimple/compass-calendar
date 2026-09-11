@@ -50,7 +50,9 @@ each with a tracking issue:
 - **An account is provider + email, never email alone.** The same address can
   be a Google account and a Microsoft account, so the web app keys sidebar
   sections, collapse state, and Settings rows by `accountKey` (provider + email)
-  and shows a provider mark (the monochrome logo) beside every account email.
+  and, in Settings, shows a provider mark (the monochrome logo) beside every
+  account email. The sidebar shows that mark on hover only when the same
+  address is connected on more than one provider.
 - **No em-dashes** in user-facing copy.
 
 ## Capability matrix

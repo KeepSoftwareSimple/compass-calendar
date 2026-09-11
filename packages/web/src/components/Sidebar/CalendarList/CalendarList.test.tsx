@@ -561,8 +561,11 @@ describe("CalendarList", () => {
     });
     expect(within(section).getByText("Work")).toBeInTheDocument();
     expect(
-      within(section).getByRole("button", { name: "ahab@pequod.com Google" }),
+      within(section).getByRole("button", { name: "ahab@pequod.com" }),
     ).toHaveAttribute("aria-expanded", "true");
+    expect(
+      within(section).queryByRole("img", { name: "Google" }),
+    ).not.toBeInTheDocument();
   });
 
   it("leaves the local calendar outside the account sections when no account is connected", () => {
@@ -647,8 +650,11 @@ describe("CalendarList", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
+      screen.getByRole("button", { name: "ahab@pequod.com" }),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "Google" }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps the local calendar visible after a connected account disconnects", () => {
@@ -690,7 +696,7 @@ describe("CalendarList", () => {
 
     expect(screen.getByText("Work")).toBeInTheDocument();
     const toggle = screen.getByRole("button", {
-      name: "ahab@pequod.com Google",
+      name: "ahab@pequod.com",
     });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
@@ -742,15 +748,19 @@ describe("CalendarList", () => {
     expect(
       within(googleSection).getByText("Google primary"),
     ).toBeInTheDocument();
-    expect(
-      within(googleSection).getByRole("img", { name: "Google" }),
-    ).toBeInTheDocument();
+    const googleMark = within(googleSection).getByRole("img", {
+      name: "Google",
+    });
+    expect(googleMark.parentElement).toHaveClass("opacity-0");
+    expect(googleMark.parentElement).toHaveClass("group-hover:opacity-100");
     expect(
       within(microsoftSection).getByText("Microsoft primary"),
     ).toBeInTheDocument();
-    expect(
-      within(microsoftSection).getByRole("img", { name: "Microsoft" }),
-    ).toBeInTheDocument();
+    const microsoftMark = within(microsoftSection).getByRole("img", {
+      name: "Microsoft",
+    });
+    expect(microsoftMark.parentElement).toHaveClass("opacity-0");
+    expect(microsoftMark.parentElement).toHaveClass("group-hover:opacity-100");
 
     // Collapsing one account leaves the same-address account alone.
     await user.click(
@@ -818,9 +828,7 @@ describe("CalendarList", () => {
     });
 
     expect(screen.getByText("Compass")).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
-    );
+    await user.click(screen.getByRole("button", { name: "ahab@pequod.com" }));
     expect(screen.queryByText("Compass")).not.toBeInTheDocument();
     expect(screen.queryByText("Work")).not.toBeInTheDocument();
   });
@@ -844,12 +852,8 @@ describe("CalendarList", () => {
       ],
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "ahab@pequod.com Google" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "ahab@gmail.com Google" }),
-    );
+    await user.click(screen.getByRole("button", { name: "ahab@pequod.com" }));
+    await user.click(screen.getByRole("button", { name: "ahab@gmail.com" }));
 
     expect(screen.getByText("Compass")).toBeInTheDocument();
   });

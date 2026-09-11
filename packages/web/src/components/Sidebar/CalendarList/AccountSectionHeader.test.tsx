@@ -11,9 +11,9 @@ import { toggleAccountCollapsed } from "@web/calendars/collapsed-accounts.store"
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const EMAIL = "ahab@pequod.com";
-// The provider mark sits inside the collapse toggle, so the button's
-// accessible name is the email followed by the provider.
-const GOOGLE_TOGGLE_NAME = `${EMAIL} Google`;
+// Unique emails omit the provider mark, so the collapse toggle's
+// accessible name is just the email. Shared-email accounts keep the
+// mark (hidden until hover) and therefore include the provider.
 
 const actualUseConnectProvider = (
   await import("@web/auth/providers/useConnectProvider")
@@ -63,7 +63,10 @@ const { AccountSectionHeader } = (await import(
   headerModuleUrl.href
 )) as typeof import("./AccountSectionHeader");
 
-const renderHeader = (overrides: Partial<SyncConnectionSummary> = {}): void => {
+const renderHeader = (
+  overrides: Partial<SyncConnectionSummary> = {},
+  showProviderOnHover = false,
+): void => {
   const { wrapper } = createStoreWrapper();
   const connection = createMockConnection(EMAIL, overrides);
   const provider = connectionProviderKind(connection);
@@ -71,6 +74,7 @@ const renderHeader = (overrides: Partial<SyncConnectionSummary> = {}): void => {
     <AccountSectionHeader
       account={{ provider, accountEmail: EMAIL }}
       connection={connection}
+      showProviderOnHover={showProviderOnHover}
     />,
     { wrapper },
   );
@@ -86,7 +90,7 @@ describe("AccountSectionHeader", () => {
     const user = userEvent.setup({ delay: null });
     renderHeader();
 
-    const toggle = screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME });
+    const toggle = screen.getByRole("button", { name: EMAIL });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
     await user.click(toggle);
@@ -103,9 +107,10 @@ describe("AccountSectionHeader", () => {
 
     renderHeader();
 
-    expect(
-      screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME }),
-    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: EMAIL })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   });
 
   it("keeps collapse state per provider, not per email", () => {
@@ -117,19 +122,35 @@ describe("AccountSectionHeader", () => {
 
     renderHeader();
 
-    expect(
-      screen.getByRole("button", { name: GOOGLE_TOGGLE_NAME }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: EMAIL })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
   });
 
-  it("names the account's provider with a mark beside the email", () => {
+  it("omits the provider mark when the email is unique across providers", () => {
     renderHeader();
 
-    expect(screen.getByRole("img", { name: "Google" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("img", { name: "Google" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: EMAIL })).toBeInTheDocument();
   });
 
-  it("marks a Microsoft connection as Microsoft", () => {
-    renderHeader({ provider: "microsoft" });
+  it("reveals the provider mark on hover when the same email is on another provider", () => {
+    renderHeader({}, true);
+
+    const mark = screen.getByRole("img", { name: "Google" });
+    expect(mark.parentElement).toHaveClass("opacity-0");
+    expect(mark.parentElement).toHaveClass("group-hover:opacity-100");
+    expect(mark.parentElement).toHaveClass("group-focus-visible:opacity-100");
+    expect(
+      screen.getByRole("button", { name: `${EMAIL} Google` }),
+    ).toBeInTheDocument();
+  });
+
+  it("marks a Microsoft connection as Microsoft when the email is shared", () => {
+    renderHeader({ provider: "microsoft" }, true);
 
     expect(screen.getByRole("img", { name: "Microsoft" })).toBeInTheDocument();
     expect(

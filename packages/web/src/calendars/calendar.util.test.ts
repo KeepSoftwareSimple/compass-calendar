@@ -8,6 +8,7 @@ import {
   accountKey,
   canInviteOnCalendar,
   compareCalendars,
+  emailsSharedAcrossProviders,
   getDefaultTargetCalendar,
   getLocalCalendar,
   getWritableCalendars,
@@ -433,6 +434,36 @@ describe("spansMultipleAccounts", () => {
         }),
       ]),
     ).toBe(true);
+  });
+});
+
+describe("emailsSharedAcrossProviders", () => {
+  it("is empty when every address is unique", () => {
+    expect(
+      emailsSharedAcrossProviders([
+        { accountEmail: "a@x.com" },
+        { accountEmail: "b@x.com" },
+      ]).size,
+    ).toBe(0);
+  });
+
+  it("includes an address connected on more than one provider", () => {
+    const shared = emailsSharedAcrossProviders([
+      { accountEmail: "lance@gmail.com" },
+      { accountEmail: "ahab@pequod.com" },
+      { accountEmail: "lance@gmail.com" },
+    ]);
+    expect(shared.size).toBe(1);
+    expect(shared.has("lance@gmail.com")).toBe(true);
+  });
+
+  it("treats the same address as shared when casing differs", () => {
+    const shared = emailsSharedAcrossProviders([
+      { accountEmail: "Lance@Gmail.com" },
+      { accountEmail: "lance@gmail.com" },
+    ]);
+    expect(shared.size).toBe(1);
+    expect(shared.has("lance@gmail.com")).toBe(true);
   });
 });
 
