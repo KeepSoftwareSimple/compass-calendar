@@ -650,6 +650,39 @@ describe("executeProviderUpdate", () => {
     expect(writer.patchCalls).toHaveLength(0);
   });
 
+  it("patches against the fresh version when only the provider's version key drifted", async () => {
+    const { tenantId, principalId, calendar, event, command } = await seed();
+    const writer = new FakeProviderEventWriter();
+    // The provider rotated the version on its own (Exchange rewrites a change
+    // key seconds after a create) but still holds exactly what Compass stored,
+    // so nobody edited it elsewhere and the stale etag-1 must not block the
+    // edit.
+    writer.fetched = providerEvent("Old", "etag-1-rotated");
+
+    const result = await executeProviderUpdate(
+      {
+        commands,
+        events,
+        occurrences,
+        resources,
+        connections: stubConnectionLookup(),
+        writer,
+        custody: tokenSource(),
+      },
+      command,
+      event,
+      calendar,
+      now,
+    );
+
+    expect(result.outcome.state).toBe("confirmed");
+    expect(writer.patchCalls).toHaveLength(1);
+    expect(writer.patchCalls[0]!.expectedVersion).toBe("etag-1-rotated");
+    const stored = await events.findById(tenantId, principalId, event._id);
+    expect(stored?.content.title).toBe("New");
+    expect(stored?.providerVersion).toBe("etag-2" as ProviderEventVersion);
+  });
+
   it("fails with a conflict on a genuine concurrent external edit", async () => {
     const { calendar, event, command } = await seed();
     const writer = new FakeProviderEventWriter();
@@ -678,6 +711,10 @@ describe("executeProviderUpdate", () => {
     expect(
       result.outcome.state === "failed" && result.outcome.failureReason,
     ).toBe("versionConflict");
+    // The drifted version is NOT adopted when the content changed too: the
+    // patch stays conditioned on the stale version so it cannot overwrite
+    // the external edit.
+    expect(writer.patchCalls[0]!.expectedVersion).toBe("etag-1");
   });
 
   it("fails when the provider event no longer exists", async () => {
@@ -1736,6 +1773,29 @@ describe("executeProviderSeriesUpdate", () => {
     expect(writer.patchCalls).toHaveLength(0);
   });
 
+  it("patches against the fresh version when only the master's version key drifted", async () => {
+    const { calendar, master } = await seedMaster();
+    const command = await editAllCommand(master, {
+      title: "New",
+      recurrence: { kind: "preserve" },
+    });
+    const writer = new FakeProviderEventWriter();
+    // Same content, schedule, and rules as stored; only the version rotated.
+    writer.fetched = providerSeries("Old", "etag-1-rotated", weekly4);
+
+    const result = await executeProviderSeriesUpdate(
+      deps(writer),
+      command,
+      master,
+      calendar,
+      now,
+    );
+
+    expect(result.outcome.state).toBe("confirmed");
+    expect(writer.patchCalls).toHaveLength(1);
+    expect(writer.patchCalls[0]!.expectedVersion).toBe("etag-1-rotated");
+  });
+
   it("fails with a conflict on a genuine concurrent external edit", async () => {
     const { calendar, master } = await seedMaster();
     const command = await editAllCommand(master, {
@@ -1758,6 +1818,8 @@ describe("executeProviderSeriesUpdate", () => {
     expect(
       result.outcome.state === "failed" && result.outcome.failureReason,
     ).toBe("versionConflict");
+    // Content changed too, so the stale version stays on the patch.
+    expect(writer.patchCalls[0]!.expectedVersion).toBe("etag-1");
   });
 
   it("discards override exceptions but keeps cancelled tombstones", async () => {
