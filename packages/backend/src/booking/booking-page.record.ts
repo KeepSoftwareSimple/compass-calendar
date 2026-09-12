@@ -26,6 +26,9 @@ export const BookingPageRecordSchema = z.object({
   durationMinutes: BookingDurationMinutesSchema,
   destinationCalendarId: CalendarIdSchema,
   blockingCalendarIds: z.array(CalendarIdSchema).min(1).readonly(),
+  // Calendars the host explicitly removed from blockers. Discovery will not
+  // put these back; a later PUT that includes them again clears the opt-out.
+  optedOutBlockingCalendarIds: z.array(CalendarIdSchema).readonly().optional(),
   timeZone: TimeZoneSchema,
   weeklyAvailability: WeeklyAvailabilitySchema,
   minNoticeHours: z

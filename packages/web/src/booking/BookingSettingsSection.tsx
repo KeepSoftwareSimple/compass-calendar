@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { mergeDiscoveredBlockingCalendarIds } from "@core/booking/merge-blocking-calendars";
 import {
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
@@ -300,6 +301,7 @@ export function BookingSettingsSection({
     }
   });
   const baselineFormRef = useRef<AdminPutBookingPageInput | null>(null);
+  const optedOutBlockingRef = useRef<Set<CalendarId>>(new Set());
 
   const minNoticeInvalid =
     parseBookingCount(minNoticeText, MIN_NOTICE_BOUNDS) === null;
@@ -327,6 +329,13 @@ export function BookingSettingsSection({
       writableCalendars,
       availabilityCalendars,
     );
+    optedOutBlockingRef.current = new Set(
+      availabilityCalendars
+        .map((calendar) => calendar.id)
+        .filter(
+          (calendarId) => !seeded.blockingCalendarIds.includes(calendarId),
+        ),
+    );
     setForm(seeded);
     setMinNoticeText(String(seeded.minNoticeHours));
     setHorizonText(String(seeded.maxHorizonDays));
@@ -350,6 +359,47 @@ export function BookingSettingsSection({
       calendarsPending ||
       waitingForHostCalendars ||
       (serverPage != null && seededPageRef.current !== serverPage));
+
+  useEffect(() => {
+    if (isSeedingForm) return;
+    const discovered = availabilityCalendars.map((calendar) => calendar.id);
+    const optedOut = [...optedOutBlockingRef.current];
+    setForm((current) => {
+      const merged = mergeDiscoveredBlockingCalendarIds({
+        current: current.blockingCalendarIds,
+        optedOut,
+        discovered,
+      });
+      if (
+        merged.length === current.blockingCalendarIds.length &&
+        merged.every((calendarId) =>
+          current.blockingCalendarIds.includes(calendarId),
+        )
+      ) {
+        return current;
+      }
+      return { ...current, blockingCalendarIds: merged };
+    });
+    const baseline = baselineFormRef.current;
+    if (baseline) {
+      const mergedBaseline = mergeDiscoveredBlockingCalendarIds({
+        current: baseline.blockingCalendarIds,
+        optedOut,
+        discovered,
+      });
+      if (
+        mergedBaseline.length !== baseline.blockingCalendarIds.length ||
+        mergedBaseline.some(
+          (calendarId) => !baseline.blockingCalendarIds.includes(calendarId),
+        )
+      ) {
+        baselineFormRef.current = {
+          ...baseline,
+          blockingCalendarIds: mergedBaseline,
+        };
+      }
+    }
+  }, [availabilityCalendars, isSeedingForm]);
 
   useEffect(() => {
     if (isSeedingForm) return;
@@ -458,6 +508,11 @@ export function BookingSettingsSection({
   };
 
   const toggleBlockingCalendar = (calendarId: CalendarId, checked: boolean) => {
+    if (checked) {
+      optedOutBlockingRef.current.delete(calendarId);
+    } else {
+      optedOutBlockingRef.current.add(calendarId);
+    }
     setForm((current) => {
       const next = new Set(current.blockingCalendarIds);
       if (checked) next.add(calendarId);

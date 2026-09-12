@@ -203,6 +203,8 @@ describe("BookingPageService", () => {
 
   it("returns a stored UTC timezone unchanged", async () => {
     const userId = await createNamedUser("Utc Host");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
 
     await bookingPageService.putAdminPage(
       userId,
@@ -221,6 +223,8 @@ describe("BookingPageService", () => {
 
   it("reports a saved-but-never-enabled page as configured", async () => {
     const userId = await createNamedUser("Draft User");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
 
     // Saved while disabled, so no slug is allocated and the response is the
     // bare input shape - indistinguishable from "never saved" without the
@@ -767,6 +771,53 @@ describe("BookingPageService", () => {
     expect(after?.hostNoticedAt?.getTime()).toBe(
       stamped?.hostNoticedAt?.getTime(),
     );
+  });
+
+  it("adds a calendar discovered after the booking page exists", async () => {
+    const userId = await createNamedUser("Late Discovery");
+    const google = writableCalendar();
+    mockHealthySync([google]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        enabled: false,
+        destinationCalendarId: google.id,
+        blockingCalendarIds: [google.id],
+      }),
+    );
+
+    const microsoft = writableCalendar();
+    mockHealthySync([google, microsoft]);
+    const page = await bookingPageService.getAdminPage(userId);
+
+    expect(page.blockingCalendarIds).toEqual(
+      expect.arrayContaining([google.id, microsoft.id]),
+    );
+  });
+
+  it("does not re-add a calendar the host removed from blockers", async () => {
+    const userId = await createNamedUser("Blocker Opt Out");
+    const google = writableCalendar();
+    const microsoft = writableCalendar();
+    mockHealthySync([google, microsoft]);
+    const base = samplePutInput({
+      enabled: false,
+      destinationCalendarId: google.id,
+      blockingCalendarIds: [google.id, microsoft.id],
+    });
+    await bookingPageService.putAdminPage(userId, base);
+    await bookingPageService.putAdminPage(userId, {
+      ...base,
+      blockingCalendarIds: [google.id],
+    });
+
+    mockHealthySync([google, microsoft]);
+    const page = await bookingPageService.getAdminPage(userId);
+
+    expect(page.blockingCalendarIds).toEqual(
+      expect.arrayContaining([google.id]),
+    );
+    expect(page.blockingCalendarIds).not.toContain(microsoft.id);
   });
 });
 
