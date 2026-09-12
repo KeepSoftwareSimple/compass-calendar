@@ -1,7 +1,7 @@
 import { type ObjectId } from "mongodb";
 import {
-  mergeDiscoveredBlockingCalendarIds,
   nextOptedOutBlockingCalendarIds,
+  withDiscoveredBlockingCalendarIds,
 } from "@core/booking/merge-blocking-calendars";
 import {
   type CalendarId,
@@ -64,30 +64,32 @@ export const optedOutBlockingCalendarIdsForPut = async (
   userId: ObjectId,
   submitted: readonly CalendarId[],
   previousOptedOut: readonly CalendarId[] | undefined,
+  eligible?: readonly CalendarId[],
 ): Promise<CalendarId[]> =>
   nextOptedOutBlockingCalendarIds({
     previousOptedOut: previousOptedOut ?? [],
-    eligible: await listEligibleBlockingCalendarIds(userId),
+    eligible: eligible ?? (await listEligibleBlockingCalendarIds(userId)),
     submitted,
   });
 
 export const reconcileBookingPageBlockingCalendars = async (
   page: BookingPageRecord,
+  eligible?: readonly CalendarId[],
 ): Promise<BookingPageRecord> => {
-  const merged = mergeDiscoveredBlockingCalendarIds({
-    current: page.blockingCalendarIds,
-    optedOut: page.optedOutBlockingCalendarIds ?? [],
-    discovered: await listEligibleBlockingCalendarIds(page.userId),
-  });
-  const current = new Set(page.blockingCalendarIds);
-  const unchanged =
-    merged.length === current.size && merged.every((id) => current.has(id));
-  if (unchanged) return page;
+  const discovered =
+    eligible ?? (await listEligibleBlockingCalendarIds(page.userId));
+  const next = withDiscoveredBlockingCalendarIds(
+    page,
+    page.optedOutBlockingCalendarIds ?? [],
+    discovered,
+  );
+  if (next === page) return page;
 
-  const added = merged.filter((id) => !current.has(id));
+  const current = new Set(page.blockingCalendarIds);
+  const added = next.blockingCalendarIds.filter((id) => !current.has(id));
   const updated = await bookingPageRepository.addBlockingCalendarIds(
     page.userId,
     added,
   );
-  return updated ?? { ...page, blockingCalendarIds: merged };
+  return updated ?? next;
 };

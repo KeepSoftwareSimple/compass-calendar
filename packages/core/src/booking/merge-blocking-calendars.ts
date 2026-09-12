@@ -1,5 +1,29 @@
 import { type CalendarId } from "@core/types/domain-primitives";
 
+const sameCalendarIdSet = (
+  left: readonly CalendarId[],
+  right: readonly CalendarId[],
+): boolean => {
+  if (left.length !== right.length) return false;
+  const rightIds = new Set(right);
+  return left.every((calendarId) => rightIds.has(calendarId));
+};
+
+const appendUniqueIds = (
+  start: readonly CalendarId[],
+  candidates: readonly CalendarId[],
+  skip: ReadonlySet<CalendarId>,
+): CalendarId[] => {
+  const next = [...start];
+  const seen = new Set(start);
+  for (const calendarId of candidates) {
+    if (skip.has(calendarId) || seen.has(calendarId)) continue;
+    seen.add(calendarId);
+    next.push(calendarId);
+  }
+  return next;
+};
+
 /**
  * Add discovered calendars to a booking page's blockers unless the host
  * already opted them out. Discovery only adds; it never removes a blocker
@@ -10,15 +34,11 @@ export function mergeDiscoveredBlockingCalendarIds(input: {
   readonly optedOut: readonly CalendarId[];
   readonly discovered: readonly CalendarId[];
 }): CalendarId[] {
-  const optedOut = new Set(input.optedOut);
-  const next = [...input.current];
-  const seen = new Set(input.current);
-  for (const calendarId of input.discovered) {
-    if (optedOut.has(calendarId) || seen.has(calendarId)) continue;
-    seen.add(calendarId);
-    next.push(calendarId);
-  }
-  return next;
+  return appendUniqueIds(
+    input.current,
+    input.discovered,
+    new Set(input.optedOut),
+  );
 }
 
 /**
@@ -30,13 +50,32 @@ export function nextOptedOutBlockingCalendarIds(input: {
   readonly eligible: readonly CalendarId[];
   readonly submitted: readonly CalendarId[];
 }): CalendarId[] {
-  const submitted = new Set(input.submitted);
-  const next: CalendarId[] = [];
-  const seen = new Set<CalendarId>();
-  for (const calendarId of [...input.previousOptedOut, ...input.eligible]) {
-    if (submitted.has(calendarId) || seen.has(calendarId)) continue;
-    seen.add(calendarId);
-    next.push(calendarId);
+  return appendUniqueIds(
+    [],
+    [...input.previousOptedOut, ...input.eligible],
+    new Set(input.submitted),
+  );
+}
+
+/**
+ * Apply discovery to a page-shaped object. Returns the same reference when
+ * the blocker set is already complete so callers can skip a write or a
+ * React state update.
+ */
+export function withDiscoveredBlockingCalendarIds<
+  T extends { readonly blockingCalendarIds: readonly CalendarId[] },
+>(
+  page: T,
+  optedOut: readonly CalendarId[],
+  discovered: readonly CalendarId[],
+): T {
+  const blockingCalendarIds = mergeDiscoveredBlockingCalendarIds({
+    current: page.blockingCalendarIds,
+    optedOut,
+    discovered,
+  });
+  if (sameCalendarIdSet(blockingCalendarIds, page.blockingCalendarIds)) {
+    return page;
   }
-  return next;
+  return { ...page, blockingCalendarIds };
 }
