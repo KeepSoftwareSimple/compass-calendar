@@ -179,10 +179,45 @@ describe("MicrosoftAuthAdapter", () => {
         }),
       );
 
-      // Without select_account, a browser signed into one Microsoft account
-      // re-authorizes that same account and the user never gets to pick.
-      // consent must stay so the exchange still returns a refresh token.
-      expect(url.searchParams.get("prompt")).toBe("select_account consent");
+      // Microsoft rejects combined prompt values (AADSTS90023). A second
+      // account needs the chooser only; first-connection consent already granted
+      // offline_access, and a missing refresh token re-runs with consent.
+      expect(url.searchParams.get("prompt")).toBe("select_account");
+    });
+
+    it("never sends a space-separated prompt value", () => {
+      const adapter = adapterWith(
+        new FakeTokenEndpoint(),
+        new FakeIdTokenVerifier(),
+      );
+
+      const absent = new URL(
+        adapter.buildAuthorizationUrl({
+          state: "opaque-state",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+        }),
+      );
+      const explicitFalse = new URL(
+        adapter.buildAuthorizationUrl({
+          state: "opaque-state",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+          selectAccount: false,
+        }),
+      );
+      const selectAccount = new URL(
+        adapter.buildAuthorizationUrl({
+          state: "opaque-state",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+          selectAccount: true,
+        }),
+      );
+
+      expect(absent.searchParams.get("prompt")).toBe("consent");
+      expect(explicitFalse.searchParams.get("prompt")).toBe("consent");
+      expect(selectAccount.searchParams.get("prompt")).toBe("select_account");
+      for (const url of [absent, explicitFalse, selectAccount]) {
+        expect(url.searchParams.get("prompt")).not.toMatch(/\s/);
+      }
     });
 
     it("passes login_hint on reconnect so the same account is pre-selected", () => {
