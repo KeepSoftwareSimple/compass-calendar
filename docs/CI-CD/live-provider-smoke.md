@@ -5,10 +5,12 @@ against real Google, Microsoft, and Apple test accounts. It never runs on
 pull requests. Workflow: [`.github/workflows/live-provider-smoke.yml`](../../.github/workflows/live-provider-smoke.yml).
 
 The job uses GitHub Environment `provider-smoke`. It does not read staging
-or production deploy secrets. A provider whose secrets are absent is skipped,
-not failed, so a green run does not by itself mean every provider passed.
-Check the summary line the job prints (`live-provider-smoke passed=... skipped=... failed=...`)
-before trusting a green run.
+or production deploy secrets. A provider whose secrets are absent is skipped
+and emitted as a `::warning::`. If that provider is listed in
+`SMOKE_EXPECTED_PROVIDERS`, the job then fails and posts to the Discord errors
+webhook, same as a failed run. Unexpected skips still leave the job green.
+The summary line (`live-provider-smoke passed=... skipped=... failed=...`) is
+printed and appended to the GitHub Actions step summary.
 
 Events are created only on a calendar named `compass-smoke`. Every created
 event's description carries the GitHub run id. A teardown step deletes
@@ -43,6 +45,7 @@ Environment variables:
 |---|---|
 | `GOOGLE_CLIENT_ID` | Same Google OAuth client id as staging |
 | `MICROSOFT_CLIENT_ID` | Same Entra client id as staging |
+| `SMOKE_EXPECTED_PROVIDERS` | Comma-separated providers that must not be skipped (for example `microsoft`). Empty means a skip is a warning, not a failure. |
 
 ## Test calendar
 
@@ -93,6 +96,15 @@ Microsoft.
 
 ```bash
 gh workflow run live-provider-smoke.yml
+# Or against a branch (the Environment has no branch policy):
+gh workflow run live-provider-smoke.yml --ref <branch>
+```
+
+After the first Microsoft proof, set the Environment variable so a skip cannot
+hide behind a green job:
+
+```bash
+gh variable set SMOKE_EXPECTED_PROVIDERS --env provider-smoke --body microsoft
 ```
 
 Apple runs when `SMOKE_APPLE_EMAIL` and `SMOKE_APPLE_APP_PASSWORD` are present
