@@ -9,7 +9,7 @@
  * computes against the constants it copied, so a change to either side fails
  * here instead of shifting the layout at the React swap.
  */
-import { JSDOM } from "jsdom";
+
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { SIDEBAR_AUTO_COLLAPSE_BREAKPOINT } from "@web/components/AuthenticatedLayout/responsive.constants";
 import {
@@ -52,39 +52,41 @@ const expectedTrackWidth = (
   MAIN_COLUMN_LEFT_PADDING -
   (sidebar.isOpen ? SIDEBAR_DIVIDER_WIDTH + sidebar.width : 0);
 
+/**
+ * A fresh document plus a getItem-only storage stub, handed to the script as
+ * arguments so its free `document` / `localStorage` / `innerWidth` resolve
+ * without touching this process's own globals. Each call gets its own
+ * document, so cases cannot leak attributes into each other.
+ */
 const runHeadScript = ({
   innerWidth,
   stored = {},
 }: {
   innerWidth: number;
-  stored?: Partial<Record<string, string>>;
+  stored?: Record<string, string>;
 }) => {
-  const dom = new JSDOM(
-    `<!doctype html>
-     <html data-theme="${DEFAULT_THEME}">
-       <head>
-         <meta name="theme-color" content="${THEMES[DEFAULT_THEME].metaColor}" />
-       </head>
-       <body></body>
-     </html>`,
-    { runScripts: "outside-only", url: "http://localhost/" },
+  const doc = document.implementation.createHTMLDocument("boot shell");
+  doc.documentElement.setAttribute("data-theme", DEFAULT_THEME);
+  const meta = doc.createElement("meta");
+  meta.setAttribute("name", "theme-color");
+  meta.setAttribute("content", THEMES[DEFAULT_THEME].metaColor);
+  doc.head.appendChild(meta);
+
+  const storage = {
+    getItem: (key: string): string | null => stored[key] ?? null,
+  };
+
+  new Function("innerWidth", "document", "localStorage", headScript)(
+    innerWidth,
+    doc,
+    storage,
   );
-  Object.defineProperty(dom.window, "innerWidth", {
-    configurable: true,
-    value: innerWidth,
-  });
-  for (const [key, value] of Object.entries(stored)) {
-    if (value !== undefined) dom.window.localStorage.setItem(key, value);
-  }
 
-  dom.window.eval(headScript);
-
-  const html = dom.window.document.documentElement;
-  const themeColorMeta =
-    dom.window.document.getElementsByName("theme-color")[0];
+  const html = doc.documentElement;
+  const themeColor = doc.getElementsByName("theme-color")[0];
   return {
     theme: html.getAttribute("data-theme"),
-    themeColor: themeColorMeta?.getAttribute("content") ?? null,
+    themeColor: themeColor?.getAttribute("content") ?? null,
     sidebarState: html.dataset.bootSidebar,
     sidebarWidth: html.style.getPropertyValue("--boot-sidebar-width"),
     columns: Number(html.dataset.bootCols),

@@ -38,7 +38,12 @@ describe("agent-loop Routine contract", () => {
     expect(guard).not.toContain("evaluate_paths");
     const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
     expect(unit).toContain("rhysd/actionlint");
-    expect(unit).toContain("agent-loop-merge-guard.test.sh");
+    // The step loops over every `*.test.sh` rather than naming them, so the
+    // contract is the loop plus the file being there to be picked up.
+    expect(unit).toContain("for script_test in .github/scripts/*.test.sh");
+    expect(existsSync(".github/scripts/agent-loop-merge-guard.test.sh")).toBe(
+      true,
+    );
   });
 
   it("launches the next WP on merge with per-job concurrency", () => {
