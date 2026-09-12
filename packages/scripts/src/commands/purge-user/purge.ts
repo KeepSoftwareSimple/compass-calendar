@@ -17,9 +17,9 @@ import {
   PrincipalIdSchema,
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
+import { normalizeEmail } from "@core/util/email.util";
 import { Collections } from "@backend/common/constants/collections";
 import { IS_DEV } from "@backend/common/constants/config.constants";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { purgePrincipal } from "@sync/domain/principal-purge.service";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";

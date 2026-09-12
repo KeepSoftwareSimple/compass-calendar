@@ -15,6 +15,7 @@ import {
   type ProviderKind,
   ProviderKindSchema,
 } from "@core/types/sync/identity.contracts";
+import { normalizeEmail, normalizeEmailOrNull } from "@core/util/email.util";
 
 export type GoogleReconnectTarget = {
   connectionId?: string | null;
@@ -35,12 +36,6 @@ const notify = (): void => {
   }
 };
 
-const normalizeEmail = (email: string | null | undefined): string | null => {
-  if (!email) return null;
-  const trimmed = email.trim().toLowerCase();
-  return trimmed.length > 0 ? trimmed : null;
-};
-
 const parseProvider = (
   provider: string | null | undefined,
 ): ProviderKind | null => {
@@ -56,7 +51,7 @@ export function reconnectAccountKey(
   provider: ProviderKind,
   email: string,
 ): string {
-  return `${provider}:${email.trim().toLowerCase()}`;
+  return `${provider}:${normalizeEmail(email)}`;
 }
 
 const normalizeTarget = (
@@ -67,7 +62,7 @@ const normalizeTarget = (
   provider: ProviderKind | null;
 } => ({
   connectionId: target.connectionId?.trim() || null,
-  accountEmail: normalizeEmail(target.accountEmail),
+  accountEmail: normalizeEmailOrNull(target.accountEmail),
   provider: parseProvider(target.provider),
 });
 
@@ -180,7 +175,7 @@ export function syncReconnectRequiredFromConnections(
   const presentIds = new Set(connections.map((connection) => connection.id));
   const presentKeys = new Set<string>();
   for (const connection of connections) {
-    const email = normalizeEmail(connection.accountEmail);
+    const email = normalizeEmailOrNull(connection.accountEmail);
     if (!email) continue;
     presentKeys.add(
       reconnectAccountKey(connectionProvider(connection.provider), email),
@@ -200,7 +195,7 @@ export function syncReconnectRequiredFromConnections(
       connectionProviders.set(connection.id, provider);
       changed = true;
     }
-    const email = normalizeEmail(connection.accountEmail);
+    const email = normalizeEmailOrNull(connection.accountEmail);
     if (email) {
       const key = reconnectAccountKey(provider, email);
       if (!reconnectRequiredAccounts.has(key)) {
@@ -239,7 +234,7 @@ export function isAccountReconnectRequired(
   accountEmail: string | null | undefined,
   provider?: ProviderKind | null,
 ): boolean {
-  const email = normalizeEmail(accountEmail);
+  const email = normalizeEmailOrNull(accountEmail);
   const kind = parseProvider(provider);
   if (!email || !kind) return false;
   return reconnectRequiredAccounts.has(reconnectAccountKey(kind, email));

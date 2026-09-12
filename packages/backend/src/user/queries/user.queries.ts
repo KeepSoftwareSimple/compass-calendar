@@ -1,7 +1,7 @@
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { type Schema_User } from "@core/types/user.types";
+import { normalizeEmail } from "@core/util/email.util";
 import { hasVerifiedLoginMethod } from "@backend/auth/services/account-linking.util";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
 import { getIdFilter } from "@backend/common/helpers/mongo.utils";
 import mongoService from "@backend/common/services/mongo.service";
 

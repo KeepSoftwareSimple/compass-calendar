@@ -5,6 +5,7 @@ import {
 } from "@core/types/sync/connection.contracts";
 import { StringV4Schema, zObjectId } from "@core/types/type.utils";
 import { type Schema_UserIdentity } from "@core/types/user.types";
+import { normalizeEmail } from "@core/util/email.util";
 import { emailForVerifiedAccountLinkLookup } from "@backend/auth/services/account-linking.util";
 import {
   grantedScopesIncludeCalendarAccess,
@@ -17,7 +18,6 @@ import {
   authErrorCopy,
 } from "@backend/common/errors/auth/auth.errors";
 import { error } from "@backend/common/errors/handlers/error.handler";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
 import { adoptProviderAuthorization } from "@backend/common/services/sync-service/sync-connection-adoption";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
