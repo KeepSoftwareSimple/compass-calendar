@@ -57,7 +57,7 @@ export const SidebarRefreshButton: FC = () => {
         shortcut={["Mod", "R"]}
       >
         <button
-          className="c-focus-ring inline-flex h-9 items-center gap-1 rounded-default px-2 text-xs text-text-muted transition hover:bg-surface-panel hover:text-text"
+          className="c-focus-ring inline-flex h-9 items-center gap-1 rounded-default px-2 text-text-muted text-xs transition hover:bg-surface-panel hover:text-text"
           type="button"
         >
           <ArrowClockwiseIcon aria-hidden="true" size={14} />
