@@ -1,5 +1,5 @@
 import { type Schema_UserIdentity } from "@core/types/user.types";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
+import { normalizeEmail } from "@core/util/email.util";
 
 export const APPLE_PRIVATE_RELAY_DOMAIN = "privaterelay.appleid.com";
 

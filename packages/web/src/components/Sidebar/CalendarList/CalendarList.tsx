@@ -1,5 +1,6 @@
 import { type FC, useMemo } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
+import { normalizeEmail } from "@core/util/email.util";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { useUser } from "@web/auth/compass/user/hooks/useUser";
@@ -128,7 +129,7 @@ export const CalendarList: FC = () => {
                   account={group}
                   connection={group.connection}
                   showProviderOnHover={sharedEmails.has(
-                    group.accountEmail.trim().toLowerCase(),
+                    normalizeEmail(group.accountEmail),
                   )}
                 />
                 {renderCollapsible(key, group.calendars)}

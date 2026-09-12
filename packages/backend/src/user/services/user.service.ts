@@ -13,6 +13,7 @@ import {
   type Schema_UserIdentity,
   type UserProfile,
 } from "@core/types/user.types";
+import { normalizeEmail } from "@core/util/email.util";
 import { canReuseCompassUserByEmail } from "@backend/auth/services/account-linking.util";
 import compassAuthService from "@backend/auth/services/compass/compass.auth.service";
 import supertokensUserCleanupService from "@backend/auth/services/supertokens/supertokens.user-cleanup.service";
@@ -21,7 +22,6 @@ import calendarService from "@backend/calendar/services/calendar.service";
 import { Collections } from "@backend/common/constants/collections";
 import { error } from "@backend/common/errors/handlers/error.handler";
 import { UserError } from "@backend/common/errors/user/user.errors";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";

@@ -7,7 +7,7 @@ import {
 } from "supertokens-node";
 import SupertokensUserMetadata from "supertokens-node/recipe/usermetadata";
 import { Logger } from "@core/logger/winston.logger";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
+import { normalizeEmail } from "@core/util/email.util";
 import { initSupertokens } from "@backend/common/middleware/supertokens.middleware";
 import { type Summary_Delete } from "@backend/user/types/user.types";
 

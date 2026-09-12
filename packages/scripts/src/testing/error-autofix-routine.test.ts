@@ -81,11 +81,19 @@ describe("error-autofix Routine contract", () => {
     expect(existsSync(".github/scripts/autofix-sweep.sh")).toBe(true);
     expect(existsSync(".github/scripts/autofix-unstick.sh")).toBe(true);
 
+    // The step loops over every `*.test.sh` rather than naming them, so the
+    // contract is the loop plus each test file being there to be picked up.
     const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
-    expect(unit).toContain("bash .github/scripts/autofix-preflight.test.sh");
-    expect(unit).toContain("bash .github/scripts/autofix-unstick.test.sh");
-    expect(unit).toContain("bash .github/scripts/autofix-sweep.test.sh");
-    expect(unit).toContain("bash .github/scripts/autofix-lib.test.sh");
+    expect(unit).toContain("for script_test in .github/scripts/*.test.sh");
+    for (const scriptTest of [
+      "autofix-preflight.test.sh",
+      "autofix-unstick.test.sh",
+      "autofix-sweep.test.sh",
+      "autofix-lib.test.sh",
+      "autofix-pr-watchdog.test.sh",
+    ]) {
+      expect(existsSync(`.github/scripts/${scriptTest}`)).toBe(true);
+    }
 
     const preflightTest = readFileSync(
       ".github/scripts/autofix-preflight.test.sh",

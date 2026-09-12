@@ -5,6 +5,7 @@ import {
   ProviderAccountFactsSchema,
 } from "@core/types/sync/connection.contracts";
 import { StringV4Schema, zObjectId } from "@core/types/type.utils";
+import { normalizeEmail } from "@core/util/email.util";
 import {
   determineGoogleAuthMode,
   parseReconnectGoogleParams,
@@ -12,7 +13,6 @@ import {
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { AuthError } from "@backend/common/errors/auth/auth.errors";
 import { error } from "@backend/common/errors/handlers/error.handler";
-import { normalizeEmail } from "@backend/common/helpers/email.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { adoptGoogleAuthorization } from "@backend/common/services/sync-service/sync-connection-adoption";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";

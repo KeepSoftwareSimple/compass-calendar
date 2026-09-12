@@ -4,6 +4,7 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { type SyncConnectionSummary } from "@core/types/user.types";
+import { normalizeEmail, normalizeEmailOrNull } from "@core/util/email.util";
 import {
   calendarProviderKind,
   connectionProviderKind,
@@ -39,9 +40,7 @@ const toEmailSet = (
   emails: ReadonlySet<string> | readonly string[] | undefined,
 ): ReadonlySet<string> | null => {
   if (!emails) return null;
-  return new Set(
-    [...emails].map((email) => email.trim().toLowerCase()).filter(Boolean),
-  );
+  return new Set([...emails].map(normalizeEmail).filter(Boolean));
 };
 
 const calendarNeedsReconnect = (
@@ -49,7 +48,9 @@ const calendarNeedsReconnect = (
   reconnectRequiredEmails: ReadonlySet<string> | null,
 ): boolean => {
   if (!calendar.accountEmail) return false;
-  const email = calendar.accountEmail.toLowerCase();
+  // The same fold `toEmailSet` applied to the set being probed; lower-casing
+  // alone would miss a stored address that carries stray whitespace.
+  const email = normalizeEmail(calendar.accountEmail);
   const provider = calendarProviderKind(calendar);
   if (reconnectRequiredEmails) {
     const keyed = provider
@@ -154,7 +155,7 @@ export function emailsSharedAcrossProviders(
 ): ReadonlySet<string> {
   const counts = new Map<string, number>();
   for (const { accountEmail } of accounts) {
-    const email = accountEmail.trim().toLowerCase();
+    const email = normalizeEmail(accountEmail);
     if (!email) continue;
     counts.set(email, (counts.get(email) ?? 0) + 1);
   }
@@ -252,14 +253,13 @@ const nestLocalCalendarInMatchingGroup = (
   ungrouped: Calendar[],
   compassEmail: string | null | undefined,
 ): { groups: AccountGroup[]; ungrouped: Calendar[] } => {
-  const normalizedCompassEmail = compassEmail?.trim().toLowerCase();
+  const normalizedCompassEmail = normalizeEmailOrNull(compassEmail);
   if (!normalizedCompassEmail) return { groups, ungrouped };
 
   // Connection order is already the group order; when accounts on two
   // providers share the login email, the oldest-connected one wins.
   const matchingGroup = groups.find(
-    (group) =>
-      group.accountEmail.trim().toLowerCase() === normalizedCompassEmail,
+    (group) => normalizeEmail(group.accountEmail) === normalizedCompassEmail,
   );
   if (!matchingGroup) return { groups, ungrouped };
 

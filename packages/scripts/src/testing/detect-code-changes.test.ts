@@ -131,7 +131,12 @@ describe("detect-code-changes", () => {
     expect(unit).toContain("code: ${{ steps.filter.outputs.code }}");
     expect(unit).toContain("web: ${{ steps.filter.outputs.web }}");
     expect(unit).toContain("needs.changes.outputs[matrix.project]");
-    expect(unit).toContain("bash .github/scripts/detect-code-changes.test.sh");
+    // The step loops over every `*.test.sh` rather than naming them, so the
+    // contract is the loop plus the file being there to be picked up.
+    expect(unit).toContain("for script_test in .github/scripts/*.test.sh");
+    expect(existsSync(".github/scripts/detect-code-changes.test.sh")).toBe(
+      true,
+    );
     expect(unit).not.toContain("outputs.e2e");
   });
 

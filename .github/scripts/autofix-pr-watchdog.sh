@@ -21,9 +21,13 @@ GRACE_MINUTES=${AUTOFIX_WATCHDOG_GRACE_MINUTES:-60}
 DRY_RUN=${AUTOFIX_WATCHDOG_DRY_RUN:-}
 AUTOFIX_MODE=${AUTOFIX_MODE:-}
 
-list_stale_prs() {
+# Open autofix PRs that carry neither terminal label, so escalation is the
+# only thing left for them. `labels` has to be in `--json`: gh returns only
+# the fields asked for, so leaving it out made the filter read an absent
+# `.labels`, pass every PR, and re-notify already-escalated ones hourly.
+list_unterminated_prs() {
   gh pr list --repo "$REPO" --label autofix --state open \
-    --json number,createdAt,url \
+    --json number,createdAt,url,labels \
     --jq '[.[] | select(
       ([.labels[]?.name] | index("automerge-candidate") | not) and
       ([.labels[]?.name] | index("autofix:needs-human") | not)
@@ -77,7 +81,7 @@ escalate() {
 main() {
   local prs pr_json number created url failures=0 escalated=0
 
-  if ! prs=$(list_stale_prs); then
+  if ! prs=$(list_unterminated_prs); then
     notify "Error autofix PR watchdog could not list open autofix PRs (gh pr list failed)"
     return 1
   fi
