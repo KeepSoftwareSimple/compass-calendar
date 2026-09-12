@@ -1258,6 +1258,74 @@ describe("SyncServiceClient", () => {
       ]);
     });
 
+    // Prod saw bursts of concurrent GETs answered with a 200, an
+    // application/json content-type and an empty body while Sync itself was
+    // healthy. A read is the same read twice, so retry it; a command is not.
+    it("retries a GET whose 200 body could not be read as JSON", async () => {
+      let call = 0;
+      const fn: SyncServiceClientOptions["fetch"] = async () => {
+        call += 1;
+        if (call === 1) {
+          return {
+            status: 200,
+            headers: contentType("application/json"),
+            json: async () => {
+              throw new SyntaxError("Unexpected end of JSON input");
+            },
+          };
+        }
+        return { status: 200, json: async () => ({ connections: [] }) };
+      };
+
+      const result = await client(fn).listConnections(principal());
+
+      expect(result.ok).toBe(true);
+      expect(call).toBe(2);
+    });
+
+    it("does not retry a POST whose 200 body could not be read as JSON", async () => {
+      let call = 0;
+      const fn: SyncServiceClientOptions["fetch"] = async () => {
+        call += 1;
+        return {
+          status: 200,
+          headers: contentType("application/json"),
+          json: async () => {
+            throw new SyntaxError("Unexpected end of JSON input");
+          },
+        };
+      };
+
+      const result = await client(fn).queryBusyAvailability(
+        principal(),
+        request([objectId()]),
+      );
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.kind).toBe("invalidResponse");
+      expect(call).toBe(1);
+    });
+
+    it("does not retry a 200 body that parsed but broke the contract", async () => {
+      // A contract mismatch is a bug, not a transport fault: the same body
+      // would come back again.
+      let call = 0;
+      const fn: SyncServiceClientOptions["fetch"] = async () => {
+        call += 1;
+        return {
+          status: 200,
+          headers: contentType("application/json"),
+          json: async () => ({ nope: true }),
+        };
+      };
+
+      const result = await client(fn).listConnections(principal());
+
+      expect(result.ok).toBe(false);
+      expect(call).toBe(1);
+    });
+
     it("stops retrying once the caller's deadline has passed", async () => {
       // Retries must fit inside the timeout the caller was promised, so a
       // nominally 50ms read cannot quietly become a multi-second one.

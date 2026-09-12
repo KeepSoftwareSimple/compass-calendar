@@ -388,6 +388,62 @@ describe("MicrosoftAuthAdapter", () => {
         .catch((e) => e);
 
       expect((error as ProviderAuthError).reason).toBe("exchangeFailed");
+      // The thrown cause is what tells a network fault from a rejection.
+      expect((error as ProviderAuthError).message).toBe(
+        "Microsoft rejected the authorization code exchange (network down)",
+      );
+    });
+
+    // Staging logged "rejected the authorization code exchange" three times
+    // in thirty seconds with nothing to say why. The OAuth error code and
+    // the AADSTS sentence are the diagnosis; the rest of Entra's description
+    // is a per-request trace id and timestamp that would split PostHog's
+    // grouping into one issue per attempt, so only the first sentence goes.
+    it("names the OAuth error and its first sentence on a rejected exchange", async () => {
+      const adapter = adapterWith(
+        new FakeTokenEndpoint({
+          exchangeResponse: {
+            error: "invalid_client",
+            error_description:
+              "AADSTS7000215: Invalid client secret provided. Trace ID: 1234 Correlation ID: 5678 Timestamp: 2026-09-11 01:14:28Z",
+          },
+        }),
+        new FakeIdTokenVerifier(),
+      );
+
+      const error = await adapter
+        .exchangeAuthorizationCode({
+          code: "auth-code",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+        })
+        .catch((e) => e);
+
+      expect((error as ProviderAuthError).reason).toBe("exchangeFailed");
+      expect((error as ProviderAuthError).message).toBe(
+        "Microsoft rejected the authorization code exchange (invalid_client: AADSTS7000215: Invalid client secret provided)",
+      );
+    });
+
+    it("reports the HTTP status when the token endpoint answered without an OAuth error", async () => {
+      const adapter = adapterWith(
+        new FakeTokenEndpoint({
+          exchangeError: Object.assign(new Error("token_endpoint_error"), {
+            response: { status: 502, data: {} },
+          }),
+        }),
+        new FakeIdTokenVerifier(),
+      );
+
+      const error = await adapter
+        .exchangeAuthorizationCode({
+          code: "auth-code",
+          redirectUri: "https://staging.example.com/sync/microsoft",
+        })
+        .catch((e) => e);
+
+      expect((error as ProviderAuthError).message).toBe(
+        "Microsoft rejected the authorization code exchange (status 502)",
+      );
     });
 
     it("requires a refresh token", async () => {

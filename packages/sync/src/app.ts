@@ -396,6 +396,14 @@ function buildHealthSnapshotSweep(
         // sit idle. Firing on the first sample would have cried wolf on the
         // very deploy that FIXED this. Requiring an hour of consecutive
         // samples costs nothing against a nine-day outage.
+        //
+        // "Never notified" also counts the provider's own proof of reaching
+        // the endpoint: Google's initial `sync` callback, and for a provider
+        // that validates the callback URL before opening a channel, the
+        // watch itself (NotificationChannel.callbackVerified). Without the
+        // latter, staging fired this for Microsoft after every restart on
+        // four idle subscriptions whose creation had already proven the
+        // route.
         for (const snapshot of snapshots) {
           if (
             !registry

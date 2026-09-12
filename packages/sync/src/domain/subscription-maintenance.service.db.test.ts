@@ -197,9 +197,43 @@ describe("maintainSubscription", () => {
     expect(saved?.subscriptionToken).toBe(notifications.watched[0]?.token);
     expect(saved?.subscriptionResourceId).toBe("res-1");
     expect(saved?.subscriptionExpiresAt).toEqual(expiresAt);
+    // A blind watch (Google) proves nothing about the callback route yet;
+    // the first `sync` callback records that.
+    expect(saved?.pushLastReceivedAt).toBeNull();
     expect(notifications.watched[0]?.calendarId).toBe("primary@google.com");
   });
 
+  // Microsoft Graph refuses a subscription whose notification URL fails its
+  // validation handshake, so a subscription that exists proves the provider
+  // reached this service. Recording that as a received push keeps the
+  // push-delivery alarm from reading an idle Microsoft fleet as a broken
+  // route: staging fired it after every restart on four quiet subscriptions.
+  it("records a callback-verified watch as a received push", async () => {
+    const cal = calendar(objectId());
+    const resource = await seedResource(cal);
+    const notifications = new FakeNotifications({
+      channel: {
+        channelId: "",
+        resourceId: "res-verified",
+        expiresAt: new Date("2026-07-17T00:00:00.000Z"),
+        callbackVerified: true,
+      },
+    });
+
+    const outcome = await maintainSubscription(
+      maintenanceDeps(notifications),
+      cal,
+      resource,
+      now,
+    );
+
+    expect(outcome).toEqual({ status: "watched" });
+    const saved = await reload(resource);
+    expect(saved?.subscriptionResourceId).toBe("res-verified");
+    expect(saved?.pushLastReceivedAt).toEqual(now());
+    // Only push receipt, not a pending change: nothing is owed to a pull.
+    expect(saved?.changeNotifiedAt).toBeNull();
+  });
   it("renews and stops the old channel when it is near expiry", async () => {
     const cal = calendar(objectId());
     // Expires in 1 hour: inside the default 24h renew window.

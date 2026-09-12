@@ -2,12 +2,17 @@ import {
   getPosthogClient,
   initPosthog,
 } from "@web/auth/posthog/posthog.bootstrap";
+import { reloadOnceForMissingChunk } from "@web/common/utils/browser/missing-chunk-reload.util";
 
 initPosthog();
 
 void import("./app.bootstrap")
   .then(({ bootstrapApp }) => bootstrapApp())
   .catch((error) => {
+    // A deploy between this index.html and the import: one reload picks up
+    // the new chunk names. Only a reload that still fails is worth a report.
+    if (reloadOnceForMissingChunk(error)) return;
+
     getPosthogClient()?.captureException(error, {
       $exception_handled: false,
       $exception_source: "app-boot",
