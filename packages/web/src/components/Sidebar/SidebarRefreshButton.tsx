@@ -33,12 +33,12 @@ const useRefreshDue = (degradedSinceMs: number | null): boolean => {
 };
 
 /**
- * Single header Refresh control for a stale live-update stream or a newer
+ * Sidebar-footer Refresh control for a stale live-update stream or a newer
  * app version. Both cases reload the page. Tooltip and blocked-click hint
  * name Mod+R because pointer clicks are suppressed in the keyboard-only
  * calendar.
  */
-export const HeaderRefreshButton: FC = () => {
+export const SidebarRefreshButton: FC = () => {
   const degradedSinceMs = useSseDegradedSince();
   const refreshDue = useRefreshDue(degradedSinceMs);
   const { isUpdateAvailable } = useVersionCheck();
@@ -57,7 +57,7 @@ export const HeaderRefreshButton: FC = () => {
         shortcut={["Mod", "R"]}
       >
         <button
-          className="c-focus-ring inline-flex items-center gap-1 rounded-xs px-1.5 py-0.5 font-medium text-text hover:bg-surface-overlay"
+          className="c-focus-ring inline-flex h-9 items-center gap-1 rounded-default px-2 text-xs text-text-muted transition hover:bg-surface-panel hover:text-text"
           type="button"
         >
           <ArrowClockwiseIcon aria-hidden="true" size={14} />

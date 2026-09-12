@@ -1,5 +1,6 @@
 import { CommandIcon, GearIcon, KeyboardIcon } from "@phosphor-icons/react";
 import { useGoogleUiState } from "@web/auth/providers/useProviderUiState";
+import { SidebarRefreshButton } from "@web/components/Sidebar/SidebarRefreshButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import {
   selectIsShortcutsOpen,
@@ -52,6 +53,7 @@ export const SidebarActions = () => {
             />
           </button>
         </TooltipWrapper>
+        <SidebarRefreshButton />
       </div>
 
       <div className="flex items-center gap-2">

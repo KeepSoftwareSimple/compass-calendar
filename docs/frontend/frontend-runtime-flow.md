@@ -209,6 +209,7 @@ users actually take.
 Files:
 
 - `packages/web/src/components/Sidebar/SidebarActions/useVersionCheck.ts`
+- `packages/web/src/components/Sidebar/SidebarRefreshButton.tsx`
 - `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
 
 Runtime behavior:
@@ -228,6 +229,7 @@ Files:
 - `packages/web/src/components/Sidebar/Sidebar.tsx`
 - `packages/web/src/components/Sidebar/MonthPicker/MonthPicker.tsx`
 - `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
+- `packages/web/src/components/Sidebar/SidebarRefreshButton.tsx`
 - `packages/web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
 
 Layout contract:
@@ -241,7 +243,8 @@ Control mapping:
 
 - Open shortcuts opens an in-sidebar keyboard shortcuts overlay.
 - Command palette toggle (`modifier + K`) calls open/close palette actions from the settings Zustand store (`packages/web/src/settings/settings.store.ts`).
-- Refresh appears only when `useVersionCheck()` reports an available update.
+- Refresh appears in the footer when `useVersionCheck()` reports an available
+  update, or when the live-update stream has been down for 30 seconds.
 - The account row shows temporary-account or signed-in account context.
 - Background Google import state is not shown in the sidebar footer.
 
