@@ -79,6 +79,33 @@ describe("isTransientMongoNetworkError", () => {
     ).toBe(false);
   });
 
+  it("matches a connection pool checkout timeout under CSOT", () => {
+    // MongoOperationTimeoutError wrapping a MongoWaitQueueTimeoutError, as
+    // thrown by ConnectionPool#checkOut when the wait queue times out.
+    expect(
+      isTransientMongoNetworkError(
+        namedError(
+          "MongoOperationTimeoutError",
+          "Timed out during connection checkout",
+          namedError(
+            "MongoWaitQueueTimeoutError",
+            "Timed out while checking out a connection from connection pool",
+          ),
+        ),
+      ),
+    ).toBe(true);
+
+    // The unwrapped wait-queue error alone (non-CSOT driver versions).
+    expect(
+      isTransientMongoNetworkError(
+        namedError(
+          "MongoWaitQueueTimeoutError",
+          "Timed out while checking out a connection from connection pool",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("rejects unrelated failures", () => {
     expect(
       isTransientMongoNetworkError(new Error("database unavailable")),
