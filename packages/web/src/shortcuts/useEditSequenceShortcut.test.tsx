@@ -82,6 +82,7 @@ describe("useEditSequenceShortcut", () => {
         ["r", "recurrence"],
         ["a", "attendees"],
         ["c", "color"],
+        ["g", "rsvp"],
       ] as const;
 
       for (const [second, field] of cases) {

@@ -20,8 +20,9 @@ in a field or focus on the grid. You do not have to change views, close
 the form, or enter a special mode first.
 
 "Any element" means first-class targets (form fields, page areas, events),
-not every DOM node. Save, All-day, and RSVP are actions or modifiers on
-those targets, not their own jump digits.
+not every DOM node. Save and All-day are actions or modifiers on those
+targets, not their own jump digits. RSVP (Going?) is a first-class field:
+`e` then `g`, or Mod+- while the form is open.
 
 ## 2. You can always discover the sequence by holding Mod
 
@@ -63,7 +64,8 @@ palette).
 ## 6. One hold-Mod gesture; context chooses the map
 
 The hold is the same everywhere. Digits are a single namespace, so the
-open event form takes them over for its fields (1–9 in DOM order). With
+open event form takes them over for its fields (1–9 in DOM order, 0 for
+actions, `-` for RSVP). With
 the form closed, the same hold numbers page areas left to right (view
 dropdown, then Day calendar columns, then month picker / Up next /
 each connected calendar account — or Life's grid/variation/details).
@@ -121,7 +123,7 @@ higher owner holds the key.
 
 Form field digits live in
 `packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts` (DOM
-order, 1–9). Page-area digits live in
+order, 1–9, then 0 for actions and `-` for RSVP). Page-area digits live in
 `packages/web/src/shortcuts/page-jump/page-jump.targets.ts`. Day-view
 calendar columns are built by `buildDayPageJumpTargets` in left-to-right
 order (view, columns, sidebar). Meeting save-error field anchors live in

@@ -34,9 +34,9 @@ const focusFieldAfterPaint = (field: EventFormFocusField) => {
 };
 
 /**
- * `e` (or `Mod+E` while typing) then `t`/`l`/`d`/`s`/`e`/`r`/`a`/`c`: open the
- * focused event's form (if needed) and move caret/focus to the matching field.
- * Shared by Day and Week.
+ * `e` (or `Mod+E` while typing) then `t`/`l`/`d`/`s`/`e`/`r`/`a`/`c`/`g`: open
+ * the focused event's form (if needed) and move caret/focus to the matching
+ * field. Shared by Day and Week.
  *
  * Returns the anchor resolver for the which-key menu: the focused card while
  * the sequence starts from the grid, else the docked form, which is where the

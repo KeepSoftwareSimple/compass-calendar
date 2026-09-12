@@ -12,7 +12,8 @@ export type EventFormFocusField =
   | "recurrence"
   | "calendar"
   | "color"
-  | "attendees";
+  | "attendees"
+  | "rsvp";
 
 const queryEventFormElement = <T extends Element>(selector: string): T | null =>
   document.querySelector<T>(selector);
@@ -61,6 +62,7 @@ const FIELD_SELECTORS: Record<EventFormFocusField, string[]> = {
   calendar: [`#event-form-calendar`],
   color: [`#event-form-color`],
   attendees: [`#event-form-attendees`, `#event-form-guest-list`],
+  rsvp: [`#event-form-rsvp`],
 };
 
 const FOCUSABLE_SELECTOR = [
@@ -88,8 +90,9 @@ const resolveFocusElement = (
   field: EventFormFocusField,
   anchor: HTMLElement,
 ): HTMLElement => {
-  // Prefer the selected swatch so arrow keys move from the current color.
-  if (field === "color") {
+  // Prefer the selected radio so arrow keys move from the current color or
+  // RSVP answer. Unanswered RSVP has no checked input; land on the first.
+  if (field === "color" || field === "rsvp") {
     return (
       anchor.querySelector<HTMLElement>('input[type="radio"]:checked') ??
       anchor.querySelector<HTMLElement>('input[type="radio"]') ??

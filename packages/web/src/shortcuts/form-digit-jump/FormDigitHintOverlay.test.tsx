@@ -145,9 +145,9 @@ describe("FormDigitHintOverlay", () => {
     render(<FormDigitHintOverlay visible={true} />);
 
     // Digit 5 (calendar) has no chip: no #event-form-calendar element was added,
-    // matching an edit draft where the calendar picker isn't rendered. Digit 0
-    // is the action toolbar, chipped last because that's where the key sits on
-    // the physical top row.
+    // matching an edit draft where the calendar picker isn't rendered. RSVP
+    // (`-`) is also absent here. Digit 0 is the action toolbar, chipped after
+    // 9 because that's where the key sits on the physical top row.
     expect(chipDigits()).toEqual(["1", "2", "3", "4", "6", "7", "8", "9", "0"]);
   });
 
@@ -174,6 +174,30 @@ describe("FormDigitHintOverlay", () => {
     ]);
   });
 
+  it("renders the RSVP chip once the Going control is present", () => {
+    buildForm();
+    const rsvp = document.createElement("div");
+    rsvp.id = "event-form-rsvp";
+    stubRect(rsvp, box(200, 80, 240, 240));
+    document.body.append(rsvp);
+
+    render(<FormDigitHintOverlay visible={true} />);
+
+    expect(chipDigits()).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "6",
+      "7",
+      "8",
+      "9",
+      "0",
+      "-",
+    ]);
+    expect(screen.getByRole("status").textContent).toContain("- for going");
+  });
+
   it("exposes a screen-reader summary while the visible chips stay aria-hidden", () => {
     buildForm();
     render(<FormDigitHintOverlay visible={true} />);
@@ -191,9 +215,10 @@ describe("FormDigitHintOverlay", () => {
     buildForm();
     render(<FormDigitHintOverlay visible={true} />);
 
-    // No #event-form-calendar element was added (edit-draft state), so digit
-    // 5 has neither a chip nor an announcement.
+    // No #event-form-calendar or #event-form-rsvp (edit-draft / not invited),
+    // so those digits have neither a chip nor an announcement.
     expect(screen.getByRole("status").textContent).not.toContain("calendar");
+    expect(screen.getByRole("status").textContent).not.toContain("going");
   });
 
   it("chips the guests wrapper even when react-select's inner input is too small to chip", () => {

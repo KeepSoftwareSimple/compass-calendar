@@ -43,10 +43,10 @@ describe("EditSequenceMenu", () => {
     ).toStrictEqual(
       "Edit which field? T for title, L for location, D for description, " +
         "S for start time, E for end time, R for recurrence, C for color, " +
-        "A for guests. " +
+        "A for guests, G for going. " +
         "Escape to cancel." +
         "Edit which field?TTitleLLocationDDescriptionSStart timeEEnd time" +
-        "RRecurrenceCColorAGuestsEsc to cancel",
+        "RRecurrenceCColorAGuestsGGoingEsc to cancel",
     );
   });
 
@@ -64,6 +64,7 @@ describe("EditSequenceMenu", () => {
       "Recurrence",
       "Color",
       "Guests",
+      "Going",
     ]) {
       expect(menu?.textContent).toContain(label);
     }

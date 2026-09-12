@@ -26,9 +26,11 @@ interface RsvpControlProps {
   event: Event;
   /** The connected account email the self attendee entry is matched by. */
   accountEmail: string;
+  /** Jump-target anchor for hold-Mod chips and Mod+- / e then g. */
+  id: string;
 }
 
-export const RsvpControl = ({ event, accountEmail }: RsvpControlProps) => {
+export const RsvpControl = ({ event, accountEmail, id }: RsvpControlProps) => {
   const groupName = useId();
   const labelId = useId();
   const [pendingStatus, setPendingStatus] = useState<RsvpResponseStatus | null>(
@@ -66,7 +68,10 @@ export const RsvpControl = ({ event, accountEmail }: RsvpControlProps) => {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-2 rounded-md bg-surface-overlay p-3 text-text text-xs">
+      <div
+        id={id}
+        className="flex items-center justify-between gap-2 rounded-md bg-surface-overlay p-3 text-text text-xs"
+      >
         <span id={labelId} className="text-text-muted">
           Going?
         </span>
