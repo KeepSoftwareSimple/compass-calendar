@@ -6,7 +6,10 @@ import {
 import { isBillingWriteLocked } from "@web/billing/billing-write-lock";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { hasAppLockReason, isAppLocked } from "@web/shortcuts/app-lock";
-import { promptShortcutUnavailable } from "@web/shortcuts/prompt-shortcut-unavailable";
+import {
+  getOverlayUnavailableMessage,
+  promptShortcutUnavailable,
+} from "@web/shortcuts/prompt-shortcut-unavailable";
 import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
 import {
   getShortcutHint,
@@ -111,11 +114,16 @@ export function useAppShortcut(
           hasAppLockReason("billingGate")
         ) {
           promptLockedWriteShortcut(telemetryHintId, upgradeFeatureArea);
-        } else if (
-          overlayUnavailableMessage &&
-          !hasAppLockReason("shortcutShowcase")
-        ) {
-          promptShortcutUnavailable(overlayUnavailableMessage);
+        } else if (!hasAppLockReason("shortcutShowcase")) {
+          // A recorded unavailable attempt should never feel like a silent
+          // failure. Callers can provide context-specific copy, while every
+          // instrumented shortcut gets a concise default.
+          const unavailableMessage =
+            overlayUnavailableMessage ??
+            (telemetryHintId
+              ? getOverlayUnavailableMessage(telemetryHintId)
+              : undefined);
+          if (unavailableMessage) promptShortcutUnavailable(unavailableMessage);
         }
         return;
       }
