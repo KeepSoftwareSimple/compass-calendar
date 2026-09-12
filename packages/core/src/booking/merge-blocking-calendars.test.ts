@@ -1,6 +1,7 @@
 import {
   mergeDiscoveredBlockingCalendarIds,
   nextOptedOutBlockingCalendarIds,
+  withDiscoveredBlockingCalendarIds,
 } from "@core/booking/merge-blocking-calendars";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { describe, expect, it } from "bun:test";
@@ -76,5 +77,25 @@ describe("nextOptedOutBlockingCalendarIds", () => {
         submitted: [google, microsoft],
       }),
     ).toEqual([]);
+  });
+});
+
+describe("withDiscoveredBlockingCalendarIds", () => {
+  const google = id("1");
+  const microsoft = id("2");
+
+  it("returns the same object when discovery adds nothing", () => {
+    const page = { blockingCalendarIds: [google], title: "Meet" };
+    expect(withDiscoveredBlockingCalendarIds(page, [], [google])).toBe(page);
+  });
+
+  it("returns a new object when a calendar is added", () => {
+    const page = { blockingCalendarIds: [google], title: "Meet" };
+    expect(
+      withDiscoveredBlockingCalendarIds(page, [], [google, microsoft]),
+    ).toEqual({
+      blockingCalendarIds: [google, microsoft],
+      title: "Meet",
+    });
   });
 });

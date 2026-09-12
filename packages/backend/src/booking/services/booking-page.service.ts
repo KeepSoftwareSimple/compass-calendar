@@ -20,6 +20,7 @@ import {
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
 import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import {
+  listEligibleBlockingCalendarIds,
   optedOutBlockingCalendarIdsForPut,
   reconcileBookingPageBlockingCalendars,
 } from "@backend/booking/services/booking-blocking-calendars";
@@ -221,11 +222,13 @@ class BookingPageService {
     }
 
     const existing = await bookingPageRepository.findByUserId(userId);
+    const eligible = await listEligibleBlockingCalendarIds(userId);
     const optedOutBlockingCalendarIds = existing
       ? await optedOutBlockingCalendarIdsForPut(
           userId,
           input.blockingCalendarIds,
           existing.optedOutBlockingCalendarIds,
+          eligible,
         )
       : [];
     const fields = mapPutInputToRecordFields(input);
@@ -263,7 +266,7 @@ class BookingPageService {
 
         return toAdminResult(
           userId,
-          await reconcileBookingPageBlockingCalendars(saved),
+          await reconcileBookingPageBlockingCalendars(saved, eligible),
         );
       } catch (error) {
         if (!isDuplicateSlugError(error)) {

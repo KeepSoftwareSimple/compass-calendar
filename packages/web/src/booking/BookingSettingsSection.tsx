@@ -6,7 +6,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { mergeDiscoveredBlockingCalendarIds } from "@core/booking/merge-blocking-calendars";
+import {
+  nextOptedOutBlockingCalendarIds,
+  withDiscoveredBlockingCalendarIds,
+} from "@core/booking/merge-blocking-calendars";
 import {
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
@@ -330,11 +333,11 @@ export function BookingSettingsSection({
       availabilityCalendars,
     );
     optedOutBlockingRef.current = new Set(
-      availabilityCalendars
-        .map((calendar) => calendar.id)
-        .filter(
-          (calendarId) => !seeded.blockingCalendarIds.includes(calendarId),
-        ),
+      nextOptedOutBlockingCalendarIds({
+        previousOptedOut: [],
+        eligible: availabilityCalendars.map((calendar) => calendar.id),
+        submitted: seeded.blockingCalendarIds,
+      }),
     );
     setForm(seeded);
     setMinNoticeText(String(seeded.minNoticeHours));
@@ -364,40 +367,16 @@ export function BookingSettingsSection({
     if (isSeedingForm) return;
     const discovered = availabilityCalendars.map((calendar) => calendar.id);
     const optedOut = [...optedOutBlockingRef.current];
-    setForm((current) => {
-      const merged = mergeDiscoveredBlockingCalendarIds({
-        current: current.blockingCalendarIds,
-        optedOut,
-        discovered,
-      });
-      if (
-        merged.length === current.blockingCalendarIds.length &&
-        merged.every((calendarId) =>
-          current.blockingCalendarIds.includes(calendarId),
-        )
-      ) {
-        return current;
-      }
-      return { ...current, blockingCalendarIds: merged };
-    });
+    setForm((current) =>
+      withDiscoveredBlockingCalendarIds(current, optedOut, discovered),
+    );
     const baseline = baselineFormRef.current;
     if (baseline) {
-      const mergedBaseline = mergeDiscoveredBlockingCalendarIds({
-        current: baseline.blockingCalendarIds,
+      baselineFormRef.current = withDiscoveredBlockingCalendarIds(
+        baseline,
         optedOut,
         discovered,
-      });
-      if (
-        mergedBaseline.length !== baseline.blockingCalendarIds.length ||
-        mergedBaseline.some(
-          (calendarId) => !baseline.blockingCalendarIds.includes(calendarId),
-        )
-      ) {
-        baselineFormRef.current = {
-          ...baseline,
-          blockingCalendarIds: mergedBaseline,
-        };
-      }
+      );
     }
   }, [availabilityCalendars, isSeedingForm]);
 
