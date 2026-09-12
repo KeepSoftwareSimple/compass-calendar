@@ -9,6 +9,13 @@ export interface NotificationChannel {
   readonly resourceId: string;
   // When the channel stops delivering and must be renewed.
   readonly expiresAt: Date;
+  // True when the provider confirmed it could reach `callbackUrl` before it
+  // opened the channel (Microsoft Graph refuses a subscription whose
+  // notification URL fails its validation handshake). Google opens a channel
+  // blind and reports reachability with its first `sync` callback instead,
+  // so it leaves this unset. The caller records a verified watch as a
+  // received push: the handshake IS the provider reaching the endpoint.
+  readonly callbackVerified?: boolean;
 }
 
 // What one inbound callback tells us, normalized from provider headers. It is

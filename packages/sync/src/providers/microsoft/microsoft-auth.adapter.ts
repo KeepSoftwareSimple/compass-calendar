@@ -135,7 +135,7 @@ export class MicrosoftAuthAdapter implements ProviderAuthAdapter {
     } catch (error) {
       throw new ProviderAuthError(
         "exchangeFailed",
-        "Microsoft rejected the authorization code exchange",
+        `Microsoft rejected the authorization code exchange (${tokenEndpointFailureSummary(error)})`,
         { cause: redactedCause(error) },
       );
     }
@@ -328,7 +328,31 @@ function consentOrExchangeError(
       "Microsoft requires admin consent before Compass can connect",
     );
   }
-  throw new ProviderAuthError(fallbackReason, message);
+  // The OAuth error code and the AADSTS sentence say WHY (a stale client
+  // secret, a redirect mismatch, an expired code); without them staging's
+  // "rejected the authorization code exchange" went undiagnosed. Only the
+  // first sentence: the rest of an Entra description is a per-request trace
+  // id, correlation id, and timestamp, which would split PostHog's grouping
+  // into one issue per attempt.
+  const lead = description?.split(/\.\s|\r|\n/, 1)[0]?.trim();
+  throw new ProviderAuthError(
+    fallbackReason,
+    `${message} (${lead ? `${error}: ${lead}` : error})`,
+  );
+}
+
+// Log-safe summary of a token endpoint failure that carried no OAuth error
+// body: the HTTP status and the thrown message, never the request (it holds
+// the client secret and the authorization code).
+function tokenEndpointFailureSummary(error: unknown): string {
+  const status = tokenEndpointStatus(error);
+  const parts = [
+    ...(status !== undefined ? [`status ${status}`] : []),
+    ...(error instanceof Error && error.message !== "token_endpoint_error"
+      ? [error.message]
+      : []),
+  ];
+  return parts.length > 0 ? parts.join(", ") : "no response";
 }
 
 const PERMANENT_REFRESH_ERRORS = new Set(["invalid_grant"]);

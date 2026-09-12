@@ -135,6 +135,11 @@ export interface SyncClientError {
   // contract drift (which field broke) from HTML the reverse proxy returned
   // with a 200.
   detail?: string;
+  // Present only for `invalidResponse`: the 200 body could not be read as
+  // JSON at all (empty, truncated, or not JSON), as opposed to JSON that
+  // failed the contract. The distinction decides whether a retry is sane:
+  // an unreadable body is a transport fault, a contract mismatch is a bug.
+  bodyUnreadable?: true;
 }
 
 export type SyncClientResult<T> =
@@ -159,8 +164,23 @@ export interface SyncClientRetryInfo {
 // retrying tightly only deepens the backlog it is reporting; and `timeout`,
 // where the caller has already waited out the whole deadline and a retry
 // would just double the wait before the same failure.
-function isRetryableSyncError(error: SyncClientError): boolean {
-  return error.kind === "unavailable" && error.status !== 429;
+//
+// A 200 whose body cannot be read as JSON is retried too, but only for a
+// GET. Prod saw this in bursts of up to seven concurrent event-list reads
+// answered at the same millisecond with status 200, content-type
+// application/json and an empty body, while Sync itself logged nothing and
+// was not restarting (PostHog issue 01a042b6, 27 occurrences 2026-08-27..
+// 09-12). Whatever drops the body on the way over, the request never
+// reached Sync's handler in any way that matters, so a second attempt is
+// the same read again. A POST is not: the command may have been applied
+// before its acknowledgement was lost, and the command path has its own
+// idempotency story.
+function isRetryableSyncError(
+  error: SyncClientError,
+  method: "GET" | "POST" | "DELETE",
+): boolean {
+  if (error.kind === "unavailable") return error.status !== 429;
+  return error.bodyUnreadable === true && method === "GET";
 }
 
 // `backOff` retries on a *thrown* error, but #send returns a typed result and
@@ -690,7 +710,9 @@ export class SyncServiceClient {
         headers: buildHeaders(),
         correlationId,
       });
-      if (result.ok || !isRetryableSyncError(result.error)) return result;
+      if (result.ok || !isRetryableSyncError(result.error, input.method)) {
+        return result;
+      }
       if (this.#now() >= retryDeadline) return result;
       throw new RetryableSyncFailure(result.error);
     };
@@ -811,12 +833,16 @@ export class SyncServiceClient {
           parts.push(`content-length=${contentLength}`);
         }
         if (contentType) parts.push(`content-type=${contentType}`);
-        return errorResult(
-          "invalidResponse",
-          correlationId,
-          200,
-          parts.join("; "),
-        );
+        return {
+          ok: false,
+          error: {
+            kind: "invalidResponse",
+            status: 200,
+            correlationId,
+            detail: parts.join("; "),
+            bodyUnreadable: true,
+          },
+        };
       }
       const parsed = input.schema.safeParse(body);
       if (!parsed.success) {

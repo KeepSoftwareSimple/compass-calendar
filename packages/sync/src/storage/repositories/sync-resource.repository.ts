@@ -71,6 +71,9 @@ interface SubscriptionInput {
   subscriptionResourceId: string;
   subscriptionToken: string;
   subscriptionExpiresAt: Date;
+  // Set when opening the channel itself counted as the provider reaching the
+  // push endpoint (see NotificationChannel.callbackVerified).
+  pushLastReceivedAt?: Date;
 }
 
 // Repository for `sync_resources`. Each resource is created once per

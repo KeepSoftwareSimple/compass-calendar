@@ -187,6 +187,13 @@ export async function maintainSubscription(
       subscriptionResourceId: channel.resourceId,
       subscriptionToken: channelToken,
       subscriptionExpiresAt: channel.expiresAt,
+      // A provider that validated the callback before opening the channel
+      // has just reached this service's push endpoint, which is exactly what
+      // pushLastReceivedAt records. Without it a quiet calendar on such a
+      // provider looks identical to a broken route to the push-delivery
+      // alarm, which fired on staging after every restart for Microsoft
+      // subscriptions that had nothing to report.
+      ...(channel.callbackVerified ? { pushLastReceivedAt: now() } : {}),
     },
   );
 

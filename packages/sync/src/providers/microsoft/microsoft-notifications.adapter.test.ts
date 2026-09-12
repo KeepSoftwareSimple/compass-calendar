@@ -99,6 +99,9 @@ describe("MicrosoftNotificationAdapter watch/stop", () => {
       channelId: "sub-1",
       resourceId: "/me/calendars/AAMkAGI2TG93AAA=/events",
       expiresAt: new Date("2026-01-02T00:00:00.000Z"),
+      // Graph validated the notification URL before returning the
+      // subscription, so the watch itself proves the callback route.
+      callbackVerified: true,
     });
   });
 

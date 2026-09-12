@@ -110,6 +110,9 @@ export class MicrosoftNotificationAdapter
         subscription.expirationDateTime,
         expirationDateTime,
       ),
+      // Graph only returns a subscription after our endpoint echoed its
+      // validationToken, so a created subscription proves the callback route.
+      callbackVerified: true,
     };
   }
 
