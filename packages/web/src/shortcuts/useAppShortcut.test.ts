@@ -265,14 +265,22 @@ describe("useAppShortcut", () => {
     setBillingWriteLock({ locked: true, status: "awaiting_checkout" });
     setAppLockReason("settingsModal", true);
 
-    renderHook(() => useAppShortcut("C", mockHandler, WRITE_CREATE_SHORTCUT));
+    renderHook(() =>
+      useAppShortcut("C", mockHandler, {
+        ...WRITE_CREATE_SHORTCUT,
+        telemetryHintId: "create-event",
+      }),
+    );
 
     dispatchKeyEvent("c", "keydown");
 
     await waitFor(() => {
       expect(mockHandler).not.toHaveBeenCalled();
     });
-    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(mocks.toast).toHaveBeenCalledWith(
+      "Close this panel to create an event (C)",
+      expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
+    );
     setAppLockReason("settingsModal", false);
   });
 

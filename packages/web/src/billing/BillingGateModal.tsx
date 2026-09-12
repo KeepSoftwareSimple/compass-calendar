@@ -62,8 +62,8 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
     ? "Start your 7-day trial"
     : "Subscribe to keep using Compass";
   const body = isAwaitingCheckout
-    ? "Try Compass for free for 7 days"
-    : "Your trial has ended.";
+    ? "Start a free 7-day trial to create and edit events, including keyboard shortcuts."
+    : "Your trial has ended. Subscribe to keep creating and editing events, including keyboard shortcuts.";
   const primaryLabel = isAwaitingCheckout ? "Start trial" : "Subscribe";
 
   useEffect(() => {

@@ -119,13 +119,19 @@ describe("BillingGateModal", () => {
     const { unmount } = renderGate();
 
     expect(
-      screen.getByText("Try Compass for free for 7 days"),
+      screen.getByText(
+        "Start a free 7-day trial to create and edit events, including keyboard shortcuts.",
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/\$|\/month/i)).not.toBeInTheDocument();
     unmount();
 
     renderGate("canceled");
-    expect(screen.getByText("Your trial has ended.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Your trial has ended. Subscribe to keep creating and editing events, including keyboard shortcuts.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.queryByText(/\$|\/month/i)).not.toBeInTheDocument();
   });
 
