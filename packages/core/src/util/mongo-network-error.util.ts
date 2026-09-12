@@ -11,6 +11,9 @@ const TRANSIENT_MONGO_ERROR_NAMES = new Set([
   "MongoNetworkTimeoutError",
   "MongoPoolClearedError",
   "PoolClearedOnNetworkError",
+  // Thrown by the connection pool's wait queue when checkout can't get a
+  // connection in time under load, not when the server is actually down.
+  "MongoWaitQueueTimeoutError",
 ]);
 
 const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
@@ -22,6 +25,11 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   // Driver: "connection 15 to 35.193.60.195:27017 closed" — match even when
   // the MongoNetworkError name is stripped by wrapping/serialization.
   /connection \d+ to \S+ closed/i,
+  // Connection pool checkout timeout under CSOT: MongoOperationTimeoutError
+  // wraps "Timed out during connection checkout" around a
+  // MongoWaitQueueTimeoutError cause of "Timed out while checking out a
+  // connection from connection pool" — match both wrapping and unwrapped.
+  /timed out .*(checking out a connection|connection checkout)/i,
 ];
 
 export function isTransientMongoNetworkError(error: unknown): boolean {
