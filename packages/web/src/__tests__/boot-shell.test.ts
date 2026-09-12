@@ -32,10 +32,18 @@ const indexHtml = readFileSync(INDEX_HTML_PATH, "utf8");
  * The two attribute-less inline scripts, in document order: the head script
  * that themes and sizes the shell, then the body script that fills in dates.
  * The structured-data and module scripts both carry attributes.
+ *
+ * Parsed rather than matched: `parseFromString` never executes a script, and
+ * a tag regexp here is both fragile about casing and whitespace and a
+ * standing CodeQL `js/bad-tag-filter` finding.
  */
 const inlineScripts = [
-  ...indexHtml.matchAll(/<script>([\s\S]*?)<\/script>/g),
-].map((match) => match[1]);
+  ...new window.DOMParser()
+    .parseFromString(indexHtml, "text/html")
+    .getElementsByTagName("script"),
+]
+  .filter((script) => !script.hasAttributes())
+  .map((script) => script.textContent ?? "");
 const headScript = inlineScripts[0] ?? "";
 
 /**
@@ -178,6 +186,41 @@ describe("boot shell head script: visible columns", () => {
 
       expect(shell.columns).toBe(computeVisibleDayCount(track));
       expect(shell.columnsVariable).toBe(String(shell.columns));
+    });
+  }
+
+  /**
+   * The narrowest open-sidebar viewport the imported constants say yields
+   * `columns`, found by scanning rather than restated as a literal.
+   */
+  const firstWidthWithColumns = (columns: number): number => {
+    for (
+      let innerWidth = SIDEBAR_AUTO_COLLAPSE_BREAKPOINT;
+      innerWidth <= 4000;
+      innerWidth += 1
+    ) {
+      const track = expectedTrackWidth(innerWidth, {
+        isOpen: true,
+        width: SIDEBAR_DEFAULT_WIDTH,
+      });
+      if (computeVisibleDayCount(track) === columns) return innerWidth;
+    }
+    throw new Error(`no viewport width yields ${columns} columns`);
+  };
+
+  // The cases above land in saturated stretches of the column formula's
+  // floor(), where a small change to the divider or the gutter cannot flip a
+  // count. These pin the step itself: a viewport one pixel narrower has to
+  // show one column fewer, so any drift in the geometry moves the step and
+  // fails here.
+  for (const columns of [6, 7]) {
+    it(`steps up to ${columns} columns at the width the constants imply`, () => {
+      const boundary = firstWidthWithColumns(columns);
+
+      expect(runHeadScript({ innerWidth: boundary }).columns).toBe(columns);
+      expect(runHeadScript({ innerWidth: boundary - 1 }).columns).toBe(
+        columns - 1,
+      );
     });
   }
 });
