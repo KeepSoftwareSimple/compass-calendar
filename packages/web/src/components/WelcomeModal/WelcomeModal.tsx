@@ -7,10 +7,7 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
-import {
-  CONNECT_CALENDAR_LABEL,
-  CONNECT_THE_CALENDAR_YOU_USE,
-} from "@web/auth/providers/provider-copy.util";
+import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useIsProviderAvailable } from "@web/auth/providers/useIsProviderAvailable";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
@@ -38,8 +35,10 @@ const WELCOME_STEPS: readonly WelcomeStep[] = [1, 2, 3];
 
 const PRIMARY_CTA_CLASS =
   "c-button c-button-primary c-button-elevated inline-flex h-10 w-full items-center justify-center rounded-full data-busy:pointer-events-none data-busy:opacity-60";
-const TEXT_CTA_CLASS =
-  "c-focus-ring inline-flex items-center rounded-md px-2 py-1 text-text-muted text-xs hover:bg-surface-overlay hover:text-text data-busy:pointer-events-none data-busy:opacity-60";
+const SECONDARY_CTA_CLASS =
+  "c-button c-button-secondary inline-flex h-10 w-full items-center justify-center rounded-full data-busy:pointer-events-none data-busy:opacity-60";
+const COMPACT_PILL_CLASS =
+  "c-button-compact c-button-secondary rounded-3xl px-4 py-1.5 text-xs data-busy:pointer-events-none data-busy:opacity-60";
 
 function WelcomeSteps({ step }: { step: WelcomeStep }) {
   return (
@@ -273,13 +272,6 @@ export function WelcomeModal() {
     }
   };
 
-  const backButton = (
-    <button type="button" onClick={goBack} className={TEXT_CTA_CLASS}>
-      Back
-      <ShortcutHint className="ml-2">Esc</ShortcutHint>
-    </button>
-  );
-
   return (
     <OverlayPanel
       align="start"
@@ -301,7 +293,8 @@ export function WelcomeModal() {
         {...pointerPassAttributes}
       >
         {/* Top row: pirate top-left, Log in top-right, on every screen so a
-            returning user is never walked through the pitch. */}
+            returning user is never walked through the pitch. Back sits
+            beside Log in once there is a previous screen. */}
         <div className="flex items-center justify-between">
           <div className="group relative flex items-center">
             <PixelPirate className="h-14 w-14 shrink-0" />
@@ -316,10 +309,21 @@ export function WelcomeModal() {
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={goBack}
+                className={COMPACT_PILL_CLASS}
+                {...busyProps}
+              >
+                Back
+                <ShortcutHint className="ml-2">Esc</ShortcutHint>
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => handOffToAuth("log_in")}
-              className="c-button-compact c-button-secondary rounded-3xl px-4 py-1.5 text-xs data-busy:pointer-events-none data-busy:opacity-60"
+              className={COMPACT_PILL_CLASS}
               {...busyProps}
             >
               Log in
@@ -388,7 +392,6 @@ export function WelcomeModal() {
                 Next
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
               </button>
-              {backButton}
             </div>
           </>
         )}
@@ -397,9 +400,11 @@ export function WelcomeModal() {
           <>
             <div className="flex w-full flex-col gap-2">
               <h2 className="font-bold text-2xl text-text leading-snug">
-                {CONNECT_THE_CALENDAR_YOU_USE}
+                Let's get started
               </h2>
-              <p className="text-text-muted">Pick how you want to start.</p>
+              <p className="text-text-muted">
+                Connect a calendar or start fresh
+              </p>
             </div>
             {/* Connecting a calendar is the moment Compass starts being
                 useful, so the Google round trip, which signs up and grants
@@ -441,13 +446,12 @@ export function WelcomeModal() {
               <button
                 type="button"
                 onClick={explore}
-                className={TEXT_CTA_CLASS}
+                className={SECONDARY_CTA_CLASS}
                 {...busyProps}
               >
                 Explore without an account
                 <ShortcutHint className="ml-2">S</ShortcutHint>
               </button>
-              {backButton}
             </div>
           </>
         )}

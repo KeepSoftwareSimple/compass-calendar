@@ -244,6 +244,7 @@ describe("WelcomeModal", () => {
       "Continue with Google",
       "Explore without an account",
       "Who is Compass for?",
+      "Back",
     ]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
@@ -264,9 +265,12 @@ describe("WelcomeModal", () => {
     await user.click(screen.getByRole("button", { name: "Next" }));
     expect(screen.getByText("Step 3 of 3")).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Connect the calendar you use" }),
+      screen.getByRole("heading", { name: "Let's get started" }),
     ).toBeTruthy();
-    expect(screen.getByText("Pick how you want to start.")).toBeTruthy();
+    expect(screen.getByText("Connect a calendar or start fresh")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Back" }).parentElement).toBe(
+      screen.getByRole("button", { name: "Log in" }).parentElement,
+    );
     expect(
       screen.queryByText(
         "If you view your calendar in Apple Calendar, it may still be hosted by Google or Microsoft.",
@@ -380,6 +384,7 @@ describe("WelcomeModal", () => {
     for (const [name, key] of [
       ["Sign up", "U"],
       ["Log in", "i"],
+      ["Back", "Esc"],
       ["Explore without an account", "S"],
     ] as const) {
       const hint = within(screen.getByRole("button", { name })).getByText(key);
@@ -548,8 +553,8 @@ describe("WelcomeModal", () => {
 
     await goToChooseScreen(user);
 
-    // Not the panel's first focusable (Log in): the primary action is signing
-    // up, so that is where focus lands.
+    // Not the panel's first focusable (Back, then Log in): the primary
+    // action is signing up, so that is where focus lands.
     const signUp = screen.getByRole("button", { name: "Sign up" });
     expect(signUp).toHaveFocus();
 
@@ -558,7 +563,7 @@ describe("WelcomeModal", () => {
     expect(terms).toHaveFocus();
 
     await user.tab();
-    expect(screen.getByRole("button", { name: "Log in" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Back" })).toHaveFocus();
     expect(
       screen.getByRole("button", { name: "Outside calendar" }),
     ).not.toHaveFocus();
@@ -614,6 +619,15 @@ describe("WelcomeModal", () => {
       expect(
         screen.getByRole("button", { name: "Sign up with email" }),
       ).toHaveClass("w-full", "h-10", "c-button-elevated");
+      expect(
+        screen.getByRole("button", { name: "Explore without an account" }),
+      ).toHaveClass("w-full", "h-10", "c-button-secondary");
+      expect(
+        screen.getByRole("button", { name: "Explore without an account" }),
+      ).not.toHaveClass("c-button-primary");
+      expect(
+        screen.getByRole("button", { name: "Explore without an account" }),
+      ).not.toHaveClass("c-button-elevated");
       expect(
         screen.getByRole("button", { name: "Continue with Google" }),
       ).toHaveClass("w-full", "h-10");
@@ -738,7 +752,7 @@ describe("WelcomeModal", () => {
       await goToChooseScreen(user);
 
       expect(
-        screen.getByRole("heading", { name: "Connect the calendar you use" }),
+        screen.getByRole("heading", { name: "Let's get started" }),
       ).toBeTruthy();
       expect(
         screen.getByRole("button", { name: "Connect Microsoft Calendar" }),
