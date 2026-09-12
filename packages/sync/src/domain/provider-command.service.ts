@@ -500,7 +500,12 @@ export async function executeProviderUpdate(
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
-      expectedVersion: command.expectedVersion,
+      expectedVersion: patchExpectedVersion(
+        command,
+        current,
+        event,
+        intendedAttendees !== undefined,
+      ),
       content,
       schedule: input.schedule,
       recurrence: intendedRecurrence,
@@ -653,7 +658,12 @@ async function executeProviderManagedUpdate(
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
-      expectedVersion: command.expectedVersion,
+      expectedVersion: patchExpectedVersion(
+        command,
+        current,
+        event,
+        intendedAttendees !== undefined,
+      ),
       providerManaged: true,
       content: mergedContent,
       schedule: current.schedule,
@@ -868,7 +878,12 @@ export async function executeProviderSeriesUpdate(
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
-      expectedVersion: command.expectedVersion,
+      expectedVersion: patchExpectedVersion(
+        command,
+        current,
+        master,
+        intendedAttendees !== undefined,
+      ),
       content,
       schedule: input.schedule,
       recurrence: intendedRecurrence,
@@ -1465,7 +1480,7 @@ export async function executeProviderSeriesFollowingDelete(
   const patchResult = await runProviderWrite(() =>
     deps.writer.patchEvent({
       ...location,
-      expectedVersion: command.expectedVersion,
+      expectedVersion: patchExpectedVersion(command, current, master),
       content: master.content,
       schedule: master.schedule,
       recurrence: truncateRecurrence,
@@ -1615,7 +1630,7 @@ export async function executeProviderSeriesFollowingUpdate(
     const truncateResult = await runProviderWrite(() =>
       deps.writer.patchEvent({
         ...originalLocation,
-        expectedVersion: command.expectedVersion,
+        expectedVersion: patchExpectedVersion(command, current, master),
         content: master.content,
         schedule: master.schedule,
         recurrence: truncateRecurrence,
@@ -2049,9 +2064,9 @@ function storedSeriesRecurrence(
 // attendeesMatchIntent). Recurrence IS written (a series edit-all changes the
 // rules), so it must be compared: a rules-only edit leaves content and
 // schedule identical, and without this a false replay would confirm the
-// command without ever writing the new rules. Used only to detect a replay,
-// so a false negative on the compared fields is still safe (it falls through
-// to the conditional patch).
+// command without ever writing the new rules. A false negative on the
+// compared fields is still safe: the replay check falls through to the
+// conditional patch, and patchExpectedVersion keeps the submitter's version.
 function matchesIntendedEdit(
   current: ProviderEvent,
   content: SyncEventContent,
@@ -2071,6 +2086,51 @@ function matchesIntendedEdit(
     recurrenceMatches(current.recurrence, recurrence) &&
     attendeesMatchIntent(current.content.attendees, intendedAttendees)
   );
+}
+
+// The If-Match version for a conditional patch on a fetched provider event.
+// The command's expectedVersion is the version its submitter last saw, so a
+// patch conditioned on it refuses to overwrite an edit made elsewhere since.
+// But a provider can rotate an event's version on its own (Exchange rewrites
+// an item's change key seconds after a create; see #3208 and the
+// live-provider-smoke), and until the next pull refreshes the stored version
+// every conditional edit would fail as a spurious versionConflict. When the
+// fetched event still carries exactly what Compass has stored for it (the
+// written fields, per matchesIntendedEdit; guest membership only when this
+// command replaces it), nobody edited it elsewhere, so the drift is the
+// provider's own rotation and the patch conditions on the fresh version. Any
+// difference keeps the submitter's version, so a genuine external edit still
+// fails as versionConflict. An unconditional command (null) stays
+// unconditional. Occurrence patches have no stored instance to compare
+// against, so they keep the submitter's version as before.
+function patchExpectedVersion(
+  command: CommandRecord,
+  current: ProviderEvent,
+  stored: EventRecord,
+  compareAttendees = false,
+): string | null {
+  if (command.expectedVersion === null) return null;
+  const unchanged = matchesIntendedEdit(
+    current,
+    stored.content,
+    stored.schedule,
+    storedWriteRecurrence(stored.recurrence),
+    compareAttendees ? stored.content.attendees : undefined,
+  );
+  return unchanged ? current.providerVersion : command.expectedVersion;
+}
+
+// The recurrence a patch would write for a stored record as it stands: a
+// series master carries its rules, an exception addresses one instance, and
+// anything else is a single event.
+function storedWriteRecurrence(
+  recurrence: EventRecord["recurrence"],
+): ProviderWriteRecurrence {
+  if (recurrence.kind === "seriesMaster") {
+    return { kind: "series", rules: recurrence.rules };
+  }
+  if (recurrence.kind === "exception") return { kind: "instance" };
+  return { kind: "single" };
 }
 
 // Membership comparison for the replay check, entered ONLY when the command
