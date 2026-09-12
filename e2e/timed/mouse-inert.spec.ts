@@ -87,12 +87,18 @@ test("an empty grid click teaches the digits that create there", async ({
   expect(timeLabel).toBeTruthy();
   // "7:15 AM" -> "7:15"; the draft's name reads "Untitled event, 7:15 - 8:15 AM".
   const startClock = (timeLabel ?? "").replace(/\s*[AP]M$/i, "");
+  // The hint always spells the minutes (Intl `minute: "2-digit"`), while the
+  // card's label drops them on a whole hour (web.date.util's getTimeLabel
+  // strips ":00"), so "2:00 PM" in the hint is "2 - 3 PM" on the card. Accept
+  // either spelling: without this the test passes all day and fails only in
+  // the windows where the clicked slot lands exactly on the hour.
+  const startPattern = startClock.replace(/:00$/, "(?::00)?");
 
   // Typed time places a draft at the clicked slot; the form opens on Enter.
   await page.keyboard.type(digits);
   await expect(
     grid.getByRole("button", {
-      name: new RegExp(`Untitled event, ${startClock} `),
+      name: new RegExp(`Untitled event, ${startPattern} `),
     }),
   ).toBeVisible();
 });
