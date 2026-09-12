@@ -1,6 +1,5 @@
 import { type FC } from "react";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
-import { HeaderRefreshButton } from "@web/components/CalendarHeader/HeaderRefreshButton";
 import { SelectView } from "@web/components/SelectView/SelectView";
 import { SidebarToggleButton } from "@web/components/Sidebar/SidebarToggleButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
@@ -60,7 +59,6 @@ export const CalendarHeader: FC<Props> = ({
           </div>
         )}
         <SelectView label={label} onToday={onToday} />
-        <HeaderRefreshButton />
       </div>
 
       <div className="z-2 flex shrink-0 items-center pr-5">

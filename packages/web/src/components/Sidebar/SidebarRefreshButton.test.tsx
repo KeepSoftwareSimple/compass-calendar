@@ -43,14 +43,14 @@ afterAll(() => {
 // Cache-bust so this file's mocks apply even when another suite already
 // loaded the component with the real hooks.
 const moduleUrl = new URL(
-  `./HeaderRefreshButton.tsx?test=${Math.random().toString(36).slice(2)}`,
+  `./SidebarRefreshButton.tsx?test=${Math.random().toString(36).slice(2)}`,
   import.meta.url,
 );
-const { HeaderRefreshButton, REFRESH_AFTER_DEGRADED_MS } = (await import(
+const { SidebarRefreshButton, REFRESH_AFTER_DEGRADED_MS } = (await import(
   moduleUrl.href
-)) as typeof import("./HeaderRefreshButton");
+)) as typeof import("./SidebarRefreshButton");
 
-describe("HeaderRefreshButton", () => {
+describe("SidebarRefreshButton", () => {
   afterEach(() => {
     degradedSinceMs = null;
     isUpdateAvailable = false;
@@ -58,7 +58,7 @@ describe("HeaderRefreshButton", () => {
   });
 
   it("renders nothing while the stream is healthy and no update is waiting", () => {
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     expect(
       screen.queryByRole("button", { name: "Refresh" }),
@@ -68,7 +68,7 @@ describe("HeaderRefreshButton", () => {
 
   it("stays hidden during a short outage instead of showing reconnecting copy", () => {
     degradedSinceMs = Date.now();
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     expect(
       screen.queryByRole("button", { name: "Refresh" }),
@@ -80,7 +80,7 @@ describe("HeaderRefreshButton", () => {
   it("offers a reload once the outage has outlived the refresh window", async () => {
     const user = userEvent.setup();
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     const refresh = screen.getByRole("button", { name: "Refresh" });
     await user.hover(refresh);
@@ -98,7 +98,7 @@ describe("HeaderRefreshButton", () => {
 
   it("adds the refresh control when the remaining window elapses", async () => {
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS + 50;
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     expect(
       screen.queryByRole("button", { name: "Refresh" }),
@@ -110,11 +110,11 @@ describe("HeaderRefreshButton", () => {
 
   it("clears the control when the stream reopens", () => {
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
-    const { rerender } = render(<HeaderRefreshButton />);
+    const { rerender } = render(<SidebarRefreshButton />);
     expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
 
     degradedSinceMs = null;
-    rerender(<HeaderRefreshButton />);
+    rerender(<SidebarRefreshButton />);
 
     expect(
       screen.queryByRole("button", { name: "Refresh" }),
@@ -124,7 +124,7 @@ describe("HeaderRefreshButton", () => {
   it("shows one refresh control when a newer app version is available", async () => {
     const user = userEvent.setup();
     isUpdateAvailable = true;
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1);
 
@@ -137,7 +137,7 @@ describe("HeaderRefreshButton", () => {
   it("keeps a single refresh control when both an outage and an update apply", () => {
     isUpdateAvailable = true;
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
-    render(<HeaderRefreshButton />);
+    render(<SidebarRefreshButton />);
 
     expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1);
     expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();

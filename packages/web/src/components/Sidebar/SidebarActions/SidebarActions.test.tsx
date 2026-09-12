@@ -71,6 +71,9 @@ describe("SidebarActions", () => {
     expect(
       screen.getByRole("button", { name: "Open settings" }),
     ).toHaveAttribute("data-pointer-shortcut", '["Mod",","]');
+    expect(
+      screen.queryByRole("button", { name: "Refresh" }),
+    ).not.toBeInTheDocument();
   });
 
   it("labels the shortcuts button as a close action when shortcuts are open", () => {
