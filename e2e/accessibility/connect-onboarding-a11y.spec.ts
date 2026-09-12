@@ -111,7 +111,7 @@ test("the connect-calendar onboarding step has no automatically detectable acces
   await welcomeDialog.getByRole("button", { name: "Next" }).click();
   await expect(
     welcomeDialog.getByRole("heading", {
-      name: "Connect the calendar you use",
+      name: "Let's get started",
     }),
   ).toBeVisible();
 
