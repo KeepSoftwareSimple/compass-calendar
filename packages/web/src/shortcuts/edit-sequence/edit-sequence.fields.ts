@@ -11,10 +11,12 @@ import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
  */
 // `digit` is the field's Mod+digit jump shortcut, assigned in the form's DOM
 // order (title → schedule → recurrence → calendar → color → location →
-// attendees → description) so the mapping is guessable without the hold-Mod
-// hint chips. The array itself keeps its original key-taught order (unrelated
-// to digit order) since EditSequenceMenu renders straight off this order.
-// Account keeps digit 5 but has no letter key: `a` is guests, and Actions is
+// attendees → description → RSVP) so the mapping is guessable without the
+// hold-Mod hint chips. 1–9 are those fields, 0 is the action toolbar, and
+// `-` (the next physical top-row key) is RSVP so existing digits stay put.
+// The array itself keeps its original key-taught order (unrelated to digit
+// order) since EditSequenceMenu renders straight off this order. Account
+// keeps digit 5 but has no letter key: `a` is guests, and Actions is
 // digit-only too — it's a toolbar, not a field, so `e`-leader has nothing to
 // focus there.
 export const EDIT_SEQUENCE_FIELDS = [
@@ -28,6 +30,7 @@ export const EDIT_SEQUENCE_FIELDS = [
   { key: "c", field: "color", label: "Color", digit: "6" },
   { key: "a", field: "attendees", label: "Guests", digit: "8" },
   { field: "actions", label: "Actions", digit: "0" },
+  { key: "g", field: "rsvp", label: "Going", digit: "-" },
 ] as const satisfies readonly {
   key?: string;
   field: EventFormFocusField;
@@ -61,10 +64,10 @@ export const EDIT_SEQUENCE_FIELD_BY_DIGIT = Object.fromEntries(
 
 /**
  * The same table in physical top-row order: the fields in DOM order under
- * 1…9, then the actions toolbar under 0. Sorted by position in
- * PICK_KEY_LABELS rather than by numeric value on purpose — the jump engine
- * resolves a keypress to a *physical key index*, so `0` has to land last,
- * where the key actually sits, not first as `Number("0")` would put it.
+ * 1…9, the actions toolbar under 0, then RSVP under `-`. Sorted by position
+ * in PICK_KEY_LABELS rather than by numeric value on purpose — the jump
+ * engine resolves a keypress to a *physical key index*, so `0` has to land
+ * after `9` (where the key sits), not first as `Number("0")` would put it.
  */
 export const FORM_FIELD_DIGITS = [...EDIT_SEQUENCE_FIELDS].sort(
   (a, b) => PICK_KEY_LABELS.indexOf(a.digit) - PICK_KEY_LABELS.indexOf(b.digit),

@@ -94,6 +94,7 @@ const EVENT_FORM_CALENDAR_ID = "event-form-calendar";
 const EVENT_FORM_COLOR_ID = "event-form-color";
 const EVENT_FORM_SCHEDULE_ID = "event-form-schedule";
 const EVENT_FORM_RECURRENCE_ID = "event-form-recurrence";
+const EVENT_FORM_RSVP_ID = "event-form-rsvp";
 
 const eventFormErrorId = (field: string) =>
   `event-form-error-${field.replaceAll(".", "-")}`;
@@ -893,7 +894,11 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
             {/* Outside the fieldset (like the details section below): RSVP
               must stay interactive on a read-only calendar. */}
             {showRsvpControl && rsvpSource && rsvpAccountEmail && (
-              <RsvpControl event={rsvpSource} accountEmail={rsvpAccountEmail} />
+              <RsvpControl
+                id={EVENT_FORM_RSVP_ID}
+                event={rsvpSource}
+                accountEmail={rsvpAccountEmail}
+              />
             )}
 
             {/* Outside the fieldset: read-only display, not an editable

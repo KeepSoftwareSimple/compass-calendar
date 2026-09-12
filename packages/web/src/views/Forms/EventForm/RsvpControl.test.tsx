@@ -47,9 +47,16 @@ const invitedEvent = (
 
 const renderControl = (event: Event) => {
   const { wrapper } = createStoreWrapper();
-  return render(<RsvpControl event={event} accountEmail={ACCOUNT_EMAIL} />, {
-    wrapper,
-  });
+  return render(
+    <RsvpControl
+      id="event-form-rsvp"
+      event={event}
+      accountEmail={ACCOUNT_EMAIL}
+    />,
+    {
+      wrapper,
+    },
+  );
 };
 
 const captureRsvpRequests = () => {
@@ -73,6 +80,7 @@ describe("RsvpControl", () => {
     expect(
       screen.getByRole("radiogroup", { name: "Going?" }),
     ).toBeInTheDocument();
+    expect(document.getElementById("event-form-rsvp")).not.toBeNull();
     expect(screen.getByRole("radio", { name: "Going" })).not.toBeChecked();
     expect(screen.getByRole("radio", { name: "Maybe" })).toBeChecked();
     expect(screen.getByRole("radio", { name: "Decline" })).not.toBeChecked();

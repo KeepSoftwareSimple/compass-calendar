@@ -228,6 +228,7 @@ describe("shortcuts.registry", () => {
       expect(ids).toContain("edit-focus-attendees");
       expect(ids).not.toContain("edit-focus-calendar");
       expect(ids).toContain("edit-focus-color");
+      expect(ids).toContain("edit-focus-rsvp");
       expect(ids).not.toContain("other-booking-jump");
     });
 

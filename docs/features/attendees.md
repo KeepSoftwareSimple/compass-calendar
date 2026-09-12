@@ -85,8 +85,11 @@ Source: `packages/core/src/types/event-command.contracts.ts`
   labels (`1 guest (0 yes, 1 awaiting)`), distinct from the user's own
   Going / Maybe / Decline control. Jump to the guest field with `e` then
   `a`, or Mod+8 while the form is open (Mod+9 is notes; Account keeps
-  Mod+5 with no letter). When the combobox is hidden (invitee / read-only
-  / occurrence), the same shortcuts focus the read-only guest list.
+  Mod+5 with no letter). Jump to your own RSVP control with `e` then `g`,
+  or Mod+- while the form is open. When the combobox is hidden (invitee /
+  read-only / occurrence), the guest shortcuts focus the read-only guest
+  list. The RSVP chip and shortcut are omitted when the control is not
+  rendered.
 - Typing an invalid string never creates a chip — `AttendeeField`'s
   `isValidAttendeeEmail` gate rejects it inline ("Enter a valid email
   address") and nothing reaches `onChange`
@@ -228,7 +231,8 @@ Source: `packages/core/src/types/event-command.contracts.ts`
   (case-insensitive, organizer included) — on any calendar the account can
   read, including a viewer-access (reader) calendar, since answering an
   invitation is not a calendar write
-  (`EventForm.rsvp.test.tsx`).
+  (`EventForm.rsvp.test.tsx`). Jump to it with `e` then `g`, or Mod+- while
+  the form is open; hold-Mod chips `-` only when the control is rendered.
 - **Self-entry rewrite, never a full replace.** The provider write rewrites
   only the caller's own attendee entry — `executeProviderRsvp` fetches the
   target's current provider state fresh, finds the self entry by the

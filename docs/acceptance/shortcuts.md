@@ -248,7 +248,7 @@ Pressing Delete while an event is focused in the Day or Week grid deletes it —
 
 ### UX
 
-With a grid event focused and no form field being typed in, pressing `E` then `T` within a short window opens that event's form (if needed) and places the caret in the title. The same `E`-prefix pattern targets description (`D`), start (`S`), end (`E`), recurrence (`R`), guests (`A`), and color (`C`). Account (calendar picker) is Mod+5 only.
+With a grid event focused and no form field being typed in, pressing `E` then `T` within a short window opens that event's form (if needed) and places the caret in the title. The same `E`-prefix pattern targets description (`D`), start (`S`), end (`E`), recurrence (`R`), guests (`A`), color (`C`), and RSVP / Going (`G`). Account (calendar picker) is Mod+5 only. RSVP is Mod+- while the form is open.
 
 ### Steps
 

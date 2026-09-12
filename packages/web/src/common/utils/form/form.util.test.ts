@@ -183,6 +183,16 @@ describe("form.util", () => {
       const attendeesInput = document.createElement("input");
       attendeesInput.setAttribute("role", "combobox");
       attendees.append(attendeesInput);
+      const rsvp = document.createElement("div");
+      rsvp.id = "event-form-rsvp";
+      const rsvpSelected = document.createElement("input");
+      rsvpSelected.type = "radio";
+      rsvpSelected.name = "event-rsvp";
+      rsvpSelected.checked = true;
+      const rsvpOther = document.createElement("input");
+      rsvpOther.type = "radio";
+      rsvpOther.name = "event-rsvp";
+      rsvp.append(rsvpSelected, rsvpOther);
       form.append(
         title,
         location,
@@ -193,6 +203,7 @@ describe("form.util", () => {
         calendar,
         color,
         attendees,
+        rsvp,
       );
       document.body.appendChild(form);
       return {
@@ -206,6 +217,8 @@ describe("form.util", () => {
         colorSelected,
         attendees,
         attendeesInput,
+        rsvp,
+        rsvpSelected,
       };
     };
 
@@ -238,9 +251,12 @@ describe("form.util", () => {
 
       expect(focusEventFormField("attendees")).toBe(true);
       expect(document.activeElement).toBe(fields.attendeesInput);
+
+      expect(focusEventFormField("rsvp")).toBe(true);
+      expect(document.activeElement).toBe(fields.rsvpSelected);
     });
 
-    it("anchors guests and color chips on the visible wrapper, not the inner control", () => {
+    it("anchors guests, color, and RSVP chips on the visible wrapper, not the inner control", () => {
       const fields = mountForm();
 
       expect(getEventFormFieldAnchor("attendees")).toBe(fields.attendees);
@@ -248,6 +264,9 @@ describe("form.util", () => {
 
       expect(getEventFormFieldAnchor("color")?.id).toBe("event-form-color");
       expect(getEventFormFieldElement("color")).toBe(fields.colorSelected);
+
+      expect(getEventFormFieldAnchor("rsvp")).toBe(fields.rsvp);
+      expect(getEventFormFieldElement("rsvp")).toBe(fields.rsvpSelected);
     });
 
     it("focuses the selected color swatch even when it is not first in the group", () => {
@@ -267,6 +286,26 @@ describe("form.util", () => {
       document.body.appendChild(form);
 
       expect(focusEventFormField("color")).toBe(true);
+      expect(document.activeElement).toBe(selected);
+    });
+
+    it("focuses the selected RSVP answer even when it is not first in the group", () => {
+      const form = document.createElement("form");
+      form.setAttribute("name", ID_EVENT_FORM);
+      const rsvp = document.createElement("div");
+      rsvp.id = "event-form-rsvp";
+      const first = document.createElement("input");
+      first.type = "radio";
+      first.name = "event-rsvp";
+      const selected = document.createElement("input");
+      selected.type = "radio";
+      selected.name = "event-rsvp";
+      selected.checked = true;
+      rsvp.append(first, selected);
+      form.append(rsvp);
+      document.body.appendChild(form);
+
+      expect(focusEventFormField("rsvp")).toBe(true);
       expect(document.activeElement).toBe(selected);
     });
 

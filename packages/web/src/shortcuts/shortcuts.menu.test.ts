@@ -349,6 +349,10 @@ describe("shortcut menu sections", () => {
           keys: ["e", "c"],
           label: "Edit color",
         });
+        expect(shortcuts).toContainEqual({
+          keys: ["e", "g"],
+          label: "Edit going",
+        });
       }
     });
 

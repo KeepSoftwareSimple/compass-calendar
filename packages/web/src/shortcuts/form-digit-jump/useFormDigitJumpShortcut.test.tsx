@@ -109,6 +109,15 @@ const buildForm = () => {
   description.tabIndex = 0;
   document.body.append(description);
 
+  const rsvp = document.createElement("div");
+  rsvp.id = "event-form-rsvp";
+  const going = document.createElement("input");
+  going.type = "radio";
+  going.name = "event-rsvp";
+  going.checked = true;
+  rsvp.append(going);
+  form.append(rsvp);
+
   return {
     title,
     start,
@@ -120,6 +129,7 @@ const buildForm = () => {
     attendees: attendeesInput,
     description,
     actions: duplicate,
+    rsvp: going,
   };
 };
 
@@ -171,14 +181,27 @@ describe("useFormDigitJumpShortcut", () => {
         ["8", fields.attendees],
         ["9", fields.description],
         // 0 sits after 9 on the physical top row, so it lands on the actions
-        // toolbar rather than shifting every field's digit by one.
+        // toolbar rather than shifting every field's digit by one. `-` is
+        // RSVP, the next physical key after 0.
         ["0", fields.actions],
+        ["-", fields.rsvp],
       ] as const;
 
       for (const [digit, element] of cases) {
-        pressModDigit(digit, `Digit${digit}`);
+        pressModDigit(digit, digit === "-" ? "Minus" : `Digit${digit}`);
         expect(element).toHaveFocus();
       }
+    });
+
+    it("jumps to RSVP on Mod+-", () => {
+      const fields = buildForm();
+      fields.title.focus();
+      renderHook(() => useFormDigitJumpShortcut());
+
+      const event = pressModDigit("-", "Minus");
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(fields.rsvp).toHaveFocus();
     });
 
     it("ignores a bare digit with no modifier held", () => {

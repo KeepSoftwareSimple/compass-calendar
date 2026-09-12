@@ -13,11 +13,12 @@ export { MOD_HOLD_HINT_MS } from "@web/shortcuts/mod-hold/useModHoldHintShortcut
 const DIGIT_ORDER = FORM_FIELD_DIGITS.map((entry) => entry.digit);
 
 /**
- * Mod+digit jumps focus straight to a form field (1=title ... 9=description;
- * see edit-sequence.fields.ts for the assignment). Holding Mod alone reveals
- * the mapping as hint chips (FormDigitHintOverlay) via the shared hold-Mod
- * engine — the same discoverability contract as the `e`-leader's which-key
- * menu, but driven by a hold instead of a second keypress.
+ * Mod+digit jumps focus straight to a form field (1=title ... 9=description,
+ * 0=actions, -=RSVP; see edit-sequence.fields.ts for the assignment). Holding
+ * Mod alone reveals the mapping as hint chips (FormDigitHintOverlay) via the
+ * shared hold-Mod engine — the same discoverability contract as the
+ * `e`-leader's which-key menu, but driven by a hold instead of a second
+ * keypress.
  *
  * Mounted from EventForm, so this hook is live exactly while the form is
  * open; no separate "is the form open" gate is needed.
