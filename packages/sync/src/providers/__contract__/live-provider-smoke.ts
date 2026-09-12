@@ -3,6 +3,7 @@ import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
 import { appleLiveFactory } from "@sync/providers/__contract__/apple-contract.factory";
 import { googleLiveFactory } from "@sync/providers/__contract__/google-contract.factory";
 import { microsoftLiveFactory } from "@sync/providers/__contract__/microsoft-contract.factory";
+import { patchWithFreshVersion } from "@sync/providers/__contract__/patch-with-fresh-version";
 import { type ProviderAdapters } from "@sync/providers/provider-adapters";
 import { type CalendarDiscovery } from "@sync/providers/provider-calendar.port";
 import {
@@ -118,17 +119,28 @@ export async function runMicrosoftLiveSmoke(input: {
     // Exchange bumps an item's change key in the seconds after creation, so
     // an If-Match on the create-time etag races it (HTTP 412
     // ErrorIrresolvableConflict, seen live). Patch against the version just
-    // read, as the domain does.
-    const patched = await adapters.writer.patchEvent({
-      accessToken,
-      calendarId,
-      providerEventId: created.providerEventId,
-      expectedVersion: readBack.providerVersion,
-      content: { ...content, title: `compass-smoke ${input.runId} updated` },
-      schedule,
-      recurrence: { kind: "single" },
-      invitation: "none",
-    });
+    // read, and re-read it if that one was also pre-bump.
+    const patched = await patchWithFreshVersion(
+      adapters.writer,
+      {
+        accessToken,
+        calendarId,
+        providerEventId: created.providerEventId,
+        expectedVersion: readBack.providerVersion,
+        content: { ...content, title: `compass-smoke ${input.runId} updated` },
+        schedule,
+        recurrence: { kind: "single" },
+        invitation: "none",
+      },
+      async () => {
+        const current = await adapters.writer.fetchEvent({
+          accessToken,
+          calendarId,
+          providerEventId: created.providerEventId,
+        });
+        return current?.kind === "event" ? current.providerVersion : null;
+      },
+    );
     if (
       !patched.providerVersion ||
       patched.providerVersion === readBack.providerVersion
@@ -589,16 +601,31 @@ async function runExceptionCase(
         "fetchInstanceAt returned no occurrence",
       );
     }
-    await writer.patchEvent({
-      accessToken,
-      calendarId,
-      providerEventId: instance.providerEventId,
-      expectedVersion: instance.providerVersion,
-      content: { ...content, title: `compass-smoke exception ${runId}` },
-      schedule: instance.schedule,
-      recurrence: { kind: "instance" },
-      invitation: "none",
-    });
+    // The occurrence is read moments after the series create, so its change
+    // key can be pre-bump too (see patchWithFreshVersion).
+    await patchWithFreshVersion(
+      writer,
+      {
+        accessToken,
+        calendarId,
+        providerEventId: instance.providerEventId,
+        expectedVersion: instance.providerVersion,
+        content: { ...content, title: `compass-smoke exception ${runId}` },
+        schedule: instance.schedule,
+        recurrence: { kind: "instance" },
+        invitation: "none",
+      },
+      async () => {
+        const current = await writer.fetchInstanceAt({
+          accessToken,
+          calendarId,
+          seriesProviderEventId: created.providerEventId,
+          originalStartAt: start.toISOString(),
+          scheduleKind: "timed",
+        });
+        return current?.kind === "event" ? current.providerVersion : null;
+      },
+    );
   } finally {
     await writer
       .deleteEvent({
