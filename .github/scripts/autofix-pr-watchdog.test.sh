@@ -20,14 +20,35 @@ set -euo pipefail
 printf '%s\n' "$*" >> "${AUTOFIX_TEST_GH_LOG}"
 args="$*"
 if [[ "$args" == *"pr list"* ]]; then
+  if [ -n "${AUTOFIX_TEST_LIST_FAIL:-}" ]; then
+    echo "simulated gh pr list failure" >&2
+    exit 1
+  fi
+  # Faithful `gh pr list` fake: answer with only the fields the caller named
+  # in --json, then apply the caller's own --jq. Re-implementing the filter
+  # here instead let a script that forgot to request `labels` still look like
+  # it filtered on them, which is how the bug this guards reached CI.
   # `gh ... --jq` prints raw (unquoted) output for string results, same as
   # `jq -r`, which is what production relies on for `tojson`-per-line output.
-  jq -r '
-    [.[] | select(
-      ([.labels[]?.name] | index("automerge-candidate") | not) and
-      ([.labels[]?.name] | index("autofix:needs-human") | not)
-    )] | .[] | tojson
-  ' <<<"${AUTOFIX_TEST_PRS:-[]}"
+  fields=""
+  jq_expr="."
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --json)
+        fields=$2
+        shift 2
+        ;;
+      --jq)
+        jq_expr=$2
+        shift 2
+        ;;
+      *) shift ;;
+    esac
+  done
+  jq -c --arg fields "$fields" \
+    '($fields | split(",")) as $requested
+     | [.[] | with_entries(select(.key | IN($requested[])))]' \
+    <<<"${AUTOFIX_TEST_PRS:-[]}" | jq -r "$jq_expr"
   exit 0
 fi
 if [[ "$args" == *"pr edit"* ]]; then
@@ -38,10 +59,6 @@ if [[ "$args" == *"pr edit"* ]]; then
     fi
   done
   exit 0
-fi
-if [[ "$args" == *"pr list --fail"* ]]; then
-  echo "simulated gh pr list failure" >&2
-  exit 1
 fi
 if [[ "$args" == *"label create"* ]]; then
   exit 0
@@ -63,12 +80,16 @@ iso_ago_minutes() {
 }
 
 run_watchdog() {
+  # Per-run log, so a `pr edit` from an earlier case can't satisfy (or spoil)
+  # this case's assertions.
+  : >"$GH_LOG"
   set +e
   PATH="${STUB_DIR}:${PATH}" \
     GH_REPO="example/compass" \
     AUTOFIX_TEST_GH_LOG="$GH_LOG" \
     AUTOFIX_TEST_PRS="${AUTOFIX_TEST_PRS:-[]}" \
     AUTOFIX_TEST_EDIT_FAIL_FOR="${AUTOFIX_TEST_EDIT_FAIL_FOR:-}" \
+    AUTOFIX_TEST_LIST_FAIL="${AUTOFIX_TEST_LIST_FAIL:-}" \
     AUTOFIX_WATCHDOG_GRACE_MINUTES="${AUTOFIX_WATCHDOG_GRACE_MINUTES:-60}" \
     AUTOFIX_MODE="${AUTOFIX_MODE:-}" \
     bash "${ROOT}/.github/scripts/autofix-pr-watchdog.sh" >"$OUT" 2>&1
@@ -172,6 +193,14 @@ assert_out_contains "failed to apply autofix:needs-human label" "failed label ed
 assert_out_contains "Autofix PR #3703 has been open" "second PR is still escalated after the first fails"
 assert_eq "$WATCHDOG_EXIT" "1" "a label-edit failure makes the run exit non-zero"
 AUTOFIX_TEST_EDIT_FAIL_FOR=""
+
+# 7. `gh pr list` itself fails: nothing is escalated and the run reports it.
+AUTOFIX_TEST_PRS='[]'
+AUTOFIX_TEST_LIST_FAIL="1"
+run_watchdog
+assert_eq "$WATCHDOG_EXIT" "1" "a failed pr list makes the run exit non-zero"
+assert_log_not_contains "pr edit" "no label edit is attempted when listing fails"
+AUTOFIX_TEST_LIST_FAIL=""
 
 if [ "$FAIL" -ne 0 ]; then
   echo "FAILED ${FAIL}  passed ${PASS}" >&2
