@@ -19,6 +19,10 @@ import {
 } from "@backend/booking/booking-page.mapper";
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
 import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
+import {
+  optedOutBlockingCalendarIdsForPut,
+  reconcileBookingPageBlockingCalendars,
+} from "@backend/booking/services/booking-blocking-calendars";
 import calendarService from "@backend/calendar/services/calendar.service";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
@@ -184,8 +188,8 @@ const toAdminResult = async (
 
 class BookingPageService {
   async getAdminPage(userId: ObjectId): Promise<AdminGetBookingPageResult> {
-    const record = await bookingPageRepository.findByUserId(userId);
-    if (!record) {
+    const existing = await bookingPageRepository.findByUserId(userId);
+    if (!existing) {
       const timeZone = await resolveHostTimeZone(userId);
       return {
         ...buildDefaultAdminPutInput(timeZone),
@@ -194,6 +198,7 @@ class BookingPageService {
       };
     }
 
+    const record = await reconcileBookingPageBlockingCalendars(existing);
     return toAdminResult(userId, record);
   }
 
@@ -216,6 +221,13 @@ class BookingPageService {
     }
 
     const existing = await bookingPageRepository.findByUserId(userId);
+    const optedOutBlockingCalendarIds = existing
+      ? await optedOutBlockingCalendarIdsForPut(
+          userId,
+          input.blockingCalendarIds,
+          existing.optedOutBlockingCalendarIds,
+        )
+      : [];
     const fields = mapPutInputToRecordFields(input);
     let bookingSlug = existing?.bookingSlug;
     let slugSource: SlugSource = "allocated";
@@ -245,10 +257,14 @@ class BookingPageService {
       try {
         const saved = await bookingPageRepository.upsertByUserId(userId, {
           ...fields,
+          optedOutBlockingCalendarIds,
           ...(bookingSlug ? { bookingSlug } : {}),
         });
 
-        return toAdminResult(userId, saved);
+        return toAdminResult(
+          userId,
+          await reconcileBookingPageBlockingCalendars(saved),
+        );
       } catch (error) {
         if (!isDuplicateSlugError(error)) {
           throw error;

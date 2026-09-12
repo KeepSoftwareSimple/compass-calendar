@@ -52,6 +52,7 @@ import {
   bookingReservationRepository,
   confirmedReservationScanRange,
 } from "@backend/booking/booking-reservation.repository";
+import { reconcileBookingPageBlockingCalendars } from "@backend/booking/services/booking-blocking-calendars";
 import {
   emptyBookableStatus,
   hostAllowsGuestWrites,
@@ -458,8 +459,9 @@ export class PublicBookingService {
     const windowEnd =
       requestedEnd.getTime() > horizonEnd.getTime() ? horizonEnd : requestedEnd;
 
+    const reconciled = await reconcileBookingPageBlockingCalendars(page);
     const probe = await probeBookability(
-      page,
+      reconciled,
       { start: windowStart, end: windowEnd },
       this.calendarBooking,
       { excludeEventIds: options.excludeEventIds },
@@ -530,8 +532,9 @@ export class PublicBookingService {
       omitReservationStart?: Date;
     } = {},
   ): Promise<void> {
+    const reconciled = await reconcileBookingPageBlockingCalendars(page);
     const now = new Date();
-    const minNoticeMs = page.minNoticeHours * 60 * 60 * 1000;
+    const minNoticeMs = reconciled.minNoticeHours * 60 * 60 * 1000;
     if (slotStart.getTime() < now.getTime() + minNoticeMs) {
       throw bookingError(
         "SLOT_UNAVAILABLE",
@@ -540,9 +543,9 @@ export class PublicBookingService {
     }
 
     const availability = await this.calendarBooking.getAvailability(
-      page.userId.toString(),
+      reconciled.userId.toString(),
       {
-        calendarIds: page.blockingCalendarIds,
+        calendarIds: reconciled.blockingCalendarIds,
         start: DateTimeSchema.parse(slotStart.toISOString()),
         end: DateTimeSchema.parse(slotEnd.toISOString()),
         ...(options.excludeEventIds

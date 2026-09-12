@@ -3069,6 +3069,55 @@ describe("BookingSettingsSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("checks a newly connected availability calendar as a blocker", async () => {
+    const user = userEvent.setup({ delay: null });
+    const microsoftCalendar = createMockCalendar({
+      name: "Outlook",
+      accountEmail: "host@outlook.com",
+      provider: "microsoft",
+      conference: "teams",
+      createsGoogleMeet: false,
+    });
+    userMetadataActions.set({
+      google: {
+        connectionState: "HEALTHY" as const,
+        connections: [
+          createMockConnection("host@example.com"),
+          createMockConnection("host@outlook.com", { provider: "microsoft" }),
+        ],
+      },
+    });
+    server.use(
+      rest.get(bookingPageUrl, (_req, res, ctx) =>
+        res(ctx.json(savedOffPage())),
+      ),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    await user.click(await screen.findByText(BOOKING_MORE_OPTIONS_LABEL));
+    const blocking = screen.getByRole("group", { name: "Blocking calendars" });
+    expect(
+      within(blocking).getByRole("checkbox", { name: "Work" }),
+    ).toBeChecked();
+
+    queryClient.setQueryData(calendarQueryKeys.all, [
+      writableCalendar,
+      microsoftCalendar,
+    ]);
+
+    expect(
+      await within(blocking).findByRole("checkbox", { name: "Outlook" }),
+    ).toBeChecked();
+  });
+
   it("keeps More options closed by default", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(

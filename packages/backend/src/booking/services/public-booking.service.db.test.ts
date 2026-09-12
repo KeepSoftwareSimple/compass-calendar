@@ -2015,6 +2015,64 @@ describe("PublicBookingService", () => {
     expect(starts).not.toContain(occupied);
     expect(starts).not.toContain(halfHour);
   });
+
+  it("blocks a slot busy on a calendar connected after the page was saved", async () => {
+    const userId = await createNamedUser("Late Busy Calendar");
+    const google = writableCalendar();
+    mockHealthySync([google]);
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+    const page = await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: google.id,
+        blockingCalendarIds: [google.id],
+      }),
+    );
+    const slug = "slug" in page ? page.slug : "";
+    const microsoft = writableCalendar();
+    mockHealthySync([google, microsoft]);
+
+    getAvailability.mockImplementation(async (_userId, query) => {
+      const ids = query.calendarIds as string[];
+      if (!ids.includes(microsoft.id)) {
+        return busyResponse(true);
+      }
+      return {
+        ...busyResponse(true),
+        intervals: [
+          {
+            start: `${BOOKING_MONDAY}T10:00:00.000Z`,
+            end: `${BOOKING_MONDAY}T11:00:00.000Z`,
+            hostIsOrganizer: true,
+            hostResponseStatus: null,
+          },
+        ],
+      };
+    });
+
+    const response = await service.getSlots(slug, {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+    });
+
+    expect(
+      response.slots.some(
+        (slot) =>
+          Date.parse(slot.slotStart) ===
+          Date.parse(`${BOOKING_MONDAY}T10:00:00.000Z`),
+      ),
+    ).toBe(false);
+    expect(getAvailability).toHaveBeenCalled();
+    const queried = getAvailability.mock.calls.at(-1)?.[1] as {
+      calendarIds: string[];
+    };
+    expect(queried.calendarIds).toEqual(
+      expect.arrayContaining([google.id, microsoft.id]),
+    );
+  });
 });
 
 describe("Public booking routes", () => {

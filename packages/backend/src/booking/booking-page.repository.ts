@@ -79,6 +79,25 @@ class BookingPageRepository {
     return BookingPageRecordSchema.parse(result);
   }
 
+  async addBlockingCalendarIds(
+    userId: ObjectId,
+    calendarIds: readonly BookingPageRecord["blockingCalendarIds"][number][],
+  ): Promise<BookingPageRecord | null> {
+    if (calendarIds.length === 0) {
+      return this.findByUserId(userId);
+    }
+    const result = await mongoService.bookingPage.findOneAndUpdate(
+      { userId },
+      {
+        $addToSet: { blockingCalendarIds: { $each: [...calendarIds] } },
+        $set: { updatedAt: new Date() },
+      },
+      { returnDocument: "after" },
+    );
+    if (!result) return null;
+    return BookingPageRecordSchema.parse(result);
+  }
+
   /**
    * Stamp `hostNoticedAt` only when the document still matches the snapshot
    * the caller read, so concurrent claims cannot both report the same rows.
