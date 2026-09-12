@@ -621,7 +621,13 @@ describe("WelcomeModal", () => {
       ).toHaveClass("w-full", "h-10", "c-button-elevated");
       expect(
         screen.getByRole("button", { name: "Explore without an account" }),
-      ).toHaveClass("w-full", "h-10", "c-button-elevated");
+      ).toHaveClass("w-full", "h-10", "c-button-secondary");
+      expect(
+        screen.getByRole("button", { name: "Explore without an account" }),
+      ).not.toHaveClass("c-button-primary");
+      expect(
+        screen.getByRole("button", { name: "Explore without an account" }),
+      ).not.toHaveClass("c-button-elevated");
       expect(
         screen.getByRole("button", { name: "Continue with Google" }),
       ).toHaveClass("w-full", "h-10");

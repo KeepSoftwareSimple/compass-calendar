@@ -87,8 +87,9 @@ Welcome → signup → first-event contract:
 - the last screen is titled **Let's get started** with the subtitle
   **Connect a calendar or start fresh**. Its CTA order is **Continue with Google**
   (`G`, when Google is available), **Sign up with email** (`U`), then
-  **Explore without an account** (`S`), all the same full-width elevated
-  height, with the social and legal links (`6`–`0`) below. Google leads
+  **Explore without an account** (`S`), all the same full-width height.
+  Explore is a quieter secondary pill so signup stays the stronger choice.
+  Social and legal links (`6`–`0`) sit below. Google leads
   because the scopes Compass requests include the calendar, so that one round
   trip signs the user up *and* connects it, the moment the product starts
   being worth keeping

@@ -35,6 +35,8 @@ const WELCOME_STEPS: readonly WelcomeStep[] = [1, 2, 3];
 
 const PRIMARY_CTA_CLASS =
   "c-button c-button-primary c-button-elevated inline-flex h-10 w-full items-center justify-center rounded-full data-busy:pointer-events-none data-busy:opacity-60";
+const SECONDARY_CTA_CLASS =
+  "c-button c-button-secondary inline-flex h-10 w-full items-center justify-center rounded-full data-busy:pointer-events-none data-busy:opacity-60";
 const COMPACT_PILL_CLASS =
   "c-button-compact c-button-secondary rounded-3xl px-4 py-1.5 text-xs data-busy:pointer-events-none data-busy:opacity-60";
 
@@ -444,7 +446,7 @@ export function WelcomeModal() {
               <button
                 type="button"
                 onClick={explore}
-                className={PRIMARY_CTA_CLASS}
+                className={SECONDARY_CTA_CLASS}
                 {...busyProps}
               >
                 Explore without an account
