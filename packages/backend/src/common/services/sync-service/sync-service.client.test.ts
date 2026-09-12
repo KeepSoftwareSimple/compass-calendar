@@ -96,6 +96,12 @@ const contentType = (value: string) => ({
   get: (name: string) => (name.toLowerCase() === "content-type" ? value : null),
 });
 
+// A Headers stand-in answering both headers the client reads on a parse
+// failure, so a test can assert content-length rides along with content-type.
+const responseHeaders = (headers: Record<string, string>) => ({
+  get: (name: string) => headers[name.toLowerCase()] ?? null,
+});
+
 const request = (calendarIds: string[]): BusyAvailabilityRequest => ({
   calendarIds: calendarIds as BusyAvailabilityRequest["calendarIds"],
   start: "2026-07-14T09:00:00.000Z" as BusyAvailabilityRequest["start"],
@@ -603,6 +609,49 @@ describe("SyncServiceClient", () => {
     if (result.ok) throw new Error("expected invalidResponse");
     expect(result.error.detail).toContain("TypeError: terminated");
     expect(result.error.detail).not.toContain("SyntaxError");
+  });
+
+  // #2901/#3677: the parse error alone can't tell "Sync sent an empty 200
+  // body" (Sync's own bug) apart from "Sync sent a full body but delivery
+  // truncated it" (a network/process failure downstream of Sync) — both throw
+  // the same SyntaxError. content-length is the header Sync set before
+  // writing a byte, so it names what Sync intended to send.
+  it("carries content-length alongside content-type on a JSON parse failure", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      headers: responseHeaders({
+        "content-type": "application/json; charset=utf-8",
+        "content-length": "0",
+      }),
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    }));
+
+    const result = await client(fn).listConnections(principal());
+
+    if (result.ok) throw new Error("expected invalidResponse");
+    expect(result.error.detail).toContain("content-length=0");
+    expect(result.error.detail).toContain(
+      "content-type=application/json; charset=utf-8",
+    );
+  });
+
+  // When Sync sets no content-length (e.g. a chunked response), the detail
+  // must not fabricate one.
+  it("omits content-length from the parse-failure detail when the header is absent", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      headers: contentType("application/json"),
+      json: async () => {
+        throw new SyntaxError("Unexpected end of JSON input");
+      },
+    }));
+
+    const result = await client(fn).listConnections(principal());
+
+    if (result.ok) throw new Error("expected invalidResponse");
+    expect(result.error.detail).not.toContain("content-length");
   });
 
   it("lists full events with a signed GET the real Sync verifier accepts", async () => {

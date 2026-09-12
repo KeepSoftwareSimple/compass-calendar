@@ -790,17 +790,32 @@ export class SyncServiceClient {
         // content-type header is legitimately application/json. The parse
         // error's own name/message is what tells those apart, so carry it
         // instead of discarding it.
+        //
+        // The parse error alone still can't tell "Sync itself sent an empty
+        // 200 body" (its own bug) apart from "Sync sent a full body but the
+        // connection was cut before we received all of it" (a network/process
+        // failure downstream of Sync, e.g. #2901's deploy-kill hypothesis) —
+        // both surface as the same SyntaxError. `content-length` is the
+        // header Sync itself set before writing a byte, so it names what Sync
+        // intended to send: `content-length=0` pins the bug to Sync's own
+        // response path; a positive value that still failed to parse points
+        // at delivery instead.
         const reason =
           error instanceof Error
             ? `${error.name}: ${error.message}`
             : String(error);
+        const contentLength =
+          response.headers?.get("content-length") ?? undefined;
+        const parts = [`body is not JSON (${reason})`];
+        if (contentLength !== undefined) {
+          parts.push(`content-length=${contentLength}`);
+        }
+        if (contentType) parts.push(`content-type=${contentType}`);
         return errorResult(
           "invalidResponse",
           correlationId,
           200,
-          contentType
-            ? `body is not JSON (${reason}); content-type=${contentType}`
-            : `body is not JSON (${reason})`,
+          parts.join("; "),
         );
       }
       const parsed = input.schema.safeParse(body);
