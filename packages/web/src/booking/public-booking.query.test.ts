@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { rest } from "msw";
+import { http , HttpResponse} from "msw"
 import { Status } from "@core/errors/status.codes";
 import dayjs from "@core/util/date/dayjs";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
@@ -22,14 +22,14 @@ describe("prefetchPublicBookingMonth", () => {
     let slotRequests = 0;
 
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) => {
+        () => {
           slotRequests += 1;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [] }),
-          );
+          return HttpResponse.json(
+{ bookable: true, slots: [] },
+{status: Status.OK,
+});
         },
       ),
     );
@@ -63,14 +63,14 @@ describe("prefetchPublicBookingMonth", () => {
     let slotRequests = 0;
 
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) => {
+        () => {
           slotRequests += 1;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [] }),
-          );
+          return HttpResponse.json(
+{ bookable: true, slots: [] },
+{status: Status.OK,
+});
         },
       ),
     );
