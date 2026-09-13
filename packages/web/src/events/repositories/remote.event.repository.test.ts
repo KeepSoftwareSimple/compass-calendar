@@ -78,8 +78,23 @@ describe("RemoteEventRepository", () => {
       } as unknown as EventListQuery;
       const result = await repository.list(query);
 
-      expect(api.list).toHaveBeenCalledWith(query);
+      expect(api.list).toHaveBeenCalledWith(query, undefined);
       expect(result).toEqual(events);
+    });
+
+    it("forwards the abort signal to EventApi.list", async () => {
+      const events = [createMockEvent()];
+      api.list.mockResolvedValue(events);
+      const query = {
+        kind: "range" as const,
+        start: "2024-01-01T00:00:00.000Z",
+        end: "2024-01-31T00:00:00.000Z",
+      } as unknown as EventListQuery;
+      const controller = new AbortController();
+
+      await repository.list(query, controller.signal);
+
+      expect(api.list).toHaveBeenCalledWith(query, controller.signal);
     });
 
     it("does not replace cloud events with local events when the backend is unavailable", async () => {

@@ -98,4 +98,15 @@ describe("isBackendUnavailableError", () => {
     );
     expect(isBackendUnavailableError("not an error")).toBe(false);
   });
+
+  it("does not treat an aborted request as backend unavailability", () => {
+    const error = new Error("The operation was aborted");
+    error.name = "AbortError";
+    expect(isBackendUnavailableError(error)).toBe(false);
+
+    const wrapped = new Error("Request failed") as ApiError;
+    wrapped.name = "ApiError";
+    wrapped.config = { signal: AbortSignal.abort() };
+    expect(isBackendUnavailableError(wrapped)).toBe(false);
+  });
 });

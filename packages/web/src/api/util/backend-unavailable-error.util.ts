@@ -40,7 +40,15 @@ export function isBackendUnavailableError(error: unknown): boolean {
     return false;
   }
 
+  // Cancelled range reads must not look like a down backend: wrapping them
+  // as ApiError used to retry the obsolete request and surface recovery UI.
+  if (error.name === "AbortError") {
+    return false;
+  }
+
   if (error.name === "ApiError") {
+    const apiError = error as ApiError;
+    if (apiError.config?.signal?.aborted) return false;
     // Read the status off the response rather than the message: `createApiError`
     // bakes the status into the message text, and string-matching that is what
     // previously let real 502s through as ordinary request failures.

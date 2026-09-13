@@ -27,9 +27,13 @@ function buildListQueryString(query: EventListQuery): string {
 }
 
 const EventApi = {
-  list: async (query: EventListQuery): Promise<Event[]> => {
+  list: async (
+    query: EventListQuery,
+    signal?: AbortSignal,
+  ): Promise<Event[]> => {
     const response = await BaseApi.get<unknown>(
       `/event?${buildListQueryString(query)}`,
+      { signal },
     );
     return EventListResponseSchema.parse(response.data).events;
   },

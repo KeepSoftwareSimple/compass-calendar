@@ -10,13 +10,14 @@ import { onServerMessage } from "../client/sse.client";
 // calendars receives pages of up to 100 calendarsChanged/eventsChanged pairs
 // inside one 2s poll tick, for hours at a stretch. invalidateQueries() cancels
 // the refetch already in flight and starts another (TanStack's cancelRefetch
-// default), and the event queryFn does not forward the abort signal, so every
-// message became one calendar-list read plus two event-range reads that all
-// ran to completion on the server. Prod saw a single browser issue 900 event
-// reads a minute this way, enough to push Sync past the backend's 5s read
-// deadline and surface as 502s (#3694, #3695). Coalesce per message type: the
-// first message in a quiet period refetches at once, anything that lands
-// inside the window after it collapses into one trailing refetch.
+// default). Event reads forward that abort signal to fetch, but a burst still
+// starts one calendar-list read plus two event-range reads per message if we
+// don't coalesce: those requests all ran to completion on the server before
+// the abort was wired. Prod saw a single browser issue 900 event reads a
+// minute this way, enough to push Sync past the backend's 5s read deadline
+// and surface as 502s (#3694, #3695). Coalesce per message type: the first
+// message in a quiet period refetches at once, anything that lands inside the
+// window after it collapses into one trailing refetch.
 export const SSE_REFETCH_COALESCE_MS = 5_000;
 
 // Leading-edge + trailing-edge throttle. A plain trailing debounce would never

@@ -50,6 +50,15 @@ export const isApiError = (error: unknown): error is ApiError => {
   );
 };
 
+export const isAbortError = (error: unknown): boolean => {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name: unknown }).name === "AbortError"
+  );
+};
+
 /**
  * Prefer the structured status on ApiError; fall back to the trailing status
  * digits in the message for errors that only carry text (same convention as

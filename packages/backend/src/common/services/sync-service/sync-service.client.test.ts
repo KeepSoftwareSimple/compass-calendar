@@ -1103,6 +1103,40 @@ describe("SyncServiceClient", () => {
     expect(result.error.kind).toBe("timeout");
   });
 
+  it("times out a stalled body after headers within the original budget", async () => {
+    const started = Date.now();
+    let calls = 0;
+    const fn: SyncServiceClientOptions["fetch"] = (_url, init) => {
+      calls += 1;
+      return Promise.resolve({
+        status: 200,
+        headers: contentType("application/json"),
+        json: () =>
+          new Promise((_resolve, reject) => {
+            const abort = () => {
+              const error = new Error("aborted");
+              error.name = "AbortError";
+              reject(error);
+            };
+            if (init.signal?.aborted) {
+              abort();
+              return;
+            }
+            init.signal?.addEventListener("abort", abort, { once: true });
+          }),
+      });
+    };
+
+    const result = await client(fn).listConnections(principal());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.kind).toBe("timeout");
+    // A GET abort must not be classified as an unreadable body, which is retryable.
+    expect(calls).toBe(1);
+    expect(Date.now() - started).toBeLessThan(200);
+  });
+
   // Restarting Sync leaves the backend holding dead pooled sockets, so the
   // next write fails with ECONNRESET before Sync is reachable again. That
   // used to surface as an error toast on an edit that would have succeeded.
@@ -1344,22 +1378,19 @@ describe("SyncServiceClient", () => {
     it("stops retrying once the caller's deadline has passed", async () => {
       // Retries must fit inside the timeout the caller was promised, so a
       // nominally 50ms read cannot quietly become a multi-second one.
-      const { fn, attempts } = failThen([
-        "connection-failure",
-        "connection-failure",
-        "connection-failure",
-      ]);
-      let clock = NOW;
+      let now = NOW;
+      let calls = 0;
+      const fn: SyncServiceClientOptions["fetch"] = async () => {
+        calls += 1;
+        now = NOW + 50;
+        throw new Error("ECONNRESET");
+      };
       const deadlineClient = new SyncServiceClient({
         baseUrl: BASE_URL,
         secret: SECRET,
         timeoutMs: 50,
         fetch: fn,
-        // Each read of the clock jumps past the 50ms budget.
-        now: () => {
-          clock += 500;
-          return clock;
-        },
+        now: () => now,
         newCorrelationId: () => "corr-1",
       });
 
@@ -1369,7 +1400,51 @@ describe("SyncServiceClient", () => {
       );
 
       expect(result.ok).toBe(false);
-      expect(attempts()).toBe(1);
+      expect(calls).toBe(1);
+    });
+
+    it("gives a stalled retry only the remaining budget", async () => {
+      let now = NOW;
+      const timeoutMs = 1_000;
+      let call = 0;
+      let secondAttemptAbortMs: number | undefined;
+      const fn: SyncServiceClientOptions["fetch"] = (_url, init) => {
+        call += 1;
+        if (call === 1) {
+          now = NOW + 900;
+          throw new Error("ECONNRESET");
+        }
+        const started = Date.now();
+        return new Promise((_resolve, reject) => {
+          init.signal?.addEventListener(
+            "abort",
+            () => {
+              secondAttemptAbortMs = Date.now() - started;
+              const error = new Error("aborted");
+              error.name = "AbortError";
+              reject(error);
+            },
+            { once: true },
+          );
+        });
+      };
+
+      const result = await new SyncServiceClient({
+        baseUrl: BASE_URL,
+        secret: SECRET,
+        timeoutMs,
+        fetch: fn,
+        now: () => now,
+        newCorrelationId: () => "corr-1",
+      }).listConnections(principal());
+
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.error.kind).toBe("timeout");
+      expect(call).toBe(2);
+      // Remaining after the first failure is 100ms, not another full 1s.
+      expect(secondAttemptAbortMs).toBeGreaterThan(20);
+      expect(secondAttemptAbortMs).toBeLessThan(400);
     });
   });
 
@@ -1458,5 +1533,82 @@ describe("SyncServiceClient", () => {
     expect(signature).not.toContain(SECRET);
     // Nothing the caller receives contains the secret.
     expect(JSON.stringify(result)).not.toContain(SECRET);
+  });
+
+  // Real HTTP, not a fetch double: native body consumption is what hung in
+  // production after headers arrived. Sync's graceful stop closes the HTTP
+  // listener first and waits for in-flight connections (app.ts `stop`); that
+  // path does not itself truncate a 200 body, so the field truncation cause
+  // stays unconfirmed rather than patched as a shutdown defect.
+  describe("real HTTP body deadline", () => {
+    const encoder = new TextEncoder();
+
+    it("times out when the body stalls after headers", async () => {
+      const server = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        fetch() {
+          return new Response(
+            new ReadableStream({
+              start(controller) {
+                controller.enqueue(encoder.encode('{"connections":['));
+              },
+            }),
+            { headers: { "content-type": "application/json" } },
+          );
+        },
+      });
+
+      try {
+        const started = Date.now();
+        const result = await new SyncServiceClient({
+          baseUrl: `http://127.0.0.1:${server.port}`,
+          secret: SECRET,
+          timeoutMs: 40,
+          newCorrelationId: () => "corr-http-stall",
+        }).listConnections(principal());
+        const elapsed = Date.now() - started;
+
+        expect(result.ok).toBe(false);
+        if (result.ok) return;
+        expect(result.error.kind).toBe("timeout");
+        expect(elapsed).toBeLessThan(250);
+      } finally {
+        server.stop(true);
+      }
+    });
+
+    it("retries a truncated GET body and recovers on the next attempt", async () => {
+      let calls = 0;
+      const server = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        fetch() {
+          calls += 1;
+          if (calls === 1) {
+            return new Response('{"connections":', {
+              status: 200,
+              headers: { "content-type": "application/json" },
+            });
+          }
+          return Response.json({ connections: [] });
+        },
+      });
+
+      try {
+        const result = await new SyncServiceClient({
+          baseUrl: `http://127.0.0.1:${server.port}`,
+          secret: SECRET,
+          timeoutMs: 1_000,
+          now: () => NOW,
+          newCorrelationId: () => "corr-http-truncate",
+        }).listConnections(principal());
+
+        expect(result.ok).toBe(true);
+        expect(calls).toBe(2);
+      } finally {
+        server.stop(true);
+      }
+    });
   });
 });
