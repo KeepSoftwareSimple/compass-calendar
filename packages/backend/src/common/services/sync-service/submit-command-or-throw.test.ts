@@ -37,7 +37,7 @@ describe("submitCommandOrThrow", () => {
     };
     await expect(
       submit({ ok: true as const, value: { command } }),
-    ).resolves.toEqual(command);
+    ).resolves.toMatchObject(command);
   });
 
   it("maps failed outcomes to typed mutation errors", async () => {

@@ -13,7 +13,7 @@ export const confirmedCommandSubmit = () =>
     state: "confirmed",
     providerEventId: "prov-1",
     providerVersion: "v1",
-  });
+  } as SyncCommandOutcome);
 
 export const failedCommandSubmit = (failureReason: SyncCommandFailureReason) =>
   commandSubmitOk({ state: "failed", failureReason });
