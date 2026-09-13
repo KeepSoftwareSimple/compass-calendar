@@ -418,7 +418,8 @@ Files:
 Responsibilities:
 
 - open/close `EventSource` to `GET /api/events/stream` based on auth state
-- refetch events when background `eventsChanged` messages arrive
+- refetch events when background `eventsChanged` messages arrive, coalesced
+  to at most one refetch per 5s window per message type (leading + trailing)
 - refetch events/calendars when the native EventSource fires `open` again
   (reconnect after sleep) via `onStreamReopen`
 - react to Google import/health via `syncStatusChanged` / `importCompleted`
