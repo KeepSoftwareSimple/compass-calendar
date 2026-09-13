@@ -183,7 +183,7 @@ Secrets and variables are split between repository level (shared across workflow
 | `GOOGLE_CLIENT_SECRET` | OAuth client secret |
 | `MICROSOFT_CLIENT_SECRET` | Entra app client secret |
 | `APPLE_SIGNIN_PRIVATE_KEY` | Sign in with Apple `.p8` private key |
-| `SYNC_CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 key for password credentials at rest |
+| `SYNC_CREDENTIAL_ENCRYPTION_KEY` | 32-byte base64 key for provider credentials at rest (required; the deploy fails without it, generate with `openssl rand -base64 32`) |
 | `MONGO_PASSWORD` | MongoDB compass user password |
 | `MONGO_REPLICA_SET_KEY` | MongoDB replica set key (`staging-selfhosted`) |
 | `MONGO_URI` | Backend MongoDB URI |

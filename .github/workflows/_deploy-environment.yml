@@ -140,6 +140,14 @@ jobs:
             echo "Deploy requires SYNC_INTERNAL_AUTH_TOKEN." >&2
             exit 1
           fi
+          # New provider credentials are encrypted at rest (#3368), so the sync
+          # service throws on every new calendar connection when this key is
+          # missing while existing connections keep syncing. That silent
+          # partial outage reached production in #3687; fail the deploy instead.
+          if [ -z "$SYNC_CREDENTIAL_ENCRYPTION_KEY" ]; then
+            echo "Deploy requires SYNC_CREDENTIAL_ENCRYPTION_KEY (32 bytes of base64, generate with: openssl rand -base64 32)." >&2
+            exit 1
+          fi
           # Cloud uses an isolated Atlas sync DB (SYNC_MONGO_URI secret) with
           # a scoped user, so least-privilege enforcement stays on. Selfhosted
           # reuses the bundled mongo's compass_sync database — same derived
@@ -266,9 +274,7 @@ jobs:
             if [ -n "$SYNC_EXECUTION" ]; then
               printf '%s\n' "  execution: \"${SYNC_EXECUTION}\""
             fi
-            if [ -n "$SYNC_CREDENTIAL_ENCRYPTION_KEY" ]; then
-              printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
-            fi
+            printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
           } | ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
                 "umask 077 && mkdir -p ~/compass && cat > ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
           COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${RELEASE_TAG}}"
