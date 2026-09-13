@@ -36,6 +36,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [Hidden Events](./features/hidden-events.md)
 - [Offline Storage And Migrations](./features/offline-storage-and-migrations.md)
 - [Password Auth Flow](./features/password-auth-flow.md)
+- [Welcome Email Sequence](./features/welcome-email-sequence.md) (plan)
 
 ## Architecture And Domain
 
