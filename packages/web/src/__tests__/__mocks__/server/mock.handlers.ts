@@ -110,7 +110,7 @@ export const globalHandlers = [
   rest.post(
     `${ENV_WEB.API_BASEURL}/booking/page/new-meetings/claim`,
     (_req, res, ctx) => {
-      return res(ctx.status(Status.OK), ctx.json({ reservations: [] }));
+      return res(ctx.status(Status.OK), ctx.json({ count: 0, latest: null }));
     },
   ),
   rest.get(`${ENV_WEB.API_BASEURL}/booking/page/status`, (_req, res, ctx) => {

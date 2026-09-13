@@ -670,22 +670,23 @@ describe("HTTP booking contracts", () => {
 describe("BookingNewMeetingsClaimResponseSchema", () => {
   it("accepts an empty claim", () => {
     expect(
-      BookingNewMeetingsClaimResponseSchema.safeParse({ reservations: [] })
-        .success,
+      BookingNewMeetingsClaimResponseSchema.safeParse({
+        count: 0,
+        latest: null,
+      }).success,
     ).toBe(true);
   });
 
   it("accepts a confirmed reservation payload", () => {
     expect(
       BookingNewMeetingsClaimResponseSchema.safeParse({
-        reservations: [
-          {
-            id: objectId(),
-            guestName: "Bob",
-            slotStart: dateTime(),
-            slotEnd: "2026-08-30T12:30:00.000Z",
-          },
-        ],
+        count: 1,
+        latest: {
+          id: objectId(),
+          guestName: "Bob",
+          slotStart: dateTime(),
+          slotEnd: "2026-08-30T12:30:00.000Z",
+        },
       }).success,
     ).toBe(true);
   });

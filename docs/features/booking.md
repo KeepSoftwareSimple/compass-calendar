@@ -540,11 +540,13 @@ Authenticated (host session + writable billing, same as event writes):
 - `PUT /api/booking/page` — replace settings. Accepts optional `slug`.
   Allocates slug on first enable when none is stored. `409` with
   `SLUG_TAKEN` when the requested address belongs to another host.
-- `POST /api/booking/page/new-meetings/claim` — stamp `hostNoticedAt` and
-  return confirmed reservations created since the previous notice (or
-  page `createdAt`). `{ reservations: [] }` when there is no page or it is
-  off. Cancelled reservations are omitted. Concurrent claims do not
-  double-report.
+- `POST /api/booking/page/new-meetings/claim` — read unclaimed confirmed
+  reservations, then advance `hostNoticedAt` (and the last claimed
+  reservation id) only through that set. Returns `{ count, latest }`.
+  `{ count: 0, latest: null }` when there is no page, it is off, or
+  another claim already reported the same rows. Cancelled reservations
+  are omitted. Concurrent claims do not double-report. A failed read
+  does not move the watermark.
 - Enabling without a healthy calendar connection is a typed `403`
   (`CALENDAR_NOT_CONNECTED`; `GOOGLE_NOT_CONNECTED` remains an alias).
 - Enabling with zero weekly hours is a typed `400` (`AVAILABILITY_REQUIRED`).
@@ -634,10 +636,11 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   host edit can be overwritten. Accepted for v1.3.
 - **Confirm is fail-closed.** When Sync reports `bookable: false`, slots
   disappear and confirm returns `409`.
-- **New-meetings claim has no `createdAt` index.**
-  `POST /api/booking/page/new-meetings/claim` filters confirmed
-  reservations by `createdAt`. Accepted for v1.10 while the production
-  gate stays off.
+- **New-meetings claim uses a createdAt cursor index.**
+  `POST /api/booking/page/new-meetings/claim` counts and returns the
+  latest confirmed reservation after `hostNoticedAt`, then stamps that
+  cursor (including `_id` ties). The
+  `booking_reservation_page_status_created` index backs the scan.
 - **Removed host settings may linger on old Mongo documents.** Buffer,
   max meetings per day, welcome text, and guest-invite permission were
   removed in Booking v1.8. Zod strips those keys on read; they are not

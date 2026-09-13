@@ -580,7 +580,8 @@ export type BookingNewMeetingsClaimReservation = z.infer<
 >;
 
 export const BookingNewMeetingsClaimResponseSchema = z.strictObject({
-  reservations: z.array(BookingNewMeetingsClaimReservationSchema).readonly(),
+  count: z.number().int().nonnegative(),
+  latest: BookingNewMeetingsClaimReservationSchema.nullable(),
 });
 export type BookingNewMeetingsClaimResponse = z.infer<
   typeof BookingNewMeetingsClaimResponseSchema

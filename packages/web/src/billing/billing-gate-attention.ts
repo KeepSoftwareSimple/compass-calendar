@@ -1,4 +1,4 @@
-import { type BookingNewMeetingsClaimReservation } from "@core/types/booking.contracts";
+import { type BookingNewMeetingsClaimResponse } from "@core/types/booking.contracts";
 import { useCheckoutCelebrationStore } from "@web/billing/checkout-celebration.store";
 
 /**
@@ -13,8 +13,7 @@ let pendingReconnect: {
   accountEmail?: string | null;
 } | null = null;
 let pendingDelayed = false;
-let pendingNewMeetings: readonly BookingNewMeetingsClaimReservation[] | null =
-  null;
+let pendingNewMeetings: BookingNewMeetingsClaimResponse | null = null;
 
 export function setBillingGateOwnsScreen(owns: boolean): void {
   ownsScreen = owns;
@@ -55,14 +54,12 @@ export function takePendingDelayed(): boolean {
 }
 
 export function rememberPendingNewMeetings(
-  reservations: readonly BookingNewMeetingsClaimReservation[],
+  claim: BookingNewMeetingsClaimResponse,
 ): void {
-  pendingNewMeetings = reservations;
+  pendingNewMeetings = claim;
 }
 
-export function takePendingNewMeetings():
-  | readonly BookingNewMeetingsClaimReservation[]
-  | null {
+export function takePendingNewMeetings(): BookingNewMeetingsClaimResponse | null {
   const next = pendingNewMeetings;
   pendingNewMeetings = null;
   return next;

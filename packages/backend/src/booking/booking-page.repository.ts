@@ -99,21 +99,38 @@ class BookingPageRepository {
   }
 
   /**
-   * Stamp `hostNoticedAt` only when the document still matches the snapshot
+   * Stamp the notice cursor only when the document still matches the snapshot
    * the caller read, so concurrent claims cannot both report the same rows.
+   * The cursor is the last claimed reservation, not wall-clock now: a failed
+   * or truncated read must not skip later arrivals.
    */
   async stampHostNoticedAt(
     userId: ObjectId,
-    expectedHostNoticedAt: Date | undefined,
-    now: Date,
+    expected: { at?: Date; reservationId?: ObjectId },
+    next: { at: Date; reservationId: ObjectId },
   ): Promise<boolean> {
     const filter =
-      expectedHostNoticedAt === undefined
+      expected.at === undefined
         ? { userId, hostNoticedAt: { $exists: false } }
-        : { userId, hostNoticedAt: expectedHostNoticedAt };
+        : expected.reservationId
+          ? {
+              userId,
+              hostNoticedAt: expected.at,
+              hostNoticedReservationId: expected.reservationId,
+            }
+          : {
+              userId,
+              hostNoticedAt: expected.at,
+              hostNoticedReservationId: { $exists: false },
+            };
     const result = await mongoService.bookingPage.findOneAndUpdate(
       filter,
-      { $set: { hostNoticedAt: now } },
+      {
+        $set: {
+          hostNoticedAt: next.at,
+          hostNoticedReservationId: next.reservationId,
+        },
+      },
       { returnDocument: "after" },
     );
     return result !== null;

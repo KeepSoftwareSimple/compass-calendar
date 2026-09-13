@@ -187,6 +187,12 @@ const toAdminResult = async (
   );
 };
 
+const emptyNewMeetingsClaim = (): BookingNewMeetingsClaimResponse =>
+  BookingNewMeetingsClaimResponseSchema.parse({
+    count: 0,
+    latest: null,
+  });
+
 class BookingPageService {
   async getAdminPage(userId: ObjectId): Promise<AdminGetBookingPageResult> {
     const existing = await bookingPageRepository.findByUserId(userId);
@@ -290,36 +296,45 @@ class BookingPageService {
   ): Promise<BookingNewMeetingsClaimResponse> {
     const page = await bookingPageRepository.findByUserId(userId);
     if (!page?.enabled) {
-      return BookingNewMeetingsClaimResponseSchema.parse({
-        reservations: [],
-      });
+      return emptyNewMeetingsClaim();
     }
 
-    const since = page.hostNoticedAt ?? page.createdAt;
-    const now = new Date();
+    const cursor = {
+      createdAt: page.hostNoticedAt ?? page.createdAt,
+      reservationId: page.hostNoticedReservationId,
+    };
+    const summary =
+      await bookingReservationRepository.summarizeConfirmedCreatedSince(
+        page._id,
+        cursor,
+      );
+    if (summary.count === 0 || !summary.latest) {
+      return emptyNewMeetingsClaim();
+    }
+
     const stamped = await bookingPageRepository.stampHostNoticedAt(
       userId,
-      page.hostNoticedAt,
-      now,
+      {
+        at: page.hostNoticedAt,
+        reservationId: page.hostNoticedReservationId,
+      },
+      {
+        at: summary.latest.createdAt,
+        reservationId: summary.latest._id,
+      },
     );
     if (!stamped) {
-      return BookingNewMeetingsClaimResponseSchema.parse({
-        reservations: [],
-      });
+      return emptyNewMeetingsClaim();
     }
 
-    const records =
-      await bookingReservationRepository.listConfirmedCreatedSince(
-        page._id,
-        since,
-      );
     return BookingNewMeetingsClaimResponseSchema.parse({
-      reservations: records.map((record) => ({
-        id: record._id.toString(),
-        guestName: record.guestName,
-        slotStart: record.slotStart.toISOString(),
-        slotEnd: record.slotEnd.toISOString(),
-      })),
+      count: summary.count,
+      latest: {
+        id: summary.latest._id.toString(),
+        guestName: summary.latest.guestName,
+        slotStart: summary.latest.slotStart.toISOString(),
+        slotEnd: summary.latest.slotEnd.toISOString(),
+      },
     });
   }
 }
