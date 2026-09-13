@@ -128,12 +128,13 @@ export interface SyncClientError {
   kind: SyncClientErrorKind;
   status?: number;
   correlationId: string;
-  // Present only for `invalidResponse`: a log-safe reason the 200 body failed
-  // the contract — the failing field paths with their Zod issue code, the
-  // body's top-level keys, and the content-type header. Field names, issue
-  // codes, and a header only; never a field value. Lets a reader tell a real
+  // For `invalidResponse`: a log-safe reason the 200 body failed the
+  // contract — the failing field paths with their Zod issue code, the body's
+  // top-level keys, and the content-type header. Field names, issue codes,
+  // and a header only; never a field value. Lets a reader tell a real
   // contract drift (which field broke) from HTML the reverse proxy returned
-  // with a 200.
+  // with a 200. For `unexpectedStatus`: the raw HTTP status (`status=500`),
+  // since the kind alone says only "not one of the mapped ones".
   detail?: string;
   // Present only for `invalidResponse`: the 200 body could not be read as
   // JSON at all (empty, truncated, or not JSON), as opposed to JSON that
@@ -791,11 +792,7 @@ export class SyncServiceClient {
     if (!input.schema) {
       return response.status === 204
         ? { ok: true, value: undefined as T, correlationId }
-        : errorResult(
-            statusToKind(response.status),
-            correlationId,
-            response.status,
-          );
+        : statusFailure(response.status, correlationId);
     }
 
     if (response.status === 200) {
@@ -856,12 +853,27 @@ export class SyncServiceClient {
       return { ok: true, value: parsed.data, correlationId };
     }
 
-    return errorResult(
-      statusToKind(response.status),
-      correlationId,
-      response.status,
-    );
+    return statusFailure(response.status, correlationId);
   }
+}
+
+// The failed-status result for a non-2xx response. `unexpectedStatus` is the
+// catch-all for every status the map below does not name, and the status is
+// the only clue to what answered: #3674 was one unexpectedStatus two seconds
+// after Sync logged SIGTERM, with nothing on the Sync side and no way to tell
+// a 500 from a 502. Carry the status in the detail so the thrown message and
+// the error-tracking issue name it.
+function statusFailure<T>(
+  status: number,
+  correlationId: string,
+): SyncClientResult<T> {
+  const kind = statusToKind(status);
+  return errorResult(
+    kind,
+    correlationId,
+    status,
+    kind === "unexpectedStatus" ? `status=${status}` : undefined,
+  );
 }
 
 function statusToKind(status: number): SyncClientErrorKind {

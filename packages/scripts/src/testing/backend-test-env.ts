@@ -17,6 +17,14 @@ export function applyBackendTestEnv(mongoUri: string): void {
   process.env["TZ"] = "Etc/UTC";
   process.env["NODE_ENV"] = "test";
   process.env["LOG_LEVEL"] = "debug";
+  // The `debug` package (pulled in by mongodb-memory-server) decides whether
+  // to colorize by calling tty.isatty(process.stderr.fd) at import time. Under
+  // `bun test --parallel` with piped stderr that lazy stderr init has crashed
+  // workers ("EEXIST: file already exists, epoll_ctl", then
+  // "undefined is not an object (evaluating 'process.stderr.fd')") and failed
+  // an otherwise green run. Any DEBUG_COLORS value makes `debug` skip the tty
+  // probe entirely.
+  process.env["DEBUG_COLORS"] = "0";
 }
 
 export function backendTestSpawnEnv(
