@@ -16,6 +16,11 @@ import {
 } from "@web/events/grid-event-draft.adapter";
 import { useEventMutations } from "@web/events/mutations/useEventMutations";
 import { toRecurrenceScope } from "@web/events/recurrence/recurrence-scope";
+import {
+  type Activity_DraftEvent,
+  draftActions,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
 import { useCloseEventForm } from "@web/views/Forms/hooks/useCloseEventForm";
 
 type InvitationIntentValue = NonNullable<CreateEventInput["invitation"]>;
@@ -39,6 +44,18 @@ const INVITATION_HOST_LABEL: Record<Calendar["provider"], string> = {
   apple: providerDisplayName("apple"),
   local: "Your calendar",
 };
+
+function restoreSubmittedDraft(
+  activity: Activity_DraftEvent | null,
+  draft: GridEventDraft,
+): void {
+  draftActions.startGridDraft({
+    activity:
+      activity ?? (draft.kind === "create" ? "gridClick" : "keyboardEdit"),
+    draft,
+  });
+  draftActions.setFormOpen(true);
+}
 
 export function useSaveEventForm() {
   const closeEventForm = useCloseEventForm();
@@ -140,10 +157,16 @@ export function useSaveEventForm() {
             invitation === undefined
               ? { ...parsed.input, id }
               : { ...parsed.input, invitation, id };
+          const activity = useDraftStore.getState().status?.activity ?? null;
+          const draftToRestore: GridEventDraft = { ...draft, clientId: id };
           // Closing via the callback (not after `create` returns) keeps the draft
           // card mounted until the optimistic insert exists, so the saved card
-          // replaces it in one commit instead of flashing empty.
-          create(input, { onOptimisticApplied: () => closeEventForm(id) });
+          // replaces it in one commit instead of flashing empty. Restore on
+          // failure so the submitted values stay available to correct and retry.
+          create(input, {
+            onOptimisticApplied: () => closeEventForm(id),
+            onError: () => restoreSubmittedDraft(activity, draftToRestore),
+          });
         }
         return;
       }
@@ -161,6 +184,7 @@ export function useSaveEventForm() {
 
       if (parsed.mode === "edit") {
         clearFieldErrors();
+        const activity = useDraftStore.getState().status?.activity ?? null;
         // Same as create: keep the draft mounted until the optimistic replace
         // exists so the grid never paints a frame with the pre-edit color.
         replace(
@@ -171,7 +195,10 @@ export function useSaveEventForm() {
                 ? parsed.input
                 : { ...parsed.input, invitation },
           },
-          { onOptimisticApplied: closeEventForm },
+          {
+            onOptimisticApplied: closeEventForm,
+            onError: () => restoreSubmittedDraft(activity, draft),
+          },
         );
       }
     },

@@ -19,9 +19,15 @@ import { getUserId } from "@web/auth/compass/session/session.util";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import {
   EVENT_SAVE_RETRYABLE_TOAST_ID,
+  EVENT_SAVE_STORAGE_TOAST_ID,
   EVENT_SAVE_UNAVAILABLE_TOAST_ID,
   GENERIC_ERROR_TOAST_ID,
 } from "@web/common/constants/toast.constants";
+import {
+  classifyStorageFailure,
+  isStorageWriteFailure,
+  storageWriteUserMessage,
+} from "@web/common/storage/storage-failure.util";
 import {
   Categories_Event,
   type GridEvent,
@@ -265,6 +271,19 @@ const showCatchallToast = (message: string) =>
   showErrorToast(message, { toastId: GENERIC_ERROR_TOAST_ID });
 
 export const handleError = (error: Error, onRetry?: () => void) => {
+  if (isStorageWriteFailure(error)) {
+    const kind = classifyStorageFailure(error);
+    getPosthogClient()?.captureException(error, {
+      $exception_handled: true,
+      $exception_source: "storage-write",
+    });
+    console.error(error);
+    showErrorToast(storageWriteUserMessage(kind), {
+      toastId: EVENT_SAVE_STORAGE_TOAST_ID,
+    });
+    return;
+  }
+
   if (isBackendUnavailableError(error)) {
     // No HTTP response reached us at all (offline, DNS, dropped connection)
     // or a 502/503/504 - the optimistic edit is about to roll back with

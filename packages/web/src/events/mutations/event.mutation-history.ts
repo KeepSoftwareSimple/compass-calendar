@@ -1,12 +1,11 @@
 import { type QueryClient } from "@tanstack/react-query";
 import { type Event } from "@core/types/event.contracts";
 import { type RecurrenceScope } from "@core/types/event-command.contracts";
-import { showDeletedToast } from "@web/common/utils/toast/deleted-toast.util";
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import {
   isRestoringHistory,
-  undoHistoryActions,
+  type UndoHistoryEntry,
 } from "@web/events/stores/undo.store";
 
 // A "series" row (the master/base) can't be undone from a client snapshot:
@@ -29,7 +28,25 @@ export const isRecurringEvent = (event: Event): boolean =>
 
 const isThisScope = (scope?: RecurrenceScope) => !scope || scope === "this";
 
-export function recordEventEditHistory({
+function pendingEditBefore(
+  queryClient: QueryClient,
+  id: string,
+): Event | undefined {
+  const pending = queryClient
+    .getMutationCache()
+    .getAll()
+    .filter((mutation) => mutation.state.status === "pending")
+    .sort((a, b) => a.mutationId - b.mutationId);
+
+  for (const mutation of pending) {
+    const entry = (mutation.state.variables as { undoEntry?: UndoHistoryEntry })
+      ?.undoEntry;
+    if (entry?.kind === "edit" && entry.id === id) return entry.before;
+  }
+  return undefined;
+}
+
+export function snapshotEventEditHistory({
   id,
   after,
   scope,
@@ -41,33 +58,39 @@ export function recordEventEditHistory({
   scope: RecurrenceScope;
   queryClient: QueryClient;
   source: EventRepositorySource;
-}): void {
-  if (isRestoringHistory() || !isThisScope(scope)) return;
+}): UndoHistoryEntry | null {
+  if (isRestoringHistory() || !isThisScope(scope)) return null;
 
-  const before = findEventInCache(queryClient, id, source);
+  const before =
+    pendingEditBefore(queryClient, id) ??
+    findEventInCache(queryClient, id, source);
   if (
     !before ||
     !isUndoableRecurrence(before) ||
     !isUndoableRecurrence(after)
   ) {
-    return;
+    return null;
   }
 
-  undoHistoryActions.record({ kind: "edit", id, before, after });
+  return { kind: "edit", id, before, after };
 }
 
-export function recordEventCreateHistory({ event }: { event: Event }): void {
+export function snapshotEventCreateHistory({
+  event,
+}: {
+  event: Event;
+}): UndoHistoryEntry | null {
   // Unlike edit/delete, isUndoableRecurrence does not gate this: a create's
   // EditableRecurrence is only ever "single" or "series" (never
   // "occurrence"/"exception" — a create can't target a bare instance), and
   // BOTH are undoable — a single event's undo deletes it, a brand-new
   // series' undo deletes the whole series (scope "all", see
   // useUndoRedo.undoCreate).
-  if (isRestoringHistory()) return;
-  undoHistoryActions.record({ kind: "create", event });
+  if (isRestoringHistory()) return null;
+  return { kind: "create", event };
 }
 
-export function recordEventDeleteHistory({
+export function snapshotEventDeleteHistory({
   id,
   scope,
   queryClient,
@@ -77,13 +100,21 @@ export function recordEventDeleteHistory({
   scope: RecurrenceScope;
   queryClient: QueryClient;
   source: EventRepositorySource;
-}): Event | null {
+}): {
+  existing: Event | null;
+  entry: UndoHistoryEntry | null;
+  deletedToast: boolean | undefined;
+} {
   const existing = findEventInCache(queryClient, id, source);
-  if (isRestoringHistory()) return existing;
+  if (isRestoringHistory()) {
+    return { existing, entry: null, deletedToast: undefined };
+  }
 
   const undoable =
     !!existing && isUndoableRecurrence(existing) && isThisScope(scope);
-  if (undoable) undoHistoryActions.record({ kind: "delete", event: existing });
-  showDeletedToast(undoable);
-  return existing;
+  return {
+    existing,
+    entry: undoable ? { kind: "delete", event: existing } : null,
+    deletedToast: undoable,
+  };
 }

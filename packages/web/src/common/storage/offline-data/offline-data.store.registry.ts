@@ -3,6 +3,7 @@ import { type OfflineDataStore } from "./offline-data.store";
 
 let store: OfflineDataStore | null = null;
 let initPromise: Promise<void> | null = null;
+let createStore: () => OfflineDataStore = () => new IndexedDbOfflineDataStore();
 
 /**
  * Get the offline data store singleton.
@@ -13,9 +14,26 @@ let initPromise: Promise<void> | null = null;
  */
 export function getOfflineDataStore(): OfflineDataStore {
   if (!store) {
-    store = new IndexedDbOfflineDataStore();
+    store = createStore();
   }
   return store;
+}
+
+/**
+ * Test-only: drop the singleton and init promise so the next initialize can
+ * retry, and optionally inject a fake store.
+ */
+export function resetOfflineDataStoreForTests(
+  nextStore?: OfflineDataStore | (() => OfflineDataStore),
+): void {
+  store?.close?.();
+  store = null;
+  initPromise = null;
+  if (nextStore === undefined) {
+    createStore = () => new IndexedDbOfflineDataStore();
+    return;
+  }
+  createStore = typeof nextStore === "function" ? nextStore : () => nextStore;
 }
 
 /**

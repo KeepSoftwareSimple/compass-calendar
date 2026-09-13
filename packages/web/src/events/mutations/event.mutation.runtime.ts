@@ -179,3 +179,17 @@ export function hasOtherPendingWriteForKey(
       variablesEventId(mutation) === eventId,
   );
 }
+
+export type EventWriteResult = { wrote: boolean };
+
+export const skippedEventWrite: EventWriteResult = { wrote: false };
+export const completedEventWrite: EventWriteResult = { wrote: true };
+
+export function isSkippedEventWrite(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "wrote" in data &&
+    (data as { wrote: unknown }).wrote === false
+  );
+}
