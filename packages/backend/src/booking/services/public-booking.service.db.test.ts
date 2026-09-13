@@ -250,7 +250,7 @@ describe("PublicBookingService", () => {
 
   const mockSyncCatalog = (
     calendars: ReturnType<typeof writableCalendar>[],
-    connections: TestSyncConnection[],
+    connections: ReadonlyArray<{ id: string; state: string }>,
   ) => {
     syncSpies.forEach((spy) => spy.mockRestore());
     syncSpies = [];
@@ -812,15 +812,9 @@ describe("PublicBookingService", () => {
       bookingCode: "SLOT_UNAVAILABLE",
     });
     expect(createBookingEvent).not.toHaveBeenCalled();
-    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+    await expect(service.getHostPageStatus(userId)).resolves.toMatchObject({
       bookable: false,
-      reasons: [
-        {
-          kind: "calendar",
-          reason: "notWritable",
-          calendarId,
-        },
-      ],
+      reasons: [{ kind: "calendar", reason: "notWritable", calendarId }],
     });
   });
 

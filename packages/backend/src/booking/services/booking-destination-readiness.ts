@@ -6,7 +6,6 @@ import { CalendarIdSchema } from "@core/types/domain-primitives";
 import {
   type ConnectionState,
   type ProviderCalendar,
-  type ProviderConnection,
 } from "@core/types/sync/connection.contracts";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
@@ -14,7 +13,7 @@ import { getSyncServiceClient } from "@backend/common/services/sync-service/sync
 
 export type DestinationCatalog = {
   calendars: readonly ProviderCalendar[];
-  connections: readonly Pick<ProviderConnection, "id" | "state">[];
+  connections: readonly { id: string; state: ConnectionState }[];
 };
 
 const asCalendarId = (calendarId: string) => {
