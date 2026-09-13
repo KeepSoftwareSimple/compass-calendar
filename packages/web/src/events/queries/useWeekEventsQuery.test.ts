@@ -156,18 +156,18 @@ describe("useWeekEventsQuery", () => {
 
   it("cancels an obsolete range read without treating it as a failure", async () => {
     const observedSignals: AbortSignal[] = [];
-    fetchWeekEvents.mockImplementation(
-      (_payload, _repository, _source, signal?: AbortSignal) => {
-        if (signal) observedSignals.push(signal);
-        return new Promise((_resolve, reject) => {
-          signal?.addEventListener("abort", () => {
-            const error = new Error("The operation was aborted");
-            error.name = "AbortError";
-            reject(error);
-          });
+    fetchWeekEvents.mockImplementation((...args: unknown[]) => {
+      const signal = args[3];
+      if (signal instanceof AbortSignal) observedSignals.push(signal);
+      return new Promise((_resolve, reject) => {
+        if (!(signal instanceof AbortSignal)) return;
+        signal.addEventListener("abort", () => {
+          const error = new Error("The operation was aborted");
+          error.name = "AbortError";
+          reject(error);
         });
-      },
-    );
+      });
+    });
 
     const queryClient = createCompassQueryClient();
     const result = renderHook(() => useWeekEventsQuery(range()), {
