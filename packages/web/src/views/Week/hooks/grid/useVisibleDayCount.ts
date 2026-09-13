@@ -1,18 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { readBootVisibleDayCount } from "@web/common/utils/boot-geometry.util";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
-import {
-  computeVisibleDayCount,
-  WEEK_DAY_COUNT,
-} from "@web/views/Week/util/week-window.util";
+import { computeVisibleDayCount } from "@web/views/Week/util/week-window.util";
 
 /**
  * Derives how many day columns the week grid can fit from the measured width
- * of the grid track. Defaults to the full week until a real measurement
- * arrives (the ref callback measures during commit, so the browser never
- * paints the unmeasured fallback).
+ * of the grid track. Starts from the boot shell's column count when present
+ * so the first React paint matches the HTML shell; the ref callback then
+ * remeasures during commit.
  */
 export const useVisibleDayCount = () => {
-  const [visibleDayCount, setVisibleDayCount] = useState(WEEK_DAY_COUNT);
+  const [visibleDayCount, setVisibleDayCount] = useState(
+    readBootVisibleDayCount,
+  );
   const observerRef = useRef<ResizeObserver | null>(null);
   const nodeRef = useRef<HTMLDivElement | null>(null);
   const marginLeft = useGridMarginLeft();
