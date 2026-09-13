@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { act, type PropsWithChildren } from "react";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
@@ -82,11 +82,11 @@ const setup = () => {
 const captureRsvpRequests = () => {
   const requests: Array<{ path: string; body: unknown }> = [];
   server.use(
-    rest.post(
+    http.post(
       `${ENV_WEB.API_BASEURL}/event/:id/rsvp`,
-      async (req, res, ctx) => {
-        requests.push({ path: req.url.pathname, body: await req.json() });
-        return res(ctx.status(204));
+      async ({ request }) => {
+        requests.push({ path: new URL(request.url).pathname, body: await request.json() });
+        return new HttpResponse(null, { status: 204 });
       },
     ),
   );
@@ -178,18 +178,15 @@ describe("useEventMutations optimistic rsvp", () => {
       failRequest = resolve;
     });
     server.use(
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/event/:id/rsvp`,
-        async (_req, res, ctx) => {
+        async () => {
           await gate;
-          return res(
-            ctx.status(503),
-            ctx.json({
+          return HttpResponse.json({
               code: "SYNC_UNAVAILABLE",
               message: "Sync command unavailable",
               retryable: true,
-            }),
-          );
+            }, { status: 503 });
         },
       ),
     );

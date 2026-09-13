@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { http , HttpResponse} from "msw"
+import { HttpResponse, http } from "msw";
 import { Origin } from "@core/constants/core.constants";
 import { Status } from "@core/errors/status.codes";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
@@ -22,23 +22,15 @@ const createGoogleImportEvent: typeof createMockStandaloneEvent = (
 // Do not register a global handler here: a default success changes event-list
 // calendarIds and breaks suite-order-dependent hook/grid tests that expect
 // the legacy undefined (all-calendars) read until calendars are seeded.
-// Tests that need a default response can server.use(rest.get(...)) locally.
+// Tests that need a default response can server.use(http.get(...)) locally.
 
 export const globalHandlers = [
   http.get("http://localhost/version.json", () => {
-    return HttpResponse.json(
-{ version: "dev" },
-);
+    return HttpResponse.json({ version: "dev" });
   }),
-  http.get(
-    `${ENV_WEB.API_BASEURL}/calendars/availability`,
-    () => {
-      return HttpResponse.json(
-{ busyPeriods: [] },
-{status: Status.OK,
-});
-    },
-  ),
+  http.get(`${ENV_WEB.API_BASEURL}/calendars/availability`, () => {
+    return HttpResponse.json({ busyPeriods: [] }, { status: Status.OK });
+  }),
   http.get(`${ENV_WEB.API_BASEURL}/event`, () => {
     const events = [
       createGoogleImportEvent(),
@@ -50,23 +42,17 @@ export const globalHandlers = [
       createGoogleImportEvent(),
       freshenEventStartEndDate(createGoogleImportEvent()),
     ];
-    return HttpResponse.json(
-events,
-);
+    return HttpResponse.json(events);
   }),
   http.delete(`${ENV_WEB.API_BASEURL}/event/:id`, () => {
-    return HttpResponse.json(
-{ acknowledged: true, deletedCount: 1 },
-);
+    return HttpResponse.json({ acknowledged: true, deletedCount: 1 });
   }),
   http.options(`${ENV_WEB.API_BASEURL}/event`, () => {
-    return HttpResponse.json(
-[],
-);
+    return HttpResponse.json([]);
   }),
   http.get(`${ENV_WEB.API_BASEURL}/user/profile`, () => {
     return HttpResponse.json(
-{
+      {
         userId: "test-user-123",
         email: "test@example.com",
         name: faker.person.fullName(),
@@ -74,28 +60,25 @@ events,
         lastName: faker.person.lastName(),
         photo: faker.image.avatar(),
       },
-{status: Status.OK,
-});
+      { status: Status.OK },
+    );
   }),
   http.get(`${ENV_WEB.API_BASEURL}/user/metadata`, () => {
-    return HttpResponse.json(
-{},
-{status: Status.OK,
-});
+    return HttpResponse.json({}, { status: Status.OK });
   }),
   http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () => {
     return HttpResponse.json(
-{
+      {
         subscriptionStatus: "active",
         trialEndsAt: null,
         isReadOnly: false,
       },
-{status: Status.OK,
-});
+      { status: Status.OK },
+    );
   }),
   http.get(`${ENV_WEB.API_BASEURL}/billing/subscription`, () => {
     return HttpResponse.json(
-{
+      {
         subscriptionStatus: "active",
         currentPeriodEnd: "2099-06-15T12:00:00.000Z",
         cancelAtPeriodEnd: false,
@@ -118,27 +101,21 @@ events,
           },
         ],
       },
-{status: Status.OK,
-});
+      { status: Status.OK },
+    );
   }),
-  http.post(
-    `${ENV_WEB.API_BASEURL}/booking/page/new-meetings/claim`,
-    () => {
-      return HttpResponse.json(
-{ reservations: [] },
-{status: Status.OK,
-});
-    },
-  ),
+  http.post(`${ENV_WEB.API_BASEURL}/booking/page/new-meetings/claim`, () => {
+    return HttpResponse.json({ reservations: [] }, { status: Status.OK });
+  }),
   http.get(`${ENV_WEB.API_BASEURL}/booking/page/status`, () => {
     return HttpResponse.json(
-{ bookable: true, reasons: [] },
-{status: Status.OK,
-});
+      { bookable: true, reasons: [] },
+      { status: Status.OK },
+    );
   }),
   http.get(`${ENV_WEB.API_BASEURL}/booking/page`, () => {
     return HttpResponse.json(
-{
+      {
         id: "000000000000000000000001",
         slug: "hostuser",
         hostUserId: "000000000000000000000002",
@@ -154,27 +131,24 @@ events,
         updatedAt: "2026-01-01T00:00:00.000Z",
         bookingUrl: "https://compasscalendar.com/meet/hostuser",
       },
-{status: Status.OK,
-});
+      { status: Status.OK },
+    );
   }),
   http.get(`${ENV_WEB.API_BASEURL}/booking/pages/:slug`, () => {
     return HttpResponse.json(
-{ code: "NOT_FOUND" },
-{status: Status.NOT_FOUND,
-});
+      { code: "NOT_FOUND" },
+      { status: Status.NOT_FOUND },
+    );
   }),
-  http.get(
-    `${ENV_WEB.API_BASEURL}/booking/pages/:slug/slots`,
-    () => {
-      return HttpResponse.json(
-{ slots: [], bookable: true },
-{status: Status.OK,
-});
-    },
-  ),
+  http.get(`${ENV_WEB.API_BASEURL}/booking/pages/:slug/slots`, () => {
+    return HttpResponse.json(
+      { slots: [], bookable: true },
+      { status: Status.OK },
+    );
+  }),
   http.get(`${ENV_WEB.API_BASEURL}/config`, () => {
     return HttpResponse.json(
-{
+      {
         version: "dev",
         google: { isConfigured: false },
         billing: {
@@ -183,25 +157,33 @@ events,
           trialLengthDays: 7,
         },
       },
-{status: Status.OK,
-});
+      { status: Status.OK },
+    );
   }),
-  http.post(`${ENV_WEB.API_BASEURL}/user/metadata`, ({request}) => {
- let req = request;
-    return HttpResponse.json(
-req.json(),
-{status: Status.OK,
-});
+  http.post(`${ENV_WEB.API_BASEURL}/user/metadata`, async ({ request }) => {
+    return HttpResponse.json(await request.json(), { status: Status.OK });
   }),
   http.post(`${ENV_WEB.API_BASEURL}/signinup`, () => {
-    return HttpResponse.json(
-{ isNewUser: true },
-);
+    return HttpResponse.json({ isNewUser: true });
   }),
-  http.post(`${ENV_WEB.API_BASEURL}/session/refresh`, (_req, res, ctx) => {
+  http.post(`${ENV_WEB.API_BASEURL}/session/refresh`, () => {
+    const accessToken = faker.internet.jwt();
+    const frontToken = faker.internet.jwt();
+    const refreshToken = faker.internet.jwt();
+    const sAccessToken = faker.internet.jwt();
+    const sFrontendToken = faker.internet.jwt();
+    const sRefreshToken = faker.internet.jwt();
+
     return HttpResponse.json(
-{ ok: true },
-{headers: {"access-token": faker.internet.jwt()"front-token": faker.internet.jwt()"refresh-token": faker.internet.jwt()"Set-Cookie": sAccessToken=aker.internet.jwt(;sFrontendToken=aker.internet.jwt(;sRefreshToken=aker.internet.jwt(;},
-});
+      { ok: true },
+      {
+        headers: {
+          "access-token": accessToken,
+          "front-token": frontToken,
+          "refresh-token": refreshToken,
+          "Set-Cookie": `sAccessToken=${sAccessToken}; sFrontendToken=${sFrontendToken}; sRefreshToken=${sRefreshToken};`,
+        },
+      },
+    );
   }),
 ];

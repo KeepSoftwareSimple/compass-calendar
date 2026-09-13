@@ -1,4 +1,4 @@
-import { http , HttpResponse} from "msw"
+import { HttpResponse, http } from "msw";
 import { SetEventHiddenInputSchema } from "@core/types/event-visibility.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { ENV_WEB } from "@web/common/constants/env.constants";
@@ -11,9 +11,7 @@ describe("HiddenEventsApi", () => {
   it("throws when a list response fails the schema", async () => {
     server.use(
       http.get(hiddenEventsUrl, () =>
-        {HttpResponse.json(
-{ hiddenEventIds: [], extra: true },
-)},
+        HttpResponse.json({ hiddenEventIds: [], extra: true }),
       ),
     );
 
@@ -23,9 +21,7 @@ describe("HiddenEventsApi", () => {
   it("throws when a set response fails the schema", async () => {
     server.use(
       http.put(hiddenEventsUrl, () =>
-        {HttpResponse.json(
-{ hiddenEventIds: "evt-1" },
-)},
+        HttpResponse.json({ hiddenEventIds: "evt-1" }),
       ),
     );
 
