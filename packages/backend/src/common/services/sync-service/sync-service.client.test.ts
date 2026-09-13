@@ -401,6 +401,21 @@ describe("SyncServiceClient", () => {
     expect(result.error.status).toBe(403);
   });
 
+  // #3674: a lone unexpectedStatus during a Sync restart carried no status
+  // in its message, so nobody could tell a 500 from a 502. The detail names
+  // it; the mapped kinds (503 -> unavailable) stay detail-free.
+  it("names the raw status in the unexpectedStatus detail", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 500,
+      json: async () => ({ error: "boom" }),
+    }));
+
+    const result = await client(fn).getContactSuggestions(principal(), "ada");
+    if (result.ok) throw new Error("expected a failure");
+    expect(result.error.kind).toBe("unexpectedStatus");
+    expect(result.error.detail).toBe("status=500");
+  });
+
   it("polls the change feed from now and with a resume cursor", async () => {
     const who = principal();
     const cursor = objectId() as ChangeFeedCursor;

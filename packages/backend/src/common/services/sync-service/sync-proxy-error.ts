@@ -26,11 +26,13 @@ export function logLevelForSyncClientError(
 
 // Map a failed Sync HTTP call on a read/proxy route into a real HTTP status.
 // Never Status.UNSURE (600). Timeout/unavailable → 503; other failures → 502.
-// `detail` is the log-safe SyncClientError.detail (present only for an
-// invalidResponse): appended to the message so the error-tracking issue names
-// which field broke the contract instead of just that it broke. It carries
-// field names, Zod issue codes, and a content-type header only — never a field
-// value — so it is safe in the message the handler logs and returns.
+// `detail` is the log-safe SyncClientError.detail (an invalidResponse's
+// contract mismatch, or an unexpectedStatus's raw status): appended to the
+// message so the error-tracking issue names which field broke the contract,
+// or which status Sync answered with, instead of just that it broke. It
+// carries field names, Zod issue codes, a content-type header, or a status
+// code only — never a field value — so it is safe in the message the handler
+// logs and returns.
 export function throwSyncProxyFailure(
   kind: SyncClientErrorKind,
   userMessage: string,

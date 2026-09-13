@@ -138,7 +138,7 @@ export class StripeService {
           automatic_tax: { enabled: true },
           customer_update: { address: "auto" },
           billing_address_collection: "required",
-          ui_mode: "embedded",
+          ui_mode: "embedded_page",
           redirect_on_completion: "never",
           subscription_data: {
             ...(grantTrial
@@ -345,7 +345,7 @@ export class StripeService {
         mode: "setup",
         customer: customerId,
         payment_method_types: ["card"],
-        ui_mode: "embedded",
+        ui_mode: "embedded_page",
         redirect_on_completion: "never",
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },

@@ -96,7 +96,7 @@ describe("StripeService", () => {
       customer_update: { address: "auto" },
       billing_address_collection: "required",
     });
-    expect(sessionArgs.ui_mode).toBe("embedded");
+    expect(sessionArgs.ui_mode).toBe("embedded_page");
     expect(sessionArgs.redirect_on_completion).toBe("never");
     expect(sessionArgs.success_url).toBeUndefined();
     expect(sessionArgs.cancel_url).toBeUndefined();
@@ -882,7 +882,7 @@ describe("StripeService", () => {
         mode: "setup",
         customer: "cus_card",
         payment_method_types: ["card"],
-        ui_mode: "embedded",
+        ui_mode: "embedded_page",
         redirect_on_completion: "never",
         client_reference_id: userId.toString(),
         setup_intent_data: { metadata: { compassUserId: userId.toString() } },
