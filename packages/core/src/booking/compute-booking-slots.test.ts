@@ -133,28 +133,81 @@ describe("computeBookingSlots", () => {
   it("does not duplicate instants across DST fall-back", () => {
     const slots = computeBookingSlots(
       baseInput({
+        timeZone: "America/New_York",
         now: new Date("2026-10-25T00:00:00.000Z"),
-        windowStart: new Date("2026-11-01T05:00:00.000Z"),
+        windowStart: new Date("2026-11-01T04:00:00.000Z"),
         windowEnd: new Date("2026-11-02T08:00:00.000Z"),
         weeklyAvailability: [{ weekday: 7, start: "01:00", end: "03:30" }],
         durationMinutes: 30,
       }),
     );
 
+    // Ambiguous 01:00-01:45 use the earlier EDT offset. The repeated EST hour
+    // is not a second grid; 02:00 is the first unique post-fold wall time.
+    expect(slots).toEqual([
+      "2026-11-01T05:00:00Z",
+      "2026-11-01T05:15:00Z",
+      "2026-11-01T05:30:00Z",
+      "2026-11-01T05:45:00Z",
+      "2026-11-01T07:00:00Z",
+      "2026-11-01T07:15:00Z",
+      "2026-11-01T07:30:00Z",
+      "2026-11-01T07:45:00Z",
+      "2026-11-01T08:00:00Z",
+    ]);
     expect(new Set(slots).size).toBe(slots.length);
   });
 
-  it("skips invalid local times on DST spring-forward", () => {
+  it("returns no slots for a nonexistent spring-forward availability interval", () => {
     const slots = computeBookingSlots(
       baseInput({
+        timeZone: "America/New_York",
         now: new Date("2026-03-01T00:00:00.000Z"),
-        windowStart: new Date("2026-03-08T07:00:00.000Z"),
-        windowEnd: new Date("2026-03-09T07:00:00.000Z"),
-        weeklyAvailability: [{ weekday: 7, start: "02:00", end: "04:00" }],
-        durationMinutes: 15,
+        windowStart: new Date("2026-03-08T05:00:00.000Z"),
+        windowEnd: new Date("2026-03-09T08:00:00.000Z"),
+        weeklyAvailability: [{ weekday: 7, start: "02:00", end: "02:30" }],
+        durationMinutes: 30,
       }),
     );
 
-    expect(slots.every((slot) => !slot.includes("T08:30:00"))).toBe(true);
+    expect(slots).toEqual([]);
+  });
+
+  it("keeps exact UTC starts around the spring-forward gap", () => {
+    const slots = computeBookingSlots(
+      baseInput({
+        timeZone: "America/New_York",
+        now: new Date("2026-03-01T00:00:00.000Z"),
+        windowStart: new Date("2026-03-08T05:00:00.000Z"),
+        windowEnd: new Date("2026-03-09T08:00:00.000Z"),
+        weeklyAvailability: [{ weekday: 7, start: "01:00", end: "04:00" }],
+        durationMinutes: 30,
+      }),
+    );
+
+    expect(slots).toEqual([
+      "2026-03-08T06:00:00Z",
+      "2026-03-08T06:15:00Z",
+      "2026-03-08T06:30:00Z",
+      "2026-03-08T06:45:00Z",
+      "2026-03-08T07:00:00Z",
+      "2026-03-08T07:15:00Z",
+      "2026-03-08T07:30:00Z",
+    ]);
+  });
+
+  it("rejects a duration that would end outside hours after the spring gap", () => {
+    const slots = computeBookingSlots(
+      baseInput({
+        timeZone: "America/New_York",
+        now: new Date("2026-03-01T00:00:00.000Z"),
+        windowStart: new Date("2026-03-08T05:00:00.000Z"),
+        windowEnd: new Date("2026-03-09T08:00:00.000Z"),
+        weeklyAvailability: [{ weekday: 7, start: "01:30", end: "02:30" }],
+        durationMinutes: 30,
+      }),
+    );
+
+    expect(slots).toEqual([]);
   });
 });

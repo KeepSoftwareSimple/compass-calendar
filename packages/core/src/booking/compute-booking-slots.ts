@@ -144,19 +144,35 @@ export const computeBookingSlots = (
       while (minuteCursor + durationMinutes <= intervalEndMinutes) {
         const hours = Math.floor(minuteCursor / 60);
         const minutes = minuteCursor % 60;
-        const localStart = dayjs.tz(
-          `${localDate} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
-          "YYYY-MM-DD HH:mm",
-          timeZone,
-        );
+        const wallStart = `${localDate} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+        const localStart = dayjs.tz(wallStart, "YYYY-MM-DD HH:mm", timeZone);
 
-        if (!localStart.isValid()) {
+        // dayjs.tz isValid stays true for nonexistent spring-forward times; it
+        // shifts them to the next real instant (02:00 EST → 03:00 EDT). A
+        // round-trip through the requested wall clock drops those gaps.
+        // Ambiguous fall-back times use dayjs.tz's earlier offset; later
+        // repeats of the same wall clock are not a second grid point, and
+        // seenStarts drops any UTC collision.
+        if (
+          !localStart.isValid() ||
+          localStart.format("YYYY-MM-DD HH:mm") !== wallStart
+        ) {
           minuteCursor += SLOT_GRID_MINUTES;
           continue;
         }
 
         const slotStart = localStart.toDate();
         const slotEnd = new Date(slotStart.getTime() + durationMs);
+        const localEnd = dayjs(slotEnd).tz(timeZone);
+        const endMinutes = localEnd.hour() * 60 + localEnd.minute();
+        if (
+          localEnd.format("YYYY-MM-DD") !== localDate ||
+          endMinutes > intervalEndMinutes
+        ) {
+          minuteCursor += SLOT_GRID_MINUTES;
+          continue;
+        }
+
         const slotStartMs = slotStart.getTime();
 
         if (
