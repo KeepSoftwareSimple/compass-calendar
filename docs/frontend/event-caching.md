@@ -129,7 +129,10 @@ sides call the **same** predicate:
 
 - **Mutations** — invalidate `["events"]` on settle (see above).
 - **SSE** — background `eventsChanged` invalidates the
-  relevant scope so it refetches. Native EventSource reconnect (`open`) and
+  relevant scope so it refetches. `useEventSSE` coalesces per message type:
+  the first message in a quiet period refetches at once, and anything that
+  lands inside the next 5s collapses into one trailing refetch, so a burst of
+  Sync pull invalidations does not become a refetch storm (#3694). Native EventSource reconnect (`open`) and
   window focus also invalidate/refetch so a laptop-sleep gap is not silent.
   Separately, `useSyncFocusRefresh` asks Sync for a silent calendar catch-up
   after mount / long hide — that complements cache invalidation; it does not
