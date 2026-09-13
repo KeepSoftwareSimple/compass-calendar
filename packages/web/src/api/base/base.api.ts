@@ -9,6 +9,7 @@ import {
   getRequestUrl,
   getResponseData,
   handleErrorResponse,
+  isAbortError,
   isApiError,
 } from "../util/api.util";
 
@@ -65,6 +66,12 @@ const request = async <T>(
 
     return result;
   } catch (error) {
+    // Cancellation is cancellation: wrapping AbortError as ApiError made
+    // obsolete range reads look like backend failures (retry, session
+    // recovery, error toast). The request config already documents AbortError.
+    if (isAbortError(error)) {
+      throw error;
+    }
     if (isApiError(error)) {
       return handleErrorResponse(error, {
         onGoogleRevoked: BaseApi.defaults.onGoogleRevoked,

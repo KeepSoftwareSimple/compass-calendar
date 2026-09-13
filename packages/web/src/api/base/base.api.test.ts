@@ -34,4 +34,16 @@ describe("BaseApi", () => {
 
     expect(onGoogleRevoked).toHaveBeenCalledTimes(1);
   });
+
+  it("rethrows AbortError instead of wrapping it as ApiError", async () => {
+    BaseApi.defaults.adapter = async () => {
+      const error = new Error("The operation was aborted");
+      error.name = "AbortError";
+      throw error;
+    };
+
+    await expect(BaseApi.get("/event")).rejects.toMatchObject({
+      name: "AbortError",
+    });
+  });
 });

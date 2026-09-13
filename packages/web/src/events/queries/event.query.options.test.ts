@@ -26,4 +26,10 @@ describe("event query retry policy", () => {
   it("does not retry request-specific failures", () => {
     expect(shouldRetry(0, new Error("Invalid event range"))).toBe(false);
   });
+
+  it("does not retry an aborted range read", () => {
+    const error = new Error("The operation was aborted");
+    error.name = "AbortError";
+    expect(shouldRetry(0, error)).toBe(false);
+  });
 });

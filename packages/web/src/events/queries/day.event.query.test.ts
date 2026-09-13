@@ -44,6 +44,7 @@ describe("fetchDayEvents remote Sync startAt skew", () => {
         start: toUTCOffset(dayjs(sundayRange.startDate).subtract(1, "day")),
         end: toUTCOffset(dayjs(sundayRange.endDate).add(1, "day")),
       }),
+      undefined,
     );
     expect(sundayResult.ids).toEqual([]);
 
@@ -59,6 +60,7 @@ describe("fetchDayEvents remote Sync startAt skew", () => {
         start: toUTCOffset(dayjs(mondayRange.startDate).subtract(1, "day")),
         end: toUTCOffset(dayjs(mondayRange.endDate).add(1, "day")),
       }),
+      undefined,
     );
     expect(mondayResult.ids).toEqual([mondayAllDay.id]);
     expect(mondayResult.entities[mondayAllDay.id]?.content).toMatchObject({
@@ -156,5 +158,24 @@ describe("fetchDayEvents remote Sync startAt skew", () => {
 
     expect(list).not.toHaveBeenCalled();
     expect(result.ids).toEqual([]);
+  });
+
+  it("forwards the abort signal to the repository list", async () => {
+    const list = mock(async () => [mondayAllDay]);
+    const repository = { list } as unknown as EventRepository;
+    const monday = dayjs.tz("2026-08-10 12:00", "America/Denver");
+    const controller = new AbortController();
+
+    await fetchDayEvents(
+      dayRange(monday),
+      repository,
+      "remote",
+      controller.signal,
+    );
+
+    expect(list).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: "range" }),
+      controller.signal,
+    );
   });
 });

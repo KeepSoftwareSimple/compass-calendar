@@ -41,12 +41,18 @@ export async function fetchDayEvents(
   payload: FetchEventsRangePayload,
   repository: EventRepository,
   source: EventRepositorySource = "remote",
+  signal?: AbortSignal,
 ): Promise<NormalizedEventQueryData> {
   if (!payload.startDate || !payload.endDate) {
     throw new Error("Event query requires startDate and endDate");
   }
 
   if (source === "local") {
+    if (signal?.aborted) {
+      const error = new Error("The operation was aborted");
+      error.name = "AbortError";
+      throw error;
+    }
     return fetchLocalEventsRange(payload);
   }
 
@@ -64,7 +70,7 @@ export async function fetchDayEvents(
       : {}),
   });
 
-  const events = await repository.list(query);
+  const events = await repository.list(query, signal);
   const inRange = events.filter((event) =>
     eventMatchesRange(event, payload.startDate, payload.endDate),
   );

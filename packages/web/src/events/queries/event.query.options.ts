@@ -49,11 +49,12 @@ function rangeEventsQueryOptions(
       end: endDate,
       calendarIds,
     }),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       fetchFn(
         { startDate, endDate, calendarIds },
         getEventRepositoryBySource(source),
         source,
+        signal,
       ),
     ...EVENT_QUERY_CACHE_OPTIONS,
   });

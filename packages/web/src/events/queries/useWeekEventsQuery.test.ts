@@ -132,4 +132,58 @@ describe("useWeekEventsQuery", () => {
     expect(result.result.current.data?.ids).toEqual([event.id]);
     expect(result.result.current.isPlaceholderData).toBe(true);
   });
+
+  it("keeps already displayed events when a refresh fails", async () => {
+    const queryClient = createCompassQueryClient();
+    const first = renderHook(() => useWeekEventsQuery(range()), {
+      queryClient,
+    });
+    await waitFor(() => {
+      expect(first.result.current.isSuccess).toBe(true);
+    });
+
+    fetchWeekEvents.mockImplementation(async () => {
+      throw new Error("boom");
+    });
+
+    await first.result.current.refetch();
+
+    await waitFor(() => {
+      expect(first.result.current.isError).toBe(true);
+    });
+    expect(first.result.current.data?.ids).toEqual([weekEvent.id]);
+  });
+
+  it("cancels an obsolete range read without treating it as a failure", async () => {
+    const observedSignals: AbortSignal[] = [];
+    fetchWeekEvents.mockImplementation(
+      (_payload, _repository, _source, signal?: AbortSignal) => {
+        if (signal) observedSignals.push(signal);
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener("abort", () => {
+            const error = new Error("The operation was aborted");
+            error.name = "AbortError";
+            reject(error);
+          });
+        });
+      },
+    );
+
+    const queryClient = createCompassQueryClient();
+    const result = renderHook(() => useWeekEventsQuery(range()), {
+      queryClient,
+    });
+
+    await waitFor(() => {
+      expect(observedSignals.length).toBeGreaterThan(0);
+    });
+
+    await queryClient.cancelQueries({
+      queryKey: eventQueryKeys.scope("week"),
+    });
+
+    expect(result.result.current.isError).toBe(false);
+    expect(observedSignals.some((signal) => signal.aborted)).toBe(true);
+    result.unmount();
+  });
 });

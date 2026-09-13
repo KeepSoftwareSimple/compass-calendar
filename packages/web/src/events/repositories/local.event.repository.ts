@@ -116,7 +116,12 @@ export class LocalEventRepository implements EventRepository {
     return this.getStore();
   }
 
-  async list(query: EventListQuery): Promise<Event[]> {
+  async list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]> {
+    if (signal?.aborted) {
+      const error = new Error("The operation was aborted");
+      error.name = "AbortError";
+      throw error;
+    }
     const records = await this.store.getAllEvents();
     return expandLocalEventRecords(records, {
       start: query.start,

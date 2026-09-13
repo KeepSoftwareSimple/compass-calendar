@@ -12,8 +12,8 @@ import { type EventRepository } from "./event.repository.types";
 export class RemoteEventRepository implements EventRepository {
   constructor(private readonly api: typeof EventApi = EventApi) {}
 
-  async list(query: EventListQuery): Promise<Event[]> {
-    return this.api.list(query);
+  async list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]> {
+    return this.api.list(query, signal);
   }
 
   async create(input: CreateEventInput): Promise<Event> {

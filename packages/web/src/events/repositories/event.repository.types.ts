@@ -8,7 +8,7 @@ import {
 } from "@core/types/event-command.contracts";
 
 export interface EventRepository {
-  list(query: EventListQuery): Promise<Event[]>;
+  list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]>;
   create(input: CreateEventInput): Promise<Event>;
   replace(id: EventId, input: ReplaceEventInput): Promise<Event>;
   delete(id: EventId, scope: RecurrenceScope): Promise<void>;

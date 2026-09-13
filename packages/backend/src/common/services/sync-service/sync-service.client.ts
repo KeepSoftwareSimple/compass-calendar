@@ -700,20 +700,33 @@ export class SyncServiceClient {
     // Retries have to fit inside the deadline the caller was promised, so a
     // nominally 5s read can never quietly become a 15s one. submitCommand's
     // 30s budget affords more retry room than a 5s read for free, which is
-    // why reads and writes need no separate policy.
-    const retryDeadline = this.#now() + (input.timeoutMs ?? this.#timeoutMs);
+    // why reads and writes need no separate policy. The same absolute deadline
+    // covers attempts, backoff delay, and body consumption: a later attempt
+    // only receives whatever budget remains.
+    const totalBudgetMs = input.timeoutMs ?? this.#timeoutMs;
+    const retryDeadline = this.#now() + totalBudgetMs;
     let attempt = 0;
+    let lastRetryable: SyncClientError | undefined;
 
     const attemptSend = async (): Promise<SyncClientResult<T>> => {
+      const remainingMs = retryDeadline - this.#now();
+      if (remainingMs <= 0) {
+        return {
+          ok: false,
+          error: lastRetryable ?? { kind: "timeout", correlationId },
+        };
+      }
       attempt += 1;
       const result = await this.#send({
         ...input,
+        timeoutMs: remainingMs,
         headers: buildHeaders(),
         correlationId,
       });
       if (result.ok || !isRetryableSyncError(result.error, input.method)) {
         return result;
       }
+      lastRetryable = result.error;
       if (this.#now() >= retryDeadline) return result;
       throw new RetryableSyncFailure(result.error);
     };
@@ -766,94 +779,135 @@ export class SyncServiceClient {
 
     const controller = new AbortController();
     const deadlineMs = input.timeoutMs ?? this.#timeoutMs;
+    if (deadlineMs <= 0) {
+      return { ok: false, error: { kind: "timeout", correlationId } };
+    }
+    // The abort covers headers AND body. Clearing it when fetch() returns
+    // left a stalled json() hanging past the caller's deadline (prod saw
+    // HTTP 200 + application/json + "Unexpected end of JSON input").
     const timer = setTimeout(() => controller.abort(), deadlineMs);
-    let response: SyncFetchResponse;
     try {
-      response = await this.#fetch(url, {
+      const response = await this.#fetch(url, {
         method: input.method,
         headers: input.headers,
         body: input.body === undefined ? undefined : JSON.stringify(input.body),
         signal: controller.signal,
       });
+
+      // A schema-less request is a no-content route: it succeeds with 204 and
+      // an empty body, so there is nothing to parse and a 200-with-body would
+      // itself be unexpected.
+      if (!input.schema) {
+        return response.status === 204
+          ? { ok: true, value: undefined as T, correlationId }
+          : statusFailure(response.status, correlationId);
+      }
+
+      if (response.status === 200) {
+        const contentType = response.headers?.get("content-type") ?? undefined;
+        let body: unknown;
+        try {
+          body = await readJson(response, controller.signal);
+        } catch (error) {
+          if (isAbortError(error)) {
+            return { ok: false, error: { kind: "timeout", correlationId } };
+          }
+          // The body was not JSON at all. This collapses two very different
+          // failures into one message: a reverse proxy returning HTML in front
+          // of Sync (content-type gives that away), or the body stream itself
+          // failing mid-read (a truncated/reset connection, e.g. Sync exiting
+          // while the response was still being written) even though the
+          // content-type header is legitimately application/json. The parse
+          // error's own name/message is what tells those apart, so carry it
+          // instead of discarding it.
+          //
+          // The parse error alone still can't tell "Sync itself sent an empty
+          // 200 body" (its own bug) apart from "Sync sent a full body but the
+          // connection was cut before we received all of it" (a network/process
+          // failure downstream of Sync, e.g. #2901's deploy-kill hypothesis) —
+          // both surface as the same SyntaxError. `content-length` is the
+          // header Sync itself set before writing a byte, so it names what Sync
+          // intended to send: `content-length=0` pins the bug to Sync's own
+          // response path; a positive value that still failed to parse points
+          // at delivery instead.
+          const reason =
+            error instanceof Error
+              ? `${error.name}: ${error.message}`
+              : String(error);
+          const contentLength =
+            response.headers?.get("content-length") ?? undefined;
+          const parts = [`body is not JSON (${reason})`];
+          if (contentLength !== undefined) {
+            parts.push(`content-length=${contentLength}`);
+          }
+          if (contentType) parts.push(`content-type=${contentType}`);
+          return {
+            ok: false,
+            error: {
+              kind: "invalidResponse",
+              status: 200,
+              correlationId,
+              detail: parts.join("; "),
+              bodyUnreadable: true,
+            },
+          };
+        }
+        const parsed = input.schema.safeParse(body);
+        if (!parsed.success) {
+          return errorResult(
+            "invalidResponse",
+            correlationId,
+            200,
+            describeContractMismatch(parsed.error, body, contentType),
+          );
+        }
+        return { ok: true, value: parsed.data, correlationId };
+      }
+
+      return statusFailure(response.status, correlationId);
     } catch (error) {
       // An abort is our deadline firing; anything else is a connection failure.
-      const kind =
-        error instanceof Error && error.name === "AbortError"
-          ? "timeout"
-          : "unavailable";
+      const kind = isAbortError(error) ? "timeout" : "unavailable";
       return { ok: false, error: { kind, correlationId } };
     } finally {
       clearTimeout(timer);
     }
+  }
+}
 
-    // A schema-less request is a no-content route: it succeeds with 204 and
-    // an empty body, so there is nothing to parse and a 200-with-body would
-    // itself be unexpected.
-    if (!input.schema) {
-      return response.status === 204
-        ? { ok: true, value: undefined as T, correlationId }
-        : statusFailure(response.status, correlationId);
-    }
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name: string }).name === "AbortError"
+  );
+}
 
-    if (response.status === 200) {
-      const contentType = response.headers?.get("content-type") ?? undefined;
-      let body: unknown;
-      try {
-        body = await response.json();
-      } catch (error) {
-        // The body was not JSON at all. This collapses two very different
-        // failures into one message: a reverse proxy returning HTML in front
-        // of Sync (content-type gives that away), or the body stream itself
-        // failing mid-read (a truncated/reset connection, e.g. Sync exiting
-        // while the response was still being written) even though the
-        // content-type header is legitimately application/json. The parse
-        // error's own name/message is what tells those apart, so carry it
-        // instead of discarding it.
-        //
-        // The parse error alone still can't tell "Sync itself sent an empty
-        // 200 body" (its own bug) apart from "Sync sent a full body but the
-        // connection was cut before we received all of it" (a network/process
-        // failure downstream of Sync, e.g. #2901's deploy-kill hypothesis) —
-        // both surface as the same SyntaxError. `content-length` is the
-        // header Sync itself set before writing a byte, so it names what Sync
-        // intended to send: `content-length=0` pins the bug to Sync's own
-        // response path; a positive value that still failed to parse points
-        // at delivery instead.
-        const reason =
-          error instanceof Error
-            ? `${error.name}: ${error.message}`
-            : String(error);
-        const contentLength =
-          response.headers?.get("content-length") ?? undefined;
-        const parts = [`body is not JSON (${reason})`];
-        if (contentLength !== undefined) {
-          parts.push(`content-length=${contentLength}`);
-        }
-        if (contentType) parts.push(`content-type=${contentType}`);
-        return {
-          ok: false,
-          error: {
-            kind: "invalidResponse",
-            status: 200,
-            correlationId,
-            detail: parts.join("; "),
-            bodyUnreadable: true,
-          },
-        };
-      }
-      const parsed = input.schema.safeParse(body);
-      if (!parsed.success) {
-        return errorResult(
-          "invalidResponse",
-          correlationId,
-          200,
-          describeContractMismatch(parsed.error, body, contentType),
-        );
-      }
-      return { ok: true, value: parsed.data, correlationId };
-    }
+function abortError(): Error {
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
+}
 
-    return statusFailure(response.status, correlationId);
+// Native fetch aborts the body when the request signal fires; test doubles
+// and some runtimes do not. Race json() against the same deadline so a
+// stalled body cannot outlive the timer, and drop the abort listener on
+// every exit so it cannot leak after a successful parse.
+async function readJson(
+  response: SyncFetchResponse,
+  signal: AbortSignal,
+): Promise<unknown> {
+  if (signal.aborted) throw abortError();
+  let onAbort: (() => void) | undefined;
+  const aborted = new Promise<never>((_, reject) => {
+    onAbort = () => reject(abortError());
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+  try {
+    return await Promise.race([response.json(), aborted]);
+  } finally {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
   }
 }
 
