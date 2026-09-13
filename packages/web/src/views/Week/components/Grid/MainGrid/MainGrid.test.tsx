@@ -1,4 +1,8 @@
-import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  notifyManager,
+  type QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { act, type PropsWithChildren, useState } from "react";
 import { type CompassEvent } from "@core/types/compass-event.contracts";
 import { EventIdSchema } from "@core/types/domain-primitives";
@@ -629,19 +633,25 @@ describe("saved Week event ownership", () => {
       screen.getByRole("button", { name: /^Timed event: Live hide/ }),
     ).toBeInTheDocument();
 
-    act(() => {
-      if (!providerQueryClient) {
-        throw new Error("expected Provider query client");
-      }
-      providerQueryClient.setQueryData(hiddenEventsQueryKeys.source("local"), [
-        event._id!,
-      ]);
-    });
+    notifyManager.setScheduler((callback) => callback());
+    try {
+      act(() => {
+        if (!providerQueryClient) {
+          throw new Error("expected Provider query client");
+        }
+        providerQueryClient.setQueryData(
+          hiddenEventsQueryKeys.source("local"),
+          [event._id!],
+        );
+      });
 
-    const hiddenCard = screen.getByRole("button", {
-      name: /^Hidden Timed event: Live hide/,
-    });
-    expect(parseFloat(hiddenCard.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+      const hiddenCard = screen.getByRole("button", {
+        name: /^Hidden Timed event: Live hide/,
+      });
+      expect(parseFloat(hiddenCard.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    } finally {
+      notifyManager.setScheduler((callback) => setTimeout(callback, 0));
+    }
   });
 
   it("does not render a hidden all-day strip for the saved card of an open edit draft", () => {
