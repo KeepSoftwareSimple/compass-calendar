@@ -47,20 +47,13 @@ const hasEditSequenceKey = (
 export const EDIT_SEQUENCE_LETTER_FIELDS =
   EDIT_SEQUENCE_FIELDS.filter(hasEditSequenceKey);
 
-export type EditSequenceSecondKey =
+type EditSequenceSecondKey =
   (typeof EDIT_SEQUENCE_LETTER_FIELDS)[number]["key"];
-
-export type EditSequenceDigit = (typeof EDIT_SEQUENCE_FIELDS)[number]["digit"];
 
 /** Second key → form field, for dispatch. */
 export const EDIT_SEQUENCE_FIELD_BY_KEY = Object.fromEntries(
   EDIT_SEQUENCE_LETTER_FIELDS.map(({ key, field }) => [key, field]),
 ) as Record<EditSequenceSecondKey, EventFormFocusField>;
-
-/** Digit → form field, for Mod+digit dispatch. */
-export const EDIT_SEQUENCE_FIELD_BY_DIGIT = Object.fromEntries(
-  EDIT_SEQUENCE_FIELDS.map(({ digit, field }) => [digit, field]),
-) as Record<EditSequenceDigit, EventFormFocusField>;
 
 /**
  * The same table in physical top-row order: the fields in DOM order under

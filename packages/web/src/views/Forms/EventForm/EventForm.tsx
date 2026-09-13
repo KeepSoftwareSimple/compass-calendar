@@ -275,9 +275,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     const showRsvpControl =
       rsvpSource !== null &&
       rsvpAccountEmail !== undefined &&
-      (liveDetails?.attendees ?? []).some(
-        (attendee) =>
-          attendee.email.toLowerCase() === rsvpAccountEmail.toLowerCase(),
+      attendeeStatusByEmail(liveDetails?.attendees).has(
+        rsvpAccountEmail.toLowerCase(),
       );
     // Contact suggestions (WP-06): live when a connected account granted the
     // optional contacts scopes; otherwise the field is a raw email input and

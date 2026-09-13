@@ -2,6 +2,7 @@ import { useId, useState } from "react";
 import { type Event } from "@core/types/event.contracts";
 import { type RsvpResponseStatus } from "@core/types/event-attendance.contracts";
 import { useEventMutations } from "@web/events/mutations/useEventMutations";
+import { attendeeStatusByEmail } from "@web/views/Forms/EventForm/attendee-rsvp";
 import { RsvpScopeDialog } from "@web/views/Forms/EventForm/RsvpScopeDialog";
 
 // Going / Maybe / Decline segmented control (WP-08). Rendered only when the
@@ -40,10 +41,9 @@ export const RsvpControl = ({ event, accountEmail, id }: RsvpControlProps) => {
 
   const selfStatus =
     event.content.kind === "details"
-      ? event.content.attendees?.find(
-          (attendee) =>
-            attendee.email.toLowerCase() === accountEmail.toLowerCase(),
-        )?.responseStatus
+      ? attendeeStatusByEmail(event.content.attendees).get(
+          accountEmail.toLowerCase(),
+        )
       : undefined;
   // Fail closed: no self entry, nothing to answer (EventForm gates this too).
   if (selfStatus === undefined) return null;

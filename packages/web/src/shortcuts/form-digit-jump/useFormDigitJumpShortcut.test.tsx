@@ -1,10 +1,8 @@
 import { resolveModifier } from "@tanstack/react-hotkeys";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
-import {
-  MOD_HOLD_HINT_MS,
-  useFormDigitJumpShortcut,
-} from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
+import { useFormDigitJumpShortcut } from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
+import { MOD_HOLD_HINT_MS } from "@web/shortcuts/mod-hold/useModHoldHintShortcut";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 /** Matches what the hook resolves Mod to on this platform. */

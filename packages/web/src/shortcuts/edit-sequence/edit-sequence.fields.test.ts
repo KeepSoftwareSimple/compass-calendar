@@ -1,5 +1,5 @@
+import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 import {
-  EDIT_SEQUENCE_FIELD_BY_DIGIT,
   EDIT_SEQUENCE_FIELDS,
   FORM_FIELD_DIGITS,
 } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
@@ -46,7 +46,8 @@ describe("edit-sequence.fields", () => {
 
   it("maps every digit back to its field for dispatch", () => {
     for (const entry of EDIT_SEQUENCE_FIELDS) {
-      expect(EDIT_SEQUENCE_FIELD_BY_DIGIT[entry.digit]).toBe(entry.field);
+      const index = PICK_KEY_LABELS.indexOf(entry.digit);
+      expect(FORM_FIELD_DIGITS[index]?.field).toBe(entry.field);
     }
   });
 });
