@@ -1397,6 +1397,71 @@ describe("PublicBookingService", () => {
     expect(tokyo).toEqual(utc);
   });
 
+  it("lists no spring-forward gap slots and rejects confirming the normalized instant", async () => {
+    setSystemTime(new Date("2026-03-01T12:00:00.000Z"));
+    try {
+      const { slug } = await enableBookingPage("Dst Host", {
+        timeZone: "America/New_York",
+        weeklyAvailability: [{ weekday: 7, start: "02:00", end: "02:30" }],
+      });
+      const listed = await service.getSlots(slug, {
+        start: "2026-03-08T05:00:00.000Z",
+        end: "2026-03-09T08:00:00.000Z",
+        timeZone: "America/New_York",
+      });
+      expect(listed).toEqual({ bookable: true, slots: [] });
+
+      await expect(
+        service.createReservation(slug, {
+          slotStart: "2026-03-08T07:00:00.000Z",
+          guestName: "Ada Lovelace",
+          guestEmail: "ada@example.com",
+          guestTimeZone: "America/New_York",
+          durationMinutes: 30,
+        }),
+      ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
+      expect(createBookingEvent).not.toHaveBeenCalled();
+    } finally {
+      setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+    }
+  });
+
+  it("lists and confirms the same pinned instants around the spring-forward gap", async () => {
+    setSystemTime(new Date("2026-03-01T12:00:00.000Z"));
+    try {
+      const { slug } = await enableBookingPage("Dst Host", {
+        timeZone: "America/New_York",
+        weeklyAvailability: [{ weekday: 7, start: "01:00", end: "04:00" }],
+      });
+      const listed = await service.getSlots(slug, {
+        start: "2026-03-08T05:00:00.000Z",
+        end: "2026-03-09T08:00:00.000Z",
+        timeZone: "America/Denver",
+      });
+      expect(listed.slots.map((slot) => slot.slotStart)).toEqual([
+        "2026-03-08T06:00:00Z",
+        "2026-03-08T06:15:00Z",
+        "2026-03-08T06:30:00Z",
+        "2026-03-08T06:45:00Z",
+        "2026-03-08T07:00:00Z",
+        "2026-03-08T07:15:00Z",
+        "2026-03-08T07:30:00Z",
+      ] as DateTime[]);
+
+      const created = await service.createReservation(slug, {
+        slotStart: "2026-03-08T06:00:00.000Z",
+        guestName: "Ada Lovelace",
+        guestEmail: "ada@example.com",
+        guestTimeZone: "America/Denver",
+        durationMinutes: 30,
+      });
+      expect(created.slotStart).toBe("2026-03-08T06:00:00.000Z" as DateTime);
+      expect(createBookingEvent).toHaveBeenCalledTimes(1);
+    } finally {
+      setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+    }
+  });
+
   it("does not fetch a confirmed reservation far outside the requested window", async () => {
     const { slug, pageId } = await enableBookingPage();
     await seedConfirmedReservation(
