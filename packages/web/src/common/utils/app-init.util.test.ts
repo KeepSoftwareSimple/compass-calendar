@@ -1,10 +1,8 @@
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as realPosthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
+import { DB_INIT_ERROR_TOAST_ID } from "@web/common/constants/toast.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
-import {
-  DatabaseInitError,
-  initializeDatabaseWithErrorHandling,
-  showDbInitErrorToast,
-} from "./app-init.util";
 import {
   afterEach,
   beforeEach,
@@ -14,6 +12,22 @@ import {
   mock,
   spyOn,
 } from "bun:test";
+
+const mockCaptureException = mock();
+
+mockModuleForFile("@web/auth/posthog/posthog.bootstrap", realPosthogBootstrap, {
+  getPosthogClient: () => ({
+    captureException: mockCaptureException,
+    capture: () => undefined,
+    reset: () => undefined,
+  }),
+});
+
+const {
+  DatabaseInitError,
+  initializeDatabaseWithErrorHandling,
+  showDbInitErrorToast,
+} = await import("./app-init.util");
 
 describe("app-init.util", () => {
   const mockInitializeStorage = mock();
@@ -26,6 +40,8 @@ describe("app-init.util", () => {
     mockInitializeStorage.mockClear();
     mocks.error.mockClear();
     mocks.toast.mockClear();
+    mocks.isActive.mockReturnValue(false);
+    mockCaptureException.mockClear();
     registerToastPort(port);
     rafCallbacks = [];
     rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation(((
@@ -64,6 +80,7 @@ describe("app-init.util", () => {
 
       expect(result.dbInitError).toBeNull();
       expect(mockInitializeStorage).toHaveBeenCalledTimes(1);
+      expect(mockCaptureException).not.toHaveBeenCalled();
     });
 
     it("should catch DatabaseInitError and return it", async () => {
@@ -74,11 +91,17 @@ describe("app-init.util", () => {
         mockInitializeStorage,
       );
 
-      expect(result.dbInitError).toBeInstanceOf(DatabaseInitError);
+      expect(result.dbInitError).toBe(dbError);
       expect(result.dbInitError?.message).toBe("Storage quota exceeded");
+      expect(mockCaptureException).toHaveBeenCalledTimes(1);
+      expect(mockCaptureException).toHaveBeenCalledWith(dbError, {
+        $exception_handled: true,
+        $exception_source: "storage-init",
+        storageFailure: "unavailable",
+      });
     });
 
-    it("should ignore non-DatabaseInitError errors and return null", async () => {
+    it("reports a generic Error instead of swallowing it", async () => {
       const genericError = new Error("Some other error");
       mockInitializeStorage.mockRejectedValue(genericError);
 
@@ -86,7 +109,59 @@ describe("app-init.util", () => {
         mockInitializeStorage,
       );
 
-      expect(result.dbInitError).toBeNull();
+      expect(result.dbInitError).toBeInstanceOf(DatabaseInitError);
+      expect(result.dbInitError?.message).toBe(
+        "local storage could not be opened",
+      );
+      expect(result.dbInitError?.cause).toBe(genericError);
+      expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    });
+
+    it("reports a browser quota exception with safe copy", async () => {
+      const quota = new DOMException("Quota exceeded", "QuotaExceededError");
+      mockInitializeStorage.mockRejectedValue(quota);
+
+      const result = await initializeDatabaseWithErrorHandling(
+        mockInitializeStorage,
+      );
+
+      expect(result.dbInitError?.message).toBe("this device is out of storage");
+      expect(result.dbInitError?.cause).toBe(quota);
+      expect(mockCaptureException).toHaveBeenCalledWith(
+        result.dbInitError,
+        expect.objectContaining({
+          $exception_source: "storage-init",
+          storageFailure: "quota",
+        }),
+      );
+    });
+
+    it("reports a blocked-storage exception with safe copy", async () => {
+      const blocked = new DOMException("Blocked", "SecurityError");
+      mockInitializeStorage.mockRejectedValue(blocked);
+
+      const result = await initializeDatabaseWithErrorHandling(
+        mockInitializeStorage,
+      );
+
+      expect(result.dbInitError?.message).toBe(
+        "the browser blocked local storage",
+      );
+      expect(result.dbInitError?.cause).toBe(blocked);
+    });
+
+    it("reports a non-Error rejection instead of swallowing it", async () => {
+      mockInitializeStorage.mockRejectedValue("indexeddb exploded");
+
+      const result = await initializeDatabaseWithErrorHandling(
+        mockInitializeStorage,
+      );
+
+      expect(result.dbInitError).toBeInstanceOf(DatabaseInitError);
+      expect(result.dbInitError?.message).toBe(
+        "local storage could not be opened",
+      );
+      expect(result.dbInitError?.cause).toBe("indexeddb exploded");
     });
 
     it("should not throw when storage initialization fails", async () => {
@@ -116,6 +191,7 @@ describe("app-init.util", () => {
         {
           autoClose: false,
           position: "bottom-right",
+          toastId: DB_INIT_ERROR_TOAST_ID,
         },
       );
     });
@@ -143,6 +219,14 @@ describe("app-init.util", () => {
         expect.objectContaining({ autoClose: false }),
       );
     });
+
+    it("does not stack a second init toast while one is already visible", () => {
+      mocks.isActive.mockReturnValue(true);
+      showDbInitErrorToast(new DatabaseInitError("Storage quota exceeded"));
+      runToastAfterPaint();
+
+      expect(mocks.error).not.toHaveBeenCalled();
+    });
   });
 
   describe("integration", () => {
@@ -167,6 +251,7 @@ describe("app-init.util", () => {
           expect.objectContaining({
             autoClose: false,
             position: "bottom-right",
+            toastId: DB_INIT_ERROR_TOAST_ID,
           }),
         );
       }

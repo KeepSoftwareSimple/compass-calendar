@@ -1917,7 +1917,16 @@ describe("useEventMutations", () => {
 });
 
 describe("undo history recording", () => {
-  test("records an edit with before/after snapshots", () => {
+  const persist = async (context: ReturnType<typeof setup>) => {
+    context.pending.resolve();
+    await waitFor(() => {
+      expect(context.hook.result.current.hasPending).toBe(false);
+    });
+  };
+
+  test("records an edit with before/after snapshots only after persist", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
     const context = setup();
     const original = event();
     context.queryClient.setQueryData(calendarKey, normalized(original));
@@ -1935,6 +1944,9 @@ describe("undo history recording", () => {
       ),
     );
 
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    await persist(context);
+
     const { past } = useUndoHistoryStore.getState();
     expect(past).toHaveLength(1);
     expect(past[0]).toMatchObject({
@@ -1943,7 +1955,33 @@ describe("undo history recording", () => {
       before: { content: { title: "Original" } },
       after: { content: { title: "Moved" } },
     });
-    context.pending.resolve();
+    expect(mocks.toast).not.toHaveBeenCalled();
+  });
+
+  test("does not record a failed replace as undo history", async () => {
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.replace(
+        replacePayload(original.id, {
+          content: {
+            kind: "details",
+            title: "Moved",
+            description: "",
+            location: "",
+          },
+        }),
+      ),
+    );
+    context.pending.reject(new Error("write failed"));
+
+    await waitFor(() => {
+      expect(context.errors[0]?.message).toBe("write failed");
+      expect(context.hook.result.current.hasPending).toBe(false);
+    });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
   });
 
   test("skips series-scope edits and edits missing from cache", () => {
@@ -1964,7 +2002,7 @@ describe("undo history recording", () => {
     context.pending.resolve();
   });
 
-  test("records a recurring occurrence edit at this-event scope (undoable via un-cancel replay)", () => {
+  test("records a recurring occurrence edit at this-event scope (undoable via un-cancel replay)", async () => {
     const context = setup();
     const seriesId = event().id;
     const instance = occurrence(seriesId);
@@ -1985,6 +2023,8 @@ describe("undo history recording", () => {
         }),
       ),
     );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    await persist(context);
     const { past } = useUndoHistoryStore.getState();
     expect(past).toHaveLength(1);
     expect(past[0]).toMatchObject({
@@ -1992,7 +2032,6 @@ describe("undo history recording", () => {
       id: instance.id,
       after: { content: { title: "Moved" } },
     });
-    context.pending.resolve();
   });
 
   test("still skips a series-master edit (scope all/thisAndFollowing never reaches this-scope recording)", () => {
@@ -2019,7 +2058,7 @@ describe("undo history recording", () => {
     context.pending.resolve();
   });
 
-  test("records create snapshots for both a single event and a new series", () => {
+  test("records create snapshots for both a single event and a new series", async () => {
     const context = setup();
     context.queryClient.setQueryData(calendarKey, normalized());
     const created = event({
@@ -2041,12 +2080,15 @@ describe("undo history recording", () => {
       }),
     );
 
-    const { past } = useUndoHistoryStore.getState();
-    expect(past).toHaveLength(1);
-    expect(past[0]).toMatchObject({
-      kind: "create",
-      event: { id: created.id, content: { title: "Created" } },
-    });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    await persist(context);
+
+    expect(useUndoHistoryStore.getState().past).toMatchObject([
+      {
+        kind: "create",
+        event: { id: created.id, content: { title: "Created" } },
+      },
+    ]);
 
     // A brand-new series create is now also recordable — its undo is a
     // scope-"all" delete of the whole series (see useUndoRedo.undoCreate).
@@ -2070,6 +2112,7 @@ describe("undo history recording", () => {
         },
       }),
     );
+    await persist(context);
     const after = useUndoHistoryStore.getState().past;
     expect(after).toHaveLength(2);
     expect(after[1]).toMatchObject({
@@ -2079,10 +2122,11 @@ describe("undo history recording", () => {
         recurrence: { kind: "series" },
       },
     });
-    context.pending.resolve();
   });
 
-  test("records delete snapshots for both standalone and recurring-occurrence deletes", () => {
+  test("records delete snapshots for both standalone and recurring-occurrence deletes", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
     const context = setup();
     const seriesId = event().id;
     const recurring = occurrence(seriesId);
@@ -2098,9 +2142,13 @@ describe("undo history recording", () => {
         scope: "this",
       }),
     );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(mocks.toast).not.toHaveBeenCalled();
+    await persist(context);
     expect(useUndoHistoryStore.getState().past).toEqual([
       { kind: "delete", event: recurring },
     ]);
+    expect(mocks.toast).toHaveBeenCalled();
 
     act(() =>
       context.hook.result.current.mutations.delete({
@@ -2108,11 +2156,34 @@ describe("undo history recording", () => {
         scope: "this",
       }),
     );
+    await persist(context);
     expect(useUndoHistoryStore.getState().past).toEqual([
       { kind: "delete", event: recurring },
       { kind: "delete", event: standalone },
     ]);
-    context.pending.resolve();
+  });
+
+  test("does not record or toast a failed delete", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.mutations.delete({
+        id: original.id,
+        scope: "this",
+      }),
+    );
+    context.pending.reject(new Error("write failed"));
+
+    await waitFor(() => {
+      expect(context.errors[0]?.message).toBe("write failed");
+      expect(context.hook.result.current.hasPending).toBe(false);
+    });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
   test("still skips deleting a series master (scope all/thisAndFollowing never reaches this-scope recording)", () => {
@@ -2176,7 +2247,7 @@ describe("undo history recording", () => {
     context.pending.resolve();
   });
 
-  test("tracks event_created for a genuine create", () => {
+  test("tracks event_created for a genuine create", async () => {
     track.mockClear();
     const context = setup();
     context.queryClient.setQueryData(calendarKey, normalized());
@@ -2198,11 +2269,14 @@ describe("undo history recording", () => {
       }),
     );
 
-    expect(track).toHaveBeenCalledWith("event_created", {
-      event_source: "local",
-      recurrence: "single",
-    });
+    expect(track).not.toHaveBeenCalled();
     context.pending.resolve();
+    await waitFor(() => {
+      expect(track).toHaveBeenCalledWith("event_created", {
+        event_source: "local",
+        recurrence: "single",
+      });
+    });
   });
 
   test("does not track event_created for an undo/redo replay create", () => {

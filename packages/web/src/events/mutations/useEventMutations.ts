@@ -45,6 +45,7 @@ import {
 } from "@web/calendars/useCalendarLookup";
 import { handleError } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import { showDeletedToast } from "@web/common/utils/toast/deleted-toast.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showGoogleReconnectToast } from "@web/common/utils/toast/google-reconnect.toast";
 import {
@@ -93,6 +94,7 @@ import { type EventRepository } from "@web/events/repositories/event.repository.
 import { getEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
 import {
   isRestoringHistory,
+  type UndoHistoryEntry,
   undoHistoryActions,
 } from "@web/events/stores/undo.store";
 import {
@@ -100,19 +102,22 @@ import {
   eventMutationKeys,
 } from "./event.mutation.keys";
 import {
+  completedEventWrite,
   hasOtherPendingWriteForKey,
+  isSkippedEventWrite,
   isSupersededByLaterEditWrite,
   markAnonymousEventWrite,
   type PrecedingEventWrites,
   precedingCreateOk,
   precedingDeleteOk,
   showAnonymousSaveToastIfEligible,
+  skippedEventWrite,
   waitForPrecedingEventWrites,
 } from "./event.mutation.runtime";
 import {
-  recordEventCreateHistory,
-  recordEventDeleteHistory,
-  recordEventEditHistory,
+  snapshotEventCreateHistory,
+  snapshotEventDeleteHistory,
+  snapshotEventEditHistory,
 } from "./event.mutation-history";
 
 type EventMutationContext = {
@@ -408,6 +413,7 @@ type CreateVariables = {
   input: CreateEventInput;
   writeKey: EventId;
   callbacks?: EventMutationCallbacks;
+  undoEntry?: UndoHistoryEntry;
 };
 type ReplaceVariables = {
   id: EventId;
@@ -420,6 +426,7 @@ type ReplaceVariables = {
   seriesMasterSchedule?: EventSchedule;
   opportunityId?: number;
   callbacks?: EventMutationCallbacks;
+  undoEntry?: UndoHistoryEntry;
 };
 type DeleteVariables = {
   id: EventId;
@@ -428,6 +435,8 @@ type DeleteVariables = {
   skipRepository: boolean;
   originalOverride?: Event;
   opportunityId?: number;
+  undoEntry?: UndoHistoryEntry;
+  deletedToast?: boolean;
 };
 type RsvpVariables = {
   id: EventId;
@@ -679,6 +688,22 @@ export function useEventMutations(
         context.previousQueries,
       );
     },
+    onSuccess: (data: unknown, variables: Variables) => {
+      const skipped = isSkippedEventWrite(data);
+      const skipRepository = (variables as { skipRepository?: boolean })
+        .skipRepository;
+      // A skipped write never landed, except skipRepository deletes which have
+      // nothing to persist and still use the Deleted toast.
+      if (skipped && !skipRepository) return;
+      if (!skipped) {
+        const undoEntry = (variables as { undoEntry?: UndoHistoryEntry })
+          .undoEntry;
+        if (undoEntry) undoHistoryActions.record(undoEntry);
+      }
+      const deletedToast = (variables as { deletedToast?: boolean })
+        .deletedToast;
+      if (deletedToast !== undefined) showDeletedToast(deletedToast);
+    },
     onSettled: settle,
   });
   // Shared by every mutationFn below: wait for earlier writes to the same
@@ -690,7 +715,7 @@ export function useEventMutations(
     canWrite: (preceding: PrecedingEventWrites) => boolean,
     write: () => Promise<unknown>,
     { coalesce = false }: { coalesce?: boolean } = {},
-  ) => {
+  ): Promise<boolean> => {
     const preceding = await waitForPrecedingEventWrites(
       queryClient,
       writeKey,
@@ -704,12 +729,13 @@ export function useEventMutations(
       isSupersededByLaterEditWrite(queryClient, writeKey, variables)
     ) {
       await markWrite();
-      return;
+      return false;
     }
     const wrote = canWrite(preceding);
     if (wrote) await write();
     await markWrite();
     if (wrote) await showAnonymousSaveToast?.();
+    return wrote;
   };
 
   const createMutation = useMutation(
@@ -719,7 +745,7 @@ export function useEventMutations(
         // Undo-of-delete restores via create with the original id; waiting
         // here keeps the POST from landing before the DELETE server-side.
         // Normal creates use fresh ids and resolve immediately.
-        await writeAfterPreceding(
+        const wrote = await writeAfterPreceding(
           variables.writeKey,
           variables,
           precedingDeleteOk,
@@ -738,9 +764,17 @@ export function useEventMutations(
         // Only past this point did the write actually land - a throw above
         // (network/validation failure) skips this, so a failed create never
         // retires the first-event prompt the way a genuine one does.
-        if (!variables.input.restore) {
+        if (wrote && !variables.input.restore) {
           noteFirstRealEventCreated();
+          track("event_created", {
+            event_source: source,
+            recurrence:
+              variables.input.recurrence.kind === "series"
+                ? "series"
+                : "single",
+          });
         }
+        return wrote ? completedEventWrite : skippedEventWrite;
       },
       ({ input }) => {
         const event = optimisticEventFromCreate(input);
@@ -775,7 +809,7 @@ export function useEventMutations(
           variables.input,
           variables.seriesMasterSchedule,
         );
-        await writeAfterPreceding(
+        const wrote = await writeAfterPreceding(
           variables.writeKey,
           // Must be the exact variables object mutate registered — a spread
           // clone cannot identify this mutation in the serialization queue.
@@ -795,6 +829,7 @@ export function useEventMutations(
             coalesce: !variables.originalOverride && !variables.input.restore,
           },
         );
+        return wrote ? completedEventWrite : skippedEventWrite;
       },
       ({ id, input, originalOverride }) => {
         const existing =
@@ -877,13 +912,14 @@ export function useEventMutations(
     buildMutation<DeleteVariables>(
       "delete",
       async (variables) => {
-        await writeAfterPreceding(
+        const wrote = await writeAfterPreceding(
           variables.writeKey,
           variables,
           (preceding) =>
             !variables.skipRepository && precedingCreateOk(preceding),
           () => repository.delete(variables.id, variables.scope),
         );
+        return wrote ? completedEventWrite : skippedEventWrite;
       },
       ({ id, scope, originalOverride }) => {
         const existing =
@@ -955,10 +991,10 @@ export function useEventMutations(
     rsvp: rsvpMutation.mutate,
   };
 
-  // Undo recording happens here at the `.mutate()` boundary: it's the one
-  // place every caller funnels through and the cache still holds the
-  // pre-mutation event. Replays from useUndoRedo set the restoring flag so
-  // they don't record themselves.
+  // Undo snapshots are taken here at the `.mutate()` boundary: the cache
+  // still holds the pre-mutation event. History is recorded only after the
+  // write persists so a failed save cannot look undoable. Replays from
+  // useUndoRedo set the restoring flag so they don't record themselves.
   return useMemo(
     () => ({
       create: (input: CreateEventInput, callbacks?: EventMutationCallbacks) => {
@@ -967,18 +1003,9 @@ export function useEventMutations(
         }
         const id = input.id ?? (createObjectIdString() as EventId);
         const finalInput = { ...input, id };
-        recordEventCreateHistory({
+        const undoEntry = snapshotEventCreateHistory({
           event: optimisticEventFromCreate(finalInput),
         });
-        // `restore: true` marks an undo-of-delete or redo-of-create replay,
-        // not a genuine user action - only count real creates.
-        if (!finalInput.restore) {
-          track("event_created", {
-            event_source: source,
-            recurrence:
-              finalInput.recurrence.kind === "series" ? "series" : "single",
-          });
-        }
         // callbacks rides along in two places: inside the variables so
         // onMutate can run onOptimisticApplied in the same task as the cache
         // write, and as mutate options so onSuccess/onError still fire per
@@ -988,6 +1015,7 @@ export function useEventMutations(
             input: finalInput,
             writeKey: id,
             callbacks,
+            undoEntry: undoEntry ?? undefined,
           },
           callbacks,
         );
@@ -1053,15 +1081,15 @@ export function useEventMutations(
                 source,
               })
             : undefined;
-        if (original) {
-          recordEventEditHistory({
-            id: payload.id,
-            after: mergeReplaceInput(original, payload.input),
-            scope: payload.input.scope,
-            queryClient,
-            source,
-          });
-        }
+        const undoEntry = original
+          ? snapshotEventEditHistory({
+              id: payload.id,
+              after: mergeReplaceInput(original, payload.input),
+              scope: payload.input.scope,
+              queryClient,
+              source,
+            })
+          : null;
         // callbacks rides in variables so onMutate can run onOptimisticApplied
         // in the same task as the cache write (same pattern as create above).
         replaceMutation.mutate(
@@ -1071,6 +1099,7 @@ export function useEventMutations(
             opportunityId,
             callbacks,
             seriesMasterSchedule,
+            undoEntry: undoEntry ?? undefined,
           },
           callbacks,
         );
@@ -1101,7 +1130,7 @@ export function useEventMutations(
                 source,
               })
             : undefined;
-        const existing = recordEventDeleteHistory({
+        const { existing, entry, deletedToast } = snapshotEventDeleteHistory({
           id: payload.id,
           scope: payload.scope,
           queryClient,
@@ -1112,6 +1141,8 @@ export function useEventMutations(
           writeKey: payload.id,
           skipRepository: !existing,
           opportunityId,
+          undoEntry: entry ?? undefined,
+          deletedToast,
         });
       },
       rsvp: ({ id, responseStatus, scope, accountEmail }: RsvpPayload) => {

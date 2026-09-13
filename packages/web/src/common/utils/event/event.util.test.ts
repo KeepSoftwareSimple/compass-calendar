@@ -7,6 +7,7 @@ import { type ApiError, type ApiResponse } from "@web/api/api.types";
 import * as realPosthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
 import {
   EVENT_SAVE_RETRYABLE_TOAST_ID,
+  EVENT_SAVE_STORAGE_TOAST_ID,
   EVENT_SAVE_UNAVAILABLE_TOAST_ID,
   GENERIC_ERROR_TOAST_ID,
 } from "@web/common/constants/toast.constants";
@@ -87,6 +88,25 @@ describe("handleError", () => {
     // backend error are different situations and must not dedupe on the
     // same toastId.
     expect(EVENT_SAVE_UNAVAILABLE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
+  });
+
+  it("shows a storage toast on quota or blocked local writes instead of the raw exception", () => {
+    const quota = new DOMException("Quota exceeded", "QuotaExceededError");
+
+    handleError(quota);
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(quota);
+    expect(mockCaptureException).toHaveBeenCalledWith(quota, {
+      $exception_handled: true,
+      $exception_source: "storage-write",
+    });
+    expect(mocks.error.mock.calls[0]?.[0]).toBe(
+      "Couldn't save, this device is out of storage. Your change was not applied.",
+    );
+    expect(mocks.error.mock.calls[0]?.[1]).toMatchObject({
+      toastId: EVENT_SAVE_STORAGE_TOAST_ID,
+    });
+    expect(EVENT_SAVE_STORAGE_TOAST_ID).not.toBe(GENERIC_ERROR_TOAST_ID);
   });
 
   it("logs once and does not reload on a server error", () => {

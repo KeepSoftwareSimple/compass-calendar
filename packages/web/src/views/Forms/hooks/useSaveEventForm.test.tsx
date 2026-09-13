@@ -5,9 +5,24 @@ import {
   type Calendar,
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
-import { CalendarIdSchema, EventIdSchema } from "@core/types/domain-primitives";
-import { type CreateEventInput } from "@core/types/event-command.contracts";
+import {
+  CalendarIdSchema,
+  type EventId,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
+import {
+  type CreateEventInput,
+  type EventListQuery,
+} from "@core/types/event-command.contracts";
+import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
+import {
+  type MigrationRecord,
+  type OfflineDataStore,
+  type StoredTask,
+} from "@web/common/storage/offline-data/offline-data.store";
+import { resetOfflineDataStoreForTests } from "@web/common/storage/offline-data/offline-data.store.registry";
+import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -17,9 +32,10 @@ import {
   initialDraftState,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
 import { useSaveEventForm } from "./useSaveEventForm";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const calendarId = CalendarIdSchema.parse("cccccccccccccccccccccccc");
 
@@ -168,5 +184,65 @@ describe("useSaveEventForm", () => {
     const savedId = createVariables(queryClient)?.input.id;
     expect(savedId).toBeDefined();
     expect(EventIdSchema.safeParse(savedId).success).toBe(true);
+  });
+
+  it("restores the submitted draft when local persistence fails", async () => {
+    const { port } = createTestToastPort();
+    registerToastPort(port);
+
+    const failingStore: OfflineDataStore = {
+      initialize: async () => undefined,
+      isReady: () => true,
+      getEvents: async (_query: EventListQuery) => [],
+      getAllEvents: async () => [] as LocalEventRecord[],
+      putEvent: async () => {
+        throw new DOMException("Quota exceeded", "QuotaExceededError");
+      },
+      putEvents: async () => undefined,
+      deleteEvent: async (_eventId: EventId) => undefined,
+      clearAllEvents: async () => undefined,
+      getAllTasks: async () => [] as StoredTask[],
+      getTaskCount: async () => 0,
+      clearAllTasks: async () => undefined,
+      getMigrationRecords: async () => [] as MigrationRecord[],
+      setMigrationRecord: async () => undefined,
+    };
+    resetOfflineDataStoreForTests(failingStore);
+
+    const clientId = EventIdSchema.parse("507f1f77bcf86cd799439045");
+    const draft = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T09:00:00.000Z"),
+        new Date("2026-05-20T10:00:00.000Z"),
+      ),
+      clientId,
+      calendarId,
+    );
+    draft.values.title = "Keep this title";
+    draftActions.startGridDraft({ activity: "createShortcut", draft });
+    draftActions.setFormOpen(true);
+
+    const { Wrapper } = createWrapper();
+    const { result } = renderHook(() => useSaveEventForm(), {
+      wrapper: Wrapper,
+    });
+
+    const consoleError = spyOn(console, "error").mockImplementation(() => {});
+    try {
+      act(() => {
+        result.current.saveEventForm(draft);
+      });
+
+      await waitFor(() => {
+        expect(useDraftStore.getState().status?.isFormOpen).toBe(true);
+      });
+      expect(useDraftStore.getState().gridDraft?.values.title).toBe(
+        "Keep this title",
+      );
+      expect(useDraftStore.getState().gridDraft).not.toEqual(null);
+    } finally {
+      consoleError.mockRestore();
+      resetOfflineDataStoreForTests();
+    }
   });
 });

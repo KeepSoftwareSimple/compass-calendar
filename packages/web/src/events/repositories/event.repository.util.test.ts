@@ -31,10 +31,14 @@ describe("getEventRepositorySource", () => {
     expect(getEventRepositorySource(false)).toBe("remote");
   });
 
-  it("keeps remote for authenticated sessions so a reconnect-required sibling cannot demote healthy accounts", () => {
+  it("keeps authenticated users on remote regardless of local storage availability", () => {
     hasUserEverAuthenticated = true;
 
+    // Source is derived from auth/session only. IndexedDB init failure is
+    // not an input, so a signed-in user never falls back to an empty local
+    // calendar when offline storage is blocked.
     expect(getEventRepositorySource(true)).toBe("remote");
+    expect(getEventRepositorySource(false)).toBe("remote");
   });
 });
 
