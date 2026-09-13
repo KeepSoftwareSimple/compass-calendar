@@ -73,7 +73,7 @@ const logger = Logger("sync:app");
 
 // Transient Atlas/network blips stay visible at warn so they do not open a
 // PostHog exception alert (PostHogExceptionTransport is error-level only).
-// Durable failures still page. Same split as the health-snapshot onError.
+// Durable failures still page.
 function logSyncLoopError(message: string, error: unknown): void {
   if (isTransientMongoNetworkError(error)) {
     logger.warn(message, error);
@@ -433,15 +433,8 @@ function buildHealthSnapshotSweep(
     {
       intervalMs: HEALTH_SNAPSHOT_INTERVAL_MS,
       jitterRatio: 0.05,
-      onError: (error) => {
-        // Transient Mongo network failures are expected blips; warn so they
-        // stay visible without opening a PostHog exception alert.
-        if (isTransientMongoNetworkError(error)) {
-          logger.warn("Sync health snapshot emit failed", error);
-          return;
-        }
-        logger.error("Sync health snapshot emit failed", error);
-      },
+      onError: (error) =>
+        logSyncLoopError("Sync health snapshot emit failed", error),
     },
   );
 }

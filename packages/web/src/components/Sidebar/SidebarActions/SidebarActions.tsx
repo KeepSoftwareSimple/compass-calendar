@@ -14,6 +14,9 @@ import {
   useSettingsStore,
 } from "@web/settings/settings.store";
 
+const FOOTER_ICON_BUTTON_CLASS =
+  "flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+
 export const SidebarActions = () => {
   const isShortcutsOpen = useViewStore(selectIsShortcutsOpen);
   const isCmdPaletteOpen = useSettingsStore(selectIsCmdPaletteOpen);
@@ -43,7 +46,7 @@ export const SidebarActions = () => {
         >
           <button
             aria-label={shortcutsActionLabel}
-            className="flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className={FOOTER_ICON_BUTTON_CLASS}
             type="button"
           >
             <KeyboardIcon
@@ -64,7 +67,7 @@ export const SidebarActions = () => {
         >
           <button
             aria-label="Open settings"
-            className="flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className={FOOTER_ICON_BUTTON_CLASS}
             type="button"
           >
             <GearIcon
@@ -85,7 +88,7 @@ export const SidebarActions = () => {
                 ? "Open command palette, syncing in the background"
                 : "Open command palette"
             }
-            className="flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className={FOOTER_ICON_BUTTON_CLASS}
             type="button"
           >
             <span className="relative flex size-4 items-center justify-center">
