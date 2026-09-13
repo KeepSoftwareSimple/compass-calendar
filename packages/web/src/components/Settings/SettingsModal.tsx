@@ -126,9 +126,9 @@ export const SettingsModal: FC = () => {
     page,
   });
 
-  // The modal stays mounted (self-reads the store) so a stray close path
-  // that skips handleDismiss (e.g. the Mod+, toggle) can't leave a
-  // disconnect confirmation pre-armed on next open.
+  // SettingsModalHost unmounts this tree while closed, which also clears
+  // confirmingId. Keep the reset for the Mod+, toggle (and any other close
+  // path that skips handleDismiss) in case the host stays mounted.
   useEffect(() => {
     if (!isOpen) setConfirmingId(null);
   }, [isOpen]);

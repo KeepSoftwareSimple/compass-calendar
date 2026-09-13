@@ -12,12 +12,12 @@ import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/Up
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { TOAST_CHROME_STYLE } from "@web/common/constants/toast.constants";
 import { useEscapeToDismissToast } from "@web/common/utils/toast/useEscapeToDismissToast";
-import { AboutModal } from "@web/components/About/AboutModal";
+import { AboutModalHost } from "@web/components/About/AboutModalHost";
 import { DeleteAccountConfirmationProvider } from "@web/components/DeleteAccountConfirmation/DeleteAccountConfirmationProvider";
 import { FeedbackDialogHost } from "@web/components/Feedback/FeedbackDialogHost";
 import { IconProvider } from "@web/components/IconProvider/IconProvider";
 import { LogoutConfirmationProvider } from "@web/components/LogoutConfirmation/LogoutConfirmationProvider";
-import { SettingsModal } from "@web/components/Settings/SettingsModal";
+import { SettingsModalHost } from "@web/components/Settings/SettingsModalHost";
 import { RecurrenceScopeOpportunityHost } from "@web/events/recurrence/RecurrenceScopeOpportunityHost";
 import { selectTheme, useThemeStore } from "@web/settings/theme/theme.store";
 import { TimezoneDialogHost } from "@web/timezone/TimezoneDialogHost";
@@ -75,9 +75,9 @@ export const CompassRequiredProviders = ({
               <DeleteAccountConfirmationProvider>
                 <UpgradeConfirmationProvider>
                   {children}
-                  <SettingsModal />
+                  <SettingsModalHost />
                   <TimezoneDialogHost />
-                  <AboutModal />
+                  <AboutModalHost />
                 </UpgradeConfirmationProvider>
               </DeleteAccountConfirmationProvider>
               <ThemeAwareToastContainer />
