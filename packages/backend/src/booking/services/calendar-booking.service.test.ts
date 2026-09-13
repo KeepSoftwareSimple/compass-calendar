@@ -9,10 +9,16 @@ import {
   type CommandSubmitRequest,
   type SyncCommandInput,
 } from "@core/types/sync/command.contracts";
+import {
+  commandSubmitOk,
+  confirmedCommandSubmit,
+  failedCommandSubmit,
+} from "@backend/__tests__/helpers/command-submit-result";
 import { BOOKING_CONFIRMATION_MAX_AGE_MS } from "@backend/booking/services/calendar-booking.port";
 import { CalendarBookingService } from "@backend/booking/services/calendar-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
 import { type SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
+import { EventMutationException } from "@backend/event/event.error";
 import {
   afterEach,
   beforeEach,
@@ -54,6 +60,17 @@ const busyResponse = {
   bookable: true,
 };
 
+const dummySubmit = () => mock(async () => confirmedCommandSubmit());
+
+const serviceWithSubmit = (submitCommand: ReturnType<typeof mock>) =>
+  new CalendarBookingService({
+    queryBusyAvailability: mock(async () => ({
+      ok: true as const,
+      value: busyResponse,
+    })),
+    submitCommand,
+  } as unknown as SyncServiceClient);
+
 describe("CalendarBookingService", () => {
   beforeEach(() => {
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
@@ -77,7 +94,7 @@ describe("CalendarBookingService", () => {
     }));
     const service = new CalendarBookingService({
       queryBusyAvailability,
-      submitCommand: mock(async () => ({ ok: true as const, value: {} })),
+      submitCommand: dummySubmit(),
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
@@ -108,7 +125,7 @@ describe("CalendarBookingService", () => {
     }));
     const service = new CalendarBookingService({
       queryBusyAvailability,
-      submitCommand: mock(async () => ({ ok: true as const, value: {} })),
+      submitCommand: dummySubmit(),
     } as unknown as SyncServiceClient);
 
     await service.getAvailability(userId(), {
@@ -135,7 +152,7 @@ describe("CalendarBookingService", () => {
     }));
     const service = new CalendarBookingService({
       queryBusyAvailability,
-      submitCommand: mock(async () => ({ ok: true as const, value: {} })),
+      submitCommand: dummySubmit(),
     } as unknown as SyncServiceClient);
     const excluded = [faker.database.mongodbObjectId()] as EventId[];
 
@@ -161,7 +178,7 @@ describe("CalendarBookingService", () => {
         ok: true as const,
         value: { ...busyResponse, bookable: false },
       })),
-      submitCommand: mock(async () => ({ ok: true as const, value: {} })),
+      submitCommand: dummySubmit(),
     } as unknown as SyncServiceClient);
 
     const result = await service.getAvailability(userId(), {
@@ -174,17 +191,8 @@ describe("CalendarBookingService", () => {
   });
 
   it("submits a booking create with conference and guest attendee", async () => {
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: faker.database.mongodbObjectId() },
-    }));
-    const service = new CalendarBookingService({
-      queryBusyAvailability: mock(async () => ({
-        ok: true as const,
-        value: busyResponse,
-      })),
-      submitCommand,
-    } as unknown as SyncServiceClient);
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
 
     const description =
       "Cancel: https://compasscalendar.com/cancel/x\n\nReschedule: https://compasscalendar.com/reschedule/x";
@@ -222,17 +230,8 @@ describe("CalendarBookingService", () => {
   });
 
   it("omits createConference when the destination cannot mint a link", async () => {
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: faker.database.mongodbObjectId() },
-    }));
-    const service = new CalendarBookingService({
-      queryBusyAvailability: mock(async () => ({
-        ok: true as const,
-        value: busyResponse,
-      })),
-      submitCommand,
-    } as unknown as SyncServiceClient);
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
 
     await service.createBookingEvent(userId(), {
       calendarId: calendarId() as CalendarId,
@@ -253,17 +252,8 @@ describe("CalendarBookingService", () => {
   });
 
   it("rejects empty guest email before submit", async () => {
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: faker.database.mongodbObjectId() },
-    }));
-    const service = new CalendarBookingService({
-      queryBusyAvailability: mock(async () => ({
-        ok: true as const,
-        value: busyResponse,
-      })),
-      submitCommand,
-    } as unknown as SyncServiceClient);
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
 
     await expect(
       service.createBookingEvent(userId(), {
@@ -282,17 +272,8 @@ describe("CalendarBookingService", () => {
 
   it("submits a booking update with the new title", async () => {
     const eventId = faker.database.mongodbObjectId() as EventId;
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: faker.database.mongodbObjectId() },
-    }));
-    const service = new CalendarBookingService({
-      queryBusyAvailability: mock(async () => ({
-        ok: true as const,
-        value: busyResponse,
-      })),
-      submitCommand,
-    } as unknown as SyncServiceClient);
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
 
     await service.updateBookingEvent(userId(), {
       eventId: eventId as EventId,
@@ -341,17 +322,8 @@ describe("CalendarBookingService", () => {
 
   it("submits delete with invitation all", async () => {
     const eventId = faker.database.mongodbObjectId() as EventId;
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: faker.database.mongodbObjectId() },
-    }));
-    const service = new CalendarBookingService({
-      queryBusyAvailability: mock(async () => ({
-        ok: true as const,
-        value: busyResponse,
-      })),
-      submitCommand,
-    } as unknown as SyncServiceClient);
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
 
     await service.deleteBookingEvent(userId(), { eventId: eventId as EventId });
 
@@ -367,5 +339,79 @@ describe("CalendarBookingService", () => {
         },
       }),
     );
+  });
+
+  const bookingCreateInput = () => ({
+    calendarId: calendarId() as CalendarId,
+    title: "Ada and Tyler",
+    description: "",
+    start: "2026-09-01T15:00:00.000Z" as DateTime,
+    end: "2026-09-01T15:30:00.000Z" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
+    guest: {
+      email: "ada@example.com",
+      displayName: "Ada Lovelace" as string | null,
+    },
+    createConference: true,
+  });
+
+  const bookingUpdateInput = (eventId: EventId) => ({
+    eventId,
+    title: "Grace and Tyler",
+    description: "bring tea",
+    start: "2026-09-01T15:00:00.000Z" as DateTime,
+    end: "2026-09-01T15:30:00.000Z" as DateTime,
+    timeZone: "America/Denver" as TimeZone,
+    guest: {
+      email: "ada@example.com",
+      displayName: "Grace Hopper" as string | null,
+    },
+  });
+
+  it("rejects failed, cancelled, and nonterminal outcomes on create, update, and delete", async () => {
+    const outcomes = [
+      failedCommandSubmit("permanentProviderError"),
+      commandSubmitOk({ state: "cancelled" }),
+      commandSubmitOk({ state: "pending" }),
+      commandSubmitOk({ state: "applying" }),
+      commandSubmitOk({ state: "reconciling" }),
+    ];
+
+    for (const outcome of outcomes) {
+      const createSubmit = mock(async () => outcome);
+      await expect(
+        serviceWithSubmit(createSubmit).createBookingEvent(
+          userId(),
+          bookingCreateInput(),
+        ),
+      ).rejects.toBeInstanceOf(EventMutationException);
+      expect(createSubmit).toHaveBeenCalledTimes(1);
+
+      const eventId = faker.database.mongodbObjectId() as EventId;
+      const updateSubmit = mock(async () => outcome);
+      await expect(
+        serviceWithSubmit(updateSubmit).updateBookingEvent(
+          userId(),
+          bookingUpdateInput(eventId),
+        ),
+      ).rejects.toBeInstanceOf(EventMutationException);
+
+      const deleteSubmit = mock(async () => outcome);
+      await expect(
+        serviceWithSubmit(deleteSubmit).deleteBookingEvent(userId(), {
+          eventId,
+        }),
+      ).rejects.toBeInstanceOf(EventMutationException);
+    }
+  });
+
+  it("returns a minted event id only after a confirmed create", async () => {
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const eventId = await serviceWithSubmit(submitCommand).createBookingEvent(
+      userId(),
+      bookingCreateInput(),
+    );
+    expect(eventId).toMatch(/^[a-f0-9]{24}$/);
+    expect(submitCommand).toHaveBeenCalledTimes(1);
   });
 });
