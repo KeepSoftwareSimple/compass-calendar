@@ -484,4 +484,35 @@ describe("ContextMenuItems hide event", () => {
     expect(mockToggleHidden).toHaveBeenCalledTimes(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
+
+  it("discards the grid draft when hiding from the item click", async () => {
+    const user = userEvent.setup();
+    const event = createMockGridEvent({ title: "Test Event" });
+    seedGridDraftForEvent(event);
+    expect(useDraftStore.getState().gridDraft).not.toBeNull();
+
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    await user.click(screen.getByRole("menuitem", { name: "Hide event" }));
+    expect(useDraftStore.getState().gridDraft).toBeNull();
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("discards the grid draft when hiding with x", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+    seedGridDraftForEvent(event);
+    expect(useDraftStore.getState().gridDraft).not.toBeNull();
+
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    fireEvent.keyDown(document.getElementById(ID_CONTEXT_MENU_ITEMS)!, {
+      key: "x",
+    });
+    expect(useDraftStore.getState().gridDraft).toBeNull();
+    expect(mockClose).toHaveBeenCalled();
+  });
 });

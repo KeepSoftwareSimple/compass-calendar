@@ -711,6 +711,11 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
 
   await card.focus();
   await hideFocusedEventViaMenu(page);
+  await expect(
+    page.locator("#mainGrid").getByRole("button", {
+      name: new RegExp(`Timed event: ${EVENT_B_TITLE}`),
+    }),
+  ).toHaveCount(1);
   const hiddenCard = await expectEventCardWidth(page, EVENT_B_TITLE, true);
 
   await hiddenCard.focus();
@@ -725,6 +730,11 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
   );
   await hideFocusedEventViaMenu(page);
   await hidePut;
+  await expect(
+    page.locator("#mainGrid").getByRole("button", {
+      name: new RegExp(`Timed event: ${EVENT_B_TITLE}`),
+    }),
+  ).toHaveCount(1);
   await expectEventCardWidth(page, EVENT_B_TITLE, true);
 
   await page.reload({ waitUntil: "domcontentloaded" });
@@ -743,6 +753,11 @@ test("a writable event can be hidden from the menu and shown with x", async ({
 
   await card.focus();
   await hideFocusedEventViaMenu(page);
+  await expect(
+    page.locator("#mainGrid").getByRole("button", {
+      name: new RegExp(`Timed event: ${EVENT_A_TITLE}`),
+    }),
+  ).toHaveCount(1);
   const hiddenCard = await expectEventCardWidth(page, EVENT_A_TITLE, true);
 
   await hiddenCard.focus();
