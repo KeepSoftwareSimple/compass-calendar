@@ -6,6 +6,7 @@ import {
   readSidebarOpen,
   writeSidebarOpen,
 } from "@web/common/storage/sidebar-open.storage";
+import { readBootSidebarOpen } from "@web/common/utils/boot-geometry.util";
 
 interface ViewState {
   dates: {
@@ -31,10 +32,12 @@ export const initialViewState: ViewState = {
     start: dayjs().startOf("week").format(),
     end: dayjs().endOf("week").format(),
   },
-  // Seed from the persisted preference so a collapsed sidebar never mounts
-  // (and animates closed) on the first render after a refresh.
+  // Seed isOpen from the boot shell when present so a narrow first paint
+  // never mounts the sidebar open and then animates it closed. Preference
+  // stays the persisted choice; useResponsiveLayout still restores it when
+  // the viewport is wide enough.
   sidebar: {
-    isOpen: persistedSidebarPreference,
+    isOpen: readBootSidebarOpen(persistedSidebarPreference),
     preference: persistedSidebarPreference,
   },
   shortcuts: { isOpen: false },

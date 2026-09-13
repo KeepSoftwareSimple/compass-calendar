@@ -8,10 +8,16 @@ import { getVisibleDayDates } from "../utils/event-test-utils";
 const layoutCases = [
   // 900px: sidebar auto-collapsed (<1280), track ~868px -> 5 days
   { width: 900, expectedDays: 5 },
+  // 1280px: sidebar open at its default 345px, track ~871px -> 5 days
+  { width: 1280, expectedDays: 5 },
   // 1728px: sidebar open, track ~1411px -> capped at the full week
   { width: 1728, expectedDays: 7 },
 ];
 const maxLayoutDelta = 1;
+// Sidebar width animates for 200ms. Sample through that window so a late
+// close (boot shell closed, React mounting open then collapsing) fails here
+// instead of after an arbitrary settle wait.
+const sidebarTransitionWindowMs = 400;
 
 test.describe("Week view layout", () => {
   for (const { width, expectedDays } of layoutCases) {
@@ -22,10 +28,12 @@ test.describe("Week view layout", () => {
       await page.goto("/week");
       await page.locator("#allDayColumns").waitFor();
       await page.locator("#timedColumns").waitFor();
-      // On load, the sidebar briefly animates toward its settled open/closed
-      // state (see useCollapsiblePanel); wait for the day count driven by
-      // that width to settle before measuring columns.
-      await waitForDayCount(page, expectedDays);
+      // First React paint must already match the boot shell. Polling here
+      // would hide the sidebar-width / column-count jump this spec exists
+      // to catch.
+      const firstPaintDays = await getVisibleDayDates(page);
+      expect(firstPaintDays).toHaveLength(expectedDays);
+      expectGeometryToHold(await sampleWeekGeometry(page), expectedDays);
 
       const layout = await getWeekColumnLayout(page, expectedDays);
       const mainGridScrollbarWidth = await page
@@ -57,7 +65,9 @@ test.describe("Week view layout", () => {
     await page.setViewportSize({ width: 320, height: 800 });
     await page.goto("/week");
     await page.locator("#timedColumns").waitFor();
-    await waitForDayCount(page, 1);
+    const firstPaintDays = await getVisibleDayDates(page);
+    expect(firstPaintDays).toHaveLength(1);
+    expectGeometryToHold(await sampleWeekGeometry(page), 1);
 
     const layout = await getWeekColumnLayout(page, 1);
     expect(layout.dayLabels).toHaveLength(1);
@@ -72,19 +82,42 @@ test.describe("Week view layout", () => {
       page.locator(`#weekGridScroller [title="${todayLabel}"]`),
     ).toBeVisible();
   });
-});
 
-/**
- * On load, an already-open sidebar/task list briefly animates toward its
- * settled state (see useCollapsiblePanel), so the grid track's width — and
- * therefore the visible day count — can take a moment to reach its final
- * value. Poll for it instead of asserting immediately after mount.
- */
-const waitForDayCount = async (page: Page, expectedDays: number) => {
-  await expect
-    .poll(async () => (await getVisibleDayDates(page)).length)
-    .toBe(expectedDays);
-};
+  test("honors a persisted closed sidebar at 1280px without a width jump", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("compass.view.sidebar-open", "false");
+    });
+    await page.setViewportSize({ width: 1280, height: 1000 });
+    await page.goto("/week");
+    await page.locator("#timedColumns").waitFor();
+
+    // Closed sidebar: track ~1198px -> full week. First paint must already
+    // be 7 days; mounting open and then collapsing would pass a delayed
+    // assertion and fail this sample.
+    expect(await getVisibleDayDates(page)).toHaveLength(7);
+    await expect(
+      page.getByRole("complementary", { name: "Sidebar" }),
+    ).toHaveCount(0);
+    expectGeometryToHold(await sampleWeekGeometry(page), 7);
+  });
+
+  test("keeps 900px geometry in dark theme and with reduced motion", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem("compass.theme", "dark-abyss");
+    });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 900, height: 1000 });
+    await page.goto("/week");
+    await page.locator("#timedColumns").waitFor();
+
+    expect(await getVisibleDayDates(page)).toHaveLength(5);
+    expectGeometryToHold(await sampleWeekGeometry(page), 5);
+  });
+});
 
 const getWeekColumnLayout = async (page: Page, daysInView: number) =>
   page.evaluate((visibleDays) => {
@@ -130,6 +163,67 @@ const getHorizontalScrollState = async (page: Page) =>
       scrollbarHeight: getComputedStyle(node, "::-webkit-scrollbar").height,
     };
   });
+
+type WeekGeometrySample = {
+  allDayHeight: number;
+  dayCount: number;
+  mainWidth: number;
+};
+
+const sampleWeekGeometry = (page: Page) =>
+  page.evaluate(async (durationMs) => {
+    const round = (value: number) => Math.round(value * 100) / 100;
+    const read = (): WeekGeometrySample => {
+      const days = [
+        ...document.querySelectorAll("#weekGridScroller [title]"),
+      ].filter(
+        (node): node is HTMLElement =>
+          node instanceof HTMLElement && /^\d{8}$/.test(node.title),
+      ).length;
+      return {
+        allDayHeight: round(
+          document.getElementById("allDayRow")?.getBoundingClientRect()
+            .height ?? 0,
+        ),
+        dayCount: days,
+        mainWidth: round(
+          document.getElementById("mainSection")?.getBoundingClientRect()
+            .width ?? 0,
+        ),
+      };
+    };
+
+    const samples: WeekGeometrySample[] = [read()];
+    const startedAt = performance.now();
+    while (performance.now() - startedAt < durationMs) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve());
+      });
+      samples.push(read());
+    }
+    return samples;
+  }, sidebarTransitionWindowMs);
+
+const expectGeometryToHold = (
+  samples: WeekGeometrySample[],
+  expectedDays: number,
+) => {
+  expect(samples.length).toBeGreaterThan(1);
+  expect(samples.map((sample) => sample.dayCount)).toEqual(
+    Array(samples.length).fill(expectedDays),
+  );
+
+  const spread = (values: number[]) =>
+    Math.max(...values) - Math.min(...values);
+  expect(spread(samples.map((sample) => sample.mainWidth))).toBeLessThanOrEqual(
+    maxLayoutDelta,
+  );
+  // Events may still arrive and grow the all-day region; it must not
+  // collapse to zero while that happens.
+  expect(
+    Math.min(...samples.map((sample) => sample.allDayHeight)),
+  ).toBeGreaterThan(0);
+};
 
 const expectColumnsToAlign = (
   dayLabel: { right: number; width: number; x: number },
