@@ -38,6 +38,18 @@
  * of the event form still fails the gate. Script transfer is
  * near-deterministic (runs vary by tens of bytes), so it can sit this tight;
  * the paint metrics vary by runner and get much wider headroom.
+ *
+ * Note 2026-09-13: not recalibrated. Lazy-splitting three closed dialogs
+ * (#3704) added three dynamic roots, and Bun keys chunks on the set of roots
+ * that reach a module, so shared boot modules fragmented into 15 extra
+ * chunks that boot still imports. The gzipped content did shrink ~7 KB, but
+ * each extra response costs ~0.9 KB of headers and chunked-encoding framing
+ * over the HTTP/1.1 serve here, which Lighthouse counts as transfer: net
+ * +7 KB and ~450 ms of mobile LCP, so the split was reverted. Near this
+ * budget the lever is request count, not module bytes: a new import() only
+ * pays when its exclusive graph is large (the event form) and it shares
+ * little with boot. Judge a candidate split by the "boot chunks
+ * modulepreloaded" count build.ts prints before trusting raw size.
  */
 import { mkdirSync } from "node:fs";
 
