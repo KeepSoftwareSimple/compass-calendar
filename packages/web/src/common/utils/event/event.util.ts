@@ -119,6 +119,22 @@ export const getCalendarEventIdFromElement = (element: HTMLElement) =>
   readCalendarEventIdFromElement(element);
 
 /**
+ * The focused event card and its id, or null when focus sits anywhere else.
+ * The precondition every shortcut that acts on "the event you are on" shares
+ * (`m` opens its menu, `x` hides it), so none of them has to re-derive what
+ * counts as a card.
+ */
+export const getFocusedCalendarEvent = (): {
+  element: HTMLElement;
+  eventId: string;
+} | null => {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement)) return null;
+  const eventId = getCalendarEventIdFromElement(active);
+  return eventId ? { element: active, eventId } : null;
+};
+
+/**
  * How many frames a focus retry waits for its target. Roughly half a second
  * at 60fps: long enough for React to commit a remount, short enough that a
  * card which never arrives stops spinning.
