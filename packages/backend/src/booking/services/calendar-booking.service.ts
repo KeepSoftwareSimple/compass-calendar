@@ -16,11 +16,9 @@ import {
   type CalendarBookingUpdateEventInput,
 } from "@backend/booking/services/calendar-booking.port";
 import calendarService from "@backend/calendar/services/calendar.service";
+import { submitCommandOrThrow } from "@backend/common/services/sync-service/submit-command-or-throw";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
-import {
-  throwSyncCommandSubmitFailure,
-  throwSyncProxyFailure,
-} from "@backend/common/services/sync-service/sync-proxy-error";
+import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
 import { type SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import { createHash } from "node:crypto";
@@ -179,13 +177,7 @@ export class CalendarBookingService implements CalendarBookingPort {
       ...input,
       guest: { ...input.guest, email: guestEmail },
     });
-    const result = await this.client.submitCommand(
-      toSyncPrincipal(userId),
-      request,
-    );
-    if (!result.ok) {
-      throwSyncCommandSubmitFailure(result.error.kind);
-    }
+    await submitCommandOrThrow(this.client, userId, request);
     return eventId;
   }
 
@@ -198,28 +190,24 @@ export class CalendarBookingService implements CalendarBookingPort {
       throw bookingError("INVALID_INPUT", "Guest email is required");
     }
 
-    const result = await this.client.submitCommand(
-      toSyncPrincipal(userId),
+    await submitCommandOrThrow(
+      this.client,
+      userId,
       toBookingUpdateSubmitRequest({
         ...input,
         guest: { ...input.guest, email: guestEmail },
       }),
     );
-    if (!result.ok) {
-      throwSyncCommandSubmitFailure(result.error.kind);
-    }
   }
 
   async deleteBookingEvent(
     userId: string,
     input: CalendarBookingDeleteEventInput,
   ): Promise<void> {
-    const result = await this.client.submitCommand(
-      toSyncPrincipal(userId),
+    await submitCommandOrThrow(
+      this.client,
+      userId,
       toDeleteSubmitRequest(input.eventId),
     );
-    if (!result.ok) {
-      throwSyncCommandSubmitFailure(result.error.kind);
-    }
   }
 }

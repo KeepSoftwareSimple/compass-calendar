@@ -14,6 +14,10 @@ import {
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { UserDriver } from "@backend/__tests__/drivers/user.driver";
 import {
+  commandSubmitOk,
+  confirmedCommandSubmit,
+} from "@backend/__tests__/helpers/command-submit-result";
+import {
   cleanupCollections,
   cleanupTestDb,
   setupTestDb,
@@ -896,10 +900,7 @@ describe("PublicBookingService", () => {
     expect(publicPage.createsGoogleMeet).toBe(false);
     expect(publicPage.conference).toBe("none");
 
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: new ObjectId().toString() },
-    }));
+    const submitCommand = mock(async () => confirmedCommandSubmit());
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
     const bookingService = new PublicBookingService(
       new CalendarBookingService({
@@ -956,10 +957,7 @@ describe("PublicBookingService", () => {
     expect(publicPage.createsGoogleMeet).toBe(false);
     expect(publicPage.conference).toBe("teams");
 
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: new ObjectId().toString() },
-    }));
+    const submitCommand = mock(async () => confirmedCommandSubmit());
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
     const bookingService = new PublicBookingService(
       new CalendarBookingService({
@@ -1010,10 +1008,7 @@ describe("PublicBookingService", () => {
     const publicPage = await service.getPublicPage(slug);
     expect(publicPage.conference).toBe("none");
 
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: new ObjectId().toString() },
-    }));
+    const submitCommand = mock(async () => confirmedCommandSubmit());
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
     const bookingService = new PublicBookingService(
       new CalendarBookingService({
@@ -1173,6 +1168,76 @@ describe("PublicBookingService", () => {
       await bookingReservationRepository.findById(reservationId);
     expect(afterRetry?.status).toBe("cancelled");
     expect(afterRetry?.calendarEventId).toBeNull();
+  });
+
+  const publicServiceWithSubmit = (submitCommand: ReturnType<typeof mock>) => {
+    spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+    return new PublicBookingService(
+      new CalendarBookingService({
+        queryBusyAvailability: mock(async () => ({
+          ok: true as const,
+          value: busyResponse(true),
+        })),
+        submitCommand,
+      } as unknown as SyncServiceClient),
+    );
+  };
+
+  it("does not insert a reservation when Sync reports a failed create outcome", async () => {
+    const { slug, pageId } = await enableBookingPage();
+    const submitCommand = mock(async () =>
+      commandSubmitOk({
+        state: "failed",
+        failureReason: "permanentProviderError",
+      }),
+    );
+    const bookingService = publicServiceWithSubmit(submitCommand);
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+
+    await expect(
+      bookingService.createReservation(slug, {
+        slotStart,
+        guestName: "Ada Lovelace",
+        guestEmail: "ada@example.com",
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ).rejects.toMatchObject({ mutationCode: "PROVIDER_FAILURE" });
+    expect(submitCommand).toHaveBeenCalledTimes(1);
+
+    const overlapping =
+      await bookingReservationRepository.listConfirmedOverlapping(
+        pageId,
+        new Date(slotStart),
+        new Date(`${BOOKING_MONDAY}T10:30:00.000Z`),
+      );
+    expect(overlapping).toEqual([]);
+  });
+
+  it("keeps calendarEventId when Sync reports a non-confirmed delete", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const submitCommand = mock(async () =>
+      commandSubmitOk({ state: "pending" }),
+    );
+    const bookingService = publicServiceWithSubmit(submitCommand);
+
+    await expect(
+      bookingService.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ mutationCode: "PROVIDER_FAILURE" });
+    expect(submitCommand).toHaveBeenCalledTimes(1);
+
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.status).toBe("cancelled");
+    expect(stored?.calendarEventId).toBeTruthy();
   });
 
   it("rejects an expired cancel token at slotEnd with RESERVATION_NOT_FOUND", async () => {
@@ -1568,10 +1633,7 @@ describe("PublicBookingService", () => {
 
   it("asks Sync to mint Meet on confirm and does not invent a conference URL", async () => {
     const { slug } = await enableBookingPage();
-    const submitCommand = mock(async () => ({
-      ok: true as const,
-      value: { commandId: new ObjectId().toString() },
-    }));
+    const submitCommand = mock(async () => confirmedCommandSubmit());
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
     const bookingService = new PublicBookingService(
       new CalendarBookingService({
@@ -2123,10 +2185,7 @@ describe("Public booking routes", () => {
           ok: true as const,
           value: availability,
         })),
-        submitCommand: mock(async () => ({
-          ok: true as const,
-          value: { commandId: new ObjectId().toString() },
-        })),
+        submitCommand: mock(async () => confirmedCommandSubmit()),
       } as never),
     );
     return { connection, calendars: wired };
