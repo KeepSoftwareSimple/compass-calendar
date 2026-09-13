@@ -1,7 +1,6 @@
 import {
   clearAccountReconnectRequired,
   clearAllGoogleReconnectRequired,
-  getGoogleReconnectRequiredAccountEmails,
   getReconnectRequiredAccountKeys,
   hasAnyReconnectRequired,
   hasGoogleReconnectRequired,
@@ -36,9 +35,6 @@ describe("google.reconnect.state", () => {
     );
     expect(isAccountReconnectRequired("lance@example.com")).toBe(false);
     expect(hasGoogleReconnectRequired()).toBe(true);
-    expect([...getGoogleReconnectRequiredAccountEmails()]).toEqual([
-      "lance@example.com",
-    ]);
     expect([...getReconnectRequiredAccountKeys()]).toEqual([
       reconnectAccountKey("google", "lance@example.com"),
     ]);

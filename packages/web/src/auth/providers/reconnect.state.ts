@@ -269,16 +269,6 @@ export function getReconnectRequiredAccountKeys(): ReadonlySet<string> {
   return reconnectRequiredAccounts;
 }
 
-/** @deprecated Prefer {@link getReconnectRequiredAccountKeys}. Google emails only. */
-export function getGoogleReconnectRequiredAccountEmails(): ReadonlySet<string> {
-  const emails = new Set<string>();
-  for (const key of reconnectRequiredAccounts) {
-    if (!key.startsWith("google:")) continue;
-    emails.add(key.slice("google:".length));
-  }
-  return emails;
-}
-
 /** Test-only reset. */
 export function resetGoogleReconnectRequiredForTests(): void {
   reconnectRequiredConnectionIds.clear();

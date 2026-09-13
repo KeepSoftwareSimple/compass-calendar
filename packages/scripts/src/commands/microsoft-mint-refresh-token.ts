@@ -297,42 +297,17 @@ async function main(): Promise<void> {
     return;
   }
 
-  gh(
-    [
-      "variable",
-      "set",
-      "MICROSOFT_CLIENT_ID",
-      "--env",
-      args.environment,
-      "--repo",
-      repo,
-    ],
-    clientId,
-  );
-  gh(
-    [
-      "secret",
-      "set",
-      "MICROSOFT_CLIENT_SECRET",
-      "--env",
-      args.environment,
-      "--repo",
-      repo,
-    ],
-    clientSecret,
-  );
-  gh(
-    [
-      "secret",
-      "set",
-      "SMOKE_MICROSOFT_REFRESH_TOKEN",
-      "--env",
-      args.environment,
-      "--repo",
-      repo,
-    ],
-    authorization.refreshToken,
-  );
+  // The client id is a variable; the other two are secrets. Everything else
+  // about the three writes is the same, so they are one list rather than
+  // three near-identical calls.
+  const writes = [
+    ["variable", "MICROSOFT_CLIENT_ID", clientId],
+    ["secret", "MICROSOFT_CLIENT_SECRET", clientSecret],
+    ["secret", "SMOKE_MICROSOFT_REFRESH_TOKEN", authorization.refreshToken],
+  ] as const;
+  for (const [kind, name, value] of writes) {
+    gh([kind, "set", name, "--env", args.environment, "--repo", repo], value);
+  }
   console.log(
     `\nWrote MICROSOFT_CLIENT_ID, MICROSOFT_CLIENT_SECRET and SMOKE_MICROSOFT_REFRESH_TOKEN to ${repo} / ${args.environment}.`,
   );
