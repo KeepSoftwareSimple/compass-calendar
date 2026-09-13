@@ -1,7 +1,9 @@
 import { ObjectId } from "mongodb";
 import { CalendarIdSchema, type TimeZone } from "@core/types/domain-primitives";
+import { type ProviderCalendar } from "@core/types/sync/connection.contracts";
 import * as billingGuard from "@backend/billing/billing.guard";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
+import { type DestinationCatalog } from "@backend/booking/services/booking-destination-readiness";
 import {
   emptyBookableStatus,
   mapProbeToStatus,
@@ -36,6 +38,40 @@ const page = (
   };
 };
 
+const catalogFor = (
+  destination: ReturnType<typeof calendarId>,
+  overrides: {
+    canWriteEvents?: boolean;
+    destinationState?: "healthy" | "disconnected" | "actionRequired";
+    includeDestination?: boolean;
+    extraCalendars?: ProviderCalendar[];
+  } = {},
+): DestinationCatalog => {
+  const calendars: ProviderCalendar[] = [...(overrides.extraCalendars ?? [])];
+  if (overrides.includeDestination !== false) {
+    calendars.push({
+      id: destination,
+      connectionId: "conn-dest",
+      capabilities: {
+        canReadEvents: true,
+        canWriteEvents: overrides.canWriteEvents ?? true,
+        canReadBusy: true,
+        canInviteAttendees: true,
+      },
+    } as unknown as ProviderCalendar);
+  }
+  return {
+    calendars,
+    connections: [
+      {
+        id: "conn-dest",
+        state: overrides.destinationState ?? "healthy",
+      },
+      { id: "conn-block", state: "healthy" },
+    ],
+  };
+};
+
 const busy = (bookable: boolean, extras: Record<string, unknown> = {}) => ({
   intervals: [],
   computedAt: "2026-09-07T12:00:00.000Z",
@@ -56,6 +92,7 @@ describe("probeBookability", () => {
     mock.restore();
   });
   it("reports a stale blocking calendar as unbookable", async () => {
+    const destination = calendarId();
     const blocking = calendarId();
     const getAvailability = mock(async () =>
       busy(false, {
@@ -68,9 +105,13 @@ describe("probeBookability", () => {
     );
 
     const probe = await probeBookability(
-      page({ blockingCalendarIds: [blocking] }),
+      page({
+        destinationCalendarId: destination,
+        blockingCalendarIds: [blocking],
+      }),
       probeWindow,
       { getAvailability } as unknown as CalendarBookingPort,
+      { destinationCatalog: catalogFor(destination) },
     );
 
     expect(probe.bookable).toBe(false);
@@ -81,6 +122,7 @@ describe("probeBookability", () => {
   });
 
   it("reports an actionRequired connection as unbookable", async () => {
+    const seeded = page();
     const getAvailability = mock(async () =>
       busy(false, {
         connections: [
@@ -97,9 +139,12 @@ describe("probeBookability", () => {
       undefined,
     );
 
-    const probe = await probeBookability(page(), probeWindow, {
-      getAvailability,
-    } as unknown as CalendarBookingPort);
+    const probe = await probeBookability(
+      seeded,
+      probeWindow,
+      { getAvailability } as unknown as CalendarBookingPort,
+      { destinationCatalog: catalogFor(seeded.destinationCalendarId) },
+    );
 
     expect(probe.bookable).toBe(false);
     expect(mapProbeToStatus(probe)).toEqual({
@@ -131,6 +176,84 @@ describe("probeBookability", () => {
     expect(mapProbeToStatus(probe)).toEqual({
       bookable: false,
       reasons: [{ kind: "billing", reason: "BILLING_REQUIRED" }],
+    });
+  });
+
+  it("does not let a healthy blocking calendar mask a disconnected destination", async () => {
+    const destination = calendarId();
+    const blocking = calendarId();
+    const getAvailability = mock(async () => busy(true));
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+
+    const probe = await probeBookability(
+      page({
+        destinationCalendarId: destination,
+        blockingCalendarIds: [blocking],
+      }),
+      probeWindow,
+      { getAvailability } as unknown as CalendarBookingPort,
+      {
+        destinationCatalog: catalogFor(destination, {
+          destinationState: "disconnected",
+        }),
+      },
+    );
+
+    expect(probe.bookable).toBe(false);
+    expect(getAvailability).toHaveBeenCalled();
+    expect(mapProbeToStatus(probe)).toEqual({
+      bookable: false,
+      reasons: [
+        {
+          kind: "connection",
+          reason: "disconnected",
+          connectionState: "disconnected",
+        },
+      ],
+    });
+  });
+
+  it("hides bookability when the destination is missing or read-only", async () => {
+    const destination = calendarId();
+    const getAvailability = mock(async () => busy(true));
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+
+    const missing = await probeBookability(
+      page({ destinationCalendarId: destination }),
+      probeWindow,
+      { getAvailability } as unknown as CalendarBookingPort,
+      {
+        destinationCatalog: catalogFor(destination, {
+          includeDestination: false,
+        }),
+      },
+    );
+    expect(mapProbeToStatus(missing)).toMatchObject({
+      bookable: false,
+      reasons: [{ kind: "calendar", reason: "notImported" }],
+    });
+
+    const readOnly = await probeBookability(
+      page({ destinationCalendarId: destination }),
+      probeWindow,
+      { getAvailability } as unknown as CalendarBookingPort,
+      {
+        destinationCatalog: catalogFor(destination, { canWriteEvents: false }),
+      },
+    );
+    expect(mapProbeToStatus(readOnly)).toEqual({
+      bookable: false,
+      reasons: [
+        {
+          kind: "calendar",
+          reason: "notWritable",
+          calendarId: destination,
+        },
+      ],
     });
   });
 });

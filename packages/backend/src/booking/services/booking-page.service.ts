@@ -9,7 +9,6 @@ import {
   buildDefaultAdminPutInput,
 } from "@core/types/booking.contracts";
 import { type TimeZone, TimeZoneSchema } from "@core/types/domain-primitives";
-import { type ProviderCalendar } from "@core/types/sync/connection.contracts";
 import { assertBillingAllowsWrites } from "@backend/billing/billing.guard";
 import { bookingError } from "@backend/booking/booking.error";
 import {
@@ -24,15 +23,12 @@ import {
   optedOutBlockingCalendarIdsForPut,
   reconcileBookingPageBlockingCalendars,
 } from "@backend/booking/services/booking-blocking-calendars";
+import {
+  destinationReadinessReason,
+  loadDestinationCatalog,
+} from "@backend/booking/services/booking-destination-readiness";
 import calendarService from "@backend/calendar/services/calendar.service";
 import mongoService from "@backend/common/services/mongo.service";
-import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
-import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
-import {
-  type SyncPrincipal,
-  type SyncServiceClient,
-} from "@backend/common/services/sync-service/sync-service.client";
-import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 
 const SLUG_ALLOCATION_MAX_ATTEMPTS = 8;
 const FALLBACK_HOST_TIME_ZONE = TimeZoneSchema.parse("UTC");
@@ -71,53 +67,24 @@ const assertTimeZoneForEnable = (rawInput: unknown): void => {
   }
 };
 
-const listSyncContext = async (
-  userId: string,
-): Promise<{
-  calendars: readonly ProviderCalendar[];
-  healthyConnectionIds: ReadonlySet<string>;
-}> => {
-  const client: Pick<SyncServiceClient, "listCalendars" | "listConnections"> =
-    getSyncServiceClient();
-  const principal: SyncPrincipal = toSyncPrincipal(userId);
-  const [calendarsResult, connectionsResult] = await Promise.all([
-    client.listCalendars(principal),
-    client.listConnections(principal),
-  ]);
-  if (!calendarsResult.ok) {
-    throwSyncProxyFailure(
-      calendarsResult.error.kind,
-      `Failed to list calendars from sync (${calendarsResult.error.kind})`,
-      calendarsResult.error.detail,
-    );
-  }
-  const healthyConnectionIds = new Set(
-    (connectionsResult.ok ? connectionsResult.value.connections : [])
-      .filter((connection) => connection.state === "healthy")
-      .map((connection) => connection.id as string),
-  );
-  return { calendars: calendarsResult.value.calendars, healthyConnectionIds };
-};
-
 const assertHealthyWritableDestinationForEnable = async (
   userId: string,
   input: AdminPutBookingPageInput,
 ): Promise<void> => {
-  const { calendars, healthyConnectionIds } = await listSyncContext(userId);
-  if (healthyConnectionIds.size === 0) {
+  const catalog = await loadDestinationCatalog(userId);
+  const hasHealthyConnection = catalog.connections.some(
+    (connection) => connection.state === "healthy",
+  );
+  if (!hasHealthyConnection) {
     throw bookingError(
       "CALENDAR_NOT_CONNECTED",
       "Connect a healthy calendar account before enabling your meeting page",
     );
   }
 
-  const destination = calendars.find(
-    (calendar) =>
-      (calendar.id as string) === (input.destinationCalendarId as string) &&
-      calendar.capabilities.canWriteEvents &&
-      healthyConnectionIds.has(calendar.connectionId as string),
-  );
-  if (!destination) {
+  if (
+    destinationReadinessReason(input.destinationCalendarId as string, catalog)
+  ) {
     throw bookingError(
       "DESTINATION_NOT_WRITABLE",
       "Destination calendar must be writable",
@@ -125,7 +92,7 @@ const assertHealthyWritableDestinationForEnable = async (
   }
 
   const availabilityIds = new Set(
-    calendars
+    catalog.calendars
       .filter((calendar) => calendar.capabilities.canReadBusy)
       .map((calendar) => calendar.id as string),
   );

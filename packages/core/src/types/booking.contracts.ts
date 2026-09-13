@@ -275,6 +275,7 @@ export const BookingPageStatusReasonSchema = z.strictObject({
     CalendarFreshnessIssueReasonSchema,
     ConnectionStateSchema,
     z.literal("BILLING_REQUIRED"),
+    z.literal("notWritable"),
   ]),
   calendarId: CalendarIdSchema.optional(),
   connectionState: ConnectionStateSchema.optional(),

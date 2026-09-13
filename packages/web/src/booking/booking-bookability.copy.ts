@@ -5,6 +5,7 @@ import { type ConnectionState } from "@core/types/sync/connection.contracts";
 export const BOOKING_NOT_BOOKABLE_PREFIX = "Guests can't book right now";
 export const BOOKING_NAV_NEEDS_ATTENTION = "needs attention";
 export const BOOKING_BLOCKING_CALENDAR_FALLBACK = "A blocking calendar";
+export const BOOKING_DESTINATION_CALENDAR_FALLBACK = "The destination calendar";
 export const BOOKING_BILLING_STATUS_COPY =
   "A paid subscription is required to make changes";
 export const BOOKING_IMPORTING_STATUS_COPY =
@@ -40,6 +41,13 @@ export function bookingCalendarUnbookableCopy(
 ): string {
   if (reason === "notImported") {
     return `${calendarName} is no longer synced. Remove it from Blocking calendars or reconnect the account.`;
+  }
+  if (reason === "notWritable") {
+    const name =
+      calendarName === BOOKING_BLOCKING_CALENDAR_FALLBACK
+        ? BOOKING_DESTINATION_CALENDAR_FALLBACK
+        : calendarName;
+    return `${name} can't accept new events. Choose a writable destination or reconnect the account.`;
   }
   return `${calendarName} hasn't synced recently. Guests can book once it catches up.`;
 }
