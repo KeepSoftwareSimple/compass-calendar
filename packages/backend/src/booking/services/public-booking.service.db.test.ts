@@ -1381,7 +1381,7 @@ describe("PublicBookingService", () => {
         "2026-03-08T07:00:00Z",
         "2026-03-08T07:15:00Z",
         "2026-03-08T07:30:00Z",
-      ]);
+      ] as DateTime[]);
 
       const created = await service.createReservation(slug, {
         slotStart: "2026-03-08T06:00:00.000Z",
@@ -1390,7 +1390,7 @@ describe("PublicBookingService", () => {
         guestTimeZone: "America/Denver",
         durationMinutes: 30,
       });
-      expect(created.slotStart).toBe("2026-03-08T06:00:00.000Z");
+      expect(created.slotStart).toBe("2026-03-08T06:00:00.000Z" as DateTime);
       expect(createBookingEvent).toHaveBeenCalledTimes(1);
     } finally {
       setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
