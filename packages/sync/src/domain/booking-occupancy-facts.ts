@@ -19,7 +19,7 @@ export const occupancyFactsForEvent = (
   const hostIsOrganizer =
     organizerEmail === undefined || organizerEmail === self;
   const selfAttendee = self
-    ? event.content.attendees.find(
+    ? event.content.attendees?.find(
         (attendee) => attendee.email.trim().toLowerCase() === self,
       )
     : undefined;

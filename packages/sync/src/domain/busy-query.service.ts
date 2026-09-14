@@ -98,6 +98,7 @@ export interface BusyOccurrenceInterval {
   start: Date;
   end: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 export async function queryBusyOccurrences(
@@ -124,6 +125,7 @@ export async function queryBusyOccurrences(
       end:
         occurrence.endAt.getTime() < windowEnd ? occurrence.endAt : input.end,
       eventId: occurrence.eventId,
+      calendarId: occurrence.calendarId,
     }))
     .filter(
       (interval) =>
@@ -167,6 +169,9 @@ export interface BusyAvailability {
   // Merged busy intervals from every requested calendar that had data (including
   // stale ones — their staleness is disclosed in `issues`, not hidden).
   intervals: BusyInterval[];
+  // The same intervals grouped by source calendar, each list merged on its
+  // own so a display caller can paint per-calendar columns from one query.
+  byCalendar: Record<string, BusyInterval[]>;
   // When this result was computed, so the caller can reason about its own age.
   computedAt: Date;
   // Per-connection freshness for the connections backing the requested calendars.
@@ -206,6 +211,45 @@ export interface BusyAvailabilityInput {
   // Drop these events before merge. Unknown ids are ignored.
   excludeEventIds?: readonly EventId[];
 }
+
+// The fields occupancyFactsForEvent reads. Busy hydration must not pull
+// titles, descriptions, or other event content.
+export const BUSY_OCCUPANCY_EVENT_PROJECTION = {
+  _id: 1,
+  connectionId: 1,
+  "content.organizer.email": 1,
+  "content.attendees.email": 1,
+  "content.attendees.responseStatus": 1,
+} as const;
+
+const withoutCalendarId = (
+  interval: BusyInterval & { calendarId: SyncEventCalendarId },
+): BusyInterval => ({
+  start: interval.start,
+  end: interval.end,
+  hostIsOrganizer: interval.hostIsOrganizer,
+  hostResponseStatus: interval.hostResponseStatus,
+});
+
+const groupBusyIntervalsByCalendar = (
+  intervals: ReadonlyArray<BusyInterval & { calendarId: SyncEventCalendarId }>,
+  calendarIds: readonly SyncEventCalendarId[],
+): Record<string, BusyInterval[]> => {
+  const grouped = new Map<string, BusyInterval[]>();
+  for (const calendarId of calendarIds) {
+    grouped.set(calendarId, []);
+  }
+  for (const interval of intervals) {
+    const list = grouped.get(interval.calendarId) ?? [];
+    list.push(withoutCalendarId(interval));
+    grouped.set(interval.calendarId, list);
+  }
+  const result: Record<string, BusyInterval[]> = {};
+  for (const [calendarId, calendarIntervals] of grouped) {
+    result[calendarId] = mergeBusyIntervals(calendarIntervals);
+  }
+  return result;
+};
 
 // The busy intervals for a set of calendars plus the freshness/completeness
 // evidence a caller needs to decide whether the result is safe to display or to
@@ -304,6 +348,7 @@ export async function computeBusyAvailability(
       input.tenantId,
       input.principalId,
       eventIds,
+      { projection: BUSY_OCCUPANCY_EVENT_PROJECTION },
     );
     for (const event of events) {
       eventsById.set(event._id, event);
@@ -340,25 +385,28 @@ export async function computeBusyAvailability(
   const fallbackEmail =
     [...emailByConnectionId.values()].find((email) => email !== null) ?? null;
 
-  const intervals = mergeBusyIntervals(
-    rawIntervals.map((interval) => {
-      const event = eventsById.get(interval.eventId);
-      const accountEmail =
-        (event?.connectionId
-          ? emailByConnectionId.get(event.connectionId)
-          : undefined) ?? fallbackEmail;
-      const facts = occupancyFactsForEvent(event, accountEmail);
-      return {
-        start: interval.start,
-        end: interval.end,
-        hostIsOrganizer: facts.hostIsOrganizer,
-        hostResponseStatus: facts.hostResponseStatus,
-      };
-    }),
-  );
+  const attributed = rawIntervals.map((interval) => {
+    const event = eventsById.get(interval.eventId);
+    const accountEmail =
+      (event?.connectionId
+        ? emailByConnectionId.get(event.connectionId)
+        : undefined) ?? fallbackEmail;
+    const facts = occupancyFactsForEvent(event, accountEmail);
+    return {
+      calendarId: interval.calendarId,
+      start: interval.start,
+      end: interval.end,
+      hostIsOrganizer: facts.hostIsOrganizer,
+      hostResponseStatus: facts.hostResponseStatus,
+    };
+  });
 
   return {
-    intervals,
+    intervals: mergeBusyIntervals(attributed.map(withoutCalendarId)),
+    byCalendar: groupBusyIntervalsByCalendar(
+      attributed,
+      present.map((calendar) => calendar.calendarId),
+    ),
     computedAt: now,
     connections,
     complete,

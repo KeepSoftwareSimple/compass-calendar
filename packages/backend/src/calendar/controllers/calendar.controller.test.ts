@@ -257,34 +257,42 @@ describe("CalendarController.availability sync outage", () => {
     await expect(settled()).rejects.toThrow();
   });
 
-  it("queries each calendar separately and attributes intervals to their real calendarId", async () => {
+  it("queries availability once for three calendars and attributes intervals to their real calendarId", async () => {
     // The day-grid layout positions a busy block by calendarId and drops
-    // blocks for calendars it doesn't recognize — a merged, single-attributed
-    // response would silently lose busy time for every calendar but one.
-    // This asserts each requested calendar is queried on its own and its
-    // intervals keep their own, correct calendarId in the response.
-    const [first, second] = [objectId(), objectId()];
+    // blocks for calendars it doesn't recognize. Sync now returns a byCalendar
+    // grouping so one request keeps every interval's real calendarId.
+    const [first, second, third] = [objectId(), objectId(), objectId()];
     const queryBusyAvailability = mock(
       (_principal: unknown, request: { calendarIds: readonly string[] }) => {
-        const requested = request.calendarIds[0];
-        const intervals =
-          requested === first
-            ? [
+        expect(request.calendarIds).toEqual([first, second, third]);
+        return Promise.resolve({
+          ok: true as const,
+          value: {
+            intervals: [
+              {
+                start: "2026-07-14T09:00:00.000Z",
+                end: "2026-07-14T10:00:00.000Z",
+              },
+              {
+                start: "2026-07-14T14:00:00.000Z",
+                end: "2026-07-14T15:00:00.000Z",
+              },
+            ],
+            byCalendar: {
+              [first]: [
                 {
                   start: "2026-07-14T09:00:00.000Z",
                   end: "2026-07-14T10:00:00.000Z",
                 },
-              ]
-            : [
+              ],
+              [second]: [
                 {
                   start: "2026-07-14T14:00:00.000Z",
                   end: "2026-07-14T15:00:00.000Z",
                 },
-              ];
-        return Promise.resolve({
-          ok: true as const,
-          value: {
-            intervals,
+              ],
+              [third]: [],
+            },
             computedAt: "2026-07-14T08:00:00.000Z",
             connections: [],
             complete: true,
@@ -300,11 +308,11 @@ describe("CalendarController.availability sync outage", () => {
 
     const { res, settled } = capturingRes();
     await calendarController.availability(
-      availabilityReqFor(objectId(), [first, second]),
+      availabilityReqFor(objectId(), [first, second, third]),
       res,
     );
 
-    expect(queryBusyAvailability).toHaveBeenCalledTimes(2);
+    expect(queryBusyAvailability).toHaveBeenCalledTimes(1);
     await expect(settled()).resolves.toEqual({
       busyPeriods: [
         {

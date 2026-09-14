@@ -596,7 +596,12 @@ describe("EventOccurrenceRepository", () => {
         end: windowEnd,
       });
       expect(busy).toEqual([
-        { startAt: inLookbackStart, endAt: windowEnd, eventId: eventIn },
+        {
+          startAt: inLookbackStart,
+          endAt: windowEnd,
+          eventId: eventIn,
+          calendarId,
+        },
       ]);
     });
   });

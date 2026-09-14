@@ -163,6 +163,7 @@ describe("ProviderPageApplier", () => {
         startAt: new Date("2026-07-14T15:00:00.000Z"),
         endAt: new Date("2026-07-14T16:00:00.000Z"),
         eventId: expect.any(String),
+        calendarId: calendar._id,
       },
     ]);
   });
@@ -191,6 +192,7 @@ describe("ProviderPageApplier", () => {
         startAt: new Date("2026-07-14T15:00:00.000Z"),
         endAt: new Date("2026-07-14T16:00:00.000Z"),
         eventId: expect.any(String),
+        calendarId: calendar._id,
       },
     ]);
   });

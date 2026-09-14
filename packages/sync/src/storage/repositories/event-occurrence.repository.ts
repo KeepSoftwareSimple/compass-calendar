@@ -55,11 +55,14 @@ export interface BusyOverlapQuery {
 }
 
 // One busy occurrence's normalized half-open interval — the only fields a busy
-// query needs. Titles and other content are never read here.
+// query needs. Titles and other content are never read here. calendarId is
+// included so a multi-calendar busy query can attribute intervals without a
+// second pass.
 export interface OccurrenceInterval {
   startAt: Date;
   endAt: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 // Repository for `event_occurrences`. Rebuilding a series' window
@@ -278,6 +281,7 @@ export class EventOccurrenceRepository {
         startAt: 1,
         endAt: 1,
         eventId: 1,
+        calendarId: 1,
         _id: 0,
       })
       .sort({ startAt: 1 })

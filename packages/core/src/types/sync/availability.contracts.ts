@@ -81,8 +81,14 @@ export const ConnectionFreshnessSchema = z.strictObject({
 
 // Busy intervals plus the freshness/completeness/bookability evidence. Event
 // titles, descriptions, locations, attendees, and conference links never appear.
+// `byCalendar` attributes the same intervals to their source calendar so a
+// display caller can keep per-column busy blocks without one request per
+// calendar. Defaults to {} so a response from an older Sync still parses.
 export const BusyAvailabilityResponseSchema = z.strictObject({
   intervals: z.array(BusyIntervalSchema),
+  byCalendar: z
+    .record(SyncEventCalendarIdSchema, z.array(BusyIntervalSchema))
+    .default({}),
   computedAt: DateTimeSchema,
   connections: z.array(ConnectionFreshnessSchema),
   complete: z.boolean(),

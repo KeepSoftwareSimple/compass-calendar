@@ -1,4 +1,5 @@
 import { faker } from "@faker-js/faker";
+import { mock } from "bun:test";
 import { type Document } from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type ConnectionState } from "@core/types/sync/connection.contracts";
@@ -11,7 +12,10 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
-import { computeBusyAvailability } from "@sync/domain/busy-query.service";
+import {
+  BUSY_OCCUPANCY_EVENT_PROJECTION,
+  computeBusyAvailability,
+} from "@sync/domain/busy-query.service";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -182,6 +186,18 @@ describe("computeBusyAvailability", () => {
     expect(
       result.intervals.map((i) => [i.start.toISOString(), i.end.toISOString()]),
     ).toEqual([["2026-07-14T09:00:00.000Z", "2026-07-14T11:00:00.000Z"]]);
+    expect(
+      result.byCalendar[calA]?.map((i) => [
+        i.start.toISOString(),
+        i.end.toISOString(),
+      ]),
+    ).toEqual([["2026-07-14T09:00:00.000Z", "2026-07-14T10:00:00.000Z"]]);
+    expect(
+      result.byCalendar[calB]?.map((i) => [
+        i.start.toISOString(),
+        i.end.toISOString(),
+      ]),
+    ).toEqual([["2026-07-14T09:30:00.000Z", "2026-07-14T11:00:00.000Z"]]);
     expect(result.connections).toHaveLength(1);
     expect(result.connections[0]?.state).toBe("healthy");
   });
@@ -260,6 +276,7 @@ describe("computeBusyAvailability", () => {
     expect(result.bookable).toBe(true);
     expect(result.issues).toEqual([]);
     expect(result.intervals).toEqual([]);
+    expect(result.byCalendar[localCalendarId]).toEqual([]);
   });
 
   it("fails closed for a missing resource that is not allowlisted as unbacked", async () => {
@@ -413,5 +430,39 @@ describe("computeBusyAvailability", () => {
     expect(
       result.intervals.map((i) => [i.start.toISOString(), i.end.toISOString()]),
     ).toEqual([["2026-07-14T13:00:00.000Z", "2026-07-14T14:00:00.000Z"]]);
+  });
+
+  it("hydrates occupancy facts with a field projection", async () => {
+    const conn = await seedConnection("healthy", fresh);
+    const cal = await seedCalendar({
+      connectionId: conn,
+      lastSuccessAt: fresh,
+      intervals: [["2026-07-14T09:00Z", "2026-07-14T10:00Z"]],
+    });
+    const findByIds = mock(async () => []);
+
+    await computeBusyAvailability(
+      {
+        occurrences,
+        events: { findByIds } as never,
+        resources,
+        connections,
+        calendars,
+      },
+      {
+        tenantId,
+        principalId,
+        calendarIds: [cal],
+        start: WINDOW_START,
+        end: WINDOW_END,
+        maxAgeMs: MAX_AGE_MS,
+        now: NOW,
+      },
+    );
+
+    expect(findByIds).toHaveBeenCalledTimes(1);
+    expect(findByIds.mock.calls[0]?.[3]).toEqual({
+      projection: BUSY_OCCUPANCY_EVENT_PROJECTION,
+    });
   });
 });

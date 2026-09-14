@@ -1,4 +1,4 @@
-import { type Collection, type Db, ObjectId } from "mongodb";
+import { type Collection, type Db, type Document, ObjectId } from "mongodb";
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
 import {
   type PrincipalId,
@@ -288,20 +288,29 @@ export class EventRepository {
     return record ? EventRecordSchema.parse(record) : null;
   }
 
-  // Batch-hydrate full event records by id, owner-scoped. The full-fidelity read
+  // Batch-hydrate event records by id, owner-scoped. The full-fidelity read
   // uses this to join a page of occurrence rows back to their owning events (and
   // then those events' series masters). Not generation-filtered: an event is
   // unique per identity, and generation on `events` is only a last-touched
   // watermark, never a read key. An empty id list short-circuits to no query.
+  // Pass `projection` to load a field subset (busy occupancy facts); projected
+  // docs are not parsed as full EventRecords.
   async findByIds(
     tenantId: TenantId,
     principalId: PrincipalId,
     ids: readonly EventId[],
+    options?: { projection?: Document },
   ): Promise<EventRecord[]> {
     if (ids.length === 0) return [];
     const records = await this.collection
-      .find({ _id: { $in: [...ids] }, tenantId, principalId })
+      .find(
+        { _id: { $in: [...ids] }, tenantId, principalId },
+        options?.projection ? { projection: options.projection } : undefined,
+      )
       .toArray();
+    if (options?.projection) {
+      return records as EventRecord[];
+    }
     return records.map((record) => EventRecordSchema.parse(record));
   }
 

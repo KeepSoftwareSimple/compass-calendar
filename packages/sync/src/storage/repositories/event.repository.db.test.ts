@@ -311,6 +311,54 @@ describe("EventRepository", () => {
 
       expect(found.map((e) => e._id)).toEqual([saved._id]);
     });
+
+    it("returns only projected occupancy fields when a projection is provided", async () => {
+      const saved = await repo.put(
+        compassRecord({
+          content: {
+            ...baseContent,
+            title: "secret meeting",
+            organizer: { email: "host@example.com", displayName: "Host" },
+            attendees: [
+              {
+                email: "guest@example.com",
+                displayName: "Guest",
+                responseStatus: "accepted",
+              },
+            ],
+          },
+        }),
+      );
+
+      const found = await repo.findByIds(
+        saved.tenantId,
+        saved.principalId,
+        [saved._id],
+        {
+          projection: {
+            _id: 1,
+            connectionId: 1,
+            "content.organizer.email": 1,
+            "content.attendees.email": 1,
+            "content.attendees.responseStatus": 1,
+          },
+        },
+      );
+
+      expect(found).toEqual([
+        {
+          _id: saved._id,
+          connectionId: saved.connectionId,
+          content: {
+            organizer: { email: "host@example.com" },
+            attendees: [
+              { email: "guest@example.com", responseStatus: "accepted" },
+            ],
+          },
+        },
+      ]);
+      expect(JSON.stringify(found)).not.toContain("secret meeting");
+    });
   });
 
   it("deleteById removes only the owner's event and is idempotent", async () => {

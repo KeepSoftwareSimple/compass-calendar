@@ -217,5 +217,57 @@ describe("POST /internal/availability/busy", () => {
     expect(body.connections[0].state).toBe("healthy");
     // Event content must never leak into the availability response.
     expect(JSON.stringify(body)).not.toContain("secret meeting");
+    expect(body.byCalendar[cal]).toEqual(body.intervals);
+  });
+
+  it("returns byCalendar with per-calendar intervals", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    await startService();
+    const conn = await seedConnection(tenantId, principalId, "healthy");
+    const calA = await seedCalendar(tenantId, principalId, conn, [
+      ["2026-07-14T09:00:00.000Z", "2026-07-14T10:00:00.000Z"],
+    ]);
+    const calB = await seedCalendar(tenantId, principalId, conn, [
+      ["2026-07-14T14:00:00.000Z", "2026-07-14T15:00:00.000Z"],
+    ]);
+
+    const res = await post(
+      signedHeaders(tenantId, principalId),
+      validBody([calA, calB]),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.intervals).toEqual([
+      {
+        start: "2026-07-14T09:00:00.000Z",
+        end: "2026-07-14T10:00:00.000Z",
+        hostIsOrganizer: true,
+        hostResponseStatus: null,
+      },
+      {
+        start: "2026-07-14T14:00:00.000Z",
+        end: "2026-07-14T15:00:00.000Z",
+        hostIsOrganizer: true,
+        hostResponseStatus: null,
+      },
+    ]);
+    expect(body.byCalendar[calA]).toEqual([
+      {
+        start: "2026-07-14T09:00:00.000Z",
+        end: "2026-07-14T10:00:00.000Z",
+        hostIsOrganizer: true,
+        hostResponseStatus: null,
+      },
+    ]);
+    expect(body.byCalendar[calB]).toEqual([
+      {
+        start: "2026-07-14T14:00:00.000Z",
+        end: "2026-07-14T15:00:00.000Z",
+        hostIsOrganizer: true,
+        hostResponseStatus: null,
+      },
+    ]);
   });
 });

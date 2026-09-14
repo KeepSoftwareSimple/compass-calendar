@@ -430,6 +430,7 @@ export function registerConnectionRoutes(
         res.status(Status.OK).json(
           toBusyAvailabilityResponse({
             intervals: [],
+            byCalendar: {},
             computedAt: new Date(now),
             connections: [],
             complete: false,
@@ -1261,13 +1262,20 @@ function toBusyAvailabilityResponse(
 ): BusyAvailabilityResponse {
   // Parse through the schema so ISO strings are validated and branded, and any
   // shape drift fails loudly here rather than reaching the caller malformed.
+  const toWireInterval = (interval: BusyAvailability["intervals"][number]) => ({
+    start: interval.start.toISOString(),
+    end: interval.end.toISOString(),
+    hostIsOrganizer: interval.hostIsOrganizer,
+    hostResponseStatus: interval.hostResponseStatus,
+  });
   return BusyAvailabilityResponseSchema.parse({
-    intervals: availability.intervals.map((i) => ({
-      start: i.start.toISOString(),
-      end: i.end.toISOString(),
-      hostIsOrganizer: i.hostIsOrganizer,
-      hostResponseStatus: i.hostResponseStatus,
-    })),
+    intervals: availability.intervals.map(toWireInterval),
+    byCalendar: Object.fromEntries(
+      Object.entries(availability.byCalendar).map(([calendarId, intervals]) => [
+        calendarId,
+        intervals.map(toWireInterval),
+      ]),
+    ),
     computedAt: availability.computedAt.toISOString(),
     connections: availability.connections.map((c) => ({
       connectionId: c.connectionId,

@@ -1,5 +1,8 @@
 import { faker } from "@faker-js/faker";
-import { BusyAvailabilityRequestSchema } from "@core/types/sync/availability.contracts";
+import {
+  BusyAvailabilityRequestSchema,
+  BusyAvailabilityResponseSchema,
+} from "@core/types/sync/availability.contracts";
 import { describe, expect, it } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
@@ -45,5 +48,44 @@ describe("BusyAvailabilityRequestSchema", () => {
     expect(BusyAvailabilityRequestSchema.safeParse(request).success).toBe(
       false,
     );
+  });
+});
+
+const baseResponse = () => ({
+  intervals: [
+    { start: "2026-07-14T09:00:00.000Z", end: "2026-07-14T10:00:00.000Z" },
+  ],
+  computedAt: "2026-07-14T12:00:00.000Z",
+  connections: [],
+  complete: true,
+  issues: [],
+  bookable: true,
+});
+
+describe("BusyAvailabilityResponseSchema", () => {
+  it("defaults missing byCalendar so older callers still parse", () => {
+    const parsed = BusyAvailabilityResponseSchema.parse(baseResponse());
+    expect(parsed.byCalendar).toEqual({});
+  });
+
+  it("keeps per-calendar intervals when byCalendar is present", () => {
+    const calendarId = objectId();
+    const parsed = BusyAvailabilityResponseSchema.parse({
+      ...baseResponse(),
+      byCalendar: {
+        [calendarId]: [
+          {
+            start: "2026-07-14T09:00:00.000Z",
+            end: "2026-07-14T10:00:00.000Z",
+          },
+        ],
+      },
+    });
+    expect(parsed.byCalendar[calendarId]).toEqual([
+      {
+        start: "2026-07-14T09:00:00.000Z",
+        end: "2026-07-14T10:00:00.000Z",
+      },
+    ]);
   });
 });
