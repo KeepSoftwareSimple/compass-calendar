@@ -138,6 +138,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Registry (source of truth for `?` legend): `packages/web/src/shortcuts/shortcuts.registry.ts`
 - Taught bindings (handlers + Shortcut Showcase keycaps): `packages/web/src/shortcuts/keymap.ts`
 - Sidebar next-shortcut selector: `packages/web/src/shortcuts/tips/selectShortcutHint.ts`
+- What counts as a hint impression: `packages/web/src/shortcuts/tips/shortcut-telemetry.ts`
 - Sidebar tip progress (demonstrated primitives): `packages/web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
 - Global shell shortcuts (sidebar `]`, palette, settings, navigation): `packages/web/src/shortcuts/useGlobalShortcuts.ts`
 - Event-jump chips (`H`): `packages/web/src/shortcuts/shift-hint/`

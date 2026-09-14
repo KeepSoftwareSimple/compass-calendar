@@ -22,6 +22,7 @@ import {
 
 const IMPRESSION_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRESENTATION_DEDUPE_MS = 30 * 1000;
+export const IMPRESSION_DWELL_MS = 5_000;
 
 export type ShortcutInvocationMethod = "keyboard" | "click";
 
@@ -37,6 +38,8 @@ type SuggestionPresentation = Omit<ActiveSuggestion, "suggestionText"> & {
 
 let activeSuggestion: ActiveSuggestion | null = null;
 const lastPresentationByKey = new Map<string, number>();
+let dwellTimer: ReturnType<typeof setTimeout> | null = null;
+let dwellVisibilityListener: (() => void) | null = null;
 
 const hintIdentityProperties = (
   hint: Pick<ShortcutHint, "actionId" | "featureArea" | "id" | "parts">,
@@ -89,10 +92,50 @@ function updateUsage(
   writeShortcutUsageProfile(next);
 }
 
+function clearDwellWait(): void {
+  if (dwellTimer !== null) {
+    clearTimeout(dwellTimer);
+    dwellTimer = null;
+  }
+  if (dwellVisibilityListener) {
+    document.removeEventListener("visibilitychange", dwellVisibilityListener);
+    dwellVisibilityListener = null;
+  }
+}
+
+function recordImpression(presented: ActiveSuggestion, now: number): void {
+  const dedupeKey = `${presented.id}:${presented.reasonCode}:${presented.suggestionText}`;
+  const lastPresentation = lastPresentationByKey.get(dedupeKey);
+  if (
+    lastPresentation !== undefined &&
+    now - lastPresentation < PRESENTATION_DEDUPE_MS
+  ) {
+    return;
+  }
+  lastPresentationByKey.set(dedupeKey, now);
+  updateUsage(presented.actionId, (current) => {
+    const isRecent =
+      current.lastShownAt !== undefined &&
+      now - current.lastShownAt < IMPRESSION_WINDOW_MS;
+    return {
+      ...current,
+      lastShownAt: now,
+      recentImpressions: isRecent ? current.recentImpressions + 1 : 1,
+    };
+  });
+  track("shortcut_suggestion_shown", {
+    ...suggestionProperties(presented),
+    dwell_ms: IMPRESSION_DWELL_MS,
+    outcome: "shown",
+  });
+}
+
 /**
- * Starts one visible sidebar-tip presentation. React remounts and short-lived
- * operational statuses can reveal the same tip repeatedly, so identical
- * presentations are locally deduplicated for 30 seconds.
+ * Starts one visible sidebar-tip presentation. The tip is armed immediately
+ * so an invocation in the first 5 seconds still counts as `was_suggested`.
+ * The usage update and `shortcut_suggestion_shown` wait for 5 seconds of
+ * dwell in a visible tab. React remounts of the same tip still dedupe for
+ * 30 seconds once an impression is recorded.
  */
 export function beginShortcutSuggestionPresentation(
   suggestion: SuggestionPresentation,
@@ -100,31 +143,30 @@ export function beginShortcutSuggestionPresentation(
 ): () => void {
   const presented = resolvePresentedSuggestion(suggestion);
   activeSuggestion = presented;
+  clearDwellWait();
 
-  const dedupeKey = `${presented.id}:${presented.reasonCode}:${presented.suggestionText}`;
-  const lastPresentation = lastPresentationByKey.get(dedupeKey);
-  if (
-    lastPresentation === undefined ||
-    now - lastPresentation >= PRESENTATION_DEDUPE_MS
-  ) {
-    lastPresentationByKey.set(dedupeKey, now);
-    updateUsage(presented.actionId, (current) => {
-      const isRecent =
-        current.lastShownAt !== undefined &&
-        now - current.lastShownAt < IMPRESSION_WINDOW_MS;
-      return {
-        ...current,
-        lastShownAt: now,
-        recentImpressions: isRecent ? current.recentImpressions + 1 : 1,
+  const tryRecord = () => {
+    dwellTimer = null;
+    if (document.visibilityState !== "visible") {
+      dwellVisibilityListener = () => {
+        if (document.visibilityState !== "visible") return;
+        document.removeEventListener(
+          "visibilitychange",
+          dwellVisibilityListener!,
+        );
+        dwellVisibilityListener = null;
+        recordImpression(presented, Date.now());
       };
-    });
-    track("shortcut_suggestion_shown", {
-      ...suggestionProperties(presented),
-      outcome: "shown",
-    });
-  }
+      document.addEventListener("visibilitychange", dwellVisibilityListener);
+      return;
+    }
+    recordImpression(presented, now + IMPRESSION_DWELL_MS);
+  };
+
+  dwellTimer = setTimeout(tryRecord, IMPRESSION_DWELL_MS);
 
   return () => {
+    clearDwellWait();
     if (activeSuggestion === presented) activeSuggestion = null;
   };
 }
@@ -263,4 +305,5 @@ export function recordShortcutUnavailableAttempt(
 export function resetShortcutTelemetryForTests(): void {
   activeSuggestion = null;
   lastPresentationByKey.clear();
+  clearDwellWait();
 }

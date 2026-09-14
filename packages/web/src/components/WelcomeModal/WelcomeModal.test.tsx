@@ -369,11 +369,63 @@ describe("WelcomeModal", () => {
       screen.getByText(/Compass is for busy professionals who live at/),
     ).toBeTruthy();
 
+    await new Promise((resolve) => setTimeout(resolve, 350));
     await user.click(questionButton);
 
     expect(questionButton).toHaveAttribute("aria-expanded", "false");
     expect(answer).toHaveAttribute("aria-hidden", "true");
     expect(answer).toHaveAttribute("data-state", "closed");
+  });
+
+  it("keeps a FAQ answer open after a double-click", async () => {
+    const user = userEvent.setup();
+
+    render(<WelcomeModal />);
+    await user.keyboard("{Enter}");
+
+    const questionButton = screen.getByRole("button", {
+      name: "Who is Compass for?",
+    });
+
+    await user.dblClick(questionButton);
+
+    expect(questionButton).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("closes a FAQ answer when a second click arrives after the guard", async () => {
+    const user = userEvent.setup();
+
+    render(<WelcomeModal />);
+    await user.keyboard("{Enter}");
+
+    const questionButton = screen.getByRole("button", {
+      name: "Who is Compass for?",
+    });
+
+    await user.click(questionButton);
+    expect(questionButton).toHaveAttribute("aria-expanded", "true");
+
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    await user.click(questionButton);
+
+    expect(questionButton).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("lets a digit key toggle the same FAQ twice in a row", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeModal />);
+
+    await user.keyboard("{Enter}");
+
+    const question = screen.getByRole("button", {
+      name: "Who is Compass for?",
+    });
+
+    await user.keyboard("1");
+    expect(question).toHaveAttribute("aria-expanded", "true");
+
+    await user.keyboard("1");
+    expect(question).toHaveAttribute("aria-expanded", "false");
   });
 
   it("shows shortcut keycaps on auth and explore actions without hover", async () => {

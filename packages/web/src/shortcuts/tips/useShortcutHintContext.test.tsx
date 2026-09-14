@@ -15,8 +15,11 @@ import {
   resetShortcutHintProgressStoreForTests,
   shortcutHintProgressActions,
 } from "@web/shortcuts/tips/shortcut-tips.progress.store";
-import { useShortcutHintContext } from "@web/shortcuts/tips/useShortcutHintContext";
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import {
+  SHORTCUT_HINT_ROTATION_MS,
+  useShortcutHintContext,
+} from "@web/shortcuts/tips/useShortcutHintContext";
+import { afterEach, beforeEach, describe, expect, it, jest } from "bun:test";
 
 const focusCalendarEvent = () => {
   const card = document.createElement("div");
@@ -40,6 +43,7 @@ describe("useShortcutHintContext", () => {
     resetShortcutHintProgressStoreForTests();
     document.body.innerHTML = "";
     window.history.replaceState({}, "", "/");
+    jest.useRealTimers();
   });
 
   it("returns create-event on an idle calendar before the first real event", () => {
@@ -121,5 +125,54 @@ describe("useShortcutHintContext", () => {
 
     const { result } = renderHook(() => useShortcutHintContext());
     expect(result.current.id).toBe("command-palette");
+  });
+
+  it("does not re-rank while the document is hidden and re-ranks once on return", () => {
+    jest.useFakeTimers();
+    const hiddenDescriptor = Object.getOwnPropertyDescriptor(
+      document,
+      "hidden",
+    );
+    const visibilityDescriptor = Object.getOwnPropertyDescriptor(
+      document,
+      "visibilityState",
+    );
+    const setHidden = (hidden: boolean) => {
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => hidden,
+      });
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => (hidden ? "hidden" : "visible"),
+      });
+    };
+
+    const { result } = renderHook(() => useShortcutHintContext());
+    const first = result.current;
+
+    setHidden(true);
+    act(() => {
+      jest.advanceTimersByTime(SHORTCUT_HINT_ROTATION_MS * 2);
+    });
+    expect(result.current).toBe(first);
+
+    setHidden(false);
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(result.current).not.toBe(first);
+
+    if (hiddenDescriptor) {
+      Object.defineProperty(document, "hidden", hiddenDescriptor);
+    } else {
+      Reflect.deleteProperty(document, "hidden");
+    }
+    if (visibilityDescriptor) {
+      Object.defineProperty(document, "visibilityState", visibilityDescriptor);
+    } else {
+      Reflect.deleteProperty(document, "visibilityState");
+    }
+    jest.useRealTimers();
   });
 });
