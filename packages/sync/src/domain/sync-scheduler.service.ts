@@ -1,4 +1,5 @@
 import { PollLoop } from "@sync/domain/poll-loop";
+import { subscribeJobQueueWake } from "@sync/storage/repositories/job.repository";
 
 // The scheduler drains the job queue continuously: it repeatedly asks a worker
 // to drain, sleeping a poll interval only when the queue is empty so a busy
@@ -43,6 +44,7 @@ const DEFAULT_POLL_MS = 5_000;
 
 export class SyncScheduler {
   readonly #loop: PollLoop;
+  #unsubscribeWake: (() => void) | undefined;
 
   constructor(deps: SyncSchedulerDeps, options: SyncSchedulerOptions) {
     const pollMs = options.pollMs ?? DEFAULT_POLL_MS;
@@ -58,10 +60,18 @@ export class SyncScheduler {
   }
 
   start(): void {
+    this.#unsubscribeWake ??= subscribeJobQueueWake(() => this.#loop.wake());
     this.#loop.start();
   }
 
+  // Interrupt the idle poll so a just-enqueued job is claimed immediately.
+  wake(): void {
+    this.#loop.wake();
+  }
+
   async stop(): Promise<void> {
+    this.#unsubscribeWake?.();
+    this.#unsubscribeWake = undefined;
     await this.#loop.stop();
   }
 }

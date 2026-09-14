@@ -72,6 +72,14 @@ upgrade normally and can ignore this section.
 Calendar](./google-calendar.md) (if the upgrade touches Google sync
 configuration).
 
+## Mongo client pool and compression
+
+Backend and Sync Mongo clients now keep a warm pool (`minPoolSize` 2,
+`maxIdleTimeMS` 60s) and enable wire compression with `zstd` then `snappy`
+when those codecs are present in the driver build. Changing Atlas cluster
+tier still requires restarting both processes so they reconnect. This
+change applies on the next process start; no extra operator step is required.
+
 ----
 
 Have an idea on how we can make self-hosting easier? Let us know in [this GitHub Discussion](https://github.com/SwitchbackTech/compass/discussions/1694).

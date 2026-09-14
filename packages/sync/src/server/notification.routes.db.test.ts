@@ -10,6 +10,10 @@ import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { createSyncService, type SyncService } from "@sync/app";
 import { type SyncConfig } from "@sync/config/sync.config";
+import {
+  type JobDrainer,
+  SyncScheduler,
+} from "@sync/domain/sync-scheduler.service";
 import { parseGoogleNotification } from "@sync/providers/google/google-notifications.adapter";
 import { parseMicrosoftNotification } from "@sync/providers/microsoft/microsoft-notifications.adapter";
 import { type ProviderNotificationAdapter } from "@sync/providers/provider-notifications.port";
@@ -21,6 +25,7 @@ import {
 } from "@sync/providers/provider-registry";
 import { NOTIFICATIONS_PATH } from "@sync/server/notification.routes";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
+import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { type AddressInfo } from "node:net";
@@ -154,6 +159,43 @@ describe("POST /sync/notifications/google", () => {
     expect(second.status).toBe(200);
     // Both deliveries collapse to a single incrementalPull job.
     expect(await jobCount(`incrementalPull:${resourceId}`)).toBe(1);
+  });
+
+  it("claims a webhook-enqueued job within 100 ms without waiting for the poll", async () => {
+    await seedSubscription();
+    await startService();
+
+    const jobs = new JobRepository(mongo.db);
+    const owner = "webhook-wake";
+    const drainWaiters: Array<(n: number) => void> = [];
+    const worker: JobDrainer = {
+      drain: async () => {
+        const job = await jobs.claimDueJob(owner, new Date(), 60_000);
+        const n = job ? 1 : 0;
+        for (const waiter of drainWaiters.splice(0)) waiter(n);
+        return n;
+      },
+    };
+    const nextDrain = () =>
+      new Promise<number>((resolve) => drainWaiters.push(resolve));
+    const scheduler = new SyncScheduler(
+      { worker, jobs: { releaseOwned: async () => 0 } },
+      { owner, pollMs: 10_000 },
+    );
+
+    const idle = nextDrain();
+    scheduler.start();
+    try {
+      expect(await idle).toBe(0);
+      const claimed = nextDrain();
+      const postedAt = Date.now();
+      const res = await post(NOTIFICATIONS_PATH, googHeaders());
+      expect(res.status).toBe(200);
+      expect(await claimed).toBe(1);
+      expect(Date.now() - postedAt).toBeLessThan(100);
+    } finally {
+      await scheduler.stop();
+    }
   });
 
   it("stamps the change marker so a pull already in flight cannot miss the change", async () => {

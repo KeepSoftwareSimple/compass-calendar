@@ -155,6 +155,26 @@ describe("SyncScheduler", () => {
     expect(worker.calls).toBeGreaterThanOrEqual(2); // it kept going
   });
 
+  it("wakes an idle drain instead of waiting out the poll interval", async () => {
+    const worker = new FakeWorker([]);
+    const jobs = releaser();
+    const scheduler = new SyncScheduler(
+      { worker, jobs },
+      { owner: OWNER, pollMs: 10_000 },
+    );
+
+    const firstDrain = worker.nextDrain();
+    scheduler.start();
+    await firstDrain;
+
+    const secondDrain = worker.nextDrain();
+    const started = Date.now();
+    scheduler.wake();
+    expect(await secondDrain).toBe(0);
+    expect(Date.now() - started).toBeLessThan(100);
+    await scheduler.stop();
+  });
+
   it("start is idempotent and stop is safe when never started", async () => {
     const worker = new FakeWorker([]);
     const jobs = releaser();

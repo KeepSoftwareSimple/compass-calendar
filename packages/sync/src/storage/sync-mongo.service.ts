@@ -1,8 +1,41 @@
 import { type Db, MongoClient } from "mongodb";
 import { Logger } from "@core/logger/winston.logger";
 import { installIndexManifest } from "@sync/storage/index-manifest";
+import { createRequire } from "node:module";
 
 const logger = Logger("sync:mongo");
+
+const requireFromHere = createRequire(import.meta.url);
+
+const MONGO_MIN_POOL_SIZE = 2;
+const MONGO_MAX_IDLE_TIME_MS = 60_000;
+
+// zstd first, then snappy, and only codecs this process can actually load so
+// handshake never agrees on a compressor the driver would then fail to use.
+export function mongoClientPoolOptions(): {
+  minPoolSize: number;
+  maxIdleTimeMS: number;
+  compressors?: Array<"zstd" | "snappy">;
+} {
+  const compressors = (["zstd", "snappy"] as const).filter((name) =>
+    canLoadMongoCompressor(name),
+  );
+  return {
+    minPoolSize: MONGO_MIN_POOL_SIZE,
+    maxIdleTimeMS: MONGO_MAX_IDLE_TIME_MS,
+    ...(compressors.length > 0 ? { compressors: [...compressors] } : {}),
+  };
+}
+
+function canLoadMongoCompressor(name: "zstd" | "snappy"): boolean {
+  const specifier = name === "zstd" ? "@mongodb-js/zstd" : "snappy";
+  try {
+    requireFromHere(specifier);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Mongo codes that mean "the database user is not authorized" — the expected,
 // wanted outcome when Sync probes a database it must not reach.
@@ -44,7 +77,7 @@ export class SyncMongoService {
   }
 
   async connect(options: SyncMongoOptions): Promise<void> {
-    const client = new MongoClient(options.uri);
+    const client = new MongoClient(options.uri, mongoClientPoolOptions());
     await client.connect();
     this.#client = client;
     this.#db = options.databaseName
