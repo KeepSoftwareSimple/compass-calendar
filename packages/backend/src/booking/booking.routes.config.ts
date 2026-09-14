@@ -1,122 +1,135 @@
 import type express from "express";
-import rateLimit from "express-rate-limit";
+import rateLimit, { type Options } from "express-rate-limit";
 import { type SessionRequest } from "supertokens-node/framework/express";
+import { Logger } from "@core/logger/winston.logger";
 import { isBookingEnabled } from "@core/util/env.util";
 import { verifySession } from "@backend/auth/session/session.middleware";
+import { bookingPublicRateLimitKey } from "@backend/booking/booking-client-ip";
+import { createBookingRateLimitStore } from "@backend/booking/booking-rate-limit.store";
 import bookingController from "@backend/booking/controllers/booking.controller";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
 import { CONFIG } from "@backend/common/constants/config.constants";
 
+const logger = Logger("app:booking.rate-limit");
+
+const MINUTE_MS = 60 * 1000;
+
 const bookingSlugKey = (req: express.Request): string =>
-  `${req.ip ?? "unknown"}:${req.params["slug"] ?? "unknown"}`;
-
-// All booking limiters in this file are in-memory per-process buckets.
-// With N replicas the advertised limit is really Nx the number here, and
-// a client that lands on another replica starts a fresh bucket. Accepted
-// for v1: booking is off in production.
-const publicPageLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingSlugKey,
-});
-
-const publicSlotsLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingSlugKey,
-});
-
-const publicConfirmLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingSlugKey,
-});
+  bookingPublicRateLimitKey(req.ip, req.params["slug"]);
 
 const bookingReservationKey = (req: express.Request): string =>
-  `${req.ip ?? "unknown"}:${req.params["id"] ?? "unknown"}`;
-
-const publicReservationGetLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicCancelLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicReservationSlotsLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicRescheduleLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicReservationPatchLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingReservationKey,
-});
+  bookingPublicRateLimitKey(req.ip, req.params["id"]);
 
 const bookingAdminKey = (req: express.Request): string =>
   `booking-admin:${(req as SessionRequest).session?.getUserId?.() ?? "unknown"}`;
 
-// GET is Settings load/poll; 60/min matches the public page read budget.
-const adminPageGetLimiter = rateLimit({
-  windowMs: 60 * 1000,
+const rateLimitedMessage = {
+  code: "RATE_LIMITED",
+  message: "Too many requests. Try again in a minute.",
+};
+
+const onLimitReached: Options["handler"] = (
+  _request,
+  response,
+  _next,
+  options,
+) => {
+  const store = options.store;
+  const limiter =
+    store && "prefix" in store && typeof store.prefix === "string"
+      ? store.prefix
+      : "booking";
+  logger.info("Booking rate limit exceeded", { limiter });
+  response.setHeader("Retry-After", String(Math.ceil(options.windowMs / 1000)));
+  response.status(options.statusCode).json(rateLimitedMessage);
+};
+
+const bookingLimiter = (options: {
+  prefix: string;
+  limit: number;
+  keyGenerator: Options["keyGenerator"];
+}) =>
+  rateLimit({
+    windowMs: MINUTE_MS,
+    limit: options.limit,
+    standardHeaders: true,
+    legacyHeaders: false,
+    passOnStoreError: false,
+    store: createBookingRateLimitStore(options.prefix),
+    keyGenerator: options.keyGenerator,
+    handler: onLimitReached,
+  });
+
+// Shared Mongo buckets: N replicas share one budget per (caller, target).
+const publicPageLimiter = bookingLimiter({
+  prefix: "booking:page",
   limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  keyGenerator: bookingAdminKey,
+  keyGenerator: bookingSlugKey,
 });
 
-const adminPageStatusGetLimiter = rateLimit({
-  windowMs: 60 * 1000,
+const publicSlotsLimiter = bookingLimiter({
+  prefix: "booking:slots",
   limit: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: bookingSlugKey,
+});
+
+const publicConfirmLimiter = bookingLimiter({
+  prefix: "booking:confirm",
+  limit: 10,
+  keyGenerator: bookingSlugKey,
+});
+
+const publicReservationGetLimiter = bookingLimiter({
+  prefix: "booking:reservation-get",
+  limit: 30,
+  keyGenerator: bookingReservationKey,
+});
+
+const publicCancelLimiter = bookingLimiter({
+  prefix: "booking:cancel",
+  limit: 10,
+  keyGenerator: bookingReservationKey,
+});
+
+const publicReservationSlotsLimiter = bookingLimiter({
+  prefix: "booking:reservation-slots",
+  limit: 10,
+  keyGenerator: bookingReservationKey,
+});
+
+const publicRescheduleLimiter = bookingLimiter({
+  prefix: "booking:reschedule",
+  limit: 10,
+  keyGenerator: bookingReservationKey,
+});
+
+const publicReservationPatchLimiter = bookingLimiter({
+  prefix: "booking:reservation-patch",
+  limit: 10,
+  keyGenerator: bookingReservationKey,
+});
+
+const adminPageGetLimiter = bookingLimiter({
+  prefix: "booking:admin-get",
+  limit: 60,
   keyGenerator: bookingAdminKey,
 });
 
-// PUT is a save. A host retries a handful of times, not sixty.
-const adminPagePutLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
+const adminPageStatusGetLimiter = bookingLimiter({
+  prefix: "booking:admin-status",
+  limit: 60,
   keyGenerator: bookingAdminKey,
 });
 
-// Claim is a write (stamps hostNoticedAt). Same 20/min budget as PUT,
-// separate bucket so a save storm cannot starve the toast claim.
-const adminNewMeetingsClaimLimiter = rateLimit({
-  windowMs: 60 * 1000,
+const adminPagePutLimiter = bookingLimiter({
+  prefix: "booking:admin-put",
   limit: 20,
-  standardHeaders: true,
-  legacyHeaders: false,
+  keyGenerator: bookingAdminKey,
+});
+
+const adminNewMeetingsClaimLimiter = bookingLimiter({
+  prefix: "booking:admin-claim",
+  limit: 20,
   keyGenerator: bookingAdminKey,
 });
 

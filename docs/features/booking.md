@@ -622,12 +622,20 @@ inside the authenticated calendar shell, and it no-ops on `/meet` and
 
 ### Named warts
 
-- **Public booking rate limits are per process.** `express-rate-limit`
-  buckets live in memory on each app replica. The numbers in
-  `booking.routes.config.ts` (for example 10 confirms per minute) are
-  per instance: N replicas yield about N times that, and a client that
-  reconnects to a different replica resets its bucket. Accepted for v1
-  while `isBookingEnabled` stays false in production.
+- **Public booking rate limits are deployment-wide.** `express-rate-limit`
+  stores hits in Mongo (`bookingRateLimit`, TTL on `expiresAt`) so every
+  app replica shares one budget per limiter prefix and caller key. Public
+  routes key on normalized `req.ip` plus slug or reservation id (Express
+  `trust proxy = 1`, so Caddy's hop is trusted and guests cannot spoof
+  past it). Host admin routes key on the session user id. Limits (all per
+  minute): page and slots 60, reservation GET 30, confirm/cancel/
+  reschedule/patch 10, admin GET/status 60, admin PUT/claim 20. A 429
+  returns `{ code: "RATE_LIMITED" }` with `Retry-After` and does not run
+  the controller (no provider write). Store failure is **fail-closed**:
+  increment errors become operational 503 `RATE_LIMIT_UNAVAILABLE`, not a
+  free pass. Keys are SHA-256 hashed in Mongo; exceeded events log only
+  the limiter prefix, never IP, token, or URL. No extra runtime
+  (Redis) is required.
 - **Cancel, edit, and reschedule tokens travel in the query string.** The
   bearer lives in `?token=` on `/meet/confirmed/:id`, `/meet/cancel/:id`,
   and `/meet/reschedule/:id`, so it can appear in **browser history** and in
