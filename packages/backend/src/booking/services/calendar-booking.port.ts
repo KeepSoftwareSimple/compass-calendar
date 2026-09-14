@@ -34,6 +34,7 @@ export interface CalendarBookingCreateEventInput {
   timeZone: string;
   guest: BookingEventGuest;
   createConference: boolean;
+  eventId?: EventId;
 }
 
 export interface CalendarBookingDeleteEventInput {

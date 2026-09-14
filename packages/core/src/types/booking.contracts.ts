@@ -229,6 +229,7 @@ export const toPublicBookingPage = (
 
 export const BookingReservationStatusSchema = z.enum([
   "confirmed",
+  "cancelling",
   "cancelled",
 ]);
 export type BookingReservationStatus = z.infer<

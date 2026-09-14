@@ -172,7 +172,7 @@ export class CalendarBookingService implements CalendarBookingPort {
       throw bookingError("INVALID_INPUT", "Guest email is required");
     }
 
-    const eventId = mintEventId();
+    const eventId = input.eventId ?? mintEventId();
     const request = toBookingCreateSubmitRequest(eventId, {
       ...input,
       guest: { ...input.guest, email: guestEmail },

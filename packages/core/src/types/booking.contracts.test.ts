@@ -514,6 +514,12 @@ describe("HTTP booking contracts", () => {
     expect(
       PublicGetBookingReservationResponseSchema.safeParse({
         ...publicGet,
+        status: "cancelling",
+      }).success,
+    ).toBe(true);
+    expect(
+      PublicGetBookingReservationResponseSchema.safeParse({
+        ...publicGet,
         guestEmail: "ada@example.com",
       }).success,
     ).toBe(false);

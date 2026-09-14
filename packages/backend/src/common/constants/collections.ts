@@ -15,6 +15,7 @@ export const Collections = {
   BOOKING_RESERVATION: IS_DEV
     ? "_dev.bookingReservation"
     : "bookingReservation",
+  BOOKING_OPERATION: IS_DEV ? "_dev.bookingOperation" : "bookingOperation",
   HIDDEN_EVENT: IS_DEV ? "_dev.hiddenEvent" : "hiddenEvent",
   USER: IS_DEV ? "_dev.user" : "user",
 };

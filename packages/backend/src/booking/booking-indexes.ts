@@ -34,4 +34,40 @@ export async function ensureBookingIndexes(): Promise<void> {
     { pageId: 1, status: 1, createdAt: 1, _id: 1 },
     { name: "booking_reservation_page_status_created" },
   );
+
+  await mongoService.bookingOperation.createIndex(
+    { pageId: 1, slotStart: 1, guestEmail: 1 },
+    {
+      name: "booking_operation_create_intent_unique",
+      unique: true,
+      partialFilterExpression: {
+        kind: "create",
+        status: { $in: ["pending", "submitted", "compensating", "failed"] },
+      },
+    },
+  );
+  await mongoService.bookingOperation.createIndex(
+    { reservationId: 1, kind: 1 },
+    { name: "booking_operation_reservation_kind_unique", unique: true },
+  );
+  await mongoService.bookingOperation.createIndex(
+    { eventId: 1 },
+    {
+      name: "booking_operation_event_id_unique",
+      unique: true,
+      partialFilterExpression: {
+        kind: "create",
+        eventId: { $type: "string" },
+      },
+    },
+  );
+  await mongoService.bookingOperation.createIndex(
+    { status: 1, nextAttemptAt: 1 },
+    {
+      name: "booking_operation_recovery",
+      partialFilterExpression: {
+        status: { $in: ["pending", "submitted", "compensating"] },
+      },
+    },
+  );
 }
