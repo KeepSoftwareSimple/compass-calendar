@@ -28,6 +28,7 @@ import {
   hashCancelToken,
 } from "@backend/booking/booking-cancel-token";
 import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
+import { bookingOperationRepository } from "@backend/booking/booking-operation.repository";
 import { bookingReservationRepository } from "@backend/booking/booking-reservation.repository";
 import bookingPageService from "@backend/booking/services/booking-page.service";
 import { type CalendarBookingPort } from "@backend/booking/services/calendar-booking.port";
@@ -229,7 +230,10 @@ describe("PublicBookingService", () => {
     syncSpies.forEach((spy) => spy.mockRestore());
     syncSpies = [];
 
-    createBookingEvent = mock(async () => new ObjectId().toString());
+    createBookingEvent = mock(
+      async (_userId: string, input: { eventId?: string }) =>
+        input.eventId ?? new ObjectId().toString(),
+    );
     deleteBookingEvent = mock(async () => undefined);
     updateBookingEvent = mock(async () => undefined);
     getAvailability = mock(async () => busyResponse(true));
@@ -1298,7 +1302,7 @@ describe("PublicBookingService", () => {
     expect(stored?.status).toBe("cancelled");
   });
 
-  it("marks cancelled before delete so a failed provider delete does not keep the slot", async () => {
+  it("marks cancelling before delete so a failed provider delete does not keep the slot", async () => {
     const { slug } = await enableBookingPage();
     const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
     const created = await service.createReservation(slug, {
@@ -1326,7 +1330,7 @@ describe("PublicBookingService", () => {
     ).rejects.toMatchObject({ result: "SYNC_UNAVAILABLE" });
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
     const stored = await bookingReservationRepository.findById(reservationId);
-    expect(stored?.status).toBe("cancelled");
+    expect(stored?.status).toBe("cancelling");
     expect(stored?.calendarEventId).toBeTruthy();
 
     const retry = await service.createReservation(slug, {
@@ -1413,7 +1417,7 @@ describe("PublicBookingService", () => {
     expect(submitCommand).toHaveBeenCalledTimes(1);
 
     const stored = await bookingReservationRepository.findById(reservationId);
-    expect(stored?.status).toBe("cancelled");
+    expect(stored?.status).toBe("cancelling");
     expect(stored?.calendarEventId).toBeTruthy();
   });
 
@@ -1739,14 +1743,16 @@ describe("PublicBookingService", () => {
     // Simulate the race: a rival confirms an overlapping adjacent-grid slot
     // after our engine pre-check but before our insert (during the slow
     // calendar call). The unique index cannot catch this (different starts).
-    createBookingEvent.mockImplementation(async () => {
-      await seedConfirmedReservation(
-        pageId,
-        `${BOOKING_MONDAY}T10:15:00.000Z`,
-        `${BOOKING_MONDAY}T10:45:00.000Z`,
-      );
-      return "our-evt";
-    });
+    createBookingEvent.mockImplementation(
+      async (_userId: string, input: { eventId?: string }) => {
+        await seedConfirmedReservation(
+          pageId,
+          `${BOOKING_MONDAY}T10:15:00.000Z`,
+          `${BOOKING_MONDAY}T10:45:00.000Z`,
+        );
+        return input.eventId ?? "our-evt";
+      },
+    );
 
     await expect(
       service.createReservation(slug, {
@@ -1759,10 +1765,17 @@ describe("PublicBookingService", () => {
     ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
+    const createdEventId = (
+      createBookingEvent.mock.calls as unknown as [
+        string,
+        { eventId?: string },
+      ][]
+    )[0]?.[1]?.eventId;
+    expect(createdEventId).toBeTruthy();
     expect(
       (deleteBookingEvent.mock.calls as unknown[][])[0]?.[1],
     ).toMatchObject({
-      eventId: "our-evt",
+      eventId: createdEventId,
     });
     const survivors =
       await bookingReservationRepository.listConfirmedOverlapping(
@@ -1775,14 +1788,16 @@ describe("PublicBookingService", () => {
 
   it("logs a failed race compensation without changing SLOT_UNAVAILABLE", async () => {
     const { slug, pageId, userId, calendarId } = await enableBookingPage();
-    createBookingEvent.mockImplementation(async () => {
-      await seedConfirmedReservation(
-        pageId,
-        `${BOOKING_MONDAY}T10:15:00.000Z`,
-        `${BOOKING_MONDAY}T10:45:00.000Z`,
-      );
-      return "our-evt";
-    });
+    createBookingEvent.mockImplementation(
+      async (_userId: string, input: { eventId?: string }) => {
+        await seedConfirmedReservation(
+          pageId,
+          `${BOOKING_MONDAY}T10:15:00.000Z`,
+          `${BOOKING_MONDAY}T10:45:00.000Z`,
+        );
+        return input.eventId ?? "our-evt";
+      },
+    );
     deleteBookingEvent.mockImplementation(async () => {
       throw new BaseError(
         "SYNC_UNAVAILABLE",
@@ -1804,6 +1819,12 @@ describe("PublicBookingService", () => {
         }),
       ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
 
+      const createdEventId = (
+        createBookingEvent.mock.calls as unknown as [
+          string,
+          { eventId?: string },
+        ][]
+      )[0]?.[1]?.eventId;
       expect(logSpy).toHaveBeenCalledTimes(1);
       expect((logSpy.mock.calls as unknown[][])[0]?.[0]).toMatchObject({
         result: "SYNC_UNAVAILABLE",
@@ -1812,7 +1833,7 @@ describe("PublicBookingService", () => {
         tenantId: userId.toString(),
         principalId: userId.toString(),
         calendarId,
-        eventId: "our-evt",
+        eventId: createdEventId,
         slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
       });
       const survivors =
@@ -2376,6 +2397,179 @@ describe("PublicBookingService", () => {
     expect(queried.calendarIds).toEqual(
       expect.arrayContaining([google.id, microsoft.id]),
     );
+  });
+  it("retries a lost create with the same provider event identity and cancel URLs", async () => {
+    const { slug } = await enableBookingPage();
+    const confirmInput = {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    };
+    createBookingEvent.mockImplementationOnce(async () => {
+      throw new BaseError(
+        "SYNC_UNAVAILABLE",
+        "lost after submit",
+        Status.SERVICE_UNAVAILABLE,
+        true,
+      );
+    });
+
+    await expect(
+      service.createReservation(slug, confirmInput),
+    ).rejects.toMatchObject({ result: "SYNC_UNAVAILABLE" });
+    expect(createBookingEvent).toHaveBeenCalledTimes(1);
+    const firstEventId = (
+      createBookingEvent.mock.calls as unknown as [
+        string,
+        { eventId?: string },
+      ][]
+    )[0]?.[1]?.eventId;
+    expect(firstEventId).toBeTruthy();
+
+    const created = await service.createReservation(slug, confirmInput);
+    expect(createBookingEvent).toHaveBeenCalledTimes(2);
+    const secondEventId = (
+      createBookingEvent.mock.calls as unknown as [
+        string,
+        { eventId?: string },
+      ][]
+    )[1]?.[1]?.eventId;
+    expect(secondEventId).toBe(firstEventId);
+    const retry = await service.createReservation(slug, confirmInput);
+    expect(retry.reservationId).toBe(created.reservationId);
+    expect(retry.cancelUrl).toBe(created.cancelUrl);
+    expect(createBookingEvent).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries failed create compensation from the persisted operation", async () => {
+    const { slug, pageId } = await enableBookingPage();
+    createBookingEvent.mockImplementation(
+      async (_userId: string, input: { eventId?: string }) => {
+        await seedConfirmedReservation(
+          pageId,
+          `${BOOKING_MONDAY}T10:15:00.000Z`,
+          `${BOOKING_MONDAY}T10:45:00.000Z`,
+        );
+        return input.eventId ?? "our-evt";
+      },
+    );
+    deleteBookingEvent.mockImplementationOnce(async () => {
+      throw new BaseError(
+        "SYNC_UNAVAILABLE",
+        "could not delete the orphaned event",
+        Status.SERVICE_UNAVAILABLE,
+        true,
+      );
+    });
+
+    await expect(
+      service.createReservation(slug, {
+        slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+        guestName: "Ada Lovelace",
+        guestEmail: "ada@example.com",
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ).rejects.toMatchObject({ bookingCode: "SLOT_UNAVAILABLE" });
+    expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
+    const eventId = (
+      deleteBookingEvent.mock.calls as unknown as [
+        string,
+        { eventId: string },
+      ][]
+    )[0]?.[1]?.eventId;
+    const pending = await bookingOperationRepository.findActiveCreateByIntent(
+      pageId,
+      new Date(`${BOOKING_MONDAY}T10:00:00.000Z`),
+      "ada@example.com",
+    );
+    expect(pending?.status).toBe("compensating");
+    expect(pending).toBeTruthy();
+    await bookingOperationRepository.scheduleRetry(
+      pending!._id,
+      new Date(0),
+      pending!.lastError,
+    );
+
+    deleteBookingEvent.mockImplementation(async () => undefined);
+    await service.recoverDueOperations();
+    expect(deleteBookingEvent).toHaveBeenCalledTimes(2);
+    expect(
+      (deleteBookingEvent.mock.calls as unknown[][])[1]?.[1],
+    ).toMatchObject({ eventId });
+    const operation = await bookingOperationRepository.findActiveCreateByIntent(
+      pageId,
+      new Date(`${BOOKING_MONDAY}T10:00:00.000Z`),
+      "ada@example.com",
+    );
+    expect(operation).toBeNull();
+  });
+
+  it("GET reservation stays cancelling until provider delete succeeds", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    deleteBookingEvent.mockImplementation(async () => {
+      throw new BaseError(
+        "SYNC_UNAVAILABLE",
+        "could not delete the booking event",
+        Status.SERVICE_UNAVAILABLE,
+        true,
+      );
+    });
+
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ result: "SYNC_UNAVAILABLE" });
+    const publicReservation = await service.getPublicReservation(reservationId);
+    expect(publicReservation.status).toBe("cancelling");
+    expect(publicReservation).not.toHaveProperty("cancelUrl");
+  });
+
+  it("recovers a pending cancel after the guest token has expired", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    deleteBookingEvent.mockImplementationOnce(async () => {
+      throw new BaseError(
+        "SYNC_UNAVAILABLE",
+        "could not delete the booking event",
+        Status.SERVICE_UNAVAILABLE,
+        true,
+      );
+    });
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ result: "SYNC_UNAVAILABLE" });
+
+    setSystemTime(new Date(`${BOOKING_MONDAY}T12:00:00.000Z`));
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
+
+    deleteBookingEvent.mockImplementation(async () => undefined);
+    await service.recoverDueOperations();
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.status).toBe("cancelled");
+    expect(stored?.calendarEventId).toBeNull();
+    expect(deleteBookingEvent.mock.calls.length).toBeGreaterThanOrEqual(2);
+    setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
   });
 });
 

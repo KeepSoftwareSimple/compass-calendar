@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { PublicBookingApi } from "@web/api/public-booking.api";
 import { getErrorStatus } from "@web/api/util/api.util";
 import { PublicBookingLayout } from "@web/booking/PublicBookingLayout";
@@ -36,6 +36,12 @@ const BOOKING_CANCELED = {
   description: "Your appointment has been canceled. You can close this page.",
 } as const;
 
+const BOOKING_CANCELLING = {
+  title: "Canceling this meeting",
+  description:
+    "We are still removing this appointment from the host calendar. You can close this page or retry if it takes too long.",
+} as const;
+
 const BOOKING_CANCEL_FAILED = {
   title: "Could not cancel meeting",
   description: "Please try again or use the link from your calendar invite.",
@@ -61,6 +67,7 @@ const resolveCancelPageView = (
     notFound: BOOKING_NOT_FOUND,
     loadFailed: BOOKING_CANCEL_FAILED,
     cancelled: BOOKING_CANCELED,
+    cancelling: BOOKING_CANCELLING,
   });
 };
 
@@ -80,7 +87,7 @@ export function PublicBookingCancelPage() {
   const inFlightRef = useRef(false);
   useBookingDocumentTitle("Cancel meeting");
 
-  const handleConfirm = async () => {
+  const handleConfirm = useCallback(async () => {
     if (!reservationId || !token || inFlightRef.current) {
       return;
     }
@@ -99,7 +106,17 @@ export function PublicBookingCancelPage() {
       inFlightRef.current = false;
       setAction("error");
     }
-  };
+  }, [reservationId, token]);
+
+  useEffect(() => {
+    if (!canLoad || action !== "idle") {
+      return;
+    }
+    if (reservationQuery.data?.status !== "cancelling") {
+      return;
+    }
+    void handleConfirm();
+  }, [action, canLoad, handleConfirm, reservationQuery.data?.status]);
 
   const handleRetry = () => {
     inFlightRef.current = false;
