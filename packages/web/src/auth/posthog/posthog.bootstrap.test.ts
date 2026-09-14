@@ -1,4 +1,3 @@
-import * as posthogJs from "posthog-js";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as posthogUtil from "@web/auth/posthog/posthog.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
@@ -8,11 +7,17 @@ import { afterEach, describe, expect, it, mock } from "bun:test";
 const init = mock();
 const register = mock();
 
+// Stub the SDK namespace instead of importing `posthog-js`. Loading the real
+// module wraps XMLHttpRequest and collides with SuperTokens in `bun test:web`.
+const posthogJsStub = {
+  posthog: { init, register },
+};
+
 mockModuleForFile(
   "posthog-js",
-  posthogJs as unknown as Record<string, unknown>,
+  posthogJsStub as unknown as Record<string, unknown>,
   {
-    posthog: { init, register },
+    posthog: posthogJsStub.posthog,
   },
 );
 
