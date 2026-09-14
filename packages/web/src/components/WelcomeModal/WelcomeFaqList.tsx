@@ -17,7 +17,7 @@ export function WelcomeFaqList({
   describedById,
 }: {
   expanded: Set<string>;
-  onToggle: (question: string) => void;
+  onToggle: (question: string, source: "pointer" | "keyboard") => void;
   flashedKey: string | null;
   describedById?: string;
 }) {
@@ -45,7 +45,12 @@ export function WelcomeFaqList({
                 aria-controls={answerId}
                 aria-expanded={isExpanded}
                 className="c-focus-ring w-full cursor-pointer select-none text-left font-medium text-sm text-text transition-colors hover:text-text-lightest"
-                onClick={() => onToggle(item.question)}
+                onClick={(event) =>
+                  onToggle(
+                    item.question,
+                    event.detail === 0 ? "keyboard" : "pointer",
+                  )
+                }
               >
                 {item.question}
               </button>
