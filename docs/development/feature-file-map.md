@@ -79,11 +79,15 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `services/booking-page.service.ts`
 - Backend public API: `packages/backend/src/booking/services/public-booking.service.ts`,
   `services/booking-readiness.ts`
+- Booking operations and lifecycle telemetry: `packages/backend/src/booking/booking-operation.repository.ts`,
+  `booking-lifecycle.analytics.ts`, `packages/core/src/types/booking-lifecycle.contracts.ts`
 - Calendar port: `packages/backend/src/booking/services/calendar-booking.port.ts`,
   `services/calendar-booking.service.ts`
 - Occupancy: `packages/sync/src/domain/occurrence-projection.ts`,
   `packages/sync/src/domain/busy-query.service.ts`,
   `POST /internal/availability/busy`
+- Booking funnels: `packages/web/src/auth/posthog/booking-funnel.ts`,
+  `packages/web/src/auth/posthog/track.ts`
 - Host Settings: `packages/web/src/booking/BookingSettingsSection.tsx`,
   `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`,
   `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`,

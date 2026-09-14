@@ -590,7 +590,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Backend admin API | `packages/backend/src/booking/controllers/booking.controller.ts`, `services/booking-page.service.ts` |
 | Backend public API | `packages/backend/src/booking/booking.routes.config.ts`, `services/public-booking.service.ts`, `services/booking-readiness.ts` |
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
-| Booking operations | `packages/backend/src/booking/booking-operation.repository.ts`, `booking-operation.record.ts` |
+| Booking operations | `packages/backend/src/booking/booking-operation.repository.ts`, `booking-operation.record.ts`, `booking-lifecycle.analytics.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
 | Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
@@ -627,9 +627,14 @@ the registered super-property `environment` (`NODE_ENV`); that is not PII.
 `track()` swallows capture exceptions, so analytics failure never
 interrupts booking. `booking_reservation_created` is browser-observed
 confirmation after the public confirm mutation succeeds. Authoritative
-server completion and recovery health belong to WP-11.
+server completion is the backend `booking_operation` event, emitted on
+durable Mongo status transitions (not on HTTP retries of an in-flight
+row). Recovery health is `booking_operation_heartbeat`, sampled every
+five minutes including zeros so missing telemetry is distinct from an
+idle queue. Provider connection health stays on Sync
+`sync_health_snapshot` (PostHog dashboard 1905421).
 
-Owner for every event below is the web client
+Owner for every **browser** event below is the web client
 (`packages/web/src/auth/posthog/booking-funnel.ts` and the five original
 call sites). Conversion windows: host settings_opened to link_copied, 7
 days; guest page_viewed to reservation_created, 1 day.
@@ -674,6 +679,36 @@ address draft save). First-time go-live vs later re-enable is
 Do not send scheduled timestamps, IANA zone names, slugs, or guest
 identifiers on these events. `timezone_differs` is true when the guest
 zone is not the host page zone.
+
+#### Server operation catalog
+
+Owner: `packages/backend/src/booking/booking-lifecycle.analytics.ts` and
+`booking-lifecycle.heartbeat.ts`. Distinct id is `compass-backend-booking`.
+Capture uses `captureSafely` and is never awaited on the booking write
+path. PostHog outage cannot fail a reservation; Mongo is the source of
+truth. Captures that drop are not replayed.
+
+Dedupe: emit once per durable transition (insert of a new pending row,
+first `submitted`, first `lastError`, `confirmed` / `recovered`,
+`failed`, `compensated`). Duplicate-key reuse of an in-flight row does
+not emit `accepted` again. Claim/lease increments do not emit. A random
+analytics delivery id is not sent; reservation, command, event, and
+guest identifiers are forbidden.
+
+`source: request` covers HTTP outcomes that never become an operation:
+validation (`400`), conflict (`409` `SLOT_UNAVAILABLE` /
+`RESERVATION_CONFLICT`), and mutation `429`. Provider, transport, and
+storage failures after an operation exists use `source: operation`.
+
+Heartbeat `retry_exhausted_count` is `status: failed` updated in the
+last 24 hours. `pending_count` is current `pending` + `submitted` +
+`compensating`. `oldest_pending_age_ms` is age of the oldest of those
+by `createdAt`, or `null` when the queue is empty.
+
+| Event | Allowlist | Trigger | Denominator |
+| --- | --- | --- | --- |
+| `booking_operation` | `environment`, `version`, `service`, `source` (`operation` \| `request`), `operation` (`create` \| `cancel` \| `reschedule` \| `edit`), `phase` (`accepted` \| `pending` \| `confirmed` \| `failed` \| `recovered` \| `compensation`), `outcome` (`success` \| `conflict` \| `validation` \| `rate_limited` \| `provider` \| `transport` \| `storage` \| `exhausted`), `reason` (bounded enum), `duration_minutes`, `latency_ms` | Durable Mongo transition, or a request-level validation/conflict/429 | Logical operations: `phase=accepted` and `source=operation` for that `operation`. Request 409/validation/429: `source=request` for that outcome |
+| `booking_operation_heartbeat` | `environment`, `version`, `service`, `pending_count`, `oldest_pending_age_ms`, `retry_exhausted_count`, `computedAt` | Every five minutes, including all zeros | One gauge sample per backend process interval. Missing samples mean missing telemetry, not an idle queue |
 
 ### Named warts
 

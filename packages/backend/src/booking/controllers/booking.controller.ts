@@ -1,13 +1,30 @@
 import { type Request, type Response } from "express";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Status } from "@core/errors/status.codes";
+import { type BookingLifecycleOperation } from "@core/types/booking-lifecycle.contracts";
 import { zObjectId } from "@core/types/type.utils";
 import {
   bookingError,
   toBookingErrorResponse,
 } from "@backend/booking/booking.error";
+import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import bookingPageService from "@backend/booking/services/booking-page.service";
 import publicBookingService from "@backend/booking/services/public-booking.service";
+
+const respondBookingError = (
+  res: Response,
+  error: unknown,
+  operation?: BookingLifecycleOperation,
+) => {
+  const { status, body } = toBookingErrorResponse(error);
+  if (operation) {
+    bookingLifecycleAnalytics.emitRequestFailure({
+      operation,
+      code: body.code,
+    });
+  }
+  res.status(status).json(body);
+};
 
 class BookingController {
   getPage = async (req: SessionRequest, res: Response) => {
@@ -16,8 +33,7 @@ class BookingController {
       const response = await bookingPageService.getAdminPage(userId);
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -27,8 +43,7 @@ class BookingController {
       const response = await publicBookingService.getHostPageStatus(userId);
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -38,8 +53,7 @@ class BookingController {
       const response = await bookingPageService.putAdminPage(userId, req.body);
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -49,8 +63,7 @@ class BookingController {
       const response = await bookingPageService.claimNewMeetings(userId);
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -61,8 +74,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -78,8 +90,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -91,8 +102,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error, "create");
     }
   };
 
@@ -100,10 +110,10 @@ class BookingController {
     try {
       const parsedId = zObjectId.safeParse(req.params["id"]);
       if (!parsedId.success) {
-        const { status, body } = toBookingErrorResponse(
+        respondBookingError(
+          res,
           bookingError("RESERVATION_NOT_FOUND", "Reservation not found"),
         );
-        res.status(status).json(body);
         return;
       }
       const response = await publicBookingService.getPublicReservation(
@@ -111,8 +121,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -120,10 +129,10 @@ class BookingController {
     try {
       const parsedId = zObjectId.safeParse(req.params["id"]);
       if (!parsedId.success) {
-        const { status, body } = toBookingErrorResponse(
+        respondBookingError(
+          res,
           bookingError("RESERVATION_NOT_FOUND", "Reservation not found"),
         );
-        res.status(status).json(body);
         return;
       }
       const response = await publicBookingService.patchPublicReservation(
@@ -132,8 +141,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error, "edit");
     }
   };
 
@@ -143,8 +151,7 @@ class BookingController {
       await publicBookingService.cancelReservation(reservationId, req.body);
       res.status(Status.OK).json({ ok: true });
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error, "cancel");
     }
   };
 
@@ -152,10 +159,10 @@ class BookingController {
     try {
       const parsedId = zObjectId.safeParse(req.params["id"]);
       if (!parsedId.success) {
-        const { status, body } = toBookingErrorResponse(
+        respondBookingError(
+          res,
           bookingError("RESERVATION_NOT_FOUND", "Reservation not found"),
         );
-        res.status(status).json(body);
         return;
       }
       const response = await publicBookingService.getReservationSlots(
@@ -169,8 +176,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error);
     }
   };
 
@@ -178,10 +184,10 @@ class BookingController {
     try {
       const parsedId = zObjectId.safeParse(req.params["id"]);
       if (!parsedId.success) {
-        const { status, body } = toBookingErrorResponse(
+        respondBookingError(
+          res,
           bookingError("RESERVATION_NOT_FOUND", "Reservation not found"),
         );
-        res.status(status).json(body);
         return;
       }
       const response = await publicBookingService.rescheduleReservation(
@@ -190,8 +196,7 @@ class BookingController {
       );
       res.status(Status.OK).json(response);
     } catch (error) {
-      const { status, body } = toBookingErrorResponse(error);
-      res.status(status).json(body);
+      respondBookingError(res, error, "reschedule");
     }
   };
 }

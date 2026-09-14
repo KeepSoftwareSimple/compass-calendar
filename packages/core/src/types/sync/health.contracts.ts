@@ -8,6 +8,10 @@ const syncServiceName = "compass-sync" as const;
 // Sanitized, bounded-cardinality sync health snapshot (R-OPS / S44).
 // Emitted as `sync_health_snapshot` every five minutes. Counts and ages only —
 // never tokens, event content, tenant/principal ids, or raw provider errors.
+// Booking lifecycle (`booking_operation`, `booking_operation_heartbeat`) is
+// emitted by the backend. This snapshot remains the provider-health gauge
+// reused by Meeting dashboards (PostHog 1905421). Do not duplicate booking
+// backlog counts here.
 export const SyncHealthConnectionCountsSchema = z.strictObject({
   connecting: z.number().int().nonnegative(),
   importing: z.number().int().nonnegative(),

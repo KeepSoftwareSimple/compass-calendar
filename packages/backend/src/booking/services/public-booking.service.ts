@@ -49,6 +49,10 @@ import {
   hashCancelToken,
 } from "@backend/booking/booking-cancel-token";
 import {
+  startBookingLifecycleHeartbeat,
+  stopBookingLifecycleHeartbeat,
+} from "@backend/booking/booking-lifecycle.heartbeat";
+import {
   BOOKING_OPERATION_CLAIM_LEASE_MS,
   BOOKING_OPERATION_MAX_ATTEMPTS,
   BOOKING_OPERATION_RETRY_BATCH_SIZE,
@@ -995,9 +999,11 @@ export class PublicBookingService {
     this.#recoveryTimer = setInterval(() => {
       this.#runRecoveryCycle();
     }, BOOKING_OPERATION_RETRY_INTERVAL_MS);
+    startBookingLifecycleHeartbeat();
   };
 
   stopRecoveryRetries = async (): Promise<void> => {
+    stopBookingLifecycleHeartbeat();
     if (this.#recoveryTimer) {
       clearInterval(this.#recoveryTimer);
       this.#recoveryTimer = undefined;
