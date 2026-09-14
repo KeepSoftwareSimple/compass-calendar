@@ -97,18 +97,46 @@ describe("assertBillingAllowsWrites", () => {
     });
   });
 
-  it("rejects missing billing and local trialing without a Stripe subscription", async () => {
+  it("rejects missing billing and a local trialing record with no trialEndsAt", async () => {
     using _env = mockEnv(stripeConfigured);
     const missing = await insertUser();
-    const localTrial = await insertUser({
+    const localTrialNoEnd = await insertUser({
       subscriptionStatus: "trialing",
-      trialEndsAt: new Date("2099-01-01T00:00:00.000Z"),
+      trialStartedAt: new Date("2026-08-06T00:00:00.000Z"),
     });
 
     await expect(assertBillingAllowsWrites(missing)).rejects.toMatchObject({
       mutationCode: "BILLING_REQUIRED",
     });
-    await expect(assertBillingAllowsWrites(localTrial)).rejects.toMatchObject({
+    await expect(
+      assertBillingAllowsWrites(localTrialNoEnd),
+    ).rejects.toMatchObject({
+      mutationCode: "BILLING_REQUIRED",
+    });
+  });
+
+  it("allows writes on a local trial that has not expired", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const localTrial = await insertUser({
+      subscriptionStatus: "trialing",
+      trialStartedAt: new Date("2026-08-06T00:00:00.000Z"),
+      trialEndsAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
+
+    await expect(
+      assertBillingAllowsWrites(localTrial),
+    ).resolves.toBeUndefined();
+  });
+
+  it("rejects an expired local trial with BILLING_REQUIRED", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const expired = await insertUser({
+      subscriptionStatus: "trialing",
+      trialStartedAt: new Date("2026-07-18T00:00:00.000Z"),
+      trialEndsAt: new Date("2026-08-01T00:00:00.000Z"),
+    });
+
+    await expect(assertBillingAllowsWrites(expired)).rejects.toMatchObject({
       mutationCode: "BILLING_REQUIRED",
     });
   });

@@ -33,12 +33,13 @@ network never flashes a gate at a user before the real value loads.
 
 **Enable-day caveat:** existing signed-in accounts are not grandfathered (see
 below) — flipping `enforcement: true` while Stripe is configured immediately
-puts any hosted user without a Stripe subscription id into `awaiting_checkout`
-and shows them `BillingGateModal`. Neither `backfill-billing` nor
-`BACKFILL_CUTOFF` changes that — see below. Sparing a whole cohort would take
-a real code change, so treat the flip as the moment every hosted account
-without a Stripe subscription goes read-only. Individual accounts can be
-exempted, though — see the next section.
+puts any hosted user without a Stripe subscription id and without a local
+trial into `awaiting_checkout` and shows them `BillingGateModal`. Neither
+`backfill-billing` nor `BACKFILL_CUTOFF` changes that — see below. Sparing a
+whole cohort would take a real code change, so treat the flip as the moment
+every hosted account without a Stripe subscription or local trial goes
+read-only. Individual accounts can be exempted, though — see the next
+section.
 
 ## Bypassing enforcement for specific accounts
 
@@ -85,9 +86,19 @@ production.
   sample events and the whole app with no clock and no gate. There is no
   browser-local trial: a trial is only ever asked for at the moment of
   commitment (sign up, sign in, connect an account).
-- **Signed up, no card yet:** `awaiting_checkout`, read-only,
-  `BillingGateModal` with Start trial. Checkout happens inside the gate:
-  Start trial (`S`) mounts Stripe embedded Checkout in the same overlay.
+- **Signed up, no card yet (new accounts):** a local 7-day trial starts at
+  signup. `GET /api/billing/status` returns `trialing`, `needsPaymentMethod:
+  true`, `isReadOnly: false`, and `trialEndsAt` seven days out. There is no
+  Stripe subscription until they add a card. Checkout while at least 48 hours
+  remain on that local trial passes `subscription_data.trial_end` equal to
+  `trialEndsAt` (Stripe's minimum remaining trial) and keeps
+  `trial_settings.end_behavior.missing_payment_method: "cancel"`. Checkout in
+  the last 48 hours, or after expiry, charges immediately with no trial. After
+  `trialEndsAt` the same account reports `expired` and is read-only until they
+  subscribe.
+- **Signed up, no card yet (legacy `awaiting_checkout`):** unchanged.
+  Read-only, `BillingGateModal` with Start trial. Checkout happens inside the
+  gate: Start trial (`S`) mounts Stripe embedded Checkout in the same overlay.
   Completion raises the celebration through `onComplete`; the webhook remains
   the source of truth and a short poll of `GET /api/billing/status` waits for
   it. The gate also offers "Look around first" (`L`), which unmounts it and
@@ -98,7 +109,8 @@ production.
   first refused save brings the gate straight back. That refusal does not
   show the catch-all "something went wrong" toast — the gate is the feedback.
   Google reconnect and delayed-sync toasts also wait until Look around (or a
-  write): they must not sit on top of Start trial.
+  write): they must not sit on top of Start trial. These accounts have no
+  `trialStartedAt`, so Checkout still grants `trial_period_days: 7`.
 - **Trialing:** writable, with a days-left badge in the sidebar month picker
   header (`TrialBadge.tsx`, via `DatePicker`'s `headerEndContent` slot). The
   badge carries no `tabindex`: `getPageJumpFocusElement` seats Mod+2 on the
@@ -106,13 +118,16 @@ production.
   that jump. Press `B` (keycap-styled in the badge tooltip and on Settings →
   Billing) to subscribe early. That shortcut is registered by
   `UpgradeConfirmationProvider` and keeps working while Settings is open.
+  Local (card-less) trials use Checkout rather than `POST /api/billing/trial/end`;
+  Stripe-backed trials still end via that endpoint.
 - **Active / past_due:** writable. `past_due` also shows a banner whose CTA
   opens Settings on Billing with Update card already mounted.
 - **Expired / canceled:** read-only until they subscribe again. A later
   Checkout does not grant another trial.
 
-There is no `POST /api/billing/trial/start`. A trial only begins through
-Stripe Checkout (`trial_period_days` on the first subscription). Sessions
+There is no `POST /api/billing/trial/start`. New accounts begin a local trial
+at signup. Legacy `awaiting_checkout` accounts still begin a Stripe trial only
+through Checkout (`trial_period_days` on the first subscription). Sessions
 use `ui_mode: "embedded"` and `redirect_on_completion: "never"`, so
 Checkout stays inside Compass. Redirect-based payment methods are therefore
 unavailable by design.
@@ -171,8 +186,12 @@ Stripe webhook event ids are retained for 35 days for replay protection, then
 expire automatically. They contain only the Stripe event id and receipt time.
 
 Existing accounts are not grandfathered. Hosted users without a Stripe
-subscription id (including missing billing, `none`, and local/backfill
-`trialing` rows) derive as `awaiting_checkout` and see the Start-trial gate.
+subscription id and without a local trial (including missing billing, `none`,
+and `trialing` rows with no `trialEndsAt`) derive as `awaiting_checkout` and
+see the Start-trial gate. A `trialing` row with a future `trialEndsAt` and no
+Stripe id is the card-less local trial: writable, `needsPaymentMethod: true`,
+then `expired` after that date. Legacy `awaiting_checkout` accounts stay
+read-only; granting them a local trial is out of scope.
 `bun run cli backfill-billing` stamps `awaiting_checkout` on rows that still
 lack `billing.subscriptionStatus`. The default `BACKFILL_CUTOFF` is far in
 the future so every such row is included; set it to a past instant to skip
@@ -182,8 +201,9 @@ newer signups.
 rows get *stamped*, and `deriveBillingStatus` already gates a missing
 `billing` object through the same `awaiting_checkout` branch — so stamped and
 unstamped rows are equally read-only. Running the backfill makes the state
-explicit for reporting; it grants nobody access. A trial only begins through
-Stripe Checkout.
+explicit for reporting; it grants nobody access. New signups begin a local
+trial at insert. Legacy accounts still begin a Stripe trial only through
+Checkout.
 
 ## Staging
 

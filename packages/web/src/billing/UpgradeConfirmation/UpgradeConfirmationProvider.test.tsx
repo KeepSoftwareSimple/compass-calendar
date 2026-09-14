@@ -82,6 +82,7 @@ describe("UpgradeConfirmationProvider", () => {
       trialEndsAt: null,
       isReadOnly: false,
       cancelAtPeriodEnd: false,
+      needsPaymentMethod: false,
     });
     await openDialog();
 
@@ -111,6 +112,7 @@ describe("UpgradeConfirmationProvider", () => {
       trialEndsAt: null,
       isReadOnly: false,
       cancelAtPeriodEnd: false,
+      needsPaymentMethod: false,
     });
     await openDialog();
 

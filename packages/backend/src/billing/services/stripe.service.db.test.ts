@@ -101,12 +101,134 @@ describe("StripeService", () => {
     expect(sessionArgs.success_url).toBeUndefined();
     expect(sessionArgs.cancel_url).toBeUndefined();
     expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
-      idempotencyKey: `compass-checkout-v3-${userId.toString()}`,
+      idempotencyKey: `compass-checkout-v4-${userId.toString()}`,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
     expect(stored?.billing?.stripeCustomerId).toBe("cus_1");
     expect(stored?.billing?.subscriptionStatus).toBe("awaiting_checkout");
+  });
+
+  it("passes trial_end equal to trialEndsAt for a day-2 local trial", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const now = Date.now();
+    const trialStartedAt = new Date(now - 2 * 24 * 60 * 60 * 1000);
+    const trialEndsAt = new Date(now + 5 * 24 * 60 * 60 * 1000);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "day2@example.com",
+      name: "Day Two",
+      firstName: "Day",
+      lastName: "Two",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "trialing",
+        trialStartedAt,
+        trialEndsAt,
+      },
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_local_day2" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_day2" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(userId.toString());
+
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      subscription_data: {
+        trial_end?: number;
+        trial_period_days?: number;
+        trial_settings?: { end_behavior: { missing_payment_method: string } };
+      };
+    };
+    expect(sessionArgs.subscription_data.trial_end).toBe(
+      Math.floor(trialEndsAt.getTime() / 1000),
+    );
+    expect(sessionArgs.subscription_data.trial_period_days).toBeUndefined();
+    expect(
+      sessionArgs.subscription_data.trial_settings?.end_behavior
+        .missing_payment_method,
+    ).toBe("cancel");
+    expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
+      idempotencyKey: `compass-checkout-v4-${userId.toString()}`,
+    });
+  });
+
+  it("omits trial when a local trial ends within 48 hours", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const now = Date.now();
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "day6@example.com",
+      name: "Day Six",
+      firstName: "Day",
+      lastName: "Six",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "trialing",
+        trialStartedAt: new Date(now - 6 * 24 * 60 * 60 * 1000),
+        trialEndsAt: new Date(now + 1 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_local_day6" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCustomer: mock(() => Promise.resolve({ id: "cus_day6" })),
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(userId.toString());
+
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      subscription_data: { trial_end?: number; trial_period_days?: number };
+    };
+    expect(sessionArgs.subscription_data.trial_end).toBeUndefined();
+    expect(sessionArgs.subscription_data.trial_period_days).toBeUndefined();
+  });
+
+  it("still grants trial_period_days for a legacy awaiting_checkout account", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "legacy@example.com",
+      name: "Legacy User",
+      firstName: "Legacy",
+      lastName: "User",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "awaiting_checkout",
+        stripeCustomerId: "cus_legacy",
+      },
+    });
+
+    const sessionsCreate = mock(() =>
+      Promise.resolve({ client_secret: "cs_legacy" }),
+    );
+    const stripeService = new StripeService(
+      stubBillingGateway({
+        createCheckoutSession: sessionsCreate,
+      }),
+    );
+
+    await stripeService.createCheckoutSession(userId.toString());
+
+    const sessionArgs = (sessionsCreate.mock.calls as unknown[][])[0]?.[0] as {
+      subscription_data: { trial_period_days?: number };
+    };
+    expect(sessionArgs.subscription_data.trial_period_days).toBe(7);
   });
 
   it("reuses an existing Stripe customer id", async () => {
@@ -409,6 +531,7 @@ describe("StripeService", () => {
         trialEndsAt: new Date(1_756_200_000 * 1000).toISOString(),
         isReadOnly: false,
         cancelAtPeriodEnd: false,
+        needsPaymentMethod: false,
       });
       expect((update.mock.calls as unknown[][])[0]?.[0]).toBe("sub_trial");
       expect((update.mock.calls as unknown[][])[0]?.[1]).toEqual({

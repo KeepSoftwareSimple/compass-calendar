@@ -22,6 +22,12 @@ export const BillingStatusResponseSchema = z.object({
    * renewing. Defaulted so a response from an older server still parses.
    */
   cancelAtPeriodEnd: z.boolean().default(false),
+  /**
+   * True when the account is on a local (card-less) trial and still needs
+   * a payment method. Defaulted so a response from an older server still
+   * parses.
+   */
+  needsPaymentMethod: z.boolean().default(false),
 });
 export type BillingStatusResponse = z.infer<typeof BillingStatusResponseSchema>;
 

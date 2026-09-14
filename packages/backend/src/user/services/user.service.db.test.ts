@@ -210,8 +210,9 @@ describe("UserService", () => {
       expect(storedUser?.google).toBeUndefined();
     });
 
-    it("starts a fresh signup in awaiting_checkout", async () => {
+    it("starts a fresh signup on a local trial", async () => {
       const userId = mongoService.objectId().toString();
+      const before = Date.now();
 
       await userService.upsertUserFromAuth({
         userId,
@@ -222,7 +223,16 @@ describe("UserService", () => {
       const storedUser = await mongoService.user.findOne({
         _id: mongoService.objectId(userId),
       });
-      expect(storedUser?.billing?.subscriptionStatus).toBe("awaiting_checkout");
+      expect(storedUser?.billing?.subscriptionStatus).toBe("trialing");
+      expect(storedUser?.billing?.trialStartedAt).toBeInstanceOf(Date);
+      expect(storedUser?.billing?.trialEndsAt).toBeInstanceOf(Date);
+      const trialMs =
+        storedUser!.billing!.trialEndsAt!.getTime() -
+        storedUser!.billing!.trialStartedAt!.getTime();
+      expect(trialMs).toBe(7 * 24 * 60 * 60 * 1000);
+      expect(
+        storedUser!.billing!.trialStartedAt!.getTime(),
+      ).toBeGreaterThanOrEqual(before);
     });
 
     it("does not overwrite billing on a returning user", async () => {
