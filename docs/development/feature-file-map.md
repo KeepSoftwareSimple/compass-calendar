@@ -106,6 +106,7 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `packages/scripts/src/telemetry/meeting-dashboard.ts`,
   [Meeting monitoring](./meeting-monitoring.md)
 - Architecture: [Product Suite Boundaries](../architecture/product-suite-boundaries.md)
+- Release evidence: [Meeting release evidence](./meeting-release-evidence.md)
 
 ## Day / Week Views
 

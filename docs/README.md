@@ -59,6 +59,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [Launch Ops Checklist](./development/launch-ops-checklist.md)
 - [Meeting monitoring](./development/meeting-monitoring.md)
 - [Performance Baselines](./development/performance-baselines.md)
+- [Meeting release evidence](./development/meeting-release-evidence.md)
 - [Types And Validation](./development/types-and-validation.md)
 - [CI/CD Workflows](./CI-CD/workflows.md)
 - [CI audit, September 2026](./CI-CD/ci-audit-2026-09.md)
