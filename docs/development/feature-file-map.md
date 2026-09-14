@@ -102,6 +102,9 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
 - Web API client: `packages/web/src/api/public-booking.api.ts`,
   `packages/web/src/api/booking.api.ts`
 - E2e: `e2e/booking/`, `e2e/accessibility/booking-a11y.spec.ts`
+- Meeting dashboard and alert evaluation:
+  `packages/scripts/src/telemetry/meeting-dashboard.ts`,
+  [Meeting monitoring](./meeting-monitoring.md)
 - Architecture: [Product Suite Boundaries](../architecture/product-suite-boundaries.md)
 
 ## Day / Week Views
