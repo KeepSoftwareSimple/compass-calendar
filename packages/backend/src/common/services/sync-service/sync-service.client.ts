@@ -4,6 +4,7 @@ import {
   encryptAdoptAuthorizationCredential,
   encryptInternalCredential,
 } from "@core/security/internal-credential-envelope";
+import { INTERNAL_HTTP_SERVER_LIMITS } from "@core/server/http-server";
 import {
   type ContactSuggestionsResponse,
   ContactSuggestionsResponseSchema,
@@ -56,6 +57,7 @@ import {
   PrincipalPurgeResponseSchema,
 } from "@core/types/sync/principal.contracts";
 import { createHmac, randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 
 // The internal endpoints this client calls. Kept in sync with the Sync service's
 // route paths; a contract test asserts they match.
@@ -204,6 +206,48 @@ type FetchFn = (
   },
 ) => Promise<SyncFetchResponse>;
 
+// Idle timeout for an explicit keep-alive dispatcher, when the runtime's
+// fetch honors one. 5s under the Sync listener so a restarting Sync closes
+// first; the next write then opens a fresh socket instead of writing into a
+// half-closed one.
+const SYNC_CLIENT_KEEP_ALIVE_IDLE_MS =
+  INTERNAL_HTTP_SERVER_LIMITS.keepAliveTimeoutMs - 5_000;
+
+function createDefaultFetch(): FetchFn {
+  const dispatcher = tryCreateKeepAliveDispatcher();
+  if (dispatcher === undefined) {
+    // Bun's fetch connection pool already reuses sockets. RequestInit has
+    // no idle-timeout knob (`dispatcher` is accepted and ignored), so the
+    // Sync listener's 65s keep-alive and uncapped maxRequestsPerSocket are
+    // what keep the pool alive across the poll cadence.
+    return globalThis.fetch as unknown as FetchFn;
+  }
+  return (url, init) =>
+    (globalThis.fetch as typeof fetch)(url, {
+      ...init,
+      dispatcher,
+    } as RequestInit);
+}
+
+function tryCreateKeepAliveDispatcher(): object | undefined {
+  if (process.versions.bun !== undefined) return undefined;
+  try {
+    const requireUndici = createRequire(import.meta.url);
+    const { Agent } = requireUndici("undici") as {
+      Agent: new (options: {
+        keepAliveTimeout: number;
+        keepAliveMaxTimeout: number;
+      }) => object;
+    };
+    return new Agent({
+      keepAliveTimeout: SYNC_CLIENT_KEEP_ALIVE_IDLE_MS,
+      keepAliveMaxTimeout: SYNC_CLIENT_KEEP_ALIVE_IDLE_MS,
+    });
+  } catch {
+    return undefined;
+  }
+}
+
 interface SyncFetchResponse {
   status: number;
   json: () => Promise<unknown>;
@@ -275,7 +319,7 @@ export class SyncServiceClient {
     this.#baseUrl = options.baseUrl.replace(/\/+$/, "");
     this.#secret = options.secret;
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    this.#fetch = options.fetch ?? (globalThis.fetch as unknown as FetchFn);
+    this.#fetch = options.fetch ?? createDefaultFetch();
     this.#now = options.now ?? Date.now;
     this.#newCorrelationId = options.newCorrelationId ?? randomUUID;
     this.#onRetry = options.onRetry;
