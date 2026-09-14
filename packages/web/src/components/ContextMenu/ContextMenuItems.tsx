@@ -275,6 +275,7 @@ export function ContextMenuItems({ event, close }: ContextMenuItemsProps) {
     },
     toggleHidden: () => {
       toggleEventHidden(eventId);
+      draftActions.discard();
     },
   };
 

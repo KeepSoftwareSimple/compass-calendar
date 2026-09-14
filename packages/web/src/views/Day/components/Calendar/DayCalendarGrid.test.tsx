@@ -32,6 +32,7 @@ import { createTimedDraft } from "@web/common/utils/draft/draft.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   createGridEventDraft,
+  editGridEventDraft,
   getGridDraftId,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
@@ -497,6 +498,35 @@ describe("DayCalendarGrid", () => {
     expect(dayEventRegistry.resolve(hiddenAllDay._id!, "all-day")).toBeNull();
     expect(dayEventRegistry.resolve(visibleTimed._id!, "timed")).toBe(
       visibleCard,
+    );
+  });
+
+  it("renders a hidden timed event that is the active draft wider than the strip", () => {
+    const hiddenTimed = createTimedEvent({
+      _id: "hidden-draft",
+      endDate: "2026-05-20T10:00:00.000",
+      startDate: "2026-05-20T09:00:00.000",
+      title: "Hidden draft",
+    });
+    setDayEvents([hiddenTimed]);
+    const draft = editGridEventDraft(toStrictEvent(hiddenTimed));
+    if (!draft) {
+      throw new Error("expected an edit draft");
+    }
+    draftActions.startGridDraft({ activity: "gridClick", draft });
+
+    renderDayCalendarGrid(undefined, [hiddenTimed._id!]);
+
+    expect(
+      screen.queryByRole("button", {
+        name: /^Hidden Timed event: Hidden draft/,
+      }),
+    ).not.toBeInTheDocument();
+    const draftCard = screen.getByRole("button", {
+      name: /^Timed event: Hidden draft/,
+    });
+    expect(parseFloat(draftCard.style.width)).toBeGreaterThan(
+      HIDDEN_EVENT_STRIP_WIDTH,
     );
   });
 

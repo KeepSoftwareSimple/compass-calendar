@@ -60,13 +60,21 @@ export const AllDayEvents = ({
     () =>
       allDayEvents.filter((event: GridEvent) => {
         if (!isAllDayEventInVisibleDays(event, weekDays)) return false;
+        // The draft overlay is the only representation of an opened hidden
+        // event; its strip would stick out beside the full-size draft.
+        if (
+          event._id === draftId &&
+          isEventIdHidden(event._id, hiddenEventIds)
+        ) {
+          return false;
+        }
         // Multi-day timed display bars stay in the all-day row, but while
         // editing GridDraft owns the live bar — hide the saved view-model
         // card to avoid a stale duplicate underneath the portal draft.
         if (event.isTimedMultiDayDisplay) return event._id !== draftId;
         return !(event._id === draftId && !draftOverlay?.isAllDay);
       }),
-    [allDayEvents, draftOverlay?.isAllDay, draftId, weekDays],
+    [allDayEvents, draftOverlay?.isAllDay, draftId, hiddenEventIds, weekDays],
   );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,

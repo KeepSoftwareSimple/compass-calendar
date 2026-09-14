@@ -9,6 +9,7 @@ import {
 import { ID_GRID_EVENTS_TIMED } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter";
+import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import {
   mergeGridEventWithDraftOverlay,
@@ -73,11 +74,17 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
             suppressedSeriesId &&
             event.recurrence?.eventId === suppressedSeriesId &&
             event._id !== draftId
+          ) &&
+          // The draft overlay is the only representation of an opened hidden
+          // event; its strip would stick out beside the full-size draft.
+          !(
+            event._id === draftId && isEventIdHidden(event._id, hiddenEventIds)
           ),
       ),
     [
       draftOverlay?.isAllDay,
       draftId,
+      hiddenEventIds,
       suppressedSeriesId,
       timedEvents,
       weekDays,

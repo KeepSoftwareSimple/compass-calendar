@@ -1,5 +1,9 @@
-import { QueryClientProvider } from "@tanstack/react-query";
-import { type PropsWithChildren, useState } from "react";
+import {
+  notifyManager,
+  type QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { act, type PropsWithChildren, useState } from "react";
 import { type CompassEvent } from "@core/types/compass-event.contracts";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
@@ -22,8 +26,10 @@ import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   allDayGridSchedule,
   createGridEventDraft,
+  editGridEventDraft,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
+import { hiddenEventsQueryKeys } from "@web/events/hidden/hidden-events.query";
 import {
   initialDraftState,
   useDraftStore,
@@ -45,6 +51,7 @@ import { Categories_Event } from "@web/common/types/web.event.types";
 let pendingEventIds: string[] = [];
 let seededWeekEvents: CompassEvent[] = [];
 let seededHiddenEventIds: readonly string[] = [];
+let providerQueryClient: QueryClient | null = null;
 
 // DateTimeSchema requires an explicit offset; several fixtures below already
 // carry one ("Z"), but normalize defensively.
@@ -83,6 +90,7 @@ function Provider({ children }: PropsWithChildren) {
     seedPendingEventMutations(client, pendingEventIds);
     seedEventQueries(client, seededWeekEvents.map(toStrictEvent));
     seedHiddenEventIds(client, seededHiddenEventIds);
+    providerQueryClient = client;
     return client;
   });
 
@@ -103,6 +111,7 @@ afterEach(() => {
   pendingEventIds = [];
   seededWeekEvents = [];
   seededHiddenEventIds = [];
+  providerQueryClient = null;
   useDraftStore.setState(initialDraftState);
 });
 
@@ -159,6 +168,24 @@ const seedGrid = (
         : Categories_Event.TIMED,
       isDrafting: true,
       isFormOpen: false,
+    },
+  });
+};
+
+const seedEditDraft = (event: CompassEvent) => {
+  const draft = editGridEventDraft(toStrictEvent(event));
+  if (!draft) {
+    throw new Error("expected an edit draft");
+  }
+  useDraftStore.setState({
+    gridDraft: draft,
+    status: {
+      activity: "keyboardEdit",
+      eventType: event.isAllDay
+        ? Categories_Event.ALLDAY
+        : Categories_Event.TIMED,
+      isDrafting: true,
+      isFormOpen: true,
     },
   });
 };
@@ -545,5 +572,125 @@ describe("saved Week event ownership", () => {
     );
     expect(weekEventRegistry.resolve(hidden._id!, "timed")).toBeNull();
     expect(weekEventRegistry.resolve(visible._id!, "timed")).toBe(visibleCard);
+  });
+
+  it("does not render a hidden strip for the saved card of an open edit draft", () => {
+    const hidden = createSavedEvent({
+      endDate: "2024-01-15T19:30:00.000Z",
+      startDate: "2024-01-15T18:30:00.000Z",
+      title: "Hidden overlap",
+    });
+    const visible = createSavedEvent({
+      endDate: "2024-01-15T19:45:00.000Z",
+      startDate: "2024-01-15T19:00:00.000Z",
+      title: "Visible overlap",
+    });
+    seededHiddenEventIds = [hidden._id!];
+    seedGrid([hidden, visible]);
+    seedEditDraft(hidden);
+
+    render(
+      <Provider>
+        <MainGridEvents
+          measurements={measurements}
+          weekProps={createWeekProps()}
+        />
+      </Provider>,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        name: /^Hidden Timed event: Hidden overlap/,
+      }),
+    ).not.toBeInTheDocument();
+
+    const visibleCard = screen.getByRole("button", {
+      name: /timed event: visible overlap/i,
+    });
+    expect(parseFloat(visibleCard.style.width)).toBeGreaterThan(
+      HIDDEN_EVENT_STRIP_WIDTH,
+    );
+  });
+
+  it("turns a timed card into a hidden strip without remounting", () => {
+    const event = createSavedEvent({
+      endDate: "2024-01-15T10:00:00.000Z",
+      startDate: "2024-01-15T09:00:00.000Z",
+      title: "Live hide",
+    });
+    seedGrid([event]);
+
+    render(
+      <Provider>
+        <MainGridEvents
+          measurements={measurements}
+          weekProps={createWeekProps()}
+        />
+      </Provider>,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^Timed event: Live hide/ }),
+    ).toBeInTheDocument();
+
+    notifyManager.setScheduler((callback) => callback());
+    try {
+      act(() => {
+        if (!providerQueryClient) {
+          throw new Error("expected Provider query client");
+        }
+        providerQueryClient.setQueryData(
+          hiddenEventsQueryKeys.source("local"),
+          [event._id!],
+        );
+      });
+
+      const hiddenCard = screen.getByRole("button", {
+        name: /^Hidden Timed event: Live hide/,
+      });
+      expect(parseFloat(hiddenCard.style.width)).toBe(HIDDEN_EVENT_STRIP_WIDTH);
+    } finally {
+      notifyManager.setScheduler((callback) => setTimeout(callback, 0));
+    }
+  });
+
+  it("does not render a hidden all-day strip for the saved card of an open edit draft", () => {
+    const hidden = createSavedEvent({
+      endDate: "2024-01-16T00:00:00.000Z",
+      isAllDay: true,
+      startDate: "2024-01-15T00:00:00.000Z",
+      title: "Hidden all day",
+    });
+    const visible = createSavedEvent({
+      endDate: "2024-01-16T00:00:00.000Z",
+      isAllDay: true,
+      startDate: "2024-01-15T00:00:00.000Z",
+      title: "Visible all day",
+    });
+    seededHiddenEventIds = [hidden._id!];
+    seedGrid([hidden, visible]);
+    seedEditDraft(hidden);
+
+    render(
+      <Provider>
+        <AllDayEvents
+          measurements={measurements}
+          queryEndOfView={startOfView.add(6, "day").endOf("day")}
+          queryStartOfView={startOfView}
+          weekDays={weekDaysInView}
+        />
+      </Provider>,
+    );
+
+    expect(
+      screen.queryByRole("button", {
+        name: /^Hidden All-day event: Hidden all day/,
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /all-day event: visible all day/i,
+      }),
+    ).toBeInTheDocument();
   });
 });

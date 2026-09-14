@@ -11,6 +11,7 @@ import {
 } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridEventDraft } from "@web/events/event-draft.types";
+import { getGridDraftId } from "@web/events/grid-event-draft.adapter";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
@@ -50,6 +51,19 @@ interface DayTimedEventsProps {
   visibleDates: GridVisibleDate[];
 }
 
+function hiddenEventIdsWithoutActiveDraft(
+  hiddenEventIds: ReadonlySet<string>,
+  draft: GridEventDraft | null,
+): ReadonlySet<string> {
+  const draftId = draft ? getGridDraftId(draft) : undefined;
+  if (!draftId || !isEventIdHidden(draftId, hiddenEventIds)) {
+    return hiddenEventIds;
+  }
+  const next = new Set(hiddenEventIds);
+  next.delete(draftId);
+  return next;
+}
+
 export const DayCalendarAllDayEventsLayer = ({
   draft,
   events: allDayEvents,
@@ -62,6 +76,10 @@ export const DayCalendarAllDayEventsLayer = ({
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
   const hiddenEventIds = useHiddenEventIds();
+  const layoutHiddenEventIds = useMemo(
+    () => hiddenEventIdsWithoutActiveDraft(hiddenEventIds, draft),
+    [draft, hiddenEventIds],
+  );
   const marginLeft = useGridMarginLeft();
 
   return (
@@ -80,7 +98,7 @@ export const DayCalendarAllDayEventsLayer = ({
           event={event}
           focusColor={resolveCalendarFocusColor(calendarLookup, event)}
           isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
-          isHidden={isEventIdHidden(event._id, hiddenEventIds)}
+          isHidden={isEventIdHidden(event._id, layoutHiddenEventIds)}
           isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
           isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
           key={event._id ?? "all-day-draft"}
@@ -105,6 +123,10 @@ export const DayCalendarTimedEventsLayer = ({
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
   const hiddenEventIds = useHiddenEventIds();
+  const layoutHiddenEventIds = useMemo(
+    () => hiddenEventIdsWithoutActiveDraft(hiddenEventIds, draft),
+    [draft, hiddenEventIds],
+  );
   const savedEventIds = useMemo(
     () => getCalendarEventIdSet(timedEvents),
     [timedEvents],
@@ -128,9 +150,9 @@ export const DayCalendarTimedEventsLayer = ({
       eventsByColumn.set(columnIndex, columnEvents);
     }
     return [...eventsByColumn.values()].flatMap((columnEvents) =>
-      createTimedEventLayout(columnEvents, hiddenEventIds),
+      createTimedEventLayout(columnEvents, layoutHiddenEventIds),
     );
-  }, [getCalendarColumnIndex, hiddenEventIds, renderedEvents]);
+  }, [getCalendarColumnIndex, layoutHiddenEventIds, renderedEvents]);
 
   return (
     <div id={ID_GRID_EVENTS_TIMED}>
