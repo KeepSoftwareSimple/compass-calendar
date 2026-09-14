@@ -38,7 +38,7 @@ production enable.
 | 09 abuse budget | #3715 | merged |
 | 10 host/guest funnels | #3716 | merged |
 | 11 lifecycle/recovery signals | #3717 | merged as #3735 |
-| 12 Meeting dashboards | #3718 | PR #3736, local `VERDICT: PASS`, not yet on `main` |
+| 12 Meeting dashboards | #3718 | merged as #3736 |
 
 WP-14 (#3720) is post-launch and outside this milestone.
 
@@ -81,7 +81,7 @@ Those are harness proofs, not live provider events.
 ## PostHog (project 165441)
 
 Dashboard: https://us.posthog.com/project/165441/dashboard/2093461
-Runbook (WP-12): `docs/development/meeting-monitoring.md` on PR #3736.
+Runbook: [Meeting monitoring](./meeting-monitoring.md).
 
 | Tile | Readback 2026-09-14 |
 | --- | --- |
@@ -98,8 +98,8 @@ failure.
 
 Launch alert rules (exhausted recovery, oldest pending on two heartbeats,
 infra failure >5% with ≥20 accepted / 30 minutes, heartbeat absent) are
-evaluated in `packages/scripts/src/testing/meeting-dashboard.test.ts` on
-PR #3736. They are not armed.
+evaluated in `packages/scripts/src/testing/meeting-dashboard.test.ts`.
+They are not armed.
 
 ## Gaps that keep this a NO-GO
 
