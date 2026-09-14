@@ -20,7 +20,7 @@ import {
 export type OccurrenceInput = Omit<EventOccurrenceRecord, "_id">;
 
 // Longest occurrence start we still consider when answering a busy or grid
-// overlap window. Keeps calendar_gen_start range-bounded; see
+// overlap window. Keeps calendar_gen_start_end range-bounded; see
 // listBusyOverlapping and listByCalendarRange.
 export const BUSY_MAX_LOOKBACK_MS = 366 * 24 * 60 * 60 * 1000;
 
@@ -271,7 +271,7 @@ export class EventOccurrenceRepository {
   // [startAt, endAt) still overlaps the window — so all-day events whose
   // startAt is UTC midnight still appear for west-of-UTC local-midnight
   // queries. startAt is lower-bounded by (windowStart - BUSY_MAX_LOOKBACK_MS)
-  // so the calendar_gen_start index stays range-bounded, same as busy reads.
+  // so the calendar_gen_start_end index stays range-bounded, same as busy reads.
   async listByCalendarRange(
     query: OccurrenceRangeQuery,
   ): Promise<EventOccurrenceRecord[]> {
@@ -294,7 +294,7 @@ export class EventOccurrenceRepository {
   // it is included. Cancelled occurrences are not busy and are excluded.
   //
   // `startAt` is also lower-bounded by (windowStart - BUSY_MAX_LOOKBACK_MS): an
-  // unbounded `startAt < end` walks the entire historical calendar_gen_start
+  // unbounded `startAt < end` walks the entire historical calendar_gen_start_end
   // range on every busy query. Occurrences longer than the lookback are still
   // found when they start inside it; longer-than-lookback events are outside
   // Compass's practical horizon (multi-year single instances).

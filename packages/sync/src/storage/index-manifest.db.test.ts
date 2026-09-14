@@ -179,12 +179,12 @@ describe("installIndexManifest", () => {
     ).toBe(true);
   });
 
-  it("installs calendar_gen_start with endAt on event_occurrences", async () => {
+  it("installs calendar_gen_start_end with endAt on event_occurrences", async () => {
     const indexes = await db
       .collection(SYNC_COLLECTIONS.eventOccurrences)
       .indexes();
     const calendarGenStart = indexes.find(
-      (i) => i.name === "calendar_gen_start",
+      (i) => i.name === "calendar_gen_start_end",
     );
     expect(calendarGenStart?.key).toEqual({
       calendarId: 1,
@@ -193,6 +193,7 @@ describe("installIndexManifest", () => {
       endAt: 1,
       _id: 1,
     });
+    expect(indexes.some((i) => i.name === "calendar_gen_start")).toBe(false);
   });
 
   it("covers every collection in the manifest", () => {

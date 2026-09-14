@@ -768,7 +768,7 @@ describe("EventOccurrenceRepository", () => {
       return { rangeQuery, busyQuery };
     };
 
-    it("listByCalendarRange and listBusyOverlapping use calendar_gen_start including endAt", async () => {
+    it("listByCalendarRange and listBusyOverlapping use calendar_gen_start_end including endAt", async () => {
       const { rangeQuery, busyQuery } = await seedIndexFixture();
       const collection =
         db.collection<EventOccurrenceRecord>("event_occurrences");
@@ -795,15 +795,15 @@ describe("EventOccurrenceRepository", () => {
 
       expect(rangeWalk.stages).toContain("IXSCAN");
       expect(busyWalk.stages).toContain("IXSCAN");
-      expect(rangeWalk.indexNames).toContain("calendar_gen_start");
-      expect(busyWalk.indexNames).toContain("calendar_gen_start");
-      expect(rangeWalk.indexNames.join()).toContain("calendar_gen_start");
+      expect(rangeWalk.indexNames).toContain("calendar_gen_start_end");
+      expect(busyWalk.indexNames).toContain("calendar_gen_start_end");
+      expect(rangeWalk.indexNames.join()).toContain("calendar_gen_start_end");
       expect(JSON.stringify(rangePlan)).not.toContain("COLLSCAN");
       expect(JSON.stringify(busyPlan)).not.toContain("COLLSCAN");
 
       const indexes = await collection.indexes();
       const calendarGenStart = indexes.find(
-        (i) => i.name === "calendar_gen_start",
+        (i) => i.name === "calendar_gen_start_end",
       );
       expect(calendarGenStart?.key).toEqual({
         calendarId: 1,
@@ -830,7 +830,7 @@ describe("EventOccurrenceRepository", () => {
         const startAtLed = walkExplain(
           await collection
             .find(filter)
-            .hint("calendar_gen_start")
+            .hint("calendar_gen_start_end")
             .explain("executionStats"),
         );
         const endAtLed = walkExplain(
@@ -840,7 +840,7 @@ describe("EventOccurrenceRepository", () => {
             .explain("executionStats"),
         );
 
-        expect(startAtLed.indexNames).toContain("calendar_gen_start");
+        expect(startAtLed.indexNames).toContain("calendar_gen_start_end");
         expect(endAtLed.indexNames).toContain("calendar_gen_end_alt");
         expect(startAtLed.totalDocsExamined).toBe(startAtLed.nReturned);
         // Future-start rows still end after the window, so endAt-leading

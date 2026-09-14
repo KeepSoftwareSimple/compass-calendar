@@ -138,9 +138,11 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
     // _id stays in the key for uniqueness. listByCalendarRange still sorts
     // (startAt, _id) explicitly so equal-startAt keyset order stays stable:
     // endAt sitting between those fields may add a SORT on the already
-    // range-bounded, limited result.
+    // range-bounded, limited result. New name so installIndexManifest drops
+    // the predecessor calendar_gen_start instead of conflicting on same-name
+    // / different-spec.
     {
-      name: "calendar_gen_start",
+      name: "calendar_gen_start_end",
       key: { calendarId: 1, generation: 1, startAt: 1, endAt: 1, _id: 1 },
     },
     { name: "principal_start", key: { principalId: 1, startAt: 1 } },
