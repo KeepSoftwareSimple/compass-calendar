@@ -158,7 +158,8 @@ describe("ProviderPageApplier", () => {
       end: windowEnd,
     });
 
-    expect(busy).toEqual([
+    expect(busy.truncated).toBe(false);
+    expect(busy.intervals).toEqual([
       {
         startAt: new Date("2026-07-14T15:00:00.000Z"),
         endAt: new Date("2026-07-14T16:00:00.000Z"),
@@ -174,13 +175,15 @@ describe("ProviderPageApplier", () => {
       start: new Date("2026-07-14T15:00:00.000Z"),
       end: new Date("2026-07-14T17:00:00.000Z"),
     };
-    const queryBusy = () =>
-      occurrences.listBusyOverlapping({
-        tenantId: calendar.tenantId,
-        principalId: calendar.principalId,
-        calendars: [{ calendarId: calendar._id, generation: 0 }],
-        ...window,
-      });
+    const queryBusy = async () =>
+      (
+        await occurrences.listBusyOverlapping({
+          tenantId: calendar.tenantId,
+          principalId: calendar.principalId,
+          calendars: [{ calendarId: calendar._id, generation: 0 }],
+          ...window,
+        })
+      ).intervals;
 
     await run.applyPage([{ ...single("flex"), busy: false }]);
     expect(await queryBusy()).toEqual([]);

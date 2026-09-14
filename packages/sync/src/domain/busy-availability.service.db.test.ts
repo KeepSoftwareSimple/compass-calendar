@@ -414,4 +414,35 @@ describe("computeBusyAvailability", () => {
       result.intervals.map((i) => [i.start.toISOString(), i.end.toISOString()]),
     ).toEqual([["2026-07-14T13:00:00.000Z", "2026-07-14T14:00:00.000Z"]]);
   });
+
+  it("fails closed when the busy overlap read is truncated", async () => {
+    const conn = await seedConnection("healthy", fresh);
+    const cal = await seedCalendar({
+      connectionId: conn,
+      lastSuccessAt: fresh,
+      intervals: [
+        ["2026-07-14T09:00Z", "2026-07-14T10:00Z"],
+        ["2026-07-14T11:00Z", "2026-07-14T12:00Z"],
+      ],
+    });
+
+    const result = await computeBusyAvailability(
+      { occurrences, resources, connections, calendars },
+      {
+        tenantId,
+        principalId,
+        calendarIds: [cal],
+        start: WINDOW_START,
+        end: WINDOW_END,
+        maxAgeMs: MAX_AGE_MS,
+        now: NOW,
+        limit: 1,
+      },
+    );
+
+    expect(result.complete).toBe(false);
+    expect(result.bookable).toBe(false);
+    expect(result.issues).toEqual([]);
+    expect(result.intervals).toHaveLength(1);
+  });
 });

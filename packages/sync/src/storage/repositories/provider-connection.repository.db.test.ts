@@ -5,6 +5,7 @@ import {
   type ProviderAccountId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { walkExplain } from "@sync/__tests__/helpers/explain-plan";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { deriveDiagnosticKey } from "@sync/safety/diagnostic-key";
 import { type ProviderConnectionUpsert } from "@sync/storage/contracts/provider-connection.contracts";
@@ -221,5 +222,54 @@ describe("ProviderConnectionRepository", () => {
     await expect(
       collection.insertOne({ _id: objectId(), ...shared } as never),
     ).rejects.toThrow();
+  });
+
+  // connection-retention.service.ts lists via listDisconnectedBefore, which
+  // must assert $type so the disconnected_at partial index is usable.
+  it("disconnectedAt retention filter is served by the disconnected_at partial index", async () => {
+    const created = await repo.upsertByProviderAccount(baseUpsert());
+    await repo.markDisconnected(
+      created.tenantId,
+      created.principalId,
+      created._id,
+      new Date("2026-01-01T00:00:00.000Z"),
+    );
+    for (let i = 0; i < 8; i += 1) {
+      await repo.upsertByProviderAccount(
+        baseUpsert({
+          account: {
+            providerAccountId: `live-${i}` as ProviderAccountId,
+            email: null,
+            displayName: null,
+          },
+        }),
+      );
+    }
+
+    const plan = await db
+      .collection("provider_connections")
+      .find({ disconnectedAt: { $type: "date", $lt: new Date("2026-06-01") } })
+      .sort({ disconnectedAt: 1 })
+      .explain("executionStats");
+    const walk = walkExplain(plan);
+    expect(walk.stages).toContain("IXSCAN");
+    expect(walk.indexNames).toContain("disconnected_at");
+    expect(JSON.stringify(plan)).not.toContain("COLLSCAN");
+  });
+
+  // diagnostic.routes.ts looks up via findByDiagnosticKey, which must assert
+  // $type so the diagnostic_key partial index is usable.
+  it("diagnosticKey filter is served by the diagnostic_key partial index", async () => {
+    const created = await repo.upsertByProviderAccount(baseUpsert());
+    const plan = await db
+      .collection("provider_connections")
+      .find({
+        diagnosticKey: { $eq: created.diagnosticKey, $type: "string" },
+      })
+      .explain("queryPlanner");
+    const walk = walkExplain(plan);
+    expect(walk.stages).toContain("IXSCAN");
+    expect(walk.indexNames).toContain("diagnostic_key");
+    expect(JSON.stringify(plan)).not.toContain("COLLSCAN");
   });
 });

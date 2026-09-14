@@ -127,15 +127,21 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       key: { eventId: 1, generation: 1, occurrenceKey: 1 },
       options: { unique: true },
     },
-    // The range read filters each calendar to its active generation, then
-    // sorts/paginates by (startAt, _id). Leading with (calendarId, generation)
-    // keeps the query index-covered even while a repair keeps two generations of
-    // a calendar's occurrences resident. Index the normalized start instant
-    // (startAt), not the schedule.start union path, so all-day and timed
-    // occurrences compare on one coherent axis.
+    // The range and busy-overlap reads filter each calendar to its active
+    // generation, bound startAt (window plus BUSY_MAX_LOOKBACK_MS), and
+    // filter endAt on the lookback/overlap branch. Indexing endAt after startAt
+    // lets the planner reject non-overlapping lookback keys without fetching
+    // them. A separate {calendarId, generation, endAt} index would skip
+    // long-past ends too, but would scan every still-open future start and
+    // cannot walk (startAt, _id) for keyset pagination.
+    //
+    // _id stays in the key for uniqueness. listByCalendarRange still sorts
+    // (startAt, _id) explicitly so equal-startAt keyset order stays stable:
+    // endAt sitting between those fields may add a SORT on the already
+    // range-bounded, limited result.
     {
       name: "calendar_gen_start",
-      key: { calendarId: 1, generation: 1, startAt: 1, _id: 1 },
+      key: { calendarId: 1, generation: 1, startAt: 1, endAt: 1, _id: 1 },
     },
     { name: "principal_start", key: { principalId: 1, startAt: 1 } },
   ],
@@ -238,6 +244,13 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       // is a jobs COLLSCAN per connection.
       name: "connection_runafter",
       key: { connectionId: 1, runAfter: 1 },
+    },
+    {
+      // findOldestOverdueByConnection sorts retrying jobs by lastErrorAt.
+      // Sparse because most jobs never record an error (null lastErrorAt).
+      name: "connection_lasterrorat",
+      key: { connectionId: 1, lastErrorAt: 1 },
+      options: { sparse: true },
     },
     {
       name: "lease_expiry",

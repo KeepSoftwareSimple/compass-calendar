@@ -12,11 +12,14 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { walkExplain } from "@sync/__tests__/helpers/explain-plan";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type EventOccurrenceRecord } from "@sync/storage/contracts/event-occurrence.contracts";
 import {
   BUSY_MAX_LOOKBACK_MS,
+  busyOverlapFilter,
   EventOccurrenceRepository,
+  occurrenceRangeFilter,
   type OccurrenceInput,
 } from "@sync/storage/repositories/event-occurrence.repository";
 
@@ -595,9 +598,246 @@ describe("EventOccurrenceRepository", () => {
         start: windowStart,
         end: windowEnd,
       });
-      expect(busy).toEqual([
+      expect(busy.truncated).toBe(false);
+      expect(busy.intervals).toEqual([
         { startAt: inLookbackStart, endAt: windowEnd, eventId: eventIn },
       ]);
+    });
+
+    it("surfaces truncation when overlapping rows exceed the limit", async () => {
+      const tenantId = objectId() as OccurrenceInput["tenantId"];
+      const principalId = objectId() as OccurrenceInput["principalId"];
+      const calendarId = objectId() as OccurrenceInput["calendarId"];
+      const windowStart = new Date("2026-07-14T00:00:00.000Z");
+      const windowEnd = new Date("2026-07-15T00:00:00.000Z");
+      const eventA = objectId() as OccurrenceInput["eventId"];
+      const eventB = objectId() as OccurrenceInput["eventId"];
+      await repo.replaceForEvents([
+        {
+          eventId: eventA,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId: eventA,
+              occurrenceKey: `${eventA}:a` as OccurrenceKey,
+              startAt: new Date("2026-07-14T09:00:00.000Z"),
+              endAt: new Date("2026-07-14T10:00:00.000Z"),
+            }),
+          ],
+        },
+        {
+          eventId: eventB,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId: eventB,
+              occurrenceKey: `${eventB}:b` as OccurrenceKey,
+              startAt: new Date("2026-07-14T11:00:00.000Z"),
+              endAt: new Date("2026-07-14T12:00:00.000Z"),
+            }),
+          ],
+        },
+      ]);
+
+      const busy = await repo.listBusyOverlapping({
+        tenantId,
+        principalId,
+        calendars: [{ calendarId, generation: 0 }],
+        start: windowStart,
+        end: windowEnd,
+        limit: 1,
+      });
+      expect(busy.truncated).toBe(true);
+      expect(busy.intervals).toHaveLength(1);
+    });
+  });
+
+  describe("index plans", () => {
+    const windowStart = new Date("2026-07-14T00:00:00.000Z");
+    const windowEnd = new Date("2026-07-15T00:00:00.000Z");
+
+    const seedIndexFixture = async () => {
+      const tenantId = objectId() as OccurrenceInput["tenantId"];
+      const principalId = objectId() as OccurrenceInput["principalId"];
+      const calendarId = objectId() as OccurrenceInput["calendarId"];
+      const lookbackEndedStart = new Date(
+        windowStart.getTime() - 200 * 24 * 60 * 60 * 1000,
+      );
+      const lookbackEndedEnd = new Date(
+        lookbackEndedStart.getTime() + 60 * 60_000,
+      );
+      const ancientStart = new Date(
+        windowStart.getTime() - BUSY_MAX_LOOKBACK_MS - 30 * 24 * 60 * 60 * 1000,
+      );
+      const futureStart = new Date(windowEnd.getTime() + 60 * 60_000);
+
+      const overlappingId = objectId() as OccurrenceInput["eventId"];
+      const inWindowId = objectId() as OccurrenceInput["eventId"];
+      const noise = (startAt: Date, endAt: Date, n: number) =>
+        Array.from({ length: n }, () => {
+          const eventId = objectId() as OccurrenceInput["eventId"];
+          return {
+            eventId,
+            generation: 0,
+            occurrences: [
+              occurrence({
+                tenantId,
+                principalId,
+                calendarId,
+                eventId,
+                occurrenceKey: `${eventId}:${startAt.toISOString()}` as OccurrenceKey,
+                startAt,
+                endAt,
+                schedule: {
+                  kind: "timed",
+                  start: startAt.toISOString() as DateTime,
+                  end: endAt.toISOString() as DateTime,
+                  timeZone: "UTC" as TimeZone,
+                },
+              }),
+            ],
+          };
+        });
+
+      await repo.replaceForEvents([
+        {
+          eventId: overlappingId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId: overlappingId,
+              occurrenceKey: `${overlappingId}:overlap` as OccurrenceKey,
+              startAt: new Date(windowStart.getTime() - 60 * 60_000),
+              endAt: new Date(windowStart.getTime() + 60 * 60_000),
+            }),
+          ],
+        },
+        {
+          eventId: inWindowId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId: inWindowId,
+              occurrenceKey: `${inWindowId}:in` as OccurrenceKey,
+              startAt: new Date("2026-07-14T09:00:00.000Z"),
+              endAt: new Date("2026-07-14T10:00:00.000Z"),
+            }),
+          ],
+        },
+        ...noise(lookbackEndedStart, lookbackEndedEnd, 40),
+        ...noise(ancientStart, new Date(ancientStart.getTime() + 60 * 60_000), 20),
+        ...noise(futureStart, new Date(futureStart.getTime() + 60 * 60_000), 20),
+      ]);
+
+      const rangeQuery = {
+        tenantId,
+        principalId,
+        calendars: [{ calendarId, generation: 0 as const }],
+        start: windowStart,
+        end: windowEnd,
+        limit: 100,
+      };
+      const busyQuery = {
+        tenantId,
+        principalId,
+        calendars: [{ calendarId, generation: 0 as const }],
+        start: windowStart,
+        end: windowEnd,
+      };
+      return { rangeQuery, busyQuery };
+    };
+
+    it("listByCalendarRange and listBusyOverlapping use calendar_gen_start including endAt", async () => {
+      const { rangeQuery, busyQuery } = await seedIndexFixture();
+      const collection = db.collection("event_occurrences");
+
+      const rangeHits = await repo.listByCalendarRange(rangeQuery);
+      expect(rangeHits.length).toBeGreaterThanOrEqual(2);
+
+      const busyHits = await repo.listBusyOverlapping(busyQuery);
+      expect(busyHits.truncated).toBe(false);
+      expect(busyHits.intervals.length).toBeGreaterThanOrEqual(2);
+
+      const rangePlan = await collection
+        .find(occurrenceRangeFilter(rangeQuery))
+        .sort({ startAt: 1, _id: 1 })
+        .limit(rangeQuery.limit)
+        .explain("executionStats");
+      const busyPlan = await collection
+        .find(busyOverlapFilter(busyQuery))
+        .sort({ startAt: 1 })
+        .explain("executionStats");
+
+      const rangeWalk = walkExplain(rangePlan);
+      const busyWalk = walkExplain(busyPlan);
+
+      expect(rangeWalk.stages).toContain("IXSCAN");
+      expect(busyWalk.stages).toContain("IXSCAN");
+      expect(rangeWalk.indexNames).toContain("calendar_gen_start");
+      expect(busyWalk.indexNames).toContain("calendar_gen_start");
+      expect(rangeWalk.indexNames.join()).toContain("calendar_gen_start");
+      expect(JSON.stringify(rangePlan)).not.toContain("COLLSCAN");
+      expect(JSON.stringify(busyPlan)).not.toContain("COLLSCAN");
+
+      const indexes = await collection.indexes();
+      const calendarGenStart = indexes.find((i) => i.name === "calendar_gen_start");
+      expect(calendarGenStart?.key).toEqual({
+        calendarId: 1,
+        generation: 1,
+        startAt: 1,
+        endAt: 1,
+        _id: 1,
+      });
+
+      expect(rangeWalk.totalDocsExamined).toBe(rangeWalk.nReturned);
+      expect(busyWalk.totalDocsExamined).toBe(busyWalk.nReturned);
+    });
+
+    it("startAt+endAt examines fewer future-start rows than an endAt-leading alt index", async () => {
+      const { busyQuery } = await seedIndexFixture();
+      const collection = db.collection("event_occurrences");
+      await collection.createIndex(
+        { calendarId: 1, generation: 1, endAt: 1 },
+        { name: "calendar_gen_end_alt" },
+      );
+      try {
+        const filter = busyOverlapFilter(busyQuery);
+        const startAtLed = walkExplain(
+          await collection
+            .find(filter)
+            .hint("calendar_gen_start")
+            .explain("executionStats"),
+        );
+        const endAtLed = walkExplain(
+          await collection
+            .find(filter)
+            .hint("calendar_gen_end_alt")
+            .explain("executionStats"),
+        );
+
+        expect(startAtLed.indexNames).toContain("calendar_gen_start");
+        expect(endAtLed.indexNames).toContain("calendar_gen_end_alt");
+        expect(startAtLed.totalDocsExamined).toBe(startAtLed.nReturned);
+        // Future-start rows still end after the window, so endAt-leading
+        // examines them; startAt+endAt bounds startAt and does not.
+        expect(startAtLed.totalKeysExamined).toBeLessThan(
+          endAtLed.totalKeysExamined,
+        );
+      } finally {
+        await collection.dropIndex("calendar_gen_end_alt");
+      }
     });
   });
 });

@@ -6,6 +6,7 @@ import {
   type SyncJobId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { walkExplain } from "@sync/__tests__/helpers/explain-plan";
 import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import {
@@ -900,6 +901,56 @@ describe("JobRepository", () => {
       const winning = JSON.stringify(plan);
       expect(winning).toContain("connection_runafter");
       expect(winning).not.toContain("COLLSCAN");
+    });
+
+    it("retrying overdue lastErrorAt sort is served by connection_lasterrorat", async () => {
+      const connectionId = objectId() as ConnectionId;
+      const tenantId = objectId() as TenantId;
+      const principalId = objectId() as PrincipalId;
+      const job = await repo.enqueue(
+        enqueue({
+          tenantId,
+          principalId,
+          connectionId: connectionId as JobEnqueue["connectionId"],
+          runAfter: new Date(NOW.getTime() - 60_000),
+        }),
+      );
+      const claimed = await repo.claimDueJob("worker", NOW, 60_000);
+      expect(claimed?._id).toBe(job._id);
+      await repo.scheduleRetry(
+        claimed!._id,
+        "worker",
+        new Date(NOW.getTime() + 60_000),
+        "HTTP 500",
+        NOW,
+      );
+      for (let i = 0; i < 10; i += 1) {
+        await repo.enqueue(
+          enqueue({
+            coalescingKey: `other-lasterror:${i}`,
+            runAfter: NOW,
+          }),
+        );
+      }
+
+      const plan = await db
+        .collection("jobs")
+        .find({
+          tenantId,
+          principalId,
+          connectionId,
+          lastErrorAt: { $lte: NOW },
+          $or: [
+            { state: "pending" },
+            { state: "claimed", leaseExpiresAt: { $lt: NOW } },
+          ],
+        })
+        .sort({ lastErrorAt: 1 })
+        .explain("executionStats");
+      const walk = walkExplain(plan);
+      expect(walk.stages).toContain("IXSCAN");
+      expect(walk.indexNames).toContain("connection_lasterrorat");
+      expect(JSON.stringify(plan)).not.toContain("COLLSCAN");
     });
   });
 });

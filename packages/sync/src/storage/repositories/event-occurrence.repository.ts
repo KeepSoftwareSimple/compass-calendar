@@ -52,6 +52,8 @@ export interface BusyOverlapQuery {
   // before `end` and ends after `start`.
   start: Date;
   end: Date;
+  // Caps the overlapping rows returned. Defaults to BUSY_OVERLAP_DEFAULT_LIMIT.
+  limit?: number;
 }
 
 // One busy occurrence's normalized half-open interval — the only fields a busy
@@ -60,6 +62,74 @@ export interface OccurrenceInterval {
   startAt: Date;
   endAt: Date;
   eventId: EventId;
+}
+
+export interface BusyOverlapResult {
+  intervals: OccurrenceInterval[];
+  // True when more overlapping rows existed than `limit` (or the default).
+  truncated: boolean;
+}
+
+// Cap for an unbounded-looking busy overlap. A 60-day booking window on a
+// dense calendar stays well under this; truncation fails the booking closed
+// rather than scanning an unbounded result.
+export const BUSY_OVERLAP_DEFAULT_LIMIT = 10_000;
+
+function startAtFloorFor(start: Date): Date {
+  return new Date(start.getTime() - BUSY_MAX_LOOKBACK_MS);
+}
+
+function activeCalendarClause(calendars: readonly CalendarGeneration[]) {
+  return {
+    $or: calendars.map((c) => ({
+      calendarId: c.calendarId,
+      generation: c.generation,
+    })),
+  };
+}
+
+// Exported so explain() tests run the same filter the repository methods use.
+export function occurrenceRangeFilter(query: OccurrenceRangeQuery) {
+  const startAtFloor = startAtFloorFor(query.start);
+  const inRange = {
+    $or: [
+      { startAt: { $gte: query.start, $lt: query.end } },
+      {
+        startAt: { $gte: startAtFloor, $lt: query.start },
+        endAt: { $gt: query.start },
+      },
+    ],
+  };
+  const keyset = query.after
+    ? [
+        {
+          $or: [
+            { startAt: { $gt: query.after.startAt } },
+            { startAt: query.after.startAt, _id: { $gt: query.after.id } },
+          ],
+        },
+      ]
+    : [];
+  return {
+    tenantId: query.tenantId,
+    principalId: query.principalId,
+    $and: [activeCalendarClause(query.calendars), inRange, ...keyset],
+  };
+}
+
+export function busyOverlapFilter(query: BusyOverlapQuery) {
+  const startAtFloor = startAtFloorFor(query.start);
+  return {
+    tenantId: query.tenantId,
+    principalId: query.principalId,
+    busy: true,
+    cancelled: false,
+    $and: [
+      activeCalendarClause(query.calendars),
+      { startAt: { $gte: startAtFloor, $lt: query.end } },
+      { endAt: { $gt: query.start } },
+    ],
+  };
 }
 
 // Repository for `event_occurrences`. Rebuilding a series' window
@@ -196,45 +266,12 @@ export class EventOccurrenceRepository {
     query: OccurrenceRangeQuery,
   ): Promise<EventOccurrenceRecord[]> {
     if (query.calendars.length === 0) return [];
-    const base = { tenantId: query.tenantId, principalId: query.principalId };
     // Read each calendar only at its active generation, so occurrences of a
     // repair building a newer generation for that calendar stay invisible until
-    // it activates.
-    const activeCalendars = {
-      $or: query.calendars.map((c) => ({
-        calendarId: c.calendarId,
-        generation: c.generation,
-      })),
-    };
-    const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
-    const inRange = {
-      $or: [
-        { startAt: { $gte: query.start, $lt: query.end } },
-        {
-          startAt: { $gte: startAtFloor, $lt: query.start },
-          endAt: { $gt: query.start },
-        },
-      ],
-    };
-
-    // Composite keyset over the (startAt, _id) sort: a later instant, or the
-    // same instant with a greater _id. startAt is a top-level Date and _id a
-    // string, so this is fully typeable — no cast needed.
-    const keyset = query.after
-      ? [
-          {
-            $or: [
-              { startAt: { $gt: query.after.startAt } },
-              { startAt: query.after.startAt, _id: { $gt: query.after.id } },
-            ],
-          },
-        ]
-      : [];
-
-    const filter = { ...base, $and: [activeCalendars, inRange, ...keyset] };
-
+    // it activates. Composite keyset over the (startAt, _id) sort: a later
+    // instant, or the same instant with a greater _id.
     const records = await this.collection
-      .find(filter)
+      .find(occurrenceRangeFilter(query))
       .sort({ startAt: 1, _id: 1 })
       .limit(query.limit)
       .toArray();
@@ -251,29 +288,18 @@ export class EventOccurrenceRepository {
   // range on every busy query. Occurrences longer than the lookback are still
   // found when they start inside it; longer-than-lookback events are outside
   // Compass's practical horizon (multi-year single instances).
+  //
+  // Bounded: more than `limit` overlapping rows sets `truncated` so the caller
+  // can fail closed instead of merging a silently incomplete busy set.
   async listBusyOverlapping(
     query: BusyOverlapQuery,
-  ): Promise<OccurrenceInterval[]> {
-    if (query.calendars.length === 0) return [];
-    const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
-    const filter = {
-      tenantId: query.tenantId,
-      principalId: query.principalId,
-      busy: true,
-      cancelled: false,
-      $and: [
-        {
-          $or: query.calendars.map((c) => ({
-            calendarId: c.calendarId,
-            generation: c.generation,
-          })),
-        },
-        { startAt: { $gte: startAtFloor, $lt: query.end } },
-        { endAt: { $gt: query.start } },
-      ],
-    };
-    return this.collection
-      .find(filter)
+  ): Promise<BusyOverlapResult> {
+    if (query.calendars.length === 0) {
+      return { intervals: [], truncated: false };
+    }
+    const limit = query.limit ?? BUSY_OVERLAP_DEFAULT_LIMIT;
+    const records = await this.collection
+      .find(busyOverlapFilter(query))
       .project<OccurrenceInterval>({
         startAt: 1,
         endAt: 1,
@@ -281,6 +307,12 @@ export class EventOccurrenceRepository {
         _id: 0,
       })
       .sort({ startAt: 1 })
+      .limit(limit + 1)
       .toArray();
+    const truncated = records.length > limit;
+    return {
+      intervals: truncated ? records.slice(0, limit) : records,
+      truncated,
+    };
   }
 }
