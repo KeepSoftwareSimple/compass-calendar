@@ -9,10 +9,13 @@ import {
   useBillingPreviewStore,
 } from "@web/billing/billing-preview.store";
 import { CheckoutCelebrationModal } from "@web/billing/CheckoutCelebrationModal";
+import { CheckoutOverlay } from "@web/billing/CheckoutOverlay";
 import {
   selectIsCelebrating,
   useCheckoutCelebrationStore,
 } from "@web/billing/checkout-celebration.store";
+import { TrialCardBanner } from "@web/billing/TrialCardBanner";
+import { getTrialDaysLeft } from "@web/billing/trialDaysLeft";
 import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
@@ -96,6 +99,15 @@ export function RootShell() {
     !deferCalendarOnboarding &&
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
+  const trialDaysLeft =
+    access.kind === "server" &&
+    access.status === "trialing" &&
+    access.needsPaymentMethod &&
+    access.trialEndsAt
+      ? getTrialDaysLeft(access.trialEndsAt)
+      : null;
+  const showTrialCardBanner =
+    trialDaysLeft !== null && trialDaysLeft <= 3 && !isCelebrating;
 
   // The gate and the celebration own the screen: the onboarding cards sit at
   // Z_INDEX_TOOLTIP (above Z_INDEX_MODAL), so leaving them mounted would let
@@ -107,11 +119,15 @@ export function RootShell() {
     <AuthModalProvider>
       {showPastDue && <BillingPastDueBanner />}
       {showReadOnlyBanner && <BillingReadOnlyBanner />}
+      {showTrialCardBanner && trialDaysLeft !== null && (
+        <TrialCardBanner daysLeft={trialDaysLeft} />
+      )}
       <Outlet />
       <AuthModal />
       <ConnectAppleForm />
       {gateStatus === null && <ConnectCalendarPromptGate />}
       {gateStatus !== null && <BillingGateModal status={gateStatus} />}
+      {gateStatus === null && <CheckoutOverlay />}
       <CheckoutCelebrationModal />
       {showCalendarOnboarding && <WelcomeModal />}
       {showCalendarOnboarding && <ShowcasePlayLink />}

@@ -119,7 +119,12 @@ production.
   Billing) to subscribe early. That shortcut is registered by
   `UpgradeConfirmationProvider` and keeps working while Settings is open.
   Local (card-less) trials use Checkout rather than `POST /api/billing/trial/end`;
-  Stripe-backed trials still end via that endpoint.
+  Stripe-backed trials still end via that endpoint. When a local trial has
+  three or fewer days left, `TrialCardBanner` asks the user to add a card
+  (`S`, same letter as Start trial) without locking the calendar. Dismiss
+  lasts for the tab session only. Checkout for that prompt, the trial badge,
+  and "Subscribe now" mounts in `CheckoutOverlay` so it is reachable while
+  the calendar is still writable.
 - **Active / past_due:** writable. `past_due` also shows a banner whose CTA
   opens Settings on Billing with Update card already mounted.
 - **Expired / canceled:** read-only until they subscribe again. A later

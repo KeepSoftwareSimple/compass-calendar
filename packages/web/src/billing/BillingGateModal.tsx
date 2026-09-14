@@ -2,18 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { type FC, Suspense, useCallback, useEffect, useRef } from "react";
 import { BillingApi } from "@web/api/billing.api";
 import { track } from "@web/auth/posthog/track";
-import {
-  startBillingStatusPoll,
-  useStripePublishableKey,
-} from "@web/billing/billing.query";
+import { useStripePublishableKey } from "@web/billing/billing.query";
 import { setBillingGateOwnsScreen } from "@web/billing/billing-gate-attention";
 import { billingPreviewActions } from "@web/billing/billing-preview.store";
-import { checkoutCelebrationActions } from "@web/billing/checkout-celebration.store";
 import {
   checkoutPanelActions,
   selectCheckoutPanelOpen,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
+import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
 import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
@@ -96,20 +93,7 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
   );
 
   const onCheckoutComplete = useCallback(() => {
-    // Read before close() clears it.
-    const source = useCheckoutPanelStore.getState().source;
-    const attribution = {
-      source: source?.kind ?? "gate",
-      ...(source?.featureArea ? { feature_area: source.featureArea } : {}),
-      ...(source?.actionId ? { action_id: source.actionId } : {}),
-    };
-    track("trial_converted", attribution);
-    if (source?.kind === "shortcut_prompt") {
-      track("billing_gate_shortcut_converted", attribution);
-    }
-    checkoutCelebrationActions.celebrate();
-    checkoutPanelActions.close();
-    startBillingStatusPoll(queryClient, () => {});
+    completeCheckoutSession(queryClient);
   }, [queryClient]);
 
   useAppShortcut(

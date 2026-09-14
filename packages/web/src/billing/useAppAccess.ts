@@ -19,6 +19,11 @@ export type AppAccess =
        * valid; absent reads as false.
        */
       cancelAtPeriodEnd?: boolean;
+      /**
+       * True when a local (card-less) trial still needs a payment method.
+       * Optional so fixtures that predate it stay valid; absent reads as false.
+       */
+      needsPaymentMethod?: boolean;
     }
   | { kind: "open" };
 
@@ -69,5 +74,6 @@ export function useAppAccess(): AppAccess {
     isReadOnly: billingQuery.data.isReadOnly,
     trialEndsAt: billingQuery.data.trialEndsAt,
     cancelAtPeriodEnd: billingQuery.data.cancelAtPeriodEnd,
+    needsPaymentMethod: billingQuery.data.needsPaymentMethod,
   };
 }

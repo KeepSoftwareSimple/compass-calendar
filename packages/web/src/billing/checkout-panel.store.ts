@@ -3,7 +3,7 @@ import { type ShortcutFeatureArea } from "@web/shortcuts/tips/shortcut-tips.data
 
 /** Where Checkout was opened from. `null` is the billing gate itself. */
 export type CheckoutPanelSource = {
-  kind: "shortcut_prompt" | "banner";
+  kind: "shortcut_prompt" | "banner" | "trial_banner";
   featureArea?: ShortcutFeatureArea;
   actionId?: string;
 };
