@@ -55,7 +55,16 @@ export type ProductEvent =
   | "booking_page_enabled"
   | "booking_link_copied"
   | "booking_page_viewed"
-  | "booking_reservation_created";
+  | "booking_reservation_created"
+  | "booking_setup_step_viewed"
+  | "booking_setup_step_completed"
+  | "booking_setup_save_succeeded"
+  | "booking_setup_save_failed"
+  | "booking_slots_loaded"
+  | "booking_slot_selected"
+  | "booking_details_reached"
+  | "booking_submit_attempted"
+  | "booking_submit_failed";
 
 export type ProductEventProperties = Record<string, boolean | number | string>;
 

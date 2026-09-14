@@ -53,21 +53,29 @@ describe("filterPosthogBookingTelemetry", () => {
   });
 
   it("keeps named booking events and strips guest fields", () => {
-    const result = filterPosthogBookingTelemetry(
-      capture("booking_reservation_created", {
-        $current_url: confirmedUrl,
-        duration_minutes: 30,
-        guestName: SENTINEL.name,
-        guestEmail: SENTINEL.email,
-        notes: SENTINEL.notes,
-        reservationId: SENTINEL.reservationId,
-        token: SENTINEL.token,
-      }),
-    );
+    for (const event of [
+      "booking_reservation_created",
+      "booking_slots_loaded",
+      "booking_submit_failed",
+    ]) {
+      const result = filterPosthogBookingTelemetry(
+        capture(event, {
+          $current_url: confirmedUrl,
+          duration_minutes: 30,
+          outcome: "available",
+          reason: "validation",
+          guestName: SENTINEL.name,
+          guestEmail: SENTINEL.email,
+          notes: SENTINEL.notes,
+          reservationId: SENTINEL.reservationId,
+          token: SENTINEL.token,
+        }),
+      );
 
-    expect(result?.properties?.duration_minutes).toBe(30);
-    expect(result?.properties?.booking_route).toBe("meet_confirmed");
-    assertNoSentinels(result);
+      expect(result?.properties?.duration_minutes).toBe(30);
+      expect(result?.properties?.booking_route).toBe("meet_confirmed");
+      assertNoSentinels(result);
+    }
   });
 
   it("drops replay, autocapture, and exceptions on public booking pages", () => {

@@ -1,5 +1,9 @@
 import { type FormEvent, useRef, useState } from "react";
 import { isGuestEmail } from "@core/types/booking.contracts";
+import {
+  trackBookingSubmitAttempted,
+  trackBookingSubmitFailed,
+} from "@web/auth/posthog/booking-funnel";
 
 export interface PublicBookingGuestDetails {
   guestName: string;
@@ -16,6 +20,7 @@ interface PublicBookingGuestFormProps {
   disabled: boolean;
   submitDisabled: boolean;
   showHeading?: boolean;
+  durationMinutes: number;
   guestTimeZone: string;
   values: PublicBookingGuestDetails;
   onChange: (values: PublicBookingGuestDetails) => void;
@@ -46,6 +51,7 @@ export function PublicBookingGuestForm({
   disabled,
   submitDisabled,
   showHeading = true,
+  durationMinutes,
   guestTimeZone,
   values,
   onChange,
@@ -60,15 +66,19 @@ export function PublicBookingGuestForm({
     if (disabled || submitDisabled) {
       return;
     }
+    trackBookingSubmitAttempted({ duration_minutes: durationMinutes });
     // Validate the trimmed values: a whitespace-only name must be an inline
     // field error here, not a schema throw dressed up as a server failure.
     const nextErrors = validateGuestFields(values);
     setErrors(nextErrors);
-    if (nextErrors.guestName) {
-      nameRef.current?.focus();
-      return;
-    }
-    if (nextErrors.guestEmail) {
+    if (nextErrors.guestName || nextErrors.guestEmail) {
+      trackBookingSubmitFailed("validation", {
+        duration_minutes: durationMinutes,
+      });
+      if (nextErrors.guestName) {
+        nameRef.current?.focus();
+        return;
+      }
       emailRef.current?.focus();
       return;
     }

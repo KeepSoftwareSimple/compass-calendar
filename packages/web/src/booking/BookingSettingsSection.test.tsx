@@ -303,6 +303,7 @@ describe("BookingSettingsSection", () => {
       has_connection: false,
       is_live: false,
       is_bookable: false,
+      configured_host: true,
     });
   });
 
@@ -947,6 +948,37 @@ describe("BookingSettingsSection", () => {
       });
     });
     expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_step_viewed", {
+      step: "address",
+      configured_host: false,
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_save_succeeded", {
+      step: "address",
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_step_completed", {
+      step: "address",
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_step_viewed", {
+      step: "hours",
+      configured_host: false,
+    });
+    expect(
+      mockTrack.mock.calls.filter(
+        (call) =>
+          call[0] === "booking_setup_step_viewed" &&
+          call[1]?.step === "address",
+      ),
+    ).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(await screen.findByText("Step 1 of 4")).toBeInTheDocument();
+    expect(
+      mockTrack.mock.calls.filter(
+        (call) =>
+          call[0] === "booking_setup_step_viewed" &&
+          call[1]?.step === "address",
+      ),
+    ).toHaveLength(2);
   });
 
   it("keeps step 1 and shows SLUG_TAKEN under the field", async () => {
@@ -980,6 +1012,10 @@ describe("BookingSettingsSection", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       BOOKING_SAVE_ERROR_COPY.SLUG_TAKEN,
     );
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_save_failed", {
+      step: "address",
+      reason: "slug_taken",
+    });
     expect(
       screen.queryByRole("switch", { name: "Meeting page" }),
     ).not.toBeInTheDocument();
@@ -1023,6 +1059,10 @@ describe("BookingSettingsSection", () => {
     });
     expect(putCount).toBe(0);
     expect(screen.getByText("Step 1 of 4")).toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_save_failed", {
+      step: "address",
+      reason: "validation",
+    });
   });
 
   it("Mod+Enter on the address step saves a draft", async () => {
@@ -1570,6 +1610,7 @@ describe("BookingSettingsSection", () => {
       has_connection: false,
       is_live: false,
       is_bookable: false,
+      configured_host: false,
     });
   });
 
@@ -1614,6 +1655,7 @@ describe("BookingSettingsSection", () => {
         has_connection: true,
         is_live: true,
         is_bookable: true,
+        configured_host: true,
       });
     });
   });
@@ -1665,6 +1707,12 @@ describe("BookingSettingsSection", () => {
       expect(mockTrack).toHaveBeenCalledWith("booking_page_enabled", {
         first_time: true,
       });
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_step_completed", {
+      step: "live",
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_setup_save_succeeded", {
+      step: "live",
     });
     expect(mockTrack).toHaveBeenCalledWith("booking_link_copied", {
       source: "save",
