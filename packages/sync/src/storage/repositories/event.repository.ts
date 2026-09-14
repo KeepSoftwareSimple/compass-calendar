@@ -1,4 +1,9 @@
-import { type Collection, type Db, ObjectId } from "mongodb";
+import {
+  type AnyBulkWriteOperation,
+  type Collection,
+  type Db,
+  ObjectId,
+} from "mongodb";
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
 import {
   type PrincipalId,
@@ -9,6 +14,11 @@ import {
   type EventRecord,
   EventRecordSchema,
 } from "@sync/storage/contracts/event.contracts";
+
+// bulkWrite / $in chunks. Matches the 500-1000 doc batching Atlas round-trips
+// want: one page of provider events is typically well under this, so a page
+// is one command; a larger repair still stays bounded.
+const WRITE_CHUNK_SIZE = 500;
 
 // Fields for a provider-linked event upsert. Sync assigns _id/createdAt on
 // first sight and dedupes on the (connection, calendar, providerEventId)
@@ -23,8 +33,8 @@ export type ProviderEventUpsert = Omit<
 
 export type UpsertByProviderIdentityOptions = {
   // When true, an incoming providerMetadata that omits iCalUID keeps any
-  // existing iCalUID on the row (aggregation-pipeline merge). Cancelled
-  // exceptions pass false so they can still clear the bag to null.
+  // existing iCalUID on the row. Cancelled exceptions pass false so they can
+  // still clear the bag to null.
   preserveIcalUidWhenAbsent?: boolean;
 };
 
@@ -51,205 +61,269 @@ export class EventRepository {
     input: ProviderEventUpsert,
     options?: UpsertByProviderIdentityOptions,
   ): Promise<EventRecord> {
-    const now = new Date();
-    // A prior scope-"this" command may have left a series-keyed exception
-    // (often a null-provider tombstone) at this canonical recurrenceId.
-    // Adopt or drop it before the provider-identity upsert, or the insert
-    // collides series_exception_identity — the dual of the E11000 that
-    // upsertException converges the other direction.
-    if (input.recurrence.kind === "exception") {
-      await this.#reconcileSeriesExceptionBeforeProviderUpsert(input);
-    }
+    const [record] = await this.upsertManyByProviderIdentity([input], options);
+    if (!record) throw new Error("Upsert did not return an event record");
+    return record;
+  }
 
+  // Page-level form of upsertByProviderIdentity: one batched identity pre-read,
+  // one batched exception-reconcile, then unordered bulkWrite chunks. Returns
+  // records in input order. Duplicate provider identities in one call keep the
+  // last input (unordered bulkWrite cannot target the same filter twice).
+  async upsertManyByProviderIdentity(
+    inputs: readonly ProviderEventUpsert[],
+    options?: UpsertByProviderIdentityOptions,
+  ): Promise<EventRecord[]> {
+    if (inputs.length === 0) return [];
+    const unique = lastByProviderIdentity(inputs);
+    let written: EventRecord[];
     try {
-      return await this.#upsertByProviderIdentityOnce(input, options, now);
+      written = await this.#upsertManyByProviderIdentityOnce(unique, options);
     } catch (error) {
       if (
         !isDuplicateKeyError(error) ||
-        input.recurrence.kind !== "exception"
+        !unique.some((input) => input.recurrence.kind === "exception")
       ) {
         throw error;
       }
-      // Concurrent command upsert won the series key between reconcile and
+      // Concurrent command upsert won a series key between reconcile and
       // insert. Reconcile again and retry once.
-      await this.#reconcileSeriesExceptionBeforeProviderUpsert(input);
-      return this.#upsertByProviderIdentityOnce(input, options, now);
+      written = await this.#upsertManyByProviderIdentityOnce(unique, options);
     }
+    const byKey = new Map(
+      written.map((record) => [providerIdentityKey(record), record]),
+    );
+    return inputs.map((input) => {
+      const record = byKey.get(providerIdentityKey(input));
+      if (!record) throw new Error("Upsert did not return an event record");
+      return record;
+    });
   }
 
-  async #upsertByProviderIdentityOnce(
-    input: ProviderEventUpsert,
+  async #upsertManyByProviderIdentityOnce(
+    inputs: readonly ProviderEventUpsert[],
     options: UpsertByProviderIdentityOptions | undefined,
-    now: Date,
-  ): Promise<EventRecord> {
-    const filter = {
-      connectionId: input.connectionId,
-      calendarId: input.calendarId,
-      // $type is a semantic no-op but makes the provider_event_identity
-      // partial index provable to the planner — without it, COLLSCAN.
-      // See the PLANNER TRAP note in index-manifest.ts.
-      providerEventId: {
-        $eq: input.providerEventId,
-        $type: "string" as const,
-      },
-    };
-
-    if (!options?.preserveIcalUidWhenAbsent) {
-      const result = await this.collection.findOneAndUpdate(
-        filter,
-        {
-          // input already omits _id/createdAt/updatedAt (see ProviderEventUpsert).
-          $set: { ...input, updatedAt: now },
-          $setOnInsert: {
-            _id: new ObjectId().toHexString() as EventId,
-            createdAt: now,
-          },
-        },
-        { upsert: true, returnDocument: "after" },
+  ): Promise<EventRecord[]> {
+    const now = new Date();
+    const existing = await this.#findExistingByProviderIdentity(inputs);
+    const existingAfterReconcile =
+      await this.#reconcileSeriesExceptionsBeforeProviderUpsert(
+        inputs,
+        existing,
       );
-      if (!result) throw new Error("Upsert did not return an event record");
-      return EventRecordSchema.parse(result);
+
+    const ops: AnyBulkWriteOperation<EventRecord>[] = [];
+    const planned: {
+      input: ProviderEventUpsert;
+      existing: EventRecord | undefined;
+      insertId: EventId;
+      providerMetadata: EventRecord["providerMetadata"];
+    }[] = [];
+
+    for (const input of inputs) {
+      const current = existingAfterReconcile.get(providerIdentityKey(input));
+      const providerMetadata = options?.preserveIcalUidWhenAbsent
+        ? mergeProviderMetadata(
+            input.providerMetadata,
+            current?.providerMetadata,
+          )
+        : input.providerMetadata;
+      const insertId = (current?._id ??
+        new ObjectId().toHexString()) as EventId;
+      planned.push({ input, existing: current, insertId, providerMetadata });
+      ops.push({
+        updateOne: {
+          filter: providerIdentityFilter(input),
+          update: {
+            $set: upsertSetFields(input, now, providerMetadata),
+            $setOnInsert: { _id: insertId, createdAt: now },
+          },
+          upsert: true,
+        },
+      });
     }
 
-    // Pipeline update so iCalUID preserve is atomic with the rest of the
-    // upsert (no find-then-write TOCTOU against a concurrent sparse pull).
-    // Strings in a pipeline $set are field refs, so every literal value goes
-    // through $literal. $setOnInsert is unavailable in pipeline mode.
-    // Use the array form of $cond ([if, then, else]) — the object form's
-    // `then` key trips Biome's noThenProperty rule.
-    const insertId = new ObjectId().toHexString() as EventId;
-    const { providerMetadata: incomingMetadata, ...fieldsWithoutMetadata } =
-      input;
-    const literalFields = Object.fromEntries(
-      Object.entries({ ...fieldsWithoutMetadata, updatedAt: now }).map(
-        ([key, value]) => [key, { $literal: value }],
-      ),
-    );
+    await this.#bulkWriteUnordered(ops);
 
-    const result = await this.collection.findOneAndUpdate(
-      filter,
-      [
-        {
-          $set: {
-            ...literalFields,
-            _id: { $ifNull: ["$_id", { $literal: insertId }] },
-            createdAt: { $ifNull: ["$createdAt", { $literal: now }] },
-            // Merge rules for the provider-fact bag: incoming wins for
-            // transparency and for a present iCalUID; if incoming omits
-            // iCalUID but the existing row has one, keep it so a sparse
-            // re-read cannot wipe a backfill or a prior full read; incoming
-            // null with no existing iCalUID stays null (busy default).
-            providerMetadata: {
-              $let: {
-                vars: {
-                  incoming: { $literal: incomingMetadata },
-                  existingUid: {
-                    $cond: [
-                      { $eq: [{ $type: "$providerMetadata" }, "object"] },
-                      { $ifNull: ["$providerMetadata.iCalUID", null] },
-                      null,
-                    ],
-                  },
-                },
-                in: {
-                  $cond: [
-                    { $eq: ["$$incoming", null] },
-                    {
-                      $cond: [
-                        { $ne: ["$$existingUid", null] },
-                        { iCalUID: "$$existingUid" },
-                        null,
-                      ],
-                    },
-                    {
-                      $let: {
-                        vars: {
-                          incomingUid: {
-                            $ifNull: ["$$incoming.iCalUID", null],
-                          },
-                        },
-                        in: {
-                          $cond: [
-                            { $ne: ["$$incomingUid", null] },
-                            "$$incoming",
-                            {
-                              $cond: [
-                                { $ne: ["$$existingUid", null] },
-                                {
-                                  $mergeObjects: [
-                                    "$$incoming",
-                                    { iCalUID: "$$existingUid" },
-                                  ],
-                                },
-                                "$$incoming",
-                              ],
-                            },
-                          ],
-                        },
-                      },
-                    },
-                  ],
-                },
-              },
-            },
-          },
-        },
-      ],
-      { upsert: true, returnDocument: "after" },
+    return planned.map(
+      ({ input, existing: current, insertId, providerMetadata }) =>
+        EventRecordSchema.parse({
+          ...current,
+          ...input,
+          providerMetadata,
+          customizations:
+            input.customizations !== undefined
+              ? input.customizations
+              : current?.customizations,
+          _id: current?._id ?? insertId,
+          createdAt: current?.createdAt ?? now,
+          updatedAt: now,
+        }),
     );
-    if (!result) throw new Error("Upsert did not return an event record");
-    return EventRecordSchema.parse(result);
   }
 
   // Stamp provider identity onto a series-keyed exception that lacks it (or
   // drop a divergent series-keyed duplicate) so the provider-identity upsert
   // that follows updates one document instead of colliding
-  // series_exception_identity.
-  async #reconcileSeriesExceptionBeforeProviderUpsert(
-    input: ProviderEventUpsert,
-  ): Promise<void> {
-    if (input.recurrence.kind !== "exception") return;
+  // series_exception_identity. One series-key find and one provider-identity
+  // find for the whole page, then one unordered bulkWrite of stamps/deletes.
+  // Mutates `existing` so a just-stamped tombstone is treated as the target
+  // of the following upsert (same _id, now holding the provider id).
+  async #reconcileSeriesExceptionsBeforeProviderUpsert(
+    inputs: readonly ProviderEventUpsert[],
+    existing: Map<string, EventRecord>,
+  ): Promise<Map<string, EventRecord>> {
+    const exceptions = inputs.filter(
+      (
+        input,
+      ): input is ProviderEventUpsert & {
+        recurrence: Extract<
+          ProviderEventUpsert["recurrence"],
+          { kind: "exception" }
+        >;
+      } => input.recurrence.kind === "exception",
+    );
+    if (exceptions.length === 0) return existing;
 
-    const bySeries = await this.collection.findOne({
-      tenantId: input.tenantId,
-      principalId: input.principalId,
-      "recurrence.kind": "exception",
-      "recurrence.seriesId": input.recurrence.seriesId,
-      "recurrence.recurrenceId": input.recurrence.recurrenceId,
-    });
-    if (!bySeries) return;
+    const bySeries = await this.#findBySeriesExceptionKeys(exceptions);
+    const ops: AnyBulkWriteOperation<EventRecord>[] = [];
 
-    const byProvider = await this.collection.findOne({
-      connectionId: input.connectionId,
-      calendarId: input.calendarId,
-      providerEventId: {
-        $eq: input.providerEventId,
-        $type: "string" as const,
-      },
-    });
+    for (const input of exceptions) {
+      const series = bySeries.get(seriesExceptionKey(input));
+      if (!series) continue;
+      const key = providerIdentityKey(input);
+      const byProvider = existing.get(key);
 
-    if (!byProvider) {
-      await this.collection.updateOne(
-        {
-          _id: bySeries._id,
-          tenantId: input.tenantId,
-          principalId: input.principalId,
-        },
-        {
-          $set: {
-            connectionId: input.connectionId,
-            providerEventId: input.providerEventId,
+      if (!byProvider) {
+        ops.push({
+          updateOne: {
+            filter: {
+              _id: series._id,
+              tenantId: input.tenantId,
+              principalId: input.principalId,
+            },
+            update: {
+              $set: {
+                connectionId: input.connectionId,
+                providerEventId: input.providerEventId,
+              },
+            },
           },
-        },
-      );
-      return;
+        });
+        existing.set(key, {
+          ...series,
+          connectionId: input.connectionId,
+          providerEventId: input.providerEventId,
+        });
+        continue;
+      }
+
+      if (series._id !== byProvider._id) {
+        ops.push({
+          deleteOne: {
+            filter: {
+              _id: series._id,
+              tenantId: input.tenantId,
+              principalId: input.principalId,
+            },
+          },
+        });
+      }
     }
 
-    if (bySeries._id !== byProvider._id) {
-      await this.collection.deleteOne({
-        _id: bySeries._id,
-        tenantId: input.tenantId,
-        principalId: input.principalId,
+    await this.#bulkWriteUnordered(ops);
+    return existing;
+  }
+
+  async #findExistingByProviderIdentity(
+    inputs: readonly ProviderEventUpsert[],
+  ): Promise<Map<string, EventRecord>> {
+    const found = new Map<string, EventRecord>();
+    for (const group of groupByCalendarIdentity(inputs)) {
+      // The unique identity is (connection, calendar, providerEventId) —
+      // the same filter upsert uses. Owner fields are not part of it; a
+      // repeated read that rebuilds tenant/principal still has to land on
+      // the same document.
+      for (
+        let i = 0;
+        i < group.providerEventIds.length;
+        i += WRITE_CHUNK_SIZE
+      ) {
+        const chunk = group.providerEventIds.slice(i, i + WRITE_CHUNK_SIZE);
+        const records = await this.collection
+          .find({
+            connectionId: group.connectionId,
+            calendarId: group.calendarId,
+            $and: [
+              { providerEventId: { $in: chunk } },
+              { providerEventId: { $type: "string" } },
+            ],
+          })
+          .toArray();
+        for (const record of records) {
+          const parsed = EventRecordSchema.parse(record);
+          if (!parsed.providerEventId) continue;
+          found.set(
+            providerIdentityKey({
+              connectionId: group.connectionId,
+              calendarId: group.calendarId,
+              providerEventId: parsed.providerEventId,
+            }),
+            parsed,
+          );
+        }
+      }
+    }
+    return found;
+  }
+
+  async #findBySeriesExceptionKeys(
+    inputs: readonly (ProviderEventUpsert & {
+      recurrence: Extract<
+        ProviderEventUpsert["recurrence"],
+        { kind: "exception" }
+      >;
+    })[],
+  ): Promise<Map<string, EventRecord>> {
+    const found = new Map<string, EventRecord>();
+    if (inputs.length === 0) return found;
+
+    for (let i = 0; i < inputs.length; i += WRITE_CHUNK_SIZE) {
+      const chunk = inputs.slice(i, i + WRITE_CHUNK_SIZE);
+      const records = await this.collection
+        .find({
+          $or: chunk.map((input) => ({
+            tenantId: input.tenantId,
+            principalId: input.principalId,
+            "recurrence.kind": "exception" as const,
+            "recurrence.seriesId": input.recurrence.seriesId,
+            "recurrence.recurrenceId": input.recurrence.recurrenceId,
+          })),
+        })
+        .toArray();
+      for (const record of records) {
+        const parsed = EventRecordSchema.parse(record);
+        if (parsed.recurrence.kind !== "exception") continue;
+        found.set(
+          seriesExceptionKey({
+            tenantId: parsed.tenantId,
+            principalId: parsed.principalId,
+            recurrence: parsed.recurrence,
+          }),
+          parsed,
+        );
+      }
+    }
+    return found;
+  }
+
+  async #bulkWriteUnordered(
+    ops: AnyBulkWriteOperation<EventRecord>[],
+  ): Promise<void> {
+    if (ops.length === 0) return;
+    for (let i = 0; i < ops.length; i += WRITE_CHUNK_SIZE) {
+      await this.collection.bulkWrite(ops.slice(i, i + WRITE_CHUNK_SIZE), {
+        ordered: false,
       });
     }
   }
@@ -326,6 +400,49 @@ export class EventRepository {
       providerEventId: { $eq: identity.providerEventId, $type: "string" },
     });
     return record ? EventRecordSchema.parse(record) : null;
+  }
+
+  // Batch form of findByProviderIdentity: one $in per chunk instead of one
+  // findOne per event. Empty id lists short-circuit. Returns a map keyed by
+  // providerEventId; missing identities are absent, not null.
+  async findByProviderIdentities(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    identity: {
+      connectionId: NonNullable<EventRecord["connectionId"]>;
+      calendarId: EventRecord["calendarId"];
+      providerEventIds: readonly NonNullable<EventRecord["providerEventId"]>[];
+    },
+  ): Promise<Map<string, EventRecord>> {
+    const ids = [...new Set(identity.providerEventIds)];
+    const found = new Map<string, EventRecord>();
+    if (ids.length === 0) return found;
+    for (let i = 0; i < ids.length; i += WRITE_CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + WRITE_CHUNK_SIZE);
+      const records = await this.collection
+        .find({
+          tenantId,
+          principalId,
+          connectionId: identity.connectionId,
+          calendarId: identity.calendarId,
+          // $type: see the PLANNER TRAP note in index-manifest.ts. $in of
+          // strings does not itself prove the partial-index predicate, so the
+          // $type clause is a sibling under $and rather than a sibling of $in
+          // (memory-server treats `{ $in, $type }` as matching nothing).
+          $and: [
+            { providerEventId: { $in: chunk } },
+            { providerEventId: { $type: "string" } },
+          ],
+        })
+        .toArray();
+      for (const record of records) {
+        const parsed = EventRecordSchema.parse(record);
+        if (parsed.providerEventId) {
+          found.set(parsed.providerEventId, parsed);
+        }
+      }
+    }
+    return found;
   }
 
   // Resolve a CalDAV resource href to a stored provider event. Incremental
@@ -592,6 +709,35 @@ export class EventRepository {
     return records.map((r) => EventRecordSchema.parse(r));
   }
 
+  // Batch form of findSeriesExceptions: one $in for every series touched on a
+  // page, grouped by seriesId. Empty id lists short-circuit.
+  async findSeriesExceptionsBySeriesIds(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    seriesIds: readonly EventId[],
+  ): Promise<Map<EventId, EventRecord[]>> {
+    const ids = [...new Set(seriesIds)];
+    const found = new Map<EventId, EventRecord[]>(ids.map((id) => [id, []]));
+    if (ids.length === 0) return found;
+    for (let i = 0; i < ids.length; i += WRITE_CHUNK_SIZE) {
+      const chunk = ids.slice(i, i + WRITE_CHUNK_SIZE);
+      const records = await this.collection
+        .find({
+          tenantId,
+          principalId,
+          "recurrence.kind": "exception",
+          "recurrence.seriesId": { $in: chunk },
+        })
+        .toArray();
+      for (const record of records) {
+        const parsed = EventRecordSchema.parse(record);
+        if (parsed.recurrence.kind !== "exception") continue;
+        found.get(parsed.recurrence.seriesId)?.push(parsed);
+      }
+    }
+    return found;
+  }
+
   // Remove a calendar's provider-linked events left below a generation — the
   // ones a completed repair did NOT re-import (deleted at the provider), since a
   // re-imported event's identity upsert bumped it to the new generation.
@@ -637,10 +783,133 @@ export class EventRepository {
 }
 
 function isDuplicateKeyError(error: unknown): boolean {
-  return (
+  if (
     typeof error === "object" &&
     error !== null &&
     "code" in error &&
     (error as { code: unknown }).code === 11000
-  );
+  ) {
+    return true;
+  }
+  const writeErrors = (
+    error as { writeErrors?: readonly { code?: unknown }[] } | null
+  )?.writeErrors;
+  return writeErrors?.some((entry) => entry.code === 11000) ?? false;
+}
+
+function providerIdentityFilter(input: {
+  connectionId: NonNullable<EventRecord["connectionId"]>;
+  calendarId: EventRecord["calendarId"];
+  providerEventId: NonNullable<EventRecord["providerEventId"]>;
+}): {
+  connectionId: NonNullable<EventRecord["connectionId"]>;
+  calendarId: EventRecord["calendarId"];
+  providerEventId: {
+    $eq: NonNullable<EventRecord["providerEventId"]>;
+    $type: "string";
+  };
+} {
+  return {
+    connectionId: input.connectionId,
+    calendarId: input.calendarId,
+    // $type is a semantic no-op but makes the provider_event_identity
+    // partial index provable to the planner — without it, COLLSCAN.
+    // See the PLANNER TRAP note in index-manifest.ts.
+    providerEventId: { $eq: input.providerEventId, $type: "string" },
+  };
+}
+
+function providerIdentityKey(input: {
+  connectionId: EventRecord["connectionId"];
+  calendarId: EventRecord["calendarId"];
+  providerEventId: EventRecord["providerEventId"];
+}): string {
+  return `${input.connectionId}:${input.calendarId}:${input.providerEventId}`;
+}
+
+function seriesExceptionKey(input: {
+  tenantId: TenantId;
+  principalId: PrincipalId;
+  recurrence: Extract<EventRecord["recurrence"], { kind: "exception" }>;
+}): string {
+  return `${input.tenantId}:${input.principalId}:${input.recurrence.seriesId}:${input.recurrence.recurrenceId}`;
+}
+
+function lastByProviderIdentity(
+  inputs: readonly ProviderEventUpsert[],
+): ProviderEventUpsert[] {
+  const unique = new Map<string, ProviderEventUpsert>();
+  for (const input of inputs) unique.set(providerIdentityKey(input), input);
+  return [...unique.values()];
+}
+
+function groupByCalendarIdentity(inputs: readonly ProviderEventUpsert[]): {
+  tenantId: TenantId;
+  principalId: PrincipalId;
+  connectionId: NonNullable<EventRecord["connectionId"]>;
+  calendarId: EventRecord["calendarId"];
+  providerEventIds: NonNullable<EventRecord["providerEventId"]>[];
+}[] {
+  const groups = new Map<
+    string,
+    {
+      tenantId: TenantId;
+      principalId: PrincipalId;
+      connectionId: NonNullable<EventRecord["connectionId"]>;
+      calendarId: EventRecord["calendarId"];
+      providerEventIds: NonNullable<EventRecord["providerEventId"]>[];
+    }
+  >();
+  for (const input of inputs) {
+    const key = `${input.tenantId}:${input.principalId}:${input.connectionId}:${input.calendarId}`;
+    const group = groups.get(key);
+    if (group) {
+      group.providerEventIds.push(input.providerEventId);
+    } else {
+      groups.set(key, {
+        tenantId: input.tenantId,
+        principalId: input.principalId,
+        connectionId: input.connectionId,
+        calendarId: input.calendarId,
+        providerEventIds: [input.providerEventId],
+      });
+    }
+  }
+  return [...groups.values()];
+}
+
+function upsertSetFields(
+  input: ProviderEventUpsert,
+  now: Date,
+  providerMetadata: EventRecord["providerMetadata"],
+): Record<string, unknown> {
+  const {
+    customizations,
+    providerMetadata: _incomingMetadata,
+    ...fields
+  } = input;
+  const set: Record<string, unknown> = {
+    ...fields,
+    providerMetadata,
+    updatedAt: now,
+  };
+  if (customizations !== undefined) set["customizations"] = customizations;
+  return set;
+}
+
+// Merge rules for the provider-fact bag: incoming wins for a present iCalUID;
+// if incoming omits iCalUID but the existing row has one, keep it so a sparse
+// re-read cannot wipe a backfill or a prior full read; incoming null with no
+// existing iCalUID stays null (busy default).
+function mergeProviderMetadata(
+  incoming: EventRecord["providerMetadata"],
+  existing: EventRecord["providerMetadata"] | undefined,
+): EventRecord["providerMetadata"] {
+  const existingUid = existing?.["iCalUID"] ?? null;
+  if (incoming === null) {
+    return existingUid ? { iCalUID: existingUid } : null;
+  }
+  if (incoming["iCalUID"]) return incoming;
+  if (existingUid) return { ...incoming, iCalUID: existingUid };
+  return incoming;
 }
