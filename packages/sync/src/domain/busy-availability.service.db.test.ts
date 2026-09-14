@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import { mock } from "bun:test";
 import { type Document } from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type ConnectionState } from "@core/types/sync/connection.contracts";
@@ -21,6 +20,7 @@ import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occu
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 const NOW = new Date("2026-07-14T12:00:00.000Z");
