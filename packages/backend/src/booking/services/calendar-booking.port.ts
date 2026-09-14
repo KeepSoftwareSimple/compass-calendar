@@ -50,6 +50,7 @@ export interface CalendarBookingUpdateEventInput {
   start?: DateTime;
   end?: DateTime;
   expectedVersion?: string | null;
+  operationId: string;
 }
 
 export interface CalendarBookingPort {

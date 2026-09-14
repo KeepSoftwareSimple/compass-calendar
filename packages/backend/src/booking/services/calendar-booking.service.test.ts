@@ -284,6 +284,7 @@ describe("CalendarBookingService", () => {
       timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Grace Hopper" },
       expectedVersion: "etag-1",
+      operationId: "op-1",
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
@@ -310,8 +311,7 @@ describe("CalendarBookingService", () => {
         },
       },
     });
-    expect(request.idempotencyKey.startsWith(`update:${eventId}:`)).toBe(true);
-    expect(request.idempotencyKey).toContain("2026-09-01T15:00:00.000Z");
+    expect(request.idempotencyKey as string).toBe(`update:${eventId}:op-1`);
     expect(request.input).not.toHaveProperty("createConference");
     if (request.input.kind === "update") {
       expect(request.input.content?.attendees).toEqual([]);
@@ -332,6 +332,7 @@ describe("CalendarBookingService", () => {
       description: "bring tea",
       timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Grace Hopper" },
+      operationId: "op-notes",
     });
 
     const request = submitRequestFrom(submitCommand);
@@ -341,7 +342,7 @@ describe("CalendarBookingService", () => {
       content: { title: "Grace and Tyler", description: "bring tea" },
     });
     expect(request.input).not.toHaveProperty("schedule");
-    expect(request.idempotencyKey).toContain("keep");
+    expect(request.idempotencyKey as string).toBe(`update:${eventId}:op-notes`);
   });
 
   it("submits a schedule-only booking update without content", async () => {
@@ -355,6 +356,7 @@ describe("CalendarBookingService", () => {
       end: "2026-09-01T16:30:00.000Z" as DateTime,
       timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
+      operationId: "op-slot",
     });
 
     const request = submitRequestFrom(submitCommand);
@@ -367,7 +369,68 @@ describe("CalendarBookingService", () => {
       },
     });
     expect(request.input).not.toHaveProperty("content");
-    expect(request.idempotencyKey).toContain("2026-09-01T16:00:00.000Z");
+    expect(request.idempotencyKey as string).toBe(`update:${eventId}:op-slot`);
+  });
+
+  it("keys retries by operation identity, not by content", async () => {
+    const eventId = faker.database.mongodbObjectId() as EventId;
+    const first = mock(async () => confirmedCommandSubmit());
+    const second = mock(async () => confirmedCommandSubmit());
+    const payload = {
+      eventId: eventId as EventId,
+      title: "Ada and Tyler",
+      description: "notes",
+      start: "2026-09-01T15:00:00.000Z" as DateTime,
+      end: "2026-09-01T15:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
+      guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
+    };
+
+    await serviceWithSubmit(first).updateBookingEvent(userId(), {
+      ...payload,
+      operationId: "op-a",
+    });
+    await serviceWithSubmit(second).updateBookingEvent(userId(), {
+      ...payload,
+      start: "2026-09-01T16:00:00.000Z" as DateTime,
+      end: "2026-09-01T16:30:00.000Z" as DateTime,
+      timeZone: "Europe/London" as TimeZone,
+      operationId: "op-a",
+    });
+    expect(submitRequestFrom(first).idempotencyKey as string).toBe(
+      `update:${eventId}:op-a`,
+    );
+    expect(submitRequestFrom(second).idempotencyKey as string).toBe(
+      `update:${eventId}:op-a`,
+    );
+  });
+
+  it("gives a later matching edit a new operation identity", async () => {
+    const eventId = faker.database.mongodbObjectId() as EventId;
+    const first = mock(async () => confirmedCommandSubmit());
+    const second = mock(async () => confirmedCommandSubmit());
+    const payload = {
+      eventId: eventId as EventId,
+      title: "Ada and Tyler",
+      description: "notes",
+      timeZone: "America/Denver" as TimeZone,
+      guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
+    };
+
+    await serviceWithSubmit(first).updateBookingEvent(userId(), {
+      ...payload,
+      operationId: "op-1",
+    });
+    await serviceWithSubmit(second).updateBookingEvent(userId(), {
+      ...payload,
+      operationId: "op-2",
+    });
+    expect(submitRequestFrom(first).idempotencyKey as string).toBe(
+      `update:${eventId}:op-1`,
+    );
+    expect(submitRequestFrom(second).idempotencyKey as string).toBe(
+      `update:${eventId}:op-2`,
+    );
   });
 
   it("submits delete with invitation all", async () => {
@@ -416,6 +479,7 @@ describe("CalendarBookingService", () => {
       email: "ada@example.com",
       displayName: "Grace Hopper" as string | null,
     },
+    operationId: faker.database.mongodbObjectId(),
   });
 
   it("rejects failed, cancelled, and nonterminal outcomes on create, update, and delete", async () => {

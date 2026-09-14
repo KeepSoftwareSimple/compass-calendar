@@ -11,6 +11,8 @@ import {
   CancelBookingOperationRecordSchema,
   type CreateBookingOperationRecord,
   CreateBookingOperationRecordSchema,
+  type EditBookingOperationRecord,
+  EditBookingOperationRecordSchema,
   type RescheduleBookingOperationRecord,
   RescheduleBookingOperationRecordSchema,
 } from "@backend/booking/booking-operation.record";
@@ -42,6 +44,15 @@ export type InsertCancelBookingOperationInput = Omit<
 
 export type InsertRescheduleBookingOperationInput = Omit<
   RescheduleBookingOperationRecord,
+  "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
+> & {
+  attemptCount?: number;
+  nextAttemptAt?: Date;
+  lastError?: string | null;
+};
+
+export type InsertEditBookingOperationInput = Omit<
+  EditBookingOperationRecord,
   "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
 > & {
   attemptCount?: number;
@@ -155,6 +166,35 @@ class BookingOperationRepository {
     }
   }
 
+  async insertEdit(
+    input: InsertEditBookingOperationInput,
+  ): Promise<EditBookingOperationRecord> {
+    const now = new Date();
+    const record = EditBookingOperationRecordSchema.parse({
+      ...input,
+      attemptCount: input.attemptCount ?? 0,
+      nextAttemptAt: input.nextAttemptAt ?? now,
+      lastError: input.lastError ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    try {
+      await mongoService.bookingOperation.insertOne(record);
+      return record;
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+      const existing = await this.findInFlightByReservationId(
+        record.reservationId,
+      );
+      if (existing?.kind === "edit") {
+        return existing;
+      }
+      throw error;
+    }
+  }
+
   async findById(id: ObjectId): Promise<BookingOperationRecord | null> {
     const record = await mongoService.bookingOperation.findOne({ _id: id });
     if (!record) return null;
@@ -193,7 +233,7 @@ class BookingOperationRepository {
   ): Promise<BookingOperationRecord | null> {
     const record = await mongoService.bookingOperation.findOne({
       reservationId,
-      kind: { $in: ["reschedule", "cancel"] },
+      kind: { $in: ["reschedule", "cancel", "edit"] },
       status: { $in: [...BOOKING_OPERATION_RECOVERABLE_STATUSES] },
     });
     if (!record) return null;
