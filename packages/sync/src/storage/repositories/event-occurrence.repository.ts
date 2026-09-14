@@ -1,4 +1,10 @@
-import { type Collection, type Db, type MongoClient, ObjectId } from "mongodb";
+import {
+  type Collection,
+  type Db,
+  type Filter,
+  type MongoClient,
+  ObjectId,
+} from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
 import {
@@ -89,7 +95,9 @@ function activeCalendarClause(calendars: readonly CalendarGeneration[]) {
 }
 
 // Exported so explain() tests run the same filter the repository methods use.
-export function occurrenceRangeFilter(query: OccurrenceRangeQuery) {
+export function occurrenceRangeFilter(
+  query: OccurrenceRangeQuery,
+): Filter<EventOccurrenceRecord> {
   const startAtFloor = startAtFloorFor(query.start);
   const inRange = {
     $or: [
@@ -114,10 +122,12 @@ export function occurrenceRangeFilter(query: OccurrenceRangeQuery) {
     tenantId: query.tenantId,
     principalId: query.principalId,
     $and: [activeCalendarClause(query.calendars), inRange, ...keyset],
-  };
+  } as Filter<EventOccurrenceRecord>;
 }
 
-export function busyOverlapFilter(query: BusyOverlapQuery) {
+export function busyOverlapFilter(
+  query: BusyOverlapQuery,
+): Filter<EventOccurrenceRecord> {
   const startAtFloor = startAtFloorFor(query.start);
   return {
     tenantId: query.tenantId,
@@ -129,7 +139,7 @@ export function busyOverlapFilter(query: BusyOverlapQuery) {
       { startAt: { $gte: startAtFloor, $lt: query.end } },
       { endAt: { $gt: query.start } },
     ],
-  };
+  } as Filter<EventOccurrenceRecord>;
 }
 
 // Repository for `event_occurrences`. Rebuilding a series' window

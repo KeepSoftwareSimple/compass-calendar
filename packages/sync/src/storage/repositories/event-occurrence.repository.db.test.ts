@@ -19,8 +19,8 @@ import {
   BUSY_MAX_LOOKBACK_MS,
   busyOverlapFilter,
   EventOccurrenceRepository,
-  occurrenceRangeFilter,
   type OccurrenceInput,
+  occurrenceRangeFilter,
 } from "@sync/storage/repositories/event-occurrence.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
@@ -691,7 +691,8 @@ describe("EventOccurrenceRepository", () => {
                 principalId,
                 calendarId,
                 eventId,
-                occurrenceKey: `${eventId}:${startAt.toISOString()}` as OccurrenceKey,
+                occurrenceKey:
+                  `${eventId}:${startAt.toISOString()}` as OccurrenceKey,
                 startAt,
                 endAt,
                 schedule: {
@@ -737,8 +738,16 @@ describe("EventOccurrenceRepository", () => {
           ],
         },
         ...noise(lookbackEndedStart, lookbackEndedEnd, 40),
-        ...noise(ancientStart, new Date(ancientStart.getTime() + 60 * 60_000), 20),
-        ...noise(futureStart, new Date(futureStart.getTime() + 60 * 60_000), 20),
+        ...noise(
+          ancientStart,
+          new Date(ancientStart.getTime() + 60 * 60_000),
+          20,
+        ),
+        ...noise(
+          futureStart,
+          new Date(futureStart.getTime() + 60 * 60_000),
+          20,
+        ),
       ]);
 
       const rangeQuery = {
@@ -761,7 +770,8 @@ describe("EventOccurrenceRepository", () => {
 
     it("listByCalendarRange and listBusyOverlapping use calendar_gen_start including endAt", async () => {
       const { rangeQuery, busyQuery } = await seedIndexFixture();
-      const collection = db.collection("event_occurrences");
+      const collection =
+        db.collection<EventOccurrenceRecord>("event_occurrences");
 
       const rangeHits = await repo.listByCalendarRange(rangeQuery);
       expect(rangeHits.length).toBeGreaterThanOrEqual(2);
@@ -792,7 +802,9 @@ describe("EventOccurrenceRepository", () => {
       expect(JSON.stringify(busyPlan)).not.toContain("COLLSCAN");
 
       const indexes = await collection.indexes();
-      const calendarGenStart = indexes.find((i) => i.name === "calendar_gen_start");
+      const calendarGenStart = indexes.find(
+        (i) => i.name === "calendar_gen_start",
+      );
       expect(calendarGenStart?.key).toEqual({
         calendarId: 1,
         generation: 1,
@@ -807,7 +819,8 @@ describe("EventOccurrenceRepository", () => {
 
     it("startAt+endAt examines fewer future-start rows than an endAt-leading alt index", async () => {
       const { busyQuery } = await seedIndexFixture();
-      const collection = db.collection("event_occurrences");
+      const collection =
+        db.collection<EventOccurrenceRecord>("event_occurrences");
       await collection.createIndex(
         { calendarId: 1, generation: 1, endAt: 1 },
         { name: "calendar_gen_end_alt" },

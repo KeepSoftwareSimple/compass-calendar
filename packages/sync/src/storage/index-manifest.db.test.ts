@@ -116,7 +116,9 @@ describe("installIndexManifest", () => {
       false,
     );
     expect(indexes.some((i) => i.name === "connection_runafter")).toBe(true);
-    const lastErrorAt = indexes.find((i) => i.name === "connection_lasterrorat");
+    const lastErrorAt = indexes.find(
+      (i) => i.name === "connection_lasterrorat",
+    );
     expect(lastErrorAt?.key).toEqual({ connectionId: 1, lastErrorAt: 1 });
     expect(lastErrorAt?.sparse).toBe(true);
   });
@@ -181,7 +183,9 @@ describe("installIndexManifest", () => {
     const indexes = await db
       .collection(SYNC_COLLECTIONS.eventOccurrences)
       .indexes();
-    const calendarGenStart = indexes.find((i) => i.name === "calendar_gen_start");
+    const calendarGenStart = indexes.find(
+      (i) => i.name === "calendar_gen_start",
+    );
     expect(calendarGenStart?.key).toEqual({
       calendarId: 1,
       generation: 1,
