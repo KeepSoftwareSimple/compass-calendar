@@ -81,7 +81,11 @@ describe("BusyAvailabilityResponseSchema", () => {
         ],
       },
     });
-    expect(parsed.byCalendar[calendarId]).toEqual([
+    const grouped = parsed.byCalendar as Record<
+      string,
+      Array<{ start: string; end: string }>
+    >;
+    expect(grouped[calendarId]).toEqual([
       {
         start: "2026-07-14T09:00:00.000Z",
         end: "2026-07-14T10:00:00.000Z",

@@ -439,7 +439,14 @@ describe("computeBusyAvailability", () => {
       lastSuccessAt: fresh,
       intervals: [["2026-07-14T09:00Z", "2026-07-14T10:00Z"]],
     });
-    const findByIds = mock(async () => []);
+    const findByIds = mock(
+      async (
+        _tenantId: TenantId,
+        _principalId: PrincipalId,
+        _ids: readonly EventId[],
+        _options?: { projection?: Document },
+      ) => [],
+    );
 
     await computeBusyAvailability(
       {

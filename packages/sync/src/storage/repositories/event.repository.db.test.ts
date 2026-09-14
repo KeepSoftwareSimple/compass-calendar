@@ -345,7 +345,7 @@ describe("EventRepository", () => {
         },
       );
 
-      expect(found).toEqual([
+      expect(found as unknown).toEqual([
         {
           _id: saved._id,
           connectionId: saved.connectionId,
