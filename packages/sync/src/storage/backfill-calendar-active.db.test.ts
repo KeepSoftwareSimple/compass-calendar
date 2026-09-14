@@ -102,7 +102,7 @@ describe("backfillCalendarActive", () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       },
-    ]);
+    ] as never);
 
     const stamped = await backfillCalendarActive(db);
     expect(stamped).toBe(3);

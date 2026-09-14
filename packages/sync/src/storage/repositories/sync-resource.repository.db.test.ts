@@ -649,12 +649,7 @@ describe("SyncResourceRepository", () => {
     const inactive = await repo.ensure(upsert({ tenantId, principalId }));
     if (!inactive.calendarId) throw new Error("expected an events resource");
     await repo.setBootstrapState(tenantId, principalId, active._id, "ready");
-    await repo.setBootstrapState(
-      tenantId,
-      principalId,
-      inactive._id,
-      "ready",
-    );
+    await repo.setBootstrapState(tenantId, principalId, inactive._id, "ready");
     await repo.setCalendarActiveByCalendarIds(
       tenantId,
       principalId,

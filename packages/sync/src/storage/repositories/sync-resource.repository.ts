@@ -445,7 +445,7 @@ export class SyncResourceRepository {
   async setCalendarActiveByCalendarIds(
     tenantId: TenantId,
     principalId: PrincipalId,
-    calendarIds: readonly ProviderCalendarId[],
+    calendarIds: readonly SyncEventCalendarId[],
     active: boolean,
   ): Promise<void> {
     await this.collection.updateMany(
