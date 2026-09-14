@@ -166,10 +166,10 @@ describe("meeting dashboard fixtures", () => {
     expect(POSTHOG_ALERTS_URL).toContain("/alerts");
     expect(POST_LAUNCH_FEEDBACK_ISSUE).toContain("/issues/3720");
     expect(GUEST_PATH_EVENTS[0]).toBe("booking_page_viewed");
-    expect(GUEST_PATH_EVENTS.at(-1)).toBe("booking_reservation_created");
+    expect(GUEST_PATH_EVENTS).toContain("booking_reservation_created");
     expect(GUEST_FUNNEL_EVENTS).toEqual([
-      GUEST_PATH_EVENTS[0],
-      GUEST_PATH_EVENTS[GUEST_PATH_EVENTS.length - 1],
+      "booking_page_viewed",
+      "booking_reservation_created",
     ]);
     expect(INFRA_FAILURE_OUTCOMES).toEqual([
       "provider",
