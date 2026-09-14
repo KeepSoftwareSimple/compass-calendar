@@ -48,6 +48,51 @@ Web PostHog events carry `version` (the web build's `APP_VERSION`) and
 `environment` as super properties, matching the backend and sync event
 shape so a frontend regression can be attributed to a release.
 
+## PostHog logs
+
+Backend and Sync emit OpenTelemetry logs to PostHog when `NODE_ENV` is
+`staging` or `production` and a PostHog key is set. Rows in the `logs`
+table carry these resource attributes:
+
+- `service.name`: `compass-backend` or `compass-sync`
+- `deployment.environment`: `staging` or `production` (same value as
+  `$exception` `properties.environment`)
+- `service.version`: deploy revision (same value as `$exception`
+  `properties.version`)
+
+Split environments:
+
+```sql
+SELECT
+  resource_attributes['deployment.environment'] AS environment,
+  service_name,
+  count() AS logs
+FROM logs
+WHERE timestamp > now() - INTERVAL 1 DAY
+GROUP BY environment, service_name
+ORDER BY environment, service_name
+```
+
+Per-route backend latency from the HTTP logger's `path`, `status`, and
+`durationMs` attributes:
+
+```sql
+SELECT
+  extract(attributes['path'], '^(/api/[a-z]+)') AS route,
+  attributes['status'],
+  quantile(0.5)(toFloat(attributes['durationMs'])) AS p50_ms,
+  quantile(0.95)(toFloat(attributes['durationMs'])) AS p95_ms
+FROM logs
+WHERE service_name = 'compass-backend'
+  AND resource_attributes['deployment.environment'] = 'production'
+GROUP BY route, attributes['status']
+ORDER BY p95_ms DESC
+```
+
+Use `resource_attributes['deployment.environment'] = 'staging'` on a
+staging host. Filter on `service.version` the same way when comparing
+releases.
+
 Hosted Compass Meeting conversion and recovery live on the PostHog
 [Meeting dashboard](https://us.posthog.com/project/165441/dashboard/2093461)
 and [Meeting monitoring](../development/meeting-monitoring.md). Self-hosted
