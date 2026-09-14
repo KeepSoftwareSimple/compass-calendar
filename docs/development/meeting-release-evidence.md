@@ -19,10 +19,9 @@ This file does not enable production booking. Do not flip
 | Rollback / disable | Keep production `NODE_ENV` on the current `isBookingEnabled` path. Do not deploy a production `true`. If a future change enables it, revert that change and leave Meeting routes 404 in production |
 | First-week review | Daily for seven days after a future production enable, then weekly. Sample-size caveat: do not promote a rate with fewer than 20 accepted operations in the window. Post-launch: [#3720](https://github.com/KeepSoftwareSimple/compass-calendar/issues/3720) |
 
-The owner signs by merging
-[#3737](https://github.com/KeepSoftwareSimple/compass-calendar/pull/3737).
-That merge records this NO-GO. It does not enable production booking and
-must not carry `agent-automerge`.
+The owner records this NO-GO by merging
+[#3737](https://github.com/KeepSoftwareSimple/compass-calendar/pull/3737)
+through the merge queue. That merge does not enable production booking.
 
 ## WP-13 acceptance (this run)
 
@@ -178,12 +177,11 @@ They are not armed.
 
 ## What the owner still has to do
 
-1. Merge [#3737](https://github.com/KeepSoftwareSimple/compass-calendar/pull/3737)
-   to record this NO-GO, or comment a GO on #3719 after a live Google Meet
-   sweep. Do not add `agent-automerge` to #3737.
-2. If go: only after a Google Meet staging sweep with authorized
-   accounts, a known live staging slug, WP-11 telemetry visible in
-   PostHog, and a written enable of production booking in a separate
-   change. This file is not that change.
-3. If no-go: leave production disabled. Use this matrix as the recorded
-   exclusion list.
+1. Merging [#3737](https://github.com/KeepSoftwareSimple/compass-calendar/pull/3737)
+   records this NO-GO and closes WP-13. It does not enable production booking.
+2. If go instead: close that PR without merging, complete a Google Meet
+   staging sweep with authorized accounts, a known live staging slug, WP-11
+   telemetry visible in PostHog, and a written enable of production booking
+   in a separate change. This file is not that change.
+3. If no-go stands: leave production disabled. Use this matrix as the
+   recorded exclusion list.
