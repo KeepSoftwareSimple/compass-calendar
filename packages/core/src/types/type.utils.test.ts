@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import { afterEach, describe, expect, it, spyOn } from "bun:test";
 import { ZodError, z } from "zod/v4";
 import { EventSchema } from "@core/types/event.contracts";
 import {
@@ -7,6 +6,7 @@ import {
   RGBHexSchema,
   TimezoneSchema,
 } from "@core/types/type.utils";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 describe("IDSchemaV4", () => {
   it("validates a correct ObjectId string", () => {
