@@ -25,8 +25,13 @@ const isDuplicateKeyError = (error: unknown): boolean =>
   "code" in error &&
   (error as { code?: unknown }).code === 11000;
 
-export type InsertCreateBookingOperationInput = Omit<
-  CreateBookingOperationRecord,
+/**
+ * What a caller supplies for a new operation: the operation's own fields,
+ * minus the retry bookkeeping and timestamps this repository owns. The three
+ * retry fields stay optional so a test or a recovery path can seed them.
+ */
+type InsertBookingOperationInput<T extends BookingOperationRecord> = Omit<
+  T,
   "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
 > & {
   attemptCount?: number;
@@ -34,32 +39,17 @@ export type InsertCreateBookingOperationInput = Omit<
   lastError?: string | null;
 };
 
-export type InsertCancelBookingOperationInput = Omit<
-  CancelBookingOperationRecord,
-  "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
-> & {
-  attemptCount?: number;
-  nextAttemptAt?: Date;
-  lastError?: string | null;
-};
+export type InsertCreateBookingOperationInput =
+  InsertBookingOperationInput<CreateBookingOperationRecord>;
 
-export type InsertRescheduleBookingOperationInput = Omit<
-  RescheduleBookingOperationRecord,
-  "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
-> & {
-  attemptCount?: number;
-  nextAttemptAt?: Date;
-  lastError?: string | null;
-};
+export type InsertCancelBookingOperationInput =
+  InsertBookingOperationInput<CancelBookingOperationRecord>;
 
-export type InsertEditBookingOperationInput = Omit<
-  EditBookingOperationRecord,
-  "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
-> & {
-  attemptCount?: number;
-  nextAttemptAt?: Date;
-  lastError?: string | null;
-};
+export type InsertRescheduleBookingOperationInput =
+  InsertBookingOperationInput<RescheduleBookingOperationRecord>;
+
+export type InsertEditBookingOperationInput =
+  InsertBookingOperationInput<EditBookingOperationRecord>;
 
 const parseOperation = (record: unknown): BookingOperationRecord =>
   BookingOperationRecordSchema.parse(record);
@@ -71,11 +61,22 @@ const OverlapClaimRowSchema = z.object({
 });
 
 class BookingOperationRepository {
-  async insertCreate(
-    input: InsertCreateBookingOperationInput,
-  ): Promise<CreateBookingOperationRecord> {
+  /**
+   * Insert an operation, or hand back the one that won the race.
+   *
+   * Every kind fills the same retry bookkeeping and emits the same opening
+   * transition; they differ only in which unique index can reject the insert
+   * and therefore how the winner is found again, which is what `findWinner`
+   * supplies. A winner of another kind is not an answer to this insert, so the
+   * duplicate-key error is rethrown instead.
+   */
+  private async insertOperation<T extends BookingOperationRecord>(
+    schema: z.ZodType<T>,
+    input: InsertBookingOperationInput<T>,
+    findWinner: (record: T) => Promise<BookingOperationRecord | null>,
+  ): Promise<T> {
     const now = new Date();
-    const record = CreateBookingOperationRecordSchema.parse({
+    const record = schema.parse({
       ...input,
       attemptCount: input.attemptCount ?? 0,
       nextAttemptAt: input.nextAttemptAt ?? now,
@@ -91,113 +92,58 @@ class BookingOperationRepository {
       if (!isDuplicateKeyError(error)) {
         throw error;
       }
-      const existing = await this.findActiveCreateByIntent(
-        record.pageId,
-        record.slotStart,
-        record.guestEmail,
-      );
-      if (existing) {
-        return existing;
-      }
-      const byReservation = await this.findCreateByReservationId(
-        record.reservationId,
-      );
-      if (byReservation) {
-        return byReservation;
+      const winner = await findWinner(record);
+      if (winner?.kind === record.kind) {
+        return winner as T;
       }
       throw error;
     }
+  }
+
+  async insertCreate(
+    input: InsertCreateBookingOperationInput,
+  ): Promise<CreateBookingOperationRecord> {
+    return this.insertOperation(
+      CreateBookingOperationRecordSchema,
+      input,
+      async (record) =>
+        (await this.findActiveCreateByIntent(
+          record.pageId,
+          record.slotStart,
+          record.guestEmail,
+        )) ?? this.findCreateByReservationId(record.reservationId),
+    );
   }
 
   async insertCancel(
     input: InsertCancelBookingOperationInput,
   ): Promise<CancelBookingOperationRecord> {
-    const now = new Date();
-    const record = CancelBookingOperationRecordSchema.parse({
-      ...input,
-      attemptCount: input.attemptCount ?? 0,
-      nextAttemptAt: input.nextAttemptAt ?? now,
-      lastError: input.lastError ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    try {
-      await mongoService.bookingOperation.insertOne(record);
-      bookingLifecycleAnalytics.emitTransition(null, record);
-      return record;
-    } catch (error) {
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-      const existing = await this.findByReservationIdAndKind(
-        record.reservationId,
-        "cancel",
-      );
-      if (existing?.kind === "cancel") {
-        return existing;
-      }
-      throw error;
-    }
+    return this.insertOperation(
+      CancelBookingOperationRecordSchema,
+      input,
+      (record) =>
+        this.findByReservationIdAndKind(record.reservationId, "cancel"),
+    );
   }
 
   async insertReschedule(
     input: InsertRescheduleBookingOperationInput,
   ): Promise<RescheduleBookingOperationRecord> {
-    const now = new Date();
-    const record = RescheduleBookingOperationRecordSchema.parse({
-      ...input,
-      attemptCount: input.attemptCount ?? 0,
-      nextAttemptAt: input.nextAttemptAt ?? now,
-      lastError: input.lastError ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    try {
-      await mongoService.bookingOperation.insertOne(record);
-      bookingLifecycleAnalytics.emitTransition(null, record);
-      return record;
-    } catch (error) {
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-      const existing = await this.findInFlightByReservationId(
-        record.reservationId,
-      );
-      if (existing?.kind === "reschedule") {
-        return existing;
-      }
-      throw error;
-    }
+    return this.insertOperation(
+      RescheduleBookingOperationRecordSchema,
+      input,
+      (record) => this.findInFlightByReservationId(record.reservationId),
+    );
   }
 
   async insertEdit(
     input: InsertEditBookingOperationInput,
   ): Promise<EditBookingOperationRecord> {
-    const now = new Date();
-    const record = EditBookingOperationRecordSchema.parse({
-      ...input,
-      attemptCount: input.attemptCount ?? 0,
-      nextAttemptAt: input.nextAttemptAt ?? now,
-      lastError: input.lastError ?? null,
-      createdAt: now,
-      updatedAt: now,
-    });
-    try {
-      await mongoService.bookingOperation.insertOne(record);
-      bookingLifecycleAnalytics.emitTransition(null, record);
-      return record;
-    } catch (error) {
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-      const existing = await this.findInFlightByReservationId(
-        record.reservationId,
-      );
-      if (existing?.kind === "edit") {
-        return existing;
-      }
-      throw error;
-    }
+    return this.insertOperation(
+      EditBookingOperationRecordSchema,
+      input,
+      (record) => this.findInFlightByReservationId(record.reservationId),
+    );
   }
 
   async findById(id: ObjectId): Promise<BookingOperationRecord | null> {
@@ -281,24 +227,17 @@ class BookingOperationRepository {
     return parseOperation(record);
   }
 
-  async markStatus(
+  /**
+   * Apply a field update and report the resulting lifecycle transition.
+   *
+   * The pre-image is read first because the analytics stream is a transition,
+   * not a state: an operation that vanished between the read and the write has
+   * no transition to emit, and answers null like any other missing record.
+   */
+  private async updateAndEmit(
     id: ObjectId,
-    status: BookingOperationStatus,
-    patch: { lastError?: string | null; nextAttemptAt?: Date } = {},
+    $set: Partial<BookingOperationRecord> & { updatedAt: Date },
   ): Promise<BookingOperationRecord | null> {
-    const now = new Date();
-    const $set: {
-      status: BookingOperationStatus;
-      updatedAt: Date;
-      lastError?: string | null;
-      nextAttemptAt?: Date;
-    } = { status, updatedAt: now };
-    if (patch.lastError !== undefined) {
-      $set.lastError = patch.lastError;
-    }
-    if (patch.nextAttemptAt) {
-      $set.nextAttemptAt = patch.nextAttemptAt;
-    }
     const previous = await this.findById(id);
     const result = await mongoService.bookingOperation.findOneAndUpdate(
       { _id: id },
@@ -313,29 +252,36 @@ class BookingOperationRepository {
     return current;
   }
 
+  async markStatus(
+    id: ObjectId,
+    status: BookingOperationStatus,
+    patch: { lastError?: string | null; nextAttemptAt?: Date } = {},
+  ): Promise<BookingOperationRecord | null> {
+    const $set: {
+      status: BookingOperationStatus;
+      updatedAt: Date;
+      lastError?: string | null;
+      nextAttemptAt?: Date;
+    } = { status, updatedAt: new Date() };
+    if (patch.lastError !== undefined) {
+      $set.lastError = patch.lastError;
+    }
+    if (patch.nextAttemptAt) {
+      $set.nextAttemptAt = patch.nextAttemptAt;
+    }
+    return this.updateAndEmit(id, $set);
+  }
+
   async scheduleRetry(
     id: ObjectId,
     nextAttemptAt: Date,
     lastError: string | null,
   ): Promise<BookingOperationRecord | null> {
-    const now = new Date();
-    const $set = {
+    return this.updateAndEmit(id, {
       nextAttemptAt,
       lastError,
-      updatedAt: now,
-    };
-    const previous = await this.findById(id);
-    const result = await mongoService.bookingOperation.findOneAndUpdate(
-      { _id: id },
-      { $set },
-      { returnDocument: "after" },
-    );
-    if (!result) return null;
-    const current = parseOperation(result);
-    if (previous) {
-      bookingLifecycleAnalytics.emitTransition(previous, current);
-    }
-    return current;
+      updatedAt: new Date(),
+    });
   }
 
   async markFailed(
