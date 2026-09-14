@@ -13,6 +13,9 @@ Short checklist for release / high-traffic days. Pair with
 - [ ] PostHog Error Tracking is receiving `$exception` from web (open a
       staging page and trigger a handled test if needed)
 - [ ] Confirm `sync_health_snapshot` events arrive every ~5 minutes in PostHog
+- [ ] Confirm the [Meeting dashboard](https://us.posthog.com/project/165441/dashboard/2093461)
+    is readable: empty server tiles are no-data until `booking_operation`
+    ships, not 100% success. Runbook: [Meeting monitoring](./meeting-monitoring.md)
 
 ## Alerts to create in PostHog (or Discord)
 
@@ -47,6 +50,12 @@ that straddles two checks can be under-counted. Widen the insight's window to
 90 minutes if that bites; 15-minute evaluation needs a PostHog add-on. The
 web app offers a sidebar-footer Refresh control for the same condition
 (`SidebarRefreshButton`) after the stream has been down for 30 seconds.
+
+Meeting launch checks (exhausted recovery, oldest pending, infrastructure
+failure rate, missing heartbeat) are defined in
+[Meeting monitoring](./meeting-monitoring.md). They are **not armed** and
+must not notify a new recipient until the release owner confirms the
+channel. Hourly evaluation is coarser than the 5-minute pending SLO.
 
 ## During launch
 
