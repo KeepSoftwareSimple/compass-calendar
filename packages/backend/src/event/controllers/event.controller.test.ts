@@ -191,10 +191,114 @@ describe("EventController", () => {
     const pageQuery = (
       (listFullEvents.mock.calls as unknown[][])[0] as never as [
         unknown,
-        { calendarIds: string[] },
+        { calendarIds: string[]; limit: number },
       ]
     )[1];
     expect(pageQuery.calendarIds).toEqual([activeCalendarId]);
+    // 7-day window → 7 * 50 events/day, well under Sync's 500 cap.
+    expect(pageQuery.limit).toBe(350);
+  });
+
+  it("sizes the first page to a day view instead of Sync's 500-row default", async () => {
+    const activeCalendarId = objectId();
+    spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+    const listFullEvents = mock(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: { instances: [], nextCursor: null },
+      }),
+    );
+    spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+      listCalendars: mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: { calendars: [{ id: activeCalendarId }] },
+        }),
+      ),
+      listFullEvents,
+    } as never);
+
+    const { res } = jsonRes();
+    await eventController.readAll(
+      sessionReq(objectId(), {
+        query: {
+          start: "2026-07-14T00:00:00.000Z",
+          end: "2026-07-15T00:00:00.000Z",
+        },
+      }),
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(Status.OK);
+    const pageQuery = (
+      (listFullEvents.mock.calls as unknown[][])[0] as never as [
+        unknown,
+        { limit: number },
+      ]
+    )[1];
+    expect(pageQuery.limit).toBe(50);
+  });
+
+  it("lists calendars once when draining multiple event pages", async () => {
+    const activeCalendarId = objectId();
+    spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+    const listCalendars = mock(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: { calendars: [{ id: activeCalendarId }] },
+      }),
+    );
+    const listFullEvents = mock(
+      (_principal: unknown, query: { cursor?: string }) => {
+        if (query.cursor === undefined) {
+          return Promise.resolve({
+            ok: true as const,
+            value: { instances: [], nextCursor: "page-2" },
+          });
+        }
+        return Promise.resolve({
+          ok: true as const,
+          value: { instances: [], nextCursor: null },
+        });
+      },
+    );
+    spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+      listCalendars,
+      listFullEvents,
+    } as never);
+
+    const { res } = jsonRes();
+    await eventController.readAll(
+      sessionReq(objectId(), {
+        query: {
+          start: "2026-07-14T00:00:00.000Z",
+          end: "2026-07-21T00:00:00.000Z",
+        },
+      }),
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(Status.OK);
+    expect(listCalendars).toHaveBeenCalledTimes(1);
+    expect(listFullEvents).toHaveBeenCalledTimes(2);
+    const firstPage = (
+      (listFullEvents.mock.calls as unknown[][])[0] as never as [
+        unknown,
+        { calendarIds: string[]; limit: number; cursor?: string },
+      ]
+    )[1];
+    const secondPage = (
+      (listFullEvents.mock.calls as unknown[][])[1] as never as [
+        unknown,
+        { calendarIds: string[]; limit: number; cursor?: string },
+      ]
+    )[1];
+    expect(firstPage.calendarIds).toEqual([activeCalendarId]);
+    expect(secondPage.calendarIds).toEqual([activeCalendarId]);
+    expect(firstPage.limit).toBe(350);
+    expect(secondPage.limit).toBe(350);
+    expect(firstPage.cursor).toBeUndefined();
+    expect(secondPage.cursor).toBe("page-2");
   });
 
   it("rejects a calendar move before submitting anything to sync", async () => {

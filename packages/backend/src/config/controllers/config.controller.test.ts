@@ -1,8 +1,8 @@
 import { type Request, type Response } from "express";
-import { type AppConfig } from "@core/types/config.types";
+import { type AppConfig, AppConfigSchema } from "@core/types/config.types";
 import { CONFIG } from "@backend/common/constants/config.constants";
-import configController from "./config.controller";
-import { afterEach, describe, expect, it } from "bun:test";
+import configController, { buildAppConfig } from "./config.controller";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 // Capture what the controller writes via res.json without a real HTTP round-trip.
 const invokeGet = (): AppConfig => {
@@ -37,7 +37,7 @@ describe("ConfigController.get sync cutover posture", () => {
     CONFIG.SYNC_CLOUD_MUTATION_MODE = "maintenance";
     CONFIG.SYNC_EXECUTION = "passive";
 
-    const config = invokeGet();
+    const config = buildAppConfig(CONFIG);
     expect(config.sync).toEqual({
       cloudMutationMode: "maintenance",
       execution: "passive",
@@ -60,12 +60,12 @@ describe("ConfigController.get billing enforcement", () => {
 
   it("defaults to paused", () => {
     CONFIG.BILLING_ENFORCEMENT = false;
-    expect(invokeGet().billing.enforcement).toBe(false);
+    expect(buildAppConfig(CONFIG).billing.enforcement).toBe(false);
   });
 
   it("reports true once the operator enables it", () => {
     CONFIG.BILLING_ENFORCEMENT = true;
-    expect(invokeGet().billing.enforcement).toBe(true);
+    expect(buildAppConfig(CONFIG).billing.enforcement).toBe(true);
   });
 });
 
@@ -90,8 +90,8 @@ describe("ConfigController.get billing publishableKey", () => {
     CONFIG.STRIPE_PRICE_ID = undefined;
     CONFIG.STRIPE_PUBLISHABLE_KEY = undefined;
 
-    expect(invokeGet().billing.publishableKey).toBeNull();
-    expect(invokeGet().billing.isConfigured).toBe(false);
+    expect(buildAppConfig(CONFIG).billing.publishableKey).toBeNull();
+    expect(buildAppConfig(CONFIG).billing.isConfigured).toBe(false);
   });
 
   it("returns the configured key when Stripe is fully configured", () => {
@@ -100,7 +100,23 @@ describe("ConfigController.get billing publishableKey", () => {
     CONFIG.STRIPE_PRICE_ID = "price_test";
     CONFIG.STRIPE_PUBLISHABLE_KEY = "pk_test_123";
 
-    expect(invokeGet().billing.publishableKey).toBe("pk_test_123");
-    expect(invokeGet().billing.isConfigured).toBe(true);
+    expect(buildAppConfig(CONFIG).billing.publishableKey).toBe("pk_test_123");
+    expect(buildAppConfig(CONFIG).billing.isConfigured).toBe(true);
+  });
+});
+
+describe("ConfigController.get parsed payload", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
+  it("parses AppConfigSchema once across two requests", () => {
+    const parse = spyOn(AppConfigSchema, "parse");
+
+    const first = invokeGet();
+    const second = invokeGet();
+
+    expect(first).toBe(second);
+    expect(parse).not.toHaveBeenCalled();
   });
 });
