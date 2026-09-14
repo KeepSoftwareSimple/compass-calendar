@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { HOURS_AM_FORMAT } from "@core/constants/date.constants";
 import dayjs from "@core/util/date/dayjs";
 import { theme } from "@web/common/styles/theme";
@@ -17,16 +17,22 @@ import {
 } from "@web/components/MobileGate/mobile-game.state";
 import { streakMultiplier } from "@web/components/ShortcutShowcase/game.tasks";
 
+const TAP_MOVE_THRESHOLD_PX = 8;
+
 const formatTime = (minutes: number) =>
   dayjs().startOf("day").add(minutes, "minute").format(HOURS_AM_FORMAT);
 
 const formatDuration = (minutes: number) =>
   minutes === 60 ? "1 hour" : `${minutes} min`;
 
+const distance = (ax: number, ay: number, bx: number, by: number) =>
+  Math.hypot(ax - bx, ay - by);
+
 /**
  * The playing and level-clear phases: score HUD, the board, and the tray
- * card the player drags. All game logic lives in the pure reducer; this
- * component only translates pointer events into hover/drop dispatches.
+ * card the player drags or taps-to-place. All game logic lives in the pure
+ * reducer; this component only translates pointer events into hover/drop
+ * dispatches.
  */
 export const MobileGame: React.FC<{
   state: MobileGameState;
@@ -36,8 +42,16 @@ export const MobileGame: React.FC<{
 }> = ({ state, onHover, onDrop, onAdvanceLevel }) => {
   const level = currentLevel(state);
   const piece = currentPiece(state);
-  const boardRef = useRef<HTMLDivElement | null>(null);
-  const dragRef = useRef<{ pointerId: number; rect: DOMRect } | null>(null);
+  const boardRef = useRef<HTMLElement | null>(null);
+  const dragRef = useRef<{
+    pointerId: number;
+    rect: DOMRect;
+    originX: number;
+    originY: number;
+    didMove: boolean;
+  } | null>(null);
+  const [armed, setArmed] = useState(false);
+  const [instructionPulse, setInstructionPulse] = useState(0);
   const { base: pieceBase } = useEventPalette(piece?.color);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -54,12 +68,23 @@ export const MobileGame: React.FC<{
     dragRef.current = {
       pointerId: event.pointerId,
       rect: boardEl.getBoundingClientRect(),
+      originX: event.clientX,
+      originY: event.clientY,
+      didMove: false,
     };
   };
 
   const handlePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
     const drag = dragRef.current;
     if (!piece || !drag || event.pointerId !== drag.pointerId) return;
+    if (
+      !drag.didMove &&
+      distance(event.clientX, event.clientY, drag.originX, drag.originY) <
+        TAP_MOVE_THRESHOLD_PX
+    ) {
+      return;
+    }
+    drag.didMove = true;
     onHover(
       slotFromPointer(
         drag.rect,
@@ -75,7 +100,12 @@ export const MobileGame: React.FC<{
     const drag = dragRef.current;
     if (!drag || event.pointerId !== drag.pointerId) return;
     dragRef.current = null;
-    onDrop();
+    if (drag.didMove) {
+      setArmed(false);
+      onDrop();
+      return;
+    }
+    setArmed((isArmed) => !isArmed);
   };
 
   const handlePointerCancel = () => {
@@ -83,9 +113,35 @@ export const MobileGame: React.FC<{
     onHover(null);
   };
 
+  const handleBoardPointerUp = (event: React.PointerEvent<HTMLElement>) => {
+    if (dragRef.current) return;
+    if (!armed || !piece) {
+      setInstructionPulse((seq) => seq + 1);
+      return;
+    }
+    const boardEl = boardRef.current;
+    if (!boardEl) return;
+    onHover(
+      slotFromPointer(
+        boardEl.getBoundingClientRect(),
+        event.clientX,
+        event.clientY,
+        level,
+        piece.durationMin,
+      ),
+    );
+    onDrop();
+    setArmed(false);
+  };
+
   const missedCurrentPiece =
     piece !== null && state.lastMiss?.pieceId === piece.id;
   const multiplier = streakMultiplier(state.streak);
+  const instruction = missedCurrentPiece
+    ? "Not quite. Check the time and try again."
+    : armed
+      ? "Now tap where it goes on the calendar"
+      : "Drag the event onto the calendar, or tap it first";
 
   return (
     <div className="flex h-dvh flex-col gap-2 p-4">
@@ -125,6 +181,7 @@ export const MobileGame: React.FC<{
           hoverSlot={state.hoverSlot}
           lastAward={state.lastAward}
           boardRef={boardRef}
+          onBoardPointerUp={handleBoardPointerUp}
         />
       </div>
 
@@ -160,9 +217,12 @@ export const MobileGame: React.FC<{
               key={
                 missedCurrentPiece ? `miss-${state.lastMiss?.seq}` : piece.id
               }
-              className={`w-full cursor-grab touch-none select-none rounded-md border-2 border-transparent px-3 py-3 text-center focus:outline focus:outline-2 focus:outline-accent focus:outline-offset-2 ${
-                missedCurrentPiece ? "c-game-shake" : ""
-              }`}
+              aria-pressed={armed}
+              className={`w-full cursor-grab touch-none select-none rounded-md border-2 px-3 py-3 text-center focus:outline focus:outline-2 focus:outline-accent focus:outline-offset-2 ${
+                armed
+                  ? "border-accent outline outline-2 outline-accent outline-offset-2"
+                  : "border-transparent"
+              } ${missedCurrentPiece ? "c-game-shake" : ""}`}
               data-game-piece={piece.id}
               style={{
                 backgroundColor: pieceBase,
@@ -184,10 +244,13 @@ export const MobileGame: React.FC<{
                 {formatDuration(piece.durationMin)}
               </span>
             </button>
-            <p className="min-h-5 text-center text-text-muted text-xs">
-              {missedCurrentPiece
-                ? "Not quite. Check the time and try again."
-                : "Drag the event onto the calendar"}
+            <p
+              key={instructionPulse}
+              className={`min-h-5 text-center text-text-muted text-xs ${
+                instructionPulse > 0 ? "c-game-shake" : ""
+              }`}
+            >
+              {instruction}
             </p>
           </div>
         )

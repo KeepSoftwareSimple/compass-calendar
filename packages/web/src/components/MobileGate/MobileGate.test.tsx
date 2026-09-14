@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MobileGate } from "./MobileGate";
 import {
@@ -80,7 +80,83 @@ describe("MobileGate", () => {
       // The first piece's tray card is up, ready to drag.
       expect(screen.getByText("Standup")).toBeInTheDocument();
       expect(
-        screen.getByText(/drag the event onto the calendar/i),
+        screen.getByText("Drag the event onto the calendar, or tap it first"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("Time Block Party placements", () => {
+    const boardRect = {
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      width: 200,
+      height: 400,
+      right: 200,
+      bottom: 400,
+      toJSON: () => {},
+    } as DOMRect;
+
+    const mockBoardRect = () => {
+      const board = screen.getByRole("region", { name: "Calendar" });
+      board.getBoundingClientRect = () => boardRect;
+      return board;
+    };
+
+    const startPlaying = async () => {
+      const user = userEvent.setup();
+      render(<MobileGate />);
+      await user.click(screen.getByRole("button", { name: /^play$/i }));
+      return screen.getByRole("button", { name: /standup/i });
+    };
+
+    const tap = (target: HTMLElement, clientX: number, clientY: number) => {
+      fireEvent.pointerDown(target, { pointerId: 1, clientX, clientY });
+      fireEvent.pointerUp(target, { pointerId: 1, clientX, clientY });
+    };
+
+    it("places the piece when the card is tapped then a calendar slot is tapped", async () => {
+      const card = await startPlaying();
+      const board = mockBoardRect();
+
+      tap(card, 20, 500);
+      expect(card).toHaveAttribute("aria-pressed", "true");
+      expect(
+        screen.getByText("Now tap where it goes on the calendar"),
+      ).toBeInTheDocument();
+
+      tap(board, 100, 25);
+
+      expect(screen.getByText("150")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /deep work/i }),
+      ).toBeInTheDocument();
+    });
+
+    it("disarms the piece when the card is tapped a second time", async () => {
+      const card = await startPlaying();
+
+      tap(card, 20, 500);
+      expect(card).toHaveAttribute("aria-pressed", "true");
+      tap(card, 20, 500);
+      expect(card).toHaveAttribute("aria-pressed", "false");
+      expect(
+        screen.getByText("Drag the event onto the calendar, or tap it first"),
+      ).toBeInTheDocument();
+    });
+
+    it("still places the piece when it is dragged onto its slot", async () => {
+      const card = await startPlaying();
+      mockBoardRect();
+
+      fireEvent.pointerDown(card, { pointerId: 1, clientX: 20, clientY: 500 });
+      fireEvent.pointerMove(card, { pointerId: 1, clientX: 100, clientY: 25 });
+      fireEvent.pointerUp(card, { pointerId: 1, clientX: 100, clientY: 25 });
+
+      expect(screen.getByText("150")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /deep work/i }),
       ).toBeInTheDocument();
     });
   });
