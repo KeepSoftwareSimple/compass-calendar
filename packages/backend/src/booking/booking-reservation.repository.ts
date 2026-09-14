@@ -146,10 +146,21 @@ class BookingReservationRepository {
     return record;
   }
 
-  async markCancelled(id: ObjectId): Promise<BookingReservationRecord | null> {
+  async markCancelling(id: ObjectId): Promise<BookingReservationRecord | null> {
     const now = new Date();
     const result = await mongoService.bookingReservation.findOneAndUpdate(
       { _id: id, status: "confirmed" },
+      { $set: { status: "cancelling", updatedAt: now } },
+      { returnDocument: "after" },
+    );
+    if (!result) return null;
+    return BookingReservationRecordSchema.parse(result);
+  }
+
+  async markCancelled(id: ObjectId): Promise<BookingReservationRecord | null> {
+    const now = new Date();
+    const result = await mongoService.bookingReservation.findOneAndUpdate(
+      { _id: id, status: { $in: ["confirmed", "cancelling"] } },
       { $set: { status: "cancelled", updatedAt: now } },
       { returnDocument: "after" },
     );

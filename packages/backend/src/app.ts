@@ -1,5 +1,6 @@
 import { ensureBillingIndexes } from "@backend/billing/billing-indexes";
 import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
+import publicBookingService from "@backend/booking/services/public-booking.service";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { createBackendHttpServer } from "@backend/servers/express/express.server";
@@ -46,6 +47,7 @@ async function start() {
     syncChangeFeedBridge.start();
     foregroundSyncRefresh.start();
     userService.startAccountDeletionRetries();
+    publicBookingService.startRecoveryRetries();
   } catch (error) {
     logger.error("Problems encountered during startup", error);
 
@@ -69,6 +71,7 @@ async function gracefulShutdown(): Promise<void> {
     syncChangeFeedBridge.stop();
     foregroundSyncRefresh.stop();
     await userService.stopAccountDeletionRetries();
+    await publicBookingService.stopRecoveryRetries();
     await closeHttpServer();
     await mongoService.stop();
     await stopPostHogLogs();

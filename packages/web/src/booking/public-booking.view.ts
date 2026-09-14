@@ -31,6 +31,7 @@ export interface PublicBookingReservationCopy {
   notFound: PublicBookingStatusCopy;
   loadFailed: PublicBookingStatusCopy;
   cancelled: PublicBookingStatusCopy;
+  cancelling?: PublicBookingStatusCopy;
 }
 
 /**
@@ -61,6 +62,12 @@ export const resolvePublicBookingReservationView = (
   }
   if (reservation.status === "cancelled") {
     return { kind: "status", ...copy.cancelled };
+  }
+  if (reservation.status === "cancelling") {
+    return {
+      kind: "status",
+      ...(copy.cancelling ?? copy.cancelled),
+    };
   }
   return { kind: "reservation", reservation };
 };

@@ -416,10 +416,18 @@ decides whether a busy interval occupies a slot
 - Token is unguessable and stored hashed on the reservation as
   `cancelTokenHash`. It stays valid until `slotEnd` and then returns
   the same generic not-found as an unknown token.
-- Cancel marks the reservation cancelled, then deletes the calendar
-  event (host as organizer, `invitation: "all"`). A failed delete
+- Create and cancel persist a booking-owned operation with a stable
+  calendar event id before the provider call. Retrying the same guest
+  intent reuses that identity. A bounded recovery job finishes in-flight
+  work after a lost response, restart, or expired guest token.
+- Cancel marks the reservation `cancelling` first so a crash after the
+  provider delete cannot leave a confirmed row occupying the slot, then
+  deletes the calendar event (host as organizer, `invitation: "all"`).
+  `cancelling` is not a finished cancel: reload keeps retrying until the
+  event is gone, then the reservation is `cancelled`. A failed delete
   still frees the slot; retry deletes while `calendarEventId` remains.
   Idempotent: a second cancel after a successful delete is a no-op.
+  Failed create compensation is the same operation record, not log-only.
 - Expired / unknown tokens return a generic not-found page, not a
   leak of whether the booking existed.
 
@@ -582,6 +590,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Backend admin API | `packages/backend/src/booking/controllers/booking.controller.ts`, `services/booking-page.service.ts` |
 | Backend public API | `packages/backend/src/booking/booking.routes.config.ts`, `services/public-booking.service.ts`, `services/booking-readiness.ts` |
 | Reservations + cancel tokens | `packages/backend/src/booking/booking-reservation.repository.ts`, `booking-cancel-token.ts` |
+| Booking operations | `packages/backend/src/booking/booking-operation.repository.ts`, `booking-operation.record.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
 | Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |

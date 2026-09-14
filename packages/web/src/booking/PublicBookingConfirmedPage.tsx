@@ -51,6 +51,12 @@ const BOOKING_CANCELED = {
     "The appointment is no longer on the host calendar. You can close this page.",
 } as const;
 
+const BOOKING_CANCELLING = {
+  title: "This meeting is being canceled",
+  description:
+    "We are still removing this appointment from the host calendar. You can close this page.",
+} as const;
+
 const resolveConfirmedPageView = (
   reservationQuery: ReturnType<typeof usePublicBookingReservationQuery>,
 ): PublicBookingReservationView =>
@@ -59,6 +65,7 @@ const resolveConfirmedPageView = (
     notFound: BOOKING_NOT_FOUND,
     loadFailed: BOOKING_LOAD_FAILED,
     cancelled: BOOKING_CANCELED,
+    cancelling: BOOKING_CANCELLING,
   });
 
 function cancelUrlFromHistory(state: unknown): string | undefined {

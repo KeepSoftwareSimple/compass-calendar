@@ -206,6 +206,41 @@ describe("PublicBookingCancelPage", () => {
     expect(screen.getByText("30 minutes")).toBeInTheDocument();
   });
 
+  it("resumes cancel on reload when the reservation is still cancelling", async () => {
+    let cancelPosts = 0;
+    let release!: () => void;
+    const hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      reservationGetHandler({ status: "cancelling" }),
+      rest.post(
+        `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/cancel`,
+        async (_req, res, ctx) => {
+          cancelPosts += 1;
+          await hold;
+          return res(ctx.status(Status.OK), ctx.json({ ok: true }));
+        },
+      ),
+    );
+
+    renderCancelRoute(cancelPath);
+
+    expect(
+      await screen.findByRole("heading", { name: "Canceling this meeting" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Meeting canceled" }),
+    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(cancelPosts).toBe(1);
+    });
+    release();
+    expect(
+      await screen.findByRole("heading", { name: "Meeting canceled" }),
+    ).toBeInTheDocument();
+  });
+
   it("skips confirmation when the reservation is already cancelled", async () => {
     let cancelPosts = 0;
     server.use(

@@ -414,4 +414,17 @@ describe("CalendarBookingService", () => {
     expect(eventId).toMatch(/^[a-f0-9]{24}$/);
     expect(submitCommand).toHaveBeenCalledTimes(1);
   });
+
+  it("reuses a caller-supplied event id on create submit", async () => {
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const eventId = faker.database.mongodbObjectId() as EventId;
+    const returned = await serviceWithSubmit(submitCommand).createBookingEvent(
+      userId(),
+      { ...bookingCreateInput(), eventId },
+    );
+    expect(returned).toBe(eventId);
+    const request = submitRequestFrom(submitCommand);
+    expect(request.eventId).toBe(eventId);
+    expect(request.idempotencyKey.startsWith(`create:${eventId}`)).toBe(true);
+  });
 });

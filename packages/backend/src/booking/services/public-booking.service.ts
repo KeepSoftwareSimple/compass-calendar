@@ -32,18 +32,34 @@ import {
   conferenceForDestination,
   createsGoogleMeetFromConference,
 } from "@core/types/calendar.contracts";
-import { DateTimeSchema, type EventId } from "@core/types/domain-primitives";
+import {
+  DateTimeSchema,
+  type EventId,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
 import {
   BUSY_QUERY_MAX_WINDOW_MS,
   type BusyAvailabilityResponse,
 } from "@core/types/sync/availability.contracts";
 import dayjs from "@core/util/date/dayjs";
-import { bookingError } from "@backend/booking/booking.error";
+import { BookingException, bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
   guestActionTokenAuthorizes,
   hashCancelToken,
 } from "@backend/booking/booking-cancel-token";
+import {
+  BOOKING_OPERATION_CLAIM_LEASE_MS,
+  BOOKING_OPERATION_MAX_ATTEMPTS,
+  BOOKING_OPERATION_RETRY_BATCH_SIZE,
+  BOOKING_OPERATION_RETRY_INTERVAL_MS,
+  bookingOperationBackoffMs,
+} from "@backend/booking/booking-operation.constants";
+import {
+  type CancelBookingOperationRecord,
+  type CreateBookingOperationRecord,
+} from "@backend/booking/booking-operation.record";
+import { bookingOperationRepository } from "@backend/booking/booking-operation.repository";
 import { guestActionUrls } from "@backend/booking/booking-page.mapper";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
 import { bookingPageRepository } from "@backend/booking/booking-page.repository";
@@ -106,11 +122,22 @@ const guestTokenFrom = (raw: unknown): string => {
 const isDuplicateSlotError = (error: unknown): boolean =>
   error instanceof MongoServerError && error.code === 11000;
 
+const isSlotUnavailable = (error: unknown): boolean =>
+  error instanceof BookingException && error.bookingCode === "SLOT_UNAVAILABLE";
+
+const reservationClosedForGuestMutation = (
+  reservation: BookingReservationRecord,
+): boolean =>
+  reservation.status === "cancelled" || reservation.status === "cancelling";
+
 const compensationFailureCause = (error: unknown): string => {
   if (error instanceof BaseError) return error.result;
   if (error instanceof Error) return error.message;
   return String(error);
 };
+
+const truncatedOperationError = (error: unknown): string =>
+  compensationFailureCause(error).slice(0, 500);
 
 export const publicBookingCompensationLog = {
   failed(
@@ -431,7 +458,7 @@ export class PublicBookingService {
       reservationId,
       query.token,
     );
-    if (reservation.status === "cancelled") {
+    if (reservationClosedForGuestMutation(reservation)) {
       throw reservationNotFound();
     }
     const page = await resolveReservationPublicPage(reservation);
@@ -604,116 +631,64 @@ export class PublicBookingService {
 
     const slotStart = new Date(input.slotStart);
     const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
-    await this.assertSlotAvailable(page, slotStart, slotEnd);
 
-    const hostDisplayName = await getHostDisplayName(page.userId);
-    const conference = await destinationConference(
-      page.userId,
-      page.destinationCalendarId,
-    );
-    const cancelToken = generateCancelToken();
-    const reservationId = mongoService.objectId();
-    const { cancelUrl, rescheduleUrl } = guestActionUrls(
-      reservationId.toString(),
-      cancelToken,
-    );
-
-    let calendarEventId: EventId | null = null;
-    try {
-      calendarEventId = await this.calendarBooking.createBookingEvent(
-        page.userId.toString(),
-        {
-          calendarId: page.destinationCalendarId,
-          title: `${input.guestName} and ${hostDisplayName}`,
-          description: bookingEventDescription(
-            input.notes,
-            cancelUrl,
-            rescheduleUrl,
-          ),
-          start: input.slotStart,
-          end: DateTimeSchema.parse(slotEnd.toISOString()),
-          timeZone: page.timeZone,
-          guest: {
-            email: input.guestEmail,
-            displayName: input.guestName,
-          },
-          createConference: conference !== "none",
-        },
+    const existingIntent =
+      await bookingOperationRepository.findActiveCreateByIntent(
+        page._id,
+        slotStart,
+        input.guestEmail,
       );
+    if (existingIntent) {
+      return this.resumeCreateOperation(page, existingIntent);
+    }
 
-      const reservation = await bookingReservationRepository.insert({
-        _id: reservationId,
-        pageId: page._id,
+    const overlapping =
+      await bookingReservationRepository.listConfirmedOverlapping(
+        page._id,
         slotStart,
         slotEnd,
-        guestName: input.guestName,
-        guestEmail: input.guestEmail,
-        notes: input.notes?.trim() ?? null,
-        guestTimeZone: input.guestTimeZone,
-        status: "confirmed",
-        calendarEventId,
-        cancelTokenHash: hashCancelToken(cancelToken),
-      });
-
-      // Close the overlap race the unique index cannot see: the index only
-      // serializes identical starts, but two concurrent confirms on adjacent
-      // grid starts (10:00 and 10:15 for a 30-minute duration) both pass the
-      // pre-insert engine check. Re-checking after our own insert guarantees
-      // the later checker sees both docs, so at most one overlapping
-      // reservation survives; in the rare symmetric case both yield 409 and
-      // the slot reopens. Deliberately not "smallest _id wins": ids are minted
-      // before the slow calendar call, so id order does not track insert order
-      // and both racers could each conclude they had won.
-      const overlapping =
-        await bookingReservationRepository.listConfirmedOverlapping(
-          page._id,
-          slotStart,
-          slotEnd,
-        );
-      if (overlapping.some((id) => !id.equals(reservationId))) {
-        await bookingReservationRepository.deleteById(reservationId);
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
+      );
+    for (const overlappingId of overlapping) {
+      const existing =
+        await bookingReservationRepository.findById(overlappingId);
+      if (
+        existing &&
+        existing.slotStart.getTime() === slotStart.getTime() &&
+        existing.guestEmail === input.guestEmail
+      ) {
+        const createOp =
+          await bookingOperationRepository.findCreateByReservationId(
+            existing._id,
+          );
+        if (createOp) {
+          return this.toCreateResponse(createOp);
+        }
       }
-
-      return CreateBookingReservationResponseSchema.parse({
-        reservationId: reservation._id.toString(),
-        slotStart: reservation.slotStart.toISOString(),
-        slotEnd: reservation.slotEnd.toISOString(),
-        guestTimeZone: reservation.guestTimeZone,
-        cancelUrl,
-        rescheduleUrl,
-      });
-    } catch (error) {
-      if (calendarEventId) {
-        const eventId = calendarEventId;
-        const principal = toSyncPrincipal(page.userId.toString());
-        await this.calendarBooking
-          .deleteBookingEvent(page.userId.toString(), {
-            eventId,
-          })
-          .catch((compensationError: unknown) => {
-            // The guest still gets SLOT_UNAVAILABLE. Log enough to find and
-            // remove the orphaned Google event by hand.
-            publicBookingCompensationLog.failed(compensationError, {
-              tenantId: principal.tenantId,
-              principalId: principal.principalId,
-              calendarId: page.destinationCalendarId,
-              eventId,
-              slotStart: slotStart.toISOString(),
-            });
-          });
-      }
-      if (isDuplicateSlotError(error)) {
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
-      }
-      throw error;
     }
+
+    await this.assertSlotAvailable(page, slotStart, slotEnd);
+
+    const cancelToken = generateCancelToken();
+    const reservationId = mongoService.objectId();
+    const eventId = EventIdSchema.parse(mongoService.objectId().toHexString());
+    const operation = await bookingOperationRepository.insertCreate({
+      _id: mongoService.objectId(),
+      kind: "create",
+      status: "pending",
+      reservationId,
+      pageId: page._id,
+      userId: page.userId,
+      calendarId: page.destinationCalendarId,
+      eventId,
+      slotStart,
+      slotEnd,
+      guestName: input.guestName,
+      guestEmail: input.guestEmail,
+      notes: input.notes?.trim() ?? null,
+      guestTimeZone: input.guestTimeZone,
+      cancelToken,
+    });
+    return this.resumeCreateOperation(page, operation);
   }
 
   async getPublicReservation(
@@ -740,7 +715,7 @@ export class PublicBookingService {
       input.token,
     );
 
-    if (reservation.status === "cancelled") {
+    if (reservationClosedForGuestMutation(reservation)) {
       throw reservationNotFound();
     }
 
@@ -787,7 +762,7 @@ export class PublicBookingService {
       reservationId,
       input.token,
     );
-    if (reservation.status === "cancelled") {
+    if (reservationClosedForGuestMutation(reservation)) {
       throw reservationNotFound();
     }
     const page = await resolveReservationPublicPage(reservation);
@@ -879,23 +854,349 @@ export class PublicBookingService {
       reservationId,
       token,
     );
-    const page = await resolveReservationPage(reservation);
+    await this.finalizeCancel(reservation);
+  }
 
-    // Cancel local state first so a crash after the provider delete cannot
-    // leave a confirmed row occupying the slot. Retry still deletes while
-    // `calendarEventId` remains.
-    if (reservation.status === "confirmed") {
-      await bookingReservationRepository.markCancelled(reservationId);
+  async recoverDueOperations(): Promise<void> {
+    const leaseUntil = new Date(Date.now() + BOOKING_OPERATION_CLAIM_LEASE_MS);
+    const due = await bookingOperationRepository.claimDue(
+      BOOKING_OPERATION_RETRY_BATCH_SIZE,
+      leaseUntil,
+    );
+    for (const operation of due) {
+      if (operation.attemptCount >= BOOKING_OPERATION_MAX_ATTEMPTS) {
+        await bookingOperationRepository.markFailed(
+          operation._id,
+          operation.lastError,
+        );
+        continue;
+      }
+      try {
+        if (operation.kind === "create") {
+          await this.recoverCreateOperation(operation);
+        } else {
+          await this.recoverCancelOperation(operation);
+        }
+      } catch (error) {
+        if (isSlotUnavailable(error)) {
+          continue;
+        }
+        await bookingOperationRepository.scheduleRetry(
+          operation._id,
+          new Date(
+            Date.now() + bookingOperationBackoffMs(operation.attemptCount),
+          ),
+          truncatedOperationError(error),
+        );
+      }
+    }
+  }
+
+  startRecoveryRetries = (): void => {
+    if (this.#recoveryTimer) return;
+    this.#runRecoveryCycle();
+    this.#recoveryTimer = setInterval(() => {
+      this.#runRecoveryCycle();
+    }, BOOKING_OPERATION_RETRY_INTERVAL_MS);
+  };
+
+  stopRecoveryRetries = async (): Promise<void> => {
+    if (this.#recoveryTimer) {
+      clearInterval(this.#recoveryTimer);
+      this.#recoveryTimer = undefined;
+    }
+    await this.#pendingRecoveryCycle;
+  };
+
+  #recoveryTimer: ReturnType<typeof setInterval> | undefined;
+  #pendingRecoveryCycle: Promise<void> | undefined;
+
+  #runRecoveryCycle = (): void => {
+    const cycle = this.recoverDueOperations().catch((error: unknown) => {
+      logger.error(
+        "Could not recover interrupted booking operations",
+        error instanceof Error
+          ? { message: error.message }
+          : { error: String(error) },
+      );
+    });
+    this.#pendingRecoveryCycle = cycle;
+    void cycle.finally(() => {
+      if (this.#pendingRecoveryCycle === cycle) {
+        this.#pendingRecoveryCycle = undefined;
+      }
+    });
+  };
+
+  private toCreateResponse(operation: CreateBookingOperationRecord) {
+    const { cancelUrl, rescheduleUrl } = guestActionUrls(
+      operation.reservationId.toString(),
+      operation.cancelToken,
+    );
+    return CreateBookingReservationResponseSchema.parse({
+      reservationId: operation.reservationId.toString(),
+      slotStart: operation.slotStart.toISOString(),
+      slotEnd: operation.slotEnd.toISOString(),
+      guestTimeZone: operation.guestTimeZone,
+      cancelUrl,
+      rescheduleUrl,
+    });
+  }
+
+  private async recoverCreateOperation(
+    operation: CreateBookingOperationRecord,
+  ): Promise<void> {
+    const page = await bookingPageRepository.findById(operation.pageId);
+    if (!page) {
+      await this.compensateCreateOperation(operation);
+      return;
+    }
+    try {
+      await this.resumeCreateOperation(page, operation);
+    } catch (error) {
+      if (isSlotUnavailable(error)) {
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async recoverCancelOperation(
+    operation: CancelBookingOperationRecord,
+  ): Promise<void> {
+    const reservation = await bookingReservationRepository.findById(
+      operation.reservationId,
+    );
+    if (!reservation) {
+      if (operation.eventId) {
+        await this.calendarBooking.deleteBookingEvent(
+          operation.userId.toString(),
+          { eventId: operation.eventId as EventId },
+        );
+      }
+      await bookingOperationRepository.markStatus(operation._id, "confirmed");
+      return;
+    }
+    await this.finalizeCancel(reservation, operation);
+  }
+
+  private async resumeCreateOperation(
+    page: BookingPageRecord,
+    operation: CreateBookingOperationRecord,
+  ) {
+    if (
+      operation.status === "compensating" ||
+      operation.status === "compensated" ||
+      operation.status === "failed"
+    ) {
+      await this.compensateCreateOperation(operation);
+      throw bookingError(
+        "SLOT_UNAVAILABLE",
+        "Selected slot is no longer available",
+      );
     }
 
-    if (!reservation.calendarEventId) {
+    const existingReservation = await bookingReservationRepository.findById(
+      operation.reservationId,
+    );
+    if (existingReservation?.status === "confirmed") {
+      if (operation.status !== "confirmed") {
+        await bookingOperationRepository.markStatus(operation._id, "confirmed");
+      }
+      return this.toCreateResponse(operation);
+    }
+
+    let current = operation;
+    if (current.status === "pending" || current.status === "failed") {
+      await this.assertSlotAvailable(page, current.slotStart, current.slotEnd, {
+        excludeEventIds: [current.eventId as EventId],
+      });
+      const hostDisplayName = await getHostDisplayName(page.userId);
+      const conference = await destinationConference(
+        page.userId,
+        page.destinationCalendarId,
+      );
+      const { cancelUrl, rescheduleUrl } = guestActionUrls(
+        current.reservationId.toString(),
+        current.cancelToken,
+      );
+      try {
+        await this.calendarBooking.createBookingEvent(page.userId.toString(), {
+          calendarId: page.destinationCalendarId,
+          eventId: current.eventId as EventId,
+          title: `${current.guestName} and ${hostDisplayName}`,
+          description: bookingEventDescription(
+            current.notes,
+            cancelUrl,
+            rescheduleUrl,
+          ),
+          start: DateTimeSchema.parse(current.slotStart.toISOString()),
+          end: DateTimeSchema.parse(current.slotEnd.toISOString()),
+          timeZone: page.timeZone,
+          guest: {
+            email: current.guestEmail,
+            displayName: current.guestName,
+          },
+          createConference: conference !== "none",
+        });
+      } catch (error) {
+        await bookingOperationRepository.scheduleRetry(
+          current._id,
+          new Date(
+            Date.now() + bookingOperationBackoffMs(current.attemptCount),
+          ),
+          truncatedOperationError(error),
+        );
+        throw error;
+      }
+      const submitted = await bookingOperationRepository.markStatus(
+        current._id,
+        "submitted",
+      );
+      if (submitted?.kind === "create") {
+        current = submitted;
+      } else {
+        current = { ...current, status: "submitted" };
+      }
+    }
+
+    try {
+      const alreadyInserted = await bookingReservationRepository.findById(
+        current.reservationId,
+      );
+      if (!alreadyInserted) {
+        await bookingReservationRepository.insert({
+          _id: current.reservationId,
+          pageId: page._id,
+          slotStart: current.slotStart,
+          slotEnd: current.slotEnd,
+          guestName: current.guestName,
+          guestEmail: current.guestEmail,
+          notes: current.notes,
+          guestTimeZone: current.guestTimeZone,
+          status: "confirmed",
+          calendarEventId: current.eventId,
+          cancelTokenHash: hashCancelToken(current.cancelToken),
+        });
+      }
+    } catch (error) {
+      if (!isDuplicateSlotError(error)) {
+        throw error;
+      }
+      const inserted = await bookingReservationRepository.findById(
+        current.reservationId,
+      );
+      if (!inserted) {
+        await this.compensateCreateOperation(current);
+        throw bookingError(
+          "SLOT_UNAVAILABLE",
+          "Selected slot is no longer available",
+        );
+      }
+    }
+
+    const overlapping =
+      await bookingReservationRepository.listConfirmedOverlapping(
+        page._id,
+        current.slotStart,
+        current.slotEnd,
+      );
+    if (overlapping.some((id) => !id.equals(current.reservationId))) {
+      await this.compensateCreateOperation(current);
+      throw bookingError(
+        "SLOT_UNAVAILABLE",
+        "Selected slot is no longer available",
+      );
+    }
+
+    await bookingOperationRepository.markStatus(current._id, "confirmed");
+    return this.toCreateResponse(current);
+  }
+
+  private async compensateCreateOperation(
+    operation: CreateBookingOperationRecord,
+  ): Promise<void> {
+    await bookingOperationRepository.markStatus(operation._id, "compensating");
+    await bookingReservationRepository.deleteById(operation.reservationId);
+    const principal = toSyncPrincipal(operation.userId.toString());
+    try {
+      await this.calendarBooking.deleteBookingEvent(
+        operation.userId.toString(),
+        { eventId: operation.eventId as EventId },
+      );
+      await bookingOperationRepository.markStatus(operation._id, "compensated");
+    } catch (compensationError: unknown) {
+      publicBookingCompensationLog.failed(compensationError, {
+        tenantId: principal.tenantId,
+        principalId: principal.principalId,
+        calendarId: operation.calendarId,
+        eventId: operation.eventId,
+        slotStart: operation.slotStart.toISOString(),
+      });
+      await bookingOperationRepository.scheduleRetry(
+        operation._id,
+        new Date(
+          Date.now() + bookingOperationBackoffMs(operation.attemptCount),
+        ),
+        truncatedOperationError(compensationError),
+      );
+    }
+  }
+
+  private async finalizeCancel(
+    reservation: BookingReservationRecord,
+    existingOperation?: CancelBookingOperationRecord,
+  ): Promise<void> {
+    const page = await resolveReservationPage(reservation);
+    const operation =
+      existingOperation ??
+      (await bookingOperationRepository.insertCancel({
+        _id: mongoService.objectId(),
+        kind: "cancel",
+        status: "pending",
+        reservationId: reservation._id,
+        pageId: reservation.pageId,
+        userId: page.userId,
+        calendarId: page.destinationCalendarId,
+        eventId: reservation.calendarEventId,
+      }));
+
+    if (reservation.status === "confirmed") {
+      await bookingReservationRepository.markCancelling(reservation._id);
+    }
+
+    const latest = await bookingReservationRepository.findById(reservation._id);
+    if (!latest) {
+      await bookingOperationRepository.markStatus(operation._id, "confirmed");
       return;
     }
 
-    await this.calendarBooking.deleteBookingEvent(page.userId.toString(), {
-      eventId: reservation.calendarEventId as EventId,
-    });
-    await bookingReservationRepository.clearCalendarEventId(reservationId);
+    if (latest.status === "cancelled" && !latest.calendarEventId) {
+      await bookingOperationRepository.markStatus(operation._id, "confirmed");
+      return;
+    }
+
+    const eventId = latest.calendarEventId ?? operation.eventId;
+    if (eventId) {
+      try {
+        await this.calendarBooking.deleteBookingEvent(page.userId.toString(), {
+          eventId: eventId as EventId,
+        });
+      } catch (error) {
+        await bookingOperationRepository.scheduleRetry(
+          operation._id,
+          new Date(
+            Date.now() + bookingOperationBackoffMs(operation.attemptCount),
+          ),
+          truncatedOperationError(error),
+        );
+        throw error;
+      }
+    }
+
+    await bookingReservationRepository.markCancelled(reservation._id);
+    await bookingReservationRepository.clearCalendarEventId(reservation._id);
+    await bookingOperationRepository.markStatus(operation._id, "confirmed");
   }
 }
 
