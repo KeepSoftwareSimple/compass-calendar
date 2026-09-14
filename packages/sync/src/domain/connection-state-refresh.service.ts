@@ -21,8 +21,9 @@ export interface ConnectionStateRefreshDeps {
   resources: SyncResourceRepository;
   credentials: CredentialRepository;
   jobs: JobRepository;
-  // Optional so unit callers that only assert state can omit the outbox; the
-  // HTTP list path always supplies it so UI clients learn about state changes.
+  // Optional: job-settle supplies the outbox so UI clients learn about state
+  // changes. The HTTP list path omits it so a metadata poll cannot enqueue the
+  // next SSE refetch.
   invalidations?: InvalidationRepository;
 }
 

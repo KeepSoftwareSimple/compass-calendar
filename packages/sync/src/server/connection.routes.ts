@@ -181,13 +181,15 @@ export function registerConnectionRoutes(
       try {
         const repos = syncRepositories(deps.mongo);
         const connections = repos.connections;
+        // Omit the outbox: derived-state updates may persist, but a list read
+        // must not enqueue the next SSE refetch. Job settle writes invalidations.
         const refreshDeps = {
           connections,
           calendars: repos.calendars,
           resources: repos.syncResources,
           credentials: repos.credentials,
           jobs: repos.jobs,
-          invalidations: repos.invalidations,
+          invalidations: undefined,
         };
         const records = await connections.listByPrincipal(
           auth.tenantId,
