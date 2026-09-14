@@ -7,17 +7,17 @@ import {
 import { maybeShowAnonymousSaveToast } from "@web/common/utils/toast/anonymous-save.toast";
 import { eventMutationKeys } from "./event.mutation.keys";
 
-export async function markAnonymousEventWrite() {
+const ifAnonymousGuest = async (action: () => void): Promise<void> => {
   if (await session.doesSessionExist()) return;
   if (hasUserEverAuthenticated()) return;
-  markAnonymousCalendarChangeForSignUpPrompt();
-}
+  action();
+};
 
-export async function showAnonymousSaveToastIfEligible(): Promise<void> {
-  if (await session.doesSessionExist()) return;
-  if (hasUserEverAuthenticated()) return;
-  maybeShowAnonymousSaveToast();
-}
+export const markAnonymousEventWrite = () =>
+  ifAnonymousGuest(markAnonymousCalendarChangeForSignUpPrompt);
+
+export const showAnonymousSaveToastIfEligible = () =>
+  ifAnonymousGuest(maybeShowAnonymousSaveToast);
 
 type AnyMutation = Mutation<unknown, Error, unknown, unknown>;
 
@@ -62,6 +62,15 @@ const whenSettled = (queryClient: QueryClient, mutation: AnyMutation) =>
     });
   });
 
+const listEventMutations = (queryClient: QueryClient): AnyMutation[] =>
+  queryClient.getMutationCache().getAll() as AnyMutation[];
+
+const findOwnMutation = (
+  mutations: AnyMutation[],
+  ownVariables: unknown,
+): AnyMutation | undefined =>
+  mutations.find((mutation) => mutation.state.variables === ownVariables);
+
 /**
  * Serializes repository writes per event: resolves once every event mutation
  * for `eventId` that was submitted before the caller has settled. Without
@@ -87,13 +96,10 @@ export async function waitForPrecedingEventWrites(
   eventId: string,
   ownVariables: unknown,
 ): Promise<PrecedingEventWrites> {
-  const mutations = queryClient
-    .getMutationCache()
-    .getAll()
-    .sort((a, b) => a.mutationId - b.mutationId) as AnyMutation[];
-  const self = mutations.find(
-    (mutation) => mutation.state.variables === ownVariables,
+  const mutations = listEventMutations(queryClient).sort(
+    (a, b) => a.mutationId - b.mutationId,
   );
+  const self = findOwnMutation(mutations, ownVariables);
   if (!self) {
     // react-query registers a mutation (status "pending", variables set)
     // before its mutationFn runs, so the caller is always present here.
@@ -142,10 +148,8 @@ export function isSupersededByLaterEditWrite(
   eventId: string,
   ownVariables: unknown,
 ): boolean {
-  const mutations = queryClient.getMutationCache().getAll() as AnyMutation[];
-  const self = mutations.find(
-    (mutation) => mutation.state.variables === ownVariables,
-  );
+  const mutations = listEventMutations(queryClient);
+  const self = findOwnMutation(mutations, ownVariables);
   if (!self) return false;
   return mutations.some(
     (mutation) =>
@@ -166,10 +170,8 @@ export function hasOtherPendingWriteForKey(
   eventId: string,
   ownVariables: unknown,
 ): boolean {
-  const mutations = queryClient.getMutationCache().getAll() as AnyMutation[];
-  const self = mutations.find(
-    (mutation) => mutation.state.variables === ownVariables,
-  );
+  const mutations = listEventMutations(queryClient);
+  const self = findOwnMutation(mutations, ownVariables);
   if (!self) return false;
   return mutations.some(
     (mutation) =>

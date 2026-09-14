@@ -9,6 +9,7 @@ import {
 import dayjs from "@core/util/date/dayjs";
 import { getCompassEventDateFormat } from "@core/util/event/event.util";
 import { shiftSeriesScheduleByOccurrenceEdit } from "@core/util/event/shift-series-schedule-by-occurrence-edit";
+import { throwIfAborted } from "@web/api/util/api.util";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
 import {
   getOfflineDataStore,
@@ -117,11 +118,7 @@ export class LocalEventRepository implements EventRepository {
   }
 
   async list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]> {
-    if (signal?.aborted) {
-      const error = new Error("The operation was aborted");
-      error.name = "AbortError";
-      throw error;
-    }
+    throwIfAborted(signal);
     const records = await this.store.getAllEvents();
     return expandLocalEventRecords(records, {
       start: query.start,

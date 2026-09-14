@@ -59,6 +59,16 @@ export const isAbortError = (error: unknown): boolean => {
   );
 };
 
+const createAbortError = (): Error => {
+  const error = new Error("The operation was aborted");
+  error.name = "AbortError";
+  return error;
+};
+
+export const throwIfAborted = (signal?: AbortSignal): void => {
+  if (signal?.aborted) throw createAbortError();
+};
+
 /**
  * Prefer the structured status on ApiError; fall back to the trailing status
  * digits in the message for errors that only carry text (same convention as

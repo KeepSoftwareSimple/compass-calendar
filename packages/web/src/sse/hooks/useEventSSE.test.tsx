@@ -69,18 +69,16 @@ describe("useEventSSE", () => {
     for (let i = 0; i < 25; i += 1) eventsChanged();
 
     // Leading edge: the first message refetches without waiting.
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(1);
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("week"))).toBe(1);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(1);
 
     await settle();
 
     // Trailing edge: the 24 messages inside the window owe exactly one more.
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(2);
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("week"))).toBe(2);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(2);
 
     await settle();
     // Nothing arrived during the trailing window, so it stays at two.
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(2);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(2);
   });
 
   it("refetches a lone message immediately, so a single edit still updates live", () => {
@@ -88,8 +86,7 @@ describe("useEventSSE", () => {
 
     eventsChanged();
 
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(1);
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("week"))).toBe(1);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(1);
   });
 
   it("coalesces calendarsChanged separately from eventsChanged", async () => {
@@ -99,13 +96,13 @@ describe("useEventSSE", () => {
     eventsChanged();
 
     expect(callsFor(invalidateSpy, calendarQueryKeys.all)).toBe(1);
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(1);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(1);
 
     await settle();
 
     expect(callsFor(invalidateSpy, calendarQueryKeys.all)).toBe(2);
     // The lone eventsChanged owed nothing further.
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(1);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(1);
   });
 
   it("drops a pending trailing refetch on unmount", async () => {
@@ -117,6 +114,6 @@ describe("useEventSSE", () => {
 
     await settle();
 
-    expect(callsFor(invalidateSpy, eventQueryKeys.scope("day"))).toBe(1);
+    expect(callsFor(invalidateSpy, eventQueryKeys.all)).toBe(1);
   });
 });
