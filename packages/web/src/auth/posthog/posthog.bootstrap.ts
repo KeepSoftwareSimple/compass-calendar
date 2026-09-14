@@ -1,10 +1,11 @@
 import { type PostHog } from "posthog-js";
-import { isPosthogEnabled } from "@web/auth/posthog/posthog.util";
+import * as posthogUtil from "@web/auth/posthog/posthog.util";
 import { filterPosthogBookingTelemetry } from "@web/auth/posthog/posthog-booking-filter.util";
 import { filterPosthogDeadClick } from "@web/auth/posthog/posthog-dead-click-filter.util";
 import { filterPosthogBeforeSend } from "@web/auth/posthog/posthog-exception-filter.util";
 import { filterPosthogWebVitals } from "@web/auth/posthog/posthog-web-vitals-filter.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
+import { APP_VERSION } from "@web/common/constants/version.constants";
 
 let client: PostHog | undefined;
 
@@ -19,7 +20,7 @@ let client: PostHog | undefined;
  * after boot rather than owning a second initialization path.
  */
 export function initPosthog(): PostHog | undefined {
-  if (!isPosthogEnabled()) return undefined;
+  if (!posthogUtil.isPosthogEnabled()) return undefined;
   if (client) return client;
 
   const posthog = require("posthog-js").posthog as PostHog;
@@ -96,8 +97,14 @@ export function initPosthog(): PostHog | undefined {
   // Staging and production share this PostHog project with the same key, so
   // without this, staging traffic is indistinguishable from production in
   // every insight (env.constants.ts NODE_ENV mirrors sync/backend's
-  // `environment` property for the same reason).
-  posthog.register({ environment: ENV_WEB.NODE_ENV });
+  // `environment` property for the same reason). The key is `version` to
+  // match backend and sync events so a web regression can be attributed to
+  // a release. `app_version` on the feedback event is a separate, existing
+  // property and is left alone.
+  posthog.register({
+    environment: ENV_WEB.NODE_ENV,
+    version: APP_VERSION,
+  });
 
   client = posthog;
   return client;
@@ -110,4 +117,9 @@ export function initPosthog(): PostHog | undefined {
  */
 export function getPosthogClient(): PostHog | undefined {
   return client;
+}
+
+/** Test-only: drop the singleton so initPosthog can run again. */
+export function resetPosthogClientForTests(): void {
+  client = undefined;
 }
