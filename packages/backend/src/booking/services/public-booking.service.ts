@@ -60,6 +60,7 @@ import {
   bookingOperationBackoffMs,
 } from "@backend/booking/booking-operation.constants";
 import {
+  type BookingOperationRecord,
   type CancelBookingOperationRecord,
   type CreateBookingOperationRecord,
   type EditBookingOperationRecord,
@@ -136,15 +137,14 @@ const isSlotUnavailable = (error: unknown): boolean =>
 const reservationConflict = () =>
   bookingError("RESERVATION_CONFLICT", "This meeting was changed. Try again.");
 
-const asBookingProviderConflict = (error: unknown): never => {
-  if (
-    error instanceof EventMutationException &&
-    error.mutationCode === "RECURRENCE_CONFLICT"
-  ) {
-    throw reservationConflict();
-  }
-  throw error;
-};
+/**
+ * Minted in one place for the same reason as {@link reservationNotFound}: a
+ * guest who raced someone else, whose slot aged past the notice window, or
+ * whose operation was compensated all get one answer, and the wording cannot
+ * drift between the ten places that give it.
+ */
+const slotNoLongerAvailable = () =>
+  bookingError("SLOT_UNAVAILABLE", "Selected slot is no longer available");
 
 const reservationClosedForGuestMutation = (
   reservation: BookingReservationRecord,
@@ -159,6 +159,71 @@ const compensationFailureCause = (error: unknown): string => {
 
 const truncatedOperationError = (error: unknown): string =>
   compensationFailureCause(error).slice(0, 500);
+
+/**
+ * Hand an operation back to the recovery loop. Every caller wants the same
+ * three things - the operation's own backoff, the truncated cause, and no
+ * other status change - so the schedule is computed here rather than at each
+ * failure site.
+ */
+const scheduleOperationRetry = async (
+  operation: BookingOperationRecord,
+  error: unknown,
+): Promise<void> => {
+  await bookingOperationRepository.scheduleRetry(
+    operation._id,
+    new Date(Date.now() + bookingOperationBackoffMs(operation.attemptCount)),
+    truncatedOperationError(error),
+  );
+};
+
+/**
+ * Statuses a resume can no longer carry forward: the operation is already
+ * being undone, was undone, or exhausted its attempts. Resuming one of these
+ * compensates and refuses instead of submitting again.
+ */
+const operationIsSpent = (operation: BookingOperationRecord): boolean =>
+  operation.status === "compensating" ||
+  operation.status === "compensated" ||
+  operation.status === "failed";
+
+/**
+ * Advance an operation to `submitted` and keep reading from the stored record,
+ * so a concurrent attempt count is not lost. `markStatus` answers with the
+ * whole union, so the kind check re-narrows it to the caller's operation type;
+ * a missing or reshaped record falls back to the in-memory copy.
+ */
+const markOperationSubmitted = async <T extends BookingOperationRecord>(
+  operation: T,
+): Promise<T> => {
+  const submitted = await bookingOperationRepository.markStatus(
+    operation._id,
+    "submitted",
+  );
+  return submitted?.kind === operation.kind
+    ? (submitted as T)
+    : { ...operation, status: "submitted" };
+};
+
+/**
+ * A unique-index collision on an in-flight operation insert means another
+ * request claimed this reservation first. What the guest is told depends on
+ * what the winner is doing, so re-read it instead of guessing. Returns the
+ * error to throw so the decision reads as one statement at the call site.
+ */
+const inFlightInsertConflict = async (
+  reservationId: ObjectId,
+  error: unknown,
+): Promise<unknown> => {
+  if (!isDuplicateSlotError(error)) {
+    return error;
+  }
+  const existing =
+    await bookingOperationRepository.findInFlightByReservationId(reservationId);
+  return existing?.kind === "cancel"
+    ? reservationNotFound()
+    : reservationConflict();
+};
 
 export const publicBookingCompensationLog = {
   failed(
@@ -240,10 +305,7 @@ const assertPinnedDuration = (
   pageDurationMinutes: number,
 ): void => {
   if (requestedMinutes !== pageDurationMinutes) {
-    throw bookingError(
-      "SLOT_UNAVAILABLE",
-      "Selected slot is no longer available",
-    );
+    throw slotNoLongerAvailable();
   }
 };
 
@@ -344,6 +406,29 @@ const presentReservation = async (
     conference,
   });
 };
+
+/**
+ * The reschedule answer, built the same way whether the guest is waiting on
+ * the request or the recovery loop finished the operation later.
+ */
+const presentRescheduled = (
+  reservation: BookingReservationRecord,
+  page: BookingPageRecord,
+  hostDisplayName: string,
+) =>
+  RescheduleBookingReservationResponseSchema.parse({
+    reservationId: reservation._id.toString(),
+    slotStart: reservation.slotStart.toISOString(),
+    slotEnd: reservation.slotEnd.toISOString(),
+    guestTimeZone: reservation.guestTimeZone,
+    durationMinutes: durationMinutesForReservation(
+      reservation,
+      page.durationMinutes,
+    ),
+    hostDisplayName,
+    status: reservation.status,
+    bookingSlug: page.bookingSlug ?? "",
+  });
 
 const nextGuestNotes = (
   incoming: string | undefined,
@@ -624,10 +709,7 @@ export class PublicBookingService {
     const now = new Date();
     const minNoticeMs = reconciled.minNoticeHours * 60 * 60 * 1000;
     if (slotStart.getTime() < now.getTime() + minNoticeMs) {
-      throw bookingError(
-        "SLOT_UNAVAILABLE",
-        "Selected slot is no longer available",
-      );
+      throw slotNoLongerAvailable();
     }
 
     const availability = await this.calendarBooking.getAvailability(
@@ -665,10 +747,7 @@ export class PublicBookingService {
       ).map((start) => Date.parse(start)),
     );
     if (!allowedStarts.has(slotStart.getTime())) {
-      throw bookingError(
-        "SLOT_UNAVAILABLE",
-        "Selected slot is no longer available",
-      );
+      throw slotNoLongerAvailable();
     }
   }
 
@@ -809,17 +888,7 @@ export class PublicBookingService {
               cancelToken: input.token,
             });
     } catch (error) {
-      if (!isDuplicateSlotError(error)) {
-        throw error;
-      }
-      const existing =
-        await bookingOperationRepository.findInFlightByReservationId(
-          reservationId,
-        );
-      if (existing?.kind === "cancel") {
-        throw reservationNotFound();
-      }
-      throw reservationConflict();
+      throw await inFlightInsertConflict(reservationId, error);
     }
 
     if (operation.guestName !== guestName || operation.notes !== notes) {
@@ -853,23 +922,9 @@ export class PublicBookingService {
     const slotStart = new Date(input.slotStart);
     const slotEnd = slotEndForStart(slotStart, input.durationMinutes);
     const hostDisplayName = await getHostDisplayName(page.userId);
-    const present = (record: BookingReservationRecord) =>
-      RescheduleBookingReservationResponseSchema.parse({
-        reservationId: record._id.toString(),
-        slotStart: record.slotStart.toISOString(),
-        slotEnd: record.slotEnd.toISOString(),
-        guestTimeZone: record.guestTimeZone,
-        durationMinutes: durationMinutesForReservation(
-          record,
-          page.durationMinutes,
-        ),
-        hostDisplayName,
-        status: record.status,
-        bookingSlug: page.bookingSlug,
-      });
 
     if (slotStart.getTime() === reservation.slotStart.getTime()) {
-      return present(reservation);
+      return presentRescheduled(reservation, page, hostDisplayName);
     }
 
     const inFlight =
@@ -917,17 +972,7 @@ export class PublicBookingService {
               guestTimeZone: input.guestTimeZone,
             });
     } catch (error) {
-      if (!isDuplicateSlotError(error)) {
-        throw error;
-      }
-      const existing =
-        await bookingOperationRepository.findInFlightByReservationId(
-          reservationId,
-        );
-      if (existing?.kind === "cancel") {
-        throw reservationNotFound();
-      }
-      throw reservationConflict();
+      throw await inFlightInsertConflict(reservationId, error);
     }
 
     if (operation.slotStart.getTime() !== slotStart.getTime()) {
@@ -938,7 +983,7 @@ export class PublicBookingService {
       page,
       reservation,
       operation,
-      present,
+      hostDisplayName,
     );
   }
 
@@ -982,13 +1027,7 @@ export class PublicBookingService {
         if (isSlotUnavailable(error)) {
           continue;
         }
-        await bookingOperationRepository.scheduleRetry(
-          operation._id,
-          new Date(
-            Date.now() + bookingOperationBackoffMs(operation.attemptCount),
-          ),
-          truncatedOperationError(error),
-        );
+        await scheduleOperationRetry(operation, error);
       }
     }
   }
@@ -1046,6 +1085,27 @@ export class PublicBookingService {
     });
   }
 
+  /**
+   * What a failed provider update means for the operation, and the error to
+   * throw for it. A recurrence conflict is terminal - the guest is asked to
+   * try again - while anything else is left for the recovery loop. Edit and
+   * reschedule submit through the same call, so they answer it the same way.
+   */
+  private async bookingEventUpdateFailure(
+    operation: EditBookingOperationRecord | RescheduleBookingOperationRecord,
+    error: unknown,
+  ): Promise<unknown> {
+    if (
+      error instanceof EventMutationException &&
+      error.mutationCode === "RECURRENCE_CONFLICT"
+    ) {
+      await bookingOperationRepository.markStatus(operation._id, "compensated");
+      return reservationConflict();
+    }
+    await scheduleOperationRetry(operation, error);
+    return error;
+  }
+
   private async recoverEditOperation(
     operation: EditBookingOperationRecord,
   ): Promise<void> {
@@ -1084,11 +1144,7 @@ export class PublicBookingService {
     cancelUrl: string,
     rescheduleUrl: string,
   ) {
-    if (
-      operation.status === "compensating" ||
-      operation.status === "compensated" ||
-      operation.status === "failed"
-    ) {
+    if (operationIsSpent(operation)) {
       await bookingOperationRepository.markStatus(operation._id, "compensated");
       throw reservationConflict();
     }
@@ -1130,35 +1186,10 @@ export class PublicBookingService {
             },
           );
         } catch (error) {
-          if (
-            error instanceof EventMutationException &&
-            error.mutationCode === "RECURRENCE_CONFLICT"
-          ) {
-            await bookingOperationRepository.markStatus(
-              current._id,
-              "compensated",
-            );
-            asBookingProviderConflict(error);
-          }
-          await bookingOperationRepository.scheduleRetry(
-            current._id,
-            new Date(
-              Date.now() + bookingOperationBackoffMs(current.attemptCount),
-            ),
-            truncatedOperationError(error),
-          );
-          throw error;
+          throw await this.bookingEventUpdateFailure(current, error);
         }
       }
-      const submitted = await bookingOperationRepository.markStatus(
-        current._id,
-        "submitted",
-      );
-      if (submitted?.kind === "edit") {
-        current = submitted;
-      } else {
-        current = { ...current, status: "submitted" };
-      }
+      current = await markOperationSubmitted(current);
     }
 
     const updated = await bookingReservationRepository.updateGuestDetails(
@@ -1188,41 +1219,23 @@ export class PublicBookingService {
       return;
     }
     const hostDisplayName = await getHostDisplayName(page.userId);
-    const present = (record: BookingReservationRecord) =>
-      RescheduleBookingReservationResponseSchema.parse({
-        reservationId: record._id.toString(),
-        slotStart: record.slotStart.toISOString(),
-        slotEnd: record.slotEnd.toISOString(),
-        guestTimeZone: record.guestTimeZone,
-        durationMinutes: durationMinutesForReservation(
-          record,
-          page.durationMinutes,
-        ),
-        hostDisplayName,
-        status: record.status,
-        bookingSlug: page.bookingSlug ?? "",
-      });
-    await this.resumeRescheduleOperation(page, reservation, operation, present);
+    await this.resumeRescheduleOperation(
+      page,
+      reservation,
+      operation,
+      hostDisplayName,
+    );
   }
 
   private async resumeRescheduleOperation(
     page: BookingPageRecord,
     reservation: BookingReservationRecord,
     operation: RescheduleBookingOperationRecord,
-    present: (
-      record: BookingReservationRecord,
-    ) => ReturnType<typeof RescheduleBookingReservationResponseSchema.parse>,
+    hostDisplayName: string,
   ) {
-    if (
-      operation.status === "compensating" ||
-      operation.status === "compensated" ||
-      operation.status === "failed"
-    ) {
+    if (operationIsSpent(operation)) {
       await this.compensateRescheduleOperation(operation);
-      throw bookingError(
-        "SLOT_UNAVAILABLE",
-        "Selected slot is no longer available",
-      );
+      throw slotNoLongerAvailable();
     }
 
     const latest = await bookingReservationRepository.findById(
@@ -1235,7 +1248,7 @@ export class PublicBookingService {
       if (operation.status !== "confirmed") {
         await bookingOperationRepository.markStatus(operation._id, "confirmed");
       }
-      return present(latest);
+      return presentRescheduled(latest, page, hostDisplayName);
     }
 
     let current = operation;
@@ -1251,10 +1264,7 @@ export class PublicBookingService {
         )
       ) {
         await bookingOperationRepository.markStatus(current._id, "compensated");
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
+        throw slotNoLongerAvailable();
       }
       if (reservation.calendarEventId) {
         try {
@@ -1273,35 +1283,10 @@ export class PublicBookingService {
             },
           );
         } catch (error) {
-          if (
-            error instanceof EventMutationException &&
-            error.mutationCode === "RECURRENCE_CONFLICT"
-          ) {
-            await bookingOperationRepository.markStatus(
-              current._id,
-              "compensated",
-            );
-            asBookingProviderConflict(error);
-          }
-          await bookingOperationRepository.scheduleRetry(
-            current._id,
-            new Date(
-              Date.now() + bookingOperationBackoffMs(current.attemptCount),
-            ),
-            truncatedOperationError(error),
-          );
-          throw error;
+          throw await this.bookingEventUpdateFailure(current, error);
         }
       }
-      const submitted = await bookingOperationRepository.markStatus(
-        current._id,
-        "submitted",
-      );
-      if (submitted?.kind === "reschedule") {
-        current = submitted;
-      } else {
-        current = { ...current, status: "submitted" };
-      }
+      current = await markOperationSubmitted(current);
     }
 
     try {
@@ -1323,19 +1308,16 @@ export class PublicBookingService {
           stored.slotStart.getTime() === current.slotStart.getTime()
         ) {
           await bookingOperationRepository.markStatus(current._id, "confirmed");
-          return present(stored);
+          return presentRescheduled(stored, page, hostDisplayName);
         }
         throw reservationConflict();
       }
       await bookingOperationRepository.markStatus(current._id, "confirmed");
-      return present(updated);
+      return presentRescheduled(updated, page, hostDisplayName);
     } catch (error) {
       if (isDuplicateSlotError(error)) {
         await this.compensateRescheduleOperation(current);
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
+        throw slotNoLongerAvailable();
       }
       throw error;
     }
@@ -1369,13 +1351,7 @@ export class PublicBookingService {
           },
         );
       } catch (compensationError: unknown) {
-        await bookingOperationRepository.scheduleRetry(
-          operation._id,
-          new Date(
-            Date.now() + bookingOperationBackoffMs(operation.attemptCount),
-          ),
-          truncatedOperationError(compensationError),
-        );
+        await scheduleOperationRetry(operation, compensationError);
         return;
       }
     }
@@ -1437,16 +1413,9 @@ export class PublicBookingService {
     page: BookingPageRecord,
     operation: CreateBookingOperationRecord,
   ) {
-    if (
-      operation.status === "compensating" ||
-      operation.status === "compensated" ||
-      operation.status === "failed"
-    ) {
+    if (operationIsSpent(operation)) {
       await this.compensateCreateOperation(operation);
-      throw bookingError(
-        "SLOT_UNAVAILABLE",
-        "Selected slot is no longer available",
-      );
+      throw slotNoLongerAvailable();
     }
 
     const existingReservation = await bookingReservationRepository.findById(
@@ -1479,10 +1448,7 @@ export class PublicBookingService {
         } else {
           await this.compensateCreateOperation(current);
         }
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
+        throw slotNoLongerAvailable();
       }
       await this.assertSlotAvailable(page, current.slotStart, current.slotEnd, {
         excludeEventIds: [current.eventId as EventId],
@@ -1516,24 +1482,10 @@ export class PublicBookingService {
           createConference: conference !== "none",
         });
       } catch (error) {
-        await bookingOperationRepository.scheduleRetry(
-          current._id,
-          new Date(
-            Date.now() + bookingOperationBackoffMs(current.attemptCount),
-          ),
-          truncatedOperationError(error),
-        );
+        await scheduleOperationRetry(current, error);
         throw error;
       }
-      const submitted = await bookingOperationRepository.markStatus(
-        current._id,
-        "submitted",
-      );
-      if (submitted?.kind === "create") {
-        current = submitted;
-      } else {
-        current = { ...current, status: "submitted" };
-      }
+      current = await markOperationSubmitted(current);
     }
 
     try {
@@ -1564,10 +1516,7 @@ export class PublicBookingService {
       );
       if (!inserted) {
         await this.compensateCreateOperation(current);
-        throw bookingError(
-          "SLOT_UNAVAILABLE",
-          "Selected slot is no longer available",
-        );
+        throw slotNoLongerAvailable();
       }
     }
 
@@ -1579,10 +1528,7 @@ export class PublicBookingService {
       );
     if (overlapping.some((id) => !id.equals(current.reservationId))) {
       await this.compensateCreateOperation(current);
-      throw bookingError(
-        "SLOT_UNAVAILABLE",
-        "Selected slot is no longer available",
-      );
+      throw slotNoLongerAvailable();
     }
 
     await bookingOperationRepository.markStatus(current._id, "confirmed");
@@ -1609,13 +1555,7 @@ export class PublicBookingService {
         eventId: operation.eventId,
         slotStart: operation.slotStart.toISOString(),
       });
-      await bookingOperationRepository.scheduleRetry(
-        operation._id,
-        new Date(
-          Date.now() + bookingOperationBackoffMs(operation.attemptCount),
-        ),
-        truncatedOperationError(compensationError),
-      );
+      await scheduleOperationRetry(operation, compensationError);
     }
   }
 
@@ -1682,13 +1622,7 @@ export class PublicBookingService {
           eventId: eventId as EventId,
         });
       } catch (error) {
-        await bookingOperationRepository.scheduleRetry(
-          operation._id,
-          new Date(
-            Date.now() + bookingOperationBackoffMs(operation.attemptCount),
-          ),
-          truncatedOperationError(error),
-        );
+        await scheduleOperationRetry(operation, error);
         throw error;
       }
     }
