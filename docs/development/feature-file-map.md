@@ -103,6 +103,7 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `packages/web/src/api/booking.api.ts`
 - E2e: `e2e/booking/`, `e2e/accessibility/booking-a11y.spec.ts`
 - Architecture: [Product Suite Boundaries](../architecture/product-suite-boundaries.md)
+- Release evidence: [Meeting release evidence](./meeting-release-evidence.md)
 
 ## Day / Week Views
 
