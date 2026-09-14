@@ -716,7 +716,10 @@ zone is not the host page zone.
 - **Host-edited events keep their schedule on guest notes edits.** Guest
   details PATCHes are content-only. Guest reschedule writes schedule only
   and claims the target interval with the same durable overlap primitive
-  as create, so a concurrent host edit is not blindly overwritten.
+  as create, so a concurrent host edit is not blindly overwritten. Each
+  accepted guest edit mints its own operation identity for Sync, so a
+  later matching notes or slot change still applies and a retry reuses
+  the in-flight identity.
 - **Confirm is fail-closed.** When Sync reports `bookable: false`, slots
   disappear and confirm returns `409`.
 - **New-meetings claim uses a createdAt cursor index.**

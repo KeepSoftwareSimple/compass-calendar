@@ -58,6 +58,7 @@ import {
 import {
   type CancelBookingOperationRecord,
   type CreateBookingOperationRecord,
+  type EditBookingOperationRecord,
   type RescheduleBookingOperationRecord,
 } from "@backend/booking/booking-operation.record";
 import { bookingOperationRepository } from "@backend/booking/booking-operation.repository";
@@ -774,32 +775,61 @@ export class PublicBookingService {
       input.token,
     );
 
-    if (reservation.calendarEventId) {
-      try {
-        await this.calendarBooking.updateBookingEvent(page.userId.toString(), {
-          eventId: reservation.calendarEventId as EventId,
-          title: `${guestName} and ${hostDisplayName}`,
-          description: bookingEventDescription(notes, cancelUrl, rescheduleUrl),
-          timeZone: page.timeZone,
-          guest: {
-            email: reservation.guestEmail,
-            displayName: guestName,
-          },
-        });
-      } catch (error) {
-        asBookingProviderConflict(error);
-      }
-    }
-
-    const updated = await bookingReservationRepository.updateGuestDetails(
-      reservationId,
-      { guestName, notes },
-    );
-    if (!updated) {
+    const inFlight =
+      await bookingOperationRepository.findInFlightByReservationId(
+        reservationId,
+      );
+    if (inFlight?.kind === "cancel") {
       throw reservationNotFound();
     }
+    if (inFlight?.kind === "reschedule") {
+      throw reservationConflict();
+    }
 
-    return presentReservation(updated, page, hostDisplayName);
+    let operation: EditBookingOperationRecord;
+    try {
+      operation =
+        inFlight?.kind === "edit"
+          ? inFlight
+          : await bookingOperationRepository.insertEdit({
+              _id: mongoService.objectId(),
+              kind: "edit",
+              status: "pending",
+              reservationId,
+              pageId: page._id,
+              userId: page.userId,
+              calendarId: page.destinationCalendarId,
+              eventId: reservation.calendarEventId,
+              guestName,
+              notes,
+              cancelToken: input.token,
+            });
+    } catch (error) {
+      if (!isDuplicateSlotError(error)) {
+        throw error;
+      }
+      const existing =
+        await bookingOperationRepository.findInFlightByReservationId(
+          reservationId,
+        );
+      if (existing?.kind === "cancel") {
+        throw reservationNotFound();
+      }
+      throw reservationConflict();
+    }
+
+    if (operation.guestName !== guestName || operation.notes !== notes) {
+      throw reservationConflict();
+    }
+
+    return this.resumeEditOperation(
+      page,
+      reservation,
+      operation,
+      hostDisplayName,
+      cancelUrl,
+      rescheduleUrl,
+    );
   }
 
   async rescheduleReservation(reservationId: ObjectId, rawInput: unknown) {
@@ -844,6 +874,9 @@ export class PublicBookingService {
       );
     if (inFlight?.kind === "cancel") {
       throw reservationNotFound();
+    }
+    if (inFlight?.kind === "edit") {
+      throw reservationConflict();
     }
     if (
       inFlight?.kind === "reschedule" &&
@@ -936,6 +969,8 @@ export class PublicBookingService {
           await this.recoverCreateOperation(operation);
         } else if (operation.kind === "cancel") {
           await this.recoverCancelOperation(operation);
+        } else if (operation.kind === "edit") {
+          await this.recoverEditOperation(operation);
         } else {
           await this.recoverRescheduleOperation(operation);
         }
@@ -1003,6 +1038,132 @@ export class PublicBookingService {
       cancelUrl,
       rescheduleUrl,
     });
+  }
+
+  private async recoverEditOperation(
+    operation: EditBookingOperationRecord,
+  ): Promise<void> {
+    const page = await bookingPageRepository.findById(operation.pageId);
+    const reservation = await bookingReservationRepository.findById(
+      operation.reservationId,
+    );
+    if (
+      !page?.bookingSlug ||
+      !reservation ||
+      reservationClosedForGuestMutation(reservation)
+    ) {
+      await bookingOperationRepository.markStatus(operation._id, "compensated");
+      return;
+    }
+    const hostDisplayName = await getHostDisplayName(page.userId);
+    const { cancelUrl, rescheduleUrl } = guestActionUrls(
+      reservation._id.toString(),
+      operation.cancelToken,
+    );
+    await this.resumeEditOperation(
+      { ...page, bookingSlug: page.bookingSlug },
+      reservation,
+      operation,
+      hostDisplayName,
+      cancelUrl,
+      rescheduleUrl,
+    );
+  }
+
+  private async resumeEditOperation(
+    page: BookingPageRecord & { bookingSlug: string },
+    reservation: BookingReservationRecord,
+    operation: EditBookingOperationRecord,
+    hostDisplayName: string,
+    cancelUrl: string,
+    rescheduleUrl: string,
+  ) {
+    if (
+      operation.status === "compensating" ||
+      operation.status === "compensated" ||
+      operation.status === "failed"
+    ) {
+      await bookingOperationRepository.markStatus(operation._id, "compensated");
+      throw reservationConflict();
+    }
+
+    const latest = await bookingReservationRepository.findById(
+      operation.reservationId,
+    );
+    if (
+      latest &&
+      latest.guestName === operation.guestName &&
+      latest.notes === operation.notes &&
+      operation.status === "submitted"
+    ) {
+      await bookingOperationRepository.markStatus(operation._id, "confirmed");
+      return presentReservation(latest, page, hostDisplayName);
+    }
+
+    let current = operation;
+    if (current.status === "pending" || current.status === "failed") {
+      const eventId = reservation.calendarEventId ?? current.eventId;
+      if (eventId) {
+        try {
+          await this.calendarBooking.updateBookingEvent(
+            page.userId.toString(),
+            {
+              eventId: eventId as EventId,
+              title: `${current.guestName} and ${hostDisplayName}`,
+              description: bookingEventDescription(
+                current.notes,
+                cancelUrl,
+                rescheduleUrl,
+              ),
+              timeZone: page.timeZone,
+              guest: {
+                email: reservation.guestEmail,
+                displayName: current.guestName,
+              },
+              operationId: current._id.toHexString(),
+            },
+          );
+        } catch (error) {
+          if (
+            error instanceof EventMutationException &&
+            error.mutationCode === "RECURRENCE_CONFLICT"
+          ) {
+            await bookingOperationRepository.markStatus(
+              current._id,
+              "compensated",
+            );
+            asBookingProviderConflict(error);
+          }
+          await bookingOperationRepository.scheduleRetry(
+            current._id,
+            new Date(
+              Date.now() + bookingOperationBackoffMs(current.attemptCount),
+            ),
+            truncatedOperationError(error),
+          );
+          throw error;
+        }
+      }
+      const submitted = await bookingOperationRepository.markStatus(
+        current._id,
+        "submitted",
+      );
+      if (submitted?.kind === "edit") {
+        current = submitted;
+      } else {
+        current = { ...current, status: "submitted" };
+      }
+    }
+
+    const updated = await bookingReservationRepository.updateGuestDetails(
+      operation.reservationId,
+      { guestName: current.guestName, notes: current.notes },
+    );
+    if (!updated) {
+      throw reservationNotFound();
+    }
+    await bookingOperationRepository.markStatus(current._id, "confirmed");
+    return presentReservation(updated, page, hostDisplayName);
   }
 
   private async recoverRescheduleOperation(
@@ -1102,6 +1263,7 @@ export class PublicBookingService {
                 email: reservation.guestEmail,
                 displayName: reservation.guestName,
               },
+              operationId: current._id.toHexString(),
             },
           );
         } catch (error) {
@@ -1197,6 +1359,7 @@ export class PublicBookingService {
               email: reservation.guestEmail,
               displayName: reservation.guestName,
             },
+            operationId: `${operation._id.toHexString()}:revert`,
           },
         );
       } catch (compensationError: unknown) {

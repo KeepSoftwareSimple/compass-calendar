@@ -8,6 +8,7 @@ export const BookingOperationKindSchema = z.enum([
   "create",
   "cancel",
   "reschedule",
+  "edit",
 ]);
 export type BookingOperationKind = z.infer<typeof BookingOperationKindSchema>;
 
@@ -76,10 +77,22 @@ export type RescheduleBookingOperationRecord = z.infer<
   typeof RescheduleBookingOperationRecordSchema
 >;
 
+export const EditBookingOperationRecordSchema =
+  BookingOperationBaseSchema.extend({
+    kind: z.literal("edit"),
+    guestName: z.string().trim().min(1).max(256),
+    notes: z.string().trim().max(4000).nullable(),
+    cancelToken: z.string().trim().min(1).max(256),
+  });
+export type EditBookingOperationRecord = z.infer<
+  typeof EditBookingOperationRecordSchema
+>;
+
 export const BookingOperationRecordSchema = z.discriminatedUnion("kind", [
   CreateBookingOperationRecordSchema,
   CancelBookingOperationRecordSchema,
   RescheduleBookingOperationRecordSchema,
+  EditBookingOperationRecordSchema,
 ]);
 export type BookingOperationRecord = z.infer<
   typeof BookingOperationRecordSchema

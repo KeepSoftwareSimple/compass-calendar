@@ -88,4 +88,31 @@ describe("bookingOperationRepository", () => {
     expect(second._id.toHexString()).toBe(first._id.toHexString());
     expect(second.slotStart.toISOString()).toBe(first.slotStart.toISOString());
   });
+
+  it("reuses an in-flight edit instead of minting a second row", async () => {
+    const reservationId = new ObjectId();
+    const input = {
+      kind: "edit" as const,
+      status: "pending" as const,
+      pageId: new ObjectId(),
+      userId: new ObjectId(),
+      calendarId: new ObjectId().toHexString(),
+      eventId: new ObjectId().toHexString(),
+      reservationId,
+      guestName: "Ada Lovelace",
+      notes: "bring tea",
+      cancelToken: "tok",
+    };
+    const first = await bookingOperationRepository.insertEdit({
+      ...input,
+      _id: new ObjectId(),
+    });
+    const second = await bookingOperationRepository.insertEdit({
+      ...input,
+      _id: new ObjectId(),
+      notes: "bring coffee",
+    });
+    expect(second._id.toHexString()).toBe(first._id.toHexString());
+    expect(second.notes).toBe("bring tea");
+  });
 });
