@@ -6,7 +6,6 @@ import { type CredentialCustody } from "@sync/credentials/credential-custody.ser
 import { terminalReplayIsStale } from "@sync/domain/command-replay";
 import {
   mergeAttendees,
-  mergeUpdateContent,
   omitNullColor,
   resolveUpdateContent,
   resolveUpdateSchedule,

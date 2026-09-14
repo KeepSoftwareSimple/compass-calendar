@@ -2319,7 +2319,9 @@ describe("PublicBookingService", () => {
     });
 
     expect(patched.notes).toBe("bring tea");
-    expect(patched.slotStart).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
+    expect(patched.slotStart).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
+    );
     expect(
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
     ).not.toHaveProperty("start");
