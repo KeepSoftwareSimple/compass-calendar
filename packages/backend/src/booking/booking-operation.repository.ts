@@ -1,6 +1,7 @@
 import { type ObjectId } from "mongodb";
 import { z } from "zod/v4";
 import { zObjectId } from "@core/types/type.utils";
+import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import {
   BOOKING_OPERATION_IN_FLIGHT_STATUSES,
   BOOKING_OPERATION_RECOVERABLE_STATUSES,
@@ -84,6 +85,7 @@ class BookingOperationRepository {
     });
     try {
       await mongoService.bookingOperation.insertOne(record);
+      bookingLifecycleAnalytics.emitTransition(null, record);
       return record;
     } catch (error) {
       if (!isDuplicateKeyError(error)) {
@@ -121,6 +123,7 @@ class BookingOperationRepository {
     });
     try {
       await mongoService.bookingOperation.insertOne(record);
+      bookingLifecycleAnalytics.emitTransition(null, record);
       return record;
     } catch (error) {
       if (!isDuplicateKeyError(error)) {
@@ -151,6 +154,7 @@ class BookingOperationRepository {
     });
     try {
       await mongoService.bookingOperation.insertOne(record);
+      bookingLifecycleAnalytics.emitTransition(null, record);
       return record;
     } catch (error) {
       if (!isDuplicateKeyError(error)) {
@@ -180,6 +184,7 @@ class BookingOperationRepository {
     });
     try {
       await mongoService.bookingOperation.insertOne(record);
+      bookingLifecycleAnalytics.emitTransition(null, record);
       return record;
     } catch (error) {
       if (!isDuplicateKeyError(error)) {
@@ -294,13 +299,18 @@ class BookingOperationRepository {
     if (patch.nextAttemptAt) {
       $set.nextAttemptAt = patch.nextAttemptAt;
     }
+    const previous = await this.findById(id);
     const result = await mongoService.bookingOperation.findOneAndUpdate(
       { _id: id },
       { $set },
       { returnDocument: "after" },
     );
     if (!result) return null;
-    return parseOperation(result);
+    const current = parseOperation(result);
+    if (previous) {
+      bookingLifecycleAnalytics.emitTransition(previous, current);
+    }
+    return current;
   }
 
   async scheduleRetry(
@@ -309,19 +319,23 @@ class BookingOperationRepository {
     lastError: string | null,
   ): Promise<BookingOperationRecord | null> {
     const now = new Date();
+    const $set = {
+      nextAttemptAt,
+      lastError,
+      updatedAt: now,
+    };
+    const previous = await this.findById(id);
     const result = await mongoService.bookingOperation.findOneAndUpdate(
       { _id: id },
-      {
-        $set: {
-          nextAttemptAt,
-          lastError,
-          updatedAt: now,
-        },
-      },
+      { $set },
       { returnDocument: "after" },
     );
     if (!result) return null;
-    return parseOperation(result);
+    const current = parseOperation(result);
+    if (previous) {
+      bookingLifecycleAnalytics.emitTransition(previous, current);
+    }
+    return current;
   }
 
   async markFailed(

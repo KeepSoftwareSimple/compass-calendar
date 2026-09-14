@@ -12,8 +12,8 @@ import { type SetupStepId } from "@web/booking/setup/setup-steps";
  *
  * The five shipped booking events keep their names and properties.
  * These helpers only add the missing transitions. `booking_reservation_created`
- * stays the browser-observed confirmation; WP-11 owns authoritative server
- * completion.
+ * stays the browser-observed confirmation. Authoritative server completion is
+ * `booking_operation` from the backend.
  *
  * Counting: a transition fires when its identity changes, not when React
  * re-renders or TanStack Query refetches the same result. Back into a setup

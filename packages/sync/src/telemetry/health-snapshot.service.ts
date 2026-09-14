@@ -94,6 +94,9 @@ export async function emitHealthSnapshot(input: {
   deps: HealthSnapshotDeps;
   client: PostHogCaptureClient | null;
 }): Promise<SyncHealthSnapshot[]> {
+  // Meeting dashboards reuse this provider-health gauge. Booking operation
+  // success, failure, and backlog live on `booking_operation` /
+  // `booking_operation_heartbeat` from the backend.
   const snapshots = await computeHealthSnapshots(input.deps);
   for (const snapshot of snapshots) {
     await captureSafely(input.client, {

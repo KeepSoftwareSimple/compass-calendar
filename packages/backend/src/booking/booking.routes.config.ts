@@ -5,6 +5,7 @@ import { Logger } from "@core/logger/winston.logger";
 import { isBookingEnabled } from "@core/util/env.util";
 import { verifySession } from "@backend/auth/session/session.middleware";
 import { bookingPublicRateLimitKey } from "@backend/booking/booking-client-ip";
+import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import { createBookingRateLimitStore } from "@backend/booking/booking-rate-limit.store";
 import bookingController from "@backend/booking/controllers/booking.controller";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
@@ -40,6 +41,7 @@ const onLimitReached: Options["handler"] = (
       ? store.prefix
       : "booking";
   logger.info("Booking rate limit exceeded", { limiter });
+  bookingLifecycleAnalytics.emitRateLimited(limiter);
   response.setHeader("Retry-After", String(Math.ceil(options.windowMs / 1000)));
   response.status(options.statusCode).json(rateLimitedMessage);
 };
