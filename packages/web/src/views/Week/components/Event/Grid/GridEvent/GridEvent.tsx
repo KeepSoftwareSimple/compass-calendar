@@ -1,5 +1,4 @@
 import { type ForwardedRef, forwardRef, memo, useState } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
@@ -10,8 +9,8 @@ import {
   type TimedDeckLayout,
   timedDeckBoxShadow,
 } from "@web/grid/layout/timed-deck.layout";
+import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
-import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 
 interface Props {
   calendarIdentity?: CalendarCardIdentity | null;
@@ -24,7 +23,7 @@ interface Props {
   measurements: Measurements_Grid;
   motionMode?: GridEventMotionMode;
   onEventKeyDown?: (event: GridEventEntity) => void;
-  weekProps: WeekProps;
+  visibleDates: GridVisibleDate[];
 }
 
 type GridEventDisplayMode = "draft" | "placeholder" | "saved";
@@ -42,12 +41,10 @@ const GridEventBase = (
     measurements,
     motionMode = "idle",
     onEventKeyDown,
-    weekProps,
+    visibleDates,
   }: Props,
   ref: ForwardedRef<HTMLDivElement>,
 ) => {
-  const { component } = weekProps;
-
   const isDraft = displayMode === "draft";
   const isDragging = motionMode === "dragging";
   const isResizing = motionMode === "resizing";
@@ -55,22 +52,6 @@ const GridEventBase = (
   const isDeck = Boolean(deckLayout);
   const [isFocused, setIsFocused] = useState(false);
 
-  const visibleDates = (
-    component.weekDays?.length
-      ? component.weekDays
-      : Array.from(
-          {
-            length:
-              component.endOfView
-                .startOf("day")
-                .diff(component.startOfView.startOf("day"), "day") + 1,
-          },
-          (_, index) => component.startOfView.startOf("day").add(index, "day"),
-        )
-  ).map((date) => ({
-    date,
-    key: date.format(YEAR_MONTH_DAY_FORMAT),
-  }));
   const shouldUseDraftSizing = isDraft && !deckLayout;
   const basePosition = getTimedEventPosition(event, {
     isDraft: shouldUseDraftSizing,
@@ -119,6 +100,6 @@ export const GridEventMemo = memo(GridEvent, (prev, next) => {
     prev.measurements === next.measurements &&
     prev.motionMode === next.motionMode &&
     // The visible window can move without the event or measurements changing
-    prev.weekProps.component.weekDays === next.weekProps.component.weekDays
+    prev.visibleDates === next.visibleDates
   );
 });

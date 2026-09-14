@@ -65,4 +65,28 @@ describe("useGridMeasurements", () => {
 
     expect(result.current.measurements.colWidths).toEqual([320]);
   });
+
+  it("keeps measurement ref callbacks stable across re-renders", () => {
+    const { result, rerender } = renderHook(() =>
+      useGridMeasurements({ visibleDateCount: 7 }),
+    );
+
+    const {
+      allDayRef,
+      allDayRowRef,
+      mainGridElementRef,
+      timedColumnsElementRef,
+    } = result.current.gridRefs;
+    const firstGridRefs = result.current.gridRefs;
+
+    rerender();
+
+    expect(result.current.gridRefs.allDayRef).toBe(allDayRef);
+    expect(result.current.gridRefs.allDayRowRef).toBe(allDayRowRef);
+    expect(result.current.gridRefs.mainGridElementRef).toBe(mainGridElementRef);
+    expect(result.current.gridRefs.timedColumnsElementRef).toBe(
+      timedColumnsElementRef,
+    );
+    expect(result.current.gridRefs).toBe(firstGridRefs);
+  });
 });
