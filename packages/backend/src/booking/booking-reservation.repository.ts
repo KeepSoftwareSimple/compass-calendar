@@ -195,10 +195,15 @@ class BookingReservationRepository {
       slotEnd: Date;
       guestTimeZone: BookingReservationRecord["guestTimeZone"];
     },
+    expectedSlotStart?: Date,
   ): Promise<BookingReservationRecord | null> {
     const now = new Date();
     const result = await mongoService.bookingReservation.findOneAndUpdate(
-      { _id: id, status: "confirmed" },
+      {
+        _id: id,
+        status: "confirmed",
+        ...(expectedSlotStart ? { slotStart: expectedSlotStart } : {}),
+      },
       {
         $set: {
           slotStart: slot.slotStart,

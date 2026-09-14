@@ -427,7 +427,7 @@ describe("toReplaceSubmitRequests", () => {
       attendeesEdit: "replace",
     });
     if (request?.input.kind !== "update") return;
-    expect(request.input.content.attendees).toEqual([
+    expect(request.input.content?.attendees).toEqual([
       {
         email: "ada@example.com",
         displayName: "Ada",
@@ -476,7 +476,7 @@ describe("toReplaceSubmitRequests", () => {
       attendeesEdit: "replace",
     });
     if (requests[0]?.input.kind !== "update") return;
-    expect(requests[0].input.content.attendees).toEqual([]);
+    expect(requests[0].input.content?.attendees).toEqual([]);
   });
 
   // Snapshot regression for the pack's backward-compat guarantee: a payload

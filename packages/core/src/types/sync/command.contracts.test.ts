@@ -378,6 +378,42 @@ describe("Sync command contracts", () => {
       expect(SyncCommandSchema.safeParse(command).success).toBe(true);
     });
 
+    it("accepts a content-only update that omits schedule", () => {
+      const { schedule: _schedule, ...contentOnly } = updateInput("all");
+      const command = baseCommand({
+        input: contentOnly,
+        expectedVersion: "etag-1",
+      });
+      expect(SyncCommandSchema.safeParse(command).success).toBe(true);
+    });
+
+    it("accepts a schedule-only update that omits content", () => {
+      const { content: _content, ...scheduleOnly } = updateInput("all");
+      const command = baseCommand({
+        input: scheduleOnly,
+        expectedVersion: "etag-1",
+      });
+      expect(SyncCommandSchema.safeParse(command).success).toBe(true);
+    });
+
+    it("rejects an update that omits both content and schedule", () => {
+      const {
+        content: _content,
+        schedule: _schedule,
+        ...empty
+      } = updateInput("all");
+      const command = baseCommand({ input: empty });
+      expect(SyncCommandSchema.safeParse(command).success).toBe(false);
+    });
+
+    it("rejects a replace update that omits content", () => {
+      const { content: _content, ...scheduleOnly } = updateInput("all");
+      const command = baseCommand({
+        input: { ...scheduleOnly, attendeesEdit: "replace" },
+      });
+      expect(SyncCommandSchema.safeParse(command).success).toBe(false);
+    });
+
     it("accepts a create command that ends up reconciling an ambiguous response", () => {
       const command = baseCommand({ outcome: { state: "reconciling" } });
       expect(SyncCommandSchema.safeParse(command).success).toBe(true);

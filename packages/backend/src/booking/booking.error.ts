@@ -2,6 +2,7 @@ import { ZodError, z } from "zod/v4";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
+import { EventMutationException } from "@backend/event/event.error";
 
 const logger = Logger("app:booking.error");
 
@@ -17,6 +18,7 @@ export const BookingErrorCodeSchema = z.enum([
   "PAGE_NOT_FOUND",
   "SLUG_TAKEN",
   "SLOT_UNAVAILABLE",
+  "RESERVATION_CONFLICT",
   "RESERVATION_NOT_FOUND",
   "INTERNAL_ERROR",
 ]);
@@ -34,6 +36,7 @@ const STATUS_BY_CODE: Record<BookingErrorCode, Status> = {
   PAGE_NOT_FOUND: Status.NOT_FOUND,
   SLUG_TAKEN: Status.CONFLICT,
   SLOT_UNAVAILABLE: Status.CONFLICT,
+  RESERVATION_CONFLICT: Status.CONFLICT,
   RESERVATION_NOT_FOUND: Status.NOT_FOUND,
   INTERNAL_ERROR: Status.INTERNAL_SERVER,
 };
@@ -60,6 +63,18 @@ export const toBookingErrorResponse = (
       status: e.statusCode,
       body: { code: e.bookingCode, message: e.message },
     };
+  }
+
+  if (e instanceof EventMutationException) {
+    if (e.mutationCode === "RECURRENCE_CONFLICT") {
+      return {
+        status: STATUS_BY_CODE.RESERVATION_CONFLICT,
+        body: {
+          code: "RESERVATION_CONFLICT",
+          message: "This meeting was changed. Try again.",
+        },
+      };
+    }
   }
 
   if (e instanceof ZodError) {

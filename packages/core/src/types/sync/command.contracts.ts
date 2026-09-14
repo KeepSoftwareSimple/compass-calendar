@@ -66,12 +66,17 @@ const CreateCommandInputSchema = z.strictObject({
 // operation's job, so the two stay independently retryable and idempotent.
 // invitation carries the user's choice of whether to notify attendees of the
 // edit, same as create; default is to notify no one.
+//
+// content and schedule are independently optional so a caller can change one
+// without restating the other. Omitting a field means "keep what is already
+// stored / at the provider". A replace of guest membership still needs
+// content. Envelope refinements reject an update that carries neither field.
 const UpdateCommandInputSchema = z.strictObject({
   kind: z.literal("update"),
   invitation: InvitationIntentSchema,
   attendeesEdit: AttendeesEditSchema,
-  content: SyncEventContentSchema,
-  schedule: EventScheduleSchema,
+  content: SyncEventContentSchema.optional(),
+  schedule: EventScheduleSchema.optional(),
   recurrence: RecurrenceEditSchema,
   scope: RecurrenceScopeSchema,
   // Which occurrence a this/thisAndFollowing scope targets: the instance's
@@ -139,6 +144,20 @@ const recurrenceTargetIsCoherent = (input: SyncCommandInput): boolean => {
 };
 const RECURRENCE_TARGET_MESSAGE =
   "recurrenceId is required for scope this/thisAndFollowing and must be null for scope all";
+
+const updateCarriesContentOrSchedule = (input: SyncCommandInput): boolean =>
+  input.kind !== "update" ||
+  input.content !== undefined ||
+  input.schedule !== undefined;
+
+const UPDATE_INTENT_MESSAGE = "An update must carry content, schedule, or both";
+
+const replaceUpdateCarriesContent = (input: SyncCommandInput): boolean =>
+  input.kind !== "update" ||
+  input.attendeesEdit !== "replace" ||
+  input.content !== undefined;
+
+const REPLACE_UPDATE_CONTENT_MESSAGE = "A replace update must carry content";
 
 // Provider-side rejection classes a command outcome can carry. These map to
 // the sync failure classification; "capability" failures are typed rather than
@@ -234,6 +253,14 @@ export const SyncCommandSchema = z
   .refine((command) => recurrenceTargetIsCoherent(command.input), {
     message: RECURRENCE_TARGET_MESSAGE,
     path: ["input", "recurrenceId"],
+  })
+  .refine((command) => updateCarriesContentOrSchedule(command.input), {
+    message: UPDATE_INTENT_MESSAGE,
+    path: ["input", "content"],
+  })
+  .refine((command) => replaceUpdateCarriesContent(command.input), {
+    message: REPLACE_UPDATE_CONTENT_MESSAGE,
+    path: ["input", "content"],
   });
 export type SyncCommand = z.infer<typeof SyncCommandSchema>;
 
@@ -266,6 +293,14 @@ export const CommandSubmitRequestSchema = z
   .refine((request) => recurrenceTargetIsCoherent(request.input), {
     message: RECURRENCE_TARGET_MESSAGE,
     path: ["input", "recurrenceId"],
+  })
+  .refine((request) => updateCarriesContentOrSchedule(request.input), {
+    message: UPDATE_INTENT_MESSAGE,
+    path: ["input", "content"],
+  })
+  .refine((request) => replaceUpdateCarriesContent(request.input), {
+    message: REPLACE_UPDATE_CONTENT_MESSAGE,
+    path: ["input", "content"],
   });
 export type CommandSubmitRequest = z.infer<typeof CommandSubmitRequestSchema>;
 

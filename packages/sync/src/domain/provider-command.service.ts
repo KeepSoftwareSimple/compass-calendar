@@ -22,6 +22,8 @@ import {
   mergeAttendees,
   mergeUpdateContent,
   omitNullColor,
+  resolveUpdateContent,
+  resolveUpdateSchedule,
 } from "@sync/domain/merge-update-content";
 import {
   occurrenceScheduleAfterSeriesEdit,
@@ -441,7 +443,14 @@ export async function executeProviderUpdate(
   }
 
   // Merge so a title/description edit cannot wipe provider-sourced attendees.
-  let content = mergeUpdateContent(event.content, input.content);
+  // Omitting content or schedule keeps the freshly fetched provider values so
+  // a content-only booking patch cannot restore a host's concurrent move.
+  let content = resolveUpdateContent(
+    event.content,
+    input.content,
+    current.content,
+  );
+  const schedule = resolveUpdateSchedule(input.schedule, current.schedule);
   // A "replace" merges the intended membership against the FRESHLY FETCHED
   // provider list (current.content), never sync's stored record: the Google
   // patch replaces the whole attendees array, and merging against a stale
@@ -449,7 +458,7 @@ export async function executeProviderUpdate(
   // merged list also lands on the local record at commit, so reads reflect
   // the edit before the next provider round-trip.
   const intendedAttendees =
-    input.attendeesEdit === "replace"
+    input.attendeesEdit === "replace" && input.content
       ? mergeAttendees(input.content.attendees, current.content.attendees)
       : undefined;
   if (intendedAttendees) {
@@ -482,7 +491,7 @@ export async function executeProviderUpdate(
     matchesIntendedEdit(
       current,
       content,
-      input.schedule,
+      schedule,
       intendedRecurrence,
       intendedAttendees,
     )
@@ -507,7 +516,7 @@ export async function executeProviderUpdate(
         intendedAttendees !== undefined,
       ),
       content,
-      schedule: input.schedule,
+      schedule,
       recurrence: intendedRecurrence,
       invitation: input.invitation,
       ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
@@ -554,7 +563,7 @@ async function commitProviderUpdate(
   const updated: EventRecord = {
     ...event,
     content,
-    schedule: commitOptions?.schedule ?? input.schedule,
+    schedule: commitOptions?.schedule ?? input.schedule ?? event.schedule,
     recurrence: storedSeriesRecurrence(input.recurrence, event),
     providerVersion: providerVersion as ProviderEventVersion,
     providerUpdatedAt: null,
@@ -603,7 +612,10 @@ async function executeProviderManagedUpdate(
   now: () => Date,
 ): Promise<CommandRecord> {
   if (
-    !deepEqual(input.schedule, current.schedule) ||
+    !deepEqual(
+      resolveUpdateSchedule(input.schedule, current.schedule),
+      current.schedule,
+    ) ||
     intendedRecurrence.kind !== "single"
   ) {
     return failCommand(deps, command, "unsupportedCapability", connectionId);
@@ -837,11 +849,16 @@ export async function executeProviderSeriesUpdate(
     return failCommand(deps, command, "permanentProviderError", connectionId);
   }
 
-  let content = mergeUpdateContent(master.content, input.content);
+  let content = resolveUpdateContent(
+    master.content,
+    input.content,
+    current.content,
+  );
+  const schedule = resolveUpdateSchedule(input.schedule, current.schedule);
   // Guest membership merges against the freshly fetched master, mirroring the
   // single-event path (see executeProviderUpdate).
   const intendedAttendees =
-    input.attendeesEdit === "replace"
+    input.attendeesEdit === "replace" && input.content
       ? mergeAttendees(input.content.attendees, current.content.attendees)
       : undefined;
   if (intendedAttendees) {
@@ -854,7 +871,7 @@ export async function executeProviderSeriesUpdate(
     matchesIntendedEdit(
       current,
       content,
-      input.schedule,
+      schedule,
       intendedRecurrence,
       intendedAttendees,
     )
@@ -885,7 +902,7 @@ export async function executeProviderSeriesUpdate(
         intendedAttendees !== undefined,
       ),
       content,
-      schedule: input.schedule,
+      schedule,
       recurrence: intendedRecurrence,
       invitation: input.invitation,
       ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
@@ -992,7 +1009,7 @@ async function commitProviderSeriesUpdate(
           content,
           schedule: occurrenceScheduleAfterSeriesEdit(
             master.schedule,
-            input.schedule,
+            resolveUpdateSchedule(input.schedule, master.schedule),
             exceptionInstant(exception),
           ),
           recurrence: { kind: "instance" },
@@ -1036,7 +1053,7 @@ async function commitProviderSeriesUpdate(
   const updated: EventRecord = {
     ...master,
     content,
-    schedule: input.schedule,
+    schedule: input.schedule ?? master.schedule,
     recurrence: storedSeriesRecurrence(input.recurrence, master),
     providerVersion: providerVersion as ProviderEventVersion,
     providerUpdatedAt: null,
@@ -1164,7 +1181,12 @@ export async function executeProviderOccurrenceUpdate(
     return failCommand(deps, command, "permanentProviderError", connectionId);
   }
 
-  const content = mergeUpdateContent(master.content, input.content);
+  const content = resolveUpdateContent(
+    master.content,
+    input.content,
+    instance.content,
+  );
+  const schedule = resolveUpdateSchedule(input.schedule, instance.schedule);
   const providerEventId = instance.providerEventId;
   const location = {
     accessToken,
@@ -1177,7 +1199,7 @@ export async function executeProviderOccurrenceUpdate(
   // rejects a `recurrence` key at all on that kind of event (see
   // ProviderWriteRecurrence).
   if (
-    matchesIntendedEdit(instance, content, input.schedule, {
+    matchesIntendedEdit(instance, content, schedule, {
       kind: "instance",
     })
   ) {
@@ -1187,6 +1209,7 @@ export async function executeProviderOccurrenceUpdate(
       master,
       recurrenceId,
       content,
+      schedule,
       providerEventId,
       instance.providerVersion,
       now,
@@ -1198,7 +1221,7 @@ export async function executeProviderOccurrenceUpdate(
       ...location,
       expectedVersion: command.expectedVersion,
       content,
-      schedule: input.schedule,
+      schedule,
       recurrence: { kind: "instance" },
       invitation: input.invitation,
     }),
@@ -1215,6 +1238,7 @@ export async function executeProviderOccurrenceUpdate(
     master,
     recurrenceId,
     content,
+    schedule,
     providerEventId,
     result.providerVersion,
     now,
@@ -1231,6 +1255,7 @@ async function commitProviderOccurrenceUpdate(
   master: EventRecord,
   recurrenceId: DateTime,
   content: SyncEventContent,
+  schedule: EventSchedule,
   providerEventId: string,
   providerVersion: string,
   now: () => Date,
@@ -1245,7 +1270,7 @@ async function commitProviderOccurrenceUpdate(
     recurrenceId,
     {
       content,
-      schedule: command.input.schedule,
+      schedule,
       cancelled: false,
       providerIdentity: {
         providerEventId: providerEventId as ProviderEventId,

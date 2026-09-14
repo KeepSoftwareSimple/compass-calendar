@@ -1,4 +1,6 @@
 import { type ObjectId } from "mongodb";
+import { z } from "zod/v4";
+import { zObjectId } from "@core/types/type.utils";
 import {
   BOOKING_OPERATION_IN_FLIGHT_STATUSES,
   BOOKING_OPERATION_RECOVERABLE_STATUSES,
@@ -9,6 +11,8 @@ import {
   CancelBookingOperationRecordSchema,
   type CreateBookingOperationRecord,
   CreateBookingOperationRecordSchema,
+  type RescheduleBookingOperationRecord,
+  RescheduleBookingOperationRecordSchema,
 } from "@backend/booking/booking-operation.record";
 import mongoService from "@backend/common/services/mongo.service";
 
@@ -36,8 +40,23 @@ export type InsertCancelBookingOperationInput = Omit<
   lastError?: string | null;
 };
 
+export type InsertRescheduleBookingOperationInput = Omit<
+  RescheduleBookingOperationRecord,
+  "createdAt" | "updatedAt" | "attemptCount" | "nextAttemptAt" | "lastError"
+> & {
+  attemptCount?: number;
+  nextAttemptAt?: Date;
+  lastError?: string | null;
+};
+
 const parseOperation = (record: unknown): BookingOperationRecord =>
   BookingOperationRecordSchema.parse(record);
+
+const OverlapClaimRowSchema = z.object({
+  _id: zObjectId,
+  reservationId: zObjectId,
+  kind: z.enum(["create", "reschedule"]),
+});
 
 class BookingOperationRepository {
   async insertCreate(
@@ -107,6 +126,35 @@ class BookingOperationRepository {
     }
   }
 
+  async insertReschedule(
+    input: InsertRescheduleBookingOperationInput,
+  ): Promise<RescheduleBookingOperationRecord> {
+    const now = new Date();
+    const record = RescheduleBookingOperationRecordSchema.parse({
+      ...input,
+      attemptCount: input.attemptCount ?? 0,
+      nextAttemptAt: input.nextAttemptAt ?? now,
+      lastError: input.lastError ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    try {
+      await mongoService.bookingOperation.insertOne(record);
+      return record;
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) {
+        throw error;
+      }
+      const existing = await this.findInFlightByReservationId(
+        record.reservationId,
+      );
+      if (existing?.kind === "reschedule") {
+        return existing;
+      }
+      throw error;
+    }
+  }
+
   async findById(id: ObjectId): Promise<BookingOperationRecord | null> {
     const record = await mongoService.bookingOperation.findOne({ _id: id });
     if (!record) return null;
@@ -138,6 +186,42 @@ class BookingOperationRepository {
     });
     if (!record) return null;
     return CreateBookingOperationRecordSchema.parse(record);
+  }
+
+  async findInFlightByReservationId(
+    reservationId: ObjectId,
+  ): Promise<BookingOperationRecord | null> {
+    const record = await mongoService.bookingOperation.findOne({
+      reservationId,
+      kind: { $in: ["reschedule", "cancel"] },
+      status: { $in: [...BOOKING_OPERATION_RECOVERABLE_STATUSES] },
+    });
+    if (!record) return null;
+    return parseOperation(record);
+  }
+
+  async listInFlightOverlapping(
+    pageId: ObjectId,
+    slotStart: Date,
+    slotEnd: Date,
+  ): Promise<
+    Array<{
+      _id: ObjectId;
+      reservationId: ObjectId;
+      kind: "create" | "reschedule";
+    }>
+  > {
+    const rows = await mongoService.bookingOperation
+      .find({
+        pageId,
+        kind: { $in: ["create", "reschedule"] },
+        status: { $in: [...BOOKING_OPERATION_IN_FLIGHT_STATUSES] },
+        slotStart: { $lt: slotEnd },
+        slotEnd: { $gt: slotStart },
+      })
+      .project({ reservationId: 1, kind: 1 })
+      .toArray();
+    return rows.map((row) => OverlapClaimRowSchema.parse(row));
   }
 
   async findByReservationIdAndKind(

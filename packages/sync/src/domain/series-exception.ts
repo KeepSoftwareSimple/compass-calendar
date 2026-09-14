@@ -1,6 +1,9 @@
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
 import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
-import { mergeUpdateContent } from "@sync/domain/merge-update-content";
+import {
+  resolveUpdateContent,
+  resolveUpdateSchedule,
+} from "@sync/domain/merge-update-content";
 import {
   stripRuleBounds,
   truncateRulesBefore,
@@ -189,8 +192,12 @@ export function buildRemainderMaster(
     ...master,
     _id: remainderMasterId(master._id, command.input.recurrenceId as DateTime),
     clientEventId: null,
-    content: mergeUpdateContent(master.content, input.content),
-    schedule: input.schedule,
+    content: resolveUpdateContent(
+      master.content,
+      input.content,
+      master.content,
+    ),
+    schedule: resolveUpdateSchedule(input.schedule, master.schedule),
     recurrence,
     createdAt: now,
     updatedAt: now,

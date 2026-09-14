@@ -82,40 +82,57 @@ const toBookingCreateSubmitRequest = (
 const toBookingUpdateSubmitRequest = (
   input: CalendarBookingUpdateEventInput,
 ) => {
+  const hasContent =
+    input.title !== undefined && input.description !== undefined;
+  const hasSchedule = input.start !== undefined && input.end !== undefined;
+  if (!hasContent && !hasSchedule) {
+    throw bookingError("INVALID_INPUT", "Booking update is missing fields");
+  }
   const digest = createHash("sha256")
     .update(
       JSON.stringify({
         title: input.title,
         description: input.description,
         displayName: input.guest.displayName,
+        start: input.start,
+        end: input.end,
       }),
     )
     .digest("hex")
     .slice(0, 40);
+  const startKey = input.start ?? "keep";
   return CommandSubmitRequestSchema.parse({
     idempotencyKey: IdempotencyKeySchema.parse(
-      `update:${input.eventId}:${input.start}:${digest}`,
+      `update:${input.eventId}:${startKey}:${digest}`,
     ),
     eventId: input.eventId,
-    expectedVersion: null,
+    expectedVersion: input.expectedVersion ?? null,
     input: {
       kind: "update",
       invitation: "all",
       attendeesEdit: "preserve",
-      content: {
-        title: input.title,
-        description: input.description,
-        location: null,
-        organizer: null,
-        attendees: [],
-        conference: null,
-      },
-      schedule: {
-        kind: "timed",
-        start: input.start,
-        end: input.end,
-        timeZone: input.timeZone,
-      },
+      ...(hasContent
+        ? {
+            content: {
+              title: input.title,
+              description: input.description,
+              location: null,
+              organizer: null,
+              attendees: [],
+              conference: null,
+            },
+          }
+        : {}),
+      ...(hasSchedule
+        ? {
+            schedule: {
+              kind: "timed",
+              start: input.start,
+              end: input.end,
+              timeZone: input.timeZone,
+            },
+          }
+        : {}),
       recurrence: { kind: "single" },
       scope: "all",
       recurrenceId: null,

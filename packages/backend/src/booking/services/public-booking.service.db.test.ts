@@ -210,6 +210,7 @@ describe("PublicBookingService", () => {
   let updateBookingEvent: ReturnType<typeof mock>;
   let getAvailability: ReturnType<typeof mock>;
   let service: PublicBookingService;
+  let calendarBookingPort: CalendarBookingPort;
 
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
@@ -244,6 +245,7 @@ describe("PublicBookingService", () => {
       updateBookingEvent,
       deleteBookingEvent,
     };
+    calendarBookingPort = port;
     service = new PublicBookingService(port);
   });
 
@@ -1949,6 +1951,15 @@ describe("PublicBookingService", () => {
     ).toMatchObject({
       title: "Grace Hopper and Host User",
     });
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
+        start?: string;
+        end?: string;
+      },
+    ).not.toHaveProperty("start");
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+    ).not.toHaveProperty("end");
     const description = (
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
         description: string;
@@ -2084,6 +2095,9 @@ describe("PublicBookingService", () => {
       start: `${BOOKING_MONDAY}T11:00:00.000Z`,
       end: `${BOOKING_MONDAY}T11:30:00.000Z`,
     });
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+    ).not.toHaveProperty("title");
     expect(createBookingEvent).not.toHaveBeenCalled();
     expect(response.slotStart).toBe(
       `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
@@ -2263,6 +2277,274 @@ describe("PublicBookingService", () => {
       }),
     ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
     expect(updateBookingEvent).not.toHaveBeenCalled();
+  });
+
+  const overlapBarrier = (size: number) => {
+    let remaining = size;
+    const waiters: Array<() => void> = [];
+    return async () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        for (const release of waiters) release();
+        return;
+      }
+      await new Promise<void>((resolve) => {
+        waiters.push(resolve);
+      });
+    };
+  };
+
+  it("keeps host-moved times when the guest later edits notes", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      notes: "bring coffee",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    await bookingReservationRepository.updateSlotTimes(reservationId, {
+      slotStart: new Date(`${BOOKING_MONDAY}T11:00:00.000Z`),
+      slotEnd: new Date(`${BOOKING_MONDAY}T11:30:00.000Z`),
+      guestTimeZone: "Europe/London" as TimeZone,
+    });
+    updateBookingEvent.mockClear();
+
+    const patched = await service.patchPublicReservation(reservationId, {
+      token,
+      notes: "bring tea",
+    });
+
+    expect(patched.notes).toBe("bring tea");
+    expect(patched.slotStart).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
+    );
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+    ).not.toHaveProperty("start");
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.slotStart.toISOString()).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z`,
+    );
+  });
+
+  it("surfaces a retryable conflict when the provider rejects a stale edit", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      notes: "bring coffee",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    updateBookingEvent.mockImplementation(async () => {
+      throw eventMutationError(
+        "RECURRENCE_CONFLICT",
+        "Event was modified elsewhere",
+      );
+    });
+
+    await expect(
+      service.patchPublicReservation(reservationId, {
+        token,
+        notes: "bring tea",
+      }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_CONFLICT" });
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.notes).toBe("bring coffee");
+    expect(stored?.slotStart.toISOString()).toBe(
+      `${BOOKING_MONDAY}T10:00:00.000Z`,
+    );
+  });
+
+  it("accepts at most one of two concurrent adjacent overlapping reschedules", async () => {
+    const { slug } = await enableBookingPage();
+    const first = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const second = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
+      guestName: "Grace Hopper",
+      guestEmail: "grace@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const firstToken = new URL(first.cancelUrl).searchParams.get("token");
+    const secondToken = new URL(second.cancelUrl).searchParams.get("token");
+    updateBookingEvent.mockClear();
+    const racing = new PublicBookingService(
+      calendarBookingPort,
+      overlapBarrier(2),
+    );
+
+    const results = await Promise.allSettled([
+      racing.rescheduleReservation(new ObjectId(first.reservationId), {
+        token: firstToken,
+        slotStart: `${BOOKING_MONDAY}T10:15:00.000Z`,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+      racing.rescheduleReservation(new ObjectId(second.reservationId), {
+        token: secondToken,
+        slotStart: `${BOOKING_MONDAY}T10:30:00.000Z`,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ]);
+
+    const accepted = results.filter((result) => result.status === "fulfilled");
+    const rejected = results.filter((result) => result.status === "rejected");
+    expect(accepted).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+      bookingCode: "SLOT_UNAVAILABLE",
+    });
+    expect(updateBookingEvent).toHaveBeenCalledTimes(1);
+    const firstStored = await bookingReservationRepository.findById(
+      new ObjectId(first.reservationId),
+    );
+    const secondStored = await bookingReservationRepository.findById(
+      new ObjectId(second.reservationId),
+    );
+    const overlap =
+      firstStored!.slotStart.getTime() < secondStored!.slotEnd.getTime() &&
+      secondStored!.slotStart.getTime() < firstStored!.slotEnd.getTime();
+    expect(overlap).toBe(false);
+  });
+
+  it("does not let a create bypass an in-flight overlapping reschedule", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    updateBookingEvent.mockClear();
+    createBookingEvent.mockClear();
+    const racing = new PublicBookingService(
+      calendarBookingPort,
+      overlapBarrier(2),
+    );
+
+    const results = await Promise.allSettled([
+      racing.rescheduleReservation(reservationId, {
+        token,
+        slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+      racing.createReservation(slug, {
+        slotStart: `${BOOKING_MONDAY}T11:00:00.000Z`,
+        guestName: "Grace Hopper",
+        guestEmail: "grace@example.com",
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ]);
+
+    const accepted = results.filter((result) => result.status === "fulfilled");
+    const rejected = results.filter((result) => result.status === "rejected");
+    expect(accepted).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect((rejected[0] as PromiseRejectedResult).reason).toMatchObject({
+      bookingCode: "SLOT_UNAVAILABLE",
+    });
+  });
+
+  it("rejects a second reschedule of the same reservation to a different slot", async () => {
+    const { slug, pageId, userId, calendarId } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const reservation =
+      await bookingReservationRepository.findById(reservationId);
+    await bookingOperationRepository.insertReschedule({
+      _id: new ObjectId(),
+      kind: "reschedule",
+      status: "pending",
+      reservationId,
+      pageId,
+      userId,
+      calendarId,
+      eventId: reservation?.calendarEventId ?? null,
+      slotStart: new Date(`${BOOKING_MONDAY}T11:00:00.000Z`),
+      slotEnd: new Date(`${BOOKING_MONDAY}T11:30:00.000Z`),
+      previousSlotStart: reservation!.slotStart,
+      previousSlotEnd: reservation!.slotEnd,
+      guestTimeZone: "Europe/London" as TimeZone,
+    });
+
+    await expect(
+      service.rescheduleReservation(reservationId, {
+        token,
+        slotStart: `${BOOKING_MONDAY}T12:00:00.000Z`,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_CONFLICT" });
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.slotStart.toISOString()).toBe(
+      `${BOOKING_MONDAY}T10:00:00.000Z`,
+    );
+  });
+
+  it("rejects cancel while a reschedule of the same reservation is in flight", async () => {
+    const { slug, pageId, userId, calendarId } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const reservation =
+      await bookingReservationRepository.findById(reservationId);
+    await bookingOperationRepository.insertReschedule({
+      _id: new ObjectId(),
+      kind: "reschedule",
+      status: "pending",
+      reservationId,
+      pageId,
+      userId,
+      calendarId,
+      eventId: reservation?.calendarEventId ?? null,
+      slotStart: new Date(`${BOOKING_MONDAY}T11:00:00.000Z`),
+      slotEnd: new Date(`${BOOKING_MONDAY}T11:30:00.000Z`),
+      previousSlotStart: reservation!.slotStart,
+      previousSlotEnd: reservation!.slotEnd,
+      guestTimeZone: "Europe/London" as TimeZone,
+    });
+
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_CONFLICT" });
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.status).toBe("confirmed");
+    expect(stored?.slotStart.toISOString()).toBe(
+      `${BOOKING_MONDAY}T10:00:00.000Z`,
+    );
   });
 
   it("includes the current start on tokenized slots and hides it on public slots", async () => {
