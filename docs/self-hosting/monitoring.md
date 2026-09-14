@@ -44,6 +44,10 @@ What to watch, in sync container logs (`./compass logs sync`):
 
 Unlike the older backend-only sync engine, Sync manages its own push-notification channel renewal internally — there's no separate cron job or maintenance endpoint to wire up.
 
+Web PostHog events carry `version` (the web build's `APP_VERSION`) and
+`environment` as super properties, matching the backend and sync event
+shape so a frontend regression can be attributed to a release.
+
 Hosted Compass Meeting conversion and recovery live on the PostHog
 [Meeting dashboard](https://us.posthog.com/project/165441/dashboard/2093461)
 and [Meeting monitoring](../development/meeting-monitoring.md). Self-hosted
