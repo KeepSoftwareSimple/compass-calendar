@@ -1,5 +1,6 @@
 import { type TokenPayload } from "google-auth-library";
 import { type ClientSession, ObjectId, type WithId } from "mongodb";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { Logger } from "@core/logger/winston.logger";
 import {
   mapUserToCompass,
@@ -184,6 +185,11 @@ class UserService {
     };
 
     const { signedUpAt: nextSignedUpAt, ...updatableUser } = nextUser;
+    const trialStartedAt = new Date();
+    const trialEndsAt = new Date(
+      trialStartedAt.getTime() +
+        BILLING_PLAN.TRIAL_LENGTH_DAYS * 24 * 60 * 60 * 1000,
+    );
 
     await mongoService.user.updateOne(
       { _id: userId },
@@ -191,7 +197,9 @@ class UserService {
         $set: updatableUser,
         $setOnInsert: {
           signedUpAt: nextSignedUpAt,
-          "billing.subscriptionStatus": "awaiting_checkout",
+          "billing.subscriptionStatus": "trialing",
+          "billing.trialStartedAt": trialStartedAt,
+          "billing.trialEndsAt": trialEndsAt,
         },
       },
       { upsert: true, session },
