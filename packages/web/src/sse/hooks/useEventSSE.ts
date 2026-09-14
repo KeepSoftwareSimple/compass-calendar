@@ -55,22 +55,15 @@ function coalesce(fn: () => void, windowMs: number) {
 
 /**
  * Refetches event reads when the backend pushes change events over SSE.
- * Invalidating the relevant scope refetches whichever query is active for the
- * current view/range - replacing the old view/date-range branching in useRefetch.
+ * Invalidating the events prefix refetches whichever day or week query is
+ * active for the current view/range.
  */
 export const useEventSSE = (coalesceMs = SSE_REFETCH_COALESCE_MS) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
     const refetchEvents = coalesce(() => {
-      invalidateEventQueriesUnlessMutating(
-        queryClient,
-        eventQueryKeys.scope("day"),
-      );
-      invalidateEventQueriesUnlessMutating(
-        queryClient,
-        eventQueryKeys.scope("week"),
-      );
+      invalidateEventQueriesUnlessMutating(queryClient, eventQueryKeys.all);
     }, coalesceMs);
     const refetchCalendars = coalesce(() => {
       void queryClient.invalidateQueries({ queryKey: calendarQueryKeys.all });

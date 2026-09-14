@@ -86,6 +86,23 @@ const availabilityForWeekday = (
   weekday: number,
 ) => weeklyAvailability.filter((interval) => interval.weekday === weekday);
 
+// dayjs.tz isValid stays true for nonexistent spring-forward times; it
+// shifts them to the next real instant (02:00 EST → 03:00 EDT). A
+// round-trip through the requested wall clock drops those gaps.
+// Ambiguous fall-back times use dayjs.tz's earlier offset; later
+// repeats of the same wall clock are not a second grid point, and
+// seenStarts drops any UTC collision.
+const localWallInstant = (wallStart: string, timeZone: string) => {
+  const localStart = dayjs.tz(wallStart, "YYYY-MM-DD HH:mm", timeZone);
+  if (
+    !localStart.isValid() ||
+    localStart.format("YYYY-MM-DD HH:mm") !== wallStart
+  ) {
+    return null;
+  }
+  return localStart;
+};
+
 /**
  * Pure slot engine: weekly hours, busy/reservation overlap, min notice,
  * and horizon. Returns UTC instants valid as slot starts.
@@ -145,18 +162,8 @@ export const computeBookingSlots = (
         const hours = Math.floor(minuteCursor / 60);
         const minutes = minuteCursor % 60;
         const wallStart = `${localDate} ${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-        const localStart = dayjs.tz(wallStart, "YYYY-MM-DD HH:mm", timeZone);
-
-        // dayjs.tz isValid stays true for nonexistent spring-forward times; it
-        // shifts them to the next real instant (02:00 EST → 03:00 EDT). A
-        // round-trip through the requested wall clock drops those gaps.
-        // Ambiguous fall-back times use dayjs.tz's earlier offset; later
-        // repeats of the same wall clock are not a second grid point, and
-        // seenStarts drops any UTC collision.
-        if (
-          !localStart.isValid() ||
-          localStart.format("YYYY-MM-DD HH:mm") !== wallStart
-        ) {
+        const localStart = localWallInstant(wallStart, timeZone);
+        if (!localStart) {
           minuteCursor += SLOT_GRID_MINUTES;
           continue;
         }

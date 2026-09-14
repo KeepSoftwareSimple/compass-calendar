@@ -18,14 +18,6 @@ import {
 export const isUndoableRecurrence = (event: Event): boolean =>
   event.recurrence.kind !== "series";
 
-/**
- * @public Kept for external callers that only care about "is this a
- * recurring instance" (unrelated to undo-history eligibility) — no current
- * caller, deliberately exported ahead of one.
- */
-export const isRecurringEvent = (event: Event): boolean =>
-  event.recurrence.kind !== "single";
-
 const isThisScope = (scope?: RecurrenceScope) => !scope || scope === "this";
 
 function pendingEditBefore(

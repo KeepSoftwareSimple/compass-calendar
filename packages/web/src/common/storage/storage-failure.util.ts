@@ -43,13 +43,11 @@ export function storageInitUserMessage(kind: StorageFailureKind): string {
 }
 
 export function storageWriteUserMessage(kind: StorageFailureKind): string {
-  if (kind === "quota") {
-    return "Couldn't save, this device is out of storage. Your change was not applied.";
-  }
-  if (kind === "blocked") {
-    return "Couldn't save, the browser blocked local storage. Your change was not applied.";
-  }
-  return "Couldn't save, local storage is unavailable. Your change was not applied.";
+  const detail =
+    kind === "unavailable"
+      ? "local storage is unavailable"
+      : storageInitUserMessage(kind);
+  return `Couldn't save, ${detail}. Your change was not applied.`;
 }
 
 export function isStorageWriteFailure(error: unknown): boolean {

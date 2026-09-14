@@ -60,78 +60,37 @@ const bookingLimiter = (options: {
     handler: onLimitReached,
   });
 
+const slugLimiter = (prefix: string, limit: number) =>
+  bookingLimiter({ prefix, limit, keyGenerator: bookingSlugKey });
+
+const reservationLimiter = (prefix: string, limit: number) =>
+  bookingLimiter({ prefix, limit, keyGenerator: bookingReservationKey });
+
+const adminLimiter = (prefix: string, limit: number) =>
+  bookingLimiter({ prefix, limit, keyGenerator: bookingAdminKey });
+
 // Shared Mongo buckets: N replicas share one budget per (caller, target).
-const publicPageLimiter = bookingLimiter({
-  prefix: "booking:page",
-  limit: 60,
-  keyGenerator: bookingSlugKey,
-});
-
-const publicSlotsLimiter = bookingLimiter({
-  prefix: "booking:slots",
-  limit: 60,
-  keyGenerator: bookingSlugKey,
-});
-
-const publicConfirmLimiter = bookingLimiter({
-  prefix: "booking:confirm",
-  limit: 10,
-  keyGenerator: bookingSlugKey,
-});
-
-const publicReservationGetLimiter = bookingLimiter({
-  prefix: "booking:reservation-get",
-  limit: 30,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicCancelLimiter = bookingLimiter({
-  prefix: "booking:cancel",
-  limit: 10,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicReservationSlotsLimiter = bookingLimiter({
-  prefix: "booking:reservation-slots",
-  limit: 10,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicRescheduleLimiter = bookingLimiter({
-  prefix: "booking:reschedule",
-  limit: 10,
-  keyGenerator: bookingReservationKey,
-});
-
-const publicReservationPatchLimiter = bookingLimiter({
-  prefix: "booking:reservation-patch",
-  limit: 10,
-  keyGenerator: bookingReservationKey,
-});
-
-const adminPageGetLimiter = bookingLimiter({
-  prefix: "booking:admin-get",
-  limit: 60,
-  keyGenerator: bookingAdminKey,
-});
-
-const adminPageStatusGetLimiter = bookingLimiter({
-  prefix: "booking:admin-status",
-  limit: 60,
-  keyGenerator: bookingAdminKey,
-});
-
-const adminPagePutLimiter = bookingLimiter({
-  prefix: "booking:admin-put",
-  limit: 20,
-  keyGenerator: bookingAdminKey,
-});
-
-const adminNewMeetingsClaimLimiter = bookingLimiter({
-  prefix: "booking:admin-claim",
-  limit: 20,
-  keyGenerator: bookingAdminKey,
-});
+const publicPageLimiter = slugLimiter("booking:page", 60);
+const publicSlotsLimiter = slugLimiter("booking:slots", 60);
+const publicConfirmLimiter = slugLimiter("booking:confirm", 10);
+const publicReservationGetLimiter = reservationLimiter(
+  "booking:reservation-get",
+  30,
+);
+const publicCancelLimiter = reservationLimiter("booking:cancel", 10);
+const publicReservationSlotsLimiter = reservationLimiter(
+  "booking:reservation-slots",
+  10,
+);
+const publicRescheduleLimiter = reservationLimiter("booking:reschedule", 10);
+const publicReservationPatchLimiter = reservationLimiter(
+  "booking:reservation-patch",
+  10,
+);
+const adminPageGetLimiter = adminLimiter("booking:admin-get", 60);
+const adminPageStatusGetLimiter = adminLimiter("booking:admin-status", 60);
+const adminPagePutLimiter = adminLimiter("booking:admin-put", 20);
+const adminNewMeetingsClaimLimiter = adminLimiter("booking:admin-claim", 20);
 
 /**
  * Host admin routes require a session. Public guest routes are unauthenticated.

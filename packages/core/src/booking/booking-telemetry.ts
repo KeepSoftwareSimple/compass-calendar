@@ -50,6 +50,33 @@ const API_RESERVATION =
 const API_PUBLIC_PAGE =
   /^\/api\/booking\/pages\/([^/]+)(?:\/(slots|reservations))?$/;
 const API_ADMIN = /^\/api\/booking\/page(?:\/.*)?$/;
+const COMPASS_ORIGIN = "https://compasscalendar.com";
+
+const API_RESERVATION_BY_SUFFIX: Record<string, ClassifiedBookingPath> = {
+  cancel: {
+    category: "api_booking_reservation_cancel",
+    canonicalPath: "/api/booking/reservations/:reservationId/cancel",
+  },
+  slots: {
+    category: "api_booking_reservation_slots",
+    canonicalPath: "/api/booking/reservations/:reservationId/slots",
+  },
+  reschedule: {
+    category: "api_booking_reservation_reschedule",
+    canonicalPath: "/api/booking/reservations/:reservationId/reschedule",
+  },
+};
+
+const API_PUBLIC_PAGE_BY_SUFFIX: Record<string, ClassifiedBookingPath> = {
+  slots: {
+    category: "api_booking_slots",
+    canonicalPath: "/api/booking/pages/:slug/slots",
+  },
+  reservations: {
+    category: "api_booking_create",
+    canonicalPath: "/api/booking/pages/:slug/reservations",
+  },
+};
 
 const BOOKING_URL_IN_TEXT =
   /(?:https?:\/\/[^\s"'<>\\]+)|(?:\/(?:meet|book|api\/booking)[^\s"'<>\\]*)/gi;
@@ -75,18 +102,23 @@ const BOOKING_UNSAFE_META_KEYS = new Set([
 const normalizeMetaKey = (key: string): string =>
   key.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-const pathnameOf = (value: string): string => {
+const parseAbsoluteOrRelativeUrl = (value: string): URL | null => {
   const trimmed = value.trim();
-  if (!trimmed) return "";
+  if (!trimmed) return null;
   try {
-    const url = /^https?:\/\//i.test(trimmed)
+    return /^https?:\/\//i.test(trimmed)
       ? new URL(trimmed)
-      : new URL(trimmed, "https://compasscalendar.com");
-    return url.pathname;
+      : new URL(trimmed, COMPASS_ORIGIN);
   } catch {
-    const path = trimmed.split("?")[0] ?? trimmed;
-    return path.startsWith("/") ? path : "";
+    return null;
   }
+};
+
+const pathnameOf = (value: string): string => {
+  const parsed = parseAbsoluteOrRelativeUrl(value);
+  if (parsed) return parsed.pathname;
+  const path = value.trim().split("?")[0] ?? value;
+  return path.startsWith("/") ? path : "";
 };
 
 const containsBookingPath = (value: string): boolean =>
@@ -118,50 +150,22 @@ export function classifyBookingPath(
 
   const reservation = API_RESERVATION.exec(path);
   if (reservation) {
-    const suffix = reservation[2];
-    if (suffix === "cancel") {
-      return {
-        category: "api_booking_reservation_cancel",
-        canonicalPath: "/api/booking/reservations/:reservationId/cancel",
-      };
-    }
-    if (suffix === "slots") {
-      return {
-        category: "api_booking_reservation_slots",
-        canonicalPath: "/api/booking/reservations/:reservationId/slots",
-      };
-    }
-    if (suffix === "reschedule") {
-      return {
-        category: "api_booking_reservation_reschedule",
-        canonicalPath: "/api/booking/reservations/:reservationId/reschedule",
-      };
-    }
-    return {
-      category: "api_booking_reservation",
-      canonicalPath: "/api/booking/reservations/:reservationId",
-    };
+    return (
+      API_RESERVATION_BY_SUFFIX[reservation[2] ?? ""] ?? {
+        category: "api_booking_reservation",
+        canonicalPath: "/api/booking/reservations/:reservationId",
+      }
+    );
   }
 
   const publicPage = API_PUBLIC_PAGE.exec(path);
   if (publicPage) {
-    const suffix = publicPage[2];
-    if (suffix === "slots") {
-      return {
-        category: "api_booking_slots",
-        canonicalPath: "/api/booking/pages/:slug/slots",
-      };
-    }
-    if (suffix === "reservations") {
-      return {
-        category: "api_booking_create",
-        canonicalPath: "/api/booking/pages/:slug/reservations",
-      };
-    }
-    return {
-      category: "api_booking_page",
-      canonicalPath: "/api/booking/pages/:slug",
-    };
+    return (
+      API_PUBLIC_PAGE_BY_SUFFIX[publicPage[2] ?? ""] ?? {
+        category: "api_booking_page",
+        canonicalPath: "/api/booking/pages/:slug",
+      }
+    );
   }
 
   if (API_ADMIN.test(path)) {
@@ -199,15 +203,9 @@ export function redactBookingUrl(raw: string): string {
   const trimmed = raw.trim();
   if (!trimmed) return raw;
 
+  const url = parseAbsoluteOrRelativeUrl(trimmed);
+  if (!url) return raw;
   const absolute = /^https?:\/\//i.test(trimmed);
-  let url: URL;
-  try {
-    url = absolute
-      ? new URL(trimmed)
-      : new URL(trimmed, "https://compasscalendar.com");
-  } catch {
-    return raw;
-  }
 
   const classified = classifyBookingPath(url.pathname);
   if (!classified) {
