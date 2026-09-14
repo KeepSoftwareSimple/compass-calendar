@@ -274,6 +274,104 @@ describe("RootShell billing gates", () => {
       ).not.toBeInTheDocument();
     });
   });
+
+  it("does not gate or banner a local trial with more than 3 days left", async () => {
+    access = {
+      kind: "server",
+      status: "trialing",
+      isReadOnly: false,
+      trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+      needsPaymentMethod: true,
+    };
+    await renderShell("/week");
+
+    expect(
+      screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", {
+        name: "Subscribe to keep using Compass",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Add a card to keep creating events/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the trial card banner when a local trial has 3 days left", async () => {
+    access = {
+      kind: "server",
+      status: "trialing",
+      isReadOnly: false,
+      trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      needsPaymentMethod: true,
+    };
+    await renderShell("/week");
+
+    expect(
+      screen.queryByRole("dialog", {
+        name: "Subscribe to keep using Compass",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen
+        .getByText(
+          "Your trial ends in 3 days. Add a card to keep creating events.",
+        )
+        .closest("[role='status']"),
+    ).not.toBeNull();
+  });
+
+  it("opens Checkout from the trial card banner while the calendar stays writable", async () => {
+    setEmbeddedCheckoutForTests(FakeCheckout);
+    const queryClient = createCompassQueryClient();
+    queryClient.setQueryData(billingQueryKeys.config, {
+      google: { isConfigured: false },
+      billing: {
+        isConfigured: true,
+        enforcement: true,
+        trialLengthDays: 7,
+        publishableKey: "pk_test_trial_banner",
+      },
+    });
+    access = {
+      kind: "server",
+      status: "trialing",
+      isReadOnly: false,
+      trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      needsPaymentMethod: true,
+    };
+    await renderShell("/week", { queryClient });
+
+    await userEvent.click(screen.getByRole("button", { name: "Add a card" }));
+
+    expect(
+      screen.getByRole("button", { name: "Complete checkout" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", {
+        name: "Subscribe to keep using Compass",
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the expired gate after the local trial ends", async () => {
+    access = {
+      kind: "server",
+      status: "expired",
+      isReadOnly: true,
+      trialEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      needsPaymentMethod: false,
+    };
+    await renderShell("/week");
+
+    expect(
+      screen.getByRole("dialog", { name: "Subscribe to keep using Compass" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Add a card to keep creating events/),
+    ).not.toBeInTheDocument();
+  });
 });
 
 describe("RootShell calendar onboarding on /life", () => {

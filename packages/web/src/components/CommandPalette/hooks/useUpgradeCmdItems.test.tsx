@@ -1,4 +1,8 @@
 import { renderHook } from "@testing-library/react";
+import {
+  initialCheckoutPanelState,
+  useCheckoutPanelStore,
+} from "@web/billing/checkout-panel.store";
 import { type AppAccess } from "@web/billing/useAppAccess";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -52,6 +56,7 @@ describe("useUpgradeCmdItems", () => {
   beforeEach(() => {
     access = { kind: "open" };
     openUpgradeConfirmation.mockClear();
+    useCheckoutPanelStore.setState(initialCheckoutPanelState, true);
   });
 
   it("offers Subscribe now while trialing", () => {
@@ -67,6 +72,21 @@ describe("useUpgradeCmdItems", () => {
     expect(result.current[0]?.label).toBe("Subscribe now");
     result.current[0]?.onClick?.();
     expect(openUpgradeConfirmation).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens Checkout for a local trial that still needs a card", () => {
+    access = {
+      kind: "server",
+      status: "trialing",
+      isReadOnly: false,
+      trialEndsAt: "2026-09-03T00:00:00.000Z",
+      needsPaymentMethod: true,
+    };
+    const { result } = renderHook(() => useUpgradeCmdItems());
+
+    result.current[0]?.onClick?.();
+    expect(openUpgradeConfirmation).not.toHaveBeenCalled();
+    expect(useCheckoutPanelStore.getState().isOpen).toBe(true);
   });
 
   it("offers nothing to a paying subscriber", () => {

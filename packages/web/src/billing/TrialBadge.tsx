@@ -1,3 +1,4 @@
+import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import {
   formatTrialBadgeDescription,
   formatTrialBadgeLabel,
@@ -38,7 +39,13 @@ export function TrialBadge() {
       <button
         aria-label={`${description}. Subscribe now.`}
         className="c-keycap c-focus-ring cursor-pointer text-xs"
-        onClick={openUpgradeConfirmation}
+        onClick={() => {
+          if (access.needsPaymentMethod) {
+            checkoutPanelActions.open();
+            return;
+          }
+          openUpgradeConfirmation();
+        }}
         type="button"
       >
         {formatTrialBadgeLabel(daysLeft)}
