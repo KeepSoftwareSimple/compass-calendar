@@ -2,15 +2,7 @@ import { type UserMetadata } from "@core/types/user.types";
 import * as supertokensRegistry from "@backend/auth/ports/supertokens.registry";
 import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
 import userMetadataService from "./user-metadata.service";
-import {
-  afterEach,
-  describe,
-  expect,
-  it,
-  jest,
-  mock,
-  spyOn,
-} from "bun:test";
+import { afterEach, describe, expect, it, jest, mock, spyOn } from "bun:test";
 
 describe("UserMetadataService.fetchUserMetadata", () => {
   afterEach(() => {
