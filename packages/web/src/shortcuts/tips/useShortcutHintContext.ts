@@ -45,11 +45,19 @@ export function useShortcutHintContext() {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const tick = setInterval(
-      () => setNow(Date.now()),
-      SHORTCUT_HINT_ROTATION_MS,
-    );
-    return () => clearInterval(tick);
+    const tick = () => setNow(Date.now());
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      tick();
+    }, SHORTCUT_HINT_ROTATION_MS);
+    const onVisibility = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, []);
 
   return selectShortcutHint(

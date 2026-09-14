@@ -1,4 +1,12 @@
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  jest,
+  mock,
+} from "bun:test";
 
 const capture = mock();
 let client: { capture: typeof capture } | undefined = { capture };
@@ -70,7 +78,8 @@ describe("track", () => {
 });
 
 describe("shortcut telemetry", () => {
-  it("captures one privacy-safe shown event and deduplicates an immediate remount", () => {
+  it("captures one privacy-safe shown event after dwell and deduplicates an immediate remount", () => {
+    jest.useFakeTimers();
     const suggestion = {
       ...getShortcutHint("page-jump"),
       reasonCode: "calendar_idle" as const,
@@ -78,10 +87,14 @@ describe("shortcut telemetry", () => {
 
     beginShortcutSuggestionPresentation(suggestion, 100_000);
     beginShortcutSuggestionPresentation(suggestion, 100_001);
+    expect(capture).toHaveBeenCalledTimes(0);
+
+    jest.advanceTimersByTime(5_000);
 
     expect(capture).toHaveBeenCalledTimes(1);
     expect(capture).toHaveBeenCalledWith("shortcut_suggestion_shown", {
       action_id: "calendar.page_jump",
+      dwell_ms: 5_000,
       feature_area: "calendar_navigation",
       outcome: "shown",
       rank: 1,
@@ -92,7 +105,8 @@ describe("shortcut telemetry", () => {
     });
     expect(
       readShortcutUsageProfile().actions["calendar.page_jump"],
-    ).toMatchObject({ recentImpressions: 1, lastShownAt: 100_000 });
+    ).toMatchObject({ recentImpressions: 1 });
+    jest.useRealTimers();
   });
 
   it("records successful invocation and engagement with the visible suggestion", () => {
