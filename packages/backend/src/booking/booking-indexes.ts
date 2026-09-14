@@ -68,13 +68,22 @@ export async function ensureBookingIndexes(): Promise<void> {
       "booking_operation_reservation_kind_unique",
     );
   }
+  if (
+    operationIndexes.some(
+      (index) => index.name === "booking_operation_reservation_inflight_unique",
+    )
+  ) {
+    await mongoService.bookingOperation.dropIndex(
+      "booking_operation_reservation_inflight_unique",
+    );
+  }
   await mongoService.bookingOperation.createIndex(
     { reservationId: 1 },
     {
       name: "booking_operation_reservation_inflight_unique",
       unique: true,
       partialFilterExpression: {
-        kind: { $in: ["reschedule", "cancel"] },
+        kind: { $in: ["reschedule", "cancel", "edit"] },
         status: { $in: ["pending", "submitted", "compensating"] },
       },
     },

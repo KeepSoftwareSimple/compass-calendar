@@ -21,7 +21,6 @@ import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-prin
 import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
 import { type SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
-import { createHash } from "node:crypto";
 
 const mintEventId = (): EventId =>
   EventIdSchema.parse(new ObjectId().toHexString());
@@ -88,22 +87,9 @@ const toBookingUpdateSubmitRequest = (
   if (!hasContent && !hasSchedule) {
     throw bookingError("INVALID_INPUT", "Booking update is missing fields");
   }
-  const digest = createHash("sha256")
-    .update(
-      JSON.stringify({
-        title: input.title,
-        description: input.description,
-        displayName: input.guest.displayName,
-        start: input.start,
-        end: input.end,
-      }),
-    )
-    .digest("hex")
-    .slice(0, 40);
-  const startKey = input.start ?? "keep";
   return CommandSubmitRequestSchema.parse({
     idempotencyKey: IdempotencyKeySchema.parse(
-      `update:${input.eventId}:${startKey}:${digest}`,
+      `update:${input.eventId}:${input.operationId}`,
     ),
     eventId: input.eventId,
     expectedVersion: input.expectedVersion ?? null,

@@ -1960,6 +1960,11 @@ describe("PublicBookingService", () => {
     expect(
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
     ).not.toHaveProperty("end");
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
+      operationId: expect.any(String),
+    });
     const description = (
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
         description: string;
@@ -2098,6 +2103,11 @@ describe("PublicBookingService", () => {
     expect(
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
     ).not.toHaveProperty("title");
+    expect(
+      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
+    ).toMatchObject({
+      operationId: expect.any(String),
+    });
     expect(createBookingEvent).not.toHaveBeenCalled();
     expect(response.slotStart).toBe(
       `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
@@ -2329,6 +2339,132 @@ describe("PublicBookingService", () => {
     expect(stored?.slotStart.toISOString()).toBe(
       `${BOOKING_MONDAY}T11:00:00.000Z`,
     );
+  });
+
+  it("applies A then B then C then B reschedules with distinct operation identities", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const slots = [
+      `${BOOKING_MONDAY}T11:00:00.000Z`,
+      `${BOOKING_MONDAY}T12:00:00.000Z`,
+      `${BOOKING_MONDAY}T11:00:00.000Z`,
+    ];
+    updateBookingEvent.mockClear();
+    for (const slotStart of slots) {
+      await service.rescheduleReservation(reservationId, {
+        token,
+        slotStart,
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      });
+    }
+    const operationIds = (
+      updateBookingEvent.mock.calls as unknown as [
+        string,
+        { operationId: string; start: string },
+      ][]
+    ).map((call) => call[1]?.operationId);
+    expect(operationIds).toHaveLength(3);
+    expect(new Set(operationIds).size).toBe(3);
+    expect(
+      (
+        updateBookingEvent.mock.calls as unknown as [
+          string,
+          { start: string },
+        ][]
+      )[2]?.[1]?.start,
+    ).toBe(`${BOOKING_MONDAY}T11:00:00.000Z`);
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.slotStart.toISOString()).toBe(
+      `${BOOKING_MONDAY}T11:00:00.000Z`,
+    );
+  });
+
+  it("applies notes X then Y then X with distinct operation identities", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      notes: "bring coffee",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    updateBookingEvent.mockClear();
+    await service.patchPublicReservation(reservationId, {
+      token,
+      notes: "bring tea",
+    });
+    await service.patchPublicReservation(reservationId, {
+      token,
+      notes: "bring coffee",
+    });
+    const operationIds = (
+      updateBookingEvent.mock.calls as unknown as [
+        string,
+        { operationId: string },
+      ][]
+    ).map((call) => call[1]?.operationId);
+    expect(operationIds).toHaveLength(2);
+    expect(new Set(operationIds).size).toBe(2);
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.notes).toBe("bring coffee");
+  });
+
+  it("reuses an in-flight edit identity when the same notes patch is retried", async () => {
+    const { slug, pageId, userId, calendarId } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      notes: "bring coffee",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const reservation =
+      await bookingReservationRepository.findById(reservationId);
+    const pending = await bookingOperationRepository.insertEdit({
+      _id: new ObjectId(),
+      kind: "edit",
+      status: "pending",
+      reservationId,
+      pageId,
+      userId,
+      calendarId,
+      eventId: reservation?.calendarEventId ?? null,
+      guestName: "Ada Lovelace",
+      notes: "bring tea",
+      cancelToken: token ?? "token",
+    });
+    updateBookingEvent.mockClear();
+
+    await service.patchPublicReservation(reservationId, {
+      token,
+      notes: "bring tea",
+    });
+
+    expect(
+      (
+        updateBookingEvent.mock.calls as unknown as [
+          string,
+          { operationId: string },
+        ][]
+      )[0]?.[1]?.operationId,
+    ).toBe(pending._id.toHexString());
+    const stored = await bookingReservationRepository.findById(reservationId);
+    expect(stored?.notes).toBe("bring tea");
   });
 
   it("surfaces a retryable conflict when the provider rejects a stale edit", async () => {
