@@ -13,7 +13,7 @@ import {
 } from "@core/types/sync/event.contracts";
 import { syncEventInstanceToBrowser } from "./event-list.translation";
 import { composeOccurrenceId } from "./occurrence-id";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -46,6 +46,23 @@ const baseInstance = (
   });
 
 describe("syncEventInstanceToBrowser", () => {
+  let parseSpy: ReturnType<typeof spyOn> | undefined;
+
+  afterEach(() => {
+    parseSpy?.mockRestore();
+    parseSpy = undefined;
+  });
+
+  it("does not re-run EventSchema.parse on a previously validated instance", () => {
+    const instance = baseInstance();
+    const spy = spyOn(EventSchema, "parse");
+    parseSpy = spy;
+
+    syncEventInstanceToBrowser(instance);
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("maps a single to Event with recurrence.kind=single and the real eventId", () => {
     const instance = baseInstance();
     const event = syncEventInstanceToBrowser(instance);
