@@ -1,4 +1,5 @@
 import { type Request, type Response } from "express";
+import { NodeEnv } from "@core/constants/core.constants";
 import { type AppConfig, AppConfigSchema } from "@core/types/config.types";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import configController, { buildAppConfig } from "./config.controller";
@@ -118,5 +119,105 @@ describe("ConfigController.get parsed payload", () => {
 
     expect(first).toBe(second);
     expect(parse).not.toHaveBeenCalled();
+  });
+});
+
+describe("buildAppConfig provider flags", () => {
+  it("reports Google unavailable when credentials are absent", () => {
+    const originalClientId = CONFIG.GOOGLE_CLIENT_ID;
+    const originalClientSecret = CONFIG.GOOGLE_CLIENT_SECRET;
+    CONFIG.GOOGLE_CLIENT_ID = undefined;
+    CONFIG.GOOGLE_CLIENT_SECRET = undefined;
+
+    try {
+      const config = buildAppConfig(CONFIG);
+      expect(config.google.isConfigured).toBe(false);
+      expect(config.providers.google).toEqual({
+        signIn: false,
+        connect: false,
+      });
+    } finally {
+      CONFIG.GOOGLE_CLIENT_ID = originalClientId;
+      CONFIG.GOOGLE_CLIENT_SECRET = originalClientSecret;
+    }
+  });
+
+  it("returns providers.google.connect true on a Google-only config", () => {
+    const originals = {
+      googleId: CONFIG.GOOGLE_CLIENT_ID,
+      googleSecret: CONFIG.GOOGLE_CLIENT_SECRET,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.GOOGLE_CLIENT_ID = "client-id";
+    CONFIG.GOOGLE_CLIENT_SECRET = "client-secret";
+    CONFIG.MICROSOFT_CLIENT_ID = undefined;
+    CONFIG.MICROSOFT_CLIENT_SECRET = undefined;
+
+    try {
+      const config = buildAppConfig(CONFIG);
+      expect(config.google.isConfigured).toBe(true);
+      expect(config.providers.google.connect).toBe(true);
+      expect(config.providers.microsoft.connect).toBe(false);
+    } finally {
+      CONFIG.GOOGLE_CLIENT_ID = originals.googleId;
+      CONFIG.GOOGLE_CLIENT_SECRET = originals.googleSecret;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
+  });
+
+  it("normalizes the deployed version", () => {
+    const original = CONFIG.VERSION;
+    CONFIG.VERSION = "v9.8.7";
+    try {
+      expect(buildAppConfig(CONFIG).version).toBe("9.8.7");
+    } finally {
+      CONFIG.VERSION = original;
+    }
+  });
+
+  it("hides Microsoft in production even when credentials are configured", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Production;
+    CONFIG.MICROSOFT_CLIENT_ID = "ms-client-id";
+    CONFIG.MICROSOFT_CLIENT_SECRET = "ms-client-secret";
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.microsoft).toEqual({
+        signIn: false,
+        connect: false,
+      });
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
+  });
+
+  it("offers Microsoft in staging when credentials are configured", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Staging;
+    CONFIG.MICROSOFT_CLIENT_ID = "ms-client-id";
+    CONFIG.MICROSOFT_CLIENT_SECRET = "ms-client-secret";
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.microsoft).toEqual({
+        signIn: true,
+        connect: true,
+      });
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
   });
 });
