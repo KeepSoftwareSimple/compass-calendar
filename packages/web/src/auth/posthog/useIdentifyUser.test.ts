@@ -49,4 +49,12 @@ describe("useIdentifyUser", () => {
 
     expect(identify).not.toHaveBeenCalled();
   });
+
+  it("does not identify on public booking routes", () => {
+    window.history.pushState({}, "", "/meet/sentinel-host-slug");
+    renderHook(() => useIdentifyUser("guest@example.test", "user-123"));
+
+    expect(identify).not.toHaveBeenCalled();
+    window.history.pushState({}, "", "/week");
+  });
 });

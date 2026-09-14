@@ -74,4 +74,22 @@ describe("buildPostHogProperties", () => {
 
     expect(props).toEqual({ resourceId: "res-1" });
   });
+
+  it("redacts booking URLs and drops guest permalink fields", () => {
+    const props = buildPostHogProperties({
+      level: "error",
+      message: "x",
+      path: "/meet/confirmed/507f1f77bcf86cd799439011?token=sentinel-capability-token-9f3c",
+      reservationId: "507f1f77bcf86cd799439011",
+      guestEmail: "sentinel.guest@example.test",
+    });
+
+    expect(props["path"]).toBe("/meet/confirmed/:reservationId");
+    expect(props["reservationId"]).toBeUndefined();
+    expect(props["guestEmail"]).toBeUndefined();
+    expect(JSON.stringify(props)).not.toContain(
+      "sentinel-capability-token-9f3c",
+    );
+    expect(JSON.stringify(props)).not.toContain("sentinel.guest@example.test");
+  });
 });

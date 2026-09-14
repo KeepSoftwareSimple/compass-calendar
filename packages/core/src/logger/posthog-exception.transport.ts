@@ -1,5 +1,10 @@
 import { type TransformableInfo } from "logform";
 import TransportStream from "winston-transport";
+import {
+  isBookingUnsafeMetaKey,
+  redactBookingSecretsFromString,
+  sanitizeBookingTelemetry,
+} from "@core/booking/booking-telemetry";
 import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import {
   type DescribedError,
@@ -27,7 +32,8 @@ export function buildPostHogProperties(
       key === "userId" ||
       typeof key === "symbol" ||
       key.startsWith("[") ||
-      isUnsafeMetaKey(key)
+      isUnsafeMetaKey(key) ||
+      isBookingUnsafeMetaKey(key)
     ) {
       continue;
     }
@@ -38,9 +44,13 @@ export function buildPostHogProperties(
       // is dropped rather than forwarded raw.
       if (value instanceof Error) {
         const chain = describeErrorChain(value);
-        properties["cause_chain"] = chain;
+        properties["cause_chain"] = sanitizeBookingTelemetry(chain, {
+          dropUnsafeKeys: true,
+        });
         const rootCause = rootCauseMessage(chain);
-        if (rootCause !== undefined) properties["root_cause"] = rootCause;
+        if (rootCause !== undefined) {
+          properties["root_cause"] = redactBookingSecretsFromString(rootCause);
+        }
       }
       continue;
     }
@@ -49,11 +59,17 @@ export function buildPostHogProperties(
       // Any other Error-valued field: forward only the allowlisted chain,
       // never the raw Error (whose enumerable own properties, for a gaxios
       // error, include the request config and its bearer token).
-      properties[key] = describeErrorChain(value) satisfies DescribedError[];
+      properties[key] = sanitizeBookingTelemetry(
+        describeErrorChain(value) satisfies DescribedError[],
+        { dropUnsafeKeys: true },
+      );
       continue;
     }
 
-    properties[key] = value;
+    properties[key] =
+      typeof value === "string"
+        ? redactBookingSecretsFromString(value)
+        : sanitizeBookingTelemetry(value, { dropUnsafeKeys: true });
   }
 
   return properties;

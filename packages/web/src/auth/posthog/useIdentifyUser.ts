@@ -1,8 +1,12 @@
 import { useEffect } from "react";
+import { isPublicBookingPath } from "@core/booking/booking-telemetry";
 import { usePostHog } from "@web/auth/posthog/posthog-react";
 
 /**
- * Identifies the user in PostHog when `userId` and profile email are available.
+ * Identifies the signed-in Compass user in PostHog. Guest booking
+ * identity (email on the public form, reservation id, capability token)
+ * never goes through identify or alias; public /meet and /book routes
+ * skip this even if a host session is sitting in another tab's storage.
  */
 export function useIdentifyUser(
   profileEmail: string | null,
@@ -10,6 +14,12 @@ export function useIdentifyUser(
 ): void {
   const posthog = usePostHog();
   useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      isPublicBookingPath(window.location.pathname)
+    ) {
+      return;
+    }
     if (
       userId &&
       profileEmail &&

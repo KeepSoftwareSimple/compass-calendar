@@ -1,5 +1,6 @@
 import { type PostHog } from "posthog-js";
 import { isPosthogEnabled } from "@web/auth/posthog/posthog.util";
+import { filterPosthogBookingTelemetry } from "@web/auth/posthog/posthog-booking-filter.util";
 import { filterPosthogDeadClick } from "@web/auth/posthog/posthog-dead-click-filter.util";
 import { filterPosthogBeforeSend } from "@web/auth/posthog/posthog-exception-filter.util";
 import { filterPosthogWebVitals } from "@web/auth/posthog/posthog-web-vitals-filter.util";
@@ -47,12 +48,20 @@ export function initPosthog(): PostHog | undefined {
     // network blips, CefSharp scanner noise, opaque "Script error.") before
     // they become issues, then the dead clicks posthog's own mutation clock
     // mis-scores on our static onboarding overlays, then the web vitals that
-    // report a zero where a timing should be.
+    // report a zero where a timing should be, then booking URL/token/PII
+    // redaction (and dropping replay/autocapture/exceptions on /meet).
     before_send: [
       filterPosthogBeforeSend,
       filterPosthogDeadClick,
       filterPosthogWebVitals,
+      filterPosthogBookingTelemetry,
     ],
+    // Inputs on public /meet pages include guest name, email, and notes.
+    // Replay DOM/network metadata cannot be rewritten onto the booking
+    // allowlist; before_send drops those captures on public booking routes.
+    session_recording: {
+      maskAllInputs: true,
+    },
     // Web vitals were running entirely on PostHog's server-side default
     // (`$web_vitals_enabled_server_side` was true on every event, and
     // `$web_vitals_allowed_metrics` was null, so the project was not
