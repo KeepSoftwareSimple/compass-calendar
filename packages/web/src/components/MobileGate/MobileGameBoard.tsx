@@ -1,4 +1,4 @@
-import { type FC, type MutableRefObject } from "react";
+import { type FC, type MutableRefObject, type PointerEvent } from "react";
 import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import {
@@ -55,8 +55,17 @@ export const MobileGameBoard: FC<{
   hoverSlot: MobileSlot | null;
   /** Keys the lock flash on the most recently placed block. */
   lastAward: { seq: number; pieceId: string } | null;
-  boardRef: MutableRefObject<HTMLDivElement | null>;
-}> = ({ level, board, piece, hoverSlot, lastAward, boardRef }) => {
+  boardRef: MutableRefObject<HTMLElement | null>;
+  onBoardPointerUp?: (event: PointerEvent<HTMLElement>) => void;
+}> = ({
+  level,
+  board,
+  piece,
+  hoverSlot,
+  lastAward,
+  boardRef,
+  onBoardPointerUp,
+}) => {
   const { base: pieceBase } = useEventPalette(piece?.color);
   const gridStartMin = level.startHour * 60;
   const totalMin = (level.endHour - level.startHour) * 60;
@@ -100,10 +109,12 @@ export const MobileGameBoard: FC<{
         </div>
 
         {/* Columns: the drag surface the pointer math maps against. */}
-        <div
+        <section
           className="relative flex min-h-0 flex-1"
           ref={boardRef}
+          aria-label="Calendar"
           data-game-board
+          onPointerUp={onBoardPointerUp}
         >
           {Array.from({ length: level.dayCount }, (_, dayIndex) => (
             <div
@@ -176,7 +187,7 @@ export const MobileGameBoard: FC<{
               )}
             </div>
           ))}
-        </div>
+        </section>
       </div>
     </div>
   );

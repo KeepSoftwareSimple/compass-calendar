@@ -85,3 +85,33 @@ test("phone users can drag the first event into place and score", async ({
   await expect(page.locator("[data-game-score]")).toHaveText("150");
   await expect(page.locator("[data-game-block='standup']")).toBeVisible();
 });
+
+test("phone users can tap the first event and tap its slot", async ({
+  page,
+}) => {
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+
+  await page.getByRole("button", { name: "Play", exact: true }).click();
+  await expect(page.getByText("Level 1 of 3")).toBeVisible();
+
+  const card = page.locator("[data-game-piece]");
+  const cardBox = await card.boundingBox();
+  const board = await page.locator("[data-game-board]").boundingBox();
+  if (!cardBox || !board) throw new Error("game surfaces not laid out");
+
+  await page.touchscreen.tap(
+    cardBox.x + cardBox.width / 2,
+    cardBox.y + cardBox.height / 2,
+  );
+  await expect(
+    page.getByText("Now tap where it goes on the calendar"),
+  ).toBeVisible();
+
+  await page.touchscreen.tap(
+    board.x + board.width / 2,
+    board.y + board.height / 16,
+  );
+
+  await expect(page.locator("[data-game-score]")).toHaveText("150");
+  await expect(page.locator("[data-game-block='standup']")).toBeVisible();
+});
