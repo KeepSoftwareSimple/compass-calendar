@@ -1,6 +1,7 @@
 import { ensureBillingIndexes } from "@backend/billing/billing-indexes";
 import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
 import publicBookingService from "@backend/booking/services/public-booking.service";
+import { ensureCalendarIndexes } from "@backend/calendar/calendar-indexes";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { createBackendHttpServer } from "@backend/servers/express/express.server";
@@ -23,6 +24,7 @@ async function start() {
     await mongoService.start();
     await ensureBillingIndexes();
     await ensureBookingIndexes();
+    await ensureCalendarIndexes();
     await ensureUserIndexes();
 
     await new Promise((resolve) =>

@@ -89,9 +89,10 @@ class BillingService {
    * would leak the roster.
    */
   getStatus = async (userId: string): Promise<BillingStatusResponse> => {
-    const user = await mongoService.user.findOne({
-      _id: mongoService.objectId(userId),
-    });
+    const user = await mongoService.user.findOne(
+      { _id: mongoService.objectId(userId) },
+      { projection: { billing: 1, email: 1 } },
+    );
     if (!user) {
       throw new Error("User not found");
     }
