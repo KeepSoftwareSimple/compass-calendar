@@ -585,6 +585,7 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
 | Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
+| Booking funnels | `packages/web/src/auth/posthog/booking-funnel.ts`, `packages/web/src/auth/posthog/track.ts` |
 | Sidebar discovery | `packages/web/src/components/Sidebar/MeetingPageNudge/` |
 | Description flattening | `packages/web/src/components/DescriptionEditor/plain-text-description.ts` |
 | Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
@@ -593,32 +594,77 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 
 ### Analytics
 
-PostHog product events for the nothing-to-live funnel. No guest name, email,
-notes, reservation id, slug, raw URL, or capability token. Autocapture,
-session replay, and exception capture are **dropped** on public `/meet/*`
-and `/book/*` routes because those payloads embed DOM text, hrefs, and
-messages that cannot be rewritten onto the allowlist. `$pageview` /
-`$pageleave` / `$web_vitals` and the named events below still send, after
-`filterPosthogBookingTelemetry` rewrites URLs to route categories
-(`meet_page`, `meet_confirmed`, `meet_cancel`, `meet_reschedule`, and the
-legacy `book_*` equivalents).
+PostHog product events for the host nothing-to-live funnel and the guest
+page-to-confirm funnel. No guest name, email, notes, reservation id, slug,
+raw URL, or capability token. Autocapture, session replay, and exception
+capture are **dropped** on public `/meet/*` and `/book/*` routes because
+those payloads embed DOM text, hrefs, and messages that cannot be rewritten
+onto the allowlist. `$pageview` / `$pageleave` / `$web_vitals` and the
+named events below still send, after `filterPosthogBookingTelemetry`
+rewrites URLs to route categories (`meet_page`, `meet_confirmed`,
+`meet_cancel`, `meet_reschedule`, and the legacy `book_*` equivalents).
 
 The rewrite lives in `packages/core/src/booking/booking-telemetry.ts` and
 is also applied to backend HTTP access logs, Winston messages, OTel log
 attributes, PostHog exception properties, and server `capture()` payloads.
 Diagnostic reservation ids stay in Mongo; they are not exported analytics.
 
-| Event | Properties | When |
-| --- | --- | --- |
-| `booking_settings_opened` | `has_connection: boolean`, `is_live: boolean`, `is_bookable: boolean` | Settings > Meeting mounts (after the page is known, or immediately on the connect prompt) |
-| `booking_page_enabled` | `first_time: boolean` | Turn-on save succeeds. `first_time` is true when the page had no `bookingUrl` before this save |
-| `booking_link_copied` | `source: "button" \| "save"` | Successful copy from the Copy button, or auto-copy after a successful turn-on / save |
-| `booking_page_viewed` | `duration_minutes: number` | Public page query succeeds with `enabled: true`, once per slug |
-| `booking_reservation_created` | `duration_minutes: number` | Guest confirm mutation succeeds |
-
 Guests are never `identify`'d or `alias`'d. `useIdentifyUser` only runs
 inside the authenticated calendar shell, and it no-ops on `/meet` and
-`/book` if a host session is present. Anonymous pageviews stay anonymous.
+`/book` if a host session is present. Anonymous pageviews stay anonymous
+and do not join to a host. Production, staging, and test traffic split on
+the registered super-property `environment` (`NODE_ENV`); that is not PII.
+
+`track()` swallows capture exceptions, so analytics failure never
+interrupts booking. `booking_reservation_created` is browser-observed
+confirmation after the public confirm mutation succeeds. Authoritative
+server completion and recovery health belong to WP-11.
+
+Owner for every event below is the web client
+(`packages/web/src/auth/posthog/booking-funnel.ts` and the five original
+call sites). Conversion windows: host settings_opened to link_copied, 7
+days; guest page_viewed to reservation_created, 1 day.
+
+#### Counting
+
+Rerenders and identical refetches do not duplicate a transition. Reload
+starts a new session. Back into a wizard step counts as another
+`booking_setup_step_viewed`. Completing the same wizard step twice (Back,
+then Continue) counts another `booking_setup_step_completed`. Slot
+identity is `slotStart`: picking a different slot after conflict counts;
+Change time then confirming the same slot does not. Confirm clicks always
+count (`booking_submit_attempted`); validation, conflict, unavailable,
+rate-limit, and transport failures are separate `booking_submit_failed`
+reasons. Month changes can emit another `booking_slots_loaded`; a refetch
+of the same month and outcome does not.
+
+Host cohorts: `configured_host` on `booking_settings_opened` and
+`booking_setup_step_viewed` (snapshot at Settings mount, not after the
+address draft save). First-time go-live vs later re-enable is
+`booking_page_enabled.first_time`.
+
+#### Event catalog
+
+| Event | Allowlist | Trigger | Denominator |
+| --- | --- | --- | --- |
+| `booking_settings_opened` | `has_connection`, `is_live`, `is_bookable`, `configured_host` | Settings > Meeting mounts after the page is known, or after the connect prompt knows the page is unconfigured. Disconnected hosts keep `is_live: false` | Unique hosts opening Meeting settings |
+| `booking_setup_step_viewed` | `step` (`address` \| `hours` \| `duration` \| `destination` \| `live`), `configured_host` | Guided wizard shows that step | `booking_settings_opened` where `configured_host` is false |
+| `booking_setup_step_completed` | `step` | Continue succeeds (address after draft save; hours/duration/destination after validation; live after turn-on save) | `booking_setup_step_viewed` for the same `step` |
+| `booking_setup_save_succeeded` | `step` (`address` \| `live`) | Wizard PUT succeeds | `booking_setup_step_viewed` for that step |
+| `booking_setup_save_failed` | `step` (`address` \| `live`), `reason` (`validation` \| `slug_taken` \| `destination_not_writable` \| `blocking_calendar_invalid` \| `availability_required` \| `timezone_required` \| `billing_required` \| `invalid_input` \| `transport`) | Wizard PUT fails, or address Continue fails client validation | `booking_setup_step_viewed` for that step |
+| `booking_page_enabled` | `first_time` | Turn-on save succeeds. `first_time` is true when the page had no `bookingUrl` before this save, or the host used wizard go live | `booking_settings_opened` |
+| `booking_link_copied` | `source` (`button` \| `save`) | Successful copy from Copy, or auto-copy after a successful turn-on / save | `booking_page_enabled` |
+| `booking_page_viewed` | `duration_minutes` | Public page query succeeds with `enabled: true`, once per slug in the page instance | Unique anonymous guest sessions on an enabled page |
+| `booking_slots_loaded` | `outcome` (`available` \| `empty` \| `unbookable` \| `error`), `duration_minutes` | Slots query settles for the month in view | `booking_page_viewed` |
+| `booking_slot_selected` | `duration_minutes`, `timezone_differs` | Guest has a `slotStart` (click or URL), once per slot identity | `booking_slots_loaded` where `outcome` is `available` |
+| `booking_details_reached` | `duration_minutes`, `timezone_differs` | Details step is shown for that slot identity | `booking_slot_selected` |
+| `booking_submit_attempted` | `duration_minutes` | Guest clicks Confirm meeting (including validation failures) | `booking_details_reached` |
+| `booking_submit_failed` | `reason` (`validation` \| `conflict` \| `unavailable` \| `rate_limited` \| `transport`), `duration_minutes` | Confirm fails client validation or the mutation errors | `booking_submit_attempted` |
+| `booking_reservation_created` | `duration_minutes` | Guest confirm mutation succeeds (browser-observed, not server completion) | `booking_submit_attempted` |
+
+Do not send scheduled timestamps, IANA zone names, slugs, or guest
+identifiers on these events. `timezone_differs` is true when the guest
+zone is not the host page zone.
 
 ### Named warts
 

@@ -22,6 +22,13 @@ import {
 } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId, TimeZoneSchema } from "@core/types/domain-primitives";
+import {
+  bookingSetupSaveFailureReason,
+  trackBookingSetupSaveFailed,
+  trackBookingSetupSaveSucceeded,
+  trackBookingSetupStepCompleted,
+  trackBookingSetupStepViewed,
+} from "@web/auth/posthog/booking-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   selectGoogleConnectionState,
@@ -107,6 +114,12 @@ function savedMeetingLinkUrl(
     return `${bookingAddressPrefix(null)}${page.suggestedSlug}`;
   }
   return null;
+}
+
+function configuredHostFromPage(
+  page: AdminGetBookingPageResult | undefined,
+): boolean {
+  return page != null && !isUnconfiguredBookingPage(page);
 }
 
 /** Copy the public link, then report whichever of the two outcomes happened. */
@@ -416,14 +429,20 @@ export function BookingSettingsSection({
   }, [dismissGuardRef]);
 
   const settingsOpenedRef = useRef(false);
+  const configuredHostAtOpenRef = useRef(false);
+  const lastSetupStepRef = useRef<SetupStepId | null>(null);
+
   useEffect(() => {
     if (settingsOpenedRef.current) return;
     if (!hasHealthyConnection) {
+      if (isPending) return;
       settingsOpenedRef.current = true;
+      configuredHostAtOpenRef.current = configuredHostFromPage(serverPage);
       track("booking_settings_opened", {
         has_connection: false,
         is_live: false,
         is_bookable: false,
+        configured_host: configuredHostAtOpenRef.current,
       });
       return;
     }
@@ -432,18 +451,33 @@ export function BookingSettingsSection({
       isSavedBookingPage(serverPage) && serverPage.enabled === true;
     if (isLive && !statusQuery.isFetched) return;
     settingsOpenedRef.current = true;
+    configuredHostAtOpenRef.current = configuredHostFromPage(serverPage);
     track("booking_settings_opened", {
       has_connection: true,
       is_live: isLive,
       is_bookable: isLive && statusQuery.data?.bookable === true,
+      configured_host: configuredHostAtOpenRef.current,
     });
   }, [
     hasHealthyConnection,
+    isPending,
     isSeedingForm,
     serverPage,
     statusQuery.data?.bookable,
     statusQuery.isFetched,
   ]);
+
+  useEffect(() => {
+    if (setupStep == null) {
+      lastSetupStepRef.current = null;
+      return;
+    }
+    if (lastSetupStepRef.current === setupStep) return;
+    lastSetupStepRef.current = setupStep;
+    trackBookingSetupStepViewed(setupStep, {
+      configured_host: configuredHostAtOpenRef.current,
+    });
+  }, [setupStep]);
 
   const showFirstRunConnectPrompt =
     !hasHealthyConnection &&
@@ -530,10 +564,20 @@ export function BookingSettingsSection({
           if (silent && setupStep == null) {
             focusSwitchAfterSetupRef.current = false;
           }
+          if (options?.fromSetupGoLive === true) {
+            trackBookingSetupSaveFailed(
+              bookingSetupSaveFailureReason(mutationError),
+              { step: "live" },
+            );
+          }
           const inline = bookingSaveErrorInline(mutationError);
           if (inline) setSaveError(inline);
         },
         onSuccess: (page) => {
+          if (options?.fromSetupGoLive === true) {
+            trackBookingSetupSaveSucceeded("live");
+            trackBookingSetupStepCompleted("live");
+          }
           if (!enabled) {
             if (!silent) {
               showStatusToast(
@@ -600,6 +644,7 @@ export function BookingSettingsSection({
     if (setupStep === "address") {
       const parseMessage = bookingSlugParseMessage(form.slug);
       if (parseMessage) {
+        trackBookingSetupSaveFailed("validation", { step: "address" });
         setSaveError({ field: "address", message: parseMessage });
         return;
       }
@@ -607,9 +652,15 @@ export function BookingSettingsSection({
         .mutateAsync({ ...form, enabled: false })
         .then((page) => {
           seededPageRef.current = page;
+          trackBookingSetupSaveSucceeded("address");
+          trackBookingSetupStepCompleted("address");
           advanceSetupStep();
         })
         .catch((mutationError) => {
+          trackBookingSetupSaveFailed(
+            bookingSetupSaveFailureReason(mutationError),
+            { step: "address" },
+          );
           const inline = bookingSaveErrorInline(mutationError);
           if (inline) setSaveError(inline);
         });
@@ -624,17 +675,20 @@ export function BookingSettingsSection({
         });
         return;
       }
+      trackBookingSetupStepCompleted("hours");
       advanceSetupStep();
       return;
     }
 
     if (setupStep === "duration") {
+      trackBookingSetupStepCompleted("duration");
       advanceSetupStep();
       return;
     }
 
     if (setupStep === "destination") {
       if (writableCalendars.length === 0) return;
+      trackBookingSetupStepCompleted("destination");
       advanceSetupStep();
       return;
     }

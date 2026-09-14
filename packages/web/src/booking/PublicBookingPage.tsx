@@ -189,6 +189,7 @@ export function PublicBookingPage() {
               <PublicBookingGuestForm
                 disabled={flow.createReservation.isPending}
                 submitDisabled={!flow.selectedSlotStart}
+                durationMinutes={page.durationMinutes}
                 guestTimeZone={flow.guestTimeZone}
                 values={flow.guestDetails}
                 onChange={flow.setGuestDetails}

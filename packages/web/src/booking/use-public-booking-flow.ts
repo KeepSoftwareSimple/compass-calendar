@@ -3,6 +3,14 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { CreateBookingReservationInputSchema } from "@core/types/booking.contracts";
 import { getErrorStatus } from "@web/api/util/api.util";
+import {
+  bookingSlotsOutcome,
+  bookingSubmitFailureReason,
+  trackBookingDetailsReached,
+  trackBookingSlotSelected,
+  trackBookingSlotsLoaded,
+  trackBookingSubmitFailed,
+} from "@web/auth/posthog/booking-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   type PublicBookingGuestDetails,
@@ -67,6 +75,9 @@ export function usePublicBookingFlow() {
   const [changingTime, setChangingTime] = useState(false);
   const detailsHeadingRef = useRef<HTMLHeadingElement>(null);
   const submitInFlightRef = useRef(false);
+  const slotsOutcomeKeyRef = useRef<string | null>(null);
+  const selectedSlotTrackedRef = useRef<string | null>(null);
+  const detailsTrackedRef = useRef<string | null>(null);
 
   const showDetailsStep = selectedSlotStart !== null && !changingTime;
 
@@ -113,6 +124,51 @@ export function usePublicBookingFlow() {
     pageQuery.isSuccess && pageQuery.data.enabled && slotsQuery.isSuccess,
   );
 
+  useEffect(() => {
+    const durationMinutes = pageQuery.data?.durationMinutes;
+    if (durationMinutes == null) return;
+    const outcome = bookingSlotsOutcome({
+      bookable: slotsQuery.data?.bookable,
+      slotCount: slotsQuery.data?.slots.length ?? 0,
+      isError: Boolean(slotsQuery.isError && !slotsQuery.data),
+    });
+    if (outcome == null) return;
+    const key = `${slug}:${monthKey}:${outcome}`;
+    if (slotsOutcomeKeyRef.current === key) return;
+    slotsOutcomeKeyRef.current = key;
+    trackBookingSlotsLoaded(outcome, { duration_minutes: durationMinutes });
+  }, [
+    monthKey,
+    pageQuery.data?.durationMinutes,
+    slug,
+    slotsQuery.data,
+    slotsQuery.isError,
+  ]);
+
+  useEffect(() => {
+    if (!selectedSlotStart || pageQuery.data == null) return;
+    const key = `${slug}:${selectedSlotStart}`;
+    if (selectedSlotTrackedRef.current === key) return;
+    selectedSlotTrackedRef.current = key;
+    trackBookingSlotSelected({
+      duration_minutes: pageQuery.data.durationMinutes,
+      timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+    });
+  }, [guestTimeZone, pageQuery.data, selectedSlotStart, slug]);
+
+  useEffect(() => {
+    if (!showDetailsStep || !selectedSlotStart || pageQuery.data == null) {
+      return;
+    }
+    const key = `${slug}:${selectedSlotStart}`;
+    if (detailsTrackedRef.current === key) return;
+    detailsTrackedRef.current = key;
+    trackBookingDetailsReached({
+      duration_minutes: pageQuery.data.durationMinutes,
+      timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+    });
+  }, [guestTimeZone, pageQuery.data, selectedSlotStart, showDetailsStep, slug]);
+
   // 409 only: keep typed details while they pick another slot. Other alerts
   // (empty horizon, confirm failure) must not open the guest form.
   const showConflictForm =
@@ -155,6 +211,7 @@ export function usePublicBookingFlow() {
 
     submitInFlightRef.current = true;
     setAlertMessage(null);
+    const durationMinutes = pageQuery.data.durationMinutes;
 
     try {
       const result = await createReservation.mutateAsync(
@@ -164,11 +221,11 @@ export function usePublicBookingFlow() {
           guestEmail: values.guestEmail,
           notes: values.notes || undefined,
           guestTimeZone: values.guestTimeZone,
-          durationMinutes: pageQuery.data.durationMinutes,
+          durationMinutes,
         }),
       );
       track("booking_reservation_created", {
-        duration_minutes: pageQuery.data.durationMinutes,
+        duration_minutes: durationMinutes,
       });
       const token = tokenFromGuestActionUrl(result.cancelUrl);
       await navigate({
@@ -185,6 +242,9 @@ export function usePublicBookingFlow() {
         } as never,
       });
     } catch (error) {
+      trackBookingSubmitFailed(bookingSubmitFailureReason(error), {
+        duration_minutes: durationMinutes,
+      });
       if (isPublicBookingConflictError(error)) {
         setAlertMessage(PUBLIC_BOOKING_SLOT_CONFLICT);
         setChangingTime(false);

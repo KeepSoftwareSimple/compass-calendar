@@ -209,6 +209,9 @@ const laterCurrentSlot = (() => {
 const nextMonthSlot = bookableSlotInNextMonth();
 const guestTimeZone = "UTC";
 const currentMonthKey = new Date().toISOString().slice(0, 7);
+const hostTimeZone = "America/Chicago";
+const timezoneDiffers =
+  Intl.DateTimeFormat().resolvedOptions().timeZone !== hostTimeZone;
 
 const publicPagePayload = (overrides: Record<string, unknown> = {}) => ({
   hostDisplayName: "Tyler Dane",
@@ -320,10 +323,21 @@ describe("PublicBookingPage", () => {
     expect(
       await screen.findByRole("heading", { name: "Meet with Tyler Dane" }),
     ).toBeInTheDocument();
-    expect(mockTrack).toHaveBeenCalledTimes(1);
     expect(mockTrack).toHaveBeenCalledWith("booking_page_viewed", {
       duration_minutes: 30,
     });
+    await waitFor(() => {
+      expect(mockTrack).toHaveBeenCalledWith("booking_slots_loaded", {
+        outcome: "available",
+        duration_minutes: 30,
+      });
+    });
+    expect(
+      mockTrack.mock.calls.filter((call) => call[0] === "booking_page_viewed"),
+    ).toHaveLength(1);
+    expect(
+      mockTrack.mock.calls.filter((call) => call[0] === "booking_slots_loaded"),
+    ).toHaveLength(1);
   });
 
   it("does not fire booking_page_viewed for a disabled page", async () => {
@@ -540,6 +554,17 @@ describe("PublicBookingPage", () => {
     expect(
       screen.getByRole("link", { name: "Cancel this meeting" }),
     ).toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_slot_selected", {
+      duration_minutes: 30,
+      timezone_differs: timezoneDiffers,
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_details_reached", {
+      duration_minutes: 30,
+      timezone_differs: timezoneDiffers,
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_submit_attempted", {
+      duration_minutes: 30,
+    });
     expect(mockTrack).toHaveBeenCalledWith("booking_reservation_created", {
       duration_minutes: 30,
     });
@@ -549,6 +574,16 @@ describe("PublicBookingPage", () => {
     expect(reservationEvents).toEqual([
       ["booking_reservation_created", { duration_minutes: 30 }],
     ]);
+    expect(
+      mockTrack.mock.calls.filter(
+        (call) => call[0] === "booking_slot_selected",
+      ),
+    ).toHaveLength(1);
+    expect(
+      mockTrack.mock.calls.filter(
+        (call) => call[0] === "booking_details_reached",
+      ),
+    ).toHaveLength(1);
     expect(
       screen.getByRole("link", { name: "Reschedule this meeting" }),
     ).toBeInTheDocument();
@@ -789,6 +824,10 @@ describe("PublicBookingPage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/week/i)).not.toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_slots_loaded", {
+      outcome: "unbookable",
+      duration_minutes: 30,
+    });
   });
 
   it("keeps guest details and moves focus to the alert on 409", async () => {
@@ -823,6 +862,10 @@ describe("PublicBookingPage", () => {
     expect(alert).toHaveTextContent(
       "This time is no longer available. Pick another slot.",
     );
+    expect(mockTrack).toHaveBeenCalledWith("booking_submit_failed", {
+      reason: "conflict",
+      duration_minutes: 30,
+    });
     await waitFor(() => {
       expect(alert).toHaveFocus();
     });
@@ -855,6 +898,32 @@ describe("PublicBookingPage", () => {
     expect(screen.getByLabelText("Name")).toHaveValue("Guest User");
   });
 
+  it("counts a validation failure separately from transport errors", async () => {
+    const user = userEvent.setup({ delay: null });
+    server.use(pageHandler(), slotsInWindow([currentSlot]));
+    renderBookingRoute("/meet/tylerdane");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: slotButtonName(currentSlot.slotStart),
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Confirm meeting" }));
+
+    expect(await screen.findByText("Enter your name.")).toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_submit_attempted", {
+      duration_minutes: 30,
+    });
+    expect(mockTrack).toHaveBeenCalledWith("booking_submit_failed", {
+      reason: "validation",
+      duration_minutes: 30,
+    });
+    expect(mockTrack).not.toHaveBeenCalledWith(
+      "booking_reservation_created",
+      expect.anything(),
+    );
+  });
+
   it("does not boot the calendar shortcut overlay on public booking routes", async () => {
     server.use(
       pageHandler(),
@@ -869,6 +938,10 @@ describe("PublicBookingPage", () => {
 
     await screen.findByRole("heading", { name: "Meet with Tyler Dane" });
     expect(screen.queryByText(/Keyboard shortcuts/i)).not.toBeInTheDocument();
+    expect(mockTrack).toHaveBeenCalledWith("booking_slots_loaded", {
+      outcome: "empty",
+      duration_minutes: 30,
+    });
   });
 
   it("starts page meta and the current-month slots request in parallel", async () => {
@@ -1325,6 +1398,10 @@ describe("PublicBookingPage", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       "Could not load times",
     );
+    expect(mockTrack).toHaveBeenCalledWith("booking_slots_loaded", {
+      outcome: "error",
+      duration_minutes: 30,
+    });
     slotFailGate.fail = false;
     await user.click(screen.getByRole("button", { name: "Retry" }));
     const pickTime = await screen.findByRole("heading", {
@@ -1333,6 +1410,16 @@ describe("PublicBookingPage", () => {
     await waitFor(() => {
       expect(pickTime).toHaveFocus();
     });
+    expect(mockTrack).toHaveBeenCalledWith("booking_slots_loaded", {
+      outcome: "available",
+      duration_minutes: 30,
+    });
+    expect(
+      mockTrack.mock.calls.filter(
+        (call) =>
+          call[0] === "booking_slots_loaded" && call[1]?.outcome === "error",
+      ),
+    ).toHaveLength(1);
     expect(
       await screen.findByRole("button", {
         name: slotButtonName(currentSlot.slotStart),
