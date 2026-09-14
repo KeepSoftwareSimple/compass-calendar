@@ -43,12 +43,13 @@ export interface CalendarBookingDeleteEventInput {
 
 export interface CalendarBookingUpdateEventInput {
   eventId: EventId;
-  title: string;
-  description: string;
-  start: DateTime;
-  end: DateTime;
-  timeZone: string;
   guest: BookingEventGuest;
+  timeZone: string;
+  title?: string;
+  description?: string;
+  start?: DateTime;
+  end?: DateTime;
+  expectedVersion?: string | null;
 }
 
 export interface CalendarBookingPort {

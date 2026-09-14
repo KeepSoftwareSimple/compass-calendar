@@ -58,4 +58,34 @@ describe("bookingOperationRepository", () => {
     expect(second.eventId).toBe(first.eventId);
     expect(second.cancelToken).toBe(first.cancelToken);
   });
+
+  it("reuses an in-flight reschedule instead of minting a second row", async () => {
+    const reservationId = new ObjectId();
+    const input = {
+      kind: "reschedule" as const,
+      status: "pending" as const,
+      pageId: new ObjectId(),
+      userId: new ObjectId(),
+      calendarId: new ObjectId().toHexString(),
+      eventId: new ObjectId().toHexString(),
+      reservationId,
+      slotStart: new Date("2026-09-14T11:00:00.000Z"),
+      slotEnd: new Date("2026-09-14T11:30:00.000Z"),
+      previousSlotStart: new Date("2026-09-14T10:00:00.000Z"),
+      previousSlotEnd: new Date("2026-09-14T10:30:00.000Z"),
+      guestTimeZone: "UTC" as TimeZone,
+    };
+    const first = await bookingOperationRepository.insertReschedule({
+      ...input,
+      _id: new ObjectId(),
+    });
+    const second = await bookingOperationRepository.insertReschedule({
+      ...input,
+      _id: new ObjectId(),
+      slotStart: new Date("2026-09-14T12:00:00.000Z"),
+      slotEnd: new Date("2026-09-14T12:30:00.000Z"),
+    });
+    expect(second._id.toHexString()).toBe(first._id.toHexString());
+    expect(second.slotStart.toISOString()).toBe(first.slotStart.toISOString());
+  });
 });

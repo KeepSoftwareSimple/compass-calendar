@@ -96,4 +96,12 @@ describe("booking indexes", () => {
     );
     expect(ttl?.expireAfterSeconds).toBe(0);
   });
+
+  it("serializes in-flight reschedule and cancel operations per reservation", async () => {
+    const indexes = await mongoService.bookingOperation.indexes();
+    const names = indexes.map((index) => index.name);
+    expect(names).toContain("booking_operation_reservation_inflight_unique");
+    expect(names).toContain("booking_operation_create_cancel_unique");
+    expect(names).not.toContain("booking_operation_reservation_kind_unique");
+  });
 });

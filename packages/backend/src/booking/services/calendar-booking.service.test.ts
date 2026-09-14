@@ -283,13 +283,14 @@ describe("CalendarBookingService", () => {
       end: "2026-09-01T15:30:00.000Z" as DateTime,
       timeZone: "America/Denver" as TimeZone,
       guest: { email: "ada@example.com", displayName: "Grace Hopper" },
+      expectedVersion: "etag-1",
     });
 
     expect(submitCommand).toHaveBeenCalledTimes(1);
     const request = submitRequestFrom(submitCommand);
     expect(request).toMatchObject({
       eventId,
-      expectedVersion: null,
+      expectedVersion: "etag-1",
       input: {
         kind: "update",
         invitation: "all",
@@ -313,11 +314,60 @@ describe("CalendarBookingService", () => {
     expect(request.idempotencyKey).toContain("2026-09-01T15:00:00.000Z");
     expect(request.input).not.toHaveProperty("createConference");
     if (request.input.kind === "update") {
-      expect(request.input.content.attendees).toEqual([]);
-      expect(request.input.content.conference).toBeNull();
+      expect(request.input.content?.attendees).toEqual([]);
+      expect(request.input.content?.conference).toBeNull();
     } else {
       throw new Error("Expected update command input");
     }
+  });
+
+  it("submits a content-only booking update without a schedule", async () => {
+    const eventId = faker.database.mongodbObjectId() as EventId;
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
+
+    await service.updateBookingEvent(userId(), {
+      eventId: eventId as EventId,
+      title: "Grace and Tyler",
+      description: "bring tea",
+      timeZone: "America/Denver" as TimeZone,
+      guest: { email: "ada@example.com", displayName: "Grace Hopper" },
+    });
+
+    const request = submitRequestFrom(submitCommand);
+    expect(request.expectedVersion).toBeNull();
+    expect(request.input).toMatchObject({
+      kind: "update",
+      content: { title: "Grace and Tyler", description: "bring tea" },
+    });
+    expect(request.input).not.toHaveProperty("schedule");
+    expect(request.idempotencyKey).toContain("keep");
+  });
+
+  it("submits a schedule-only booking update without content", async () => {
+    const eventId = faker.database.mongodbObjectId() as EventId;
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const service = serviceWithSubmit(submitCommand);
+
+    await service.updateBookingEvent(userId(), {
+      eventId: eventId as EventId,
+      start: "2026-09-01T16:00:00.000Z" as DateTime,
+      end: "2026-09-01T16:30:00.000Z" as DateTime,
+      timeZone: "America/Denver" as TimeZone,
+      guest: { email: "ada@example.com", displayName: "Ada Lovelace" },
+    });
+
+    const request = submitRequestFrom(submitCommand);
+    expect(request.input).toMatchObject({
+      kind: "update",
+      schedule: {
+        kind: "timed",
+        start: "2026-09-01T16:00:00.000Z",
+        end: "2026-09-01T16:30:00.000Z",
+      },
+    });
+    expect(request.input).not.toHaveProperty("content");
+    expect(request.idempotencyKey).toContain("2026-09-01T16:00:00.000Z");
   });
 
   it("submits delete with invitation all", async () => {

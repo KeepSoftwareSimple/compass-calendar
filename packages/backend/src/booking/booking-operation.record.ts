@@ -4,7 +4,11 @@ import { zObjectId } from "@core/types/type.utils";
 
 const ObjectIdSchema = zObjectId;
 
-export const BookingOperationKindSchema = z.enum(["create", "cancel"]);
+export const BookingOperationKindSchema = z.enum([
+  "create",
+  "cancel",
+  "reschedule",
+]);
 export type BookingOperationKind = z.infer<typeof BookingOperationKindSchema>;
 
 export const BookingOperationStatusSchema = z.enum([
@@ -59,9 +63,23 @@ export type CancelBookingOperationRecord = z.infer<
   typeof CancelBookingOperationRecordSchema
 >;
 
+export const RescheduleBookingOperationRecordSchema =
+  BookingOperationBaseSchema.extend({
+    kind: z.literal("reschedule"),
+    slotStart: z.date(),
+    slotEnd: z.date(),
+    previousSlotStart: z.date(),
+    previousSlotEnd: z.date(),
+    guestTimeZone: TimeZoneSchema,
+  });
+export type RescheduleBookingOperationRecord = z.infer<
+  typeof RescheduleBookingOperationRecordSchema
+>;
+
 export const BookingOperationRecordSchema = z.discriminatedUnion("kind", [
   CreateBookingOperationRecordSchema,
   CancelBookingOperationRecordSchema,
+  RescheduleBookingOperationRecordSchema,
 ]);
 export type BookingOperationRecord = z.infer<
   typeof BookingOperationRecordSchema

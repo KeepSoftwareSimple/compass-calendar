@@ -713,10 +713,10 @@ zone is not the host page zone.
 - **Changing the booking address breaks old links.** The host may edit the
   slug in Settings; the stored value is overwritten with no previous-slug
   list and no redirect. Public resolution 404s the old slug after a rename.
-- **Host-edited etag overwrite uses `expectedVersion: null`.** Guest
-  reschedule PATCHes the same Google event in place. Host-edited events
-  still omit a stored etag on the booking update path, so a concurrent
-  host edit can be overwritten. Accepted for v1.3.
+- **Host-edited events keep their schedule on guest notes edits.** Guest
+  details PATCHes are content-only. Guest reschedule writes schedule only
+  and claims the target interval with the same durable overlap primitive
+  as create, so a concurrent host edit is not blindly overwritten.
 - **Confirm is fail-closed.** When Sync reports `bookable: false`, slots
   disappear and confirm returns `409`.
 - **New-meetings claim uses a createdAt cursor index.**

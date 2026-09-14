@@ -4,6 +4,7 @@ import {
   bookingError,
   toBookingErrorResponse,
 } from "@backend/booking/booking.error";
+import { EventMutationException } from "@backend/event/event.error";
 import { describe, expect, it } from "bun:test";
 
 describe("toBookingErrorResponse", () => {
@@ -67,6 +68,20 @@ describe("toBookingErrorResponse", () => {
     expect(body).toEqual({
       code: "SLUG_TAKEN",
       message: "That address is already taken",
+    });
+  });
+
+  it("maps EventMutationException version conflicts to RESERVATION_CONFLICT", () => {
+    const { status, body } = toBookingErrorResponse(
+      new EventMutationException(
+        "RECURRENCE_CONFLICT",
+        "Event was modified elsewhere",
+      ),
+    );
+    expect(status).toBe(Status.CONFLICT);
+    expect(body).toEqual({
+      code: "RESERVATION_CONFLICT",
+      message: "This meeting was changed. Try again.",
     });
   });
 

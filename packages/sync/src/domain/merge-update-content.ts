@@ -12,6 +12,23 @@ import { type SyncEventContent } from "@core/types/sync/event.contracts";
 // must drop it so palette resolution cannot resurrect the old fill after
 // settle. Drafts often send color:null for "no slot" on hex-only events —
 // that must not wipe colorHex.
+export function resolveUpdateContent(
+  stored: SyncEventContent,
+  incoming: SyncEventContent | undefined,
+  fallback: SyncEventContent,
+): SyncEventContent {
+  return incoming === undefined
+    ? fallback
+    : mergeUpdateContent(stored, incoming);
+}
+
+export function resolveUpdateSchedule<T>(
+  incoming: T | undefined,
+  fallback: T,
+): T {
+  return incoming ?? fallback;
+}
+
 export function mergeUpdateContent(
   existing: SyncEventContent,
   incoming: SyncEventContent,

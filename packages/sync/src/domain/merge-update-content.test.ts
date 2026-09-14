@@ -3,6 +3,8 @@ import {
   mergeAttendees,
   mergeUpdateContent,
   omitNullColor,
+  resolveUpdateContent,
+  resolveUpdateSchedule,
 } from "./merge-update-content";
 import { describe, expect, it } from "bun:test";
 
@@ -236,6 +238,58 @@ describe("mergeUpdateContent", () => {
       attendees: [],
       conference: null,
     });
+  });
+});
+
+describe("resolveUpdateContent", () => {
+  const stored = {
+    title: "Stored",
+    description: "stored",
+    location: "Room A",
+    organizer: null,
+    attendees: [],
+    conference: null,
+  };
+  const incoming = {
+    title: "Incoming",
+    description: "incoming",
+    location: null,
+    organizer: null,
+    attendees: [],
+    conference: null,
+  };
+  const fallback = {
+    title: "Fallback",
+    description: "fallback",
+    location: "Room B",
+    organizer: null,
+    attendees: [],
+    conference: null,
+  };
+
+  it("merges incoming onto stored when content is present", () => {
+    expect(resolveUpdateContent(stored, incoming, fallback)).toEqual({
+      title: "Incoming",
+      description: "incoming",
+      location: null,
+      organizer: null,
+      attendees: [],
+      conference: null,
+    });
+  });
+
+  it("keeps the fallback when content is omitted", () => {
+    expect(resolveUpdateContent(stored, undefined, fallback)).toEqual(fallback);
+  });
+});
+
+describe("resolveUpdateSchedule", () => {
+  it("keeps the fallback when the incoming schedule is omitted", () => {
+    expect(resolveUpdateSchedule(undefined, "kept")).toBe("kept");
+  });
+
+  it("uses the incoming schedule when present", () => {
+    expect(resolveUpdateSchedule("next", "kept")).toBe("next");
   });
 });
 

@@ -52,7 +52,44 @@ export async function ensureBookingIndexes(): Promise<void> {
   );
   await mongoService.bookingOperation.createIndex(
     { reservationId: 1, kind: 1 },
-    { name: "booking_operation_reservation_kind_unique", unique: true },
+    {
+      name: "booking_operation_create_cancel_unique",
+      unique: true,
+      partialFilterExpression: { kind: { $in: ["create", "cancel"] } },
+    },
+  );
+  const operationIndexes = await mongoService.bookingOperation.indexes();
+  if (
+    operationIndexes.some(
+      (index) => index.name === "booking_operation_reservation_kind_unique",
+    )
+  ) {
+    await mongoService.bookingOperation.dropIndex(
+      "booking_operation_reservation_kind_unique",
+    );
+  }
+  await mongoService.bookingOperation.createIndex(
+    { reservationId: 1 },
+    {
+      name: "booking_operation_reservation_inflight_unique",
+      unique: true,
+      partialFilterExpression: {
+        kind: { $in: ["reschedule", "cancel"] },
+        status: { $in: ["pending", "submitted", "compensating"] },
+      },
+    },
+  );
+  await mongoService.bookingOperation.createIndex(
+    { pageId: 1, slotStart: 1, slotEnd: 1 },
+    {
+      name: "booking_operation_overlap_scan",
+      partialFilterExpression: {
+        kind: { $in: ["create", "reschedule"] },
+        status: {
+          $in: ["pending", "submitted", "compensating", "failed"],
+        },
+      },
+    },
   );
   await mongoService.bookingOperation.createIndex(
     { eventId: 1 },

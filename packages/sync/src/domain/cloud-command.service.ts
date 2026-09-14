@@ -8,6 +8,8 @@ import {
   mergeAttendees,
   mergeUpdateContent,
   omitNullColor,
+  resolveUpdateContent,
+  resolveUpdateSchedule,
 } from "@sync/domain/merge-update-content";
 import {
   isFollowingSplitAtSeriesStart,
@@ -697,8 +699,12 @@ async function updateCloudOccurrence(
     master,
     command.input.recurrenceId,
     {
-      content: mergeUpdateContent(master.content, command.input.content),
-      schedule: command.input.schedule,
+      content: resolveUpdateContent(
+        master.content,
+        command.input.content,
+        master.content,
+      ),
+      schedule: resolveUpdateSchedule(command.input.schedule, master.schedule),
       cancelled: false,
     },
     now(),
@@ -831,14 +837,18 @@ function applyCloudUpdate(
     throw new Error("applyCloudUpdate requires an update command");
   }
   const { input } = command;
-  const merged = mergeUpdateContent(existing.content, input.content);
+  const merged = resolveUpdateContent(
+    existing.content,
+    input.content,
+    existing.content,
+  );
   // A cloud-only event has no provider copy to fetch, so an attendeesEdit
   // "replace" merges the intended membership against the STORED list — the
   // closest "current" state — keeping any recorded status for retained
   // guests and entering new ones as needsAction. "preserve"/legacy commands
   // keep today's byte-identical merge (attendees untouched).
   const content =
-    input.attendeesEdit === "replace"
+    input.attendeesEdit === "replace" && input.content
       ? {
           ...merged,
           attendees: mergeAttendees(
@@ -850,7 +860,7 @@ function applyCloudUpdate(
   return {
     ...existing,
     content,
-    schedule: input.schedule,
+    schedule: resolveUpdateSchedule(input.schedule, existing.schedule),
     recurrence:
       input.recurrence.kind === "preserve"
         ? existing.recurrence
