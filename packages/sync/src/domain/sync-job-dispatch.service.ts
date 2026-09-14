@@ -386,13 +386,12 @@ async function runSyncJob(
   // initialImport for a deactivated calendar kept its coalescing key and burned
   // Google quota on every sweep until an operator noticed (2026-07-30).
   if (!calendar.active) {
-    // Stamp the attempt even though nothing ran. Both stale-resource finders
-    // select from sync_resources alone (it carries no active flag) and order by
-    // lastAttemptAt, so a resource that drops WITHOUT stamping keeps its old
-    // timestamp, sorts to the front of every batch, and is re-enqueued forever:
-    // 22 such drops in 19 minutes on prod, crowding out calendars that had real
-    // work (2026-08-23). Stamping rotates it to the back of the line, and
-    // removes it from the foreground finder's window entirely.
+    // Stamp the attempt even though nothing ran. The finders now skip
+    // resources whose mirrored calendarActive is false, so this drop is
+    // the safety net for a race (calendar flipped after the finder ran)
+    // and for rows written before the mirror existed. Stamping still
+    // rotates a leaked inactive resource to the back of lastAttemptAt
+    // sorts instead of re-winning every batch (2026-08-23).
     await deps.resources.markAttempt(
       resource.tenantId,
       resource.principalId,

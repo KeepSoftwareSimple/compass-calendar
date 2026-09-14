@@ -28,10 +28,11 @@ import {
 // dead-credential cohort (2026-07-29: an isolated post-rotation-fix sweep
 // batch still selected 100 resources with only 1 holding a credential).
 //
-// listExpiringSubscriptions deliberately does NOT use this: it only selects
-// resources that already hold a live channel, which a credential-less
-// connection cannot renew into existence in the first place, and a renewal
-// attempt on one settles as a credential drop rather than burning a ladder.
+// listExpiringSubscriptions uses the same lookup: a discarded (unusable)
+// credential still leaves a live channel row, and enqueueing
+// subscriptionMaintain just so dispatch can drop it was ~1,200 warnings a
+// day (2026-09-14). A credential-less connection cannot renew a channel, so
+// excluding at selection is the same evidence dispatch uses to drop.
 const CREDENTIAL_LOOKUP_STAGES = [
   {
     $lookup: {
@@ -48,6 +49,13 @@ export interface ListStaleEventsOptions {
   provider?: ProviderKind;
   excludeProviders?: readonly ProviderKind[];
 }
+
+// Inactive calendars are skipped at selection so a foreground tick or
+// reconcile sweep never enqueues a pull that dispatch would drop. `$ne:
+// false` still matches rows written before the field (treated as active)
+// until startup backfill or the next discovery pass stamps them. False is
+// the only value that excludes.
+const ACTIVE_CALENDAR_FILTER = { calendarActive: { $ne: false } } as const;
 
 function credentialFilterStages(
   options: ListStaleEventsOptions = {},
@@ -147,6 +155,9 @@ export class SyncResourceRepository {
           lastReadFailureAt: null,
           lastReadFailureDetail: null,
           watchUnsupportedAt: null,
+          // Events resources are created for calendars discovery currently
+          // lists as active; discovery stamps false if that later flips.
+          calendarActive: true,
           bootstrapState:
             fields.resourceKind === "events" ? "importing" : "ready",
           subscriptionId: null,
@@ -427,6 +438,27 @@ export class SyncResourceRepository {
     );
   }
 
+  // Mirror provider_calendars.active onto the events resources for these
+  // calendars. Self-gating: rows already holding `active` are not rewritten,
+  // so a daily full pass that re-reports the same hidden calendars costs a
+  // no-op rather than a write per resource.
+  async setCalendarActiveByCalendarIds(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    calendarIds: readonly ProviderCalendarId[],
+    active: boolean,
+  ): Promise<void> {
+    await this.collection.updateMany(
+      {
+        tenantId,
+        principalId,
+        calendarId: { $in: [...calendarIds] },
+        calendarActive: { $ne: active },
+      },
+      { $set: { calendarActive: active, updatedAt: new Date() } },
+    );
+  }
+
   // Find the resource a provider push channel belongs to. Keyed on the channel
   // (subscription) id alone — an inbound callback carries no tenant/principal,
   // and the channel id is unique — so authenticity is then checked against the
@@ -566,13 +598,20 @@ export class SyncResourceRepository {
   // Events resources owned by the signed principal — input for a user-
   // triggered refresh (enqueue one incrementalPull per resource). Bounded so a
   // pathological principal cannot enqueue an unbounded refresh burst.
+  // Inactive calendars are excluded: a Refresh must not enqueue pulls that
+  // dispatch would drop.
   async listEventsByPrincipal(
     tenantId: TenantId,
     principalId: PrincipalId,
     limit = 200,
   ): Promise<SyncResourceRecord[]> {
     const records = await this.collection
-      .find({ tenantId, principalId, resourceKind: "events" })
+      .find({
+        tenantId,
+        principalId,
+        resourceKind: "events",
+        ...ACTIVE_CALENDAR_FILTER,
+      })
       .limit(limit)
       .toArray();
     return records.map((r) => SyncResourceReadSchema.parse(r));
@@ -594,6 +633,7 @@ export class SyncResourceRepository {
         principalId,
         resourceKind: "events",
         bootstrapState: "ready",
+        ...ACTIVE_CALENDAR_FILTER,
         $or: [{ lastAttemptAt: { $lt: before } }, { lastAttemptAt: null }],
       })
       .sort({ lastAttemptAt: 1 })
@@ -609,7 +649,9 @@ export class SyncResourceRepository {
   // carries its own (tenantId, principalId) for the job the caller enqueues. A
   // never-synced resource (lastSuccessAt null) sorts first so bootstrapping a
   // new calendar is not starved by the stale ones. Uses the
-  // resource_last_success index.
+  // resource_last_success index. Inactive calendars are excluded via the
+  // mirrored calendarActive field so this sweep never enqueues a pull that
+  // dispatch would drop.
   async listStaleEvents(
     before: Date,
     limit: number,
@@ -623,6 +665,7 @@ export class SyncResourceRepository {
     return this.#listForSweep(
       {
         resourceKind: "events",
+        ...ACTIVE_CALENDAR_FILTER,
         $or: [{ lastSuccessAt: { $lt: before } }, { lastSuccessAt: null }],
       },
       { lastAttemptAt: 1, lastSuccessAt: 1 },
@@ -662,20 +705,22 @@ export class SyncResourceRepository {
   // channel share this sweep. Only resources that ALREADY hold a channel are
   // returned; a resource with no subscription is bootstrapped by the import
   // (events) or calendarListSync (calendar list) followup, not here.
+  // Connections whose credential has been discarded (unusable) are excluded
+  // at selection — the same evidence dispatch uses to drop — so a live
+  // channel on a revoked grant is not re-enqueued every sweep.
   async listExpiringSubscriptions(
     before: Date,
     limit: number,
   ): Promise<SyncResourceRecord[]> {
-    const records = await this.collection
-      .find({
+    return this.#listForSweep(
+      {
         resourceKind: { $in: ["events", "calendarList"] },
         subscriptionId: { $ne: null },
         subscriptionExpiresAt: { $lt: before },
-      })
-      .sort({ subscriptionExpiresAt: 1 })
-      .limit(limit)
-      .toArray();
-    return records.map((r) => SyncResourceReadSchema.parse(r));
+      },
+      { subscriptionExpiresAt: 1 },
+      limit,
+    );
   }
 
   // calendarList resources whose last FULL enumeration is older than `before`
