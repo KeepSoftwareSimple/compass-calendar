@@ -47,8 +47,6 @@ export type BookingSetupSaveFailureReason =
 
 export type BookingSetupSaveStep = Extract<SetupStepId, "address" | "live">;
 
-type OptionalProperties = Record<string, boolean | number | string | undefined>;
-
 export function trackBookingSetupStepViewed(
   step: SetupStepId,
   properties: { configured_host: boolean },
@@ -93,14 +91,14 @@ export function trackBookingSlotSelected(properties: {
   duration_minutes: number;
   timezone_differs: boolean;
 }): void {
-  track("booking_slot_selected", compact(properties));
+  track("booking_slot_selected", properties);
 }
 
 export function trackBookingDetailsReached(properties: {
   duration_minutes: number;
   timezone_differs: boolean;
 }): void {
-  track("booking_details_reached", compact(properties));
+  track("booking_details_reached", properties);
 }
 
 export function trackBookingSubmitAttempted(properties: {
@@ -168,10 +166,4 @@ export function bookingSubmitFailureReason(
     return "rate_limited";
   }
   return "transport";
-}
-
-function compact(properties: OptionalProperties) {
-  return Object.fromEntries(
-    Object.entries(properties).filter(([, value]) => value !== undefined),
-  );
 }

@@ -125,12 +125,6 @@ export function usePublicBookingFlow() {
   );
 
   useEffect(() => {
-    slotsOutcomeKeyRef.current = null;
-    selectedSlotTrackedRef.current = null;
-    detailsTrackedRef.current = null;
-  }, [slug]);
-
-  useEffect(() => {
     const durationMinutes = pageQuery.data?.durationMinutes;
     if (durationMinutes == null) return;
     const outcome = bookingSlotsOutcome({
@@ -139,38 +133,41 @@ export function usePublicBookingFlow() {
       isError: Boolean(slotsQuery.isError && !slotsQuery.data),
     });
     if (outcome == null) return;
-    const key = `${monthKey}:${outcome}`;
+    const key = `${slug}:${monthKey}:${outcome}`;
     if (slotsOutcomeKeyRef.current === key) return;
     slotsOutcomeKeyRef.current = key;
     trackBookingSlotsLoaded(outcome, { duration_minutes: durationMinutes });
   }, [
     monthKey,
     pageQuery.data?.durationMinutes,
+    slug,
     slotsQuery.data,
     slotsQuery.isError,
   ]);
 
   useEffect(() => {
     if (!selectedSlotStart || pageQuery.data == null) return;
-    if (selectedSlotTrackedRef.current === selectedSlotStart) return;
-    selectedSlotTrackedRef.current = selectedSlotStart;
+    const key = `${slug}:${selectedSlotStart}`;
+    if (selectedSlotTrackedRef.current === key) return;
+    selectedSlotTrackedRef.current = key;
     trackBookingSlotSelected({
       duration_minutes: pageQuery.data.durationMinutes,
       timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
     });
-  }, [guestTimeZone, pageQuery.data, selectedSlotStart]);
+  }, [guestTimeZone, pageQuery.data, selectedSlotStart, slug]);
 
   useEffect(() => {
     if (!showDetailsStep || !selectedSlotStart || pageQuery.data == null) {
       return;
     }
-    if (detailsTrackedRef.current === selectedSlotStart) return;
-    detailsTrackedRef.current = selectedSlotStart;
+    const key = `${slug}:${selectedSlotStart}`;
+    if (detailsTrackedRef.current === key) return;
+    detailsTrackedRef.current = key;
     trackBookingDetailsReached({
       duration_minutes: pageQuery.data.durationMinutes,
       timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
     });
-  }, [guestTimeZone, pageQuery.data, selectedSlotStart, showDetailsStep]);
+  }, [guestTimeZone, pageQuery.data, selectedSlotStart, showDetailsStep, slug]);
 
   // 409 only: keep typed details while they pick another slot. Other alerts
   // (empty horizon, confirm failure) must not open the guest form.
