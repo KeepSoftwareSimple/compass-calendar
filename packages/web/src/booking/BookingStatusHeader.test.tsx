@@ -193,6 +193,30 @@ describe("BookingStatusHeader", () => {
     ).toBeInTheDocument();
   });
 
+  it("names a read-only destination", () => {
+    renderHeader(
+      unbookable([{ kind: "calendar", reason: "notWritable", calendarId }]),
+    );
+
+    expect(
+      screen.getByText(
+        `${BOOKING_NOT_BOOKABLE_PREFIX}: Work can't accept new events. Choose a writable destination or reconnect the account.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back when a read-only destination is unnamed", () => {
+    renderHeader(unbookable([{ kind: "calendar", reason: "notWritable" }]), {
+      connections: [],
+    });
+
+    expect(
+      screen.getByText(
+        `${BOOKING_NOT_BOOKABLE_PREFIX}: The destination calendar can't accept new events. Choose a writable destination or reconnect the account.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("renders billing copy", () => {
     renderHeader(
       unbookable([{ kind: "billing", reason: "BILLING_REQUIRED" }]),

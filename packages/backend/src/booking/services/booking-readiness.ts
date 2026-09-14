@@ -1,6 +1,7 @@
 import { type ObjectId } from "mongodb";
 import { BaseError } from "@core/errors/errors.base";
 import {
+  type BookingPageStatusReason,
   type BookingPageStatusResponse,
   BookingPageStatusResponseSchema,
 } from "@core/types/booking.contracts";
@@ -12,6 +13,11 @@ import {
 import { type BusyAvailabilityResponse } from "@core/types/sync/availability.contracts";
 import { assertBillingAllowsWrites } from "@backend/billing/billing.guard";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
+import {
+  type DestinationCatalog,
+  destinationReadinessReason,
+  loadDestinationCatalog,
+} from "@backend/booking/services/booking-destination-readiness";
 import { type CalendarBookingPort } from "@backend/booking/services/calendar-booking.port";
 
 const isBillingRequiredError = (error: unknown): boolean =>
@@ -35,27 +41,41 @@ export type BookabilityProbe = {
   bookable: boolean;
   billingBlocked: boolean;
   availability: BusyAvailabilityResponse | null;
+  destinationReason: BookingPageStatusReason | null;
 };
 
 export async function probeBookability(
   page: BookingPageRecord,
   window: { start: Date; end: Date },
   calendarBooking: CalendarBookingPort,
-  options: { excludeEventIds?: readonly EventId[] } = {},
+  options: {
+    excludeEventIds?: readonly EventId[];
+    destinationCatalog?: DestinationCatalog;
+  } = {},
 ): Promise<BookabilityProbe> {
   if (!(await hostAllowsGuestWrites(page.userId))) {
     return {
       bookable: false,
       billingBlocked: true,
       availability: null,
+      destinationReason: null,
     };
   }
 
+  const catalog =
+    options.destinationCatalog ??
+    (await loadDestinationCatalog(page.userId.toString()));
+  const destinationReason = destinationReadinessReason(
+    page.destinationCalendarId as string,
+    catalog,
+  );
+
   if (window.end.getTime() <= window.start.getTime()) {
     return {
-      bookable: true,
+      bookable: destinationReason === null,
       billingBlocked: false,
       availability: null,
+      destinationReason,
     };
   }
 
@@ -72,9 +92,10 @@ export async function probeBookability(
   );
 
   return {
-    bookable: availability.bookable,
+    bookable: destinationReason === null && availability.bookable,
     billingBlocked: false,
     availability,
+    destinationReason,
   };
 }
 
@@ -99,6 +120,9 @@ export function mapProbeToStatus(
   }
 
   const reasons: BookingPageStatusResponse["reasons"] = [];
+  if (probe.destinationReason) {
+    reasons.push(probe.destinationReason);
+  }
   for (const issue of probe.availability?.issues ?? []) {
     const calendarId = CalendarIdSchema.safeParse(issue.calendarId);
     reasons.push({

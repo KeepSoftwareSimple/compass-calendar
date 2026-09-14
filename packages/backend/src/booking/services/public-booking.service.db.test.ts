@@ -248,6 +248,30 @@ describe("PublicBookingService", () => {
     await cleanupTestDb();
   });
 
+  const mockSyncCatalog = (
+    calendars: ReturnType<typeof writableCalendar>[],
+    connections: ReadonlyArray<{ id: string; state: string }>,
+  ) => {
+    syncSpies.forEach((spy) => spy.mockRestore());
+    syncSpies = [];
+    syncSpies.push(
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        listConnections: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: { connections },
+          }),
+        ),
+        listCalendars: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: { calendars },
+          }),
+        ),
+      } as never),
+    );
+  };
+
   const mockHealthySync = (
     calendars: ReturnType<typeof writableCalendar>[],
     connection: TestSyncConnection = healthyConnection(),
@@ -256,22 +280,7 @@ describe("PublicBookingService", () => {
       ...calendar,
       connectionId: connection.id,
     }));
-    syncSpies.push(
-      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
-        listConnections: mock(() =>
-          Promise.resolve({
-            ok: true as const,
-            value: { connections: [connection] },
-          }),
-        ),
-        listCalendars: mock(() =>
-          Promise.resolve({
-            ok: true as const,
-            value: { calendars: wired },
-          }),
-        ),
-      } as never),
-    );
+    mockSyncCatalog(wired, [connection]);
     return { connection, calendars: wired };
   };
 
@@ -676,6 +685,174 @@ describe("PublicBookingService", () => {
         },
       ],
     });
+  });
+
+  it("hides guest slots when a healthy blocker cannot mask a disconnected destination", async () => {
+    const userId = await createNamedUser("Split Account Host");
+    const destConnection = healthyConnection();
+    const blockerConnection = healthyConnection();
+    const destCalendar = {
+      ...writableCalendar(),
+      connectionId: destConnection.id,
+    };
+    const blockerCalendar = {
+      ...writableCalendar(),
+      connectionId: blockerConnection.id,
+      capabilities: {
+        canReadEvents: true,
+        canWriteEvents: false,
+        canReadBusy: true,
+        canInviteAttendees: false,
+      },
+    };
+    mockSyncCatalog(
+      [destCalendar, blockerCalendar],
+      [destConnection, blockerConnection],
+    );
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+    const page = await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: destCalendar.id,
+        blockingCalendarIds: [blockerCalendar.id],
+      }),
+    );
+    const slug = "slug" in page ? page.slug : "";
+    const slotQuery = {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+    };
+    const confirmInput = {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30 as const,
+    };
+
+    mockSyncCatalog(
+      [destCalendar, blockerCalendar],
+      [{ ...destConnection, state: "disconnected" }, blockerConnection],
+    );
+
+    await expect(service.getSlots(slug, slotQuery)).resolves.toEqual({
+      slots: [],
+      bookable: false,
+    });
+    await expect(
+      service.createReservation(slug, confirmInput),
+    ).rejects.toMatchObject({
+      bookingCode: "SLOT_UNAVAILABLE",
+      message: "This page is not accepting meetings.",
+    });
+    expect(createBookingEvent).not.toHaveBeenCalled();
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: false,
+      reasons: [
+        {
+          kind: "connection",
+          reason: "disconnected",
+          connectionState: "disconnected",
+        },
+      ],
+    });
+
+    mockSyncCatalog(
+      [destCalendar, blockerCalendar],
+      [destConnection, blockerConnection],
+    );
+
+    const recovered = await service.getSlots(slug, slotQuery);
+    expect(recovered.bookable).toBe(true);
+    expect(recovered.slots.length).toBeGreaterThan(0);
+    await service.createReservation(slug, confirmInput);
+    expect(createBookingEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides guest slots when the destination is read-only", async () => {
+    const { userId, slug, calendarId } = await enableBookingPage(
+      "Read Only Dest Host",
+    );
+    const destConnection = healthyConnection();
+    mockSyncCatalog(
+      [
+        {
+          ...writableCalendar(calendarId),
+          connectionId: destConnection.id,
+          capabilities: {
+            canReadEvents: true,
+            canWriteEvents: false,
+            canReadBusy: true,
+            canInviteAttendees: true,
+          },
+        },
+      ],
+      [destConnection],
+    );
+
+    await expect(
+      service.getSlots(slug, {
+        start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+        end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+        timeZone: "UTC",
+      }),
+    ).resolves.toEqual({ slots: [], bookable: false });
+    await expect(
+      service.createReservation(slug, {
+        slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+        guestName: "Ada Lovelace",
+        guestEmail: "ada@example.com",
+        guestTimeZone: "Europe/London",
+        durationMinutes: 30,
+      }),
+    ).rejects.toMatchObject({
+      bookingCode: "SLOT_UNAVAILABLE",
+    });
+    expect(createBookingEvent).not.toHaveBeenCalled();
+    await expect(service.getHostPageStatus(userId)).resolves.toMatchObject({
+      bookable: false,
+      reasons: [{ kind: "calendar", reason: "notWritable", calendarId }],
+    });
+  });
+
+  it("keeps disabled-page status when the destination later disconnects", async () => {
+    const { userId, calendarId } =
+      await enableBookingPage("Disabled Dest Host");
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        enabled: false,
+        destinationCalendarId: calendarId,
+        blockingCalendarIds: [calendarId],
+      }),
+    );
+    mockSyncCatalog(
+      [
+        {
+          ...writableCalendar(calendarId),
+          connectionId: "conn-dest-disabled",
+        },
+      ],
+      [
+        {
+          ...healthyConnection(),
+          id: "conn-dest-disabled",
+          state: "disconnected",
+        },
+      ],
+    );
+
+    await expect(service.getHostPageStatus(userId)).resolves.toEqual({
+      bookable: true,
+      reasons: [],
+    });
+    expect(getAvailability).not.toHaveBeenCalled();
   });
 
   it("answers bookable with no reasons for a disabled page", async () => {

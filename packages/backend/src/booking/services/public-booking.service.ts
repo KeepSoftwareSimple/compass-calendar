@@ -54,6 +54,10 @@ import {
 } from "@backend/booking/booking-reservation.repository";
 import { reconcileBookingPageBlockingCalendars } from "@backend/booking/services/booking-blocking-calendars";
 import {
+  destinationReadinessReason,
+  loadDestinationCatalog,
+} from "@backend/booking/services/booking-destination-readiness";
+import {
   emptyBookableStatus,
   hostAllowsGuestWrites,
   mapProbeToStatus,
@@ -533,6 +537,13 @@ export class PublicBookingService {
     } = {},
   ): Promise<void> {
     const reconciled = await reconcileBookingPageBlockingCalendars(page);
+    const destinationReason = destinationReadinessReason(
+      reconciled.destinationCalendarId as string,
+      await loadDestinationCatalog(reconciled.userId.toString()),
+    );
+    if (destinationReason) {
+      throw bookingError("SLOT_UNAVAILABLE", GUEST_PAGE_NOT_ACCEPTING_BOOKINGS);
+    }
     const now = new Date();
     const minNoticeMs = reconciled.minNoticeHours * 60 * 60 * 1000;
     if (slotStart.getTime() < now.getTime() + minNoticeMs) {
