@@ -710,6 +710,15 @@ by `createdAt`, or `null` when the queue is empty.
 | `booking_operation` | `environment`, `version`, `service`, `source` (`operation` \| `request`), `operation` (`create` \| `cancel` \| `reschedule` \| `edit`), `phase` (`accepted` \| `pending` \| `confirmed` \| `failed` \| `recovered` \| `compensation`), `outcome` (`success` \| `conflict` \| `validation` \| `rate_limited` \| `provider` \| `transport` \| `storage` \| `exhausted`), `reason` (bounded enum), `duration_minutes`, `latency_ms` | Durable Mongo transition, or a request-level validation/conflict/429 | Logical operations: `phase=accepted` and `source=operation` for that `operation`. Request 409/validation/429: `source=request` for that outcome |
 | `booking_operation_heartbeat` | `environment`, `version`, `service`, `pending_count`, `oldest_pending_age_ms`, `retry_exhausted_count`, `computedAt` | Every five minutes, including all zeros | One gauge sample per backend process interval. Missing samples mean missing telemetry, not an idle queue |
 
+#### Monitoring
+
+Meeting dashboard (conversion, reliability, pending work, recovery):
+https://us.posthog.com/project/165441/dashboard/2093461. Runbook:
+[Meeting monitoring](../development/meeting-monitoring.md). Provider
+connection health stays on Sync health
+https://us.posthog.com/project/165441/dashboard/1905421. Do not join
+browser funnels and server operations as one population.
+
 ### Named warts
 
 - **Public booking rate limits are deployment-wide.** `express-rate-limit`
