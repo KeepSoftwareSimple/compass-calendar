@@ -42,7 +42,7 @@ test("shows the trial card banner and opens Checkout while writable", async ({
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
+          google: { isConfigured: false },
           billing: {
             isConfigured: true,
             enforcement: true,
@@ -114,6 +114,7 @@ test("shows the trial card banner and opens Checkout while writable", async ({
     page.getByRole("dialog", { name: "Subscribe to keep using Compass" }),
   ).toHaveCount(0);
 
+  await page.keyboard.press("Escape");
   await banner.getByRole("button", { name: "Add a card" }).click();
   await expect(page.getByRole("dialog", { name: "Checkout" })).toBeVisible();
 });
