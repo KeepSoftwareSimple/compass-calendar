@@ -41,7 +41,8 @@ import {
 
 const mockClaimNewMeetings = mock(
   async (): Promise<BookingNewMeetingsClaimResponse> => ({
-    reservations: [],
+    count: 0,
+    latest: null,
   }),
 );
 const mockNavigate = mock();
@@ -90,39 +91,25 @@ const anonymousSession = {
 
 const chicagoSlot = "2026-09-24T17:00:00.000Z";
 
-const oneReservation = BookingNewMeetingsClaimResponseSchema.parse({
-  reservations: [
-    {
-      id: "0000000000000000000000aa",
-      guestName: "Bob",
-      slotStart: chicagoSlot,
-      slotEnd: "2026-09-24T17:30:00.000Z",
-    },
-  ],
-}).reservations;
+const oneClaim = BookingNewMeetingsClaimResponseSchema.parse({
+  count: 1,
+  latest: {
+    id: "0000000000000000000000aa",
+    guestName: "Bob",
+    slotStart: chicagoSlot,
+    slotEnd: "2026-09-24T17:30:00.000Z",
+  },
+});
 
-const threeReservations = BookingNewMeetingsClaimResponseSchema.parse({
-  reservations: [
-    {
-      id: "0000000000000000000000a1",
-      guestName: "Ada",
-      slotStart: "2026-09-23T17:00:00.000Z",
-      slotEnd: "2026-09-23T17:30:00.000Z",
-    },
-    {
-      id: "0000000000000000000000a2",
-      guestName: "Lin",
-      slotStart: "2026-09-24T15:00:00.000Z",
-      slotEnd: "2026-09-24T15:30:00.000Z",
-    },
-    {
-      id: "0000000000000000000000a3",
-      guestName: "Bob",
-      slotStart: chicagoSlot,
-      slotEnd: "2026-09-24T17:30:00.000Z",
-    },
-  ],
-}).reservations;
+const threeClaim = BookingNewMeetingsClaimResponseSchema.parse({
+  count: 3,
+  latest: {
+    id: "0000000000000000000000a3",
+    guestName: "Bob",
+    slotStart: chicagoSlot,
+    slotEnd: "2026-09-24T17:30:00.000Z",
+  },
+});
 
 function Authenticated({ children }: PropsWithChildren) {
   return (
@@ -139,7 +126,7 @@ describe("useNewMeetingsNotice", () => {
     mocks.toast.mockClear();
     mocks.dismiss.mockClear();
     mockClaimNewMeetings.mockReset();
-    mockClaimNewMeetings.mockResolvedValue({ reservations: [] });
+    mockClaimNewMeetings.mockResolvedValue({ count: 0, latest: null });
     mockNavigate.mockClear();
     registerToastPort(port);
     setEffectiveTimeZoneForTests("America/Chicago");
@@ -171,7 +158,7 @@ describe("useNewMeetingsNotice", () => {
   };
 
   it("shows the single-booking sentence and Show navigates to that week", async () => {
-    mockClaimNewMeetings.mockResolvedValue({ reservations: oneReservation });
+    mockClaimNewMeetings.mockResolvedValue(oneClaim);
     renderNotice();
 
     await waitFor(() => {
@@ -193,9 +180,7 @@ describe("useNewMeetingsNotice", () => {
   });
 
   it("shows the count sentence for several bookings", async () => {
-    mockClaimNewMeetings.mockResolvedValue({
-      reservations: threeReservations,
-    });
+    mockClaimNewMeetings.mockResolvedValue(threeClaim);
     renderNotice();
 
     await waitFor(() => {
@@ -236,7 +221,7 @@ describe("useNewMeetingsNotice", () => {
 
   it("defers the toast until the billing gate is released", async () => {
     setBillingGateOwnsScreen(true);
-    mockClaimNewMeetings.mockResolvedValue({ reservations: oneReservation });
+    mockClaimNewMeetings.mockResolvedValue(oneClaim);
     renderNotice();
 
     await waitFor(() => {

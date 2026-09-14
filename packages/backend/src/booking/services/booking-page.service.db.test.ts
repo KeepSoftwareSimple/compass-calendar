@@ -683,15 +683,16 @@ describe("BookingPageService", () => {
     });
 
     const first = await bookingPageService.claimNewMeetings(userId);
-    expect(first.reservations.map((row) => row.guestName)).toEqual([
-      "Ada",
-      "Bob",
-    ]);
+    expect(first).toMatchObject({
+      count: 2,
+      latest: { guestName: "Bob" },
+    });
     const stamped = await bookingPageRepository.findByUserId(userId);
     expect(stamped?.hostNoticedAt).toBeInstanceOf(Date);
+    expect(stamped?.hostNoticedReservationId).toBeTruthy();
 
     const second = await bookingPageService.claimNewMeetings(userId);
-    expect(second.reservations).toEqual([]);
+    expect(second).toEqual({ count: 0, latest: null });
   });
 
   it("returns none for a disabled page and does not stamp", async () => {
@@ -711,7 +712,7 @@ describe("BookingPageService", () => {
     await insertReservation(stored!._id);
 
     const claimed = await bookingPageService.claimNewMeetings(userId);
-    expect(claimed.reservations).toEqual([]);
+    expect(claimed).toEqual({ count: 0, latest: null });
     const after = await bookingPageRepository.findByUserId(userId);
     expect(after?.hostNoticedAt).toBeUndefined();
     expect("bookingUrl" in page).toBe(false);
@@ -720,7 +721,7 @@ describe("BookingPageService", () => {
   it("returns none when the host has no page", async () => {
     const userId = await createNamedUser("No Page Claim");
     const claimed = await bookingPageService.claimNewMeetings(userId);
-    expect(claimed.reservations).toEqual([]);
+    expect(claimed).toEqual({ count: 0, latest: null });
   });
 
   it("never returns a cancelled reservation", async () => {
@@ -747,7 +748,94 @@ describe("BookingPageService", () => {
     });
 
     const claimed = await bookingPageService.claimNewMeetings(userId);
-    expect(claimed.reservations.map((row) => row.guestName)).toEqual(["Live"]);
+    expect(claimed).toMatchObject({
+      count: 1,
+      latest: { guestName: "Live" },
+    });
+  });
+
+  it("reports the full count and latest after more than 20 arrivals", async () => {
+    const userId = await createNamedUser("Burst Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const stored = await bookingPageRepository.findByUserId(userId);
+    expect(stored).not.toBeNull();
+    for (let index = 0; index < 25; index += 1) {
+      await insertReservation(stored!._id, {
+        guestName: `Guest ${index + 1}`,
+        slotStart: new Date(Date.UTC(2026, 8, 24, 10, index)),
+      });
+    }
+
+    const claimed = await bookingPageService.claimNewMeetings(userId);
+    expect(claimed.count).toBe(25);
+    expect(claimed.latest?.guestName).toBe("Guest 25");
+
+    const leftover = await bookingPageService.claimNewMeetings(userId);
+    expect(leftover).toEqual({ count: 0, latest: null });
+  });
+
+  it("lets only one concurrent claim report the same arrivals", async () => {
+    const userId = await createNamedUser("Race Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const stored = await bookingPageRepository.findByUserId(userId);
+    expect(stored).not.toBeNull();
+    await insertReservation(stored!._id, {
+      guestName: "Ada",
+      slotStart: new Date("2026-09-24T16:00:00.000Z"),
+    });
+    await insertReservation(stored!._id, {
+      guestName: "Bob",
+      slotStart: new Date("2026-09-24T17:00:00.000Z"),
+    });
+
+    const [first, second] = await Promise.all([
+      bookingPageService.claimNewMeetings(userId),
+      bookingPageService.claimNewMeetings(userId),
+    ]);
+    const counts = [first.count, second.count].sort(
+      (left, right) => left - right,
+    );
+    expect(counts).toEqual([0, 2]);
+  });
+
+  it("does not advance the watermark when the unclaimed read fails", async () => {
+    const userId = await createNamedUser("Fail Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const summarize = spyOn(
+      bookingReservationRepository,
+      "summarizeConfirmedCreatedSince",
+    ).mockRejectedValue(new Error("read failed"));
+
+    await expect(bookingPageService.claimNewMeetings(userId)).rejects.toThrow(
+      "read failed",
+    );
+    const after = await bookingPageRepository.findByUserId(userId);
+    expect(after?.hostNoticedAt).toBeUndefined();
+    summarize.mockRestore();
   });
 
   it("keeps hostNoticedAt across a settings save", async () => {
@@ -759,9 +847,17 @@ describe("BookingPageService", () => {
       blockingCalendarIds: [calendar.id],
     });
     await bookingPageService.putAdminPage(userId, input);
+    await insertReservation(
+      (await bookingPageRepository.findByUserId(userId))!._id,
+      {
+        guestName: "Ada",
+        slotStart: new Date("2026-09-24T16:00:00.000Z"),
+      },
+    );
     await bookingPageService.claimNewMeetings(userId);
     const stamped = await bookingPageRepository.findByUserId(userId);
     expect(stamped?.hostNoticedAt).toBeInstanceOf(Date);
+    expect(stamped?.hostNoticedReservationId).toBeTruthy();
 
     await bookingPageService.putAdminPage(userId, {
       ...input,
@@ -770,6 +866,9 @@ describe("BookingPageService", () => {
     const after = await bookingPageRepository.findByUserId(userId);
     expect(after?.hostNoticedAt?.getTime()).toBe(
       stamped?.hostNoticedAt?.getTime(),
+    );
+    expect(after?.hostNoticedReservationId?.toString()).toBe(
+      stamped?.hostNoticedReservationId?.toString(),
     );
   });
 

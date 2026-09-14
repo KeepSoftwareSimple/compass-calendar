@@ -23,9 +23,11 @@ const insertReservation = async (
     guestName: string;
     status: "confirmed" | "cancelled";
     createdAt: Date;
+    slotStart?: Date;
   },
 ) => {
-  const slotStart = new Date(overrides.createdAt.getTime());
+  const slotStart =
+    overrides.slotStart ?? new Date(overrides.createdAt.getTime());
   const record = await bookingReservationRepository.insert({
     _id: new ObjectId(),
     pageId,
@@ -49,9 +51,10 @@ const insertReservation = async (
       },
     },
   );
+  return record;
 };
 
-describe("listConfirmedCreatedSince", () => {
+describe("summarizeConfirmedCreatedSince", () => {
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
     await ensureBookingIndexes();
@@ -59,7 +62,7 @@ describe("listConfirmedCreatedSince", () => {
   beforeEach(cleanupCollections);
   afterAll(cleanupTestDb);
 
-  it("returns only confirmed reservations created after since, ascending", async () => {
+  it("returns only confirmed reservations created after since, with latest last", async () => {
     const pageId = new ObjectId();
     const since = new Date("2026-09-02T00:00:00.000Z");
 
@@ -89,11 +92,39 @@ describe("listConfirmedCreatedSince", () => {
       createdAt: new Date("2026-09-03T12:00:00.000Z"),
     });
 
-    const rows = await bookingReservationRepository.listConfirmedCreatedSince(
-      pageId,
-      since,
-    );
+    const summary =
+      await bookingReservationRepository.summarizeConfirmedCreatedSince(
+        pageId,
+        { createdAt: since },
+      );
 
-    expect(rows.map((row) => row.guestName)).toEqual(["Earlier", "Later"]);
+    expect(summary.count).toBe(2);
+    expect(summary.latest?.guestName).toBe("Later");
+  });
+
+  it("uses _id to claim the rest of an identical createdAt tie", async () => {
+    const pageId = new ObjectId();
+    const tied = new Date("2026-09-03T12:00:00.000Z");
+    const first = await insertReservation(pageId, {
+      guestName: "First",
+      status: "confirmed",
+      createdAt: tied,
+      slotStart: new Date("2026-09-03T12:00:00.000Z"),
+    });
+    await insertReservation(pageId, {
+      guestName: "Second",
+      status: "confirmed",
+      createdAt: tied,
+      slotStart: new Date("2026-09-03T12:30:00.000Z"),
+    });
+
+    const remaining =
+      await bookingReservationRepository.summarizeConfirmedCreatedSince(
+        pageId,
+        { createdAt: tied, reservationId: first._id },
+      );
+
+    expect(remaining.count).toBe(1);
+    expect(remaining.latest?.guestName).toBe("Second");
   });
 });

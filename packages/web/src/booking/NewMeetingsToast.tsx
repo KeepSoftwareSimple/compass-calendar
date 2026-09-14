@@ -1,7 +1,10 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
-import { type BookingNewMeetingsClaimReservation } from "@core/types/booking.contracts";
+import {
+  type BookingNewMeetingsClaimReservation,
+  type BookingNewMeetingsClaimResponse,
+} from "@core/types/booking.contracts";
 import {
   rememberPendingNewMeetings,
   shouldDeferAttentionToasts,
@@ -28,37 +31,35 @@ export function formatHostMeetingWhen(
 }
 
 export function newMeetingsToastCopy(
-  reservations: readonly BookingNewMeetingsClaimReservation[],
+  count: number,
+  latest: BookingNewMeetingsClaimReservation | null,
   timeZone: string,
 ): string {
-  const latest = reservations[reservations.length - 1];
-  if (!latest) {
+  if (!latest || count < 1) {
     return "";
   }
   const when = formatHostMeetingWhen(latest.slotStart, timeZone);
-  if (reservations.length === 1) {
+  if (count === 1) {
     return `${latest.guestName} booked a meeting: ${when}`;
   }
-  return `${reservations.length} meetings booked since you last looked. Latest: ${latest.guestName}, ${when}`;
+  return `${count} meetings booked since you last looked. Latest: ${latest.guestName}, ${when}`;
 }
 
 interface NewMeetingsToastProps {
   toastId: Id;
-  reservations: readonly BookingNewMeetingsClaimReservation[];
+  count: number;
+  latest: BookingNewMeetingsClaimReservation;
 }
 
 export function NewMeetingsToast({
   toastId,
-  reservations,
+  count,
+  latest,
 }: NewMeetingsToastProps) {
   const timeZone = useEffectiveTimeZone();
-  const latest = reservations[reservations.length - 1];
 
   const handleShow = () => {
     getToast().dismiss(toastId);
-    if (!latest) {
-      return;
-    }
     const dateString = inEffectiveTimeZone(latest.slotStart, timeZone).format(
       YEAR_MONTH_DAY_FORMAT,
     );
@@ -73,7 +74,7 @@ export function NewMeetingsToast({
   return (
     <ToastNotice>
       <p className="text-sm text-text">
-        {newMeetingsToastCopy(reservations, timeZone)}
+        {newMeetingsToastCopy(count, latest, timeZone)}
       </p>
       <ToastActionButton onClick={handleShow}>Show</ToastActionButton>
     </ToastNotice>
@@ -81,20 +82,21 @@ export function NewMeetingsToast({
 }
 
 export function showNewMeetingsToast(
-  reservations: readonly BookingNewMeetingsClaimReservation[],
+  claim: BookingNewMeetingsClaimResponse,
 ): void {
-  if (reservations.length === 0) {
+  if (claim.count < 1 || !claim.latest) {
     return;
   }
   if (shouldDeferAttentionToasts()) {
-    rememberPendingNewMeetings(reservations);
+    rememberPendingNewMeetings(claim);
     return;
   }
 
   getToast()(
     createElement(NewMeetingsToast, {
       toastId: NEW_MEETINGS_TOAST_ID,
-      reservations,
+      count: claim.count,
+      latest: claim.latest,
     }),
     {
       ...getToastDefaultOptions(),

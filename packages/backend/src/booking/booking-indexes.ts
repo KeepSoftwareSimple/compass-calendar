@@ -30,4 +30,8 @@ export async function ensureBookingIndexes(): Promise<void> {
     { pageId: 1, status: 1, slotStart: 1 },
     { name: "booking_reservation_page_status_slot" },
   );
+  await mongoService.bookingReservation.createIndex(
+    { pageId: 1, status: 1, createdAt: 1, _id: 1 },
+    { name: "booking_reservation_page_status_created" },
+  );
 }

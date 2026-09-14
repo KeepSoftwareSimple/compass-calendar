@@ -61,28 +61,54 @@ class BookingReservationRepository {
   }
 
   /**
-   * Confirmed rows created after `since`, oldest first.
+   * Confirmed rows created after the host notice cursor, oldest-first cursor
+   * order with `_id` as the createdAt tie-breaker.
    *
-   * No dedicated `createdAt` index: `{ pageId, status, slotStart }` already
-   * serves the `{ pageId, status }` prefix, and reservations per page are
-   * few. Always state `status: "confirmed"` so the partial unique sibling
-   * can also apply.
+   * Count and latest come from one aggregation so a truncated in-memory
+   * limit cannot skip later arrivals. The compound
+   * `pageId + status + createdAt + _id` index backs this match+sort.
    */
-  async listConfirmedCreatedSince(
+  async summarizeConfirmedCreatedSince(
     pageId: ObjectId,
-    since: Date,
-    limit = 20,
-  ): Promise<BookingReservationRecord[]> {
-    const rows = await mongoService.bookingReservation
-      .find({
-        pageId,
-        status: "confirmed",
-        createdAt: { $gt: since },
-      })
-      .sort({ createdAt: 1 })
-      .limit(limit)
+    cursor: { createdAt: Date; reservationId?: ObjectId },
+  ): Promise<{ count: number; latest: BookingReservationRecord | null }> {
+    const createdAfterCursor = cursor.reservationId
+      ? {
+          $or: [
+            { createdAt: { $gt: cursor.createdAt } },
+            {
+              createdAt: cursor.createdAt,
+              _id: { $gt: cursor.reservationId },
+            },
+          ],
+        }
+      : { createdAt: { $gt: cursor.createdAt } };
+    const [summary] = await mongoService.bookingReservation
+      .aggregate<{ count: number; latest: BookingReservationRecord }>([
+        {
+          $match: {
+            pageId,
+            status: "confirmed",
+            ...createdAfterCursor,
+          },
+        },
+        { $sort: { createdAt: 1, _id: 1 } },
+        {
+          $group: {
+            _id: null,
+            count: { $sum: 1 },
+            latest: { $last: "$$ROOT" },
+          },
+        },
+      ])
       .toArray();
-    return rows.map((row) => BookingReservationRecordSchema.parse(row));
+    if (!summary) {
+      return { count: 0, latest: null };
+    }
+    return {
+      count: summary.count,
+      latest: BookingReservationRecordSchema.parse(summary.latest),
+    };
   }
 
   async listConfirmedOverlapping(

@@ -40,5 +40,6 @@ export const BookingPageRecordSchema = z.object({
   createdAt: z.date(),
   updatedAt: z.date(),
   hostNoticedAt: z.date().optional(),
+  hostNoticedReservationId: ObjectIdSchema.optional(),
 });
 export type BookingPageRecord = z.infer<typeof BookingPageRecordSchema>;

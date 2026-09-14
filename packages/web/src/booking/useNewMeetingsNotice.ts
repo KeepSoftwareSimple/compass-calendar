@@ -26,10 +26,11 @@ export function useNewMeetingsNotice(): void {
     lastClaimAtMs = now;
     try {
       const result = await BookingApi.claimNewMeetings();
-      showNewMeetingsToast(result.reservations);
+      showNewMeetingsToast(result);
     } catch {
-      // The stamp already happened or the request failed. Either way the
-      // five-minute gate still applies so a flapping tab cannot hammer POST.
+      // The watermark is only advanced after a successful read, so clear the
+      // gate and let the next visibility pass retry.
+      lastClaimAtMs = null;
     }
   }, [authenticated]);
 
