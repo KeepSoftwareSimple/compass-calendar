@@ -34,9 +34,11 @@ const paddedRemoteRange = (startDate: string, endDate: string) => ({
  * Remote (Sync) reads pad the request window and re-filter with
  * {@link eventMatchesRange}; local IndexedDB already applies that rule.
  *
- * An empty `calendarIds` array means every calendar is hidden: skip the
- * network and return []. `undefined` keeps the legacy "all calendars" read
- * until visibility is known.
+ * An empty `calendarIds` array means there are no active calendars: skip
+ * the network and return []. `undefined` is the loading state; remote
+ * observers stay disabled until the authenticated calendars query resolves
+ * with real ids. Hidden calendars still belong to the active set so toggling
+ * visibility does not refetch.
  */
 export async function fetchDayEvents(
   payload: FetchEventsRangePayload,

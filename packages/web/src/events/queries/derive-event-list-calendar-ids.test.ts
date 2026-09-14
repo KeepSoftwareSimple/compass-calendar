@@ -17,19 +17,19 @@ describe("deriveEventListCalendarIds", () => {
     expect(deriveEventListCalendarIds(undefined)).toBeUndefined();
   });
 
-  it("returns only active visible calendar ids", () => {
+  it("returns only active calendar ids, including hidden ones", () => {
     expect(
       deriveEventListCalendarIds([
         calendar("a"),
         calendar("b", { isVisible: false }),
         calendar("c", { isActive: false }),
       ]),
-    ).toEqual(["a" as CalendarId]);
+    ).toEqual(["a" as CalendarId, "b" as CalendarId]);
   });
 
-  it("returns an empty list when every calendar is hidden", () => {
+  it("returns an empty list when every calendar is inactive", () => {
     expect(
-      deriveEventListCalendarIds([calendar("a", { isVisible: false })]),
+      deriveEventListCalendarIds([calendar("a", { isActive: false })]),
     ).toEqual([]);
   });
 });

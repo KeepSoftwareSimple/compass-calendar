@@ -13,9 +13,10 @@ type DayEventsQueryArgs = {
 export function useDayEventsQuery({ startDate, endDate }: DayEventsQueryArgs) {
   const queryClient = useQueryClient();
   const source = useEventRepositorySource();
-  const calendarIds = useEventListCalendarIds();
+  const { calendarIds, enabled } = useEventListCalendarIds();
   const query = useQuery({
     ...dayEventsQueryOptions({ source, startDate, endDate, calendarIds }),
+    enabled,
     placeholderData: () =>
       deriveOverlappingEventQueryData(queryClient, {
         source,

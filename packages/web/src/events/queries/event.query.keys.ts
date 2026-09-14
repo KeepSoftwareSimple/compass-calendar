@@ -1,4 +1,3 @@
-import { type CalendarId } from "@core/types/domain-primitives";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 
 export const eventQueryKeys = {
@@ -9,12 +8,7 @@ export const eventQueryKeys = {
    * `["events", "week"]`.
    */
   scope: (scope: "day" | "week") => [...eventQueryKeys.all, scope] as const,
-  day: (args: {
-    source: EventRepositorySource;
-    start: string;
-    end: string;
-    calendarIds?: CalendarId[];
-  }) =>
+  day: (args: { source: EventRepositorySource; start: string; end: string }) =>
     [
       ...eventQueryKeys.all,
       "day",
@@ -22,15 +16,9 @@ export const eventQueryKeys = {
         source: args.source,
         start: args.start,
         end: args.end,
-        calendarIds: args.calendarIds,
       },
     ] as const,
-  week: (args: {
-    source: EventRepositorySource;
-    start: string;
-    end: string;
-    calendarIds?: CalendarId[];
-  }) =>
+  week: (args: { source: EventRepositorySource; start: string; end: string }) =>
     [
       ...eventQueryKeys.all,
       "week",
@@ -38,7 +26,6 @@ export const eventQueryKeys = {
         source: args.source,
         start: args.start,
         end: args.end,
-        calendarIds: args.calendarIds,
       },
     ] as const,
 };

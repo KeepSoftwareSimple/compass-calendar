@@ -23,12 +23,13 @@ export function useWeekEventsQuery({
 }: WeekEventsQueryArgs) {
   const queryClient = useQueryClient();
   const source = useEventRepositorySource();
-  const calendarIds = useEventListCalendarIds();
+  const { calendarIds, enabled } = useEventListCalendarIds();
   const startDate = toUTCOffset(startOfView);
   const endDate = toUTCOffset(endOfView);
 
   const query = useQuery({
     ...weekEventsQueryOptions({ source, startDate, endDate, calendarIds }),
+    enabled,
     placeholderData: () =>
       deriveOverlappingEventQueryData(queryClient, {
         source,

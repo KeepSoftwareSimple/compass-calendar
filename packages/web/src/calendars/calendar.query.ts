@@ -1,4 +1,5 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLayoutEffect, useRef } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { CalendarApi } from "@web/api/calendar.api";
 import { useSession } from "@web/auth/compass/session/useSession";
@@ -20,6 +21,10 @@ export const calendarQueryKeys = {
 // on every read, so any writer of this cache (SSE upsert, mutation, test
 // seeding) gets correct isVisible for free instead of needing to re-run
 // applyClientVisibility itself.
+//
+// The key stays `["calendars"]` so mutation reads and test seeds keep working.
+// `useCalendarsQuery` removes this entry on the anonymous-to-authenticated
+// transition; otherwise staleTime would keep the sentinel for 60s after login.
 export function calendarsQueryOptions(authenticated: boolean) {
   return queryOptions({
     queryKey: calendarQueryKeys.all,
@@ -72,6 +77,17 @@ function selectVisibleCalendars(
 export function useCalendarsQuery() {
   const { authenticated } = useSession();
   const hiddenIds = useHiddenCalendarIds();
+  const queryClient = useQueryClient();
+  const previousAuthenticated = useRef(authenticated);
+
+  // Drop the anonymous sentinel the moment auth resolves so it cannot linger
+  // under `["calendars"]` prefix observers or seeded exact-key reads.
+  useLayoutEffect(() => {
+    if (previousAuthenticated.current === false && authenticated) {
+      queryClient.removeQueries({ queryKey: calendarQueryKeys.all });
+    }
+    previousAuthenticated.current = authenticated;
+  }, [authenticated, queryClient]);
 
   return useQuery({
     ...calendarsQueryOptions(authenticated),
