@@ -1,3 +1,7 @@
+import {
+  redactBookingSecretsFromString,
+  redactBookingUrl,
+} from "@core/booking/booking-telemetry";
 import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
@@ -93,7 +97,7 @@ class ErrorHandler {
       errorType?: string;
     } = { stack: error.stack };
     if (context?.method !== undefined) meta.method = context.method;
-    if (context?.path !== undefined) meta.path = context.path;
+    if (context?.path !== undefined) meta.path = redactBookingUrl(context.path);
     if (context?.status !== undefined) meta.status = context.status;
     if (context?.userId != null) meta.userId = context.userId;
     if (context?.correlationId !== undefined) {
@@ -104,7 +108,13 @@ class ErrorHandler {
       meta[POSTHOG_ERROR_TRACKING_PROPERTY.errorType] =
         error.code ?? error.constructor.name;
     }
-    logger[logLevelForError(error)](error.message || String(error), meta);
+    if (meta.stack) {
+      meta.stack = redactBookingSecretsFromString(meta.stack);
+    }
+    logger[logLevelForError(error)](
+      redactBookingSecretsFromString(error.message || String(error)),
+      meta,
+    );
   }
 
   exitAfterProgrammerError(): void {

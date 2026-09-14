@@ -2,6 +2,11 @@ import { logs, SeverityNumber } from "@opentelemetry/api-logs";
 import { type TransformableInfo } from "logform";
 import TransportStream from "winston-transport";
 import {
+  isBookingUnsafeMetaKey,
+  redactBookingSecretsFromString,
+  sanitizeBookingTelemetry,
+} from "@core/booking/booking-telemetry";
+import {
   describeErrorChain,
   formatErrorChain,
   isUnsafeMetaKey,
@@ -40,7 +45,8 @@ export function buildOtelAttributes(
         key !== "message" &&
         !key.startsWith("[") &&
         typeof key !== "symbol" &&
-        !isUnsafeMetaKey(key),
+        !isUnsafeMetaKey(key) &&
+        !isBookingUnsafeMetaKey(key),
     )
     .reduce<OtelAttributes>((acc, [key, value]) => {
       if (key === "cause") {
@@ -49,9 +55,11 @@ export function buildOtelAttributes(
         // against — so it is dropped rather than stringified.
         if (value instanceof Error) {
           const chain = describeErrorChain(value);
-          acc[key] = formatErrorChain(chain);
+          acc[key] = redactBookingSecretsFromString(formatErrorChain(chain));
           const rootCause = rootCauseMessage(chain);
-          if (rootCause !== undefined) acc["root_cause"] = rootCause;
+          if (rootCause !== undefined) {
+            acc["root_cause"] = redactBookingSecretsFromString(rootCause);
+          }
         }
         return acc;
       }
@@ -60,11 +68,18 @@ export function buildOtelAttributes(
         typeof value === "number" ||
         typeof value === "boolean"
       ) {
-        acc[key] = value;
+        acc[key] =
+          typeof value === "string"
+            ? redactBookingSecretsFromString(value)
+            : value;
       } else if (value instanceof Error) {
-        acc[key] = formatErrorChain(describeErrorChain(value));
+        acc[key] = redactBookingSecretsFromString(
+          formatErrorChain(describeErrorChain(value)),
+        );
       } else if (value != null) {
-        acc[key] = JSON.stringify(value);
+        acc[key] = JSON.stringify(
+          sanitizeBookingTelemetry(value, { dropUnsafeKeys: true }),
+        );
       }
       return acc;
     }, {});

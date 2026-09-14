@@ -188,17 +188,27 @@ Files:
 - `packages/web/src/auth/posthog/posthog.bootstrap.ts`
 - `packages/web/src/auth/posthog/posthog-exception-filter.util.ts`
 - `packages/web/src/auth/posthog/posthog-dead-click-filter.util.ts`
+- `packages/web/src/auth/posthog/posthog-web-vitals-filter.util.ts`
+- `packages/web/src/auth/posthog/posthog-booking-filter.util.ts`
+- `packages/core/src/booking/booking-telemetry.ts`
 
-PostHog's `before_send` runs two filters, in order:
+PostHog's `before_send` runs four filters, in order:
 
 - unactionable exception signatures (SuperTokens/browser network blips,
   CefSharp scanner noise, opaque "Script error.", ResizeObserver loop warnings)
 - dead clicks posthog's own mutation clock mis-scored (a click whose own
   re-render posthog records as happening *before* it) — the mechanism and the
   50ms window are documented in `posthog-dead-click-filter.util.ts` itself
+- web vitals whose value is zero for LCP/FCP/INP (a missing measurement, not
+  a perfect score)
+- booking telemetry redaction: public `/meet` and `/book` URLs are rewritten
+  to route categories, capability tokens and reservation ids are stripped,
+  and replay/autocapture/exceptions on those pages are dropped because the
+  DOM and error messages cannot be rewritten onto the allowlist
 
-Neither filter touches `$rageclick`: repeated clicking is real frustration
-whatever the DOM did.
+Neither the exception nor the dead-click filter touches `$rageclick`: repeated
+clicking is real frustration whatever the DOM did. Rageclicks on public
+booking pages are still dropped by the booking filter.
 
 `calendar_connected` has two sources, distinguished by a `source` property:
 `signup_google` from `GoogleAuthCallback` (a new user whose Google grant

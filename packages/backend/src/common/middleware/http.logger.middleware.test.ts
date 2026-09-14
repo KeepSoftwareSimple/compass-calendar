@@ -55,4 +55,11 @@ describe("httpLoggingMiddleware", () => {
     const { next } = await runMiddleware("/api/health?foo=bar", "debug");
     expect(next).toHaveBeenCalledTimes(1);
   });
+
+  it("accepts a public booking URL without reading the request IP", async () => {
+    const { next } = await runMiddleware(
+      "/api/booking/reservations/507f1f77bcf86cd799439011/cancel?token=sentinel-capability-token-9f3c",
+    );
+    expect(next).toHaveBeenCalledTimes(1);
+  });
 });

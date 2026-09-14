@@ -594,8 +594,19 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 ### Analytics
 
 PostHog product events for the nothing-to-live funnel. No guest name, email,
-notes, or reservation id. Autocapture already runs on public `/meet/*`
-routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
+notes, reservation id, slug, raw URL, or capability token. Autocapture,
+session replay, and exception capture are **dropped** on public `/meet/*`
+and `/book/*` routes because those payloads embed DOM text, hrefs, and
+messages that cannot be rewritten onto the allowlist. `$pageview` /
+`$pageleave` / `$web_vitals` and the named events below still send, after
+`filterPosthogBookingTelemetry` rewrites URLs to route categories
+(`meet_page`, `meet_confirmed`, `meet_cancel`, `meet_reschedule`, and the
+legacy `book_*` equivalents).
+
+The rewrite lives in `packages/core/src/booking/booking-telemetry.ts` and
+is also applied to backend HTTP access logs, Winston messages, OTel log
+attributes, PostHog exception properties, and server `capture()` payloads.
+Diagnostic reservation ids stay in Mongo; they are not exported analytics.
 
 | Event | Properties | When |
 | --- | --- | --- |
@@ -604,6 +615,10 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
 | `booking_link_copied` | `source: "button" \| "save"` | Successful copy from the Copy button, or auto-copy after a successful turn-on / save |
 | `booking_page_viewed` | `duration_minutes: number` | Public page query succeeds with `enabled: true`, once per slug |
 | `booking_reservation_created` | `duration_minutes: number` | Guest confirm mutation succeeds |
+
+Guests are never `identify`'d or `alias`'d. `useIdentifyUser` only runs
+inside the authenticated calendar shell, and it no-ops on `/meet` and
+`/book` if a host session is present. Anonymous pageviews stay anonymous.
 
 ### Named warts
 
@@ -615,10 +630,15 @@ routes; these are the named events in `packages/web/src/auth/posthog/track.ts`.
   while `isBookingEnabled` stays false in production.
 - **Cancel, edit, and reschedule tokens travel in the query string.** The
   bearer lives in `?token=` on `/meet/confirmed/:id`, `/meet/cancel/:id`,
-  and `/meet/reschedule/:id`, so it can appear in browser history, Referer
-  headers, and access logs. Accepted for v1: a fragment or POST landing
-  page would break the confirmation permalink. Tokens stop working at
-  `slotEnd`.
+  and `/meet/reschedule/:id`, so it can appear in **browser history** and in
+  the Referer header of the *next* site if the guest clicks an outbound
+  link before the token expires at `slotEnd`. Compass telemetry (PostHog
+  pageviews, replay, exceptions, HTTP logs exported to PostHog) rewrites
+  those URLs and strips `token=` before send; this does not claim that
+  historical events were audited or purged, and it cannot rewrite the
+  guest's local history. Accepted for v1: a fragment or POST landing page
+  would break the confirmation permalink. Changing token transport is out
+  of scope.
 - **Guest email is not editable after confirm.** The attendee identity and
   Google invite are bound to the address collected at booking. Changing it
   would send a new invitation, which v1.5 does not do.

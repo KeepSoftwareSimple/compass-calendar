@@ -1,3 +1,4 @@
+import { sanitizeBookingTelemetry } from "@core/booking/booking-telemetry";
 import { Logger } from "@core/logger/winston.logger";
 
 const logger = Logger("posthog:capture");
@@ -39,7 +40,7 @@ export function createPostHogCaptureClient(
           distinct_id: distinctId,
           event,
           properties: {
-            ...properties,
+            ...sanitizeBookingTelemetry(properties, { dropUnsafeKeys: true }),
             $lib: options.lib,
           },
         }),

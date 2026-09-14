@@ -1,4 +1,5 @@
 import { type RequestHandler } from "express";
+import { redactBookingUrl } from "@core/booking/booking-telemetry";
 import { Logger } from "@core/logger/winston.logger";
 import { styleText } from "node:util";
 
@@ -38,7 +39,7 @@ export const httpLoggingMiddleware: RequestHandler = (req, res, next) => {
     const status = String(res.statusCode);
     const statusColor = getStatusColor(status);
     const method = req.method || "unknown";
-    const url = req.originalUrl || req.url || "unknown";
+    const url = redactBookingUrl(req.originalUrl || req.url || "unknown");
 
     const isHealthCheck = url.split("?")[0] === HEALTH_CHECK_PATH;
     const logLevel = isHealthCheck ? "debug" : "info";

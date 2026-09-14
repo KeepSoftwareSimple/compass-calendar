@@ -74,4 +74,23 @@ describe("buildOtelAttributes", () => {
     expect(attrs["active"]).toBe(true);
     expect(attrs["tags"]).toBe('["a","b"]');
   });
+
+  it("redacts booking URLs and drops reservation identifiers", () => {
+    const attrs = buildOtelAttributes({
+      level: "info",
+      message: "request",
+      path: "/api/booking/reservations/507f1f77bcf86cd799439011?token=sentinel-capability-token-9f3c",
+      reservationId: "507f1f77bcf86cd799439011",
+      slug: "sentinel-host-slug",
+    });
+
+    expect(attrs["path"]).toBe("/api/booking/reservations/:reservationId");
+    expect(attrs["reservationId"]).toBeUndefined();
+    expect(attrs["slug"]).toBeUndefined();
+    expect(JSON.stringify(attrs)).not.toContain(
+      "sentinel-capability-token-9f3c",
+    );
+    expect(JSON.stringify(attrs)).not.toContain("507f1f77bcf86cd799439011");
+    expect(JSON.stringify(attrs)).not.toContain("sentinel-host-slug");
+  });
 });

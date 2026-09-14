@@ -1,8 +1,25 @@
 import { type TransformableInfo } from "logform";
 import * as winston from "winston";
+import {
+  redactBookingSecretsFromString,
+  redactBookingUrl,
+} from "@core/booking/booking-telemetry";
 import { MB_50 } from "@core/constants/core.constants";
 import { OpenTelemetryTransport } from "@core/logger/otel.transport";
 import { PostHogExceptionTransport } from "@core/logger/posthog-exception.transport";
+
+const redactBookingLogs = winston.format((info: TransformableInfo) => {
+  if (typeof info.message === "string") {
+    info.message = redactBookingSecretsFromString(info.message);
+  }
+  if (typeof info["path"] === "string") {
+    info["path"] = redactBookingUrl(info["path"]);
+  }
+  if (typeof info["stack"] === "string") {
+    info["stack"] = redactBookingSecretsFromString(info["stack"]);
+  }
+  return info;
+});
 
 const consoleFormat = winston.format.combine(
   winston.format.splat(),
@@ -35,7 +52,7 @@ const createTransports = (): winston.transport[] => [
 export const Logger = (namespace?: string) => {
   const logger = winston.createLogger({
     level: process.env["LOG_LEVEL"],
-    format: winston.format.splat(),
+    format: winston.format.combine(winston.format.splat(), redactBookingLogs()),
     transports: createTransports(),
   });
 
