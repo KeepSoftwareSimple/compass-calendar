@@ -1,4 +1,5 @@
 import { loadCompassConfig } from "@core/config/compass.config";
+import { reportBootSize } from "./boot-size-report";
 import { copyStaticAssets } from "./copy-static-assets";
 import { injectModulePreloads } from "./inject-module-preloads";
 import { postcssPlugin } from "./plugins/postcss.plugin";
@@ -95,3 +96,8 @@ console.log(`Build complete → ${OUTDIR}`);
 console.log(`  ${result.outputs.length} files written`);
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`  ${preloaded.length} boot chunks modulepreloaded in index.html`);
+
+const bootSizeViolations = await reportBootSize(OUTDIR, result.metafile);
+if (bootSizeViolations.length > 0) {
+  process.exit(1);
+}
