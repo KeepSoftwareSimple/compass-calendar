@@ -5,19 +5,39 @@ import {
   type EventId,
 } from "@core/types/domain-primitives";
 import { type ServerMessage } from "@core/types/server-message.contracts";
-import { type ChangeFeedCursor } from "@core/types/sync/change-feed.contracts";
+import {
+  type ChangeFeedCursor,
+  type GlobalInvalidationEnvelope,
+} from "@core/types/sync/change-feed.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
+  type ProviderCalendarId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { FakeScheduler } from "@backend/__tests__/helpers/fake-scheduler";
 import {
+  CHANGE_FEED_PAGE_SIZE,
   SyncChangeFeedBridge,
   type SyncChangeFeedBridgeDeps,
 } from "@backend/servers/sse/sync-change-feed.bridge";
 
 const objectId = () => faker.database.mongodbObjectId();
+
+const calendarEnvelope = (opts: {
+  principalId: PrincipalId;
+  calendarId: string;
+  tenantId?: TenantId;
+}): GlobalInvalidationEnvelope => ({
+  invalidation: {
+    kind: "calendar",
+    connectionId: objectId() as ConnectionId,
+    calendarId: opts.calendarId as ProviderCalendarId,
+  },
+  emittedAt: "2026-07-30T00:00:00.000Z" as DateTime,
+  tenantId: (opts.tenantId ?? opts.principalId) as TenantId,
+  principalId: opts.principalId,
+});
 
 class FakeClient {
   calls: Array<string | null> = [];
@@ -320,5 +340,175 @@ describe("SyncChangeFeedBridge", () => {
     expect(scheduler.pending).toHaveLength(1);
     bridge.stop();
     expect(scheduler.pending).toEqual([]);
+  });
+
+  it("publishes one calendarsChanged + eventsChanged pair for 40 rows of the same calendar", async () => {
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as CalendarId;
+    const scheduler = new FakeScheduler();
+    const client = new FakeClient([
+      {
+        ok: true,
+        correlationId: "c1",
+        value: {
+          kind: "ok",
+          invalidations: Array.from({ length: 40 }, () =>
+            calendarEnvelope({ principalId, calendarId }),
+          ),
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
+      },
+    ]);
+    const sse = new FakeSse();
+    const bridge = new SyncChangeFeedBridge(
+      { client, sse: sse as never },
+      { schedule: scheduler.schedule },
+    );
+
+    bridge.start();
+    await scheduler.fireNext();
+    bridge.stop();
+
+    expect(sse.published).toHaveLength(2);
+    expect(sse.published.map((p) => p.message.type)).toEqual([
+      "calendarsChanged",
+      "eventsChanged",
+    ]);
+    expect(sse.published.every((p) => p.userId === principalId)).toBe(true);
+    expect(sse.published[0]?.message).toEqual({
+      type: "calendarsChanged",
+      calendarIds: [calendarId],
+    });
+    expect(sse.published[1]?.message).toEqual({
+      type: "eventsChanged",
+      calendarId,
+      eventIds: [],
+      reason: "reconciled",
+    });
+  });
+
+  it("publishes one pair per distinct calendar on a mixed page", async () => {
+    const principalId = objectId() as PrincipalId;
+    const calendarA = objectId() as CalendarId;
+    const calendarB = objectId() as CalendarId;
+    const scheduler = new FakeScheduler();
+    const client = new FakeClient([
+      {
+        ok: true,
+        correlationId: "c1",
+        value: {
+          kind: "ok",
+          invalidations: [
+            calendarEnvelope({ principalId, calendarId: calendarA }),
+            calendarEnvelope({ principalId, calendarId: calendarA }),
+            calendarEnvelope({ principalId, calendarId: calendarB }),
+            calendarEnvelope({ principalId, calendarId: calendarB }),
+            calendarEnvelope({ principalId, calendarId: calendarB }),
+          ],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
+      },
+    ]);
+    const sse = new FakeSse();
+    const bridge = new SyncChangeFeedBridge(
+      { client, sse: sse as never },
+      { schedule: scheduler.schedule },
+    );
+
+    bridge.start();
+    await scheduler.fireNext();
+    bridge.stop();
+
+    expect(sse.published).toHaveLength(4);
+    expect(sse.published.every((p) => p.userId === principalId)).toBe(true);
+    expect(sse.published.map((p) => p.message)).toEqual([
+      { type: "calendarsChanged", calendarIds: [calendarA] },
+      {
+        type: "eventsChanged",
+        calendarId: calendarA,
+        eventIds: [],
+        reason: "reconciled",
+      },
+      { type: "calendarsChanged", calendarIds: [calendarB] },
+      {
+        type: "eventsChanged",
+        calendarId: calendarB,
+        eventIds: [],
+        reason: "reconciled",
+      },
+    ]);
+  });
+
+  it("schedules the next tick immediately when a page comes back full", async () => {
+    const principalId = objectId() as PrincipalId;
+    const calendarId = objectId() as CalendarId;
+    const scheduler = new FakeScheduler();
+    const client = new FakeClient([
+      {
+        ok: true,
+        correlationId: "c1",
+        value: {
+          kind: "ok",
+          invalidations: Array.from({ length: CHANGE_FEED_PAGE_SIZE }, () =>
+            calendarEnvelope({ principalId, calendarId }),
+          ),
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
+      },
+      {
+        ok: true,
+        correlationId: "c2",
+        value: {
+          kind: "ok",
+          invalidations: [],
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
+      },
+    ]);
+    const sse = new FakeSse();
+    const bridge = new SyncChangeFeedBridge(
+      { client, sse: sse as never },
+      { schedule: scheduler.schedule, pollIntervalMs: 777 },
+    );
+
+    bridge.start();
+    await scheduler.fireNext();
+    expect(sse.published).toHaveLength(2);
+    expect(scheduler.pending).toHaveLength(1);
+    expect(scheduler.pending[0]?.delayMs).toBe(0);
+
+    await scheduler.fireNext();
+    expect(client.calls).toHaveLength(2);
+    expect(scheduler.pending[0]?.delayMs).toBe(777);
+    bridge.stop();
+  });
+
+  it("keeps the poll interval after a non-full page", async () => {
+    const scheduler = new FakeScheduler();
+    const client = new FakeClient([
+      {
+        ok: true,
+        correlationId: "c1",
+        value: {
+          kind: "ok",
+          invalidations: Array.from({ length: CHANGE_FEED_PAGE_SIZE - 1 }, () =>
+            calendarEnvelope({
+              principalId: objectId() as PrincipalId,
+              calendarId: objectId() as CalendarId,
+            }),
+          ),
+          nextCursor: objectId() as ChangeFeedCursor,
+        },
+      },
+    ]);
+    const bridge = new SyncChangeFeedBridge(
+      { client, sse: new FakeSse() as never },
+      { schedule: scheduler.schedule, pollIntervalMs: 777 },
+    );
+
+    bridge.start();
+    await scheduler.fireNext();
+    expect(scheduler.pending[0]?.delayMs).toBe(777);
+    bridge.stop();
   });
 });

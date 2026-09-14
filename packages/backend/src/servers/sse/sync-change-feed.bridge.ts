@@ -1,5 +1,9 @@
 import { Logger } from "@core/logger/winston.logger";
-import { type ChangeFeedCursor } from "@core/types/sync/change-feed.contracts";
+import {
+  type ChangeFeedCursor,
+  type GlobalInvalidationEnvelope,
+  type SyncInvalidation,
+} from "@core/types/sync/change-feed.contracts";
 import { type SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
 import { sseServer } from "@backend/servers/sse/sse.server";
@@ -17,6 +21,11 @@ const logger = Logger("app:sse.sync-change-feed");
 const POLL_INTERVAL_MS = 2000;
 const ERROR_BACKOFF_MS = 5000;
 
+// Must stay aligned with packages/sync/src/domain/change-feed.service.ts.
+// A full page means more rows may be waiting, so drain immediately rather than
+// waiting POLL_INTERVAL_MS (50 rows/s at page size 100).
+export const CHANGE_FEED_PAGE_SIZE = 100;
+
 export interface SyncChangeFeedBridgeDeps {
   client: Pick<SyncServiceClient, "getGlobalChanges">;
   sse: Pick<
@@ -33,6 +42,39 @@ export interface SyncChangeFeedBridgeOptions {
   errorBackoffMs?: number;
   // Injectable timer so tests can drive ticks deterministically.
   schedule?: TickScheduler;
+}
+
+// Collapse a page to one representative per (principal, kind, calendar or
+// connection) so a Sync burst of 100 identical calendar rows becomes one
+// calendarsChanged + one eventsChanged, not 200 SSE frames. Later envelopes
+// win: the feed is ordered, so the last row in a group is the freshest.
+function dedupeInvalidations(
+  envelopes: readonly GlobalInvalidationEnvelope[],
+): GlobalInvalidationEnvelope[] {
+  const groups = new Map<string, GlobalInvalidationEnvelope>();
+  for (const envelope of envelopes) {
+    groups.set(
+      invalidationGroupKey(envelope.principalId, envelope.invalidation),
+      envelope,
+    );
+  }
+  return [...groups.values()];
+}
+
+function invalidationGroupKey(
+  principalId: string,
+  invalidation: SyncInvalidation,
+): string {
+  switch (invalidation.kind) {
+    case "event":
+    case "calendar":
+      return `${principalId}\0${invalidation.kind}\0${invalidation.calendarId}`;
+    case "connection":
+    case "importProgress":
+      return `${principalId}\0${invalidation.kind}\0${invalidation.connectionId}`;
+    case "command":
+      return `${principalId}\0${invalidation.kind}\0${invalidation.commandId}`;
+  }
 }
 
 // Polls Sync's single, global (cross-tenant) change feed with ONE shared
@@ -135,7 +177,7 @@ export class SyncChangeFeedBridge {
       return;
     }
 
-    for (const envelope of page.invalidations) {
+    for (const envelope of dedupeInvalidations(page.invalidations)) {
       for (const message of syncInvalidationToServerMessages(
         envelope.invalidation,
       )) {
@@ -143,7 +185,11 @@ export class SyncChangeFeedBridge {
       }
     }
     this.#cursor = page.nextCursor;
-    this.#scheduleNext(this.#pollIntervalMs);
+    this.#scheduleNext(
+      page.invalidations.length === CHANGE_FEED_PAGE_SIZE
+        ? 0
+        : this.#pollIntervalMs,
+    );
   }
 }
 
