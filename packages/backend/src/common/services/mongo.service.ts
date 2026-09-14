@@ -14,6 +14,7 @@ import { type Schema_User } from "@core/types/user.types";
 import { isTransientMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { type BillingEventRecord } from "@backend/billing/billing-event.record";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
+import { type BookingRateLimitRecord } from "@backend/booking/booking-rate-limit.record";
 import { type BookingReservationRecord } from "@backend/booking/booking-reservation.record";
 import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { Collections } from "@backend/common/constants/collections";
@@ -29,6 +30,7 @@ interface InternalClient {
   client: MongoClient;
   billingEvent: Collection<BillingEventRecord>;
   bookingPage: Collection<BookingPageRecord>;
+  bookingRateLimit: Collection<BookingRateLimitRecord>;
   bookingReservation: Collection<BookingReservationRecord>;
   calendar: Collection<CalendarRecord>;
   event: Collection<EventRecord>;
@@ -63,6 +65,10 @@ class MongoService {
 
   get bookingPage(): InternalClient["bookingPage"] {
     return this.#accessInternalCollectionProps("bookingPage");
+  }
+
+  get bookingRateLimit(): InternalClient["bookingRateLimit"] {
+    return this.#accessInternalCollectionProps("bookingRateLimit");
   }
 
   get bookingReservation(): InternalClient["bookingReservation"] {
@@ -131,6 +137,9 @@ class MongoService {
         Collections.BILLING_EVENT,
       ),
       bookingPage: db.collection<BookingPageRecord>(Collections.BOOKING_PAGE),
+      bookingRateLimit: db.collection<BookingRateLimitRecord>(
+        Collections.BOOKING_RATE_LIMIT,
+      ),
       bookingReservation: db.collection<BookingReservationRecord>(
         Collections.BOOKING_RESERVATION,
       ),

@@ -6,6 +6,8 @@ import {
   cleanupTestDb,
   setupTestDb,
 } from "@backend/__tests__/helpers/mock.db.setup";
+import { ensureBookingIndexes } from "@backend/booking/booking-indexes";
+import publicBookingService from "@backend/booking/services/public-booking.service";
 import {
   afterAll,
   beforeAll,
@@ -13,16 +15,18 @@ import {
   describe,
   expect,
   it,
+  spyOn,
 } from "bun:test";
 
-// The public booking API must be rate-limited per (ip, key): these routes are
-// reachable without a session. Each test uses its own slug/id so the shared
-// in-memory buckets cannot bleed between tests.
+// The public booking API must be rate-limited per (ip, target) across
+// replicas: these routes are reachable without a session. Mongo buckets are
+// cleared in beforeEach.
 describe("Public booking rate limits", () => {
   const baseDriver = new BaseDriver();
 
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
+    await ensureBookingIndexes();
     await baseDriver.listen();
   });
 
@@ -123,6 +127,41 @@ describe("Public booking rate limits", () => {
       .get("/api/booking/pages/quiet-neighbor-slug")
       .expect(Status.NOT_FOUND);
   });
+
+  it("returns a retryable 429 without calling reservation create", async () => {
+    const create = spyOn(publicBookingService, "createReservation");
+    const server = baseDriver.getServer();
+    for (let i = 0; i < 10; i += 1) {
+      await server
+        .post("/api/booking/pages/confirm-budget-slug/reservations")
+        .send({});
+    }
+    create.mockClear();
+    const throttled = await server
+      .post("/api/booking/pages/confirm-budget-slug/reservations")
+      .send({});
+    expect(throttled.status).toBe(429);
+    expect(throttled.body).toEqual({
+      code: "RATE_LIMITED",
+      message: "Too many requests. Try again in a minute.",
+    });
+    expect(throttled.headers["retry-after"]).toBeDefined();
+    expect(create).not.toHaveBeenCalled();
+    create.mockRestore();
+  });
+
+  it("keeps two forwarded client addresses on independent budgets", async () => {
+    const server = baseDriver.getServer();
+    for (let i = 0; i < 61; i += 1) {
+      await server
+        .get("/api/booking/pages/forwarded-busy-slug")
+        .set("X-Forwarded-For", "203.0.113.10");
+    }
+    const neighbor = await server
+      .get("/api/booking/pages/forwarded-busy-slug")
+      .set("X-Forwarded-For", "198.51.100.20");
+    expect(neighbor.status).not.toBe(429);
+  });
 });
 
 describe("Host admin booking rate limits", () => {
@@ -130,6 +169,7 @@ describe("Host admin booking rate limits", () => {
 
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
+    await ensureBookingIndexes();
     await baseDriver.listen();
   });
 

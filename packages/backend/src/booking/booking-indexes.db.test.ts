@@ -88,4 +88,12 @@ describe("booking indexes", () => {
     const used = indexNamesFromPlan(plan);
     expect(used).toContain("booking_reservation_page_status_created");
   });
+
+  it("creates a TTL index on booking rate-limit expiry", async () => {
+    const indexes = await mongoService.bookingRateLimit.indexes();
+    const ttl = indexes.find(
+      (index) => index.name === "booking_rate_limit_expires",
+    );
+    expect(ttl?.expireAfterSeconds).toBe(0);
+  });
 });
