@@ -1,17 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { dom } from "@web/__tests__/setup/jsdom-env";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import {
+  NotFoundView,
   SHORTCUTS_PAGE_DESCRIPTION,
   SHORTCUTS_PAGE_TITLE,
-  ShortcutsPage,
-} from "./ShortcutsPage";
+} from "@web/views/NotFound/NotFound";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
-describe("ShortcutsPage", () => {
+describe("public /shortcuts page", () => {
   let meta: HTMLMetaElement;
 
   beforeEach(() => {
+    dom.reconfigure({ url: "http://localhost/shortcuts" });
     meta = document.createElement("meta");
     meta.setAttribute("name", "description");
     meta.setAttribute("content", "default description");
@@ -25,7 +28,7 @@ describe("ShortcutsPage", () => {
   });
 
   it("renders Week legend sections plus form, Day-only, and Life-only rows", () => {
-    render(<ShortcutsPage />);
+    render(<NotFoundView />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: SHORTCUTS_PAGE_TITLE }),
@@ -51,10 +54,19 @@ describe("ShortcutsPage", () => {
     expect(screen.getByText("Save event form")).toBeInTheDocument();
     expect(screen.getByText("Go to Week view")).toBeInTheDocument();
     expect(screen.getByText("Previous life variation")).toBeInTheDocument();
+
+    for (const section of getPublicShortcutCatalog()) {
+      expect(
+        screen.getByRole("heading", { name: section.title }),
+      ).toBeInTheDocument();
+      for (const shortcut of section.shortcuts) {
+        expect(screen.getByText(shortcut.label)).toBeInTheDocument();
+      }
+    }
   });
 
   it("sets the document title and meta description, then restores them", () => {
-    const { unmount } = render(<ShortcutsPage />);
+    const { unmount } = render(<NotFoundView />);
 
     expect(document.title).toBe(SHORTCUTS_PAGE_TITLE);
     expect(meta.getAttribute("content")).toBe(SHORTCUTS_PAGE_DESCRIPTION);
@@ -72,7 +84,7 @@ describe("ShortcutsPage", () => {
 
     try {
       const user = userEvent.setup();
-      render(<ShortcutsPage />);
+      render(<NotFoundView />);
 
       expect(
         screen.getByRole("link", { name: "Compass Calendar" }),
@@ -83,5 +95,17 @@ describe("ShortcutsPage", () => {
     } finally {
       window.print = originalPrint;
     }
+  });
+
+  it("still shows the unmatched-path copy off /shortcuts", () => {
+    dom.reconfigure({ url: "http://localhost/nope" });
+    render(<NotFoundView />);
+
+    expect(
+      screen.getByText(/This isn't part of the app, matey/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: SHORTCUTS_PAGE_TITLE }),
+    ).not.toBeInTheDocument();
   });
 });
