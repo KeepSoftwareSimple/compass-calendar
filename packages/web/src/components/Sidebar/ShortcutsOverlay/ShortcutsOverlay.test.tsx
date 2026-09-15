@@ -67,6 +67,9 @@ describe("ShortcutsOverlay", () => {
     expect(screen.getByText("Day")).toBeInTheDocument();
     expect(screen.getByText("Previous day")).toBeInTheDocument();
     expect(screen.queryByText("Empty")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Printable version" }),
+    ).toHaveAttribute("href", "/shortcuts");
   });
 
   it("closes when Escape is pressed", async () => {

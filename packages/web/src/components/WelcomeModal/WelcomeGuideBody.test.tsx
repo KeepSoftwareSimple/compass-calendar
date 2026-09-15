@@ -150,6 +150,10 @@ describe("WelcomeGuideBody", () => {
       "href",
       "https://compasscalendar.com/pricing",
     );
+    expect(screen.getByRole("link", { name: "Shortcuts" })).toHaveAttribute(
+      "href",
+      "/shortcuts",
+    );
   });
 
   it("flashes the matching FAQ key after a click, then clears", async () => {

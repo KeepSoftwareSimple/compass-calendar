@@ -1,4 +1,7 @@
-import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
+import {
+  getPublicShortcutCatalog,
+  getShortcutMenuSections,
+} from "@web/shortcuts/shortcuts.registry";
 
 const stripMetadata = (
   shortcuts: ReadonlyArray<{ keys: unknown; label: unknown }>,
@@ -463,6 +466,51 @@ describe("shortcut menu sections", () => {
         keys: ["]"],
         label: "Toggle sidebar",
       });
+    });
+  });
+
+  describe("getPublicShortcutCatalog", () => {
+    it("lists Week sections, form-open rows, and Day-only and Life-only extras", () => {
+      const sections = getPublicShortcutCatalog();
+
+      expect(sections.map((section) => section.title)).toEqual([
+        "Navigate",
+        "Create",
+        "Focus",
+        "Edit",
+        "Other",
+        "While the event form is open",
+        "Day only",
+        "Life only",
+      ]);
+
+      const byId = Object.fromEntries(
+        sections.map((section) => [section.id, section]),
+      );
+
+      expect(stripMetadata(byId.create?.shortcuts ?? [])).toContainEqual({
+        keys: ["c"],
+        label: "Create timed event",
+      });
+      expect(stripMetadata(byId["form-open"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["Mod", "Enter"],
+        label: "Save event form",
+      });
+      expect(stripMetadata(byId["day-only"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["w"],
+        label: "Go to Week view",
+      });
+      expect(stripMetadata(byId["life-only"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["j"],
+        label: "Previous life variation",
+      });
+    });
+
+    it("matches the printable page snapshot so the public copy cannot drift", async () => {
+      const snapshot = await Bun.file(
+        new URL("./shortcuts-catalog.json", import.meta.url),
+      ).json();
+      expect(getPublicShortcutCatalog()).toEqual(snapshot);
     });
   });
 });
