@@ -106,6 +106,19 @@ describe("isTransientMongoNetworkError", () => {
     ).toBe(true);
   });
 
+  it("matches a socket read timeout under CSOT", () => {
+    // MongoOperationTimeoutError thrown by Connection#readMany when the
+    // health check's bounded ping hits timeoutMS mid-read.
+    expect(
+      isTransientMongoNetworkError(
+        namedError(
+          "MongoOperationTimeoutError",
+          "Timed out during socket read (2499ms)",
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("rejects unrelated failures", () => {
     expect(
       isTransientMongoNetworkError(new Error("database unavailable")),
