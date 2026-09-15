@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { dom } from "@web/__tests__/setup/jsdom-env";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import {
@@ -14,7 +13,7 @@ describe("public /shortcuts page", () => {
   let meta: HTMLMetaElement;
 
   beforeEach(() => {
-    dom.reconfigure({ url: "http://localhost/shortcuts" });
+    window.history.pushState({}, "", ROOT_ROUTES.SHORTCUTS);
     meta = document.createElement("meta");
     meta.setAttribute("name", "description");
     meta.setAttribute("content", "default description");
@@ -98,7 +97,7 @@ describe("public /shortcuts page", () => {
   });
 
   it("still shows the unmatched-path copy off /shortcuts", () => {
-    dom.reconfigure({ url: "http://localhost/nope" });
+    window.history.pushState({}, "", "/nope");
     render(<NotFoundView />);
 
     expect(
