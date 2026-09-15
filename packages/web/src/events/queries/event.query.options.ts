@@ -5,6 +5,7 @@ import { type EventRepositorySource } from "@web/events/repositories/event.repos
 import { RemoteEventRepository } from "@web/events/repositories/remote.event.repository";
 import { fetchDayEvents } from "./day.event.query";
 import { eventQueryKeys } from "./event.query.keys";
+import { fetchWeekEvents } from "./week.event.query";
 
 /**
  * Shared cache policy for event reads. `staleTime` lets back-navigation to a
@@ -48,18 +49,13 @@ function rangeEventsQueryOptions(
       end: endDate,
       calendarIds,
     }),
-    queryFn: async ({ signal }) => {
-      if (source === "local") {
-        const { fetchLocalEventsRange } = await import("./event.query.local");
-        return fetchLocalEventsRange({ startDate, endDate });
-      }
-      return fetchFn(
+    queryFn: ({ signal }) =>
+      fetchFn(
         { startDate, endDate, calendarIds },
-        new RemoteEventRepository(),
+        source === "remote" ? new RemoteEventRepository() : undefined,
         source,
         signal,
-      );
-    },
+      ),
     ...EVENT_QUERY_CACHE_OPTIONS,
   });
 }
@@ -69,5 +65,5 @@ export function dayEventsQueryOptions(args: EventsQueryArgs) {
 }
 
 export function weekEventsQueryOptions(args: EventsQueryArgs) {
-  return rangeEventsQueryOptions("week", fetchDayEvents, args);
+  return rangeEventsQueryOptions("week", fetchWeekEvents, args);
 }
