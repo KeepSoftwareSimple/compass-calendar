@@ -142,6 +142,10 @@ describe("shortcut menu sections", () => {
         keys: ["Alt", "ArrowDown"],
         label: "Scroll grid down one hour",
       });
+      expect(stripMetadata(lifeNavigate.shortcuts)).not.toContainEqual({
+        keys: ["g"],
+        label: "Go to a date (type it in the palette)",
+      });
     });
 
     it("lists the Up Next shortcuts in both views", () => {
@@ -158,6 +162,10 @@ describe("shortcut menu sections", () => {
         expect(stripMetadata(navigate.shortcuts)).toContainEqual({
           keys: ["v"],
           label: "Join Up Next meeting",
+        });
+        expect(stripMetadata(navigate.shortcuts)).toContainEqual({
+          keys: ["g"],
+          label: "Go to a date (type it in the palette)",
         });
       }
     });

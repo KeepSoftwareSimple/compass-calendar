@@ -13,7 +13,7 @@ export function getCommandPalettePlaceholder(
   _currentView?: CommandPaletteViewName,
   _feedbackEnabled = isPosthogEnabled(),
 ): string {
-  return "Search commands or events";
+  return "Search commands, events, or type a date";
 }
 
 export function getMoreCommandPaletteSections(

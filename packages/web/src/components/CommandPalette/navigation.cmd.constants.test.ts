@@ -1,5 +1,7 @@
+import dayjs from "@core/util/date/dayjs";
 import {
   type CommandPaletteViewName,
+  getGoToDateCommandItem,
   getNavigationCommandItems,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
 import { describe, expect, it } from "bun:test";
@@ -95,5 +97,19 @@ describe("getNavigationCommandItems", () => {
     expect(navigatedViews).toEqual(["day", "week", "life"]);
     expect(didGoToToday).toBe(true);
     expect(didShowShortcuts).toBe(true);
+  });
+
+  it("returns a pinned Go to date row only while the query parses", () => {
+    const now = dayjs("2026-09-15T12:00:00.000Z");
+    const selected: string[] = [];
+    const item = getGoToDateCommandItem("oct 3", now, (date) => {
+      selected.push(date.format("YYYY-MM-DD"));
+    });
+
+    expect(item?.id).toBe("go-to-date");
+    expect(item?.label).toBe("Go to Sat, Oct 3, 2026");
+    item?.onClick?.();
+    expect(selected).toEqual(["2026-10-03"]);
+    expect(getGoToDateCommandItem("hello", now, () => {})).toBeNull();
   });
 });

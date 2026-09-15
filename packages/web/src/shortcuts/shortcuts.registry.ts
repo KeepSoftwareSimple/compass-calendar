@@ -107,6 +107,12 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
     section: "navigate",
   },
   {
+    id: "nav-go-to-date",
+    keys: [...B.navGoToDate.keycaps],
+    label: "Go to a date (type it in the palette)",
+    section: "navigate",
+  },
+  {
     id: "nav-scroll-up",
     keys: [...B.navScrollUp.keycaps],
     label: "Scroll grid up",

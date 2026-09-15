@@ -36,6 +36,7 @@ import {
 } from "@web/components/WelcomeModal/welcome.guide.store";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
+import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
 import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
@@ -71,6 +72,7 @@ export function RootShell() {
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();
+  useGoToDateShortcut();
   // Must stay mounted on every route, including Life, so the 5-minute
   // heads-up still fires while the calendar grid is not on screen.
   useUpcomingEventNotifier();

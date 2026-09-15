@@ -40,10 +40,10 @@ describe("getMoreCommandPaletteSections", () => {
     expect(section.items[0].label).toBe("Book personal onboarding");
     expect(section.items[1].label).toBe("About Compass");
     expect(getCommandPalettePlaceholder("day", false)).toBe(
-      "Search commands or events",
+      "Search commands, events, or type a date",
     );
     expect(getCommandPalettePlaceholder("week", false)).toBe(
-      "Search commands or events",
+      "Search commands, events, or type a date",
     );
   });
 
@@ -65,7 +65,7 @@ describe("getMoreCommandPaletteSections", () => {
       true,
     );
     expect(getCommandPalettePlaceholder("day", true)).toBe(
-      "Search commands or events",
+      "Search commands, events, or type a date",
     );
   });
 
@@ -77,7 +77,7 @@ describe("getMoreCommandPaletteSections", () => {
       view: "life",
     });
     expect(getCommandPalettePlaceholder("life", true)).toBe(
-      "Search commands or events",
+      "Search commands, events, or type a date",
     );
   });
 

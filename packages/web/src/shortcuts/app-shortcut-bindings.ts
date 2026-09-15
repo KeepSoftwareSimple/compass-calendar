@@ -37,6 +37,7 @@ export const APP_SHORTCUT_BINDINGS = {
   navMonthPrev: { keycaps: [...MONTH_PICKER_PREV_KEYCAPS] },
   navMonthNext: { keycaps: [...MONTH_PICKER_NEXT_KEYCAPS] },
   navToday: { hotkey: "T", keycaps: [letterKeycap("T")] },
+  navGoToDate: { hotkey: "G", keycaps: [letterKeycap("G")] },
   navScrollUp: { hotkey: "PageUp", keycaps: ["PageUp"] },
   navScrollDown: { hotkey: "PageDown", keycaps: ["PageDown"] },
   navScrollHourUp: {
@@ -97,6 +98,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "nav-month-next": APP_SHORTCUT_BINDINGS.navMonthNext.keycaps,
   "nav-picker-step": KEYMAP.moveFocus.keycaps,
   "nav-today": APP_SHORTCUT_BINDINGS.navToday.keycaps,
+  "nav-go-to-date": APP_SHORTCUT_BINDINGS.navGoToDate.keycaps,
   "nav-scroll-up": APP_SHORTCUT_BINDINGS.navScrollUp.keycaps,
   "nav-scroll-down": APP_SHORTCUT_BINDINGS.navScrollDown.keycaps,
   "nav-scroll-hour-up": APP_SHORTCUT_BINDINGS.navScrollHourUp.keycaps,
