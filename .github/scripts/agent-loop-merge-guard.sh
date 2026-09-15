@@ -110,9 +110,18 @@ pr_has_automerge() {
 # The latest push run of each required workflow on main. A red main means the
 # base is broken; merging more on top hides which change broke it. Fails
 # closed: an unreadable result counts as red.
+#
+# release-on-main.yml is here because test-unit.yml and test-e2e.yml both
+# passing does not mean main can ship: #3814-#3816 built and merged fine but
+# release-on-main's Docker image build failed on every push for most of a
+# day (a stale boot-size ceiling), leaving staging and prod stuck on old web
+# images with nobody notified. perf-budget.yml is deliberately not included;
+# the boot-size budget it also exercises is now a required PR check (see
+# test-unit.yml's `static` job), so a PR that would break it never reaches
+# main in the first place.
 main_is_red() {
   local workflow conclusion
-  for workflow in test-unit.yml test-e2e.yml; do
+  for workflow in test-unit.yml test-e2e.yml release-on-main.yml; do
     conclusion=$(gh run list --repo "$REPO" --workflow "$workflow" --branch main \
       --event push --status completed --limit 1 --json conclusion \
       --jq '.[0].conclusion // "unknown"' 2>/dev/null || echo "unknown")
