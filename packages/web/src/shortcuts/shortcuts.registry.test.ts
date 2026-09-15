@@ -193,6 +193,7 @@ describe("shortcuts.registry", () => {
         }).map((shortcut) => shortcut.id);
         expect(ids).toContain("focus-page-jump");
         expect(ids).toContain("focus-find-event");
+        expect(ids).toContain("focus-calendar-digit");
       }
     });
 

@@ -87,6 +87,10 @@ describe("shortcut menu sections", () => {
       // discoverable via the same row shown on Day/Week.
       expect(stripMetadata(sections[1]?.shortcuts ?? [])).toEqual([
         {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
+        {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
         },
@@ -243,6 +247,10 @@ describe("shortcut menu sections", () => {
         },
         { keys: ["f"], label: "Focus latest notice" },
         {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
+        {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
         },
@@ -261,6 +269,10 @@ describe("shortcut menu sections", () => {
             "Focus a day's events (Shift + M T W R F, Shift + S then U or A)",
         },
         { keys: ["f"], label: "Focus latest notice" },
+        {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
         {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
