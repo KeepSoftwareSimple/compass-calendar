@@ -238,6 +238,46 @@ describe("EventOccurrenceRepository", () => {
         await db.collection("event_occurrences").countDocuments({ eventId }),
       ).toBe(1);
     });
+
+    it("skips the empty-delete transaction when the event has no occurrence rows", async () => {
+      const eventId = objectId() as OccurrenceInput["eventId"];
+      await repo.replaceForEvent(eventId, 0, []);
+      expect(
+        await db.collection("event_occurrences").countDocuments({ eventId }),
+      ).toBe(0);
+    });
+
+    it("keeps the last entry when the same event appears twice in one call", async () => {
+      const eventId = objectId() as OccurrenceInput["eventId"];
+      await repo.replaceForEvents([
+        {
+          eventId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              eventId,
+              occurrenceKey: `${eventId}:old` as OccurrenceKey,
+            }),
+          ],
+        },
+        {
+          eventId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              eventId,
+              occurrenceKey: `${eventId}:new` as OccurrenceKey,
+            }),
+          ],
+        },
+      ]);
+
+      const docs = await db
+        .collection("event_occurrences")
+        .find({ eventId })
+        .toArray();
+      expect(docs.map((d) => d["occurrenceKey"])).toEqual([`${eventId}:new`]);
+    });
   });
 
   describe("listByCalendarRange", () => {
