@@ -2,6 +2,7 @@ import {
   scrollTimedGrid,
   type TimedGridScrollUnit,
 } from "@web/grid/shortcuts/scroll-timed-grid";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 const scrollGridFromShortcut = (
@@ -22,16 +23,17 @@ const scrollGridFromShortcut = (
  * event focus; J/K stay reserved for day/week navigation.
  */
 export function useGridScrollShortcuts() {
-  useAppShortcut("PageUp", (event) => {
+  const scroll = APP_SHORTCUT_BINDINGS;
+  useAppShortcut(scroll.navScrollUp.hotkey, (event) => {
     scrollGridFromShortcut("up", "page", event);
   });
-  useAppShortcut("PageDown", (event) => {
+  useAppShortcut(scroll.navScrollDown.hotkey, (event) => {
     scrollGridFromShortcut("down", "page", event);
   });
-  useAppShortcut("Alt+ArrowUp", (event) => {
+  useAppShortcut(scroll.navScrollHourUp.hotkey, (event) => {
     scrollGridFromShortcut("up", "hour", event);
   });
-  useAppShortcut("Alt+ArrowDown", (event) => {
+  useAppShortcut(scroll.navScrollHourDown.hotkey, (event) => {
     scrollGridFromShortcut("down", "hour", event);
   });
 }

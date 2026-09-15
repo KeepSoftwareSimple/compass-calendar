@@ -14,6 +14,7 @@ import {
   selectIsSidebarOpen,
   useViewStore,
 } from "@web/events/stores/view.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
   LIFE_PAGE_JUMP_TARGETS,
@@ -158,9 +159,10 @@ export function LifeView({ today }: LifeViewProps) {
     }));
   }, [currentDate]);
 
-  useAppShortcutUp("T", focusCurrentWeek);
-  useAppShortcutUp("J", () => cycleVariation(-1));
-  useAppShortcutUp("K", () => cycleVariation(1));
+  const lifeNav = APP_SHORTCUT_BINDINGS;
+  useAppShortcutUp(lifeNav.navLifeCurrent.hotkey, focusCurrentWeek);
+  useAppShortcutUp(lifeNav.navLifePrevious.hotkey, () => cycleVariation(-1));
+  useAppShortcutUp(lifeNav.navLifeNext.hotkey, () => cycleVariation(1));
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
