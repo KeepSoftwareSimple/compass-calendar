@@ -6,10 +6,7 @@ import {
 import { track } from "@web/auth/posthog/track";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { getAppLockReasons } from "@web/shortcuts/app-lock";
-import {
-  SHORTCUTS_REGISTRY,
-  type ShortcutRegistryId,
-} from "@web/shortcuts/shortcuts.registry";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import {
   readShortcutUsageProfile,
   type ShortcutActionUsage,
@@ -97,6 +94,23 @@ function updateUsage(
   writeShortcutUsageProfile(next);
 }
 
+/** Registry ids are `<section-prefix>-…`; `nav-*` is the navigate section. */
+const SECTION_BY_ID_PREFIX = {
+  nav: "navigate",
+  create: "create",
+  focus: "focus",
+  edit: "edit",
+  other: "other",
+} as const;
+
+function sectionForRegistryId(
+  shortcutId: ShortcutRegistryId,
+): string | undefined {
+  const prefix = shortcutId.split("-")[0];
+  if (prefix === undefined) return undefined;
+  return SECTION_BY_ID_PREFIX[prefix as keyof typeof SECTION_BY_ID_PREFIX];
+}
+
 function updateShortcutUsage(
   shortcutId: ShortcutRegistryId,
   now: number,
@@ -134,16 +148,14 @@ export function recordHandledShortcutInvocation(
     invocationMethod = "keyboard",
     now = Date.now(),
   } = options;
-  const entry = SHORTCUTS_REGISTRY.find(
-    (shortcut) => shortcut.id === shortcutId,
-  );
+  const section = sectionForRegistryId(shortcutId);
   updateShortcutUsage(shortcutId, now);
-  if (!emitEvent || !entry) return;
+  if (!emitEvent || !section) return;
 
   track("shortcut_invoked", {
     invocation_method: invocationMethod,
     outcome: "handled",
-    section: entry.section,
+    section,
     shortcut_id: shortcutId,
     source: invocationMethod,
   });

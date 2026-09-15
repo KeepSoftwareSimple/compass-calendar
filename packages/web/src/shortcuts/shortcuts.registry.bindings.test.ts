@@ -61,4 +61,22 @@ describe("shortcuts.registry bindings", () => {
       expect(registryIds.has(id)).toBe(true);
     }
   });
+
+  it("keeps registry sections aligned with id prefixes", () => {
+    const sectionByPrefix = {
+      nav: "navigate",
+      create: "create",
+      focus: "focus",
+      edit: "edit",
+      other: "other",
+    } as const;
+
+    for (const shortcut of SHORTCUTS_REGISTRY) {
+      const prefix = shortcut.id.split("-")[0];
+      expect(prefix).toBeDefined();
+      expect(shortcut.section).toBe(
+        sectionByPrefix[prefix as keyof typeof sectionByPrefix],
+      );
+    }
+  });
 });
