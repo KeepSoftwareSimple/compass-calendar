@@ -1,5 +1,9 @@
 import { z } from "zod/v4";
 import {
+  EVENT_TITLE_SEARCH_MAX,
+  EVENT_TITLE_SEARCH_MIN,
+} from "@core/event/search-events-by-title";
+import {
   CalendarIdSchema,
   DateTimeSchema,
   EventIdSchema,
@@ -139,6 +143,14 @@ export const EventListQuerySchema = z
     // clients; the web passes visible calendar ids to avoid draining hidden
     // calendars on first paint.
     calendarIds: z.array(CalendarIdSchema).min(1).max(100).optional(),
+    // Title substring search (palette). When set, the backend scans ±1 year
+    // and returns at most 20 matches ordered by distance from now.
+    q: z
+      .string()
+      .trim()
+      .min(EVENT_TITLE_SEARCH_MIN)
+      .max(EVENT_TITLE_SEARCH_MAX)
+      .optional(),
   })
   .refine(({ start, end }) => Date.parse(end) > Date.parse(start), {
     message: "Range end must be after start",

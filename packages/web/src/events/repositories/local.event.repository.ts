@@ -128,6 +128,9 @@ export class LocalEventRepository implements EventRepository {
   async list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]> {
     throwIfAborted(signal);
     await this.ensureStoreReady();
+    if (query.q !== undefined) {
+      return this.store.searchByTitle(query.q);
+    }
     const records = await this.store.getAllEvents();
     return expandLocalEventRecords(records, {
       start: query.start,

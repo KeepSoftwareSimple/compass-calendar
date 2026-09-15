@@ -239,6 +239,154 @@ describe("EventController", () => {
     expect(pageQuery.limit).toBe(50);
   });
 
+  describe("title search", () => {
+    const timedInstance = (
+      title: string,
+      start: string,
+      calendarId: string,
+    ) => ({
+      eventId: objectId(),
+      calendarId,
+      content: {
+        title,
+        description: "",
+        location: null,
+        organizer: null,
+        attendees: [] as const,
+        conference: null,
+      },
+      schedule: {
+        kind: "timed" as const,
+        start,
+        end: "2099-01-01T01:00:00.000Z",
+        timeZone: "UTC",
+      },
+      recurrence: { kind: "single" as const },
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    const mockOwnedList = (calendarId: string, instances: unknown[]) => {
+      spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+      const listFullEvents = mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: { instances, nextCursor: null },
+        }),
+      );
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        listCalendars: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: { calendars: [{ id: calendarId }] },
+          }),
+        ),
+        listFullEvents,
+      } as never);
+      return listFullEvents;
+    };
+
+    const titles = (json: ReturnType<typeof mock>) =>
+      (json.mock.calls[0]?.[0] as { events: { content: { title: string } }[] })
+        .events;
+
+    it("matches titles case-insensitively", async () => {
+      const calendarId = objectId();
+      mockOwnedList(calendarId, [
+        timedInstance("Dentist", "2026-09-16T09:00:00.000Z", calendarId),
+        timedInstance("Standup", "2026-09-16T10:00:00.000Z", calendarId),
+      ]);
+
+      const { res, json } = jsonRes();
+      await eventController.readAll(
+        sessionReq(objectId(), { query: { q: "dent" } }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+      expect(titles(json).map((event) => event.content.title)).toEqual([
+        "Dentist",
+      ]);
+    });
+
+    it("scopes the scan to calendars the signed-in user owns", async () => {
+      const ownedId = objectId();
+      const listFullEvents = mockOwnedList(ownedId, []);
+
+      const { res } = jsonRes();
+      await eventController.readAll(
+        sessionReq(objectId(), { query: { q: "dent" } }),
+        res,
+      );
+
+      const pageQuery = (
+        (listFullEvents.mock.calls as unknown[][])[0] as never as [
+          unknown,
+          { calendarIds: string[] },
+        ]
+      )[1];
+      expect(pageQuery.calendarIds).toEqual([ownedId]);
+    });
+
+    it("excludes events that start more than a year from now", async () => {
+      const calendarId = objectId();
+      mockOwnedList(calendarId, [
+        timedInstance("Dentist", "2026-09-16T09:00:00.000Z", calendarId),
+        timedInstance("Dentist", "2024-01-01T09:00:00.000Z", calendarId),
+        timedInstance("Dentist", "2028-09-16T09:00:00.000Z", calendarId),
+      ]);
+
+      const { res, json } = jsonRes();
+      await eventController.readAll(
+        sessionReq(objectId(), { query: { q: "Dentist" } }),
+        res,
+      );
+
+      expect(titles(json)).toHaveLength(1);
+      expect(titles(json)[0]?.content.title).toBe("Dentist");
+    });
+
+    it("caps matches at 20", async () => {
+      const calendarId = objectId();
+      mockOwnedList(
+        calendarId,
+        Array.from({ length: 25 }, (_, index) =>
+          timedInstance(
+            "Dentist",
+            new Date(Date.now() + (index + 1) * 86_400_000).toISOString(),
+            calendarId,
+          ),
+        ),
+      );
+
+      const { res, json } = jsonRes();
+      await eventController.readAll(
+        sessionReq(objectId(), { query: { q: "Dentist" } }),
+        res,
+      );
+
+      expect(titles(json)).toHaveLength(20);
+    });
+
+    it("does not error when q contains regex metacharacters", async () => {
+      const calendarId = objectId();
+      mockOwnedList(calendarId, [
+        timedInstance("Q(1)", "2026-09-16T09:00:00.000Z", calendarId),
+      ]);
+
+      const { res, json } = jsonRes();
+      await eventController.readAll(
+        sessionReq(objectId(), { query: { q: "Q(" } }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+      expect(titles(json).map((event) => event.content.title)).toEqual([
+        "Q(1)",
+      ]);
+    });
+  });
+
   it("lists calendars once when draining multiple event pages", async () => {
     const activeCalendarId = objectId();
     spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);

@@ -12,6 +12,8 @@ export interface CommandItem {
   badge?: string;
   /** Extra search terms (synonyms) matched by the palette's fuzzy filter; never rendered. */
   keywords?: string[];
+  /** Muted trailing copy (event date and time). Not searched. */
+  detail?: string;
 }
 
 export interface CommandSection {

@@ -192,6 +192,7 @@ describe("shortcuts.registry", () => {
           isViewingCurrentPeriod: true,
         }).map((shortcut) => shortcut.id);
         expect(ids).toContain("focus-page-jump");
+        expect(ids).toContain("focus-find-event");
       }
     });
 

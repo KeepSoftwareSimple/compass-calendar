@@ -209,4 +209,39 @@ describe("IndexedDbOfflineDataStore (real Dexie + fake-indexeddb)", () => {
 
     store.close();
   });
+
+  it("searchByTitle matches a title inside the one-year window", async () => {
+    const store = new IndexedDbOfflineDataStore();
+    await store.initialize();
+    const dentist = localRecord({
+      title: "Dentist",
+      schedule: {
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      },
+    });
+    const standup = localRecord({
+      title: "Standup",
+      schedule: {
+        kind: "timed",
+        start: "2026-09-16T10:00:00.000Z",
+        end: "2026-09-16T10:30:00.000Z",
+        timeZone: "UTC",
+      },
+    });
+    await store.putEvents([dentist, standup]);
+
+    const hits = await store.searchByTitle(
+      "dent",
+      Date.parse("2026-09-15T12:00:00.000Z"),
+    );
+
+    expect(hits.map((event) => event.content)).toEqual([
+      expect.objectContaining({ title: "Dentist" }),
+    ]);
+
+    store.close();
+  });
 });

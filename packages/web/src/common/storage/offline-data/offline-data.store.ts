@@ -1,4 +1,5 @@
 import { type EventId } from "@core/types/domain-primitives";
+import { type Event } from "@core/types/event.contracts";
 import { type EventListQuery } from "@core/types/event-command.contracts";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 
@@ -62,6 +63,12 @@ export interface OfflineDataStore {
    * Get events matching a range query (B_E).
    */
   getEvents(query: EventListQuery): Promise<LocalEventRecord[]>;
+
+  /**
+   * Title substring search used by the command palette in anonymous mode.
+   * Same window, cap, and ranking as the signed-in `q` list.
+   */
+  searchByTitle(q: string, now?: number): Promise<Event[]>;
 
   /**
    * Get all events without filtering.

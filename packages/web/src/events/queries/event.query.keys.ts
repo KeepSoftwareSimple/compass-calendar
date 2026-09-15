@@ -41,4 +41,6 @@ export const eventQueryKeys = {
         calendarIds: args.calendarIds,
       },
     ] as const,
+  search: (args: { source: EventRepositorySource; q: string }) =>
+    [...eventQueryKeys.all, "search", args.source, args.q] as const,
 };

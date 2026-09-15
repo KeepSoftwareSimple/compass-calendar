@@ -788,6 +788,7 @@ describe("LocalEventRepository default store", () => {
       isReady: () => false,
       getEvents: async () => [],
       getAllEvents,
+      searchByTitle: async () => [],
       putEvent: async () => undefined,
       putEvents: async () => undefined,
       deleteEvent: async () => undefined,

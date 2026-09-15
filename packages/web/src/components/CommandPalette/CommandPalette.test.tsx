@@ -6,13 +6,17 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { createMockOfflineDataStore } from "@web/__tests__/utils/storage/mock-offline-data-store.util";
 import * as Track from "@web/auth/posthog/track";
 import { type AppAccess } from "@web/billing/useAppAccess";
+import { resetOfflineDataStoreForTests } from "@web/common/storage/offline-data/offline-data.store.registry";
 import { onViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
+import { resetEventRepositorySourceForTests } from "@web/events/repositories/event.repository.source.store";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
 import {
   undoHistoryActions,
@@ -23,6 +27,10 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import {
+  POINTER_EVENT_ID_ATTRIBUTE,
+  POINTER_EVENT_JUMP_REQUEST,
+} from "@web/shortcuts/keyboard-only/pointer-action";
 import { recordRecentCommand } from "./recent-commands.store";
 import {
   afterAll,
@@ -579,6 +587,52 @@ describe("CommandPalette", () => {
     expect(
       within(recentSection).getByText("Show shortcuts"),
     ).toBeInTheDocument();
+  });
+
+  it("lists a matching event under Events and opens its day", async () => {
+    resetEventRepositorySourceForTests();
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([dentist]);
+    resetOfflineDataStoreForTests(store as never);
+    const card = document.createElement("div");
+    card.setAttribute(POINTER_EVENT_ID_ATTRIBUTE, dentist.id);
+    document.body.appendChild(card);
+    const jumps: string[] = [];
+    const onJump = (event: Event) => {
+      const detail = (event as CustomEvent<{ eventId?: string }>).detail;
+      if (detail?.eventId) jumps.push(detail.eventId);
+    };
+    document.addEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "dent" } });
+
+      const row = await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      expect(screen.getByText("Events")).toBeInTheDocument();
+      fireEvent.click(row);
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/week/$dateString",
+        params: { dateString: "2026-09-16" },
+      });
+      expect(jumps).toEqual([dentist.id]);
+    } finally {
+      document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+      card.remove();
+      resetOfflineDataStoreForTests();
+    }
   });
 });
 

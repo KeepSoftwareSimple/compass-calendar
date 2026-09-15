@@ -1,3 +1,4 @@
+import { type Event } from "@core/types/event.contracts";
 import { EventListQuerySchema } from "@core/types/event-command.contracts";
 import {
   ensureOfflineDataStoreReady,
@@ -30,4 +31,12 @@ export async function fetchLocalEventsRange(
   return normalizeLocalEventRecords(
     expandLocalEventRecords(records, { start: query.start, end: query.end }),
   );
+}
+
+export async function fetchLocalEventsByTitle(
+  q: string,
+  now = Date.now(),
+): Promise<Event[]> {
+  await ensureOfflineDataStoreReady();
+  return getOfflineDataStore().searchByTitle(q, now);
 }
