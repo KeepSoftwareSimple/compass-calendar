@@ -20,4 +20,6 @@ export interface Shortcut {
   requiresWrite?: boolean;
   /** Display-only: this write shortcut is currently locked behind billing. */
   locked?: boolean;
+  /** True when this browser has invoked the shortcut (legend check mark). */
+  used?: boolean;
 }

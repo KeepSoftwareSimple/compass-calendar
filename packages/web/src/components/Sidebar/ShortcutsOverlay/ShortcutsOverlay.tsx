@@ -9,6 +9,7 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
+import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 interface Props {
@@ -21,9 +22,32 @@ const normalizeSearch = (text: string): string => text.toLowerCase().trim();
 const matchesSearch = (normalizedQuery: string, text: string): boolean =>
   normalizeSearch(text).includes(normalizedQuery);
 
+function usedShortcutIds(): Set<string> {
+  const profile = readShortcutUsageProfile();
+  return new Set(
+    Object.entries(profile.shortcuts)
+      .filter(([, usage]) => usage.invocations > 0)
+      .map(([id]) => id),
+  );
+}
+
+function withUsedFlags(
+  sections: ShortcutOverlaySection[],
+  usedIds: Set<string>,
+): ShortcutOverlaySection[] {
+  return sections.map((section) => ({
+    ...section,
+    shortcuts: section.shortcuts.map((shortcut) => ({
+      ...shortcut,
+      used: usedIds.has(shortcut.id),
+    })),
+  }));
+}
+
 export function ShortcutsOverlay({ sections, viewLabel }: Props) {
   const isOpen = useViewStore(selectIsShortcutsOpen);
   const [searchQuery, setSearchQuery] = useState("");
+  const [usedIds, setUsedIds] = useState<Set<string>>(() => new Set());
   const overlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -66,14 +90,18 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
       return;
     }
 
+    setUsedIds(usedShortcutIds());
     setTimeout(() => searchInputRef.current?.focus(), 0);
   }, [isOpen]);
 
-  const hasSections = sections.some((section) => section.shortcuts.length > 0);
+  const markedSections = withUsedFlags(sections, usedIds);
+  const hasSections = markedSections.some(
+    (section) => section.shortcuts.length > 0,
+  );
   if (!hasSections) return null;
 
   const normalizedQuery = normalizeSearch(searchQuery);
-  const visibleSections = sections
+  const visibleSections = markedSections
     .map((section) => {
       if (!normalizedQuery) return section;
 
@@ -87,9 +115,16 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
     })
     .filter((section) => section.shortcuts.length > 0);
 
-  const subtitle = viewLabel
-    ? `Keyboard shortcuts for ${viewLabel} view`
-    : "Keyboard shortcuts";
+  const visibleShortcutCount = visibleSections.reduce(
+    (count, section) => count + section.shortcuts.length,
+    0,
+  );
+  const usedCount = visibleSections.reduce(
+    (count, section) =>
+      count + section.shortcuts.filter((shortcut) => shortcut.used).length,
+    0,
+  );
+  const subtitle = `You've used ${usedCount} of ${visibleShortcutCount} shortcuts here`;
 
   return (
     <div
@@ -112,7 +147,14 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
         <div className="mb-5 flex items-center justify-between">
           <div className="flex-1">
             <div className="font-medium text-text text-xl">Shortcuts</div>
-            <div className="mt-1 text-text-muted text-xs">{subtitle}</div>
+            <div className="mt-1 text-text-muted text-xs">
+              {subtitle}
+              {viewLabel ? (
+                <span className="sr-only">
+                  Keyboard shortcuts for {viewLabel} view
+                </span>
+              ) : null}
+            </div>
           </div>
 
           <button

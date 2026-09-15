@@ -75,6 +75,26 @@ describe("ShortcutList", () => {
     expect(row).not.toHaveClass("border");
   });
 
+  it("marks a used shortcut with a check and screen-reader text", () => {
+    render(
+      <ShortcutList
+        shortcuts={[
+          {
+            id: "nav-today",
+            keys: ["t"],
+            label: "Go to today",
+            section: "navigate",
+            used: true,
+          },
+        ]}
+      />,
+    );
+
+    const row = screen.getByText("Go to today").closest("li") as HTMLLIElement;
+    expect(screen.getByText("used")).toBeInTheDocument();
+    expect(row.querySelector("svg")).not.toBeNull();
+  });
+
   it("shows a Pro badge and tooltip on a locked write shortcut", async () => {
     const user = userEvent.setup();
     render(
