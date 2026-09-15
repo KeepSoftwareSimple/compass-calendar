@@ -1,0 +1,43 @@
+name: Notify on failure
+
+# Called from a workflow's `notify-failure` job (`if: failure()`) so a broken
+# release or deploy posts to the errors Discord channel instead of failing
+# silently (#3814-#3816). The caller passes `toJSON(needs)`; the failed job is
+# read from it, so callers do not maintain a second list of their needs.
+# `github.workflow` and `github.run_id` are the top-level caller's, even when
+# this runs from a nested reusable workflow.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag involved, or a placeholder when none exists yet'
+        required: true
+        type: string
+      needs_json:
+        description: 'toJSON(needs) of the calling job'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Notify Discord
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Notify Discord
+        env:
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+          NEEDS_JSON: ${{ inputs.needs_json }}
+        run: |
+          failed_jobs=$(jq -r \
+            '[to_entries[] | select(.value.result == "failure") | .key] | join(", ") | if . == "" then "unknown" else . end' \
+            <<<"$NEEDS_JSON")
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          .github/scripts/discord-notify.sh \
+            "${{ github.workflow }} failed: job ${failed_jobs}, tag ${{ inputs.tag }}. ${run_url}"

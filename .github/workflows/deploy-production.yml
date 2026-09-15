@@ -18,21 +18,11 @@ jobs:
     needs:
       - deploy
       - health-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-
-      - name: Notify Discord
-        env:
-          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
-        run: |
-          failed_job=unknown
-          [ "${{ needs.deploy.result }}" = "failure" ] && failed_job="deploy"
-          [ "${{ needs.health-check.result }}" = "failure" ] && failed_job="health-check"
-          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          .github/scripts/discord-notify.sh \
-            "Deploy production failed: job ${failed_job}, tag ${{ inputs.tag }}. ${run_url}"
+    uses: ./.github/workflows/_notify-failure.yml
+    with:
+      tag: ${{ inputs.tag }}
+      needs_json: ${{ toJSON(needs) }}
+    secrets: inherit
 
   deploy:
     name: Deploy to production
