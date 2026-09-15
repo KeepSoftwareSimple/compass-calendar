@@ -298,7 +298,7 @@ export class ProviderPageApplier {
       const entry = group[i];
       const record = records[i];
       if (!entry || !record) continue;
-      this.#remember(readFingerprintSource(entry.read), record);
+      this.#remember(entry.read, record);
       const master = mastersByRead.get(entry.read.providerEventId);
       if (master) relinked.set(master._id, master);
     }
@@ -319,20 +319,8 @@ export class ProviderPageApplier {
     }
     const recurrenceId = read.series.recurrenceId as DateTime;
     return {
-      tenantId: this.calendar.tenantId,
-      principalId: this.calendar.principalId,
-      origin: "provider",
-      calendarId: this.calendar._id,
-      clientEventId: null,
-      connectionId: this.calendar.connectionId,
-      providerEventId: read.providerEventId as NonNullable<
-        EventRecord["providerEventId"]
-      >,
-      providerVersion: read.providerVersion as NonNullable<
-        EventRecord["providerVersion"]
-      >,
+      ...this.#upsertIdentity(read),
       providerUpdatedAt: null,
-      deliveryState: null,
       providerMetadata: null,
       content: master.content,
       schedule: occurrenceScheduleAt(master.schedule, recurrenceId),
@@ -342,7 +330,32 @@ export class ProviderPageApplier {
         recurrenceId,
         cancelled: true,
       },
-      lifecycleState: "active",
+    };
+  }
+
+  // Ownership, calendar, and provider identity are the same for every row this
+  // applier writes; only the provider timestamp, the metadata bag, and the
+  // content/schedule/recurrence differ between an imported read and a
+  // cancellation tombstone.
+  #upsertIdentity(
+    read: Pick<ProviderEventRead, "providerEventId" | "providerVersion">,
+  ) {
+    return {
+      tenantId: this.calendar.tenantId,
+      principalId: this.calendar.principalId,
+      origin: "provider" as const,
+      calendarId: this.calendar._id,
+      clientEventId: null,
+      connectionId: this.calendar.connectionId,
+      providerEventId: read.providerEventId as NonNullable<
+        EventRecord["providerEventId"]
+      >,
+      providerVersion: read.providerVersion as NonNullable<
+        EventRecord["providerVersion"]
+      >,
+      // Imported provider events carry no Compass delivery intent.
+      deliveryState: null,
+      lifecycleState: "active" as const,
       generation: this.generation,
       confirmedAt: this.now(),
     };
@@ -439,7 +452,7 @@ export class ProviderPageApplier {
       const read = toWrite[i];
       const record = records[i];
       if (!read || !record) continue;
-      this.#remember(readFingerprintSource(read), record);
+      this.#remember(read, record);
       results.push({ read, record, wrote: true });
     }
     return results;
@@ -450,30 +463,14 @@ export class ProviderPageApplier {
     recurrence: SyncEventRecurrence,
   ): ProviderEventUpsert {
     return {
-      tenantId: this.calendar.tenantId,
-      principalId: this.calendar.principalId,
-      origin: "provider",
-      calendarId: this.calendar._id,
-      clientEventId: null,
-      connectionId: this.calendar.connectionId,
-      providerEventId: read.providerEventId as NonNullable<
-        EventRecord["providerEventId"]
-      >,
-      providerVersion: read.providerVersion as NonNullable<
-        EventRecord["providerVersion"]
-      >,
+      ...this.#upsertIdentity(read),
       providerUpdatedAt: read.providerUpdatedAt
         ? new Date(read.providerUpdatedAt)
         : null,
-      // Imported provider events carry no Compass delivery intent.
-      deliveryState: null,
       providerMetadata: providerMetadataFor(read),
       content: read.content,
       schedule: read.schedule,
       recurrence,
-      lifecycleState: "active",
-      generation: this.generation,
-      confirmedAt: this.now(),
     };
   }
 
@@ -482,13 +479,10 @@ export class ProviderPageApplier {
     return previous !== undefined && previous === fingerprintOf(read);
   }
 
-  #remember(
-    read: { providerEventId: string; fingerprint: string },
-    record: EventRecord,
-  ): void {
+  #remember(read: ProviderEventRead, record: EventRecord): void {
     this.#importedIds.add(read.providerEventId);
     this.#written.set(read.providerEventId, record);
-    this.#writtenFingerprints.set(read.providerEventId, read.fingerprint);
+    this.#writtenFingerprints.set(read.providerEventId, fingerprintOf(read));
   }
 }
 
@@ -505,14 +499,4 @@ function seriesProviderId(read: ProviderEventRead): string {
 function fingerprintOf(read: ProviderEventRead): string {
   if (read.kind === "cancellation") return `${read.providerVersion}\0`;
   return `${read.providerVersion}\0${read.providerUpdatedAt ?? ""}`;
-}
-
-function readFingerprintSource(read: ProviderEventRead): {
-  providerEventId: string;
-  fingerprint: string;
-} {
-  return {
-    providerEventId: read.providerEventId,
-    fingerprint: fingerprintOf(read),
-  };
 }

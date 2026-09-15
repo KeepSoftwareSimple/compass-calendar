@@ -244,20 +244,12 @@ export class EventRepository {
       // the same filter upsert uses. Owner fields are not part of it; a
       // repeated read that rebuilds tenant/principal still has to land on
       // the same document.
-      for (
-        let i = 0;
-        i < group.providerEventIds.length;
-        i += WRITE_CHUNK_SIZE
-      ) {
-        const chunk = group.providerEventIds.slice(i, i + WRITE_CHUNK_SIZE);
+      for (const chunk of chunked(group.providerEventIds)) {
         const records = await this.collection
           .find({
             connectionId: group.connectionId,
             calendarId: group.calendarId,
-            $and: [
-              { providerEventId: { $in: chunk } },
-              { providerEventId: { $type: "string" } },
-            ],
+            ...providerEventIdsFilter(chunk),
           })
           .toArray();
         for (const record of records) {
@@ -288,8 +280,7 @@ export class EventRepository {
     const found = new Map<string, EventRecord>();
     if (inputs.length === 0) return found;
 
-    for (let i = 0; i < inputs.length; i += WRITE_CHUNK_SIZE) {
-      const chunk = inputs.slice(i, i + WRITE_CHUNK_SIZE);
+    for (const chunk of chunked(inputs)) {
       const records = await this.collection
         .find({
           $or: chunk.map((input) => ({
@@ -321,10 +312,8 @@ export class EventRepository {
     ops: AnyBulkWriteOperation<EventRecord>[],
   ): Promise<void> {
     if (ops.length === 0) return;
-    for (let i = 0; i < ops.length; i += WRITE_CHUNK_SIZE) {
-      await this.collection.bulkWrite(ops.slice(i, i + WRITE_CHUNK_SIZE), {
-        ordered: false,
-      });
+    for (const chunk of chunked(ops)) {
+      await this.collection.bulkWrite([...chunk], { ordered: false });
     }
   }
 
@@ -417,22 +406,14 @@ export class EventRepository {
     const ids = [...new Set(identity.providerEventIds)];
     const found = new Map<string, EventRecord>();
     if (ids.length === 0) return found;
-    for (let i = 0; i < ids.length; i += WRITE_CHUNK_SIZE) {
-      const chunk = ids.slice(i, i + WRITE_CHUNK_SIZE);
+    for (const chunk of chunked(ids)) {
       const records = await this.collection
         .find({
           tenantId,
           principalId,
           connectionId: identity.connectionId,
           calendarId: identity.calendarId,
-          // $type: see the PLANNER TRAP note in index-manifest.ts. $in of
-          // strings does not itself prove the partial-index predicate, so the
-          // $type clause is a sibling under $and rather than a sibling of $in
-          // (memory-server treats `{ $in, $type }` as matching nothing).
-          $and: [
-            { providerEventId: { $in: chunk } },
-            { providerEventId: { $type: "string" } },
-          ],
+          ...providerEventIdsFilter(chunk),
         })
         .toArray();
       for (const record of records) {
@@ -719,14 +700,13 @@ export class EventRepository {
     const ids = [...new Set(seriesIds)];
     const found = new Map<EventId, EventRecord[]>(ids.map((id) => [id, []]));
     if (ids.length === 0) return found;
-    for (let i = 0; i < ids.length; i += WRITE_CHUNK_SIZE) {
-      const chunk = ids.slice(i, i + WRITE_CHUNK_SIZE);
+    for (const chunk of chunked(ids)) {
       const records = await this.collection
         .find({
           tenantId,
           principalId,
           "recurrence.kind": "exception",
-          "recurrence.seriesId": { $in: chunk },
+          "recurrence.seriesId": { $in: [...chunk] },
         })
         .toArray();
       for (const record of records) {
@@ -780,6 +760,35 @@ export class EventRepository {
     const result = await this.collection.deleteMany({ tenantId, principalId });
     return result.deletedCount;
   }
+}
+
+// Walk a list in WRITE_CHUNK_SIZE batches, so every $in width and every
+// bulkWrite stays bounded regardless of how large a page or repair is.
+function* chunked<T>(items: readonly T[]): Generator<readonly T[]> {
+  for (let i = 0; i < items.length; i += WRITE_CHUNK_SIZE) {
+    yield items.slice(i, i + WRITE_CHUNK_SIZE);
+  }
+}
+
+// The $in form of providerIdentityFilter's providerEventId clause, for the
+// batched reads. $type: see the PLANNER TRAP note in index-manifest.ts. $in of
+// strings does not itself prove the partial-index predicate, so the $type
+// clause is a sibling under $and rather than a sibling of $in (memory-server
+// treats `{ $in, $type }` as matching nothing).
+function providerEventIdsFilter(
+  providerEventIds: readonly NonNullable<EventRecord["providerEventId"]>[],
+): {
+  $and: [
+    { providerEventId: { $in: NonNullable<EventRecord["providerEventId"]>[] } },
+    { providerEventId: { $type: "string" } },
+  ];
+} {
+  return {
+    $and: [
+      { providerEventId: { $in: [...providerEventIds] } },
+      { providerEventId: { $type: "string" } },
+    ],
+  };
 }
 
 function isDuplicateKeyError(error: unknown): boolean {
@@ -843,23 +852,18 @@ function lastByProviderIdentity(
   return [...unique.values()];
 }
 
-function groupByCalendarIdentity(inputs: readonly ProviderEventUpsert[]): {
+type CalendarIdentityGroup = {
   tenantId: TenantId;
   principalId: PrincipalId;
   connectionId: NonNullable<EventRecord["connectionId"]>;
   calendarId: EventRecord["calendarId"];
   providerEventIds: NonNullable<EventRecord["providerEventId"]>[];
-}[] {
-  const groups = new Map<
-    string,
-    {
-      tenantId: TenantId;
-      principalId: PrincipalId;
-      connectionId: NonNullable<EventRecord["connectionId"]>;
-      calendarId: EventRecord["calendarId"];
-      providerEventIds: NonNullable<EventRecord["providerEventId"]>[];
-    }
-  >();
+};
+
+function groupByCalendarIdentity(
+  inputs: readonly ProviderEventUpsert[],
+): CalendarIdentityGroup[] {
+  const groups = new Map<string, CalendarIdentityGroup>();
   for (const input of inputs) {
     const key = `${input.tenantId}:${input.principalId}:${input.connectionId}:${input.calendarId}`;
     const group = groups.get(key);
