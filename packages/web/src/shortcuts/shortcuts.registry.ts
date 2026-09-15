@@ -283,7 +283,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   {
     id: "edit-paste",
     keys: [...B.editPaste.keycaps],
-    label: "Paste copied event",
+    label: "Paste copied event on the selected day",
     section: "edit",
     requiresWrite: true,
   },

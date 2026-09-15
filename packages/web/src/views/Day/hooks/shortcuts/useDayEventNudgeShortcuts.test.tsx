@@ -28,6 +28,10 @@ import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import {
+  initialEventClipboardState,
+  useEventClipboardStore,
+} from "@web/events/stores/event-clipboard.store";
+import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
@@ -229,6 +233,14 @@ const getEditMutation = (
     .getAll()
     .find((mutation) => mutation.options.mutationKey?.[2] === "replace");
 
+const getCreateMutation = (
+  queryClient: ReturnType<typeof createCompassQueryClient>,
+) =>
+  queryClient
+    .getMutationCache()
+    .getAll()
+    .find((mutation) => mutation.options.mutationKey?.[2] === "create");
+
 beforeEach(() => {
   // Pin midday so keyboardPlace drafts (seeded from dayjs().hour()) do not
   // land near midnight and reject the next 15-minute Shift+Arrow move.
@@ -243,8 +255,15 @@ afterEach(() => {
   dayEventRegistry.clear();
   draftActions.discard();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
+  useEventClipboardStore.setState(initialEventClipboardState, true);
   document.body.innerHTML = "";
   setSystemTime();
+  window.dispatchEvent(
+    new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "c" }),
+  );
+  window.dispatchEvent(
+    new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "v" }),
+  );
 });
 
 describe("useDayEventNudgeShortcuts", () => {
@@ -787,5 +806,58 @@ describe("useDayEventNudgeShortcuts", () => {
     });
 
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
+  });
+
+  it("pastes a copied timed event onto the focused column day", () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: {
+        content: { title: string };
+        schedule: { start: string; end: string };
+      };
+    };
+    expect(input.content.title).toBe("Timed event");
+    expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-08-05T09:00",
+    );
+    expect(dayjs(input.schedule.end).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-08-05T10:00",
+    );
+  });
+
+  it("pastes an all-day copy onto the focused column and keeps its length", () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+    });
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: { schedule: { kind: string; start: string; end: string } };
+    };
+    expect(input.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-08-05",
+      end: "2026-08-06",
+    });
   });
 });

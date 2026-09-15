@@ -58,6 +58,7 @@ export function useDayEventNudgeShortcuts({
   useGridEventEditShortcuts({
     allDayEvents,
     dependencies,
+    getPasteTargetDay: getQuickTimeDay,
     timedEvents,
     dayBoundary: {
       kind: "follow",

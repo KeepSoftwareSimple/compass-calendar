@@ -293,7 +293,7 @@ describe("shortcut menu sections", () => {
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["Mod", "V"],
-          label: "Paste copied event",
+          label: "Paste copied event on the selected day",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["ArrowUp"],
