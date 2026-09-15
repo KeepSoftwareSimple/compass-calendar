@@ -146,6 +146,25 @@ describe("calendar indexes", () => {
     expect(used).toContain(CALENDAR_USER_ID_INDEX);
   });
 
+  it("keeps a pre-existing unnamed userId index instead of crashing startup", async () => {
+    await mongoService.calendar.dropIndex(CALENDAR_USER_ID_INDEX);
+
+    try {
+      // The retired July migration created this index without a name.
+      await mongoService.calendar.createIndex({ userId: 1 });
+
+      await expect(ensureCalendarIndexes()).resolves.toBeUndefined();
+
+      const indexes = await mongoService.calendar.indexes();
+      const names = indexes.map((index) => index.name);
+      expect(names).toContain("userId_1");
+      expect(names).not.toContain(CALENDAR_USER_ID_INDEX);
+    } finally {
+      await mongoService.calendar.dropIndex("userId_1");
+      await ensureCalendarIndexes();
+    }
+  });
+
   it("skips the unique index when duplicate local calendars already exist", async () => {
     const userId = new ObjectId();
     await mongoService.calendar.dropIndex(CALENDAR_USER_ID_LOCAL_UNIQUE_INDEX);

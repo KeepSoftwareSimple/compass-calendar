@@ -25,18 +25,49 @@ const findDuplicateLocalCalendarUsers = async () => {
     .toArray();
 };
 
-const hasCalendarIndex = async (name: string): Promise<boolean> => {
-  const indexes = await mongoService.calendar.indexes();
-  return indexes.some((index) => index.name === name);
+type CalendarIndex = {
+  name?: string;
+  key?: Record<string, unknown>;
+  unique?: boolean;
+  partialFilterExpression?: unknown;
+};
+
+// Databases migrated in July 2026 already carry an unnamed
+// createIndex({ userId: 1 }) that Mongo called `userId_1`. Mongo rejects the
+// same key under a different name (IndexOptionsConflict, code 85) and the
+// backend exits on startup errors, so match the plain userId index by key
+// instead of by name.
+const isPlainUserIdIndex = (index: CalendarIndex): boolean =>
+  JSON.stringify(index.key) === JSON.stringify({ userId: 1 }) &&
+  !index.unique &&
+  !index.partialFilterExpression;
+
+const listCalendarIndexes = async (): Promise<CalendarIndex[]> => {
+  try {
+    return await mongoService.calendar.indexes();
+  } catch (error) {
+    // A fresh database has no calendar collection until the first
+    // createIndex below creates it.
+    if ((error as { codeName?: string }).codeName === "NamespaceNotFound") {
+      return [];
+    }
+    throw error;
+  }
 };
 
 export async function ensureCalendarIndexes(): Promise<void> {
-  await mongoService.calendar.createIndex(
-    { userId: 1 },
-    { name: CALENDAR_USER_ID_INDEX },
-  );
+  const existing = await listCalendarIndexes();
 
-  if (await hasCalendarIndex(CALENDAR_USER_ID_LOCAL_UNIQUE_INDEX)) {
+  if (!existing.some(isPlainUserIdIndex)) {
+    await mongoService.calendar.createIndex(
+      { userId: 1 },
+      { name: CALENDAR_USER_ID_INDEX },
+    );
+  }
+
+  if (
+    existing.some((index) => index.name === CALENDAR_USER_ID_LOCAL_UNIQUE_INDEX)
+  ) {
     logger.info("Ensured calendar indexes");
     return;
   }
