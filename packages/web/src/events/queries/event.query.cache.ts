@@ -2,7 +2,7 @@ import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { isDateRangeOverlapping } from "@core/util/date/date.util";
-import { type RecurringEditProjection } from "@web/events/recurrence/projectRecurringEdit";
+import type { RecurringEditProjection } from "@web/events/recurrence/projectRecurringEdit";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { eventQueryKeys } from "./event.query.keys";
 import { eventMatchesRange } from "./event.query.normalize";

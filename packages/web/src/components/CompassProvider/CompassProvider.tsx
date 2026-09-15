@@ -1,7 +1,6 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { type PropsWithChildren } from "react";
 import { Slide, ToastContainer } from "react-toastify";
 import { queryClient as defaultQueryClient } from "@web/api/query-client";
@@ -9,7 +8,7 @@ import { SessionProvider } from "@web/auth/compass/session/SessionProvider";
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import { PostHogProvider } from "@web/auth/posthog/posthog-react";
 import { UpgradeConfirmationProvider } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationProvider";
-import { ENV_WEB } from "@web/common/constants/env.constants";
+import { ENV_WEB, IS_DEV } from "@web/common/constants/env.constants";
 import { TOAST_CHROME_STYLE } from "@web/common/constants/toast.constants";
 import { useEscapeToDismissToast } from "@web/common/utils/toast/useEscapeToDismissToast";
 import { AboutModalHost } from "@web/components/About/AboutModalHost";
@@ -18,19 +17,9 @@ import { FeedbackDialogHost } from "@web/components/Feedback/FeedbackDialogHost"
 import { IconProvider } from "@web/components/IconProvider/IconProvider";
 import { LogoutConfirmationProvider } from "@web/components/LogoutConfirmation/LogoutConfirmationProvider";
 import { SettingsModalHost } from "@web/components/Settings/SettingsModalHost";
-import { RecurrenceScopeOpportunityHost } from "@web/events/recurrence/RecurrenceScopeOpportunityHost";
 import { selectTheme, useThemeStore } from "@web/settings/theme/theme.store";
 import { TimezoneDialogHost } from "@web/timezone/TimezoneDialogHost";
-import { useUndoRedoShortcuts } from "@web/views/Week/hooks/shortcuts/useUndoRedoShortcuts";
-
-/**
- * Mount once under {@link HotkeysProvider} and inside React Router so
- * {@link useGlobalShortcuts} can register app hotkeys (via useAppShortcut).
- */
-export function GlobalShortcutsHost() {
-  useUndoRedoShortcuts();
-  return <RecurrenceScopeOpportunityHost />;
-}
+import { ReactQueryDevtoolsHost } from "./ReactQueryDevtoolsHost";
 
 function ThemeAwareToastContainer() {
   const theme = useThemeStore(selectTheme);
@@ -86,7 +75,7 @@ export const CompassRequiredProviders = ({
         </GoogleOAuthProvider>
       </SessionProvider>
     </HotkeysProvider>
-    <ReactQueryDevtools initialIsOpen={false} />
+    {IS_DEV ? <ReactQueryDevtoolsHost /> : null}
   </QueryClientProvider>
 );
 

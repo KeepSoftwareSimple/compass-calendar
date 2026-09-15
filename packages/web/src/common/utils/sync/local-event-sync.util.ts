@@ -8,8 +8,8 @@ import {
   ensureOfflineDataStoreReady,
   getOfflineDataStore,
 } from "@web/common/storage/offline-data/offline-data.store.registry";
+import { editableContent } from "@web/events/editable-content";
 import { EventApi } from "@web/events/event.api";
-import { editableContent } from "@web/events/grid-event-draft.adapter";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 
 type LocalEventSyncStorage = Pick<

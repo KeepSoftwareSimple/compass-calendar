@@ -14,6 +14,7 @@ import {
   selectIsSidebarOpen,
   useViewStore,
 } from "@web/events/stores/view.store";
+import { UpcomingEventNotifierHost } from "@web/notifications/UpcomingEventNotifierHost";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
   LIFE_PAGE_JUMP_TARGETS,
@@ -164,6 +165,7 @@ export function LifeView({ today }: LifeViewProps) {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
+      <UpcomingEventNotifierHost />
       <LifeCommandPalette placeholder={getCommandPalettePlaceholder("life")} />
       <PageJumpHints targets={LIFE_PAGE_JUMP_TARGETS} />
 

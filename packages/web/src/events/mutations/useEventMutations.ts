@@ -54,8 +54,8 @@ import {
   showRecurrenceScopeSuccessToast,
 } from "@web/common/utils/toast/recurrence-scope.toast";
 import { noteFirstRealEventCreated } from "@web/components/FirstEventPrompt/first-event.store";
+import { editableContent } from "@web/events/editable-content";
 import { EventApi } from "@web/events/event.api";
-import { editableContent } from "@web/events/grid-event-draft.adapter";
 import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal";
 import {
   applyEventProjectionAcrossQueries,
@@ -77,12 +77,6 @@ import {
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
 import {
-  projectRecurringDelete,
-  projectRecurringEdit,
-  projectSeriesMaterialization,
-  projectSeriesRulesChange,
-} from "@web/events/recurrence/projectRecurringEdit";
-import {
   isRecurrenceScopeEditAskDeclined,
   type RecurrenceScopeOpportunity,
   recurrenceScopeOpportunityActions,
@@ -91,7 +85,7 @@ import {
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
-import { getEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
+import { loadEventRepositoryBySource } from "@web/events/repositories/event.repository.load";
 import {
   isRestoringHistory,
   type UndoHistoryEntry,
@@ -123,6 +117,10 @@ import {
 type EventMutationContext = {
   previousQueries: Array<[QueryKey, unknown]>;
 };
+
+function loadProjectRecurringEdit() {
+  return import("@web/events/recurrence/projectRecurringEdit");
+}
 
 function restoreWriteKeyFromSnapshot(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -487,10 +485,10 @@ export function useEventMutations(
   const queryClient = useQueryClient();
   const activeSource = useEventRepositorySource();
   const source = dependencies.source ?? activeSource;
-  const repository = useMemo(
-    () => dependencies.repository ?? getEventRepositoryBySource(source),
-    [dependencies.repository, source],
-  );
+  const resolveRepository = useCallback(async () => {
+    if (dependencies.repository) return dependencies.repository;
+    return loadEventRepositoryBySource(source);
+  }, [dependencies.repository, source]);
   const markWrite = dependencies.markWrite ?? markAnonymousEventWrite;
   const showAnonymousSaveToast =
     dependencies.markWrite === undefined
@@ -604,7 +602,7 @@ export function useEventMutations(
   const buildMutation = <Variables extends { writeKey: EventId }>(
     operation: EventMutationOperation,
     mutationFn: (variables: Variables) => Promise<unknown>,
-    optimistic: (variables: Variables) => void,
+    optimistic: (variables: Variables) => void | Promise<void>,
   ) => ({
     mutationKey: eventMutationKeys.operation(operation),
     mutationFn,
@@ -613,7 +611,8 @@ export function useEventMutations(
       const previousQueries = queryClient.getQueriesData<unknown>({
         queryKey: eventQueryKeys.all,
       });
-      optimistic(variables);
+      const optimisticResult = optimistic(variables);
+      if (optimisticResult) await optimisticResult;
       // Callers that tear down their own pre-save UI (the event form's grid
       // draft) run it here so the teardown lands in the same task — and so
       // the same React commit — as the cache write. useBaseQuery recomputes
@@ -742,6 +741,7 @@ export function useEventMutations(
     buildMutation<CreateVariables>(
       "create",
       async (variables) => {
+        const repository = await resolveRepository();
         // Undo-of-delete restores via create with the original id; waiting
         // here keeps the POST from landing before the DELETE server-side.
         // Normal creates use fresh ids and resolve immediately.
@@ -782,15 +782,18 @@ export function useEventMutations(
         // series bases), so expand its instances too or the event would be
         // invisible until the settle refetch.
         if (event.recurrence.kind === "series") {
-          applyEventProjectionAcrossQueries(
-            queryClient,
-            projectSeriesMaterialization({
-              base: event,
-              ranges: cachedRanges(),
-            }),
-            source,
+          return loadProjectRecurringEdit().then(
+            ({ projectSeriesMaterialization }) => {
+              applyEventProjectionAcrossQueries(
+                queryClient,
+                projectSeriesMaterialization({
+                  base: event,
+                  ranges: cachedRanges(),
+                }),
+                source,
+              );
+            },
           );
-          return;
         }
         insertEventIntoQueries(queryClient, event, (entry) =>
           eventBelongsToEntry(event, entry, source),
@@ -803,6 +806,7 @@ export function useEventMutations(
     buildMutation<ReplaceVariables>(
       "replace",
       async (variables) => {
+        const repository = await resolveRepository();
         const input = resolveRemoteReplaceSchedule(
           source,
           variables.id,
@@ -860,40 +864,44 @@ export function useEventMutations(
               edited.recurrence.rules.join("\n");
 
           if (rulesChanged) {
-            applyEventProjectionAcrossQueries(
-              queryClient,
-              projectSeriesRulesChange({
-                scope: input.scope,
-                edited,
-                original,
-                seriesId,
-                seriesEvents: seriesId
-                  ? findSeriesEventsInCache(queryClient, seriesId, source)
-                  : [],
-                ranges: cachedRanges(),
-              }),
-              source,
+            return loadProjectRecurringEdit().then(
+              ({ projectSeriesRulesChange }) => {
+                applyEventProjectionAcrossQueries(
+                  queryClient,
+                  projectSeriesRulesChange({
+                    scope: input.scope,
+                    edited,
+                    original,
+                    seriesId,
+                    seriesEvents: seriesId
+                      ? findSeriesEventsInCache(queryClient, seriesId, source)
+                      : [],
+                    ranges: cachedRanges(),
+                  }),
+                  source,
+                );
+              },
             );
-            return;
           }
         }
 
         if (seriesId && input.scope !== "this") {
-          applyEventProjectionAcrossQueries(
-            queryClient,
-            projectRecurringEdit({
-              scope: input.scope,
-              edited,
-              original,
-              seriesEvents: findSeriesEventsInCache(
-                queryClient,
-                seriesId,
-                source,
-              ),
-            }),
-            source,
-          );
-          return;
+          return loadProjectRecurringEdit().then(({ projectRecurringEdit }) => {
+            applyEventProjectionAcrossQueries(
+              queryClient,
+              projectRecurringEdit({
+                scope: input.scope,
+                edited,
+                original,
+                seriesEvents: findSeriesEventsInCache(
+                  queryClient,
+                  seriesId,
+                  source,
+                ),
+              }),
+              source,
+            );
+          });
         }
         // Upsert (not patch) so an event edited/dragged into a currently-cached
         // range it wasn't previously a member of renders optimistically, and
@@ -912,6 +920,7 @@ export function useEventMutations(
     buildMutation<DeleteVariables>(
       "delete",
       async (variables) => {
+        const repository = await resolveRepository();
         const wrote = await writeAfterPreceding(
           variables.writeKey,
           variables,
@@ -927,21 +936,24 @@ export function useEventMutations(
         const seriesId = seriesIdOf(originalOverride ?? existing);
 
         if (existing && seriesId && scope !== "this") {
-          applyEventProjectionAcrossQueries(
-            queryClient,
-            projectRecurringDelete({
-              scope,
-              target: originalOverride ?? existing,
-              seriesId,
-              seriesEvents: findSeriesEventsInCache(
+          return loadProjectRecurringEdit().then(
+            ({ projectRecurringDelete }) => {
+              applyEventProjectionAcrossQueries(
                 queryClient,
-                seriesId,
+                projectRecurringDelete({
+                  scope,
+                  target: originalOverride ?? existing,
+                  seriesId,
+                  seriesEvents: findSeriesEventsInCache(
+                    queryClient,
+                    seriesId,
+                    source,
+                  ),
+                }),
                 source,
-              ),
-            }),
-            source,
+              );
+            },
           );
-          return;
         }
         removeEventFromQueries(queryClient, id, { source });
       },

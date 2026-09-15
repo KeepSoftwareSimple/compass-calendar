@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useTodayTimedEvents } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
+import { useTodayTimedEvents } from "@web/components/Sidebar/UpNextCard/useTodayTimedEvents";
 import { getNotificationPort } from "@web/notifications/notification.port";
 import { useNotificationsEffectivelyOn } from "@web/notifications/notification.state";
 import {

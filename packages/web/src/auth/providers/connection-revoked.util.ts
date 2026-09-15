@@ -135,7 +135,7 @@ const googleAuthUtil = createGoogleAuthUtil({
   resolveRevokedAccount,
   markAccountReconnectRequired,
   showReconnectToast: showGoogleReconnectToast,
-  syncLocalEventsToCloud: () => syncLocalEventsToCloud(),
+  syncLocalEventsToCloud,
   toastError: (content, options) => getToast().error(content, options),
 });
 

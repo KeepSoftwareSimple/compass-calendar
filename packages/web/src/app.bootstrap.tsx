@@ -7,7 +7,6 @@ import {
   applyConnectRedirect,
   readConnectStatus,
 } from "@web/auth/providers/connect-status.util";
-import { configureGoogleRevocationApiHandler } from "@web/auth/providers/revocation-api.config";
 import {
   initializeDatabaseWithErrorHandling,
   showDbInitErrorToast,
@@ -17,8 +16,6 @@ import { preloadEventFormOnFirstInput } from "@web/views/Forms/EventForm/EventFo
 import "./index.css";
 
 export async function bootstrapApp(): Promise<void> {
-  configureGoogleRevocationApiHandler();
-
   // Read before the router mounts: validateAuthSearch strips unrecognized
   // query params (like these) on the first navigation.
   const connectStatus = readConnectStatus();

@@ -10,7 +10,7 @@ import {
 } from "@web/common/utils/toast/deleted-toast.util";
 import { dismissRecurrenceScopeToastFor } from "@web/common/utils/toast/recurrence-scope.toast";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
-import { detailsLocation } from "@web/events/grid-event-draft.adapter";
+import { detailsLocation } from "@web/events/editable-content";
 import {
   type EventMutationCallbacks,
   type EventMutationDependencies,

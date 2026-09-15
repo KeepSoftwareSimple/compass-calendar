@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { CalendarAccessSchema } from "@core/types/calendar.contracts";
 import { HexColorSchema, TimeZoneSchema } from "@core/types/domain-primitives";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 
 // Accept an ObjectId or its valid 24-hex form, then normalize it to ObjectId.
 const ObjectIdSchema = zObjectId;
