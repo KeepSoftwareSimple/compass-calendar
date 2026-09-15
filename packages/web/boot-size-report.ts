@@ -221,6 +221,17 @@ export function bootSizeBudgetViolations(
   return violations;
 }
 
+// Two configs build packages/web in CI: self-host/Dockerfile.web's generated
+// compass.yaml (the actual release image) and .github/perf/compass.perf.yaml
+// (perf-budget.yml's Lighthouse run, not a required check). They differ only
+// in google.clientId ("" vs a placeholder string), which nothing in the route
+// tree branches on, so as measured on 2026-09-15 both produce the same
+// chunkCount (85). The Dockerfile config is canonical for this budget because
+// it is the config that actually ships; the required PR check in
+// test-unit.yml's `static` job reconstructs it inline rather than running
+// Docker. If the two configs ever diverge in a field that changes the chunk
+// graph, trust this one and update compass.perf.yaml to match, not the
+// reverse - a budget PRs can't reproduce isn't enforceable.
 export async function loadBootSizeBudget(
   budgetPath = path.resolve(import.meta.dir, "boot-size-budget.json"),
 ): Promise<BootSizeBudget> {
