@@ -65,9 +65,9 @@ const PROFILES: Record<
 // been SIGKILL'd (exit 137) on 7 GB GitHub runners, and on 2026-09-04 a
 // 191-file shard took the whole runner down with it ("The runner has
 // received a shutdown signal"), which reads as a hang rather than memory.
-// Four shards keep each process well under the runner; the RSS guard below
+// Six shards keep each process well under the runner; the RSS guard below
 // names the shard when one still runs away.
-const DEFAULT_WEB_SHARDS = 4;
+const DEFAULT_WEB_SHARDS = 6;
 
 /**
  * Kill a shard that outgrows the CI runner before the runner itself dies.
@@ -145,8 +145,8 @@ export function webSuiteShardCount(opts: {
 /**
  * 1-based shard pick from `WEB_TEST_SHARD_INDEX`. Unset means run every
  * shard sequentially (local `bun test:web`). A comma list runs those
- * shards in order so CI can pack four RSS-safe processes into two legs
- * (`1,2` and `3,4`) while still exposing `unit (web, 1)` / `unit (web, 2)`.
+ * shards in order so CI can pack six RSS-safe processes into two legs
+ * (`1,2,3` and `4,5,6`) while still exposing `unit (web, 1)` / `unit (web, 2)`.
  */
 export function webSuiteShardIndex(opts: {
   envIndex?: string;
