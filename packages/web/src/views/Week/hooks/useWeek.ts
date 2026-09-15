@@ -8,7 +8,10 @@ import { usePrefetchAdjacentEvents } from "@web/events/queries/usePrefetchAdjace
 import { useWeekEventsQuery } from "@web/events/queries/useWeekEventsQuery";
 import { viewActions } from "@web/events/stores/view.store";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { WEEK_DAY_COUNT } from "@web/views/Week/util/week-window.util";
+import {
+  WEEK_DAY_COUNT,
+  weekEventsQueryWindow,
+} from "@web/views/Week/util/week-window.util";
 import { type Category_View } from "@web/views/Week/week-view.types";
 
 export type WeekNavigationSource = "manual" | "drag-to-edge" | "day-shift";
@@ -56,11 +59,9 @@ export const useWeek = (
   );
   // Fetch window is always WEEK_DAY_COUNT days from the anchor so resize-driven
   // column changes reuse the same cache entry; display still clips to weekDays.
-  // Exclusive next local midnight (not endOf("day")) so all-day membership via
-  // eventMatchesRange's date-slice exclusive end includes the last fetched day.
   const queryEnd = useMemo(
-    () => start.add(WEEK_DAY_COUNT, "day").startOf("day"),
-    [start],
+    () => weekEventsQueryWindow(anchor).endOfView,
+    [anchor],
   );
 
   const week = useMemo(() => start.week(), [start]);

@@ -12,6 +12,8 @@ import {
   publicBookRoute,
   rootRoute,
   routeTree,
+  weekDateRoute,
+  weekRoute,
 } from "@web/routers/router.routes";
 import { describe, expect, it } from "bun:test";
 
@@ -80,6 +82,11 @@ describe("routeTree", () => {
   it("gates the authenticated layout behind loadAuthenticated inside the calendar shell", () => {
     expect(authenticatedLayoutRoute.options.beforeLoad).toBeDefined();
     expect(authenticatedLayoutRoute.parentRoute).toBe(calendarShellRoute);
+  });
+
+  it("prefetches week events from the week route loaders", () => {
+    expect(weekRoute.options.loader).toBeDefined();
+    expect(weekDateRoute.options.loader).toBeDefined();
   });
 
   it("registers /auth/google/callback on the provider auth callback route", async () => {
