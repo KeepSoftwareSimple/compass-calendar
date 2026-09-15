@@ -1,38 +1,35 @@
 import {
-  MONTH_PICKER_NEXT_KEYCAPS,
-  MONTH_PICKER_PREV_KEYCAPS,
-} from "@web/components/Sidebar/MonthPicker/useMonthPickerShortcuts";
-import { EDIT_SEQUENCE_LETTER_FIELDS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
+  APP_SHORTCUT_BINDINGS,
+  EDIT_SEQUENCE_LETTER_FIELDS,
+  editSequenceRegistryKeys,
+  hotkeyKeycaps,
+} from "@web/shortcuts/app-shortcut-bindings";
 import { type Shortcut } from "@web/shortcuts/global.shortcut.types";
-import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 
-// Display keycaps for a tanstack hotkey string ("Mod+Shift+Z" -> ["Mod",
-// "Shift", "Z"]), so registry rows derive from the runtime binding instead of
-// hand-copying it.
-const caps = (hotkey: string): string[] => hotkey.split("+");
+const B = APP_SHORTCUT_BINDINGS;
 
 /**
  * Shortcut registry: the display source for the `?` legend overlay. Each
  * shortcut has an id, section, label, and optional context predicate; the
  * predicate determines visibility based on app state.
  *
- * Runtime bindings live at the handler sites; rows for bindings that
- * `keymap.ts` owns derive their keys from KEYMAP, so a remap there updates
- * the legend by construction.
+ * Runtime bindings live in {@link KEYMAP} and {@link APP_SHORTCUT_BINDINGS};
+ * legend rows derive from those tables so a remap updates behavior and the
+ * overlay together.
  */
 export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Navigate - Up Next
   {
     id: "nav-up-next",
-    keys: ["n"],
+    keys: [...B.navUpNext.keycaps],
     label: "Open Up Next event",
     section: "navigate",
   },
   {
     id: "nav-join-meeting",
-    keys: ["v"],
+    keys: [...B.navJoinMeeting.keycaps],
     label: "Join Up Next meeting",
     section: "navigate",
   },
@@ -40,21 +37,21 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Navigate - Life view only
   {
     id: "nav-life-prev",
-    keys: ["j"],
+    keys: [...B.navLifePrevious.keycaps],
     label: "Previous life variation",
     section: "navigate",
     when: { lifeView: true },
   },
   {
     id: "nav-life-next",
-    keys: ["k"],
+    keys: [...B.navLifeNext.keycaps],
     label: "Next life variation",
     section: "navigate",
     when: { lifeView: true },
   },
   {
     id: "nav-life-current",
-    keys: ["t"],
+    keys: [...B.navLifeCurrent.keycaps],
     label: "Focus current week",
     section: "navigate",
     when: { lifeView: true },
@@ -63,37 +60,37 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Navigate - Day/Week views
   {
     id: "nav-previous",
-    keys: ["j"],
+    keys: [...B.navPrevious.keycaps],
     label: "Previous",
     section: "navigate",
   },
   {
     id: "nav-next",
-    keys: ["k"],
+    keys: [...B.navNext.keycaps],
     label: "Next",
     section: "navigate",
   },
   {
     id: "nav-shift-left",
-    keys: ["Shift", "j"],
+    keys: [...B.navShiftLeft.keycaps],
     label: "Shift view back one day",
     section: "navigate",
   },
   {
     id: "nav-shift-right",
-    keys: ["Shift", "k"],
+    keys: [...B.navShiftRight.keycaps],
     label: "Shift view forward one day",
     section: "navigate",
   },
   {
     id: "nav-month-prev",
-    keys: [...MONTH_PICKER_PREV_KEYCAPS],
+    keys: [...B.navMonthPrev.keycaps],
     label: "Previous month in picker",
     section: "navigate",
   },
   {
     id: "nav-month-next",
-    keys: [...MONTH_PICKER_NEXT_KEYCAPS],
+    keys: [...B.navMonthNext.keycaps],
     label: "Next month in picker",
     section: "navigate",
   },
@@ -105,31 +102,31 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "nav-today",
-    keys: ["t"],
+    keys: [...B.navToday.keycaps],
     label: "Go to today",
     section: "navigate",
   },
   {
     id: "nav-scroll-up",
-    keys: ["PageUp"],
+    keys: [...B.navScrollUp.keycaps],
     label: "Scroll grid up",
     section: "navigate",
   },
   {
     id: "nav-scroll-down",
-    keys: ["PageDown"],
+    keys: [...B.navScrollDown.keycaps],
     label: "Scroll grid down",
     section: "navigate",
   },
   {
     id: "nav-scroll-hour-up",
-    keys: caps("Alt+ArrowUp"),
+    keys: [...B.navScrollHourUp.keycaps],
     label: "Scroll grid up one hour",
     section: "navigate",
   },
   {
     id: "nav-scroll-hour-down",
-    keys: caps("Alt+ArrowDown"),
+    keys: [...B.navScrollHourDown.keycaps],
     label: "Scroll grid down one hour",
     section: "navigate",
   },
@@ -137,19 +134,19 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Navigate - View switchers (all views)
   {
     id: "nav-day-view",
-    keys: ["d"],
+    keys: [...B.navDayView.keycaps],
     label: "Go to Day view",
     section: "navigate",
   },
   {
     id: "nav-week-view",
-    keys: ["w"],
+    keys: [...B.navWeekView.keycaps],
     label: "Go to Week view",
     section: "navigate",
   },
   {
     id: "nav-life-view",
-    keys: ["l"],
+    keys: [...B.navLifeView.keycaps],
     label: "Go to Life view",
     section: "navigate",
   },
@@ -164,7 +161,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "create-allday",
-    keys: ["Shift", "C"],
+    keys: [...B.createAllDay.keycaps],
     label: "Create all-day event",
     section: "create",
     requiresWrite: true,
@@ -185,7 +182,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "create-place-discard",
-    keys: ["Escape"],
+    keys: [...B.createPlaceDiscard.keycaps],
     label: "Discard placed draft",
     section: "create",
   },
@@ -193,13 +190,13 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Focus
   {
     id: "focus-sidebar",
-    keys: ["i"],
+    keys: [...B.focusSidebar.keycaps],
     label: "Focus month picker",
     section: "focus",
   },
   {
     id: "focus-event",
-    keys: ["u"],
+    keys: [...B.focusEvent.keycaps],
     label: "Focus calendar event",
     section: "focus",
   },
@@ -211,13 +208,13 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "focus-week-day",
-    keys: ["Shift", "m"],
+    keys: [...B.focusWeekDay.keycaps],
     label: "Focus a day's events (Shift + M T W R F, Shift + S then U or A)",
     section: "focus",
   },
   {
     id: "focus-notice",
-    keys: ["f"],
+    keys: [...B.focusNotice.keycaps],
     label: "Focus latest notice",
     section: "focus",
   },
@@ -234,7 +231,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Edit
   {
     id: "edit-open",
-    keys: ["Enter"],
+    keys: [...B.editOpen.keycaps],
     label: "Open focused event",
     section: "edit",
   },
@@ -245,35 +242,35 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // menu's job instead.
   ...EDIT_SEQUENCE_LETTER_FIELDS.map(({ field, key, label }) => ({
     id: `edit-focus-${field}`,
-    keys: ["e", key],
+    keys: editSequenceRegistryKeys(key),
     label: `Edit ${label.toLowerCase()}`,
     section: "edit",
     requiresWrite: true,
   })),
   {
     id: "edit-delete",
-    keys: ["Delete"],
+    keys: [...B.editDelete.keycaps],
     label: "Delete focused event",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-duplicate",
-    keys: ["Mod", "D"],
+    keys: [...B.editDuplicate.keycaps],
     label: "Duplicate focused event",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-copy",
-    keys: ["Mod", "C"],
+    keys: [...B.editCopy.keycaps],
     label: "Copy focused event",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-paste",
-    keys: ["Mod", "V"],
+    keys: [...B.editPaste.keycaps],
     label: "Paste copied event",
     section: "edit",
     requiresWrite: true,
@@ -284,20 +281,20 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
     // listed here: it would be a second row
     // with this exact label, and m already teaches the capability.
     id: "edit-menu",
-    keys: ["m"],
+    keys: [...B.editMenu.keycaps],
     label: "Open event menu",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-hide",
-    keys: [HIDE_EVENT_LETTER],
+    keys: [...B.editHide.keycaps],
     label: "Hide or show focused event",
     section: "edit",
   },
   {
     id: "edit-save",
-    keys: ["Mod", "Enter"],
+    keys: [...B.editSave.keycaps],
     label: "Save event form",
     section: "edit",
     when: { isFormOpen: true },
@@ -307,7 +304,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // leader, for when the caret is already in a field and a bare `e` would type.
   {
     id: "edit-field-leader-in-form",
-    keys: ["Mod+E"],
+    keys: [...B.editFieldLeaderInForm.keycaps],
     label: "Same field jumps while typing",
     section: "edit",
     when: { isFormOpen: true },
@@ -329,7 +326,7 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // and Delete are visible.
   {
     id: "edit-form-actions",
-    keys: ["Mod", "0"],
+    keys: [...B.editFormActions.keycaps],
     label: "Jump to event actions",
     section: "edit",
     when: { isFormOpen: true },
@@ -377,28 +374,28 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "edit-move-prev-day",
-    keys: caps(KEYMAP.moveEvent.hotkeys.left),
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.left),
     label: "Move event to previous day",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-move-next-day",
-    keys: caps(KEYMAP.moveEvent.hotkeys.right),
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.right),
     label: "Move event to next day",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-move-earlier",
-    keys: caps(KEYMAP.moveEvent.hotkeys.up),
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.up),
     label: "Move event 15 min earlier",
     section: "edit",
     requiresWrite: true,
   },
   {
     id: "edit-move-later",
-    keys: caps(KEYMAP.moveEvent.hotkeys.down),
+    keys: hotkeyKeycaps(KEYMAP.moveEvent.hotkeys.down),
     label: "Move event 15 min later",
     section: "edit",
     requiresWrite: true,
@@ -421,13 +418,13 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // Other
   {
     id: "other-sidebar",
-    keys: ["]"],
+    keys: [...B.otherSidebar.keycaps],
     label: "Toggle sidebar",
     section: "other",
   },
   {
     id: "other-shortcuts",
-    keys: ["?"],
+    keys: [...B.otherShortcuts.keycaps],
     label: "Toggle shortcuts",
     section: "other",
   },
@@ -439,34 +436,34 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   },
   {
     id: "other-subscribe",
-    keys: ["b"],
+    keys: [...B.otherSubscribe.keycaps],
     label: "Subscribe now",
     section: "other",
     when: { isTrialing: true },
   },
   {
     id: "other-settings",
-    keys: ["Mod", ","],
+    keys: [...B.otherSettings.keycaps],
     label: "Settings",
     section: "other",
   },
   {
     id: "other-undo",
-    keys: caps(KEYMAP.undo.hotkey),
+    keys: hotkeyKeycaps(KEYMAP.undo.hotkey),
     label: "Undo last change",
     section: "other",
     requiresWrite: true,
   },
   {
     id: "other-redo",
-    keys: caps(KEYMAP.redo.hotkey),
+    keys: hotkeyKeycaps(KEYMAP.redo.hotkey),
     label: "Redo last change",
     section: "other",
     requiresWrite: true,
   },
   {
     id: "other-time-travel",
-    keys: ["z"],
+    keys: [...B.otherTimeTravel.keycaps],
     label: "Time travel",
     section: "other",
   },

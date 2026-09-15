@@ -9,6 +9,8 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
+import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,
@@ -80,7 +82,7 @@ export function useNavigationShortcuts() {
   });
 
   useAppShortcut(
-    "Mod+K",
+    KEYMAP.commandPalette.hotkey,
     () => {
       // Blur after this gate: first-visit welcome keys live on a focused
       // child, and stealing focus here would leave S / Escape with nowhere
@@ -117,7 +119,7 @@ export function useNavigationShortcuts() {
   );
 
   useAppShortcut(
-    "Mod+,",
+    APP_SHORTCUT_BINDINGS.otherSettings.hotkey,
     () => {
       settingsActions.toggleSettings();
     },
@@ -130,5 +132,7 @@ export function useNavigationShortcuts() {
 }
 
 export function useCalendarShellShortcuts() {
-  useAppShortcutUp("]", () => viewActions.toggleSidebar());
+  useAppShortcutUp(APP_SHORTCUT_BINDINGS.otherSidebar.hotkey, () =>
+    viewActions.toggleSidebar(),
+  );
 }

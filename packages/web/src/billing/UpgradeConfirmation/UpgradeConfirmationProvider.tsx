@@ -20,6 +20,7 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 
 export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {
@@ -46,7 +47,7 @@ export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {
   // "Press B to subscribe" is written, and OverlayPanel would otherwise
   // swallow the key.
   useAppShortcutUp(
-    "B",
+    APP_SHORTCUT_BINDINGS.otherSubscribe.hotkey,
     () => {
       if (needsPaymentMethod) {
         checkoutPanelActions.open();
