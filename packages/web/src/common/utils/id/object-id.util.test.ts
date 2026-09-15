@@ -8,4 +8,8 @@ describe("createObjectIdString", () => {
     expect(ObjectId.isValid(id)).toBe(true);
     expect(id).toMatch(/^[a-f0-9]{24}$/);
   });
+
+  it("returns a distinct id on each call", () => {
+    expect(createObjectIdString()).not.toBe(createObjectIdString());
+  });
 });

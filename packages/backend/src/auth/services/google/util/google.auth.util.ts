@@ -1,6 +1,7 @@
 import { type Credentials, type TokenPayload } from "google-auth-library";
+import { zObjectId } from "@core/types/object-id.schema";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
-import { StringV4Schema, zObjectId } from "@core/types/type.utils";
+import { StringV4Schema } from "@core/types/type.utils";
 import { findCanonicalCompassUser } from "@backend/user/queries/user.queries";
 import {
   type AuthDecision,

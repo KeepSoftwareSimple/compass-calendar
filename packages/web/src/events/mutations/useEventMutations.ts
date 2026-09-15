@@ -54,8 +54,8 @@ import {
   showRecurrenceScopeSuccessToast,
 } from "@web/common/utils/toast/recurrence-scope.toast";
 import { noteFirstRealEventCreated } from "@web/components/FirstEventPrompt/first-event.store";
+import { editableContent } from "@web/events/editable-content";
 import { EventApi } from "@web/events/event.api";
-import { editableContent } from "@web/events/grid-event-draft.adapter";
 import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal";
 import {
   applyEventProjectionAcrossQueries,

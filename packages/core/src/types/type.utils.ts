@@ -1,21 +1,15 @@
-import { ObjectId } from "bson";
+import { type ObjectId } from "bson";
 import { z as zod4 } from "zod/v4";
-import { z as zod4Mini } from "zod/v4-mini";
 import dayjs from "@core/util/date/dayjs";
 
-export const IDSchemaV4 = zod4.string().refine(ObjectId.isValid, {
-  message: "Invalid id",
-});
+/** 24-hex ObjectId string. Shared by wire schemas so the browser never loads bson. */
+export const OBJECT_ID_HEX_PATTERN = /^[0-9a-f]{24}$/i;
 
-export const zObjectIdMini = zod4Mini.pipe(
-  zod4Mini.custom<ObjectId | string>(ObjectId.isValid),
-  zod4Mini.transform((v) => new ObjectId(v)),
-);
-
-export const zObjectId = zod4.pipe(
-  zod4.custom<ObjectId | string>((v) => ObjectId.isValid(v as string)),
-  zod4.transform((v) => new ObjectId(v)),
-);
+export const IDSchemaV4 = zod4
+  .string()
+  .refine((value) => OBJECT_ID_HEX_PATTERN.test(value), {
+    message: "Invalid id",
+  });
 
 export const zYearMonthDayString = zod4.string().refine(
   (dateString) => {
@@ -51,7 +45,7 @@ export const RGBHexSchema = zod4.string().regex(/^#[0-9a-f]{6}$/i, {
 
 // An ObjectId kept as its 24-hex string form (Compass-side ids on the wire and
 // in Sync's records). Brand it at the point of use for a typed id.
-export const ObjectIdStringSchema = zod4.string().regex(/^[0-9a-f]{24}$/i);
+export const ObjectIdStringSchema = zod4.string().regex(OBJECT_ID_HEX_PATTERN);
 
 export const ExpirationDateSchema = zod4
   .union([

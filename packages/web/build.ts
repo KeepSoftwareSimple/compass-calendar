@@ -1,6 +1,7 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
 import { injectModulePreloads } from "./inject-module-preloads";
+import { dropZodLocalesPlugin } from "./plugins/drop-zod-locales.plugin";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { execSync } from "node:child_process";
 import path from "node:path";
@@ -69,7 +70,7 @@ const result = await Bun.build({
   splitting: true,
   metafile: true,
   define,
-  plugins: [postcssPlugin],
+  plugins: [dropZodLocalesPlugin, postcssPlugin],
   publicPath: "/",
 });
 

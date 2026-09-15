@@ -21,6 +21,11 @@ describe("IDSchemaV4", () => {
     expect(result.error).toBeInstanceOf(ZodError);
     expect(z.treeifyError(result.error!).errors).toEqual(["Invalid id"]);
   });
+
+  it("rejects a 12-character string that bson ObjectId.isValid would accept", () => {
+    const twelveBytes = "abcdefghijkl";
+    expect(IDSchemaV4.safeParse(twelveBytes).success).toBe(false);
+  });
 });
 
 describe("TimezoneSchema", () => {

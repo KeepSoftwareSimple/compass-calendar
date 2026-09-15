@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Logger } from "@core/logger/winston.logger";
+import { zObjectId } from "@core/types/object-id.schema";
 import {
   type ConnectionBeginRequest,
   ConnectionBeginRequestSchema,
@@ -11,7 +12,6 @@ import {
   type ProviderKind,
   ProviderKindSchema,
 } from "@core/types/sync/identity.contracts";
-import { zObjectId } from "@core/types/type.utils";
 import { resolveAppleFormPostRedirect } from "@backend/auth/services/apple/apple.auth.callback";
 import compassAuthService from "@backend/auth/services/compass/compass.auth.service";
 import { CONFIG } from "@backend/common/constants/config.constants";

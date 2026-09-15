@@ -1,5 +1,6 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
+import { dropZodLocalesPlugin } from "./plugins/drop-zod-locales.plugin";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { watch } from "node:fs";
 import path from "node:path";
@@ -60,7 +61,7 @@ async function build() {
     minify: !IS_DEV,
     splitting: true,
     define,
-    plugins: [postcssPlugin],
+    plugins: [dropZodLocalesPlugin, postcssPlugin],
     publicPath: "/",
   });
 

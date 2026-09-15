@@ -6,8 +6,8 @@ import {
   AvailabilityQuerySchema,
   type AvailabilityResponse,
 } from "@core/types/event-command.contracts";
+import { zObjectId } from "@core/types/object-id.schema";
 import { SyncEventCalendarIdSchema } from "@core/types/sync/event.contracts";
-import { zObjectId } from "@core/types/type.utils";
 import { mapCalendarRecord } from "@backend/calendar/calendar.record.mapper";
 import calendarService from "@backend/calendar/services/calendar.service";
 import { AuthError } from "@backend/common/errors/auth/auth.errors";
