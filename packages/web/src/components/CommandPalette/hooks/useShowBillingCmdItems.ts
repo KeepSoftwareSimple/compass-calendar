@@ -1,4 +1,4 @@
-import { CreditCardIcon } from "@phosphor-icons/react";
+import { CreditCardIcon } from "@phosphor-icons/react/dist/csr/CreditCard";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { cardUpdateActions } from "@web/billing/card-update.store";
 import { getPlanBadge } from "@web/billing/planBadge";

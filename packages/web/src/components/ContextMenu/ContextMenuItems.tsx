@@ -1,4 +1,8 @@
-import { Copy, Eye, EyeSlash, PenNib, Trash } from "@phosphor-icons/react";
+import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
+import { Eye } from "@phosphor-icons/react/dist/csr/Eye";
+import { EyeSlash } from "@phosphor-icons/react/dist/csr/EyeSlash";
+import { PenNib } from "@phosphor-icons/react/dist/csr/PenNib";
+import { Trash } from "@phosphor-icons/react/dist/csr/Trash";
 import type React from "react";
 import { createContext, useContext } from "react";
 import {

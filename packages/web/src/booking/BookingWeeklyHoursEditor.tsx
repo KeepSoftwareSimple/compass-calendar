@@ -1,4 +1,5 @@
-import { Minus, Plus } from "@phosphor-icons/react";
+import { Minus } from "@phosphor-icons/react/dist/csr/Minus";
+import { Plus } from "@phosphor-icons/react/dist/csr/Plus";
 import { useLayoutEffect, useRef, useState } from "react";
 import {
   type LocalTimeOfDay,

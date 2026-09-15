@@ -1,4 +1,6 @@
-import { CalendarCheckIcon, ChatsIcon, InfoIcon } from "@phosphor-icons/react";
+import { CalendarCheckIcon } from "@phosphor-icons/react/dist/csr/CalendarCheck";
+import { ChatsIcon } from "@phosphor-icons/react/dist/csr/Chats";
+import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
 import { isPosthogEnabled } from "@web/auth/posthog/posthog.util";
 import { type CommandSection } from "@web/components/CommandPalette/command-palette.types";
 import { feedbackActions } from "@web/components/Feedback/feedback.store";

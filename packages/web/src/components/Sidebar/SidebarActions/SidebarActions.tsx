@@ -1,4 +1,6 @@
-import { CommandIcon, GearIcon, KeyboardIcon } from "@phosphor-icons/react";
+import { CommandIcon } from "@phosphor-icons/react/dist/csr/Command";
+import { GearIcon } from "@phosphor-icons/react/dist/csr/Gear";
+import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
 import { useGoogleUiState } from "@web/auth/providers/useProviderUiState";
 import { SidebarRefreshButton } from "@web/components/Sidebar/SidebarRefreshButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";

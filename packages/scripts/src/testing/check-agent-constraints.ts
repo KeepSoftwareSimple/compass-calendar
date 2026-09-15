@@ -38,6 +38,8 @@ export const RULE_HELP: Record<string, string> = {
     "user-facing strings must not contain an em-dash; use a comma, period, or colon. Comments are ignored. Parsers that accept typed dashes: EM_DASH_ALLOWLIST.",
   "keydown-listener":
     "register shortcuts through useAppShortcut or the engines under packages/web/src/shortcuts/, not a raw keydown listener. Existing engines: KEYDOWN_LISTENER_ALLOWLIST.",
+  "phosphor-barrel":
+    'import icons from "@phosphor-icons/react/dist/csr/<Icon>" and IconContext or types from dist/lib; the package barrel pulls every glyph onto the boot graph.',
 };
 
 /** Empty: remaining barrels were deleted; imports target the concrete files. */
@@ -185,6 +187,7 @@ const MONGO_SERVICE_IMPORT = /from\s+["'][^"']*(?<!sync-)mongo\.service["']/;
 const DUPLICATE_EVENT_SCHEMA =
   /(?:const|let|var)\s+EventSchema\s*=\s*z\.object/;
 const ZOD_V3_IMPORT = /from\s+["']zod(?:\/v3)?["']/;
+const PHOSPHOR_BARREL_IMPORT = /from\s+["']@phosphor-icons\/react["']/;
 const KEYDOWN_LISTENER = /addEventListener\(\s*["']keydown["']/;
 const EM_DASH = /\u2014/;
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
@@ -233,6 +236,10 @@ export function duplicateEventSchemaHits(source: string): number[] {
 
 export function zodV3ImportHits(source: string): number[] {
   return lineNumbers(source, ZOD_V3_IMPORT);
+}
+
+export function phosphorBarrelImportHits(source: string): number[] {
+  return lineNumbers(source, PHOSPHOR_BARREL_IMPORT);
 }
 
 export function keydownListenerHits(source: string): number[] {
@@ -376,6 +383,12 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
     if (!matchesConstraintAllow(rel, ZOD_V3_ALLOWLIST)) {
       for (const line of zodV3ImportHits(source)) {
         hits.push({ path: rel, rule: "zod-import", line });
+      }
+    }
+
+    if (rel.startsWith("packages/web/src/")) {
+      for (const line of phosphorBarrelImportHits(source)) {
+        hits.push({ path: rel, rule: "phosphor-barrel", line });
       }
     }
 

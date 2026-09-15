@@ -7,10 +7,8 @@ import {
   useListNavigation,
   useRole,
 } from "@floating-ui/react";
-import {
-  ArrowClockwiseIcon,
-  ArrowCounterClockwiseIcon,
-} from "@phosphor-icons/react";
+import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
+import { ArrowCounterClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowCounterClockwise";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";

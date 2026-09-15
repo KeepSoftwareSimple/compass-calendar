@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
 import { ZIndex } from "@web/common/constants/web.constants";

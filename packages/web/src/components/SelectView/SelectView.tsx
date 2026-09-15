@@ -6,7 +6,7 @@ import {
   useListNavigation,
   useRole,
 } from "@floating-ui/react";
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
 import { useRef, useState } from "react";

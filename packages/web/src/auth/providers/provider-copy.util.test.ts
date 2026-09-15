@@ -1,4 +1,4 @@
-import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowsClockwise";
 import {
   bookingConnectPromptCopy,
   CONNECT_CALENDAR_LABEL,

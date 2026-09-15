@@ -1,4 +1,4 @@
-import { CheckCircleIcon } from "@phosphor-icons/react";
+import { CheckCircleIcon } from "@phosphor-icons/react/dist/csr/CheckCircle";
 import { type CalendarConference } from "@core/types/calendar.contracts";
 import {
   BOOKING_CONFERENCE_INVITE_COPY,

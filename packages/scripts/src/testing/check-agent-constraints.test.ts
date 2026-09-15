@@ -13,6 +13,7 @@ import {
   matchGlob,
   mongoServiceImportHits,
   ovenBunVersion,
+  phosphorBarrelImportHits,
   RULE_HELP,
   scanBunDockerfilePins,
   scanConstraints,
@@ -162,6 +163,7 @@ describe("formatHit", () => {
       "zod-import",
       "em-dash",
       "keydown-listener",
+      "phosphor-barrel",
     ]) {
       expect(RULE_HELP[rule]?.length ?? 0).toBeGreaterThan(20);
     }
@@ -259,6 +261,63 @@ describe("scanConstraints", () => {
     expect(
       scanConstraints(root).map((hit) => `${hit.rule}:${hit.path}`),
     ).toContain("web-locator:packages/web/src/auth/providers/y.test.tsx");
+  });
+});
+
+describe("phosphorBarrelImportHits", () => {
+  it("flags the package barrel and ignores per-icon paths", () => {
+    expect(
+      phosphorBarrelImportHits(
+        'import { XIcon } from "@phosphor-icons/react";\n',
+      ),
+    ).toEqual([1]);
+    expect(
+      phosphorBarrelImportHits(
+        'import { IconContext } from "@phosphor-icons/react";\n',
+      ),
+    ).toEqual([1]);
+    expect(
+      phosphorBarrelImportHits(
+        'import { XIcon } from "@phosphor-icons/react/dist/csr/X";\n',
+      ),
+    ).toEqual([]);
+    expect(
+      phosphorBarrelImportHits(
+        'import { IconContext } from "@phosphor-icons/react/dist/lib/context";\n',
+      ),
+    ).toEqual([]);
+    expect(
+      phosphorBarrelImportHits(
+        'import type { Icon } from "@phosphor-icons/react/dist/lib/types";\n',
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("scanConstraints phosphor barrel", () => {
+  it("fails a barrel import under packages/web/src, including tests", () => {
+    const root = mkdtempSync(join(tmpdir(), "phosphor-barrel-"));
+    writeTree(root, {
+      "packages/web/src/index.tsx":
+        'import { init } from "@web/auth/posthog/posthog.bootstrap";\nvoid import("./app.bootstrap");\n',
+      "packages/web/src/Widget.tsx":
+        'import { XIcon } from "@phosphor-icons/react";\n',
+      "packages/web/src/Widget.test.tsx":
+        'import { PlusIcon } from "@phosphor-icons/react";\n',
+      "packages/web/src/ok.tsx":
+        'import { XIcon } from "@phosphor-icons/react/dist/csr/X";\n',
+    });
+
+    const hits = scanConstraints(root).map(
+      (hit) => `${hit.rule}:${hit.path}:${hit.line}`,
+    );
+    expect(hits).toContain("phosphor-barrel:packages/web/src/Widget.tsx:1");
+    expect(hits).toContain(
+      "phosphor-barrel:packages/web/src/Widget.test.tsx:1",
+    );
+    expect(hits.some((hit) => hit.includes("packages/web/src/ok.tsx"))).toBe(
+      false,
+    );
   });
 });
 

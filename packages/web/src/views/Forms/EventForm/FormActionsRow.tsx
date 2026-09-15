@@ -1,4 +1,6 @@
-import { Copy, Trash, X } from "@phosphor-icons/react";
+import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
+import { Trash } from "@phosphor-icons/react/dist/csr/Trash";
+import { X } from "@phosphor-icons/react/dist/csr/X";
 import type React from "react";
 import IconButton from "@web/components/IconButton/IconButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";

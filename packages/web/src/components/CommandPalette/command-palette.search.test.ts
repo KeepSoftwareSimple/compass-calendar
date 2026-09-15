@@ -1,4 +1,4 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import {
   filterSections,
   getLabelMatchRanges,

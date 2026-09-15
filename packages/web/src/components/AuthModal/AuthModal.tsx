@@ -1,4 +1,4 @@
-import { DotIcon } from "@phosphor-icons/react";
+import { DotIcon } from "@phosphor-icons/react/dist/csr/Dot";
 import { useSearch } from "@tanstack/react-router";
 import {
   type FC,

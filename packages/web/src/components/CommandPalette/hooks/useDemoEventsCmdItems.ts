@@ -1,4 +1,4 @@
-import { EraserIcon } from "@phosphor-icons/react";
+import { EraserIcon } from "@phosphor-icons/react/dist/csr/Eraser";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";

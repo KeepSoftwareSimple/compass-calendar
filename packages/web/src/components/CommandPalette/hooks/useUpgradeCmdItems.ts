@@ -1,4 +1,4 @@
-import { CreditCardIcon } from "@phosphor-icons/react";
+import { CreditCardIcon } from "@phosphor-icons/react/dist/csr/CreditCard";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import { useUpgradeConfirmation } from "@web/billing/UpgradeConfirmation/hooks/useUpgradeConfirmation";
 import { useAppAccess } from "@web/billing/useAppAccess";

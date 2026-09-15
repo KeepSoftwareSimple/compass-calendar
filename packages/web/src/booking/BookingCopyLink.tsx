@@ -1,4 +1,6 @@
-import { ArrowSquareOut, Check, Copy } from "@phosphor-icons/react";
+import { ArrowSquareOut } from "@phosphor-icons/react/dist/csr/ArrowSquareOut";
+import { Check } from "@phosphor-icons/react/dist/csr/Check";
+import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
 import { track } from "@web/auth/posthog/track";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { useCopiedFlag } from "@web/booking/use-copied-flag";

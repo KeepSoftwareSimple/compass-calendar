@@ -1,8 +1,6 @@
-import {
-  GithubLogoIcon,
-  LinkedinLogoIcon,
-  XLogoIcon,
-} from "@phosphor-icons/react";
+import { GithubLogoIcon } from "@phosphor-icons/react/dist/csr/GithubLogo";
+import { LinkedinLogoIcon } from "@phosphor-icons/react/dist/csr/LinkedinLogo";
+import { XLogoIcon } from "@phosphor-icons/react/dist/csr/XLogo";
 import classNames from "classnames";
 import { type ReactNode } from "react";
 import { SOCIAL_LINKS } from "@web/common/constants/social.constants";

@@ -1,9 +1,7 @@
-import {
-  CheckIcon,
-  MinusIcon,
-  QuestionIcon,
-  XIcon,
-} from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { MinusIcon } from "@phosphor-icons/react/dist/csr/Minus";
+import { QuestionIcon } from "@phosphor-icons/react/dist/csr/Question";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
 import { ATTENDEE_RSVP_LABEL } from "@web/views/Forms/EventForm/attendee-rsvp";
 
