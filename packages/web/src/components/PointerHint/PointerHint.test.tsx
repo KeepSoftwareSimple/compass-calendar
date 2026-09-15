@@ -325,6 +325,21 @@ describe("PointerHint", () => {
     expect(screen.getByRole("status")).not.toHaveTextContent("Press Mod");
   });
 
+  it("uses the same next-time copy for a palette selection", () => {
+    render(<PointerHint />);
+
+    act(() => {
+      pointerHintActions.pulse({
+        actionId: "unknown",
+        shortcutKey: ["]"],
+        performed: true,
+        source: "palette",
+      });
+    });
+
+    expect(screen.getByRole("status")).toHaveTextContent("Next time, press ].");
+  });
+
   it("names the view keys after the view switcher is clicked", () => {
     render(<PointerHint />);
 

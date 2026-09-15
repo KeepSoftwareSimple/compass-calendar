@@ -28,6 +28,7 @@ import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabe
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
+import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
 import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
@@ -57,6 +58,8 @@ import {
 } from "@web/settings/settings.store";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
+import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
@@ -188,8 +191,17 @@ const CommandPaletteContent = ({
   const activateItem = (item: CommandItem) => {
     if (item.disabled) return;
     recordRecentCommand(item.id);
+    const shortcut = item.shortcut;
     item.onClick?.();
     close();
+    if (shortcut && !readPointerHintDismissedPermanently()) {
+      pointerHintActions.pulse({
+        actionId: "unknown",
+        shortcutKey: shortcut,
+        performed: true,
+        source: "palette",
+      });
+    }
   };
 
   const dismiss = useDismiss(context);
@@ -402,6 +414,7 @@ export const CommandPalette = ({
   const upgradeCmdItems = useUpgradeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
   const { undo, redo, canUndo, canRedo } = useUndoRedo(mutationDependencies);
   const recentCommandIds = useRecentCommandIds();
 
@@ -409,15 +422,18 @@ export const CommandPalette = ({
     {
       id: "navigation",
       heading: "Navigation",
-      items: getNavigationCommandItems({
-        currentView,
-        onGoToToday,
-        onNavigateToView: (viewName) =>
-          navigate({ to: getNavigationViewRoute(viewName) }),
-        onShowShortcuts,
-        onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
-        onShowWelcomeGuide,
-      }),
+      items: [
+        ...getNavigationCommandItems({
+          currentView,
+          onGoToToday,
+          onNavigateToView: (viewName) =>
+            navigate({ to: getNavigationViewRoute(viewName) }),
+          onShowShortcuts,
+          onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
+          onShowWelcomeGuide,
+        }),
+        ...legendCmdItems,
+      ],
     },
     {
       id: "general",
@@ -510,6 +526,7 @@ export const LifeCommandPalette = ({
   const themeCmdItems = useThemeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
 
   if (!open) return null;
 
@@ -521,11 +538,14 @@ export const LifeCommandPalette = ({
         {
           id: "navigation",
           heading: "Navigation",
-          items: getNavigationCommandItems({
-            currentView: "life",
-            onNavigateToView: (viewName) =>
-              navigate({ to: getNavigationViewRoute(viewName) }),
-          }),
+          items: [
+            ...getNavigationCommandItems({
+              currentView: "life",
+              onNavigateToView: (viewName) =>
+                navigate({ to: getNavigationViewRoute(viewName) }),
+            }),
+            ...legendCmdItems,
+          ],
         },
         {
           id: "appearance",

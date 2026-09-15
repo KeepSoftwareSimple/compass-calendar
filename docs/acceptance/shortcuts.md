@@ -146,7 +146,7 @@ Pressing Cmd+K opens the command palette from any view, including while a text i
 ### Expected Results
 
 - The command palette opens immediately.
-- Items include: Create event, Create all-day event, Go to Today, Practice shortcuts, Show welcome guide, Undo last change, Redo last change, Log Out, Book personal onboarding. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
+- Items include: Create event, Create all-day event, Go to Today, Practice shortcuts, Show welcome guide, Undo last change, Redo last change, Toggle sidebar, Focus month picker, Open Up Next event, Join Up Next meeting, Time travel, Settings, Log Out, Book personal onboarding. Selecting a row that advertises a shortcut pulses the top-center hint "Next time, press …" unless tips are off. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
 - Undo / Redo rows show their keycaps and stay disabled when there is no history.
 - Google Calendar connection status and actions appear in the sidebar, not the command palette.
 - Typing filters the list.
