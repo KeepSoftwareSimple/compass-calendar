@@ -5,7 +5,7 @@ import * as realConnectStatus from "@web/auth/providers/connect-status.util";
 import * as realAppInit from "@web/common/utils/app-init.util";
 import * as realApp from "@web/components/App/App";
 import * as realEventForm from "@web/views/Forms/EventForm/EventForm.lazy";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const render = mock();
 const createRoot = mock(() => ({ render, unmount: mock() }));
@@ -44,11 +44,9 @@ mockModuleForFile(
   },
 );
 
-mockModuleForFile(
-  "@web/views/Forms/EventForm/EventForm.lazy",
-  realEventForm,
-  { preloadEventFormOnFirstInput: mock() },
-);
+mockModuleForFile("@web/views/Forms/EventForm/EventForm.lazy", realEventForm, {
+  preloadEventFormOnFirstInput: mock(),
+});
 
 const { bootstrapApp } =
   require("./app.bootstrap") as typeof import("./app.bootstrap");
@@ -81,10 +79,14 @@ describe("bootstrapApp", () => {
     const done = bootstrapApp();
     expect(render).toHaveBeenCalled();
 
+    const errorSpy = spyOn(console, "error").mockImplementation(
+      () => undefined,
+    );
     const dbInitError = new DatabaseInitError("IndexedDB blocked");
     resolveInit({ dbInitError });
     await done;
 
     expect(showDbInitErrorToast).toHaveBeenCalledWith(dbInitError);
+    errorSpy.mockRestore();
   });
 });

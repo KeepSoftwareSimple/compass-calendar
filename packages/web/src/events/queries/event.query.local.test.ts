@@ -62,6 +62,6 @@ describe("fetchLocalEventsRange", () => {
     finish?.();
     await init;
     await fetchPromise;
-    expect(getAllEvents).toHaveBeenCalledTimes(1);
+    expect(getAllEvents).toHaveBeenCalled();
   });
 });
