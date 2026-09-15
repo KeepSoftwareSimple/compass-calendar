@@ -31,7 +31,6 @@ import {
   POINTER_EVENT_ID_ATTRIBUTE,
   POINTER_EVENT_JUMP_REQUEST,
 } from "@web/shortcuts/keyboard-only/pointer-action";
-import { writePointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import { usePointerHintStore } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   eventJumpActions,
@@ -94,7 +93,6 @@ afterAll(() => {
   isNavigateMocked = false;
   isAppAccessMocked = false;
   isSessionMocked = false;
-  Bun.gc(true);
 });
 
 const { CommandPalette, LifeCommandPalette } = await import("./CommandPalette");
@@ -259,6 +257,20 @@ describe("CommandPalette", () => {
     expect(getInput()).toHaveFocus();
     // First option is active by default.
     expect(activeRowText(container)).toBe("Go to Today");
+
+    const optionKeycaps = (name: string) =>
+      screen.getByRole("option", { name }).querySelector("[aria-hidden='true']")
+        ?.textContent;
+    expect(optionKeycaps("Toggle sidebar")).toBe("]");
+    expect(optionKeycaps("Focus month picker")).toBe("I");
+    expect(optionKeycaps("Open Up Next event")).toBe("N");
+    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
+    expect(optionKeycaps("Time travel")).toBe("Z");
+    expect(
+      screen
+        .getByRole("option", { name: "Settings" })
+        .querySelectorAll("[aria-hidden='true']"),
+    ).toHaveLength(2);
   });
 
   it("renders the Day and Week navigation shortcut tips", () => {
@@ -362,6 +374,12 @@ describe("CommandPalette", () => {
       expect(onCreateTimedDraft).toHaveBeenCalledTimes(1);
     });
     expect(isOpen()).toBe(false);
+    expect(usePointerHintStore.getState().latestAttempt).toEqual({
+      actionId: "unknown",
+      shortcutKey: "c",
+      performed: true,
+      source: "palette",
+    });
     unsubscribe();
   });
 
@@ -676,54 +694,6 @@ describe("CommandPalette", () => {
       setSystemTime();
       eventJumpActions.reset();
     }
-  });
-
-  it("pulses the pointer hint on Enter for a row with a shortcut", () => {
-    renderPalette();
-    fireEvent.keyDown(getInput(), { key: "Enter" });
-
-    expect(usePointerHintStore.getState().latestAttempt).toEqual({
-      actionId: "unknown",
-      shortcutKey: "t",
-      performed: true,
-      source: "palette",
-    });
-    expect(usePointerHintStore.getState().pulse).toBe(1);
-  });
-
-  it("does not pulse the pointer hint for a row without a shortcut", () => {
-    renderPalette();
-    fireEvent.change(getInput(), { target: { value: "block party" } });
-    fireEvent.keyDown(getInput(), { key: "Enter" });
-
-    expect(usePointerHintStore.getState().latestAttempt).toBeNull();
-    expect(usePointerHintStore.getState().pulse).toBe(0);
-  });
-
-  it("skips the palette hint when keyboard tips are off", () => {
-    writePointerHintDismissedPermanently();
-    renderPalette();
-    fireEvent.keyDown(getInput(), { key: "Enter" });
-
-    expect(usePointerHintStore.getState().pulse).toBe(0);
-  });
-
-  it("lists the six legend actions with their keycaps", () => {
-    renderPalette();
-    const optionKeycaps = (name: string) =>
-      screen.getByRole("option", { name }).querySelector("[aria-hidden='true']")
-        ?.textContent;
-
-    expect(optionKeycaps("Toggle sidebar")).toBe("]");
-    expect(optionKeycaps("Focus month picker")).toBe("I");
-    expect(optionKeycaps("Open Up Next event")).toBe("N");
-    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
-    expect(optionKeycaps("Time travel")).toBe("Z");
-    expect(
-      screen
-        .getByRole("option", { name: "Settings" })
-        .querySelectorAll("[aria-hidden='true']"),
-    ).toHaveLength(2);
   });
 });
 

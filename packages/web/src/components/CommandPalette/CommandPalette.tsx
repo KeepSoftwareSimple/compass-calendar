@@ -41,6 +41,7 @@ import {
   getNavigationCommandItems,
   getNavigationViewRoute,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
+import { pulsePaletteTaughtShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import {
   recordRecentCommand,
   useRecentCommandIds,
@@ -58,8 +59,6 @@ import {
 } from "@web/settings/settings.store";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
-import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
-import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
@@ -194,14 +193,7 @@ const CommandPaletteContent = ({
     const shortcut = item.shortcut;
     item.onClick?.();
     close();
-    if (shortcut && !readPointerHintDismissedPermanently()) {
-      pointerHintActions.pulse({
-        actionId: "unknown",
-        shortcutKey: shortcut,
-        performed: true,
-        source: "palette",
-      });
-    }
+    pulsePaletteTaughtShortcut(shortcut);
   };
 
   const dismiss = useDismiss(context);
