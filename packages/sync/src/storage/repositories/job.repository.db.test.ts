@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { type Db } from "mongodb";
+import { type Db, MongoClient } from "mongodb";
 import {
   type ConnectionId,
   type PrincipalId,
@@ -12,7 +12,11 @@ import {
   JOB_PRIORITY,
   type JobEnqueue,
 } from "@sync/storage/contracts/job.contracts";
-import { JobRepository } from "@sync/storage/repositories/job.repository";
+import {
+  JobRepository,
+  subscribeJobQueueWake,
+} from "@sync/storage/repositories/job.repository";
+import { beforeEach, describe, expect, it } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -30,6 +34,32 @@ const enqueue = (overrides: Partial<JobEnqueue> = {}): JobEnqueue =>
     ...overrides,
   }) as JobEnqueue;
 
+async function monitorJobCommands<T>(
+  dbName: string,
+  run: (jobs: JobRepository) => Promise<T>,
+): Promise<{ names: string[]; result: T }> {
+  const client = new MongoClient(process.env["SYNC_MONGO_URI"] as string, {
+    monitorCommands: true,
+  });
+  await client.connect();
+  const names: string[] = [];
+  const onStarted = (event: {
+    commandName: string;
+    command: Record<string, unknown>;
+  }) => {
+    const collection = event.command["find"] ?? event.command["findAndModify"];
+    if (collection === "jobs") names.push(event.commandName);
+  };
+  client.on("commandStarted", onStarted);
+  try {
+    const result = await run(new JobRepository(client.db(dbName)));
+    return { names, result };
+  } finally {
+    client.off("commandStarted", onStarted);
+    await client.close();
+  }
+}
+
 describe("JobRepository", () => {
   const storage = setupSyncStorage(import.meta.url);
   let db: Db;
@@ -45,6 +75,19 @@ describe("JobRepository", () => {
     expect(job.state).toBe("pending");
     expect(job.attempt).toBe(0);
     expect(job.leaseOwner).toBeNull();
+  });
+
+  it("wakes subscribers when a pending job is enqueued", async () => {
+    let wakes = 0;
+    const stop = subscribeJobQueueWake(() => {
+      wakes += 1;
+    });
+    try {
+      await repo.enqueue(enqueue());
+      expect(wakes).toBe(1);
+    } finally {
+      stop();
+    }
   });
 
   it("coalesces repeated enqueues of the same key into one job", async () => {
@@ -117,6 +160,26 @@ describe("JobRepository", () => {
       expect(claimed?.leaseOwner).toBe("worker-1");
       expect(claimed?.attempt).toBe(1);
       expect(claimed?.leaseExpiresAt).toEqual(future(LEASE_MS));
+    });
+
+    it("issues one find and no findOneAndUpdate when the queue is idle", async () => {
+      const { names, result } = await monitorJobCommands(
+        db.databaseName,
+        (jobs) => jobs.claimDueJob("worker-1", NOW, LEASE_MS),
+      );
+      expect(result).toBeNull();
+      expect(names.filter((name) => name === "find")).toHaveLength(1);
+      expect(names.filter((name) => name === "findAndModify")).toHaveLength(0);
+    });
+
+    it("does not claim-write when every pending job is still in backoff", async () => {
+      await repo.enqueue(enqueue({ runAfter: future(60_000) }));
+      const { names, result } = await monitorJobCommands(
+        db.databaseName,
+        (jobs) => jobs.claimDueJob("worker-1", NOW, LEASE_MS),
+      );
+      expect(result).toBeNull();
+      expect(names.filter((name) => name === "findAndModify")).toHaveLength(0);
     });
 
     it("does not claim a job whose runAfter is still in the future", async () => {

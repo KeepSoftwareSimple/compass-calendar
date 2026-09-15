@@ -33,6 +33,22 @@ export type EnqueueUrgentOutcome =
 
 type EnqueueForegroundOutcome = "created" | "boosted" | "inFlight" | "failed";
 
+const jobQueueWakeListeners = new Set<() => void>();
+
+// In-process wake for idle job drains. Enqueue (including webhook ingest)
+// signals so a single Sync process claims new work immediately; extra
+// replicas still fall back to the 5s poll.
+export function subscribeJobQueueWake(listener: () => void): () => void {
+  jobQueueWakeListeners.add(listener);
+  return () => {
+    jobQueueWakeListeners.delete(listener);
+  };
+}
+
+function signalJobQueueWake(): void {
+  for (const listener of jobQueueWakeListeners) listener();
+}
+
 // The exact complement of listFailedForRequeue's eligibility filter: {$gte}
 // does not match a missing requeuedCount, so a legacy job counts as eligible
 // there and never as exhausted here. Keep the two in step.
@@ -88,7 +104,9 @@ export class JobRepository {
       { upsert: true, returnDocument: "after" },
     );
     if (!result) throw new Error("Enqueue did not return a job record");
-    return JobRecordSchema.parse(result);
+    const job = JobRecordSchema.parse(result);
+    wakeIfPending(job);
+    return job;
   }
 
   // User-initiated enqueue that must do something even when a coalescing key
@@ -109,11 +127,13 @@ export class JobRepository {
     // untouched so the ladder still terminates.
     const boosted = await boostPending();
     if (boosted.matchedCount === 1) {
-      return this.#requireByKey(
+      const result = await this.#requireByKey(
         fields.coalescingKey,
         "boosted",
         "Boosted job disappeared after update",
       );
+      wakeIfPending(result.job);
+      return result;
     }
 
     // failed → revive. Frees the coalescing key that durable failures hold
@@ -137,11 +157,13 @@ export class JobRepository {
       },
     );
     if (revived.matchedCount === 1) {
-      return this.#requireByKey(
+      const result = await this.#requireByKey(
         fields.coalescingKey,
         "requeuedFailed",
         "Revived job disappeared after update",
       );
+      wakeIfPending(result.job);
+      return result;
     }
 
     // claimed → inFlight. Touch nothing: releaseOwned/complete/scheduleRetry
@@ -167,11 +189,13 @@ export class JobRepository {
         created.runAfter.getTime() > now.getTime())
     ) {
       await boostPending();
-      return this.#requireByKey(
+      const result = await this.#requireByKey(
         fields.coalescingKey,
         "boosted",
         "Job disappeared after late boost",
       );
+      wakeIfPending(result.job);
+      return result;
     }
 
     if (created.state === "claimed") {
@@ -191,11 +215,13 @@ export class JobRepository {
     const now = fields.runAfter;
     const boostPending = async (missing: string) => {
       await this.#boostPending(fields.coalescingKey, now, fields.priority);
-      return this.#requireByKey(
+      const result = await this.#requireByKey(
         fields.coalescingKey,
         "boosted" as const,
         missing,
       );
+      wakeIfPending(result.job);
+      return result;
     };
 
     // Read first, then branch. Unlike enqueueUrgent this path has no failed →
@@ -297,7 +323,9 @@ export class JobRepository {
   // sort over every due job on every idle poll (440 docs after the 2026-08-07
   // restart burst). Sort is `{runAfter:1}` so oldest-due wins within a rung.
   // findOneAndUpdate stays atomic per arm, so two workers still never both
-  // win the same job. Returns null when no job is due.
+  // win the same job. Returns null when no job is due. An idle queue is
+  // detected with one indexed find before any claim write, so a quiet
+  // process does not issue three no-op findOneAndUpdate commands per poll.
   // excludeKinds reserves this lane away from the given job kinds — a light
   // lane that claims only quick jobs, so a long initialImport/repair claimed
   // by another lane can never head-of-line block it. Applied to all three
@@ -323,6 +351,18 @@ export class JobRepository {
       excludeKinds && excludeKinds.length > 0
         ? { kind: { $nin: excludeKinds } }
         : {};
+
+    const due = await this.collection.findOne(
+      {
+        $or: [
+          { state: "claimed" as const, leaseExpiresAt: { $lt: now } },
+          { state: "pending" as const, runAfter: { $lte: now } },
+        ],
+        ...kindFilter,
+      },
+      { projection: { _id: 1 } },
+    );
+    if (!due) return null;
 
     for (const filter of [
       { state: "claimed" as const, leaseExpiresAt: { $lt: now } },
@@ -762,4 +802,8 @@ export class JobRepository {
     const result = await this.collection.deleteMany({ tenantId, principalId });
     return result.deletedCount;
   }
+}
+
+function wakeIfPending(job: JobRecord): void {
+  if (job.state === "pending") signalJobQueueWake();
 }

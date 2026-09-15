@@ -2,6 +2,7 @@ import { faker } from "@faker-js/faker";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   assertForbiddenDatabaseUnreachable,
+  mongoClientPoolOptions,
   SyncMongoService,
 } from "@sync/storage/sync-mongo.service";
 
@@ -39,6 +40,15 @@ describe("SyncMongoService when connected", () => {
       ),
     );
     expect(names.has(SYNC_COLLECTIONS.providerConnections)).toBe(true);
+  });
+
+  it("opens a warm compressed pool", () => {
+    const options = mongoClientPoolOptions();
+    expect(service.client.options.minPoolSize).toBe(options.minPoolSize);
+    expect(service.client.options.maxIdleTimeMS).toBe(options.maxIdleTimeMS);
+    expect(service.client.options.compressors).toEqual(
+      options.compressors ?? [],
+    );
   });
 
   it("supports multi-document transactions (replica set)", async () => {

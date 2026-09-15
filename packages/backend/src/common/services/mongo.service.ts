@@ -23,8 +23,41 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import { type EventRecord } from "@backend/event/event.record";
 import { type HiddenEventRecord } from "@backend/user/hidden-event.record";
 import { type PendingAccountDeletionRecord } from "@backend/user/pending-account-deletion.record";
+import { createRequire } from "node:module";
 
 const logger = Logger("app:mongo.service");
+
+const requireFromHere = createRequire(import.meta.url);
+
+const MONGO_MIN_POOL_SIZE = 2;
+const MONGO_MAX_IDLE_TIME_MS = 60_000;
+
+// zstd first, then snappy, and only codecs this process can actually load so
+// handshake never agrees on a compressor the driver would then fail to use.
+export function mongoClientPoolOptions(): {
+  minPoolSize: number;
+  maxIdleTimeMS: number;
+  compressors?: Array<"zstd" | "snappy">;
+} {
+  const compressors = (["zstd", "snappy"] as const).filter((name) =>
+    canLoadMongoCompressor(name),
+  );
+  return {
+    minPoolSize: MONGO_MIN_POOL_SIZE,
+    maxIdleTimeMS: MONGO_MAX_IDLE_TIME_MS,
+    ...(compressors.length > 0 ? { compressors: [...compressors] } : {}),
+  };
+}
+
+function canLoadMongoCompressor(name: "zstd" | "snappy"): boolean {
+  const specifier = name === "zstd" ? "@mongodb-js/zstd" : "snappy";
+  try {
+    requireFromHere(specifier);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 interface InternalClient {
   db: Db;
@@ -207,6 +240,7 @@ class MongoService {
 
     const client = new MongoClient(CONFIG.MONGO_URI, {
       serverApi: { strict: true, version: "1" },
+      ...mongoClientPoolOptions(),
     });
 
     client.on("close", this.onDisconnect.bind(this));

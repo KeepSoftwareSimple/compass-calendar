@@ -35,6 +35,7 @@ export class PollLoop {
   #loop: Promise<void> | null = null;
   #wake: (() => void) | null = null;
   #timer: ReturnType<typeof setTimeout> | null = null;
+  #drainImmediately = false;
 
   constructor(options: PollLoopOptions) {
     this.#tick = options.tick;
@@ -52,6 +53,24 @@ export class PollLoop {
     this.#loop = this.#run();
   }
 
+  // Interrupt an idle wait so the next tick runs now. A call during a tick
+  // skips the following idle delay (work may have landed while we were busy).
+  // No-op when the loop is not running; multi-replica still relies on pollMs.
+  wake(): void {
+    if (!this.#running) return;
+    if (this.#timer) {
+      clearTimeout(this.#timer);
+      this.#timer = null;
+    }
+    if (this.#wake) {
+      const wake = this.#wake;
+      this.#wake = null;
+      wake();
+      return;
+    }
+    this.#drainImmediately = true;
+  }
+
   // Stop ticking. Waits for an in-flight tick to finish BEFORE running onStop
   // (a caller's precondition, e.g. releaseOwned, may require no handler still
   // running). Idempotent and safe to call when never started.
@@ -65,6 +84,7 @@ export class PollLoop {
     // instead of sleeping out the remaining delay.
     this.#wake?.();
     this.#wake = null;
+    this.#drainImmediately = false;
     if (this.#loop) await this.#loop;
     this.#loop = null;
     if (this.#onStop) await this.#onStop();
@@ -89,6 +109,10 @@ export class PollLoop {
   }
 
   #idle(ms: number): Promise<void> {
+    if (this.#drainImmediately) {
+      this.#drainImmediately = false;
+      return Promise.resolve();
+    }
     return new Promise((resolve) => {
       this.#wake = resolve;
       this.#timer = setTimeout(() => {
