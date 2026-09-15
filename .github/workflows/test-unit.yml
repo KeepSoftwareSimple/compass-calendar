@@ -107,6 +107,35 @@ jobs:
         run: |
           bun run type-check
 
+      # Mirrors self-host/Dockerfile.web's generated compass.yaml so a PR that
+      # grows the boot bundle fails here, on the PR, instead of silently
+      # breaking the release image build days later. #3781 landed the
+      # boot-size gate with a stale chunkCount ceiling and nothing ran
+      # build.ts on pull requests, so Dockerfile.web (which does run it) spent
+      # #3814-#3816 exiting 1 with no image published and nobody notified
+      # (see packages/web/boot-size-report.ts for which config is canonical).
+      - name: Build web bundle (boot-size budget)
+        run: |
+          cat > "$RUNNER_TEMP/compass.ci.yaml" <<'YAML'
+          runtime:
+            nodeEnv: production
+            timezone: Etc/UTC
+          web:
+            url: http://localhost:9080
+          backend:
+            apiUrl: http://localhost:3000/api
+            compassToken: unused-ci-build
+          mongo:
+            uri: mongodb://localhost:27017/unused
+          supertokens:
+            uri: http://localhost:3567
+            key: unused-ci-build
+          google:
+            clientId:
+          YAML
+          cd packages/web
+          COMPASS_CONFIG_FILE="$RUNNER_TEMP/compass.ci.yaml" bun run build.ts
+
       # Workflow files auto-merge under the same size rails as other paths,
       # so they are linted here. Pinned; the image bundles shellcheck for
       # run: steps.
