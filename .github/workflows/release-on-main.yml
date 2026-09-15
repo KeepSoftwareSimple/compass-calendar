@@ -85,3 +85,31 @@ jobs:
     with:
       tag: ${{ needs.tag-release.outputs.release_tag }}
     secrets: inherit
+
+  # #3814-#3816 failed here (publish-docker-images) on every push for most of
+  # a day - a stale boot-size ceiling - and nobody noticed until staging and
+  # prod were both several versions behind. Post once, on failure only, so a
+  # broken release is loud instead of silent.
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - tag-release
+      - publish-docker-images
+      - deploy-staging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Notify Discord
+        env:
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+        run: |
+          failed_job=unknown
+          [ "${{ needs.tag-release.result }}" = "failure" ] && failed_job="tag-release"
+          [ "${{ needs.publish-docker-images.result }}" = "failure" ] && failed_job="publish-docker-images"
+          [ "${{ needs.deploy-staging.result }}" = "failure" ] && failed_job="deploy-staging"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          .github/scripts/discord-notify.sh \
+            "Release on main failed: job ${failed_job}, tag ${{ needs.tag-release.outputs.release_tag || 'not tagged' }}. ${run_url}"

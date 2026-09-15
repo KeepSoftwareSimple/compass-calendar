@@ -18,6 +18,32 @@ permissions:
   contents: read
 
 jobs:
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - deploy-cloud
+      - health-check-cloud
+      - deploy-selfhosted
+      - health-check-selfhosted
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Notify Discord
+        env:
+          DISCORD_ERRORS_WEBHOOK_URL: ${{ secrets.DISCORD_ERRORS_WEBHOOK_URL }}
+        run: |
+          failed_job=unknown
+          [ "${{ needs.deploy-cloud.result }}" = "failure" ] && failed_job="deploy-cloud"
+          [ "${{ needs.health-check-cloud.result }}" = "failure" ] && failed_job="health-check-cloud"
+          [ "${{ needs.deploy-selfhosted.result }}" = "failure" ] && failed_job="deploy-selfhosted"
+          [ "${{ needs.health-check-selfhosted.result }}" = "failure" ] && failed_job="health-check-selfhosted"
+          run_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          .github/scripts/discord-notify.sh \
+            "Deploy staging failed: job ${failed_job}, tag ${{ inputs.tag }}. ${run_url}"
+
   deploy-cloud:
     name: Deploy to staging-cloud
     uses: ./.github/workflows/_deploy-environment.yml
