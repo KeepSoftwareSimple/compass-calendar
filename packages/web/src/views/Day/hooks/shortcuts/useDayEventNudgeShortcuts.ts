@@ -65,7 +65,7 @@ export function useDayEventNudgeShortcuts({
     },
     placeTimedDraft,
     targeting,
-    repositionDraftByKey: (key) => {
+    repositionDraftByKey: (key, step) => {
       const { gridDraft, status } = useDraftStore.getState();
       const previousStart = gridDraft
         ? dayjs(gridDraft.values.schedule.start).startOf("day")
@@ -75,6 +75,7 @@ export function useDayEventNudgeShortcuts({
         activity: status?.activity,
         draft: gridDraft,
         key,
+        step,
       });
       if (!nextDraft) return false;
 

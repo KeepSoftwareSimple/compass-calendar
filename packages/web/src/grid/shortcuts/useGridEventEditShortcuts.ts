@@ -23,7 +23,9 @@ import {
 import {
   convertAllDayToTimedDates,
   type EventEdge,
+  type EventNudgeStep,
   getArrowKeyMovement,
+  nudgeStepFromKeyboard,
 } from "@web/common/utils/event/event-nudge.util";
 import {
   nudgeEventEdgeFromKeyboard,
@@ -138,9 +140,14 @@ const isOutsideVisibleWeek = (
   date: Dayjs,
   days: number,
   weekDays: Dayjs[],
-): boolean =>
-  (days === -1 && !date.isAfter(weekDays[0], "day")) ||
-  (days === 1 && !date.isBefore(weekDays[weekDays.length - 1], "day"));
+): boolean => {
+  if (days === 0 || weekDays.length === 0) return false;
+  const next = date.add(days, "day");
+  const first = weekDays[0];
+  const last = weekDays[weekDays.length - 1];
+  if (!first || !last) return false;
+  return next.isBefore(first, "day") || next.isAfter(last, "day");
+};
 
 /**
  * Form-closed grid draft whose card currently has DOM focus. Drafts stamp
@@ -193,7 +200,7 @@ export type GridEventEditDayBoundary =
        * the nudge (edge nudges always refuse - resizing across the window is
        * not a flow).
        */
-      onCrossed?: (days: 1 | -1, eventId: string) => void;
+      onCrossed?: (days: number, eventId: string) => void;
     };
 
 /**
@@ -226,7 +233,7 @@ export function useGridEventEditShortcuts({
    * View-owned draft move. Return true when the draft moved so the shared
    * hook can preventDefault. Day may also navigate here on day-cross.
    */
-  repositionDraftByKey: (key: string) => boolean;
+  repositionDraftByKey: (key: string, step?: EventNudgeStep) => boolean;
   targeting: {
     focus: (target: FocusableGridEventTarget) => void;
     /** Registry-backed: the gate for any action that mutates the event. */
@@ -395,6 +402,7 @@ export function useGridEventEditShortcuts({
     const movement = getArrowKeyMovement(
       keyboardEvent.key,
       Boolean(event.isAllDay),
+      nudgeStepFromKeyboard(keyboardEvent),
     );
     if (!movement) return;
     if (wouldAllDayEdgeLeaveVisibleWeek(event, edge, movement)) return;
@@ -463,7 +471,11 @@ export function useGridEventEditShortcuts({
         return;
       }
 
-      if (event.isAllDay && keyboardEvent.key === "ArrowDown") {
+      if (
+        event.isAllDay &&
+        keyboardEvent.key === "ArrowDown" &&
+        !keyboardEvent.altKey
+      ) {
         if (!event._id) return;
         keyboardEvent.preventDefault();
         const startMinute =
@@ -479,6 +491,7 @@ export function useGridEventEditShortcuts({
       const movement = getArrowKeyMovement(
         keyboardEvent.key,
         Boolean(event.isAllDay),
+        nudgeStepFromKeyboard(keyboardEvent),
       );
       if (!movement) return;
 
@@ -511,7 +524,7 @@ export function useGridEventEditShortcuts({
           if (
             crossesWeekWindow &&
             dayBoundary.kind === "clamp" &&
-            (movement.days === 1 || movement.days === -1) &&
+            movement.days !== 0 &&
             nudgedEvent._id
           ) {
             dayBoundary.onCrossed?.(movement.days, nudgedEvent._id);
@@ -534,7 +547,10 @@ export function useGridEventEditShortcuts({
       }
     }
 
-    const didMoveDraft = repositionDraftByKey(keyboardEvent.key);
+    const didMoveDraft = repositionDraftByKey(
+      keyboardEvent.key,
+      nudgeStepFromKeyboard(keyboardEvent),
+    );
     if (didMoveDraft) {
       claimShortcut(keyboardEvent);
       return;
@@ -766,6 +782,34 @@ export function useGridEventEditShortcuts({
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
   });
+  useAppShortcut(KEYMAP.moveEvent.coarseHotkeys.up, moveFocusedCalendarEvent, {
+    ...WRITE_EDIT_SHORTCUT,
+    telemetryHintId: "nudge",
+  });
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.down,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+    },
+  );
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.left,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+    },
+  );
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.right,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+    },
+  );
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,
