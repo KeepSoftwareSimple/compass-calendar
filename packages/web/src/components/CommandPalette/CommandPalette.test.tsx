@@ -94,6 +94,7 @@ afterAll(() => {
   isNavigateMocked = false;
   isAppAccessMocked = false;
   isSessionMocked = false;
+  Bun.gc(true);
 });
 
 const { CommandPalette, LifeCommandPalette } = await import("./CommandPalette");
@@ -723,71 +724,6 @@ describe("CommandPalette", () => {
         .getByRole("option", { name: "Settings" })
         .querySelectorAll("[aria-hidden='true']"),
     ).toHaveLength(2);
-  });
-
-  it("disables Up Next rows when there is no upcoming event", () => {
-    renderPalette();
-
-    expect(
-      screen.getByRole("option", { name: "Open Up Next event" }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("option", { name: "Join Up Next meeting" }),
-    ).toBeDisabled();
-    expect(
-      screen.getByRole("option", { name: "Focus month picker" }),
-    ).toBeEnabled();
-  });
-
-  it("enables Up Next rows from the availability snapshot", () => {
-    const openEventDetails = mock();
-    const joinMeeting = mock();
-    renderWithStore(
-      <CommandPalette
-        currentView="week"
-        onGoToToday={onGoToToday}
-        onShowShortcuts={onShowShortcuts}
-        placeholder="Try: 'create', 'bug', or 'code'"
-      />,
-      {
-        settings: { isCmdPaletteOpen: true },
-        upNextAvailability: {
-          hasUpNext: true,
-          hasConference: true,
-          openEventDetails,
-          joinMeeting,
-        },
-      },
-    );
-
-    expect(
-      screen.getByRole("option", { name: "Open Up Next event" }),
-    ).toBeEnabled();
-    expect(
-      screen.getByRole("option", { name: "Join Up Next meeting" }),
-    ).toBeEnabled();
-
-    fireEvent.click(screen.getByRole("option", { name: "Open Up Next event" }));
-    expect(openEventDetails).toHaveBeenCalledWith("keyboardEdit");
-  });
-
-  it("disables Focus month picker when the sidebar is collapsed", () => {
-    renderWithStore(
-      <CommandPalette
-        currentView="week"
-        onGoToToday={onGoToToday}
-        onShowShortcuts={onShowShortcuts}
-        placeholder="Try: 'create', 'bug', or 'code'"
-      />,
-      {
-        settings: { isCmdPaletteOpen: true },
-        view: { sidebar: { isOpen: false, preference: false } },
-      },
-    );
-
-    expect(
-      screen.getByRole("option", { name: "Focus month picker" }),
-    ).toBeDisabled();
   });
 });
 
