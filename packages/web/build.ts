@@ -89,6 +89,10 @@ await Bun.write(
 
 await copyStaticAssets(OUTDIR);
 const preloaded = await injectModulePreloads(OUTDIR, result.metafile);
+const metafileDump = process.env["COMPASS_DUMP_METAFILE"];
+if (metafileDump) {
+  await Bun.write(metafileDump, JSON.stringify(result.metafile));
+}
 
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`Build complete → ${OUTDIR}`);

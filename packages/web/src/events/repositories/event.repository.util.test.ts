@@ -2,6 +2,7 @@ import {
   createGetEventRepository,
   createGetEventRepositorySource,
 } from "./event.repository.factory";
+import { loadEventRepositoryBySource } from "./event.repository.util";
 import { LocalEventRepository } from "./local.event.repository";
 import { RemoteEventRepository } from "./remote.event.repository";
 import { beforeEach, describe, expect, it } from "bun:test";
@@ -67,5 +68,17 @@ describe("getEventRepository", () => {
     hasUserEverAuthenticated = true;
 
     expect(getEventRepository(false)).toBeInstanceOf(RemoteEventRepository);
+  });
+});
+
+describe("loadEventRepositoryBySource", () => {
+  it("loads the remote repository without constructing local storage", async () => {
+    const repository = await loadEventRepositoryBySource("remote");
+    expect(repository).toBeInstanceOf(RemoteEventRepository);
+  });
+
+  it("loads the local repository when the source is local", async () => {
+    const repository = await loadEventRepositoryBySource("local");
+    expect(repository).toBeInstanceOf(LocalEventRepository);
   });
 });

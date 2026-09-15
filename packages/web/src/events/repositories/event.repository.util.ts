@@ -14,11 +14,10 @@
 
 import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import {
-  createGetEventRepositoryBySource,
   createGetEventRepositorySource,
+  type EventRepositorySource,
 } from "./event.repository.factory";
-import { LocalEventRepository } from "./local.event.repository";
-import { RemoteEventRepository } from "./remote.event.repository";
+import { type EventRepository } from "./event.repository.types";
 
 /**
  * Determines the repository source (local or remote) based on session and authentication state.
@@ -28,26 +27,20 @@ export const getEventRepositorySource = createGetEventRepositorySource({
 });
 
 /**
- * Factory function to get the appropriate event repository based on session and authentication state.
+ * Loads the repository for an explicit source, bypassing session/auth checks.
+ * Used by query and mutation functions that already carry `source` in their
+ * key, so the fetch target cannot drift from the key.
  *
- * Repository selection logic:
- * 1. If user has EVER authenticated: Use RemoteEventRepository
- *    - Prevents remote account events from disappearing when the session is temporarily missing
- *    - Remote requests can surface the auth problem instead of silently saving locally
- *    - A single Google account needing reconnect does not demote healthy accounts
- * 2. If a session exists: Use RemoteEventRepository
- *    - Newly authenticated users persist through the backend even before remembered auth state updates
- * 3. If user has NEVER authenticated: Use LocalEventRepository (IndexedDB)
- *    - Events stored locally until user decides to sign in
- *
- * @param sessionExists - Whether a session currently exists (from session.doesSessionExist())
+ * Local IndexedDB (and rrule via series expansion) stay off the boot graph:
+ * await this from mutationFn / queryFn, never at render.
  */
-/**
- * Returns the repository for an explicit source, bypassing session/auth checks.
- * Used by query functions that already carry `source` in their query key, so the
- * fetch target cannot drift from the key.
- */
-export const getEventRepositoryBySource = createGetEventRepositoryBySource({
-  createLocalEventRepository: () => new LocalEventRepository(),
-  createRemoteEventRepository: () => new RemoteEventRepository(),
-});
+export async function loadEventRepositoryBySource(
+  source: EventRepositorySource,
+): Promise<EventRepository> {
+  if (source === "remote") {
+    const { RemoteEventRepository } = await import("./remote.event.repository");
+    return new RemoteEventRepository();
+  }
+  const { LocalEventRepository } = await import("./local.event.repository");
+  return new LocalEventRepository();
+}

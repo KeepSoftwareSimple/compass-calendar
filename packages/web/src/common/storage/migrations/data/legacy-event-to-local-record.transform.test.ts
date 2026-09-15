@@ -1,7 +1,10 @@
 import { Origin } from "@core/constants/core.constants";
 import { type ValidatedCompassEvent } from "@core/types/compass-event.contracts";
 import { CalendarIdSchema, type EventId } from "@core/types/domain-primitives";
-import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import {
+  createdAtFromObjectIdHex,
+  createObjectIdString,
+} from "@web/common/utils/id/object-id.util";
 import {
   transformLegacyEvents,
   transformLegacyEventToLocalRecord,
@@ -52,6 +55,10 @@ describe("transformLegacyEventToLocalRecord", () => {
     }
     expect(record?.event.calendarId).toBe(sentinelCalendarId);
     expect(record?.isDemo).toBe(false);
+    expect(record).not.toBeNull();
+    expect(record?.event.createdAt).toBe(
+      createdAtFromObjectIdHex(record?.event.id ?? ""),
+    );
   });
 
   it("normalizes a same-date all-day event to an exclusive end", () => {

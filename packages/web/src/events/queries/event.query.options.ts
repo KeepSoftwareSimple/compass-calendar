@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { isBackendUnavailableError } from "@web/api/util/backend-unavailable-error.util";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
-import { getEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
+import { loadEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
 import { fetchDayEvents } from "./day.event.query";
 import { eventQueryKeys } from "./event.query.keys";
 import { fetchWeekEvents } from "./week.event.query";
@@ -49,13 +49,18 @@ function rangeEventsQueryOptions(
       end: endDate,
       calendarIds,
     }),
-    queryFn: ({ signal }) =>
-      fetchFn(
+    queryFn: async ({ signal }) => {
+      const repository =
+        source === "local"
+          ? undefined
+          : await loadEventRepositoryBySource(source);
+      return fetchFn(
         { startDate, endDate, calendarIds },
-        getEventRepositoryBySource(source),
+        repository,
         source,
         signal,
-      ),
+      );
+    },
     ...EVENT_QUERY_CACHE_OPTIONS,
   });
 }

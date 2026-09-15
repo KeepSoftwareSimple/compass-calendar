@@ -1,9 +1,11 @@
-import { ObjectId } from "bson";
 import { type ValidatedCompassEvent } from "@core/types/compass-event.contracts";
 import { type CalendarId, EventIdSchema } from "@core/types/domain-primitives";
 import { type EventRecurrence } from "@core/types/event.contracts";
 import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
-import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import {
+  createdAtFromObjectIdHex,
+  createObjectIdString,
+} from "@web/common/utils/id/object-id.util";
 import {
   type LocalEventRecord,
   LocalEventRecordSchema,
@@ -81,11 +83,7 @@ function resolveSchedule(legacy: LegacyLocalEvent): ScheduleCandidate | null {
 }
 
 function resolveCreatedAt(id: string): string {
-  try {
-    return new ObjectId(id).getTimestamp().toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
+  return createdAtFromObjectIdHex(id);
 }
 
 function resolveUpdatedAt(legacy: LegacyLocalEvent): string | null {
