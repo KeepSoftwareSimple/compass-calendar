@@ -31,6 +31,8 @@ import {
   POINTER_EVENT_ID_ATTRIBUTE,
   POINTER_EVENT_JUMP_REQUEST,
 } from "@web/shortcuts/keyboard-only/pointer-action";
+import { writePointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import { usePointerHintStore } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   eventJumpActions,
   useEventJumpStore,
@@ -239,8 +241,10 @@ describe("CommandPalette", () => {
     // Only the heading matches here: useShowAccountsCmdItems' "Manage
     // Accounts" item is gated on auth, and this render is unauthenticated
     // (no SessionContext.Provider — see session.context.ts's default).
-    expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("More")).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Settings" }),
+    ).toBeInTheDocument();
 
     // Navigation always lists Today first, then app views.
     expect(screen.getByText("Go to Today")).toBeInTheDocument();
@@ -325,13 +329,16 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(activeRowText(container)).toBe("Go to Today");
 
-    // Walk down through the Create section. The ArrowDown after Create
-    // all-day event skips the disabled Undo row and lands on Appearance.
+    // Walk down through Navigation (including legend rows) into Create.
+    // The ArrowDown after Create all-day event skips the disabled Undo row
+    // and lands on Appearance.
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Day
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Practice shortcuts
-    fireEvent.keyDown(input, { key: "ArrowDown" }); // Create event
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Toggle sidebar
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Focus month picker
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Up Next + Join
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Create all-day event
     expect(activeRowText(container)).toBe("Create all-day event");
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Undo last change
@@ -668,6 +675,87 @@ describe("CommandPalette", () => {
       setSystemTime();
       eventJumpActions.reset();
     }
+  });
+
+  it("pulses the pointer hint on Enter for a row with a shortcut", () => {
+    renderPalette();
+    fireEvent.keyDown(getInput(), { key: "Enter" });
+
+    expect(usePointerHintStore.getState().latestAttempt).toEqual({
+      actionId: "unknown",
+      shortcutKey: "t",
+      performed: true,
+      source: "palette",
+    });
+    expect(usePointerHintStore.getState().pulse).toBe(1);
+  });
+
+  it("does not pulse the pointer hint for a row without a shortcut", () => {
+    renderPalette();
+    fireEvent.change(getInput(), { target: { value: "block party" } });
+    fireEvent.keyDown(getInput(), { key: "Enter" });
+
+    expect(usePointerHintStore.getState().latestAttempt).toBeNull();
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+  });
+
+  it("skips the palette hint when keyboard tips are off", () => {
+    writePointerHintDismissedPermanently();
+    renderPalette();
+    fireEvent.keyDown(getInput(), { key: "Enter" });
+
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+  });
+
+  it("lists the six legend actions with their keycaps", () => {
+    renderPalette();
+    const optionKeycaps = (name: string) =>
+      screen.getByRole("option", { name }).querySelector("[aria-hidden='true']")
+        ?.textContent;
+
+    expect(optionKeycaps("Toggle sidebar")).toBe("]");
+    expect(optionKeycaps("Focus month picker")).toBe("I");
+    expect(optionKeycaps("Open Up Next event")).toBe("N");
+    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
+    expect(optionKeycaps("Time travel")).toBe("Z");
+    expect(
+      screen
+        .getByRole("option", { name: "Settings" })
+        .querySelectorAll("[aria-hidden='true']"),
+    ).toHaveLength(2);
+  });
+
+  it("disables Up Next rows when there is no upcoming event", () => {
+    renderPalette();
+
+    expect(
+      screen.getByRole("option", { name: "Open Up Next event" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("option", { name: "Join Up Next meeting" }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole("option", { name: "Focus month picker" }),
+    ).toBeEnabled();
+  });
+
+  it("disables Focus month picker when the sidebar is collapsed", () => {
+    renderWithStore(
+      <CommandPalette
+        currentView="week"
+        onGoToToday={onGoToToday}
+        onShowShortcuts={onShowShortcuts}
+        placeholder="Try: 'create', 'bug', or 'code'"
+      />,
+      {
+        settings: { isCmdPaletteOpen: true },
+        view: { sidebar: { isOpen: false, preference: false } },
+      },
+    );
+
+    expect(
+      screen.getByRole("option", { name: "Focus month picker" }),
+    ).toBeDisabled();
   });
 });
 
