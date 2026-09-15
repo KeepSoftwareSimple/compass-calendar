@@ -466,7 +466,7 @@ Bare `Z` opens the time-travel timezone picker in Day and Week view. Cmd+Z / Ctr
 
 ### UX
 
-With a grid event focused (form closed, not typing in an input), Cmd+C (Mac) or Ctrl+C (Windows/Linux) copies that event into an in-app clipboard. Cmd+V / Ctrl+V then creates a duplicate at the original date and time, the same result as Cmd+D, including when nothing is focused. A later copy replaces the previous one. The clipboard lasts for the tab session with no expiry. While a text field is focused, Cmd+C / Cmd+V stay native text copy/paste.
+With a grid event focused (form closed, not typing in an input), Cmd+C (Mac) or Ctrl+C (Windows/Linux) copies that event into an in-app clipboard. Cmd+V / Ctrl+V then creates a duplicate on the create target day (the selected column via Shift+day letter, else the focused event's day, else the copied event's own day), keeping the copied event's time of day and duration. An all-day copy keeps its length. After paste the new event is focused and the column selection is spent, like C. Cmd+D still duplicates the currently focused event at its original time. A later copy replaces the previous one. The clipboard lasts for the tab session with no expiry. While a text field is focused, Cmd+C / Cmd+V stay native text copy/paste.
 
 ### Steps
 
@@ -480,8 +480,9 @@ With a grid event focused (form closed, not typing in an input), Cmd+C (Mac) or 
 ### Expected Results
 
 - The first Cmd+C does not create an event.
-- After the second copy, Cmd+V creates a duplicate of the *second* event at that event's original time. The two source events remain.
-- Cmd+D still duplicates the currently focused event immediately.
+- After the second copy, Cmd+V with nothing selected creates a duplicate of the *second* event at that event's original time. The two source events remain.
+- Cmd+V after Shift+day-letter creates the copy on that selected day at the original time of day and spends the column selection.
+- Cmd+D still duplicates the currently focused event immediately at its original date.
 - Cmd+C / Cmd+V inside the title field copy and paste text and do not duplicate an event.
 
 ---
@@ -559,6 +560,6 @@ If time is limited, run these checks before shipping shortcut-related changes:
 18. Alt+ArrowUp / Alt+ArrowDown pan the timed grid by one hour in Day and Week view even when an event is focused; they do not fire in a text input.
 19. `Z` opens time travel in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.
 20. On Day view, hold Mod then a column digit (2+) focuses that writable calendar column; Shift+Arrow / `C` seed a draft there.
-21. Cmd+C / Ctrl+C copies a focused event; Cmd+V / Ctrl+V pastes a duplicate at the original time without requiring focus. A later copy replaces the clipboard. Empty paste is a no-op. Copy/paste do not fire while typing in an input (native text clipboard). Cmd+D is unchanged.
+21. Cmd+C / Ctrl+C copies a focused event; Cmd+V / Ctrl+V pastes a duplicate on the create target day (selected column, else focused event's day, else the copied event's day) without requiring focus. A later copy replaces the clipboard. Empty paste is a no-op. Copy/paste do not fire while typing in an input (native text clipboard). Cmd+D is unchanged.
 22. In Settings > Meeting, hold Mod to reveal chips `1`/`2`/`3` and Enter; extra digits focus nothing; U with Mod held does not copy.
 23. On the first-run Meeting wizard, Enter continues, Esc and J go back after step 1, and K continues when focus is not in an editable target.

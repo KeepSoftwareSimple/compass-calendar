@@ -45,6 +45,10 @@ import {
 } from "@web/events/grid-event-draft.adapter";
 import { commitDuplicateEvent } from "@web/events/mutations/duplicate-event";
 import {
+  eventOnTargetDay,
+  eventStartDay,
+} from "@web/events/mutations/event-on-target-day";
+import {
   type EventMutationDependencies,
   useEventMutations,
 } from "@web/events/mutations/useEventMutations";
@@ -74,6 +78,10 @@ import {
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import { promptShortcutUnavailableWhileEditingEvent } from "@web/shortcuts/prompt-shortcut-unavailable";
+import {
+  eventJumpActions,
+  isEventJumpActive,
+} from "@web/shortcuts/shift-hint/event-jump.store";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
@@ -216,6 +224,7 @@ export function useGridEventEditShortcuts({
   allDayEvents = [],
   dayBoundary,
   dependencies = {},
+  getPasteTargetDay,
   placeTimedDraft,
   repositionDraftByKey,
   targeting,
@@ -224,6 +233,11 @@ export function useGridEventEditShortcuts({
   allDayEvents?: GridEvent[];
   dayBoundary: GridEventEditDayBoundary;
   dependencies?: EventMutationDependencies;
+  /**
+   * Day a Mod+V copy lands on. Week: selected column, else focused event
+   * day, else the copied event's day. Day: the column in view.
+   */
+  getPasteTargetDay?: (sourceDay: Dayjs) => Dayjs;
   /**
    * Shift+Arrow place-create when nothing is focused and no draft can move.
    * Seeds a timed draft at the same default as `c`, form closed.
@@ -289,9 +303,12 @@ export function useGridEventEditShortcuts({
     deleteEventAndDiscardDraft(deleteEvent, event);
   };
 
-  const duplicateSourceEvent = (sourceEvent: Event) => {
+  const duplicateSourceEvent = (sourceEvent: Event, targetDay?: Dayjs) => {
+    const source = targetDay
+      ? eventOnTargetDay(sourceEvent, targetDay)
+      : sourceEvent;
     const committed = commitDuplicateEvent({
-      source: sourceEvent,
+      source,
       calendars: calendars ?? [],
       defaultCalendarId: defaultCalendar?.id,
       create: createEvent,
@@ -300,7 +317,7 @@ export function useGridEventEditShortcuts({
 
     // No writable calendar could be resolved for the copy - fall back to
     // the create-draft form so the user can pick one.
-    const duplicate = duplicateGridEventDraft(sourceEvent, calendars ?? []);
+    const duplicate = duplicateGridEventDraft(source, calendars ?? []);
     if (!duplicate) return;
 
     draftActions.startGridDraft({ activity: "gridClick", draft: duplicate });
@@ -345,7 +362,13 @@ export function useGridEventEditShortcuts({
     if (!sourceEvent) return;
 
     claimShortcut(keyboardEvent);
-    duplicateSourceEvent(sourceEvent);
+    // Read the create-target day before spending the column selection
+    // (the #3388 gotcha: setActive(false) clears activeDayKeys).
+    const sourceDay = eventStartDay(sourceEvent);
+    const targetDay = getPasteTargetDay?.(sourceDay) ?? sourceDay;
+    eventJumpActions.setPointerDraftIntent(null);
+    if (isEventJumpActive()) eventJumpActions.setActive(false);
+    duplicateSourceEvent(sourceEvent, targetDay);
   };
 
   const describeEdgeDate = (event: GridEvent, edge: EventEdge) => {

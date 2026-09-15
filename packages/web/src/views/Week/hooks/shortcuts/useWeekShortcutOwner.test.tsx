@@ -205,6 +205,12 @@ const getEditMutation = (queryClient: QueryClient) =>
     .getAll()
     .find((mutation) => mutation.options.mutationKey?.[2] === "replace");
 
+const getCreateMutation = (queryClient: QueryClient) =>
+  queryClient
+    .getMutationCache()
+    .getAll()
+    .find((mutation) => mutation.options.mutationKey?.[2] === "create");
+
 beforeEach(() => {
   HotkeyManager.resetInstance();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
@@ -1789,6 +1795,96 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       expect(draftDay()).toBe("2026-05-20");
     });
     expect(useEventJumpStore.getState().announcement).toBe("");
+  });
+
+  it("pastes a Monday event onto Thursday after Shift+R and spends the selection", () => {
+    const button = addCalendarTarget(leftmostEvent.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({ includeLeftmostEvent: true });
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    button.blur();
+    act(() => {
+      pressKey("R", shiftKey);
+    });
+    expect(useEventJumpStore.getState().activeDayKeys).toEqual(["2026-05-21"]);
+
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: {
+        content: { title: string };
+        schedule: { start: string; end: string };
+      };
+    };
+    expect(input.content.title).toBe("Leftmost event");
+    expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-05-21T09:00",
+    );
+    expect(dayjs(input.schedule.end).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-05-21T10:00",
+    );
+    expect(useEventJumpStore.getState().isActive).toBe(false);
+    expect(useEventJumpStore.getState().activeDayKeys).toEqual([]);
+  });
+
+  it("pastes on the copied event's day when nothing is selected", () => {
+    const button = addCalendarTarget(leftmostEvent.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({ includeLeftmostEvent: true });
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    button.blur();
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string } };
+    };
+    expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-05-18T09:00",
+    );
+  });
+
+  it("pastes an all-day copy onto the selected day and keeps its length", () => {
+    const button = addCalendarTarget(leftmostAllDayEvent.id, "all-day");
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [leftmostAllDayEvent],
+    });
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    button.blur();
+    act(() => {
+      pressKey("R", shiftKey);
+    });
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: { schedule: { kind: string; start: string; end: string } };
+    };
+    expect(input.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-05-21",
+      end: "2026-05-22",
+    });
   });
 });
 
