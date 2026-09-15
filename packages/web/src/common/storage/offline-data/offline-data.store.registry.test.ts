@@ -21,6 +21,7 @@ function stubStore(
     isReady: () => true,
     getEvents: async (_query: EventListQuery) => [],
     getAllEvents: async () => [] as LocalEventRecord[],
+    searchByTitle: async () => [],
     putEvent: async () => undefined,
     putEvents: async () => undefined,
     deleteEvent: async (_eventId: EventId) => undefined,

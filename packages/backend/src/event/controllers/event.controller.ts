@@ -1,6 +1,10 @@
 import { type Request, type Response } from "express";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Status } from "@core/errors/status.codes";
+import {
+  eventTitleSearchWindow,
+  searchEventsByTitle,
+} from "@core/event/search-events-by-title";
 import { Logger } from "@core/logger/winston.logger";
 import {
   type CreateEventInput,
@@ -116,12 +120,15 @@ const send = (res: Response, e: unknown) => {
 
 const parseListQuery = (query: Request["query"]): EventListQuery => {
   const calendarIds = parseCommaSeparatedQueryParam(query["calendarIds"]);
+  const q = typeof query["q"] === "string" ? query["q"] : undefined;
+  const searchWindow = q !== undefined ? eventTitleSearchWindow() : undefined;
 
   return EventListQuerySchema.parse({
     kind: "range",
-    start: query["start"],
-    end: query["end"],
+    start: searchWindow?.start ?? query["start"],
+    end: searchWindow?.end ?? query["end"],
     ...(calendarIds !== undefined ? { calendarIds } : {}),
+    ...(q !== undefined ? { q } : {}),
   });
 };
 
@@ -363,7 +370,9 @@ class EventController {
     try {
       const userId = req.session?.getUserId() as string;
       const query = parseListQuery(req.query);
-      const events = await readAllFromSync(userId, query);
+      const listed = await readAllFromSync(userId, query);
+      const events =
+        query.q !== undefined ? searchEventsByTitle(listed, query.q) : listed;
 
       res.status(Status.OK).json({ events });
     } catch (e) {

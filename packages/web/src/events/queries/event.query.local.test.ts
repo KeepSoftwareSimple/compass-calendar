@@ -22,6 +22,7 @@ function stubStore(
     isReady: () => false,
     getEvents: async (_query: EventListQuery) => [],
     getAllEvents,
+    searchByTitle: async () => [],
     putEvent: async () => undefined,
     putEvents: async () => undefined,
     deleteEvent: async (_eventId: EventId) => undefined,

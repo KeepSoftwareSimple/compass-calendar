@@ -39,12 +39,12 @@ describe("getMoreCommandPaletteSections", () => {
     expect(section.items).toHaveLength(2);
     expect(section.items[0].label).toBe("Book personal onboarding");
     expect(section.items[1].label).toBe("About Compass");
-    expect(getCommandPalettePlaceholder("day", false)).not.toContain("bug");
-    expect(getCommandPalettePlaceholder("week", false)).not.toContain(
-      "feedback",
+    expect(getCommandPalettePlaceholder("day", false)).toBe(
+      "Search commands or events",
     );
-    expect(getCommandPalettePlaceholder("week", false)).toContain("play");
-    expect(getCommandPalettePlaceholder("day", false)).toContain("play");
+    expect(getCommandPalettePlaceholder("week", false)).toBe(
+      "Search commands or events",
+    );
   });
 
   it("opens the feedback request from the cloud command", () => {
@@ -64,9 +64,9 @@ describe("getMoreCommandPaletteSections", () => {
     expect(selectOverlayOpenedFromPalette(useSettingsStore.getState())).toBe(
       true,
     );
-    expect(getCommandPalettePlaceholder("day", true)).toContain("feedback");
-    expect(getCommandPalettePlaceholder("day", true)).toContain("play");
-    expect(getCommandPalettePlaceholder("day", true)).not.toContain("bug");
+    expect(getCommandPalettePlaceholder("day", true)).toBe(
+      "Search commands or events",
+    );
   });
 
   it("offers feedback from Life", () => {
@@ -77,7 +77,7 @@ describe("getMoreCommandPaletteSections", () => {
       view: "life",
     });
     expect(getCommandPalettePlaceholder("life", true)).toBe(
-      "Try: 'day', 'week', or 'feedback'",
+      "Search commands or events",
     );
   });
 

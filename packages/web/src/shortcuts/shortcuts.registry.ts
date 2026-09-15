@@ -227,6 +227,12 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
     label: "Jump to a page area (hold Mod for hints)",
     section: "focus",
   },
+  {
+    id: "focus-find-event",
+    keys: [...KEYMAP.commandPalette.keycaps],
+    label: "Find an event by title",
+    section: "focus",
+  },
 
   // Edit
   {
@@ -518,7 +524,10 @@ export const filterShortcutsByContext = (
       // the page jump row: Life mounts its own hold-Mod jump targets, so the
       // gesture is still discoverable there.
       if (shortcut.section === "focus") {
-        return shortcut.id === "focus-page-jump";
+        return (
+          shortcut.id === "focus-page-jump" ||
+          shortcut.id === "focus-find-event"
+        );
       }
       if (shortcut.section === "create" || shortcut.section === "edit") {
         return false;

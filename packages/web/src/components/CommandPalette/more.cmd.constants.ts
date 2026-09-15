@@ -10,24 +10,10 @@ export const PERSONAL_ONBOARDING_URL =
   "https://calendly.com/switchback-tech/compass-onboarding";
 
 export function getCommandPalettePlaceholder(
-  currentView: CommandPaletteViewName,
-  feedbackEnabled = isPosthogEnabled(),
+  _currentView?: CommandPaletteViewName,
+  _feedbackEnabled = isPosthogEnabled(),
 ): string {
-  if (currentView === "life") {
-    return feedbackEnabled
-      ? "Try: 'day', 'week', or 'feedback'"
-      : "Try: 'day', 'week', or 'theme'";
-  }
-
-  if (currentView === "day") {
-    return feedbackEnabled
-      ? "Try: 'play', 'week', or 'feedback'"
-      : "Try: 'play' or 'week'";
-  }
-
-  return feedbackEnabled
-    ? "Try: 'play', 'create', or 'feedback'"
-    : "Try: 'play' or 'create'";
+  return "Search commands or events";
 }
 
 export function getMoreCommandPaletteSections(

@@ -113,6 +113,7 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "focus-week-day": APP_SHORTCUT_BINDINGS.focusWeekDay.keycaps,
   "focus-notice": APP_SHORTCUT_BINDINGS.focusNotice.keycaps,
   "focus-page-jump": KEYMAP.jumpPageTarget.keycaps,
+  "focus-find-event": KEYMAP.commandPalette.keycaps,
   "edit-open": APP_SHORTCUT_BINDINGS.editOpen.keycaps,
   "edit-delete": APP_SHORTCUT_BINDINGS.editDelete.keycaps,
   "edit-duplicate": APP_SHORTCUT_BINDINGS.editDuplicate.keycaps,

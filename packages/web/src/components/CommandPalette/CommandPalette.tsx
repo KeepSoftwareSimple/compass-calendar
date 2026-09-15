@@ -10,9 +10,14 @@ import {
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
+  CalendarBlankIcon,
 } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
+import {
+  EVENT_TITLE_SEARCH_PALETTE_LIMIT,
+  eventTitle,
+} from "@core/event/search-events-by-title";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
@@ -39,6 +44,7 @@ import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showca
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
 import { useUndoRedo } from "@web/events/mutations/useUndoRedo";
+import { useEventSearch } from "@web/events/queries/useEventSearch";
 import { useNotificationCmdItems } from "@web/notifications/useNotificationCmdItems";
 import {
   selectIsCmdPaletteOpen,
@@ -52,6 +58,12 @@ import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-t
 import { useTimezoneCmdItems } from "@web/timezone/useTimezoneCmdItems";
 import { filterSections, getLabelMatchRanges } from "./command-palette.search";
 import { type CommandItem, type CommandSection } from "./command-palette.types";
+import {
+  eventSearchDateString,
+  eventSearchDetail,
+  paletteEventRoute,
+  startFocusEventCard,
+} from "./event-search.util";
 
 const RECENT_SECTION_ID = "recent";
 const MAX_RECENT_ITEMS = 3;
@@ -66,12 +78,14 @@ interface CommandPaletteProps {
 }
 
 interface CommandPaletteContentProps {
+  currentView: ViewName;
   placeholder: string;
   sections: CommandSection[];
 }
 
 /** Mounted only while open so search/activeIndex reset on every reopen. */
 const CommandPaletteContent = ({
+  currentView,
   placeholder,
   sections,
 }: CommandPaletteContentProps) => {
@@ -95,6 +109,8 @@ const CommandPaletteContent = ({
   }, []);
 
   const close = () => settingsActions.closeCmdPalette();
+  const navigate = useNavigate();
+  const eventSearch = useEventSearch(search);
 
   const { refs, context } = useFloating({
     open: true,
@@ -111,7 +127,27 @@ const CommandPaletteContent = ({
   const sectionsToFilter = trimmedSearch
     ? sections.filter((section) => section.id !== RECENT_SECTION_ID)
     : sections;
-  const filteredSections = filterSections(sectionsToFilter, search);
+  const commandSections = filterSections(sectionsToFilter, search);
+  const eventItems: CommandItem[] = (eventSearch.data ?? [])
+    .slice(0, EVENT_TITLE_SEARCH_PALETTE_LIMIT)
+    .map((event) => ({
+      id: `event-search:${event.id}`,
+      label: eventTitle(event) || "Untitled",
+      detail: eventSearchDetail(event),
+      icon: CalendarBlankIcon,
+      onClick: () => {
+        void navigate({
+          to: paletteEventRoute(currentView),
+          params: { dateString: eventSearchDateString(event) },
+        });
+        startFocusEventCard(event.id);
+      },
+    }));
+  const eventSection: CommandSection[] =
+    eventItems.length > 0
+      ? [{ id: "events", heading: "Events", items: eventItems }]
+      : [];
+  const filteredSections = [...commandSections, ...eventSection];
   const flatItems = filteredSections.flatMap((section) => section.items);
   const disabledIndices = flatItems.reduce<number[]>((acc, item, index) => {
     if (item.disabled) acc.push(index);
@@ -220,7 +256,7 @@ const CommandPaletteContent = ({
                       <>
                         <item.icon size={18} />
                         <span className="min-w-0 flex-1 truncate">
-                          {trimmedSearch ? (
+                          {trimmedSearch && !item.detail ? (
                             <HighlightedLabel
                               label={item.label}
                               ranges={getLabelMatchRanges(item.label, search)}
@@ -229,6 +265,11 @@ const CommandPaletteContent = ({
                             item.label
                           )}
                         </span>
+                        {item.detail && (
+                          <span className="shrink-0 text-text-muted text-xs">
+                            {item.detail}
+                          </span>
+                        )}
                         {item.badge && (
                           <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
                             {item.badge}
@@ -424,6 +465,7 @@ export const CommandPalette = ({
 
   return (
     <CommandPaletteContent
+      currentView={currentView}
       placeholder={placeholder}
       sections={sectionsWithRecent}
     />
@@ -446,6 +488,7 @@ export const LifeCommandPalette = ({
 
   return (
     <CommandPaletteContent
+      currentView="life"
       placeholder={placeholder}
       sections={[
         {
