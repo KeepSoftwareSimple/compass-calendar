@@ -17,7 +17,40 @@ const textTypes: Record<string, string> = {
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
+  ".wasm": "application/wasm",
 };
+
+type ContentEncoding = "br" | "gzip";
+
+const ENCODING_EXTENSIONS: Record<ContentEncoding, string> = {
+  br: ".br",
+  gzip: ".gz",
+};
+
+// build.ts's precompressBuildOutput() writes these next to compressible
+// outputs. Parsed without q-value weighting since this server only ever
+// picks the strongest of two candidates, not a ranked list.
+function pickEncoding(acceptEncoding: string | null): ContentEncoding | null {
+  if (!acceptEncoding) {
+    return null;
+  }
+
+  const accepted = new Set(
+    acceptEncoding
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => !/;\s*q=0(\.0+)?$/.test(part))
+      .map((part) => part.split(";")[0]?.trim().toLowerCase()),
+  );
+
+  if (accepted.has("br")) {
+    return "br";
+  }
+  if (accepted.has("gzip")) {
+    return "gzip";
+  }
+  return null;
+}
 
 function badRequest(): Response {
   return new Response("Bad Request", { status: 400 });
@@ -64,18 +97,44 @@ async function fileResponse(
 
   const type = contentType(filePath);
   const etag = `"${fileStat.size.toString(16)}-${fileStat.mtimeMs.toString(16)}"`;
-  const headers = {
+  const headers: Record<string, string> = {
     ...(type ? { "Content-Type": type } : {}),
     "Cache-Control": cacheControl(resolvedFilePath),
     ETag: etag,
     "Last-Modified": fileStat.mtime.toUTCString(),
+    Vary: "Accept-Encoding",
   };
 
   if (isNotModified(request, etag, fileStat.mtimeMs)) {
     return new Response(null, { status: 304, headers });
   }
 
+  const encoding = pickEncoding(request.headers.get("accept-encoding"));
+  const compressed = encoding
+    ? await compressedSibling(resolvedFilePath, encoding)
+    : null;
+
+  if (compressed) {
+    return new Response(Bun.file(compressed), {
+      headers: { ...headers, "Content-Encoding": encoding },
+    });
+  }
+
   return new Response(Bun.file(resolvedFilePath), { headers });
+}
+
+async function compressedSibling(
+  resolvedFilePath: string,
+  encoding: ContentEncoding,
+): Promise<string | null> {
+  const siblingPath = `${resolvedFilePath}${ENCODING_EXTENSIONS[encoding]}`;
+
+  try {
+    const siblingStat = await stat(siblingPath);
+    return siblingStat.isFile() ? siblingPath : null;
+  } catch {
+    return null;
+  }
 }
 
 function isInsideRoot(resolvedRoot: string, resolvedPath: string): boolean {
@@ -153,6 +212,10 @@ Bun.serve({
 
     if (pathname.includes("\0")) {
       return badRequest();
+    }
+
+    if (pathname.endsWith(".br") || pathname.endsWith(".gz")) {
+      return new Response("Not Found", { status: 404 });
     }
 
     const safePath = path
