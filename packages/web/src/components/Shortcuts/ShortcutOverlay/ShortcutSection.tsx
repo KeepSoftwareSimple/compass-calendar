@@ -19,9 +19,9 @@ export const ShortcutSection = ({
           : "mt-6 mb-6 border-border/60 border-t pt-5 last:mb-0"
       }
     >
-      <div className="mb-3 font-bold text-sm text-text leading-tight">
+      <h2 className="mb-3 font-bold text-sm text-text leading-tight">
         {title}
-      </div>
+      </h2>
       <ShortcutList shortcuts={shortcuts} />
     </section>
   );

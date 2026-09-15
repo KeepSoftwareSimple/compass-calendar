@@ -5,6 +5,7 @@ import {
 } from "@phosphor-icons/react";
 import classNames from "classnames";
 import { type ReactNode } from "react";
+import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { SOCIAL_LINKS } from "@web/common/constants/social.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
@@ -103,6 +104,12 @@ export function WelcomeLinks({ flashedKey }: { flashedKey: string | null }) {
         })}
       </div>
       <div className="flex items-center gap-4 text-text-muted text-xs">
+        <a
+          href={ROOT_ROUTES.SHORTCUTS}
+          className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
+        >
+          Shortcuts
+        </a>
         <JumpAnchor
           letter={PRICING_LINK.letter}
           digit={PRICING_LINK.shortcut}

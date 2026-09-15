@@ -53,6 +53,15 @@ export const calendarShellRoute = createRoute({
   ),
 });
 
+export const publicShortcutsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROOT_ROUTES.SHORTCUTS,
+  component: lazyRouteComponent(
+    () => import("@web/components/ShortcutsPage/ShortcutsPage"),
+    "ShortcutsPage",
+  ),
+});
+
 export const publicBookRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROOT_ROUTES.BOOK,
@@ -253,6 +262,7 @@ const calendarShellChildren = calendarShellRoute.addChildren([
 
 export const routeTree = rootRoute.addChildren([
   calendarShellChildren,
+  publicShortcutsRoute,
   ...(IS_BOOKING_ENABLED
     ? [
         publicBookConfirmedRoute,

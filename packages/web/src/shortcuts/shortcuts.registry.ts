@@ -657,3 +657,61 @@ export const getShortcutMenuSections = (
   config: FilterOptions,
 ): ShortcutOverlaySection[] =>
   getShortcutsBySection(filterShortcutsByContext(config));
+
+const PUBLIC_CATALOG_CONTEXT = {
+  isViewingCurrentPeriod: false as const,
+};
+
+const shortcutIds = (shortcuts: Shortcut[]): Set<string> =>
+  new Set(shortcuts.map((shortcut) => shortcut.id));
+
+/**
+ * Printable public catalog: Week legend sections, then form-open rows, then
+ * Day-only and Life-only rows. `requiresWrite` rows stay listed: the page
+ * describes the product, not the reader's plan.
+ */
+export const getPublicShortcutCatalog = (): ShortcutOverlaySection[] => {
+  const week = getShortcutMenuSections({
+    ...PUBLIC_CATALOG_CONTEXT,
+    view: "week",
+  });
+  const weekIds = shortcutIds(week.flatMap((section) => section.shortcuts));
+
+  const formOpen = filterShortcutsByContext({
+    ...PUBLIC_CATALOG_CONTEXT,
+    view: "week",
+    isFormOpen: true,
+  }).filter((shortcut) => !weekIds.has(shortcut.id));
+
+  const dayOnly = filterShortcutsByContext({
+    ...PUBLIC_CATALOG_CONTEXT,
+    view: "day",
+  }).filter((shortcut) => !weekIds.has(shortcut.id));
+  const dayIds = shortcutIds(dayOnly);
+
+  const lifeOnly = filterShortcutsByContext({
+    ...PUBLIC_CATALOG_CONTEXT,
+    view: "life",
+  }).filter(
+    (shortcut) => !weekIds.has(shortcut.id) && !dayIds.has(shortcut.id),
+  );
+
+  return [
+    ...week,
+    ...(formOpen.length > 0
+      ? [
+          {
+            id: "form-open",
+            title: "While the event form is open",
+            shortcuts: formOpen,
+          },
+        ]
+      : []),
+    ...(dayOnly.length > 0
+      ? [{ id: "day-only", title: "Day only", shortcuts: dayOnly }]
+      : []),
+    ...(lifeOnly.length > 0
+      ? [{ id: "life-only", title: "Life only", shortcuts: lifeOnly }]
+      : []),
+  ];
+};

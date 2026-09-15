@@ -10,6 +10,7 @@ import {
   publicBookConfirmedRoute,
   publicBookRescheduleRoute,
   publicBookRoute,
+  publicShortcutsRoute,
   rootRoute,
   routeTree,
   weekDateRoute,
@@ -24,6 +25,12 @@ describe("routeTree", () => {
     expect(lifeRoute.fullPath).toBe(ROOT_ROUTES.LIFE);
     expect(lifeRoute.options.loader).toBeUndefined();
     expect(lifeRoute.parentRoute).toBe(calendarShellRoute);
+  });
+
+  it("registers /shortcuts as a public route outside the calendar shell", () => {
+    expect(publicShortcutsRoute.fullPath).toBe(ROOT_ROUTES.SHORTCUTS);
+    expect(publicShortcutsRoute.options.beforeLoad).toBeUndefined();
+    expect(publicShortcutsRoute.parentRoute).toBe(rootRoute);
   });
 
   it("registers /meet/$username as a public route outside the calendar shell", () => {
