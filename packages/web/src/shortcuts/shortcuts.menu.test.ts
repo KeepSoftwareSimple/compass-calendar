@@ -90,6 +90,10 @@ describe("shortcut menu sections", () => {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
         },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
+        },
       ]);
     });
 
@@ -234,6 +238,10 @@ describe("shortcut menu sections", () => {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
         },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
+        },
       ]);
       expect(stripMetadata(findFocus("week")?.shortcuts ?? [])).toEqual([
         { keys: ["i"], label: "Focus month picker" },
@@ -248,6 +256,10 @@ describe("shortcut menu sections", () => {
         {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
+        },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
         },
       ]);
     });
