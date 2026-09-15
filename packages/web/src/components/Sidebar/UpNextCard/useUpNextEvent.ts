@@ -1,6 +1,7 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
+import { upNextAvailabilityActions } from "@web/components/Sidebar/UpNextCard/up-next.availability.store";
 import { editGridEventDraft } from "@web/events/grid-event-draft.adapter";
 import { useDayEventViewModel } from "@web/events/queries/useDayEventsQuery";
 import { draftActions } from "@web/events/stores/draft.store";
@@ -75,6 +76,19 @@ export function useUpNextEvent() {
   );
 
   const conferenceUrl = upNext?.conference?.url;
+
+  useEffect(() => {
+    upNextAvailabilityActions.publish({
+      hasUpNext: Boolean(upNext),
+      hasConference: Boolean(conferenceUrl),
+      openEventDetails,
+      joinMeeting: () => {
+        if (conferenceUrl) {
+          window.open(conferenceUrl, "_blank", "noopener,noreferrer");
+        }
+      },
+    });
+  }, [upNext, conferenceUrl, openEventDetails]);
 
   return { now, openEventDetails, upNext, conferenceUrl, isCurrentEvent };
 }

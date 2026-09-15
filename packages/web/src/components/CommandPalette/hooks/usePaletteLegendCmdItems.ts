@@ -1,6 +1,6 @@
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { getLegendNavigationCommandItems } from "@web/components/CommandPalette/navigation.cmd.constants";
-import { useUpNextEvent } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
+import { useUpNextAvailabilityStore } from "@web/components/Sidebar/UpNextCard/up-next.availability.store";
 import { focusFirstSidebarItem } from "@web/components/Sidebar/util/sidebarFocus.util";
 import {
   selectIsSidebarOpen,
@@ -10,21 +10,18 @@ import {
 
 export function usePaletteLegendCmdItems(): CommandItem[] {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
-  const { upNext, conferenceUrl, openEventDetails } = useUpNextEvent();
+  const { hasUpNext, hasConference, openEventDetails, joinMeeting } =
+    useUpNextAvailabilityStore();
 
   return getLegendNavigationCommandItems({
     isSidebarOpen,
-    hasUpNext: Boolean(upNext),
-    hasConference: Boolean(conferenceUrl),
+    hasUpNext,
+    hasConference,
     onToggleSidebar: () => viewActions.toggleSidebar(),
     onFocusMonthPicker: () => {
       focusFirstSidebarItem();
     },
     onOpenUpNext: () => openEventDetails("keyboardEdit"),
-    onJoinMeeting: () => {
-      if (conferenceUrl) {
-        window.open(conferenceUrl, "_blank", "noopener,noreferrer");
-      }
-    },
+    onJoinMeeting: joinMeeting,
   });
 }

@@ -739,6 +739,38 @@ describe("CommandPalette", () => {
     ).toBeEnabled();
   });
 
+  it("enables Up Next rows from the availability snapshot", () => {
+    const openEventDetails = mock();
+    const joinMeeting = mock();
+    renderWithStore(
+      <CommandPalette
+        currentView="week"
+        onGoToToday={onGoToToday}
+        onShowShortcuts={onShowShortcuts}
+        placeholder="Try: 'create', 'bug', or 'code'"
+      />,
+      {
+        settings: { isCmdPaletteOpen: true },
+        upNextAvailability: {
+          hasUpNext: true,
+          hasConference: true,
+          openEventDetails,
+          joinMeeting,
+        },
+      },
+    );
+
+    expect(
+      screen.getByRole("option", { name: "Open Up Next event" }),
+    ).toBeEnabled();
+    expect(
+      screen.getByRole("option", { name: "Join Up Next meeting" }),
+    ).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("option", { name: "Open Up Next event" }));
+    expect(openEventDetails).toHaveBeenCalledWith("keyboardEdit");
+  });
+
   it("disables Focus month picker when the sidebar is collapsed", () => {
     renderWithStore(
       <CommandPalette

@@ -17,6 +17,7 @@ import {
   POINTER_SHORTCUT_ATTRIBUTE,
 } from "@web/shortcuts/keyboard-only/pointer-action";
 import { UpNextBanner } from "./UpNextBanner";
+import { useUpNextAvailabilityStore } from "./up-next.availability.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 
@@ -71,6 +72,23 @@ describe("UpNextBanner", () => {
     expect(screen.getByText("Soon Event")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
     expect(screen.getByText("N")).toBeInTheDocument();
+  });
+
+  it("publishes availability so the palette can enable Up Next without querying", async () => {
+    render(<UpNextBanner />, {
+      events: [
+        timedEvent(SOON_EVENT_ID, "Soon Event", 2, {
+          url: "https://meet.example/join",
+          label: null,
+        }),
+      ],
+    });
+
+    await waitFor(() => {
+      const snapshot = useUpNextAvailabilityStore.getState();
+      expect(snapshot.hasUpNext).toBe(true);
+      expect(snapshot.hasConference).toBe(true);
+    });
   });
 
   it("renders nothing for an event more than 2 minutes out", () => {
