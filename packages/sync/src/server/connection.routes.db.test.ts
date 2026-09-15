@@ -208,6 +208,7 @@ const seedConnection = (
   tenantId: string,
   principalId: string,
   email: string,
+  state: "healthy" | "importing" = "healthy",
 ) =>
   repo.upsertByProviderAccount({
     tenantId: tenantId as TenantId,
@@ -219,7 +220,7 @@ const seedConnection = (
       displayName: null,
     },
     capabilities: ["readEvents"],
-    state: "healthy",
+    state,
     stateReason: null,
   });
 
@@ -275,8 +276,15 @@ describe("GET /internal/connections", () => {
     tenantId: string,
     principalId: string,
     email: string,
+    storedState: "healthy" | "importing" = "healthy",
   ) => {
-    const connection = await seedConnection(repo, tenantId, principalId, email);
+    const connection = await seedConnection(
+      repo,
+      tenantId,
+      principalId,
+      email,
+      storedState,
+    );
     await seedOauthCredential(credentials, {
       connectionId: connection._id,
       provider: "google",
@@ -401,6 +409,34 @@ describe("GET /internal/connections", () => {
     expect(
       ((await res.json()) as { connections: unknown[] }).connections,
     ).toHaveLength(1);
+  });
+
+  it("returns refreshed derived state without writing a change-feed invalidation", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    await seedHealthyConnection(
+      tenantId,
+      principalId,
+      "importing@example.com",
+      "importing",
+    );
+    await startService();
+
+    const res = await fetch(`${base}${CONNECTIONS_PATH}`, {
+      headers: signedHeaders(tenantId, principalId),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      connections: Array<{ state: string }>;
+    };
+    expect(body.connections).toHaveLength(1);
+    expect(body.connections[0]!.state).toBe("healthy");
+    expect(
+      await mongo.db
+        .collection(SYNC_COLLECTIONS.invalidations)
+        .countDocuments({ principalId }),
+    ).toBe(0);
   });
 });
 
