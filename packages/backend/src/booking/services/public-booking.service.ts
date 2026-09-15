@@ -476,6 +476,51 @@ const destinationConference = async (
 };
 
 /**
+ * The confirmed starts the slot engine must treat as taken, minus the guest's
+ * own reservation when it is the one being moved.
+ *
+ * `computeSlotsForPage` and `assertSlotAvailable` must agree exactly on this
+ * set for the same reason they share {@link slotEngineInputForPage}: a slot
+ * the guest was offered must not be rejected (or accepted) differently by the
+ * re-check.
+ */
+const confirmedStartsForWindow = async (
+  page: BookingPageRecord,
+  windowStart: Date,
+  windowEnd: Date,
+  omitReservationStart: Date | undefined,
+): Promise<Date[]> => {
+  const omitStartMs = omitReservationStart?.getTime();
+  const starts = await bookingReservationRepository.listConfirmedStartsByPageId(
+    page._id,
+    confirmedReservationScanRange(page, windowStart, windowEnd),
+  );
+  return starts.filter((start) => start.getTime() !== omitStartMs);
+};
+
+/**
+ * The in-flight operation a guest mutation has to live with, or the error it
+ * loses to. A cancel in flight means the reservation is gone as far as the
+ * guest is concerned; the other kind of mutation in flight is a conflict.
+ * Patch and reschedule triage this identically apart from which kind blocks
+ * them, so the two answers are minted here rather than at both entrypoints.
+ */
+const inFlightForGuestMutation = async (
+  reservationId: ObjectId,
+  conflictingKind: "edit" | "reschedule",
+): Promise<BookingOperationRecord | null> => {
+  const inFlight =
+    await bookingOperationRepository.findInFlightByReservationId(reservationId);
+  if (inFlight?.kind === "cancel") {
+    throw reservationNotFound();
+  }
+  if (inFlight?.kind === conflictingKind) {
+    throw reservationConflict();
+  }
+  return inFlight;
+};
+
+/**
  * Every page-derived knob the slot engine reads, in one place.
  *
  * `getSlots` and `createReservation` must agree exactly on what the engine is
@@ -662,13 +707,12 @@ export class PublicBookingService {
       });
     }
 
-    const omitStartMs = options.omitReservationStart?.getTime();
-    const confirmedStarts = (
-      await bookingReservationRepository.listConfirmedStartsByPageId(
-        page._id,
-        confirmedReservationScanRange(page, windowStart, windowEnd),
-      )
-    ).filter((start) => start.getTime() !== omitStartMs);
+    const confirmedStarts = await confirmedStartsForWindow(
+      page,
+      windowStart,
+      windowEnd,
+      options.omitReservationStart,
+    );
     const slotStarts = computeBookingSlots(
       slotEngineInputForPage(page, availability, confirmedStarts, {
         now,
@@ -730,13 +774,12 @@ export class PublicBookingService {
       );
     }
 
-    const omitStartMs = options.omitReservationStart?.getTime();
-    const confirmedStarts = (
-      await bookingReservationRepository.listConfirmedStartsByPageId(
-        page._id,
-        confirmedReservationScanRange(page, slotStart, slotEnd),
-      )
-    ).filter((start) => start.getTime() !== omitStartMs);
+    const confirmedStarts = await confirmedStartsForWindow(
+      page,
+      slotStart,
+      slotEnd,
+      options.omitReservationStart,
+    );
     const allowedStarts = new Set(
       computeBookingSlots(
         slotEngineInputForPage(page, availability, confirmedStarts, {
@@ -858,16 +901,10 @@ export class PublicBookingService {
       input.token,
     );
 
-    const inFlight =
-      await bookingOperationRepository.findInFlightByReservationId(
-        reservationId,
-      );
-    if (inFlight?.kind === "cancel") {
-      throw reservationNotFound();
-    }
-    if (inFlight?.kind === "reschedule") {
-      throw reservationConflict();
-    }
+    const inFlight = await inFlightForGuestMutation(
+      reservationId,
+      "reschedule",
+    );
 
     let operation: EditBookingOperationRecord;
     try {
@@ -927,16 +964,7 @@ export class PublicBookingService {
       return presentRescheduled(reservation, page, hostDisplayName);
     }
 
-    const inFlight =
-      await bookingOperationRepository.findInFlightByReservationId(
-        reservationId,
-      );
-    if (inFlight?.kind === "cancel") {
-      throw reservationNotFound();
-    }
-    if (inFlight?.kind === "edit") {
-      throw reservationConflict();
-    }
+    const inFlight = await inFlightForGuestMutation(reservationId, "edit");
     if (
       inFlight?.kind === "reschedule" &&
       inFlight.slotStart.getTime() !== slotStart.getTime()
@@ -1014,14 +1042,21 @@ export class PublicBookingService {
         continue;
       }
       try {
-        if (operation.kind === "create") {
-          await this.recoverCreateOperation(operation);
-        } else if (operation.kind === "cancel") {
-          await this.recoverCancelOperation(operation);
-        } else if (operation.kind === "edit") {
-          await this.recoverEditOperation(operation);
-        } else {
-          await this.recoverRescheduleOperation(operation);
+        // A switch rather than an if/else chain so a new operation kind is a
+        // compile error here instead of silently landing in the last branch.
+        switch (operation.kind) {
+          case "create":
+            await this.recoverCreateOperation(operation);
+            break;
+          case "cancel":
+            await this.recoverCancelOperation(operation);
+            break;
+          case "edit":
+            await this.recoverEditOperation(operation);
+            break;
+          case "reschedule":
+            await this.recoverRescheduleOperation(operation);
+            break;
         }
       } catch (error) {
         if (isSlotUnavailable(error)) {
