@@ -14,10 +14,12 @@ import {
 } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   EVENT_TITLE_SEARCH_PALETTE_LIMIT,
   eventTitle,
 } from "@core/event/search-events-by-title";
+import dayjs from "@core/util/date/dayjs";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
@@ -33,6 +35,8 @@ import { useThemeCmdItems } from "@web/components/CommandPalette/hooks/useThemeC
 import { useUpgradeCmdItems } from "@web/components/CommandPalette/hooks/useUpgradeCmdItems";
 import { getMoreCommandPaletteSections } from "@web/components/CommandPalette/more.cmd.constants";
 import {
+  GO_TO_DATE_ITEM_ID,
+  getGoToDateCommandItem,
   getNavigationCommandItems,
   getNavigationViewRoute,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
@@ -53,6 +57,7 @@ import {
 } from "@web/settings/settings.store";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
+import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useTimezoneCmdItems } from "@web/timezone/useTimezoneCmdItems";
@@ -147,7 +152,25 @@ const CommandPaletteContent = ({
     eventItems.length > 0
       ? [{ id: "events", heading: "Events", items: eventItems }]
       : [];
-  const filteredSections = [...commandSections, ...eventSection];
+  const goToDateItem = getGoToDateCommandItem(search, dayjs(), (date) => {
+    const dateString = date.format(YEAR_MONTH_DAY_FORMAT);
+    void Promise.resolve(
+      navigate({
+        to: paletteEventRoute(currentView),
+        params: { dateString },
+      }),
+    ).then(() => {
+      eventJumpActions.setActiveDayKeys([dateString]);
+    });
+  });
+  const goToDateSection: CommandSection[] = goToDateItem
+    ? [{ id: "go-to-date", heading: "", items: [goToDateItem] }]
+    : [];
+  const filteredSections = [
+    ...goToDateSection,
+    ...commandSections,
+    ...eventSection,
+  ];
   const flatItems = filteredSections.flatMap((section) => section.items);
   const disabledIndices = flatItems.reduce<number[]>((acc, item, index) => {
     if (item.disabled) acc.push(index);
@@ -239,9 +262,11 @@ const CommandPaletteContent = ({
             ) : (
               filteredSections.map((section) => (
                 <div key={section.id} className="mb-1">
-                  <div className="px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide">
-                    {section.heading}
-                  </div>
+                  {section.heading ? (
+                    <div className="px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide">
+                      {section.heading}
+                    </div>
+                  ) : null}
                   {section.items.map((item) => {
                     itemIndex += 1;
                     const index = itemIndex;
@@ -256,7 +281,9 @@ const CommandPaletteContent = ({
                       <>
                         <item.icon size={18} />
                         <span className="min-w-0 flex-1 truncate">
-                          {trimmedSearch && !item.detail ? (
+                          {trimmedSearch &&
+                          !item.detail &&
+                          item.id !== GO_TO_DATE_ITEM_ID ? (
                             <HighlightedLabel
                               label={item.label}
                               ranges={getLabelMatchRanges(item.label, search)}

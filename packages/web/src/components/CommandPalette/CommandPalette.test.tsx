@@ -31,6 +31,10 @@ import {
   POINTER_EVENT_ID_ATTRIBUTE,
   POINTER_EVENT_JUMP_REQUEST,
 } from "@web/shortcuts/keyboard-only/pointer-action";
+import {
+  eventJumpActions,
+  useEventJumpStore,
+} from "@web/shortcuts/shift-hint/event-jump.store";
 import { recordRecentCommand } from "./recent-commands.store";
 import {
   afterAll,
@@ -39,6 +43,7 @@ import {
   expect,
   it,
   mock,
+  setSystemTime,
   spyOn,
 } from "bun:test";
 
@@ -632,6 +637,36 @@ describe("CommandPalette", () => {
       document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
       card.remove();
       resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("pins a Go to date row and selects that day's column on Enter", async () => {
+    setSystemTime(new Date("2026-09-15T12:00:00.000Z"));
+    eventJumpActions.reset();
+    mockNavigate.mockResolvedValue(undefined);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "oct 3" } });
+
+      expect(
+        screen.getByRole("option", { name: "Go to Sat, Oct 3, 2026" }),
+      ).toBeInTheDocument();
+      fireEvent.keyDown(getInput(), { key: "Enter" });
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/week/$dateString",
+        params: { dateString: "2026-10-03" },
+      });
+      await waitFor(() => {
+        expect(useEventJumpStore.getState().activeDayKeys).toEqual([
+          "2026-10-03",
+        ]);
+      });
+      expect(isOpen()).toBe(false);
+    } finally {
+      setSystemTime();
+      eventJumpActions.reset();
     }
   });
 });

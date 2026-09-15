@@ -7,12 +7,19 @@ import {
   type Icon,
   KeyboardIcon,
 } from "@phosphor-icons/react";
+import { type Dayjs } from "@core/util/date/dayjs";
+import {
+  goToDatePaletteLabel,
+  parseUserDate,
+} from "@web/common/utils/datetime/web.date.util";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,
   type ViewName,
 } from "@web/shortcuts/shortcuts.constants";
+
+export const GO_TO_DATE_ITEM_ID = "go-to-date";
 
 export type CommandPaletteViewName = ViewName;
 
@@ -62,6 +69,23 @@ const navigationViewOrder: CommandPaletteViewName[] = ["day", "week", "life"];
 
 export const getNavigationViewRoute = (viewName: CommandPaletteViewName) =>
   commandPaletteViews[viewName].route;
+
+/** Synthetic palette row while the query parses as a date. Not keyword-filtered. */
+export const getGoToDateCommandItem = (
+  query: string,
+  now: Dayjs,
+  onSelect: (date: Dayjs) => void,
+): CommandItem | null => {
+  const date = parseUserDate(query, now);
+  if (!date) return null;
+
+  return {
+    id: GO_TO_DATE_ITEM_ID,
+    label: goToDatePaletteLabel(date),
+    icon: CalendarIcon,
+    onClick: () => onSelect(date),
+  };
+};
 
 export const getNavigationCommandItems = ({
   currentView,
