@@ -220,6 +220,7 @@ the full picture.
 - Read-only look-around: `packages/web/src/billing/billing-preview.store.ts`, `packages/web/src/billing/BillingReadOnlyBanner.tsx`
 - Server access + paid gate: `packages/web/src/billing/useAppAccess.ts`, `packages/web/src/billing/BillingGateModal.tsx`
 - Embedded Checkout port (only `loadStripe` call) and lazy seam: `packages/web/src/billing/embedded-checkout/embedded-checkout.port.tsx`, `embedded-checkout.seam.ts`
+- Shared writable Checkout panel (gate + trial banner overlay): `packages/web/src/billing/EmbeddedCheckoutPanel.tsx`, `CheckoutOverlay.tsx`, `TrialCardBanner.tsx`
 - Gate checkout store: `packages/web/src/billing/checkout-panel.store.ts`
 - Update-card store: `packages/web/src/billing/card-update.store.ts`
 - Settings > Billing management: `packages/web/src/billing/PlanSection.tsx`

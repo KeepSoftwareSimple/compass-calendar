@@ -44,6 +44,16 @@ const EMPTY_GUEST_DETAILS: PublicBookingGuestDetails = {
   notes: "",
 };
 
+const trackOnce = (
+  seen: { current: string | null },
+  key: string,
+  emit: () => void,
+) => {
+  if (seen.current === key) return;
+  seen.current = key;
+  emit();
+};
+
 /**
  * All state and behavior of the guest booking flow. The shared slot picker
  * lives in `usePublicBookingSlotSelection`; what stays here is the details
@@ -133,10 +143,9 @@ export function usePublicBookingFlow() {
       isError: Boolean(slotsQuery.isError && !slotsQuery.data),
     });
     if (outcome == null) return;
-    const key = `${slug}:${monthKey}:${outcome}`;
-    if (slotsOutcomeKeyRef.current === key) return;
-    slotsOutcomeKeyRef.current = key;
-    trackBookingSlotsLoaded(outcome, { duration_minutes: durationMinutes });
+    trackOnce(slotsOutcomeKeyRef, `${slug}:${monthKey}:${outcome}`, () => {
+      trackBookingSlotsLoaded(outcome, { duration_minutes: durationMinutes });
+    });
   }, [
     monthKey,
     pageQuery.data?.durationMinutes,
@@ -147,12 +156,11 @@ export function usePublicBookingFlow() {
 
   useEffect(() => {
     if (!selectedSlotStart || pageQuery.data == null) return;
-    const key = `${slug}:${selectedSlotStart}`;
-    if (selectedSlotTrackedRef.current === key) return;
-    selectedSlotTrackedRef.current = key;
-    trackBookingSlotSelected({
-      duration_minutes: pageQuery.data.durationMinutes,
-      timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+    trackOnce(selectedSlotTrackedRef, `${slug}:${selectedSlotStart}`, () => {
+      trackBookingSlotSelected({
+        duration_minutes: pageQuery.data.durationMinutes,
+        timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+      });
     });
   }, [guestTimeZone, pageQuery.data, selectedSlotStart, slug]);
 
@@ -160,12 +168,11 @@ export function usePublicBookingFlow() {
     if (!showDetailsStep || !selectedSlotStart || pageQuery.data == null) {
       return;
     }
-    const key = `${slug}:${selectedSlotStart}`;
-    if (detailsTrackedRef.current === key) return;
-    detailsTrackedRef.current = key;
-    trackBookingDetailsReached({
-      duration_minutes: pageQuery.data.durationMinutes,
-      timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+    trackOnce(detailsTrackedRef, `${slug}:${selectedSlotStart}`, () => {
+      trackBookingDetailsReached({
+        duration_minutes: pageQuery.data.durationMinutes,
+        timezone_differs: guestTimeZone !== pageQuery.data.timeZone,
+      });
     });
   }, [guestTimeZone, pageQuery.data, selectedSlotStart, showDetailsStep, slug]);
 
