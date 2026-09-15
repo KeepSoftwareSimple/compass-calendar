@@ -482,14 +482,27 @@ async function runSyncJob(
       if (pull.status === "applied") {
         // The stored cursor worked, so whatever streak it had is over. Guarded
         // so the overwhelmingly common healthy pull writes nothing.
-        if (pull.resource.cursorExpiredStreak > 0) {
+        const cursorExpiryCleared = pull.resource.cursorExpiredStreak > 0;
+        if (cursorExpiryCleared) {
           await deps.resources.clearCursorExpiry(
             resource.tenantId,
             resource.principalId,
             resource._id,
           );
         }
-        await appendCalendarInvalidation(deps, calendar, now());
+        // Idle applied pulls still advance the cursor; they must not wake the
+        // SPA. Connection status (importing -> catchingUp -> healthy) is a
+        // separate `connection` invalidation from refreshConnectionStateAfterJob.
+        // initialImport / repair / bootstrapCatchup keep unconditional appends.
+        const generationPromoted =
+          pull.resource.activeGeneration !== resource.activeGeneration;
+        if (
+          pull.changed + pull.deleted > 0 ||
+          cursorExpiryCleared ||
+          generationPromoted
+        ) {
+          await appendCalendarInvalidation(deps, calendar, now());
+        }
         // Bootstrap a channel for an imported calendar that has none. The
         // initialImport followup is otherwise the ONLY thing that ever opens
         // one, and the renewal sweep only renews channels that already exist

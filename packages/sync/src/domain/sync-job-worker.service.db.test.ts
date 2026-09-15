@@ -308,6 +308,86 @@ describe("SyncJobWorker", () => {
     expect(after?.lastHealthyAt).toBeInstanceOf(Date);
   });
 
+  it("flips importing to healthy after a first successful no-op pull without a calendar invalidation", async () => {
+    // The idle-pull gate must not strand the sidebar on "Syncing calendar".
+    // Connection status rides the `connection` invalidation from
+    // refreshConnectionStateAfterJob, not the `calendar` row the pull skipped.
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: objectId() as TenantId,
+      principalId: objectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "acct-1" as ProviderAccountId,
+        email: "user@example.com",
+        displayName: "User",
+      },
+      capabilities: ["readEvents", "readBusy", "writeEvents"],
+      state: "importing",
+      stateReason: null,
+    });
+    const credentials = new CredentialRepository(storage.db());
+    await seedOauthCredential(credentials, {
+      connectionId: connection._id,
+      provider: "google",
+      refreshToken: "refresh",
+      scopes: ["https://www.googleapis.com/auth/calendar.events"],
+    });
+    const calendar = await seedCalendar({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+    });
+    const listResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "calendarList",
+      calendarId: null,
+    });
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      "list-cursor",
+      now(),
+    );
+    const eventsResource = await seedResource(calendar, "cursor-1");
+    await resources.updateSubscription(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      {
+        subscriptionId: "channel-1",
+        subscriptionResourceId: "provider-resource-1",
+        subscriptionToken: "token-1",
+        subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      },
+    );
+    await enqueue(eventsResource, "incrementalPull");
+
+    await worker(
+      new FakeReader([pageOf([], { nextSyncToken: "cursor-1" })]),
+    ).runOnce();
+
+    const after = await connections.findById(
+      connection.tenantId,
+      connection.principalId,
+      connection._id,
+    );
+    expect(after?.state).toBe("healthy");
+    expect(after?.stateReason).toBeNull();
+
+    const feed = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.invalidations)
+      .find({ principalId: connection.principalId })
+      .toArray();
+    const kinds = feed.map(
+      (row) => (row["invalidation"] as { kind?: string }).kind,
+    );
+    expect(kinds).toEqual(["connection"]);
+  });
+
   it("hands an expired-cursor pull off by enqueuing a repair and completing the pull", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "stale");

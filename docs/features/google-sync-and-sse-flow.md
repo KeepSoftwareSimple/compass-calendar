@@ -121,9 +121,9 @@ learns about changes by polling Sync's own change feed:
    by `syncInvalidationToServerMessages`
    (`packages/backend/src/servers/sse/sync-invalidation.to-server-message.ts`).
    A Sync `event` invalidation becomes an `eventsChanged` message. A
-   `connection` invalidation becomes `calendarsChanged` plus `eventsChanged`.
-   An `importProgress` invalidation becomes `syncStatusChanged` /
-   `importCompleted`.
+   `calendar` or `connection` invalidation becomes `calendarsChanged` plus
+   `eventsChanged`. An `importProgress` invalidation becomes
+   `syncStatusChanged` / `importCompleted`.
 3. The backend publishes each translated message over SSE.
 4. Revocation on the mutation path is HTTP 410 `GOOGLE_REVOKED`
    (`event.controller.ts` maps Sync `authorizationRevoked`). The SSE attention
@@ -131,6 +131,16 @@ learns about changes by polling Sync's own change feed:
    alias `GOOGLE_REVOKED`. Helper `revokedConnectionServerMessages` in
    `packages/core/src/types/server-message.contracts.ts` emits both. Milestone
    C drops `GOOGLE_REVOKED` after every client reads `CONNECTION_REVOKED`.
+
+An `incrementalPull` that applied without writing events (`changed + deleted
+=== 0`) does not append a `calendar` invalidation, unless the resource's
+cursor-expiry streak cleared or its generation was promoted during that pull.
+Idle cursor-only advances would otherwise wake every open tab on the 5 s
+coalesce cadence. `initialImport`, repair, and bootstrap catch-up still
+append unconditionally so the client learns those finishes. Connection state
+(importing -> catchingUp -> healthy) is a separate `connection` invalidation
+from `refreshConnectionStateAfterJob`, so a first successful no-op pull after
+import still flips the UI status.
 
 Primary files:
 
