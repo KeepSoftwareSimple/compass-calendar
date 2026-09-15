@@ -1,8 +1,17 @@
 import { act, renderHook } from "@testing-library/react";
+import * as Track from "@web/auth/posthog/track";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const press = (init: KeyboardEventInit) => {
   const event = new KeyboardEvent("keydown", {
@@ -117,5 +126,24 @@ describe("useBareLetterShortcut", () => {
     });
 
     expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("emits handled shortcut_invoked with the registry id after the handler acts", () => {
+    const track = spyOn(Track, "track");
+    const handler = mock(() => true);
+    renderHook(() => useBareLetterShortcut("x", handler, "edit-hide"));
+
+    act(() => {
+      press({ key: "x" });
+    });
+
+    expect(track).toHaveBeenCalledWith("shortcut_invoked", {
+      invocation_method: "keyboard",
+      outcome: "handled",
+      section: "edit",
+      shortcut_id: "edit-hide",
+      source: "keyboard",
+    });
+    track.mockRestore();
   });
 });

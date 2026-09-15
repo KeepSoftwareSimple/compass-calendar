@@ -10,6 +10,7 @@ import {
   focusPageJumpTarget,
   type PageJumpTargets,
 } from "@web/shortcuts/page-jump/page-jump.targets";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 
 /**
@@ -33,7 +34,9 @@ export function usePageJumpShortcut(
       const index = physicalDigitIndex(event);
       const target = index !== null ? targets[index] : undefined;
       if (!target) return false;
-      return focusPageJumpTarget(target.id);
+      const focused = focusPageJumpTarget(target.id);
+      if (focused) recordHandledShortcutInvocation("focus-page-jump");
+      return focused;
     },
   });
 }

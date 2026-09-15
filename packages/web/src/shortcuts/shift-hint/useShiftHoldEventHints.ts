@@ -47,6 +47,7 @@ import {
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { createKeyupSwallow } from "@web/shortcuts/swallow-next-keyup";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { isEditSequenceArmed } from "@web/shortcuts/useEditSequenceShortcut";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
@@ -492,6 +493,7 @@ export function useShiftHoldEventHints({
         resetColumnTimeBurst();
         bufferRef.current = match.buffer;
         shortcutHintProgressActions.demonstrate("week-day-focus");
+        recordHandledShortcutInvocation("focus-week-day");
         const dayName = dayNameForPrefix(match.dayPrefix);
         eventJumpActions.setActiveDayKeys(
           [match.dayKey],
@@ -561,6 +563,7 @@ export function useShiftHoldEventHints({
           activate();
           if (isActiveRef.current) {
             keyupSwallow.add(KEYMAP.eventJump.bareLetter);
+            recordHandledShortcutInvocation("focus-shift-hold");
           }
           return;
         }

@@ -160,9 +160,15 @@ export function LifeView({ today }: LifeViewProps) {
   }, [currentDate]);
 
   const lifeNav = APP_SHORTCUT_BINDINGS;
-  useAppShortcutUp(lifeNav.navLifeCurrent.hotkey, focusCurrentWeek);
-  useAppShortcutUp(lifeNav.navLifePrevious.hotkey, () => cycleVariation(-1));
-  useAppShortcutUp(lifeNav.navLifeNext.hotkey, () => cycleVariation(1));
+  useAppShortcutUp(lifeNav.navLifeCurrent.hotkey, focusCurrentWeek, {
+    shortcutId: "nav-life-current",
+  });
+  useAppShortcutUp(lifeNav.navLifePrevious.hotkey, () => cycleVariation(-1), {
+    shortcutId: "nav-life-prev",
+  });
+  useAppShortcutUp(lifeNav.navLifeNext.hotkey, () => cycleVariation(1), {
+    shortcutId: "nav-life-next",
+  });
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">

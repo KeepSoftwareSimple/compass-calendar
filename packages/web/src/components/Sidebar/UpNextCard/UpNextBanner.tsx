@@ -43,11 +43,14 @@ export const UpNextBanner: FC = () => {
   };
 
   const upNextShortcuts = APP_SHORTCUT_BINDINGS;
-  useAppShortcutUp(upNextShortcuts.navUpNext.hotkey, () =>
-    openEventDetails("keyboardEdit"),
+  useAppShortcutUp(
+    upNextShortcuts.navUpNext.hotkey,
+    () => openEventDetails("keyboardEdit"),
+    { shortcutId: "nav-up-next" },
   );
   useAppShortcutUp(upNextShortcuts.navJoinMeeting.hotkey, openConference, {
     enabled: Boolean(conferenceUrl),
+    shortcutId: "nav-join-meeting",
   });
   // Only active while the banner itself is showing. Fires alongside any
   // other Escape handling (e.g. useEscapeToCloseForm closing the event form)

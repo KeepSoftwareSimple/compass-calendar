@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { shouldStandDownBareLetterShortcut } from "@web/shortcuts/bare-letter-stand-down";
 import { isBareLetterKey } from "@web/shortcuts/is-bare-letter-key";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 
 /**
  * The wiring every bare-letter shortcut (`f`, `m`, `x`) needs: a capture-phase
@@ -19,6 +21,7 @@ import { isBareLetterKey } from "@web/shortcuts/is-bare-letter-key";
 export function useBareLetterShortcut(
   letter: string,
   handler: (event: KeyboardEvent) => boolean,
+  shortcutId?: ShortcutRegistryId,
 ): void {
   // Held in a ref so a handler that closes over changing state (a mutation
   // callback, say) does not resubscribe the listener on every render.
@@ -36,11 +39,12 @@ export function useBareLetterShortcut(
 
       event.preventDefault();
       event.stopPropagation();
+      if (shortcutId) recordHandledShortcutInvocation(shortcutId);
     };
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [letter]);
+  }, [letter, shortcutId]);
 }

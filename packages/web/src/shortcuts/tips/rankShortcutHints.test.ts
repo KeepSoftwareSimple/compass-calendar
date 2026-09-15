@@ -13,7 +13,7 @@ const calendarIdle = {
 
 const profile = (
   actions: ShortcutUsageProfile["actions"],
-): ShortcutUsageProfile => ({ version: 1, actions });
+): ShortcutUsageProfile => ({ version: 2, actions, shortcuts: {} });
 
 describe("shortcut hint personalization", () => {
   it("preserves the deterministic order when local history is missing", () => {

@@ -28,8 +28,10 @@ export function useSidebarShortcuts() {
 
   useAppShortcutUp(TOGGLE_SHORTCUTS_HOTKEY, toggleIfUnlocked, {
     ignoreAppLock: true,
+    shortcutId: "other-shortcuts",
   });
   useAppShortcutUp(TOGGLE_SHORTCUTS_SLASH_HOTKEY, toggleIfUnlocked, {
     ignoreAppLock: true,
+    shortcutId: "other-shortcuts",
   });
 }

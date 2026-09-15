@@ -52,4 +52,13 @@ describe("shortcuts.registry bindings", () => {
       runtimeIds.sort(),
     );
   });
+
+  it("lists every REGISTRY_RUNTIME_KEY_SOURCES id as a ShortcutRegistryId", () => {
+    const registryIds = new Set<string>(
+      SHORTCUTS_REGISTRY.map((shortcut) => shortcut.id),
+    );
+    for (const id of Object.keys(REGISTRY_RUNTIME_KEY_SOURCES)) {
+      expect(registryIds.has(id)).toBe(true);
+    }
+  });
 });

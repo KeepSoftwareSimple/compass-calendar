@@ -633,7 +633,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         e.preventDefault();
         onSubmitForm();
       },
-      EVENT_FORM_PLAIN_HOTKEY_OPTIONS,
+      { ...EVENT_FORM_PLAIN_HOTKEY_OPTIONS, shortcutId: "edit-save" },
     );
 
     const { isConfirmOpen, onCancelConfirm, onDiscardConfirm, requestClose } =

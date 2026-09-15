@@ -58,28 +58,40 @@ export function useNavigationShortcuts() {
     },
   );
 
-  useAppShortcutUp(dayHotkey, () => {
-    if (Date.now() < suppressDayShortcutUntilRef.current) {
-      suppressDayShortcutUntilRef.current = 0;
-      return;
-    }
+  useAppShortcutUp(
+    dayHotkey,
+    () => {
+      if (Date.now() < suppressDayShortcutUntilRef.current) {
+        suppressDayShortcutUntilRef.current = 0;
+        return;
+      }
 
-    if (!location.pathname.startsWith(VIEW_SHORTCUTS.day.route)) {
-      navigate({ to: VIEW_SHORTCUTS.day.route });
-    }
-  });
+      if (!location.pathname.startsWith(VIEW_SHORTCUTS.day.route)) {
+        navigate({ to: VIEW_SHORTCUTS.day.route });
+      }
+    },
+    { shortcutId: "nav-day-view" },
+  );
 
-  useAppShortcutUp(weekHotkey, () => {
-    if (!location.pathname.startsWith(VIEW_SHORTCUTS.week.route)) {
-      navigate({ to: VIEW_SHORTCUTS.week.route });
-    }
-  });
+  useAppShortcutUp(
+    weekHotkey,
+    () => {
+      if (!location.pathname.startsWith(VIEW_SHORTCUTS.week.route)) {
+        navigate({ to: VIEW_SHORTCUTS.week.route });
+      }
+    },
+    { shortcutId: "nav-week-view" },
+  );
 
-  useAppShortcutUp(lifeHotkey, () => {
-    if (!location.pathname.startsWith(LIFE_SHORTCUT.route)) {
-      navigate({ to: LIFE_SHORTCUT.route });
-    }
-  });
+  useAppShortcutUp(
+    lifeHotkey,
+    () => {
+      if (!location.pathname.startsWith(LIFE_SHORTCUT.route)) {
+        navigate({ to: LIFE_SHORTCUT.route });
+      }
+    },
+    { shortcutId: "nav-life-view" },
+  );
 
   useAppShortcut(
     KEYMAP.commandPalette.hotkey,
@@ -98,6 +110,7 @@ export function useNavigationShortcuts() {
     {
       ignoreInputs: false,
       ignoreAppLock: true,
+      shortcutId: "other-palette",
     },
   );
 
@@ -127,12 +140,15 @@ export function useNavigationShortcuts() {
       ignoreInputs: false,
       blurOnTrigger: true,
       ignoreAppLock: true,
+      shortcutId: "other-settings",
     },
   );
 }
 
 export function useCalendarShellShortcuts() {
-  useAppShortcutUp(APP_SHORTCUT_BINDINGS.otherSidebar.hotkey, () =>
-    viewActions.toggleSidebar(),
+  useAppShortcutUp(
+    APP_SHORTCUT_BINDINGS.otherSidebar.hotkey,
+    () => viewActions.toggleSidebar(),
+    { shortcutId: "other-sidebar" },
   );
 }

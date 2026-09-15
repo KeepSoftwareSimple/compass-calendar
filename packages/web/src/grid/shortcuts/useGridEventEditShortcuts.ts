@@ -720,65 +720,71 @@ export function useGridEventEditShortcuts({
   useAppShortcut("Delete", deleteFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
+    shortcutId: "edit-delete",
   });
   useAppShortcut("Mod+D", duplicateFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
+    shortcutId: "edit-duplicate",
   });
   useAppShortcut("Mod+C", copyFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: true,
+    shortcutId: "edit-copy",
   });
   useAppShortcut("Mod+V", pasteCopiedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: true,
+    shortcutId: "edit-paste",
   });
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.up,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.down,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.left,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.right,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.up, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-prev",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.down, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-next",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.left, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-left",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.right, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-right",
+  });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.up, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-earlier",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.down, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-later",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.left, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-prev-day",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.right, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-next-day",
   });
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,
     overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
     telemetryHintId: "edge-focus",
+    shortcutId: "edit-cycle-edge",
   });
   useAppShortcut("Shift+Tab", cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
     telemetryHintId: "edge-focus",
+    shortcutId: "edit-cycle-edge",
   });
   useAppShortcut("Escape", onEscape, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
 }

@@ -13,6 +13,19 @@ Two files matter, at different depths:
 - `packages/web/src/shortcuts/shortcuts.registry.ts` is the display registry: every shortcut's legend entry (label, keys, section, context). When adding a shortcut, update the registry and it appears in the legend overlay (opened with `?`), which is searchable and context-aware. The full, always-current shortcut list is that overlay — this doc deliberately does not duplicate it.
 - `packages/web/src/shortcuts/keymap.ts` is the runtime binding source for the shortcuts the onboarding flow teaches; the real handlers, the showcase hint keycaps, and the registry's legend rows all derive from it, so remapping a taught shortcut is a one-file edit. Shortcuts outside the keymap bind at their handler sites (the Day/Week view keys live in `useCalendarViewShortcuts.ts`).
 
+Adoption is measured with `shortcut_invoked`. Taught outcomes still send `outcome: "succeeded"` and `action_id`. Every legend row also records `shortcut_id` (the registry id) and `section` with `outcome: "handled"` when its handler runs. Query production adoption with:
+
+```sql
+SELECT properties.shortcut_id, count(), uniq(person_id)
+FROM events
+WHERE event = 'shortcut_invoked'
+  AND timestamp >= now() - INTERVAL 30 DAY
+  AND properties.environment = 'production'
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+
 ## Scope
 
 Use this guide to validate:

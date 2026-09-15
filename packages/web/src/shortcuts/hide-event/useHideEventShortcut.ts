@@ -11,10 +11,14 @@ import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 export function useHideEventShortcut() {
   const toggleEventHidden = useToggleEventHidden();
 
-  useBareLetterShortcut(HIDE_EVENT_LETTER, () => {
-    const focused = getFocusedCalendarEvent();
-    if (!focused) return false;
-    toggleEventHidden(focused.eventId);
-    return true;
-  });
+  useBareLetterShortcut(
+    HIDE_EVENT_LETTER,
+    () => {
+      const focused = getFocusedCalendarEvent();
+      if (!focused) return false;
+      toggleEventHidden(focused.eventId);
+      return true;
+    },
+    "edit-hide",
+  );
 }

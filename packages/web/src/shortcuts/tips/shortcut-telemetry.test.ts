@@ -21,6 +21,7 @@ mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
 
 const {
   beginShortcutSuggestionPresentation,
+  recordHandledShortcutInvocation,
   recordShortcutInvocation,
   resetShortcutTelemetryForTests,
   IMPRESSION_DWELL_MS,
@@ -144,5 +145,35 @@ describe("shortcut suggestion dwell impressions", () => {
         was_suggested: true,
       }),
     );
+  });
+});
+
+describe("recordHandledShortcutInvocation", () => {
+  it("emits handled properties with the registry id and section", () => {
+    recordHandledShortcutInvocation("nav-next");
+
+    expect(track).toHaveBeenCalledWith("shortcut_invoked", {
+      invocation_method: "keyboard",
+      outcome: "handled",
+      section: "navigate",
+      shortcut_id: "nav-next",
+      source: "keyboard",
+    });
+    expect(readShortcutUsageProfile().shortcuts["nav-next"]).toEqual({
+      invocations: 1,
+      lastInvokedAt: expect.any(Number),
+      recentImpressions: 0,
+    });
+  });
+
+  it("still records the registry id locally when PostHog emission is skipped", () => {
+    recordHandledShortcutInvocation("create-timed", { emitEvent: false });
+
+    expect(track).not.toHaveBeenCalled();
+    expect(readShortcutUsageProfile().shortcuts["create-timed"]).toEqual({
+      invocations: 1,
+      lastInvokedAt: expect.any(Number),
+      recentImpressions: 0,
+    });
   });
 });
