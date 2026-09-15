@@ -149,8 +149,8 @@ jobs:
   # Let the legs start and skip every step instead: each reports in a few
   # seconds, for free. Per-package outputs skip unrelated legs the same way
   # (a backend-only PR must not pay two web runners). `unit-leg (web, 1)`
-  # and `unit-leg (web, 2)` each cover half the suite as two sequential
-  # shards (`WEB_TEST_SHARDS=4` with index `1,2` / `3,4`) so RSS stays
+  # and `unit-leg (web, 2)` each cover half the suite as three sequential
+  # shards (`WEB_TEST_SHARDS=6` with index `1,2,3` / `4,5,6`) so RSS stays
   # under 7 GB.
   unit-leg:
     needs: changes
@@ -167,10 +167,10 @@ jobs:
             project: sync
           - name: web, 1
             project: web
-            shard: "1,2"
+            shard: "1,2,3"
           - name: web, 2
             project: web
-            shard: "3,4"
+            shard: "4,5,6"
           - name: backend
             project: backend
           - name: scripts
@@ -215,7 +215,7 @@ jobs:
         timeout-minutes: 5
         env:
           TZ: Etc/UTC
-          WEB_TEST_SHARDS: "4"
+          WEB_TEST_SHARDS: "6"
           WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
         run: |
           bun run test:web

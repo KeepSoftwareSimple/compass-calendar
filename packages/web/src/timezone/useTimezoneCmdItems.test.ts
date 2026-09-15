@@ -4,6 +4,7 @@ import {
   selectOverlayOpenedFromPalette,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setPinnedTimeZone,
@@ -53,6 +54,9 @@ describe("useTimezoneCmdItems", () => {
 
   it("opens the time-travel picker from the Time travel command", () => {
     const { result } = renderHook(() => useTimezoneCmdItems());
+    expect(result.current[1]?.shortcut).toEqual([
+      ...APP_SHORTCUT_BINDINGS.otherTimeTravel.keycaps,
+    ]);
     act(() => {
       result.current[1]?.onClick?.();
     });

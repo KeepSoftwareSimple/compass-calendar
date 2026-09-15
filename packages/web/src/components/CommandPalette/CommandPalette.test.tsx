@@ -31,6 +31,7 @@ import {
   POINTER_EVENT_ID_ATTRIBUTE,
   POINTER_EVENT_JUMP_REQUEST,
 } from "@web/shortcuts/keyboard-only/pointer-action";
+import { usePointerHintStore } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   eventJumpActions,
   useEventJumpStore,
@@ -239,8 +240,10 @@ describe("CommandPalette", () => {
     // Only the heading matches here: useShowAccountsCmdItems' "Manage
     // Accounts" item is gated on auth, and this render is unauthenticated
     // (no SessionContext.Provider — see session.context.ts's default).
-    expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("More")).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Settings" }),
+    ).toBeInTheDocument();
 
     // Navigation always lists Today first, then app views.
     expect(screen.getByText("Go to Today")).toBeInTheDocument();
@@ -254,6 +257,20 @@ describe("CommandPalette", () => {
     expect(getInput()).toHaveFocus();
     // First option is active by default.
     expect(activeRowText(container)).toBe("Go to Today");
+
+    const optionKeycaps = (name: string) =>
+      screen.getByRole("option", { name }).querySelector("[aria-hidden='true']")
+        ?.textContent;
+    expect(optionKeycaps("Toggle sidebar")).toBe("]");
+    expect(optionKeycaps("Focus month picker")).toBe("I");
+    expect(optionKeycaps("Open Up Next event")).toBe("N");
+    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
+    expect(optionKeycaps("Time travel")).toBe("Z");
+    expect(
+      screen
+        .getByRole("option", { name: "Settings" })
+        .querySelectorAll("[aria-hidden='true']"),
+    ).toHaveLength(2);
   });
 
   it("renders the Day and Week navigation shortcut tips", () => {
@@ -325,13 +342,16 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(activeRowText(container)).toBe("Go to Today");
 
-    // Walk down through the Create section. The ArrowDown after Create
-    // all-day event skips the disabled Undo row and lands on Appearance.
+    // Walk down through Navigation (including legend rows) into Create.
+    // The ArrowDown after Create all-day event skips the disabled Undo row
+    // and lands on Appearance.
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Day
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Practice shortcuts
-    fireEvent.keyDown(input, { key: "ArrowDown" }); // Create event
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Toggle sidebar
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Focus month picker
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Up Next + Join
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Create all-day event
     expect(activeRowText(container)).toBe("Create all-day event");
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Undo last change
@@ -354,6 +374,12 @@ describe("CommandPalette", () => {
       expect(onCreateTimedDraft).toHaveBeenCalledTimes(1);
     });
     expect(isOpen()).toBe(false);
+    expect(usePointerHintStore.getState().latestAttempt).toEqual({
+      actionId: "unknown",
+      shortcutKey: "c",
+      performed: true,
+      source: "palette",
+    });
     unsubscribe();
   });
 

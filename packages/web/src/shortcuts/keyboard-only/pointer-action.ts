@@ -42,6 +42,8 @@ export type PointerActionId =
 
 export type PointerShortcutKey = string | string[];
 
+export type PointerHintSource = "click" | "palette";
+
 /**
  * "Blocked" is historical: clicks pass through since #3171. The attempt now
  * describes what a click aimed at so the hint can name the keyboard path,
@@ -52,6 +54,8 @@ export type BlockedPointerAttempt = {
   actionId: PointerActionId | "grid.timed" | "grid.all-day" | "unknown";
   /** True when the clicked control performs the action itself. */
   performed?: boolean;
+  /** Palette selection uses the same "Next time" copy as a performed click. */
+  source?: PointerHintSource;
   eventId?: string;
   shortcutKey?: PointerShortcutKey;
   gridDate?: string;

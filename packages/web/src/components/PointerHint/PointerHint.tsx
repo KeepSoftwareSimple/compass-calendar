@@ -57,8 +57,8 @@ const pointerHintMessage = ({
   if (showcaseActive) return "Follow the keys on screen.";
 
   // The click already did its job through a working control; only the key
-  // for next time is new information.
-  if (attempt?.performed) {
+  // for next time is new information. Palette selection uses the same copy.
+  if (attempt?.performed || attempt?.source === "palette") {
     if (attempt.actionId === POINTER_ACTIONS.switchView) {
       return (
         <>

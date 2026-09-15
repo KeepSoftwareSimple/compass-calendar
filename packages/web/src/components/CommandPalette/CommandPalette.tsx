@@ -28,6 +28,7 @@ import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabe
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
+import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
 import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
@@ -40,6 +41,7 @@ import {
   getNavigationCommandItems,
   getNavigationViewRoute,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
+import { pulsePaletteTaughtShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import {
   recordRecentCommand,
   useRecentCommandIds,
@@ -188,8 +190,10 @@ const CommandPaletteContent = ({
   const activateItem = (item: CommandItem) => {
     if (item.disabled) return;
     recordRecentCommand(item.id);
+    const shortcut = item.shortcut;
     item.onClick?.();
     close();
+    pulsePaletteTaughtShortcut(shortcut);
   };
 
   const dismiss = useDismiss(context);
@@ -402,6 +406,7 @@ export const CommandPalette = ({
   const upgradeCmdItems = useUpgradeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
   const { undo, redo, canUndo, canRedo } = useUndoRedo(mutationDependencies);
   const recentCommandIds = useRecentCommandIds();
 
@@ -409,15 +414,18 @@ export const CommandPalette = ({
     {
       id: "navigation",
       heading: "Navigation",
-      items: getNavigationCommandItems({
-        currentView,
-        onGoToToday,
-        onNavigateToView: (viewName) =>
-          navigate({ to: getNavigationViewRoute(viewName) }),
-        onShowShortcuts,
-        onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
-        onShowWelcomeGuide,
-      }),
+      items: [
+        ...getNavigationCommandItems({
+          currentView,
+          onGoToToday,
+          onNavigateToView: (viewName) =>
+            navigate({ to: getNavigationViewRoute(viewName) }),
+          onShowShortcuts,
+          onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
+          onShowWelcomeGuide,
+        }),
+        ...legendCmdItems,
+      ],
     },
     {
       id: "general",
@@ -510,6 +518,7 @@ export const LifeCommandPalette = ({
   const themeCmdItems = useThemeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
 
   if (!open) return null;
 
@@ -521,11 +530,14 @@ export const LifeCommandPalette = ({
         {
           id: "navigation",
           heading: "Navigation",
-          items: getNavigationCommandItems({
-            currentView: "life",
-            onNavigateToView: (viewName) =>
-              navigate({ to: getNavigationViewRoute(viewName) }),
-          }),
+          items: [
+            ...getNavigationCommandItems({
+              currentView: "life",
+              onNavigateToView: (viewName) =>
+                navigate({ to: getNavigationViewRoute(viewName) }),
+            }),
+            ...legendCmdItems,
+          ],
         },
         {
           id: "appearance",
