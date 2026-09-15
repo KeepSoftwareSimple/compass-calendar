@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   type CalendarCardIdentity,
   isGridEventScheduleLocked,
@@ -17,6 +18,7 @@ import {
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectDraftId, useDraftStore } from "@web/events/stores/draft.store";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
+import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -53,6 +55,14 @@ export const AllDayEvents = ({
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
   const hiddenEventIds = useHiddenEventIds();
+  const visibleDates: GridVisibleDate[] = useMemo(
+    () =>
+      weekDays.map((date) => ({
+        date,
+        key: date.format(YEAR_MONTH_DAY_FORMAT),
+      })),
+    [weekDays],
+  );
   // The query covers the full week; only mount events overlapping the visible
   // window so off-window events never land in the DOM or the interaction
   // registry.
@@ -136,7 +146,7 @@ export const AllDayEvents = ({
                 measurements={measurements}
                 onKeyDown={onEventKeyDown}
                 onOpenReadOnlyDetails={onOpenReadOnlyDetails}
-                weekDays={weekDays}
+                visibleDates={visibleDates}
               />
             );
           },
@@ -155,7 +165,7 @@ interface AllDayEventItemProps {
   measurements: Measurements_Grid;
   onKeyDown: (event: GridEvent) => void;
   onOpenReadOnlyDetails: (event: GridEvent) => void;
-  weekDays: WeekProps["component"]["weekDays"];
+  visibleDates: GridVisibleDate[];
 }
 
 const AllDayEventItem = ({
@@ -168,7 +178,7 @@ const AllDayEventItem = ({
   measurements,
   onKeyDown,
   onOpenReadOnlyDetails,
-  weekDays,
+  visibleDates,
 }: AllDayEventItemProps) => {
   // Stamp view-registry id attrs for any saved card (including read-only) so
   // context menus / focus restore can resolve an id. Drag/resize stays gated
@@ -204,7 +214,7 @@ const AllDayEventItem = ({
       measurements={measurements}
       onKeyDown={isReadOnly ? onOpenReadOnlyDetails : onKeyDown}
       ref={registrationRef}
-      weekDays={weekDays}
+      visibleDates={visibleDates}
     />
   );
 };

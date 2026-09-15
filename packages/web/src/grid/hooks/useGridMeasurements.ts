@@ -40,8 +40,10 @@ const areMeasurementsEqual = (
   );
 };
 
+const defaultIsInteractionMotionActive = () => false;
+
 export const useGridMeasurements = ({
-  isInteractionMotionActive = () => false,
+  isInteractionMotionActive = defaultIsInteractionMotionActive,
   visibleDateCount,
 }: {
   isInteractionMotionActive?: () => boolean;
