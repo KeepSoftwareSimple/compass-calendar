@@ -3,13 +3,14 @@ import path from "node:path";
 // Only the metafile fields used here. build.ts passes Bun.build's metafile
 // (metafile: true), which lists every output's imports with their kind, so no
 // parsing of the emitted sources is needed.
-interface Metafile {
+export interface BuildMetafile {
   outputs: Record<
     string,
     {
       imports: Array<{ path: string; kind: string }>;
-      inputs?: Record<string, unknown>;
+      inputs?: Record<string, { bytesInOutput?: number } | unknown>;
       entryPoint?: string;
+      bytes?: number;
     }
   >;
 }
@@ -28,6 +29,85 @@ export const ALWAYS_BOOT_SOURCES = [
   "src/components/RootShell/AppRoot.tsx",
   "src/components/RootShell/RootShell.tsx",
 ];
+
+export function parseBuildMetafile(
+  metafile: string | object | undefined,
+): BuildMetafile {
+  if (!metafile) {
+    throw new Error(
+      "Bun.build returned no metafile; build.ts must pass metafile: true",
+    );
+  }
+  return (
+    typeof metafile === "string" ? JSON.parse(metafile) : metafile
+  ) as BuildMetafile;
+}
+
+/**
+ * Output keys of the boot set: the entry, ALWAYS_BOOT_SOURCES chunks, the
+ * entry's dynamic imports, and every static-import closure of those roots.
+ * Same walk injectModulePreloads uses; the returned list includes the entry.
+ */
+export function collectBootOutputKeys(
+  metafile: string | object | undefined,
+  alwaysBootSources: string[] = ALWAYS_BOOT_SOURCES,
+): string[] {
+  const meta = parseBuildMetafile(metafile);
+
+  const entry = Object.keys(meta.outputs).find((key) => {
+    const output = meta.outputs[key];
+    return output?.entryPoint;
+  });
+  if (!entry) {
+    throw new Error("No entrypoint output found in the build metafile");
+  }
+
+  const keys: string[] = [entry];
+  const seen = new Set(keys);
+
+  for (const source of alwaysBootSources) {
+    const chunk = Object.keys(meta.outputs).find((key) =>
+      Object.keys(meta.outputs[key]?.inputs ?? {}).some(
+        (input) => input === source || input.endsWith(`/${source}`),
+      ),
+    );
+    if (!chunk) {
+      throw new Error(
+        `Always-boot source ${source} is in no build output; update ALWAYS_BOOT_SOURCES in inject-module-preloads.ts`,
+      );
+    }
+    if (!seen.has(chunk)) {
+      seen.add(chunk);
+      keys.push(chunk);
+    }
+  }
+
+  const queue = [...keys];
+  while (queue.length > 0) {
+    const key = queue.shift() as string;
+    const output = meta.outputs[key];
+    if (!output) continue;
+    for (const imp of output.imports) {
+      const bootCritical =
+        imp.kind === "import-statement" ||
+        (key === entry && imp.kind === "dynamic-import");
+      if (!bootCritical) continue;
+      if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
+      if (!(imp.path in meta.outputs)) continue;
+      seen.add(imp.path);
+      keys.push(imp.path);
+      queue.push(imp.path);
+    }
+  }
+
+  if (keys.length < 2) {
+    // With splitting enabled the entry always imports chunks; an empty walk
+    // means the metafile shape changed or the wrong output was picked.
+    throw new Error(`No boot-critical chunks found walking ${entry}`);
+  }
+
+  return keys;
+}
 
 /**
  * Injects `<link rel="modulepreload">` tags for every boot-critical chunk into
@@ -48,64 +128,9 @@ export async function injectModulePreloads(
   metafile: string | object | undefined,
   alwaysBootSources: string[] = ALWAYS_BOOT_SOURCES,
 ): Promise<string[]> {
-  if (!metafile) {
-    throw new Error(
-      "Bun.build returned no metafile; build.ts must pass metafile: true",
-    );
-  }
-  const meta = (
-    typeof metafile === "string" ? JSON.parse(metafile) : metafile
-  ) as Metafile;
-
-  const entry = Object.keys(meta.outputs).find(
-    (key) => meta.outputs[key].entryPoint,
-  );
-  if (!entry) {
-    throw new Error("No entrypoint output found in the build metafile");
-  }
-
-  const roots = [entry];
-  for (const source of alwaysBootSources) {
-    const chunk = Object.keys(meta.outputs).find((key) =>
-      Object.keys(meta.outputs[key].inputs ?? {}).some(
-        (input) => input === source || input.endsWith(`/${source}`),
-      ),
-    );
-    if (!chunk) {
-      throw new Error(
-        `Always-boot source ${source} is in no build output; update ALWAYS_BOOT_SOURCES in inject-module-preloads.ts`,
-      );
-    }
-    if (!roots.includes(chunk)) roots.push(chunk);
-  }
-
-  const critical = roots.filter((key) => key !== entry);
-  const seen = new Set(roots);
-  const queue = [...roots];
-  while (queue.length > 0) {
-    const key = queue.shift() as string;
-    for (const imp of meta.outputs[key].imports) {
-      const bootCritical =
-        imp.kind === "import-statement" ||
-        (key === entry && imp.kind === "dynamic-import");
-      if (!bootCritical) continue;
-      if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
-      if (!(imp.path in meta.outputs)) continue;
-      seen.add(imp.path);
-      critical.push(imp.path);
-      queue.push(imp.path);
-    }
-  }
-
-  if (critical.length === 0) {
-    // With splitting enabled the entry always imports chunks; an empty walk
-    // means the metafile shape changed or the wrong output was picked.
-    throw new Error(`No boot-critical chunks found walking ${entry}`);
-  }
-
-  // Metafile paths are outdir-relative ("./chunk-x.js"); the page serves them
-  // from the root (publicPath "/").
-  const names = critical.map((key) => key.replace(/^\.\//, ""));
+  const keys = collectBootOutputKeys(metafile, alwaysBootSources);
+  // Preload tags omit the entry: the page already loads it via <script type=module>.
+  const names = keys.slice(1).map((key) => key.replace(/^\.\//, ""));
 
   const htmlPath = path.join(outdir, "index.html");
   const html = await Bun.file(htmlPath).text();

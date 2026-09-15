@@ -45,6 +45,45 @@ Mongo-free iteration; full suites remain the durability gate.
 | `bun run test:sync` | 893 / 893 | ~13–14s |
 | `bun run test:scripts` | (see package) | ~2s |
 
+## Web boot-set size (`bun run build:web`)
+
+`packages/web/build.ts` prints a boot-set report from the production metafile
+after each `bun run build:web`. The boot set is the same graph
+`inject-module-preloads.ts` preloads: the entry chunk, its `app.bootstrap`
+dynamic import, the `AppRoot` and `RootShell` chunks, and every static-import
+closure of those roots.
+
+Read the report as:
+
+- **chunks**: JavaScript files on that graph, including the entry. A new
+  `import()` root that stays on the boot path raises this count. #3704 is
+  the precedent for not trading bytes for extra requests.
+- **raw / gzip**: decoded and gzipped bytes of those files. gzip is the
+  transfer-shaped number; raw is what the parser sees. Each chunk is gzipped
+  separately and the sizes are summed, matching one HTTP response per file.
+- **Top packages**: minified `bytesInOutput` attributed by the last
+  `node_modules/` path segment (Bun's isolated linker layout). First-party
+  sources are omitted. Zod's `v4/locales` share is noted when present.
+
+Ceilings live in `packages/web/boot-size-budget.json`: per-package minified
+bytes, total gzip, and chunk count. The build exits non-zero when any of
+those is exceeded, and the message names the package (or gzip/chunks) and
+the delta. Headroom is 5% above the WP-13 measurement so later boot-weight
+work can land without the gate failing first.
+
+**Lower a ceiling when you remove that weight from the boot path** (the
+acceptance for WP-14, WP-15, and WP-16). Run `bun run build:web`, copy the
+new actual into the JSON, and keep a little headroom only if the number
+still jitters across machines. Do not raise a ceiling to make a
+regression pass; fix the import or the split instead. When a new npm
+package appears on the boot path, add a ceiling for it in the same change.
+When a package leaves the boot path, delete its key so the file only
+lists what boot still loads.
+
+The CI `perf-budget` Lighthouse job remains the transfer gate on ubuntu and
+is calibrated from CI, never from a laptop. This report is the local,
+per-package tool that job cannot be.
+
 ## Regression rule
 
 Investigate any p95 query or render regression over 20% from the numbers
