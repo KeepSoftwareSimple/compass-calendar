@@ -71,10 +71,7 @@ import {
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
-import {
-  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-  promptShortcutUnavailableWhileEditingEvent,
-} from "@web/shortcuts/prompt-shortcut-unavailable";
+import { promptShortcutUnavailableWhileEditingEvent } from "@web/shortcuts/prompt-shortcut-unavailable";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
@@ -772,13 +769,7 @@ export function useGridEventEditShortcuts({
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,
-    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-    telemetryHintId: "edge-focus",
   });
-  useAppShortcut("Shift+Tab", cycleEdgeFocus, {
-    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-    telemetryHintId: "edge-focus",
-  });
+  useAppShortcut("Shift+Tab", cycleEdgeFocus, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
   useAppShortcut("Escape", onEscape, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
 }
