@@ -1,5 +1,6 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
+import { combineCoreBootSplitsPlugin } from "./plugins/combine-core-boot-splits.plugin";
 import { dropZodLocalesPlugin } from "./plugins/drop-zod-locales.plugin";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { watch } from "node:fs";
@@ -14,13 +15,15 @@ const SRCDIR = path.resolve(import.meta.dir, "src");
 // In development: unminified + inline sourcemaps + live-reload watcher.
 // In test/other: minified + no sourcemaps + no live-reload (keeps bundle small
 // so Playwright tests can parse it quickly on CI's limited CPU).
-const IS_DEV = (config.runtime.nodeEnv ?? "development") === "development";
+const nodeEnv = config.runtime.nodeEnv || "development";
+const IS_DEV = nodeEnv === "development";
 
-// Define process.env as a whole object so both dot and bracket notation work:
-// process.env.NODE_ENV and process.env["NODE_ENV"] are both replaced correctly.
+// `process.env.NODE_ENV` as a string literal so `IS_DEV` folds; keep the
+// whole `process.env` object so bracket notation still works.
 const define: Record<string, string> = {
+  "process.env.NODE_ENV": JSON.stringify(nodeEnv),
   "process.env": JSON.stringify({
-    NODE_ENV: config.runtime.nodeEnv || "development",
+    NODE_ENV: nodeEnv,
     API_BASEURL: config.backend.apiUrl,
     GOOGLE_CLIENT_ID: config.google?.clientId || "",
     MICROSOFT_CLIENT_ID:
@@ -61,7 +64,7 @@ async function build() {
     minify: !IS_DEV,
     splitting: true,
     define,
-    plugins: [dropZodLocalesPlugin, postcssPlugin],
+    plugins: [combineCoreBootSplitsPlugin, dropZodLocalesPlugin, postcssPlugin],
     publicPath: "/",
   });
 

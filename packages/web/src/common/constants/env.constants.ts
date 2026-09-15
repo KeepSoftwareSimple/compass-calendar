@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { isBookingEnabled, isDev } from "@core/util/env.util";
+import { isBookingEnabled } from "@core/util/env.util";
 
 export const getApiBaseUrl = (apiBaseUrl?: string, port?: string): string => {
   if (apiBaseUrl) {
@@ -44,5 +44,9 @@ export const ENV_WEB = webEnvSchema.parse({
   POSTHOG_HOST: process.env.POSTHOG_HOST,
 });
 
-export const IS_DEV = isDev(ENV_WEB.NODE_ENV);
+// Compare NODE_ENV directly so production builds can fold this to `false`
+// (build.ts defines `process.env.NODE_ENV` as a string literal). A runtime
+// helper over `ENV_WEB.NODE_ENV` is not a compile-time constant, so `if
+// (IS_DEV)` would keep dead imports in the boot graph.
+export const IS_DEV = process.env.NODE_ENV === "development";
 export const IS_BOOKING_ENABLED = isBookingEnabled(ENV_WEB.NODE_ENV);

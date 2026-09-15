@@ -15,6 +15,7 @@ import {
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
+import { syncLocalEventsToCloud } from "@web/common/utils/sync/local-event-sync.util";
 import { showGoogleReconnectToast } from "@web/common/utils/toast/google-reconnect.toast";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { closeStream, openStream } from "@web/sse/client/sse.client";
@@ -134,10 +135,7 @@ const googleAuthUtil = createGoogleAuthUtil({
   resolveRevokedAccount,
   markAccountReconnectRequired,
   showReconnectToast: showGoogleReconnectToast,
-  syncLocalEventsToCloud: () =>
-    import("@web/common/utils/sync/local-event-sync.util").then((module) =>
-      module.syncLocalEventsToCloud(),
-    ),
+  syncLocalEventsToCloud,
   toastError: (content, options) => getToast().error(content, options),
 });
 

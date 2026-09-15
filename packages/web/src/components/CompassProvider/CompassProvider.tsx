@@ -1,7 +1,7 @@
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { lazy, type PropsWithChildren, Suspense } from "react";
+import { type PropsWithChildren } from "react";
 import { Slide, ToastContainer } from "react-toastify";
 import { queryClient as defaultQueryClient } from "@web/api/query-client";
 import { SessionProvider } from "@web/auth/compass/session/SessionProvider";
@@ -19,11 +19,7 @@ import { LogoutConfirmationProvider } from "@web/components/LogoutConfirmation/L
 import { SettingsModalHost } from "@web/components/Settings/SettingsModalHost";
 import { selectTheme, useThemeStore } from "@web/settings/theme/theme.store";
 import { TimezoneDialogHost } from "@web/timezone/TimezoneDialogHost";
-
-const LazyReactQueryDevtoolsHost = lazy(async () => {
-  const { ReactQueryDevtoolsHost } = await import("./ReactQueryDevtoolsHost");
-  return { default: ReactQueryDevtoolsHost };
-});
+import { ReactQueryDevtoolsHost } from "./ReactQueryDevtoolsHost";
 
 function ThemeAwareToastContainer() {
   const theme = useThemeStore(selectTheme);
@@ -79,11 +75,7 @@ export const CompassRequiredProviders = ({
         </GoogleOAuthProvider>
       </SessionProvider>
     </HotkeysProvider>
-    {IS_DEV ? (
-      <Suspense fallback={null}>
-        <LazyReactQueryDevtoolsHost />
-      </Suspense>
-    ) : null}
+    {IS_DEV ? <ReactQueryDevtoolsHost /> : null}
   </QueryClientProvider>
 );
 

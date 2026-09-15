@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
+import { configureGoogleRevocationApiHandler } from "@web/auth/providers/revocation-api.config";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
 import { BillingPastDueBanner } from "@web/billing/BillingPastDueBanner";
 import { BillingReadOnlyBanner } from "@web/billing/BillingReadOnlyBanner";
@@ -43,6 +44,11 @@ import {
   useNavigationShortcuts,
 } from "@web/shortcuts/useGlobalShortcuts";
 import { isLifePathname } from "./isLifePathname";
+
+// Register on this always-boot chunk rather than app.bootstrap so the
+// local-event-sync static import joins a graph that already exists on every
+// page load, without a new import() root.
+configureGoogleRevocationApiHandler();
 
 /**
  * The auth modal is driven by the router's `?auth=` search param, so its

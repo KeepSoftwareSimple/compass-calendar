@@ -10,7 +10,7 @@ import {
   userMetadataActions,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
-import * as sseProvider from "@web/sse/provider/SSEProvider";
+import * as sseClient from "@web/sse/client/sse.client";
 import {
   afterAll,
   beforeEach,
@@ -28,16 +28,15 @@ const refreshUserMetadata = spyOn(
   userMetadataUtil,
   "refreshUserMetadata",
 ).mockResolvedValue(undefined);
-// SSEProvider.test.tsx has its own dedicated test importing the real module —
-// mock.module leaks process-wide across files, so spy on the real module's
-// exports (restorable) instead of mock.module'ing the whole path.
-const openStream = spyOn(sseProvider, "openStream").mockImplementation(
+// spy on the concrete sse.client exports SessionProvider imports (restorable).
+// mock.module leaks process-wide and would replace the real client for later files.
+const openStream = spyOn(sseClient, "openStream").mockImplementation(
   (() => {}) as never,
 );
-const closeStream = spyOn(sseProvider, "closeStream").mockImplementation(
+const closeStream = spyOn(sseClient, "closeStream").mockImplementation(
   () => {},
 );
-const getStream = spyOn(sseProvider, "getStream").mockImplementation(
+const getStream = spyOn(sseClient, "getStream").mockImplementation(
   (() => null) as never,
 );
 const markUserAsAuthenticated = mock();

@@ -1,6 +1,7 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
 import { injectModulePreloads } from "./inject-module-preloads";
+import { combineCoreBootSplitsPlugin } from "./plugins/combine-core-boot-splits.plugin";
 import { dropZodLocalesPlugin } from "./plugins/drop-zod-locales.plugin";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { execSync } from "node:child_process";
@@ -39,12 +40,15 @@ const buildHash = getBuildHash();
 const BUILD_VERSION =
   buildHash === "self-host" ? `${Date.now()}-self-host` : buildHash;
 const OUTDIR = path.resolve(import.meta.dir, "../../build/web");
+const nodeEnv = config.runtime.nodeEnv || "production";
 
-// Define process.env as a whole object so both dot and bracket notation work:
-// process.env.NODE_ENV and process.env["NODE_ENV"] are both replaced correctly.
+// `process.env.NODE_ENV` as a string literal so `process.env.NODE_ENV ===
+// "development"` (and `IS_DEV`) fold in production. The whole `process.env`
+// object replacement is not a compile-time constant, so keep both.
 const define: Record<string, string> = {
+  "process.env.NODE_ENV": JSON.stringify(nodeEnv),
   "process.env": JSON.stringify({
-    NODE_ENV: config.runtime.nodeEnv || "production",
+    NODE_ENV: nodeEnv,
     API_BASEURL: config.backend.apiUrl,
     GOOGLE_CLIENT_ID: config.google?.clientId || "",
     MICROSOFT_CLIENT_ID:
@@ -70,7 +74,7 @@ const result = await Bun.build({
   splitting: true,
   metafile: true,
   define,
-  plugins: [dropZodLocalesPlugin, postcssPlugin],
+  plugins: [combineCoreBootSplitsPlugin, dropZodLocalesPlugin, postcssPlugin],
   publicPath: "/",
 });
 
