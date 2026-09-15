@@ -1,4 +1,4 @@
-import { type FC, useMemo } from "react";
+import { type FC, useCallback, useMemo } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { normalizeEmail } from "@core/util/email.util";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
@@ -23,6 +23,12 @@ import {
 } from "@web/calendars/collapsed-accounts.store";
 import { useCalendarVisibility } from "@web/calendars/useCalendarVisibility";
 import { useConnectedAccountEmails } from "@web/calendars/useDefaultTargetCalendar";
+import { CalendarDigitListSection } from "@web/components/Sidebar/CalendarList/CalendarDigitListSection";
+import {
+  CalendarRow,
+  calendarRowDisplayName,
+} from "@web/components/Sidebar/CalendarList/CalendarRow";
+import { useCalendarDigitPick } from "@web/components/Sidebar/CalendarList/useCalendarDigitPick";
 import {
   calendarAccountJumpId,
   pageJumpAttrs,
@@ -37,8 +43,7 @@ export const CalendarList: FC = () => {
   const availableProviders = useAvailableConnectProviders();
   const connections = useUserMetadataStore(selectSyncConnections);
   const { data, error, isPending, isError, refetch } = useCalendarsQuery();
-  const { toggleCalendarVisibility, failureAnnouncement } =
-    useCalendarVisibility();
+  const { toggleCalendarVisibility, announcement } = useCalendarVisibility();
   const accountEmailOrder = useConnectedAccountEmails();
   const collapsedKeys = useCollapsedAccountKeys();
 
@@ -68,30 +73,34 @@ export const CalendarList: FC = () => {
   );
   const sharedEmails = emailsSharedAcrossProviders(groups);
 
-  const renderRows = (rows: Calendar[], id?: string) => (
-    <ul className="flex flex-col gap-1.5" id={id}>
-      {rows.map((calendar) => (
-        <CalendarRow
-          calendar={calendar}
-          key={calendar.id}
-          onToggle={toggleCalendarVisibility}
-        />
-      ))}
-    </ul>
+  const handleToggle = useCallback(
+    (calendar: Calendar, displayName: string) => {
+      toggleCalendarVisibility(calendar.id, !calendar.isVisible, displayName);
+    },
+    [toggleCalendarVisibility],
   );
 
-  // Renders nothing (rather than an aria-hidden wrapper) when collapsed: the
-  // toggle in the account's own heading still announces aria-expanded, and
-  // this way a hidden section's rows are never briefly stale mid-toggle.
-  const renderCollapsible = (key: string, rows: Calendar[]) =>
-    collapsedKeys.has(key)
-      ? null
-      : renderRows(rows, accountCalendarListId(key));
+  // No connected accounts: the single "Calendar list" page-jump target is
+  // this outer section. Digit pick lives here so Mod+digit then 1..9 still
+  // toggles after landing on that heading.
+  const standaloneCalendars =
+    groups.length === 0 && !isAnonymous ? ungrouped : [];
+  const standalonePick = useCalendarDigitPick({
+    calendars: standaloneCalendars,
+    onPick: (calendar) => {
+      const displayName =
+        calendar.provider === "local"
+          ? calendar.name
+          : calendarRowDisplayName(calendar);
+      handleToggle(calendar, displayName);
+    },
+  });
 
   return (
     <section
       aria-label="Calendars"
       {...(groups.length === 0 ? pageJumpAttrs("calendars") : {})}
+      {...(standaloneCalendars.length > 0 ? standalonePick.sectionProps : {})}
     >
       {/* Every connected account carries its own heading below, so the generic
           banner is only for users who have none yet and are signed in. Anonymous
@@ -119,10 +128,16 @@ export const CalendarList: FC = () => {
         <div className="flex flex-col gap-3">
           {groups.map((group) => {
             const key = accountKey(group);
+            const collapsed = collapsedKeys.has(key);
+            const rows = collapsed ? [] : group.calendars;
+
             return (
-              <section
+              <CalendarDigitListSection
                 aria-label={`Calendars for ${accountLabel(group)}`}
+                calendars={rows}
                 key={key}
+                listId={collapsed ? undefined : accountCalendarListId(key)}
+                onToggle={handleToggle}
                 {...pageJumpAttrs(calendarAccountJumpId(key))}
               >
                 <AccountSectionHeader
@@ -132,13 +147,16 @@ export const CalendarList: FC = () => {
                     normalizeEmail(group.accountEmail),
                   )}
                 />
-                {renderCollapsible(key, group.calendars)}
-              </section>
+              </CalendarDigitListSection>
             );
           })}
           {ungrouped.length > 0 ? (
             groups.length > 0 && email ? (
-              <section aria-label={`Calendars for ${email}`}>
+              <CalendarDigitListSection
+                aria-label={`Calendars for ${email}`}
+                calendars={ungrouped}
+                onToggle={handleToggle}
+              >
                 <div className="mb-1.5">
                   <h2 className="mb-0.5 font-semibold text-sm leading-none">
                     <span
@@ -149,11 +167,10 @@ export const CalendarList: FC = () => {
                     </span>
                   </h2>
                 </div>
-                {renderRows(ungrouped)}
-              </section>
+              </CalendarDigitListSection>
             ) : (
               <ul className="flex flex-col gap-1.5">
-                {ungrouped.map((calendar) =>
+                {ungrouped.map((calendar, index) =>
                   isAnonymous ? (
                     <AnonymousCalendarRow
                       calendar={calendar}
@@ -168,7 +185,8 @@ export const CalendarList: FC = () => {
                           ? calendar.name
                           : undefined
                       }
-                      onToggle={toggleCalendarVisibility}
+                      onToggle={handleToggle}
+                      pickKey={standalonePick.pickKeyFor(index)}
                     />
                   ),
                 )}
@@ -179,43 +197,8 @@ export const CalendarList: FC = () => {
       )}
 
       <span aria-live="polite" className="sr-only" role="status">
-        {failureAnnouncement}
+        {announcement}
       </span>
     </section>
-  );
-};
-
-const CalendarRow: FC<{
-  calendar: Calendar;
-  label?: string;
-  onToggle: (calendarId: Calendar["id"], isVisible: boolean) => void;
-}> = ({ calendar, label, onToggle }) => {
-  // If an explicit label is provided, use it (for ungrouped rows that have no
-  // account heading). Otherwise, a primary calendar's row reads "primary"
-  // instead of repeating the account name already in the section heading.
-  const displayName = label ?? (calendar.isPrimary ? "primary" : calendar.name);
-
-  return (
-    <li className="flex min-w-0 items-center gap-1">
-      <button
-        aria-label={`${calendar.isVisible ? "Hide" : "Show"} ${displayName} calendar`}
-        aria-pressed={calendar.isVisible}
-        className="c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-text-muted text-xs hover:bg-surface-panel hover:text-text"
-        onClick={() => onToggle(calendar.id, !calendar.isVisible)}
-        type="button"
-      >
-        <span
-          aria-hidden
-          className="size-3.5 shrink-0 rounded-full border-2 transition-[background-color,border-color] motion-reduce:transition-none"
-          style={{
-            backgroundColor: calendar.isVisible
-              ? calendar.backgroundColor
-              : "transparent",
-            borderColor: calendar.backgroundColor,
-          }}
-        />
-        <span className="min-w-0 flex-1 truncate">{displayName}</span>
-      </button>
-    </li>
   );
 };

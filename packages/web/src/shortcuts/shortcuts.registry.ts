@@ -224,6 +224,12 @@ export const SHORTCUTS_REGISTRY = [
     label: "Focus latest notice",
     section: "focus",
   },
+  {
+    id: "focus-calendar-digit",
+    keys: [...B.focusCalendarDigit.keycaps],
+    label: "Show or hide a calendar by number (in the focused list)",
+    section: "focus",
+  },
   // One row instead of one per target: the digit assignment lives in
   // page-jump.targets.ts, and in-the-moment discovery is the hold-Mod hint
   // overlay's job (mirrors edit-jump-field-digit below).
@@ -564,7 +570,8 @@ export const filterShortcutsByContext = (
       if (shortcut.section === "focus") {
         return (
           shortcut.id === "focus-page-jump" ||
-          shortcut.id === "focus-find-event"
+          shortcut.id === "focus-find-event" ||
+          shortcut.id === "focus-calendar-digit"
         );
       }
       if (shortcut.section === "create" || shortcut.section === "edit") {
