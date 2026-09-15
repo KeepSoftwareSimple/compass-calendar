@@ -105,6 +105,10 @@ const shiftKey = {
   keyDownInit: { shiftKey: true },
   keyUpInit: { shiftKey: true },
 };
+const altShiftKey = {
+  keyDownInit: { altKey: true, shiftKey: true },
+  keyUpInit: { altKey: true, shiftKey: true },
+};
 
 const focusCalendarTarget = (
   eventId: string,
@@ -317,6 +321,76 @@ describe("useDayEventNudgeShortcuts", () => {
       offsetString(dayjs(timedEvent.startDate).add(1, "day")),
     );
     expect(navigateToDate).toHaveBeenCalled();
+  });
+
+  it("moves the focused timed event an hour earlier with Alt+Shift+ArrowUp", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+
+    pressKey("ArrowUp", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).subtract(60, "minutes")),
+    );
+    expect(input.schedule.end).toBe(
+      offsetString(dayjs(timedEvent.endDate).subtract(60, "minutes")),
+    );
+  });
+
+  it("moves the focused timed event a week later with Alt+Shift+ArrowRight", async () => {
+    const navigateToDate = mock(() => {});
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts({ navigateToDate });
+
+    pressKey("ArrowRight", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).add(7, "day")),
+    );
+    expect(navigateToDate).toHaveBeenCalled();
+  });
+
+  it("moves the focused all-day event a week earlier with Alt+Shift+ArrowLeft", async () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+      timedEvents: [],
+    });
+
+    pressKey("ArrowLeft", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe("2026-05-13");
+    expect(input.schedule.end).toBe("2026-05-14");
+  });
+
+  it("does not convert an all-day event with Alt+Shift+ArrowDown", async () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+      timedEvents: [],
+    });
+
+    pressKey("ArrowDown", altShiftKey);
+
+    expect(getEditMutation(queryClient)).toBeUndefined();
   });
 
   it("moves the focused all-day event to the previous day with Shift+ArrowLeft", async () => {
@@ -737,6 +811,36 @@ describe("useDayEventNudgeShortcuts", () => {
       offsetString(dayjs(timedEvent.endDate).add(15, "minutes")),
     );
     expect(useEdgeFocusStore.getState().edge).toBe("endDate");
+  });
+
+  it("moves only the start edge an hour with Alt+Shift+ArrowUp when that edge is focused", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+    pressKey("Tab");
+
+    pressKey("ArrowUp", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).subtract(60, "minutes")),
+    );
+    expect(input.schedule.end).toBe(offsetString(dayjs(timedEvent.endDate)));
+    expect(useEdgeFocusStore.getState().edge).toBe("startDate");
+  });
+
+  it("refuses Alt+Shift+ArrowLeft on a timed edge", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+    pressKey("Tab");
+
+    pressKey("ArrowLeft", altShiftKey);
+
+    expect(getEditMutation(queryClient)).toBeUndefined();
   });
 
   it("flips the focused edge from start to end past the minimum duration", async () => {

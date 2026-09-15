@@ -92,6 +92,26 @@ describe("repositionDraftByKeyboard", () => {
     );
   });
 
+  it("moves a keyboardPlace timed draft by 60 minutes with a coarse ArrowDown", () => {
+    const draft = createGridEventDraft(
+      timedGridSchedule(
+        new Date("2026-05-20T09:00:00.000"),
+        new Date("2026-05-20T10:00:00.000"),
+      ),
+    );
+
+    const next = repositionDraftByKeyboard({
+      activity: "keyboardPlace",
+      draft,
+      key: "ArrowDown",
+      step: "coarse",
+    });
+
+    expect(dayjs(next?.values.schedule.start).format()).toBe(
+      dayjs("2026-05-20T10:00:00.000").format(),
+    );
+  });
+
   it("moves a timed draft that is same-day in the pin but crosses the browser midnight", () => {
     act(() => {
       setPinnedTimeZone("America/Chicago");

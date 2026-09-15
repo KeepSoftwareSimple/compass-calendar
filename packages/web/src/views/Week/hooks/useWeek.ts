@@ -143,9 +143,9 @@ export const useWeek = (
   );
 
   const shiftViewByDay = useCallback(
-    (direction: 1 | -1) => {
+    (days: number) => {
       navigationSourceRef.current = "day-shift";
-      setAnchor(start.add(direction, "day"));
+      setAnchor(start.add(days, "day"));
     },
     [setAnchor, start],
   );

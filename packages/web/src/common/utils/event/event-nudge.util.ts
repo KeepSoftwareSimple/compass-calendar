@@ -12,22 +12,36 @@ export interface EventNudgeMovement {
   minutes: number;
 }
 
+export type EventNudgeStep = "fine" | "coarse";
+
+const FINE_DAY_STEP = 1;
+const COARSE_DAY_STEP = 7;
+const COARSE_MINUTE_STEP = 60;
+
+export const nudgeStepFromKeyboard = (
+  event: Pick<KeyboardEvent, "altKey">,
+): EventNudgeStep => (event.altKey ? "coarse" : "fine");
+
 /** Start or end edge of an event, used by Tab edge-focus and Shift+arrow edge nudges. */
 export type EventEdge = "startDate" | "endDate";
 
 export const getArrowKeyMovement = (
   key: string,
   isAllDay: boolean,
+  step: EventNudgeStep = "fine",
 ): EventNudgeMovement | null => {
+  const days = step === "coarse" ? COARSE_DAY_STEP : FINE_DAY_STEP;
+  const minutes = step === "coarse" ? COARSE_MINUTE_STEP : GRID_TIME_STEP;
+
   switch (key) {
     case "ArrowLeft":
-      return { days: -1, minutes: 0 };
+      return { days: -days, minutes: 0 };
     case "ArrowRight":
-      return { days: 1, minutes: 0 };
+      return { days, minutes: 0 };
     case "ArrowUp":
-      return isAllDay ? null : { days: 0, minutes: -GRID_TIME_STEP };
+      return isAllDay ? null : { days: 0, minutes: -minutes };
     case "ArrowDown":
-      return isAllDay ? null : { days: 0, minutes: GRID_TIME_STEP };
+      return isAllDay ? null : { days: 0, minutes };
     default:
       return null;
   }

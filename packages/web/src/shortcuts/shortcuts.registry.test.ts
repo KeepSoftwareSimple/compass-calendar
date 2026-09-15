@@ -229,6 +229,25 @@ describe("shortcuts.registry", () => {
       expect(life).not.toContain("other-time-travel");
     });
 
+    it("lists Alt+Shift hour and week move rows in day and week, not life", () => {
+      for (const view of ["day", "week"] as const) {
+        const ids = filterShortcutsByContext({
+          view,
+          isViewingCurrentPeriod: true,
+        }).map((shortcut) => shortcut.id);
+        expect(ids).toContain("edit-move-hour-earlier");
+        expect(ids).toContain("edit-move-hour-later");
+        expect(ids).toContain("edit-move-week-earlier");
+        expect(ids).toContain("edit-move-week-later");
+      }
+
+      const life = filterShortcutsByContext({
+        view: "life",
+        isViewingCurrentPeriod: true,
+      }).map((shortcut) => shortcut.id);
+      expect(life).not.toContain("edit-move-hour-earlier");
+    });
+
     it("lists the edit sequences with nothing focused, so the legend can show them", () => {
       // Regression: these were gated on live DOM focus, which the legend itself
       // stole when it focused its search input, making them unreachable.

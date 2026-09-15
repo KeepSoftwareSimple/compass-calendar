@@ -256,7 +256,7 @@ export const useWeekShortcutOwner = ({
     },
     targeting,
     placeTimedDraft: placeTimedDraftEvent,
-    repositionDraftByKey: (key) => {
+    repositionDraftByKey: (key, step) => {
       const { gridDraft, status } = useDraftStore.getState();
       const viewStart = startOfView.startOf("day");
       const viewEnd = endOfView.startOf("day");
@@ -264,6 +264,7 @@ export const useWeekShortcutOwner = ({
         activity: status?.activity,
         draft: gridDraft,
         key,
+        step,
         isStartAllowed: (nextStart) => {
           const start = dayjs(nextStart);
           return (

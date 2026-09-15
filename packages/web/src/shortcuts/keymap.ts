@@ -49,6 +49,12 @@ export const KEYMAP = {
       left: "Shift+ArrowLeft",
       right: "Shift+ArrowRight",
     },
+    coarseHotkeys: {
+      up: "Alt+Shift+ArrowUp",
+      down: "Alt+Shift+ArrowDown",
+      left: "Alt+Shift+ArrowLeft",
+      right: "Alt+Shift+ArrowRight",
+    },
     keycaps: ["Shift", "ArrowRight"],
     // Timed start/end edges only move in time. Left/right stay whole-event
     // day shifts; the practice and edge-focus tip teach the vertical axis.

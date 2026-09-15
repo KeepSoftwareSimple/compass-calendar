@@ -418,6 +418,22 @@ describe("shortcut menu sections", () => {
           label: "Move event 15 min earlier",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowUp"],
+          label: "Move event an hour earlier",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowDown"],
+          label: "Move event an hour later",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowLeft"],
+          label: "Move event a week earlier",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowRight"],
+          label: "Move event a week later",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["Arrow keys"],
           label: "Move draft event",
         });
