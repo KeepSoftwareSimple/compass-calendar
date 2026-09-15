@@ -10,14 +10,18 @@ import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 /** Mount once per view: registers the "i" hotkey, which opens the sidebar
  * (if closed) and focuses its first item, or just focuses it if already open. */
 export function useFocusSidebarShortcut() {
-  useAppShortcutUp(APP_SHORTCUT_BINDINGS.focusSidebar.hotkey, () => {
-    if (selectIsSidebarOpen(useViewStore.getState())) {
-      focusFirstSidebarItem();
-      return;
-    }
+  useAppShortcutUp(
+    APP_SHORTCUT_BINDINGS.focusSidebar.hotkey,
+    () => {
+      if (selectIsSidebarOpen(useViewStore.getState())) {
+        focusFirstSidebarItem();
+        return;
+      }
 
-    viewActions.setSidebarOpen(true);
-    // The sidebar renders conditionally; focus after the open commits.
-    requestAnimationFrame(() => focusFirstSidebarItem());
-  });
+      viewActions.setSidebarOpen(true);
+      // The sidebar renders conditionally; focus after the open commits.
+      requestAnimationFrame(() => focusFirstSidebarItem());
+    },
+    { shortcutId: "focus-sidebar" },
+  );
 }

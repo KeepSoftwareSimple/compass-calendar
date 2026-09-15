@@ -13,21 +13,25 @@ export const EVENT_MENU_LETTER = "m";
  * sequence armed, or event jump owning letters (`m` is the Monday jump key).
  */
 export function useEventContextMenuShortcut() {
-  useBareLetterShortcut(EVENT_MENU_LETTER, () => {
-    const focused = getFocusedCalendarEvent();
-    if (!focused) return false;
+  useBareLetterShortcut(
+    EVENT_MENU_LETTER,
+    () => {
+      const focused = getFocusedCalendarEvent();
+      if (!focused) return false;
 
-    // Anchor near the card's top center so the menu reads as attached to
-    // the event, like a right-click there would.
-    const rect = focused.element.getBoundingClientRect();
-    focused.element.dispatchEvent(
-      new MouseEvent("contextmenu", {
-        bubbles: true,
-        cancelable: true,
-        clientX: rect.left + rect.width / 2,
-        clientY: rect.top + Math.min(rect.height / 2, 24),
-      }),
-    );
-    return true;
-  });
+      // Anchor near the card's top center so the menu reads as attached to
+      // the event, like a right-click there would.
+      const rect = focused.element.getBoundingClientRect();
+      focused.element.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: rect.left + rect.width / 2,
+          clientY: rect.top + Math.min(rect.height / 2, 24),
+        }),
+      );
+      return true;
+    },
+    "edit-menu",
+  );
 }

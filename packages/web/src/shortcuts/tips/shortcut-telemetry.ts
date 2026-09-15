@@ -6,6 +6,7 @@ import {
 import { track } from "@web/auth/posthog/track";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { getAppLockReasons } from "@web/shortcuts/app-lock";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import {
   readShortcutUsageProfile,
   type ShortcutActionUsage,
@@ -83,13 +84,81 @@ function updateUsage(
 ): void {
   const current = readShortcutUsageProfile();
   const next: ShortcutUsageProfile = {
-    version: 1,
+    version: 2,
     actions: {
       ...current.actions,
       [actionId]: update(current.actions[actionId] ?? emptyUsage()),
     },
+    shortcuts: current.shortcuts,
   };
   writeShortcutUsageProfile(next);
+}
+
+/** Registry ids are `<section-prefix>-…`; `nav-*` is the navigate section. */
+const SECTION_BY_ID_PREFIX = {
+  nav: "navigate",
+  create: "create",
+  focus: "focus",
+  edit: "edit",
+  other: "other",
+} as const;
+
+function sectionForRegistryId(
+  shortcutId: ShortcutRegistryId,
+): string | undefined {
+  const prefix = shortcutId.split("-")[0];
+  if (prefix === undefined) return undefined;
+  return SECTION_BY_ID_PREFIX[prefix as keyof typeof SECTION_BY_ID_PREFIX];
+}
+
+function updateShortcutUsage(
+  shortcutId: ShortcutRegistryId,
+  now: number,
+): void {
+  const current = readShortcutUsageProfile();
+  const existing = current.shortcuts[shortcutId] ?? emptyUsage();
+  const next: ShortcutUsageProfile = {
+    version: 2,
+    actions: current.actions,
+    shortcuts: {
+      ...current.shortcuts,
+      [shortcutId]: {
+        ...existing,
+        invocations: existing.invocations + 1,
+        lastInvokedAt: now,
+      },
+    },
+  };
+  writeShortcutUsageProfile(next);
+}
+
+/** Records that a legend shortcut ran. `handled` means the handler ran, not
+ * that it changed anything. Skip the PostHog event when a taught outcome
+ * site already reports `shortcut_invoked` for the same press. */
+export function recordHandledShortcutInvocation(
+  shortcutId: ShortcutRegistryId,
+  options: {
+    emitEvent?: boolean;
+    invocationMethod?: ShortcutInvocationMethod;
+    now?: number;
+  } = {},
+): void {
+  const {
+    emitEvent = true,
+    invocationMethod = "keyboard",
+    now = Date.now(),
+  } = options;
+  const section = sectionForRegistryId(shortcutId);
+  updateShortcutUsage(shortcutId, now);
+  if (!emitEvent || !section) return;
+
+  track("shortcut_invoked", {
+    invocation_method: invocationMethod,
+    outcome: "handled",
+    section,
+    shortcut_id: shortcutId,
+    source: invocationMethod,
+  });
 }
 
 function clearDwellWait(): void {

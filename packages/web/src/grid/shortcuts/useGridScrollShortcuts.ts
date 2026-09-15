@@ -24,16 +24,32 @@ const scrollGridFromShortcut = (
  */
 export function useGridScrollShortcuts() {
   const scroll = APP_SHORTCUT_BINDINGS;
-  useAppShortcut(scroll.navScrollUp.hotkey, (event) => {
-    scrollGridFromShortcut("up", "page", event);
-  });
-  useAppShortcut(scroll.navScrollDown.hotkey, (event) => {
-    scrollGridFromShortcut("down", "page", event);
-  });
-  useAppShortcut(scroll.navScrollHourUp.hotkey, (event) => {
-    scrollGridFromShortcut("up", "hour", event);
-  });
-  useAppShortcut(scroll.navScrollHourDown.hotkey, (event) => {
-    scrollGridFromShortcut("down", "hour", event);
-  });
+  useAppShortcut(
+    scroll.navScrollUp.hotkey,
+    (event) => {
+      scrollGridFromShortcut("up", "page", event);
+    },
+    { shortcutId: "nav-scroll-up" },
+  );
+  useAppShortcut(
+    scroll.navScrollDown.hotkey,
+    (event) => {
+      scrollGridFromShortcut("down", "page", event);
+    },
+    { shortcutId: "nav-scroll-down" },
+  );
+  useAppShortcut(
+    scroll.navScrollHourUp.hotkey,
+    (event) => {
+      scrollGridFromShortcut("up", "hour", event);
+    },
+    { shortcutId: "nav-scroll-hour-up" },
+  );
+  useAppShortcut(
+    scroll.navScrollHourDown.hotkey,
+    (event) => {
+      scrollGridFromShortcut("down", "hour", event);
+    },
+    { shortcutId: "nav-scroll-hour-down" },
+  );
 }

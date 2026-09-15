@@ -52,4 +52,31 @@ describe("shortcuts.registry bindings", () => {
       runtimeIds.sort(),
     );
   });
+
+  it("lists every REGISTRY_RUNTIME_KEY_SOURCES id as a ShortcutRegistryId", () => {
+    const registryIds = new Set<string>(
+      SHORTCUTS_REGISTRY.map((shortcut) => shortcut.id),
+    );
+    for (const id of Object.keys(REGISTRY_RUNTIME_KEY_SOURCES)) {
+      expect(registryIds.has(id)).toBe(true);
+    }
+  });
+
+  it("keeps registry sections aligned with id prefixes", () => {
+    const sectionByPrefix = {
+      nav: "navigate",
+      create: "create",
+      focus: "focus",
+      edit: "edit",
+      other: "other",
+    } as const;
+
+    for (const shortcut of SHORTCUTS_REGISTRY) {
+      const prefix = shortcut.id.split("-")[0];
+      expect(prefix).toBeDefined();
+      expect(shortcut.section).toBe(
+        sectionByPrefix[prefix as keyof typeof sectionByPrefix],
+      );
+    }
+  });
 });

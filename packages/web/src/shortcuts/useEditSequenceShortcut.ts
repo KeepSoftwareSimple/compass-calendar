@@ -23,7 +23,9 @@ import {
   eventJumpActions,
   isEventJumpActive,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { createKeyupSwallow } from "@web/shortcuts/swallow-next-keyup";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 
 /**
@@ -179,6 +181,9 @@ export function useEditSequenceShortcut<
           disarm();
           onSequenceRef.current(field);
           shortcutHintProgressActions.demonstrate("edit-sequence");
+          recordHandledShortcutInvocation(
+            `edit-focus-${field}` as ShortcutRegistryId,
+          );
           return;
         }
 
