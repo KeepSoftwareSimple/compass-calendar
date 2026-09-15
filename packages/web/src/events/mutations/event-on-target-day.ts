@@ -1,5 +1,5 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
-import { type Event } from "@core/types/event.contracts";
+import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { calendarDateInEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
@@ -31,22 +31,23 @@ export function eventOnTargetDay(event: Event, targetDay: Dayjs): Event {
     const end = dayjs(schedule.end).tz(schedule.timeZone);
     return {
       ...event,
-      schedule: {
-        ...schedule,
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
         start: start.add(deltaDays, "day").format(),
         end: end.add(deltaDays, "day").format(),
-      },
+        timeZone: schedule.timeZone,
+      }),
     };
   }
 
   return {
     ...event,
-    schedule: {
+    schedule: EventScheduleSchema.parse({
       kind: "allDay",
       start: targetKey,
       end: dayjs(schedule.end)
         .add(deltaDays, "day")
         .format(YEAR_MONTH_DAY_FORMAT),
-    },
+    }),
   };
 }

@@ -51,41 +51,37 @@ test("moves a timed event to the target day and keeps time of day and duration",
   const moved = eventOnTargetDay(timedMonday, dayjs("2026-05-21"));
 
   expect(moved).not.toBe(timedMonday);
-  expect(moved.schedule).toEqual({
-    kind: "timed",
-    start: "2026-05-21T09:00:00Z",
-    end: "2026-05-21T10:00:00Z",
-    timeZone: "UTC",
-  });
+  expect(moved.schedule.kind).toBe("timed");
+  if (moved.schedule.kind !== "timed") return;
+  expect(String(moved.schedule.start)).toBe("2026-05-21T09:00:00Z");
+  expect(String(moved.schedule.end)).toBe("2026-05-21T10:00:00Z");
+  expect(String(moved.schedule.timeZone)).toBe("UTC");
   expect(eventStartDay(moved).format("YYYY-MM-DD")).toBe("2026-05-21");
 });
 
 test("keeps an overnight timed span when moving days", () => {
   const moved = eventOnTargetDay(overnightMonday, dayjs("2026-05-21"));
 
-  expect(moved.schedule).toMatchObject({
-    kind: "timed",
-    start: "2026-05-21T23:00:00Z",
-    end: "2026-05-22T01:00:00Z",
-  });
+  expect(moved.schedule.kind).toBe("timed");
+  if (moved.schedule.kind !== "timed") return;
+  expect(String(moved.schedule.start)).toBe("2026-05-21T23:00:00Z");
+  expect(String(moved.schedule.end)).toBe("2026-05-22T01:00:00Z");
 });
 
 test("moves an all-day event and keeps a one-day length", () => {
   const moved = eventOnTargetDay(allDayMonday, dayjs("2026-05-21"));
 
-  expect(moved.schedule).toEqual({
-    kind: "allDay",
-    start: "2026-05-21",
-    end: "2026-05-22",
-  });
+  expect(moved.schedule.kind).toBe("allDay");
+  if (moved.schedule.kind !== "allDay") return;
+  expect(String(moved.schedule.start)).toBe("2026-05-21");
+  expect(String(moved.schedule.end)).toBe("2026-05-22");
 });
 
 test("moves a multi-day all-day event and keeps its length", () => {
   const moved = eventOnTargetDay(multiDayAllDay, dayjs("2026-05-21"));
 
-  expect(moved.schedule).toEqual({
-    kind: "allDay",
-    start: "2026-05-21",
-    end: "2026-05-24",
-  });
+  expect(moved.schedule.kind).toBe("allDay");
+  if (moved.schedule.kind !== "allDay") return;
+  expect(String(moved.schedule.start)).toBe("2026-05-21");
+  expect(String(moved.schedule.end)).toBe("2026-05-24");
 });
