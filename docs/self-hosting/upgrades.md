@@ -46,6 +46,45 @@ database migrations. Normal upgrades only replace the running images. Back up
 before an upgrade as usual; a future data repair will ship with its own
 operator runbook rather than silently running during deployment.
 
+## Duplicate local calendars (`calendar_userId_local_unique`)
+
+The backend creates two indexes on the `calendar` collection at startup: one
+on `userId` (for listing a user's calendars) and a unique partial index named
+`calendar_userId_local_unique` so each user has at most one local calendar.
+
+If your database already has two or more local calendars for the same user,
+startup logs a warning, skips that unique index, and keeps running. The
+`userId` index is still created. Until you dedupe, the unique guard the
+backend assumes for `ensureLocalCalendar` is not in place.
+
+To create the unique index:
+
+1. Back up first ([Back up & restore](./backup-and-restore.md)).
+2. Connect `mongosh` using the API URI in `mongo.uri` (self-hosted default
+   database: `prod_calendar`). The collection is `calendar`.
+3. List users with more than one local calendar:
+
+   ```javascript
+   db.calendar.aggregate([
+     { $match: { "source.provider": "local" } },
+     {
+       $group: {
+         _id: "$userId",
+         count: { $sum: 1 },
+         ids: { $push: "$_id" },
+       },
+     },
+     { $match: { count: { $gt: 1 } } },
+   ]);
+   ```
+
+4. Keep one local calendar per user. Prefer the `_id` that user's events
+   already reference (`event.calendarId`). Delete the extra local calendar
+   rows.
+5. Restart the backend. The unique index is created on the next startup once
+   no duplicates remain. Look for `Ensured calendar indexes` in the backend
+   log, and confirm the warning about `calendar_userId_local_unique` is gone.
+
 ## Upgrading from a pre-cutover install (before v1.0.236)
 
 The sub-calendar v1 release (2026-07) moved events out of the legacy `event`
