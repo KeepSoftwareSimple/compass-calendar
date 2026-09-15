@@ -29,22 +29,24 @@ export async function bootstrapApp(): Promise<void> {
   }
 
   const root = createRoot(container);
-  const { dbInitError } = await initializeDatabaseWithErrorHandling();
+  const dbInitPromise = initializeDatabaseWithErrorHandling();
+  sessionInit();
   // biome-ignore lint/suspicious/noConsole: Don't remove this plz.
   console.debug(
     "aHR0cHM6Ly9jb21wYXNzY2FsZW5kYXIubm90aW9uLnNpdGUvaDNsbDAtZGF0LTMwYzIzN2JkZThmNDgwNTdhZmYxZDRiODU0YjAzMjYz",
   );
-  sessionInit();
 
   root.render(<App />);
   preloadEventFormOnFirstInput();
 
+  if (connectStatus) {
+    void applyConnectRedirect(connectStatus);
+  }
+
   // Show toasts after app renders (so the toast container is available)
+  const { dbInitError } = await dbInitPromise;
   if (dbInitError) {
     console.error(dbInitError);
     showDbInitErrorToast(dbInitError);
-  }
-  if (connectStatus) {
-    void applyConnectRedirect(connectStatus);
   }
 }

@@ -12,6 +12,18 @@ import {
 export const WEEK_DAY_COUNT = 7;
 
 /**
+ * Week-events fetch window from an anchor (the first visible day). Always
+ * {@link WEEK_DAY_COUNT} local days: exclusive next midnight so all-day
+ * membership via date-slice exclusive end includes the last fetched day.
+ * Shared by `useWeek` and the week route-loader prefetch so they hit one key.
+ */
+export function weekEventsQueryWindow(anchor: Dayjs) {
+  const startOfView = anchor.startOf("day");
+  const endOfView = startOfView.add(WEEK_DAY_COUNT, "day").startOf("day");
+  return { startOfView, endOfView };
+}
+
+/**
  * How many day columns fit in the week grid track without squishing events
  * below a readable width. The hour labels margin is part of the track, so it
  * is subtracted before dividing.

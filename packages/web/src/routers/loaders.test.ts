@@ -6,14 +6,17 @@ import {
   isRedirect,
 } from "@tanstack/react-router";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import * as prefetchWeekEvents from "@web/events/queries/prefetch-week-events";
 import {
   loadDateParam,
   loadTodayData,
+  loadWeekDate,
+  loadWeekEvents,
   redirectToDefaultCalendar,
   redirectToToday,
   validateWeekDateParam,
 } from "@web/routers/loaders";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 function getRedirect(fn: () => unknown) {
   try {
@@ -151,5 +154,53 @@ describe("validateWeekDateParam", () => {
     );
 
     expect(redirect.options.to).toBe(ROOT_ROUTES.WEEK);
+  });
+});
+
+describe("week event prefetch loaders", () => {
+  let restorePrefetch: (() => void) | undefined;
+
+  afterEach(() => {
+    restorePrefetch?.();
+    restorePrefetch = undefined;
+  });
+
+  it("prefetches from weekDateRoute then returns the dated loader data", () => {
+    const prefetch = spyOn(
+      prefetchWeekEvents,
+      "prefetchWeekEventsQuery",
+    ).mockImplementation(() => undefined);
+    restorePrefetch = () => prefetch.mockRestore();
+
+    const result = loadWeekDate({
+      params: { dateString: "2026-05-20" },
+      location: { pathname: "/week/2026-05-20" },
+      context: { authenticated: true },
+    });
+
+    expect(result).toMatchObject({ dateString: "2026-05-20" });
+    expect(prefetch).toHaveBeenCalledWith({
+      dateString: "2026-05-20",
+      authenticated: true,
+    });
+  });
+
+  it("prefetches the dated week from the parent week route pathname", () => {
+    const prefetch = spyOn(
+      prefetchWeekEvents,
+      "prefetchWeekEventsQuery",
+    ).mockImplementation(() => undefined);
+    restorePrefetch = () => prefetch.mockRestore();
+
+    loadWeekEvents({
+      params: {},
+      location: { pathname: "/week/2026-05-18" },
+      context: { authenticated: true },
+    });
+
+    expect(prefetch).toHaveBeenCalledWith({
+      dateString: "2026-05-18",
+      authenticated: true,
+    });
   });
 });

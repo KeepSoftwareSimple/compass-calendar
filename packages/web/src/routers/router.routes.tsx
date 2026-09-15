@@ -25,6 +25,8 @@ import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal
 import {
   loadAuthenticated,
   loadDateParam,
+  loadWeekDate,
+  loadWeekEvents,
   redirectToDefaultCalendar,
   redirectToToday,
   validateDayDateParam,
@@ -185,6 +187,7 @@ export const dayIndexRoute = createRoute({
 export const weekRoute = createRoute({
   getParentRoute: () => authenticatedLayoutRoute,
   path: ROOT_ROUTES.WEEK,
+  loader: loadWeekEvents,
   component: lazyRouteComponent(
     () => import("@web/views/Week/WeekView"),
     "WeekView",
@@ -195,7 +198,7 @@ export const weekDateRoute = createRoute({
   getParentRoute: () => weekRoute,
   path: "$dateString",
   beforeLoad: validateWeekDateParam,
-  loader: loadDateParam,
+  loader: loadWeekDate,
 });
 
 export const weekIndexRoute = createRoute({

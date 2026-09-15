@@ -3,9 +3,11 @@ import {
   ApiErrorResponseSchema,
   GoogleConnectErrorResponseSchema,
 } from "@core/types/auth.types";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { session } from "@web/auth/compass/session/Session";
 import { markUserAsAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import * as realRouters from "@web/routers";
 import {
   type ApiError,
   type ApiRequestConfig,
@@ -23,6 +25,11 @@ import {
   shouldShowContextualLoadError,
 } from "./api.util";
 import { describe, expect, it, mock, spyOn } from "bun:test";
+
+const mockNavigate = mock((_options: { to: string }) => Promise.resolve());
+mockModuleForFile("@web/routers", realRouters, {
+  router: { navigate: mockNavigate },
+});
 
 const createApiError = (
   response: { data?: unknown; status?: number } | null,
@@ -428,8 +435,7 @@ describe("handleErrorResponse", () => {
     // was destroyed before it could be read. Routing in-app keeps it alive.
     window.history.pushState({}, "", "/day/2026-07-31");
     markUserAsAuthenticated("person@example.com");
-    const navigate = mock((_options: { to: string }) => Promise.resolve());
-    mock.module("@web/routers", () => ({ router: { navigate } }));
+    mockNavigate.mockClear();
     const signOutSpy = spyOn(session, "signOut").mockResolvedValue(undefined);
     const error = createApiError(
       { status: Status.UNAUTHORIZED },
@@ -441,8 +447,8 @@ describe("handleErrorResponse", () => {
     ).rejects.toBe(error);
 
     expect(signOutSpy).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledTimes(1);
-    expect(navigate).toHaveBeenCalledWith({ to: "/week" });
+    expect(mockNavigate).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/week" });
     signOutSpy.mockRestore();
     window.history.pushState({}, "", "/week");
   });

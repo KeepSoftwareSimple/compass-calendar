@@ -11,6 +11,7 @@ import {
   isAllDayEventInVisibleDays,
   isTimedEventInVisibleDays,
   WEEK_DAY_COUNT,
+  weekEventsQueryWindow,
 } from "@web/views/Week/util/week-window.util";
 import { afterEach, describe, expect, it } from "bun:test";
 
@@ -156,5 +157,15 @@ describe("isAllDayEventInVisibleDays", () => {
         chicagoWeek,
       ),
     ).toBe(false);
+  });
+});
+
+describe("weekEventsQueryWindow", () => {
+  it("spans seven local days with an exclusive next-midnight end", () => {
+    const { startOfView, endOfView } = weekEventsQueryWindow(weekStart);
+
+    expect(startOfView.format("YYYY-MM-DD HH:mm")).toBe("2026-06-28 00:00");
+    expect(endOfView.format("YYYY-MM-DD HH:mm")).toBe("2026-07-05 00:00");
+    expect(endOfView.diff(startOfView, "day")).toBe(WEEK_DAY_COUNT);
   });
 });
