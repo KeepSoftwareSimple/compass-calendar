@@ -1,4 +1,4 @@
-import { type Event, EventSchema } from "@core/types/event.contracts";
+import { type Event } from "@core/types/event.contracts";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { type SyncEventInstance } from "@core/types/sync/event.contracts";
 import { composeOccurrenceId } from "./occurrence-id";
@@ -37,27 +37,30 @@ export const syncEventInstanceToBrowser = (
       : {}),
   };
 
+  // EventInstanceListResponseSchema already validated this instance on the
+  // HMAC-signed internal channel. Re-running EventSchema.parse here doubled
+  // timezone construction on every range read.
   switch (instance.recurrence.kind) {
     case "single":
-      return EventSchema.parse({
+      return {
         ...shared,
         id: instance.eventId,
         recurrence: { kind: "single" },
-      });
+      } as Event;
     case "series":
-      return EventSchema.parse({
+      return {
         ...shared,
         id: instance.eventId,
         recurrence: { kind: "series", rules: instance.recurrence.rules },
-      });
+      } as Event;
     case "occurrence":
-      return EventSchema.parse({
+      return {
         ...shared,
         id: composeOccurrenceId({
           eventId: instance.eventId,
           recurrenceId: instance.recurrence.recurrenceId,
         }),
         recurrence: { kind: "occurrence", seriesId: instance.eventId },
-      });
+      } as Event;
   }
 };

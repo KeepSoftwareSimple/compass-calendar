@@ -1,10 +1,12 @@
 import { faker } from "@faker-js/faker";
 import { ZodError, z } from "zod/v4";
+import { EventSchema } from "@core/types/event.contracts";
 import {
   IDSchemaV4,
   RGBHexSchema,
   TimezoneSchema,
 } from "@core/types/type.utils";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 describe("IDSchemaV4", () => {
   it("validates a correct ObjectId string", () => {
@@ -24,6 +26,41 @@ describe("IDSchemaV4", () => {
 });
 
 describe("TimezoneSchema", () => {
+  let dateTimeFormatSpy: ReturnType<typeof spyOn> | undefined;
+
+  afterEach(() => {
+    dateTimeFormatSpy?.mockRestore();
+    dateTimeFormatSpy = undefined;
+  });
+
+  it("constructs Intl.DateTimeFormat once for 1,000 timed events in one zone", () => {
+    const timeZone = "Etc/GMT-13";
+    const spy = spyOn(globalThis.Intl, "DateTimeFormat");
+    dateTimeFormatSpy = spy;
+
+    for (let index = 0; index < 1000; index++) {
+      const result = EventSchema.safeParse({
+        id: faker.database.mongodbObjectId(),
+        calendarId: faker.database.mongodbObjectId(),
+        content: { kind: "details", title: "Standup", description: "Daily" },
+        schedule: {
+          kind: "timed",
+          start: "2026-07-14T09:00:00.000Z",
+          end: "2026-07-14T09:30:00.000Z",
+          timeZone,
+        },
+        recurrence: { kind: "single" },
+        createdAt: "2026-07-01T00:00:00.000Z",
+        updatedAt: null,
+      });
+
+      expect(result.success).toBe(true);
+    }
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]?.[1]).toEqual({ timeZone });
+  });
+
   it("validates a correct timezone string", () => {
     const timezone = faker.location.timeZone();
 

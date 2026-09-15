@@ -13,7 +13,7 @@ import {
 } from "@core/types/sync/event.contracts";
 import { syncEventInstanceToBrowser } from "./event-list.translation";
 import { composeOccurrenceId } from "./occurrence-id";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -46,6 +46,33 @@ const baseInstance = (
   });
 
 describe("syncEventInstanceToBrowser", () => {
+  let restoreParse: (() => void) | undefined;
+
+  afterEach(() => {
+    restoreParse?.();
+    restoreParse = undefined;
+  });
+
+  it("does not re-run EventSchema.parse on a previously validated instance", () => {
+    const instance = baseInstance();
+    const originalParse = EventSchema.parse.bind(EventSchema);
+    const parseSpy = mock((...args: Parameters<typeof EventSchema.parse>) =>
+      originalParse(...args),
+    );
+    // Zod v4 exposes `parse` as a prototype accessor; bun:test spyOn cannot wrap those.
+    Object.defineProperty(EventSchema, "parse", {
+      configurable: true,
+      value: parseSpy,
+    });
+    restoreParse = () => {
+      Reflect.deleteProperty(EventSchema, "parse");
+    };
+
+    syncEventInstanceToBrowser(instance);
+
+    expect(parseSpy).not.toHaveBeenCalled();
+  });
+
   it("maps a single to Event with recurrence.kind=single and the real eventId", () => {
     const instance = baseInstance();
     const event = syncEventInstanceToBrowser(instance);
