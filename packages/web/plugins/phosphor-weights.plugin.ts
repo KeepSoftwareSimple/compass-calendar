@@ -2,7 +2,7 @@ import { type BunPlugin } from "bun";
 
 /** Weights the app actually passes. IconBase looks them up dynamically, so unused entries cannot tree-shake. */
 const UNUSED_WEIGHT_ENTRY =
-  /\n  \[\n    "(?:thin|light|duotone)",[\s\S]*?\n  \],?/g;
+  /\n {2}\[\n {4}"(?:thin|light|duotone)",[\s\S]*?\n {2}\],?/g;
 
 export function stripUnusedPhosphorWeights(source: string): string {
   return source.replace(UNUSED_WEIGHT_ENTRY, "");

@@ -1,10 +1,10 @@
-import type { Icon } from "@phosphor-icons/react/dist/lib/types";
 import { ArrowUDownLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowUDownLeft";
-import { CalendarDotsIcon } from "@phosphor-icons/react/dist/csr/CalendarDots";
 import { CalendarIcon } from "@phosphor-icons/react/dist/csr/Calendar";
+import { CalendarDotsIcon } from "@phosphor-icons/react/dist/csr/CalendarDots";
 import { CompassIcon } from "@phosphor-icons/react/dist/csr/Compass";
 import { HourglassSimpleIcon } from "@phosphor-icons/react/dist/csr/HourglassSimple";
 import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
+import { type Icon } from "@phosphor-icons/react/dist/lib/types";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import {
   LIFE_SHORTCUT,

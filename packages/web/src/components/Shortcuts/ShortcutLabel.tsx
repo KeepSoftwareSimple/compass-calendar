@@ -1,4 +1,3 @@
-import type { Icon } from "@phosphor-icons/react/dist/lib/types";
 import { ArrowDownIcon } from "@phosphor-icons/react/dist/csr/ArrowDown";
 import { ArrowLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowLeft";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
@@ -6,6 +5,7 @@ import { ArrowUpIcon } from "@phosphor-icons/react/dist/csr/ArrowUp";
 import { CommandIcon } from "@phosphor-icons/react/dist/csr/Command";
 import { ControlIcon } from "@phosphor-icons/react/dist/csr/Control";
 import { WindowsLogoIcon } from "@phosphor-icons/react/dist/csr/WindowsLogo";
+import { type Icon } from "@phosphor-icons/react/dist/lib/types";
 import { detectPlatform } from "@tanstack/react-hotkeys";
 import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
 
