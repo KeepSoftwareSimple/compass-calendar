@@ -9,7 +9,6 @@ export const EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE =
 
 const OVERLAY_UNAVAILABLE_MESSAGES: Partial<Record<ShortcutHintId, string>> = {
   "create-event": "Close this panel to create an event (C)",
-  "edge-focus": "Close this panel to use edge focus (Tab)",
   nudge: "Close this panel to move an event (Shift and arrow keys)",
 };
 

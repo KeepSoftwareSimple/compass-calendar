@@ -31,11 +31,11 @@ describe("promptShortcutUnavailable", () => {
     expect(getOverlayUnavailableMessage("create-event")).toBe(
       "Close this panel to create an event (C)",
     );
-    expect(getOverlayUnavailableMessage("edge-focus")).toBe(
-      "Close this panel to use edge focus (Tab)",
-    );
     expect(getOverlayUnavailableMessage("nudge")).toBe(
       "Close this panel to move an event (Shift and arrow keys)",
+    );
+    expect(getOverlayUnavailableMessage("edge-focus")).toBe(
+      "Close this panel to use this shortcut",
     );
   });
 

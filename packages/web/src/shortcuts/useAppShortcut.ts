@@ -52,8 +52,9 @@ export interface UseAppShortcutOptions {
   upgradeFeatureArea?: ShortcutFeatureArea;
   /**
    * Shown when a non-billing overlay holds the app lock so the handler never
-   * runs. Use for shortcuts whose silent no-op is confusing (Tab edge-focus
-   * while a dialog owns the keyboard).
+   * runs. Use for shortcuts whose silent no-op is confusing (C while a
+   * dialog owns the keyboard). Native browser keys (Tab, Escape, arrows)
+   * must not set this: overlays need those keys to move focus.
    */
   overlayUnavailableMessage?: string;
   /** @default 'allow' — multiple features often register the same global key (e.g. Escape). */
