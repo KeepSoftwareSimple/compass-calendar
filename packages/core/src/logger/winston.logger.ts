@@ -35,25 +35,30 @@ const consoleFormat = winston.format.combine(
   }),
 );
 
-const createTransports = (): winston.transport[] => [
-  new winston.transports.File({
-    filename: "logs/app.log",
-    level: process.env["LOG_LEVEL"],
-    maxsize: MB_50,
-    maxFiles: 1,
-  }),
-  new winston.transports.Console({ format: consoleFormat }),
-  new OpenTelemetryTransport({
-    level: process.env["LOG_LEVEL"],
-  }),
-  new PostHogExceptionTransport(),
-];
+let sharedTransports: winston.transport[] | undefined;
+
+const getSharedTransports = (): winston.transport[] => {
+  sharedTransports ??= [
+    new winston.transports.File({
+      filename: "logs/app.log",
+      level: process.env["LOG_LEVEL"],
+      maxsize: MB_50,
+      maxFiles: 1,
+    }),
+    new winston.transports.Console({ format: consoleFormat }),
+    new OpenTelemetryTransport({
+      level: process.env["LOG_LEVEL"],
+    }),
+    new PostHogExceptionTransport(),
+  ];
+  return sharedTransports;
+};
 
 export const Logger = (namespace?: string) => {
   const logger = winston.createLogger({
     level: process.env["LOG_LEVEL"],
     format: winston.format.combine(winston.format.splat(), redactBookingLogs()),
-    transports: createTransports(),
+    transports: getSharedTransports(),
   });
 
   return namespace ? logger.child({ namespace }) : logger;

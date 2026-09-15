@@ -26,6 +26,20 @@ let loggerProvider: LoggerProvider | undefined;
 let posthogClient: PostHog | undefined;
 let postHogContext: PostHogContext | undefined;
 
+/** OTel resource attributes shared with PostHog `logs.resource_attributes`. */
+export function buildOtelResourceAttributes(
+  options: Pick<OtelLogsOptions, "serviceName" | "nodeEnv" | "version">,
+): Record<string, string> {
+  const attributes: Record<string, string> = {
+    "service.name": options.serviceName,
+    "deployment.environment": options.nodeEnv,
+  };
+  if (options.version) {
+    attributes["service.version"] = options.version;
+  }
+  return attributes;
+}
+
 export function startOtelLogs(options: OtelLogsOptions): PostHog | null {
   const isRemoteLoggingEnvironment =
     options.nodeEnv === NodeEnv.Staging ||
@@ -35,9 +49,7 @@ export function startOtelLogs(options: OtelLogsOptions): PostHog | null {
     const host = options.posthogHost || "https://us.i.posthog.com";
 
     loggerProvider = new LoggerProvider({
-      resource: resourceFromAttributes({
-        "service.name": options.serviceName,
-      }),
+      resource: resourceFromAttributes(buildOtelResourceAttributes(options)),
       processors: [
         new BatchLogRecordProcessor({
           exporter: new OTLPLogExporter({
