@@ -17,6 +17,8 @@ import { DateTimeSchema } from "@core/types/domain-primitives";
 export const BOOKING_OPERATION_EVENT = "booking_operation" as const;
 export const BOOKING_OPERATION_HEARTBEAT_EVENT =
   "booking_operation_heartbeat" as const;
+/** Cadence of `booking_operation_heartbeat`. Dashboard alerts assume this. */
+export const BOOKING_OPERATION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 export const BOOKING_LIFECYCLE_DISTINCT_ID = "compass-backend-booking" as const;
 export const BOOKING_LIFECYCLE_SERVICE = "compass-backend" as const;
 

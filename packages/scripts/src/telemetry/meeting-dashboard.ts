@@ -13,6 +13,7 @@
 import {
   BOOKING_OPERATION_EVENT,
   BOOKING_OPERATION_HEARTBEAT_EVENT,
+  BOOKING_OPERATION_HEARTBEAT_INTERVAL_MS,
   type BookingLifecycleOutcome,
 } from "@core/types/booking-lifecycle.contracts";
 
@@ -60,7 +61,7 @@ export const GUEST_CONVERSION_WINDOW = {
   unit: "day",
 } as const;
 
-export const HEARTBEAT_CADENCE_MS = 5 * 60 * 1000;
+export const HEARTBEAT_CADENCE_MS = BOOKING_OPERATION_HEARTBEAT_INTERVAL_MS;
 export const HEARTBEAT_ABSENCE_INTERVALS = 2;
 export const HEARTBEAT_ABSENCE_WINDOW_MS =
   HEARTBEAT_CADENCE_MS * HEARTBEAT_ABSENCE_INTERVALS;

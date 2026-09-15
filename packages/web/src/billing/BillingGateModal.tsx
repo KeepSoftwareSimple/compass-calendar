@@ -1,6 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { type FC, Suspense, useCallback, useEffect, useRef } from "react";
-import { BillingApi } from "@web/api/billing.api";
+import { type FC, useEffect, useRef } from "react";
 import { track } from "@web/auth/posthog/track";
 import { useStripePublishableKey } from "@web/billing/billing.query";
 import { setBillingGateOwnsScreen } from "@web/billing/billing-gate-attention";
@@ -10,8 +8,11 @@ import {
   selectCheckoutPanelOpen,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
-import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
-import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
+import {
+  EMBEDDED_CHECKOUT_PANEL_CLASSNAME,
+  EMBEDDED_CHECKOUT_SECONDARY_BUTTON_CLASSNAME,
+  EmbeddedCheckoutPanel,
+} from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { deferGoogleDelayedToastIfVisible } from "@web/common/utils/toast/google-delayed.toast";
@@ -29,11 +30,6 @@ import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeA
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
-const PANEL_CLASSNAME =
-  "max-w-full gap-4 border border-border bg-surface text-center text-text shadow-xl";
-const SECONDARY_BUTTON_CLASSNAME =
-  "c-button c-button-secondary inline-flex items-center justify-center rounded-full px-6 py-2";
-
 type BillingGateModalProps = {
   status: string;
 };
@@ -49,10 +45,8 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
   useAppLockReason("billingGate", true);
   const primaryButtonRef = useRef<HTMLButtonElement>(null);
   const shownRef = useRef(false);
-  const queryClient = useQueryClient();
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
-  const EmbeddedCheckout = getEmbeddedCheckoutComponent();
 
   const isAwaitingCheckout = status === "awaiting_checkout";
   const title = isAwaitingCheckout
@@ -87,15 +81,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
     checkoutPanelActions.open();
   };
 
-  const fetchClientSecret = useCallback(
-    () => BillingApi.createCheckoutSession().then((r) => r.clientSecret),
-    [],
-  );
-
-  const onCheckoutComplete = useCallback(() => {
-    completeCheckoutSession(queryClient);
-  }, [queryClient]);
-
   useAppShortcut(
     START_TRIAL_SHORTCUT_KEY,
     () => {
@@ -122,35 +107,17 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
       backdropClassName={isCheckoutOpen ? "overflow-y-auto" : undefined}
       initialFocusRef={primaryButtonRef}
       onDismiss={isCheckoutOpen ? checkoutPanelActions.close : undefined}
-      panelClassName={PANEL_CLASSNAME}
+      panelClassName={EMBEDDED_CHECKOUT_PANEL_CLASSNAME}
       restoreFocus={() => {
         primaryButtonRef.current?.focus({ preventScroll: true });
       }}
       widthClassName={isCheckoutOpen ? "w-[560px]" : "w-120"}
     >
       {isCheckoutOpen && publishableKey ? (
-        <div className="flex w-full flex-col items-center gap-4">
-          <Suspense
-            fallback={
-              <p className="text-sm text-text-muted">Loading checkout...</p>
-            }
-          >
-            <EmbeddedCheckout
-              className="w-full"
-              fetchClientSecret={fetchClientSecret}
-              onComplete={onCheckoutComplete}
-              publishableKey={publishableKey}
-            />
-          </Suspense>
-          <button
-            className={SECONDARY_BUTTON_CLASSNAME}
-            onClick={checkoutPanelActions.close}
-            onPointerEnter={focusOnPointerEnter}
-            type="button"
-          >
-            Back
-          </button>
-        </div>
+        <EmbeddedCheckoutPanel
+          onBack={checkoutPanelActions.close}
+          publishableKey={publishableKey}
+        />
       ) : (
         <div className="flex w-full flex-col items-center gap-4">
           <PixelPirateScouting className="h-14 w-14" />
@@ -175,7 +142,7 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
             </button>
             {isAwaitingCheckout ? (
               <button
-                className={SECONDARY_BUTTON_CLASSNAME}
+                className={EMBEDDED_CHECKOUT_SECONDARY_BUTTON_CLASSNAME}
                 onClick={lookAround}
                 onPointerEnter={focusOnPointerEnter}
                 type="button"
