@@ -12,42 +12,45 @@ import {
   isMicrosoftConfigured,
   isStripeConfigured,
 } from "@backend/common/constants/config.util";
-import { getCloudMutationMode } from "@backend/common/services/sync-service/cloud-mutation-mode";
+
+export const buildAppConfig = (config: typeof CONFIG): AppConfig => {
+  const google = isGoogleConfigured(config);
+  const microsoft =
+    isMicrosoftConfigured(config) && isMicrosoftOffered(config.NODE_ENV);
+  const appleSignIn = isAppleSignInConfigured(config);
+  const appleConnect = isAppleConnectConfigured(config);
+  const stripe = isStripeConfigured(config);
+
+  return AppConfigSchema.parse({
+    version: normalizeDeployVersion(config.VERSION),
+    google: {
+      isConfigured: google,
+    },
+    providers: {
+      google: { signIn: google, connect: google },
+      microsoft: { signIn: microsoft, connect: microsoft },
+      apple: { signIn: appleSignIn, connect: appleConnect },
+    },
+    sync: {
+      cloudMutationMode: config.SYNC_CLOUD_MUTATION_MODE,
+      execution: config.SYNC_EXECUTION,
+    },
+    billing: {
+      isConfigured: stripe,
+      enforcement: isBillingEnforced(config),
+      trialLengthDays: BILLING_PLAN.TRIAL_LENGTH_DAYS,
+      publishableKey: stripe ? (config.STRIPE_PUBLISHABLE_KEY ?? null) : null,
+    },
+  });
+};
+
+// CONFIG is process-lifetime. Parse once at import so GET /api/config does
+// not rebuild and re-validate the same object on every request.
+const APP_CONFIG = buildAppConfig(CONFIG);
 
 class ConfigController {
   get = (_req: Request<never, AppConfig, never, never>, res: Response) => {
-    const google = isGoogleConfigured(CONFIG);
-    const microsoft =
-      isMicrosoftConfigured(CONFIG) && isMicrosoftOffered(CONFIG.NODE_ENV);
-    const appleSignIn = isAppleSignInConfigured(CONFIG);
-    const appleConnect = isAppleConnectConfigured(CONFIG);
-    const stripe = isStripeConfigured(CONFIG);
-
-    res.json(
-      AppConfigSchema.parse({
-        version: normalizeDeployVersion(CONFIG.VERSION),
-        google: {
-          isConfigured: google,
-        },
-        providers: {
-          google: { signIn: google, connect: google },
-          microsoft: { signIn: microsoft, connect: microsoft },
-          apple: { signIn: appleSignIn, connect: appleConnect },
-        },
-        sync: {
-          cloudMutationMode: getCloudMutationMode(),
-          execution: CONFIG.SYNC_EXECUTION,
-        },
-        billing: {
-          isConfigured: stripe,
-          enforcement: isBillingEnforced(CONFIG),
-          trialLengthDays: BILLING_PLAN.TRIAL_LENGTH_DAYS,
-          publishableKey: stripe
-            ? (CONFIG.STRIPE_PUBLISHABLE_KEY ?? null)
-            : null,
-        },
-      }),
-    );
+    res.json(APP_CONFIG);
   };
 }
 
