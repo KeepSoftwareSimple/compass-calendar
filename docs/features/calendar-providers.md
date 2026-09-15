@@ -331,6 +331,26 @@ second Microsoft account fails), and #3664 (the smoke job is green when every
 provider is skipped). Exchange aligns recurring occurrences to whole minutes;
 `fetchInstanceAt` matches at minute precision for that reason.
 
+Work-tenant proof on staging, 2026-09-15 (#3676): a licensed Exchange Online
+test mailbox connected alongside the existing personal Microsoft account.
+Compass discovered its primary and `compass-smoke` calendars. An event created
+in Compass appeared in Outlook, and an Outlook title edit appeared in Compass
+after a reload. Both connections reported healthy. A booking with the work
+`compass-smoke` calendar as its destination appeared in Outlook. This mailbox
+does not support Teams links; Settings explained that limitation and the
+booking completed without a Teams URL.
+
+This proof used the deployed staging OAuth callback and calendar adapters,
+instead of the local `microsoft:mint-token --print-only` command. No work-account
+token was written to the nightly smoke environment. The personal-account live
+smoke also passed on 2026-09-15, with `SMOKE_EXPECTED_PROVIDERS=microsoft` now
+required in that environment.
+
+**Microsoft invitation limitation.** Graph can send attendee mail on event
+creation and attendee changes even when `responseRequested` is false. The
+writer sets that field for invitation intent `none`, but it cannot guarantee
+that Outlook will suppress notifications.
+
 ## Microsoft Graph event reads
 
 WP-05 spike (Graph documentation, confirmed against the normalizer fixture corpus):
