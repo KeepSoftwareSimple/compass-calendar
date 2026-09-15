@@ -85,7 +85,7 @@ import {
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
-import { loadEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
+import { loadEventRepositoryBySource } from "@web/events/repositories/event.repository.load";
 import {
   isRestoringHistory,
   type UndoHistoryEntry,

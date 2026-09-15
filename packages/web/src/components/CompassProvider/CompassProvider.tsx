@@ -17,24 +17,13 @@ import { FeedbackDialogHost } from "@web/components/Feedback/FeedbackDialogHost"
 import { IconProvider } from "@web/components/IconProvider/IconProvider";
 import { LogoutConfirmationProvider } from "@web/components/LogoutConfirmation/LogoutConfirmationProvider";
 import { SettingsModalHost } from "@web/components/Settings/SettingsModalHost";
-import { RecurrenceScopeOpportunityHost } from "@web/events/recurrence/RecurrenceScopeOpportunityHost";
 import { selectTheme, useThemeStore } from "@web/settings/theme/theme.store";
 import { TimezoneDialogHost } from "@web/timezone/TimezoneDialogHost";
-import { useUndoRedoShortcuts } from "@web/views/Week/hooks/shortcuts/useUndoRedoShortcuts";
 
 const LazyReactQueryDevtoolsHost = lazy(async () => {
   const { ReactQueryDevtoolsHost } = await import("./ReactQueryDevtoolsHost");
   return { default: ReactQueryDevtoolsHost };
 });
-
-/**
- * Mount once under {@link HotkeysProvider} and inside React Router so
- * {@link useGlobalShortcuts} can register app hotkeys (via useAppShortcut).
- */
-export function GlobalShortcutsHost() {
-  useUndoRedoShortcuts();
-  return <RecurrenceScopeOpportunityHost />;
-}
 
 function ThemeAwareToastContainer() {
   const theme = useThemeStore(selectTheme);

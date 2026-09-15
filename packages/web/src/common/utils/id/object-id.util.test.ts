@@ -18,10 +18,10 @@ describe("createObjectIdString", () => {
 });
 
 describe("createdAtFromObjectIdHex", () => {
-  it("matches bson ObjectId.getTimestamp for a 24-hex id", () => {
-    const id = createObjectIdString();
+  it("decodes unix seconds from the first 8 hex chars", () => {
+    const id = "64a1b2c3d4e5f60718293a4b";
     expect(createdAtFromObjectIdHex(id)).toBe(
-      new ObjectId(id).getTimestamp().toISOString(),
+      new Date(0x64a1b2c3 * 1000).toISOString(),
     );
   });
 

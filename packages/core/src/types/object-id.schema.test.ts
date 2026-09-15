@@ -13,8 +13,10 @@ describe("zObjectId", () => {
 
   it("parses an ObjectId instance", () => {
     const value = new ObjectId();
+    const parsed = zObjectId.parse(value);
 
-    expect(zObjectId.parse(value).equals(value)).toBe(true);
+    expect(parsed).toBeInstanceOf(ObjectId);
+    expect(parsed.toString()).toBe(value.toString());
   });
 
   it("rejects a non-ObjectId string", () => {

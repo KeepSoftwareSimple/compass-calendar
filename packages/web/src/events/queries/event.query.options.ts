@@ -2,10 +2,9 @@ import { queryOptions } from "@tanstack/react-query";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { isBackendUnavailableError } from "@web/api/util/backend-unavailable-error.util";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
-import { loadEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
+import { RemoteEventRepository } from "@web/events/repositories/remote.event.repository";
 import { fetchDayEvents } from "./day.event.query";
 import { eventQueryKeys } from "./event.query.keys";
-import { fetchWeekEvents } from "./week.event.query";
 
 /**
  * Shared cache policy for event reads. `staleTime` lets back-navigation to a
@@ -50,13 +49,13 @@ function rangeEventsQueryOptions(
       calendarIds,
     }),
     queryFn: async ({ signal }) => {
-      const repository =
-        source === "local"
-          ? undefined
-          : await loadEventRepositoryBySource(source);
+      if (source === "local") {
+        const { fetchLocalEventsRange } = await import("./event.query.local");
+        return fetchLocalEventsRange({ startDate, endDate });
+      }
       return fetchFn(
         { startDate, endDate, calendarIds },
-        repository,
+        new RemoteEventRepository(),
         source,
         signal,
       );
@@ -70,5 +69,5 @@ export function dayEventsQueryOptions(args: EventsQueryArgs) {
 }
 
 export function weekEventsQueryOptions(args: EventsQueryArgs) {
-  return rangeEventsQueryOptions("week", fetchWeekEvents, args);
+  return rangeEventsQueryOptions("week", fetchDayEvents, args);
 }

@@ -34,7 +34,6 @@ import {
   selectWelcomeGuideOpen,
   useWelcomeGuideStore,
 } from "@web/components/WelcomeModal/welcome.guide.store";
-import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
 import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
@@ -71,9 +70,6 @@ export function RootShell() {
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();
-  // Must stay mounted on every route, including Life, so the 5-minute
-  // heads-up still fires while the calendar grid is not on screen.
-  useUpcomingEventNotifier();
   // Claims new guest bookings once per load (and on return to the tab
   // after five minutes). No-ops when booking is off or the session is
   // anonymous.

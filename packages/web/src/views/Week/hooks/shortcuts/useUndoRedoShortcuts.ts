@@ -5,8 +5,7 @@ import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 /**
  * Registers Mod+Z (undo) and Mod+Shift+Z (redo) for event changes.
- * Mount once under HotkeysProvider (see `GlobalShortcutsHost` in
- * CompassProvider).
+ * Mount once under HotkeysProvider (see `GlobalShortcutsHost`).
  *
  * `ignoreInputs: true` is load-bearing: Meta/Ctrl combos fire inside text
  * fields by default, and Mod+Z there must stay native text undo.

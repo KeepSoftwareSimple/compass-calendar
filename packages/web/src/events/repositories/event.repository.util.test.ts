@@ -2,7 +2,7 @@ import {
   createGetEventRepository,
   createGetEventRepositorySource,
 } from "./event.repository.factory";
-import { loadEventRepositoryBySource } from "./event.repository.util";
+import { loadEventRepositoryBySource } from "./event.repository.load";
 import { LocalEventRepository } from "./local.event.repository";
 import { RemoteEventRepository } from "./remote.event.repository";
 import { beforeEach, describe, expect, it } from "bun:test";

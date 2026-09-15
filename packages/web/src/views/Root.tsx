@@ -2,10 +2,11 @@ import { useMemo } from "react";
 import { UserProvider } from "@web/auth/compass/user/context/UserProvider";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthenticatedLayout } from "@web/components/AuthenticatedLayout/AuthenticatedLayout";
-import { GlobalShortcutsHost } from "@web/components/CompassProvider/CompassProvider";
+import { GlobalShortcutsHost } from "@web/components/CompassProvider/GlobalShortcutsHost";
 import { DocumentTitle } from "@web/components/DocumentTitle/DocumentTitle";
 import { MobileGate } from "@web/components/MobileGate/MobileGate";
 import { UpNextBanner } from "@web/components/Sidebar/UpNextCard/UpNextBanner";
+import { UpcomingEventNotifierHost } from "@web/notifications/UpcomingEventNotifierHost";
 import SSEProvider from "@web/sse/provider/SSEProvider";
 
 export const RootView = () => {
@@ -21,6 +22,7 @@ export const RootView = () => {
     <UserProvider>
       <SSEProvider>
         <GlobalShortcutsHost />
+        <UpcomingEventNotifierHost />
         <DocumentTitle />
         <UpNextBanner />
         <AuthenticatedLayout />

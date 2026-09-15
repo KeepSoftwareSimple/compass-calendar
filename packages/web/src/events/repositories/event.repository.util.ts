@@ -13,11 +13,7 @@
  */
 
 import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.util";
-import {
-  createGetEventRepositorySource,
-  type EventRepositorySource,
-} from "./event.repository.factory";
-import { type EventRepository } from "./event.repository.types";
+import { createGetEventRepositorySource } from "./event.repository.factory";
 
 /**
  * Determines the repository source (local or remote) based on session and authentication state.
@@ -25,22 +21,3 @@ import { type EventRepository } from "./event.repository.types";
 export const getEventRepositorySource = createGetEventRepositorySource({
   hasUserEverAuthenticated,
 });
-
-/**
- * Loads the repository for an explicit source, bypassing session/auth checks.
- * Used by query and mutation functions that already carry `source` in their
- * key, so the fetch target cannot drift from the key.
- *
- * Local IndexedDB (and rrule via series expansion) stay off the boot graph:
- * await this from mutationFn / queryFn, never at render.
- */
-export async function loadEventRepositoryBySource(
-  source: EventRepositorySource,
-): Promise<EventRepository> {
-  if (source === "remote") {
-    const { RemoteEventRepository } = await import("./remote.event.repository");
-    return new RemoteEventRepository();
-  }
-  const { LocalEventRepository } = await import("./local.event.repository");
-  return new LocalEventRepository();
-}

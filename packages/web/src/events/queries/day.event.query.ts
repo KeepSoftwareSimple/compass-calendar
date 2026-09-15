@@ -1,7 +1,6 @@
 import { type CalendarId } from "@core/types/domain-primitives";
 import { EventListQuerySchema } from "@core/types/event-command.contracts";
 import dayjs from "@core/util/date/dayjs";
-import { throwIfAborted } from "@web/api/util/api.util";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
@@ -39,7 +38,7 @@ const paddedRemoteRange = (startDate: string, endDate: string) => ({
  */
 export async function fetchDayEvents(
   payload: FetchEventsRangePayload,
-  repository: EventRepository | undefined,
+  repository: EventRepository,
   source: EventRepositorySource = "remote",
   signal?: AbortSignal,
 ): Promise<NormalizedEventQueryData> {
@@ -48,17 +47,11 @@ export async function fetchDayEvents(
   }
 
   if (source === "local") {
-    throwIfAborted(signal);
-    const { fetchLocalEventsRange } = await import("./event.query.local");
-    return fetchLocalEventsRange(payload);
+    throw new Error("Local range reads use fetchLocalEventsRange");
   }
 
   if (payload.calendarIds !== undefined && payload.calendarIds.length === 0) {
     return normalizeEventList([]);
-  }
-
-  if (!repository) {
-    throw new Error("Remote event query requires a repository");
   }
 
   const { start, end } = paddedRemoteRange(payload.startDate, payload.endDate);
