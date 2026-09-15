@@ -57,6 +57,11 @@ describe("SyncResourceReadSchema", () => {
     expect("fieldFromNewerBuild" in parsed).toBe(false);
   });
 
+  it("defaults a missing calendarActive to true so pre-field rows still parse", () => {
+    const parsed = SyncResourceReadSchema.parse(record);
+    expect(parsed.calendarActive).toBe(true);
+  });
+
   it("still rejects an unknown key on write, so this build cannot persist a typo", () => {
     const result = SyncResourceRecordSchema.safeParse({
       ...record,

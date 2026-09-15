@@ -206,8 +206,8 @@ export async function syncCalendarList(
   // never have its push channel renewed: dispatch drops subscriptionMaintain
   // for inactive calendars, so subscriptionExpiresAt never advances and the
   // row would squat at the head of every renewal sweep forever
-  // (listExpiringSubscriptions sorts soonest-expiry first with no other
-  // exclusion). The clear is one self-gating updateMany because hidden and
+  // (listExpiringSubscriptions sorts soonest-expiry first and now also
+  // drops credential-less connections). The clear is one self-gating updateMany because hidden and
   // deleted calendars are re-reported inactive on EVERY daily full pass, not
   // just the transition one — steady state must cost one no-op write, not a
   // read of the connection's resources. Clearing the local fields, rather
@@ -215,6 +215,10 @@ export async function syncCalendarList(
   // channels lapse on their own within 30 days, so the remote channel is a
   // harmless, self-healing wart, not something worth a provider call and a
   // new adapter dependency.
+  //
+  // The same pass mirrors calendar.active onto the events resource so the
+  // stale-event finders never enqueue a pull for it. Reactivation stamps
+  // true again so a later Refresh or sweep can resume.
   const inactiveIds = [
     ...new Set([
       ...retiredIds,
@@ -226,6 +230,21 @@ export async function syncCalendarList(
       tenantId,
       principalId,
       inactiveIds,
+    );
+    await deps.resources.setCalendarActiveByCalendarIds(
+      tenantId,
+      principalId,
+      inactiveIds,
+      false,
+    );
+  }
+  const activeIds = upserted.filter((r) => r.active).map((r) => r._id);
+  if (activeIds.length > 0) {
+    await deps.resources.setCalendarActiveByCalendarIds(
+      tenantId,
+      principalId,
+      activeIds,
+      true,
     );
   }
 

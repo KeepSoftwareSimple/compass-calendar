@@ -153,6 +153,14 @@ export const SyncResourceRecordSchema = z.strictObject({
   // watchUnsupportedAt above.
   cursorExpiredStreak: z.number().int().nonnegative().default(0),
   cursorExpiredBackoffUntil: z.date().nullable().default(null),
+  // Mirrored from provider_calendars.active so stale-resource finders can
+  // skip inactive calendars at selection time instead of enqueueing a pull
+  // that dispatch then drops. Discovery stamps this when a calendar is
+  // (de)activated; startup backfills rows written before the field. Defaults
+  // tolerate those rows — REQUIRED, see watchUnsupportedAt above. A missing
+  // field still matches the finders' `$ne: false` predicate (treated as
+  // active) until backfill or the next discovery pass stamps it.
+  calendarActive: z.boolean().default(true),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

@@ -231,4 +231,157 @@ describe("refreshPrincipalCalendars (db)", () => {
       }),
     ).toBe(1);
   });
+
+  it("foreground refresh enqueues exactly one job when one calendar is inactive", async () => {
+    const { resources, jobs, calendars, connections } = deps();
+    const connection = await connections.upsertByProviderAccount({
+      tenantId: faker.database.mongodbObjectId() as TenantId,
+      principalId: faker.database.mongodbObjectId() as PrincipalId,
+      provider: "google",
+      account: {
+        providerAccountId: "mixed-active@gmail.com" as ProviderAccountId,
+        email: "foreground-mixed@gmail.com",
+        displayName: "Foreground mixed",
+      },
+      capabilities: ["readEvents"],
+      state: "healthy",
+      stateReason: null,
+    });
+    const activeCalendar: ProviderCalendarRecord = await seedProviderCalendar(
+      calendars,
+      {
+        tenantId: connection.tenantId,
+        principalId: connection.principalId,
+        connectionId: connection._id,
+      },
+    );
+    const inactiveCalendar: ProviderCalendarRecord = await seedProviderCalendar(
+      calendars,
+      {
+        tenantId: connection.tenantId,
+        principalId: connection.principalId,
+        connectionId: connection._id,
+        providerCalendarId: "hidden@google.com" as ProviderCalendarSourceId,
+        primary: false,
+        active: false,
+      },
+    );
+    const active = await resources.ensure({
+      tenantId: activeCalendar.tenantId,
+      principalId: activeCalendar.principalId,
+      connectionId: activeCalendar.connectionId,
+      resourceKind: "events",
+      calendarId: activeCalendar._id,
+    });
+    const inactive = await resources.ensure({
+      tenantId: inactiveCalendar.tenantId,
+      principalId: inactiveCalendar.principalId,
+      connectionId: inactiveCalendar.connectionId,
+      resourceKind: "events",
+      calendarId: inactiveCalendar._id,
+    });
+    await resources.setBootstrapState(
+      active.tenantId,
+      active.principalId,
+      active._id,
+      "ready",
+    );
+    await resources.setBootstrapState(
+      inactive.tenantId,
+      inactive.principalId,
+      inactive._id,
+      "ready",
+    );
+    await resources.setCalendarActiveByCalendarIds(
+      inactive.tenantId,
+      inactive.principalId,
+      [inactiveCalendar._id],
+      false,
+    );
+
+    const tally = await refreshStalePrincipalCalendars(
+      { resources, jobs, connections },
+      connection.tenantId,
+      connection.principalId,
+      new Date("2026-08-10T11:59:30.000Z"),
+      now,
+    );
+
+    expect(tally).toMatchObject({ resources: 1, created: 1 });
+    expect(
+      await storage.db().collection(SYNC_COLLECTIONS.jobs).countDocuments({
+        kind: "incrementalPull",
+      }),
+    ).toBe(1);
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `incrementalPull:${active._id}` }),
+    ).not.toBeNull();
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `incrementalPull:${inactive._id}` }),
+    ).toBeNull();
+  });
+
+  it("manual refresh skips an inactive calendar's incrementalPull", async () => {
+    const { resources, jobs, calendars, connections } = deps();
+    const activeCalendar: ProviderCalendarRecord =
+      await seedProviderCalendar(calendars);
+    const inactiveCalendar: ProviderCalendarRecord = await seedProviderCalendar(
+      calendars,
+      {
+        tenantId: activeCalendar.tenantId,
+        principalId: activeCalendar.principalId,
+        connectionId: activeCalendar.connectionId,
+        providerCalendarId: "hidden@google.com" as ProviderCalendarSourceId,
+        primary: false,
+        active: false,
+      },
+    );
+    await resources.ensure({
+      tenantId: activeCalendar.tenantId,
+      principalId: activeCalendar.principalId,
+      connectionId: activeCalendar.connectionId,
+      resourceKind: "events",
+      calendarId: activeCalendar._id,
+    });
+    const inactive = await resources.ensure({
+      tenantId: inactiveCalendar.tenantId,
+      principalId: inactiveCalendar.principalId,
+      connectionId: inactiveCalendar.connectionId,
+      resourceKind: "events",
+      calendarId: inactiveCalendar._id,
+    });
+    await resources.setCalendarActiveByCalendarIds(
+      inactive.tenantId,
+      inactive.principalId,
+      [inactiveCalendar._id],
+      false,
+    );
+
+    const tally = await refreshPrincipalCalendars(
+      { resources, jobs, connections },
+      activeCalendar.tenantId,
+      activeCalendar.principalId,
+      now,
+    );
+
+    expect(tally.resources).toBe(1);
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .countDocuments({ kind: "incrementalPull" }),
+    ).toBe(1);
+    expect(
+      await storage
+        .db()
+        .collection(SYNC_COLLECTIONS.jobs)
+        .findOne({ coalescingKey: `incrementalPull:${inactive._id}` }),
+    ).toBeNull();
+  });
 });
