@@ -180,13 +180,39 @@ compass.example.com {  # <- this is the only line you need to change
  handle {
   reverse_proxy 127.0.0.1:9080
  }
+
+ # Compress compressible responses. Matched on Content-Type rather than a
+ # bare `encode zstd br gzip`, because a bare directive also compresses
+ # `/api/events/stream`'s text/event-stream body — Caddy buffers to compress,
+ # which breaks SSE. Never add text/event-stream here.
+ encode zstd br gzip {
+  match {
+   header Content-Type text/html*
+   header Content-Type text/css*
+   header Content-Type text/javascript*
+   header Content-Type application/javascript*
+   header Content-Type application/json*
+   header Content-Type image/svg+xml*
+   header Content-Type text/plain*
+   header Content-Type application/wasm*
+  }
+ }
 }
 ```
 
 This tells Caddy to serve your public domain over HTTPS, send `/api/*` requests
 to the Compass backend on `127.0.0.1:3000`, send `/sync/*` to the Sync service
 on `127.0.0.1:3010` (Google OAuth redirect `/sync/google` and push notifications),
-and send everything else to the web app on `127.0.0.1:9080`.
+and send everything else to the web app on `127.0.0.1:9080`. `encode` negotiates
+brotli/zstd/gzip for the matched content types, at site-block scope so it
+applies to `/index.js` and every `chunk-*.js`.
+
+If you're running `self-host/serve-web.ts` directly, without Caddy or another
+reverse proxy in front of it (uncommon; the Docker Compose setup above always
+puts Caddy in front), you don't need the `encode` block: `bun run build.ts`
+already writes `.br`/`.gz` siblings next to compressible build outputs, and
+`serve-web.ts` negotiates `Accept-Encoding` itself and serves whichever
+sibling the client accepts.
 
 > **Editing this file later?** Edit the live `/etc/caddy/Caddyfile`, never a
 > backup copy. Compass's own production host lost the `/sync/*` block for nine

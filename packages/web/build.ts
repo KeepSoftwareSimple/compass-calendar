@@ -3,6 +3,7 @@ import { reportBootSize } from "./boot-size-report";
 import { copyStaticAssets } from "./copy-static-assets";
 import { injectModulePreloads } from "./inject-module-preloads";
 import { postcssPlugin } from "./plugins/postcss.plugin";
+import { precompressBuildOutput } from "./precompress-build-output";
 import { execSync } from "node:child_process";
 import path from "node:path";
 
@@ -89,6 +90,7 @@ await Bun.write(
 
 await copyStaticAssets(OUTDIR);
 const preloaded = await injectModulePreloads(OUTDIR, result.metafile);
+const precompressed = await precompressBuildOutput(OUTDIR);
 
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`Build complete → ${OUTDIR}`);
@@ -96,6 +98,8 @@ console.log(`Build complete → ${OUTDIR}`);
 console.log(`  ${result.outputs.length} files written`);
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`  ${preloaded.length} boot chunks modulepreloaded in index.html`);
+// biome-ignore lint/suspicious/noConsole: Preserve build progress output.
+console.log(`  ${precompressed.length} files precompressed (.br/.gz)`);
 
 const bootSizeViolations = await reportBootSize(OUTDIR, result.metafile);
 if (bootSizeViolations.length > 0) {
