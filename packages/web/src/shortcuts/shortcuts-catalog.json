@@ -5,148 +5,103 @@
     "shortcuts": [
       {
         "id": "nav-up-next",
-        "keys": [
-          "n"
-        ],
+        "keys": ["n"],
         "label": "Open Up Next event",
         "section": "navigate"
       },
       {
         "id": "nav-join-meeting",
-        "keys": [
-          "v"
-        ],
+        "keys": ["v"],
         "label": "Join Up Next meeting",
         "section": "navigate"
       },
       {
         "id": "nav-previous",
-        "keys": [
-          "j"
-        ],
+        "keys": ["j"],
         "label": "Previous week",
         "section": "navigate"
       },
       {
         "id": "nav-next",
-        "keys": [
-          "k"
-        ],
+        "keys": ["k"],
         "label": "Next week",
         "section": "navigate"
       },
       {
         "id": "nav-shift-left",
-        "keys": [
-          "Shift",
-          "j"
-        ],
+        "keys": ["Shift", "j"],
         "label": "Shift view back one day",
         "section": "navigate"
       },
       {
         "id": "nav-shift-right",
-        "keys": [
-          "Shift",
-          "k"
-        ],
+        "keys": ["Shift", "k"],
         "label": "Shift view forward one day",
         "section": "navigate"
       },
       {
         "id": "nav-month-prev",
-        "keys": [
-          "Mod",
-          "Shift",
-          ","
-        ],
+        "keys": ["Mod", "Shift", ","],
         "label": "Previous month in picker",
         "section": "navigate"
       },
       {
         "id": "nav-month-next",
-        "keys": [
-          "Mod",
-          "Shift",
-          "."
-        ],
+        "keys": ["Mod", "Shift", "."],
         "label": "Next month in picker",
         "section": "navigate"
       },
       {
         "id": "nav-picker-step",
-        "keys": [
-          "ArrowLeft",
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowRight"
-        ],
+        "keys": ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"],
         "label": "Move the month picker by a week (Enter opens it)",
         "section": "navigate"
       },
       {
         "id": "nav-today",
-        "keys": [
-          "t"
-        ],
+        "keys": ["t"],
         "label": "Go to current week",
         "section": "navigate"
       },
       {
         "id": "nav-go-to-date",
-        "keys": [
-          "g"
-        ],
+        "keys": ["g"],
         "label": "Go to a date (type it in the palette)",
         "section": "navigate"
       },
       {
         "id": "nav-scroll-up",
-        "keys": [
-          "PageUp"
-        ],
+        "keys": ["PageUp"],
         "label": "Scroll grid up",
         "section": "navigate"
       },
       {
         "id": "nav-scroll-down",
-        "keys": [
-          "PageDown"
-        ],
+        "keys": ["PageDown"],
         "label": "Scroll grid down",
         "section": "navigate"
       },
       {
         "id": "nav-scroll-hour-up",
-        "keys": [
-          "Alt",
-          "ArrowUp"
-        ],
+        "keys": ["Alt", "ArrowUp"],
         "label": "Scroll grid up one hour",
         "section": "navigate"
       },
       {
         "id": "nav-scroll-hour-down",
-        "keys": [
-          "Alt",
-          "ArrowDown"
-        ],
+        "keys": ["Alt", "ArrowDown"],
         "label": "Scroll grid down one hour",
         "section": "navigate"
       },
       {
         "id": "nav-day-view",
-        "keys": [
-          "d"
-        ],
+        "keys": ["d"],
         "label": "Go to Day view",
         "section": "navigate"
       },
       {
         "id": "nav-life-view",
-        "keys": [
-          "l"
-        ],
+        "keys": ["l"],
         "label": "Go to Life view",
         "section": "navigate"
       }
@@ -158,47 +113,35 @@
     "shortcuts": [
       {
         "id": "create-timed",
-        "keys": [
-          "c"
-        ],
+        "keys": ["c"],
         "label": "Create timed event",
         "section": "create",
         "requiresWrite": true
       },
       {
         "id": "create-allday",
-        "keys": [
-          "Shift",
-          "C"
-        ],
+        "keys": ["Shift", "C"],
         "label": "Create all-day event",
         "section": "create",
         "requiresWrite": true
       },
       {
         "id": "create-place-timed",
-        "keys": [
-          "Shift",
-          "Arrow keys"
-        ],
+        "keys": ["Shift", "Arrow keys"],
         "label": "Place timed draft on grid",
         "section": "create",
         "requiresWrite": true
       },
       {
         "id": "create-typed-time",
-        "keys": [
-          "1130"
-        ],
+        "keys": ["1130"],
         "label": "Create draft at a typed time (press H to see open slots)",
         "section": "create",
         "requiresWrite": true
       },
       {
         "id": "create-place-discard",
-        "keys": [
-          "Escape"
-        ],
+        "keys": ["Escape"],
         "label": "Discard placed draft",
         "section": "create"
       }
@@ -210,68 +153,49 @@
     "shortcuts": [
       {
         "id": "focus-sidebar",
-        "keys": [
-          "i"
-        ],
+        "keys": ["i"],
         "label": "Focus month picker",
         "section": "focus"
       },
       {
         "id": "focus-event",
-        "keys": [
-          "u"
-        ],
+        "keys": ["u"],
         "label": "Focus calendar event",
         "section": "focus"
       },
       {
         "id": "focus-shift-hold",
-        "keys": [
-          "h"
-        ],
+        "keys": ["h"],
         "label": "Toggle event jump keys",
         "section": "focus"
       },
       {
         "id": "focus-week-day",
-        "keys": [
-          "Shift",
-          "m"
-        ],
+        "keys": ["Shift", "m"],
         "label": "Focus a day's events (Shift + M T W R F, Shift + S then U or A)",
         "section": "focus"
       },
       {
         "id": "focus-notice",
-        "keys": [
-          "f"
-        ],
+        "keys": ["f"],
         "label": "Focus latest notice",
         "section": "focus"
       },
       {
         "id": "focus-calendar-digit",
-        "keys": [
-          "1-9"
-        ],
+        "keys": ["1-9"],
         "label": "Show or hide a calendar by number (in the focused list)",
         "section": "focus"
       },
       {
         "id": "focus-page-jump",
-        "keys": [
-          "Mod",
-          "1-9"
-        ],
+        "keys": ["Mod", "1-9"],
         "label": "Jump to a page area (hold Mod for hints)",
         "section": "focus"
       },
       {
         "id": "focus-find-event",
-        "keys": [
-          "Mod",
-          "K"
-        ],
+        "keys": ["Mod", "K"],
         "label": "Find an event by title",
         "section": "focus"
       }
@@ -283,310 +207,218 @@
     "shortcuts": [
       {
         "id": "edit-open",
-        "keys": [
-          "Enter"
-        ],
+        "keys": ["Enter"],
         "label": "Open focused event",
         "section": "edit"
       },
       {
         "id": "edit-focus-title",
-        "keys": [
-          "e",
-          "t"
-        ],
+        "keys": ["e", "t"],
         "label": "Edit title",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-location",
-        "keys": [
-          "e",
-          "l"
-        ],
+        "keys": ["e", "l"],
         "label": "Edit location",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-description",
-        "keys": [
-          "e",
-          "d"
-        ],
+        "keys": ["e", "d"],
         "label": "Edit description",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-start",
-        "keys": [
-          "e",
-          "s"
-        ],
+        "keys": ["e", "s"],
         "label": "Edit start time",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-end",
-        "keys": [
-          "e",
-          "e"
-        ],
+        "keys": ["e", "e"],
         "label": "Edit end time",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-recurrence",
-        "keys": [
-          "e",
-          "r"
-        ],
+        "keys": ["e", "r"],
         "label": "Edit recurrence",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-color",
-        "keys": [
-          "e",
-          "c"
-        ],
+        "keys": ["e", "c"],
         "label": "Edit color",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-attendees",
-        "keys": [
-          "e",
-          "a"
-        ],
+        "keys": ["e", "a"],
         "label": "Edit guests",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-rsvp",
-        "keys": [
-          "e",
-          "g"
-        ],
+        "keys": ["e", "g"],
         "label": "Edit going",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-delete",
-        "keys": [
-          "Delete"
-        ],
+        "keys": ["Delete"],
         "label": "Delete focused event",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-duplicate",
-        "keys": [
-          "Mod",
-          "D"
-        ],
+        "keys": ["Mod", "D"],
         "label": "Duplicate focused event",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-copy",
-        "keys": [
-          "Mod",
-          "C"
-        ],
+        "keys": ["Mod", "C"],
         "label": "Copy focused event",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-paste",
-        "keys": [
-          "Mod",
-          "V"
-        ],
+        "keys": ["Mod", "V"],
         "label": "Paste copied event on the selected day",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-menu",
-        "keys": [
-          "m"
-        ],
+        "keys": ["m"],
         "label": "Open event menu",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-hide",
-        "keys": [
-          "x"
-        ],
+        "keys": ["x"],
         "label": "Hide or show focused event",
         "section": "edit"
       },
       {
         "id": "edit-pick-by-number",
-        "keys": [
-          "1-9",
-          "0",
-          "-",
-          "="
-        ],
+        "keys": ["1-9", "0", "-", "="],
         "label": "Pick focused color or calendar",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-focus-prev",
-        "keys": [
-          "ArrowUp"
-        ],
+        "keys": ["ArrowUp"],
         "label": "Focus previous event on day",
         "section": "edit"
       },
       {
         "id": "edit-focus-next",
-        "keys": [
-          "ArrowDown"
-        ],
+        "keys": ["ArrowDown"],
         "label": "Focus next event on day",
         "section": "edit"
       },
       {
         "id": "edit-focus-left",
-        "keys": [
-          "ArrowLeft"
-        ],
+        "keys": ["ArrowLeft"],
         "label": "Focus event on previous day",
         "section": "edit"
       },
       {
         "id": "edit-focus-right",
-        "keys": [
-          "ArrowRight"
-        ],
+        "keys": ["ArrowRight"],
         "label": "Focus event on next day",
         "section": "edit"
       },
       {
         "id": "edit-move",
-        "keys": [
-          "Arrow keys"
-        ],
+        "keys": ["Arrow keys"],
         "label": "Move draft event",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-prev-day",
-        "keys": [
-          "Shift",
-          "ArrowLeft"
-        ],
+        "keys": ["Shift", "ArrowLeft"],
         "label": "Move event to previous day",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-next-day",
-        "keys": [
-          "Shift",
-          "ArrowRight"
-        ],
+        "keys": ["Shift", "ArrowRight"],
         "label": "Move event to next day",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-earlier",
-        "keys": [
-          "Shift",
-          "ArrowUp"
-        ],
+        "keys": ["Shift", "ArrowUp"],
         "label": "Move event 15 min earlier",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-later",
-        "keys": [
-          "Shift",
-          "ArrowDown"
-        ],
+        "keys": ["Shift", "ArrowDown"],
         "label": "Move event 15 min later",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-hour-earlier",
-        "keys": [
-          "Alt",
-          "Shift",
-          "ArrowUp"
-        ],
+        "keys": ["Alt", "Shift", "ArrowUp"],
         "label": "Move event an hour earlier",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-hour-later",
-        "keys": [
-          "Alt",
-          "Shift",
-          "ArrowDown"
-        ],
+        "keys": ["Alt", "Shift", "ArrowDown"],
         "label": "Move event an hour later",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-week-earlier",
-        "keys": [
-          "Alt",
-          "Shift",
-          "ArrowLeft"
-        ],
+        "keys": ["Alt", "Shift", "ArrowLeft"],
         "label": "Move event a week earlier",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-week-later",
-        "keys": [
-          "Alt",
-          "Shift",
-          "ArrowRight"
-        ],
+        "keys": ["Alt", "Shift", "ArrowRight"],
         "label": "Move event a week later",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-cycle-edge",
-        "keys": [
-          "Tab"
-        ],
+        "keys": ["Tab"],
         "label": "Cycle start/end edge focus",
         "section": "edit",
         "requiresWrite": true
       },
       {
         "id": "edit-move-edge",
-        "keys": [
-          "Shift",
-          "Arrow keys"
-        ],
+        "keys": ["Shift", "Arrow keys"],
         "label": "Move only the focused edge",
         "section": "edit",
         "requiresWrite": true
@@ -599,64 +431,45 @@
     "shortcuts": [
       {
         "id": "other-sidebar",
-        "keys": [
-          "]"
-        ],
+        "keys": ["]"],
         "label": "Toggle sidebar",
         "section": "other"
       },
       {
         "id": "other-shortcuts",
-        "keys": [
-          "?"
-        ],
+        "keys": ["?"],
         "label": "Toggle shortcuts",
         "section": "other"
       },
       {
         "id": "other-palette",
-        "keys": [
-          "Mod",
-          "K"
-        ],
+        "keys": ["Mod", "K"],
         "label": "Command Palette",
         "section": "other"
       },
       {
         "id": "other-settings",
-        "keys": [
-          "Mod",
-          ","
-        ],
+        "keys": ["Mod", ","],
         "label": "Settings",
         "section": "other"
       },
       {
         "id": "other-undo",
-        "keys": [
-          "Mod",
-          "Z"
-        ],
+        "keys": ["Mod", "Z"],
         "label": "Undo last change",
         "section": "other",
         "requiresWrite": true
       },
       {
         "id": "other-redo",
-        "keys": [
-          "Mod",
-          "Shift",
-          "Z"
-        ],
+        "keys": ["Mod", "Shift", "Z"],
         "label": "Redo last change",
         "section": "other",
         "requiresWrite": true
       },
       {
         "id": "other-time-travel",
-        "keys": [
-          "z"
-        ],
+        "keys": ["z"],
         "label": "Time travel",
         "section": "other"
       }
@@ -668,10 +481,7 @@
     "shortcuts": [
       {
         "id": "edit-save",
-        "keys": [
-          "Mod",
-          "Enter"
-        ],
+        "keys": ["Mod", "Enter"],
         "label": "Save event form",
         "section": "edit",
         "when": {
@@ -681,9 +491,7 @@
       },
       {
         "id": "edit-field-leader-in-form",
-        "keys": [
-          "Mod+E"
-        ],
+        "keys": ["Mod+E"],
         "label": "Same field jumps while typing",
         "section": "edit",
         "when": {
@@ -693,11 +501,7 @@
       },
       {
         "id": "edit-jump-field-digit",
-        "keys": [
-          "Mod",
-          "0-9",
-          "-"
-        ],
+        "keys": ["Mod", "0-9", "-"],
         "label": "Jump to form field or actions (hold Mod for hints)",
         "section": "edit",
         "when": {
@@ -707,10 +511,7 @@
       },
       {
         "id": "edit-form-actions",
-        "keys": [
-          "Mod",
-          "0"
-        ],
+        "keys": ["Mod", "0"],
         "label": "Jump to event actions",
         "section": "edit",
         "when": {
@@ -726,9 +527,7 @@
     "shortcuts": [
       {
         "id": "nav-week-view",
-        "keys": [
-          "w"
-        ],
+        "keys": ["w"],
         "label": "Go to Week view",
         "section": "navigate"
       }
@@ -740,9 +539,7 @@
     "shortcuts": [
       {
         "id": "nav-life-prev",
-        "keys": [
-          "j"
-        ],
+        "keys": ["j"],
         "label": "Previous life variation",
         "section": "navigate",
         "when": {
@@ -751,9 +548,7 @@
       },
       {
         "id": "nav-life-next",
-        "keys": [
-          "k"
-        ],
+        "keys": ["k"],
         "label": "Next life variation",
         "section": "navigate",
         "when": {
@@ -762,9 +557,7 @@
       },
       {
         "id": "nav-life-current",
-        "keys": [
-          "t"
-        ],
+        "keys": ["t"],
         "label": "Focus current week",
         "section": "navigate",
         "when": {
