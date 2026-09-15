@@ -10,7 +10,11 @@ import {
   getOverlayUnavailableMessage,
   promptShortcutUnavailable,
 } from "@web/shortcuts/prompt-shortcut-unavailable";
-import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
+import {
+  recordHandledShortcutInvocation,
+  recordShortcutUnavailableAttempt,
+} from "@web/shortcuts/tips/shortcut-telemetry";
 import {
   getShortcutHint,
   type ShortcutFeatureArea,
@@ -57,6 +61,12 @@ export interface UseAppShortcutOptions {
    * must not set this: overlays need those keys to move focus.
    */
   overlayUnavailableMessage?: string;
+  /**
+   * Legend row this registration backs. After the handler runs, emit
+   * `shortcut_invoked` with this id unless `telemetryHintId` is set (those
+   * outcome sites already report).
+   */
+  shortcutId?: ShortcutRegistryId;
   /** @default 'allow' — multiple features often register the same global key (e.g. Escape). */
   conflictBehavior?: ConflictBehavior;
 }
@@ -91,6 +101,7 @@ export function useAppShortcut(
     requiresWrite = false,
     upgradeFeatureArea,
     overlayUnavailableMessage,
+    shortcutId,
     conflictBehavior = "allow",
   } = options;
 
@@ -145,6 +156,11 @@ export function useAppShortcut(
       }
 
       handler(event);
+      if (shortcutId) {
+        recordHandledShortcutInvocation(shortcutId, {
+          emitEvent: telemetryHintId === undefined,
+        });
+      }
     },
     {
       enabled,

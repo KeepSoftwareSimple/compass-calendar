@@ -19,7 +19,7 @@ const B = APP_SHORTCUT_BINDINGS;
  * legend rows derive from those tables so a remap updates behavior and the
  * overlay together.
  */
-export const SHORTCUTS_REGISTRY: Shortcut[] = [
+export const SHORTCUTS_REGISTRY = [
   // Navigate - Up Next
   {
     id: "nav-up-next",
@@ -253,11 +253,11 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
   // the legend took focus to open. In-the-moment discovery is the which-key
   // menu's job instead.
   ...EDIT_SEQUENCE_LETTER_FIELDS.map(({ field, key, label }) => ({
-    id: `edit-focus-${field}`,
+    id: `edit-focus-${field}` as const,
     keys: editSequenceRegistryKeys(key),
     label: `Edit ${label.toLowerCase()}`,
-    section: "edit",
-    requiresWrite: true,
+    section: "edit" as const,
+    requiresWrite: true as const,
   })),
   {
     id: "edit-delete",
@@ -507,7 +507,9 @@ export const SHORTCUTS_REGISTRY: Shortcut[] = [
     label: "Time travel",
     section: "other",
   },
-];
+] as const satisfies readonly Shortcut[];
+
+export type ShortcutRegistryId = (typeof SHORTCUTS_REGISTRY)[number]["id"];
 
 interface FilterOptions {
   view: "day" | "week" | "life";
@@ -548,10 +550,12 @@ export const filterShortcutsByContext = (
 ): Shortcut[] => {
   const { view, isFormOpen, isTrialing } = options;
 
-  return SHORTCUTS_REGISTRY.map((shortcut) => ({
+  const shortcuts: Shortcut[] = SHORTCUTS_REGISTRY.map((shortcut) => ({
     ...shortcut,
     label: LABEL_OVERRIDES[shortcut.id]?.(options) ?? shortcut.label,
-  })).filter((shortcut) => {
+  }));
+
+  return shortcuts.filter((shortcut) => {
     // Filter by view
     if (view === "life") {
       // Life view shows only life-specific navigate + other shortcuts, plus

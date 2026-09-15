@@ -76,7 +76,11 @@ const LIFE_POOL = [
   "command-palette",
 ] as const satisfies readonly ShortcutHintId[];
 
-const EMPTY_USAGE_PROFILE: ShortcutUsageProfile = { version: 1, actions: {} };
+const EMPTY_USAGE_PROFILE: ShortcutUsageProfile = {
+  version: 2,
+  actions: {},
+  shortcuts: {},
+};
 
 function ranked(
   id: ShortcutHintId,

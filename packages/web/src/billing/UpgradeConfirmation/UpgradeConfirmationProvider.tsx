@@ -55,7 +55,11 @@ export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {
       }
       value.openUpgradeConfirmation();
     },
-    { enabled: isTrialing, ignoreAppLock: isSettingsOpen },
+    {
+      enabled: isTrialing,
+      ignoreAppLock: isSettingsOpen,
+      shortcutId: "other-subscribe",
+    },
   );
 
   const handleConfirm = useCallback(() => {

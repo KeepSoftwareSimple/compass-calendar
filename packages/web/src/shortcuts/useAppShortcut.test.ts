@@ -455,4 +455,51 @@ describe("useAppShortcut", () => {
       track.mockRestore();
     });
   });
+
+  describe("legend shortcut_invoked", () => {
+    const invoked = (track: { mock: { calls: unknown[][] } }) =>
+      track.mock.calls.filter(([name]) => name === "shortcut_invoked");
+
+    it("emits handled properties for a registry shortcutId", async () => {
+      const track = spyOn(Track, "track");
+      renderHook(() =>
+        useAppShortcut("J", mockHandler, { shortcutId: "nav-previous" }),
+      );
+      dispatchKeyEvent("j", "keydown");
+
+      await waitFor(() => {
+        expect(mockHandler).toHaveBeenCalledTimes(1);
+      });
+      expect(invoked(track)).toEqual([
+        [
+          "shortcut_invoked",
+          {
+            invocation_method: "keyboard",
+            outcome: "handled",
+            section: "navigate",
+            shortcut_id: "nav-previous",
+            source: "keyboard",
+          },
+        ],
+      ]);
+      track.mockRestore();
+    });
+
+    it("skips the generic event when a taught outcome site already reports", async () => {
+      const track = spyOn(Track, "track");
+      renderHook(() =>
+        useAppShortcut("C", mockHandler, {
+          telemetryHintId: "create-event",
+          shortcutId: "create-timed",
+        }),
+      );
+      dispatchKeyEvent("c", "keydown");
+
+      await waitFor(() => {
+        expect(mockHandler).toHaveBeenCalledTimes(1);
+      });
+      expect(invoked(track)).toHaveLength(0);
+      track.mockRestore();
+    });
+  });
 });

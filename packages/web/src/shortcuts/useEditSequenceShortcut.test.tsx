@@ -4,6 +4,7 @@ import {
   dispatchMissingKey,
   pressKey,
 } from "@web/__tests__/utils/keyboard.test.util";
+import * as Track from "@web/auth/posthog/track";
 import { setBillingWriteLock } from "@web/billing/billing-write-lock";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
 import {
@@ -19,7 +20,15 @@ import {
   resetEditSequenceArm,
   useEditSequenceShortcut,
 } from "@web/shortcuts/useEditSequenceShortcut";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 /** Matches what the hook accepts for Mod on this platform. */
 const MOD_INIT: KeyboardEventInit =
@@ -57,6 +66,24 @@ describe("useEditSequenceShortcut", () => {
 
       expect(onSequence).toHaveBeenCalledTimes(1);
       expect(onSequence).toHaveBeenCalledWith("title");
+    });
+
+    it("emits handled shortcut_invoked for the edit-focus field id", () => {
+      const track = spyOn(Track, "track");
+      const onSequence = mock(() => {});
+      renderHook(() => useEditSequenceShortcut({ onSequence }));
+
+      pressKey("e");
+      pressKey("t");
+
+      expect(track).toHaveBeenCalledWith("shortcut_invoked", {
+        invocation_method: "keyboard",
+        outcome: "handled",
+        section: "edit",
+        shortcut_id: "edit-focus-title",
+        source: "keyboard",
+      });
+      track.mockRestore();
     });
 
     it("stays silent within the arm window", () => {

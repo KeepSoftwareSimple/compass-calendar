@@ -8,8 +8,12 @@ import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
  * armed (`e` then `g` is RSVP), or event jump owning letters.
  */
 export function useGoToDateShortcut() {
-  useBareLetterShortcut(GO_TO_DATE_LETTER, () => {
-    settingsActions.openCmdPalette();
-    return true;
-  });
+  useBareLetterShortcut(
+    GO_TO_DATE_LETTER,
+    () => {
+      settingsActions.openCmdPalette();
+      return true;
+    },
+    "nav-go-to-date",
+  );
 }
