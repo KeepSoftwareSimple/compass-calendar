@@ -55,6 +55,13 @@ const PROFILES: Record<
   },
 };
 
+/**
+ * Isolate jsdom workers each hold a Window graph. Default `--parallel`
+ * (CPU count) OOMs GitHub runners; two workers keep `--parallel` without
+ * restoring shards.
+ */
+const WEB_PARALLEL_WORKERS = 2;
+
 export function testArgvFor(
   profile: ProfileName,
   opts: {
@@ -68,10 +75,13 @@ export function testArgvFor(
     profile === "sync-fast" ||
     profile === "scripts-fast";
 
+  const parallelFlag =
+    profile === "web" ? `--parallel=${WEB_PARALLEL_WORKERS}` : "--parallel";
+
   return [
     "bun",
     "test",
-    "--parallel",
+    parallelFlag,
     ...(needsHookTimeout ? ["--timeout", "60000"] : []),
     "--preload",
     opts.preloadPath,

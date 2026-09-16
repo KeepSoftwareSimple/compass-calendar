@@ -8,8 +8,8 @@ const argvOpts = {
 };
 
 describe("testArgvFor", () => {
-  it("passes --parallel for the web profile", () => {
-    expect(testArgvFor("web", argvOpts)).toContain("--parallel");
+  it("caps web isolate workers so jsdom does not OOM CI", () => {
+    expect(testArgvFor("web", argvOpts)).toContain("--parallel=2");
   });
 
   it("passes --parallel for core", () => {

@@ -49,8 +49,9 @@ shared budget without reimplementing them by hand, so the job-level
 timeout is the practical equivalent.
 
 Jobs that only run Bun do not install Node. Web is one `unit-leg (web)`
-row; `bun test:web` runs `bun test --parallel` in a single process
-(`msw@2` no longer needs the old RSS-safe shard split).
+row; `bun test:web` runs `bun test --parallel=2` in a single process
+(`msw@2` no longer needs the old RSS-safe shard split; two isolate jsdom
+workers fit GitHub runner RAM, CPU-count workers do not).
 
 On pull requests, `detect-code-changes.sh` also emits per-package outputs
 (`core`, `web`, `backend`, `sync`, `scripts`). A backend-only PR still
