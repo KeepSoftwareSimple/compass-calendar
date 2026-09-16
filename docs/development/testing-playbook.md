@@ -106,7 +106,7 @@ Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been remo
 bun test --parallel --preload packages/web/src/__tests__/web.preload.ts ./packages/web/src
 ```
 
-`msw@2` unblocked Bun `--isolate` (v1's XHR interceptor held a stale `PureXMLHttpRequest` after isolate cleared `globalThis`). The old `WEB_TEST_SHARDS` / `WEB_TEST_SHARD_INDEX` / RSS-watchdog split is gone; CI is one `unit-leg (web)` row. `--concurrent` is still off: shared jsdom, the MSW server, and Zustand singletons race (~465 failures in a past experiment).
+`msw@2` unblocked Bun `--isolate` (v1's XHR interceptor held a stale `PureXMLHttpRequest` after isolate cleared `globalThis`). The preload still remirrors jsdom onto `globalThis` and restarts the MSW server in `beforeAll`, because isolate clears globals without reloading preload modules. The old `WEB_TEST_SHARDS` / `WEB_TEST_SHARD_INDEX` / RSS-watchdog split is gone; CI is one `unit-leg (web)` row. `--concurrent` is still off: shared jsdom, the MSW server, and Zustand singletons race (~465 failures in a past experiment).
 
 Do not reintroduce `resetSessionProviderForTests()` in `afterEach` to "help" isolate. It poisoned MSW in `246078c3c`. Session isolation stays on injectable ports (`resetSessionApiPort()`).
 
