@@ -2,6 +2,10 @@ import { z } from "zod/v4";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import {
+  readJsonValue,
+  writeJsonValue,
+} from "@web/common/storage/json-value.store";
+import {
   clampLifespan,
   DEFAULT_LIFESPAN,
   LIFE_VARIATIONS,
@@ -39,17 +43,16 @@ function normalizeLifePreferences(
   };
 }
 
-export function readLifePreferences(): LifePreferences {
-  const raw = persistentBrowserStore.get(STORAGE_KEYS.LIFE_PREFERENCES);
-  if (!raw) return DEFAULT_LIFE_PREFERENCES;
+const StoredLifePreferencesSchema = LifePreferencesSchema.transform(
+  normalizeLifePreferences,
+);
 
-  try {
-    return normalizeLifePreferences(
-      LifePreferencesSchema.parse(JSON.parse(raw)),
-    );
-  } catch {
-    return DEFAULT_LIFE_PREFERENCES;
-  }
+export function readLifePreferences(): LifePreferences {
+  return readJsonValue(
+    STORAGE_KEYS.LIFE_PREFERENCES,
+    StoredLifePreferencesSchema,
+    DEFAULT_LIFE_PREFERENCES,
+  );
 }
 
 export function hasLifePreferences() {
@@ -57,8 +60,8 @@ export function hasLifePreferences() {
 }
 
 export function writeLifePreferences(preferences: LifePreferences) {
-  persistentBrowserStore.set(
+  writeJsonValue(
     STORAGE_KEYS.LIFE_PREFERENCES,
-    JSON.stringify(normalizeLifePreferences(preferences)),
+    normalizeLifePreferences(preferences),
   );
 }

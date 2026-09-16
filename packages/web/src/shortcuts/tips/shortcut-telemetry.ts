@@ -78,20 +78,25 @@ const emptyUsage = (): ShortcutActionUsage => ({
   recentImpressions: 0,
 });
 
+/** Read/modify/write one counter bucket of the device-local usage profile. */
+function updateUsageBucket<Bucket extends "actions" | "shortcuts">(
+  bucket: Bucket,
+  key: keyof ShortcutUsageProfile[Bucket] & string,
+  update: (current: ShortcutActionUsage) => ShortcutActionUsage,
+): void {
+  const current = readShortcutUsageProfile();
+  const entries = current[bucket] as Record<string, ShortcutActionUsage>;
+  writeShortcutUsageProfile({
+    ...current,
+    [bucket]: { ...entries, [key]: update(entries[key] ?? emptyUsage()) },
+  });
+}
+
 function updateUsage(
   actionId: RankedShortcutHint["actionId"],
   update: (current: ShortcutActionUsage) => ShortcutActionUsage,
 ): void {
-  const current = readShortcutUsageProfile();
-  const next: ShortcutUsageProfile = {
-    version: 2,
-    actions: {
-      ...current.actions,
-      [actionId]: update(current.actions[actionId] ?? emptyUsage()),
-    },
-    shortcuts: current.shortcuts,
-  };
-  writeShortcutUsageProfile(next);
+  updateUsageBucket("actions", actionId, update);
 }
 
 /** Registry ids are `<section-prefix>-…`; `nav-*` is the navigate section. */
@@ -115,21 +120,11 @@ function updateShortcutUsage(
   shortcutId: ShortcutRegistryId,
   now: number,
 ): void {
-  const current = readShortcutUsageProfile();
-  const existing = current.shortcuts[shortcutId] ?? emptyUsage();
-  const next: ShortcutUsageProfile = {
-    version: 2,
-    actions: current.actions,
-    shortcuts: {
-      ...current.shortcuts,
-      [shortcutId]: {
-        ...existing,
-        invocations: existing.invocations + 1,
-        lastInvokedAt: now,
-      },
-    },
-  };
-  writeShortcutUsageProfile(next);
+  updateUsageBucket("shortcuts", shortcutId, (current) => ({
+    ...current,
+    invocations: current.invocations + 1,
+    lastInvokedAt: now,
+  }));
 }
 
 /** Records that a legend shortcut ran. `handled` means the handler ran, not
