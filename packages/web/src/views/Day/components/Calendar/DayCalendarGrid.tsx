@@ -82,6 +82,7 @@ export function DayCalendarGrid() {
   // Seed shortcuts with the form's default create target, not day-column order.
   const defaultTargetCalendarId =
     useDefaultTargetCalendar(calendars)?.id ?? null;
+  const { startDate, endDate } = dayEventQueryRange(dateInView);
   const {
     allDayEvents,
     error: eventsError,
@@ -91,7 +92,7 @@ export function DayCalendarGrid() {
     isPending,
     refetch,
     timedEvents,
-  } = useDayEventViewModel(dayEventQueryRange(dateInView));
+  } = useDayEventViewModel({ startDate, endDate });
   // Session expiry already surfaces SessionExpiredToast — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
@@ -400,7 +401,7 @@ export function DayCalendarGrid() {
         <GridBusyPeriods
           calendarColumnIndexById={calendarColumnIndexById}
           measurements={measurements}
-          range={dayEventQueryRange(dateInView)}
+          range={{ start: startDate, end: endDate }}
           visibleDates={visibleDates}
         />
         <QuickTimeSlots
@@ -422,8 +423,8 @@ export function DayCalendarGrid() {
     ),
     [
       calendarColumnIndexById,
-      dateInView,
       displayedTimedEvents,
+      endDate,
       gridDraft,
       getCalendarColumnIndex,
       isDisplayedEvent,
@@ -431,6 +432,7 @@ export function DayCalendarGrid() {
       openEventFormForEvent,
       quickTimeColumnIndex,
       quickTimeSlots,
+      startDate,
       visibleDates,
     ],
   );

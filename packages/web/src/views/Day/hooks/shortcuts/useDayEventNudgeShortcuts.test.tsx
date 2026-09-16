@@ -32,13 +32,13 @@ import {
   useEventClipboardStore,
 } from "@web/events/stores/event-clipboard.store";
 import {
-  initialEdgeFocusState,
-  useEdgeFocusStore,
-} from "@web/grid/shortcuts/edge-focus.store";
-import {
   dayEventRegistry,
   getDayInteractionTargetAttributes,
 } from "@web/grid/interaction/view-event-registry";
+import {
+  initialEdgeFocusState,
+  useEdgeFocusStore,
+} from "@web/grid/shortcuts/edge-focus.store";
 import { useDayEventNudgeShortcuts } from "./useDayEventNudgeShortcuts";
 import {
   afterEach,

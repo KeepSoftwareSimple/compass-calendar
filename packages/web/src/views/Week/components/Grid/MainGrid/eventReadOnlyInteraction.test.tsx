@@ -22,13 +22,13 @@ import { createCompassQueryClient } from "@web/api/query-client";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
-import { GRID_EVENT_READ_ONLY_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
-import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import {
+  GRID_EVENT_READ_ONLY_ATTRIBUTE,
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
   weekEventRegistry,
   weekEventTargeting,
 } from "@web/grid/interaction/view-event-registry";
+import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { AllDayEvents } from "../AllDayRow/AllDayEvents";
 import { MainGridEvents } from "./MainGridEvents";
 import { afterEach, describe, expect, it, mock } from "bun:test";

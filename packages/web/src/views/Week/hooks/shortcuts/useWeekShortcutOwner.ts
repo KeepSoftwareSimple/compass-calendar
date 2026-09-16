@@ -18,6 +18,7 @@ import {
   isEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import { weekEventTargeting } from "@web/grid/interaction/view-event-registry";
 import { useCalendarViewShortcuts } from "@web/grid/shortcuts/useCalendarViewShortcuts";
 import { useGridEventEditShortcuts } from "@web/grid/shortcuts/useGridEventEditShortcuts";
 import { useGridEventFormFieldSequences } from "@web/grid/shortcuts/useGridEventFormFieldSequences";
@@ -39,7 +40,6 @@ import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { type Util_Scroll } from "@web/views/Week/hooks/grid/useScroll";
 import { goToTodayInWeek } from "@web/views/Week/hooks/shortcuts/weekShortcuts.util";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import { weekEventTargeting } from "@web/grid/interaction/view-event-registry";
 
 export interface ShortcutProps {
   queryEndOfView: Dayjs;

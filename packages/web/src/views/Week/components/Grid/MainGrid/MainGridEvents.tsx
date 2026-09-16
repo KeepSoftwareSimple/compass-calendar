@@ -7,7 +7,6 @@ import {
   useCalendarLookup,
 } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_TIMED } from "@web/common/constants/web.constants";
-import { type GridEvent } from "@web/common/types/web.event.types";
 import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";

@@ -38,12 +38,12 @@ import {
   DECK_INDENT,
   HIDDEN_EVENT_STRIP_WIDTH,
 } from "@web/grid/grid.constants";
-import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import {
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
   WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
   weekEventRegistry,
 } from "@web/grid/interaction/view-event-registry";
+import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 import { Categories_Event } from "@web/common/types/web.event.types";
