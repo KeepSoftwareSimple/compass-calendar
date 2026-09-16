@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  getPaletteSearch,
   openCommandPaletteWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
@@ -10,7 +11,7 @@ test("running a palette command with a shortcut names that key", async ({
   await prepareCalendarPage(page);
 
   await openCommandPaletteWithKeyboard(page);
-  const search = page.getByRole("textbox", { name: "Command palette search" });
+  const search = getPaletteSearch(page);
   await search.fill("Create event");
   await expect(
     page.getByRole("option", { name: /Create event/ }),

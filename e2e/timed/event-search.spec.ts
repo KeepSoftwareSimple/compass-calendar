@@ -3,6 +3,7 @@ import {
   createEventTitle,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
+  getPaletteSearch,
   openCommandPaletteWithKeyboard,
   openTimedEventFormWithKeyboard,
   prepareCalendarPage,
@@ -17,13 +18,15 @@ test("Mod+K finds a saved event by title and focuses it", async ({ page }) => {
   await expectTimedEventVisible(page, title);
 
   await openCommandPaletteWithKeyboard(page);
-  const search = page.getByRole("textbox", { name: "Command palette search" });
+  const search = getPaletteSearch(page);
   await search.fill(title);
 
   const option = page.getByRole("option", { name: new RegExp(title) });
   await expect(option).toBeVisible();
-  await expect(page.getByText("Events")).toBeVisible();
-  await expect(page.getByRole("status")).toContainText(/result/);
+  await expect(page.getByText("Events", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("status").filter({ hasText: /result/ }),
+  ).toBeVisible();
 
   await page.keyboard.press("Enter");
   await expect(search).toHaveCount(0);

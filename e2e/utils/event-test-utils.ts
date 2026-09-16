@@ -67,10 +67,9 @@ export const getVisibleDayDates = (page: Page) =>
 const FORM_TIMEOUT = 10000;
 
 /**
- * Dispatch a keyboard shortcut to the focused node (falling back to
- * `document`) so Playwright's Control+K cannot be swallowed by Chromium
- * chrome, and so capture-phase bare letters still see a bubbling keydown.
- * Uses the same event properties as the app's internal pressKey utility.
+ * Dispatch a keyboard shortcut on `document`. Playwright's Control+K is
+ * swallowed by Chromium chrome; this matches the app's pressKey utility and
+ * the `]` sidebar helper that already works in e2e.
  */
 const pressShortcut = async (
   page: Page,
@@ -84,15 +83,8 @@ const pressShortcut = async (
 ) => {
   await page.evaluate(
     ({ shortcut, modifiers: nextModifiers }) => {
-      const target =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : document;
       const init = {
         key: shortcut,
-        code: /^[a-z]$/i.test(shortcut)
-          ? `Key${shortcut.toUpperCase()}`
-          : shortcut,
         bubbles: true,
         cancelable: true,
         composed: true,
@@ -101,8 +93,8 @@ const pressShortcut = async (
         altKey: Boolean(nextModifiers.altKey),
         shiftKey: Boolean(nextModifiers.shiftKey),
       };
-      target.dispatchEvent(new KeyboardEvent("keydown", init));
-      target.dispatchEvent(new KeyboardEvent("keyup", init));
+      document.dispatchEvent(new KeyboardEvent("keydown", init));
+      document.dispatchEvent(new KeyboardEvent("keyup", init));
     },
     { shortcut: key, modifiers },
   );
@@ -159,14 +151,17 @@ export const dispatchDocumentKey = async (
   await pressShortcut(page, key, modifiers);
 };
 
+export const getPaletteSearch = (page: Page) =>
+  page.getByLabel("Command palette search");
+
 export const openCommandPaletteWithKeyboard = async (page: Page) => {
   await blurActiveElement(page);
   await page.locator("#mainGrid").focus();
-  const search = page.getByRole("textbox", { name: "Command palette search" });
+  const search = getPaletteSearch(page);
 
-  // Chromium steals Playwright's Control+K for browser search. Dispatch the
-  // matching Mod chord only: a second chord would toggle a just-opened
-  // palette closed before React paints the search box.
+  // Chromium steals Playwright's Control+K for browser search. Bare G also
+  // opens the palette (nav-go-to-date) and is what capture-phase e2e can
+  // actually deliver; try the Mod chord first, then G.
   const useMeta = await page.evaluate(
     () => /mac/i.test(navigator.platform) || /mac/i.test(navigator.userAgent),
   );
@@ -179,12 +174,8 @@ export const openCommandPaletteWithKeyboard = async (page: Page) => {
     await expect(search).toBeVisible({ timeout: 1500 });
     return;
   } catch {
-    // Chromium still ate the chord; the sidebar button is the same command.
+    await pressShortcut(page, "g");
   }
-
-  if ((await search.count()) > 0) return;
-  await ensureSidebarOpen(page);
-  await page.getByRole("button", { name: /Open command palette/ }).click();
   await expect(search).toBeVisible({ timeout: FORM_TIMEOUT });
 };
 
