@@ -149,21 +149,29 @@ window.IntersectionObserver =
 window.ResizeObserver =
   MockObserver<ResizeObserverCallback> as unknown as typeof ResizeObserver;
 
-for (const key of Object.getOwnPropertyNames(window)) {
-  if (key in globalThis) {
-    continue;
-  }
+/**
+ * Copy remaining jsdom `window` keys onto `globalThis`. `--isolate` clears
+ * those copies between files; window prototype patches above stay on `dom`.
+ */
+export function mirrorBrowserPolyfillGlobals(): void {
+  for (const key of Object.getOwnPropertyNames(window)) {
+    if (key in globalThis) {
+      continue;
+    }
 
-  const descriptor = Object.getOwnPropertyDescriptor(window, key);
+    const descriptor = Object.getOwnPropertyDescriptor(window, key);
 
-  if (descriptor) {
-    try {
-      Object.defineProperty(globalThis, key, descriptor);
-    } catch {
-      // Some properties are non-configurable in Bun's globalThis; skip them.
+    if (descriptor) {
+      try {
+        Object.defineProperty(globalThis, key, descriptor);
+      } catch {
+        // Some properties are non-configurable in Bun's globalThis; skip them.
+      }
     }
   }
 }
+
+mirrorBrowserPolyfillGlobals();
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,

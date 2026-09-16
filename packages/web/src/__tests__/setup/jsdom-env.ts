@@ -8,37 +8,14 @@ export const dom = new JSDOM("<!DOCTYPE html><html><body></body></html>", {
 
 const { window } = dom;
 
-globalThis.window = window as unknown as Window & typeof globalThis;
-globalThis.document = window.document;
-globalThis.navigator = window.navigator;
-globalThis.location = window.location;
-globalThis.history = window.history;
-globalThis.localStorage = window.localStorage;
-globalThis.sessionStorage = window.sessionStorage;
-globalThis.HTMLElement = window.HTMLElement;
 Object.defineProperty(window, "HTMLIFrameElement", {
   configurable: true,
   value: window.HTMLElement,
   writable: true,
 });
-globalThis.HTMLIFrameElement = window.HTMLIFrameElement;
-globalThis.HTMLAnchorElement = window.HTMLAnchorElement;
-globalThis.Node = window.Node;
-
-// Bun's native globalThis.dispatchEvent/addEventListener operate on Bun's own
-// Event realm. Dexie constructs `new CustomEvent(...)` against the jsdom
-// Event class above, so dispatching through Bun's native EventTarget throws
-// "must be an instance of Event" (cross-realm brand check). Rebind these to
-// jsdom's window so the whole event pipeline stays in one realm.
-globalThis.dispatchEvent = window.dispatchEvent.bind(window);
-globalThis.addEventListener = window.addEventListener.bind(window);
-globalThis.removeEventListener = window.removeEventListener.bind(window);
-globalThis.self = window;
-globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 const noopAlert = () => {};
 window.alert = noopAlert;
-globalThis.alert = noopAlert;
 
 // Bun/util.inspect walks jsdom Window/Event graphs by default (event
 // listeners → document → SymbolTree → …), which can dump megabytes into
@@ -156,5 +133,39 @@ for (const name of EVENT_CONSTRUCTOR_NAMES) {
     writable: true,
     value: Redacted,
   });
-  (globalThis as Record<string, unknown>)[name] = Redacted;
 }
+
+/**
+ * Re-apply jsdom onto `globalThis`. Bun `--isolate` (implied by `--parallel`)
+ * clears globals between files while this module stays loaded.
+ */
+export function mirrorJsdomGlobals(): void {
+  const { window: jsdomWindow } = dom;
+  globalThis.window = jsdomWindow as unknown as Window & typeof globalThis;
+  globalThis.document = jsdomWindow.document;
+  globalThis.navigator = jsdomWindow.navigator;
+  globalThis.location = jsdomWindow.location;
+  globalThis.history = jsdomWindow.history;
+  globalThis.localStorage = jsdomWindow.localStorage;
+  globalThis.sessionStorage = jsdomWindow.sessionStorage;
+  globalThis.HTMLElement = jsdomWindow.HTMLElement;
+  globalThis.HTMLIFrameElement = jsdomWindow.HTMLIFrameElement;
+  globalThis.HTMLAnchorElement = jsdomWindow.HTMLAnchorElement;
+  globalThis.Node = jsdomWindow.Node;
+  // Bun's native EventTarget rejects jsdom Event instances (cross-realm).
+  globalThis.dispatchEvent = jsdomWindow.dispatchEvent.bind(jsdomWindow);
+  globalThis.addEventListener = jsdomWindow.addEventListener.bind(jsdomWindow);
+  globalThis.removeEventListener =
+    jsdomWindow.removeEventListener.bind(jsdomWindow);
+  globalThis.self = jsdomWindow;
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  globalThis.alert = jsdomWindow.alert;
+  for (const name of EVENT_CONSTRUCTOR_NAMES) {
+    const ctor = jsdomWindow[name as keyof Window];
+    if (typeof ctor === "function") {
+      (globalThis as Record<string, unknown>)[name] = ctor;
+    }
+  }
+}
+
+mirrorJsdomGlobals();

@@ -1,11 +1,12 @@
 import { HotkeyManager } from "@tanstack/react-hotkeys";
-import { server } from "../__mocks__/server/mock.server";
+import { restartMockServer, server } from "../__mocks__/server/mock.server";
 import {
   installDefaultWebTestSeams,
   resetWebTestSeams,
 } from "../helpers/web-test-seams";
+import { mirrorBrowserPolyfillGlobals } from "./browser-polyfills";
 import { ensureIndexedDbTestEnv } from "./indexeddb-env";
-import { dom } from "./jsdom-env";
+import { dom, mirrorJsdomGlobals } from "./jsdom-env";
 import {
   afterAll,
   afterEach,
@@ -62,17 +63,23 @@ function resetBrowserState() {
 }
 
 beforeEach(() => {
-  // bun's fake clock is process-global across files in a shard. A leaked
+  // bun's fake clock is process-global across files in a worker. A leaked
   // pin makes later findBy/waitFor hang forever because Date.now never
   // advances past their timeout. Reset before the test, not only after,
   // so a previous afterEach that threw still cannot poison this file.
+  if (globalThis.document !== dom.window.document) {
+    mirrorJsdomGlobals();
+    mirrorBrowserPolyfillGlobals();
+  }
   setSystemTime();
   installDefaultWebTestSeams();
 });
 
 beforeAll(async () => {
+  mirrorJsdomGlobals();
+  mirrorBrowserPolyfillGlobals();
   await ensureIndexedDbTestEnv();
-  server.listen({ onUnhandledRequest: "error" });
+  restartMockServer();
 });
 afterEach(async () => {
   setSystemTime();
@@ -92,6 +99,5 @@ afterAll(() => {
   resetBrowserState();
   resetAllStores();
   resetWebTestSeams();
-  server.close();
   mock.restore();
 });
