@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
-import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import {
+  readJsonValue,
+  writeJsonValue,
+} from "@web/common/storage/json-value.store";
 import {
   SHORTCUT_HINTS,
   type ShortcutActionId,
@@ -37,6 +40,19 @@ const ProfileV2Schema = z.object({
   shortcuts: z.record(z.string(), ActionUsageSchema),
 });
 
+// Either stored shape reads back as v2: a v1 profile predates per-shortcut
+// counters, so it upgrades with an empty `shortcuts` map. Action ids this
+// build no longer knows are dropped rather than ranked.
+const StoredProfileSchema = z
+  .union([ProfileV2Schema, ProfileV1Schema])
+  .transform(
+    (stored): ShortcutUsageProfile => ({
+      version: 2,
+      actions: knownActions(stored.actions),
+      shortcuts: stored.version === 2 ? stored.shortcuts : {},
+    }),
+  );
+
 const EMPTY_PROFILE: ShortcutUsageProfile = {
   version: 2,
   actions: {},
@@ -59,36 +75,15 @@ function knownActions(
 }
 
 export function readShortcutUsageProfile(): ShortcutUsageProfile {
-  const raw = persistentBrowserStore.get(STORAGE_KEYS.SHORTCUT_PERSONALIZATION);
-  if (!raw) return EMPTY_PROFILE;
-
-  try {
-    const parsed = JSON.parse(raw);
-    const v2 = ProfileV2Schema.safeParse(parsed);
-    if (v2.success) {
-      return {
-        version: 2,
-        actions: knownActions(v2.data.actions),
-        shortcuts: v2.data.shortcuts,
-      };
-    }
-
-    const v1 = ProfileV1Schema.parse(parsed);
-    return {
-      version: 2,
-      actions: knownActions(v1.actions),
-      shortcuts: {},
-    };
-  } catch {
-    return EMPTY_PROFILE;
-  }
+  return readJsonValue(
+    STORAGE_KEYS.SHORTCUT_PERSONALIZATION,
+    StoredProfileSchema,
+    EMPTY_PROFILE,
+  );
 }
 
 export function writeShortcutUsageProfile(
   profile: ShortcutUsageProfile,
 ): boolean {
-  return persistentBrowserStore.set(
-    STORAGE_KEYS.SHORTCUT_PERSONALIZATION,
-    JSON.stringify(profile),
-  );
+  return writeJsonValue(STORAGE_KEYS.SHORTCUT_PERSONALIZATION, profile);
 }

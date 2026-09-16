@@ -24,7 +24,10 @@ export const syncEventInstanceToBrowser = (
   instance: SyncEventInstance,
 ): Event => {
   const shared = {
-    calendarId: instance.calendarId,
+    // Sync's calendar id IS the browser's calendar id (S39 option 2), but the
+    // two contracts brand it separately. Assert just this field so the rest of
+    // the translated event stays type-checked against EventSchema.
+    calendarId: instance.calendarId as Event["calendarId"],
     content: toBrowserDetails(instance.content),
     schedule: instance.schedule,
     createdAt: instance.createdAt,
@@ -39,28 +42,31 @@ export const syncEventInstanceToBrowser = (
 
   // EventInstanceListResponseSchema already validated this instance on the
   // HMAC-signed internal channel. Re-running EventSchema.parse here doubled
-  // timezone construction on every range read.
+  // timezone construction on every range read, so the return type is the only
+  // thing checking these shapes now: keep the assertions field-level.
   switch (instance.recurrence.kind) {
     case "single":
       return {
         ...shared,
         id: instance.eventId,
         recurrence: { kind: "single" },
-      } as Event;
+      };
     case "series":
       return {
         ...shared,
         id: instance.eventId,
         recurrence: { kind: "series", rules: instance.recurrence.rules },
-      } as Event;
+      };
     case "occurrence":
       return {
         ...shared,
+        // The shared codec composes plain strings; decodeOccurrenceId reverses
+        // this exact format back into an eventId the write path can address.
         id: composeOccurrenceId({
           eventId: instance.eventId,
           recurrenceId: instance.recurrence.recurrenceId,
-        }),
+        }) as Event["id"],
         recurrence: { kind: "occurrence", seriesId: instance.eventId },
-      } as Event;
+      };
   }
 };
