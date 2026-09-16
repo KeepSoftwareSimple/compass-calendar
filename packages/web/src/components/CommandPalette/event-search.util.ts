@@ -31,9 +31,9 @@ export function eventSearchDetail(event: Event): string {
 }
 
 const eventCardInDom = (eventId: string): boolean =>
-  [...document.querySelectorAll(`[${POINTER_EVENT_ID_ATTRIBUTE}]`)].some(
-    (node) => node.getAttribute(POINTER_EVENT_ID_ATTRIBUTE) === eventId,
-  );
+  document.querySelector(
+    `[${POINTER_EVENT_ID_ATTRIBUTE}="${CSS.escape(eventId)}"]`,
+  ) !== null;
 
 export function startFocusEventCard(eventId: string): void {
   const deadline = Date.now() + FOCUS_WAIT_MS;

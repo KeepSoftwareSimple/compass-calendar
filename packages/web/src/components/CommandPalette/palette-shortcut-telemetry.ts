@@ -1,10 +1,11 @@
 import { track } from "@web/auth/posthog/track";
 import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 /** Palette rows that run an action directly (not through a keyboard handler). */
 export function reportPaletteShortcut(
-  shortcutId: string,
+  shortcutId: ShortcutRegistryId,
   section: string,
 ): void {
   track("shortcut_invoked", {

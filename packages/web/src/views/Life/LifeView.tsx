@@ -6,7 +6,7 @@ import { ID_MAIN } from "@web/common/constants/web.constants";
 import { useResponsiveLayout } from "@web/components/AuthenticatedLayout/useResponsiveLayout";
 import { CalendarHeader } from "@web/components/CalendarHeader/CalendarHeader";
 import { LifeCommandPalette } from "@web/components/CommandPalette/CommandPalette";
-import { getCommandPalettePlaceholder } from "@web/components/CommandPalette/more.cmd.constants";
+import { COMMAND_PALETTE_PLACEHOLDER } from "@web/components/CommandPalette/more.cmd.constants";
 import { ResizableSidebarPanel } from "@web/components/Sidebar/ResizableSidebarPanel";
 import { SidebarShell } from "@web/components/Sidebar/SidebarShell";
 import { useSidebarShortcuts } from "@web/components/Sidebar/useSidebarShortcuts";
@@ -172,7 +172,7 @@ export function LifeView({ today }: LifeViewProps) {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">
-      <LifeCommandPalette placeholder={getCommandPalettePlaceholder("life")} />
+      <LifeCommandPalette placeholder={COMMAND_PALETTE_PLACEHOLDER} />
       <PageJumpHints targets={LIFE_PAGE_JUMP_TARGETS} />
 
       <main
