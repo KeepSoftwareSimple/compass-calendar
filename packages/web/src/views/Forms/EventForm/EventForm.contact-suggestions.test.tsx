@@ -1,7 +1,7 @@
 import { HotkeyManager } from "@tanstack/react-hotkeys";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import {
   type Calendar,
   getCalendarCapabilities,
@@ -75,9 +75,9 @@ const serveSuggestions = (
 ) => {
   const queries: string[] = [];
   server.use(
-    rest.get(SUGGESTIONS_URL, (req, res, ctx) => {
-      queries.push(req.url.searchParams.get("q") ?? "");
-      return res(ctx.status(200), ctx.json({ suggestions }));
+    http.get(SUGGESTIONS_URL, ({ request }) => {
+      queries.push(new URL(request.url).searchParams.get("q") ?? "");
+      return HttpResponse.json({ suggestions }, { status: 200 });
     }),
   );
   return queries;
@@ -198,7 +198,7 @@ describe("EventForm contact suggestions (WP-06)", () => {
   it("degrades silently when the proxy fails: no suggestions, raw entry unaffected", async () => {
     seedContactsCapability(true);
     server.use(
-      rest.get(SUGGESTIONS_URL, (_req, res, ctx) => res(ctx.status(503))),
+      http.get(SUGGESTIONS_URL, () => new HttpResponse(null, { status: 503 })),
     );
     const user = userEvent.setup();
 

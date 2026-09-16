@@ -157,9 +157,11 @@ describe("detect-code-changes", () => {
     expect(e2e).toMatch(/^ {2}merge_group:$/m);
     expect(unit).toContain("static:");
     expect(unit).toContain("name: unit-leg (${{ matrix.name }})");
-    expect(unit).toContain("WEB_TEST_SHARD_INDEX");
-    expect(unit).toContain("name: web, 1");
-    expect(unit).toContain("name: web, 2");
+    expect(unit).toContain("name: web");
+    expect(unit).not.toContain("WEB_TEST_SHARD_INDEX");
+    expect(unit).not.toContain("WEB_TEST_SHARDS");
+    expect(unit).not.toContain("name: web, 1");
+    expect(unit).not.toContain("name: web, 2");
     expect(unit).not.toContain("uses: actions/setup-node");
     expect(unit).not.toMatch(/^ {2}lint:/m);
     expect(unit).not.toMatch(/^ {2}knip:/m);
