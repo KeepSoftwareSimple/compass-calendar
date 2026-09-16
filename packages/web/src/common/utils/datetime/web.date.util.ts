@@ -320,6 +320,14 @@ export const parseUserDate = (text: string, now: Dayjs): Dayjs | null => {
 export const goToDatePaletteLabel = (date: Dayjs): string =>
   `Go to ${date.format("ddd, MMM D, YYYY")}`;
 
+export const goToDateAnnouncement = (
+  date: Dayjs,
+  view: "day" | "week" | "life",
+): string =>
+  view === "day"
+    ? `Showing ${date.format("dddd, MMMM D, YYYY")}`
+    : `Showing week of ${date.format("dddd, MMMM D, YYYY")}`;
+
 export const filterTimeOption = (
   option: { label: string; value: string },
   input: string,

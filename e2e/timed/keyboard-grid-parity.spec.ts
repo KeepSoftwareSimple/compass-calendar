@@ -65,6 +65,37 @@ test("Shift+ArrowRight at the week edge carries the event into the next window",
   await expect(eventButton).toBeFocused();
 });
 
+test("Alt+Shift+ArrowRight carries the event a week into the next window", async ({
+  page,
+}) => {
+  await prepareCalendarPage(page);
+
+  const title = createEventTitle("Coarse Carry");
+  await openTimedEventFormWithKeyboard(page);
+  await fillTitleAndSaveEventForm(page, title);
+  await expectTimedEventVisible(page, title);
+
+  const [saved] = await getSavedEventsByTitle(page, title);
+  const startDay = saved.startDate.slice(0, 10);
+
+  const eventButton = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: title });
+  await eventButton.focus();
+
+  await page.keyboard.press("Alt+Shift+ArrowRight");
+  const crossedDay = addDays(startDay, 7);
+  await expect
+    .poll(async () => {
+      const [event] = await getSavedEventsByTitle(page, title);
+      return event?.startDate.slice(0, 10);
+    })
+    .toBe(crossedDay);
+
+  await expect.poll(() => getVisibleDayDates(page)).toContain(crossedDay);
+  await expectTimedEventVisible(page, title);
+});
+
 test("m opens the focused event's menu without a mouse", async ({ page }) => {
   await prepareCalendarPage(page);
 

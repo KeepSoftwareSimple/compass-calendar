@@ -110,6 +110,20 @@ when focus has fallen to `document.body`. Panels that omit `onDismiss`
 (the billing gate) stay undismissible. Toasts advertise Esc only when no
 higher owner holds the key.
 
+## 9. Alt means a bigger step
+
+Alt is the coarse modifier. Alt+ArrowUp / Alt+ArrowDown already pan the
+timed grid by an hour instead of a viewport. Alt+Shift+Arrow is the same
+idea on a focused event: an hour on up/down, a week on left/right, instead
+of 15 minutes or one day. Do not invent a second "bigger step" modifier.
+
+## 10. The palette teaches
+
+A command palette row that has a shortcut names that shortcut after the
+command runs: "Next time, press …", the same hint a successful click uses.
+Rows without a shortcut stay silent. Do not teach a key the row would not
+actually bind.
+
 ---
 
 ## Adding a jump target

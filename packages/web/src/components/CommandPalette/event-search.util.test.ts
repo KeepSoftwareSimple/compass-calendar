@@ -3,7 +3,12 @@ import {
   eventSearchDateString,
   eventSearchDetail,
   paletteEventRoute,
+  startFocusEventCard,
 } from "@web/components/CommandPalette/event-search.util";
+import {
+  POINTER_EVENT_ID_ATTRIBUTE,
+  POINTER_EVENT_JUMP_REQUEST,
+} from "@web/shortcuts/keyboard-only/pointer-action";
 import { describe, expect, it } from "bun:test";
 
 const timed = (overrides: { start: string; timeZone: string }): Event =>
@@ -52,5 +57,32 @@ describe("event-search.util", () => {
     expect(paletteEventRoute("day")).toBe("/day/$dateString");
     expect(paletteEventRoute("week")).toBe("/week/$dateString");
     expect(paletteEventRoute("life")).toBe("/week/$dateString");
+  });
+
+  it("waits for app-lock to clear before focusing a search hit", async () => {
+    document.body.dataset.appLocked = "true";
+    const card = document.createElement("div");
+    card.setAttribute(POINTER_EVENT_ID_ATTRIBUTE, "evt-1");
+    document.body.appendChild(card);
+    const jumps: string[] = [];
+    const onJump = (event: globalThis.Event) => {
+      const detail = (event as CustomEvent<{ eventId?: string }>).detail;
+      if (detail?.eventId) jumps.push(detail.eventId);
+    };
+    document.addEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+
+    try {
+      startFocusEventCard("evt-1");
+      await Promise.resolve();
+      expect(jumps).toEqual([]);
+
+      delete document.body.dataset.appLocked;
+      await new Promise((resolve) => setTimeout(resolve, 80));
+      expect(jumps).toEqual(["evt-1"]);
+    } finally {
+      document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+      card.remove();
+      delete document.body.dataset.appLocked;
+    }
   });
 });

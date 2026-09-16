@@ -33,9 +33,10 @@ export const EventJumpIndicator: FC = () => {
   const announcement = useEventJumpStore(selectEventJumpAnnouncement);
 
   useEffect(() => {
-    if (isActive || announcement !== "Event jump off") return;
+    if (isActive || !announcement) return;
+    const spoken = announcement;
     const timer = window.setTimeout(() => {
-      if (useEventJumpStore.getState().announcement === "Event jump off") {
+      if (useEventJumpStore.getState().announcement === spoken) {
         eventJumpActions.clearAnnouncement();
       }
     }, EXIT_ANNOUNCEMENT_LINGER_MS);
