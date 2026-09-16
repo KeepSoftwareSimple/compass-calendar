@@ -14,19 +14,23 @@ import {
   isFollowingSplitAtSeriesStart,
   occurrenceScheduleAt,
 } from "@sync/domain/occurrence-projection";
+import { executeProviderCreate } from "@sync/domain/provider-command.create";
+import { executeProviderDelete } from "@sync/domain/provider-command.delete";
 import {
-  executeProviderCreate,
-  executeProviderDelete,
-  executeProviderOccurrenceDelete,
-  executeProviderOccurrenceUpdate,
-  executeProviderRsvp,
-  executeProviderSeriesFollowingDelete,
-  executeProviderSeriesFollowingUpdate,
-  executeProviderSeriesUpdate,
-  executeProviderUpdate,
   type ProviderConnectionLookup,
   type ProviderDeleteDeps,
-} from "@sync/domain/provider-command.service";
+} from "@sync/domain/provider-command.deps";
+import {
+  executeProviderOccurrenceDelete,
+  executeProviderOccurrenceUpdate,
+} from "@sync/domain/provider-command.occurrence";
+import { executeProviderRsvp } from "@sync/domain/provider-command.rsvp";
+import {
+  executeProviderSeriesFollowingDelete,
+  executeProviderSeriesFollowingUpdate,
+} from "@sync/domain/provider-command.series-following";
+import { executeProviderSeriesUpdate } from "@sync/domain/provider-command.series-update";
+import { executeProviderUpdate } from "@sync/domain/provider-command.update";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import {
   buildRemainderMaster,

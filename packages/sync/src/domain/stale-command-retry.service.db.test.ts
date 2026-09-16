@@ -22,7 +22,7 @@ import {
 } from "@sync/__tests__/helpers/fixtures";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { submitCloudCommand } from "@sync/domain/cloud-command.service";
-import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
+import { type ProviderConnectionLookup } from "@sync/domain/provider-command.deps";
 import {
   retryStaleCommands,
   type StaleCommandRetryDeps,
