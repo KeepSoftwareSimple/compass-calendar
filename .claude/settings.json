@@ -49,7 +49,8 @@
       "mcp__Claude_Preview__preview_screenshot",
       "mcp__Claude_Preview__preview_click",
       "mcp__Claude_Preview__preview_fill",
-      "mcp__Claude_Preview__preview_resize"
+      "mcp__Claude_Preview__preview_resize",
+      "mcp__PostHog__exec"
     ],
     "deny": [
       "Bash(git push --force:*)",
@@ -102,6 +103,12 @@
           }
         ]
       }
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Every call to the PostHog MCP server (tool names starting with mcp__PostHog__) is allowed without asking. The exec tool runs analytics queries and reads for this project; it is not a shell and cannot touch the filesystem or repo."
     ]
   }
 }
