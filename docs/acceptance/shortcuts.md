@@ -146,7 +146,7 @@ Pressing Cmd+K opens the command palette from any view, including while a text i
 ### Expected Results
 
 - The command palette opens immediately.
-- Items include: Create event, Create all-day event, Go to Today, Practice shortcuts, Show welcome guide, Undo last change, Redo last change, Toggle sidebar, Focus month picker, Open Up Next event, Join Up Next meeting, Time travel, Settings, Log Out, Book personal onboarding. Selecting a row that advertises a shortcut pulses the top-center hint "Next time, press …" unless tips are off. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
+- Items include: Go to Today, Go to Day or Go to Week (the view you are not on), Go to Life, Show shortcuts, Play Block Party (practice shortcuts), Show welcome guide, Create event, Create all-day event, Undo last change, Redo last change, Toggle sidebar, Focus month picker, Open Up Next event, Join Up Next meeting, Time travel, Settings, Log Out (when signed in), Book personal onboarding. Selecting a row that advertises a shortcut pulses the top-center hint "Next time, press …" unless tips are off. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
 - Undo / Redo rows show their keycaps and stay disabled when there is no history.
 - Google Calendar connection status and actions appear in the sidebar, not the command palette.
 - Typing filters the list.
@@ -549,6 +549,177 @@ Enter from the address field.
 
 ---
 
+## Scenario 20: Find An Event By Title (Mod+K)
+
+### UX
+
+The command palette searches saved event titles once the query is two or more characters. Choosing an Events row navigates to that event's day and focuses the card so Enter opens it.
+
+### Steps
+
+1. Navigate to `/week` with at least one saved timed event whose title is distinctive.
+2. Press Cmd+K (or Ctrl+K).
+3. Type enough of the title to unique-match it.
+4. Confirm the Events section lists that title with its weekday, date, and time.
+5. Press Enter.
+
+### Expected Results
+
+- An Events heading appears above matching rows (title plus weekday, date, and time or All day).
+- The live region announces the result count (or "No results for …" when nothing matches).
+- Enter closes the palette, opens the week or day that contains the event, and focuses that event card.
+- Tab from the search field does not land in the Events rows. Arrow keys still move the active row.
+
+---
+
+## Scenario 21: Go To A Typed Date (G)
+
+### UX
+
+Bare `G` opens the command palette so the user can type a date. A query that parses as a date pins a "Go to …" row first. Enter navigates to that date, selects its column, and announces the jump.
+
+### Steps
+
+1. Navigate to `/week`.
+2. Press `G`.
+3. Type a date such as `oct 3` or `2026-12-15`.
+4. Press Enter.
+
+### Expected Results
+
+- `G` opens the palette with the search field focused.
+- The first row reads "Go to …" with the resolved weekday, month, day, and year.
+- Enter navigates so that date is visible and its column is selected.
+- A polite status announcement reads "Showing week of …" (Day view: "Showing …").
+- `e` then `G` still jumps to RSVP when an event form is open. Typing in an input does not open the palette.
+
+---
+
+## Scenario 22: Coarse-Nudge A Focused Event (Alt+Shift+Arrow)
+
+### UX
+
+Alt means a bigger step, the same idea as Alt+Arrow scrolling the grid by an hour. With a focused event (form closed), Alt+Shift+ArrowUp / ArrowDown move it by one hour. Alt+Shift+ArrowLeft / ArrowRight move it by one week. A week step that leaves the visible window slides the view so the event stays on screen and focused.
+
+### Steps
+
+1. Navigate to `/week` with a timed event on the current week.
+2. Focus the event.
+3. Press Alt+Shift+ArrowDown, then Alt+Shift+ArrowUp.
+4. Press Alt+Shift+ArrowRight.
+
+### Expected Results
+
+- Alt+Shift+ArrowDown moves the event one hour later; Alt+Shift+ArrowUp moves it one hour earlier.
+- Alt+Shift+ArrowRight moves it seven days later. If that day was off-screen, the week window slides and the event stays visible and focused.
+- All-day events ignore hour steps. Shift+Arrow without Alt still moves one day or 15 minutes.
+
+---
+
+## Scenario 23: Paste Onto The Selected Day
+
+### UX
+
+Cmd+V / Ctrl+V pastes the copied event onto the create target day: the selected column (Shift+day letter), else the focused event's day, else the copied event's own day. The copy keeps its time of day. Pasting spends the column selection, like `C`.
+
+### Steps
+
+1. Navigate to `/week` with a saved timed event.
+2. Focus it and press Cmd+C / Ctrl+C.
+3. Press Shift plus a different day's letter so that column is selected.
+4. Press Cmd+V / Ctrl+V.
+
+### Expected Results
+
+- A duplicate appears on the selected day at the original time of day.
+- The new event is focused and the column highlight clears.
+- Empty paste is a no-op. Copy and paste do not fire while typing in an input.
+
+---
+
+## Scenario 24: Toggle Calendars With Digits
+
+### UX
+
+Once a calendar-account list has focus, digits `1`–`9`, then `0`, `-`, and `=` toggle the first twelve rows. Chips and `aria-keyshortcuts` appear only while that list is focused.
+
+### Steps
+
+1. Navigate to `/week` or `/day` with the sidebar open and at least two calendars in one account.
+2. Tab (or hold Mod and press the account's chip) until a calendar row in that list is focused.
+3. Press `2`.
+4. Tab out of the list.
+
+### Expected Results
+
+- While the list is focused, rows show digit chips and `aria-keyshortcuts` matching their index.
+- Pressing that digit toggles the matching calendar. A status line announces Hidden or Shown.
+- After focus leaves the list, chips and `aria-keyshortcuts` hide. Digits no longer toggle.
+
+---
+
+## Scenario 25: The Palette Teaches Its Shortcuts
+
+### UX
+
+A command palette row that has a shortcut names that shortcut after you run it, using the same "Next time, press …" hint as a successful click. Rows without a shortcut stay silent.
+
+### Steps
+
+1. Navigate to `/week`.
+2. Press Cmd+K / Ctrl+K.
+3. Select "Create event" (shortcut `C`).
+4. Open the palette again and select "About Compass" (no shortcut).
+
+### Expected Results
+
+- After Create event, a hint says "Next time, press C" (or the current binding).
+- About Compass does not show a shortcut hint.
+- The X on the hint still turns tips off for that browser. The command still runs.
+
+---
+
+## Scenario 26: The Legend Shows Which Shortcuts You Have Used
+
+### UX
+
+The `?` legend is a progress surface. Rows you have invoked in this browser show a check mark labeled "used". The header counts how many of the visible rows you have used.
+
+### Steps
+
+1. Navigate to `/week`.
+2. Press `?` and note "You've used 0 of … shortcuts here".
+3. Press Escape, then `T` (Go to today).
+4. Press `?` again and find the Go to today row.
+
+### Expected Results
+
+- The header reads "You've used N of M shortcuts here" for the rows currently listed (search narrows both counts).
+- After `T`, that row shows a "used" check mark. Unused rows have no check.
+- Searching the overlay updates the count to the filtered set.
+
+---
+
+## Scenario 27: Printable Shortcuts Page
+
+### UX
+
+`/shortcuts` is a public, printable catalog of the same registry the `?` overlay shows. It is not wrapped in the signed-in calendar shell.
+
+### Steps
+
+1. Open `/shortcuts` in a logged-out window.
+2. Confirm the page title and headings.
+3. Print preview (optional).
+
+### Expected Results
+
+- The document title is "Compass keyboard shortcuts".
+- An `h1` matches that title. Each catalog group is an `h2`.
+- The in-app overlay's "Printable version" link opens this page.
+
+---
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping shortcut-related changes:
@@ -576,3 +747,11 @@ If time is limited, run these checks before shipping shortcut-related changes:
 21. Cmd+C / Ctrl+C copies a focused event; Cmd+V / Ctrl+V pastes a duplicate on the create target day (selected column, else focused event's day, else the copied event's day) without requiring focus. A later copy replaces the clipboard. Empty paste is a no-op. Copy/paste do not fire while typing in an input (native text clipboard). Cmd+D is unchanged.
 22. In Settings > Meeting, hold Mod to reveal chips `1`/`2`/`3` and Enter; extra digits focus nothing; U with Mod held does not copy.
 23. On the first-run Meeting wizard, Enter continues, Esc and J go back after step 1, and K continues when focus is not in an editable target.
+24. Cmd+K / Ctrl+K finds saved events by title (two or more characters) under an Events heading; Enter focuses that event. The live region announces the result count. Tab does not trap in Events.
+25. Bare `G` opens the palette; a parsed date pins "Go to …"; Enter selects that day and announces "Showing week of …" (or "Showing …" on Day view).
+26. Alt+Shift+Arrow moves a focused event by an hour (up/down) or a week (left/right) and carries across the visible window.
+27. Cmd+V / Ctrl+V after Shift+day-letter pastes onto that selected day and spends the column.
+28. A focused calendar list toggles rows with digits; `aria-keyshortcuts` is present only while that list is focused.
+29. Running a palette command that has a shortcut shows "Next time, press …".
+30. The `?` legend check-marks used shortcuts and counts "You've used N of M shortcuts here".
+31. `/shortcuts` is a public printable catalog with an `h1` and per-section `h2` headings.
