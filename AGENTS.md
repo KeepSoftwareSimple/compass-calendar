@@ -74,6 +74,12 @@ Playwright. Docs index: `docs/README.md`.
   green, mergeable PR. Procedure: `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
+- GitHub milestones and labels: the GitHub MCP server has no milestone tool
+  and Claude Code web sessions have no `gh`. In those sessions `curl` against
+  `https://api.github.com` is authenticated by the session proxy, so
+  `POST /repos/<owner>/<repo>/milestones` creates one and issues can be filed
+  with a `milestone` number. Actions variables stay blocked; a human sets
+  `AGENT_LOOP_MILESTONES`.
 
 ## Lookups
 
