@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { act } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createCompassQueryClient } from "@web/api/query-client";
@@ -10,9 +10,7 @@ import { describe, expect, it } from "bun:test";
 
 const renderHostTree = () => {
   server.use(
-    rest.get(`${ENV_WEB.API_BASEURL}/calendars`, (_req, res, ctx) =>
-      res(ctx.json([])),
-    ),
+    http.get(`${ENV_WEB.API_BASEURL}/calendars`, () => HttpResponse.json([])),
   );
   return render(
     <CompassRequiredProviders queryClient={createCompassQueryClient()}>

@@ -44,7 +44,9 @@ Playwright. Docs index: `docs/README.md`.
 - Web tests use React Testing Library, semantic role/name/text queries, and
   `user-event`. Register every new Zustand store in the reset registry and
   the state seeder. Restore replaced globals, timers, and spies in teardown.
-  Keep `bun test:web` sequential (documented jsdom/MSW constraint).
+  Keep `bun test:web` sequential within a file (jsdom/MSW/Zustand
+  singletons); the suite itself uses Bun `--parallel` like the other
+  packages.
 - Web styles use Tailwind semantic colors from `packages/web/src/index.css`
   and canonical scale utilities, with native semantic elements and visible
   focus states.

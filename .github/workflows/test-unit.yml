@@ -148,10 +148,8 @@ jobs:
   # below would see `skipped` for a docs-only PR only if every leg started.
   # Let the legs start and skip every step instead: each reports in a few
   # seconds, for free. Per-package outputs skip unrelated legs the same way
-  # (a backend-only PR must not pay two web runners). `unit-leg (web, 1)`
-  # and `unit-leg (web, 2)` each cover half the suite as three sequential
-  # shards (`WEB_TEST_SHARDS=6` with index `1,2,3` / `4,5,6`) so RSS stays
-  # under 7 GB.
+  # (a backend-only PR must not pay the web runner). The required context is
+  # the `unit` rollup, so web stays one matrix row.
   unit-leg:
     needs: changes
     runs-on: ubuntu-latest
@@ -165,12 +163,8 @@ jobs:
             project: core
           - name: sync
             project: sync
-          - name: web, 1
+          - name: web
             project: web
-            shard: "1,2,3"
-          - name: web, 2
-            project: web
-            shard: "4,5,6"
           - name: backend
             project: backend
           - name: scripts
@@ -210,16 +204,6 @@ jobs:
           path: ~/.cache/mongodb-binaries
           key: ${{ runner.os }}-mongodb-memory-server
 
-      - name: Run web tests
-        if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs[matrix.project] == 'true' && matrix.project == 'web' }}
-        timeout-minutes: 5
-        env:
-          TZ: Etc/UTC
-          WEB_TEST_SHARDS: "6"
-          WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
-        run: |
-          bun run test:web
-
       # 5 minutes is deliberate, and deliberately not raised. These suites run in
       # seconds on ubuntu-latest - scripts ~5s, backend ~13s, core ~2s, sync
       # ~105s at its slowest - so the budget is already an order of magnitude
@@ -232,7 +216,7 @@ jobs:
       # which now kills a wedged run at 4 minutes and names the likely cause
       # instead of letting this timeout fire with no output.
       - name: Run ${{ matrix.project }} tests
-        if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs[matrix.project] == 'true' && matrix.project != 'web' }}
+        if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs[matrix.project] == 'true' }}
         timeout-minutes: 5
         env:
           TZ: Etc/UTC
