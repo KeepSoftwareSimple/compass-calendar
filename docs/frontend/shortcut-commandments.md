@@ -31,7 +31,8 @@ keys for whatever is currently targetable. Do not make the user memorize
 `Mod+8` for guests or `Mod+3` for Up next. If they can see it, they can
 hold Mod and read the chip.
 
-The `?` overlay is the catalog. Hold-Mod is in-the-moment discovery.
+The `?` overlay is the catalog. The public `/shortcuts` page is the printable
+catalog and derives from the registry. Hold-Mod is in-the-moment discovery.
 
 ## 3. Hints never lie
 

@@ -10,6 +10,7 @@ export const ROOT_ROUTES = {
   APPLE_AUTH_CALLBACK: "/auth/apple/callback",
   LIFE: "/life",
   ROOT: "/",
+  SHORTCUTS: "/shortcuts",
   WEEK: "/week",
   WEEK_DATE: "/week/$dateString",
   DAY: "/day",

@@ -1390,3 +1390,26 @@
     border-radius: var(--radius-default);
   }
 }
+
+/* Public /shortcuts catalog: one column, black on white, no chrome. */
+@media print {
+  [data-shortcuts-print] {
+    background: #fff;
+    color: #000;
+  }
+
+  [data-shortcuts-print] [data-shortcuts-print-chrome] {
+    display: none;
+  }
+
+  [data-shortcuts-print] main {
+    max-width: none;
+    padding-inline: 0;
+  }
+
+  [data-shortcuts-print] .c-keycap {
+    background: #fff;
+    color: #000;
+    border-color: #000;
+  }
+}

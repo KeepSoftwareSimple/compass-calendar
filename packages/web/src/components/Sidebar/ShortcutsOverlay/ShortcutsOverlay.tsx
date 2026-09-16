@@ -1,6 +1,7 @@
 import { XIcon } from "@phosphor-icons/react";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
+import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { ShortcutSection } from "@web/components/Shortcuts/ShortcutOverlay/ShortcutSection";
 import {
@@ -194,6 +195,13 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
             </div>
           </div>
         )}
+
+        <a
+          href={ROOT_ROUTES.SHORTCUTS}
+          className="c-focus-ring mt-auto pt-4 text-text-muted text-xs underline-offset-4 hover:text-text hover:underline"
+        >
+          Printable version
+        </a>
       </div>
     </div>
   );
