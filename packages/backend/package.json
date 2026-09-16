@@ -15,7 +15,7 @@
     "lodash": "^4.18.1",
     "mongodb": "^7.2.0",
     "rrule": "^2.7.2",
-    "supertokens-node": "^23.0.1",
+    "supertokens-node": "^24.0.3",
     "stripe": "^22.6.1",
     "tslib": "^2.4.0",
     "zod": "^4.5.4"
