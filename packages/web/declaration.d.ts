@@ -31,6 +31,11 @@ declare module "*.jpeg" {
   export = imageUrl;
 }
 
+declare module "*.json" {
+  const value: unknown;
+  export default value;
+}
+
 declare const BUILD_VERSION: string;
 
 /** Compass e2e globals — set by the app when __COMPASS_E2E_TEST__ is true. */

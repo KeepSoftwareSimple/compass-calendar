@@ -5,7 +5,7 @@ import { useHorizontalNavigation } from "@web/common/hooks/useHorizontalNavigati
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { CalendarConnectionBannerGate } from "@web/components/CalendarConnectionBanner/CalendarConnectionBannerGate";
 import { CommandPalette } from "@web/components/CommandPalette/CommandPalette";
-import { getCommandPalettePlaceholder } from "@web/components/CommandPalette/more.cmd.constants";
+import { COMMAND_PALETTE_PLACEHOLDER } from "@web/components/CommandPalette/more.cmd.constants";
 import { DemoEventsBannerGate } from "@web/components/DemoEventsBanner/DemoEventsBannerGate";
 import { SidebarEventDetails } from "@web/components/Sidebar/EventDetails/SidebarEventDetails";
 import { ResizableSidebarPanel } from "@web/components/Sidebar/ResizableSidebarPanel";
@@ -118,7 +118,7 @@ export const DayViewContent = memo(() => {
         onGoToToday={handleGoToToday}
         onShowShortcuts={viewActions.toggleShortcuts}
         onShowWelcomeGuide={openWelcomeGuide}
-        placeholder={getCommandPalettePlaceholder("day")}
+        placeholder={COMMAND_PALETTE_PLACEHOLDER}
       />
       <Dedication />
 

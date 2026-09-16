@@ -4,7 +4,7 @@ import { ID_MAIN } from "@web/common/constants/web.constants";
 import { useHorizontalNavigation } from "@web/common/hooks/useHorizontalNavigation";
 import { CalendarConnectionBannerGate } from "@web/components/CalendarConnectionBanner/CalendarConnectionBannerGate";
 import { CommandPalette } from "@web/components/CommandPalette/CommandPalette";
-import { getCommandPalettePlaceholder } from "@web/components/CommandPalette/more.cmd.constants";
+import { COMMAND_PALETTE_PLACEHOLDER } from "@web/components/CommandPalette/more.cmd.constants";
 import { ContextMenuWrapper } from "@web/components/ContextMenu/GridContextMenuWrapper";
 import { DemoEventsBannerGate } from "@web/components/DemoEventsBanner/DemoEventsBannerGate";
 import { SidebarEventDetails } from "@web/components/Sidebar/EventDetails/SidebarEventDetails";
@@ -139,7 +139,7 @@ export const WeekView = () => {
         onGoToToday={goToTodayViaCmd}
         onShowShortcuts={viewActions.toggleShortcuts}
         onShowWelcomeGuide={openWelcomeGuide}
-        placeholder={getCommandPalettePlaceholder("week")}
+        placeholder={COMMAND_PALETTE_PLACEHOLDER}
       />
       <Dedication />
       <PageJumpHints />

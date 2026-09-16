@@ -34,6 +34,7 @@ import {
 } from "@web/routers/loaders";
 import { validateLifeSearch } from "@web/views/Life/life-search";
 import { NotFoundView } from "@web/views/NotFound/NotFound";
+import { ShortcutsCatalogView } from "@web/views/NotFound/ShortcutsCatalogView";
 
 export const rootRoute = createRootRoute({
   component: lazyRouteComponent(
@@ -56,7 +57,7 @@ export const calendarShellRoute = createRoute({
 export const publicShortcutsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROOT_ROUTES.SHORTCUTS,
-  component: NotFoundView,
+  component: ShortcutsCatalogView,
 });
 
 export const publicBookRoute = createRoute({

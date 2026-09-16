@@ -36,6 +36,25 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   /timed out during socket read/i,
 ];
 
+type MongoNetworkLogger = {
+  error: (message: string, meta?: unknown) => void;
+  warn: (message: string, meta?: unknown) => void;
+};
+
+/** Transient Atlas/network blips stay at warn so they do not open a PostHog
+ * exception alert (error-level only). Durable failures still page. */
+export function logMongoNetworkError(
+  logger: MongoNetworkLogger,
+  message: string,
+  error: unknown,
+): void {
+  if (isTransientMongoNetworkError(error)) {
+    logger.warn(message, error);
+    return;
+  }
+  logger.error(message, error);
+}
+
 export function isTransientMongoNetworkError(error: unknown): boolean {
   let current: unknown = error;
   const seen = new WeakSet<object>();

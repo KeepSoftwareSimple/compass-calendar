@@ -1,6 +1,6 @@
 import { XIcon } from "@phosphor-icons/react";
 import classNames from "classnames";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { ShortcutSection } from "@web/components/Shortcuts/ShortcutOverlay/ShortcutSection";
@@ -22,6 +22,8 @@ const normalizeSearch = (text: string): string => text.toLowerCase().trim();
 
 const matchesSearch = (normalizedQuery: string, text: string): boolean =>
   normalizeSearch(text).includes(normalizedQuery);
+
+const EMPTY_USED_IDS = new Set<string>();
 
 function usedShortcutIds(): Set<string> {
   const profile = readShortcutUsageProfile();
@@ -48,7 +50,10 @@ function withUsedFlags(
 export function ShortcutsOverlay({ sections, viewLabel }: Props) {
   const isOpen = useViewStore(selectIsShortcutsOpen);
   const [searchQuery, setSearchQuery] = useState("");
-  const [usedIds, setUsedIds] = useState<Set<string>>(() => new Set());
+  const usedIds = useMemo(
+    () => (isOpen ? usedShortcutIds() : EMPTY_USED_IDS),
+    [isOpen],
+  );
   const overlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,7 +96,6 @@ export function ShortcutsOverlay({ sections, viewLabel }: Props) {
       return;
     }
 
-    setUsedIds(usedShortcutIds());
     setTimeout(() => searchInputRef.current?.focus(), 0);
   }, [isOpen]);
 

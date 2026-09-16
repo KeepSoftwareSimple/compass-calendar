@@ -1,3 +1,4 @@
+import { COMPRESSIBLE_STATIC_EXTENSIONS } from "./compressible-static-types";
 import { readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
@@ -5,21 +6,6 @@ import {
   gzipSync,
   constants as zlibConstants,
 } from "node:zlib";
-
-// Extensions worth precompressing: text formats that self-host's serve-web.ts
-// (no reverse proxy in front of it) negotiates Accept-Encoding for. Binary
-// formats like .png and .woff2 are already compressed and would only grow
-// under brotli/gzip.
-const COMPRESSIBLE_EXTENSIONS = new Set([
-  ".css",
-  ".html",
-  ".js",
-  ".json",
-  ".map",
-  ".svg",
-  ".txt",
-  ".wasm",
-]);
 
 async function listFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -49,7 +35,7 @@ export async function precompressBuildOutput(
   const written: string[] = [];
 
   for (const filePath of files) {
-    if (!COMPRESSIBLE_EXTENSIONS.has(path.extname(filePath))) {
+    if (!COMPRESSIBLE_STATIC_EXTENSIONS.has(path.extname(filePath))) {
       continue;
     }
 

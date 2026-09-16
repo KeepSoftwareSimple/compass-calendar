@@ -18,7 +18,7 @@ import {
 } from "@core/types/sync/health.contracts";
 import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import {
-  isTransientMongoNetworkError,
+  logMongoNetworkError,
   withTransientMongoRetry,
 } from "@core/util/mongo-network-error.util";
 import {
@@ -74,15 +74,8 @@ import { createServer, type Server } from "node:http";
 
 const logger = Logger("sync:app");
 
-// Transient Atlas/network blips stay visible at warn so they do not open a
-// PostHog exception alert (PostHogExceptionTransport is error-level only).
-// Durable failures still page.
 function logSyncLoopError(message: string, error: unknown): void {
-  if (isTransientMongoNetworkError(error)) {
-    logger.warn(message, error);
-    return;
-  }
-  logger.error(message, error);
+  logMongoNetworkError(logger, message, error);
 }
 
 export interface SyncService {
