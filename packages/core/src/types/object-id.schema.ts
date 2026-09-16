@@ -10,6 +10,6 @@ export const zObjectIdMini = zod4Mini.pipe(
 
 /** Zod schema that yields a bson ObjectId. Server/Mongo only; do not import from web. */
 export const zObjectId = zod4.pipe(
-  zod4.custom<ObjectId | string>(ObjectId.isValid),
+  zod4.custom<ObjectId | string>((v) => ObjectId.isValid(v as string)),
   zod4.transform((v) => (v instanceof ObjectId ? v : new ObjectId(v))),
 );

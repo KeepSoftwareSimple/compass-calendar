@@ -4,10 +4,10 @@ import {
   EVENT_TITLE_SEARCH_MIN,
   eventTitleSearchWindow,
 } from "@core/event/search-events-by-title";
+import { throwIfAborted } from "@web/api/util/api.util";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
-import { fetchLocalEventsByTitle } from "@web/events/queries/event.query.local";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
-import { getEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
+import { RemoteEventRepository } from "@web/events/repositories/remote.event.repository";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -27,12 +27,16 @@ export function useEventSearch(query: string) {
 
   return useQuery({
     queryKey: eventQueryKeys.search({ source, q: debounced }),
-    queryFn: ({ signal }) => {
+    queryFn: async ({ signal }) => {
       if (source === "local") {
+        const { fetchLocalEventsByTitle } = await import(
+          "@web/events/queries/event.query.local"
+        );
+        throwIfAborted(signal);
         return fetchLocalEventsByTitle(debounced);
       }
       const window = eventTitleSearchWindow();
-      return getEventRepositoryBySource(source).list(
+      return new RemoteEventRepository().list(
         {
           kind: "range",
           start: window.start,

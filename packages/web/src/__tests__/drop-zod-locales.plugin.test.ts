@@ -31,7 +31,10 @@ describe("dropZodLocalesPlugin", () => {
 
   it("stubs the locales barrel so unused locale tables are not emitted", async () => {
     const result = await Bun.build({
-      entrypoints: [`${import.meta.dir}/drop-zod-locales.plugin.fixture.ts`],
+      entrypoints: [
+        new URL(import.meta.resolve("./drop-zod-locales.plugin.fixture.ts"))
+          .pathname,
+      ],
       plugins: [dropZodLocalesPlugin],
       minify: true,
     });

@@ -46,7 +46,9 @@ describe("combineCoreBootSplitsPlugin", () => {
   it("collapses the helpers into one build module", async () => {
     const result = await Bun.build({
       entrypoints: [
-        `${import.meta.dir}/combine-core-boot-splits.plugin.fixture.ts`,
+        new URL(
+          import.meta.resolve("./combine-core-boot-splits.plugin.fixture.ts"),
+        ).pathname,
       ],
       plugins: [combineCoreBootSplitsPlugin],
       minify: true,

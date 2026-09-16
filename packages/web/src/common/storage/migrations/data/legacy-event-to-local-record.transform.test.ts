@@ -56,7 +56,7 @@ describe("transformLegacyEventToLocalRecord", () => {
     expect(record?.event.calendarId).toBe(sentinelCalendarId);
     expect(record?.isDemo).toBe(false);
     expect(record).not.toBeNull();
-    expect(record?.event.createdAt).toBe(
+    expect(String(record?.event.createdAt)).toBe(
       createdAtFromObjectIdHex(record?.event.id ?? ""),
     );
   });
