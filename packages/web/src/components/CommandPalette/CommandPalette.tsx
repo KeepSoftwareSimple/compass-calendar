@@ -10,17 +10,26 @@ import {
 import {
   ArrowClockwiseIcon,
   ArrowCounterClockwiseIcon,
+  CalendarBlankIcon,
 } from "@phosphor-icons/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useRef, useState } from "react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import {
+  EVENT_TITLE_SEARCH_PALETTE_LIMIT,
+  eventTitle,
+} from "@core/event/search-events-by-title";
+import dayjs from "@core/util/date/dayjs";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
+import { goToDateAnnouncement } from "@web/common/utils/datetime/web.date.util";
 import { eventCommandPaletteItems } from "@web/components/CommandPalette/event.cmd.constants";
 import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabel";
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
+import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
 import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
@@ -28,9 +37,12 @@ import { useThemeCmdItems } from "@web/components/CommandPalette/hooks/useThemeC
 import { useUpgradeCmdItems } from "@web/components/CommandPalette/hooks/useUpgradeCmdItems";
 import { getMoreCommandPaletteSections } from "@web/components/CommandPalette/more.cmd.constants";
 import {
+  GO_TO_DATE_ITEM_ID,
+  getGoToDateCommandItem,
   getNavigationCommandItems,
   getNavigationViewRoute,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
+import { pulsePaletteTaughtShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import {
   recordRecentCommand,
   useRecentCommandIds,
@@ -39,6 +51,7 @@ import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showca
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
 import { useUndoRedo } from "@web/events/mutations/useUndoRedo";
+import { useEventSearch } from "@web/events/queries/useEventSearch";
 import { useNotificationCmdItems } from "@web/notifications/useNotificationCmdItems";
 import {
   selectIsCmdPaletteOpen,
@@ -47,11 +60,18 @@ import {
 } from "@web/settings/settings.store";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
+import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useTimezoneCmdItems } from "@web/timezone/useTimezoneCmdItems";
 import { filterSections, getLabelMatchRanges } from "./command-palette.search";
 import { type CommandItem, type CommandSection } from "./command-palette.types";
+import {
+  eventSearchDateString,
+  eventSearchDetail,
+  paletteEventRoute,
+  startFocusEventCard,
+} from "./event-search.util";
 
 const RECENT_SECTION_ID = "recent";
 const MAX_RECENT_ITEMS = 3;
@@ -66,12 +86,14 @@ interface CommandPaletteProps {
 }
 
 interface CommandPaletteContentProps {
+  currentView: ViewName;
   placeholder: string;
   sections: CommandSection[];
 }
 
 /** Mounted only while open so search/activeIndex reset on every reopen. */
 const CommandPaletteContent = ({
+  currentView,
   placeholder,
   sections,
 }: CommandPaletteContentProps) => {
@@ -95,6 +117,8 @@ const CommandPaletteContent = ({
   }, []);
 
   const close = () => settingsActions.closeCmdPalette();
+  const navigate = useNavigate();
+  const eventSearch = useEventSearch(search);
 
   const { refs, context } = useFloating({
     open: true,
@@ -111,7 +135,52 @@ const CommandPaletteContent = ({
   const sectionsToFilter = trimmedSearch
     ? sections.filter((section) => section.id !== RECENT_SECTION_ID)
     : sections;
-  const filteredSections = filterSections(sectionsToFilter, search);
+  const commandSections = filterSections(sectionsToFilter, search);
+  const eventItems: CommandItem[] = (eventSearch.data ?? [])
+    .slice(0, EVENT_TITLE_SEARCH_PALETTE_LIMIT)
+    .map((event) => ({
+      id: `event-search:${event.id}`,
+      label: eventTitle(event) || "Untitled",
+      detail: eventSearchDetail(event),
+      icon: CalendarBlankIcon,
+      onClick: () => {
+        const eventId = event.id;
+        void Promise.resolve(
+          navigate({
+            to: paletteEventRoute(currentView),
+            params: { dateString: eventSearchDateString(event) },
+          }),
+        ).then(() => {
+          startFocusEventCard(eventId);
+        });
+      },
+    }));
+  const eventSection: CommandSection[] =
+    eventItems.length > 0
+      ? [{ id: "events", heading: "Events", items: eventItems }]
+      : [];
+  const goToDateItem = getGoToDateCommandItem(search, dayjs(), (date) => {
+    const dateString = date.format(YEAR_MONTH_DAY_FORMAT);
+    void Promise.resolve(
+      navigate({
+        to: paletteEventRoute(currentView),
+        params: { dateString },
+      }),
+    ).then(() => {
+      eventJumpActions.setActiveDayKeys(
+        [dateString],
+        goToDateAnnouncement(date, currentView),
+      );
+    });
+  });
+  const goToDateSection: CommandSection[] = goToDateItem
+    ? [{ id: "go-to-date", heading: "", items: [goToDateItem] }]
+    : [];
+  const filteredSections = [
+    ...goToDateSection,
+    ...commandSections,
+    ...eventSection,
+  ];
   const flatItems = filteredSections.flatMap((section) => section.items);
   const disabledIndices = flatItems.reduce<number[]>((acc, item, index) => {
     if (item.disabled) acc.push(index);
@@ -129,8 +198,10 @@ const CommandPaletteContent = ({
   const activateItem = (item: CommandItem) => {
     if (item.disabled) return;
     recordRecentCommand(item.id);
+    const shortcut = item.shortcut;
     item.onClick?.();
     close();
+    pulsePaletteTaughtShortcut(shortcut);
   };
 
   const dismiss = useDismiss(context);
@@ -191,7 +262,7 @@ const CommandPaletteContent = ({
               reader users, who otherwise get no feedback that typing
               changed what's showing. Wording matches the visible
               zero-results message below rather than diverging from it. */}
-          <span aria-live="polite" className="sr-only">
+          <span aria-live="polite" className="sr-only" role="status">
             {liveRegionText}
           </span>
 
@@ -203,9 +274,11 @@ const CommandPaletteContent = ({
             ) : (
               filteredSections.map((section) => (
                 <div key={section.id} className="mb-1">
-                  <div className="px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide">
-                    {section.heading}
-                  </div>
+                  {section.heading ? (
+                    <div className="px-3 pt-2 pb-1 font-semibold text-text text-xs uppercase tracking-wide">
+                      {section.heading}
+                    </div>
+                  ) : null}
                   {section.items.map((item) => {
                     itemIndex += 1;
                     const index = itemIndex;
@@ -220,7 +293,9 @@ const CommandPaletteContent = ({
                       <>
                         <item.icon size={18} />
                         <span className="min-w-0 flex-1 truncate">
-                          {trimmedSearch ? (
+                          {trimmedSearch &&
+                          !item.detail &&
+                          item.id !== GO_TO_DATE_ITEM_ID ? (
                             <HighlightedLabel
                               label={item.label}
                               ranges={getLabelMatchRanges(item.label, search)}
@@ -229,6 +304,11 @@ const CommandPaletteContent = ({
                             item.label
                           )}
                         </span>
+                        {item.detail && (
+                          <span className="shrink-0 text-text-muted text-xs">
+                            {item.detail}
+                          </span>
+                        )}
                         {item.badge && (
                           <span className="ml-auto shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
                             {item.badge}
@@ -260,6 +340,7 @@ const CommandPaletteContent = ({
                         })}
                         type="button"
                         role="option"
+                        tabIndex={-1}
                         aria-selected={isActive}
                         disabled={item.disabled}
                         className={rowClassName}
@@ -334,6 +415,7 @@ export const CommandPalette = ({
   const upgradeCmdItems = useUpgradeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
   const { undo, redo, canUndo, canRedo } = useUndoRedo(mutationDependencies);
   const recentCommandIds = useRecentCommandIds();
 
@@ -341,15 +423,18 @@ export const CommandPalette = ({
     {
       id: "navigation",
       heading: "Navigation",
-      items: getNavigationCommandItems({
-        currentView,
-        onGoToToday,
-        onNavigateToView: (viewName) =>
-          navigate({ to: getNavigationViewRoute(viewName) }),
-        onShowShortcuts,
-        onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
-        onShowWelcomeGuide,
-      }),
+      items: [
+        ...getNavigationCommandItems({
+          currentView,
+          onGoToToday,
+          onNavigateToView: (viewName) =>
+            navigate({ to: getNavigationViewRoute(viewName) }),
+          onShowShortcuts,
+          onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
+          onShowWelcomeGuide,
+        }),
+        ...legendCmdItems,
+      ],
     },
     {
       id: "general",
@@ -424,6 +509,7 @@ export const CommandPalette = ({
 
   return (
     <CommandPaletteContent
+      currentView={currentView}
       placeholder={placeholder}
       sections={sectionsWithRecent}
     />
@@ -441,21 +527,26 @@ export const LifeCommandPalette = ({
   const themeCmdItems = useThemeCmdItems();
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
+  const legendCmdItems = usePaletteLegendCmdItems();
 
   if (!open) return null;
 
   return (
     <CommandPaletteContent
+      currentView="life"
       placeholder={placeholder}
       sections={[
         {
           id: "navigation",
           heading: "Navigation",
-          items: getNavigationCommandItems({
-            currentView: "life",
-            onNavigateToView: (viewName) =>
-              navigate({ to: getNavigationViewRoute(viewName) }),
-          }),
+          items: [
+            ...getNavigationCommandItems({
+              currentView: "life",
+              onNavigateToView: (viewName) =>
+                navigate({ to: getNavigationViewRoute(viewName) }),
+            }),
+            ...legendCmdItems,
+          ],
         },
         {
           id: "appearance",

@@ -5,6 +5,8 @@ export const USER_IDENTITIES_PROVIDER_SUBJECT_INDEX =
 
 export const HIDDEN_EVENT_USER_EVENT_INDEX = "hidden_event_user_event_unique";
 
+export const HIDDEN_EVENT_USER_CREATED_INDEX = "hidden_event_user_created";
+
 export async function ensureUserIndexes(): Promise<void> {
   await mongoService.user.createIndex(
     { "identities.provider": 1, "identities.subjectId": 1 },
@@ -17,5 +19,9 @@ export async function ensureUserIndexes(): Promise<void> {
   await mongoService.hiddenEvent.createIndex(
     { userId: 1, eventId: 1 },
     { name: HIDDEN_EVENT_USER_EVENT_INDEX, unique: true },
+  );
+  await mongoService.hiddenEvent.createIndex(
+    { userId: 1, createdAt: 1 },
+    { name: HIDDEN_EVENT_USER_CREATED_INDEX },
   );
 }

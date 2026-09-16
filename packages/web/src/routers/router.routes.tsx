@@ -25,6 +25,8 @@ import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal
 import {
   loadAuthenticated,
   loadDateParam,
+  loadWeekDate,
+  loadWeekEvents,
   redirectToDefaultCalendar,
   redirectToToday,
   validateDayDateParam,
@@ -49,6 +51,12 @@ export const calendarShellRoute = createRoute({
     () => import("@web/components/RootShell/RootShell"),
     "RootShell",
   ),
+});
+
+export const publicShortcutsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROOT_ROUTES.SHORTCUTS,
+  component: NotFoundView,
 });
 
 export const publicBookRoute = createRoute({
@@ -185,6 +193,7 @@ export const dayIndexRoute = createRoute({
 export const weekRoute = createRoute({
   getParentRoute: () => authenticatedLayoutRoute,
   path: ROOT_ROUTES.WEEK,
+  loader: loadWeekEvents,
   component: lazyRouteComponent(
     () => import("@web/views/Week/WeekView"),
     "WeekView",
@@ -195,7 +204,7 @@ export const weekDateRoute = createRoute({
   getParentRoute: () => weekRoute,
   path: "$dateString",
   beforeLoad: validateWeekDateParam,
-  loader: loadDateParam,
+  loader: loadWeekDate,
 });
 
 export const weekIndexRoute = createRoute({
@@ -250,6 +259,7 @@ const calendarShellChildren = calendarShellRoute.addChildren([
 
 export const routeTree = rootRoute.addChildren([
   calendarShellChildren,
+  publicShortcutsRoute,
   ...(IS_BOOKING_ENABLED
     ? [
         publicBookConfirmedRoute,

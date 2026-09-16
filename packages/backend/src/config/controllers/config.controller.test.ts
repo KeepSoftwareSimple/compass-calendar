@@ -1,8 +1,9 @@
 import { type Request, type Response } from "express";
-import { type AppConfig } from "@core/types/config.types";
+import { NodeEnv } from "@core/constants/core.constants";
+import { type AppConfig, AppConfigSchema } from "@core/types/config.types";
 import { CONFIG } from "@backend/common/constants/config.constants";
-import configController from "./config.controller";
-import { afterEach, describe, expect, it } from "bun:test";
+import configController, { buildAppConfig } from "./config.controller";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 // Capture what the controller writes via res.json without a real HTTP round-trip.
 const invokeGet = (): AppConfig => {
@@ -37,7 +38,7 @@ describe("ConfigController.get sync cutover posture", () => {
     CONFIG.SYNC_CLOUD_MUTATION_MODE = "maintenance";
     CONFIG.SYNC_EXECUTION = "passive";
 
-    const config = invokeGet();
+    const config = buildAppConfig(CONFIG);
     expect(config.sync).toEqual({
       cloudMutationMode: "maintenance",
       execution: "passive",
@@ -60,12 +61,12 @@ describe("ConfigController.get billing enforcement", () => {
 
   it("defaults to paused", () => {
     CONFIG.BILLING_ENFORCEMENT = false;
-    expect(invokeGet().billing.enforcement).toBe(false);
+    expect(buildAppConfig(CONFIG).billing.enforcement).toBe(false);
   });
 
   it("reports true once the operator enables it", () => {
     CONFIG.BILLING_ENFORCEMENT = true;
-    expect(invokeGet().billing.enforcement).toBe(true);
+    expect(buildAppConfig(CONFIG).billing.enforcement).toBe(true);
   });
 });
 
@@ -90,8 +91,8 @@ describe("ConfigController.get billing publishableKey", () => {
     CONFIG.STRIPE_PRICE_ID = undefined;
     CONFIG.STRIPE_PUBLISHABLE_KEY = undefined;
 
-    expect(invokeGet().billing.publishableKey).toBeNull();
-    expect(invokeGet().billing.isConfigured).toBe(false);
+    expect(buildAppConfig(CONFIG).billing.publishableKey).toBeNull();
+    expect(buildAppConfig(CONFIG).billing.isConfigured).toBe(false);
   });
 
   it("returns the configured key when Stripe is fully configured", () => {
@@ -100,7 +101,123 @@ describe("ConfigController.get billing publishableKey", () => {
     CONFIG.STRIPE_PRICE_ID = "price_test";
     CONFIG.STRIPE_PUBLISHABLE_KEY = "pk_test_123";
 
-    expect(invokeGet().billing.publishableKey).toBe("pk_test_123");
-    expect(invokeGet().billing.isConfigured).toBe(true);
+    expect(buildAppConfig(CONFIG).billing.publishableKey).toBe("pk_test_123");
+    expect(buildAppConfig(CONFIG).billing.isConfigured).toBe(true);
+  });
+});
+
+describe("ConfigController.get parsed payload", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
+  it("parses AppConfigSchema once across two requests", () => {
+    const parse = spyOn(AppConfigSchema, "parse");
+
+    const first = invokeGet();
+    const second = invokeGet();
+
+    expect(first).toBe(second);
+    expect(parse).not.toHaveBeenCalled();
+  });
+});
+
+describe("buildAppConfig provider flags", () => {
+  it("reports Google unavailable when credentials are absent", () => {
+    const originalClientId = CONFIG.GOOGLE_CLIENT_ID;
+    const originalClientSecret = CONFIG.GOOGLE_CLIENT_SECRET;
+    CONFIG.GOOGLE_CLIENT_ID = undefined;
+    CONFIG.GOOGLE_CLIENT_SECRET = undefined;
+
+    try {
+      const config = buildAppConfig(CONFIG);
+      expect(config.google.isConfigured).toBe(false);
+      expect(config.providers.google).toEqual({
+        signIn: false,
+        connect: false,
+      });
+    } finally {
+      CONFIG.GOOGLE_CLIENT_ID = originalClientId;
+      CONFIG.GOOGLE_CLIENT_SECRET = originalClientSecret;
+    }
+  });
+
+  it("returns providers.google.connect true on a Google-only config", () => {
+    const originals = {
+      googleId: CONFIG.GOOGLE_CLIENT_ID,
+      googleSecret: CONFIG.GOOGLE_CLIENT_SECRET,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.GOOGLE_CLIENT_ID = "client-id";
+    CONFIG.GOOGLE_CLIENT_SECRET = "client-secret";
+    CONFIG.MICROSOFT_CLIENT_ID = undefined;
+    CONFIG.MICROSOFT_CLIENT_SECRET = undefined;
+
+    try {
+      const config = buildAppConfig(CONFIG);
+      expect(config.google.isConfigured).toBe(true);
+      expect(config.providers.google.connect).toBe(true);
+      expect(config.providers.microsoft.connect).toBe(false);
+    } finally {
+      CONFIG.GOOGLE_CLIENT_ID = originals.googleId;
+      CONFIG.GOOGLE_CLIENT_SECRET = originals.googleSecret;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
+  });
+
+  it("normalizes the deployed version", () => {
+    const original = CONFIG.VERSION;
+    CONFIG.VERSION = "v9.8.7";
+    try {
+      expect(buildAppConfig(CONFIG).version).toBe("9.8.7");
+    } finally {
+      CONFIG.VERSION = original;
+    }
+  });
+
+  it("hides Microsoft in production even when credentials are configured", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Production;
+    CONFIG.MICROSOFT_CLIENT_ID = "ms-client-id";
+    CONFIG.MICROSOFT_CLIENT_SECRET = "ms-client-secret";
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.microsoft).toEqual({
+        signIn: false,
+        connect: false,
+      });
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
+  });
+
+  it("offers Microsoft in staging when credentials are configured", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
+      microsoftSecret: CONFIG.MICROSOFT_CLIENT_SECRET,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Staging;
+    CONFIG.MICROSOFT_CLIENT_ID = "ms-client-id";
+    CONFIG.MICROSOFT_CLIENT_SECRET = "ms-client-secret";
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.microsoft).toEqual({
+        signIn: true,
+        connect: true,
+      });
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.MICROSOFT_CLIENT_ID = originals.microsoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originals.microsoftSecret;
+    }
   });
 });

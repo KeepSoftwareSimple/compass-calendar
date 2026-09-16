@@ -1,4 +1,5 @@
 import {
+  type EventNudgeStep,
   getArrowKeyMovement,
   isTimedEventInsideOneDay,
 } from "@web/common/utils/event/event-nudge.util";
@@ -28,17 +29,19 @@ export const repositionDraftByKeyboard = ({
   draft,
   key,
   isStartAllowed,
+  step = "fine",
 }: {
   activity: Activity_DraftEvent | null | undefined;
   draft: GridEventDraft | null | undefined;
   key: string;
   /** Optional bound for the draft's next start (e.g. Week visible range). */
   isStartAllowed?: (nextStart: Date) => boolean;
+  step?: EventNudgeStep;
 }): GridEventDraft | null => {
   if (!canRepositionDraftByKeyboard(activity) || !draft) return null;
 
   const isAllDay = draft.values.schedule.kind === "allDay";
-  const movement = getArrowKeyMovement(key, isAllDay);
+  const movement = getArrowKeyMovement(key, isAllDay, step);
   if (!movement) return null;
 
   const start = inEffectiveTimeZone(draft.values.schedule.start);

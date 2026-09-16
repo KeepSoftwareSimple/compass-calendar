@@ -18,18 +18,24 @@ export const CALENDAR_VISIBILITY_FAILURE_MESSAGE =
  * every calendar (client filter is the source of truth).
  */
 export function useCalendarVisibility() {
-  const [failureAnnouncement, setFailureAnnouncement] = useState("");
+  const [announcement, setAnnouncement] = useState("");
 
   const toggleCalendarVisibility = (
     calendarId: CalendarId,
     isVisible: boolean,
+    label: string,
   ) => {
     const saved = setCalendarVisibility(calendarId, isVisible);
     if (!saved) {
       showErrorToast(CALENDAR_VISIBILITY_FAILURE_MESSAGE);
-      setFailureAnnouncement(CALENDAR_VISIBILITY_FAILURE_MESSAGE);
+      setAnnouncement(CALENDAR_VISIBILITY_FAILURE_MESSAGE);
+      return;
     }
+
+    setAnnouncement(
+      isVisible ? `Showing ${label} calendar` : `Hidden ${label} calendar`,
+    );
   };
 
-  return { toggleCalendarVisibility, failureAnnouncement };
+  return { toggleCalendarVisibility, announcement };
 }

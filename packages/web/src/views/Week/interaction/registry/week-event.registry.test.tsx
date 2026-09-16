@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
 import {
@@ -66,6 +67,10 @@ const weekProps = {
     weekDays: [...Array(7)].map((_, index) => startOfView.add(index, "day")),
   },
 } as WeekProps;
+const visibleDates = weekProps.component.weekDays.map((date) => ({
+  date,
+  key: date.format(YEAR_MONTH_DAY_FORMAT),
+}));
 const _pastWeekProps = {
   component: {
     endOfView: pastWeekStart.add(7, "day"),
@@ -145,11 +150,9 @@ const RegistrationHarness = ({
 };
 
 const RegisteredTimedEventHarness = ({
-  calendarWeekProps = weekProps,
   displayMode = "saved",
   event,
 }: {
-  calendarWeekProps?: WeekProps;
   displayMode?: "draft" | "placeholder" | "saved";
   event: GridEventEntity;
 }) => {
@@ -174,7 +177,7 @@ const RegisteredTimedEventHarness = ({
       }
       measurements={measurements}
       ref={ref}
-      weekProps={calendarWeekProps}
+      visibleDates={visibleDates}
     />
   );
 };
@@ -207,7 +210,7 @@ const RegisteredAllDayEventHarness = ({
       isPlaceholder={isPlaceholder}
       measurements={measurements}
       ref={ref}
-      weekDays={weekProps.component.weekDays}
+      visibleDates={visibleDates}
     />
   );
 };

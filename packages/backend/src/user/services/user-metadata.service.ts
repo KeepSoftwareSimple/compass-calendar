@@ -72,6 +72,10 @@ class UserMetadataService {
     userId: string;
     data: Partial<UserMetadata>;
   }): Promise<UserMetadata> => {
+    // Read-modify-write is not atomic: two concurrent updates can each read
+    // the same snapshot, and the later write silently drops the other's
+    // fields. Out of scope here; a compare-and-swap at the SuperTokens store
+    // would close it.
     const storedMetadata = await this.getStoredUserMetadata(userId);
     const value = hasLegacyEmailUpdatesMetadata(storedMetadata)
       ? removeLegacyEmailUpdatesMetadata(storedMetadata)
@@ -103,16 +107,18 @@ class UserMetadataService {
     userId: string,
     userContext?: Record<string, unknown>,
   ): Promise<UserMetadata> => {
-    const storedMetadata = await this.getStoredUserMetadata(
-      userId,
-      userContext,
-    );
+    // SuperTokens metadata and the Sync connection list are independent
+    // upstreams. Await them together so GET /api/user/metadata and the SSE
+    // connect handshake pay one hop, not two in series.
+    const [storedMetadata, { connectionState, connections }] =
+      await Promise.all([
+        this.getStoredUserMetadata(userId, userContext),
+        this.assessGoogleMetadata(userId),
+      ]);
     const metadata = hasLegacyEmailUpdatesMetadata(storedMetadata)
       ? removeLegacyEmailUpdatesMetadata(storedMetadata)
       : storedMetadata;
 
-    const { connectionState, connections } =
-      await this.assessGoogleMetadata(userId);
     const googleConnections = connections.filter(
       (connection) => connection.provider === "google",
     );

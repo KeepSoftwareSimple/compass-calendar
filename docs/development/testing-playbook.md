@@ -48,8 +48,8 @@ Unit workflow (`test-unit.yml`):
 - runs a matrix across `core`, `sync`, `web, 1`, `web, 2`, `backend`, and `scripts`
 - uses `fail-fast: false`, so one failing lane does not cancel the others
 - runs `bun run test:<project>` in each lane after dependency install
-- runs `unit (web, 1)` and `unit (web, 2)` with `WEB_TEST_SHARDS=4` and
-  `WEB_TEST_SHARD_INDEX` `1,2` / `3,4` so each leg is two sequential
+- runs `unit (web, 1)` and `unit (web, 2)` with `WEB_TEST_SHARDS=6` and
+  `WEB_TEST_SHARD_INDEX` `1,2,3` / `4,5,6` so each leg is three sequential
   RSS-safe processes covering half the suite
 - runs every lane with `TZ: Etc/UTC` set
 - does not install Node on Bun-only jobs
@@ -80,7 +80,7 @@ E2E workflow (`test-e2e.yml`) is separate and runs on pull requests, merge-queue
 Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been removed.
 
 - `bun run test:core` — `test-parallel.ts core`: `bun test --parallel` with `core.preload.ts`.
-- `bun run test:web` — `test-parallel.ts web`: sequential `bun test` processes with `web.preload.ts` (jsdom, MSW, Zustand reset, injectable test seams). Files run sequentially inside each process — not `--parallel` — because MSW/jsdom globals do not survive Bun's per-file `--isolate`. Default local behavior is four sequential shards (`WEB_TEST_SHARDS`). Set `WEB_TEST_SHARD_INDEX` to run only one shard (CI uses two shards as `unit (web, 1)` and `unit (web, 2)`). See [Web native parallel (future / blocked)](#web-native-parallel-future--blocked).
+- `bun run test:web` — `test-parallel.ts web`: sequential `bun test` processes with `web.preload.ts` (jsdom, MSW, Zustand reset, injectable test seams). Files run sequentially inside each process — not `--parallel` — because MSW/jsdom globals do not survive Bun's per-file `--isolate`. Default local behavior is six sequential shards (`WEB_TEST_SHARDS`). Set `WEB_TEST_SHARD_INDEX` to run only one shard (CI packs three shards into `unit (web, 1)` and three into `unit (web, 2)`). See [Web native parallel (future / blocked)](#web-native-parallel-future--blocked).
 - `bun run test:backend`, `bun run test:scripts`, and `bun run test:sync` — `test-mongo-env.ts` boots one shared in-memory Mongo replica set, then runs `bun test --parallel` with the package preload. Per-file DB names come from `setupTestDb(import.meta.url)`.
 - `bun run test:backend:fast`, `bun run test:sync:fast`, and `bun run test:scripts:fast` — `test-parallel.ts` with mongo-free preloads; excludes `*.db.test.*` via `--path-ignore-patterns`. No mongod boot — use these for day-to-day backend/sync/scripts work that does not touch persistence.
 - Backend and web SuperTokens, toast, and Google-auth behavior in tests use injectable seams (`TestGcalFixture`, `session.middleware`, `supertokens.registry`, `session.port`, `emailpassword.port`, `toast.port`, `useStartGoogleAuthorization.registry`, `useCompleteAuthentication.registry`, `LoggerFactory`) instead of preload `mock.module` clusters.

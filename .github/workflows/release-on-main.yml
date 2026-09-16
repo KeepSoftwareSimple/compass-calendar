@@ -85,3 +85,18 @@ jobs:
     with:
       tag: ${{ needs.tag-release.outputs.release_tag }}
     secrets: inherit
+
+  # A broken release was silent for most of a day (#3814-#3816). deploy-staging
+  # is not listed: deploy-staging.yml has its own notify-failure job, which in
+  # this nested run already posts under this workflow's name and run URL.
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - tag-release
+      - publish-docker-images
+    uses: ./.github/workflows/_notify-failure.yml
+    with:
+      tag: ${{ needs.tag-release.outputs.release_tag || 'not tagged' }}
+      needs_json: ${{ toJSON(needs) }}
+    secrets: inherit

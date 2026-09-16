@@ -168,10 +168,6 @@ export const KEYDOWN_LISTENER_ALLOWLIST: ConstraintAllow[] = [
     glob: "packages/web/src/components/ShortcutShowcase/ShortcutShowcase.tsx",
     reason: "the showcase game simulates the engine in capture phase",
   },
-  {
-    glob: "packages/web/src/events/recurrence/RecurrenceScopeOpportunityHost.tsx",
-    reason: "scope prompt intercepts keys before the grid engine",
-  },
 ];
 
 const REEXPORT_FROM =

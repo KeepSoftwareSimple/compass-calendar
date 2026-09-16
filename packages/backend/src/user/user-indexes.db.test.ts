@@ -8,6 +8,7 @@ import mongoService from "@backend/common/services/mongo.service";
 import { identitiesProviderSubjectFilter } from "@backend/user/queries/user.queries";
 import {
   ensureUserIndexes,
+  HIDDEN_EVENT_USER_CREATED_INDEX,
   HIDDEN_EVENT_USER_EVENT_INDEX,
   USER_IDENTITIES_PROVIDER_SUBJECT_INDEX,
 } from "@backend/user/user-indexes";
@@ -25,6 +26,7 @@ const indexNamesFromPlan = (stage: unknown, names: string[] = []): string[] => {
   const record = stage as Record<string, unknown>;
   if (typeof record["indexName"] === "string") names.push(record["indexName"]);
   if (record["inputStage"]) indexNamesFromPlan(record["inputStage"], names);
+  if (record["queryPlan"]) indexNamesFromPlan(record["queryPlan"], names);
   if (Array.isArray(record["inputStages"])) {
     for (const child of record["inputStages"]) {
       indexNamesFromPlan(child, names);
@@ -122,5 +124,26 @@ describe("user indexes", () => {
     expect(indexes.map((index) => index.name)).toContain(
       HIDDEN_EVENT_USER_EVENT_INDEX,
     );
+  });
+
+  it("uses the userId+createdAt index when listing hidden events in created order", async () => {
+    const userId = new ObjectId();
+    for (let index = 0; index < 8; index += 1) {
+      await mongoService.hiddenEvent.insertOne({
+        _id: new ObjectId(),
+        userId,
+        eventId: `evt-${index}`,
+        createdAt: new Date(Date.UTC(2026, 0, index + 1)),
+      });
+    }
+
+    const explained = await mongoService.hiddenEvent
+      .find({ userId }, { projection: { eventId: 1 } })
+      .sort({ createdAt: 1 })
+      .explain("queryPlanner");
+    const plan = (explained as { queryPlanner?: { winningPlan?: unknown } })
+      .queryPlanner?.winningPlan;
+    const used = indexNamesFromPlan(plan);
+    expect(used).toContain(HIDDEN_EVENT_USER_CREATED_INDEX);
   });
 });

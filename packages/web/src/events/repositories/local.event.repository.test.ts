@@ -7,10 +7,13 @@ import {
 } from "@core/types/domain-primitives";
 import { decodeOccurrenceId } from "@core/util/occurrence-id";
 import { createMockLocalEventRecord } from "@web/__tests__/utils/factories/event.factory";
-import { type OfflineDataStore } from "@web/common/storage/offline-data/offline-data.store.registry";
+import {
+  type OfflineDataStore,
+  resetOfflineDataStoreForTests,
+} from "@web/common/storage/offline-data/offline-data.store.registry";
 import { LocalEventRepository } from "@web/events/repositories/local.event.repository";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const putEvent = mock();
 const getAllEvents = mock();
@@ -763,5 +766,51 @@ describe("LocalEventRepository", () => {
     expect(
       stored.find((entry) => entry.id === head.id)?.event.content,
     ).toMatchObject({ title: "Head renamed" });
+  });
+});
+
+describe("LocalEventRepository default store", () => {
+  afterEach(() => {
+    resetOfflineDataStoreForTests();
+  });
+
+  it("waits for offline store init before listing", async () => {
+    let finish: (() => void) | undefined;
+    const initialize = mock(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const getAllEvents = mock(async () => [] as LocalEventRecord[]);
+    resetOfflineDataStoreForTests({
+      initialize,
+      isReady: () => false,
+      getEvents: async () => [],
+      getAllEvents,
+      searchByTitle: async () => [],
+      putEvent: async () => undefined,
+      putEvents: async () => undefined,
+      deleteEvent: async () => undefined,
+      clearAllEvents: async () => undefined,
+      getAllTasks: async () => [],
+      getTaskCount: async () => 0,
+      clearAllTasks: async () => undefined,
+      getMigrationRecords: async () => [],
+      setMigrationRecord: async () => undefined,
+    });
+
+    const pending = new LocalEventRepository().list({
+      kind: "range",
+      start: "2026-05-03T00:00:00.000Z",
+      end: "2026-05-10T00:00:00.000Z",
+    } as never);
+
+    await Promise.resolve();
+    expect(getAllEvents).not.toHaveBeenCalled();
+
+    finish?.();
+    await pending;
+    expect(getAllEvents).toHaveBeenCalled();
   });
 });

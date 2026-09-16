@@ -1,4 +1,5 @@
-import { type FC } from "react";
+import { type FC, useMemo } from "react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
 import { focusEventFormTitle } from "@web/common/utils/form/form.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
@@ -9,6 +10,7 @@ import {
   isDraftRenderedInAllDayRow,
 } from "@web/grid/layout/all-day-draft.position";
 import { type TimedDeckLayout } from "@web/grid/layout/timed-deck.layout";
+import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { GridEvent } from "@web/views/Week/components/Event/Grid/GridEvent/GridEvent";
 import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -41,6 +43,14 @@ export const GridDraft: FC<Props> = ({
   weekProps,
 }) => {
   const draftAsGridEvent = gridEventDraftToGridEvent(draft);
+  const visibleDates: GridVisibleDate[] = useMemo(
+    () =>
+      weekProps.component.weekDays.map((date) => ({
+        date,
+        key: date.format(YEAR_MONTH_DAY_FORMAT),
+      })),
+    [weekProps.component.weekDays],
+  );
   const rendersInAllDayRow = isDraftRenderedInAllDayRow(draft);
   const allDayDraftEvent = rendersInAllDayRow
     ? (activeAllDayDraftEvent ?? draftToAllDayRowGridEvent(draft))
@@ -72,7 +82,7 @@ export const GridDraft: FC<Props> = ({
           }
           key={`draft-preview-${preview.startDate}`}
           measurements={measurements}
-          weekProps={weekProps}
+          visibleDates={visibleDates}
         />
       ))}
 
@@ -84,7 +94,7 @@ export const GridDraft: FC<Props> = ({
           key={`draft-${draftAsGridEvent._id}`}
           measurements={measurements}
           onKeyDown={openDraftFormOrFocusTitle}
-          weekDays={weekProps.component.weekDays}
+          visibleDates={visibleDates}
         />
       ) : (
         <GridEvent
@@ -95,7 +105,7 @@ export const GridDraft: FC<Props> = ({
           key={`draft-${draftAsGridEvent._id}`}
           measurements={measurements}
           onEventKeyDown={openDraftFormOrFocusTitle}
-          weekProps={weekProps}
+          visibleDates={visibleDates}
         />
       )}
     </>

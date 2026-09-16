@@ -1,6 +1,7 @@
 import {
   getCommandPalettePlaceholder,
   getMoreCommandPaletteSections,
+  getSettingsCommandItem,
   PERSONAL_ONBOARDING_URL,
 } from "@web/components/CommandPalette/more.cmd.constants";
 import {
@@ -10,9 +11,12 @@ import {
 } from "@web/components/Feedback/feedback.store";
 import {
   selectIsAboutOpen,
+  selectIsSettingsOpen,
   selectOverlayOpenedFromPalette,
+  selectSettingsPage,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 describe("getMoreCommandPaletteSections", () => {
@@ -23,6 +27,8 @@ describe("getMoreCommandPaletteSections", () => {
     feedbackActions.close();
     useSettingsStore.setState({
       isAboutOpen: false,
+      isSettingsOpen: false,
+      settingsPage: "accounts",
       overlayOpenedFromPalette: false,
     });
     mockWindowOpen.mockClear();
@@ -36,20 +42,21 @@ describe("getMoreCommandPaletteSections", () => {
   it("omits feedback commands when PostHog is not enabled", () => {
     const [section] = getMoreCommandPaletteSections("week", false);
 
-    expect(section.items).toHaveLength(2);
-    expect(section.items[0].label).toBe("Book personal onboarding");
-    expect(section.items[1].label).toBe("About Compass");
-    expect(getCommandPalettePlaceholder("day", false)).not.toContain("bug");
-    expect(getCommandPalettePlaceholder("week", false)).not.toContain(
-      "feedback",
+    expect(section.items).toHaveLength(3);
+    expect(section.items[0].label).toBe("Settings");
+    expect(section.items[1].label).toBe("Book personal onboarding");
+    expect(section.items[2].label).toBe("About Compass");
+    expect(getCommandPalettePlaceholder("day", false)).toBe(
+      "Search commands, events, or type a date",
     );
-    expect(getCommandPalettePlaceholder("week", false)).toContain("play");
-    expect(getCommandPalettePlaceholder("day", false)).toContain("play");
+    expect(getCommandPalettePlaceholder("week", false)).toBe(
+      "Search commands, events, or type a date",
+    );
   });
 
   it("opens the feedback request from the cloud command", () => {
     const [section] = getMoreCommandPaletteSections("day", true);
-    expect(section.items).toHaveLength(3);
+    expect(section.items).toHaveLength(4);
     expect(
       section.items.find((item) => item.id === "report-bug"),
     ).toBeUndefined();
@@ -64,9 +71,9 @@ describe("getMoreCommandPaletteSections", () => {
     expect(selectOverlayOpenedFromPalette(useSettingsStore.getState())).toBe(
       true,
     );
-    expect(getCommandPalettePlaceholder("day", true)).toContain("feedback");
-    expect(getCommandPalettePlaceholder("day", true)).toContain("play");
-    expect(getCommandPalettePlaceholder("day", true)).not.toContain("bug");
+    expect(getCommandPalettePlaceholder("day", true)).toBe(
+      "Search commands, events, or type a date",
+    );
   });
 
   it("offers feedback from Life", () => {
@@ -77,7 +84,7 @@ describe("getMoreCommandPaletteSections", () => {
       view: "life",
     });
     expect(getCommandPalettePlaceholder("life", true)).toBe(
-      "Try: 'day', 'week', or 'feedback'",
+      "Search commands, events, or type a date",
     );
   });
 
@@ -106,6 +113,21 @@ describe("getMoreCommandPaletteSections", () => {
       PERSONAL_ONBOARDING_URL,
       "_blank",
       "noopener,noreferrer",
+    );
+  });
+
+  it("opens Settings from the settings command", () => {
+    const item = getSettingsCommandItem();
+
+    expect(item.shortcut).toEqual([
+      ...APP_SHORTCUT_BINDINGS.otherSettings.keycaps,
+    ]);
+    item.onClick?.();
+
+    expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(true);
+    expect(selectSettingsPage(useSettingsStore.getState())).toBe("accounts");
+    expect(selectOverlayOpenedFromPalette(useSettingsStore.getState())).toBe(
+      true,
     );
   });
 });

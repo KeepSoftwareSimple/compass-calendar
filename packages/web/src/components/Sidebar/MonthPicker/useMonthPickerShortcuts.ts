@@ -9,6 +9,16 @@ const MONTH_PICKER_SHORTCUT_OPTIONS = {
   stopPropagation: true,
 } as const;
 
+const MONTH_PICKER_PREV_OPTIONS = {
+  ...MONTH_PICKER_SHORTCUT_OPTIONS,
+  shortcutId: "nav-month-prev" as const,
+};
+
+const MONTH_PICKER_NEXT_OPTIONS = {
+  ...MONTH_PICKER_SHORTCUT_OPTIONS,
+  shortcutId: "nav-month-next" as const,
+};
+
 /**
  * Mod+Shift+, / Mod+Shift+. step the sidebar month picker's displayed month
  * the same way the chevrons do. Registered only while the picker is mounted.
@@ -28,21 +38,21 @@ export function useMonthPickerShortcuts({
   useAppShortcut(
     { key: ",", mod: true, shift: true },
     onPrevMonth,
-    MONTH_PICKER_SHORTCUT_OPTIONS,
+    MONTH_PICKER_PREV_OPTIONS,
   );
   useAppShortcut(
     { key: "<", mod: true, shift: true },
     onPrevMonth,
-    MONTH_PICKER_SHORTCUT_OPTIONS,
+    MONTH_PICKER_PREV_OPTIONS,
   );
   useAppShortcut(
     { key: ".", mod: true, shift: true },
     onNextMonth,
-    MONTH_PICKER_SHORTCUT_OPTIONS,
+    MONTH_PICKER_NEXT_OPTIONS,
   );
   useAppShortcut(
     { key: ">", mod: true, shift: true },
     onNextMonth,
-    MONTH_PICKER_SHORTCUT_OPTIONS,
+    MONTH_PICKER_NEXT_OPTIONS,
   );
 }

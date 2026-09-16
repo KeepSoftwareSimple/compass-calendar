@@ -28,6 +28,10 @@ import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import {
+  initialEventClipboardState,
+  useEventClipboardStore,
+} from "@web/events/stores/event-clipboard.store";
+import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
@@ -104,6 +108,10 @@ const allDayEventContract = createMockEvent({
 const shiftKey = {
   keyDownInit: { shiftKey: true },
   keyUpInit: { shiftKey: true },
+};
+const altShiftKey = {
+  keyDownInit: { altKey: true, shiftKey: true },
+  keyUpInit: { altKey: true, shiftKey: true },
 };
 
 const focusCalendarTarget = (
@@ -229,6 +237,14 @@ const getEditMutation = (
     .getAll()
     .find((mutation) => mutation.options.mutationKey?.[2] === "replace");
 
+const getCreateMutation = (
+  queryClient: ReturnType<typeof createCompassQueryClient>,
+) =>
+  queryClient
+    .getMutationCache()
+    .getAll()
+    .find((mutation) => mutation.options.mutationKey?.[2] === "create");
+
 beforeEach(() => {
   // Pin midday so keyboardPlace drafts (seeded from dayjs().hour()) do not
   // land near midnight and reject the next 15-minute Shift+Arrow move.
@@ -243,8 +259,15 @@ afterEach(() => {
   dayEventRegistry.clear();
   draftActions.discard();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
+  useEventClipboardStore.setState(initialEventClipboardState, true);
   document.body.innerHTML = "";
   setSystemTime();
+  window.dispatchEvent(
+    new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "c" }),
+  );
+  window.dispatchEvent(
+    new KeyboardEvent("keyup", { bubbles: true, cancelable: true, key: "v" }),
+  );
 });
 
 describe("useDayEventNudgeShortcuts", () => {
@@ -317,6 +340,76 @@ describe("useDayEventNudgeShortcuts", () => {
       offsetString(dayjs(timedEvent.startDate).add(1, "day")),
     );
     expect(navigateToDate).toHaveBeenCalled();
+  });
+
+  it("moves the focused timed event an hour earlier with Alt+Shift+ArrowUp", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+
+    pressKey("ArrowUp", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).subtract(60, "minutes")),
+    );
+    expect(input.schedule.end).toBe(
+      offsetString(dayjs(timedEvent.endDate).subtract(60, "minutes")),
+    );
+  });
+
+  it("moves the focused timed event a week later with Alt+Shift+ArrowRight", async () => {
+    const navigateToDate = mock(() => {});
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts({ navigateToDate });
+
+    pressKey("ArrowRight", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).add(7, "day")),
+    );
+    expect(navigateToDate).toHaveBeenCalled();
+  });
+
+  it("moves the focused all-day event a week earlier with Alt+Shift+ArrowLeft", async () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+      timedEvents: [],
+    });
+
+    pressKey("ArrowLeft", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe("2026-05-13");
+    expect(input.schedule.end).toBe("2026-05-14");
+  });
+
+  it("does not convert an all-day event with Alt+Shift+ArrowDown", async () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+      timedEvents: [],
+    });
+
+    pressKey("ArrowDown", altShiftKey);
+
+    expect(getEditMutation(queryClient)).toBeUndefined();
   });
 
   it("moves the focused all-day event to the previous day with Shift+ArrowLeft", async () => {
@@ -739,6 +832,36 @@ describe("useDayEventNudgeShortcuts", () => {
     expect(useEdgeFocusStore.getState().edge).toBe("endDate");
   });
 
+  it("moves only the start edge an hour with Alt+Shift+ArrowUp when that edge is focused", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+    pressKey("Tab");
+
+    pressKey("ArrowUp", altShiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    const { input } = getEditMutation(queryClient)?.state.variables as {
+      input: { schedule: { start: string; end: string } };
+    };
+    expect(input.schedule.start).toBe(
+      offsetString(dayjs(timedEvent.startDate).subtract(60, "minutes")),
+    );
+    expect(input.schedule.end).toBe(offsetString(dayjs(timedEvent.endDate)));
+    expect(useEdgeFocusStore.getState().edge).toBe("startDate");
+  });
+
+  it("refuses Alt+Shift+ArrowLeft on a timed edge", async () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+    pressKey("Tab");
+
+    pressKey("ArrowLeft", altShiftKey);
+
+    expect(getEditMutation(queryClient)).toBeUndefined();
+  });
+
   it("flips the focused edge from start to end past the minimum duration", async () => {
     const shortEvent: GridEvent = {
       ...timedEvent,
@@ -787,5 +910,58 @@ describe("useDayEventNudgeShortcuts", () => {
     });
 
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
+  });
+
+  it("pastes a copied timed event onto the focused column day", () => {
+    focusCalendarTarget(TIMED_EVENT_ID, "timed");
+    const { queryClient } = renderEditShortcuts();
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: {
+        content: { title: string };
+        schedule: { start: string; end: string };
+      };
+    };
+    expect(input.content.title).toBe("Timed event");
+    expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-08-05T09:00",
+    );
+    expect(dayjs(input.schedule.end).format("YYYY-MM-DDTHH:mm")).toBe(
+      "2026-08-05T10:00",
+    );
+  });
+
+  it("pastes an all-day copy onto the focused column and keeps its length", () => {
+    focusCalendarTarget(ALL_DAY_EVENT_ID, "all-day");
+    const { queryClient } = renderEditShortcuts({
+      allDayEvents: [allDayEvent],
+    });
+
+    pressKey("c", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+    pressKey("v", {
+      keyDownInit: { ctrlKey: true },
+      keyUpInit: { ctrlKey: true },
+    });
+
+    const { input } = getCreateMutation(queryClient)?.state.variables as {
+      input: { schedule: { kind: string; start: string; end: string } };
+    };
+    expect(input.schedule).toEqual({
+      kind: "allDay",
+      start: "2026-08-05",
+      end: "2026-08-06",
+    });
   });
 });

@@ -1,7 +1,7 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type CompassEvent } from "@core/types/compass-event.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
-import dayjs from "@core/util/date/dayjs";
+import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import {
   computeCurrentEventDateRange,
   computeRelativeEventDateRange,
@@ -12,7 +12,10 @@ import {
   getTimeOptionByValue,
   getTimesLabel,
   getWeekRangeLabel,
+  goToDateAnnouncement,
+  goToDatePaletteLabel,
   mapToBackend,
+  parseUserDate,
   parseUserTime,
   toUTCOffset,
   tryMapToBackend,
@@ -651,5 +654,52 @@ describe("mapToBackend timed overnight", () => {
     expect(schedule.kind).toBe("timed");
     if (schedule.kind !== "timed") return;
     expect(schedule.timeZone).toBe(TimeZoneSchema.parse("America/Chicago"));
+  });
+});
+
+describe("parseUserDate", () => {
+  const now = dayjs("2026-09-15T12:00:00.000Z");
+  const ymd = (value: Dayjs | null) => value?.format(YEAR_MONTH_DAY_FORMAT);
+
+  it.each([
+    ["2026-10-03", "2026-10-03"],
+    ["10/3", "2026-10-03"],
+    ["10/3/2026", "2026-10-03"],
+    ["10/3/26", "2026-10-03"],
+    ["oct 3", "2026-10-03"],
+    ["3 oct", "2026-10-03"],
+    ["october 3 2026", "2026-10-03"],
+  ] as const)("parses %s", (input, expected) => {
+    expect(ymd(parseUserDate(input, now))).toBe(expected);
+  });
+
+  it.each(["13/1", "oct", "hello"] as const)("rejects %s", (input) => {
+    expect(parseUserDate(input, now)).toBeNull();
+  });
+
+  it("uses next year when an omitted year is more than six months in the past", () => {
+    expect(ymd(parseUserDate("jan 3", now))).toBe("2027-01-03");
+    expect(ymd(parseUserDate("mar 14", now))).toBe("2027-03-14");
+    expect(ymd(parseUserDate("mar 15", now))).toBe("2026-03-15");
+  });
+});
+
+describe("goToDateAnnouncement", () => {
+  const date = dayjs("2026-10-03");
+
+  it("names the day on Day view", () => {
+    expect(goToDatePaletteLabel(date)).toBe("Go to Sat, Oct 3, 2026");
+    expect(goToDateAnnouncement(date, "day")).toBe(
+      "Showing Saturday, October 3, 2026",
+    );
+  });
+
+  it("names the week on Week and Life", () => {
+    expect(goToDateAnnouncement(date, "week")).toBe(
+      "Showing week of Saturday, October 3, 2026",
+    );
+    expect(goToDateAnnouncement(date, "life")).toBe(
+      "Showing week of Saturday, October 3, 2026",
+    );
   });
 });

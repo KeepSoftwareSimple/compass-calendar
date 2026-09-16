@@ -5,6 +5,10 @@ import {
   DEFAULT_CALENDAR_ROUTE,
   ROOT_ROUTES,
 } from "@web/common/constants/routes";
+import {
+  prefetchWeekEventsQuery,
+  weekDateStringFromPathname,
+} from "@web/events/queries/prefetch-week-events";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 
 export interface DayLoaderData {
@@ -97,4 +101,29 @@ export function loadDateParam({
     dateString: params.dateString,
     dateInView: dayjs.tz(params.dateString, getEffectiveTimeZone()),
   };
+}
+
+type WeekEventsLoaderArgs = {
+  params: { dateString?: string };
+  location: { pathname: string };
+  context: { authenticated?: boolean };
+};
+
+export function loadWeekEvents({
+  params,
+  location,
+  context,
+}: WeekEventsLoaderArgs): void {
+  prefetchWeekEventsQuery({
+    dateString:
+      params.dateString ?? weekDateStringFromPathname(location.pathname),
+    authenticated: context.authenticated === true,
+  });
+}
+
+export function loadWeekDate(
+  opts: WeekEventsLoaderArgs & { params: { dateString: string } },
+): DayLoaderData {
+  loadWeekEvents(opts);
+  return loadDateParam(opts);
 }

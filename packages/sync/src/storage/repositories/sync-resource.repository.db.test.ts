@@ -609,4 +609,60 @@ describe("SyncResourceRepository", () => {
       cursorExpiredBackoffUntil: holdOffUntil,
     });
   });
+
+  it("stamps calendarActive true on insert and the mutator flips it", async () => {
+    const tenantId = objectId() as SyncResourceUpsert["tenantId"];
+    const principalId = objectId() as SyncResourceUpsert["principalId"];
+    const calendarId = objectId() as CalendarId;
+    const resource = await repo.ensure(
+      upsert({ tenantId, principalId, calendarId }),
+    );
+    expect(resource.calendarActive).toBe(true);
+
+    await repo.setCalendarActiveByCalendarIds(
+      tenantId,
+      principalId,
+      [calendarId],
+      false,
+    );
+    expect(
+      (await repo.findById(tenantId, principalId, resource._id))
+        ?.calendarActive,
+    ).toBe(false);
+
+    await repo.setCalendarActiveByCalendarIds(
+      tenantId,
+      principalId,
+      [calendarId],
+      true,
+    );
+    expect(
+      (await repo.findById(tenantId, principalId, resource._id))
+        ?.calendarActive,
+    ).toBe(true);
+  });
+
+  it("listStaleEventsByPrincipal skips an inactive calendar", async () => {
+    const tenantId = objectId() as SyncResourceUpsert["tenantId"];
+    const principalId = objectId() as SyncResourceUpsert["principalId"];
+    const active = await repo.ensure(upsert({ tenantId, principalId }));
+    const inactive = await repo.ensure(upsert({ tenantId, principalId }));
+    if (!inactive.calendarId) throw new Error("expected an events resource");
+    await repo.setBootstrapState(tenantId, principalId, active._id, "ready");
+    await repo.setBootstrapState(tenantId, principalId, inactive._id, "ready");
+    await repo.setCalendarActiveByCalendarIds(
+      tenantId,
+      principalId,
+      [inactive.calendarId],
+      false,
+    );
+
+    const stale = await repo.listStaleEventsByPrincipal(
+      tenantId,
+      principalId,
+      new Date("2026-08-10T12:00:00.000Z"),
+    );
+
+    expect(stale.map((r) => r._id)).toEqual([active._id]);
+  });
 });

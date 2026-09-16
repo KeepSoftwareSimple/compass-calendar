@@ -113,12 +113,10 @@ export const useWeekShortcutOwner = ({
   // null calendarId while calendars are still loading.
   const canSeedDraft = !isCalendarsPending || Boolean(defaultTargetCalendarId);
 
-  // The day every create gesture lands on: a parked click, then a single
-  // jump-selected column, then the focused event's day, then today, then the
-  // first visible day. Typed times, C, Shift+C, and Shift+Arrow place-create
-  // all share it so "create an event" means the day the user is looking at.
-  const getTargetDay = useCallback(() => {
-    const now = dayjs().tz(getEffectiveTimeZone());
+  // Parked click, then a single jump-selected column, then the focused
+  // event's day. Null when none of those apply so C can fall back to today
+  // and paste can fall back to the copied event's own day.
+  const getExplicitTargetDay = useCallback((): Dayjs | null => {
     const { pointerDraftDateKey, activeDayKeys } = useEventJumpStore.getState();
     const focusedColumn = quickTimeFocusedColumnDay(
       pointerDraftDateKey,
@@ -127,20 +125,35 @@ export const useWeekShortcutOwner = ({
     const focusedEvent =
       weekEventTargeting.getFocusedNavigableGridEventTarget() ??
       weekEventTargeting.getFocusedGridEventTarget();
+    const focusedEventDay = quickTimeDayFromEventStart(
+      focusedEvent
+        ? [...allDayEvents, ...timedEvents].find(
+            (event) => event._id === focusedEvent.eventId,
+          )?.startDate
+        : undefined,
+    );
+    const day = focusedColumn ?? focusedEventDay ?? null;
+    return day ? day.startOf("day") : null;
+  }, [allDayEvents, timedEvents]);
+
+  // The day every create gesture lands on: explicit target, then today, then
+  // the first visible day. Typed times, C, Shift+C, and Shift+Arrow
+  // place-create all share it so "create an event" means the day the user
+  // is looking at.
+  const getTargetDay = useCallback(() => {
+    const now = dayjs().tz(getEffectiveTimeZone());
     return quickTimeTargetDay(
       startOfView,
       endOfView,
       now,
-      focusedColumn ??
-        quickTimeDayFromEventStart(
-          focusedEvent
-            ? [...allDayEvents, ...timedEvents].find(
-                (event) => event._id === focusedEvent.eventId,
-              )?.startDate
-            : undefined,
-        ),
+      getExplicitTargetDay(),
     );
-  }, [allDayEvents, endOfView, startOfView, timedEvents]);
+  }, [endOfView, getExplicitTargetDay, startOfView]);
+
+  const getPasteTargetDay = useCallback(
+    (sourceDay: Dayjs) => getExplicitTargetDay() ?? sourceDay.startOf("day"),
+    [getExplicitTargetDay],
+  );
 
   // Spend the column selection once a create has used it, so jump chips do
   // not linger over the new draft. Guarded: turning jump off also announces
@@ -240,6 +253,7 @@ export const useWeekShortcutOwner = ({
   useGridEventEditShortcuts({
     allDayEvents,
     timedEvents,
+    getPasteTargetDay,
     dayBoundary: {
       kind: "clamp",
       weekDays,
@@ -256,7 +270,7 @@ export const useWeekShortcutOwner = ({
     },
     targeting,
     placeTimedDraft: placeTimedDraftEvent,
-    repositionDraftByKey: (key) => {
+    repositionDraftByKey: (key, step) => {
       const { gridDraft, status } = useDraftStore.getState();
       const viewStart = startOfView.startOf("day");
       const viewEnd = endOfView.startOf("day");
@@ -264,6 +278,7 @@ export const useWeekShortcutOwner = ({
         activity: status?.activity,
         draft: gridDraft,
         key,
+        step,
         isStartAllowed: (nextStart) => {
           const start = dayjs(nextStart);
           return (

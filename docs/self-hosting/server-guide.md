@@ -180,13 +180,32 @@ compass.example.com {  # <- this is the only line you need to change
  handle {
   reverse_proxy 127.0.0.1:9080
  }
+
+ # Compress text responses. Stock Caddy ships gzip and zstd only; do not add
+ # `br` here, it fails `caddy validate` without a brotli plugin. Brotli still
+ # reaches browsers, see below.
+ encode zstd gzip
 }
 ```
 
 This tells Caddy to serve your public domain over HTTPS, send `/api/*` requests
 to the Compass backend on `127.0.0.1:3000`, send `/sync/*` to the Sync service
 on `127.0.0.1:3010` (Google OAuth redirect `/sync/google` and push notifications),
-and send everything else to the web app on `127.0.0.1:9080`.
+and send everything else to the web app on `127.0.0.1:9080`. `encode` at
+site-block scope gzip/zstd-compresses text responses from every route,
+including `/index.js` and each `chunk-*.js`. Its default content-type matcher
+already covers HTML, CSS, JavaScript, JSON, SVG, and WASM, and it flushes as
+the backend flushes, so `/api/events/stream` (server-sent events) keeps
+streaming through it.
+
+Brotli comes from the web container, not from Caddy: `bun run build.ts` writes
+`.br` and `.gz` siblings next to every compressible build output, and
+`self-host/serve-web.ts` answers a browser's `Accept-Encoding: br` with the
+`.br` file and `Content-Encoding: br`. Caddy forwards `Accept-Encoding`
+upstream and leaves responses that already carry `Content-Encoding` alone, so
+a browser gets brotli end to end while Caddy's own `encode` only touches what
+the app did not precompress. If you run `serve-web.ts` with no reverse proxy
+at all (uncommon), the same negotiation applies and no `encode` is needed.
 
 > **Editing this file later?** Edit the live `/etc/caddy/Caddyfile`, never a
 > backup copy. Compass's own production host lost the `/sync/*` block for nine

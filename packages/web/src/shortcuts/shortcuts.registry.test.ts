@@ -192,7 +192,26 @@ describe("shortcuts.registry", () => {
           isViewingCurrentPeriod: true,
         }).map((shortcut) => shortcut.id);
         expect(ids).toContain("focus-page-jump");
+        expect(ids).toContain("focus-find-event");
+        expect(ids).toContain("focus-calendar-digit");
       }
+    });
+
+    it("lists G go-to-date in day and week, not life", () => {
+      for (const view of ["day", "week"] as const) {
+        const shortcut = filterShortcutsByContext({
+          view,
+          isViewingCurrentPeriod: true,
+        }).find((row) => row.id === "nav-go-to-date");
+        expect(shortcut?.keys).toEqual(["g"]);
+        expect(shortcut?.label).toBe("Go to a date (type it in the palette)");
+      }
+
+      const life = filterShortcutsByContext({
+        view: "life",
+        isViewingCurrentPeriod: true,
+      }).map((shortcut) => shortcut.id);
+      expect(life).not.toContain("nav-go-to-date");
     });
 
     it("lists time travel in day and week but not life", () => {
@@ -209,6 +228,25 @@ describe("shortcuts.registry", () => {
         isViewingCurrentPeriod: true,
       }).map((shortcut) => shortcut.id);
       expect(life).not.toContain("other-time-travel");
+    });
+
+    it("lists Alt+Shift hour and week move rows in day and week, not life", () => {
+      for (const view of ["day", "week"] as const) {
+        const ids = filterShortcutsByContext({
+          view,
+          isViewingCurrentPeriod: true,
+        }).map((shortcut) => shortcut.id);
+        expect(ids).toContain("edit-move-hour-earlier");
+        expect(ids).toContain("edit-move-hour-later");
+        expect(ids).toContain("edit-move-week-earlier");
+        expect(ids).toContain("edit-move-week-later");
+      }
+
+      const life = filterShortcutsByContext({
+        view: "life",
+        isViewingCurrentPeriod: true,
+      }).map((shortcut) => shortcut.id);
+      expect(life).not.toContain("edit-move-hour-earlier");
     });
 
     it("lists the edit sequences with nothing focused, so the legend can show them", () => {

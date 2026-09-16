@@ -54,20 +54,21 @@ const RATE_LIMIT_OPERATION_BY_PREFIX: Record<
   "booking:reservation-patch": "edit",
 };
 
+const OUTCOME_FOR_REASON = {
+  invalid_input: "validation",
+  slot_unavailable: "conflict",
+  reservation_conflict: "conflict",
+  rate_limited: "rate_limited",
+  sync_unavailable: "transport",
+  storage_failure: "storage",
+  retry_exhausted: "exhausted",
+  provider_failure: "provider",
+  unknown: "provider",
+} as const satisfies Record<BookingLifecycleReason, BookingLifecycleOutcome>;
+
 const outcomeForReason = (
   reason: BookingLifecycleReason,
-): BookingLifecycleOutcome => {
-  if (reason === "invalid_input") return "validation";
-  if (reason === "slot_unavailable" || reason === "reservation_conflict") {
-    return "conflict";
-  }
-  if (reason === "rate_limited") return "rate_limited";
-  if (reason === "sync_unavailable") return "transport";
-  if (reason === "storage_failure") return "storage";
-  if (reason === "retry_exhausted") return "exhausted";
-  if (reason === "provider_failure") return "provider";
-  return "provider";
-};
+): BookingLifecycleOutcome => OUTCOME_FOR_REASON[reason];
 
 const reasonFromToken = (token: string): BookingLifecycleReason | undefined =>
   FAILURE_CODE_REASON[token];

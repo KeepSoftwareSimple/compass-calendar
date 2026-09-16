@@ -1,6 +1,12 @@
 {
   "extends": "./tsconfig.json",
-  "include": ["./declaration.d.ts", "./src/**/*.ts", "./src/**/*.tsx"],
+  "include": [
+    "./declaration.d.ts",
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
+    "./boot-size-report.ts",
+    "./inject-module-preloads.ts"
+  ],
   "exclude": [
     "./src/**/__tests__/**",
     "./src/**/*.test.ts",

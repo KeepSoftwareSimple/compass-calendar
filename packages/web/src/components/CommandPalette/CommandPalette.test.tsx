@@ -6,13 +6,18 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { createMockOfflineDataStore } from "@web/__tests__/utils/storage/mock-offline-data-store.util";
 import * as Track from "@web/auth/posthog/track";
 import { type AppAccess } from "@web/billing/useAppAccess";
+import { resetOfflineDataStoreForTests } from "@web/common/storage/offline-data/offline-data.store.registry";
 import { onViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
+import { resetEventRepositorySourceForTests } from "@web/events/repositories/event.repository.source.store";
 import { type EventRepository } from "@web/events/repositories/event.repository.types";
 import {
   undoHistoryActions,
@@ -23,6 +28,15 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import {
+  POINTER_EVENT_ID_ATTRIBUTE,
+  POINTER_EVENT_JUMP_REQUEST,
+} from "@web/shortcuts/keyboard-only/pointer-action";
+import { usePointerHintStore } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import {
+  eventJumpActions,
+  useEventJumpStore,
+} from "@web/shortcuts/shift-hint/event-jump.store";
 import { recordRecentCommand } from "./recent-commands.store";
 import {
   afterAll,
@@ -31,6 +45,7 @@ import {
   expect,
   it,
   mock,
+  setSystemTime,
   spyOn,
 } from "bun:test";
 
@@ -226,8 +241,10 @@ describe("CommandPalette", () => {
     // Only the heading matches here: useShowAccountsCmdItems' "Manage
     // Accounts" item is gated on auth, and this render is unauthenticated
     // (no SessionContext.Provider — see session.context.ts's default).
-    expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("More")).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", { name: "Settings" }),
+    ).toBeInTheDocument();
 
     // Navigation always lists Today first, then app views.
     expect(screen.getByText("Go to Today")).toBeInTheDocument();
@@ -241,6 +258,20 @@ describe("CommandPalette", () => {
     expect(getInput()).toHaveFocus();
     // First option is active by default.
     expect(activeRowText(container)).toBe("Go to Today");
+
+    const optionKeycaps = (name: string) =>
+      screen.getByRole("option", { name }).querySelector("[aria-hidden='true']")
+        ?.textContent;
+    expect(optionKeycaps("Toggle sidebar")).toBe("]");
+    expect(optionKeycaps("Focus month picker")).toBe("I");
+    expect(optionKeycaps("Open Up Next event")).toBe("N");
+    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
+    expect(optionKeycaps("Time travel")).toBe("Z");
+    expect(
+      screen
+        .getByRole("option", { name: "Settings" })
+        .querySelectorAll("[aria-hidden='true']"),
+    ).toHaveLength(2);
   });
 
   it("renders the Day and Week navigation shortcut tips", () => {
@@ -312,13 +343,16 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" });
     expect(activeRowText(container)).toBe("Go to Today");
 
-    // Walk down through the Create section. The ArrowDown after Create
-    // all-day event skips the disabled Undo row and lands on Appearance.
+    // Walk down through Navigation (including legend rows) into Create.
+    // The ArrowDown after Create all-day event skips the disabled Undo row
+    // and lands on Appearance.
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Day
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Practice shortcuts
-    fireEvent.keyDown(input, { key: "ArrowDown" }); // Create event
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Toggle sidebar
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Focus month picker
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Up Next + Join
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Create all-day event
     expect(activeRowText(container)).toBe("Create all-day event");
     fireEvent.keyDown(input, { key: "ArrowDown" }); // skips Undo last change
@@ -341,6 +375,12 @@ describe("CommandPalette", () => {
       expect(onCreateTimedDraft).toHaveBeenCalledTimes(1);
     });
     expect(isOpen()).toBe(false);
+    expect(usePointerHintStore.getState().latestAttempt).toEqual({
+      actionId: "unknown",
+      shortcutKey: "c",
+      performed: true,
+      source: "palette",
+    });
     unsubscribe();
   });
 
@@ -510,10 +550,10 @@ describe("CommandPalette", () => {
   it("keeps Google sync status and actions out of the command palette", () => {
     renderPalette();
 
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Google Calendar|calendar sync|calendar status/i),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("Calendar up-to-date")).not.toBeInTheDocument();
   });
 
   it("activates a row on pointer move, without requiring a keypress", () => {
@@ -528,8 +568,7 @@ describe("CommandPalette", () => {
 
   it("announces the result count in a live region, matching the visible copy", () => {
     renderPalette();
-    const liveRegion = () =>
-      document.querySelector('[aria-live="polite"]') as HTMLElement;
+    const liveRegion = () => screen.getByRole("status");
 
     // Nothing announced yet for an untouched, empty query.
     expect(liveRegion().textContent).toBe("");
@@ -580,6 +619,120 @@ describe("CommandPalette", () => {
       within(recentSection).getByText("Show shortcuts"),
     ).toBeInTheDocument();
   });
+
+  it("lists a matching event under Events and opens its day", async () => {
+    resetEventRepositorySourceForTests();
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([dentist]);
+    resetOfflineDataStoreForTests(store as never);
+    const card = document.createElement("div");
+    card.setAttribute(POINTER_EVENT_ID_ATTRIBUTE, dentist.id);
+    document.body.appendChild(card);
+    const jumps: string[] = [];
+    const onJump = (event: Event) => {
+      const detail = (event as CustomEvent<{ eventId?: string }>).detail;
+      if (detail?.eventId) jumps.push(detail.eventId);
+    };
+    document.addEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "dent" } });
+
+      const row = await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      expect(screen.getByText("Events")).toBeInTheDocument();
+      fireEvent.click(row);
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/week/$dateString",
+        params: { dateString: "2026-09-16" },
+      });
+      await waitFor(() => {
+        expect(jumps).toEqual([dentist.id]);
+      });
+    } finally {
+      document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
+      card.remove();
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("keeps Events rows out of the tab order so focus stays on the search field", async () => {
+    resetEventRepositorySourceForTests();
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([dentist]);
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      const user = userEvent.setup();
+      renderPalette();
+      await user.type(getInput(), "dent");
+
+      const row = await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      expect(row).toHaveAttribute("tabindex", "-1");
+      expect(getInput()).toHaveFocus();
+
+      await user.tab();
+      expect(row).not.toHaveFocus();
+    } finally {
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("pins a Go to date row and selects that day's column on Enter", async () => {
+    setSystemTime(new Date("2026-09-15T12:00:00.000Z"));
+    eventJumpActions.reset();
+    mockNavigate.mockResolvedValue(undefined);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "oct 3" } });
+
+      expect(
+        screen.getByRole("option", { name: "Go to Sat, Oct 3, 2026" }),
+      ).toBeInTheDocument();
+      fireEvent.keyDown(getInput(), { key: "Enter" });
+
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/week/$dateString",
+        params: { dateString: "2026-10-03" },
+      });
+      await waitFor(() => {
+        expect(useEventJumpStore.getState().activeDayKeys).toEqual([
+          "2026-10-03",
+        ]);
+      });
+      expect(useEventJumpStore.getState().announcement).toBe(
+        "Showing week of Saturday, October 3, 2026",
+      );
+      expect(isOpen()).toBe(false);
+    } finally {
+      setSystemTime();
+      eventJumpActions.reset();
+    }
+  });
 });
 
 describe("LifeCommandPalette", () => {
@@ -589,7 +742,6 @@ describe("LifeCommandPalette", () => {
       { settings: { isCmdPaletteOpen: true } },
     );
 
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByText("Calendar up-to-date")).not.toBeInTheDocument();
   });
 

@@ -1,4 +1,10 @@
-import { type Collection, type Db, type MongoClient, ObjectId } from "mongodb";
+import {
+  type ClientSession,
+  type Collection,
+  type Db,
+  type MongoClient,
+  ObjectId,
+} from "mongodb";
 import { type EventId } from "@core/types/domain-primitives";
 import { type SyncEventCalendarId } from "@core/types/sync/event.contracts";
 import {
@@ -17,6 +23,11 @@ export type OccurrenceInput = Omit<EventOccurrenceRecord, "_id">;
 // overlap window. Keeps calendar_gen_start range-bounded; see
 // listBusyOverlapping and listByCalendarRange.
 export const BUSY_MAX_LOOKBACK_MS = 366 * 24 * 60 * 60 * 1000;
+
+// insertMany / bulkWrite chunk. Occurrence rebuilds for a page can be a few
+// thousand rows; 1000 stays inside the 500-1000 doc batch the Atlas round-trip
+// budget wants without approaching the 16 MB command cap.
+const INSERT_MANY_CHUNK = 1000;
 
 export interface OccurrenceRangeCursor {
   startAt: Date;
@@ -94,17 +105,13 @@ export class EventOccurrenceRepository {
     await this.replaceForEvents([{ eventId, generation, occurrences }]);
   }
 
-  // Batched form of replaceForEvent: every entry's delete+insert runs in ONE
-  // transaction instead of one per event. A single-event import page can touch
-  // thousands of events, and a separate Mongo transaction per event (each its
-  // own commit round-trip) was the dominant cost of an initial import — see
-  // provider-page-applier.ts, which accumulates a page's projections and
-  // flushes them through this method in chunks (bounded by the caller so one
-  // transaction never approaches Atlas's 60s transaction lifetime limit).
-  // Same per-event safety as replaceForEvent: each entry is scoped to its own
-  // (eventId, generation), so entries never touch each other's rows; grouping
-  // them in one transaction only changes when the commit happens, not what
-  // becomes visible together.
+  // Batched form of replaceForEvent: every unique (eventId, generation) is
+  // deleted once and its new rows inserted in one transaction, so a page of
+  // hundreds of events is a handful of Mongo commands instead of two per event.
+  // Duplicate (eventId, generation) entries keep the last — a split-phase
+  // delete-all-then-insert-all would otherwise duplicate that event's rows.
+  // An all-empty replacement skips the transaction when no occurrence rows
+  // exist (the pull path otherwise opened a transaction to delete zero docs).
   async replaceForEvents(
     entries: readonly {
       eventId: EventId;
@@ -113,30 +120,31 @@ export class EventOccurrenceRepository {
     }[],
   ): Promise<void> {
     if (entries.length === 0) return;
+    const unique = lastOccurrenceEntry(entries);
+    const filter = occurrenceEntryFilter(unique);
+    const docs = unique.flatMap((entry) =>
+      entry.occurrences.map((occurrence) =>
+        EventOccurrenceRecordSchema.parse({
+          _id: new ObjectId().toHexString(),
+          ...occurrence,
+        }),
+      ),
+    );
+
+    if (docs.length === 0) {
+      const exists = await this.collection.findOne(filter, {
+        projection: { _id: 1 },
+      });
+      if (!exists) return;
+      await this.collection.deleteMany(filter);
+      return;
+    }
 
     const session = this.client.startSession();
     try {
       await session.withTransaction(async () => {
-        // Delete-then-insert PER ENTRY (not a batched delete phase followed by
-        // a batched insert phase): if the same (eventId, generation) somehow
-        // appeared twice in one call, a split-phase delete-all-then-insert-all
-        // would silently duplicate that event's rows, since the second entry's
-        // delete would find nothing left to remove. Interleaving keeps the
-        // same one-transaction win (a single commit) without that risk.
-        for (const entry of entries) {
-          await this.collection.deleteMany(
-            { eventId: entry.eventId, generation: entry.generation },
-            { session },
-          );
-          if (entry.occurrences.length === 0) continue;
-          const docs = entry.occurrences.map((occurrence) =>
-            EventOccurrenceRecordSchema.parse({
-              _id: new ObjectId().toHexString(),
-              ...occurrence,
-            }),
-          );
-          await this.collection.insertMany(docs, { session });
-        }
+        await this.collection.deleteMany(filter, { session });
+        await insertManyChunked(this.collection, docs, session);
       });
     } finally {
       await session.endSession();
@@ -282,5 +290,55 @@ export class EventOccurrenceRepository {
       })
       .sort({ startAt: 1 })
       .toArray();
+  }
+}
+
+type OccurrenceReplaceEntry = {
+  eventId: EventId;
+  generation: number;
+  occurrences: OccurrenceInput[];
+};
+
+function lastOccurrenceEntry(
+  entries: readonly OccurrenceReplaceEntry[],
+): OccurrenceReplaceEntry[] {
+  const unique = new Map<string, OccurrenceReplaceEntry>();
+  for (const entry of entries) {
+    unique.set(`${entry.eventId}:${entry.generation}`, entry);
+  }
+  return [...unique.values()];
+}
+
+function occurrenceEntryFilter(
+  entries: readonly OccurrenceReplaceEntry[],
+): Record<string, unknown> {
+  const byGeneration = new Map<number, EventId[]>();
+  for (const entry of entries) {
+    const ids = byGeneration.get(entry.generation);
+    if (ids) ids.push(entry.eventId);
+    else byGeneration.set(entry.generation, [entry.eventId]);
+  }
+  if (byGeneration.size === 1) {
+    const [generation, eventIds] = [...byGeneration][0] as [number, EventId[]];
+    return { eventId: { $in: eventIds }, generation };
+  }
+  return {
+    $or: entries.map((entry) => ({
+      eventId: entry.eventId,
+      generation: entry.generation,
+    })),
+  };
+}
+
+async function insertManyChunked(
+  collection: Collection<EventOccurrenceRecord>,
+  docs: EventOccurrenceRecord[],
+  session: ClientSession,
+): Promise<void> {
+  for (let i = 0; i < docs.length; i += INSERT_MANY_CHUNK) {
+    await collection.insertMany(docs.slice(i, i + INSERT_MANY_CHUNK), {
+      session,
+      ordered: false,
+    });
   }
 }

@@ -10,8 +10,11 @@ import {
   publicBookConfirmedRoute,
   publicBookRescheduleRoute,
   publicBookRoute,
+  publicShortcutsRoute,
   rootRoute,
   routeTree,
+  weekDateRoute,
+  weekRoute,
 } from "@web/routers/router.routes";
 import { describe, expect, it } from "bun:test";
 
@@ -22,6 +25,12 @@ describe("routeTree", () => {
     expect(lifeRoute.fullPath).toBe(ROOT_ROUTES.LIFE);
     expect(lifeRoute.options.loader).toBeUndefined();
     expect(lifeRoute.parentRoute).toBe(calendarShellRoute);
+  });
+
+  it("registers /shortcuts as a public route outside the calendar shell", () => {
+    expect(publicShortcutsRoute.fullPath).toBe(ROOT_ROUTES.SHORTCUTS);
+    expect(publicShortcutsRoute.options.beforeLoad).toBeUndefined();
+    expect(publicShortcutsRoute.parentRoute).toBe(rootRoute);
   });
 
   it("registers /meet/$username as a public route outside the calendar shell", () => {
@@ -80,6 +89,11 @@ describe("routeTree", () => {
   it("gates the authenticated layout behind loadAuthenticated inside the calendar shell", () => {
     expect(authenticatedLayoutRoute.options.beforeLoad).toBeDefined();
     expect(authenticatedLayoutRoute.parentRoute).toBe(calendarShellRoute);
+  });
+
+  it("prefetches week events from the week route loaders", () => {
+    expect(weekRoute.options.loader).toBeDefined();
+    expect(weekDateRoute.options.loader).toBeDefined();
   });
 
   it("registers /auth/google/callback on the provider auth callback route", async () => {

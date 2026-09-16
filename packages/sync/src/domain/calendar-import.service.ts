@@ -151,9 +151,11 @@ export async function importCalendarEvents(
 }
 
 // Drives the reader through one import's passes over one calendar. The shared
-// ProviderPageApplier does the per-page content work (upsert, link, project);
-// this run owns import-specific control: the checkpointed page loop, the
-// windowed-vs-full distinction, reader-drop counting, and the final flush.
+// ProviderPageApplier does the per-page content work (upsert, link, project)
+// and spans both passes so a full-pass event whose etag/updated matches the
+// windowed write is not re-upserted. This run owns import-specific control:
+// the checkpointed page loop, the windowed-vs-full distinction, reader-drop
+// counting, and the final flush.
 // A standalone cancellation has no local event to tombstone on a first import,
 // so the applier's returned deletions are ignored.
 class ImportRun {

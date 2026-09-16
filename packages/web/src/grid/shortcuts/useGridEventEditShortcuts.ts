@@ -23,7 +23,9 @@ import {
 import {
   convertAllDayToTimedDates,
   type EventEdge,
+  type EventNudgeStep,
   getArrowKeyMovement,
+  nudgeStepFromKeyboard,
 } from "@web/common/utils/event/event-nudge.util";
 import {
   nudgeEventEdgeFromKeyboard,
@@ -42,6 +44,10 @@ import {
   replaceGridDraftSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { commitDuplicateEvent } from "@web/events/mutations/duplicate-event";
+import {
+  eventOnTargetDay,
+  eventStartDay,
+} from "@web/events/mutations/event-on-target-day";
 import {
   type EventMutationDependencies,
   useEventMutations,
@@ -71,10 +77,11 @@ import {
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
+import { promptShortcutUnavailableWhileEditingEvent } from "@web/shortcuts/prompt-shortcut-unavailable";
 import {
-  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-  promptShortcutUnavailableWhileEditingEvent,
-} from "@web/shortcuts/prompt-shortcut-unavailable";
+  eventJumpActions,
+  isEventJumpActive,
+} from "@web/shortcuts/shift-hint/event-jump.store";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
@@ -141,9 +148,14 @@ const isOutsideVisibleWeek = (
   date: Dayjs,
   days: number,
   weekDays: Dayjs[],
-): boolean =>
-  (days === -1 && !date.isAfter(weekDays[0], "day")) ||
-  (days === 1 && !date.isBefore(weekDays[weekDays.length - 1], "day"));
+): boolean => {
+  if (days === 0 || weekDays.length === 0) return false;
+  const next = date.add(days, "day");
+  const first = weekDays[0];
+  const last = weekDays[weekDays.length - 1];
+  if (!first || !last) return false;
+  return next.isBefore(first, "day") || next.isAfter(last, "day");
+};
 
 /**
  * Form-closed grid draft whose card currently has DOM focus. Drafts stamp
@@ -196,7 +208,7 @@ export type GridEventEditDayBoundary =
        * the nudge (edge nudges always refuse - resizing across the window is
        * not a flow).
        */
-      onCrossed?: (days: 1 | -1, eventId: string) => void;
+      onCrossed?: (days: number, eventId: string) => void;
     };
 
 /**
@@ -212,6 +224,7 @@ export function useGridEventEditShortcuts({
   allDayEvents = [],
   dayBoundary,
   dependencies = {},
+  getPasteTargetDay,
   placeTimedDraft,
   repositionDraftByKey,
   targeting,
@@ -221,6 +234,11 @@ export function useGridEventEditShortcuts({
   dayBoundary: GridEventEditDayBoundary;
   dependencies?: EventMutationDependencies;
   /**
+   * Day a Mod+V copy lands on. Week: selected column, else focused event
+   * day, else the copied event's day. Day: the column in view.
+   */
+  getPasteTargetDay?: (sourceDay: Dayjs) => Dayjs;
+  /**
    * Shift+Arrow place-create when nothing is focused and no draft can move.
    * Seeds a timed draft at the same default as `c`, form closed.
    */
@@ -229,7 +247,7 @@ export function useGridEventEditShortcuts({
    * View-owned draft move. Return true when the draft moved so the shared
    * hook can preventDefault. Day may also navigate here on day-cross.
    */
-  repositionDraftByKey: (key: string) => boolean;
+  repositionDraftByKey: (key: string, step?: EventNudgeStep) => boolean;
   targeting: {
     focus: (target: FocusableGridEventTarget) => void;
     /** Registry-backed: the gate for any action that mutates the event. */
@@ -285,9 +303,12 @@ export function useGridEventEditShortcuts({
     deleteEventAndDiscardDraft(deleteEvent, event);
   };
 
-  const duplicateSourceEvent = (sourceEvent: Event) => {
+  const duplicateSourceEvent = (sourceEvent: Event, targetDay?: Dayjs) => {
+    const source = targetDay
+      ? eventOnTargetDay(sourceEvent, targetDay)
+      : sourceEvent;
     const committed = commitDuplicateEvent({
-      source: sourceEvent,
+      source,
       calendars: calendars ?? [],
       defaultCalendarId: defaultCalendar?.id,
       create: createEvent,
@@ -296,7 +317,7 @@ export function useGridEventEditShortcuts({
 
     // No writable calendar could be resolved for the copy - fall back to
     // the create-draft form so the user can pick one.
-    const duplicate = duplicateGridEventDraft(sourceEvent, calendars ?? []);
+    const duplicate = duplicateGridEventDraft(source, calendars ?? []);
     if (!duplicate) return;
 
     draftActions.startGridDraft({ activity: "gridClick", draft: duplicate });
@@ -341,7 +362,13 @@ export function useGridEventEditShortcuts({
     if (!sourceEvent) return;
 
     claimShortcut(keyboardEvent);
-    duplicateSourceEvent(sourceEvent);
+    // Read the create-target day before spending the column selection
+    // (the #3388 gotcha: setActive(false) clears activeDayKeys).
+    const sourceDay = eventStartDay(sourceEvent);
+    const targetDay = getPasteTargetDay?.(sourceDay) ?? sourceDay;
+    eventJumpActions.setPointerDraftIntent(null);
+    if (isEventJumpActive()) eventJumpActions.setActive(false);
+    duplicateSourceEvent(sourceEvent, targetDay);
   };
 
   const describeEdgeDate = (event: GridEvent, edge: EventEdge) => {
@@ -398,6 +425,7 @@ export function useGridEventEditShortcuts({
     const movement = getArrowKeyMovement(
       keyboardEvent.key,
       Boolean(event.isAllDay),
+      nudgeStepFromKeyboard(keyboardEvent),
     );
     if (!movement) return;
     if (wouldAllDayEdgeLeaveVisibleWeek(event, edge, movement)) return;
@@ -466,7 +494,11 @@ export function useGridEventEditShortcuts({
         return;
       }
 
-      if (event.isAllDay && keyboardEvent.key === "ArrowDown") {
+      if (
+        event.isAllDay &&
+        keyboardEvent.key === "ArrowDown" &&
+        !keyboardEvent.altKey
+      ) {
         if (!event._id) return;
         keyboardEvent.preventDefault();
         const startMinute =
@@ -482,6 +514,7 @@ export function useGridEventEditShortcuts({
       const movement = getArrowKeyMovement(
         keyboardEvent.key,
         Boolean(event.isAllDay),
+        nudgeStepFromKeyboard(keyboardEvent),
       );
       if (!movement) return;
 
@@ -514,7 +547,7 @@ export function useGridEventEditShortcuts({
           if (
             crossesWeekWindow &&
             dayBoundary.kind === "clamp" &&
-            (movement.days === 1 || movement.days === -1) &&
+            movement.days !== 0 &&
             nudgedEvent._id
           ) {
             dayBoundary.onCrossed?.(movement.days, nudgedEvent._id);
@@ -537,7 +570,10 @@ export function useGridEventEditShortcuts({
       }
     }
 
-    const didMoveDraft = repositionDraftByKey(keyboardEvent.key);
+    const didMoveDraft = repositionDraftByKey(
+      keyboardEvent.key,
+      nudgeStepFromKeyboard(keyboardEvent),
+    );
     if (didMoveDraft) {
       claimShortcut(keyboardEvent);
       return;
@@ -720,65 +756,99 @@ export function useGridEventEditShortcuts({
   useAppShortcut("Delete", deleteFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
+    shortcutId: "edit-delete",
   });
   useAppShortcut("Mod+D", duplicateFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: false,
+    shortcutId: "edit-duplicate",
   });
   useAppShortcut("Mod+C", copyFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: true,
+    shortcutId: "edit-copy",
   });
   useAppShortcut("Mod+V", pasteCopiedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     ignoreInputs: true,
+    shortcutId: "edit-paste",
   });
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.up,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.down,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.left,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
-  useAppShortcut(
-    KEYMAP.moveFocus.hotkeys.right,
-    moveDraftOrFocusAdjacent,
-    DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-  );
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.up, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-prev",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.down, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-next",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.left, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-left",
+  });
+  useAppShortcut(KEYMAP.moveFocus.hotkeys.right, moveDraftOrFocusAdjacent, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId: "edit-focus-right",
+  });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.up, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-earlier",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.down, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-later",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.left, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-prev-day",
   });
   useAppShortcut(KEYMAP.moveEvent.hotkeys.right, moveFocusedCalendarEvent, {
     ...WRITE_EDIT_SHORTCUT,
     telemetryHintId: "nudge",
+    shortcutId: "edit-move-next-day",
   });
+  useAppShortcut(KEYMAP.moveEvent.coarseHotkeys.up, moveFocusedCalendarEvent, {
+    ...WRITE_EDIT_SHORTCUT,
+    telemetryHintId: "nudge",
+    shortcutId: "edit-move-hour-earlier",
+  });
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.down,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+      shortcutId: "edit-move-hour-later",
+    },
+  );
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.left,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+      shortcutId: "edit-move-week-earlier",
+    },
+  );
+  useAppShortcut(
+    KEYMAP.moveEvent.coarseHotkeys.right,
+    moveFocusedCalendarEvent,
+    {
+      ...WRITE_EDIT_SHORTCUT,
+      telemetryHintId: "nudge",
+      shortcutId: "edit-move-week-later",
+    },
+  );
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,
-    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-    telemetryHintId: "edge-focus",
+    shortcutId: "edit-cycle-edge",
   });
   useAppShortcut("Shift+Tab", cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    overlayUnavailableMessage: EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-    telemetryHintId: "edge-focus",
+    shortcutId: "edit-cycle-edge",
   });
   useAppShortcut("Escape", onEscape, DRAFT_MOVEMENT_HOTKEY_OPTIONS);
 }

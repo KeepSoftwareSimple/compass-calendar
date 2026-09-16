@@ -6,13 +6,24 @@ import {
   HourglassSimpleIcon,
   type Icon,
   KeyboardIcon,
+  SidebarSimpleIcon,
+  VideoCameraIcon,
 } from "@phosphor-icons/react";
+import { type Dayjs } from "@core/util/date/dayjs";
+import {
+  goToDatePaletteLabel,
+  parseUserDate,
+} from "@web/common/utils/datetime/web.date.util";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
+import { reportPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,
   type ViewName,
 } from "@web/shortcuts/shortcuts.constants";
+
+export const GO_TO_DATE_ITEM_ID = "go-to-date";
 
 export type CommandPaletteViewName = ViewName;
 
@@ -62,6 +73,23 @@ const navigationViewOrder: CommandPaletteViewName[] = ["day", "week", "life"];
 
 export const getNavigationViewRoute = (viewName: CommandPaletteViewName) =>
   commandPaletteViews[viewName].route;
+
+/** Synthetic palette row while the query parses as a date. Not keyword-filtered. */
+export const getGoToDateCommandItem = (
+  query: string,
+  now: Dayjs,
+  onSelect: (date: Dayjs) => void,
+): CommandItem | null => {
+  const date = parseUserDate(query, now);
+  if (!date) return null;
+
+  return {
+    id: GO_TO_DATE_ITEM_ID,
+    label: goToDatePaletteLabel(date),
+    icon: CalendarIcon,
+    onClick: () => onSelect(date),
+  };
+};
 
 export const getNavigationCommandItems = ({
   currentView,
@@ -152,4 +180,76 @@ export const getNavigationCommandItems = ({
   }
 
   return calendarItems;
+};
+
+export interface LegendNavigationCommandOptions {
+  isSidebarOpen: boolean;
+  hasUpNext: boolean;
+  hasConference: boolean;
+  onToggleSidebar: () => void;
+  onFocusMonthPicker: () => void;
+  onOpenUpNext: () => void;
+  onJoinMeeting: () => void;
+}
+
+/** Legend navigate/other rows that the palette did not list until Keyboard v1. */
+export const getLegendNavigationCommandItems = ({
+  isSidebarOpen,
+  hasUpNext,
+  hasConference,
+  onToggleSidebar,
+  onFocusMonthPicker,
+  onOpenUpNext,
+  onJoinMeeting,
+}: LegendNavigationCommandOptions): CommandItem[] => {
+  const B = APP_SHORTCUT_BINDINGS;
+  return [
+    {
+      id: "toggle-sidebar",
+      label: "Toggle sidebar",
+      icon: SidebarSimpleIcon,
+      shortcut: [...B.otherSidebar.keycaps],
+      keywords: ["panel", "hide sidebar", "show sidebar"],
+      onClick: () => {
+        reportPaletteShortcut("other-sidebar", "other");
+        onToggleSidebar();
+      },
+    },
+    {
+      id: "focus-month-picker",
+      label: "Focus month picker",
+      icon: CalendarDotsIcon,
+      shortcut: [...B.focusSidebar.keycaps],
+      keywords: ["sidebar", "dates", "calendar"],
+      disabled: !isSidebarOpen,
+      onClick: () => {
+        reportPaletteShortcut("focus-sidebar", "focus");
+        onFocusMonthPicker();
+      },
+    },
+    {
+      id: "open-up-next",
+      label: "Open Up Next event",
+      icon: CalendarIcon,
+      shortcut: [...B.navUpNext.keycaps],
+      keywords: ["upcoming", "next event"],
+      disabled: !hasUpNext,
+      onClick: () => {
+        reportPaletteShortcut("nav-up-next", "navigate");
+        onOpenUpNext();
+      },
+    },
+    {
+      id: "join-up-next-meeting",
+      label: "Join Up Next meeting",
+      icon: VideoCameraIcon,
+      shortcut: [...B.navJoinMeeting.keycaps],
+      keywords: ["conference", "video", "call", "meet"],
+      disabled: !hasConference,
+      onClick: () => {
+        reportPaletteShortcut("nav-join-meeting", "navigate");
+        onJoinMeeting();
+      },
+    },
+  ];
 };

@@ -36,6 +36,7 @@ import {
   useWelcomeGuideStore,
 } from "@web/components/WelcomeModal/welcome.guide.store";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
+import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
 import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
@@ -76,6 +77,7 @@ export function RootShell() {
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();
+  useGoToDateShortcut();
   // Claims new guest bookings once per load (and on return to the tab
   // after five minutes). No-ops when booking is off or the session is
   // anonymous.

@@ -1611,4 +1611,41 @@ describe("SyncServiceClient", () => {
       }
     });
   });
+
+  describe("keep-alive fetch", () => {
+    it("uses Bun's fetch pool and does not pass a dispatcher Bun would ignore", async () => {
+      const original = globalThis.fetch;
+      const inits: Array<RequestInit | undefined> = [];
+      globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
+        inits.push(init);
+        return original(input, init);
+      }) as typeof fetch;
+
+      const server = Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        fetch() {
+          return Response.json({ connections: [] });
+        },
+      });
+
+      try {
+        const result = await new SyncServiceClient({
+          baseUrl: `http://127.0.0.1:${server.port}`,
+          secret: SECRET,
+          timeoutMs: 1_000,
+          now: () => NOW,
+          newCorrelationId: () => "corr-keepalive-pool",
+        }).listConnections(principal());
+
+        expect(result.ok).toBe(true);
+        expect(process.versions.bun).toBeDefined();
+        expect(inits).toHaveLength(1);
+        expect(inits[0]).not.toHaveProperty("dispatcher");
+      } finally {
+        globalThis.fetch = original;
+        server.stop(true);
+      }
+    });
+  });
 });

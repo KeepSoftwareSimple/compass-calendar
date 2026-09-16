@@ -335,6 +335,39 @@ describe("Event Command Contracts", () => {
       expect(EventListQuerySchema.safeParse(query).success).toBe(false);
     });
 
+    it("parses an optional title search query", () => {
+      const query = {
+        kind: "range",
+        start: "2026-07-14T00:00:00Z",
+        end: "2026-07-21T00:00:00Z",
+        q: "  Dent  ",
+      };
+
+      expect(EventListQuerySchema.parse(query).q).toBe("Dent");
+    });
+
+    it("rejects a title search shorter than two characters", () => {
+      const query = {
+        kind: "range",
+        start: "2026-07-14T00:00:00Z",
+        end: "2026-07-21T00:00:00Z",
+        q: "d",
+      };
+
+      expect(EventListQuerySchema.safeParse(query).success).toBe(false);
+    });
+
+    it("rejects a title search longer than 80 characters", () => {
+      const query = {
+        kind: "range",
+        start: "2026-07-14T00:00:00Z",
+        end: "2026-07-21T00:00:00Z",
+        q: "d".repeat(81),
+      };
+
+      expect(EventListQuerySchema.safeParse(query).success).toBe(false);
+    });
+
     it("rejects a someday query now that the kind is removed", () => {
       const query = {
         kind: "someday",

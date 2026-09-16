@@ -1,3 +1,4 @@
+import { CheckIcon } from "@phosphor-icons/react";
 import {
   SHORTCUT_PRO_TOOLTIP,
   ShortcutProBadge,
@@ -26,6 +27,12 @@ function ShortcutRowContent({ shortcut }: { shortcut: Shortcut }) {
       <span className="flex shrink-0 items-center gap-2">
         {shortcut.locked ? <ShortcutProBadge /> : null}
         <ShortcutKeys className="shrink-0" keys={shortcut.keys} />
+        {shortcut.used ? (
+          <span className="shrink-0 text-text">
+            <span className="sr-only">used</span>
+            <CheckIcon aria-hidden="true" size={14} />
+          </span>
+        ) : null}
       </span>
     </>
   );

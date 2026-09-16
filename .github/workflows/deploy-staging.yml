@@ -18,6 +18,20 @@ permissions:
   contents: read
 
 jobs:
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - deploy-cloud
+      - health-check-cloud
+      - deploy-selfhosted
+      - health-check-selfhosted
+    uses: ./.github/workflows/_notify-failure.yml
+    with:
+      tag: ${{ inputs.tag }}
+      needs_json: ${{ toJSON(needs) }}
+    secrets: inherit
+
   deploy-cloud:
     name: Deploy to staging-cloud
     uses: ./.github/workflows/_deploy-environment.yml

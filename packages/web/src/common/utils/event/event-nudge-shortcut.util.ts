@@ -5,6 +5,7 @@ import {
   getArrowKeyMovement,
   nudgeEventDates,
   nudgeEventEdgeDates,
+  nudgeStepFromKeyboard,
 } from "@web/common/utils/event/event-nudge.util";
 
 export function nudgeEventFromKeyboard({
@@ -23,6 +24,7 @@ export function nudgeEventFromKeyboard({
   const movement = getArrowKeyMovement(
     keyboardEvent.key,
     Boolean(event.isAllDay),
+    nudgeStepFromKeyboard(keyboardEvent),
   );
   if (!movement) return false;
 
@@ -54,6 +56,7 @@ export function nudgeEventEdgeFromKeyboard({
   const movement = getArrowKeyMovement(
     keyboardEvent.key,
     Boolean(event.isAllDay),
+    nudgeStepFromKeyboard(keyboardEvent),
   );
   if (!movement) return false;
 

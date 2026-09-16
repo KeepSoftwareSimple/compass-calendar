@@ -1,7 +1,14 @@
-# Build-time config for the CI performance budget (perf-budget.yml).
+# Build-time config for the CI web builds: the performance budget
+# (perf-budget.yml) and the required boot-size check (test-unit.yml).
 # Only the values baked into the web bundle matter (nodeEnv, apiUrl,
 # empty PostHog key so analytics stays out of the measurement); the rest
 # exist to satisfy config schema validation and are never used.
+#
+# self-host/Dockerfile.web generates the config that actually ships and is
+# canonical for the boot-size budget. It differs from this file only in
+# google.clientId ("" vs a placeholder), a plain define constant, and both
+# measured chunkCount 85 on 2026-09-15. If they ever diverge in a field that
+# changes the chunk graph, update this file to match the Dockerfile.
 runtime:
   nodeEnv: production
   timezone: Etc/UTC

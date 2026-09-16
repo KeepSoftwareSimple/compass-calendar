@@ -1,3 +1,4 @@
+import { MongoClient } from "mongodb";
 import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import { seedProviderCalendar } from "@sync/__tests__/helpers/fixtures";
@@ -185,7 +186,11 @@ describe("ProviderPageApplier", () => {
     await run.applyPage([{ ...single("flex"), busy: false }]);
     expect(await queryBusy()).toEqual([]);
 
-    await run.applyPage([{ ...single("flex"), busy: true }]);
+    // A real provider bumps etag when transparency changes; same-etag skip
+    // is for the windowed-then-full import pass, not a content-changing pull.
+    await run.applyPage([
+      { ...single("flex"), busy: true, providerVersion: "etag-flex-opaque" },
+    ]);
     expect(await queryBusy()).toEqual([
       {
         startAt: new Date("2026-07-14T15:00:00.000Z"),
@@ -349,9 +354,9 @@ describe("ProviderPageApplier", () => {
   });
 
   it("writes every event's occurrences for a page larger than one projection batch", async () => {
-    // PROJECTION_BATCH_SIZE is 200 — a page bigger than that must still
-    // project every event correctly, chunked across multiple transactions
-    // rather than dropping/duplicating anything at the boundary.
+    // reprojectOccurrencesBatch splits on occurrence-document count (2000).
+    // A page bigger than the old per-event chunk of 200 must still project
+    // every event correctly rather than dropping/duplicating at a boundary.
     const calendar = await seedCalendar();
     const run = applier(calendar);
     const ids = Array.from({ length: 250 }, (_, i) => `bulk-${i}`);
@@ -365,6 +370,53 @@ describe("ProviderPageApplier", () => {
       .countDocuments({ calendarId: calendar._id });
     // One single-occurrence event each.
     expect(occCount).toBe(250);
+  });
+
+  it("applies a 500-event page in fewer than 20 Mongo commands", async () => {
+    const calendar = await seedCalendar();
+    const client = new MongoClient(process.env["SYNC_MONGO_URI"] as string, {
+      monitorCommands: true,
+    });
+    await client.connect();
+    try {
+      const db = client.db(storage.db().databaseName);
+      const pageEvents = new EventRepository(db);
+      const pageOccurrences = new EventOccurrenceRepository(db, client);
+      const run = new ProviderPageApplier(
+        pageEvents,
+        pageOccurrences,
+        calendar,
+        0,
+        now,
+      );
+      const ids = Array.from({ length: 500 }, (_, i) => `page-${i}`);
+      const ignored = new Set([
+        "hello",
+        "isMaster",
+        "ismaster",
+        "ping",
+        "endSessions",
+        "killCursors",
+      ]);
+      const commands: string[] = [];
+      const onStarted = (event: { commandName: string }) => {
+        if (!ignored.has(event.commandName)) commands.push(event.commandName);
+      };
+      client.on("commandStarted", onStarted);
+      await run.applyPage(ids.map((id) => single(id)));
+      client.off("commandStarted", onStarted);
+
+      expect(run.importedCount).toBe(500);
+      expect(
+        await db
+          .collection(SYNC_COLLECTIONS.eventOccurrences)
+          .countDocuments({ calendarId: calendar._id }),
+      ).toBe(500);
+      expect(commands.length).toBeGreaterThan(0);
+      expect(commands.length).toBeLessThan(20);
+    } finally {
+      await client.close();
+    }
   });
 
   it("keeps customizations when a pull changes the provider schedule", async () => {

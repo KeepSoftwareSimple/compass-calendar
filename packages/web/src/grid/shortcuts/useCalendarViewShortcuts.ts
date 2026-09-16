@@ -1,6 +1,7 @@
 import { useDraftStore } from "@web/events/stores/draft.store";
 import { useEdgeFocusStore } from "@web/grid/shortcuts/edge-focus.store";
 import { useGridScrollShortcuts } from "@web/grid/shortcuts/useGridScrollShortcuts";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import { isEventJumpActive } from "@web/shortcuts/shift-hint/event-jump.store";
@@ -44,18 +45,40 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
   const timeTravelZone = useTimeTravelZone();
   useGridScrollShortcuts();
 
-  useAppShortcutUp("J", () => config.onPrevPeriod?.());
-  useAppShortcutUp("K", () => config.onNextPeriod?.());
-  useAppShortcutUp("Shift+J", () => config.onShiftViewBackward?.(), {
-    enabled: config.onShiftViewBackward !== undefined,
+  const nav = APP_SHORTCUT_BINDINGS;
+  useAppShortcutUp(nav.navPrevious.hotkey, () => config.onPrevPeriod?.(), {
+    shortcutId: "nav-previous",
   });
-  useAppShortcutUp("Shift+K", () => config.onShiftViewForward?.(), {
-    enabled: config.onShiftViewForward !== undefined,
+  useAppShortcutUp(nav.navNext.hotkey, () => config.onNextPeriod?.(), {
+    shortcutId: "nav-next",
   });
-  useAppShortcutUp("T", () => config.onGoToToday?.());
-  useAppShortcutUp("Shift+C", () => config.onCreateAllDayEvent?.(), {
-    ...WRITE_CREATE_SHORTCUT,
+  useAppShortcutUp(
+    nav.navShiftLeft.hotkey,
+    () => config.onShiftViewBackward?.(),
+    {
+      enabled: config.onShiftViewBackward !== undefined,
+      shortcutId: "nav-shift-left",
+    },
+  );
+  useAppShortcutUp(
+    nav.navShiftRight.hotkey,
+    () => config.onShiftViewForward?.(),
+    {
+      enabled: config.onShiftViewForward !== undefined,
+      shortcutId: "nav-shift-right",
+    },
+  );
+  useAppShortcutUp(nav.navToday.hotkey, () => config.onGoToToday?.(), {
+    shortcutId: "nav-today",
   });
+  useAppShortcutUp(
+    nav.createAllDay.hotkey,
+    () => config.onCreateAllDayEvent?.(),
+    {
+      ...WRITE_CREATE_SHORTCUT,
+      shortcutId: "create-allday",
+    },
+  );
   useAppShortcutUp(
     KEYMAP.createEvent.hotkey,
     () => {
@@ -63,14 +86,24 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
       config.onCreateTimedEvent();
       shortcutHintProgressActions.demonstrate("create-event");
     },
-    { ...WRITE_CREATE_SHORTCUT, telemetryHintId: "create-event" },
+    {
+      ...WRITE_CREATE_SHORTCUT,
+      telemetryHintId: "create-event",
+      shortcutId: "create-timed",
+    },
   );
-  useAppShortcutUp("U", () => config.onFocusCalendar?.());
+  useAppShortcutUp(nav.focusEvent.hotkey, () => config.onFocusCalendar?.(), {
+    shortcutId: "focus-event",
+  });
   // Keydown so a macOS Cmd+Z keyup-replay (meta already released) cannot
   // match this binding the way Mod+D vs D does on keyup.
-  useAppShortcut("Z", () => timezoneDialogActions.open("time-travel"));
   useAppShortcut(
-    "Escape",
+    nav.otherTimeTravel.hotkey,
+    () => timezoneDialogActions.open("time-travel"),
+    { shortcutId: "other-time-travel" },
+  );
+  useAppShortcut(
+    nav.createPlaceDiscard.hotkey,
     () => {
       if (isHigherEscapeOwner()) return;
       if (useEdgeFocusStore.getState().eventId) return;
@@ -85,6 +118,6 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
       }
       setTimeTravelZone(null);
     },
-    { enabled: timeTravelZone !== null },
+    { enabled: timeTravelZone !== null, shortcutId: "create-place-discard" },
   );
 }

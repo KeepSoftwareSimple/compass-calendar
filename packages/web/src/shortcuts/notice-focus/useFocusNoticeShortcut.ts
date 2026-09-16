@@ -17,13 +17,17 @@ export const FOCUS_NOTICE_LETTER = "f";
  * Friday).
  */
 export function useFocusNoticeShortcut() {
-  useBareLetterShortcut(FOCUS_NOTICE_LETTER, () => {
-    const target = findNextNoticeTarget(
-      getVisibleNotices(),
-      document.activeElement,
-    );
-    if (!target) return false;
-    target.focus();
-    return true;
-  });
+  useBareLetterShortcut(
+    FOCUS_NOTICE_LETTER,
+    () => {
+      const target = findNextNoticeTarget(
+        getVisibleNotices(),
+        document.activeElement,
+      );
+      if (!target) return false;
+      target.focus();
+      return true;
+    },
+    "focus-notice",
+  );
 }

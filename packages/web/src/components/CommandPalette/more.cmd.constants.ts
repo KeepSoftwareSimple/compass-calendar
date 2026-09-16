@@ -1,33 +1,43 @@
-import { CalendarCheckIcon, ChatsIcon, InfoIcon } from "@phosphor-icons/react";
+import {
+  CalendarCheckIcon,
+  ChatsIcon,
+  GearIcon,
+  InfoIcon,
+} from "@phosphor-icons/react";
 import { isPosthogEnabled } from "@web/auth/posthog/posthog.util";
-import { type CommandSection } from "@web/components/CommandPalette/command-palette.types";
+import {
+  type CommandItem,
+  type CommandSection,
+} from "@web/components/CommandPalette/command-palette.types";
+import { reportPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { feedbackActions } from "@web/components/Feedback/feedback.store";
 import { settingsActions } from "@web/settings/settings.store";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { type CommandPaletteViewName } from "./navigation.cmd.constants";
 
 export const PERSONAL_ONBOARDING_URL =
   "https://calendly.com/switchback-tech/compass-onboarding";
 
+export function getSettingsCommandItem(): CommandItem {
+  return {
+    id: "open-settings",
+    label: "Settings",
+    icon: GearIcon,
+    shortcut: [...APP_SHORTCUT_BINDINGS.otherSettings.keycaps],
+    keywords: ["preferences", "account", "options"],
+    onClick: () => {
+      reportPaletteShortcut("other-settings", "other");
+      settingsActions.openSettings("accounts", { fromPalette: true });
+    },
+  };
+}
+
 export function getCommandPalettePlaceholder(
-  currentView: CommandPaletteViewName,
-  feedbackEnabled = isPosthogEnabled(),
+  _currentView?: CommandPaletteViewName,
+  _feedbackEnabled = isPosthogEnabled(),
 ): string {
-  if (currentView === "life") {
-    return feedbackEnabled
-      ? "Try: 'day', 'week', or 'feedback'"
-      : "Try: 'day', 'week', or 'theme'";
-  }
-
-  if (currentView === "day") {
-    return feedbackEnabled
-      ? "Try: 'play', 'week', or 'feedback'"
-      : "Try: 'play' or 'week'";
-  }
-
-  return feedbackEnabled
-    ? "Try: 'play', 'create', or 'feedback'"
-    : "Try: 'play' or 'create'";
+  return "Search commands, events, or type a date";
 }
 
 export function getMoreCommandPaletteSections(
@@ -55,6 +65,7 @@ export function getMoreCommandPaletteSections(
       id: "advanced",
       items: [
         ...feedbackItems,
+        getSettingsCommandItem(),
         {
           id: "book-personal-onboarding",
           label: "Book personal onboarding",

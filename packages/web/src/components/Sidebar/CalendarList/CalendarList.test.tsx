@@ -362,6 +362,110 @@ describe("CalendarList", () => {
     });
   });
 
+  it("toggles calendars with digits once the account section is focused", async () => {
+    const work = makeCalendar({
+      name: "Alpha",
+      accountEmail: "ahab@pequod.com",
+    });
+    const personal = makeCalendar({
+      name: "Bravo",
+      accountEmail: "ahab@pequod.com",
+    });
+    const user = userEvent.setup({ delay: null });
+    renderCalendarList([work, personal], {
+      connections: [makeConnection("ahab@pequod.com")],
+    });
+
+    const section = screen.getByRole("region", {
+      name: "Calendars for ahab@pequod.com (Google)",
+    });
+    const workToggle = within(section).getByRole("button", {
+      name: "Hide Alpha calendar",
+    });
+    const personalToggle = within(section).getByRole("button", {
+      name: "Hide Bravo calendar",
+    });
+
+    expect(workToggle.getAttribute("aria-keyshortcuts")).toBeNull();
+    expect(within(section).queryByText("1")).not.toBeInTheDocument();
+
+    act(() => {
+      workToggle.focus();
+    });
+    expect(workToggle.getAttribute("aria-keyshortcuts")).toBe("1");
+    expect(personalToggle.getAttribute("aria-keyshortcuts")).toBe("2");
+    expect(within(section).getByText("1")).toBeInTheDocument();
+    expect(within(section).getByText("2")).toBeInTheDocument();
+
+    await user.keyboard("2");
+    await waitFor(() => {
+      expect(
+        within(section).getByRole("button", {
+          name: "Show Bravo calendar",
+        }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden Bravo calendar",
+    );
+
+    await user.keyboard("2");
+    await waitFor(() => {
+      expect(
+        within(section).getByRole("button", {
+          name: "Hide Bravo calendar",
+        }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Showing Bravo calendar",
+    );
+
+    act(() => {
+      workToggle.blur();
+    });
+    expect(workToggle.getAttribute("aria-keyshortcuts")).toBeNull();
+    expect(within(section).queryByText("1")).not.toBeInTheDocument();
+  });
+
+  it("ignores digits when focus is outside the calendar list", async () => {
+    const work = makeCalendar({ name: "Work" });
+    const user = userEvent.setup({ delay: null });
+    renderCalendarList([work]);
+
+    await user.keyboard("1");
+
+    expect(
+      screen.getByRole("button", { name: "Hide Work calendar" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("");
+  });
+
+  it("numbers the ungrouped calendar list when no account is connected", async () => {
+    const work = makeCalendar({ name: "Alpha" });
+    const personal = makeCalendar({ name: "Bravo" });
+    const user = userEvent.setup({ delay: null });
+    renderCalendarList([work, personal], { connections: [] });
+
+    const workToggle = screen.getByRole("button", {
+      name: "Hide Alpha calendar",
+    });
+    act(() => {
+      workToggle.focus();
+    });
+    expect(workToggle.getAttribute("aria-keyshortcuts")).toBe("1");
+
+    await user.keyboard("1");
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Show Alpha calendar" }),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hidden Alpha calendar",
+    );
+  });
+
   it("groups calendars under a labelled section per account when two are connected", () => {
     const work = makeCalendar({
       name: "Work",

@@ -1,4 +1,7 @@
-import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
+import {
+  getPublicShortcutCatalog,
+  getShortcutMenuSections,
+} from "@web/shortcuts/shortcuts.registry";
 
 const stripMetadata = (
   shortcuts: ReadonlyArray<{ keys: unknown; label: unknown }>,
@@ -87,8 +90,16 @@ describe("shortcut menu sections", () => {
       // discoverable via the same row shown on Day/Week.
       expect(stripMetadata(sections[1]?.shortcuts ?? [])).toEqual([
         {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
+        {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
+        },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
         },
       ]);
     });
@@ -138,6 +149,10 @@ describe("shortcut menu sections", () => {
         keys: ["Alt", "ArrowDown"],
         label: "Scroll grid down one hour",
       });
+      expect(stripMetadata(lifeNavigate.shortcuts)).not.toContainEqual({
+        keys: ["g"],
+        label: "Go to a date (type it in the palette)",
+      });
     });
 
     it("lists the Up Next shortcuts in both views", () => {
@@ -154,6 +169,10 @@ describe("shortcut menu sections", () => {
         expect(stripMetadata(navigate.shortcuts)).toContainEqual({
           keys: ["v"],
           label: "Join Up Next meeting",
+        });
+        expect(stripMetadata(navigate.shortcuts)).toContainEqual({
+          keys: ["g"],
+          label: "Go to a date (type it in the palette)",
         });
       }
     });
@@ -231,8 +250,16 @@ describe("shortcut menu sections", () => {
         },
         { keys: ["f"], label: "Focus latest notice" },
         {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
+        {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
+        },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
         },
       ]);
       expect(stripMetadata(findFocus("week")?.shortcuts ?? [])).toEqual([
@@ -246,8 +273,16 @@ describe("shortcut menu sections", () => {
         },
         { keys: ["f"], label: "Focus latest notice" },
         {
+          keys: ["1-9"],
+          label: "Show or hide a calendar by number (in the focused list)",
+        },
+        {
           keys: ["Mod", "1-9"],
           label: "Jump to a page area (hold Mod for hints)",
+        },
+        {
+          keys: ["Mod", "K"],
+          label: "Find an event by title",
         },
       ]);
     });
@@ -273,7 +308,7 @@ describe("shortcut menu sections", () => {
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["Mod", "V"],
-          label: "Paste copied event",
+          label: "Paste copied event on the selected day",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["ArrowUp"],
@@ -398,6 +433,22 @@ describe("shortcut menu sections", () => {
           label: "Move event 15 min earlier",
         });
         expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowUp"],
+          label: "Move event an hour earlier",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowDown"],
+          label: "Move event an hour later",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowLeft"],
+          label: "Move event a week earlier",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
+          keys: ["Alt", "Shift", "ArrowRight"],
+          label: "Move event a week later",
+        });
+        expect(stripMetadata(edit?.shortcuts ?? [])).toContainEqual({
           keys: ["Arrow keys"],
           label: "Move draft event",
         });
@@ -415,6 +466,51 @@ describe("shortcut menu sections", () => {
         keys: ["]"],
         label: "Toggle sidebar",
       });
+    });
+  });
+
+  describe("getPublicShortcutCatalog", () => {
+    it("lists Week sections, form-open rows, and Day-only and Life-only extras", () => {
+      const sections = getPublicShortcutCatalog();
+
+      expect(sections.map((section) => section.title)).toEqual([
+        "Navigate",
+        "Create",
+        "Focus",
+        "Edit",
+        "Other",
+        "While the event form is open",
+        "Day only",
+        "Life only",
+      ]);
+
+      const byId = Object.fromEntries(
+        sections.map((section) => [section.id, section]),
+      );
+
+      expect(stripMetadata(byId.create?.shortcuts ?? [])).toContainEqual({
+        keys: ["c"],
+        label: "Create timed event",
+      });
+      expect(stripMetadata(byId["form-open"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["Mod", "Enter"],
+        label: "Save event form",
+      });
+      expect(stripMetadata(byId["day-only"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["w"],
+        label: "Go to Week view",
+      });
+      expect(stripMetadata(byId["life-only"]?.shortcuts ?? [])).toContainEqual({
+        keys: ["j"],
+        label: "Previous life variation",
+      });
+    });
+
+    it("matches the printable page snapshot so the public copy cannot drift", async () => {
+      const snapshot = await Bun.file(
+        new URL("./shortcuts-catalog.json", import.meta.url),
+      ).json();
+      expect(getPublicShortcutCatalog()).toEqual(snapshot);
     });
   });
 });

@@ -1,6 +1,10 @@
 import { type Request, type Response } from "express";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Status } from "@core/errors/status.codes";
+import {
+  eventTitleSearchWindow,
+  searchEventsByTitle,
+} from "@core/event/search-events-by-title";
 import { Logger } from "@core/logger/winston.logger";
 import {
   type CreateEventInput,
@@ -116,12 +120,15 @@ const send = (res: Response, e: unknown) => {
 
 const parseListQuery = (query: Request["query"]): EventListQuery => {
   const calendarIds = parseCommaSeparatedQueryParam(query["calendarIds"]);
+  const q = typeof query["q"] === "string" ? query["q"] : undefined;
+  const searchWindow = q !== undefined ? eventTitleSearchWindow() : undefined;
 
   return EventListQuerySchema.parse({
     kind: "range",
-    start: query["start"],
-    end: query["end"],
+    start: searchWindow?.start ?? query["start"],
+    end: searchWindow?.end ?? query["end"],
     ...(calendarIds !== undefined ? { calendarIds } : {}),
+    ...(q !== undefined ? { q } : {}),
   });
 };
 
@@ -135,6 +142,10 @@ const parseListQuery = (query: Request["query"]): EventListQuery => {
 // no longer lists must never be read from (nor silently included when the
 // client sends no calendarIds at all, which happens while the browser's own
 // calendar list is still loading).
+//
+// Call once per request and reuse the ids across event pages. listCalendars
+// is an upstream hop; repeating it per page would double the round trips
+// the drain already pays sequentially.
 const resolveSyncCalendarIds = async (
   client: SyncServiceClient,
   userId: string,
@@ -171,10 +182,27 @@ const resolveSyncCalendarIds = async (
     .map((id) => SyncEventCalendarIdSchema.parse(id));
 };
 
+const MS_PER_DAY = 86_400_000;
+const SYNC_FULL_EVENTS_PAGE_LIMIT_MAX = 500;
+// Personal calendars rarely exceed this many timed events in a day. Day
+// view (and other short windows) request a first page this size instead of
+// Sync's 500-row default so the typical read is one small page; busy
+// windows still drain via nextCursor.
+const SYNC_FULL_EVENTS_PAGE_LIMIT_PER_DAY = 50;
+
+const pageLimitForRange = (start: string, end: string): number => {
+  const days = (Date.parse(end) - Date.parse(start)) / MS_PER_DAY;
+  const estimated = Math.ceil(
+    Math.max(days, 1) * SYNC_FULL_EVENTS_PAGE_LIMIT_PER_DAY,
+  );
+  return Math.min(SYNC_FULL_EVENTS_PAGE_LIMIT_MAX, Math.max(1, estimated));
+};
+
 // Drain every page of full-fidelity instances for the range. Sync pages at
 // most 500; legacy readAll was unbounded within the view window, so we follow
 // nextCursor until exhausted. Horizon note: sync clamps 12mo past / 18mo
-// future — the browser only views inside that window.
+// future — the browser only views inside that window. `calendarIds` is
+// resolved once by the caller and reused on every page.
 const listAllFullEvents = async (
   client: SyncServiceClient,
   userId: string,
@@ -184,12 +212,14 @@ const listAllFullEvents = async (
   const principal = toSyncPrincipal(userId);
   const instances = [];
   let cursor: string | undefined;
+  const limit = pageLimitForRange(query.start, query.end);
 
   for (;;) {
     const pageQuery: EventInstanceListQuery = {
       calendarIds,
       start: query.start,
       end: query.end,
+      limit,
       ...(cursor !== undefined ? { cursor } : {}),
     };
     const result = await client.listFullEvents(principal, pageQuery);
@@ -340,7 +370,9 @@ class EventController {
     try {
       const userId = req.session?.getUserId() as string;
       const query = parseListQuery(req.query);
-      const events = await readAllFromSync(userId, query);
+      const listed = await readAllFromSync(userId, query);
+      const events =
+        query.q !== undefined ? searchEventsByTitle(listed, query.q) : listed;
 
       res.status(Status.OK).json({ events });
     } catch (e) {

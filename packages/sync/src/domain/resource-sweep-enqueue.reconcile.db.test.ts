@@ -208,6 +208,24 @@ describe("reconcile sweep (enqueueForResources + listStaleEvents)", () => {
     expect(await jobByKey(`incrementalPull:${deadCredential._id}`)).toBeNull();
   });
 
+  it("skips a resource whose calendar is inactive", async () => {
+    const inactive = await seedResource(new Date("2026-07-01T00:00:00.000Z"));
+    const active = await seedResource(new Date("2026-07-01T00:00:00.000Z"));
+    if (!inactive.calendarId) throw new Error("expected an events resource");
+    await resources.setCalendarActiveByCalendarIds(
+      inactive.tenantId,
+      inactive.principalId,
+      [inactive.calendarId],
+      false,
+    );
+
+    const enqueued = await reconcileStaleCalendars(deps(), staleBefore, now);
+
+    expect(enqueued).toBe(1);
+    expect(await jobByKey(`incrementalPull:${active._id}`)).not.toBeNull();
+    expect(await jobByKey(`incrementalPull:${inactive._id}`)).toBeNull();
+  });
+
   it("skips a resource whose existing job cannot be read and sweeps the rest", async () => {
     // 2026-07-31: three job docs written before `requeuedCount` existed made
     // enqueue's coalescing read throw, and the sweep's loop had no per-item

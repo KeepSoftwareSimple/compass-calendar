@@ -30,6 +30,10 @@ const TRANSIENT_MONGO_MESSAGE_PATTERNS = [
   // MongoWaitQueueTimeoutError cause of "Timed out while checking out a
   // connection from connection pool" — match both wrapping and unwrapped.
   /timed out .*(checking out a connection|connection checkout)/i,
+  // Driver: MongoOperationTimeoutError "Timed out during socket read (Xms)"
+  // from Connection#readMany when a tightly-bounded op (e.g. the health
+  // check's ping) hits its timeoutMS mid-read on a slow/blipping socket.
+  /timed out during socket read/i,
 ];
 
 export function isTransientMongoNetworkError(error: unknown): boolean {

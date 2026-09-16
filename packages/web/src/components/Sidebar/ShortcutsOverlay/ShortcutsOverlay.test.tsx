@@ -8,6 +8,7 @@ import {
   useViewStore,
   viewActions,
 } from "@web/events/stores/view.store";
+import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { beforeEach, describe, expect, it } from "bun:test";
 import "@testing-library/jest-dom";
 import { ShortcutsOverlay } from "./ShortcutsOverlay";
@@ -58,11 +59,17 @@ describe("ShortcutsOverlay", () => {
     expect(overlay.inert).toBe(false);
     expect(screen.getByText("Shortcuts")).toBeInTheDocument();
     expect(
+      screen.getByText("You've used 0 of 2 shortcuts here"),
+    ).toBeInTheDocument();
+    expect(
       screen.getByText("Keyboard shortcuts for Day view"),
     ).toBeInTheDocument();
     expect(screen.getByText("Day")).toBeInTheDocument();
     expect(screen.getByText("Previous day")).toBeInTheDocument();
     expect(screen.queryByText("Empty")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Printable version" }),
+    ).toHaveAttribute("href", "/shortcuts");
   });
 
   it("closes when Escape is pressed", async () => {
@@ -142,5 +149,76 @@ describe("ShortcutsOverlay", () => {
     });
     expect(overlay.inert).toBe(true);
     expect(overlay.firstElementChild?.className).toContain("-translate-x-full");
+  });
+
+  it("marks used shortcuts and narrows the header count with search", async () => {
+    const user = userEvent.setup();
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "nav-prev": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 2, recentImpressions: 0 },
+        "nav-today": { invocations: 4, recentImpressions: 0 },
+      },
+    });
+    viewActions.setSidebarOpen(true);
+    viewActions.toggleShortcuts();
+
+    render(
+      <ShortcutsOverlay
+        sections={[
+          {
+            id: "navigate",
+            title: "Day",
+            shortcuts: [
+              {
+                id: "nav-prev",
+                keys: ["j"],
+                label: "Previous day",
+                section: "navigate",
+              },
+              {
+                id: "nav-next",
+                keys: ["k"],
+                label: "Next day",
+                section: "navigate",
+              },
+              {
+                id: "nav-today",
+                keys: ["t"],
+                label: "Go to today",
+                section: "navigate",
+              },
+              {
+                id: "nav-unused",
+                keys: ["g"],
+                label: "Go to date",
+                section: "navigate",
+              },
+            ],
+          },
+        ]}
+      />,
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("You've used 3 of 4 shortcuts here"),
+      ).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("used")).toHaveLength(3);
+
+    await user.type(
+      screen.getByPlaceholderText("Search shortcuts..."),
+      "previous",
+    );
+
+    expect(
+      screen.getByText("You've used 1 of 1 shortcuts here"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("used")).toHaveLength(1);
+    expect(screen.queryByText("Next day")).not.toBeInTheDocument();
   });
 });

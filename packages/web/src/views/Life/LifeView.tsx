@@ -15,6 +15,7 @@ import {
   useViewStore,
 } from "@web/events/stores/view.store";
 import { UpcomingEventNotifierHost } from "@web/notifications/UpcomingEventNotifierHost";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
   LIFE_PAGE_JUMP_TARGETS,
@@ -159,9 +160,16 @@ export function LifeView({ today }: LifeViewProps) {
     }));
   }, [currentDate]);
 
-  useAppShortcutUp("T", focusCurrentWeek);
-  useAppShortcutUp("J", () => cycleVariation(-1));
-  useAppShortcutUp("K", () => cycleVariation(1));
+  const lifeNav = APP_SHORTCUT_BINDINGS;
+  useAppShortcutUp(lifeNav.navLifeCurrent.hotkey, focusCurrentWeek, {
+    shortcutId: "nav-life-current",
+  });
+  useAppShortcutUp(lifeNav.navLifePrevious.hotkey, () => cycleVariation(-1), {
+    shortcutId: "nav-life-prev",
+  });
+  useAppShortcutUp(lifeNav.navLifeNext.hotkey, () => cycleVariation(1), {
+    shortcutId: "nav-life-next",
+  });
 
   return (
     <div className="flex h-screen w-screen overflow-hidden">

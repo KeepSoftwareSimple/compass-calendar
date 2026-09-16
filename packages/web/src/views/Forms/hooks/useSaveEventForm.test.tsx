@@ -195,6 +195,7 @@ describe("useSaveEventForm", () => {
       isReady: () => true,
       getEvents: async (_query: EventListQuery) => [],
       getAllEvents: async () => [] as LocalEventRecord[],
+      searchByTitle: async () => [],
       putEvent: async () => {
         throw new DOMException("Quota exceeded", "QuotaExceededError");
       },

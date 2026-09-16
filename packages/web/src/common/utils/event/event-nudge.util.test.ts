@@ -41,6 +41,26 @@ describe("getArrowKeyMovement", () => {
     expect(getArrowKeyMovement("ArrowDown", true)).toBeNull();
     expect(getArrowKeyMovement("Enter", false)).toBeNull();
   });
+
+  it("maps coarse arrows to 60 minutes or 7 days", () => {
+    expect(getArrowKeyMovement("ArrowUp", false, "coarse")).toEqual({
+      days: 0,
+      minutes: -60,
+    });
+    expect(getArrowKeyMovement("ArrowDown", false, "coarse")).toEqual({
+      days: 0,
+      minutes: 60,
+    });
+    expect(getArrowKeyMovement("ArrowLeft", false, "coarse")).toEqual({
+      days: -7,
+      minutes: 0,
+    });
+    expect(getArrowKeyMovement("ArrowRight", true, "coarse")).toEqual({
+      days: 7,
+      minutes: 0,
+    });
+    expect(getArrowKeyMovement("ArrowUp", true, "coarse")).toBeNull();
+  });
 });
 
 describe("convertAllDayToTimedDates", () => {

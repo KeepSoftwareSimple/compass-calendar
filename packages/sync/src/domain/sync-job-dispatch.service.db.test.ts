@@ -254,7 +254,7 @@ describe("dispatchSyncJob", () => {
       updatedAt: now(),
     }) as JobRecord;
 
-  it("invalidates after an empty incremental pull retry once the cursor already advanced", async () => {
+  it("does not append a calendar invalidation after an applied pull that wrote nothing", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "cursor-1");
     const reader = new FakeReader([page([], { nextSyncToken: "cursor-1" })]);
@@ -273,15 +273,10 @@ describe("dispatchSyncJob", () => {
       .collection(SYNC_COLLECTIONS.invalidations)
       .find({ principalId: calendar.principalId })
       .toArray();
-    expect(feed).toHaveLength(1);
-    expect(feed[0]?.["invalidation"]).toEqual({
-      kind: "calendar",
-      connectionId: calendar.connectionId,
-      calendarId: calendar._id,
-    });
+    expect(feed).toHaveLength(0);
   });
 
-  it("settles an applied incremental pull as done when the channel is already live", async () => {
+  it("appends one calendar invalidation after an applied pull that changed an event", async () => {
     const calendar = await seedCalendar();
     const resource = await seedResource(calendar, "cursor-0");
     await resources.updateSubscription(
@@ -305,6 +300,55 @@ describe("dispatchSyncJob", () => {
       now,
     );
     expect(outcome).toEqual({ result: "done" });
+
+    const feed = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.invalidations)
+      .find({ principalId: calendar.principalId })
+      .toArray();
+    expect(feed).toHaveLength(1);
+    expect(feed[0]?.["invalidation"]).toEqual({
+      kind: "calendar",
+      connectionId: calendar.connectionId,
+      calendarId: calendar._id,
+    });
+  });
+
+  it("appends one calendar invalidation when an applied no-op pull clears cursor expiry", async () => {
+    const calendar = await seedCalendar();
+    const resource = await seedResource(calendar, "cursor-1");
+    await resources.updateSubscription(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+      {
+        subscriptionId: "channel-1",
+        subscriptionResourceId: "provider-resource-1",
+        subscriptionToken: "token-1",
+        subscriptionExpiresAt: new Date("2026-08-01T00:00:00.000Z"),
+      },
+    );
+    await resources.recordCursorExpiry(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+      now(),
+    );
+    const reader = new FakeReader([page([], { nextSyncToken: "cursor-1" })]);
+
+    const outcome = await dispatchSyncJob(
+      deps(reader),
+      jobFor(resource, "incrementalPull"),
+      now,
+    );
+    expect(outcome).toEqual({ result: "done" });
+
+    const healed = await resources.findById(
+      calendar.tenantId,
+      calendar.principalId,
+      resource._id,
+    );
+    expect(healed?.cursorExpiredStreak).toBe(0);
 
     const feed = await storage
       .db()

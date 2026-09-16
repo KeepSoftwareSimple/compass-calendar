@@ -1,9 +1,11 @@
 import { loadCompassConfig } from "@core/config/compass.config";
+import { reportBootSize } from "./boot-size-report";
 import { copyStaticAssets } from "./copy-static-assets";
 import { injectModulePreloads } from "./inject-module-preloads";
 import { combineCoreBootSplitsPlugin } from "./plugins/combine-core-boot-splits.plugin";
 import { dropZodLocalesPlugin } from "./plugins/drop-zod-locales.plugin";
 import { postcssPlugin } from "./plugins/postcss.plugin";
+import { precompressBuildOutput } from "./precompress-build-output";
 import { execSync } from "node:child_process";
 import path from "node:path";
 
@@ -97,6 +99,7 @@ const metafileDump = process.env["COMPASS_DUMP_METAFILE"];
 if (metafileDump) {
   await Bun.write(metafileDump, JSON.stringify(result.metafile));
 }
+const precompressed = await precompressBuildOutput(OUTDIR);
 
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`Build complete → ${OUTDIR}`);
@@ -104,3 +107,10 @@ console.log(`Build complete → ${OUTDIR}`);
 console.log(`  ${result.outputs.length} files written`);
 // biome-ignore lint/suspicious/noConsole: Preserve build progress output.
 console.log(`  ${preloaded.length} boot chunks modulepreloaded in index.html`);
+// biome-ignore lint/suspicious/noConsole: Preserve build progress output.
+console.log(`  ${precompressed.length} files precompressed (.br/.gz)`);
+
+const bootSizeViolations = await reportBootSize(OUTDIR, result.metafile);
+if (bootSizeViolations.length > 0) {
+  process.exit(1);
+}

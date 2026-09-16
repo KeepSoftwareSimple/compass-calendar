@@ -1,35 +1,22 @@
 import { bookingOperationHeartbeatProperties } from "@core/booking/booking-operation-lifecycle";
-import {
-  captureSafely,
-  createPostHogCaptureClient,
-  DEFAULT_POSTHOG_HOST,
-} from "@core/logger/posthog-capture";
+import { captureSafely } from "@core/logger/posthog-capture";
 import { Logger } from "@core/logger/winston.logger";
 import {
   BOOKING_LIFECYCLE_DISTINCT_ID,
   BOOKING_OPERATION_HEARTBEAT_EVENT,
+  BOOKING_OPERATION_HEARTBEAT_INTERVAL_MS,
 } from "@core/types/booking-lifecycle.contracts";
 import { normalizeDeployVersion } from "@core/util/deploy-version.util";
 import { BOOKING_OPERATION_RECOVERABLE_STATUSES } from "@backend/booking/booking-operation.record";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { getBackendPostHogClient } from "@backend/common/helpers/backend-posthog-client";
 import mongoService from "@backend/common/services/mongo.service";
 
 const logger = Logger("app:booking.lifecycle.heartbeat");
 
-const BOOKING_OPERATION_HEARTBEAT_INTERVAL_MS = 5 * 60 * 1000;
 const EXHAUSTED_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
-
-function getClient() {
-  const apiKey = CONFIG.POSTHOG_KEY;
-  if (!apiKey) return null;
-  return createPostHogCaptureClient({
-    apiKey,
-    host: CONFIG.POSTHOG_HOST ?? DEFAULT_POSTHOG_HOST,
-    lib: "compass-backend",
-  });
-}
 
 export async function computeBookingOperationHeartbeat(now = new Date()) {
   const pendingFilter = {
@@ -61,7 +48,7 @@ export async function computeBookingOperationHeartbeat(now = new Date()) {
 export async function emitBookingOperationHeartbeat(): Promise<void> {
   try {
     const properties = await computeBookingOperationHeartbeat();
-    void captureSafely(getClient(), {
+    void captureSafely(getBackendPostHogClient(), {
       event: BOOKING_OPERATION_HEARTBEAT_EVENT,
       distinctId: BOOKING_LIFECYCLE_DISTINCT_ID,
       properties,

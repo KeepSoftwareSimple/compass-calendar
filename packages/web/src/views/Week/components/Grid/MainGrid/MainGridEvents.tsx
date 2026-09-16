@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   type CalendarCardIdentity,
   isGridEventScheduleLocked,
@@ -25,6 +26,7 @@ import {
   createTimedEventLayout,
   type TimedDeckLayout,
 } from "@web/grid/layout/timed-deck.layout";
+import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
@@ -53,6 +55,14 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
   const draftId = useDraftStore(selectDraftId);
   const gridDraft = useDraftStore(selectGridDraft);
   const weekDays = weekProps.component.weekDays;
+  const visibleDates: GridVisibleDate[] = useMemo(
+    () =>
+      weekDays.map((date) => ({
+        date,
+        key: date.format(YEAR_MONTH_DAY_FORMAT),
+      })),
+    [weekDays],
+  );
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
   const hiddenEventIds = useHiddenEventIds();
@@ -159,7 +169,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
                 measurements={measurements}
                 onEventKeyDown={onEventKeyDown}
                 onOpenReadOnlyDetails={onOpenReadOnlyDetails}
-                weekProps={weekProps}
+                visibleDates={visibleDates}
               />
             );
           },
@@ -179,7 +189,7 @@ interface MainGridEventItemProps {
   measurements: Measurements_Grid;
   onEventKeyDown: (event: GridEvent) => void;
   onOpenReadOnlyDetails: (event: GridEvent) => void;
-  weekProps: WeekProps;
+  visibleDates: GridVisibleDate[];
 }
 
 const MainGridEventItem = ({
@@ -193,7 +203,7 @@ const MainGridEventItem = ({
   measurements,
   onEventKeyDown,
   onOpenReadOnlyDetails,
-  weekProps,
+  visibleDates,
 }: MainGridEventItemProps) => {
   // Stamp view-registry id attrs whenever the card has an id (saved, draft
   // placeholder, or read-only) so context menus / focus restore can resolve
@@ -230,7 +240,7 @@ const MainGridEventItem = ({
       measurements={measurements}
       onEventKeyDown={isReadOnly ? onOpenReadOnlyDetails : onEventKeyDown}
       ref={registrationRef}
-      weekProps={weekProps}
+      visibleDates={visibleDates}
     />
   );
 };

@@ -1,10 +1,12 @@
 import { faker } from "@faker-js/faker";
+import { seedOauthCredential } from "@sync/__tests__/helpers/credential-encryption";
 import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { enqueueForResources } from "@sync/domain/resource-sweep-enqueue";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { resourceJob } from "@sync/storage/contracts/job.contracts";
 import { type SyncResourceRecord } from "@sync/storage/contracts/sync-resource.contracts";
+import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 
@@ -39,10 +41,12 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
   const storage = setupSyncStorage(import.meta.url);
   let resources: SyncResourceRepository;
   let jobs: JobRepository;
+  let credentials: CredentialRepository;
 
   beforeEach(() => {
     resources = new SyncResourceRepository(storage.db());
     jobs = new JobRepository(storage.db());
+    credentials = new CredentialRepository(storage.db());
   });
 
   const deps = () => ({ resources, jobs });
@@ -52,16 +56,26 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
   // calendar) identity never collides.
   const seedResource = async (
     expiresAt: Date | null,
+    options: { withCredential?: boolean } = {},
   ): Promise<SyncResourceRecord> => {
     const tenantId = objectId() as SyncResourceRecord["tenantId"];
     const principalId = objectId() as SyncResourceRecord["principalId"];
+    const connectionId = objectId() as SyncResourceRecord["connectionId"];
     const resource = await resources.ensure({
       tenantId,
       principalId,
-      connectionId: objectId() as SyncResourceRecord["connectionId"],
+      connectionId,
       resourceKind: "events",
       calendarId: objectId() as SyncResourceRecord["calendarId"],
     });
+    if (options.withCredential ?? true) {
+      await seedOauthCredential(credentials, {
+        connectionId,
+        provider: "google",
+        refreshToken: "refresh-token",
+        scopes: [],
+      });
+    }
     if (expiresAt) {
       await resources.updateSubscription(tenantId, principalId, resource._id, {
         subscriptionId: `channel-${resource._id}`,
@@ -124,12 +138,19 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
   it("enqueues a maintain job for an expiring calendar-list channel", async () => {
     const tenantId = objectId() as SyncResourceRecord["tenantId"];
     const principalId = objectId() as SyncResourceRecord["principalId"];
+    const connectionId = objectId() as SyncResourceRecord["connectionId"];
     const resource = await resources.ensure({
       tenantId,
       principalId,
-      connectionId: objectId() as SyncResourceRecord["connectionId"],
+      connectionId,
       resourceKind: "calendarList",
       calendarId: null,
+    });
+    await seedOauthCredential(credentials, {
+      connectionId,
+      provider: "google",
+      refreshToken: "refresh-token",
+      scopes: [],
     });
     await resources.updateSubscription(tenantId, principalId, resource._id, {
       subscriptionId: `channel-${resource._id}`,
@@ -193,5 +214,24 @@ describe("subscription-maintenance sweep (enqueueForResources + listExpiringSubs
     expect(resource?.["subscriptionExpiresAt"]).toEqual(
       new Date("2026-07-10T02:00:00.000Z"),
     );
+  });
+
+  it("skips a connection whose credential is already unusable", async () => {
+    const unusable = await seedResource(new Date("2026-07-10T01:00:00.000Z"), {
+      withCredential: false,
+    });
+    const healthy = await seedResource(new Date("2026-07-10T01:00:00.000Z"));
+
+    const enqueued = await maintainExpiringSubscriptions(
+      deps(),
+      renewBefore,
+      now,
+    );
+
+    expect(enqueued).toBe(1);
+    expect(
+      await jobByKey(`subscriptionMaintain:${healthy._id}`),
+    ).not.toBeNull();
+    expect(await jobByKey(`subscriptionMaintain:${unusable._id}`)).toBeNull();
   });
 });

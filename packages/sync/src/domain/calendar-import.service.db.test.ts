@@ -26,6 +26,7 @@ import { EventRepository } from "@sync/storage/repositories/event.repository";
 import { EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const now = () => new Date("2026-07-10T00:00:00.000Z");
 
@@ -380,6 +381,28 @@ describe("importCalendarEvents", () => {
     expect(result.imported).toBe(1);
     expect(result.skipped).toBe(1);
     expect(await occCount(calendar._id)).toBe(1);
+  });
+
+  it("skips re-upserting a windowed event whose etag is unchanged on the full pass", async () => {
+    const calendar = await seedCalendar();
+    const inHorizon = single("a");
+    const outOfHorizon = single("b");
+    const reader = new FakeReader({
+      window: [page([inHorizon])],
+      full: [page([inHorizon, outOfHorizon], { nextSyncToken: "cursor-1" })],
+    });
+    const spy = spyOn(events, "upsertManyByProviderIdentity");
+
+    const result = await importCalendarEvents(deps(reader), calendar, now);
+
+    expect(result.imported).toBe(2);
+    const upsertedIds = spy.mock.calls.flatMap(
+      ([inputs]) => inputs?.map((input) => input.providerEventId) ?? [],
+    );
+    // Windowed pass writes "a"; the full pass only writes out-of-horizon "b".
+    expect(upsertedIds.filter((id) => id === "a")).toHaveLength(1);
+    expect(upsertedIds.filter((id) => id === "b")).toHaveLength(1);
+    spy.mockRestore();
   });
 
   it("is a no-op once the resource already has a cursor", async () => {

@@ -107,6 +107,16 @@ jobs:
         run: |
           bun run type-check
 
+      # build.ts enforces the boot-size budget. Running it here makes a PR
+      # that grows the boot bundle fail on the PR instead of only breaking the
+      # release image build after merge (#3814-#3816). Same config as
+      # perf-budget.yml; see its header for why that config is trustworthy.
+      - name: Build web bundle (boot-size budget)
+        env:
+          COMPASS_CONFIG_FILE: ${{ github.workspace }}/.github/perf/compass.perf.yaml
+        run: |
+          cd packages/web && bun run build.ts
+
       # Workflow files auto-merge under the same size rails as other paths,
       # so they are linted here. Pinned; the image bundles shellcheck for
       # run: steps.
@@ -139,8 +149,8 @@ jobs:
   # Let the legs start and skip every step instead: each reports in a few
   # seconds, for free. Per-package outputs skip unrelated legs the same way
   # (a backend-only PR must not pay two web runners). `unit-leg (web, 1)`
-  # and `unit-leg (web, 2)` each cover half the suite as two sequential
-  # shards (`WEB_TEST_SHARDS=4` with index `1,2` / `3,4`) so RSS stays
+  # and `unit-leg (web, 2)` each cover half the suite as three sequential
+  # shards (`WEB_TEST_SHARDS=6` with index `1,2,3` / `4,5,6`) so RSS stays
   # under 7 GB.
   unit-leg:
     needs: changes
@@ -157,10 +167,10 @@ jobs:
             project: sync
           - name: web, 1
             project: web
-            shard: "1,2"
+            shard: "1,2,3"
           - name: web, 2
             project: web
-            shard: "3,4"
+            shard: "4,5,6"
           - name: backend
             project: backend
           - name: scripts
@@ -205,7 +215,7 @@ jobs:
         timeout-minutes: 5
         env:
           TZ: Etc/UTC
-          WEB_TEST_SHARDS: "4"
+          WEB_TEST_SHARDS: "6"
           WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
         run: |
           bun run test:web

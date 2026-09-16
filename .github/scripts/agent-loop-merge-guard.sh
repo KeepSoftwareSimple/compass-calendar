@@ -110,9 +110,13 @@ pr_has_automerge() {
 # The latest push run of each required workflow on main. A red main means the
 # base is broken; merging more on top hides which change broke it. Fails
 # closed: an unreadable result counts as red.
+#
+# release-on-main.yml counts too: green tests do not mean a shippable image
+# (#3814-#3816). perf-budget.yml is left out because the boot-size budget it
+# exercises is already a required PR check in test-unit.yml.
 main_is_red() {
   local workflow conclusion
-  for workflow in test-unit.yml test-e2e.yml; do
+  for workflow in test-unit.yml test-e2e.yml release-on-main.yml; do
     conclusion=$(gh run list --repo "$REPO" --workflow "$workflow" --branch main \
       --event push --status completed --limit 1 --json conclusion \
       --jq '.[0].conclusion // "unknown"' 2>/dev/null || echo "unknown")

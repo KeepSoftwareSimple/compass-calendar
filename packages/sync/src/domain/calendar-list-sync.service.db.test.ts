@@ -424,6 +424,7 @@ describe("syncCalendarList", () => {
       .findOne(stringIdFilter(goneEventsResourceId));
     expect(goneEventsResource?.["subscriptionId"]).toBeNull();
     expect(goneEventsResource?.["subscriptionExpiresAt"]).toBeNull();
+    expect(goneEventsResource?.["calendarActive"]).toBe(false);
   });
 
   it("clears the push channel when a calendar is upserted inactive on an incremental pass", async () => {
@@ -475,6 +476,22 @@ describe("syncCalendarList", () => {
       (d) => d["providerCalendarId"] === "hides",
     );
     expect(hides?.["active"]).toBe(false);
+    expect(hidesEventsResource?.["calendarActive"]).toBe(false);
+
+    await syncCalendarList(
+      deps(
+        new FakeDiscovery([
+          { calendars: [discovered("hides", true)], cursor: "c3" },
+        ]),
+      ),
+      conn,
+      now,
+    );
+    const reactivated = await storage
+      .db()
+      .collection(SYNC_COLLECTIONS.syncResources)
+      .findOne(stringIdFilter(hidesEventsResourceId));
+    expect(reactivated?.["calendarActive"]).toBe(true);
   });
 
   it("stamps lastFullListAt on a full pass", async () => {

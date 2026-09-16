@@ -167,6 +167,95 @@ describe("EventRepository", () => {
     expect(cleared.providerMetadata).toBeNull();
   });
 
+  it("upsertManyByProviderIdentity writes a page in one call and preserves iCalUID", async () => {
+    const connectionId = objectId() as ConnectionId;
+    const calendarId = objectId() as CalendarId;
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const first = await repo.upsertManyByProviderIdentity(
+      [
+        linkedUpsert({
+          tenantId,
+          principalId,
+          connectionId,
+          calendarId,
+          providerEventId: "evt-a" as ProviderEventId,
+          providerMetadata: { iCalUID: "a@google.com" },
+        }),
+        linkedUpsert({
+          tenantId,
+          principalId,
+          connectionId,
+          calendarId,
+          providerEventId: "evt-b" as ProviderEventId,
+        }),
+      ],
+      { preserveIcalUidWhenAbsent: true },
+    );
+    expect(first).toHaveLength(2);
+    expect(first[0]?.providerEventId).toBe("evt-a" as ProviderEventId);
+    expect(first[1]?.providerEventId).toBe("evt-b" as ProviderEventId);
+
+    const second = await repo.upsertManyByProviderIdentity(
+      [
+        linkedUpsert({
+          tenantId,
+          principalId,
+          connectionId,
+          calendarId,
+          providerEventId: "evt-a" as ProviderEventId,
+          providerVersion: "etag-2" as ProviderEventVersion,
+          providerMetadata: null,
+        }),
+      ],
+      { preserveIcalUidWhenAbsent: true },
+    );
+    expect(second[0]?._id).toBe(first[0]?._id);
+    expect(second[0]?.providerMetadata).toEqual({ iCalUID: "a@google.com" });
+    expect(await db.collection("events").countDocuments()).toBe(2);
+  });
+
+  it("findByProviderIdentities hydrates several identities in one call", async () => {
+    const connectionId = objectId() as ConnectionId;
+    const calendarId = objectId() as CalendarId;
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    await repo.upsertManyByProviderIdentity([
+      linkedUpsert({
+        tenantId,
+        principalId,
+        connectionId,
+        calendarId,
+        providerEventId: "evt-1" as ProviderEventId,
+      }),
+      linkedUpsert({
+        tenantId,
+        principalId,
+        connectionId,
+        calendarId,
+        providerEventId: "evt-2" as ProviderEventId,
+      }),
+    ]);
+
+    const found = await repo.findByProviderIdentities(tenantId, principalId, {
+      connectionId,
+      calendarId,
+      providerEventIds: [
+        "evt-1" as ProviderEventId,
+        "evt-2" as ProviderEventId,
+        "missing" as ProviderEventId,
+      ],
+    });
+    expect([...found.keys()].sort()).toEqual(["evt-1", "evt-2"]);
+    expect(
+      await repo.findByProviderIdentities(tenantId, principalId, {
+        connectionId,
+        calendarId,
+        providerEventIds: [],
+      }),
+    ).toEqual(new Map());
+  });
+
   // The $type in the upsert filter looks redundant (the input is always a
   // string) but is what lets the planner use the provider_event_identity
   // PARTIAL index — without it every upsert COLLSCANs, which took prod down.

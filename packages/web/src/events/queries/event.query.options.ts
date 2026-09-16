@@ -1,6 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 import { type CalendarId } from "@core/types/domain-primitives";
+import { type Dayjs } from "@core/util/date/dayjs";
 import { isBackendUnavailableError } from "@web/api/util/backend-unavailable-error.util";
+import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { RemoteEventRepository } from "@web/events/repositories/remote.event.repository";
 import { fetchDayEvents } from "./day.event.query";
@@ -66,4 +68,28 @@ export function dayEventsQueryOptions(args: EventsQueryArgs) {
 
 export function weekEventsQueryOptions(args: EventsQueryArgs) {
   return rangeEventsQueryOptions("week", fetchWeekEvents, args);
+}
+
+/**
+ * View-range wrapper around {@link weekEventsQueryOptions}. The week read
+ * hook and the week route-loader prefetch share this so the in-flight
+ * request lands under the key the view will read.
+ */
+export function weekEventsViewQueryOptions({
+  startOfView,
+  endOfView,
+  source,
+  calendarIds,
+}: {
+  startOfView: Dayjs;
+  endOfView: Dayjs;
+  source: EventRepositorySource;
+  calendarIds?: CalendarId[];
+}) {
+  return weekEventsQueryOptions({
+    source,
+    startDate: toUTCOffset(startOfView),
+    endDate: toUTCOffset(endOfView),
+    calendarIds,
+  });
 }

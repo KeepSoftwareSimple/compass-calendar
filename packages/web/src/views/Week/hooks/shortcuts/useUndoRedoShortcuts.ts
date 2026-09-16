@@ -23,8 +23,11 @@ export function useUndoRedoShortcuts(
       if (event.shiftKey) return;
       undo();
     },
-    { ignoreInputs: true },
+    { ignoreInputs: true, shortcutId: "other-undo" },
   );
 
-  useAppShortcut(KEYMAP.redo.hotkey, () => redo(), { ignoreInputs: true });
+  useAppShortcut(KEYMAP.redo.hotkey, () => redo(), {
+    ignoreInputs: true,
+    shortcutId: "other-redo",
+  });
 }

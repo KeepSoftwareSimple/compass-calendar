@@ -1,5 +1,9 @@
+import { type Event } from "@core/types/event.contracts";
 import { EventListQuerySchema } from "@core/types/event-command.contracts";
-import { getOfflineDataStore } from "@web/common/storage/offline-data/offline-data.store.registry";
+import {
+  ensureOfflineDataStoreReady,
+  getOfflineDataStore,
+} from "@web/common/storage/offline-data/offline-data.store.registry";
 import { expandLocalEventRecords } from "@web/events/recurrence/expandLocalEventRecords";
 import { normalizeLocalEventRecords } from "./event.query.normalize";
 import { type NormalizedEventQueryData } from "./event.query.types";
@@ -22,8 +26,17 @@ export async function fetchLocalEventsRange(
   // All records, not the store's range read: a series record's own schedule
   // is just its first occurrence, so range-filtering before expansion would
   // drop every series that started before the queried window.
+  await ensureOfflineDataStoreReady();
   const records = await getOfflineDataStore().getAllEvents();
   return normalizeLocalEventRecords(
     expandLocalEventRecords(records, { start: query.start, end: query.end }),
   );
+}
+
+export async function fetchLocalEventsByTitle(
+  q: string,
+  now = Date.now(),
+): Promise<Event[]> {
+  await ensureOfflineDataStoreReady();
+  return getOfflineDataStore().searchByTitle(q, now);
 }

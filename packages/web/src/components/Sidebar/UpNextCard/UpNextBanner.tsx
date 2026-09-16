@@ -5,6 +5,7 @@ import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
@@ -41,9 +42,15 @@ export const UpNextBanner: FC = () => {
     beginDismiss(() => setDismissedId(upNext?._id));
   };
 
-  useAppShortcutUp("N", () => openEventDetails("keyboardEdit"));
-  useAppShortcutUp("V", openConference, {
+  const upNextShortcuts = APP_SHORTCUT_BINDINGS;
+  useAppShortcutUp(
+    upNextShortcuts.navUpNext.hotkey,
+    () => openEventDetails("keyboardEdit"),
+    { shortcutId: "nav-up-next" },
+  );
+  useAppShortcutUp(upNextShortcuts.navJoinMeeting.hotkey, openConference, {
     enabled: Boolean(conferenceUrl),
+    shortcutId: "nav-join-meeting",
   });
   // Only active while the banner itself is showing. Fires alongside any
   // other Escape handling (e.g. useEscapeToCloseForm closing the event form)

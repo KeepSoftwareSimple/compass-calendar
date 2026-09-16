@@ -12,6 +12,18 @@ permissions:
   contents: read
 
 jobs:
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - deploy
+      - health-check
+    uses: ./.github/workflows/_notify-failure.yml
+    with:
+      tag: ${{ inputs.tag }}
+      needs_json: ${{ toJSON(needs) }}
+    secrets: inherit
+
   deploy:
     name: Deploy to production
     uses: ./.github/workflows/_deploy-environment.yml

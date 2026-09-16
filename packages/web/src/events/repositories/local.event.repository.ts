@@ -12,6 +12,7 @@ import { shiftSeriesScheduleByOccurrenceEdit } from "@core/util/event/shift-seri
 import { throwIfAborted } from "@web/api/util/api.util";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
 import {
+  ensureOfflineDataStoreReady,
   getOfflineDataStore,
   type OfflineDataStore,
 } from "@web/common/storage/offline-data/offline-data.store.registry";
@@ -117,8 +118,19 @@ export class LocalEventRepository implements EventRepository {
     return this.getStore();
   }
 
+  private async ensureStoreReady(): Promise<void> {
+    if (this.getStore !== getOfflineDataStore) {
+      return;
+    }
+    await ensureOfflineDataStoreReady();
+  }
+
   async list(query: EventListQuery, signal?: AbortSignal): Promise<Event[]> {
     throwIfAborted(signal);
+    await this.ensureStoreReady();
+    if (query.q !== undefined) {
+      return this.store.searchByTitle(query.q);
+    }
     const records = await this.store.getAllEvents();
     return expandLocalEventRecords(records, {
       start: query.start,
@@ -188,6 +200,7 @@ export class LocalEventRepository implements EventRepository {
   }
 
   async create(input: CreateEventInput): Promise<Event> {
+    await this.ensureStoreReady();
     const id = input.id ?? (createObjectIdString() as EventId);
     const now = nowDateTime();
 
@@ -207,6 +220,7 @@ export class LocalEventRepository implements EventRepository {
   }
 
   async replace(id: EventId, input: ReplaceEventInput): Promise<Event> {
+    await this.ensureStoreReady();
     if (input.scope !== "this") {
       const series = await this.findSeriesRecord(id);
       if (series) {
@@ -325,6 +339,7 @@ export class LocalEventRepository implements EventRepository {
   }
 
   async delete(id: EventId, scope: RecurrenceScope): Promise<void> {
+    await this.ensureStoreReady();
     const series = await this.findSeriesRecord(id);
     if (!series) {
       await this.store.deleteEvent(id);

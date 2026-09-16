@@ -182,6 +182,152 @@ export const parseUserTime = (
   return getTimeOptionByValue(parsed);
 };
 
+const MONTH_NAME_TO_INDEX: Record<string, number> = {
+  january: 1,
+  jan: 1,
+  february: 2,
+  feb: 2,
+  march: 3,
+  mar: 3,
+  april: 4,
+  apr: 4,
+  may: 5,
+  june: 6,
+  jun: 6,
+  july: 7,
+  jul: 7,
+  august: 8,
+  aug: 8,
+  september: 9,
+  sept: 9,
+  sep: 9,
+  october: 10,
+  oct: 10,
+  november: 11,
+  nov: 11,
+  december: 12,
+  dec: 12,
+};
+
+const MONTH_NAME_PATTERN = Object.keys(MONTH_NAME_TO_INDEX)
+  .sort((a, b) => b.length - a.length)
+  .join("|");
+
+const expandTwoDigitYear = (year: number): number =>
+  year >= 100 ? year : 2000 + year;
+
+const calendarDate = (
+  year: number,
+  month: number,
+  day: number,
+): Dayjs | null => {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return null;
+  }
+  if (year < 1000 || year > 9999) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const iso = `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const date = dayjs(iso, YEAR_MONTH_DAY_FORMAT, true);
+  if (!date.isValid()) return null;
+  if (
+    date.year() !== year ||
+    date.month() + 1 !== month ||
+    date.date() !== day
+  ) {
+    return null;
+  }
+  return date.startOf("day");
+};
+
+const dateWithInferredYear = (
+  month: number,
+  day: number,
+  now: Dayjs,
+): Dayjs | null => {
+  const thisYear = calendarDate(now.year(), month, day);
+  if (!thisYear) return null;
+  const cutoff = now.startOf("day").subtract(6, "month");
+  if (thisYear.isBefore(cutoff)) {
+    return calendarDate(now.year() + 1, month, day);
+  }
+  return thisYear;
+};
+
+/** Parses a typed calendar date. Month-first for `M/D`. English month names only. */
+export const parseUserDate = (text: string, now: Dayjs): Dayjs | null => {
+  if (!text || typeof text !== "string") return null;
+
+  const normalized = text
+    .trim()
+    .toLowerCase()
+    .replace(/\./g, "")
+    .replace(/\s+/g, " ");
+  if (!normalized) return null;
+
+  const iso = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (iso) {
+    return calendarDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  }
+
+  const slash = normalized.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/);
+  if (slash) {
+    const month = Number(slash[1]);
+    const day = Number(slash[2]);
+    if (slash[3] !== undefined) {
+      return calendarDate(expandTwoDigitYear(Number(slash[3])), month, day);
+    }
+    return dateWithInferredYear(month, day, now);
+  }
+
+  const monthFirst = normalized.match(
+    new RegExp(
+      `^(${MONTH_NAME_PATTERN})(?:\\s+|\\s*,\\s*)(\\d{1,2})(?:(?:\\s+|\\s*,\\s*)(\\d{4}))?$`,
+    ),
+  );
+  if (monthFirst) {
+    const month = MONTH_NAME_TO_INDEX[monthFirst[1] ?? ""];
+    if (month === undefined) return null;
+    const day = Number(monthFirst[2]);
+    if (monthFirst[3] !== undefined) {
+      return calendarDate(Number(monthFirst[3]), month, day);
+    }
+    return dateWithInferredYear(month, day, now);
+  }
+
+  const dayFirst = normalized.match(
+    new RegExp(
+      `^(\\d{1,2})(?:\\s+|\\s*,\\s*)(${MONTH_NAME_PATTERN})(?:(?:\\s+|\\s*,\\s*)(\\d{4}))?$`,
+    ),
+  );
+  if (dayFirst) {
+    const month = MONTH_NAME_TO_INDEX[dayFirst[2] ?? ""];
+    if (month === undefined) return null;
+    const day = Number(dayFirst[1]);
+    if (dayFirst[3] !== undefined) {
+      return calendarDate(Number(dayFirst[3]), month, day);
+    }
+    return dateWithInferredYear(month, day, now);
+  }
+
+  return null;
+};
+
+export const goToDatePaletteLabel = (date: Dayjs): string =>
+  `Go to ${date.format("ddd, MMM D, YYYY")}`;
+
+export const goToDateAnnouncement = (
+  date: Dayjs,
+  view: "day" | "week" | "life",
+): string =>
+  view === "day"
+    ? `Showing ${date.format("dddd, MMMM D, YYYY")}`
+    : `Showing week of ${date.format("dddd, MMMM D, YYYY")}`;
+
 export const filterTimeOption = (
   option: { label: string; value: string },
   input: string,

@@ -71,12 +71,12 @@ consistent.
 
 ## Add Or Change A Keyboard Shortcut
 
-1. Add or update the entry in `packages/web/src/shortcuts/shortcuts.registry.ts`
-   (id, keys, label, section, optional `when`). The `?` legend and overlay
-   sections read from this registry — do not hard-code a second label list.
-2. If the Shortcut Showcase teaches the binding, update
-   `packages/web/src/shortcuts/keymap.ts` — the registry rows and hint
-   keycaps derive from it.
+1. Declare the binding once in `packages/web/src/shortcuts/keymap.ts` (taught
+   flows) or `packages/web/src/shortcuts/app-shortcut-bindings.ts` (everything
+   else the main shell registers).
+2. Add or update the row in `packages/web/src/shortcuts/shortcuts.registry.ts`
+   (id, keys derived from those tables, label, section, optional `when`). The
+   `?` legend reads from this registry — do not hard-code a second label list.
 3. Register the key in the owning hook:
    - global / shell: `packages/web/src/shortcuts/useGlobalShortcuts.ts`
    - day/week view keys: `packages/web/src/grid/shortcuts/useCalendarViewShortcuts.ts`

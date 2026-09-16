@@ -25,19 +25,39 @@ export const zYearMonthDayString = zod4.string().refine(
   },
 );
 
-export const TimezoneSchema = zod4.string().refine(
-  (timeZone) => {
-    try {
-      new Intl.DateTimeFormat("en-US", { timeZone });
+// IANA has a few hundred valid names, so an unbounded valid cache is fine.
+// Invalid strings are attacker-controlled, so that cache is bounded.
+const knownValidTimeZones = new Set<string>();
+const knownInvalidTimeZones = new Set<string>();
+const MAX_KNOWN_INVALID_TIMEZONES = 1024;
 
-      return true;
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_) {
-      return false;
+const isValidTimeZone = (timeZone: string): boolean => {
+  if (knownValidTimeZones.has(timeZone)) {
+    return true;
+  }
+  if (knownInvalidTimeZones.has(timeZone)) {
+    return false;
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone });
+    knownValidTimeZones.add(timeZone);
+    return true;
+  } catch {
+    if (knownInvalidTimeZones.size >= MAX_KNOWN_INVALID_TIMEZONES) {
+      const oldest = knownInvalidTimeZones.values().next().value;
+      if (oldest !== undefined) {
+        knownInvalidTimeZones.delete(oldest);
+      }
     }
-  },
-  { message: "Invalid timezone" },
-);
+    knownInvalidTimeZones.add(timeZone);
+    return false;
+  }
+};
+
+export const TimezoneSchema = zod4.string().refine(isValidTimeZone, {
+  message: "Invalid timezone",
+});
 
 export const RGBHexSchema = zod4.string().regex(/^#[0-9a-f]{6}$/i, {
   message: "Invalid color. Must be a 7-character hex color code.",

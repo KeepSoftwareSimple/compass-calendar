@@ -1,5 +1,6 @@
 import { type Db, MongoClient } from "mongodb";
 import { Logger } from "@core/logger/winston.logger";
+import { backfillCalendarActive } from "@sync/storage/backfill-calendar-active";
 import { installIndexManifest } from "@sync/storage/index-manifest";
 
 const logger = Logger("sync:mongo");
@@ -54,6 +55,7 @@ export class SyncMongoService {
     try {
       await this.verifyLeastPrivilege(options);
       await installIndexManifest(this.#db);
+      await backfillCalendarActive(this.#db);
     } catch (error) {
       // A failed startup must not leave an open client behind.
       await this.disconnect();

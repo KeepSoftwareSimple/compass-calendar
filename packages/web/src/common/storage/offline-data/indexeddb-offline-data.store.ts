@@ -1,8 +1,14 @@
 import Dexie, { type Table } from "dexie";
+import {
+  eventTitleSearchWindow,
+  searchEventsByTitle,
+} from "@core/event/search-events-by-title";
 import { type EventId } from "@core/types/domain-primitives";
+import { type Event } from "@core/types/event.contracts";
 import { type EventListQuery } from "@core/types/event-command.contracts";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
 import { transformLegacyEvents } from "@web/common/storage/migrations/data/legacy-event-to-local-record.transform";
+import { expandLocalEventRecords } from "@web/events/recurrence/expandLocalEventRecords";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import {
   deleteCompassLocalDb,
@@ -204,6 +210,16 @@ export class IndexedDbOfflineDataStore implements OfflineDataStore {
 
   async getAllEvents(): Promise<LocalEventRecord[]> {
     return this.db.events.toArray();
+  }
+
+  async searchByTitle(q: string, now = Date.now()): Promise<Event[]> {
+    const window = eventTitleSearchWindow(now);
+    const records = await this.getAllEvents();
+    return searchEventsByTitle(
+      expandLocalEventRecords(records, window).map((record) => record.event),
+      q,
+      now,
+    );
   }
 
   async putEvent(record: LocalEventRecord): Promise<void> {
