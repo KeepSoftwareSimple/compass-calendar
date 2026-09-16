@@ -15,7 +15,7 @@ import {
   parseUserDate,
 } from "@web/common/utils/datetime/web.date.util";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
-import { reportPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
+import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import {
   LIFE_SHORTCUT,
@@ -210,10 +210,7 @@ export const getLegendNavigationCommandItems = ({
       icon: SidebarSimpleIcon,
       shortcut: [...B.otherSidebar.keycaps],
       keywords: ["panel", "hide sidebar", "show sidebar"],
-      onClick: () => {
-        reportPaletteShortcut("other-sidebar", "other");
-        onToggleSidebar();
-      },
+      onClick: withPaletteShortcut("other-sidebar", onToggleSidebar),
     },
     {
       id: "focus-month-picker",
@@ -222,10 +219,7 @@ export const getLegendNavigationCommandItems = ({
       shortcut: [...B.focusSidebar.keycaps],
       keywords: ["sidebar", "dates", "calendar"],
       disabled: !isSidebarOpen,
-      onClick: () => {
-        reportPaletteShortcut("focus-sidebar", "focus");
-        onFocusMonthPicker();
-      },
+      onClick: withPaletteShortcut("focus-sidebar", onFocusMonthPicker),
     },
     {
       id: "open-up-next",
@@ -234,10 +228,7 @@ export const getLegendNavigationCommandItems = ({
       shortcut: [...B.navUpNext.keycaps],
       keywords: ["upcoming", "next event"],
       disabled: !hasUpNext,
-      onClick: () => {
-        reportPaletteShortcut("nav-up-next", "navigate");
-        onOpenUpNext();
-      },
+      onClick: withPaletteShortcut("nav-up-next", onOpenUpNext),
     },
     {
       id: "join-up-next-meeting",
@@ -246,10 +237,7 @@ export const getLegendNavigationCommandItems = ({
       shortcut: [...B.navJoinMeeting.keycaps],
       keywords: ["conference", "video", "call", "meet"],
       disabled: !hasConference,
-      onClick: () => {
-        reportPaletteShortcut("nav-join-meeting", "navigate");
-        onJoinMeeting();
-      },
+      onClick: withPaletteShortcut("nav-join-meeting", onJoinMeeting),
     },
   ];
 };

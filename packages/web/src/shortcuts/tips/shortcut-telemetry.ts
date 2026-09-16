@@ -103,7 +103,7 @@ const SECTION_BY_ID_PREFIX = {
   other: "other",
 } as const;
 
-function sectionForRegistryId(
+export function sectionForRegistryId(
   shortcutId: ShortcutRegistryId,
 ): string | undefined {
   const prefix = shortcutId.split("-")[0];

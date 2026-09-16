@@ -14,6 +14,10 @@ import {
 // it never appears in the browser directly. Invalidations carry only IDs and
 // reasons, never event content — a client always refetches canonical state.
 
+// Shared by Sync's feed readers and the backend SSE poller. A full page means
+// more rows may be waiting, so the poller drains immediately.
+export const CHANGE_FEED_PAGE_SIZE = 100;
+
 // Import progress must never imply completion from partial data:
 // `complete` can only be true once every discovered calendar
 // has finished, though the converse isn't required — a cursor-finalization

@@ -11,7 +11,7 @@ import {
 import { NodeEnv } from "@core/constants/core.constants";
 import { Logger } from "@core/logger/winston.logger";
 import { type Schema_User } from "@core/types/user.types";
-import { isTransientMongoNetworkError } from "@core/util/mongo-network-error.util";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { type BillingEventRecord } from "@backend/billing/billing-event.record";
 import { type BookingOperationRecord } from "@backend/booking/booking-operation.record";
 import { type BookingPageRecord } from "@backend/booking/booking-page.record";
@@ -116,13 +116,7 @@ class MongoService {
   }
 
   private onError(error: Error): void {
-    // Client "error" events include brief Atlas/DNS blips; warn those so they
-    // do not open PostHog exception alerts. Unexpected client errors still page.
-    if (isTransientMongoNetworkError(error)) {
-      logger.warn(error.message, error);
-      return;
-    }
-    logger.error(error.message, error);
+    logMongoNetworkError(logger, error.message, error);
   }
 
   private onClose(event: ConnectionClosedEvent): void {

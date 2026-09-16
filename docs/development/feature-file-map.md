@@ -149,7 +149,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Event title search in the command palette: `packages/web/src/events/queries/useEventSearch.ts`, `packages/web/src/components/CommandPalette/event-search.util.ts`
 - Typed-date parser and go-to-date announcement: `parseUserDate` / `goToDateAnnouncement` in `packages/web/src/common/utils/datetime/web.date.util.ts`, `packages/web/src/shortcuts/go-to-date/useGoToDateShortcut.ts`
 - Palette-teaches hint: `packages/web/src/components/CommandPalette/palette-shortcut-telemetry.ts`, `packages/web/src/components/CommandPalette/hooks/usePaletteLegendCmdItems.ts`
-- Public printable `/shortcuts` catalog: `packages/web/src/views/NotFound/NotFound.tsx` (registry snapshot; stays off a new `import()` root)
+- Public printable `/shortcuts` catalog: `packages/web/src/views/NotFound/ShortcutsCatalogView.tsx` (snapshot in `shortcuts-catalog.json`; stays off a new `import()` root)
 - Mount point for global + pointer-hint hooks: `packages/web/src/components/RootShell/RootShell.tsx`
 - Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md)
 

@@ -2,6 +2,7 @@ import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Event } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { eventStartDay } from "@web/events/mutations/event-on-target-day";
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   POINTER_EVENT_ID_ATTRIBUTE,
@@ -13,12 +14,7 @@ const FOCUS_WAIT_MS = 2_000;
 const FOCUS_POLL_MS = 50;
 
 export function eventSearchDateString(event: Event): string {
-  if (event.schedule.kind === "allDay") {
-    return event.schedule.start;
-  }
-  return dayjs(event.schedule.start)
-    .tz(event.schedule.timeZone)
-    .format(YEAR_MONTH_DAY_FORMAT);
+  return eventStartDay(event).format(YEAR_MONTH_DAY_FORMAT);
 }
 
 export function eventSearchDetail(event: Event): string {

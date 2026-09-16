@@ -1,6 +1,6 @@
 import { GlobeIcon } from "@phosphor-icons/react";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
-import { reportPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
+import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { settingsActions } from "@web/settings/settings.store";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
@@ -28,11 +28,10 @@ export function useTimezoneCmdItems(): CommandItem[] {
       icon: GlobeIcon,
       shortcut: [...APP_SHORTCUT_BINDINGS.otherTimeTravel.keycaps],
       keywords: ["timezone", "time zone", "tz", "secondary"],
-      onClick: () => {
-        reportPaletteShortcut("other-time-travel", "other");
+      onClick: withPaletteShortcut("other-time-travel", () => {
         settingsActions.markOverlayOpenedFromPalette();
         timezoneDialogActions.open("time-travel");
-      },
+      }),
     },
   ];
 }

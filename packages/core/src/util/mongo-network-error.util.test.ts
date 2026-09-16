@@ -1,5 +1,6 @@
 import {
   isTransientMongoNetworkError,
+  logMongoNetworkError,
   withTransientMongoRetry,
 } from "./mongo-network-error.util";
 import { describe, expect, it, mock } from "bun:test";
@@ -117,6 +118,20 @@ describe("isTransientMongoNetworkError", () => {
         ),
       ),
     ).toBe(true);
+  });
+
+  it("logs transient blips at warn and durable failures at error", () => {
+    const logger = { error: mock(), warn: mock() };
+    const transient = namedError("MongoNetworkError", "socket hang up");
+    const durable = new Error("database unavailable");
+
+    logMongoNetworkError(logger, "mongo failed", transient);
+    logMongoNetworkError(logger, "mongo failed", durable);
+
+    expect(logger.warn).toHaveBeenCalledTimes(1);
+    expect(logger.warn).toHaveBeenCalledWith("mongo failed", transient);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith("mongo failed", durable);
   });
 
   it("rejects unrelated failures", () => {

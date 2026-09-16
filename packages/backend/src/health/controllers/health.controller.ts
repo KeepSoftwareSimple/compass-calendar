@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
-  isTransientMongoNetworkError,
+  logMongoNetworkError,
   withTransientMongoRetry,
 } from "@core/util/mongo-network-error.util";
 import mongoService from "@backend/common/services/mongo.service";
@@ -51,14 +51,7 @@ class HealthController {
         timestamp,
       });
     } catch (error) {
-      // Transient network blips are expected on managed Mongo; warn so they
-      // stay in logs/OTel without opening a PostHog exception alert.
-      // Persistent or unexpected failures still page as errors.
-      if (isTransientMongoNetworkError(error)) {
-        logger.warn("Database connectivity check failed", error);
-      } else {
-        logger.error("Database connectivity check failed", error);
-      }
+      logMongoNetworkError(logger, "Database connectivity check failed", error);
       res.status(Status.INTERNAL_SERVER).json({
         status: "error",
         timestamp,

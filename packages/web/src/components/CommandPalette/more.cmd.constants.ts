@@ -9,12 +9,11 @@ import {
   type CommandItem,
   type CommandSection,
 } from "@web/components/CommandPalette/command-palette.types";
-import { reportPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
+import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { feedbackActions } from "@web/components/Feedback/feedback.store";
 import { settingsActions } from "@web/settings/settings.store";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
-import { type CommandPaletteViewName } from "./navigation.cmd.constants";
 
 export const PERSONAL_ONBOARDING_URL =
   "https://calendly.com/switchback-tech/compass-onboarding";
@@ -26,19 +25,14 @@ export function getSettingsCommandItem(): CommandItem {
     icon: GearIcon,
     shortcut: [...APP_SHORTCUT_BINDINGS.otherSettings.keycaps],
     keywords: ["preferences", "account", "options"],
-    onClick: () => {
-      reportPaletteShortcut("other-settings", "other");
-      settingsActions.openSettings("accounts", { fromPalette: true });
-    },
+    onClick: withPaletteShortcut("other-settings", () =>
+      settingsActions.openSettings("accounts", { fromPalette: true }),
+    ),
   };
 }
 
-export function getCommandPalettePlaceholder(
-  _currentView?: CommandPaletteViewName,
-  _feedbackEnabled = isPosthogEnabled(),
-): string {
-  return "Search commands, events, or type a date";
-}
+export const COMMAND_PALETTE_PLACEHOLDER =
+  "Search commands, events, or type a date";
 
 export function getMoreCommandPaletteSections(
   currentView: ViewName,

@@ -1,5 +1,5 @@
 import {
-  getCommandPalettePlaceholder,
+  COMMAND_PALETTE_PLACEHOLDER,
   getMoreCommandPaletteSections,
   getSettingsCommandItem,
   PERSONAL_ONBOARDING_URL,
@@ -46,10 +46,7 @@ describe("getMoreCommandPaletteSections", () => {
     expect(section.items[0].label).toBe("Settings");
     expect(section.items[1].label).toBe("Book personal onboarding");
     expect(section.items[2].label).toBe("About Compass");
-    expect(getCommandPalettePlaceholder("day", false)).toBe(
-      "Search commands, events, or type a date",
-    );
-    expect(getCommandPalettePlaceholder("week", false)).toBe(
+    expect(COMMAND_PALETTE_PLACEHOLDER).toBe(
       "Search commands, events, or type a date",
     );
   });
@@ -71,9 +68,6 @@ describe("getMoreCommandPaletteSections", () => {
     expect(selectOverlayOpenedFromPalette(useSettingsStore.getState())).toBe(
       true,
     );
-    expect(getCommandPalettePlaceholder("day", true)).toBe(
-      "Search commands, events, or type a date",
-    );
   });
 
   it("offers feedback from Life", () => {
@@ -83,9 +77,6 @@ describe("getMoreCommandPaletteSections", () => {
     expect(selectFeedbackRequest(useFeedbackStore.getState())).toEqual({
       view: "life",
     });
-    expect(getCommandPalettePlaceholder("life", true)).toBe(
-      "Search commands, events, or type a date",
-    );
   });
 
   it("opens the About modal from the about command", () => {
