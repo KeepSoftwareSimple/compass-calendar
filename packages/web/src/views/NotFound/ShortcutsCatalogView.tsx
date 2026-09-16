@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
-import catalogJson from "@web/shortcuts/shortcuts-catalog.json";
-import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
+import { PUBLIC_SHORTCUT_CATALOG } from "@web/shortcuts/shortcuts-catalog.data";
 
 export const SHORTCUTS_PAGE_TITLE = "Compass keyboard shortcuts";
 export const SHORTCUTS_PAGE_DESCRIPTION =
@@ -9,15 +8,12 @@ export const SHORTCUTS_PAGE_DESCRIPTION =
 
 const DEFAULT_DOCUMENT_TITLE = "Compass Calendar";
 
-// Snapshot of getPublicShortcutCatalog(). Static JSON so /shortcuts stays in
-// this boot module and does not add a chunk or an import() root (#3704).
-const catalog = catalogJson as ShortcutOverlaySection[];
-
 /**
- * Public printable catalog. Mounted from the unmatched-path module so the
- * week boot graph does not grow a second route root.
+ * Printable `/shortcuts` page. Statically imported from the router next to
+ * the 404 view so the catalog stays in the eager graph and does not add a
+ * chunk or `import()` root (#3704).
  */
-export const ShortcutsPage = () => {
+export const ShortcutsCatalogView = () => {
   useEffect(() => {
     const previousTitle = document.title;
     const meta = document.querySelector('meta[name="description"]');
@@ -67,7 +63,7 @@ export const ShortcutsPage = () => {
           The same catalog as the in-app legend. Press ? in Compass to search
           it.
         </p>
-        {catalog.map((section, index) =>
+        {PUBLIC_SHORTCUT_CATALOG.map((section, index) =>
           section.shortcuts.length === 0 ? null : (
             <section
               key={section.id}

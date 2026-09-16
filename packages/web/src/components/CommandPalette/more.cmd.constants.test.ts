@@ -1,4 +1,5 @@
 import {
+  COMMAND_PALETTE_PLACEHOLDER,
   getMoreCommandPaletteSections,
   getSettingsCommandItem,
   PERSONAL_ONBOARDING_URL,
@@ -45,6 +46,9 @@ describe("getMoreCommandPaletteSections", () => {
     expect(section.items[0].label).toBe("Settings");
     expect(section.items[1].label).toBe("Book personal onboarding");
     expect(section.items[2].label).toBe("About Compass");
+    expect(COMMAND_PALETTE_PLACEHOLDER).toBe(
+      "Search commands, events, or type a date",
+    );
   });
 
   it("opens the feedback request from the cloud command", () => {

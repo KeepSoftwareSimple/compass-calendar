@@ -507,10 +507,10 @@ describe("shortcut menu sections", () => {
     });
 
     it("matches the printable page snapshot so the public copy cannot drift", async () => {
-      const snapshot = await Bun.file(
-        new URL("./shortcuts-catalog.json", import.meta.url),
-      ).json();
-      expect(getPublicShortcutCatalog()).toEqual(snapshot);
+      const { PUBLIC_SHORTCUT_CATALOG } = await import(
+        "./shortcuts-catalog.data"
+      );
+      expect(getPublicShortcutCatalog()).toEqual(PUBLIC_SHORTCUT_CATALOG);
     });
   });
 });

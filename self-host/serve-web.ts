@@ -1,3 +1,4 @@
+import { COMPRESSIBLE_STATIC_TYPES } from "../packages/web/compressible-static-types";
 import { type Stats } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -9,16 +10,7 @@ const MIN_PORT = 1;
 const port = parsePort(process.env.WEB_PORT);
 const root =
   process.env.WEB_ROOT || path.resolve(import.meta.dir, "../build/web");
-const textTypes: Record<string, string> = {
-  ".css": "text/css; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".map": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".txt": "text/plain; charset=utf-8",
-  ".wasm": "application/wasm",
-};
+const textTypes: Record<string, string> = COMPRESSIBLE_STATIC_TYPES;
 
 type ContentEncoding = "br" | "gzip";
 

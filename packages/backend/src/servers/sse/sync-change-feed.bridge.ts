@@ -1,5 +1,6 @@
 import { Logger } from "@core/logger/winston.logger";
 import {
+  CHANGE_FEED_PAGE_SIZE,
   type ChangeFeedCursor,
   type GlobalInvalidationEnvelope,
   type SyncInvalidation,
@@ -21,10 +22,7 @@ const logger = Logger("app:sse.sync-change-feed");
 const POLL_INTERVAL_MS = 2000;
 const ERROR_BACKOFF_MS = 5000;
 
-// Must stay aligned with packages/sync/src/domain/change-feed.service.ts.
-// A full page means more rows may be waiting, so drain immediately rather than
-// waiting POLL_INTERVAL_MS (50 rows/s at page size 100).
-export const CHANGE_FEED_PAGE_SIZE = 100;
+export { CHANGE_FEED_PAGE_SIZE };
 
 export interface SyncChangeFeedBridgeDeps {
   client: Pick<SyncServiceClient, "getGlobalChanges">;

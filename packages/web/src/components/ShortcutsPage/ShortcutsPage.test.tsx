@@ -1,12 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
+import { NotFoundView } from "@web/views/NotFound/NotFound";
 import {
   SHORTCUTS_PAGE_DESCRIPTION,
   SHORTCUTS_PAGE_TITLE,
-} from "@web/components/ShortcutsPage/ShortcutsPage";
-import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
-import { NotFoundView } from "@web/views/NotFound/NotFound";
+  ShortcutsCatalogView,
+} from "@web/views/NotFound/ShortcutsCatalogView";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 describe("public /shortcuts page", () => {
@@ -27,7 +28,7 @@ describe("public /shortcuts page", () => {
   });
 
   it("renders Week legend sections plus form, Day-only, and Life-only rows", () => {
-    render(<NotFoundView />);
+    render(<ShortcutsCatalogView />);
 
     expect(
       screen.getByRole("heading", { level: 1, name: SHORTCUTS_PAGE_TITLE }),
@@ -65,7 +66,7 @@ describe("public /shortcuts page", () => {
   });
 
   it("sets the document title and meta description, then restores them", () => {
-    const { unmount } = render(<NotFoundView />);
+    const { unmount } = render(<ShortcutsCatalogView />);
 
     expect(document.title).toBe(SHORTCUTS_PAGE_TITLE);
     expect(meta.getAttribute("content")).toBe(SHORTCUTS_PAGE_DESCRIPTION);
@@ -83,7 +84,7 @@ describe("public /shortcuts page", () => {
 
     try {
       const user = userEvent.setup();
-      render(<NotFoundView />);
+      render(<ShortcutsCatalogView />);
 
       expect(
         screen.getByRole("link", { name: "Compass Calendar" }),

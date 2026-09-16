@@ -1,15 +1,6 @@
 import { ROOT_ROUTES } from "@web/common/constants/routes";
-import { ShortcutsPage } from "@web/components/ShortcutsPage/ShortcutsPage";
 
-/**
- * Public unmatched paths and `/shortcuts` share this module so the printable
- * catalog does not add a boot chunk or a new `import()` root (#3704).
- */
 export const NotFoundView = () => {
-  if (window.location.pathname === ROOT_ROUTES.SHORTCUTS) {
-    return <ShortcutsPage />;
-  }
-
   return (
     <div className="c-not-found">
       <div>
