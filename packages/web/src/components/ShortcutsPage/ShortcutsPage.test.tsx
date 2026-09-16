@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
-import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import {
-  NotFoundView,
   SHORTCUTS_PAGE_DESCRIPTION,
   SHORTCUTS_PAGE_TITLE,
-} from "@web/views/NotFound/NotFound";
+} from "@web/components/ShortcutsPage/ShortcutsPage";
+import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
+import { NotFoundView } from "@web/views/NotFound/NotFound";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 describe("public /shortcuts page", () => {
