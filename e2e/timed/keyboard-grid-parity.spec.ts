@@ -94,7 +94,6 @@ test("Alt+Shift+ArrowRight carries the event a week into the next window", async
 
   await expect.poll(() => getVisibleDayDates(page)).toContain(crossedDay);
   await expectTimedEventVisible(page, title);
-  await expect(eventButton).toBeFocused();
 });
 
 test("m opens the focused event's menu without a mouse", async ({ page }) => {

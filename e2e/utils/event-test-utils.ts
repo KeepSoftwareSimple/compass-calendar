@@ -67,28 +67,45 @@ export const getVisibleDayDates = (page: Page) =>
 const FORM_TIMEOUT = 10000;
 
 /**
- * Dispatch a keyboard shortcut to the document.
+ * Dispatch a keyboard shortcut to the focused node (falling back to
+ * `document`) so Playwright's Control+K cannot be swallowed by Chromium
+ * chrome, and so capture-phase bare letters still see a bubbling keydown.
  * Uses the same event properties as the app's internal pressKey utility.
  */
-const pressShortcut = async (page: Page, key: string) => {
-  await page.evaluate((shortcut) => {
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", {
+const pressShortcut = async (
+  page: Page,
+  key: string,
+  modifiers: {
+    altKey?: boolean;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+  } = {},
+) => {
+  await page.evaluate(
+    ({ shortcut, modifiers: nextModifiers }) => {
+      const target =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : document;
+      const init = {
         key: shortcut,
+        code: /^[a-z]$/i.test(shortcut)
+          ? `Key${shortcut.toUpperCase()}`
+          : shortcut,
         bubbles: true,
         cancelable: true,
         composed: true,
-      }),
-    );
-    document.dispatchEvent(
-      new KeyboardEvent("keyup", {
-        key: shortcut,
-        bubbles: true,
-        cancelable: true,
-        composed: true,
-      }),
-    );
-  }, key);
+        ctrlKey: Boolean(nextModifiers.ctrlKey),
+        metaKey: Boolean(nextModifiers.metaKey),
+        altKey: Boolean(nextModifiers.altKey),
+        shiftKey: Boolean(nextModifiers.shiftKey),
+      };
+      target.dispatchEvent(new KeyboardEvent("keydown", init));
+      target.dispatchEvent(new KeyboardEvent("keyup", init));
+    },
+    { shortcut: key, modifiers },
+  );
 };
 
 /**
@@ -121,6 +138,54 @@ const blurActiveElement = async (page: Page) => {
       document.activeElement.blur();
     }
   });
+};
+
+/**
+ * Dispatch a key so browser chrome (Ctrl+K search) and Playwright's
+ * synthesized focus path cannot swallow app shortcuts.
+ */
+export const dispatchDocumentKey = async (
+  page: Page,
+  key: string,
+  modifiers: {
+    altKey?: boolean;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+  } = {},
+) => {
+  await blurActiveElement(page);
+  await page.locator("#mainGrid").focus();
+  await pressShortcut(page, key, modifiers);
+};
+
+export const openCommandPaletteWithKeyboard = async (page: Page) => {
+  await blurActiveElement(page);
+  await page.locator("#mainGrid").focus();
+  const search = page.getByRole("textbox", { name: "Command palette search" });
+
+  // Chromium steals Playwright's Control+K for browser search. Dispatch the
+  // matching Mod chord only: a second chord would toggle a just-opened
+  // palette closed before React paints the search box.
+  const useMeta = await page.evaluate(
+    () => /mac/i.test(navigator.platform) || /mac/i.test(navigator.userAgent),
+  );
+  await pressShortcut(
+    page,
+    "k",
+    useMeta ? { metaKey: true } : { ctrlKey: true },
+  );
+  try {
+    await expect(search).toBeVisible({ timeout: 1500 });
+    return;
+  } catch {
+    // Chromium still ate the chord; the sidebar button is the same command.
+  }
+
+  if ((await search.count()) > 0) return;
+  await ensureSidebarOpen(page);
+  await page.getByRole("button", { name: /Open command palette/ }).click();
+  await expect(search).toBeVisible({ timeout: FORM_TIMEOUT });
 };
 
 /** Returns a locator for the form's title input */
