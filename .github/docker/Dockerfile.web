@@ -69,6 +69,10 @@ ENV WEB_PORT=9080
 ENV WEB_ROOT=/app/build/web
 
 COPY --from=build --chown=compass:compass /app/build/web ./build/web
+# serve-web.ts imports this map at runtime, so the runtime stage needs the
+# file on disk; without it bun exits on an unresolved module and the web
+# container restart-loops.
+COPY --from=build --chown=compass:compass /app/packages/web/compressible-static-types.ts ./packages/web/compressible-static-types.ts
 COPY --from=build --chown=compass:compass /app/self-host/serve-web.ts ./self-host/serve-web.ts
 
 USER compass

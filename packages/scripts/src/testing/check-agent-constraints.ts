@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, posix, relative } from "node:path";
 
 const repoRoot = join(import.meta.dir, "../../../..");
 
@@ -12,6 +12,15 @@ const E2E_WORKFLOW = ".github/workflows/test-e2e.yml";
 const E2E_BUN_VERSION = /npm install[^\n]*\bbun@([\d.]+)/g;
 const OVEN_BUN_TAG = /oven\/bun:([^\s]+)/g;
 const DOCKERFILE_DIRS = ["self-host", ".github/docker"];
+// The web images copy named files into their runtime stage rather than the
+// tree, so serve-web.ts's own imports have to be listed there too.
+const WEB_SERVER = "self-host/serve-web.ts";
+const WEB_DOCKERFILES = [
+  "self-host/Dockerfile.web",
+  ".github/docker/Dockerfile.web",
+];
+const RELATIVE_IMPORT = / from "(\.[^"]*)";/g;
+const RUNTIME_STAGE = /^FROM .+ AS runtime$/m;
 
 const SOURCE_EXT = /\.(ts|tsx)$/;
 
@@ -32,6 +41,8 @@ export const RULE_HELP: Record<string, string> = {
     "shared event contracts live in packages/core; import them instead of redefining EventSchema.",
   "bun-pin":
     "every oven/bun: Dockerfile tag in self-host/ and .github/docker/, and the npm bun@ install in .github/workflows/test-e2e.yml, must equal the single bun-version in .github/workflows/test-unit.yml.",
+  "runtime-copy":
+    "every relative import in self-host/serve-web.ts must be COPYed into the runtime stage of both web Dockerfiles; bun exits on an unresolved module and the web container restart-loops past a green image build.",
   "zod-import":
     'import Zod from "zod/v4" (or "zod/v4-mini" for the mini API); the bare "zod" path is the v3 API. Legacy config schemas: ZOD_V3_ALLOWLIST.',
   "em-dash":
@@ -331,6 +342,64 @@ export function scanBunDockerfilePins(root = repoRoot): ConstraintHit[] {
   return hits;
 }
 
+export function scanRuntimeStageCopies(root = repoRoot): ConstraintHit[] {
+  const hits: ConstraintHit[] = [];
+  const serverPath = join(root, WEB_SERVER);
+  if (!existsSync(serverPath)) {
+    return [
+      { path: WEB_SERVER, rule: "runtime-copy", line: 1, detail: "missing" },
+    ];
+  }
+
+  const server = readFileSync(serverPath, "utf8");
+
+  for (const match of server.matchAll(RELATIVE_IMPORT)) {
+    const specifier = match[1] ?? "";
+    const line = server.slice(0, match.index ?? 0).split("\n").length;
+    const bare = posix.join("self-host", specifier);
+    // Bun resolves an extensionless specifier to the .ts file on disk.
+    const rel = existsSync(join(root, bare)) ? bare : `${bare}.ts`;
+
+    if (!existsSync(join(root, rel))) {
+      hits.push({
+        path: WEB_SERVER,
+        rule: "runtime-copy",
+        line,
+        detail: `imports "${specifier}", which resolves to no file`,
+      });
+      continue;
+    }
+
+    for (const dockerfile of WEB_DOCKERFILES) {
+      const dockerfilePath = join(root, dockerfile);
+      if (!existsSync(dockerfilePath)) continue;
+
+      const source = readFileSync(dockerfilePath, "utf8");
+      const stageAt = source.search(RUNTIME_STAGE);
+      if (stageAt === -1) {
+        hits.push({
+          path: dockerfile,
+          rule: "runtime-copy",
+          line: 1,
+          detail: "no `FROM ... AS runtime` stage to copy into",
+        });
+        continue;
+      }
+
+      if (source.slice(stageAt).includes(`/app/${rel} ./${rel}`)) continue;
+
+      hits.push({
+        path: dockerfile,
+        rule: "runtime-copy",
+        line: source.slice(0, stageAt).split("\n").length,
+        detail: `runtime stage never copies ${rel}, imported by ${WEB_SERVER}:${line}`,
+      });
+    }
+  }
+
+  return hits;
+}
+
 export function scanConstraints(root = repoRoot): ConstraintHit[] {
   const hits: ConstraintHit[] = [];
   for (const file of walk(join(root, "packages"))) {
@@ -455,7 +524,11 @@ function posixRel(root: string, file: string): string {
 }
 
 if (import.meta.main) {
-  const hits = [...scanConstraints(), ...scanBunDockerfilePins()];
+  const hits = [
+    ...scanConstraints(),
+    ...scanBunDockerfilePins(),
+    ...scanRuntimeStageCopies(),
+  ];
   if (hits.length > 0) {
     console.error("Agent constraint violations:");
     for (const hit of hits) {

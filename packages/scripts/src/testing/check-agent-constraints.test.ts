@@ -16,6 +16,7 @@ import {
   RULE_HELP,
   scanBunDockerfilePins,
   scanConstraints,
+  scanRuntimeStageCopies,
   WEB_LOCATOR_ALLOWLIST,
   ZOD_V3_ALLOWLIST,
   zodV3ImportHits,
@@ -375,6 +376,62 @@ describe("scanBunDockerfilePins", () => {
     expect(hits.map((hit) => `${hit.rule}:${hit.path}`)).toEqual([
       "bun-pin:self-host/Dockerfile.backend",
     ]);
+  });
+});
+
+describe("scanRuntimeStageCopies", () => {
+  const SERVER = 'import { A } from "../packages/web/a";\n';
+  const COPY =
+    "COPY --from=build /app/packages/web/a.ts ./packages/web/a.ts\n" +
+    "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n";
+
+  function webTree(runtimeBody: string): Record<string, string> {
+    const dockerfile = `FROM oven/bun:1.3.14 AS build\nFROM oven/bun:1.3.14-slim AS runtime\n${runtimeBody}`;
+    return {
+      "packages/web/a.ts": "export const A = 1;\n",
+      "self-host/serve-web.ts": SERVER,
+      "self-host/Dockerfile.web": dockerfile,
+      ".github/docker/Dockerfile.web": dockerfile,
+    };
+  }
+
+  it("passes when both runtime stages copy the imported file", () => {
+    const root = mkdtempSync(join(tmpdir(), "runtime-copy-"));
+    writeTree(root, webTree(COPY));
+
+    expect(scanRuntimeStageCopies(root)).toEqual([]);
+  });
+
+  it("flags both Dockerfiles when the import is never copied", () => {
+    const root = mkdtempSync(join(tmpdir(), "runtime-copy-"));
+    writeTree(
+      root,
+      webTree(
+        "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n",
+      ),
+    );
+
+    expect(scanRuntimeStageCopies(root).map((hit) => hit.path)).toEqual([
+      "self-host/Dockerfile.web",
+      ".github/docker/Dockerfile.web",
+    ]);
+  });
+
+  it("ignores a copy that only the build stage makes", () => {
+    const root = mkdtempSync(join(tmpdir(), "runtime-copy-"));
+    const files = webTree(
+      "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n",
+    );
+    const early =
+      "FROM oven/bun:1.3.14 AS build\n" +
+      "COPY --from=x /app/packages/web/a.ts ./packages/web/a.ts\n" +
+      "FROM oven/bun:1.3.14-slim AS runtime\n" +
+      "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n";
+    files["self-host/Dockerfile.web"] = early;
+    files[".github/docker/Dockerfile.web"] = early;
+    writeTree(root, files);
+
+    expect(scanRuntimeStageCopies(root)).toHaveLength(2);
   });
 });
 
