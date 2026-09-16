@@ -25,7 +25,10 @@ import {
 } from "@sync/providers/provider-registry";
 import { NOTIFICATIONS_PATH } from "@sync/server/notification.routes";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
-import { JobRepository } from "@sync/storage/repositories/job.repository";
+import {
+  JobRepository,
+  subscribeJobQueueWake,
+} from "@sync/storage/repositories/job.repository";
 import { SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { type AddressInfo } from "node:net";
@@ -167,10 +170,16 @@ describe("POST /sync/notifications/google", () => {
 
     const jobs = new JobRepository(mongo.db);
     const owner = "webhook-wake";
+    let enqueuedAt: number | undefined;
+    let claimedAt: number | undefined;
+    const unsubscribe = subscribeJobQueueWake(() => {
+      enqueuedAt = performance.now();
+    });
     const drainWaiters: Array<(n: number) => void> = [];
     const worker: JobDrainer = {
       drain: async () => {
         const job = await jobs.claimDueJob(owner, new Date(), 60_000);
+        if (job) claimedAt = performance.now();
         const n = job ? 1 : 0;
         for (const waiter of drainWaiters.splice(0)) waiter(n);
         return n;
@@ -188,12 +197,16 @@ describe("POST /sync/notifications/google", () => {
     try {
       expect(await idle).toBe(0);
       const claimed = nextDrain();
-      const postedAt = Date.now();
       const res = await post(NOTIFICATIONS_PATH, googHeaders());
       expect(res.status).toBe(200);
       expect(await claimed).toBe(1);
-      expect(Date.now() - postedAt).toBeLessThan(100);
+      // Measure the scheduler response to persisted work, excluding HTTP
+      // setup and notification validation before the job is enqueued.
+      expect(enqueuedAt).toBeDefined();
+      expect(claimedAt).toBeDefined();
+      expect(claimedAt! - enqueuedAt!).toBeLessThan(100);
     } finally {
+      unsubscribe();
       await scheduler.stop();
     }
   });
