@@ -101,13 +101,8 @@ const CommandPaletteContent = ({
   const [activeIndex, setActiveIndex] = useState<number | null>(0);
   const listRef = useRef<Array<HTMLElement | null>>([]);
 
-  // Entrance-only fade/scale via `@starting-style` / `starting:` — no exit
-  // animation. Close is driven by the external `isCmdPaletteOpen` store
-  // (shortcuts + tests flip it synchronously), and this component unmounts
-  // the instant it flips false; animating that would need a delayed-unmount
-  // state machine to handle "reopened while still closing." Not worth it for
-  // a UI pattern where an instant close is normal — dismissal isn't a
-  // decision the user watches, unlike a confirmation modal.
+  // Entrance-only fade/scale via `@starting-style`. Close unmounts immediately
+  // from the store; an exit animation would need delayed-unmount.
 
   // Focus the search input the moment it mounts (commit phase, like the
   // autoFocus attribute — but without tripping the a11y lint). Stable identity
@@ -119,6 +114,14 @@ const CommandPaletteContent = ({
   const close = () => settingsActions.closeCmdPalette();
   const navigate = useNavigate();
   const eventSearch = useEventSearch(search);
+  const navigateToDate = (dateString: string, after?: () => void) => {
+    void Promise.resolve(
+      navigate({
+        to: paletteEventRoute(currentView),
+        params: { dateString },
+      }),
+    ).then(after);
+  };
 
   const { refs, context } = useFloating({
     open: true,
@@ -145,12 +148,7 @@ const CommandPaletteContent = ({
       icon: CalendarBlankIcon,
       onClick: () => {
         const eventId = event.id;
-        void Promise.resolve(
-          navigate({
-            to: paletteEventRoute(currentView),
-            params: { dateString: eventSearchDateString(event) },
-          }),
-        ).then(() => {
+        navigateToDate(eventSearchDateString(event), () => {
           startFocusEventCard(eventId);
         });
       },
@@ -161,12 +159,7 @@ const CommandPaletteContent = ({
       : [];
   const goToDateItem = getGoToDateCommandItem(search, dayjs(), (date) => {
     const dateString = date.format(YEAR_MONTH_DAY_FORMAT);
-    void Promise.resolve(
-      navigate({
-        to: paletteEventRoute(currentView),
-        params: { dateString },
-      }),
-    ).then(() => {
+    navigateToDate(dateString, () => {
       eventJumpActions.setActiveDayKeys(
         [dateString],
         goToDateAnnouncement(date, currentView),
@@ -187,10 +180,11 @@ const CommandPaletteContent = ({
     return acc;
   }, []);
   const resultCount = flatItems.length;
+  const noResultsText = `No results for “${search}”`;
   const liveRegionText = !trimmedSearch
     ? ""
     : resultCount === 0
-      ? `No results for “${search}”`
+      ? noResultsText
       : `${resultCount} result${resultCount === 1 ? "" : "s"}`;
 
   // Invoke the item action directly — not via HTMLElement.click() — so
@@ -268,9 +262,7 @@ const CommandPaletteContent = ({
 
           <div className="max-h-[50vh] overflow-y-auto p-2">
             {filteredSections.length === 0 ? (
-              <div className="px-3 py-2 text-text">
-                No results for “{search}”
-              </div>
+              <div className="px-3 py-2 text-text">{noResultsText}</div>
             ) : (
               filteredSections.map((section) => (
                 <div key={section.id} className="mb-1">

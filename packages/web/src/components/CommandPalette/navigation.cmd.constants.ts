@@ -25,19 +25,17 @@ import {
 
 export const GO_TO_DATE_ITEM_ID = "go-to-date";
 
-export type CommandPaletteViewName = ViewName;
-
 interface GetNavigationCommandItemsArgs {
-  currentView?: CommandPaletteViewName;
+  currentView?: ViewName;
   onGoToToday?: () => void;
-  onNavigateToView: (viewName: CommandPaletteViewName) => void;
+  onNavigateToView: (viewName: ViewName) => void;
   onShowShortcuts?: () => void;
   onPracticeShortcuts?: () => void;
   onShowWelcomeGuide?: () => void;
 }
 
 const commandPaletteViews: Record<
-  CommandPaletteViewName,
+  ViewName,
   {
     icon: Icon;
     label: string;
@@ -69,9 +67,9 @@ const commandPaletteViews: Record<
   },
 };
 
-const navigationViewOrder: CommandPaletteViewName[] = ["day", "week", "life"];
+const navigationViewOrder: ViewName[] = ["day", "week", "life"];
 
-export const getNavigationViewRoute = (viewName: CommandPaletteViewName) =>
+export const getNavigationViewRoute = (viewName: ViewName) =>
   commandPaletteViews[viewName].route;
 
 /** Synthetic palette row while the query parses as a date. Not keyword-filtered. */
