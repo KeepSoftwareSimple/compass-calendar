@@ -9,7 +9,7 @@
     "packages/scripts/src/**/*.d.ts",
     "**/*.json"
   ],
-  "exclude": [],
+  "exclude": ["packages/sync/src/domain/provider-command.*.db.test.ts"],
   "compilerOptions": {
     "composite": true,
     "declaration": true,

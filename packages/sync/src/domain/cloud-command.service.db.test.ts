@@ -30,7 +30,7 @@ import {
   ProviderWriteUnavailableError,
   submitCloudCommand,
 } from "@sync/domain/cloud-command.service";
-import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
+import { type ProviderConnectionLookup } from "@sync/domain/provider-command.deps";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import { type ProviderEventWriter } from "@sync/providers/provider-event-writer.port";

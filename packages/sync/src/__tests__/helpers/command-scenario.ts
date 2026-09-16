@@ -14,7 +14,7 @@ import { seedProviderCalendar } from "@sync/__tests__/helpers/fixtures";
 import { type SyncExecutionMode } from "@sync/config/sync.config";
 import { type CredentialCustody } from "@sync/credentials/credential-custody.service";
 import { type CloudCommandDeps } from "@sync/domain/cloud-command.service";
-import { type ProviderConnectionLookup } from "@sync/domain/provider-command.service";
+import { type ProviderConnectionLookup } from "@sync/domain/provider-command.deps";
 import { type AccessTokenSource } from "@sync/domain/provider-write-ladder";
 import {
   type ProviderAuthAdapter,
