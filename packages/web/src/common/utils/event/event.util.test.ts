@@ -20,7 +20,7 @@ import {
   refocusEventElement,
 } from "@web/common/utils/event/event.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import {
   afterEach,
   beforeEach,

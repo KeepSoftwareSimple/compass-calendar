@@ -38,7 +38,7 @@ import {
 import {
   dayEventRegistry,
   getDayInteractionTargetAttributes,
-} from "@web/views/Day/interaction/registry/day-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { useDayEventNudgeShortcuts } from "./useDayEventNudgeShortcuts";
 import {
   afterEach,

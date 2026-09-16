@@ -23,7 +23,7 @@ import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { SidebarEventDetails } from "@web/components/Sidebar/EventDetails/SidebarEventDetails";
 import { draftActions } from "@web/events/stores/draft.store";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
-import { weekEventRegistry } from "@web/views/Week/interaction/registry/week-event.registry";
+import { weekEventRegistry } from "@web/grid/interaction/view-event-registry";
 import { MainGridEvents } from "./MainGridEvents";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";

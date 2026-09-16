@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
-  type CalendarCardIdentity,
   isGridEventScheduleLocked,
   resolveCalendarCardIdentity,
   resolveCalendarFocusColor,
@@ -17,16 +16,12 @@ import {
 } from "@web/events/hooks/useGridDraftOverlay";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectDraftId, useDraftStore } from "@web/events/stores/draft.store";
+import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
-import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import {
-  getWeekInteractionTargetAttributes,
-  useWeekEventRegistrationRef,
-} from "@web/views/Week/interaction/registry/week-event.registry";
 import { isAllDayEventInVisibleDays } from "@web/views/Week/util/week-window.util";
 
 interface Props {
@@ -88,7 +83,7 @@ export const AllDayEvents = ({
   );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,
-  // so AllDayEventMemo's per-card comparator doesn't over-invalidate.
+  // so GridAllDayEventMemo's per-card comparator doesn't over-invalidate.
   const visibleAllDayEventsWithIdentity = useMemo(
     () =>
       visibleAllDayEvents.map((event) => ({
@@ -135,7 +130,7 @@ export const AllDayEvents = ({
               : focusColor;
 
             return (
-              <AllDayEventItem
+              <GridRegisteredAllDayEvent
                 calendarIdentity={identityForDisplay}
                 event={eventForDisplay}
                 focusColor={focusColorForDisplay}
@@ -144,77 +139,15 @@ export const AllDayEvents = ({
                 isReadOnly={isReadOnly}
                 key={event._id}
                 measurements={measurements}
-                onKeyDown={onEventKeyDown}
-                onOpenReadOnlyDetails={onOpenReadOnlyDetails}
+                onEventKeyDown={
+                  isReadOnly ? onOpenReadOnlyDetails : onEventKeyDown
+                }
+                view="week"
                 visibleDates={visibleDates}
               />
             );
           },
         )}
     </div>
-  );
-};
-
-interface AllDayEventItemProps {
-  calendarIdentity: CalendarCardIdentity | null;
-  event: GridEvent;
-  focusColor: string | null;
-  isHidden: boolean;
-  isPlaceholder: boolean;
-  isReadOnly: boolean;
-  measurements: Measurements_Grid;
-  onKeyDown: (event: GridEvent) => void;
-  onOpenReadOnlyDetails: (event: GridEvent) => void;
-  visibleDates: GridVisibleDate[];
-}
-
-const AllDayEventItem = ({
-  calendarIdentity,
-  event,
-  focusColor,
-  isHidden,
-  isPlaceholder,
-  isReadOnly,
-  measurements,
-  onKeyDown,
-  onOpenReadOnlyDetails,
-  visibleDates,
-}: AllDayEventItemProps) => {
-  // Stamp view-registry id attrs for any saved card (including read-only) so
-  // context menus / focus restore can resolve an id. Drag/resize stays gated
-  // separately via registry registration.
-  const hasEventIdentity = Boolean(event._id);
-  const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
-  const registrationRef = useWeekEventRegistrationRef({
-    eventId: event._id,
-    eventType: "all-day",
-    isEnabled: isRegisteredForDragResize,
-  });
-
-  const interactionAttributes = useMemo(
-    () =>
-      hasEventIdentity
-        ? getWeekInteractionTargetAttributes({
-            eventId: event._id,
-            eventType: "all-day",
-            isReadOnly,
-          })
-        : undefined,
-    [event._id, hasEventIdentity, isReadOnly],
-  );
-  return (
-    <AllDayEventMemo
-      calendarIdentity={calendarIdentity}
-      event={event}
-      focusColor={focusColor}
-      interactionAttributes={interactionAttributes}
-      isHidden={isHidden}
-      isPlaceholder={isPlaceholder}
-      measurements={measurements}
-      onKeyDown={isReadOnly ? onOpenReadOnlyDetails : onKeyDown}
-      ref={registrationRef}
-      visibleDates={visibleDates}
-    />
   );
 };

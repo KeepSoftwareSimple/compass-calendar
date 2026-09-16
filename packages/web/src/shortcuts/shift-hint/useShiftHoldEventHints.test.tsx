@@ -16,7 +16,7 @@ import {
   resetEditSequenceArm,
   useEditSequenceShortcut,
 } from "@web/shortcuts/useEditSequenceShortcut";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const EVENT_A = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");

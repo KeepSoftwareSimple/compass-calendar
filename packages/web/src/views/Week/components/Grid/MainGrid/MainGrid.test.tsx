@@ -43,7 +43,7 @@ import {
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
   WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
   weekEventRegistry,
-} from "@web/views/Week/interaction/registry/week-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 import { Categories_Event } from "@web/common/types/web.event.types";

@@ -39,7 +39,7 @@ import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { type Util_Scroll } from "@web/views/Week/hooks/grid/useScroll";
 import { goToTodayInWeek } from "@web/views/Week/hooks/shortcuts/weekShortcuts.util";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import { weekEventTargeting } from "@web/views/Week/interaction/registry/week-event.registry";
+import { weekEventTargeting } from "@web/grid/interaction/view-event-registry";
 
 export interface ShortcutProps {
   queryEndOfView: Dayjs;

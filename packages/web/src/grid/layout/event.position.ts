@@ -71,8 +71,8 @@ export interface BusyPeriodPositionInput {
  * column/hour math as {@link getTimedEventPosition} (left/width from
  * colWidths, top/height from minutes-of-day) minus its widthMultiplier/deck
  * concerns - busy blocks never overlap-fan like event cards, they just
- * render at full column width. Callers (MainGridBusyPeriods /
- * DayCalendarBusyPeriods) clamp a possibly multi-day BusyPeriod to one day's
+ * render at full column width. Callers (GridBusyPeriods) clamp a possibly
+ * multi-day BusyPeriod to one day's
  * [00:00, 24:00) window per call via splitBusyPeriodsByDay before reaching
  * here, so `segment.start`/`segment.end` are always within a single day
  * (packet 08 phase 4; A7). A full-day busy range still renders as one tall

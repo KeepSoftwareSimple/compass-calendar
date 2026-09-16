@@ -9,38 +9,48 @@ import {
   type TimedDeckLayout,
   timedDeckBoxShadow,
 } from "@web/grid/layout/timed-deck.layout";
-import { type GridVisibleDate } from "@web/grid/types/grid.types";
-import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
+import {
+  type GridMeasurements,
+  type GridVisibleDate,
+} from "@web/grid/types/grid.types";
 
 interface Props {
   calendarIdentity?: CalendarCardIdentity | null;
+  columnIndex?: number;
   deckLayout?: TimedDeckLayout | null;
   displayMode: GridEventDisplayMode;
   event: GridEventEntity;
   focusColor?: string | null;
   interactionAttributes?: Record<string, string | undefined>;
+  isActiveDraft?: boolean;
   isHidden?: boolean;
-  measurements: Measurements_Grid;
+  isSelected?: boolean;
+  measurements: GridMeasurements;
   motionMode?: GridEventMotionMode;
   onEventKeyDown?: (event: GridEventEntity) => void;
+  positionAsDraft?: boolean;
   visibleDates: GridVisibleDate[];
 }
 
 type GridEventDisplayMode = "draft" | "placeholder" | "saved";
 type GridEventMotionMode = "dragging" | "idle" | "resizing";
 
-const GridEventBase = (
+const GridTimedEventBase = (
   {
     calendarIdentity = null,
+    columnIndex,
     deckLayout = null,
     displayMode,
-    event: _event,
+    event,
     focusColor = null,
     interactionAttributes,
+    isActiveDraft = false,
     isHidden = false,
+    isSelected = false,
     measurements,
     motionMode = "idle",
     onEventKeyDown,
+    positionAsDraft = false,
     visibleDates,
   }: Props,
   ref: ForwardedRef<HTMLDivElement>,
@@ -48,13 +58,13 @@ const GridEventBase = (
   const isDraft = displayMode === "draft";
   const isDragging = motionMode === "dragging";
   const isResizing = motionMode === "resizing";
-  const event = _event;
   const isDeck = Boolean(deckLayout);
   const [isFocused, setIsFocused] = useState(false);
 
   const shouldUseDraftSizing = isDraft && !deckLayout;
   const basePosition = getTimedEventPosition(event, {
-    isDraft: shouldUseDraftSizing,
+    columnIndex,
+    isDraft: shouldUseDraftSizing || positionAsDraft,
     measurements,
     visibleDates,
   });
@@ -62,7 +72,8 @@ const GridEventBase = (
     ? basePosition
     : applyTimedEventDisplayPosition(basePosition, deckLayout, isHidden);
 
-  const shouldFloatAboveDeck = isDragging || isResizing || (isDraft && !isDeck);
+  const shouldFloatAboveDeck =
+    isDragging || isResizing || ((isDraft || isActiveDraft) && !isDeck);
   const zIndex = shouldFloatAboveDeck
     ? ZIndex.MAX
     : (position.zIndex ?? ZIndex.LAYER_1);
@@ -79,6 +90,7 @@ const GridEventBase = (
       onFocus={isDeck ? () => setIsFocused(true) : undefined}
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
+      isSelected={isSelected || isActiveDraft}
       motionMode={motionMode}
       onEventKeyDown={onEventKeyDown}
       position={{ ...position, zIndex }}
@@ -87,19 +99,22 @@ const GridEventBase = (
   );
 };
 
-export const GridEvent = forwardRef(GridEventBase);
-export const GridEventMemo = memo(GridEvent, (prev, next) => {
+export const GridTimedEvent = forwardRef(GridTimedEventBase);
+export const GridTimedEventMemo = memo(GridTimedEvent, (prev, next) => {
   return (
     prev.calendarIdentity === next.calendarIdentity &&
+    prev.columnIndex === next.columnIndex &&
     prev.displayMode === next.displayMode &&
     prev.deckLayout === next.deckLayout &&
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
     prev.interactionAttributes === next.interactionAttributes &&
+    prev.isActiveDraft === next.isActiveDraft &&
     prev.isHidden === next.isHidden &&
+    prev.isSelected === next.isSelected &&
     prev.measurements === next.measurements &&
     prev.motionMode === next.motionMode &&
-    // The visible window can move without the event or measurements changing
+    prev.positionAsDraft === next.positionAsDraft &&
     prev.visibleDates === next.visibleDates
   );
 });

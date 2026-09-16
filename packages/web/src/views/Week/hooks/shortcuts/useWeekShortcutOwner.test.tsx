@@ -50,7 +50,7 @@ import {
 import {
   getWeekInteractionTargetAttributes,
   weekEventRegistry,
-} from "@web/views/Week/interaction/registry/week-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import {
   afterEach,
   beforeEach,

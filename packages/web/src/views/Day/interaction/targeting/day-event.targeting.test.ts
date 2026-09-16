@@ -1,7 +1,7 @@
 import {
   dayEventRegistry,
   dayEventTargeting,
-} from "../registry/day-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { afterEach, describe, expect, it } from "bun:test";
 
 afterEach(() => {

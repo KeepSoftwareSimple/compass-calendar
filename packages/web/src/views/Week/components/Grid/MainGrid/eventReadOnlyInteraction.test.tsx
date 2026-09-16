@@ -28,7 +28,7 @@ import {
   WEEK_INTERACTION_EVENT_ID_ATTRIBUTE,
   weekEventRegistry,
   weekEventTargeting,
-} from "@web/views/Week/interaction/registry/week-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { AllDayEvents } from "../AllDayRow/AllDayEvents";
 import { MainGridEvents } from "./MainGridEvents";
 import { afterEach, describe, expect, it, mock } from "bun:test";

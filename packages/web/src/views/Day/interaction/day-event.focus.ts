@@ -1,4 +1,4 @@
-import { dayEventTargeting } from "@web/views/Day/interaction/registry/day-event.registry";
+import { dayEventTargeting } from "@web/grid/interaction/view-event-registry";
 
 export function focusFirstDayCalendarEvent() {
   const target = dayEventTargeting.getFirstNavigableGridEventTarget();

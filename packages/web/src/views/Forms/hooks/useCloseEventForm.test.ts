@@ -11,7 +11,7 @@ import {
   initialDraftState,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { useCloseEventForm } from "./useCloseEventForm";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 

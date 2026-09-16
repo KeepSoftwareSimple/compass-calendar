@@ -1,7 +1,7 @@
 import {
   weekEventRegistry,
   weekEventTargeting,
-} from "../registry/week-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { afterEach, describe, expect, it } from "bun:test";
 
 afterEach(() => {

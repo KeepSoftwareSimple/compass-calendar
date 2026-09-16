@@ -15,8 +15,8 @@ import { ContextMenuWrapper } from "@web/components/ContextMenu/GridContextMenuW
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { draftActions } from "@web/events/stores/draft.store";
 import { useDayCalendarContextMenu } from "@web/views/Day/components/Calendar/DayCalendarContextMenu";
-import { DAY_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Day/interaction/registry/day-event.registry";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
+import { DAY_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { afterEach, describe, expect, it } from "bun:test";
 import "@testing-library/jest-dom";
 
