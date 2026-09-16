@@ -77,7 +77,7 @@ E2E workflow (`test-e2e.yml`) is separate and runs on pull requests, merge-queue
 Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been removed.
 
 - `bun run test:core` — `test-parallel.ts core`: `bun test --parallel` with `core.preload.ts`.
-- `bun run test:web` — `test-parallel.ts web`: `bun test --parallel` with `web.preload.ts` (jsdom, MSW v2, Zustand reset, injectable test seams). Same launcher as core/fast tiers. See [Web parallel runner](#web-parallel-runner).
+- `bun run test:web` — `test-parallel.ts web`: `bun test --parallel=2` with `web.preload.ts` (jsdom, MSW v2, Zustand reset, injectable test seams). Same launcher as core/fast tiers. See [Web parallel runner](#web-parallel-runner).
 - `bun run test:backend`, `bun run test:scripts`, and `bun run test:sync` — `test-mongo-env.ts` boots one shared in-memory Mongo replica set, then runs `bun test --parallel` with the package preload. Per-file DB names come from `setupTestDb(import.meta.url)`.
 - `bun run test:self-host` — `bun test ./self-host`: the runtime static server (`serve-web.ts`) and the compose/deploy contracts. No preload and no mongod. It is not a workspace package, so it has its own scan root here and its own step in the `static` CI job; nothing else matches `self-host/*.test.ts`.
 - `bun run test:backend:fast`, `bun run test:sync:fast`, and `bun run test:scripts:fast` — `test-parallel.ts` with mongo-free preloads; excludes `*.db.test.*` via `--path-ignore-patterns`. No mongod boot — use these for day-to-day backend/sync/scripts work that does not touch persistence.
@@ -88,7 +88,13 @@ Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been remo
 
 **Web test seams.** Session, toast, Google authorization, email/password, and complete-authentication use injectable ports/registries registered in `@web/__tests__/helpers/web-test-seams.ts`. The preload lifecycle calls `installDefaultWebTestSeams()` in `beforeEach` and `resetWebTestSeams()` in `afterEach`, so web no longer needs preload `mock.module` clusters or a per-file process launcher.
 
-**Web parallel runner.** Web uses `bun test --parallel` like the other mongo-free profiles. MSW v2's interceptor stack survives Bun `--isolate`; the old `WEB_TEST_SHARDS` / RSS-watchdog split is gone. `--concurrent` is still off: shared jsdom `document`, the MSW server, and Zustand singletons race if tests in one file overlap.
+**Web parallel runner.** Web uses `bun test --parallel=2` with the same
+mongo-free launcher as core/fast tiers. MSW v2's interceptor stack survives
+Bun `--isolate`; the old `WEB_TEST_SHARDS` / RSS-watchdog split is gone.
+`--parallel` defaults to CPU count, and that many isolate jsdom workers OOM
+GitHub runners, so web caps at two workers instead of restoring shards.
+`--concurrent` is still off: shared jsdom `document`, the MSW server, and
+Zustand singletons race if tests in one file overlap.
 
 **IndexedDB in tests.** `ensureIndexedDbTestEnv()` re-applies fake-indexeddb globals when needed.
 
@@ -103,10 +109,10 @@ Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been remo
 `test-parallel.ts web` runs:
 
 ```bash
-bun test --parallel --preload packages/web/src/__tests__/web.preload.ts ./packages/web/src
+bun test --parallel=2 --preload packages/web/src/__tests__/web.preload.ts ./packages/web/src
 ```
 
-`msw@2` unblocked Bun `--isolate` (v1's XHR interceptor held a stale `PureXMLHttpRequest` after isolate cleared `globalThis`). The preload still remirrors jsdom onto `globalThis` and restarts the MSW server in `beforeAll`, because isolate clears globals without reloading preload modules. The old `WEB_TEST_SHARDS` / `WEB_TEST_SHARD_INDEX` / RSS-watchdog split is gone; CI is one `unit-leg (web)` row. `--concurrent` is still off: shared jsdom, the MSW server, and Zustand singletons race (~465 failures in a past experiment).
+`msw@2` unblocked Bun `--isolate` (v1's XHR interceptor held a stale `PureXMLHttpRequest` after isolate cleared `globalThis`). The preload still remirrors jsdom onto `globalThis` and restarts the MSW server in `beforeAll`, because isolate clears globals without reloading preload modules. `--parallel=2` caps isolate jsdom workers so a single CI process stays inside GitHub runner RAM; the old `WEB_TEST_SHARDS` / `WEB_TEST_SHARD_INDEX` / RSS-watchdog split is gone. CI is one `unit-leg (web)` row. `--concurrent` is still off: shared jsdom, the MSW server, and Zustand singletons race (~465 failures in a past experiment).
 
 Do not reintroduce `resetSessionProviderForTests()` in `afterEach` to "help" isolate. It poisoned MSW in `246078c3c`. Session isolation stays on injectable ports (`resetSessionApiPort()`).
 
@@ -178,7 +184,7 @@ Isolation rules:
 - Avoid mocking shared UI primitives such as `TooltipWrapper`, `@floating-ui/react`, or session hooks in broad component tests. Even with per-file isolation, broad mocks can hide integration behavior inside that file.
 - If a test replaces globals (`fetch`, `document.getElementById`, storage, timers, console methods), restore the original value in teardown.
 - Prefer `renderWithStore`, `createStoreWrapper`, or a focused provider harness over mocking `@web/store` or `store.hooks`.
-- `bun run test:web` is the acceptance check for the web suite. It runs `bun test --parallel` with `web.preload.ts`; see [Web parallel runner](#web-parallel-runner). A focused single-file run can still miss cross-file interactions.
+- `bun run test:web` is the acceptance check for the web suite. It runs `bun test --parallel=2` with `web.preload.ts`; see [Web parallel runner](#web-parallel-runner). A focused single-file run can still miss cross-file interactions.
 - `mock.module` is process-global within a test file, not test-scoped. Prefer injectable seams (`session.port`, `toast.port`, `emailpassword.port`, hook registries) or `spyOn` with teardown. File-level `mock.module` remains acceptable for one-off module substitution when a seam does not exist yet.
 - **Never mock `@tanstack/react-router` hooks without restoring them.** Bun's web suite runs all files in one process and discovery order is non-deterministic. Gate every overridden hook (`useNavigate`, `useSearch`, `useLocation`, `useParams`, …) behind a flag flipped off in `afterAll`, delegating to the snapshotted real implementation when the flag is false — see `SelectView.test.tsx`, `CommandPalette.test.tsx`, and `LifeView.test.tsx`. An unconditional `useSearch: () => ({})` will leave AuthModal (URL-driven via `?auth=`) unable to open for every later file in the process. Do not force alphabetical web file order as a workaround: that order trips a separate SuperTokens/posthog XMLHttpRequest conflict.
 - To focus an element on mount in this jsdom setup, use React's `autoFocus` prop or a stable callback ref (`ref={useCallback(n => n?.focus(), [])}`) — both fire in the commit phase. A `useEffect(() => ref.current?.focus())` does **not** make the element `document.activeElement` in tests. `autoFocus` trips biome's `lint/a11y/noAutofocus` (error) and a JSX-attribute `biome-ignore` comment breaks the formatter, so prefer the callback ref.

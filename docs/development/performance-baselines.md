@@ -38,7 +38,7 @@ Mongo-free iteration; full suites remain the durability gate.
 | Script | Tests | Time |
 | --- | --- | --- |
 | `bun run test:core` | (see package) | ~0.5s |
-| `bun run test:web` | (`--parallel`; see testing-playbook) | ~14–17s |
+| `bun run test:web` | (`--parallel=2`; see testing-playbook) | ~14–17s |
 | `bun run test:backend:fast` | 248 / 248 | ~1.6s |
 | `bun run test:backend` | 303 / 304 (1 skip) | ~3.4s |
 | `bun run test:sync:fast` | 321 / 321 | ~0.6s |

@@ -4,7 +4,10 @@ import {
   installDefaultWebTestSeams,
   resetWebTestSeams,
 } from "../helpers/web-test-seams";
-import { mirrorBrowserPolyfillGlobals } from "./browser-polyfills";
+import {
+  mirrorBrowserPolyfillGlobals,
+  syncWindowNetworkGlobals,
+} from "./browser-polyfills";
 import { ensureIndexedDbTestEnv } from "./indexeddb-env";
 import { dom, mirrorJsdomGlobals } from "./jsdom-env";
 import {
@@ -62,24 +65,26 @@ function resetBrowserState() {
   sessionStorage.clear();
 }
 
-beforeEach(() => {
+function remirrorIsolateGlobals(): void {
   // bun's fake clock is process-global across files in a worker. A leaked
   // pin makes later findBy/waitFor hang forever because Date.now never
-  // advances past their timeout. Reset before the test, not only after,
-  // so a previous afterEach that threw still cannot poison this file.
-  if (globalThis.document !== dom.window.document) {
-    mirrorJsdomGlobals();
-    mirrorBrowserPolyfillGlobals();
-  }
+  // advances past their timeout. Reset before any async work, so a previous
+  // file that timed out cannot freeze indexedDB or MSW in this file.
   setSystemTime();
+  mirrorJsdomGlobals();
+  mirrorBrowserPolyfillGlobals();
+}
+
+beforeEach(() => {
+  remirrorIsolateGlobals();
   installDefaultWebTestSeams();
 });
 
 beforeAll(async () => {
-  mirrorJsdomGlobals();
-  mirrorBrowserPolyfillGlobals();
+  remirrorIsolateGlobals();
   await ensureIndexedDbTestEnv();
   restartMockServer();
+  syncWindowNetworkGlobals();
 });
 afterEach(async () => {
   setSystemTime();

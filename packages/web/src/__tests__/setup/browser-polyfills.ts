@@ -114,7 +114,7 @@ if (!window.Range.prototype.getBoundingClientRect) {
   window.Range.prototype.getBoundingClientRect = zeroDOMRect;
 }
 
-window.fetch = globalThis.fetch.bind(globalThis);
+syncWindowNetworkGlobals();
 window.Blob = globalThis.Blob;
 window.File = globalThis.File;
 window.FormData = globalThis.FormData;
@@ -122,10 +122,6 @@ window.Event = globalThis.Event;
 window.CustomEvent = globalThis.CustomEvent;
 window.MouseEvent = globalThis.MouseEvent;
 window.KeyboardEvent = globalThis.KeyboardEvent;
-window.Headers = globalThis.Headers;
-window.Request = globalThis.Request;
-window.Response = globalThis.Response;
-window.XMLHttpRequest = globalThis.XMLHttpRequest;
 window.ArrayBuffer = globalThis.ArrayBuffer;
 window.Uint8Array = globalThis.Uint8Array;
 window.Uint8ClampedArray = globalThis.Uint8ClampedArray;
@@ -148,6 +144,20 @@ window.IntersectionObserver =
   MockObserver<IntersectionObserverCallback> as unknown as typeof IntersectionObserver;
 window.ResizeObserver =
   MockObserver<ResizeObserverCallback> as unknown as typeof ResizeObserver;
+
+/**
+ * Point jsdom `window` at the current `globalThis` network stack. Call after
+ * MSW `listen()` so `window.fetch` is the patched interceptor, not the
+ * native fetch isolate restored.
+ */
+export function syncWindowNetworkGlobals(): void {
+  const { window: jsdomWindow } = dom;
+  jsdomWindow.fetch = globalThis.fetch.bind(globalThis);
+  jsdomWindow.Headers = globalThis.Headers;
+  jsdomWindow.Request = globalThis.Request;
+  jsdomWindow.Response = globalThis.Response;
+  jsdomWindow.XMLHttpRequest = globalThis.XMLHttpRequest;
+}
 
 /**
  * Copy remaining jsdom `window` keys onto `globalThis`. `--isolate` clears

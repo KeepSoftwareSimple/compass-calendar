@@ -45,8 +45,8 @@ Playwright. Docs index: `docs/README.md`.
   `user-event`. Register every new Zustand store in the reset registry and
   the state seeder. Restore replaced globals, timers, and spies in teardown.
   Keep `bun test:web` sequential within a file (jsdom/MSW/Zustand
-  singletons); the suite itself uses Bun `--parallel` like the other
-  packages.
+  singletons); the suite itself uses Bun `--parallel=2` so isolate jsdom
+  workers fit CI RAM.
 - Web styles use Tailwind semantic colors from `packages/web/src/index.css`
   and canonical scale utilities, with native semantic elements and visible
   focus states.
