@@ -60,7 +60,26 @@ test("the first click on an event teaches its jump key and Enter opens it", asyn
     .locator("#mainGrid")
     .getByRole("button", { name: title });
 
-  await eventButton.click({ force: true });
+  await eventButton.scrollIntoViewIfNeeded();
+  // React Query Devtools can cover a late-night event at the bottom of the
+  // grid. A force-click then hits empty grid and teaches digits instead of
+  // the jump key. Dispatch pointerdown on the card itself so the hint
+  // tracker sees the event in composedPath.
+  await eventButton.evaluate((el) => {
+    const rect = el.getBoundingClientRect();
+    el.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        composed: true,
+        button: 0,
+        clientX: rect.left + rect.width / 2,
+        clientY: rect.top + rect.height / 2,
+        pointerType: "mouse",
+      }),
+    );
+    el.focus();
+  });
   const hint = page.locator("[data-pointer-hint]");
   await expect(hint).toContainText("then Enter to open this event");
 
