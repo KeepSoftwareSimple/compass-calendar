@@ -46,9 +46,9 @@ import {
   TIMED_EVENT_FAN_INDENT,
 } from "@web/grid/grid.constants";
 import * as realUsegridmeasurements from "@web/grid/hooks/useGridMeasurements";
+import { dayEventRegistry } from "@web/grid/interaction/view-event-registry";
 import { type GridMeasurements } from "@web/grid/types/grid.types";
 import * as realUsedateinview from "@web/views/Day/hooks/navigation/useDateInView";
-import { dayEventRegistry } from "@web/views/Day/interaction/registry/day-event.registry";
 import {
   afterEach,
   beforeEach,

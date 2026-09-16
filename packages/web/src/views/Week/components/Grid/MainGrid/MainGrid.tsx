@@ -1,8 +1,9 @@
 import { type FC, type ReactNode, type RefCallback, useMemo } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
+import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
+import { GridBusyPeriods } from "@web/grid/components/GridBusyPeriods";
 import { TimedGrid } from "@web/grid/components/TimedGrid";
-import { MainGridBusyPeriods } from "@web/views/Week/components/Grid/MainGrid/MainGridBusyPeriods";
 import { MainGridEvents } from "@web/views/Week/components/Grid/MainGrid/MainGridEvents";
 import { MainGridQuickTimeSlots } from "@web/views/Week/components/Grid/MainGrid/MainGridQuickTimeSlots";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -66,9 +67,16 @@ const MainGridChildren: FC<MainGridChildrenProps> = ({
   const timedEventsLayer = useMemo(
     () => (
       <>
-        <MainGridBusyPeriods
+        <GridBusyPeriods
           measurements={measurements}
-          weekProps={weekProps}
+          range={{
+            start: toUTCOffset(weekProps.component.startOfView),
+            end: toUTCOffset(weekProps.component.endOfView),
+          }}
+          visibleDates={weekProps.component.weekDays.map((date) => ({
+            date,
+            key: date.format(YEAR_MONTH_DAY_FORMAT),
+          }))}
         />
         <MainGridQuickTimeSlots
           measurements={measurements}
@@ -109,9 +117,16 @@ const MainGridCalendar: FC<MainGridCalendarProps> = ({
   const timedEventsLayer = useMemo(
     () => (
       <>
-        <MainGridBusyPeriods
+        <GridBusyPeriods
           measurements={measurements}
-          weekProps={weekProps}
+          range={{
+            start: toUTCOffset(weekProps.component.startOfView),
+            end: toUTCOffset(weekProps.component.endOfView),
+          }}
+          visibleDates={weekProps.component.weekDays.map((date) => ({
+            date,
+            key: date.format(YEAR_MONTH_DAY_FORMAT),
+          }))}
         />
         <MainGridQuickTimeSlots
           measurements={measurements}

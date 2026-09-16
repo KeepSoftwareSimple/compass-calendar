@@ -36,6 +36,10 @@ import {
 } from "@web/events/stores/event-clipboard.store";
 import { initialViewState, useViewStore } from "@web/events/stores/view.store";
 import {
+  getWeekInteractionTargetAttributes,
+  weekEventRegistry,
+} from "@web/grid/interaction/view-event-registry";
+import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
@@ -47,10 +51,6 @@ import {
   eventJumpActions,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
-import {
-  getWeekInteractionTargetAttributes,
-  weekEventRegistry,
-} from "@web/views/Week/interaction/registry/week-event.registry";
 import {
   afterEach,
   beforeEach,

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import dayjs from "@core/util/date/dayjs";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
+import { weekEventTargeting } from "@web/grid/interaction/view-event-registry";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { QuickTimeSlots } from "@web/shortcuts/quick-time/QuickTimeSlots";
 import {
@@ -20,7 +21,6 @@ import {
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import { weekEventTargeting } from "@web/views/Week/interaction/registry/week-event.registry";
 
 interface Props {
   measurements: Measurements_Grid;
@@ -29,7 +29,7 @@ interface Props {
 
 /**
  * Week-grid host for the quick-time placeholders. Sources events from the same
- * cached week query MainGridEvents reads, the way MainGridBusyPeriods sources
+ * cached week query MainGridEvents reads, the way GridBusyPeriods sources
  * its own availability query, so no new props thread through the grid.
  * The chips follow the focused column (jump-selected day, parked click, or
  * focused event) so they preview where a typed time would land.

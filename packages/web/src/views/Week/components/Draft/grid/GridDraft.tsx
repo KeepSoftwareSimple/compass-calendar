@@ -5,17 +5,17 @@ import { focusEventFormTitle } from "@web/common/utils/form/form.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import { gridEventDraftToGridEvent } from "@web/events/grid-event-draft.adapter";
 import { draftActions, isEventFormOpen } from "@web/events/stores/draft.store";
+import { GridAllDayEventMemo } from "@web/grid/components/GridAllDayEvent";
+import { GridTimedEvent } from "@web/grid/components/GridTimedEvent";
+import { getWeekInteractionTargetAttributes } from "@web/grid/interaction/view-event-registry";
 import {
   draftToAllDayRowGridEvent,
   isDraftRenderedInAllDayRow,
 } from "@web/grid/layout/all-day-draft.position";
 import { type TimedDeckLayout } from "@web/grid/layout/timed-deck.layout";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
-import { GridEvent } from "@web/views/Week/components/Event/Grid/GridEvent/GridEvent";
-import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import { getWeekInteractionTargetAttributes } from "@web/views/Week/interaction/registry/week-event.registry";
 
 interface Props {
   activeAllDayDraftEvent?: GridEventEntity | null;
@@ -69,7 +69,7 @@ export const GridDraft: FC<Props> = ({
   return (
     <>
       {recurringPreviews.map((preview) => (
-        <GridEvent
+        <GridTimedEvent
           displayMode="draft"
           event={preview}
           interactionAttributes={
@@ -87,17 +87,17 @@ export const GridDraft: FC<Props> = ({
       ))}
 
       {rendersInAllDayRow ? (
-        <AllDayEventMemo
+        <GridAllDayEventMemo
           event={allDayDraftEvent}
           interactionAttributes={draftInteractionAttributes}
           isPlaceholder={false}
           key={`draft-${draftAsGridEvent._id}`}
           measurements={measurements}
-          onKeyDown={openDraftFormOrFocusTitle}
+          onEventKeyDown={openDraftFormOrFocusTitle}
           visibleDates={visibleDates}
         />
       ) : (
-        <GridEvent
+        <GridTimedEvent
           deckLayout={deckLayout}
           displayMode="draft"
           event={draftAsGridEvent}

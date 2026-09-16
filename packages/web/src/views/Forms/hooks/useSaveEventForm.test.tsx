@@ -33,7 +33,7 @@ import {
   useDraftStore,
 } from "@web/events/stores/draft.store";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { useSaveEventForm } from "./useSaveEventForm";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 

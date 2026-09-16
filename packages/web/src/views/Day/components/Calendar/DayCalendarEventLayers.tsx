@@ -14,16 +14,14 @@ import { type GridEventDraft } from "@web/events/event-draft.types";
 import { getGridDraftId } from "@web/events/grid-event-draft.adapter";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
+import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
+import { GridRegisteredTimedEvent } from "@web/grid/components/GridRegisteredTimedEvent";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import {
   type GridMeasurements,
   type GridVisibleDate,
 } from "@web/grid/types/grid.types";
-import {
-  DayAllDayCalendarEvent,
-  DayTimedCalendarEvent,
-} from "./DayCalendarEventCards";
 import {
   addVisibleDraftEvent,
   getCalendarEventIdSet,
@@ -92,18 +90,20 @@ export const DayCalendarAllDayEventsLayer = ({
       }}
     >
       {allDayEvents.map((event) => (
-        <DayAllDayCalendarEvent
+        <GridRegisteredAllDayEvent
           calendarIdentity={resolveCalendarCardIdentity(calendarLookup, event)}
           columnIndex={getCalendarColumnIndex(event)}
           event={event}
           focusColor={resolveCalendarFocusColor(calendarLookup, event)}
           isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
+          isDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
           isHidden={isEventIdHidden(event._id, layoutHiddenEventIds)}
           isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
           isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
           key={event._id ?? "all-day-draft"}
           measurements={measurements}
-          onOpenEvent={onOpenEvent}
+          onEventKeyDown={onOpenEvent}
+          view="day"
           visibleDates={visibleDates}
         />
       ))}
@@ -157,7 +157,7 @@ export const DayCalendarTimedEventsLayer = ({
   return (
     <div id={ID_GRID_EVENTS_TIMED}>
       {timedEventItems.map(({ deckLayout, event, isHidden }) => (
-        <DayTimedCalendarEvent
+        <GridRegisteredTimedEvent
           calendarIdentity={resolveCalendarCardIdentity(calendarLookup, event)}
           columnIndex={getCalendarColumnIndex(event)}
           deckLayout={deckLayout}
@@ -169,7 +169,9 @@ export const DayCalendarTimedEventsLayer = ({
           isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
           key={event._id ?? "timed-draft"}
           measurements={measurements}
-          onOpenEvent={onOpenEvent}
+          onEventKeyDown={onOpenEvent}
+          positionAsDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
+          view="day"
           visibleDates={visibleDates}
         />
       ))}

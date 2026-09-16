@@ -54,8 +54,8 @@ max offset going back). Neither branch is a flat ±7-day jump —
 
 ## Memo Comparator Trap
 
-`GridEventMemo` (`.../Event/Grid/GridEvent/GridEvent.tsx`) and
-`AllDayEventMemo` (`.../Grid/AllDayRow/AllDayEvent.tsx`) skip re-render unless
+`GridTimedEventMemo` (`packages/web/src/grid/components/GridTimedEvent.tsx`) and
+`GridAllDayEventMemo` (`packages/web/src/grid/components/GridAllDayEvent.tsx`) skip re-render unless
 their custom comparator says something relevant changed. Both comparators
 must include `weekDays` (or `weekProps.component.weekDays`) in that
 comparison. If a future edit drops it: the day window can move (paging,

@@ -7,7 +7,7 @@ import {
   dayEventRegistry,
   getDayInteractionTargetAttributes,
   useDayEventRegistrationRef,
-} from "./day-event.registry";
+} from "@web/grid/interaction/view-event-registry";
 import { afterEach, describe, expect, it } from "bun:test";
 
 const RegistrationHarness = ({

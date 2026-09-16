@@ -2,15 +2,13 @@ import { render, screen } from "@testing-library/react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
+import { GridAllDayEventMemo } from "@web/grid/components/GridAllDayEvent";
+import { GridTimedEvent } from "@web/grid/components/GridTimedEvent";
 import {
   GRID_EVENT_TIME_LABEL_FONT_SIZE,
   GRID_EVENT_TIME_LABEL_OPACITY,
   GRID_EVENT_TITLE_LINE_HEIGHT,
 } from "@web/grid/grid.constants";
-import { GridEvent } from "@web/views/Week/components/Event/Grid/GridEvent/GridEvent";
-import { AllDayEventMemo } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvent";
-import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
-import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import {
   createWeekEventRegistry,
   getWeekInteractionTargetAttributes,
@@ -19,7 +17,9 @@ import {
   WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE,
   type WeekInteractionEventType,
   weekEventRegistry,
-} from "./week-event.registry";
+} from "@web/grid/interaction/view-event-registry";
+import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
+import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import {
   afterEach,
   beforeEach,
@@ -164,7 +164,7 @@ const RegisteredTimedEventHarness = ({
   });
 
   return (
-    <GridEvent
+    <GridTimedEvent
       displayMode={displayMode}
       event={event}
       interactionAttributes={
@@ -197,7 +197,7 @@ const RegisteredAllDayEventHarness = ({
   });
 
   return (
-    <AllDayEventMemo
+    <GridAllDayEventMemo
       event={event}
       interactionAttributes={
         isEnabled

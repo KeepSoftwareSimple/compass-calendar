@@ -3,6 +3,7 @@ import { EventIdSchema } from "@core/types/domain-primitives";
 import dayjs from "@core/util/date/dayjs";
 import { dispatchMissingKey } from "@web/__tests__/utils/keyboard.test.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
 import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-action";
 import { KEYMAP } from "@web/shortcuts/keymap";
@@ -16,7 +17,6 @@ import {
   resetEditSequenceArm,
   useEditSequenceShortcut,
 } from "@web/shortcuts/useEditSequenceShortcut";
-import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/views/Week/interaction/registry/week-event.registry";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const EVENT_A = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");

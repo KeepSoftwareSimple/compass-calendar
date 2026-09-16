@@ -2,8 +2,12 @@ import {
   calendarEventIdElementSelector,
   calendarEventIdValueSelector,
   createViewInteractionRegistry,
+  dayEventRegistry,
+  dayViewInteraction,
   GRID_EVENT_READ_ONLY_ATTRIBUTE,
   readCalendarEventIdFromElement,
+  weekEventRegistry,
+  weekViewInteraction,
 } from "./view-event-registry";
 import { afterEach, describe, expect, it } from "bun:test";
 
@@ -38,6 +42,17 @@ describe("createViewInteractionRegistry", () => {
     expect(day.typeAttribute).toBe("data-day-interaction-event-type");
     expect(week.idAttribute).toBe("data-week-interaction-event-id");
     expect(week.typeAttribute).toBe("data-week-interaction-event-type");
+  });
+
+  it("exports one singleton registry per calendar view", () => {
+    expect(dayViewInteraction.idAttribute).toBe(
+      "data-day-interaction-event-id",
+    );
+    expect(weekViewInteraction.idAttribute).toBe(
+      "data-week-interaction-event-id",
+    );
+    expect(dayEventRegistry).toBe(dayViewInteraction.registry);
+    expect(weekEventRegistry).toBe(weekViewInteraction.registry);
   });
 
   it("keeps each view's registry from resolving the other view's elements", () => {

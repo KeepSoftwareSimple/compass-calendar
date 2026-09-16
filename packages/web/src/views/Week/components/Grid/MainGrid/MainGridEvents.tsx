@@ -1,14 +1,12 @@
 import { useMemo } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
-  type CalendarCardIdentity,
   isGridEventScheduleLocked,
   resolveCalendarCardIdentity,
   resolveCalendarFocusColor,
   useCalendarLookup,
 } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_TIMED } from "@web/common/constants/web.constants";
-import { type GridEvent } from "@web/common/types/web.event.types";
 import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
@@ -22,20 +20,13 @@ import {
   selectGridDraft,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import {
-  createTimedEventLayout,
-  type TimedDeckLayout,
-} from "@web/grid/layout/timed-deck.layout";
+import { GridRegisteredTimedEvent } from "@web/grid/components/GridRegisteredTimedEvent";
+import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
-import {
-  getWeekInteractionTargetAttributes,
-  useWeekEventRegistrationRef,
-} from "@web/views/Week/interaction/registry/week-event.registry";
 import { isTimedEventInVisibleDays } from "@web/views/Week/util/week-window.util";
-import { GridEventMemo } from "../../Event/Grid/GridEvent/GridEvent";
 
 interface Props {
   measurements: Measurements_Grid;
@@ -106,7 +97,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
   );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,
-  // so GridEventMemo's per-card comparator doesn't over-invalidate.
+  // so GridTimedEventMemo's per-card comparator doesn't over-invalidate.
   const timedEventItemsWithIdentity = useMemo(
     () =>
       timedEventItems.map((item) => ({
@@ -157,7 +148,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
               : focusColor;
 
             return (
-              <MainGridEventItem
+              <GridRegisteredTimedEvent
                 calendarIdentity={identityForDisplay}
                 deckLayout={deckLayout}
                 event={eventForDisplay}
@@ -167,80 +158,15 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
                 isReadOnly={isReadOnly}
                 key={`initial-${event._id}`}
                 measurements={measurements}
-                onEventKeyDown={onEventKeyDown}
-                onOpenReadOnlyDetails={onOpenReadOnlyDetails}
+                onEventKeyDown={
+                  isReadOnly ? onOpenReadOnlyDetails : onEventKeyDown
+                }
+                view="week"
                 visibleDates={visibleDates}
               />
             );
           },
         )}
     </div>
-  );
-};
-
-interface MainGridEventItemProps {
-  calendarIdentity: CalendarCardIdentity | null;
-  deckLayout: TimedDeckLayout | null;
-  event: GridEvent;
-  focusColor: string | null;
-  isHidden: boolean;
-  isPlaceholder: boolean;
-  isReadOnly: boolean;
-  measurements: Measurements_Grid;
-  onEventKeyDown: (event: GridEvent) => void;
-  onOpenReadOnlyDetails: (event: GridEvent) => void;
-  visibleDates: GridVisibleDate[];
-}
-
-const MainGridEventItem = ({
-  calendarIdentity,
-  deckLayout,
-  event,
-  focusColor,
-  isHidden,
-  isPlaceholder,
-  isReadOnly,
-  measurements,
-  onEventKeyDown,
-  onOpenReadOnlyDetails,
-  visibleDates,
-}: MainGridEventItemProps) => {
-  // Stamp view-registry id attrs whenever the card has an id (saved, draft
-  // placeholder, or read-only) so context menus / focus restore can resolve
-  // it. Drag/resize stays gated via registry registration on saved writable
-  // cards only.
-  const hasEventIdentity = Boolean(event._id);
-  const isRegisteredForDragResize =
-    hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
-  const registrationRef = useWeekEventRegistrationRef({
-    eventId: event._id,
-    eventType: "timed",
-    isEnabled: isRegisteredForDragResize,
-  });
-  const interactionAttributes = useMemo(
-    () =>
-      hasEventIdentity
-        ? getWeekInteractionTargetAttributes({
-            eventId: event._id,
-            eventType: "timed",
-            isReadOnly,
-          })
-        : undefined,
-    [event._id, hasEventIdentity, isReadOnly],
-  );
-  return (
-    <GridEventMemo
-      calendarIdentity={calendarIdentity}
-      deckLayout={deckLayout}
-      displayMode={isPlaceholder ? "placeholder" : "saved"}
-      event={event}
-      focusColor={focusColor}
-      interactionAttributes={interactionAttributes}
-      isHidden={isHidden}
-      measurements={measurements}
-      onEventKeyDown={isReadOnly ? onOpenReadOnlyDetails : onEventKeyDown}
-      ref={registrationRef}
-      visibleDates={visibleDates}
-    />
   );
 };

@@ -146,3 +146,45 @@ export const createViewInteractionRegistry = (viewName: string) => {
     useRegistrationRef,
   };
 };
+
+export type CalendarGridView = "day" | "week";
+
+export const dayViewInteraction = createViewInteractionRegistry("day");
+export const weekViewInteraction = createViewInteractionRegistry("week");
+
+const calendarViewInteractions = {
+  day: dayViewInteraction,
+  week: weekViewInteraction,
+} as const;
+
+export const calendarViewInteraction = (view: CalendarGridView) =>
+  calendarViewInteractions[view];
+
+export const DAY_INTERACTION_EVENT_ID_ATTRIBUTE =
+  dayViewInteraction.idAttribute;
+export const DAY_INTERACTION_EVENT_TYPE_ATTRIBUTE =
+  dayViewInteraction.typeAttribute;
+export type DayInteractionEventType = ViewInteractionEventType;
+export type DayRegisteredEventTarget = ViewRegisteredEventTarget;
+export type DayEventRegistry = ViewEventRegistry;
+export const getDayInteractionTargetAttributes =
+  dayViewInteraction.getInteractionTargetAttributes;
+export const createDayEventRegistry = dayViewInteraction.createRegistry;
+export const dayEventRegistry = dayViewInteraction.registry;
+export const dayEventTargeting = dayViewInteraction.targeting;
+export const useDayEventRegistrationRef = dayViewInteraction.useRegistrationRef;
+
+export const WEEK_INTERACTION_EVENT_ID_ATTRIBUTE =
+  weekViewInteraction.idAttribute;
+export const WEEK_INTERACTION_EVENT_TYPE_ATTRIBUTE =
+  weekViewInteraction.typeAttribute;
+export type WeekInteractionEventType = ViewInteractionEventType;
+export type WeekRegisteredEventTarget = ViewRegisteredEventTarget;
+export type WeekEventRegistry = ViewEventRegistry;
+export const getWeekInteractionTargetAttributes =
+  weekViewInteraction.getInteractionTargetAttributes;
+export const createWeekEventRegistry = weekViewInteraction.createRegistry;
+export const weekEventRegistry = weekViewInteraction.registry;
+export const weekEventTargeting = weekViewInteraction.targeting;
+export const useWeekEventRegistrationRef =
+  weekViewInteraction.useRegistrationRef;

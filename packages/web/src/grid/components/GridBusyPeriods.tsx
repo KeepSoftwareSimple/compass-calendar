@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { type Dayjs } from "@core/util/date/dayjs";
 import { useAvailabilityQuery } from "@web/calendars/availability.query";
 import { useCalendarLookup } from "@web/calendars/useCalendarLookup";
 import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
@@ -10,33 +9,23 @@ import {
   type GridMeasurements,
   type GridVisibleDate,
 } from "@web/grid/types/grid.types";
-import { dayEventQueryRange } from "@web/views/Day/hooks/events/useDayEvents";
 
 const ID_GRID_BUSY_PERIODS = "busyPeriods";
 
-interface Props {
+interface GridBusyPeriodsProps {
   calendarColumnIndexById?: ReadonlyMap<string, number>;
-  dateInView: Dayjs;
   measurements: GridMeasurements;
+  range: { start: string; end: string };
   visibleDates: GridVisibleDate[];
 }
 
-/**
- * Day-grid counterpart to MainGridBusyPeriods (packet 08 phase 4; A7):
- * renders freeBusyReader calendars' busy time as inert decoration in the day
- * timed grid, mounted beside DayCalendarTimedEventsLayer. Shares
- * dayEventQueryRange with the day events query so the availability range
- * agrees with the events drawn beneath it. Renders nothing while the
- * availability query is loading/errored/disabled.
- */
-export const DayCalendarBusyPeriodsLayer = ({
+export const GridBusyPeriods = ({
   calendarColumnIndexById,
-  dateInView,
   measurements,
+  range,
   visibleDates,
-}: Props) => {
-  const { startDate, endDate } = dayEventQueryRange(dateInView);
-  const { data } = useAvailabilityQuery({ start: startDate, end: endDate });
+}: GridBusyPeriodsProps) => {
+  const { data } = useAvailabilityQuery(range);
   const calendarLookup = useCalendarLookup();
   const segments = useMemo(
     () => splitBusyPeriodsByDay(data?.busyPeriods ?? [], visibleDates),

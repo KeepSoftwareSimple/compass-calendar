@@ -3,13 +3,13 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { repositionDraftByKeyboard } from "@web/common/utils/draft/reposition-draft-by-keyboard.util";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
+import { dayEventTargeting } from "@web/grid/interaction/view-event-registry";
 import { useGridEventEditShortcuts } from "@web/grid/shortcuts/useGridEventEditShortcuts";
 import { useGridEventFormFieldSequences } from "@web/grid/shortcuts/useGridEventFormFieldSequences";
 import {
   type ActiveShiftHint,
   useShiftHoldEventHints,
 } from "@web/shortcuts/shift-hint/useShiftHoldEventHints";
-import { dayEventTargeting } from "@web/views/Day/interaction/registry/day-event.registry";
 
 /**
  * Day-view edit shortcuts: Delete, Mod+D, Shift+arrows (nudge / day-move),

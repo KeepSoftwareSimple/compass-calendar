@@ -36,6 +36,7 @@ import {
   useDraftStore,
 } from "@web/events/stores/draft.store";
 import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
+import { GridBusyPeriods } from "@web/grid/components/GridBusyPeriods";
 import { useGridMeasurements } from "@web/grid/hooks/useGridMeasurements";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
 import { EditSequenceMenu } from "@web/shortcuts/edit-sequence/EditSequenceMenu";
@@ -57,7 +58,6 @@ import { useDateInView } from "@web/views/Day/hooks/navigation/useDateInView";
 import { useDateNavigation } from "@web/views/Day/hooks/navigation/useDateNavigation";
 import { useDayEventNudgeShortcuts } from "@web/views/Day/hooks/shortcuts/useDayEventNudgeShortcuts";
 import { useToday } from "@web/views/Week/hooks/useToday";
-import { DayCalendarBusyPeriodsLayer } from "./DayCalendarBusyPeriods";
 import { DayCalendarColumnHeaders } from "./DayCalendarColumnHeaders";
 import { useDayCalendarContextMenu } from "./DayCalendarContextMenu";
 import {
@@ -82,6 +82,7 @@ export function DayCalendarGrid() {
   // Seed shortcuts with the form's default create target, not day-column order.
   const defaultTargetCalendarId =
     useDefaultTargetCalendar(calendars)?.id ?? null;
+  const { startDate, endDate } = dayEventQueryRange(dateInView);
   const {
     allDayEvents,
     error: eventsError,
@@ -91,7 +92,7 @@ export function DayCalendarGrid() {
     isPending,
     refetch,
     timedEvents,
-  } = useDayEventViewModel(dayEventQueryRange(dateInView));
+  } = useDayEventViewModel({ startDate, endDate });
   // Session expiry already surfaces SessionExpiredToast — don't also show
   // "Couldn't load events" / Retry for the same failure.
   const showEventsLoadError = shouldShowContextualLoadError(
@@ -397,10 +398,10 @@ export function DayCalendarGrid() {
   const timedEventsLayer = useMemo(
     () => (
       <>
-        <DayCalendarBusyPeriodsLayer
+        <GridBusyPeriods
           calendarColumnIndexById={calendarColumnIndexById}
-          dateInView={dateInView}
           measurements={measurements}
+          range={{ start: startDate, end: endDate }}
           visibleDates={visibleDates}
         />
         <QuickTimeSlots
@@ -422,8 +423,8 @@ export function DayCalendarGrid() {
     ),
     [
       calendarColumnIndexById,
-      dateInView,
       displayedTimedEvents,
+      endDate,
       gridDraft,
       getCalendarColumnIndex,
       isDisplayedEvent,
@@ -431,6 +432,7 @@ export function DayCalendarGrid() {
       openEventFormForEvent,
       quickTimeColumnIndex,
       quickTimeSlots,
+      startDate,
       visibleDates,
     ],
   );
