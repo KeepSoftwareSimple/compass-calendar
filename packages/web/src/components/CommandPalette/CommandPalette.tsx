@@ -23,6 +23,7 @@ import dayjs from "@core/util/date/dayjs";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
 import { Z_INDEX_MODAL } from "@web/common/constants/web.constants";
+import { goToDateAnnouncement } from "@web/common/utils/datetime/web.date.util";
 import { eventCommandPaletteItems } from "@web/components/CommandPalette/event.cmd.constants";
 import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabel";
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
@@ -143,11 +144,15 @@ const CommandPaletteContent = ({
       detail: eventSearchDetail(event),
       icon: CalendarBlankIcon,
       onClick: () => {
-        void navigate({
-          to: paletteEventRoute(currentView),
-          params: { dateString: eventSearchDateString(event) },
+        const eventId = event.id;
+        void Promise.resolve(
+          navigate({
+            to: paletteEventRoute(currentView),
+            params: { dateString: eventSearchDateString(event) },
+          }),
+        ).then(() => {
+          startFocusEventCard(eventId);
         });
-        startFocusEventCard(event.id);
       },
     }));
   const eventSection: CommandSection[] =
@@ -162,7 +167,10 @@ const CommandPaletteContent = ({
         params: { dateString },
       }),
     ).then(() => {
-      eventJumpActions.setActiveDayKeys([dateString]);
+      eventJumpActions.setActiveDayKeys(
+        [dateString],
+        goToDateAnnouncement(date, currentView),
+      );
     });
   });
   const goToDateSection: CommandSection[] = goToDateItem
@@ -254,7 +262,7 @@ const CommandPaletteContent = ({
               reader users, who otherwise get no feedback that typing
               changed what's showing. Wording matches the visible
               zero-results message below rather than diverging from it. */}
-          <span aria-live="polite" className="sr-only">
+          <span aria-live="polite" className="sr-only" role="status">
             {liveRegionText}
           </span>
 
@@ -332,6 +340,7 @@ const CommandPaletteContent = ({
                         })}
                         type="button"
                         role="option"
+                        tabIndex={-1}
                         aria-selected={isActive}
                         disabled={item.disabled}
                         className={rowClassName}

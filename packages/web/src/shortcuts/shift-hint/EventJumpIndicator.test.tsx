@@ -56,4 +56,17 @@ describe("EventJumpIndicator", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Event jump off");
     expect(screen.queryByText("Esc")).not.toBeInTheDocument();
   });
+
+  it("speaks a go-to-date orientation while jump mode is off", () => {
+    eventJumpActions.setActiveDayKeys(
+      ["2026-10-03"],
+      "Showing week of Saturday, October 3, 2026",
+    );
+    render(<EventJumpIndicator />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Showing week of Saturday, October 3, 2026",
+    );
+    expect(screen.queryByText("Esc")).not.toBeInTheDocument();
+  });
 });

@@ -2,6 +2,7 @@ import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Event } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   POINTER_EVENT_ID_ATTRIBUTE,
   requestPointerEventJump,
@@ -37,13 +38,15 @@ const eventCardInDom = (eventId: string): boolean =>
 export function startFocusEventCard(eventId: string): void {
   const deadline = Date.now() + FOCUS_WAIT_MS;
   const tick = () => {
-    if (eventCardInDom(eventId)) {
-      requestPointerEventJump(eventId);
+    // The palette holds app-lock until it unmounts. Jumping while locked is
+    // a no-op (event-jump stands down), so wait for close before focusing.
+    if (isAppLocked() || !eventCardInDom(eventId)) {
+      if (Date.now() < deadline) {
+        setTimeout(tick, FOCUS_POLL_MS);
+      }
       return;
     }
-    if (Date.now() < deadline) {
-      setTimeout(tick, FOCUS_POLL_MS);
-    }
+    requestPointerEventJump(eventId);
   };
   tick();
 }

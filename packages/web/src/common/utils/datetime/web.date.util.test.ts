@@ -12,6 +12,8 @@ import {
   getTimeOptionByValue,
   getTimesLabel,
   getWeekRangeLabel,
+  goToDateAnnouncement,
+  goToDatePaletteLabel,
   mapToBackend,
   parseUserDate,
   parseUserTime,
@@ -679,5 +681,25 @@ describe("parseUserDate", () => {
     expect(ymd(parseUserDate("jan 3", now))).toBe("2027-01-03");
     expect(ymd(parseUserDate("mar 14", now))).toBe("2027-03-14");
     expect(ymd(parseUserDate("mar 15", now))).toBe("2026-03-15");
+  });
+});
+
+describe("goToDateAnnouncement", () => {
+  const date = dayjs("2026-10-03");
+
+  it("names the day on Day view", () => {
+    expect(goToDatePaletteLabel(date)).toBe("Go to Sat, Oct 3, 2026");
+    expect(goToDateAnnouncement(date, "day")).toBe(
+      "Showing Saturday, October 3, 2026",
+    );
+  });
+
+  it("names the week on Week and Life", () => {
+    expect(goToDateAnnouncement(date, "week")).toBe(
+      "Showing week of Saturday, October 3, 2026",
+    );
+    expect(goToDateAnnouncement(date, "life")).toBe(
+      "Showing week of Saturday, October 3, 2026",
+    );
   });
 });

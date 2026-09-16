@@ -6,6 +6,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
@@ -549,10 +550,10 @@ describe("CommandPalette", () => {
   it("keeps Google sync status and actions out of the command palette", () => {
     renderPalette();
 
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Google Calendar|calendar sync|calendar status/i),
     ).not.toBeInTheDocument();
+    expect(screen.queryByText("Calendar up-to-date")).not.toBeInTheDocument();
   });
 
   it("activates a row on pointer move, without requiring a keypress", () => {
@@ -567,8 +568,7 @@ describe("CommandPalette", () => {
 
   it("announces the result count in a live region, matching the visible copy", () => {
     renderPalette();
-    const liveRegion = () =>
-      document.querySelector('[aria-live="polite"]') as HTMLElement;
+    const liveRegion = () => screen.getByRole("status");
 
     // Nothing announced yet for an untouched, empty query.
     expect(liveRegion().textContent).toBe("");
@@ -658,10 +658,45 @@ describe("CommandPalette", () => {
         to: "/week/$dateString",
         params: { dateString: "2026-09-16" },
       });
-      expect(jumps).toEqual([dentist.id]);
+      await waitFor(() => {
+        expect(jumps).toEqual([dentist.id]);
+      });
     } finally {
       document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
       card.remove();
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("keeps Events rows out of the tab order so focus stays on the search field", async () => {
+    resetEventRepositorySourceForTests();
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([dentist]);
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      const user = userEvent.setup();
+      renderPalette();
+      await user.type(getInput(), "dent");
+
+      const row = await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      expect(row).toHaveAttribute("tabindex", "-1");
+      expect(getInput()).toHaveFocus();
+
+      await user.tab();
+      expect(row).not.toHaveFocus();
+    } finally {
       resetOfflineDataStoreForTests();
     }
   });
@@ -689,6 +724,9 @@ describe("CommandPalette", () => {
           "2026-10-03",
         ]);
       });
+      expect(useEventJumpStore.getState().announcement).toBe(
+        "Showing week of Saturday, October 3, 2026",
+      );
       expect(isOpen()).toBe(false);
     } finally {
       setSystemTime();
@@ -704,7 +742,6 @@ describe("LifeCommandPalette", () => {
       { settings: { isCmdPaletteOpen: true } },
     );
 
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.queryByText("Calendar up-to-date")).not.toBeInTheDocument();
   });
 
