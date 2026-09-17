@@ -1,5 +1,4 @@
 import { type FC, useMemo } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
 import {
@@ -12,12 +11,13 @@ import { selectGridDraft, useDraftStore } from "@web/events/stores/draft.store";
 import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
 import { positionAllDayDraftEvent } from "@web/grid/layout/all-day-draft.position";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
-import { AllDayRow } from "@web/views/Week/components/Grid/AllDayRow/AllDayRow";
-import { MainGrid } from "@web/views/Week/components/Grid/MainGrid/MainGrid";
+import { AllDayEvents } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvents";
+import { MainGridTimedEventsLayer } from "@web/views/Week/components/Grid/MainGrid/MainGridTimedEventsLayer";
 import {
   type Measurements_Grid,
   type Refs_Grid,
 } from "@web/views/Week/hooks/grid/useGridLayout";
+import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GRID_Y_START } from "@web/views/Week/layout.constants";
 
@@ -34,9 +34,8 @@ export const Grid: FC<Props> = ({
   today,
   weekProps,
 }) => {
-  const { allDayRef, allDayRowRef, mainGridElementRef } = gridRefs;
   // Subscribes to the same cache entry the event layers read, so this reports
-  // their load without issuing a second fetch.
+  // their load (and the all-day row count) without issuing a second fetch.
   const {
     allDayEvents,
     error: eventsError,
@@ -46,6 +45,7 @@ export const Grid: FC<Props> = ({
     isSuccess,
     data,
     refetch,
+    rowCount: allDayRowsCount,
   } = useWeekEventViewModel({
     startOfView: weekProps.query.startOfView,
     endOfView: weekProps.query.endOfView,
@@ -87,53 +87,54 @@ export const Grid: FC<Props> = ({
   );
 
   const weekDays = weekProps.component.weekDays;
-  const visibleDates = useMemo(
-    () =>
-      withAllDayColumnTints(
-        weekDays.map((date) => ({
-          date,
-          key: date.format(YEAR_MONTH_DAY_FORMAT),
-        })),
-        allDayEventsForTint,
-        "date",
-      ),
-    [allDayEventsForTint, weekDays],
+  const visibleDates = useWeekVisibleDates(weekDays);
+  const tintedVisibleDates = useMemo(
+    () => withAllDayColumnTints(visibleDates, allDayEventsForTint, "date"),
+    [allDayEventsForTint, visibleDates],
+  );
+
+  const allDayEventsLayer = useMemo(
+    () => (
+      <AllDayEvents
+        measurements={measurements}
+        queryEndOfView={weekProps.query.endOfView}
+        queryStartOfView={weekProps.query.startOfView}
+        weekDays={weekDays}
+      />
+    ),
+    [
+      measurements,
+      weekDays,
+      weekProps.query.endOfView,
+      weekProps.query.startOfView,
+    ],
+  );
+  const timedEventsLayer = useMemo(
+    () => (
+      <MainGridTimedEventsLayer
+        measurements={measurements}
+        visibleDates={visibleDates}
+        weekProps={weekProps}
+      />
+    ),
+    [measurements, visibleDates, weekProps],
   );
 
   return (
-    <AllDayRow
-      allDayRef={allDayRef}
-      allDayRowRef={allDayRowRef}
-      measurements={measurements}
-      weekProps={weekProps}
-    >
-      {({ allDayEventsLayer, allDayRowsCount }) => (
-        <MainGrid
-          mainGridElementRef={mainGridElementRef}
-          measurements={measurements}
-          timedColumnsElementRef={gridRefs.timedColumnsElementRef}
-          today={today}
-          weekProps={weekProps}
-        >
-          {({ timedEventsLayer }) => (
-            <EventGrid
-              allDayEventsLayer={allDayEventsLayer}
-              allDayGridOffsetTopPx={GRID_Y_START}
-              allDayRowsCount={allDayRowsCount}
-              gridRefs={gridRefs}
-              isErrorEvents={showEventsLoadError}
-              isImportFailed={isImportFailed}
-              isImportingEmpty={isImportingEmpty}
-              isLoadingEvents={isLoadingEvents}
-              onRetryEvents={() => void refetch()}
-              onRetryImport={() => refresh()}
-              timedEventsLayer={timedEventsLayer}
-              today={today}
-              visibleDates={visibleDates}
-            />
-          )}
-        </MainGrid>
-      )}
-    </AllDayRow>
+    <EventGrid
+      allDayEventsLayer={allDayEventsLayer}
+      allDayGridOffsetTopPx={GRID_Y_START}
+      allDayRowsCount={allDayRowsCount}
+      gridRefs={gridRefs}
+      isErrorEvents={showEventsLoadError}
+      isImportFailed={isImportFailed}
+      isImportingEmpty={isImportingEmpty}
+      isLoadingEvents={isLoadingEvents}
+      onRetryEvents={() => void refetch()}
+      onRetryImport={() => refresh()}
+      timedEventsLayer={timedEventsLayer}
+      today={today}
+      visibleDates={tintedVisibleDates}
+    />
   );
 };
