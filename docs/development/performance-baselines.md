@@ -50,9 +50,8 @@ Mongo-free iteration; full suites remain the durability gate.
 `packages/web/build.ts` prints a boot-set report from the production metafile
 after each `bun run build:web`. The boot set is the same graph
 `inject-module-preloads.ts` preloads: the entry chunk, its `app.bootstrap`
-dynamic import, the `AppRoot`, `RootShell`, `Root` and `WeekView` chunks
-(every calendar load renders all four), and every static-import closure of
-those roots.
+dynamic import, the `AppRoot` and `RootShell` chunks, and every static-import
+closure of those roots.
 
 Read the report as:
 

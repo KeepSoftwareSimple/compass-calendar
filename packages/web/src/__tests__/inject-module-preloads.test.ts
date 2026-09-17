@@ -137,15 +137,13 @@ describe("injectModulePreloads", () => {
     ]);
   });
 
-  it("preloads the week view's route chunks by default, not other lazy views", () => {
-    // Every calendar load renders these four in series after React mounts,
-    // so the default set must carry them; a lazy sibling view must not ride
-    // along. Guards the list against a silent revert.
+  it("orders the entry graph before always-boot closures and skips other lazy views", () => {
+    // The default set is the two shell chunks only: route chunks measured
+    // slower when preloaded (see ALWAYS_BOOT_SOURCES). This walk uses an
+    // explicit list to pin the order and the exclusion of lazy siblings.
     expect(ALWAYS_BOOT_SOURCES).toEqual([
       "src/components/RootShell/AppRoot.tsx",
       "src/components/RootShell/RootShell.tsx",
-      "src/views/Root.tsx",
-      "src/views/Week/WeekView.tsx",
     ]);
     const metafile = {
       outputs: {
@@ -191,7 +189,11 @@ describe("injectModulePreloads", () => {
       },
     };
 
-    const keys = collectBootOutputKeys(metafile);
+    const keys = collectBootOutputKeys(metafile, [
+      ...ALWAYS_BOOT_SOURCES,
+      "src/views/Root.tsx",
+      "src/views/Week/WeekView.tsx",
+    ]);
 
     expect(keys).toEqual([
       "./index.js",
