@@ -102,10 +102,8 @@ export async function resolveFailedOverrideAlign(
   return null;
 }
 
-// Build the canonical event for a provider-linked create: same shape as a cloud
-// event but with the provider identity the write returned. calendarId stays the
-// Sync provider-calendar id (how the command addressed it); the raw provider
-// calendar id is only used for the API call.
+// Confirm a provider-linked delete: the adapter already treated the event as
+// gone, so the command settles with no provider identity to keep.
 export async function confirmDeletion(
   deps: ProviderMutationDeps,
   command: CommandRecord,

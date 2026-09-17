@@ -17,8 +17,6 @@ import {
   type InvalidationRepository,
 } from "@sync/storage/repositories/invalidation.repository";
 
-export { CHANGE_FEED_PAGE_SIZE };
-
 export interface ChangeFeedDeps {
   invalidations: InvalidationRepository;
 }

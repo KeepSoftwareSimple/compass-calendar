@@ -1,5 +1,4 @@
 import { faker } from "@faker-js/faker";
-import { type Document, type Filter } from "mongodb";
 import {
   type DateTime,
   type EventId,
@@ -8,7 +7,6 @@ import {
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
 import {
   type IdempotencyKey,
-  type PrincipalId,
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
 import {
@@ -32,12 +30,9 @@ import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
-import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -50,20 +45,14 @@ let mongo: SyncMongoService;
 let commands: CommandRepository;
 let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
-let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
   mongo = repos.mongo;
   commands = repos.commands;
   events = repos.events;
   occurrences = repos.occurrences;
-  resources = repos.resources;
   calendars = repos.calendars;
-  markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
@@ -160,16 +149,6 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     return docs.map((doc) => (doc["startAt"] as Date).toISOString());
   };
 
-  const _otherSeriesMaster = (principalId: PrincipalId, masterId: EventId) =>
-    mongo.db
-      .collection(SYNC_COLLECTIONS.events)
-      .find({
-        principalId,
-        "recurrence.kind": "seriesMaster",
-        _id: { $ne: masterId },
-      } as unknown as Filter<Document>)
-      .toArray();
-
   const thisScopeCommand = async (
     master: EventRecord,
     kind: "update" | "delete",
@@ -249,12 +228,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     ).record;
 
   const deps = (writer: FakeProviderEventWriter) =>
-    providerMutationDeps({ commands, events, occurrences, resources }, writer);
+    providerMutationDeps(repos, writer);
   const deleteDeps = (writer: FakeProviderEventWriter) =>
-    providerDeleteDeps(
-      { commands, events, occurrences, resources, markers },
-      writer,
-    );
+    providerDeleteDeps(repos, writer);
 
   describe("executeProviderOccurrenceUpdate", () => {
     it("resolves the instance, patches IT (not the master), and stores its own provider identity", async () => {
