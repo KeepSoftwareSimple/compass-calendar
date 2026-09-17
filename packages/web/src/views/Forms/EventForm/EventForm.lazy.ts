@@ -16,6 +16,8 @@ export const LazyEventForm = lazyRouteComponent(
  * opens without a visible fetch. Deliberately input-driven rather than a
  * timer: an idle timer would fire during Lighthouse's trace window and count
  * the chunk back into the boot script-transfer budget it was split to avoid.
+ * app.bootstrap arms it after the router's first navigation resolves, so an
+ * early mouse move cannot start this download while boot chunks are in flight.
  */
 export const preloadEventFormOnFirstInput = (): void => {
   const controller = new AbortController();

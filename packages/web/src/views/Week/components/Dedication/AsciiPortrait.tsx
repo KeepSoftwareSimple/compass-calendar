@@ -69,8 +69,10 @@ export const AsciiPortrait = ({ src, alt, className }: AsciiPortraitProps) => {
     const ctx = canvas?.getContext("2d");
     if (!container || !canvas || !ctx) return;
 
+    // Not fetched until the dialog first opens: this mounts on every week
+    // load behind a closed <dialog>, and a 50 KB portrait has no business on
+    // the boot path. The ResizeObserver below starts the load on first open.
     const image = new Image();
-    image.src = src;
 
     const shadowColor = resolveCssColor(SHADOW_COLOR_VAR);
     const highlightColor = resolveCssColor(HIGHLIGHT_COLOR_VAR);
@@ -201,6 +203,13 @@ export const AsciiPortrait = ({ src, alt, className }: AsciiPortraitProps) => {
     };
 
     const resizeObserver = new ResizeObserver(() => {
+      // Zero while the parent <dialog> is closed (display: none).
+      if (!container.clientWidth || !container.clientHeight) return;
+      if (!image.src) {
+        // First open: start the fetch; onload builds the particles.
+        image.src = src;
+        return;
+      }
       if (image.complete && image.naturalWidth) buildParticles();
     });
 

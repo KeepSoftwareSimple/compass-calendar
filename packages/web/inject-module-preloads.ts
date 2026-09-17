@@ -22,12 +22,20 @@ export interface BuildMetafile {
 // RootShell the pathless calendar-shell route beneath it - both kept lazy
 // imports only so route-shape tests can mock their auth stack (see
 // router.routes.tsx) - and both render on every page load, 404s included.
-// Missing one costs a whole round-trip, since they load in series.
+// Root (the authenticated layout) and WeekView render on every calendar
+// load: `/` redirects to `/week`, which is where every signed-in user and
+// every first-time visitor lands. The router only requests their chunks
+// after React has mounted and the auth beforeLoad has resolved, so without
+// a preload each one is a fresh round-trip (the chunk, then its exclusive
+// static deps) on the path to the first calendar paint. Preloading them
+// adds no requests: they are fetched on every visit either way.
 // Metafile input keys are relative to the build's cwd, so entries here are
 // matched by path suffix.
 export const ALWAYS_BOOT_SOURCES = [
   "src/components/RootShell/AppRoot.tsx",
   "src/components/RootShell/RootShell.tsx",
+  "src/views/Root.tsx",
+  "src/views/Week/WeekView.tsx",
 ];
 
 export function parseBuildMetafile(
