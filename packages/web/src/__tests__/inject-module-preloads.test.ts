@@ -129,9 +129,10 @@ describe("injectModulePreloads", () => {
       "packages/web/src/components/RootShell/RootShell.tsx",
     ]);
 
+    // The entry's own graph first, the always-boot closure after it.
     expect(critical).toEqual([
-      "chunk-rootshell.js",
       "chunk-boot.js",
+      "chunk-rootshell.js",
       "chunk-auth.js",
     ]);
   });
@@ -194,12 +195,12 @@ describe("injectModulePreloads", () => {
 
     expect(keys).toEqual([
       "./index.js",
+      "./chunk-boot.js",
       "./chunk-approot.js",
       "./chunk-rootshell.js",
       "./chunk-root.js",
-      "./chunk-week.js",
-      "./chunk-boot.js",
       "./chunk-root-only.js",
+      "./chunk-week.js",
       "./chunk-week-only.js",
     ]);
     expect(keys).not.toContain("./chunk-life.js");

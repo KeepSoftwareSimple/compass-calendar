@@ -52,9 +52,17 @@ export function parseBuildMetafile(
 }
 
 /**
- * Output keys of the boot set: the entry, ALWAYS_BOOT_SOURCES chunks, the
- * entry's dynamic imports, and every static-import closure of those roots.
- * Same walk injectModulePreloads uses; the returned list includes the entry.
+ * Output keys of the boot set: the entry, its dynamic imports, and their
+ * static-import closure first; then each ALWAYS_BOOT_SOURCES chunk with its
+ * closure. Same walk injectModulePreloads uses; the returned list includes
+ * the entry.
+ *
+ * Order matters because the browser fetches preloads in document order and
+ * they all share the script priority: the entry's own graph must execute
+ * before any route chunk can, so listing a route chunk's closure ahead of it
+ * queues the first paint behind code it does not need yet. On a six-lane
+ * HTTP/1.1 server (CI's Lighthouse, local runs) that queueing is worth
+ * seconds; on HTTP/2 it still decides the send order.
  */
 export function collectBootOutputKeys(
   metafile: string | object | undefined,
@@ -70,8 +78,33 @@ export function collectBootOutputKeys(
     throw new Error("No entrypoint output found in the build metafile");
   }
 
-  const keys: string[] = [entry];
-  const seen = new Set(keys);
+  const keys: string[] = [];
+  const seen = new Set<string>();
+
+  const walk = (root: string) => {
+    if (seen.has(root)) return;
+    seen.add(root);
+    keys.push(root);
+    const queue = [root];
+    while (queue.length > 0) {
+      const key = queue.shift() as string;
+      const output = meta.outputs[key];
+      if (!output) continue;
+      for (const imp of output.imports) {
+        const bootCritical =
+          imp.kind === "import-statement" ||
+          (key === entry && imp.kind === "dynamic-import");
+        if (!bootCritical) continue;
+        if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
+        if (!(imp.path in meta.outputs)) continue;
+        seen.add(imp.path);
+        keys.push(imp.path);
+        queue.push(imp.path);
+      }
+    }
+  };
+
+  walk(entry);
 
   for (const source of alwaysBootSources) {
     const chunk = Object.keys(meta.outputs).find((key) =>
@@ -84,28 +117,7 @@ export function collectBootOutputKeys(
         `Always-boot source ${source} is in no build output; update ALWAYS_BOOT_SOURCES in inject-module-preloads.ts`,
       );
     }
-    if (!seen.has(chunk)) {
-      seen.add(chunk);
-      keys.push(chunk);
-    }
-  }
-
-  const queue = [...keys];
-  while (queue.length > 0) {
-    const key = queue.shift() as string;
-    const output = meta.outputs[key];
-    if (!output) continue;
-    for (const imp of output.imports) {
-      const bootCritical =
-        imp.kind === "import-statement" ||
-        (key === entry && imp.kind === "dynamic-import");
-      if (!bootCritical) continue;
-      if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
-      if (!(imp.path in meta.outputs)) continue;
-      seen.add(imp.path);
-      keys.push(imp.path);
-      queue.push(imp.path);
-    }
+    walk(chunk);
   }
 
   if (keys.length < 2) {
