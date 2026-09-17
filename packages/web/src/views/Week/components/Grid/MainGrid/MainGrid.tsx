@@ -1,4 +1,4 @@
-import { type FC, type ReactNode, type RefCallback, useMemo } from "react";
+import { type FC, type ReactNode, type RefCallback } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
@@ -21,6 +21,30 @@ interface Props {
 interface MainGridRenderProps {
   timedEventsLayer: ReactNode;
 }
+
+const toVisibleDates = (weekDays: Dayjs[]) =>
+  weekDays.map((date) => ({
+    date,
+    key: date.format(YEAR_MONTH_DAY_FORMAT),
+  }));
+
+const MainGridTimedEventsLayer: FC<{
+  measurements: Measurements_Grid;
+  weekProps: WeekProps;
+}> = ({ measurements, weekProps }) => (
+  <>
+    <GridBusyPeriods
+      measurements={measurements}
+      range={{
+        start: toUTCOffset(weekProps.component.startOfView),
+        end: toUTCOffset(weekProps.component.endOfView),
+      }}
+      visibleDates={toVisibleDates(weekProps.component.weekDays)}
+    />
+    <MainGridQuickTimeSlots measurements={measurements} weekProps={weekProps} />
+    <MainGridEvents measurements={measurements} weekProps={weekProps} />
+  </>
+);
 
 export const MainGrid: FC<Props> = ({
   children,
@@ -63,39 +87,18 @@ const MainGridChildren: FC<MainGridChildrenProps> = ({
   children,
   measurements,
   weekProps,
-}) => {
-  const timedEventsLayer = useMemo(
-    () => (
-      <>
-        <GridBusyPeriods
-          measurements={measurements}
-          range={{
-            start: toUTCOffset(weekProps.component.startOfView),
-            end: toUTCOffset(weekProps.component.endOfView),
-          }}
-          visibleDates={weekProps.component.weekDays.map((date) => ({
-            date,
-            key: date.format(YEAR_MONTH_DAY_FORMAT),
-          }))}
-        />
-        <MainGridQuickTimeSlots
+}) => (
+  <>
+    {children({
+      timedEventsLayer: (
+        <MainGridTimedEventsLayer
           measurements={measurements}
           weekProps={weekProps}
         />
-        <MainGridEvents measurements={measurements} weekProps={weekProps} />
-      </>
-    ),
-    [measurements, weekProps],
-  );
-
-  return (
-    <>
-      {children({
-        timedEventsLayer,
-      })}
-    </>
-  );
-};
+      ),
+    })}
+  </>
+);
 
 interface MainGridCalendarProps {
   mainGridElementRef: RefCallback<HTMLElement>;
@@ -113,41 +116,17 @@ const MainGridCalendar: FC<MainGridCalendarProps> = ({
   today,
   weekDays,
   weekProps,
-}) => {
-  const timedEventsLayer = useMemo(
-    () => (
-      <>
-        <GridBusyPeriods
-          measurements={measurements}
-          range={{
-            start: toUTCOffset(weekProps.component.startOfView),
-            end: toUTCOffset(weekProps.component.endOfView),
-          }}
-          visibleDates={weekProps.component.weekDays.map((date) => ({
-            date,
-            key: date.format(YEAR_MONTH_DAY_FORMAT),
-          }))}
-        />
-        <MainGridQuickTimeSlots
-          measurements={measurements}
-          weekProps={weekProps}
-        />
-        <MainGridEvents measurements={measurements} weekProps={weekProps} />
-      </>
-    ),
-    [measurements, weekProps],
-  );
-
-  return (
-    <TimedGrid
-      eventsLayer={timedEventsLayer}
-      timedColumnsRef={timedColumnsElementRef}
-      timedGridRef={mainGridElementRef}
-      today={today}
-      visibleDates={weekDays.map((date) => ({
-        date,
-        key: date.format(YEAR_MONTH_DAY_FORMAT),
-      }))}
-    />
-  );
-};
+}) => (
+  <TimedGrid
+    eventsLayer={
+      <MainGridTimedEventsLayer
+        measurements={measurements}
+        weekProps={weekProps}
+      />
+    }
+    timedColumnsRef={timedColumnsElementRef}
+    timedGridRef={mainGridElementRef}
+    today={today}
+    visibleDates={toVisibleDates(weekDays)}
+  />
+);

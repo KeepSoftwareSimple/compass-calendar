@@ -30,12 +30,9 @@ import {
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
-import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -48,20 +45,14 @@ let mongo: SyncMongoService;
 let commands: CommandRepository;
 let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
-let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let _markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
   mongo = repos.mongo;
   commands = repos.commands;
   events = repos.events;
   occurrences = repos.occurrences;
-  resources = repos.resources;
   calendars = repos.calendars;
-  _markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("executeProviderSeriesUpdate", () => {
@@ -205,7 +196,7 @@ describe("executeProviderSeriesUpdate", () => {
   };
 
   const deps = (writer: ProviderEventWriter) =>
-    providerMutationDeps({ commands, events, occurrences, resources }, writer);
+    providerMutationDeps(repos, writer);
 
   it("discards override exceptions but keeps cancelled tombstones", async () => {
     const { tenantId, principalId, calendar, master } = await seedMaster();

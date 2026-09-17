@@ -77,8 +77,7 @@ export const readCalendarEventIdFromElement = (
 /**
  * One interaction registry per calendar view (Day, Week), namespaced by
  * `data-${viewName}-interaction-event-*` attributes so a view only ever
- * resolves its own DOM nodes. Day and Week previously hand-rolled identical
- * copies of this wiring; this factory is the single source of it.
+ * resolves its own DOM nodes.
  */
 export const createViewInteractionRegistry = (viewName: string) => {
   const { idAttribute, typeAttribute } =

@@ -25,8 +25,6 @@ import { type ProviderEventWriter } from "@sync/providers/provider-event-writer.
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -45,8 +43,6 @@ let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
 let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let _markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
   mongo = repos.mongo;
@@ -55,8 +51,6 @@ beforeEach(() => {
   occurrences = repos.occurrences;
   resources = repos.resources;
   calendars = repos.calendars;
-  _markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("executeProviderRsvp", () => {
@@ -97,9 +91,6 @@ describe("executeProviderRsvp", () => {
   const connectionsWith = (email: string | null): ProviderConnectionLookup => ({
     findById: async () => ({ account: { email }, provider: "google" }),
   });
-  const _missingConnection: ProviderConnectionLookup = {
-    findById: async () => null,
-  };
 
   const deps = (
     writer: ProviderEventWriter,

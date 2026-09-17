@@ -28,12 +28,9 @@ import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
 import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
-import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
-import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -46,20 +43,14 @@ let mongo: SyncMongoService;
 let commands: CommandRepository;
 let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
-let resources: SyncResourceRepository;
-let _calendars: ProviderCalendarRepository;
 let markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
   mongo = repos.mongo;
   commands = repos.commands;
   events = repos.events;
   occurrences = repos.occurrences;
-  resources = repos.resources;
-  _calendars = repos.calendars;
   markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("executeProviderDelete", () => {
@@ -132,10 +123,7 @@ describe("executeProviderDelete", () => {
     expect(await occurrenceCount()).toBe(1);
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        writer,
-      ),
+      providerDeleteDeps(repos, writer),
       command,
       event,
       calendar,
@@ -164,10 +152,7 @@ describe("executeProviderDelete", () => {
     await events.deleteById(tenantId, principalId, event._id);
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        writer,
-      ),
+      providerDeleteDeps(repos, writer),
       command,
       event,
       calendar,
@@ -289,10 +274,7 @@ describe("executeProviderDelete", () => {
     });
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        new FakeProviderEventWriter(),
-      ),
+      providerDeleteDeps(repos, new FakeProviderEventWriter()),
       command,
       master,
       calendar,
@@ -412,10 +394,7 @@ describe("executeProviderDelete", () => {
     });
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        new FakeProviderEventWriter(),
-      ),
+      providerDeleteDeps(repos, new FakeProviderEventWriter()),
       command,
       ghostMaster,
       calendar,
@@ -434,10 +413,7 @@ describe("executeProviderDelete", () => {
     writer.deleteError = new ProviderWriteError("transient", "blip");
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        writer,
-      ),
+      providerDeleteDeps(repos, writer),
       command,
       event,
       calendar,
@@ -458,10 +434,7 @@ describe("executeProviderDelete", () => {
     );
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        writer,
-      ),
+      providerDeleteDeps(repos, writer),
       command,
       event,
       calendar,
@@ -482,15 +455,11 @@ describe("executeProviderDelete", () => {
     const writer = new FakeProviderEventWriter();
 
     const result = await executeProviderDelete(
-      providerDeleteDeps(
-        { commands, events, occurrences, resources, markers },
-        writer,
-        {
-          custody: failingTokenSource(
-            new ProviderAuthError("authorizationRevoked", "revoked"),
-          ),
-        },
-      ),
+      providerDeleteDeps(repos, writer, {
+        custody: failingTokenSource(
+          new ProviderAuthError("authorizationRevoked", "revoked"),
+        ),
+      }),
       command,
       event,
       calendar,
