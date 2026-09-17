@@ -50,7 +50,7 @@ describe("AsciiPortrait", () => {
     globalThis.ResizeObserver =
       FakeResizeObserver as unknown as typeof ResizeObserver;
     HTMLCanvasElement.prototype.getContext = (() =>
-      fakeContext) as typeof HTMLCanvasElement.prototype.getContext;
+      fakeContext) as unknown as typeof HTMLCanvasElement.prototype.getContext;
   });
 
   afterEach(() => {

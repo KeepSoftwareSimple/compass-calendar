@@ -4,6 +4,7 @@ import * as realSessionProvider from "@web/auth/compass/session/SessionProvider"
 import * as realConnectStatus from "@web/auth/providers/connect-status.util";
 import * as realAppInit from "@web/common/utils/app-init.util";
 import * as realApp from "@web/components/App/App";
+import * as realRouters from "@web/routers";
 import * as realEventForm from "@web/views/Forms/EventForm/EventForm.lazy";
 import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
@@ -44,9 +45,19 @@ mockModuleForFile(
   },
 );
 
+const preloadEventFormOnFirstInput = mock();
 mockModuleForFile("@web/views/Forms/EventForm/EventForm.lazy", realEventForm, {
-  preloadEventFormOnFirstInput: mock(),
+  preloadEventFormOnFirstInput,
 });
+
+// Other files stub `router` too (navigate only); this one needs `subscribe`.
+let onResolved: (() => void) | null = null;
+const unsubscribe = mock();
+const subscribe = mock((_event: string, listener: () => void) => {
+  onResolved = listener;
+  return unsubscribe;
+});
+mockModuleForFile("@web/routers", realRouters, { router: { subscribe } });
 
 const { bootstrapApp } =
   require("./app.bootstrap") as typeof import("./app.bootstrap");
@@ -61,6 +72,10 @@ describe("bootstrapApp", () => {
     sessionInit.mockClear();
     showDbInitErrorToast.mockClear();
     initializeDatabaseWithErrorHandling.mockClear();
+    preloadEventFormOnFirstInput.mockClear();
+    subscribe.mockClear();
+    unsubscribe.mockClear();
+    onResolved = null;
   });
 
   it("renders before the database init promise resolves", async () => {
@@ -88,5 +103,21 @@ describe("bootstrapApp", () => {
 
     expect(showDbInitErrorToast).toHaveBeenCalledWith(dbInitError);
     errorSpy.mockRestore();
+  });
+
+  it("arms the form preload only after the first navigation resolves", async () => {
+    const done = bootstrapApp();
+
+    expect(subscribe).toHaveBeenCalledWith("onResolved", expect.any(Function));
+    expect(preloadEventFormOnFirstInput).not.toHaveBeenCalled();
+
+    onResolved?.();
+    onResolved?.();
+
+    expect(preloadEventFormOnFirstInput).toHaveBeenCalledTimes(1);
+    expect(unsubscribe).toHaveBeenCalledTimes(1);
+
+    resolveInit({ dbInitError: null });
+    await done;
   });
 });
