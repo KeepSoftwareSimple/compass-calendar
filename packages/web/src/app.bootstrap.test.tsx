@@ -52,7 +52,10 @@ mockModuleForFile("@web/views/Forms/EventForm/EventForm.lazy", realEventForm, {
 
 // Other files stub `router` too (navigate only); this one needs `subscribe`.
 let onResolved: (() => void) | null = null;
-const unsubscribe = mock();
+// Detaches like the real one, so a second emit reaches no listener.
+const unsubscribe = mock(() => {
+  onResolved = null;
+});
 const subscribe = mock((_event: string, listener: () => void) => {
   onResolved = listener;
   return unsubscribe;
