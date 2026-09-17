@@ -167,7 +167,8 @@ and stays anonymous, so it is the demo-events path, not a signed-in user.
 | devtools lazy, portrait deferred, preload armed on resolve, Root and WeekView chunks preloaded ahead of the entry graph | 4896 (5032, 4896, 3660) |
 | same, entry graph preloaded first | 3756 (3756, 3684, 4860) |
 | same, Root preloaded, WeekView not | 3480 (3508, 3308, 3480) |
-| shipped: devtools lazy, portrait deferred, preload armed on resolve, no route-chunk preload | 3056 (3056, 3004, 3120) |
+| shipped: devtools lazy, portrait deferred, preload armed on resolve, no route-chunk preload | 3044 (3236, 3040, 3044) |
+| shipped, PostHog enabled against an unreachable host | 3140 (3132, 3140, 3152) |
 
 The LCP element is the welcome paragraph (16,856 px²) for a new visitor and
 the demo-events banner text (5,950 px²) for the returning anonymous visitor,
@@ -186,9 +187,15 @@ preloads, which is why the throttled probe is the one to trust for p75.
 The shipped changes are neutral in this lab for a visitor who never touches
 the mouse: the devtools split adds three script requests (105 to 108) and
 costs nothing measurable, the portrait request is gone, and the boot set
-is 86 chunks and 672,521 gzip bytes (from 85 and 685,559). The preload
+is 86 chunks and 672,436 gzip bytes (from 85 and 685,559). The preload
 change only shows with input: on main, a mouse move during boot starts the
 editor download at once.
+
+PostHog's own cost was measured for the first time, with a key set and the
+host pointed at a closed local port: about 100 ms of LCP for parsing and
+initializing the 247 KB client. Production pays more than that, because a
+reachable host also serves remote config and the session recorder script,
+which this variant never fetched.
 
 What remains is about 2.8 s of script parse and execution at 4x between
 the shell and the welcome paragraph. The boot set report names the weight:
