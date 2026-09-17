@@ -1,9 +1,7 @@
 import { useMemo } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import dayjs from "@core/util/date/dayjs";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { weekEventTargeting } from "@web/grid/interaction/view-event-registry";
-import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { QuickTimeSlots } from "@web/shortcuts/quick-time/QuickTimeSlots";
 import {
   buildQuickTimeSlots,
@@ -20,6 +18,7 @@ import {
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
+import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 
 interface Props {
@@ -45,14 +44,7 @@ export const MainGridQuickTimeSlots = ({ measurements, weekProps }: Props) => {
   const isJumpActive = useEventJumpStore(selectEventJumpActive);
   const activeDayKeys = useEventJumpStore(selectEventJumpActiveDayKeys);
   const pointerDraftDateKey = useEventJumpStore(selectPointerDraftDateKey);
-  const visibleDates: GridVisibleDate[] = useMemo(
-    () =>
-      component.weekDays.map((date) => ({
-        date,
-        key: date.format(YEAR_MONTH_DAY_FORMAT),
-      })),
-    [component.weekDays],
-  );
+  const visibleDates = useWeekVisibleDates(component.weekDays);
 
   const slots = useMemo(() => {
     const now = dayjs().tz(getEffectiveTimeZone());

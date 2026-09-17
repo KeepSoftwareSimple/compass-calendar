@@ -102,6 +102,18 @@ describe("mapFilesToPackages", () => {
     ).toEqual(["core", "web", "scripts"]);
   });
 
+  it("selects the self-host suite for self-host/ changes", () => {
+    expect(
+      mapFilesToPackages(["self-host/serve-web.ts", "self-host/compose.yaml"]),
+    ).toEqual(["self-host"]);
+    expect(
+      planVerify({
+        packages: mapFilesToPackages(["self-host/serve-web.ts"]),
+        playwrightChromiumAvailable: false,
+      }).checks.map((check) => check.id),
+    ).toContain("test:self-host");
+  });
+
   it("does not invent core/web for docs-only or empty diffs", () => {
     expect(
       mapFilesToPackages(["docs/development/testing-playbook.md"]),

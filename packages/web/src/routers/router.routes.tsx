@@ -22,6 +22,7 @@ import {
   ROOT_ROUTES,
 } from "@web/common/constants/routes";
 import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
+import { ShortcutsCatalogView } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
 import {
   loadAuthenticated,
   loadDateParam,
@@ -34,7 +35,6 @@ import {
 } from "@web/routers/loaders";
 import { validateLifeSearch } from "@web/views/Life/life-search";
 import { NotFoundView } from "@web/views/NotFound/NotFound";
-import { ShortcutsCatalogView } from "@web/views/NotFound/ShortcutsCatalogView";
 
 export const rootRoute = createRootRoute({
   component: lazyRouteComponent(

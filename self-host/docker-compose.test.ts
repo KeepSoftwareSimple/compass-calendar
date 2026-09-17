@@ -597,8 +597,11 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain("file: .github/docker/Dockerfile.web");
     expect(workflow).toContain("POSTHOG_KEY=$");
     expect(workflow).toContain("POSTHOG_HOST=$");
-    expect(workflow).not.toContain("COMPASS_WEB_BUILD_CONFIG_B64");
-    expect(workflow).not.toContain("base64");
+    // The web image takes its config as plain build args, never as an encoded
+    // blob. Asserted on the config variable rather than on the word "base64",
+    // which also appears in the SYNC_CREDENTIAL_ENCRYPTION_KEY help text and
+    // has nothing to do with how the image is built.
+    expect(workflow).not.toContain("BUILD_CONFIG");
     expect(dockerfile).toContain("ARG POSTHOG_KEY=");
     expect(dockerfile).toContain("ARG POSTHOG_HOST=");
     expect(dockerfile).toContain("'posthog:'");
