@@ -10,6 +10,10 @@ import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-wri
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 
+// The provider recurrence a series edit-all writes. "series" sets new rules;
+// "single" removes recurrence (converting the series to one event); "preserve"
+// re-writes the master's current rules unchanged (harmless, keeps the write
+// self-describing).
 export function intendedSeriesRecurrence(
   recurrence: RecurrenceEdit,
   master: EventRecord,

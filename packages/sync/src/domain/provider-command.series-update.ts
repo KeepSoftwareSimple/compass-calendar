@@ -25,6 +25,7 @@ import {
   organizerGuardFailure,
   resolveCommandAccessToken,
   resolveFailedOverrideAlign,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -36,6 +37,23 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
+// Apply a Compass-initiated scope-"all" edit to a provider-linked recurring
+// series — Google's "edit all events in the series". The master is patched with
+// the new content, schedule, AND recurrence rules, and its per-instance
+// overrides fall away. Kept separate from executeProviderUpdate because the
+// local commit is series-aware: it discards override exceptions but preserves
+// cancelled tombstones (a deletion must survive an edit) and reprojects the
+// master excluding their instants.
+//
+// Provider-managed events are single-only today (Google Gmail events), so this
+// path is unreachable for them; managed customizations live in the single-event
+// update path instead.
+//
+// Replay safety mirrors the single-event path: fetch the provider's current
+// master first; if it already carries this edit (content, schedule, and rules),
+// a prior attempt landed, so confirm at the current version without re-writing.
+// Otherwise patch conditionally on the command's expected version, turning a
+// genuine concurrent external edit into a versionConflict.
 export async function executeProviderSeriesUpdate(
   deps: ProviderMutationDeps,
   command: CommandRecord,
@@ -85,8 +103,7 @@ export async function executeProviderSeriesUpdate(
     deps.writer.fetchEvent(location),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, fetchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, fetchResult.stop, connectionId);
   }
   const current =
     fetchResult.value?.kind === "event" ? fetchResult.value : null;
@@ -154,8 +171,7 @@ export async function executeProviderSeriesUpdate(
     }),
   );
   if (!patchResult.ok) {
-    if (patchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, patchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, patchResult.stop, connectionId);
   }
   const result = patchResult.value;
 
@@ -327,34 +343,3 @@ async function commitProviderSeriesUpdate(
   );
   return confirmed ?? command;
 }
-
-// ---------------------------------------------------------------------------
-// Provider-linked recurring scopes "this" and "thisAndFollowing".
-//
-// A this/thisAndFollowing scope operates on ONE instance of a provider series,
-// which — unlike a cloud series exception — has no id of its own until
-// resolved via writer.fetchInstanceAt. Every executor below: resolves the
-// instance (or, for a split, patches the master directly), applies the same
-// replay-safe fetch-then-compare pattern executeProviderUpdate/
-// executeProviderSeriesUpdate already use, and commits locally through
-// upsertException/reprojectMaster — the exact local-commit shape the cloud
-// path's updateCloudOccurrence/deleteCloudOccurrence/*SeriesFollowing already
-// use (series-exception.ts), so a provider-linked and a cloud-only
-// series converge to the same on-disk shape.
-//
-// Known deferred gap: un-cancelling a provider instance (a scope-"this" edit
-// of an instance the provider already reports as cancelled) is not
-// implemented — it fails with permanentProviderError rather than silently
-// no-op'ing. Restoring a cancelled Google instance to "confirmed" is a
-// distinct provider operation this slice does not need for the common
-// edit/delete-a-live-instance path.
-// ---------------------------------------------------------------------------
-
-// Apply a Compass-initiated scope-"this" edit to one occurrence of a
-// provider-linked series: resolve the instance's own provider identity, then
-// patch IT (never the master) — mirrors executeProviderUpdate's replay-safe
-// fetch-then-compare, but against the resolved instance's location.
-//
-// Provider-managed events are single-only today, so this occurrence path is
-// unreachable for them; managed customizations live in the single-event update
-// path instead.

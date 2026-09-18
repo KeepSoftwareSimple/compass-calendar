@@ -15,6 +15,7 @@ import { matchesIntendedEdit } from "@sync/domain/provider-command.intent-match"
 import {
   failCommand,
   resolveCommandAccessToken,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -23,6 +24,35 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
+// Provider-linked recurring scopes "this" and "thisAndFollowing".
+//
+// A this/thisAndFollowing scope operates on ONE instance of a provider series,
+// which — unlike a cloud series exception — has no id of its own until
+// resolved via writer.fetchInstanceAt. Every executor in this file and in
+// provider-command.series-following.ts: resolves the instance (or, for a
+// split, patches the master directly), applies the same replay-safe
+// fetch-then-compare pattern executeProviderUpdate/executeProviderSeriesUpdate
+// already use, and commits locally through upsertException/reprojectMaster —
+// the exact local-commit shape the cloud path's
+// updateCloudOccurrence/deleteCloudOccurrence/*SeriesFollowing already use
+// (series-exception.ts), so a provider-linked and a cloud-only series
+// converge to the same on-disk shape.
+//
+// Known deferred gap: un-cancelling a provider instance (a scope-"this" edit
+// of an instance the provider already reports as cancelled) is not
+// implemented — it fails with permanentProviderError rather than silently
+// no-op'ing. Restoring a cancelled Google instance to "confirmed" is a
+// distinct provider operation this slice does not need for the common
+// edit/delete-a-live-instance path.
+
+// Apply a Compass-initiated scope-"this" edit to one occurrence of a
+// provider-linked series: resolve the instance's own provider identity, then
+// patch IT (never the master) — mirrors executeProviderUpdate's replay-safe
+// fetch-then-compare, but against the resolved instance's location.
+//
+// Provider-managed events are single-only today, so this occurrence path is
+// unreachable for them; managed customizations live in the single-event update
+// path instead.
 export async function executeProviderOccurrenceUpdate(
   deps: ProviderMutationDeps,
   command: CommandRecord,
@@ -70,13 +100,7 @@ export async function executeProviderOccurrenceUpdate(
     }),
   );
   if (!fetchInstanceResult.ok) {
-    if (fetchInstanceResult.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      fetchInstanceResult.stop.reason,
-      connectionId,
-    );
+    return stopCommand(deps, command, fetchInstanceResult.stop, connectionId);
   }
   const instance =
     fetchInstanceResult.value?.kind === "event"
@@ -134,8 +158,7 @@ export async function executeProviderOccurrenceUpdate(
     }),
   );
   if (!patchResult.ok) {
-    if (patchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, patchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, patchResult.stop, connectionId);
   }
   const result = patchResult.value;
 
@@ -249,13 +272,7 @@ export async function executeProviderOccurrenceDelete(
     }),
   );
   if (!fetchInstanceResult.ok) {
-    if (fetchInstanceResult.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      fetchInstanceResult.stop.reason,
-      connectionId,
-    );
+    return stopCommand(deps, command, fetchInstanceResult.stop, connectionId);
   }
   const instance =
     fetchInstanceResult.value?.kind === "event" &&
@@ -276,8 +293,7 @@ export async function executeProviderOccurrenceDelete(
       }),
     );
     if (!deleteResult.ok) {
-      if (deleteResult.stop.kind === "pending") return command;
-      return failCommand(deps, command, deleteResult.stop.reason, connectionId);
+      return stopCommand(deps, command, deleteResult.stop, connectionId);
     }
   }
 
@@ -316,12 +332,3 @@ export async function executeProviderOccurrenceDelete(
   );
   return confirmed ?? command;
 }
-
-// Apply a Compass-initiated scope-"thisAndFollowing" delete to a
-// provider-linked series: truncate the provider master's rules to end before
-// the split (Google removes every instance from that point on), drop the
-// local exceptions at/after it, and reproject. A split at the series' own
-// first occurrence removes the whole series, so it collapses to the existing
-// whole-series provider delete. Content/schedule are NOT part of this write —
-// only recurrence changes — so the replay check and patch both hold the
-// master's own content/schedule fixed.

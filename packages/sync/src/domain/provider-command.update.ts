@@ -28,6 +28,7 @@ import {
   failCommand,
   organizerGuardFailure,
   resolveCommandAccessToken,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -37,6 +38,18 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
+// Apply a Compass-initiated update to an existing provider-linked event.
+//
+// Replay safety is the hard part: a successful conditional patch changes the
+// provider version, so a naive crash-then-retry would re-send the now-stale
+// expected version and the provider would reject it as a conflict — misreporting
+// an edit that actually landed. So we FETCH the provider's current state first:
+// if it already carries this command's intended content, the edit landed on a
+// prior attempt and we simply confirm at the current version (no second write).
+// Otherwise we patch conditionally; the If-Match precondition turns a genuine
+// concurrent external edit into a versionConflict. The content check only gates
+// the replay shortcut, so a false miss falls through to the conditional patch
+// (a spurious conflict at worst — never a lost external edit).
 export async function executeProviderUpdate(
   deps: ProviderMutationDeps,
   command: CommandRecord,
@@ -84,8 +97,7 @@ export async function executeProviderUpdate(
     deps.writer.fetchEvent(location),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, fetchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, fetchResult.stop, connectionId);
   }
   const current =
     fetchResult.value?.kind === "event" ? fetchResult.value : null;
@@ -174,8 +186,7 @@ export async function executeProviderUpdate(
     }),
   );
   if (!patchResult.ok) {
-    if (patchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, patchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, patchResult.stop, connectionId);
   }
   const result = patchResult.value;
 
@@ -336,8 +347,7 @@ async function executeProviderManagedUpdate(
     }),
   );
   if (!patchResult.ok) {
-    if (patchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, patchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, patchResult.stop, connectionId);
   }
 
   return commitProviderUpdate(
@@ -421,21 +431,3 @@ function matchesManagedIntendedEdit(
   if (!customizationsEqual(event.customizations, customizations)) return false;
   return !managedProviderSideChange(current, mergedContent, intendedAttendees);
 }
-
-// Apply a Compass-initiated scope-"all" edit to a provider-linked recurring
-// series — Google's "edit all events in the series". The master is patched with
-// the new content, schedule, AND recurrence rules, and its per-instance
-// overrides fall away. Kept separate from executeProviderUpdate because the
-// local commit is series-aware: it discards override exceptions but preserves
-// cancelled tombstones (a deletion must survive an edit) and reprojects the
-// master excluding their instants.
-//
-// Provider-managed events are single-only today (Google Gmail events), so this
-// path is unreachable for them; managed customizations live in the single-event
-// update path instead.
-//
-// Replay safety mirrors the single-event path: fetch the provider's current
-// master first; if it already carries this edit (content, schedule, and rules),
-// a prior attempt landed, so confirm at the current version without re-writing.
-// Otherwise patch conditionally on the command's expected version, turning a
-// genuine concurrent external edit into a versionConflict.

@@ -5,6 +5,7 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import {
+  type ProviderWriteStop,
   resolveAccessToken,
   runProviderWrite,
 } from "@sync/domain/provider-write-ladder";
@@ -52,6 +53,21 @@ export async function failCommand(
     await deps.custody.discardRevoked(connectionId);
   }
   return failed ?? command;
+}
+
+// The outcome every provider write shares once runProviderWrite stops it: a
+// transient stop leaves the command pending so the next attempt retries it, a
+// terminal one fails it with the typed reason. Callers that must undo local
+// state before failing (delete's deletionPending revert) use revertAndFail
+// instead; so does any caller whose reason depends on more than the stop.
+export async function stopCommand(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  stop: ProviderWriteStop,
+  connectionId: ConnectionId,
+): Promise<CommandRecord> {
+  if (stop.kind === "pending") return command;
+  return failCommand(deps, command, stop.reason, connectionId);
 }
 
 // Gate for a guest-list replace: only the organizer's copy of an event
@@ -115,13 +131,7 @@ export async function resolveFailedOverrideAlign(
     }),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      fetchResult.stop.reason,
-      provider.connectionId,
-    );
+    return stopCommand(deps, command, fetchResult.stop, provider.connectionId);
   }
   if (fetchResult.value?.kind === "event") {
     return failCommand(deps, command, reason, provider.connectionId);

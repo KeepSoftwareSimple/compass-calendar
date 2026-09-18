@@ -10,6 +10,7 @@ import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import {
   failCommand,
   resolveCommandAccessToken,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -20,6 +21,17 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
+// RSVP.
+//
+// An RSVP is not a content edit: it rewrites exactly ONE attendee entry — the
+// connection account's own, matched case-insensitively by email — and leaves
+// every other entry byte-identical to the freshly fetched provider state.
+// Because a Google patch replaces the WHOLE attendees array, the write sends
+// the full merged list, and sendUpdates is always "none": answering an
+// invitation must never email the guest list.
+
+// The caller's own attendee entry, matched case-insensitively by the
+// connection's account email. Alias emails not matching is a named wart.
 function findSelfAttendee(
   attendees: readonly Attendee[],
   accountEmail: string,
@@ -110,8 +122,7 @@ export async function executeProviderRsvp(
         }),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, fetchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, fetchResult.stop, connectionId);
   }
   const current =
     fetchResult.value?.kind === "event" ? fetchResult.value : null;
@@ -160,8 +171,7 @@ export async function executeProviderRsvp(
       }),
     );
     if (!patchResult.ok) {
-      if (patchResult.stop.kind === "pending") return command;
-      return failCommand(deps, command, patchResult.stop.reason, connectionId);
+      return stopCommand(deps, command, patchResult.stop, connectionId);
     }
     providerVersion = patchResult.value.providerVersion;
   }
@@ -307,8 +317,3 @@ async function commitProviderOccurrenceRsvp(
   );
   return confirmed ?? command;
 }
-
-// The provider recurrence a series edit-all writes. "series" sets new rules;
-// "single" removes recurrence (converting the series to one event); "preserve"
-// re-writes the master's current rules unchanged (harmless, keeps the write
-// self-describing).

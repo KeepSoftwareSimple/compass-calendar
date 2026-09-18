@@ -134,6 +134,3 @@ async function clearSeriesExceptions(
     );
   }
 }
-
-// Confirm a completed deletion: the event has no live provider target anymore,
-// so the confirmed outcome carries no provider identity.

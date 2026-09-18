@@ -17,6 +17,7 @@ import {
 import {
   failCommand,
   resolveCommandAccessToken,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { executeProviderSeriesUpdate } from "@sync/domain/provider-command.series-update";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
@@ -32,6 +33,14 @@ import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
+// Apply a Compass-initiated scope-"thisAndFollowing" delete to a
+// provider-linked series: truncate the provider master's rules to end before
+// the split (Google removes every instance from that point on), drop the
+// local exceptions at/after it, and reproject. A split at the series' own
+// first occurrence removes the whole series, so it collapses to the existing
+// whole-series provider delete. Content/schedule are NOT part of this write —
+// only recurrence changes — so the replay check and patch both hold the
+// master's own content/schedule fixed.
 export async function executeProviderSeriesFollowingDelete(
   deps: ProviderDeleteDeps,
   command: CommandRecord,
@@ -79,8 +88,7 @@ export async function executeProviderSeriesFollowingDelete(
     deps.writer.fetchEvent(location),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, fetchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, fetchResult.stop, connectionId);
   }
   const current =
     fetchResult.value?.kind === "event" ? fetchResult.value : null;
@@ -121,8 +129,7 @@ export async function executeProviderSeriesFollowingDelete(
     }),
   );
   if (!patchResult.ok) {
-    if (patchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, patchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, patchResult.stop, connectionId);
   }
   const result = patchResult.value;
 
@@ -233,8 +240,7 @@ export async function executeProviderSeriesFollowingUpdate(
     deps.writer.fetchEvent(originalLocation),
   );
   if (!fetchResult.ok) {
-    if (fetchResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, fetchResult.stop.reason, connectionId);
+    return stopCommand(deps, command, fetchResult.stop, connectionId);
   }
   const current =
     fetchResult.value?.kind === "event" ? fetchResult.value : null;
@@ -268,13 +274,7 @@ export async function executeProviderSeriesFollowingUpdate(
       }),
     );
     if (!truncateResult.ok) {
-      if (truncateResult.stop.kind === "pending") return command;
-      return failCommand(
-        deps,
-        command,
-        truncateResult.stop.reason,
-        connectionId,
-      );
+      return stopCommand(deps, command, truncateResult.stop, connectionId);
     }
     originalVersion = truncateResult.value.providerVersion;
   }
@@ -310,13 +310,7 @@ export async function executeProviderSeriesFollowingUpdate(
     }),
   );
   if (!createResultAttempt.ok) {
-    if (createResultAttempt.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      createResultAttempt.stop.reason,
-      connectionId,
-    );
+    return stopCommand(deps, command, createResultAttempt.stop, connectionId);
   }
   const createResult = createResultAttempt.value;
 
@@ -343,17 +337,3 @@ export async function executeProviderSeriesFollowingUpdate(
   );
   return confirmed ?? command;
 }
-
-// ---------------------------------------------------------------------------
-// RSVP.
-//
-// An RSVP is not a content edit: it rewrites exactly ONE attendee entry — the
-// connection account's own, matched case-insensitively by email — and leaves
-// every other entry byte-identical to the freshly fetched provider state.
-// Because a Google patch replaces the WHOLE attendees array, the write sends
-// the full merged list, and sendUpdates is always "none": answering an
-// invitation must never email the guest list.
-// ---------------------------------------------------------------------------
-
-// The caller's own attendee entry, matched case-insensitively by the
-// connection's account email. Alias emails not matching is a named wart.

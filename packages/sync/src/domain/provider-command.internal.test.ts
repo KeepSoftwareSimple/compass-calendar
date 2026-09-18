@@ -1,6 +1,9 @@
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
-import { resolveCommandAccessToken } from "@sync/domain/provider-command.internal";
+import {
+  resolveCommandAccessToken,
+  stopCommand,
+} from "@sync/domain/provider-command.internal";
 import { ProviderAuthError } from "@sync/providers/provider-auth.port";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { describe, expect, it, mock } from "bun:test";
@@ -28,6 +31,53 @@ function depsWith(
     commands: { updateOutcome },
   } as unknown as ProviderMutationDeps;
 }
+
+describe("stopCommand", () => {
+  it("leaves the command pending on a transient stop", async () => {
+    const updateOutcome = mock(async () => failedCommand);
+    await expect(
+      stopCommand(
+        depsWith(async () => "tok", updateOutcome),
+        command,
+        { kind: "pending" },
+        connectionId,
+      ),
+    ).resolves.toBe(command);
+    expect(updateOutcome).not.toHaveBeenCalled();
+  });
+
+  it("fails the command with the stop's reason", async () => {
+    const updateOutcome = mock(async () => failedCommand);
+    await expect(
+      stopCommand(
+        depsWith(async () => "tok", updateOutcome),
+        command,
+        { kind: "failed", reason: "permanentProviderError" },
+        connectionId,
+      ),
+    ).resolves.toBe(failedCommand);
+    expect(updateOutcome).toHaveBeenCalledWith(
+      command.tenantId,
+      command.principalId,
+      command._id,
+      { state: "failed", failureReason: "permanentProviderError" },
+      command.attemptCount,
+    );
+  });
+
+  it("discards a revoked credential when that is the stop's reason", async () => {
+    const discardRevoked = mock(async () => {});
+    const deps = depsWith(async () => "tok");
+    deps.custody.discardRevoked = discardRevoked;
+    await stopCommand(
+      deps,
+      command,
+      { kind: "failed", reason: "authorizationRevoked" },
+      connectionId,
+    );
+    expect(discardRevoked).toHaveBeenCalledWith(connectionId);
+  });
+});
 
 describe("resolveCommandAccessToken", () => {
   it("returns the token when custody succeeds", async () => {
