@@ -12,11 +12,11 @@ import {
 import { occurrenceScheduleAt } from "@sync/domain/occurrence-projection";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import { matchesIntendedEdit } from "@sync/domain/provider-command.intent-match";
-import { failCommand } from "@sync/domain/provider-command.internal";
 import {
-  resolveAccessToken,
-  runProviderWrite,
-} from "@sync/domain/provider-write-ladder";
+  failCommand,
+  resolveCommandAccessToken,
+} from "@sync/domain/provider-command.internal";
+import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { reprojectMaster } from "@sync/domain/series-exception";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
@@ -56,12 +56,9 @@ export async function executeProviderOccurrenceUpdate(
     return failCommand(deps, command, "unsupportedCapability", connectionId);
   }
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   const fetchInstanceResult = await runProviderWrite(() =>
     deps.writer.fetchInstanceAt({
@@ -238,12 +235,9 @@ export async function executeProviderOccurrenceDelete(
   const connectionId = master.connectionId;
   const seriesProviderEventId = master.providerEventId;
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   const fetchInstanceResult = await runProviderWrite(() =>
     deps.writer.fetchInstanceAt({

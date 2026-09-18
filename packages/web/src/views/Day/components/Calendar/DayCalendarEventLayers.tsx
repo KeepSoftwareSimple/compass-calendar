@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  isGridEventScheduleLocked,
-  resolveCalendarCardIdentity,
-  resolveCalendarFocusColor,
-  useCalendarLookup,
-} from "@web/calendars/useCalendarLookup";
+import { useCalendarLookup } from "@web/calendars/useCalendarLookup";
 import {
   ID_GRID_EVENTS_ALLDAY,
   ID_GRID_EVENTS_TIMED,
@@ -16,6 +11,7 @@ import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 import { useHiddenEventIds } from "@web/events/hidden/hidden-events.query";
 import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
 import { GridRegisteredTimedEvent } from "@web/grid/components/GridRegisteredTimedEvent";
+import { resolveGridEventCardChrome } from "@web/grid/grid-event-card-chrome";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import {
@@ -89,24 +85,31 @@ export const DayCalendarAllDayEventsLayer = ({
         width: `calc(100% - ${marginLeft}px)`,
       }}
     >
-      {allDayEvents.map((event) => (
-        <GridRegisteredAllDayEvent
-          calendarIdentity={resolveCalendarCardIdentity(calendarLookup, event)}
-          columnIndex={getCalendarColumnIndex(event)}
-          event={event}
-          focusColor={resolveCalendarFocusColor(calendarLookup, event)}
-          isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
-          isDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
-          isHidden={isEventIdHidden(event._id, layoutHiddenEventIds)}
-          isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
-          isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
-          key={event._id ?? "all-day-draft"}
-          measurements={measurements}
-          onEventKeyDown={onOpenEvent}
-          view="day"
-          visibleDates={visibleDates}
-        />
-      ))}
+      {allDayEvents.map((event) => {
+        const chrome = resolveGridEventCardChrome(
+          calendarLookup,
+          event,
+          layoutHiddenEventIds,
+        );
+        return (
+          <GridRegisteredAllDayEvent
+            calendarIdentity={chrome.calendarIdentity}
+            columnIndex={getCalendarColumnIndex(event)}
+            event={event}
+            focusColor={chrome.focusColor}
+            isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
+            isDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
+            isHidden={chrome.isHidden}
+            isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
+            isReadOnly={chrome.isReadOnly}
+            key={event._id ?? "all-day-draft"}
+            measurements={measurements}
+            onEventKeyDown={onOpenEvent}
+            view="day"
+            visibleDates={visibleDates}
+          />
+        );
+      })}
     </div>
   );
 };
@@ -156,25 +159,32 @@ export const DayCalendarTimedEventsLayer = ({
 
   return (
     <div id={ID_GRID_EVENTS_TIMED}>
-      {timedEventItems.map(({ deckLayout, event, isHidden }) => (
-        <GridRegisteredTimedEvent
-          calendarIdentity={resolveCalendarCardIdentity(calendarLookup, event)}
-          columnIndex={getCalendarColumnIndex(event)}
-          deckLayout={deckLayout}
-          event={event}
-          focusColor={resolveCalendarFocusColor(calendarLookup, event)}
-          isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
-          isHidden={isHidden}
-          isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
-          isReadOnly={isGridEventScheduleLocked(calendarLookup, event)}
-          key={event._id ?? "timed-draft"}
-          measurements={measurements}
-          onEventKeyDown={onOpenEvent}
-          positionAsDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
-          view="day"
-          visibleDates={visibleDates}
-        />
-      ))}
+      {timedEventItems.map(({ deckLayout, event, isHidden }) => {
+        const chrome = resolveGridEventCardChrome(
+          calendarLookup,
+          event,
+          layoutHiddenEventIds,
+        );
+        return (
+          <GridRegisteredTimedEvent
+            calendarIdentity={chrome.calendarIdentity}
+            columnIndex={getCalendarColumnIndex(event)}
+            deckLayout={deckLayout}
+            event={event}
+            focusColor={chrome.focusColor}
+            isActiveDraft={isActiveDraftEvent(event, draft, savedEventIds)}
+            isHidden={isHidden}
+            isPlaceholder={isDraftOnlyEvent(event, draft, savedEventIds)}
+            isReadOnly={chrome.isReadOnly}
+            key={event._id ?? "timed-draft"}
+            measurements={measurements}
+            onEventKeyDown={onOpenEvent}
+            positionAsDraft={isDraftOnlyEvent(event, draft, savedEventIds)}
+            view="day"
+            visibleDates={visibleDates}
+          />
+        );
+      })}
     </div>
   );
 };

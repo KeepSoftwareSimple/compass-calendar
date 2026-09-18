@@ -23,12 +23,12 @@ export const useGridEventCardInteraction = ({
   const hasEventIdentity = Boolean(eventId);
   const isRegisteredForDragResize =
     hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
-  const registrationRef = calendarViewInteraction(view).useRegistrationRef({
+  const interaction = calendarViewInteraction(view);
+  const registrationRef = interaction.useRegistrationRef({
     eventId,
     eventType,
     isEnabled: isRegisteredForDragResize,
   });
-  const interaction = calendarViewInteraction(view);
   const interactionAttributes = useMemo(
     () =>
       hasEventIdentity

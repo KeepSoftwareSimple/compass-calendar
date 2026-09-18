@@ -8,6 +8,7 @@ import {
   type GridVisibleDate,
 } from "@web/grid/types/grid.types";
 import { AllDayGridRow } from "./AllDayGridRow";
+import { EventGridRetryOverlay } from "./EventGridRetryOverlay";
 import { TimedGrid } from "./TimedGrid";
 
 export interface EventGridProps {
@@ -110,46 +111,16 @@ export const EventGrid: FC<EventGridProps> = ({
         </div>
       )}
     {isImportFailed && !isLoadingEvents && !isErrorEvents && (
-      <div
-        className="absolute inset-0 flex items-center justify-center bg-background px-4"
-        style={{ zIndex: ZIndex.MAX }}
-      >
-        <div className="flex max-w-sm flex-col items-center gap-3 rounded-md border border-border-strong bg-surface-raised px-5 py-4 text-center shadow-[0_8px_24px_var(--color-shadow-default)]">
-          <p className="text-sm text-text" role="alert">
-            Couldn&apos;t add your calendar.
-          </p>
-          {onRetryImport ? (
-            <button
-              className="c-focus-ring rounded-sm bg-accent px-3 py-1.5 text-on-accent text-sm hover:bg-accent-hover"
-              onClick={onRetryImport}
-              type="button"
-            >
-              Retry
-            </button>
-          ) : null}
-        </div>
-      </div>
+      <EventGridRetryOverlay
+        message="Couldn't add your calendar."
+        onRetry={onRetryImport}
+      />
     )}
     {isErrorEvents && !isLoadingEvents && (
-      <div
-        className="absolute inset-0 flex items-center justify-center bg-background px-4"
-        style={{ zIndex: ZIndex.MAX }}
-      >
-        <div className="flex max-w-sm flex-col items-center gap-3 rounded-md border border-border-strong bg-surface-raised px-5 py-4 text-center shadow-[0_8px_24px_var(--color-shadow-default)]">
-          <p className="text-sm text-text" role="alert">
-            Couldn&apos;t load events.
-          </p>
-          {onRetryEvents ? (
-            <button
-              className="c-focus-ring rounded-sm bg-accent px-3 py-1.5 text-on-accent text-sm hover:bg-accent-hover"
-              onClick={onRetryEvents}
-              type="button"
-            >
-              Retry
-            </button>
-          ) : null}
-        </div>
-      </div>
+      <EventGridRetryOverlay
+        message="Couldn't load events."
+        onRetry={onRetryEvents}
+      />
     )}
   </div>
 );

@@ -7,11 +7,11 @@ import {
   omitNullColor,
 } from "@sync/domain/merge-update-content";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
-import { failCommand } from "@sync/domain/provider-command.internal";
 import {
-  resolveAccessToken,
-  runProviderWrite,
-} from "@sync/domain/provider-write-ladder";
+  failCommand,
+  resolveCommandAccessToken,
+} from "@sync/domain/provider-command.internal";
+import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import {
   type ProviderWriteRecurrence,
@@ -32,22 +32,13 @@ export async function executeProviderCreate(
   }
   const { input } = command;
 
-  const tokenResult = await resolveAccessToken(
-    deps.custody,
+  const token = await resolveCommandAccessToken(
+    deps,
+    command,
     calendar.connectionId,
   );
-  if (!tokenResult.ok) {
-    // A transient refresh failure is retryable, so leave the command pending; a
-    // revoked or missing credential is terminal.
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      tokenResult.stop.reason,
-      calendar.connectionId,
-    );
-  }
-  const { accessToken } = tokenResult;
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   // A create with intended guests (attendeesEdit "replace") merges against an
   // EMPTY provider list — the event does not exist yet — so every intended

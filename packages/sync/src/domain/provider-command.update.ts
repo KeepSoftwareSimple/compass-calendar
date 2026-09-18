@@ -27,11 +27,9 @@ import {
 import {
   failCommand,
   organizerGuardFailure,
+  resolveCommandAccessToken,
 } from "@sync/domain/provider-command.internal";
-import {
-  resolveAccessToken,
-  runProviderWrite,
-} from "@sync/domain/provider-write-ladder";
+import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-writer.port";
@@ -68,12 +66,9 @@ export async function executeProviderUpdate(
     if (guardFailure) return guardFailure;
   }
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   const location = {
     accessToken,

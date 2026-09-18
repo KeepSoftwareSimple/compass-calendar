@@ -1,14 +1,11 @@
 import { type FC, useMemo } from "react";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { shouldShowContextualLoadError } from "@web/api/util/api.util";
-import {
-  isFirstImportFailed,
-  isFirstImportInProgress,
-} from "@web/auth/providers/connect.util";
 import { useConnectGoogle } from "@web/auth/providers/useConnectProvider";
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectGridDraft, useDraftStore } from "@web/events/stores/draft.store";
 import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
+import { eventGridFirstImportFlags } from "@web/grid/event-grid-import-overlay";
 import { positionAllDayDraftEvent } from "@web/grid/layout/all-day-draft.position";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
 import { AllDayEvents } from "@web/views/Week/components/Grid/AllDayRow/AllDayEvents";
@@ -62,20 +59,12 @@ export const Grid: FC<Props> = ({
     showEventsLoadError,
     isFetching,
   );
-  const hasVisibleEvents = (data?.ids?.length ?? 0) > 0;
-  // googleState alone can't tell a first-ever import apart from an
-  // already-established account's routine catch-up - both collapse to the
-  // same aggregate IMPORTING state. Without isFirstImportInProgress, an
-  // established user viewing a genuinely empty week during ordinary
-  // background catch-up would see the empty-import scouting overlay as if
-  // this were a brand-new account.
-  const isImportingEmpty =
-    isSuccess &&
-    !hasVisibleEvents &&
-    googleState === "IMPORTING" &&
-    isFirstImportInProgress(connection);
-  const isImportFailed =
-    isSuccess && !hasVisibleEvents && isFirstImportFailed(connection);
+  const { isImportingEmpty, isImportFailed } = eventGridFirstImportFlags({
+    connection,
+    googleState,
+    hasVisibleEvents: (data?.ids?.length ?? 0) > 0,
+    queryReady: isSuccess,
+  });
 
   const gridDraft = useDraftStore(selectGridDraft);
   // Include the live all-day draft so create/edit chips tint columns before save.
@@ -93,36 +82,16 @@ export const Grid: FC<Props> = ({
     [allDayEventsForTint, visibleDates],
   );
 
-  const allDayEventsLayer = useMemo(
-    () => (
-      <AllDayEvents
-        measurements={measurements}
-        queryEndOfView={weekProps.query.endOfView}
-        queryStartOfView={weekProps.query.startOfView}
-        weekDays={weekDays}
-      />
-    ),
-    [
-      measurements,
-      weekDays,
-      weekProps.query.endOfView,
-      weekProps.query.startOfView,
-    ],
-  );
-  const timedEventsLayer = useMemo(
-    () => (
-      <MainGridTimedEventsLayer
-        measurements={measurements}
-        visibleDates={visibleDates}
-        weekProps={weekProps}
-      />
-    ),
-    [measurements, visibleDates, weekProps],
-  );
-
   return (
     <EventGrid
-      allDayEventsLayer={allDayEventsLayer}
+      allDayEventsLayer={
+        <AllDayEvents
+          measurements={measurements}
+          queryEndOfView={weekProps.query.endOfView}
+          queryStartOfView={weekProps.query.startOfView}
+          weekDays={weekDays}
+        />
+      }
       allDayGridOffsetTopPx={GRID_Y_START}
       allDayRowsCount={allDayRowsCount}
       gridRefs={gridRefs}
@@ -132,7 +101,13 @@ export const Grid: FC<Props> = ({
       isLoadingEvents={isLoadingEvents}
       onRetryEvents={() => void refetch()}
       onRetryImport={() => refresh()}
-      timedEventsLayer={timedEventsLayer}
+      timedEventsLayer={
+        <MainGridTimedEventsLayer
+          measurements={measurements}
+          visibleDates={visibleDates}
+          weekProps={weekProps}
+        />
+      }
       today={today}
       visibleDates={tintedVisibleDates}
     />

@@ -4,9 +4,36 @@ import {
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
-import { runProviderWrite } from "@sync/domain/provider-write-ladder";
+import {
+  resolveAccessToken,
+  runProviderWrite,
+} from "@sync/domain/provider-write-ladder";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
+
+// Transient refresh stays pending so the command can retry; a revoked or
+// missing credential fails the command. Delete is the one caller that cannot
+// use this: it must restore the event from deletionPending first.
+export async function resolveCommandAccessToken(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  connectionId: ConnectionId,
+): Promise<
+  { ok: true; accessToken: string } | { ok: false; command: CommandRecord }
+> {
+  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
+  if (tokenResult.ok) return tokenResult;
+  if (tokenResult.stop.kind === "pending") return { ok: false, command };
+  return {
+    ok: false,
+    command: await failCommand(
+      deps,
+      command,
+      tokenResult.stop.reason,
+      connectionId,
+    ),
+  };
+}
 
 export async function failCommand(
   deps: ProviderMutationDeps,
