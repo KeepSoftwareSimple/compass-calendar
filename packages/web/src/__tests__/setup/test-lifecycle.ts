@@ -78,7 +78,6 @@ function remirrorTestRuntime(): void {
 beforeEach(async () => {
   remirrorTestRuntime();
   await ensureIndexedDbTestEnv();
-  restartMockServer();
   syncWindowNetworkGlobals();
   installDefaultWebTestSeams();
 });
