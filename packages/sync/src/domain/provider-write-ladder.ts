@@ -12,8 +12,9 @@ export interface AccessTokenSource {
   invalidateAccessToken(connectionId: ConnectionId): Promise<void>;
 }
 
-// Callers decide how to turn a stop into a command outcome (failCommand vs
-// revertAndFail vs return pending).
+// Callers decide how to turn a stop into a command outcome. Most take the
+// shared pending-or-fail shape (provider-command.internal's stopCommand);
+// the rest undo local state first (revertAndFail) or pick their own reason.
 export type ProviderWriteStop =
   | { kind: "pending" }
   | { kind: "failed"; reason: SyncCommandFailureReason };

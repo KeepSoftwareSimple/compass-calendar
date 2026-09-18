@@ -8,8 +8,8 @@ import {
 } from "@sync/domain/merge-update-content";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import {
-  failCommand,
   resolveCommandAccessToken,
+  stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -70,13 +70,7 @@ export async function executeProviderCreate(
     }),
   );
   if (!writeResult.ok) {
-    if (writeResult.stop.kind === "pending") return command;
-    return failCommand(
-      deps,
-      command,
-      writeResult.stop.reason,
-      calendar.connectionId,
-    );
+    return stopCommand(deps, command, writeResult.stop, calendar.connectionId);
   }
   const result = writeResult.value;
 
@@ -182,16 +176,3 @@ function toProviderWriteRecurrence(
     ? { kind: "series", rules: recurrence.rules }
     : { kind: "single" };
 }
-
-// Apply a Compass-initiated update to an existing provider-linked event.
-//
-// Replay safety is the hard part: a successful conditional patch changes the
-// provider version, so a naive crash-then-retry would re-send the now-stale
-// expected version and the provider would reject it as a conflict — misreporting
-// an edit that actually landed. So we FETCH the provider's current state first:
-// if it already carries this command's intended content, the edit landed on a
-// prior attempt and we simply confirm at the current version (no second write).
-// Otherwise we patch conditionally; the If-Match precondition turns a genuine
-// concurrent external edit into a versionConflict. The content check only gates
-// the replay shortcut, so a false miss falls through to the conditional patch
-// (a spurious conflict at worst — never a lost external edit).
