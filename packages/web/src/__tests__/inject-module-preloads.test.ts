@@ -1,4 +1,8 @@
-import { injectModulePreloads } from "../../inject-module-preloads";
+import {
+  ALWAYS_BOOT_SOURCES,
+  collectBootOutputKeys,
+  injectModulePreloads,
+} from "../../inject-module-preloads";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -125,11 +129,84 @@ describe("injectModulePreloads", () => {
       "packages/web/src/components/RootShell/RootShell.tsx",
     ]);
 
+    // The entry's own graph first, the always-boot closure after it.
     expect(critical).toEqual([
-      "chunk-rootshell.js",
       "chunk-boot.js",
+      "chunk-rootshell.js",
       "chunk-auth.js",
     ]);
+  });
+
+  it("orders the entry graph before always-boot closures and skips other lazy views", () => {
+    // The default set is the two shell chunks only: route chunks measured
+    // slower when preloaded (see ALWAYS_BOOT_SOURCES). This walk uses an
+    // explicit list to pin the order and the exclusion of lazy siblings.
+    expect(ALWAYS_BOOT_SOURCES).toEqual([
+      "src/components/RootShell/AppRoot.tsx",
+      "src/components/RootShell/RootShell.tsx",
+    ]);
+    const metafile = {
+      outputs: {
+        "./index.js": {
+          entryPoint: "src/index.tsx",
+          imports: [staticImport("./chunk-boot.js")],
+        },
+        "./chunk-boot.js": {
+          imports: [
+            dynamicImport("./chunk-approot.js"),
+            dynamicImport("./chunk-rootshell.js"),
+            dynamicImport("./chunk-root.js"),
+            dynamicImport("./chunk-week.js"),
+            dynamicImport("./chunk-life.js"),
+          ],
+        },
+        "./chunk-approot.js": {
+          inputs: { "packages/web/src/components/RootShell/AppRoot.tsx": {} },
+          imports: [],
+        },
+        "./chunk-rootshell.js": {
+          inputs: { "packages/web/src/components/RootShell/RootShell.tsx": {} },
+          imports: [],
+        },
+        "./chunk-root.js": {
+          inputs: { "packages/web/src/views/Root.tsx": {} },
+          imports: [staticImport("./chunk-root-only.js")],
+        },
+        "./chunk-root-only.js": { imports: [] },
+        "./chunk-week.js": {
+          inputs: { "packages/web/src/views/Week/WeekView.tsx": {} },
+          imports: [
+            staticImport("./chunk-week-only.js"),
+            dynamicImport("./chunk-monthpicker.js"),
+          ],
+        },
+        "./chunk-week-only.js": { imports: [] },
+        "./chunk-monthpicker.js": { imports: [] },
+        "./chunk-life.js": {
+          inputs: { "packages/web/src/views/Life/LifeView.tsx": {} },
+          imports: [],
+        },
+      },
+    };
+
+    const keys = collectBootOutputKeys(metafile, [
+      ...ALWAYS_BOOT_SOURCES,
+      "src/views/Root.tsx",
+      "src/views/Week/WeekView.tsx",
+    ]);
+
+    expect(keys).toEqual([
+      "./index.js",
+      "./chunk-boot.js",
+      "./chunk-approot.js",
+      "./chunk-rootshell.js",
+      "./chunk-root.js",
+      "./chunk-root-only.js",
+      "./chunk-week.js",
+      "./chunk-week-only.js",
+    ]);
+    expect(keys).not.toContain("./chunk-life.js");
+    expect(keys).not.toContain("./chunk-monthpicker.js");
   });
 
   it("fails loudly when an always-boot source is in no output", async () => {

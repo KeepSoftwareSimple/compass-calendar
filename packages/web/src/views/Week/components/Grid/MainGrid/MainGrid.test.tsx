@@ -100,9 +100,7 @@ function Provider({ children }: PropsWithChildren) {
 }
 
 const { AllDayEvents } = await import("../AllDayRow/AllDayEvents");
-const { AllDayRow } = await import("../AllDayRow/AllDayRow");
 const { Grid } = await import("../Grid");
-const { MainGrid } = await import("./MainGrid");
 const { MainGridEvents } = await import("./MainGridEvents");
 
 afterEach(() => {
@@ -232,30 +230,6 @@ const createSavedEvent = (
     _id: createObjectIdString(),
   }) as CompassEvent;
 
-const renderGridRegions = () => {
-  seedGrid();
-
-  const view = render(
-    <Provider>
-      <AllDayRow
-        allDayRef={mock()}
-        allDayRowRef={mock()}
-        measurements={measurements}
-        weekProps={createWeekProps()}
-      />
-      <MainGrid
-        mainGridElementRef={mock()}
-        measurements={measurements}
-        timedColumnsElementRef={mock()}
-        today={startOfView}
-        weekProps={createWeekProps()}
-      />
-    </Provider>,
-  );
-
-  return view;
-};
-
 const renderWeekGrid = (events: CompassEvent[] = []) => {
   seedGrid(events);
 
@@ -281,7 +255,7 @@ const renderWeekGrid = (events: CompassEvent[] = []) => {
 
 describe("Week calendar accessibility", () => {
   it("labels timed and all-day calendar regions", () => {
-    renderGridRegions();
+    renderWeekGrid();
 
     expect(
       screen.getByRole("region", { name: "Timed events grid" }),

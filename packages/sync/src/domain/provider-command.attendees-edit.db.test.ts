@@ -27,13 +27,10 @@ import {
 import { findSafetyCanaryHit } from "@sync/safety/safety-canary";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
-import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
 const storage = setupSyncStorage(import.meta.url);
@@ -41,24 +38,18 @@ const repos = bindCommandRepos(storage);
 const objectId = () => faker.database.mongodbObjectId();
 const now = COMMAND_NOW;
 
-let _mongo: SyncMongoService;
 let commands: CommandRepository;
 let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
 let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let _markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
-  _mongo = repos.mongo;
   commands = repos.commands;
   events = repos.events;
   occurrences = repos.occurrences;
   resources = repos.resources;
   calendars = repos.calendars;
-  _markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("attendeesEdit replace", () => {

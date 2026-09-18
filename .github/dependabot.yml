@@ -3,7 +3,9 @@
 # drained it. Weekly, grouped, capped, so the queue is not flooded.
 version: 2
 updates:
-  - package-ecosystem: "npm"
+  # Use Bun so dependency PRs update bun.lock alongside package.json.
+  # CI intentionally rejects stale lockfiles with --frozen-lockfile.
+  - package-ecosystem: "bun"
     directory: "/"
     schedule:
       interval: "weekly"

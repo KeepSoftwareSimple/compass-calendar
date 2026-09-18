@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   isGridEventScheduleLocked,
   resolveCalendarCardIdentity,
@@ -18,9 +17,9 @@ import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectDraftId, useDraftStore } from "@web/events/stores/draft.store";
 import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
-import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
+import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { isAllDayEventInVisibleDays } from "@web/views/Week/util/week-window.util";
 
@@ -50,14 +49,7 @@ export const AllDayEvents = ({
   // One lookup build for the whole list (packet 08 step 5) - not per card.
   const calendarLookup = useCalendarLookup();
   const hiddenEventIds = useHiddenEventIds();
-  const visibleDates: GridVisibleDate[] = useMemo(
-    () =>
-      weekDays.map((date) => ({
-        date,
-        key: date.format(YEAR_MONTH_DAY_FORMAT),
-      })),
-    [weekDays],
-  );
+  const visibleDates = useWeekVisibleDates(weekDays);
   // The query covers the full week; only mount events overlapping the visible
   // window so off-window events never land in the DOM or the interaction
   // registry.

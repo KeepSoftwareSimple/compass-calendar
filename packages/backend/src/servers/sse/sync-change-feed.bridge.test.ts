@@ -6,6 +6,7 @@ import {
 } from "@core/types/domain-primitives";
 import { type ServerMessage } from "@core/types/server-message.contracts";
 import {
+  CHANGE_FEED_PAGE_SIZE,
   type ChangeFeedCursor,
   type GlobalInvalidationEnvelope,
 } from "@core/types/sync/change-feed.contracts";
@@ -17,7 +18,6 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { FakeScheduler } from "@backend/__tests__/helpers/fake-scheduler";
 import {
-  CHANGE_FEED_PAGE_SIZE,
   SyncChangeFeedBridge,
   type SyncChangeFeedBridgeDeps,
 } from "@backend/servers/sse/sync-change-feed.bridge";

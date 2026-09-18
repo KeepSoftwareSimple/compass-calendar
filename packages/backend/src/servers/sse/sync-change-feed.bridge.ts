@@ -22,8 +22,6 @@ const logger = Logger("app:sse.sync-change-feed");
 const POLL_INTERVAL_MS = 2000;
 const ERROR_BACKOFF_MS = 5000;
 
-export { CHANGE_FEED_PAGE_SIZE };
-
 export interface SyncChangeFeedBridgeDeps {
   client: Pick<SyncServiceClient, "getGlobalChanges">;
   sse: Pick<

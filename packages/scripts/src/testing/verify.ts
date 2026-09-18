@@ -6,7 +6,9 @@ import { existsSync } from "node:fs";
  *
  * Detects packages from the merge-base vs origin/main plus the working tree,
  * then runs the matching `test:<pkg>` (or `test:<pkg>:fast`) scripts plus
- * type-check, lint, and knip. Independent checks run concurrently unless
+ * type-check, lint, and knip. `self-host/` is a suite here too, though it is
+ * not a workspace package: its tests cover the runtime server and the
+ * compose/deploy contracts. Independent checks run concurrently unless
  * `--serial` is passed. Web or e2e/ changes also select Playwright a11y and
  * e2e after that wave, unless Chromium is missing — in that case the helper
  * skips those checks and reports incomplete CI parity instead of a silent pass.
@@ -25,12 +27,27 @@ import { existsSync } from "node:fs";
  *   bun run verify --strict     — exit 1 on VERDICT: INCOMPLETE
  */
 
-const VALID_PACKAGES = ["core", "sync", "web", "backend", "scripts"] as const;
+const WORKSPACE_PACKAGES = [
+  "core",
+  "sync",
+  "web",
+  "backend",
+  "scripts",
+] as const;
+/** Suites with a `test:<name>` script that live outside `packages/`. */
+const STANDALONE_PREFIXES = { "self-host/": "self-host" } as const;
+const VALID_PACKAGES = [
+  ...WORKSPACE_PACKAGES,
+  ...Object.values(STANDALONE_PREFIXES),
+] as const;
 export type Package = (typeof VALID_PACKAGES)[number];
 
-const PACKAGE_PREFIXES: Record<string, Package> = Object.fromEntries(
-  VALID_PACKAGES.map((pkg) => [`packages/${pkg}/`, pkg]),
-);
+const PACKAGE_PREFIXES: Record<string, Package> = {
+  ...Object.fromEntries(
+    WORKSPACE_PACKAGES.map((pkg) => [`packages/${pkg}/`, pkg]),
+  ),
+  ...STANDALONE_PREFIXES,
+};
 
 const MERGE_BASE_REFS = ["origin/main", "main", "master"] as const;
 export const PLAYWRIGHT_INSTALL_COMMAND = "bunx playwright install chromium";
