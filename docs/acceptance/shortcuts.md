@@ -613,6 +613,7 @@ Alt means a bigger step, the same idea as Alt+Arrow scrolling the grid by an hou
 - Alt+Shift+ArrowDown moves the event one hour later; Alt+Shift+ArrowUp moves it one hour earlier.
 - Alt+Shift+ArrowRight moves it seven days later. If that day was off-screen, the week window slides and the event stays visible and focused.
 - All-day events ignore hour steps. Shift+Arrow without Alt still moves one day or 15 minutes.
+- Nudging an instance of a recurring event raises one "Apply to series?" toast after you release Shift, not one per step, and it offers the position the burst ended on.
 
 ---
 

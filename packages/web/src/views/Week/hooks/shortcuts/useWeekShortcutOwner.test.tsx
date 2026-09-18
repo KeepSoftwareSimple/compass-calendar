@@ -29,6 +29,10 @@ import {
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
+import {
+  recurrenceScopeOpportunityActions,
+  useRecurrenceScopeOpportunityStore,
+} from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
 import {
   initialEventClipboardState,
@@ -183,6 +187,24 @@ const providerManagedEvent = createMockEvent({
   }),
 });
 
+// A custom instance of a series: nudging it is what raises the
+// "Apply to series?" ask.
+const RECURRING_EVENT_ID = EventIdSchema.parse("111111111111111111111111");
+const recurringOccurrence = createMockEvent({
+  id: RECURRING_EVENT_ID,
+  content: { kind: "details", title: "Devotion", description: "" },
+  recurrence: {
+    kind: "occurrence",
+    seriesId: EventIdSchema.parse("222222222222222222222222"),
+  },
+  schedule: EventScheduleSchema.parse({
+    kind: "timed",
+    start: "2026-05-20T15:00:00.000Z",
+    end: "2026-05-20T16:00:00.000Z",
+    timeZone: "UTC",
+  }),
+});
+
 const shiftKey = {
   keyDownInit: { shiftKey: true },
   keyUpInit: { shiftKey: true },
@@ -228,6 +250,7 @@ afterEach(() => {
   useEventClipboardStore.setState(initialEventClipboardState, true);
   eventJumpActions.reset();
   draftActions.discard();
+  recurrenceScopeOpportunityActions.reset();
   setSystemTime();
   // Drain leftover swallowNextKeyup capture listeners from Mod+C / Mod+V.
   window.dispatchEvent(
@@ -1187,6 +1210,34 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     // to the original start — not another +15m from the pre-Up fixture.
     expect(movedDown.input.schedule.start).toBe(
       offsetString(dayjs("2026-05-20T09:00:00.000Z")),
+    );
+  });
+
+  it("holds the series ask until Shift is released during a nudge burst", async () => {
+    const button = addCalendarTarget(recurringOccurrence.id);
+    button.focus();
+    const { queryClient } = renderShortcuts({
+      extraEvents: [recurringOccurrence],
+    });
+
+    pressKey("ArrowUp", shiftKey);
+    pressKey("ArrowUp", shiftKey);
+    pressKey("ArrowUp", shiftKey);
+
+    await waitFor(() => {
+      expect(getEditMutation(queryClient)).toBeDefined();
+    });
+    // One ask for the whole burst, still deferred: no toast can show yet.
+    // RecurrenceScopeOpportunityHost owns the Shift-release settle that makes
+    // it askable, and is not mounted here.
+    const opportunity =
+      useRecurrenceScopeOpportunityStore.getState().opportunity;
+    expect(opportunity).toMatchObject({
+      kind: "replace",
+      status: "pending",
+    });
+    expect(opportunity?.original.schedule).toEqual(
+      recurringOccurrence.schedule,
     );
   });
 

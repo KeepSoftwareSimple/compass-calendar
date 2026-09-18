@@ -7,8 +7,16 @@ import {
   renderHook,
   waitFor,
 } from "@web/__tests__/__mocks__/mock.render";
+import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
-import { recurrenceScopeOpportunityActions } from "@web/events/recurrence/recurrence-scope-opportunity.store";
+import {
+  registerToastPort,
+  resetToastPort,
+} from "@web/common/utils/toast/toast.port";
+import {
+  recurrenceScopeOpportunityActions,
+  useRecurrenceScopeOpportunityStore,
+} from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { useShiftHoldEventHints } from "@web/shortcuts/shift-hint/useShiftHoldEventHints";
 import { RecurrenceScopeOpportunityHost } from "./RecurrenceScopeOpportunityHost";
 import {
@@ -36,8 +44,33 @@ const beginReadyAsk = () =>
     source: "local",
   });
 
+const beginDeferredEditAsk = (event = occurrence()) =>
+  recurrenceScopeOpportunityActions.begin(
+    {
+      kind: "replace",
+      original: event,
+      input: {
+        calendarId: event.calendarId,
+        content: {
+          kind: "details" as const,
+          title: "Test",
+          description: "",
+          location: "",
+        },
+        schedule: event.schedule,
+        recurrence: { kind: "preserve" as const },
+        scope: "this" as const,
+      },
+      source: "local",
+    },
+    { deferred: true },
+  );
+
 const pressDigit = (value: "1" | "2") =>
   fireEvent.keyDown(document, { key: value, code: `Digit${value}` });
+
+const releaseShift = () =>
+  fireEvent.keyUp(document, { key: "Shift", code: "ShiftLeft" });
 
 describe("RecurrenceScopeOpportunityHost", () => {
   beforeEach(() => {
@@ -47,6 +80,7 @@ describe("RecurrenceScopeOpportunityHost", () => {
 
   afterEach(() => {
     cleanup();
+    resetToastPort();
     recurrenceScopeOpportunityActions.reset();
   });
 
@@ -122,5 +156,47 @@ describe("RecurrenceScopeOpportunityHost", () => {
     });
     expect(createAt).not.toHaveBeenCalled();
     requestPromotion.mockRestore();
+  });
+
+  it("shows no toast while a deferred ask is pending, then shows it on Shift release", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+
+    beginDeferredEditAsk();
+    render(<RecurrenceScopeOpportunityHost />);
+
+    await waitFor(() => expect(mocks.dismiss).toHaveBeenCalled());
+    expect(mocks.toast).not.toHaveBeenCalled();
+
+    releaseShift();
+
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalled());
+  });
+
+  it("ignores 1 while a deferred ask is pending", () => {
+    beginDeferredEditAsk();
+    const requestPromotion = spyOn(
+      recurrenceScopeOpportunityActions,
+      "requestPromotion",
+    );
+
+    render(<RecurrenceScopeOpportunityHost />);
+    pressDigit("1");
+
+    expect(requestPromotion).not.toHaveBeenCalled();
+    requestPromotion.mockRestore();
+  });
+
+  it("settles a pending ask when the window loses focus", async () => {
+    beginDeferredEditAsk();
+    render(<RecurrenceScopeOpportunityHost />);
+
+    fireEvent.blur(window);
+
+    await waitFor(() => {
+      expect(
+        useRecurrenceScopeOpportunityStore.getState().opportunity?.status,
+      ).toBe("ready");
+    });
   });
 });

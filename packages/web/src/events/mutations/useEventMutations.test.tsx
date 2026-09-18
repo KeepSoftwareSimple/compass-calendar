@@ -263,6 +263,33 @@ const timedStartOf = (
   return schedule?.kind === "timed" ? schedule.start : undefined;
 };
 
+// A keyboard nudge burst: every press is a deferred replace on the same
+// occurrence, so the store merges them into one pending ask.
+const nudgeAndGetOpportunity = async (
+  context: MutationTestContext,
+  id: EventId,
+  schedule: ReplaceEventInput["schedule"],
+) => {
+  await act(async () => {
+    context.hook.result.current.mutations.replace({
+      ...replacePayload(id, { schedule }),
+      scopeAsk: "deferred",
+    });
+  });
+  // The optimistic cache write lands a tick later, the way a real keystroke
+  // gap lets it. The next press then reads the already-nudged event as its
+  // `original` - the stale pre-image the store's merge has to discard.
+  await waitFor(() =>
+    expect(
+      timedStartOf(
+        context.queryClient.getQueryData(calendarKeyFor("remote")),
+        id,
+      ),
+    ).toBe(schedule.kind === "timed" ? schedule.start : undefined),
+  );
+  return useRecurrenceScopeOpportunityStore.getState().opportunity;
+};
+
 const expectPromotedReplaceCall = async (
   context: MutationTestContext,
   id: EventId,
@@ -458,6 +485,76 @@ describe("useEventMutations", () => {
         "2026-07-02T16:00:00+00:00",
         "2026-07-02T17:00:00+00:00",
       ),
+    });
+  });
+
+  test("a keyboard nudge burst asks once after settle and promotes the full delta", async () => {
+    const context = setup("remote");
+    const seriesId = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");
+    const master = seriesMaster(seriesId, {
+      schedule: timedSchedule(
+        "2026-07-01T16:00:00.000Z",
+        "2026-07-01T17:00:00.000Z",
+      ),
+    });
+    const middle = composedOccurrence(seriesId, "2026-07-03T16:00:00.000Z", {
+      schedule: timedSchedule(
+        "2026-07-03T16:00:00.000Z",
+        "2026-07-03T17:00:00.000Z",
+      ),
+    });
+    context.queryClient.setQueryData(
+      calendarKeyFor("remote"),
+      normalized(master, middle),
+    );
+
+    // Three Shift+ArrowUp presses: 16:00 -> 15:00 -> 14:00 -> 13:00.
+    let opportunity = null;
+    for (const hour of [15, 14, 13]) {
+      opportunity = await nudgeAndGetOpportunity(
+        context,
+        middle.id,
+        timedSchedule(
+          `2026-07-03T${hour}:00:00.000Z`,
+          `2026-07-03T${hour + 1}:00:00.000Z`,
+        ),
+      );
+      expect(opportunity?.status).toBe("pending");
+    }
+
+    // One ask, holding the pre-burst original and the final position.
+    expect(opportunity).toMatchObject({ kind: "replace", original: middle });
+    expect(
+      opportunity?.kind === "replace" && opportunity.input.schedule,
+    ).toMatchObject({ start: "2026-07-03T13:00:00.000Z" });
+
+    // Let the burst's writes drain so the promotion is not queued behind them.
+    context.pending.resolve();
+
+    act(() => recurrenceScopeOpportunityActions.settle());
+    const settled = useRecurrenceScopeOpportunityStore.getState().opportunity;
+    expect(settled?.status).toBe("ready");
+    if (!settled) throw new Error("Expected a settled recurrence opportunity");
+
+    act(() =>
+      context.hook.result.current.mutations.promoteRecurring(settled, "all"),
+    );
+
+    // The master moves by the whole three-hour delta, not by the first step.
+    await waitFor(() => {
+      expect(context.calls).toContainEqual({
+        method: "replace",
+        value: {
+          id: middle.id,
+          input: expect.objectContaining({
+            scope: "all",
+            schedule: timedSchedule(
+              "2026-07-01T13:00:00+00:00",
+              "2026-07-01T14:00:00+00:00",
+            ),
+          }),
+        },
+      });
     });
   });
 

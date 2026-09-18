@@ -8,11 +8,30 @@ import {
 } from "./recurrence-scope-opportunity.store";
 import { describe, expect, it } from "bun:test";
 
-const original = createMockEvent({
-  recurrence: {
-    kind: "occurrence",
-    seriesId: "0123456789abcdef11111111" as EventId,
+const occurrence = () =>
+  createMockEvent({
+    recurrence: {
+      kind: "occurrence",
+      seriesId: "0123456789abcdef11111111" as EventId,
+    },
+  });
+
+const original = occurrence();
+
+const replaceInput = (event = original, startHour = 9) => ({
+  calendarId: event.calendarId,
+  content: {
+    kind: "details" as const,
+    title: "Test",
+    description: "",
+    location: "",
   },
+  schedule: {
+    ...event.schedule,
+    start: `2026-05-05T0${startHour}:00:00.000-05:00`,
+  } as typeof event.schedule,
+  recurrence: { kind: "preserve" as const },
+  scope: "this" as const,
 });
 
 describe("recurrenceScopeOpportunityActions", () => {
@@ -85,18 +104,7 @@ describe("recurrenceScopeOpportunityActions", () => {
     const id = recurrenceScopeOpportunityActions.begin({
       kind: "replace",
       original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      input: replaceInput(),
       source: "local",
     });
 
@@ -108,40 +116,19 @@ describe("recurrenceScopeOpportunityActions", () => {
     ).toBeNull();
   });
 
-  it("records a decline when a newer ask supersedes a live edit ask", () => {
+  it("records a decline when an ask for another instance supersedes a live edit ask", () => {
     recurrenceScopeOpportunityActions.reset();
     recurrenceScopeOpportunityActions.begin({
       kind: "replace",
       original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      input: replaceInput(),
       source: "local",
     });
+    const other = occurrence();
     const id2 = recurrenceScopeOpportunityActions.begin({
       kind: "replace",
-      original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      original: other,
+      input: replaceInput(other),
       source: "local",
     });
 
@@ -152,6 +139,84 @@ describe("recurrenceScopeOpportunityActions", () => {
     expect(
       useRecurrenceScopeOpportunityStore.getState().opportunity?.status,
     ).toBe("ready");
+  });
+
+  it("a deferred ask stays pending until settle()", () => {
+    recurrenceScopeOpportunityActions.reset();
+    recurrenceScopeOpportunityActions.begin(
+      { kind: "replace", original, input: replaceInput(), source: "local" },
+      { deferred: true },
+    );
+
+    expect(
+      useRecurrenceScopeOpportunityStore.getState().opportunity?.status,
+    ).toBe("pending");
+    expect(isRecurrenceScopeAskReady()).toBe(false);
+
+    recurrenceScopeOpportunityActions.settle();
+
+    expect(isRecurrenceScopeAskReady()).toBe(true);
+  });
+
+  it("merges a burst on one instance: first original, latest input, no decline", () => {
+    recurrenceScopeOpportunityActions.reset();
+    const first = recurrenceScopeOpportunityActions.begin(
+      {
+        kind: "replace",
+        original,
+        input: replaceInput(original, 8),
+        source: "local",
+      },
+      { deferred: true },
+    );
+    const second = recurrenceScopeOpportunityActions.begin(
+      {
+        kind: "replace",
+        original,
+        input: replaceInput(original, 7),
+        source: "local",
+      },
+      { deferred: true },
+    );
+
+    const live = useRecurrenceScopeOpportunityStore.getState().opportunity;
+    expect(second).not.toBe(first);
+    expect(live).toMatchObject({ id: second, original, status: "pending" });
+    expect(live?.kind === "replace" && live.input.schedule).toMatchObject({
+      start: "2026-05-05T07:00:00.000-05:00",
+    });
+    expect(isRecurrenceScopeEditAskDeclined(original.id)).toBe(false);
+  });
+
+  it("a pending ask is never declined by the ask that supersedes it", () => {
+    recurrenceScopeOpportunityActions.reset();
+    recurrenceScopeOpportunityActions.begin(
+      { kind: "replace", original, input: replaceInput(), source: "local" },
+      { deferred: true },
+    );
+    const other = occurrence();
+    recurrenceScopeOpportunityActions.begin({
+      kind: "replace",
+      original: other,
+      input: replaceInput(other),
+      source: "local",
+    });
+
+    expect(isRecurrenceScopeEditAskDeclined(original.id)).toBe(false);
+  });
+
+  it("reset() clears a pending ask", () => {
+    recurrenceScopeOpportunityActions.reset();
+    recurrenceScopeOpportunityActions.begin(
+      { kind: "replace", original, input: replaceInput(), source: "local" },
+      { deferred: true },
+    );
+
+    recurrenceScopeOpportunityActions.reset();
+
+    expect(
+      useRecurrenceScopeOpportunityStore.getState().opportunity,
+    ).toBeNull();
   });
 
   it("does not record a decline for a delete ask", () => {
@@ -172,18 +237,7 @@ describe("recurrenceScopeOpportunityActions", () => {
     recurrenceScopeOpportunityActions.begin({
       kind: "replace",
       original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      input: replaceInput(),
       source: "local",
     });
 
@@ -197,18 +251,7 @@ describe("recurrenceScopeOpportunityActions", () => {
     const replaceId = recurrenceScopeOpportunityActions.begin({
       kind: "replace",
       original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      input: replaceInput(),
       source: "local",
     });
     recurrenceScopeOpportunityActions.dismiss(replaceId);
@@ -231,18 +274,7 @@ describe("recurrenceScopeOpportunityActions", () => {
     const id = recurrenceScopeOpportunityActions.begin({
       kind: "replace",
       original,
-      input: {
-        calendarId: original.calendarId,
-        content: {
-          kind: "details" as const,
-          title: "Test",
-          description: "",
-          location: "",
-        },
-        schedule: original.schedule,
-        recurrence: { kind: "preserve" },
-        scope: "this",
-      },
+      input: replaceInput(),
       source: "local",
     });
     recurrenceScopeOpportunityActions.dismiss(id);

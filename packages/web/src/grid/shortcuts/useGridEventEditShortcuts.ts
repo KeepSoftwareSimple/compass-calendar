@@ -453,7 +453,7 @@ export function useGridEventEditShortcuts({
     edge: EventEdge,
   ) =>
     moveFocusedEdge(keyboardEvent, event, edge, (nudgedEvent) => {
-      updateEvent({ event: nudgedEvent }, true, {
+      updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
         onOptimisticApplied: () => draftActions.discard(),
       });
     });
@@ -504,9 +504,14 @@ export function useGridEventEditShortcuts({
         const startMinute =
           getVisibleGridStartMinute() ?? DEFAULT_TIMED_START_MINUTE;
         const dates = convertAllDayToTimedDates(event, startMinute);
-        updateEvent({ event: { ...event, ...dates, isAllDay: false } }, true, {
-          onOptimisticApplied: () => draftActions.discard(),
-        });
+        updateEvent(
+          {
+            event: { ...event, ...dates, isAllDay: false },
+            scopeAsk: "deferred",
+          },
+          true,
+          { onOptimisticApplied: () => draftActions.discard() },
+        );
         refocusEventElement(event._id);
         return;
       }
@@ -540,7 +545,7 @@ export function useGridEventEditShortcuts({
         keyboardEvent,
         onNudge: (nudgedEvent) => {
           shortcutHintProgressActions.demonstrate("nudge");
-          updateEvent({ event: nudgedEvent }, true, {
+          updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
             onOptimisticApplied: () => draftActions.discard(),
           });
           followAcrossMidnight(previousStart, nudgedEvent);
