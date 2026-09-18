@@ -9,9 +9,25 @@ export const SHORTCUTS_PAGE_DESCRIPTION =
 const DEFAULT_DOCUMENT_TITLE = "Compass Calendar";
 
 /**
- * Printable `/shortcuts` page. Statically imported from the router next to
- * the 404 view so the catalog stays in the eager graph and does not add a
- * chunk or `import()` root (#3704).
+ * Printable `/shortcuts` page. Statically imported from the router, not
+ * lazily, so the catalog stays in the eager graph and does not add a chunk or
+ * an `import()` root (#3704).
+ *
+ * The rows below deliberately do not reuse ShortcutSection / ShortcutList /
+ * ShortcutKeys, which render the same catalog inside the app. Two reasons,
+ * both measured rather than assumed:
+ *
+ * - ShortcutList pulls Tooltip and the billing Pro badge in, and because this
+ *   page is eager that lands @floating-ui/react (~65 kB) plus two chunks in
+ *   the boot set, which fails the boot-size budget. The badge and tooltip are
+ *   for locked write shortcuts; the public catalog has neither.
+ * - ShortcutKeys marks every keycap `aria-hidden`, which is right for a hint
+ *   beside a visible label and wrong here: on this page the keys are the
+ *   content, so they stay in plain `<kbd>` elements a screen reader reads.
+ *
+ * `shortcuts.menu.test.ts` is what keeps the two in step: both render the same
+ * PUBLIC_SHORTCUT_CATALOG snapshot, and that test fails when the snapshot
+ * drifts from the registry.
  */
 export const ShortcutsCatalogView = () => {
   useEffect(() => {

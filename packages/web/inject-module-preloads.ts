@@ -22,7 +22,12 @@ export interface BuildMetafile {
 // RootShell the pathless calendar-shell route beneath it - both kept lazy
 // imports only so route-shape tests can mock their auth stack (see
 // router.routes.tsx) - and both render on every page load, 404s included.
-// Missing one costs a whole round-trip, since they load in series.
+// Not listed on purpose: views/Root.tsx and views/Week/WeekView.tsx. They
+// also render on every calendar load, but preloading them measured slower,
+// not faster (docs/development/week-initial-paint-audit.md, September 17
+// 2026): a modulepreload is fetched and compiled on arrival, so under a
+// throttled CPU the week view's closure competes with the boot code the
+// first paint needs. Measure before adding a route chunk here.
 // Metafile input keys are relative to the build's cwd, so entries here are
 // matched by path suffix.
 export const ALWAYS_BOOT_SOURCES = [
@@ -44,9 +49,17 @@ export function parseBuildMetafile(
 }
 
 /**
- * Output keys of the boot set: the entry, ALWAYS_BOOT_SOURCES chunks, the
- * entry's dynamic imports, and every static-import closure of those roots.
- * Same walk injectModulePreloads uses; the returned list includes the entry.
+ * Output keys of the boot set: the entry, its dynamic imports, and their
+ * static-import closure first; then each ALWAYS_BOOT_SOURCES chunk with its
+ * closure. Same walk injectModulePreloads uses; the returned list includes
+ * the entry.
+ *
+ * Order matters because the browser fetches preloads in document order and
+ * they all share the script priority: the entry's own graph must execute
+ * before any route chunk can, so listing a route chunk's closure ahead of it
+ * queues the first paint behind code it does not need yet. On a six-lane
+ * HTTP/1.1 server (CI's Lighthouse, local runs) that queueing is worth
+ * seconds; on HTTP/2 it still decides the send order.
  */
 export function collectBootOutputKeys(
   metafile: string | object | undefined,
@@ -62,8 +75,33 @@ export function collectBootOutputKeys(
     throw new Error("No entrypoint output found in the build metafile");
   }
 
-  const keys: string[] = [entry];
-  const seen = new Set(keys);
+  const keys: string[] = [];
+  const seen = new Set<string>();
+
+  const walk = (root: string) => {
+    if (seen.has(root)) return;
+    seen.add(root);
+    keys.push(root);
+    const queue = [root];
+    while (queue.length > 0) {
+      const key = queue.shift() as string;
+      const output = meta.outputs[key];
+      if (!output) continue;
+      for (const imp of output.imports) {
+        const bootCritical =
+          imp.kind === "import-statement" ||
+          (key === entry && imp.kind === "dynamic-import");
+        if (!bootCritical) continue;
+        if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
+        if (!(imp.path in meta.outputs)) continue;
+        seen.add(imp.path);
+        keys.push(imp.path);
+        queue.push(imp.path);
+      }
+    }
+  };
+
+  walk(entry);
 
   for (const source of alwaysBootSources) {
     const chunk = Object.keys(meta.outputs).find((key) =>
@@ -76,28 +114,7 @@ export function collectBootOutputKeys(
         `Always-boot source ${source} is in no build output; update ALWAYS_BOOT_SOURCES in inject-module-preloads.ts`,
       );
     }
-    if (!seen.has(chunk)) {
-      seen.add(chunk);
-      keys.push(chunk);
-    }
-  }
-
-  const queue = [...keys];
-  while (queue.length > 0) {
-    const key = queue.shift() as string;
-    const output = meta.outputs[key];
-    if (!output) continue;
-    for (const imp of output.imports) {
-      const bootCritical =
-        imp.kind === "import-statement" ||
-        (key === entry && imp.kind === "dynamic-import");
-      if (!bootCritical) continue;
-      if (!imp.path.endsWith(".js") || seen.has(imp.path)) continue;
-      if (!(imp.path in meta.outputs)) continue;
-      seen.add(imp.path);
-      keys.push(imp.path);
-      queue.push(imp.path);
-    }
+    walk(chunk);
   }
 
   if (keys.length < 2) {

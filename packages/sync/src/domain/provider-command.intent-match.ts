@@ -211,12 +211,3 @@ export function deepEqual(a: unknown, b: unknown): boolean {
     ),
   );
 }
-
-// Delete a Compass-initiated provider event. The event is marked deletionPending
-// (so it reads as "deleting" while the command is in flight or retrying) BEFORE
-// the provider is asked, and its local content is removed only AFTER the
-// provider confirms — never delete content before provider confirmation. The
-// delete is unconditional: the user's intent to cancel does not hinge on a
-// version, and a routine attendee RSVP must not block it. Idempotent: the
-// adapter treats an already-absent event as deleted, and the marker + local
-// delete are both idempotent, so a retry after a crash converges.

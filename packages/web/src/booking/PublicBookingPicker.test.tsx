@@ -5,7 +5,14 @@ import {
   formatBookingMonthDayLabel,
   formatBookingSlotTime,
 } from "@web/booking/public-booking.format";
-import { describe, expect, it } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  setSystemTime,
+} from "bun:test";
 
 const timeZone = "UTC";
 const monthKey = "2026-09";
@@ -41,6 +48,14 @@ function renderPicker() {
 }
 
 describe("PublicBookingPicker", () => {
+  beforeEach(() => {
+    setSystemTime(new Date("2026-09-17T12:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    setSystemTime();
+  });
+
   it("scrolls the times list inside the pane instead of growing the page", () => {
     renderPicker();
 

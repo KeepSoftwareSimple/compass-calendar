@@ -1,4 +1,3 @@
-import { faker } from "@faker-js/faker";
 import { type DateTime, type TimeZone } from "@core/types/domain-primitives";
 import { type SyncCommandInput } from "@core/types/sync/command.contracts";
 import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
@@ -27,7 +26,6 @@ import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
 import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
@@ -37,7 +35,6 @@ import { beforeEach, describe, expect, it } from "bun:test";
 
 const storage = setupSyncStorage(import.meta.url);
 const repos = bindCommandRepos(storage);
-const _objectId = () => faker.database.mongodbObjectId();
 const now = COMMAND_NOW;
 
 let mongo: SyncMongoService;
@@ -46,7 +43,6 @@ let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
 let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let _markers: DeletionMarkerRepository;
 let credentials: CredentialRepository;
 
 beforeEach(() => {
@@ -56,7 +52,6 @@ beforeEach(() => {
   occurrences = repos.occurrences;
   resources = repos.resources;
   calendars = repos.calendars;
-  _markers = repos.markers;
   credentials = repos.credentials;
 });
 
@@ -368,15 +363,11 @@ describe("executeProviderUpdate", () => {
     const writer = new FakeProviderEventWriter();
 
     const result = await executeProviderUpdate(
-      providerMutationDeps(
-        { commands, events, occurrences, resources },
-        writer,
-        {
-          custody: failingTokenSource(
-            new ProviderAuthError("authorizationRevoked", "revoked"),
-          ),
-        },
-      ),
+      providerMutationDeps(repos, writer, {
+        custody: failingTokenSource(
+          new ProviderAuthError("authorizationRevoked", "revoked"),
+        ),
+      }),
       command,
       event,
       calendar,
@@ -408,11 +399,7 @@ describe("executeProviderUpdate", () => {
     );
 
     const result = await executeProviderUpdate(
-      providerMutationDeps(
-        { commands, events, occurrences, resources },
-        writer,
-        { custody },
-      ),
+      providerMutationDeps(repos, writer, { custody }),
       command,
       event,
       calendar,

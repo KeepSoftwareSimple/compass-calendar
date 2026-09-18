@@ -24,9 +24,9 @@ Playwright. Docs index: `docs/README.md`.
   with `VERDICT: PASS | INCOMPLETE | FAIL`. Run it with `--strict` before
   labeling a PR. `INCOMPLETE` means Playwright was skipped; install Chromium
   with `bunx playwright install chromium` and rerun.
-- Focused suites: `bun test:core|web|backend|sync|scripts` (`:fast` tiers
-  skip Mongo). Avoid bare `bun test`. Also `bun type-check`, `bun lint`,
-  `bun knip`.
+- Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
+  (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
+  `bun lint`, `bun knip`.
 - `bun lint` mechanically enforces Tailwind semantic colors, the barrel-file
   ban, no CSS or `data-*` locators in web tests, no duplicate `EventSchema`,
   and Bun version pins. Read its output instead of looking for those rules

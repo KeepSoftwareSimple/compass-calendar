@@ -33,12 +33,9 @@ import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type CommandRepository } from "@sync/storage/repositories/command.repository";
-import { type CredentialRepository } from "@sync/storage/repositories/credential.repository";
-import { type DeletionMarkerRepository } from "@sync/storage/repositories/deletion-marker.repository";
 import { type EventRepository } from "@sync/storage/repositories/event.repository";
 import { type EventOccurrenceRepository } from "@sync/storage/repositories/event-occurrence.repository";
 import { type ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
-import { type SyncResourceRepository } from "@sync/storage/repositories/sync-resource.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -51,20 +48,14 @@ let mongo: SyncMongoService;
 let commands: CommandRepository;
 let events: EventRepository;
 let occurrences: EventOccurrenceRepository;
-let resources: SyncResourceRepository;
 let calendars: ProviderCalendarRepository;
-let markers: DeletionMarkerRepository;
-let _credentials: CredentialRepository;
 
 beforeEach(() => {
   mongo = repos.mongo;
   commands = repos.commands;
   events = repos.events;
   occurrences = repos.occurrences;
-  resources = repos.resources;
   calendars = repos.calendars;
-  markers = repos.markers;
-  _credentials = repos.credentials;
 });
 
 describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
@@ -87,34 +78,6 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     organizer: null,
     attendees: [],
     conference: null,
-  });
-  const _providerInstance = (
-    providerEventId: string,
-    title: string,
-    version: string,
-    instanceSchedule = {
-      kind: "timed" as const,
-      start: SECOND_START as DateTime,
-      end: "2026-07-21T10:00:00-06:00" as DateTime,
-      timeZone: "America/Denver" as TimeZone,
-    },
-  ): ProviderEvent => ({
-    kind: "event",
-    providerEventId,
-    providerVersion: version,
-    providerUpdatedAt: null,
-    content: content(title),
-    schedule: instanceSchedule,
-    busy: true,
-    // Matches what the real normalizer reports for an event resolved off a
-    // series via fetchInstanceAt — NOT "single". A prior version of this
-    // fixture used "single", which papered over a bug where the replay
-    // short-circuit could never match a real instance read.
-    recurrence: {
-      kind: "instance",
-      seriesProviderId: "g-series-1",
-      recurrenceId: SECOND_START,
-    },
   });
   const providerSeries = (
     title: string,
@@ -171,43 +134,6 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       } as unknown as Filter<Document>)
       .toArray();
 
-  const _thisScopeCommand = async (
-    master: EventRecord,
-    kind: "update" | "delete",
-    title = "Edited",
-  ) =>
-    (
-      await commands.submit({
-        tenantId: master.tenantId,
-        principalId: master.principalId,
-        idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
-        eventId: master._id,
-        input:
-          kind === "update"
-            ? ({
-                kind: "update",
-                invitation: "none",
-                content: content(title),
-                schedule: {
-                  kind: "timed",
-                  start: SECOND_START,
-                  end: "2026-07-21T10:00:00-06:00",
-                  timeZone: "America/Denver",
-                },
-                recurrence: { kind: "preserve" },
-                scope: "this",
-                recurrenceId: SECOND_START,
-              } as unknown as SyncCommandInput)
-            : ({
-                kind: "delete",
-                invitation: "none",
-                scope: "this",
-                recurrenceId: SECOND_START,
-              } as unknown as SyncCommandInput),
-        expectedVersion: null,
-      })
-    ).record;
-
   const followingCommand = async (
     master: EventRecord,
     kind: "update" | "delete",
@@ -250,12 +176,9 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
     ).record;
 
   const deps = (writer: FakeProviderEventWriter) =>
-    providerMutationDeps({ commands, events, occurrences, resources }, writer);
+    providerMutationDeps(repos, writer);
   const deleteDeps = (writer: FakeProviderEventWriter) =>
-    providerDeleteDeps(
-      { commands, events, occurrences, resources, markers },
-      writer,
-    );
+    providerDeleteDeps(repos, writer);
 
   describe("executeProviderSeriesFollowingDelete", () => {
     it("truncates the provider master and drops following occurrences", async () => {

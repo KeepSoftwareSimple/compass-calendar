@@ -1,16 +1,14 @@
 {
-  "chunkCount": 85,
-  "totalGzipBytes": 716219,
+  "chunkCount": 86,
+  "totalGzipBytes": 702784,
   "packages": {
     "@phosphor-icons/react": 173248,
     "@react-oauth/google": 2011,
     "@tanstack/history": 4500,
     "@tanstack/hotkeys": 9250,
     "@tanstack/query-core": 36351,
-    "@tanstack/query-devtools": 47260,
     "@tanstack/react-hotkeys": 1229,
     "@tanstack/react-query": 4068,
-    "@tanstack/react-query-devtools": 895,
     "@tanstack/react-router": 24969,
     "@tanstack/react-store": 282,
     "@tanstack/router-core": 64835,
