@@ -13,6 +13,7 @@ import {
   showDbInitErrorToast,
 } from "@web/common/utils/app-init.util";
 import { App } from "@web/components/App/App";
+import { router } from "@web/routers";
 import { preloadEventFormOnFirstInput } from "@web/views/Forms/EventForm/EventForm.lazy";
 import "./index.css";
 
@@ -37,7 +38,14 @@ export async function bootstrapApp(): Promise<void> {
   );
 
   root.render(<App />);
-  preloadEventFormOnFirstInput();
+  // Arm the input-driven form preload only once the first navigation has
+  // resolved. Armed at render, the first mouse move (common while the app is
+  // still booting) starts the ~170 KB editor download in competition with
+  // the route chunks the first calendar paint is waiting on.
+  const unsubscribe = router.subscribe("onResolved", () => {
+    unsubscribe();
+    preloadEventFormOnFirstInput();
+  });
 
   if (connectStatus) {
     void applyConnectRedirect(connectStatus);

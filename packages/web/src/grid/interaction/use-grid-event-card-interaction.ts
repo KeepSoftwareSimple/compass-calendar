@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useCalendarViewEventRegistrationRef } from "@web/grid/interaction/use-calendar-view-event-registration";
 import {
   type CalendarGridView,
   calendarViewInteraction,
@@ -24,8 +23,7 @@ export const useGridEventCardInteraction = ({
   const hasEventIdentity = Boolean(eventId);
   const isRegisteredForDragResize =
     hasEventIdentity && !isPlaceholder && !isReadOnly && !isHidden;
-  const registrationRef = useCalendarViewEventRegistrationRef({
-    view,
+  const registrationRef = calendarViewInteraction(view).useRegistrationRef({
     eventId,
     eventType,
     isEnabled: isRegisteredForDragResize,
