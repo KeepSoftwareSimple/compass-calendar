@@ -10,7 +10,7 @@ export type RecurrenceScopeOpportunity =
       original: Event;
       input: ReplaceEventInput;
       source: EventRepositorySource;
-      status: "ready" | "requested" | "submitting";
+      status: "pending" | "ready" | "requested" | "submitting";
       requestedScope?: "thisAndFollowing" | "all";
     }
   | {
@@ -18,7 +18,7 @@ export type RecurrenceScopeOpportunity =
       kind: "delete";
       original: Event;
       source: EventRepositorySource;
-      status: "ready" | "requested" | "submitting";
+      status: "pending" | "ready" | "requested" | "submitting";
       requestedScope?: "thisAndFollowing" | "all";
     };
 
@@ -66,17 +66,51 @@ const recordDeclineIfReadyEdit = (
   }));
 };
 
+// The live ask when it is an unanswered replace for this same occurrence: the
+// user is still editing it, not ignoring its toast.
+const liveReplaceFor = (instanceId: string) => {
+  const current = useRecurrenceScopeOpportunityStore.getState().opportunity;
+  if (current?.kind !== "replace") return null;
+  if (current.original.id !== instanceId) return null;
+  if (current.status !== "pending" && current.status !== "ready") return null;
+  return current;
+};
+
 export const recurrenceScopeOpportunityActions = {
-  begin: (opportunity: NewRecurrenceScopeOpportunity): number => {
+  begin: (
+    opportunity: NewRecurrenceScopeOpportunity,
+    options: { deferred?: boolean } = {},
+  ): number => {
+    const id = nextOpportunityId++;
+    const status = options.deferred ? ("pending" as const) : ("ready" as const);
+
+    // A keyboard nudge burst is one edit: keep the pre-burst `original` so a
+    // promotion projects the full delta, and take the newest `input`. No
+    // decline: the user has not ignored anything yet.
+    if (opportunity.kind === "replace") {
+      const live = liveReplaceFor(opportunity.original.id);
+      if (live) {
+        setOpportunity({ ...live, id, input: opportunity.input, status });
+        return id;
+      }
+    }
+
     // Superseding a live edit ask ends it without an answer — same decline as
     // letting the toast expire. No onClose fires here (toast.update swaps the
     // handler), so it must be recorded explicitly.
     recordDeclineIfReadyEdit(
       useRecurrenceScopeOpportunityStore.getState().opportunity,
     );
-    const id = nextOpportunityId++;
-    setOpportunity({ ...opportunity, id, status: "ready" });
+    setOpportunity({ ...opportunity, id, status });
     return id;
+  },
+
+  /** Shift released (or focus lost): a deferred ask becomes askable. */
+  settle: (): void => {
+    useRecurrenceScopeOpportunityStore.setState((state) => {
+      if (state.opportunity?.status !== "pending") return state;
+      return { opportunity: { ...state.opportunity, status: "ready" } };
+    });
   },
 
   dismiss: (id?: number): void => {

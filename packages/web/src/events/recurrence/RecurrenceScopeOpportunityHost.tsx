@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import {
+  dismissRecurrenceScopeToastFor,
   showRecurrenceScopePromotionToast,
   showRecurrenceScopeToast,
 } from "@web/common/utils/toast/recurrence-scope.toast";
@@ -9,7 +10,7 @@ import {
   selectRecurrenceScopeOpportunity,
   useRecurrenceScopeOpportunityStore,
 } from "@web/events/recurrence/recurrence-scope-opportunity.store";
-import { useRecurrenceScopeKeydown } from "@web/shortcuts/recurrence/useRecurrenceScopeKeydown";
+import { useRecurrenceScopeKeys } from "@web/shortcuts/recurrence/useRecurrenceScopeKeys";
 
 export function RecurrenceScopeOpportunityHost() {
   const opportunity = useRecurrenceScopeOpportunityStore(
@@ -17,9 +18,16 @@ export function RecurrenceScopeOpportunityHost() {
   );
   const { promoteRecurring } = useEventMutations();
 
-  useRecurrenceScopeKeydown();
+  useRecurrenceScopeKeys();
 
   useEffect(() => {
+    // A deferred ask (keyboard nudge burst) stays silent until Shift is
+    // released. Hide any toast an earlier ready ask left on screen: its buttons
+    // are bound to an id the store has already replaced.
+    if (opportunity?.status === "pending") {
+      dismissRecurrenceScopeToastFor(opportunity);
+      return;
+    }
     if (opportunity?.status !== "ready") return;
     showRecurrenceScopeToast(opportunity);
   }, [opportunity]);

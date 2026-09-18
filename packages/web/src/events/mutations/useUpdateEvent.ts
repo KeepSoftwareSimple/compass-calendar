@@ -45,11 +45,13 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
         event: GridEvent;
         shouldRemove?: boolean;
         applyTo?: RecurringEventUpdateScope;
+        // Keyboard nudges set this so the series ask waits for Shift release.
+        scopeAsk?: "deferred";
       },
       saveImmediate = true,
       callbacks?: EventMutationCallbacks,
     ): boolean => {
-      const { event, shouldRemove, applyTo } = payload;
+      const { event, shouldRemove, applyTo, scopeAsk } = payload;
 
       // Callers pass onOptimisticApplied to tear down covering drafts. When
       // the mutation never starts (blocked/no-op), still run it so drafts do
@@ -154,6 +156,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
           input: nextCalendarId
             ? { ...parsed.input, calendarId: nextCalendarId }
             : parsed.input,
+          scopeAsk,
         },
         callbacks,
       );

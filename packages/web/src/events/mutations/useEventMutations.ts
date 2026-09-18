@@ -463,7 +463,13 @@ export type EventMutationCallbacks = {
 export type EventMutations = {
   create: (input: CreateEventInput, callbacks?: EventMutationCallbacks) => void;
   replace: (
-    payload: { id: EventId; input: ReplaceEventInput },
+    // `scopeAsk: "deferred"` holds the "Apply to series?" ask until the
+    // keyboard burst that is producing these writes ends (Shift released).
+    payload: {
+      id: EventId;
+      input: ReplaceEventInput;
+      scopeAsk?: "deferred";
+    },
     callbacks?: EventMutationCallbacks,
   ) => boolean;
   delete: (payload: { id: EventId; scope: RecurrenceScope }) => void;
@@ -1021,7 +1027,11 @@ export function useEventMutations(
         );
       },
       replace: (
-        payload: { id: EventId; input: ReplaceEventInput },
+        payload: {
+          id: EventId;
+          input: ReplaceEventInput;
+          scopeAsk?: "deferred";
+        },
         callbacks?: EventMutationCallbacks,
       ): boolean => {
         const original = findEventInCache(queryClient, payload.id, source);
@@ -1074,12 +1084,15 @@ export function useEventMutations(
           payload.input.recurrence.kind === "preserve" &&
           !isRestoringHistory() &&
           !isRecurrenceScopeEditAskDeclined(original.id)
-            ? recurrenceScopeOpportunityActions.begin({
-                kind: "replace",
-                original,
-                input: payload.input,
-                source,
-              })
+            ? recurrenceScopeOpportunityActions.begin(
+                {
+                  kind: "replace",
+                  original,
+                  input: payload.input,
+                  source,
+                },
+                { deferred: payload.scopeAsk === "deferred" },
+              )
             : undefined;
         const undoEntry = original
           ? snapshotEventEditHistory({

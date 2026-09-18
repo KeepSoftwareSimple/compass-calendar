@@ -27,6 +27,7 @@ Helpful notes:
 
 - Editing or deleting an occurrence applies to **This Event** immediately. A live toast offers **1 This and Following** and **2 All**; both options are clickable.
 - The scope keys work only while that toast is visible and never while typing in a form field.
+- Keyboard nudges (Shift+Arrow) are one edit, not one per keystroke: the toast waits until you let go of Shift, then offers the final position. Promoting moves the whole series by the full distance you nudged. Esc keeps the change on that instance alone.
 - Changing the guest list applies to **All Events** immediately, no chooser: guest edits have no per-occurrence semantics, so a save that changed guests widens to the whole series (other fields changed in that same save go with it). The guest field says so while you edit.
 - Changing the recurrence rule itself (frequency, weekdays, until) applies to This and Following immediately — "This Event" is not a valid rule-change operation. Turning Repeat off on an instance asks to convert that occurrence to a standalone event.
 - Recurring events synced with Google Calendar will push scope changes back to Google automatically.
