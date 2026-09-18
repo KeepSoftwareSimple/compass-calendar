@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  isGridEventScheduleLocked,
-  resolveCalendarCardIdentity,
-  resolveCalendarFocusColor,
-  useCalendarLookup,
-} from "@web/calendars/useCalendarLookup";
+import { useCalendarLookup } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_ALLDAY } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
@@ -16,6 +11,10 @@ import {
 import { useWeekEventViewModel } from "@web/events/queries/useWeekEventsQuery";
 import { selectDraftId, useDraftStore } from "@web/events/stores/draft.store";
 import { GridRegisteredAllDayEvent } from "@web/grid/components/GridRegisteredAllDayEvent";
+import {
+  resolveGridEventCardChrome,
+  resolvePlaceholderCardChrome,
+} from "@web/grid/grid-event-card-chrome";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -80,14 +79,7 @@ export const AllDayEvents = ({
     () =>
       visibleAllDayEvents.map((event) => ({
         event,
-        calendarIdentity: resolveCalendarCardIdentity(calendarLookup, event),
-        focusColor: resolveCalendarFocusColor(calendarLookup, event),
-        isHidden: isEventIdHidden(event._id, hiddenEventIds),
-        // Read-only (unwritable calendar or busy content) events never
-        // attach interaction attributes/registration below, so the drag/
-        // resize engine can't find them as a target - blocked before any
-        // optimistic state change (packet 08 step 8).
-        isReadOnly: isGridEventScheduleLocked(calendarLookup, event),
+        ...resolveGridEventCardChrome(calendarLookup, event, hiddenEventIds),
       })),
     [visibleAllDayEvents, calendarLookup, hiddenEventIds],
   );
@@ -114,18 +106,18 @@ export const AllDayEvents = ({
             // The placeholder can carry a live (dragging/resizing) calendarId
             // from the draft store; everything else reuses the stable,
             // list-level resolved identity above.
-            const identityForDisplay = isPlaceholder
-              ? resolveCalendarCardIdentity(calendarLookup, eventForDisplay)
-              : calendarIdentity;
-            const focusColorForDisplay = isPlaceholder
-              ? resolveCalendarFocusColor(calendarLookup, eventForDisplay)
-              : focusColor;
+            const displayChrome = resolvePlaceholderCardChrome(
+              calendarLookup,
+              eventForDisplay,
+              isPlaceholder,
+              { calendarIdentity, focusColor },
+            );
 
             return (
               <GridRegisteredAllDayEvent
-                calendarIdentity={identityForDisplay}
+                calendarIdentity={displayChrome.calendarIdentity}
                 event={eventForDisplay}
-                focusColor={focusColorForDisplay}
+                focusColor={displayChrome.focusColor}
                 isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}

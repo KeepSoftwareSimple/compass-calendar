@@ -7,11 +7,11 @@ import {
 } from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
-import { failCommand } from "@sync/domain/provider-command.internal";
 import {
-  resolveAccessToken,
-  runProviderWrite,
-} from "@sync/domain/provider-write-ladder";
+  failCommand,
+  resolveCommandAccessToken,
+} from "@sync/domain/provider-command.internal";
+import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import { reprojectMaster } from "@sync/domain/series-exception";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
@@ -83,12 +83,9 @@ export async function executeProviderRsvp(
     return failCommand(deps, command, "unsupportedCapability", connectionId);
   }
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   const perOccurrence =
     input.scope === "this" &&

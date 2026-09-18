@@ -14,12 +14,12 @@ import {
   matchesIntendedEdit,
   patchExpectedVersion,
 } from "@sync/domain/provider-command.intent-match";
-import { failCommand } from "@sync/domain/provider-command.internal";
-import { executeProviderSeriesUpdate } from "@sync/domain/provider-command.series-update";
 import {
-  resolveAccessToken,
-  runProviderWrite,
-} from "@sync/domain/provider-write-ladder";
+  failCommand,
+  resolveCommandAccessToken,
+} from "@sync/domain/provider-command.internal";
+import { executeProviderSeriesUpdate } from "@sync/domain/provider-command.series-update";
+import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
 import {
   buildRemainderMaster,
@@ -63,12 +63,9 @@ export async function executeProviderSeriesFollowingDelete(
     return executeProviderDelete(deps, command, master, calendar, now);
   }
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   await deleteFollowingExceptions(deps, command, master._id, splitAt);
   const truncatedRules = truncateRulesBefore(master.recurrence.rules, splitAt);
@@ -217,12 +214,9 @@ export async function executeProviderSeriesFollowingUpdate(
     return failCommand(deps, command, "unsupportedCapability", connectionId);
   }
 
-  const tokenResult = await resolveAccessToken(deps.custody, connectionId);
-  if (!tokenResult.ok) {
-    if (tokenResult.stop.kind === "pending") return command;
-    return failCommand(deps, command, tokenResult.stop.reason, connectionId);
-  }
-  const { accessToken } = tokenResult;
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token.command;
+  const { accessToken } = token;
 
   // Truncate the original master first — same ordering as the cloud path:
   // the worst transient state between this step and the remainder create

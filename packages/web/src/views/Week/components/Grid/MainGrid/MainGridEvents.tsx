@@ -1,10 +1,5 @@
 import { useMemo } from "react";
-import {
-  isGridEventScheduleLocked,
-  resolveCalendarCardIdentity,
-  resolveCalendarFocusColor,
-  useCalendarLookup,
-} from "@web/calendars/useCalendarLookup";
+import { useCalendarLookup } from "@web/calendars/useCalendarLookup";
 import { ID_GRID_EVENTS_TIMED } from "@web/common/constants/web.constants";
 import { suppressedSeriesIdForDraft } from "@web/events/grid-event-draft.adapter";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
@@ -20,6 +15,10 @@ import {
   useDraftStore,
 } from "@web/events/stores/draft.store";
 import { GridRegisteredTimedEvent } from "@web/grid/components/GridRegisteredTimedEvent";
+import {
+  resolveGridEventCardChrome,
+  resolvePlaceholderCardChrome,
+} from "@web/grid/grid-event-card-chrome";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -92,21 +91,21 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
   // so GridTimedEventMemo's per-card comparator doesn't over-invalidate.
   const timedEventItemsWithIdentity = useMemo(
     () =>
-      timedEventItems.map((item) => ({
-        ...item,
-        calendarIdentity: resolveCalendarCardIdentity(
-          calendarLookup,
-          item.event,
-        ),
-        focusColor: resolveCalendarFocusColor(calendarLookup, item.event),
-        isHidden: item.isHidden,
-        // Read-only (unwritable calendar or busy content) events never
-        // attach interaction attributes/registration below, so the drag/
-        // resize engine can't find them as a target - blocked before any
-        // optimistic state change (packet 08 step 8).
-        isReadOnly: isGridEventScheduleLocked(calendarLookup, item.event),
-      })),
-    [timedEventItems, calendarLookup],
+      timedEventItems.map((item) => {
+        const { calendarIdentity, focusColor, isReadOnly } =
+          resolveGridEventCardChrome(
+            calendarLookup,
+            item.event,
+            hiddenEventIds,
+          );
+        return {
+          ...item,
+          calendarIdentity,
+          focusColor,
+          isReadOnly,
+        };
+      }),
+    [timedEventItems, calendarLookup, hiddenEventIds],
   );
 
   const { onEventKeyDown, onOpenReadOnlyDetails } =
@@ -132,19 +131,19 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
             // The placeholder can carry a live (dragging/resizing) calendarId
             // from the draft store; everything else reuses the stable,
             // list-level resolved identity above.
-            const identityForDisplay = isPlaceholder
-              ? resolveCalendarCardIdentity(calendarLookup, eventForDisplay)
-              : calendarIdentity;
-            const focusColorForDisplay = isPlaceholder
-              ? resolveCalendarFocusColor(calendarLookup, eventForDisplay)
-              : focusColor;
+            const displayChrome = resolvePlaceholderCardChrome(
+              calendarLookup,
+              eventForDisplay,
+              isPlaceholder,
+              { calendarIdentity, focusColor },
+            );
 
             return (
               <GridRegisteredTimedEvent
-                calendarIdentity={identityForDisplay}
+                calendarIdentity={displayChrome.calendarIdentity}
                 deckLayout={deckLayout}
                 event={eventForDisplay}
-                focusColor={focusColorForDisplay}
+                focusColor={displayChrome.focusColor}
                 isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}
