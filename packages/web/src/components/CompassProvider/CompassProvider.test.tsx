@@ -1,8 +1,8 @@
 import { HotkeyManager } from "@tanstack/react-hotkeys";
 import { useQueryClient } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { rest } from "msw";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { createCompassQueryClient } from "@web/api/query-client";

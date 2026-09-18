@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import { type PropsWithChildren } from "react";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { bookingQueryKeys } from "@web/booking/booking.query";

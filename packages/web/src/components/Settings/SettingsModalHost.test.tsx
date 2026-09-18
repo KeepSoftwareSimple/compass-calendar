@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
-import { rest } from "msw";
 import { act } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { CompassRequiredProviders } from "@web/components/CompassProvider/CompassProvider";

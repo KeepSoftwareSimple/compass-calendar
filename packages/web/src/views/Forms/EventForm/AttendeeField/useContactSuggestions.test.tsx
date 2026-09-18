@@ -1,6 +1,6 @@
 import { renderHook } from "@testing-library/react";
-import { rest } from "msw";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";

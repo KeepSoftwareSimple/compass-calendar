@@ -48,13 +48,10 @@ several built-in action steps (`checkout`, `setup-bun`, `cache`) one
 shared budget without reimplementing them by hand, so the job-level
 timeout is the practical equivalent.
 
-Jobs that only run Bun do not install Node. `unit (web, 1)` and
-`unit (web, 2)` each cover half the web suite. CI uses `WEB_TEST_SHARDS=6`
-with `WEB_TEST_SHARD_INDEX=1,2,3` and `4,5,6` so each leg runs three sequential
-processes (a 111-file process on four shards exceeded the 5 GB RSS guard).
-Local `bun test:web` still runs every shard sequentially.
-`WEB_TEST_SHARDS=2 WEB_TEST_SHARD_INDEX=2 bun test:web` still runs only
-the second half.
+Jobs that only run Bun do not install Node. `unit (web)` runs the full web
+suite in one leg via `bun run test:web` (`--parallel=2 --no-isolate`). Update
+branch protection contexts from `unit-leg (web, 1)` / `(web, 2)` to
+`unit-leg (web)` when merging this change.
 
 On pull requests, `detect-code-changes.sh` also emits per-package outputs
 (`core`, `web`, `backend`, `sync`, `scripts`). A backend-only PR still

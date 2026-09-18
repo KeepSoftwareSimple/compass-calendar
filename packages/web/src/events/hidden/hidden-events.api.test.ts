@@ -1,6 +1,6 @@
-import { rest } from "msw";
 import { SetEventHiddenInputSchema } from "@core/types/event-visibility.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { HiddenEventsApi } from "@web/events/hidden/hidden-events.api";
 import { describe, expect, it } from "bun:test";

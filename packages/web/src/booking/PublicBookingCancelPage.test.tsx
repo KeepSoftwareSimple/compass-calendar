@@ -6,9 +6,9 @@ import {
 } from "@tanstack/react-router";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import { Status } from "@core/errors/status.codes";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { routeTree } from "@web/routers/router.routes";

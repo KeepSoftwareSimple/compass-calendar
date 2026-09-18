@@ -1,8 +1,8 @@
 import { QueryClient } from "@tanstack/react-query";
-import { rest } from "msw";
 import { Status } from "@core/errors/status.codes";
 import dayjs from "@core/util/date/dayjs";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import {
   formatBookingMonthKey,
   shiftBookingMonthKey,

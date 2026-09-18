@@ -1,8 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { ENV_WEB } from "@web/common/constants/env.constants";

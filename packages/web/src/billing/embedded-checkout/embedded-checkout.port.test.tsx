@@ -1,9 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { useStripePublishableKey } from "@web/billing/billing.query";
 import { ENV_WEB } from "@web/common/constants/env.constants";

@@ -38,7 +38,12 @@
     },
     "packages/web": {
       "entry": ["src/__tests__/utils/render.test.util.tsx"],
-      "project": ["src/**/*.{ts,tsx}!"]
+      "project": ["src/**/*.{ts,tsx}!"],
+      "ignore": [
+        "src/__tests__/setup/empty-style.stub.js",
+        "src/__tests__/setup/file-stub.js",
+        "src/__tests__/setup/svg-stub.tsx"
+      ]
     }
   },
   "ignoreDependencies": ["@compass/core", "@compass/backend"],

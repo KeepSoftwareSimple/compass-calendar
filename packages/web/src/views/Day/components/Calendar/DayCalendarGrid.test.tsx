@@ -1,5 +1,4 @@
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import { act } from "react";
 import {
   type Calendar,
@@ -17,6 +16,7 @@ import {
   within,
 } from "@web/__tests__/__mocks__/mock.render";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";

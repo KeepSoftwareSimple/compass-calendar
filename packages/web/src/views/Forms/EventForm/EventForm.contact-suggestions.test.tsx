@@ -1,7 +1,6 @@
 import { HotkeyManager } from "@tanstack/react-hotkeys";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import {
   type Calendar,
   getCalendarCapabilities,
@@ -9,6 +8,7 @@ import {
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";

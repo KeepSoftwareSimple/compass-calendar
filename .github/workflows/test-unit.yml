@@ -158,10 +158,8 @@ jobs:
   # below would see `skipped` for a docs-only PR only if every leg started.
   # Let the legs start and skip every step instead: each reports in a few
   # seconds, for free. Per-package outputs skip unrelated legs the same way
-  # (a backend-only PR must not pay two web runners). `unit-leg (web, 1)`
-  # and `unit-leg (web, 2)` each cover half the suite as three sequential
-  # shards (`WEB_TEST_SHARDS=6` with index `1,2,3` / `4,5,6`) so RSS stays
-  # under 7 GB.
+  # (a backend-only PR must not pay a web runner). Web runs in one parallel
+  # process now that msw@2 survives Bun's per-file `--isolate`.
   unit-leg:
     needs: changes
     runs-on: ubuntu-latest
@@ -175,12 +173,8 @@ jobs:
             project: core
           - name: sync
             project: sync
-          - name: web, 1
+          - name: web
             project: web
-            shard: "1,2,3"
-          - name: web, 2
-            project: web
-            shard: "4,5,6"
           - name: backend
             project: backend
           - name: scripts
@@ -225,8 +219,6 @@ jobs:
         timeout-minutes: 5
         env:
           TZ: Etc/UTC
-          WEB_TEST_SHARDS: "6"
-          WEB_TEST_SHARD_INDEX: ${{ matrix.shard }}
         run: |
           bun run test:web
 

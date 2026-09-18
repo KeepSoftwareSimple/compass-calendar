@@ -2,7 +2,6 @@ import "@testing-library/jest-dom";
 import { HotkeysProvider, resolveModifier } from "@tanstack/react-hotkeys";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
 import {
   DEFAULT_WEEKLY_AVAILABILITY,
   type WeeklyAvailability,
@@ -10,6 +9,7 @@ import {
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import {

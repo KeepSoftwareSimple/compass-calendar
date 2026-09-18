@@ -1,12 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { rest } from "msw";
 import { act, type PropsWithChildren } from "react";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { type Attendee } from "@core/types/event-attendance.contracts";
 import { composeOccurrenceId } from "@core/util/occurrence-id";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
+import { rest } from "@web/__tests__/helpers/msw-rest";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
