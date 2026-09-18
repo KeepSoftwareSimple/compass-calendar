@@ -65,8 +65,8 @@ function resetBrowserState() {
   sessionStorage.clear();
 }
 
-function remirrorIsolateGlobals(): void {
-  // bun's fake clock is process-global across files in a worker. A leaked
+function remirrorTestRuntime(): void {
+  // Bun's fake clock is process-global across files in a worker. A leaked
   // pin makes later findBy/waitFor hang forever because Date.now never
   // advances past their timeout. Reset before any async work, so a previous
   // file that timed out cannot freeze indexedDB or MSW in this file.
@@ -75,13 +75,15 @@ function remirrorIsolateGlobals(): void {
   mirrorBrowserPolyfillGlobals();
 }
 
-beforeEach(() => {
-  remirrorIsolateGlobals();
+beforeEach(async () => {
+  remirrorTestRuntime();
+  await ensureIndexedDbTestEnv();
+  syncWindowNetworkGlobals();
   installDefaultWebTestSeams();
 });
 
 beforeAll(async () => {
-  remirrorIsolateGlobals();
+  remirrorTestRuntime();
   await ensureIndexedDbTestEnv();
   restartMockServer();
   syncWindowNetworkGlobals();
