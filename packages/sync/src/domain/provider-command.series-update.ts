@@ -21,9 +21,11 @@ import {
   storedSeriesRecurrence,
 } from "@sync/domain/provider-command.intent-match";
 import {
+  confirmCommand,
   failCommand,
   organizerGuardFailure,
   resolveCommandAccessToken,
+  resolveCurrentProviderEvent,
   resolveFailedOverrideAlign,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
@@ -99,17 +101,14 @@ export async function executeProviderSeriesUpdate(
 
   // Fetch the master's current provider state to detect a replay and learn the
   // version to commit. A cancellation read means the series no longer exists.
-  const fetchResult = await runProviderWrite(() =>
-    deps.writer.fetchEvent(location),
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () => deps.writer.fetchEvent(location),
   );
-  if (!fetchResult.ok) {
-    return stopCommand(deps, command, fetchResult.stop, connectionId);
-  }
-  const current =
-    fetchResult.value?.kind === "event" ? fetchResult.value : null;
-  if (!current) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
+  if (!fetched.ok) return fetched.command;
+  const { current } = fetched;
 
   let content = resolveUpdateContent(
     master.content,
@@ -330,16 +329,10 @@ async function commitProviderSeriesUpdate(
     kept.map(exceptionInstant),
   );
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: master.providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
+  return confirmCommand(
+    deps,
+    command,
+    master.providerEventId as ProviderEventId,
+    providerVersion,
   );
-  return confirmed ?? command;
 }

@@ -25,9 +25,11 @@ import {
   storedSeriesRecurrence,
 } from "@sync/domain/provider-command.intent-match";
 import {
+  confirmCommand,
   failCommand,
   organizerGuardFailure,
   resolveCommandAccessToken,
+  resolveCurrentProviderEvent,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
@@ -90,20 +92,16 @@ export async function executeProviderUpdate(
   };
 
   // Fetch current provider state to detect a replay (our edit already landed)
-  // and to learn the version to commit.
-  // A cancellation read means the event no longer exists as a content event —
-  // there is nothing to update.
-  const fetchResult = await runProviderWrite(() =>
-    deps.writer.fetchEvent(location),
+  // and to learn the version to commit. A cancellation read means the event no
+  // longer exists as a content event — there is nothing to update.
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () => deps.writer.fetchEvent(location),
   );
-  if (!fetchResult.ok) {
-    return stopCommand(deps, command, fetchResult.stop, connectionId);
-  }
-  const current =
-    fetchResult.value?.kind === "event" ? fetchResult.value : null;
-  if (!current) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
+  if (!fetched.ok) return fetched.command;
+  const { current } = fetched;
 
   // Merge so a title/description edit cannot wipe provider-sourced attendees.
   // Omitting content or schedule keeps the freshly fetched provider values so
@@ -239,18 +237,12 @@ async function commitProviderUpdate(
   if (!applied) return command;
   await reprojectOccurrences(deps.occurrences, updated, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: event.providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
+  return confirmCommand(
+    deps,
+    command,
+    event.providerEventId as ProviderEventId,
+    providerVersion,
   );
-  return confirmed ?? command;
 }
 
 // Provider-managed events keep syncing from the provider; Compass overlays

@@ -1,6 +1,9 @@
 import { type DateTime } from "@core/types/domain-primitives";
 import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
-import { type ProviderEventId } from "@core/types/sync/identity.contracts";
+import {
+  type ConnectionId,
+  type ProviderEventId,
+} from "@core/types/sync/identity.contracts";
 import {
   scheduleStartAt,
   truncateRulesBefore,
@@ -15,8 +18,10 @@ import {
   patchExpectedVersion,
 } from "@sync/domain/provider-command.intent-match";
 import {
+  confirmCommand,
   failCommand,
   resolveCommandAccessToken,
+  resolveCurrentProviderEvent,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { executeProviderSeriesUpdate } from "@sync/domain/provider-command.series-update";
@@ -28,7 +33,10 @@ import {
   reprojectMaster,
   truncatedSeriesMaster,
 } from "@sync/domain/series-exception";
-import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-writer.port";
+import {
+  type InvitationIntent,
+  type ProviderWriteRecurrence,
+} from "@sync/providers/provider-event-writer.port";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
@@ -74,32 +82,84 @@ export async function executeProviderSeriesFollowingDelete(
 
   const token = await resolveCommandAccessToken(deps, command, connectionId);
   if (!token.ok) return token.command;
-  const { accessToken } = token;
 
-  await deleteFollowingExceptions(deps, command, master._id, splitAt);
-  const truncatedRules = truncateRulesBefore(master.recurrence.rules, splitAt);
-  const location = {
-    accessToken,
-    calendarId: calendar.providerCalendarId,
-    providerEventId,
-  };
-
-  const fetchResult = await runProviderWrite(() =>
-    deps.writer.fetchEvent(location),
+  const split = await splitProviderSeriesAt(
+    deps,
+    command,
+    master,
+    {
+      connectionId,
+      accessToken: token.accessToken,
+      calendarId: calendar.providerCalendarId,
+      providerEventId,
+      seriesRules: master.recurrence.rules,
+      invitation: input.invitation,
+    },
+    splitAt,
+    now,
   );
-  if (!fetchResult.ok) {
-    return stopCommand(deps, command, fetchResult.stop, connectionId);
-  }
-  const current =
-    fetchResult.value?.kind === "event" ? fetchResult.value : null;
-  if (!current) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
+  if (!split.ok) return split.command;
 
+  return confirmCommand(deps, command, providerEventId, split.providerVersion);
+}
+
+// Split a provider-linked series at `splitAt`: drop the local exceptions at
+// or after the split, truncate the master's rules at the provider so it ends
+// before it, then land the truncated master locally at the version the
+// provider now holds. Content and schedule are NOT part of this write — only
+// recurrence changes — so both the replay check and the patch hold the
+// master's own content/schedule fixed.
+//
+// Shared by the thisAndFollowing delete and the thisAndFollowing edit, which
+// split identically and then diverge: the delete stops here, the edit goes on
+// to create the remainder series at the provider.
+//
+// A not-ok result carries the command to return unchanged: either a stopped
+// provider write already settled it, or the master vanished mid-flight and it
+// stays pending rather than confirming a gone series.
+async function splitProviderSeriesAt(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  master: EventRecord,
+  target: {
+    connectionId: ConnectionId;
+    accessToken: string;
+    calendarId: string;
+    providerEventId: string;
+    // The master's current rules, already narrowed by the caller's
+    // seriesMaster guard.
+    seriesRules: readonly string[];
+    invitation: InvitationIntent;
+  },
+  splitAt: Date,
+  now: () => Date,
+): Promise<
+  { ok: true; providerVersion: string } | { ok: false; command: CommandRecord }
+> {
+  const { connectionId } = target;
+  const location = {
+    accessToken: target.accessToken,
+    calendarId: target.calendarId,
+    providerEventId: target.providerEventId,
+  };
+  await deleteFollowingExceptions(deps, command, master._id, splitAt);
   const truncateRecurrence: ProviderWriteRecurrence = {
     kind: "series",
-    rules: truncatedRules,
+    rules: truncateRulesBefore(target.seriesRules, splitAt),
   };
+
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () => deps.writer.fetchEvent(location),
+  );
+  if (!fetched.ok) return fetched;
+  const { current } = fetched;
+
+  // Replay: a prior attempt already truncated the provider master, so take
+  // its current version rather than writing again.
+  let providerVersion: string;
   if (
     matchesIntendedEdit(
       current,
@@ -108,71 +168,43 @@ export async function executeProviderSeriesFollowingDelete(
       truncateRecurrence,
     )
   ) {
-    return commitProviderSeriesFollowingDelete(
-      deps,
-      command,
-      master,
-      splitAt,
-      current.providerVersion,
-      now,
+    providerVersion = current.providerVersion;
+  } else {
+    const patchResult = await runProviderWrite(() =>
+      deps.writer.patchEvent({
+        ...location,
+        expectedVersion: patchExpectedVersion(command, current, master),
+        content: master.content,
+        schedule: master.schedule,
+        recurrence: truncateRecurrence,
+        invitation: target.invitation,
+      }),
     );
+    if (!patchResult.ok) {
+      return {
+        ok: false,
+        command: await stopCommand(
+          deps,
+          command,
+          patchResult.stop,
+          connectionId,
+        ),
+      };
+    }
+    providerVersion = patchResult.value.providerVersion;
   }
 
-  const patchResult = await runProviderWrite(() =>
-    deps.writer.patchEvent({
-      ...location,
-      expectedVersion: patchExpectedVersion(command, current, master),
-      content: master.content,
-      schedule: master.schedule,
-      recurrence: truncateRecurrence,
-      invitation: input.invitation,
-    }),
-  );
-  if (!patchResult.ok) {
-    return stopCommand(deps, command, patchResult.stop, connectionId);
-  }
-  const result = patchResult.value;
-
-  return commitProviderSeriesFollowingDelete(
-    deps,
-    command,
-    master,
-    splitAt,
-    result.providerVersion,
-    now,
-  );
-}
-
-async function commitProviderSeriesFollowingDelete(
-  deps: ProviderMutationDeps,
-  command: CommandRecord,
-  master: EventRecord,
-  splitAt: Date,
-  providerVersion: string,
-  now: () => Date,
-): Promise<CommandRecord> {
   const truncated: EventRecord = {
     ...truncatedSeriesMaster(master, splitAt, now()),
     providerVersion: providerVersion as ProviderEventVersion,
     providerUpdatedAt: null,
     deliveryState: "confirmed",
   };
-  const applied = await deps.events.replaceExisting(truncated);
-  if (!applied) return command;
+  if (!(await deps.events.replaceExisting(truncated))) {
+    return { ok: false, command };
+  }
   await reprojectMaster(deps, command, truncated, now);
-
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: master.providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
-  );
-  return confirmed ?? command;
+  return { ok: true, providerVersion };
 }
 
 // Apply a Compass-initiated scope-"thisAndFollowing" EDIT to a provider-linked
@@ -228,66 +260,22 @@ export async function executeProviderSeriesFollowingUpdate(
   // Truncate the original master first — same ordering as the cloud path:
   // the worst transient state between this step and the remainder create
   // below is a momentary gap at the split, never a duplicate series.
-  await deleteFollowingExceptions(deps, command, master._id, splitAt);
-  const truncatedRules = truncateRulesBefore(master.recurrence.rules, splitAt);
-  const originalLocation = {
-    accessToken,
-    calendarId: calendar.providerCalendarId,
-    providerEventId,
-  };
-
-  const fetchResult = await runProviderWrite(() =>
-    deps.writer.fetchEvent(originalLocation),
+  const split = await splitProviderSeriesAt(
+    deps,
+    command,
+    master,
+    {
+      connectionId,
+      accessToken,
+      calendarId: calendar.providerCalendarId,
+      providerEventId,
+      seriesRules: master.recurrence.rules,
+      invitation: input.invitation,
+    },
+    splitAt,
+    now,
   );
-  if (!fetchResult.ok) {
-    return stopCommand(deps, command, fetchResult.stop, connectionId);
-  }
-  const current =
-    fetchResult.value?.kind === "event" ? fetchResult.value : null;
-  if (!current) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
-
-  const truncateRecurrence: ProviderWriteRecurrence = {
-    kind: "series",
-    rules: truncatedRules,
-  };
-  let originalVersion: string;
-  if (
-    matchesIntendedEdit(
-      current,
-      master.content,
-      master.schedule,
-      truncateRecurrence,
-    )
-  ) {
-    originalVersion = current.providerVersion;
-  } else {
-    const truncateResult = await runProviderWrite(() =>
-      deps.writer.patchEvent({
-        ...originalLocation,
-        expectedVersion: patchExpectedVersion(command, current, master),
-        content: master.content,
-        schedule: master.schedule,
-        recurrence: truncateRecurrence,
-        invitation: input.invitation,
-      }),
-    );
-    if (!truncateResult.ok) {
-      return stopCommand(deps, command, truncateResult.stop, connectionId);
-    }
-    originalVersion = truncateResult.value.providerVersion;
-  }
-
-  const truncated: EventRecord = {
-    ...truncatedSeriesMaster(master, splitAt, now()),
-    providerVersion: originalVersion as ProviderEventVersion,
-    providerUpdatedAt: null,
-    deliveryState: "confirmed",
-  };
-  const appliedTruncate = await deps.events.replaceExisting(truncated);
-  if (!appliedTruncate) return command;
-  await reprojectMaster(deps, command, truncated, now);
+  if (!split.ok) return split.command;
 
   // Remainder comes from the original (pre-truncation) master. "preserve"
   // must not use intendedSeriesRecurrence, which would re-write the already
@@ -324,16 +312,10 @@ export async function executeProviderSeriesFollowingUpdate(
   await deps.events.put(remainder);
   await reprojectOccurrences(deps.occurrences, remainder, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: createResult.providerEventId as ProviderEventId,
-      providerVersion: createResult.providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
+  return confirmCommand(
+    deps,
+    command,
+    createResult.providerEventId,
+    createResult.providerVersion,
   );
-  return confirmed ?? command;
 }
