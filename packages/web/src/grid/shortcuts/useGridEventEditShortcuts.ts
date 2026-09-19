@@ -447,16 +447,17 @@ export function useGridEventEditShortcuts({
     });
   };
 
+  const commitDeferredNudge = (nudgedEvent: GridEvent) => {
+    updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
+      onOptimisticApplied: () => draftActions.discard(),
+    });
+  };
+
   const moveFocusedEventEdge = (
     keyboardEvent: KeyboardEvent,
     event: GridEvent,
     edge: EventEdge,
-  ) =>
-    moveFocusedEdge(keyboardEvent, event, edge, (nudgedEvent) => {
-      updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
-        onOptimisticApplied: () => draftActions.discard(),
-      });
-    });
+  ) => moveFocusedEdge(keyboardEvent, event, edge, commitDeferredNudge);
 
   const moveFocusedDraftEdge = (
     keyboardEvent: KeyboardEvent,
@@ -504,14 +505,7 @@ export function useGridEventEditShortcuts({
         const startMinute =
           getVisibleGridStartMinute() ?? DEFAULT_TIMED_START_MINUTE;
         const dates = convertAllDayToTimedDates(event, startMinute);
-        updateEvent(
-          {
-            event: { ...event, ...dates, isAllDay: false },
-            scopeAsk: "deferred",
-          },
-          true,
-          { onOptimisticApplied: () => draftActions.discard() },
-        );
+        commitDeferredNudge({ ...event, ...dates, isAllDay: false });
         refocusEventElement(event._id);
         return;
       }
@@ -545,9 +539,7 @@ export function useGridEventEditShortcuts({
         keyboardEvent,
         onNudge: (nudgedEvent) => {
           shortcutHintProgressActions.demonstrate("nudge");
-          updateEvent({ event: nudgedEvent, scopeAsk: "deferred" }, true, {
-            onOptimisticApplied: () => draftActions.discard(),
-          });
+          commitDeferredNudge(nudgedEvent);
           followAcrossMidnight(previousStart, nudgedEvent);
           if (
             crossesWeekWindow &&

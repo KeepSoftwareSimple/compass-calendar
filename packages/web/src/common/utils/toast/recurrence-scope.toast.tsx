@@ -6,6 +6,7 @@ import {
 } from "@web/common/constants/toast.constants";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import {
   type RecurrenceScopeOpportunity,
   recurrenceScopeOpportunityActions,
@@ -129,7 +130,7 @@ export function showRecurrenceScopePromotionToast(
 
 export function showRecurrenceScopeSuccessToast(
   opportunity: RecurrenceScopeOpportunity,
-  scope: "thisAndFollowing" | "all",
+  scope: RecurrenceScopePromotion,
 ): void {
   if (
     useRecurrenceScopeOpportunityStore.getState().opportunity?.id !==

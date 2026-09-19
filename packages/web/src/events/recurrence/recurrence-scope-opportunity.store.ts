@@ -1,36 +1,45 @@
 import { create } from "zustand";
 import { type Event } from "@core/types/event.contracts";
 import { type ReplaceEventInput } from "@core/types/event-command.contracts";
+import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 
-export type RecurrenceScopeOpportunity =
-  | {
-      id: number;
-      kind: "replace";
-      original: Event;
-      input: ReplaceEventInput;
-      source: EventRepositorySource;
-      status: "pending" | "ready" | "requested" | "submitting";
-      requestedScope?: "thisAndFollowing" | "all";
-    }
-  | {
-      id: number;
-      kind: "delete";
-      original: Event;
-      source: EventRepositorySource;
-      status: "pending" | "ready" | "requested" | "submitting";
-      requestedScope?: "thisAndFollowing" | "all";
-    };
+// Keyboard nudges hold the ask silent until Shift is released.
+export type RecurrenceScopeAskTiming = "deferred";
 
-type NewRecurrenceScopeOpportunity =
-  | Omit<
-      Extract<RecurrenceScopeOpportunity, { kind: "replace" }>,
-      "id" | "status"
-    >
-  | Omit<
-      Extract<RecurrenceScopeOpportunity, { kind: "delete" }>,
-      "id" | "status"
-    >;
+type RecurrenceScopeOpportunityStatus =
+  | "pending"
+  | "ready"
+  | "requested"
+  | "submitting";
+
+type RecurrenceScopeOpportunityBase = {
+  id: number;
+  original: Event;
+  source: EventRepositorySource;
+  status: RecurrenceScopeOpportunityStatus;
+  requestedScope?: RecurrenceScopePromotion;
+};
+
+export type RecurrenceScopeOpportunity =
+  | (RecurrenceScopeOpportunityBase & {
+      kind: "replace";
+      input: ReplaceEventInput;
+    })
+  | (RecurrenceScopeOpportunityBase & {
+      kind: "delete";
+    });
+
+// Omit is not distributive: a plain Omit<Union> collapses `kind` and drops
+// replace-only `input`.
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
+type NewRecurrenceScopeOpportunity = DistributiveOmit<
+  RecurrenceScopeOpportunity,
+  "id" | "status"
+>;
 
 type RecurrenceScopeOpportunityState = {
   opportunity: RecurrenceScopeOpportunity | null;
@@ -121,7 +130,7 @@ export const recurrenceScopeOpportunityActions = {
     setOpportunity(null);
   },
 
-  requestPromotion: (id: number, scope: "thisAndFollowing" | "all"): void => {
+  requestPromotion: (id: number, scope: RecurrenceScopePromotion): void => {
     useRecurrenceScopeOpportunityStore.setState((state) => {
       const current = state.opportunity;
       if (!current || current.id !== id || current.status !== "ready") {

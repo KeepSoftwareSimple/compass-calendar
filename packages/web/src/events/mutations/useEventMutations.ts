@@ -82,8 +82,10 @@ import {
   projectSeriesMaterialization,
   projectSeriesRulesChange,
 } from "@web/events/recurrence/projectRecurringEdit";
+import { type RecurrenceScopePromotion } from "@web/events/recurrence/recurrence-scope";
 import {
   isRecurrenceScopeEditAskDeclined,
+  type RecurrenceScopeAskTiming,
   type RecurrenceScopeOpportunity,
   recurrenceScopeOpportunityActions,
   useRecurrenceScopeOpportunityStore,
@@ -215,6 +217,28 @@ function isMissingSeriesBase(
     scope === "all" &&
     decodeOccurrenceId(id) !== null &&
     seriesMasterSchedule === undefined
+  );
+}
+
+function seriesMasterScheduleForRemoteScopeAll(
+  queryClient: ReturnType<typeof useQueryClient>,
+  source: EventRepositorySource,
+  id: EventId,
+  scope: RecurrenceScope,
+): EventSchedule | undefined {
+  if (source !== "remote" || scope !== "all") return undefined;
+  return snapshotSeriesMasterSchedule(queryClient, source, id);
+}
+
+function isOccurrenceThisScopeAsk(
+  original: Event | null | undefined,
+  scope: RecurrenceScope,
+): original is Event {
+  return (
+    original != null &&
+    original.recurrence.kind === "occurrence" &&
+    scope === "this" &&
+    !isRestoringHistory()
   );
 }
 
@@ -468,7 +492,7 @@ export type EventMutations = {
     payload: {
       id: EventId;
       input: ReplaceEventInput;
-      scopeAsk?: "deferred";
+      scopeAsk?: RecurrenceScopeAskTiming;
     },
     callbacks?: EventMutationCallbacks,
   ) => boolean;
@@ -476,7 +500,7 @@ export type EventMutations = {
   rsvp: (payload: RsvpPayload) => void;
   promoteRecurring: (
     opportunity: RecurrenceScopeOpportunity,
-    scope: "thisAndFollowing" | "all",
+    scope: RecurrenceScopePromotion,
   ) => void;
 };
 
@@ -1030,7 +1054,7 @@ export function useEventMutations(
         payload: {
           id: EventId;
           input: ReplaceEventInput;
-          scopeAsk?: "deferred";
+          scopeAsk?: RecurrenceScopeAskTiming;
         },
         callbacks?: EventMutationCallbacks,
       ): boolean => {
@@ -1057,10 +1081,12 @@ export function useEventMutations(
         ) {
           return false;
         }
-        const seriesMasterSchedule =
-          source === "remote" && payload.input.scope === "all"
-            ? snapshotSeriesMasterSchedule(queryClient, source, payload.id)
-            : undefined;
+        const seriesMasterSchedule = seriesMasterScheduleForRemoteScopeAll(
+          queryClient,
+          source,
+          payload.id,
+          payload.input.scope,
+        );
         if (
           isMissingSeriesBase(
             source,
@@ -1078,11 +1104,8 @@ export function useEventMutations(
           payload.id,
         );
         const opportunityId =
-          original &&
-          original.recurrence.kind === "occurrence" &&
-          payload.input.scope === "this" &&
+          isOccurrenceThisScopeAsk(original, payload.input.scope) &&
           payload.input.recurrence.kind === "preserve" &&
-          !isRestoringHistory() &&
           !isRecurrenceScopeEditAskDeclined(original.id)
             ? recurrenceScopeOpportunityActions.begin(
                 {
@@ -1132,17 +1155,13 @@ export function useEventMutations(
         ) {
           return;
         }
-        const opportunityId =
-          original &&
-          original.recurrence.kind === "occurrence" &&
-          payload.scope === "this" &&
-          !isRestoringHistory()
-            ? recurrenceScopeOpportunityActions.begin({
-                kind: "delete",
-                original,
-                source,
-              })
-            : undefined;
+        const opportunityId = isOccurrenceThisScopeAsk(original, payload.scope)
+          ? recurrenceScopeOpportunityActions.begin({
+              kind: "delete",
+              original,
+              source,
+            })
+          : undefined;
         const { existing, entry, deletedToast } = snapshotEventDeleteHistory({
           id: payload.id,
           scope: payload.scope,
@@ -1179,31 +1198,26 @@ export function useEventMutations(
       },
       promoteRecurring: (
         opportunity: RecurrenceScopeOpportunity,
-        scope: "thisAndFollowing" | "all",
+        scope: RecurrenceScopePromotion,
       ) => {
+        const id = opportunity.original.id as EventId;
         if (opportunity.source !== source) {
           dismissRecurrenceScopeToast(opportunity.id);
           recurrenceScopeOpportunityActions.complete(opportunity.id);
           return;
         }
         const seriesMasterSchedule =
-          opportunity.kind === "replace" &&
-          source === "remote" &&
-          scope === "all"
-            ? snapshotSeriesMasterSchedule(
+          opportunity.kind === "replace"
+            ? seriesMasterScheduleForRemoteScopeAll(
                 queryClient,
                 source,
-                opportunity.original.id as EventId,
+                id,
+                scope,
               )
             : undefined;
         if (
           opportunity.kind === "replace" &&
-          isMissingSeriesBase(
-            source,
-            scope,
-            opportunity.original.id as EventId,
-            seriesMasterSchedule,
-          )
+          isMissingSeriesBase(source, scope, id, seriesMasterSchedule)
         ) {
           showErrorToast(SERIES_BASE_MISSING_MESSAGE);
           dismissRecurrenceScopeToast(opportunity.id);
@@ -1223,7 +1237,6 @@ export function useEventMutations(
           recurrenceScopeOpportunityActions.complete(opportunity.id);
         };
         if (opportunity.kind === "replace") {
-          const id = opportunity.original.id as EventId;
           replaceMutation.mutate(
             {
               id,
@@ -1242,9 +1255,9 @@ export function useEventMutations(
 
         deleteMutation.mutate(
           {
-            id: opportunity.original.id as EventId,
+            id,
             scope,
-            writeKey: opportunity.original.id as EventId,
+            writeKey: id,
             skipRepository: false,
             originalOverride: opportunity.original,
           },
