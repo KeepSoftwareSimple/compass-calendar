@@ -8,8 +8,10 @@ import {
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import {
+  confirmCommand,
   failCommand,
   resolveCommandAccessToken,
+  resolveCurrentProviderEvent,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
@@ -105,32 +107,30 @@ export async function executeProviderRsvp(
     event.recurrence.kind === "seriesMaster";
 
   // Fetch the target's current provider state: the master (or single event)
-  // itself, or the ONE resolved instance for a per-occurrence answer.
-  const fetchResult = await runProviderWrite(() =>
-    perOccurrence
-      ? deps.writer.fetchInstanceAt({
-          accessToken,
-          calendarId: calendar.providerCalendarId,
-          seriesProviderEventId,
-          originalStartAt: input.recurrenceId as DateTime,
-          scheduleKind: event.schedule.kind,
-        })
-      : deps.writer.fetchEvent({
-          accessToken,
-          calendarId: calendar.providerCalendarId,
-          providerEventId: seriesProviderEventId,
-        }),
+  // itself, or the ONE resolved instance for a per-occurrence answer. Nothing
+  // live to answer — a cancellation read, or no such instance — fails the
+  // command.
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () =>
+      perOccurrence
+        ? deps.writer.fetchInstanceAt({
+            accessToken,
+            calendarId: calendar.providerCalendarId,
+            seriesProviderEventId,
+            originalStartAt: input.recurrenceId as DateTime,
+            scheduleKind: event.schedule.kind,
+          })
+        : deps.writer.fetchEvent({
+            accessToken,
+            calendarId: calendar.providerCalendarId,
+            providerEventId: seriesProviderEventId,
+          }),
   );
-  if (!fetchResult.ok) {
-    return stopCommand(deps, command, fetchResult.stop, connectionId);
-  }
-  const current =
-    fetchResult.value?.kind === "event" ? fetchResult.value : null;
-  // Nothing live to answer: the event (or that one instance) no longer
-  // exists as a content event at the provider.
-  if (!current) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
+  if (!fetched.ok) return fetched.command;
+  const { current } = fetched;
 
   const selfIndex = current.content.attendees.findIndex(
     (attendee) => attendee.email.toLowerCase() === accountEmail.toLowerCase(),
@@ -256,18 +256,12 @@ async function commitProviderRsvp(
   if (!applied) return command;
   await reprojectMaster(deps, command, updated, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: event.providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
+  return confirmCommand(
+    deps,
+    command,
+    event.providerEventId as ProviderEventId,
+    providerVersion,
   );
-  return confirmed ?? command;
 }
 
 // Commit a confirmed per-occurrence rsvp locally: upsert the exception
@@ -304,16 +298,5 @@ async function commitProviderOccurrenceRsvp(
   await reprojectMaster(deps, command, master, now);
   await reprojectOccurrences(deps.occurrences, exception, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
-  );
-  return confirmed ?? command;
+  return confirmCommand(deps, command, providerEventId, providerVersion);
 }

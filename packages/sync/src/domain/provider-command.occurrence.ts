@@ -13,8 +13,11 @@ import { occurrenceScheduleAt } from "@sync/domain/occurrence-projection";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import { matchesIntendedEdit } from "@sync/domain/provider-command.intent-match";
 import {
+  confirmCommand,
+  confirmDeletion,
   failCommand,
   resolveCommandAccessToken,
+  resolveCurrentProviderEvent,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
@@ -90,27 +93,24 @@ export async function executeProviderOccurrenceUpdate(
   if (!token.ok) return token.command;
   const { accessToken } = token;
 
-  const fetchInstanceResult = await runProviderWrite(() =>
-    deps.writer.fetchInstanceAt({
-      accessToken,
-      calendarId: calendar.providerCalendarId,
-      seriesProviderEventId,
-      originalStartAt: recurrenceId,
-      scheduleKind: master.schedule.kind,
-    }),
+  // A read that comes back without a live instance — never materialized at
+  // that instant, or already cancelled at the provider (see the deferred-gap
+  // note above) — fails the command: there is nothing to override.
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () =>
+      deps.writer.fetchInstanceAt({
+        accessToken,
+        calendarId: calendar.providerCalendarId,
+        seriesProviderEventId,
+        originalStartAt: recurrenceId,
+        scheduleKind: master.schedule.kind,
+      }),
   );
-  if (!fetchInstanceResult.ok) {
-    return stopCommand(deps, command, fetchInstanceResult.stop, connectionId);
-  }
-  const instance =
-    fetchInstanceResult.value?.kind === "event"
-      ? fetchInstanceResult.value
-      : null;
-  // No live instance to override: never materialized at that instant, or
-  // already cancelled at the provider (see the deferred-gap note above).
-  if (!instance) {
-    return failCommand(deps, command, "permanentProviderError", connectionId);
-  }
+  if (!fetched.ok) return fetched.command;
+  const instance = fetched.current;
 
   const content = resolveUpdateContent(
     master.content,
@@ -212,18 +212,7 @@ async function commitProviderOccurrenceUpdate(
   await reprojectMaster(deps, command, master, now);
   await reprojectOccurrences(deps.occurrences, exception, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: providerEventId as ProviderEventId,
-      providerVersion: providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
-  );
-  return confirmed ?? command;
+  return confirmCommand(deps, command, providerEventId, providerVersion);
 }
 
 // Apply a Compass-initiated scope-"this" delete to one occurrence of a
@@ -321,14 +310,7 @@ export async function executeProviderOccurrenceDelete(
   await reprojectMaster(deps, command, master, now);
   await reprojectOccurrences(deps.occurrences, exception, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    // No live provider target for this command once the instance is
-    // cancelled — same shape confirmDeletion uses for a whole-event delete.
-    { state: "confirmed", providerEventId: null, providerVersion: null },
-    command.attemptCount,
-  );
-  return confirmed ?? command;
+  // No live provider target for this command once the instance is cancelled,
+  // which is exactly what confirmDeletion settles a whole-event delete with.
+  return confirmDeletion(deps, command);
 }

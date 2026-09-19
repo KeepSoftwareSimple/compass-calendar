@@ -8,6 +8,7 @@ import {
 } from "@sync/domain/merge-update-content";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
 import {
+  confirmCommand,
   resolveCommandAccessToken,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
@@ -96,18 +97,12 @@ export async function executeProviderCreate(
   await deps.events.put(record);
   await reprojectOccurrences(deps.occurrences, record, now);
 
-  const confirmed = await deps.commands.updateOutcome(
-    command.tenantId,
-    command.principalId,
-    command._id,
-    {
-      state: "confirmed",
-      providerEventId: result.providerEventId as ProviderEventId,
-      providerVersion: result.providerVersion as ProviderEventVersion,
-    },
-    command.attemptCount,
+  return confirmCommand(
+    deps,
+    command,
+    result.providerEventId,
+    result.providerVersion,
   );
-  return confirmed ?? command;
 }
 
 function buildLinkedEventRecord(

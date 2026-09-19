@@ -1,4 +1,5 @@
 import { type SyncCommandFailureReason } from "@core/types/sync/command.contracts";
+import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type ProviderEventId,
@@ -9,6 +10,10 @@ import {
   resolveAccessToken,
   runProviderWrite,
 } from "@sync/domain/provider-write-ladder";
+import {
+  type ProviderEvent,
+  type ProviderEventRead,
+} from "@sync/providers/provider-event.port";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 
@@ -68,6 +73,70 @@ export async function stopCommand(
 ): Promise<CommandRecord> {
   if (stop.kind === "pending") return command;
   return failCommand(deps, command, stop.reason, connectionId);
+}
+
+// The read every replay check opens with: fetch the target's current provider
+// state, so the caller can tell "this edit already landed" from "the provider
+// moved on" and learn the version to commit at. A stopped read settles the
+// command the shared way (pending or typed failure); a target that no longer
+// reads back as a content event — a cancellation, or nothing at all — fails
+// the command, because there is nothing left to write to.
+//
+// The read itself is the caller's: the target is a whole event (fetchEvent)
+// for most paths and one resolved instance (fetchInstanceAt) for a
+// per-occurrence rsvp. Mirrors resolveCommandAccessToken's result shape, so a
+// caller forwards `command` on the not-ok branch and keeps going otherwise.
+export async function resolveCurrentProviderEvent(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  connectionId: ConnectionId,
+  read: () => Promise<ProviderEventRead | null>,
+): Promise<
+  { ok: true; current: ProviderEvent } | { ok: false; command: CommandRecord }
+> {
+  const fetchResult = await runProviderWrite(read);
+  if (!fetchResult.ok) {
+    return {
+      ok: false,
+      command: await stopCommand(deps, command, fetchResult.stop, connectionId),
+    };
+  }
+  if (fetchResult.value?.kind !== "event") {
+    return {
+      ok: false,
+      command: await failCommand(
+        deps,
+        command,
+        "permanentProviderError",
+        connectionId,
+      ),
+    };
+  }
+  return { ok: true, current: fetchResult.value };
+}
+
+// Confirm a provider-linked write at the identity it landed on. The twin of
+// confirmDeletion, which settles with no identity to keep. A null from
+// updateOutcome means another attempt already settled the command, so the
+// caller's own record is returned unchanged.
+export async function confirmCommand(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  providerEventId: string,
+  providerVersion: string,
+): Promise<CommandRecord> {
+  const confirmed = await deps.commands.updateOutcome(
+    command.tenantId,
+    command.principalId,
+    command._id,
+    {
+      state: "confirmed",
+      providerEventId: providerEventId as ProviderEventId,
+      providerVersion: providerVersion as ProviderEventVersion,
+    },
+    command.attemptCount,
+  );
+  return confirmed ?? command;
 }
 
 // Gate for a guest-list replace: only the organizer's copy of an event
