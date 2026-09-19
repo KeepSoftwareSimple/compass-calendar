@@ -29,6 +29,7 @@ import {
   removeEventFromQueries,
 } from "@web/events/queries/event.query.cache";
 import { toRecurrenceScope } from "@web/events/recurrence/recurrence-scope";
+import { type RecurrenceScopeAskTiming } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 
 // Builds a GridEventDraft from the cached strict `Event` plus the incoming
 // GridEvent's changed fields (schedule/title/description), instead of
@@ -46,7 +47,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
         shouldRemove?: boolean;
         applyTo?: RecurringEventUpdateScope;
         // Keyboard nudges set this so the series ask waits for Shift release.
-        scopeAsk?: "deferred";
+        scopeAsk?: RecurrenceScopeAskTiming;
       },
       saveImmediate = true,
       callbacks?: EventMutationCallbacks,

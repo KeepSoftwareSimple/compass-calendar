@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
-  isRecurrenceScopeAskReady,
   recurrenceScopeOpportunityActions,
   useRecurrenceScopeOpportunityStore,
 } from "@web/events/recurrence/recurrence-scope-opportunity.store";
@@ -19,7 +18,8 @@ export function useRecurrenceScopeKeys() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (!isRecurrenceScopeAskReady()) return;
+      const current = useRecurrenceScopeOpportunityStore.getState().opportunity;
+      if (current?.status !== "ready") return;
       if (
         event.isComposing ||
         isAppLocked() ||
@@ -31,9 +31,6 @@ export function useRecurrenceScopeKeys() {
 
       const scope = recurrenceScopeForToastDigit(event);
       if (!scope) return;
-
-      const current = useRecurrenceScopeOpportunityStore.getState().opportunity;
-      if (!current || current.status !== "ready") return;
 
       event.preventDefault();
       event.stopPropagation();
