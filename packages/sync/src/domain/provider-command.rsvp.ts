@@ -1,5 +1,4 @@
 import { type DateTime } from "@core/types/domain-primitives";
-import { type EventSchedule } from "@core/types/event.contracts";
 import { type Attendee } from "@core/types/event-attendance.contracts";
 import {
   type ProviderEventVersion,
@@ -14,8 +13,8 @@ import {
   resolveCurrentProviderEvent,
   stopCommand,
 } from "@sync/domain/provider-command.internal";
+import { commitProviderOccurrenceOverride } from "@sync/domain/provider-command.occurrence";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
-import { reprojectOccurrences } from "@sync/domain/reproject";
 import { reprojectMaster } from "@sync/domain/series-exception";
 import { type ProviderEvent } from "@sync/providers/provider-event.port";
 import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-writer.port";
@@ -177,7 +176,7 @@ export async function executeProviderRsvp(
   }
 
   if (perOccurrence) {
-    return commitProviderOccurrenceRsvp(
+    return commitProviderOccurrenceOverride(
       deps,
       command,
       event,
@@ -262,41 +261,4 @@ async function commitProviderRsvp(
     event.providerEventId as ProviderEventId,
     providerVersion,
   );
-}
-
-// Commit a confirmed per-occurrence rsvp locally: upsert the exception
-// carrying the INSTANCE's own provider identity and its fetched content with
-// the rewritten self entry (what a pull of that instance would store),
-// reproject the master to exclude that instant, then project the exception's
-// own occurrence — the same local-commit shape a scope-"this" edit uses, so
-// the next backend read reflects the answer before Google round-trips.
-async function commitProviderOccurrenceRsvp(
-  deps: ProviderMutationDeps,
-  command: CommandRecord,
-  master: EventRecord,
-  recurrenceId: DateTime,
-  content: SyncEventContent,
-  schedule: EventSchedule,
-  providerEventId: string,
-  providerVersion: string,
-  now: () => Date,
-): Promise<CommandRecord> {
-  const exception = await deps.events.upsertException(
-    master,
-    recurrenceId,
-    {
-      content,
-      schedule,
-      cancelled: false,
-      providerIdentity: {
-        providerEventId: providerEventId as ProviderEventId,
-        providerVersion: providerVersion as ProviderEventVersion,
-      },
-    },
-    now(),
-  );
-  await reprojectMaster(deps, command, master, now);
-  await reprojectOccurrences(deps.occurrences, exception, now);
-
-  return confirmCommand(deps, command, providerEventId, providerVersion);
 }
