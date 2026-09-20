@@ -15,6 +15,7 @@ import {
   applyLinkedProviderUpdate,
   confirmCommand,
   failCommand,
+  requireLinkedSeries,
   resolveFailedOverrideAlign,
   resolveLinkedProviderUpdate,
 } from "@sync/domain/provider-command.internal";
@@ -52,15 +53,13 @@ export async function executeProviderSeriesUpdate(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "update") {
-    throw new Error("executeProviderSeriesUpdate requires an update command");
-  }
-  if (!master.connectionId || !master.providerEventId) {
-    throw new Error("executeProviderSeriesUpdate requires a linked event");
-  }
-  if (master.recurrence.kind !== "seriesMaster") {
-    throw new Error("executeProviderSeriesUpdate requires a series master");
-  }
+  requireLinkedSeries(
+    "executeProviderSeriesUpdate",
+    "update",
+    "all",
+    command,
+    master,
+  );
   const resolved = await resolveLinkedProviderUpdate(
     deps,
     command,

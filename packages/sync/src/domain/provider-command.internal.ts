@@ -1,3 +1,4 @@
+import { type DateTime } from "@core/types/domain-primitives";
 import { type EventSchedule } from "@core/types/event.contracts";
 import { type Attendee } from "@core/types/event-attendance.contracts";
 import { type SyncCommandFailureReason } from "@core/types/sync/command.contracts";
@@ -33,6 +34,72 @@ import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-wri
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
+
+// The entry invariants every provider executor that targets a linked series
+// master re-states. provider-command.service routes by command kind, scope,
+// and link state before dispatching, so a mismatch here is a routing bug, not
+// a user-visible failure — hence a throw rather than failCommand.
+type LinkedSeriesTarget<K extends "update" | "delete"> = {
+  input: Extract<CommandRecord["input"], { kind: K }>;
+  connectionId: ConnectionId;
+  providerEventId: ProviderEventId;
+  seriesRules: readonly string[];
+};
+
+export function requireLinkedSeries<K extends "update" | "delete">(
+  executor: string,
+  kind: K,
+  scope: "this" | "thisAndFollowing" | "all",
+  command: CommandRecord,
+  master: EventRecord,
+): LinkedSeriesTarget<K> {
+  if (command.input.kind !== kind) {
+    throw new Error(`${executor} requires a ${scope}-scope ${kind} command`);
+  }
+  if (!master.connectionId || !master.providerEventId) {
+    throw new Error(`${executor} requires a linked series master`);
+  }
+  if (master.recurrence.kind !== "seriesMaster") {
+    throw new Error(`${executor} requires a series master`);
+  }
+  return {
+    input: command.input as LinkedSeriesTarget<K>["input"],
+    connectionId: master.connectionId,
+    providerEventId: master.providerEventId,
+    seriesRules: master.recurrence.rules,
+  };
+}
+
+// Only the occurrence-addressing kinds carry an instant; create and move have
+// no such field at all, so the union needs widening before it can be read.
+function commandRecurrenceId(input: CommandRecord["input"]): DateTime | null {
+  switch (input.kind) {
+    case "update":
+    case "delete":
+    case "rsvp":
+      return input.recurrenceId;
+    default:
+      return null;
+  }
+}
+
+// The scope-"this" and scope-"thisAndFollowing" variant: those commands also
+// carry the instant they address, which the union types as nullable and the
+// service has already refused when absent.
+export function requireLinkedSeriesAt<K extends "update" | "delete">(
+  executor: string,
+  kind: K,
+  scope: "this" | "thisAndFollowing",
+  command: CommandRecord,
+  master: EventRecord,
+): LinkedSeriesTarget<K> & { recurrenceId: DateTime } {
+  const target = requireLinkedSeries(executor, kind, scope, command, master);
+  const recurrenceId = commandRecurrenceId(command.input);
+  if (recurrenceId === null) {
+    throw new Error(`${executor} requires a ${scope}-scope ${kind} command`);
+  }
+  return { ...target, recurrenceId };
+}
 
 // Transient refresh stays pending so the command can retry; a revoked or
 // missing credential fails the command. Delete is the one caller that cannot

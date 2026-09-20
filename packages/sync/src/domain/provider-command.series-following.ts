@@ -1,4 +1,3 @@
-import { type DateTime } from "@core/types/domain-primitives";
 import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
@@ -20,6 +19,7 @@ import {
 import {
   confirmCommand,
   failCommand,
+  requireLinkedSeriesAt,
   resolveCommandAccessToken,
   resolveCurrentProviderEvent,
   stopCommand,
@@ -56,25 +56,15 @@ export async function executeProviderSeriesFollowingDelete(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "delete" || command.input.recurrenceId === null) {
-    throw new Error(
-      "executeProviderSeriesFollowingDelete requires a thisAndFollowing-scope delete command",
+  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
+    requireLinkedSeriesAt(
+      "executeProviderSeriesFollowingDelete",
+      "delete",
+      "thisAndFollowing",
+      command,
+      master,
     );
-  }
-  if (!master.connectionId || !master.providerEventId) {
-    throw new Error(
-      "executeProviderSeriesFollowingDelete requires a linked series master",
-    );
-  }
-  if (master.recurrence.kind !== "seriesMaster") {
-    throw new Error(
-      "executeProviderSeriesFollowingDelete requires a series master",
-    );
-  }
-  const { input } = command;
-  const connectionId = master.connectionId;
-  const providerEventId = master.providerEventId;
-  const splitAt = new Date(input.recurrenceId as DateTime);
+  const splitAt = new Date(recurrenceId);
 
   if (splitAt.getTime() <= scheduleStartAt(master.schedule).getTime()) {
     return executeProviderDelete(deps, command, master, calendar, now);
@@ -92,7 +82,7 @@ export async function executeProviderSeriesFollowingDelete(
       accessToken: token.accessToken,
       calendarId: calendar.providerCalendarId,
       providerEventId,
-      seriesRules: master.recurrence.rules,
+      seriesRules,
       invitation: input.invitation,
     },
     splitAt,
@@ -221,25 +211,15 @@ export async function executeProviderSeriesFollowingUpdate(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "update" || command.input.recurrenceId === null) {
-    throw new Error(
-      "executeProviderSeriesFollowingUpdate requires a thisAndFollowing-scope update command",
+  const { input, recurrenceId, connectionId, providerEventId, seriesRules } =
+    requireLinkedSeriesAt(
+      "executeProviderSeriesFollowingUpdate",
+      "update",
+      "thisAndFollowing",
+      command,
+      master,
     );
-  }
-  if (!master.connectionId || !master.providerEventId) {
-    throw new Error(
-      "executeProviderSeriesFollowingUpdate requires a linked series master",
-    );
-  }
-  if (master.recurrence.kind !== "seriesMaster") {
-    throw new Error(
-      "executeProviderSeriesFollowingUpdate requires a series master",
-    );
-  }
-  const { input } = command;
-  const connectionId = master.connectionId;
-  const providerEventId = master.providerEventId;
-  const splitAt = new Date(input.recurrenceId as DateTime);
+  const splitAt = new Date(recurrenceId);
 
   if (splitAt.getTime() <= scheduleStartAt(master.schedule).getTime()) {
     return executeProviderSeriesUpdate(deps, command, master, calendar, now);
@@ -269,7 +249,7 @@ export async function executeProviderSeriesFollowingUpdate(
       accessToken,
       calendarId: calendar.providerCalendarId,
       providerEventId,
-      seriesRules: master.recurrence.rules,
+      seriesRules,
       invitation: input.invitation,
     },
     splitAt,

@@ -16,6 +16,7 @@ import {
   confirmCommand,
   confirmDeletion,
   failCommand,
+  requireLinkedSeriesAt,
   resolveCommandAccessToken,
   resolveCurrentProviderEvent,
   stopCommand,
@@ -63,23 +64,18 @@ export async function executeProviderOccurrenceUpdate(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "update" || command.input.recurrenceId === null) {
-    throw new Error(
-      "executeProviderOccurrenceUpdate requires a this-scope update command",
-    );
-  }
-  if (!master.connectionId || !master.providerEventId) {
-    throw new Error(
-      "executeProviderOccurrenceUpdate requires a linked series master",
-    );
-  }
-  if (master.recurrence.kind !== "seriesMaster") {
-    throw new Error("executeProviderOccurrenceUpdate requires a series master");
-  }
-  const { input } = command;
-  const recurrenceId = input.recurrenceId as DateTime;
-  const connectionId = master.connectionId;
-  const seriesProviderEventId = master.providerEventId;
+  const {
+    input,
+    recurrenceId,
+    connectionId,
+    providerEventId: seriesProviderEventId,
+  } = requireLinkedSeriesAt(
+    "executeProviderOccurrenceUpdate",
+    "update",
+    "this",
+    command,
+    master,
+  );
 
   // Guest-list editing is whole-event/whole-series only in v1: a replace on a
   // "this" scope has no defined per-occurrence semantics yet, so refuse typed
@@ -226,23 +222,18 @@ export async function executeProviderOccurrenceDelete(
   calendar: ProviderCalendarRecord,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "delete" || command.input.recurrenceId === null) {
-    throw new Error(
-      "executeProviderOccurrenceDelete requires a this-scope delete command",
-    );
-  }
-  if (!master.connectionId || !master.providerEventId) {
-    throw new Error(
-      "executeProviderOccurrenceDelete requires a linked series master",
-    );
-  }
-  if (master.recurrence.kind !== "seriesMaster") {
-    throw new Error("executeProviderOccurrenceDelete requires a series master");
-  }
-  const { input } = command;
-  const recurrenceId = input.recurrenceId as DateTime;
-  const connectionId = master.connectionId;
-  const seriesProviderEventId = master.providerEventId;
+  const {
+    input,
+    recurrenceId,
+    connectionId,
+    providerEventId: seriesProviderEventId,
+  } = requireLinkedSeriesAt(
+    "executeProviderOccurrenceDelete",
+    "delete",
+    "this",
+    command,
+    master,
+  );
 
   const token = await resolveCommandAccessToken(deps, command, connectionId);
   if (!token.ok) return token.command;
