@@ -203,31 +203,31 @@ const SERIES_BASE_MISSING_MESSAGE =
 // A remote scope-"all" edit addressed through an occurrence needs the series
 // base to rebase the occurrence's dates onto. Without it the absolute dates
 // would become the series start: sync moves the master to them and shifts
-// every instance by the same distance. Checked BEFORE a mutation is queued,
+// every instance by the same distance. Resolved BEFORE a mutation is queued,
 // because a queued promotion coalesces the narrow write away and a failure
-// after that point would lose both edits.
-function isMissingSeriesBase(
-  source: EventRepositorySource,
-  scope: RecurrenceScope,
-  id: EventId,
-  seriesMasterSchedule: EventSchedule | undefined,
-): boolean {
-  return (
-    source === "remote" &&
-    scope === "all" &&
-    decodeOccurrenceId(id) !== null &&
-    seriesMasterSchedule === undefined
-  );
-}
+// after that point would lose both edits — so the lookup and the refusal are
+// one step, shared by the replace entry point and a promotion.
+type SeriesMasterScheduleResult =
+  | { ok: true; schedule: EventSchedule | undefined }
+  | { ok: false };
 
-function seriesMasterScheduleForRemoteScopeAll(
+const NO_SERIES_MASTER_SCHEDULE: SeriesMasterScheduleResult = {
+  ok: true,
+  schedule: undefined,
+};
+
+function resolveSeriesMasterSchedule(
   queryClient: ReturnType<typeof useQueryClient>,
   source: EventRepositorySource,
   id: EventId,
   scope: RecurrenceScope,
-): EventSchedule | undefined {
-  if (source !== "remote" || scope !== "all") return undefined;
-  return snapshotSeriesMasterSchedule(queryClient, source, id);
+): SeriesMasterScheduleResult {
+  if (source !== "remote" || scope !== "all") return NO_SERIES_MASTER_SCHEDULE;
+  const schedule = snapshotSeriesMasterSchedule(queryClient, source, id);
+  if (schedule === undefined && decodeOccurrenceId(id) !== null) {
+    return { ok: false };
+  }
+  return { ok: true, schedule };
 }
 
 function isOccurrenceThisScopeAsk(
@@ -433,42 +433,46 @@ function seriesWriteKey(
   return original.id;
 }
 
-type CreateVariables = {
-  input: CreateEventInput;
+// The envelope every serialized event mutation's variables carry: the write
+// key they serialize against, plus the optional riders buildMutation's shared
+// onMutate/onError/onSuccess read. Declaring them once here is what lets those
+// callbacks reach the riders through the generic instead of casting each
+// operation's variables shape back open at every use.
+type EventWriteVariables = {
   writeKey: EventId;
   callbacks?: EventMutationCallbacks;
   undoEntry?: UndoHistoryEntry;
+  // Set when this write opened an "Apply to series?" ask that a failure must
+  // retire (delete and replace only).
+  opportunityId?: number;
+  skipRepository?: boolean;
+  deletedToast?: boolean;
 };
-type ReplaceVariables = {
+
+type CreateVariables = EventWriteVariables & {
+  input: CreateEventInput;
+};
+type ReplaceVariables = EventWriteVariables & {
   id: EventId;
   input: ReplaceEventInput;
-  writeKey: EventId;
   originalOverride?: Event;
   // Captured before optimistic cache writes so remote scope-all rebasing
   // cannot read a master row that projectSeriesRulesChange already polluted
   // with the occurrence's absolute schedule.
   seriesMasterSchedule?: EventSchedule;
-  opportunityId?: number;
-  callbacks?: EventMutationCallbacks;
-  undoEntry?: UndoHistoryEntry;
 };
-type DeleteVariables = {
+type DeleteVariables = EventWriteVariables & {
   id: EventId;
   scope: RecurrenceScope;
-  writeKey: EventId;
   skipRepository: boolean;
   originalOverride?: Event;
-  opportunityId?: number;
-  undoEntry?: UndoHistoryEntry;
-  deletedToast?: boolean;
 };
-type RsvpVariables = {
+type RsvpVariables = EventWriteVariables & {
   id: EventId;
   input: RsvpEventInput;
   // The connected account answering — the self attendee entry is matched by
   // the calendar's account email, case-insensitively (same rule sync applies).
   accountEmail: string;
-  writeKey: EventId;
 };
 
 export type RsvpPayload = {
@@ -631,7 +635,7 @@ export function useEventMutations(
       }
     }, 0);
   };
-  const buildMutation = <Variables extends { writeKey: EventId }>(
+  const buildMutation = <Variables extends EventWriteVariables>(
     operation: EventMutationOperation,
     mutationFn: (variables: Variables) => Promise<unknown>,
     optimistic: (variables: Variables) => void,
@@ -650,9 +654,7 @@ export function useEventMutations(
       // getOptimisticResult on every render, so the re-render the teardown
       // itself triggers already shows the inserted event: the grid never
       // paints a frame with neither the draft nor the saved card.
-      const callbacks = (variables as { callbacks?: EventMutationCallbacks })
-        .callbacks;
-      callbacks?.onOptimisticApplied?.();
+      variables.callbacks?.onOptimisticApplied?.();
       return { previousQueries };
     },
     onError: (
@@ -675,8 +677,7 @@ export function useEventMutations(
         // is skipped as superseded by itself.
         redispatch.current[operation]?.({ ...variables } as never),
       );
-      const opportunityId = (variables as { opportunityId?: number })
-        .opportunityId;
+      const { opportunityId } = variables;
       if (opportunityId) {
         // Complete before dismissing to prevent a synchronous onClose from
         // recording a decline on a failed save (which is not user intent).
@@ -720,19 +721,15 @@ export function useEventMutations(
     },
     onSuccess: (data: unknown, variables: Variables) => {
       const skipped = isSkippedEventWrite(data);
-      const skipRepository = (variables as { skipRepository?: boolean })
-        .skipRepository;
       // A skipped write never landed, except skipRepository deletes which have
       // nothing to persist and still use the Deleted toast.
-      if (skipped && !skipRepository) return;
-      if (!skipped) {
-        const undoEntry = (variables as { undoEntry?: UndoHistoryEntry })
-          .undoEntry;
-        if (undoEntry) undoHistoryActions.record(undoEntry);
+      if (skipped && !variables.skipRepository) return;
+      if (!skipped && variables.undoEntry) {
+        undoHistoryActions.record(variables.undoEntry);
       }
-      const deletedToast = (variables as { deletedToast?: boolean })
-        .deletedToast;
-      if (deletedToast !== undefined) showDeletedToast(deletedToast);
+      if (variables.deletedToast !== undefined) {
+        showDeletedToast(variables.deletedToast);
+      }
     },
     onSettled: settle,
   });
@@ -1081,20 +1078,13 @@ export function useEventMutations(
         ) {
           return false;
         }
-        const seriesMasterSchedule = seriesMasterScheduleForRemoteScopeAll(
+        const seriesMaster = resolveSeriesMasterSchedule(
           queryClient,
           source,
           payload.id,
           payload.input.scope,
         );
-        if (
-          isMissingSeriesBase(
-            source,
-            payload.input.scope,
-            payload.id,
-            seriesMasterSchedule,
-          )
-        ) {
+        if (!seriesMaster.ok) {
           showErrorToast(SERIES_BASE_MISSING_MESSAGE);
           return false;
         }
@@ -1134,7 +1124,7 @@ export function useEventMutations(
             writeKey,
             opportunityId,
             callbacks,
-            seriesMasterSchedule,
+            seriesMasterSchedule: seriesMaster.schedule,
             undoEntry: undoEntry ?? undefined,
           },
           callbacks,
@@ -1206,19 +1196,11 @@ export function useEventMutations(
           recurrenceScopeOpportunityActions.complete(opportunity.id);
           return;
         }
-        const seriesMasterSchedule =
+        const seriesMaster =
           opportunity.kind === "replace"
-            ? seriesMasterScheduleForRemoteScopeAll(
-                queryClient,
-                source,
-                id,
-                scope,
-              )
-            : undefined;
-        if (
-          opportunity.kind === "replace" &&
-          isMissingSeriesBase(source, scope, id, seriesMasterSchedule)
-        ) {
+            ? resolveSeriesMasterSchedule(queryClient, source, id, scope)
+            : NO_SERIES_MASTER_SCHEDULE;
+        if (!seriesMaster.ok) {
           showErrorToast(SERIES_BASE_MISSING_MESSAGE);
           dismissRecurrenceScopeToast(opportunity.id);
           recurrenceScopeOpportunityActions.complete(opportunity.id);
@@ -1246,7 +1228,7 @@ export function useEventMutations(
               // deleted/overridden cache entry cannot lose the promotion.
               writeKey: id,
               originalOverride: opportunity.original,
-              seriesMasterSchedule,
+              seriesMasterSchedule: seriesMaster.schedule,
             },
             { onSuccess, onSettled },
           );
