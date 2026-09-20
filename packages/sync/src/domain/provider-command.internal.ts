@@ -1,10 +1,25 @@
+import { type EventSchedule } from "@core/types/event.contracts";
+import { type Attendee } from "@core/types/event-attendance.contracts";
 import { type SyncCommandFailureReason } from "@core/types/sync/command.contracts";
-import { type ProviderEventVersion } from "@core/types/sync/event.contracts";
+import {
+  type ProviderEventVersion,
+  type SyncEventContent,
+} from "@core/types/sync/event.contracts";
 import {
   type ConnectionId,
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
+import {
+  mergeAttendees,
+  resolveUpdateContent,
+  resolveUpdateSchedule,
+} from "@sync/domain/merge-update-content";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
+import {
+  intendedSeriesRecurrence,
+  matchesIntendedEdit,
+  patchExpectedVersion,
+} from "@sync/domain/provider-command.intent-match";
 import {
   type ProviderWriteStop,
   resolveAccessToken,
@@ -14,8 +29,10 @@ import {
   type ProviderEvent,
   type ProviderEventRead,
 } from "@sync/providers/provider-event.port";
+import { type ProviderWriteRecurrence } from "@sync/providers/provider-event-writer.port";
 import { type CommandRecord } from "@sync/storage/contracts/command.contracts";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
+import { type ProviderCalendarRecord } from "@sync/storage/contracts/provider-calendar.contracts";
 
 // Transient refresh stays pending so the command can retry; a revoked or
 // missing credential fails the command. Delete is the one caller that cannot
@@ -172,6 +189,161 @@ export async function organizerGuardFailure(
     return null;
   }
   return failCommand(deps, command, "unsupportedCapability", connectionId);
+}
+
+// The shared front half of a provider-linked content update: organizer gate
+// for a guest-list replace, token, fetch, then merge content / schedule /
+// attendees against the freshly fetched provider state. Series-update and
+// single-event update split after this — one commits as a series edit-all,
+// the other as a single (or managed) event.
+export type LinkedProviderUpdate = {
+  input: Extract<CommandRecord["input"], { kind: "update" }>;
+  connectionId: ConnectionId;
+  location: {
+    accessToken: string;
+    calendarId: string;
+    providerEventId: string;
+  };
+  current: ProviderEvent;
+  content: SyncEventContent;
+  schedule: EventSchedule;
+  intendedAttendees: readonly Attendee[] | undefined;
+  intendedRecurrence: ProviderWriteRecurrence;
+};
+
+export async function resolveLinkedProviderUpdate(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  event: EventRecord,
+  calendar: ProviderCalendarRecord,
+): Promise<
+  | { ok: true; update: LinkedProviderUpdate }
+  | { ok: false; command: CommandRecord }
+> {
+  if (command.input.kind !== "update") {
+    throw new Error("resolveLinkedProviderUpdate requires an update command");
+  }
+  if (!event.connectionId || !event.providerEventId) {
+    throw new Error("resolveLinkedProviderUpdate requires a linked event");
+  }
+  const { input } = command;
+  const connectionId = event.connectionId;
+  const providerEventId = event.providerEventId;
+
+  if (input.attendeesEdit === "replace") {
+    const guardFailure = await organizerGuardFailure(
+      deps,
+      command,
+      event,
+      connectionId,
+    );
+    if (guardFailure) return { ok: false, command: guardFailure };
+  }
+
+  const token = await resolveCommandAccessToken(deps, command, connectionId);
+  if (!token.ok) return token;
+
+  const location = {
+    accessToken: token.accessToken,
+    calendarId: calendar.providerCalendarId,
+    providerEventId,
+  };
+
+  const fetched = await resolveCurrentProviderEvent(
+    deps,
+    command,
+    connectionId,
+    () => deps.writer.fetchEvent(location),
+  );
+  if (!fetched.ok) return fetched;
+  const { current } = fetched;
+
+  let content = resolveUpdateContent(
+    event.content,
+    input.content,
+    current.content,
+  );
+  const schedule = resolveUpdateSchedule(input.schedule, current.schedule);
+  // A "replace" merges against the freshly fetched provider list, never
+  // sync's stored record: the Google patch replaces the whole attendees
+  // array, and merging against a stale stored copy would clobber a
+  // concurrent RSVP made between syncs.
+  const intendedAttendees =
+    input.attendeesEdit === "replace" && input.content
+      ? mergeAttendees(input.content.attendees, current.content.attendees)
+      : undefined;
+  if (intendedAttendees) {
+    content = { ...content, attendees: intendedAttendees };
+  }
+
+  return {
+    ok: true,
+    update: {
+      input,
+      connectionId,
+      location,
+      current,
+      content,
+      schedule,
+      intendedAttendees,
+      intendedRecurrence: intendedSeriesRecurrence(input.recurrence, event),
+    },
+  };
+}
+
+// Replay-or-patch for a resolved linked update: confirm at the current
+// version when the provider already holds the edit, otherwise patch
+// conditionally and commit at the version the write returns.
+export async function applyLinkedProviderUpdate(
+  deps: ProviderMutationDeps,
+  command: CommandRecord,
+  event: EventRecord,
+  update: LinkedProviderUpdate,
+  commit: (providerVersion: string) => Promise<CommandRecord>,
+): Promise<CommandRecord> {
+  const {
+    input,
+    connectionId,
+    location,
+    current,
+    content,
+    schedule,
+    intendedAttendees,
+    intendedRecurrence,
+  } = update;
+
+  if (
+    matchesIntendedEdit(
+      current,
+      content,
+      schedule,
+      intendedRecurrence,
+      intendedAttendees,
+    )
+  ) {
+    return commit(current.providerVersion);
+  }
+
+  const patchResult = await runProviderWrite(() =>
+    deps.writer.patchEvent({
+      ...location,
+      expectedVersion: patchExpectedVersion(
+        command,
+        current,
+        event,
+        intendedAttendees !== undefined,
+      ),
+      content,
+      schedule,
+      recurrence: intendedRecurrence,
+      invitation: input.invitation,
+      ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
+    }),
+  );
+  if (!patchResult.ok) {
+    return stopCommand(deps, command, patchResult.stop, connectionId);
+  }
+  return commit(patchResult.value.providerVersion);
 }
 
 // After a failed override-align patch, continue when the instance is already

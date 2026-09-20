@@ -7,27 +7,16 @@ import {
   type ConnectionId,
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
-import {
-  mergeAttendees,
-  resolveUpdateContent,
-  resolveUpdateSchedule,
-} from "@sync/domain/merge-update-content";
+import { resolveUpdateSchedule } from "@sync/domain/merge-update-content";
 import { occurrenceScheduleAfterSeriesEdit } from "@sync/domain/occurrence-projection";
 import { type ProviderMutationDeps } from "@sync/domain/provider-command.deps";
+import { storedSeriesRecurrence } from "@sync/domain/provider-command.intent-match";
 import {
-  intendedSeriesRecurrence,
-  matchesIntendedEdit,
-  patchExpectedVersion,
-  storedSeriesRecurrence,
-} from "@sync/domain/provider-command.intent-match";
-import {
+  applyLinkedProviderUpdate,
   confirmCommand,
   failCommand,
-  organizerGuardFailure,
-  resolveCommandAccessToken,
-  resolveCurrentProviderEvent,
   resolveFailedOverrideAlign,
-  stopCommand,
+  resolveLinkedProviderUpdate,
 } from "@sync/domain/provider-command.internal";
 import { runProviderWrite } from "@sync/domain/provider-write-ladder";
 import { reprojectOccurrences } from "@sync/domain/reproject";
@@ -72,121 +61,35 @@ export async function executeProviderSeriesUpdate(
   if (master.recurrence.kind !== "seriesMaster") {
     throw new Error("executeProviderSeriesUpdate requires a series master");
   }
-  const { input } = command;
-  const connectionId = master.connectionId;
-  const providerEventId = master.providerEventId;
-  const intendedRecurrence = intendedSeriesRecurrence(input.recurrence, master);
-
-  // Same organizer gate as the single-event path: a non-organizer guest-list
-  // replace fails typed before any provider call.
-  if (input.attendeesEdit === "replace") {
-    const guardFailure = await organizerGuardFailure(
-      deps,
-      command,
-      master,
-      connectionId,
-    );
-    if (guardFailure) return guardFailure;
-  }
-
-  const token = await resolveCommandAccessToken(deps, command, connectionId);
-  if (!token.ok) return token.command;
-  const { accessToken } = token;
-
-  const location = {
-    accessToken,
-    calendarId: calendar.providerCalendarId,
-    providerEventId,
-  };
-
-  // Fetch the master's current provider state to detect a replay and learn the
-  // version to commit. A cancellation read means the series no longer exists.
-  const fetched = await resolveCurrentProviderEvent(
-    deps,
-    command,
-    connectionId,
-    () => deps.writer.fetchEvent(location),
-  );
-  if (!fetched.ok) return fetched.command;
-  const { current } = fetched;
-
-  let content = resolveUpdateContent(
-    master.content,
-    input.content,
-    current.content,
-  );
-  const schedule = resolveUpdateSchedule(input.schedule, current.schedule);
-  // Guest membership merges against the freshly fetched master, mirroring the
-  // single-event path (see executeProviderUpdate).
-  const intendedAttendees =
-    input.attendeesEdit === "replace" && input.content
-      ? mergeAttendees(input.content.attendees, current.content.attendees)
-      : undefined;
-  if (intendedAttendees) {
-    content = { ...content, attendees: intendedAttendees };
-  }
-
-  // Replay: the provider already holds this series edit (rules included), so
-  // confirm at its version rather than writing again.
-  if (
-    matchesIntendedEdit(
-      current,
-      content,
-      schedule,
-      intendedRecurrence,
-      intendedAttendees,
-    )
-  ) {
-    return commitProviderSeriesUpdate(
-      deps,
-      command,
-      master,
-      content,
-      intendedAttendees,
-      current.providerVersion,
-      now,
-      {
-        accessToken,
-        calendarId: calendar.providerCalendarId,
-        connectionId,
-      },
-    );
-  }
-
-  const patchResult = await runProviderWrite(() =>
-    deps.writer.patchEvent({
-      ...location,
-      expectedVersion: patchExpectedVersion(
-        command,
-        current,
-        master,
-        intendedAttendees !== undefined,
-      ),
-      content,
-      schedule,
-      recurrence: intendedRecurrence,
-      invitation: input.invitation,
-      ...(intendedAttendees ? { attendees: intendedAttendees } : {}),
-    }),
-  );
-  if (!patchResult.ok) {
-    return stopCommand(deps, command, patchResult.stop, connectionId);
-  }
-  const result = patchResult.value;
-
-  return commitProviderSeriesUpdate(
+  const resolved = await resolveLinkedProviderUpdate(
     deps,
     command,
     master,
-    content,
-    intendedAttendees,
-    result.providerVersion,
-    now,
-    {
-      accessToken,
-      calendarId: calendar.providerCalendarId,
-      connectionId,
-    },
+    calendar,
+  );
+  if (!resolved.ok) return resolved.command;
+  const { update } = resolved;
+
+  return applyLinkedProviderUpdate(
+    deps,
+    command,
+    master,
+    update,
+    (providerVersion) =>
+      commitProviderSeriesUpdate(
+        deps,
+        command,
+        master,
+        update.content,
+        update.intendedAttendees,
+        providerVersion,
+        now,
+        {
+          accessToken: update.location.accessToken,
+          calendarId: update.location.calendarId,
+          connectionId: update.connectionId,
+        },
+      ),
   );
 }
 

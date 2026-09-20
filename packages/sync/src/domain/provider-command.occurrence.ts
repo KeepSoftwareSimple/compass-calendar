@@ -134,7 +134,7 @@ export async function executeProviderOccurrenceUpdate(
       kind: "instance",
     })
   ) {
-    return commitProviderOccurrenceUpdate(
+    return commitProviderOccurrenceOverride(
       deps,
       command,
       master,
@@ -162,7 +162,7 @@ export async function executeProviderOccurrenceUpdate(
   }
   const result = patchResult.value;
 
-  return commitProviderOccurrenceUpdate(
+  return commitProviderOccurrenceOverride(
     deps,
     command,
     master,
@@ -175,11 +175,13 @@ export async function executeProviderOccurrenceUpdate(
   );
 }
 
-// Commit a provider occurrence override locally: upsert the exception
-// carrying the INSTANCE's own provider identity (never the master's — see
+// Commit a live occurrence override locally: upsert the exception carrying
+// the INSTANCE's own provider identity (never the master's — see
 // upsertException's providerIdentity param), reproject the master to exclude
-// that instant, then project the exception's own occurrence.
-async function commitProviderOccurrenceUpdate(
+// that instant, then project the exception's own occurrence. Shared by a
+// scope-"this" edit and a per-occurrence rsvp — same on-disk shape, same
+// identity, different content.
+export async function commitProviderOccurrenceOverride(
   deps: ProviderMutationDeps,
   command: CommandRecord,
   master: EventRecord,
@@ -190,11 +192,6 @@ async function commitProviderOccurrenceUpdate(
   providerVersion: string,
   now: () => Date,
 ): Promise<CommandRecord> {
-  if (command.input.kind !== "update") {
-    throw new Error(
-      "commitProviderOccurrenceUpdate requires an update command",
-    );
-  }
   const exception = await deps.events.upsertException(
     master,
     recurrenceId,
