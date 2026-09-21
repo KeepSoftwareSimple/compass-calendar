@@ -1,0 +1,179 @@
+import { Logger } from "@core/logger/winston.logger";
+import { normalizeEmail } from "@core/util/email.util";
+import { CONFIG } from "@backend/common/constants/config.constants";
+import {
+  EMAIL_SEND_BATCH_SIZE,
+  EMAIL_SEND_CLAIM_LEASE_MS,
+  EMAIL_SEND_POLL_INTERVAL_MS,
+  EMAIL_SEND_PROVIDER_SPACING_MS,
+  emailSendBackoffMs,
+} from "@backend/email/email.constants";
+import { renderWelcomeEmail } from "@backend/email/email-layout";
+import { type EmailSendRecord } from "@backend/email/email-send.record";
+import { emailSendRepository } from "@backend/email/email-send.repository";
+import { buildEmailProvider } from "@backend/email/providers/email.client";
+import { type EmailProvider } from "@backend/email/providers/email.port";
+import { findWelcomeStep } from "@backend/email/welcome-sequence";
+import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
+import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
+import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
+
+const logger = Logger("app:email.dispatch");
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+
+const isAllowlistedRecipient = (email: string): boolean => {
+  const allowlist = CONFIG.EMAIL_ALLOWLIST;
+  if (allowlist.length === 0) {
+    return true;
+  }
+  const normalized = normalizeEmail(email);
+  return allowlist.some((entry) => normalizeEmail(entry) === normalized);
+};
+
+const isInvalidRecipientError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const message = error.message;
+  return (
+    /\(\s*4\d\d\s*\)/.test(message) &&
+    /invalid|recipient|bounce|undeliverable/i.test(message)
+  );
+};
+
+export class EmailDispatchService {
+  #pollTimer: ReturnType<typeof setInterval> | undefined;
+  #pendingCycle: Promise<void> | undefined;
+  #provider: EmailProvider | undefined;
+
+  private getProvider(): EmailProvider {
+    if (!this.#provider) {
+      this.#provider = buildEmailProvider(CONFIG);
+    }
+    return this.#provider;
+  }
+
+  startPolling = (): void => {
+    if (!isWelcomeEmailEnabled() || this.#pollTimer) {
+      return;
+    }
+    this.#runCycle();
+    this.#pollTimer = setInterval(() => {
+      this.#runCycle();
+    }, EMAIL_SEND_POLL_INTERVAL_MS);
+  };
+
+  stopPolling = async (): Promise<void> => {
+    if (this.#pollTimer) {
+      clearInterval(this.#pollTimer);
+      this.#pollTimer = undefined;
+    }
+    await this.#pendingCycle;
+  };
+
+  dispatchDue = async (): Promise<void> => {
+    if (!isWelcomeEmailEnabled()) {
+      return;
+    }
+
+    const now = new Date();
+    const claimed = await emailSendRepository.claimDue(
+      now,
+      EMAIL_SEND_BATCH_SIZE,
+      EMAIL_SEND_CLAIM_LEASE_MS,
+    );
+
+    for (const row of claimed) {
+      await this.#dispatchRow(row);
+      await sleep(EMAIL_SEND_PROVIDER_SPACING_MS);
+    }
+  };
+
+  #runCycle = (): void => {
+    const cycle = this.dispatchDue().catch((error: unknown) => {
+      logger.error(
+        "Welcome email dispatch cycle failed",
+        error instanceof Error
+          ? { message: error.message }
+          : { error: String(error) },
+      );
+    });
+    this.#pendingCycle = cycle;
+    void cycle.finally(() => {
+      if (this.#pendingCycle === cycle) {
+        this.#pendingCycle = undefined;
+      }
+    });
+  };
+
+  async #dispatchRow(row: EmailSendRecord): Promise<void> {
+    const step = findWelcomeStep(row.stepKey);
+    if (!step) {
+      await emailSendRepository.markSkipped(row._id, "Unknown welcome step");
+      return;
+    }
+
+    const user = await loadWelcomeSequenceUser(row.userId);
+    if (!user) {
+      await emailSendRepository.markSkipped(row._id, "User not found");
+      return;
+    }
+
+    if (step.skipIf?.(user)) {
+      await emailSendRepository.markSkipped(row._id, "Step skipped by skipIf");
+      return;
+    }
+
+    if (!isAllowlistedRecipient(user.email)) {
+      await emailSendRepository.markSkipped(
+        row._id,
+        "Recipient not allowlisted",
+      );
+      return;
+    }
+
+    const content = getWelcomeEmailContent(row.stepKey);
+    if (!content) {
+      await emailSendRepository.markSkipped(row._id, "Missing email content");
+      return;
+    }
+
+    const rendered = renderWelcomeEmail(row.stepKey, content);
+
+    try {
+      const result = await this.getProvider().send({
+        idempotencyKey: row._id,
+        to: user.email,
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        headers: {},
+      });
+      await emailSendRepository.markSent(row._id, result.messageId);
+    } catch (error) {
+      if (isInvalidRecipientError(error)) {
+        await emailSendRepository.markSkipped(
+          row._id,
+          error instanceof Error ? error.message : String(error),
+        );
+        return;
+      }
+
+      const nextAttemptAt = new Date(
+        Date.now() + emailSendBackoffMs(row.attemptCount + 1),
+      );
+      await emailSendRepository.recordFailure(
+        row._id,
+        error instanceof Error ? error.message : String(error),
+        nextAttemptAt,
+      );
+    }
+  }
+}
+
+const emailDispatchService = new EmailDispatchService();
+export default emailDispatchService;

@@ -26,6 +26,8 @@ import { UserError } from "@backend/common/errors/user/user.errors";
 import mongoService from "@backend/common/services/mongo.service";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { getSyncServiceClient } from "@backend/common/services/sync-service/sync-service.factory";
+import { emailSendRepository } from "@backend/email/email-send.repository";
+import { enrollWelcomeSequenceForNewUser } from "@backend/email/welcome-sequence.enrollment";
 import eventService from "@backend/event/services/event.service";
 import { findCanonicalCompassUser } from "@backend/user/queries/user.queries";
 import hiddenEventService from "@backend/user/services/hidden-event.service";
@@ -216,6 +218,12 @@ class UserService {
     // in their sidebar and an empty column in their day view.
     if (isNewUser) {
       await calendarService.ensureLocalCalendar(userId, session);
+      await enrollWelcomeSequenceForNewUser(
+        userId,
+        signedUpAt,
+        isNewUser,
+        session,
+      );
     }
 
     return {
@@ -261,6 +269,11 @@ class UserService {
           session,
         );
         summary.hiddenEvents = hiddenEvents.deletedCount;
+
+        summary.emailSends = await emailSendRepository.deleteAllByUser(
+          _id,
+          session,
+        );
 
         // delete user
         const userDel = await mongoService.user.deleteOne({ _id }, { session });

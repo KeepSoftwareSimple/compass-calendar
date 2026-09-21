@@ -9,6 +9,7 @@ export interface Summary_Delete {
   calendars?: number;
   events?: number;
   hiddenEvents?: number;
+  emailSends?: number;
   user?: number;
   sessions?: number;
   superTokensUsers?: number;

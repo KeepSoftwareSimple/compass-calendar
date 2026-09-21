@@ -537,6 +537,14 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
       }
     }
 
+    if (isEmailSource(rel)) {
+      if (!matchesConstraintAllow(rel, EM_DASH_ALLOWLIST)) {
+        for (const line of emDashHits(source)) {
+          hits.push({ path: rel, rule: "em-dash", line });
+        }
+      }
+    }
+
     if (isWebSource(rel)) {
       if (!matchesConstraintAllow(rel, EM_DASH_ALLOWLIST)) {
         for (const line of emDashHits(source)) {
@@ -563,6 +571,14 @@ function isWebSource(rel: string): boolean {
     !rel.includes(".spec.") &&
     !rel.includes("/__tests__/") &&
     !rel.includes("/__mocks__/")
+  );
+}
+
+function isEmailSource(rel: string): boolean {
+  return (
+    rel.startsWith("packages/backend/src/email/") &&
+    !rel.includes(".test.") &&
+    !rel.includes(".spec.")
   );
 }
 

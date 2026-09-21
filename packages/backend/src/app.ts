@@ -4,6 +4,7 @@ import publicBookingService from "@backend/booking/services/public-booking.servi
 import { ensureCalendarIndexes } from "@backend/calendar/calendar-indexes";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
+import emailDispatchService from "@backend/email/email-dispatch.service";
 import { ensureEmailIndexes } from "@backend/email/email-indexes";
 import { createBackendHttpServer } from "@backend/servers/express/express.server";
 import { foregroundSyncRefresh } from "@backend/servers/sse/foreground-sync-refresh";
@@ -52,6 +53,7 @@ async function start() {
     foregroundSyncRefresh.start();
     userService.startAccountDeletionRetries();
     publicBookingService.startRecoveryRetries();
+    emailDispatchService.startPolling();
   } catch (error) {
     logger.error("Problems encountered during startup", error);
 
@@ -76,6 +78,7 @@ async function gracefulShutdown(): Promise<void> {
     foregroundSyncRefresh.stop();
     await userService.stopAccountDeletionRetries();
     await publicBookingService.stopRecoveryRetries();
+    await emailDispatchService.stopPolling();
     await closeHttpServer();
     await mongoService.stop();
     await stopPostHogLogs();
