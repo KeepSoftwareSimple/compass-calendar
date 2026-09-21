@@ -42,14 +42,22 @@ gh() {
   fi
 }
 
-# Ordered milestone titles from AGENT_LOOP_MILESTONES (comma or newline
-# separated). Empty input is fail-closed: the picker idles.
+# Ordered milestone titles from AGENT_LOOP_MILESTONES. One title per line
+# when the value has newlines (titles may then contain commas, e.g.
+# "Email-ready v1: reconnect, realtime, signal"); a single line splits on
+# commas. Empty input is fail-closed: the picker idles.
 parse_milestones() {
   local raw="${AGENT_LOOP_MILESTONES:-}"
   if [ -z "$raw" ]; then
     return 0
   fi
-  printf '%s\n' "$raw" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' || true
+  local lines
+  if [[ "$raw" == *$'\n'* ]]; then
+    lines=$(printf '%s\n' "$raw")
+  else
+    lines=$(printf '%s\n' "$raw" | tr ',' '\n')
+  fi
+  printf '%s\n' "$lines" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' || true
 }
 
 # "Providers L: loop + CI acceleration" -> "providers-l"
