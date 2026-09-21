@@ -12,6 +12,12 @@ const root =
   process.env.WEB_ROOT || path.resolve(import.meta.dir, "../build/web");
 const textTypes: Record<string, string> = COMPRESSIBLE_STATIC_TYPES;
 
+const STATIC_SECURITY_HEADERS: Record<string, string> = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "SAMEORIGIN",
+};
+
 type ContentEncoding = "br" | "gzip";
 
 const ENCODING_EXTENSIONS: Record<ContentEncoding, string> = {
@@ -90,6 +96,7 @@ async function fileResponse(
   const type = contentType(filePath);
   const etag = `"${fileStat.size.toString(16)}-${fileStat.mtimeMs.toString(16)}"`;
   const headers: Record<string, string> = {
+    ...STATIC_SECURITY_HEADERS,
     ...(type ? { "Content-Type": type } : {}),
     "Cache-Control": cacheControl(resolvedFilePath),
     ETag: etag,

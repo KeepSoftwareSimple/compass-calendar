@@ -1,4 +1,7 @@
-import { HTTP_SERVER_LIMITS } from "@core/server/http-server";
+import {
+  HTTP_JSON_BODY_LIMIT,
+  HTTP_SERVER_LIMITS,
+} from "@core/server/http-server";
 import {
   createBackendHttpServer,
   initExpressServer,
@@ -14,6 +17,10 @@ describe("initExpressServer", () => {
   it("uses the flat query parser so repeated parameters remain arrays", () => {
     const app = initExpressServer();
     expect(app.get("query parser")).toBe("simple");
+  });
+
+  it("exports a bounded JSON body limit for express.json()", () => {
+    expect(HTTP_JSON_BODY_LIMIT).toBe("256kb");
   });
 
   it("creates an HTTP server with bounded connection limits", () => {

@@ -10,6 +10,11 @@ export type HttpServerLimits = {
   maxRequestsPerSocket: number;
 };
 
+// Explicit cap for express.json() on API services. Keeps body-parser on a
+// validated limit (invalid values can disable enforcement) and bounds JSON
+// allocation per request without affecting normal event payloads.
+export const HTTP_JSON_BODY_LIMIT = "256kb" as const;
+
 // Public API behind Caddy. Caddy holds the browser-facing connection, so a
 // short keep-alive and a request cap on this listener are fine.
 export const HTTP_SERVER_LIMITS: HttpServerLimits = {
