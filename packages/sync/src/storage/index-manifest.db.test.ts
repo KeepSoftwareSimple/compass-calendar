@@ -116,6 +116,9 @@ describe("installIndexManifest", () => {
       false,
     );
     expect(indexes.some((i) => i.name === "connection_runafter")).toBe(true);
+    const lastError = indexes.find((i) => i.name === "connection_last_error");
+    expect(lastError?.key).toEqual({ connectionId: 1, lastErrorAt: 1 });
+    expect(lastError?.sparse).toBe(true);
   });
 
   it("installs owner-calendar and resourceKind-led indexes on sync_resources", async () => {
@@ -138,6 +141,26 @@ describe("installIndexManifest", () => {
       resourceKind: 1,
       bootstrapState: 1,
       updatedAt: 1,
+    });
+  });
+
+  it("installs an endAt index on event occurrences without changing start order", async () => {
+    const indexes = await db
+      .collection(SYNC_COLLECTIONS.eventOccurrences)
+      .indexes();
+    const start = indexes.find((i) => i.name === "calendar_gen_start");
+    expect(start?.key).toEqual({
+      calendarId: 1,
+      generation: 1,
+      startAt: 1,
+      _id: 1,
+    });
+    const end = indexes.find((i) => i.name === "calendar_gen_end");
+    expect(end?.key).toEqual({
+      calendarId: 1,
+      generation: 1,
+      endAt: 1,
+      startAt: 1,
     });
   });
 

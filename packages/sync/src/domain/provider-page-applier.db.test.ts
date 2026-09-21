@@ -159,13 +159,16 @@ describe("ProviderPageApplier", () => {
       end: windowEnd,
     });
 
-    expect(busy).toEqual([
-      {
-        startAt: new Date("2026-07-14T15:00:00.000Z"),
-        endAt: new Date("2026-07-14T16:00:00.000Z"),
-        eventId: expect.any(String),
-      },
-    ]);
+    expect(busy).toEqual({
+      truncated: false,
+      intervals: [
+        {
+          startAt: new Date("2026-07-14T15:00:00.000Z"),
+          endAt: new Date("2026-07-14T16:00:00.000Z"),
+          eventId: expect.any(String),
+        },
+      ],
+    });
   });
 
   it("reprojects occurrence busy when a transparent import becomes opaque on pull", async () => {
@@ -184,20 +187,23 @@ describe("ProviderPageApplier", () => {
       });
 
     await run.applyPage([{ ...single("flex"), busy: false }]);
-    expect(await queryBusy()).toEqual([]);
+    expect(await queryBusy()).toEqual({ intervals: [], truncated: false });
 
     // A real provider bumps etag when transparency changes; same-etag skip
     // is for the windowed-then-full import pass, not a content-changing pull.
     await run.applyPage([
       { ...single("flex"), busy: true, providerVersion: "etag-flex-opaque" },
     ]);
-    expect(await queryBusy()).toEqual([
-      {
-        startAt: new Date("2026-07-14T15:00:00.000Z"),
-        endAt: new Date("2026-07-14T16:00:00.000Z"),
-        eventId: expect.any(String),
-      },
-    ]);
+    expect(await queryBusy()).toEqual({
+      truncated: false,
+      intervals: [
+        {
+          startAt: new Date("2026-07-14T15:00:00.000Z"),
+          endAt: new Date("2026-07-14T16:00:00.000Z"),
+          eventId: expect.any(String),
+        },
+      ],
+    });
   });
 
   it("preserves an existing iCalUID when a later sparse read omits it", async () => {

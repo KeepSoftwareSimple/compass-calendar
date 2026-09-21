@@ -437,6 +437,7 @@ export function registerConnectionRoutes(
             complete: false,
             issues: [],
             bookable: false,
+            truncated: false,
           }),
         );
         return;

@@ -16,8 +16,10 @@ import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type EventOccurrenceRecord } from "@sync/storage/contracts/event-occurrence.contracts";
 import {
   BUSY_MAX_LOOKBACK_MS,
+  busyOverlapFilter,
   EventOccurrenceRepository,
   type OccurrenceInput,
+  occurrenceRangeFilter,
 } from "@sync/storage/repositories/event-occurrence.repository";
 
 const objectId = () => faker.database.mongodbObjectId();
@@ -635,9 +637,161 @@ describe("EventOccurrenceRepository", () => {
         start: windowStart,
         end: windowEnd,
       });
-      expect(busy).toEqual([
-        { startAt: inLookbackStart, endAt: windowEnd, eventId: eventIn },
-      ]);
+      expect(busy).toEqual({
+        truncated: false,
+        intervals: [
+          { startAt: inLookbackStart, endAt: windowEnd, eventId: eventIn },
+        ],
+      });
+    });
+
+    it("reports truncation when more overlaps exist than the limit", async () => {
+      const tenantId = objectId() as OccurrenceInput["tenantId"];
+      const principalId = objectId() as OccurrenceInput["principalId"];
+      const calendarId = objectId() as OccurrenceInput["calendarId"];
+      const windowStart = new Date("2026-07-14T00:00:00.000Z");
+      const windowEnd = new Date("2026-07-15T00:00:00.000Z");
+      const entries = [0, 1].map((hour) => {
+        const eventId = objectId() as OccurrenceInput["eventId"];
+        const startAt = new Date(windowStart.getTime() + hour * 3_600_000);
+        return {
+          eventId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId,
+              occurrenceKey: `${eventId}:h` as OccurrenceKey,
+              startAt,
+              endAt: new Date(startAt.getTime() + 1_800_000),
+              schedule: {
+                kind: "timed",
+                start: startAt.toISOString() as DateTime,
+                end: new Date(
+                  startAt.getTime() + 1_800_000,
+                ).toISOString() as DateTime,
+                timeZone: "UTC" as TimeZone,
+              },
+            }),
+          ],
+        };
+      });
+      await repo.replaceForEvents(entries);
+
+      const busy = await repo.listBusyOverlapping({
+        tenantId,
+        principalId,
+        calendars: [{ calendarId, generation: 0 }],
+        start: windowStart,
+        end: windowEnd,
+        limit: 1,
+      });
+      expect(busy.truncated).toBe(true);
+      expect(busy.intervals).toHaveLength(1);
+      expect(busy.intervals[0]?.eventId).toBe(entries[0]?.eventId);
+    });
+  });
+
+  describe("overlap index plans", () => {
+    it("bounds endAt so long-past rows are not fetched", async () => {
+      const tenantId = objectId() as OccurrenceInput["tenantId"];
+      const principalId = objectId() as OccurrenceInput["principalId"];
+      const calendarId = objectId() as OccurrenceInput["calendarId"];
+      const windowStart = new Date("2026-07-14T00:00:00.000Z");
+      const windowEnd = new Date("2026-07-15T00:00:00.000Z");
+      const entries: {
+        eventId: OccurrenceInput["eventId"];
+        generation: number;
+        occurrences: OccurrenceInput[];
+      }[] = [];
+
+      const push = (startAt: Date, endAt: Date) => {
+        const eventId = objectId() as OccurrenceInput["eventId"];
+        entries.push({
+          eventId,
+          generation: 0,
+          occurrences: [
+            occurrence({
+              tenantId,
+              principalId,
+              calendarId,
+              eventId,
+              occurrenceKey: `${eventId}:k` as OccurrenceKey,
+              startAt,
+              endAt,
+              schedule: {
+                kind: "timed",
+                start: startAt.toISOString() as DateTime,
+                end: endAt.toISOString() as DateTime,
+                timeZone: "UTC" as TimeZone,
+              },
+            }),
+          ],
+        });
+      };
+
+      for (let i = 0; i < 20; i += 1) {
+        const start = new Date(
+          windowStart.getTime() - BUSY_MAX_LOOKBACK_MS - (i + 2) * 86_400_000,
+        );
+        push(start, new Date(start.getTime() + 3_600_000));
+      }
+      for (let i = 0; i < 15; i += 1) {
+        const start = new Date(windowStart.getTime() - (i + 2) * 86_400_000);
+        push(start, new Date(start.getTime() + 3_600_000));
+      }
+      for (let i = 0; i < 3; i += 1) {
+        const start = new Date(windowStart.getTime() + i * 3_600_000);
+        push(start, new Date(start.getTime() + 1_800_000));
+      }
+      push(new Date(windowStart.getTime() - 3 * 86_400_000), windowEnd);
+      await repo.replaceForEvents(entries);
+
+      const query = {
+        tenantId,
+        principalId,
+        calendars: [{ calendarId, generation: 0 }],
+        start: windowStart,
+        end: windowEnd,
+        limit: 50,
+      };
+      const page = await repo.listByCalendarRange(query);
+      expect(page).toHaveLength(4);
+
+      const rangePlan = await db
+        .collection("event_occurrences")
+        .find(occurrenceRangeFilter(query))
+        .sort({ startAt: 1, _id: 1 })
+        .limit(query.limit)
+        .explain("executionStats");
+      assertEndAtBounded(rangePlan, 4);
+
+      const busyPlan = await db
+        .collection("event_occurrences")
+        .find(busyOverlapFilter(query))
+        .sort({ startAt: 1 })
+        .explain("executionStats");
+      assertEndAtBounded(busyPlan, 4);
     });
   });
 });
+
+function assertEndAtBounded(
+  plan: Record<string, unknown>,
+  returned: number,
+): void {
+  const stats = plan["executionStats"] as {
+    nReturned: number;
+    totalDocsExamined: number;
+  };
+  const winning = JSON.stringify(
+    (plan["queryPlanner"] as { winningPlan: unknown }).winningPlan,
+  );
+  expect(stats.nReturned).toBe(returned);
+  expect(stats.totalDocsExamined).toBe(stats.nReturned);
+  expect(winning).toContain("calendar_gen_end");
+  expect(winning).toContain('"endAt":1');
+  expect(winning).not.toContain("COLLSCAN");
+}
