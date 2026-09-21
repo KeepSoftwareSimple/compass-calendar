@@ -13,6 +13,7 @@ import { BOOTSTRAP_STALLED_AFTER_MS } from "@sync/domain/connection-state";
 import { refreshConnectionState } from "@sync/domain/connection-state-refresh.service";
 import { type JobEnqueue } from "@sync/storage/contracts/job.contracts";
 import { CredentialRepository } from "@sync/storage/repositories/credential.repository";
+import { InvalidationRepository } from "@sync/storage/repositories/invalidation.repository";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-calendar.repository";
 import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
@@ -29,6 +30,7 @@ describe("refreshConnectionState", () => {
   let resources: SyncResourceRepository;
   let credentials: CredentialRepository;
   let jobs: JobRepository;
+  let invalidations: InvalidationRepository;
 
   beforeEach(() => {
     connections = new ProviderConnectionRepository(storage.db());
@@ -36,6 +38,7 @@ describe("refreshConnectionState", () => {
     resources = new SyncResourceRepository(storage.db());
     credentials = new CredentialRepository(storage.db());
     jobs = new JobRepository(storage.db());
+    invalidations = new InvalidationRepository(storage.db());
   });
 
   const deps = () => ({ connections, calendars, resources, credentials, jobs });
@@ -184,6 +187,96 @@ describe("refreshConnectionState", () => {
     expect(withSlowerCalendar.lastSyncedAt).toEqual(
       new Date("2026-07-10T00:00:00.000Z"),
     );
+  });
+
+  it("persists a newer lastSyncedAt without a connection invalidation once already healthy", async () => {
+    const connection = await seedImportingConnection();
+    const calendar = await calendars.upsertByProviderCalendar({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      providerCalendarId: "primary@example.com" as ProviderCalendarSourceId,
+      displayName: "Primary",
+      color: "#fff",
+      active: true,
+      primary: true,
+      accessRole: "owner",
+      capabilities: {
+        canReadEvents: true,
+        canWriteEvents: true,
+        canReadBusy: true,
+        canInviteAttendees: true,
+      },
+      eventLabels: [],
+      createsGoogleMeet: true,
+    });
+    const listResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "calendarList",
+      calendarId: null,
+    });
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      listResource._id,
+      "list-cursor",
+      new Date("2026-07-11T00:00:00.000Z"),
+    );
+    const eventsResource = await resources.ensure({
+      tenantId: connection.tenantId,
+      principalId: connection.principalId,
+      connectionId: connection._id,
+      resourceKind: "events",
+      calendarId: calendar._id as ProviderCalendarId,
+    });
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      "events-cursor",
+      new Date("2026-07-11T00:00:00.000Z"),
+    );
+    await resources.setBootstrapState(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      "ready",
+    );
+
+    const withInvalidations = { ...deps(), invalidations };
+    const healthy = await refreshConnectionState(withInvalidations, connection);
+    expect(healthy.state).toBe("healthy");
+    const afterFlip = await invalidations.listAfter(
+      connection.tenantId,
+      connection.principalId,
+      null,
+      20,
+    );
+    expect(afterFlip.map((row) => row.invalidation.kind)).toEqual([
+      "connection",
+    ]);
+
+    await resources.advanceCursor(
+      connection.tenantId,
+      connection.principalId,
+      eventsResource._id,
+      "events-cursor",
+      new Date("2026-07-11T00:01:00.000Z"),
+    );
+    const later = await refreshConnectionState(withInvalidations, healthy);
+    expect(later.state).toBe("healthy");
+    expect(later.lastSyncedAt).toEqual(new Date("2026-07-11T00:01:00.000Z"));
+    const afterTick = await invalidations.listAfter(
+      connection.tenantId,
+      connection.principalId,
+      null,
+      20,
+    );
+    expect(afterTick.map((row) => row.invalidation.kind)).toEqual([
+      "connection",
+    ]);
   });
 
   it("reports delayed/providerErrors when a failed bootstrap would otherwise keep syncing", async () => {
