@@ -11,8 +11,8 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  EventReadSchema,
   type EventRecord,
-  EventRecordSchema,
 } from "@sync/storage/contracts/event.contracts";
 
 // bulkWrite / $in chunks. Matches the 500-1000 doc batching Atlas round-trips
@@ -147,7 +147,7 @@ export class EventRepository {
 
     return planned.map(
       ({ input, existing: current, insertId, providerMetadata }) =>
-        EventRecordSchema.parse({
+        EventReadSchema.parse({
           ...current,
           ...input,
           providerMetadata,
@@ -253,7 +253,7 @@ export class EventRepository {
           })
           .toArray();
         for (const record of records) {
-          const parsed = EventRecordSchema.parse(record);
+          const parsed = EventReadSchema.parse(record);
           if (!parsed.providerEventId) continue;
           found.set(
             providerIdentityKey({
@@ -293,7 +293,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.recurrence.kind !== "exception") continue;
         found.set(
           seriesExceptionKey({
@@ -325,7 +325,7 @@ export class EventRepository {
   // collides on the unique _id at insert (a caught error) instead of silently
   // clobbering the owner's document.
   async put(record: EventRecord): Promise<EventRecord> {
-    const parsed = EventRecordSchema.parse(record);
+    const parsed = EventReadSchema.parse(record);
     await this.collection.replaceOne(
       {
         _id: parsed._id,
@@ -348,7 +348,7 @@ export class EventRepository {
       tenantId,
       principalId,
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Batch-hydrate full event records by id, owner-scoped. The full-fidelity read
@@ -365,7 +365,7 @@ export class EventRepository {
     const records = await this.collection
       .find({ _id: { $in: [...ids] }, tenantId, principalId })
       .toArray();
-    return records.map((record) => EventRecordSchema.parse(record));
+    return records.map((record) => EventReadSchema.parse(record));
   }
 
   // Look up one provider-linked event by its provider identity, owner-scoped.
@@ -388,7 +388,7 @@ export class EventRepository {
       // $type: see the PLANNER TRAP note in index-manifest.ts.
       providerEventId: { $eq: identity.providerEventId, $type: "string" },
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Batch form of findByProviderIdentity: one $in per chunk instead of one
@@ -417,7 +417,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.providerEventId) {
           found.set(parsed.providerEventId, parsed);
         }
@@ -445,7 +445,7 @@ export class EventRepository {
       calendarId: identity.calendarId,
       "providerMetadata.href": identity.href,
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Remove one event by id, scoped to its owner so a caller can only delete its
@@ -469,7 +469,7 @@ export class EventRepository {
   // whether a document was matched; false means the event vanished since it was
   // read, and the caller should re-evaluate rather than treat it as applied.
   async replaceExisting(record: EventRecord): Promise<boolean> {
-    const parsed = EventRecordSchema.parse(record);
+    const parsed = EventReadSchema.parse(record);
     const result = await this.collection.replaceOne(
       {
         _id: parsed._id,
@@ -590,7 +590,7 @@ export class EventRepository {
         { upsert: true, returnDocument: "after" },
       );
       if (!result) throw new Error("Exception upsert did not return a record");
-      return EventRecordSchema.parse(result);
+      return EventReadSchema.parse(result);
     } catch (error) {
       // Concurrent import won the provider_event_identity insert between our
       // lookup and this upsert. Converge on that row instead of failing the
@@ -667,7 +667,7 @@ export class EventRepository {
     if (!result) {
       throw new Error("Exception provider-identity update returned no record");
     }
-    return EventRecordSchema.parse(result);
+    return EventReadSchema.parse(result);
   }
 
   // Every exception event of a series (overridden or cancelled instances),
@@ -687,7 +687,7 @@ export class EventRepository {
         "recurrence.seriesId": seriesId,
       })
       .toArray();
-    return records.map((r) => EventRecordSchema.parse(r));
+    return records.map((r) => EventReadSchema.parse(r));
   }
 
   // Batch form of findSeriesExceptions: one $in for every series touched on a
@@ -710,7 +710,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.recurrence.kind !== "exception") continue;
         found.get(parsed.recurrence.seriesId)?.push(parsed);
       }
