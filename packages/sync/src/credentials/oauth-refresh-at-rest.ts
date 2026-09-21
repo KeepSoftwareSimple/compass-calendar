@@ -18,9 +18,6 @@ export function openOauthRefreshToken(
   keyBase64: string | null,
   record: OauthRefreshCredentialRecord,
 ): string {
-  if (record.refreshToken) {
-    return record.refreshToken;
-  }
   if (
     record.refreshTokenCiphertext &&
     record.refreshTokenIv &&
@@ -45,19 +42,10 @@ export function openOauthRefreshToken(
 export function hasStoredOauthRefreshToken(
   record: OauthRefreshCredentialRecord,
 ): boolean {
-  if (record.refreshToken && record.refreshToken.length > 0) {
-    return true;
-  }
   return Boolean(
     record.refreshTokenCiphertext &&
       record.refreshTokenIv &&
       record.refreshTokenTag &&
       record.keyVersion,
   );
-}
-
-export function isPlaintextOauthRefresh(
-  record: OauthRefreshCredentialRecord,
-): boolean {
-  return Boolean(record.refreshToken && record.refreshToken.length > 0);
 }

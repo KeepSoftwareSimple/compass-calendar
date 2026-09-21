@@ -8,7 +8,6 @@ import {
   type ProviderKind,
 } from "@core/types/sync/identity.contracts";
 import {
-  isPlaintextOauthRefresh,
   openOauthRefreshToken,
   sealOauthRefreshToken,
 } from "@sync/credentials/oauth-refresh-at-rest";
@@ -225,18 +224,6 @@ export class CredentialCustody {
         "missingRefreshToken",
         "Credential was removed during refresh",
       );
-    }
-    if (isPlaintextOauthRefresh(credential) && this.#credentialEncryptionKey) {
-      const sealed = sealOauthRefreshToken(
-        this.#credentialEncryptionKey,
-        refreshToken,
-      );
-      await this.credentials.reencryptOauthRefresh(credential._id, {
-        refreshTokenCiphertext: sealed.ciphertext,
-        refreshTokenIv: sealed.iv,
-        refreshTokenTag: sealed.tag,
-        keyVersion: sealed.keyVersion,
-      });
     }
     return refreshed.accessToken;
   }

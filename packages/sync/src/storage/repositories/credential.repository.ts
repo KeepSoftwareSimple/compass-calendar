@@ -88,36 +88,6 @@ export class CredentialRepository {
     return OauthRefreshCredentialRecordSchema.parse(result);
   }
 
-  // Replace a legacy plaintext refresh token with encrypted fields after a
-  // successful refresh. Idempotent when the row is already encrypted.
-  async reencryptOauthRefresh(
-    connectionId: ConnectionId,
-    input: Omit<
-      OauthRefreshStoredUpsert,
-      "connectionId" | "provider" | "scopes"
-    >,
-  ): Promise<OauthRefreshCredentialRecord | null> {
-    const result = await this.collection.findOneAndUpdate(
-      {
-        _id: connectionId,
-        ...OAUTH_ONLY_FILTER,
-        refreshToken: { $type: "string" },
-      },
-      {
-        $set: {
-          refreshTokenCiphertext: input.refreshTokenCiphertext,
-          refreshTokenIv: input.refreshTokenIv,
-          refreshTokenTag: input.refreshTokenTag,
-          keyVersion: input.keyVersion,
-          updatedAt: new Date(),
-        },
-        $unset: PLAINTEXT_REFRESH_TOKEN_FIELD,
-      },
-      { returnDocument: "after" },
-    );
-    return result ? OauthRefreshCredentialRecordSchema.parse(result) : null;
-  }
-
   // Store or replace a password credential. OAuth fields from a prior kind
   // are unset so the document cannot mix kinds. The caller seals the secret
   // before this write; the repository never sees plaintext.

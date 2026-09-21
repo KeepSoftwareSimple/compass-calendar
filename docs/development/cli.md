@@ -37,7 +37,7 @@ bun run cli encrypt-credentials
 bun run cli encrypt-credentials --apply
 ```
 
-Run on staging, confirm the report shows zero matched rows, then run on production. After production converges, a follow-up release can drop plaintext acceptance.
+Run on staging, confirm the report shows zero matched rows, then run on production before deploying a sync release that rejects plaintext OAuth rows at startup.
 
 #### Key rotation (procedure only)
 

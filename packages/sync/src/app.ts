@@ -27,6 +27,10 @@ import {
 } from "@sync/auth/internal-auth";
 import { loadSyncConfig, type SyncConfig } from "@sync/config/sync.config";
 import { CredentialCustody } from "@sync/credentials/credential-custody.service";
+import {
+  assertOauthCredentialStartupReady,
+  PLAINTEXT_OAUTH_BOOT_MESSAGE,
+} from "@sync/credentials/oauth-credential-startup";
 import { rediscoverStaleCalendarLists } from "@sync/domain/calendar-list-rediscovery.service";
 import {
   CONNECTION_CACHE_RETENTION_MS,
@@ -253,6 +257,24 @@ async function start(): Promise<void> {
       forbiddenDatabaseName: config.COMPASS_API_DATABASE,
       enforceLeastPrivilege: config.ENFORCE_LEAST_PRIVILEGE,
     });
+
+    try {
+      await assertOauthCredentialStartupReady(
+        mongo.db,
+        config.CREDENTIAL_ENCRYPTION_KEY,
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message === PLAINTEXT_OAUTH_BOOT_MESSAGE ||
+          error.message ===
+            "stored credentials require sync.credentialEncryptionKey")
+      ) {
+        logger.error(error.message);
+        process.exit(1);
+      }
+      throw error;
+    }
 
     // Retention is local-only (no provider calls), so it runs in passive mode
     // too — soft-disconnected caches must still age out. Register before the
