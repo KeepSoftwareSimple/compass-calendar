@@ -30,7 +30,8 @@ const isDuplicateKeyError = (error: unknown): boolean =>
 const toDate = (unixSeconds: number | null | undefined): Date | undefined =>
   typeof unixSeconds === "number" ? new Date(unixSeconds * 1000) : undefined;
 
-const subscriptionIdOf = (value: unknown): string | undefined => {
+/** Stripe expandable fields arrive as either an id string or `{ id: string }`. */
+const stripeReferenceIdOf = (value: unknown): string | undefined => {
   if (typeof value === "string" && value.length > 0) return value;
   if (
     typeof value === "object" &&
@@ -42,22 +43,6 @@ const subscriptionIdOf = (value: unknown): string | undefined => {
   }
   return undefined;
 };
-
-const customerIdOf = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.length > 0) return value;
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof (value as { id: unknown }).id === "string"
-  ) {
-    return (value as { id: string }).id;
-  }
-  return undefined;
-};
-
-const paymentMethodIdOf = (value: unknown): string | undefined =>
-  customerIdOf(value);
 
 const isAwaitingCheckoutActivation = (status: string | undefined): boolean =>
   !status || status === "none" || status === "awaiting_checkout";
@@ -85,13 +70,13 @@ async function resolveSubscriptionForCheckoutSession(
   session: Stripe.Checkout.Session;
   subscription: Stripe.Subscription;
 } | null> {
-  let subscriptionId = subscriptionIdOf(session.subscription);
+  let subscriptionId = stripeReferenceIdOf(session.subscription);
   let resolvedSession = session;
   if (!subscriptionId) {
     resolvedSession = await stripe.retrieveCheckoutSession(session.id, {
       expand: ["subscription"],
     });
-    subscriptionId = subscriptionIdOf(resolvedSession.subscription);
+    subscriptionId = stripeReferenceIdOf(resolvedSession.subscription);
   }
   if (!subscriptionId) {
     logger.warn("checkout.session.completed had no subscription id");
@@ -146,7 +131,7 @@ export async function applySubscription(
     {
       $set: {
         "billing.subscriptionStatus": status,
-        "billing.stripeCustomerId": customerIdOf(subscription.customer),
+        "billing.stripeCustomerId": stripeReferenceIdOf(subscription.customer),
         "billing.stripeSubscriptionId": subscription.id,
         ...(priceId ? { "billing.stripePriceId": priceId } : {}),
         ...(currentPeriodEnd
@@ -172,7 +157,7 @@ async function findUserIdForSubscription(
   const metadataUserId = subscription.metadata?.["compassUserId"];
   if (metadataUserId) return metadataUserId;
 
-  const customerId = customerIdOf(subscription.customer);
+  const customerId = stripeReferenceIdOf(subscription.customer);
   const bySubscription = await mongoService.user.findOne({
     "billing.stripeSubscriptionId": subscription.id,
   });
@@ -192,7 +177,7 @@ async function findUserIdForCheckoutSession(
   session: Pick<Stripe.Checkout.Session, "client_reference_id" | "customer">,
 ): Promise<string | null> {
   if (session.client_reference_id) return session.client_reference_id;
-  const customerId = customerIdOf(session.customer);
+  const customerId = stripeReferenceIdOf(session.customer);
   if (!customerId) return null;
   const byCustomer = await mongoService.user.findOne({
     "billing.stripeCustomerId": customerId,
@@ -209,7 +194,7 @@ async function handleSetupCheckoutSession(
     expand: ["setup_intent"],
   });
   const setupIntent = retrieved.setup_intent;
-  const paymentMethodId = paymentMethodIdOf(
+  const paymentMethodId = stripeReferenceIdOf(
     typeof setupIntent === "object" && setupIntent !== null
       ? setupIntent.payment_method
       : undefined,
@@ -221,7 +206,8 @@ async function handleSetupCheckoutSession(
   }
 
   const customerId =
-    customerIdOf(retrieved.customer) ?? customerIdOf(session.customer);
+    stripeReferenceIdOf(retrieved.customer) ??
+    stripeReferenceIdOf(session.customer);
   let userId: string | null =
     retrieved.client_reference_id ?? session.client_reference_id ?? null;
   if (!userId && customerId) {
@@ -318,7 +304,7 @@ async function handleEvent(
     return;
   }
 
-  const subscriptionId = subscriptionIdOf(event.data.object);
+  const subscriptionId = stripeReferenceIdOf(event.data.object);
   if (!subscriptionId) {
     logger.warn(`${event.type} had no subscription id`);
     return;

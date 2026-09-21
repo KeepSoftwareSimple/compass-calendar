@@ -104,9 +104,9 @@ const entrySeriesId = (entry: UndoHistoryEntry): string | null => {
 };
 
 export const undoHistoryActions = {
-  // Consecutive edits to the SAME event within COALESCE_WINDOW_MS merge into
-  // one history entry (keep the run's first `before`, take its last
-  // `after`) instead of appending a new one — an arrow-key nudge held down
+  // Consecutive edits to the SAME event merge into one history entry (keep
+  // the run's first `before`, take its last `after`) instead of appending a
+  // new one — an arrow-key nudge held down
   // fires one mutation per keypress, and without this a handful of keypresses
   // floods history and evicts real, unrelated entries under MAX_HISTORY.
   // Coalescing is skipped once anything has been undone (future is
