@@ -83,10 +83,20 @@ export const ConnectionFreshnessSchema = z.object({
   lastHealthyAt: DateTimeSchema.nullable(),
 });
 
+// Per-calendar intervals, in the request's calendar order. The merged
+// `intervals` list does not say which calendar a block came from.
+export const BusyCalendarIntervalsSchema = z.object({
+  calendarId: SyncEventCalendarIdSchema,
+  intervals: z.array(BusyIntervalSchema),
+});
+export type BusyCalendarIntervals = z.infer<typeof BusyCalendarIntervalsSchema>;
+
 // Busy intervals plus the freshness/completeness/bookability evidence. Event
 // titles, descriptions, locations, attendees, and conference links never appear.
+// `byCalendar` defaults so a response from an older Sync process still parses.
 export const BusyAvailabilityResponseSchema = z.object({
   intervals: z.array(BusyIntervalSchema),
+  byCalendar: z.array(BusyCalendarIntervalsSchema).default([]),
   computedAt: DateTimeSchema,
   connections: z.array(ConnectionFreshnessSchema),
   complete: z.boolean(),

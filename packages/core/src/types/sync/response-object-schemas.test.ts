@@ -211,6 +211,7 @@ const healthSnapshot = {
     delayed: 2,
     actionRequired: 1,
     disconnected: 3,
+    oldestImportingAgeMs: 1_200_000,
   },
   jobs: {
     pending: 4,

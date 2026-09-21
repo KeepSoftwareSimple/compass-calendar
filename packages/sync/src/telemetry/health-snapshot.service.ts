@@ -4,7 +4,10 @@ import {
   captureSafely,
   type PostHogCaptureClient,
 } from "@core/logger/posthog-capture";
-import { ConnectionStateSchema } from "@core/types/sync/connection.contracts";
+import {
+  type ConnectionState,
+  ConnectionStateSchema,
+} from "@core/types/sync/connection.contracts";
 import {
   SYNC_HEALTH_SNAPSHOT_EVENT,
   type SyncHealthSnapshot,
@@ -58,7 +61,7 @@ export async function computeHealthSnapshotForProvider(
     .capabilities.includes("changeNotifications");
 
   const [connections, jobs, subscriptions, freshness] = await Promise.all([
-    countConnectionsByState(db, provider),
+    countConnectionsByState(db, now, provider),
     summarizeJobs(db, now, provider),
     hasChangeNotifications
       ? summarizeSubscriptions(db, now, provider)
@@ -113,12 +116,30 @@ async function connectionIdsForProvider(
   db: Db,
   provider: ProviderKind,
 ): Promise<ConnectionId[]> {
+  return connectionIdsForProviderInStates(db, provider, undefined);
+}
+
+async function connectionIdsForProviderInStates(
+  db: Db,
+  provider: ProviderKind,
+  states: readonly ConnectionState[] | undefined,
+): Promise<ConnectionId[]> {
+  const filter: Record<string, unknown> = { provider };
+  if (states) {
+    filter["state"] = { $in: [...states] };
+  }
   const rows = await db
     .collection(SYNC_COLLECTIONS.providerConnections)
-    .find({ provider }, { projection: { _id: 1 } })
+    .find(filter, { projection: { _id: 1 } })
     .toArray();
   return rows.map((row) => String(row._id) as ConnectionId);
 }
+
+const FRESHNESS_CONNECTION_STATES: readonly ConnectionState[] = [
+  "healthy",
+  "delayed",
+  "catchingUp",
+];
 
 // The counters below read collections directly instead of going through the
 // repositories, on purpose: a fleet gauge must keep reporting even when a doc
@@ -127,15 +148,27 @@ async function connectionIdsForProvider(
 // hydrated records.
 async function countConnectionsByState(
   db: Db,
+  now: Date,
   provider: ProviderKind,
 ): Promise<SyncHealthSnapshot["connections"]> {
-  const rows = await db
-    .collection(SYNC_COLLECTIONS.providerConnections)
-    .aggregate<{ _id: string; count: number }>([
-      { $match: { provider } },
-      { $group: { _id: "$state", count: { $sum: 1 } } },
-    ])
-    .toArray();
+  const [rows, importing] = await Promise.all([
+    db
+      .collection(SYNC_COLLECTIONS.providerConnections)
+      .aggregate<{ _id: string; count: number }>([
+        { $match: { provider } },
+        { $group: { _id: "$state", count: { $sum: 1 } } },
+      ])
+      .toArray(),
+    db
+      .collection<{ updatedAt?: Date; createdAt?: Date }>(
+        SYNC_COLLECTIONS.providerConnections,
+      )
+      .find(
+        { provider, state: "importing" },
+        { projection: { updatedAt: 1, createdAt: 1 } },
+      )
+      .toArray(),
+  ]);
 
   const counts: SyncHealthSnapshot["connections"] = {
     connecting: 0,
@@ -145,6 +178,10 @@ async function countConnectionsByState(
     delayed: 0,
     actionRequired: 0,
     disconnected: 0,
+    oldestImportingAgeMs: oldestAgeMs(
+      importing.map((row) => row.updatedAt ?? row.createdAt ?? null),
+      now,
+    ),
   };
   for (const row of rows) {
     const state = ConnectionStateSchema.safeParse(row._id);
@@ -260,7 +297,11 @@ async function summarizeFreshness(
   now: Date,
   provider: ProviderKind,
 ): Promise<SyncHealthSnapshot["freshness"]> {
-  const connectionIds = await connectionIdsForProvider(db, provider);
+  const connectionIds = await connectionIdsForProviderInStates(
+    db,
+    provider,
+    FRESHNESS_CONNECTION_STATES,
+  );
   if (connectionIds.length === 0) {
     return {
       sampleSize: 0,
@@ -323,6 +364,19 @@ async function summarizeFreshness(
     p99Ms: percentile(ages, 0.99),
     percentOver30s: Math.round((over30 / ages.length) * 1000) / 10,
   };
+}
+
+function oldestAgeMs(
+  timestamps: readonly (Date | null | undefined)[],
+  now: Date,
+): number | null {
+  let oldest: number | null = null;
+  for (const at of timestamps) {
+    if (!(at instanceof Date)) continue;
+    const age = Math.max(0, now.getTime() - at.getTime());
+    if (oldest === null || age > oldest) oldest = age;
+  }
+  return oldest;
 }
 
 function percentile(sorted: readonly number[], p: number): number {

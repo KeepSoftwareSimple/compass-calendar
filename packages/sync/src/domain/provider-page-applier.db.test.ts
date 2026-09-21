@@ -163,6 +163,7 @@ describe("ProviderPageApplier", () => {
       truncated: false,
       intervals: [
         {
+          calendarId: calendar._id,
           startAt: new Date("2026-07-14T15:00:00.000Z"),
           endAt: new Date("2026-07-14T16:00:00.000Z"),
           eventId: expect.any(String),
@@ -198,6 +199,7 @@ describe("ProviderPageApplier", () => {
       truncated: false,
       intervals: [
         {
+          calendarId: calendar._id,
           startAt: new Date("2026-07-14T15:00:00.000Z"),
           endAt: new Date("2026-07-14T16:00:00.000Z"),
           eventId: expect.any(String),

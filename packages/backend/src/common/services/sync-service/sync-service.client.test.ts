@@ -137,6 +137,8 @@ describe("SyncServiceClient", () => {
     if (!result.ok) throw new Error(`expected ok, got ${result.error.kind}`);
     expect(result.value.bookable).toBe(true);
     expect(result.value.intervals).toHaveLength(1);
+    // An older Sync process omits byCalendar. The default keeps that body valid.
+    expect(result.value.byCalendar).toEqual([]);
 
     // The URL and method are correct.
     const sent = calls[0];

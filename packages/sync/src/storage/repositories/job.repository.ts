@@ -10,8 +10,8 @@ import {
   JOB_PRIORITY,
   type JobEnqueue,
   JobEnqueueSchema,
+  JobReadSchema,
   type JobRecord,
-  JobRecordSchema,
 } from "@sync/storage/contracts/job.contracts";
 
 export type ExhaustedFailedJob = {
@@ -88,7 +88,7 @@ export class JobRepository {
       { upsert: true, returnDocument: "after" },
     );
     if (!result) throw new Error("Enqueue did not return a job record");
-    return JobRecordSchema.parse(result);
+    return JobReadSchema.parse(result);
   }
 
   // User-initiated enqueue that must do something even when a coalescing key
@@ -152,7 +152,7 @@ export class JobRepository {
       state: "claimed",
     });
     if (inFlight) {
-      return { job: JobRecordSchema.parse(inFlight), outcome: "inFlight" };
+      return { job: JobReadSchema.parse(inFlight), outcome: "inFlight" };
     }
 
     const created = await this.enqueue(fields);
@@ -206,10 +206,10 @@ export class JobRepository {
       coalescingKey: fields.coalescingKey,
     });
     if (existing?.state === "failed") {
-      return { job: JobRecordSchema.parse(existing), outcome: "failed" };
+      return { job: JobReadSchema.parse(existing), outcome: "failed" };
     }
     if (existing?.state === "claimed") {
-      return { job: JobRecordSchema.parse(existing), outcome: "inFlight" };
+      return { job: JobReadSchema.parse(existing), outcome: "inFlight" };
     }
     if (existing?.state === "pending") {
       return boostPending("Foreground job disappeared after boost");
@@ -254,7 +254,7 @@ export class JobRepository {
   ): Promise<{ job: JobRecord; outcome: O }> {
     const job = await this.collection.findOne({ coalescingKey });
     if (!job) throw new Error(missing);
-    return { job: JobRecordSchema.parse(job), outcome };
+    return { job: JobReadSchema.parse(job), outcome };
   }
 
   async findById(
@@ -267,7 +267,7 @@ export class JobRepository {
       tenantId,
       principalId,
     });
-    return record ? JobRecordSchema.parse(record) : null;
+    return record ? JobReadSchema.parse(record) : null;
   }
 
   // Remove a job by id (operator tooling: manage-failed-jobs clear). Deleting
@@ -338,7 +338,7 @@ export class JobRepository {
         claimUpdate,
         claimOpts,
       );
-      if (claimed) return JobRecordSchema.parse(claimed);
+      if (claimed) return JobReadSchema.parse(claimed);
     }
     return null;
   }
@@ -473,7 +473,7 @@ export class JobRepository {
       .sort({ runAfter: 1 })
       .limit(limit)
       .toArray();
-    return rows.map((row) => JobRecordSchema.parse(row));
+    return rows.map((row) => JobReadSchema.parse(row));
   }
 
   // Give a failed job a fresh attempt budget and return it to the pending
@@ -612,7 +612,7 @@ export class JobRepository {
   // Prefer findById(tenantId, principalId, id) for request-path reads.
   async findByIdUnscoped(id: SyncJobId): Promise<JobRecord | null> {
     const row = await this.collection.findOne({ _id: id });
-    return row ? JobRecordSchema.parse(row) : null;
+    return row ? JobReadSchema.parse(row) : null;
   }
 
   // The oldest piece of overdue work for one connection, if any: a pending

@@ -11,8 +11,8 @@ import {
 import { deriveDiagnosticKey } from "@sync/safety/diagnostic-key";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  ProviderConnectionReadSchema,
   type ProviderConnectionRecord,
-  ProviderConnectionRecordSchema,
   type ProviderConnectionUpsert,
   ProviderConnectionUpsertSchema,
 } from "@sync/storage/contracts/provider-connection.contracts";
@@ -214,9 +214,9 @@ export class ProviderConnectionRepository {
       if (!stamped) {
         throw new Error("Connection not found while stamping diagnostic key");
       }
-      return ProviderConnectionRecordSchema.parse(stamped);
+      return ProviderConnectionReadSchema.parse(stamped);
     }
-    return ProviderConnectionRecordSchema.parse(record);
+    return ProviderConnectionReadSchema.parse(record);
   }
 
   // Soft-disconnected connections whose disconnectedAt is strictly before

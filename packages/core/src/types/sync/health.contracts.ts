@@ -24,6 +24,10 @@ export const SyncHealthConnectionCountsSchema = z.object({
   delayed: z.number().int().nonnegative(),
   actionRequired: z.number().int().nonnegative(),
   disconnected: z.number().int().nonnegative(),
+  // Age of the oldest `importing` connection, or null when none. Launch
+  // watches this against one hour: a stuck first import is not a live-fleet
+  // freshness problem.
+  oldestImportingAgeMs: z.number().int().nonnegative().nullable(),
 });
 export type SyncHealthConnectionCounts = z.infer<
   typeof SyncHealthConnectionCountsSchema
