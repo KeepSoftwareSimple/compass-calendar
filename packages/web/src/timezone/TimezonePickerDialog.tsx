@@ -100,6 +100,7 @@ export function TimezonePickerDialog({
       widthClassName="w-[480px]"
     >
       <TimezoneCombobox
+        excludeZone={isTimeTravel ? effectiveTimeZone : undefined}
         headOptions={headOptions}
         inputRef={searchRef}
         onSelect={commit}

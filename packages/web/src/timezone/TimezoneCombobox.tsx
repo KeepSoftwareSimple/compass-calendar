@@ -43,6 +43,8 @@ interface TimezoneComboboxProps {
   inputRef?: Ref<HTMLInputElement>;
   /** Zone the catalog is sorted around; defaults to `value`. */
   sortAround?: string;
+  /** Zone to leave out of the catalog, e.g. the one already on screen. */
+  excludeZone?: string;
 }
 
 /**
@@ -60,6 +62,7 @@ export function TimezoneCombobox({
   searchLabel,
   inputRef,
   sortAround,
+  excludeZone,
 }: TimezoneComboboxProps) {
   const listId = useId();
   const [query, setQuery] = useState("");
@@ -71,7 +74,7 @@ export function TimezoneCombobox({
     const list = sortTimeZonesByOffsetDistance(
       buildTimeZoneList(now),
       anchorZone,
-    );
+    ).filter((zone) => zone.id !== excludeZone || zone.id === value);
     // Intl.supportedValuesOf only reports canonical ids, so a stored alias
     // ("US/Pacific") has no row and the field would look empty. Synthesize one
     // rather than silently showing nothing.
@@ -90,7 +93,7 @@ export function TimezoneCombobox({
       return [alias, ...list];
     }
     return list;
-  }, [anchorZone, now, value]);
+  }, [anchorZone, excludeZone, now, value]);
 
   const zones = useMemo(
     () => filterTimeZones(catalog, query),
