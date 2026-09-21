@@ -7,6 +7,7 @@
   "main": "",
   "dependencies": {
     "@googleapis/calendar": "^16.0.0",
+    "@mongodb-js/zstd": "^7.0.0",
     "@opentelemetry/api-logs": "^0.222.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
     "@opentelemetry/resources": "^2.9.0",
@@ -18,6 +19,7 @@
     "logform": "^2.7.0",
     "posthog-node": "^5.47.0",
     "rrule": "^2.7.2",
+    "snappy": "^7.3.2",
     "tslib": "^2.4.0",
     "winston": "^3.8.1",
     "winston-transport": "^4.7.0",

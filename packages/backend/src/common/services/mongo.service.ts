@@ -10,6 +10,7 @@ import {
 } from "mongodb";
 import { NodeEnv } from "@core/constants/core.constants";
 import { Logger } from "@core/logger/winston.logger";
+import { mongoPerformanceOptions } from "@core/server/mongo-client-options";
 import { type Schema_User } from "@core/types/user.types";
 import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { type BillingEventRecord } from "@backend/billing/billing-event.record";
@@ -201,6 +202,7 @@ class MongoService {
 
     const client = new MongoClient(CONFIG.MONGO_URI, {
       serverApi: { strict: true, version: "1" },
+      ...mongoPerformanceOptions(),
     });
 
     client.on("close", this.onDisconnect.bind(this));
