@@ -7,6 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { EventIdSchema } from "@core/types/domain-primitives";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
@@ -291,7 +292,7 @@ describe("CommandPalette", () => {
     );
   });
 
-  it("fuzzy-filters case-insensitively, dropping empty sections, and shows a no-results row", () => {
+  it("fuzzy-filters case-insensitively, dropping empty sections, and shows a no-results row", async () => {
     const { container } = renderPalette();
 
     fireEvent.change(getInput(), { target: { value: "create event" } });
@@ -312,9 +313,13 @@ describe("CommandPalette", () => {
     fireEvent.change(getInput(), { target: { value: "zzzzz" } });
     // The sr-only live region echoes the same "No results for" copy, so
     // scope to the visible div specifically to avoid an ambiguous match.
-    expect(
-      screen.getByText(/No results for/, { selector: "div" }),
-    ).toBeInTheDocument();
+    // The event search debounces, so the row starts as "Searching" and
+    // settles to "No results" once the (empty, mocked) fetch resolves.
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No results for/, { selector: "div" }),
+      ).toBeInTheDocument();
+    });
   });
 
   it("matches a synonym keyword that doesn't appear in the label", () => {
@@ -566,7 +571,7 @@ describe("CommandPalette", () => {
     expect(activeRowText(container)).toBe("Go to Day");
   });
 
-  it("announces the result count in a live region, matching the visible copy", () => {
+  it("announces the result count in a live region, matching the visible copy", async () => {
     renderPalette();
     const liveRegion = () => screen.getByRole("status");
 
@@ -577,7 +582,9 @@ describe("CommandPalette", () => {
     expect(liveRegion().textContent).toBe("2 results");
 
     fireEvent.change(getInput(), { target: { value: "zzzzz" } });
-    expect(liveRegion().textContent).toBe("No results for “zzzzz”");
+    await waitFor(() => {
+      expect(liveRegion().textContent).toBe("No results for “zzzzz”");
+    });
   });
 
   it("renders keyboard hint footer chips", () => {
@@ -664,6 +671,111 @@ describe("CommandPalette", () => {
     } finally {
       document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
       card.remove();
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("shows a searching state until event results land", async () => {
+    resetEventRepositorySourceForTests();
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    let resolveSearch: (events: ReturnType<typeof createMockEvent>[]) => void =
+      () => {};
+    store.searchByTitle.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSearch = resolve;
+      }),
+    );
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "devot" } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Searching for “devot”")).toBeInTheDocument();
+      });
+      expect(screen.getByRole("status").textContent).toBe("");
+
+      resolveSearch([dentist]);
+
+      await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      expect(
+        screen.queryByText("Searching for “devot”"),
+      ).not.toBeInTheDocument();
+    } finally {
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("shows no results only after the search settles", async () => {
+    resetEventRepositorySourceForTests();
+    const store = createMockOfflineDataStore();
+    let resolveSearch: (events: ReturnType<typeof createMockEvent>[]) => void =
+      () => {};
+    store.searchByTitle.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSearch = resolve;
+      }),
+    );
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "devot" } });
+
+      await waitFor(() => {
+        expect(screen.getByText("Searching for “devot”")).toBeInTheDocument();
+      });
+
+      resolveSearch([]);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("No results for “devot”", { selector: "div" }),
+        ).toBeInTheDocument();
+      });
+    } finally {
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("marks a recurring occurrence with Repeats", async () => {
+    resetEventRepositorySourceForTests();
+    const seriesId = EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa");
+    const devotion = createMockEvent({
+      content: { kind: "details", title: "Devotion", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-21T07:30:00.000Z",
+        end: "2026-09-21T08:00:00.000Z",
+        timeZone: "UTC",
+      }),
+      recurrence: { kind: "occurrence", seriesId },
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([devotion]);
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "devot" } });
+
+      const row = await screen.findByRole("option", {
+        name: "Devotion Mon, Sep 21, 7:30 AM Repeats",
+      });
+      expect(row).toBeInTheDocument();
+    } finally {
       resetOfflineDataStoreForTests();
     }
   });
