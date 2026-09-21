@@ -66,12 +66,13 @@ Playwright. Docs index: `docs/README.md`.
   `agent-automerge`, and enable auto-merge yourself. `main` takes changes
   only through the merge queue, which squash-merges once required checks
   pass. `.github/scripts/agent-loop-merge-guard.sh` checks size and that
-  main is not red; those rails are the gate. Path prefixes are not: there
-  is no denylist in this repo, so do not look for one or hold a PR because
-  you cannot find it. A local verdict that fails only on sandbox-bound
+  main is not red; those rails are the gate. There is no path denylist; do
+  not look for one. A local verdict that fails only on sandbox-bound
   Playwright timeouts, in specs the diff cannot reach, is evidence to report
-  and not a blocker; CI decides. Do not wait on CI or wait for a human on a
-  green, mergeable PR. Procedure: `.agents/skills/ship/SKILL.md`.
+  and not a blocker; CI decides. Never wait for CI or for the user to say
+  "merge" on a green, mergeable PR, interactive sessions included. Product
+  judgment calls (copy, key choices) go in the PR body, not on hold.
+  Procedure: `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
 - GitHub milestones and labels: the GitHub MCP server has no milestone tool
