@@ -39,6 +39,17 @@ the full repo checkout present alongside it — see the [Custom code
 guide](./customizing.md). It restarts and health-checks the same way
 `update` does.
 
+## Mongo client options
+
+Backend and Sync open their Mongo clients with wire compression (zstd, then
+snappy, when that addon is installed), a warm pool (`minPoolSize` 2), and
+`maxIdleTimeMS` of 60 seconds. Applying these options is not a data migration
+and does not change indexes. A normal upgrade restart picks up the new
+handshake.
+
+A Mongo tier change is separate. Restart both the backend and the Sync
+process after the tier change so both clients reconnect.
+
 ## Database migrations
 
 Current releases do not ship a server-side migration runner or pending

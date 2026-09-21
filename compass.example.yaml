@@ -62,6 +62,17 @@ supertokens:
 #   publishableKey: REPLACE_WITH_STRIPE_PUBLISHABLE_KEY # pk_test_... is fine for staging
 # Omit the whole block for self-host. All four values are required together.
 
+# email:
+#   provider: resend # resend | log
+#   apiKey: REPLACE_WITH_RESEND_API_KEY
+#   from: Compass <hello@mail.compasscalendar.com>
+#   webhookSecret: REPLACE_WITH_RESEND_WEBHOOK_SECRET
+#   unsubscribeSecret: REPLACE_WITH_EMAIL_UNSUBSCRIBE_SECRET # openssl rand -base64 32
+#   scheduleProfile: real # real | fast — fast is rejected when runtime.nodeEnv is production
+#   allowlist: []
+# Omit the whole block to keep email off (no enrollment, poller, or send routes).
+# provider resend requires apiKey, from, webhookSecret, and unsubscribeSecret together.
+
 # billing:
 #   enforcement: false # operator pause switch — keep the app free for everyone
 #   bypassEmails: [] # accounts exempt from the gate, even with enforcement on

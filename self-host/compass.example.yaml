@@ -57,6 +57,11 @@ supertokens:
 #   publishableKey: REPLACE_WITH_STRIPE_PUBLISHABLE_KEY
 # Omit this block on self-host. Compass stays fully writable without Stripe.
 
+# email:
+#   provider: log
+# Omit the whole block on self-host to keep email off (default).
+# scheduleProfile fast is rejected when runtime.nodeEnv is production.
+
 # Compass Sync service — self-host runs the same architecture as Compass
 # Cloud: this is required, not optional. It uses the SAME bundled mongo as
 # `mongo:` above, isolated to its own `compass_sync` database — no separate

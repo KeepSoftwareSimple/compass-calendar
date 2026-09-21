@@ -10,6 +10,7 @@ import {
 } from "mongodb";
 import { NodeEnv } from "@core/constants/core.constants";
 import { Logger } from "@core/logger/winston.logger";
+import { mongoPerformanceOptions } from "@core/server/mongo-client-options";
 import { type Schema_User } from "@core/types/user.types";
 import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { type BillingEventRecord } from "@backend/billing/billing-event.record";
@@ -20,6 +21,7 @@ import { type BookingReservationRecord } from "@backend/booking/booking-reservat
 import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { Collections } from "@backend/common/constants/collections";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { type EventRecord } from "@backend/event/event.record";
 import { type HiddenEventRecord } from "@backend/user/hidden-event.record";
 import { type PendingAccountDeletionRecord } from "@backend/user/pending-account-deletion.record";
@@ -34,6 +36,7 @@ interface InternalClient {
   bookingRateLimit: Collection<BookingRateLimitRecord>;
   bookingReservation: Collection<BookingReservationRecord>;
   bookingOperation: Collection<BookingOperationRecord>;
+  emailSend: Collection<EmailSendRecord>;
   calendar: Collection<CalendarRecord>;
   event: Collection<EventRecord>;
   hiddenEvent: Collection<HiddenEventRecord>;
@@ -79,6 +82,10 @@ class MongoService {
 
   get bookingOperation(): InternalClient["bookingOperation"] {
     return this.#accessInternalCollectionProps("bookingOperation");
+  }
+
+  get emailSend(): InternalClient["emailSend"] {
+    return this.#accessInternalCollectionProps("emailSend");
   }
 
   get hiddenEvent(): InternalClient["hiddenEvent"] {
@@ -146,6 +153,7 @@ class MongoService {
       bookingOperation: db.collection<BookingOperationRecord>(
         Collections.BOOKING_OPERATION,
       ),
+      emailSend: db.collection<EmailSendRecord>(Collections.EMAIL_SEND),
       calendar: db.collection<CalendarRecord>(Collections.CALENDAR),
       event: db.collection<EventRecord>(Collections.EVENT),
       hiddenEvent: db.collection<HiddenEventRecord>(Collections.HIDDEN_EVENT),
@@ -201,6 +209,7 @@ class MongoService {
 
     const client = new MongoClient(CONFIG.MONGO_URI, {
       serverApi: { strict: true, version: "1" },
+      ...mongoPerformanceOptions(),
     });
 
     client.on("close", this.onDisconnect.bind(this));

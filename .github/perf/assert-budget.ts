@@ -39,6 +39,15 @@
  * near-deterministic (runs vary by tens of bytes), so it can sit this tight;
  * the paint metrics vary by runner and get much wider headroom.
  *
+ * Recalibrated 2026-09-21: main measured 1,064,054 bytes (median of 3 runs on
+ * ubuntu-latest; run 35654521880) after keyboard v1 and boot-path work landed
+ * without a budget update. perf(web) per-icon Phosphor imports (#3938) dropped
+ * transfer from a ~1,077,733 byte spike (#3934) but left ~4 KB over the old
+ * 1,060 KB ceiling. perf(sync) mongo warm (#3939) re-triggered this workflow
+ * via packages/core and bun.lock only; script transfer matched #3938 within
+ * tens of bytes. The 1,065 KB script budget leaves ~1 KB of headroom at the
+ * measured median; boot-set gzip (~647 KB locally) is unchanged in intent.
+ *
  * Note 2026-09-13: not recalibrated. Lazy-splitting three closed dialogs
  * (#3704) added three dynamic roots, and Bun keys chunks on the set of roots
  * that reach a module, so shared boot modules fragmented into 15 extra
@@ -77,7 +86,7 @@ const DESKTOP_BUDGETS = [
   {
     metric: "scriptBytes",
     label: "Script transfer size",
-    max: 1_060_000,
+    max: 1_065_000,
     unit: "bytes",
     level: "error",
   },

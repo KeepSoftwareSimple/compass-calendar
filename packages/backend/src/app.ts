@@ -4,6 +4,7 @@ import publicBookingService from "@backend/booking/services/public-booking.servi
 import { ensureCalendarIndexes } from "@backend/calendar/calendar-indexes";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
+import { ensureEmailIndexes } from "@backend/email/email-indexes";
 import { createBackendHttpServer } from "@backend/servers/express/express.server";
 import { foregroundSyncRefresh } from "@backend/servers/sse/foreground-sync-refresh";
 import { syncChangeFeedBridge } from "@backend/servers/sse/sync-change-feed.bridge";
@@ -24,6 +25,7 @@ async function start() {
     await mongoService.start();
     await ensureBillingIndexes();
     await ensureBookingIndexes();
+    await ensureEmailIndexes();
     await ensureCalendarIndexes();
     await ensureUserIndexes();
 

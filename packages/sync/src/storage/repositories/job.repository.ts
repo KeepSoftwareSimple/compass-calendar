@@ -13,6 +13,7 @@ import {
   JobReadSchema,
   type JobRecord,
 } from "@sync/storage/contracts/job.contracts";
+import { notifyJobsWaiting } from "@sync/storage/job-wake";
 
 export type ExhaustedFailedJob = {
   id: SyncJobId;
@@ -88,7 +89,9 @@ export class JobRepository {
       { upsert: true, returnDocument: "after" },
     );
     if (!result) throw new Error("Enqueue did not return a job record");
-    return JobReadSchema.parse(result);
+    const job = JobReadSchema.parse(result);
+    notifyJobsWaiting();
+    return job;
   }
 
   // User-initiated enqueue that must do something even when a coalescing key
@@ -109,10 +112,12 @@ export class JobRepository {
     // untouched so the ladder still terminates.
     const boosted = await boostPending();
     if (boosted.matchedCount === 1) {
-      return this.#requireByKey(
-        fields.coalescingKey,
-        "boosted",
-        "Boosted job disappeared after update",
+      return this.#wake(
+        this.#requireByKey(
+          fields.coalescingKey,
+          "boosted",
+          "Boosted job disappeared after update",
+        ),
       );
     }
 
@@ -137,10 +142,12 @@ export class JobRepository {
       },
     );
     if (revived.matchedCount === 1) {
-      return this.#requireByKey(
-        fields.coalescingKey,
-        "requeuedFailed",
-        "Revived job disappeared after update",
+      return this.#wake(
+        this.#requireByKey(
+          fields.coalescingKey,
+          "requeuedFailed",
+          "Revived job disappeared after update",
+        ),
       );
     }
 
@@ -155,6 +162,7 @@ export class JobRepository {
       return { job: JobReadSchema.parse(inFlight), outcome: "inFlight" };
     }
 
+    // enqueue() already wakes the drains.
     const created = await this.enqueue(fields);
 
     // claimed→pending (scheduleRetry) or a concurrent insert may have landed
@@ -167,10 +175,12 @@ export class JobRepository {
         created.runAfter.getTime() > now.getTime())
     ) {
       await boostPending();
-      return this.#requireByKey(
-        fields.coalescingKey,
-        "boosted",
-        "Job disappeared after late boost",
+      return this.#wake(
+        this.#requireByKey(
+          fields.coalescingKey,
+          "boosted",
+          "Job disappeared after late boost",
+        ),
       );
     }
 
@@ -179,6 +189,14 @@ export class JobRepository {
     }
 
     return { job: created, outcome: "created" };
+  }
+
+  // enqueue() notifies on its own. The other successful writes in the urgent
+  // paths need the same kick so a drain does not wait out the idle poll.
+  async #wake<T>(pending: Promise<T>): Promise<T> {
+    const value = await pending;
+    notifyJobsWaiting();
+    return value;
   }
 
   // Urgent like a user refresh, except a periodic foreground safety tick must
@@ -212,7 +230,7 @@ export class JobRepository {
       return { job: JobReadSchema.parse(existing), outcome: "inFlight" };
     }
     if (existing?.state === "pending") {
-      return boostPending("Foreground job disappeared after boost");
+      return this.#wake(boostPending("Foreground job disappeared after boost"));
     }
 
     // The row may have appeared, been claimed, or failed since the read above.
@@ -225,7 +243,9 @@ export class JobRepository {
       return { job: created, outcome: "inFlight" };
     }
     if (created.priority < fields.priority || created.runAfter > now) {
-      return boostPending("Foreground job disappeared after late boost");
+      return this.#wake(
+        boostPending("Foreground job disappeared after late boost"),
+      );
     }
     return { job: created, outcome: "created" };
   }
@@ -323,6 +343,19 @@ export class JobRepository {
       excludeKinds && excludeKinds.length > 0
         ? { kind: { $nin: excludeKinds } }
         : {};
+
+    // One indexed read before the three claim arms. An idle poll used to
+    // issue three findOneAndUpdate commands every 5s per drain.
+    const due = await this.collection.findOne(
+      {
+        $or: [
+          { state: "pending", runAfter: { $lte: now }, ...kindFilter },
+          { state: "claimed", leaseExpiresAt: { $lt: now }, ...kindFilter },
+        ],
+      },
+      { projection: { _id: 1 } },
+    );
+    if (!due) return null;
 
     for (const filter of [
       { state: "claimed" as const, leaseExpiresAt: { $lt: now } },

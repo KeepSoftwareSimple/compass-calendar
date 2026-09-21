@@ -1,5 +1,6 @@
 import { type Db, MongoClient } from "mongodb";
 import { Logger } from "@core/logger/winston.logger";
+import { mongoPerformanceOptions } from "@core/server/mongo-client-options";
 import { backfillCalendarActive } from "@sync/storage/backfill-calendar-active";
 import { installIndexManifest } from "@sync/storage/index-manifest";
 
@@ -45,7 +46,7 @@ export class SyncMongoService {
   }
 
   async connect(options: SyncMongoOptions): Promise<void> {
-    const client = new MongoClient(options.uri);
+    const client = new MongoClient(options.uri, mongoPerformanceOptions());
     await client.connect();
     this.#client = client;
     this.#db = options.databaseName

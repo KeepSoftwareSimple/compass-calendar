@@ -35,6 +35,9 @@ export class PollLoop {
   #loop: Promise<void> | null = null;
   #wake: (() => void) | null = null;
   #timer: ReturnType<typeof setTimeout> | null = null;
+  // Set when wake() arrives during a tick, so the following idle wait is
+  // skipped. A wake during idle resolves that wait and clears the flag.
+  #kicked = false;
 
   constructor(options: PollLoopOptions) {
     this.#tick = options.tick;
@@ -57,17 +60,31 @@ export class PollLoop {
   // running). Idempotent and safe to call when never started.
   async stop(): Promise<void> {
     this.#running = false;
+    this.#kicked = false;
+    // Resolve a pending idle wait so the loop notices #running is false at once
+    // instead of sleeping out the remaining delay.
+    this.#resolveIdle();
+    if (this.#loop) await this.#loop;
+    this.#loop = null;
+    if (this.#onStop) await this.#onStop();
+  }
+
+  // End the current idle wait, or skip the next one if a tick is in flight.
+  // Used when new work is enqueued so a drain does not sit out pollMs.
+  wake(): void {
+    if (!this.#running) return;
+    this.#kicked = true;
+    this.#resolveIdle();
+  }
+
+  #resolveIdle(): void {
     if (this.#timer) {
       clearTimeout(this.#timer);
       this.#timer = null;
     }
-    // Resolve a pending idle wait so the loop notices #running is false at once
-    // instead of sleeping out the remaining delay.
-    this.#wake?.();
+    const wake = this.#wake;
     this.#wake = null;
-    if (this.#loop) await this.#loop;
-    this.#loop = null;
-    if (this.#onStop) await this.#onStop();
+    wake?.();
   }
 
   async #run(): Promise<void> {
@@ -89,8 +106,17 @@ export class PollLoop {
   }
 
   #idle(ms: number): Promise<void> {
+    if (this.#kicked) {
+      this.#kicked = false;
+      return Promise.resolve();
+    }
     return new Promise((resolve) => {
-      this.#wake = resolve;
+      this.#wake = () => {
+        // The kick was consumed by ending this wait. Do not also skip the
+        // idle that follows the next tick.
+        this.#kicked = false;
+        resolve();
+      };
       this.#timer = setTimeout(() => {
         this.#wake = null;
         this.#timer = null;
