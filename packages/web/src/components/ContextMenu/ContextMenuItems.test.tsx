@@ -227,6 +227,27 @@ describe("ContextMenuItems", () => {
     expect(mockClose).toHaveBeenCalled();
   });
 
+  it("still runs Edit when the focused item is activated from the keyboard", () => {
+    // A real click reports a positive `event.detail`; Enter/Space on a
+    // focused button reports 0. Arrow-key navigation into the menu plus
+    // Enter is a legitimate keyboard path (e2e: calendar-experience.spec.ts
+    // "a read-only event opens as a read-only form"), so it must still run
+    // the action rather than showing the mouse-only toast.
+    const event = createMockGridEvent({ title: "Test Event" });
+    seedGridDraftForEvent(event);
+
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    const editButton = screen.getByRole("menuitem", { name: "Edit" });
+    fireEvent.click(editButton, { detail: 0 });
+
+    expect(selectIsEventFormOpen(useDraftStore.getState())).toBe(true);
+    expect(toastMocks.toast).not.toHaveBeenCalled();
+    expect(mockClose).toHaveBeenCalled();
+  });
+
   it("points Edit at its shortcut instead of opening the form", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({

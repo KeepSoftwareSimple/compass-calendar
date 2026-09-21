@@ -170,8 +170,13 @@ export function ContextMenuItemsView({
       }}
     >
       {menuActions.map((item, index) => {
-        const select = () => {
-          if (item.keyboardOnly) {
+        // A real pointer click reports a positive `detail`; Enter/Space
+        // activation of a focused button reports 0 (same signal
+        // PublicBookingMonthGrid uses to tell the two apart). Keyboard
+        // selection of a focused item still runs the action - only the
+        // mouse is turned away, toward the shortcut.
+        const select = (clickEvent: React.MouseEvent) => {
+          if (item.keyboardOnly && clickEvent.detail !== 0) {
             promptContextMenuKeyboardOnly(item.label, item.keys ?? []);
           } else {
             item.onClick();
