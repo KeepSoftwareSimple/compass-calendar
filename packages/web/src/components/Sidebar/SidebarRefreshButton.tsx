@@ -5,9 +5,8 @@ import { useVersionCheck } from "@web/components/Sidebar/SidebarActions/useVersi
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useSseDegradedSince } from "@web/sse/hooks/useSseDegraded";
 
-// Native EventSource retries on its own for transient drops but gives up for
-// good once the browser marks it CLOSED. Past this age a reload is the
-// recovery that always works.
+// The SSE client stops reconnecting after a bounded episode; past this age
+// a reload is the recovery that always works.
 export const REFRESH_AFTER_DEGRADED_MS = 30_000;
 
 const useRefreshDue = (degradedSinceMs: number | null): boolean => {

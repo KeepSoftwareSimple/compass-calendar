@@ -11,6 +11,7 @@ import {
 } from "@core/types/server-message.contracts";
 import { BaseDriver } from "@backend/__tests__/drivers/base.driver";
 import { setupBackendTestSeams } from "@backend/__tests__/helpers/mock.setup";
+import { type TickScheduler } from "@backend/servers/sse/tick-scheduler";
 import userMetadataService from "@backend/user/services/user-metadata.service";
 import {
   afterAll,
@@ -61,6 +62,44 @@ describe("SSE Server", () => {
 
       expect(sseServer.subscriberCount(userId)).toBe(0);
       expect(() => unsubscribe?.()).not.toThrow();
+    });
+  });
+
+  describe("planned stream lifetime", () => {
+    it("sends retry: 5000 first and closes at the planned lifetime", async () => {
+      const { SSEServer, SSE_RETRY_HINT_MS, SSE_STREAM_LIFETIME_MS } =
+        await import("./sse.server");
+      const userId = new ObjectId().toString();
+      const writes: string[] = [];
+      let ended = false;
+      const ticks: Array<{ tick: () => void; delayMs: number }> = [];
+      const schedule: TickScheduler = (tick, delayMs) => {
+        ticks.push({ tick, delayMs });
+        return { clear: mock() };
+      };
+      const server = new SSEServer(schedule);
+
+      const res = {
+        setHeader: mock(),
+        flushHeaders: mock(),
+        write: mock((chunk: string) => {
+          writes.push(chunk);
+        }),
+        end: mock(() => {
+          ended = true;
+        }),
+      } as unknown as Response;
+
+      const unsubscribe = server.subscribe(userId, res);
+      expect(writes[0]).toBe(`retry: ${SSE_RETRY_HINT_MS}\n\n`);
+      expect(server.subscriberCount(userId)).toBe(1);
+
+      const lifetime = ticks.find((t) => t.delayMs === SSE_STREAM_LIFETIME_MS);
+      expect(lifetime).toBeDefined();
+      lifetime?.tick();
+      expect(ended).toBe(true);
+      expect(server.subscriberCount(userId)).toBe(0);
+      unsubscribe();
     });
   });
 
