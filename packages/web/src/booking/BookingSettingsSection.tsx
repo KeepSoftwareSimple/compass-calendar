@@ -41,7 +41,6 @@ import {
   bookingAddressPrefix,
 } from "@web/booking/BookingAddressField";
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
-import { BookingConnectionBanner } from "@web/booking/BookingConnectionBanner";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
 import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
@@ -741,18 +740,14 @@ export function BookingSettingsSection({
         className="flex flex-col gap-2"
         disabled={isReadOnly || saveMutation.isPending}
       >
-        {!hasHealthyConnection ? (
-          <BookingConnectionBanner
-            aggregateState={googleConnectionState}
-            connections={connections}
-          />
-        ) : null}
         <BookingStatusHeader
           addressPreview={addressPreview}
+          aggregateState={googleConnectionState}
           bookingUrl={savedPage?.bookingUrl ?? null}
           savedUrl={savedMeetingLinkUrl(serverPage)}
           calendars={calendars}
           connections={connections}
+          hasHealthyConnection={hasHealthyConnection}
           isLive={isLive}
           isPending={saveMutation.isPending}
           onToggle={(next) => submit(next)}

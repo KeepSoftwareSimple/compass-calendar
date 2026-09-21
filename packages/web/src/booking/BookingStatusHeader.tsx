@@ -1,12 +1,17 @@
 import { type BookingPageStatusResponse } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
-import { type SyncConnectionSummary } from "@core/types/user.types";
-import { BookingBookabilityNotice } from "@web/booking/BookingBookabilityNotice";
+import {
+  type GoogleConnectionState,
+  type SyncConnectionSummary,
+} from "@core/types/user.types";
+import { BookingBlockerNotice } from "@web/booking/BookingBlockerNotice";
 import { BookingCopyLink } from "@web/booking/BookingCopyLink";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { Switch } from "@web/components/Switch/Switch";
 
 interface BookingStatusHeaderProps {
+  aggregateState: GoogleConnectionState;
+  hasHealthyConnection: boolean;
   isLive: boolean;
   isPending: boolean;
   onToggle: (next: boolean) => void;
@@ -19,6 +24,8 @@ interface BookingStatusHeaderProps {
 }
 
 export function BookingStatusHeader({
+  aggregateState,
+  hasHealthyConnection,
   isLive,
   isPending,
   onToggle,
@@ -62,13 +69,13 @@ export function BookingStatusHeader({
           ) : null}
         </>
       )}
-      {isLive && status ? (
-        <BookingBookabilityNotice
-          calendars={calendars}
-          connections={connections}
-          status={status}
-        />
-      ) : null}
+      <BookingBlockerNotice
+        aggregateState={aggregateState}
+        calendars={calendars}
+        connections={connections}
+        hasHealthyConnection={hasHealthyConnection}
+        status={isLive ? status : undefined}
+      />
     </div>
   );
 }
