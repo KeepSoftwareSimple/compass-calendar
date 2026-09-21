@@ -69,6 +69,7 @@ import {
 import { resetPointerHintPersistenceForTests } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
   initialPointerHintState,
+  resetPointerHintTimerForTests,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
@@ -119,6 +120,7 @@ const storeResets: StoreReset[] = [
   () => useThemeStore.setState(useThemeStore.getInitialState(), true),
   () => useEditSequenceStore.setState(initialEditSequenceState, true),
   resetPointerHintPersistenceForTests,
+  resetPointerHintTimerForTests,
   () => usePointerHintStore.setState(initialPointerHintState, true),
   () => useEventJumpStore.setState(initialEventJumpState, true),
   () => usePageJumpHintStore.setState(initialPageJumpHintState, true),

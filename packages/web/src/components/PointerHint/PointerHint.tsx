@@ -1,5 +1,5 @@
 import { X } from "@phosphor-icons/react/dist/csr/X";
-import { type FC, type ReactNode, useEffect, useState } from "react";
+import { type FC, type ReactNode } from "react";
 import {
   type ProviderKind,
   providerDisplayName,
@@ -23,8 +23,9 @@ import {
 } from "@web/shortcuts/keyboard-only/pointer-action";
 import { writePointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
+  pointerHintActions,
   selectPointerHintAttempt,
-  selectPointerHintPulse,
+  selectPointerHintVisible,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { KEYMAP } from "@web/shortcuts/keymap";
@@ -36,8 +37,6 @@ import {
   selectEventJumpPointerHintKey,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
-
-const HINT_VISIBLE_MS = 2500;
 
 const Key = ({ children }: { children: string }) => (
   <kbd className="c-keycap">{children}</kbd>
@@ -198,19 +197,11 @@ const pointerHintMessage = ({
  * too. Top-center to stay clear of the Up Next banner's bottom-center spot.
  */
 export const PointerHint: FC = () => {
-  const pulse = usePointerHintStore(selectPointerHintPulse);
+  const isVisible = usePointerHintStore(selectPointerHintVisible);
   const attempt = usePointerHintStore(selectPointerHintAttempt);
   const eventJumpKey = useEventJumpStore(selectEventJumpPointerHintKey);
   const showcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
   const welcomeOpen = useWelcomeGuideStore(selectWelcomeSurfaceOpen);
-  const [isVisible, setIsVisible] = useState(false);
-
-  useEffect(() => {
-    if (pulse === 0) return;
-    setIsVisible(true);
-    const timer = window.setTimeout(() => setIsVisible(false), HINT_VISIBLE_MS);
-    return () => window.clearTimeout(timer);
-  }, [pulse]);
 
   if (!isVisible) return null;
 
@@ -237,7 +228,7 @@ export const PointerHint: FC = () => {
         onClick={() => {
           writePointerHintDismissedPermanently();
           track("pointer_hint_dismissed");
-          setIsVisible(false);
+          pointerHintActions.hide();
         }}
         size="small"
         type="button"

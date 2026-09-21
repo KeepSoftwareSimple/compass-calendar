@@ -355,6 +355,30 @@ describe("RootShell billing gates", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("does not show pointer hints or onboarding prompts under the billing gate", async () => {
+    access = awaitingCheckout;
+    await renderShell("/week");
+
+    act(() => {
+      pointerHintActions.pulse({ actionId: "unknown" });
+    });
+
+    expect(
+      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Compass works from the keyboard/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", {
+        name: "Create your first event",
+      }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the expired gate after the local trial ends", async () => {
     access = {
       kind: "server",
