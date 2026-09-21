@@ -139,7 +139,17 @@ Web tests depend on a shared preload stack:
 
 Under `--parallel` / `--isolate`, Bun clears globals between files in a worker but **does not reload preload modules**. That mismatch causes two failure modes:
 
-**MSW XHR patching.** MSW v1 (`msw@1.3.x`) uses `@mswjs/interceptors`'s `XMLHttpRequestInterceptor`. On `setup()`, it captures `const PureXMLHttpRequest = window.XMLHttpRequest`, patches the constructor, and registers teardown that restores `window.XMLHttpRequest = PureXMLHttpRequest`. After `--isolate` resets globals, the interceptor module still holds the **previous** `PureXMLHttpRequest` reference (often `undefined`). The next file's requests hit a broken patch — historically surfaced as `oldXMLHttpRequest is undefined` / `PureXMLHttpRequest is undefined` in CI. `BaseApi` uses `fetch`, but SuperTokens, axios browser adapters, and some hooks still exercise XHR in jsdom.
+**MSW XHR patching.** MSW v1 (`msw@1.3.x`) used `@mswjs/interceptors`'s `XMLHttpRequestInterceptor`. On `setup()`, it captured `const PureXMLHttpRequest = window.XMLHttpRequest`, patched the constructor, and registered teardown that restored `window.XMLHttpRequest = PureXMLHttpRequest`. After `--isolate` resets globals, the interceptor module still held the **previous** `PureXMLHttpRequest` reference (often `undefined`). The next file's requests hit a broken patch — historically surfaced as `oldXMLHttpRequest is undefined` / `PureXMLHttpRequest is undefined` in CI. `BaseApi` uses `fetch`, but SuperTokens, axios browser adapters, and some hooks still exercise XHR in jsdom.
+
+The package is now on `msw@2`, which re-reads the global constructors on each
+`setup()` instead of holding a module-level `PureXMLHttpRequest`, so this
+particular failure mode is gone. That removed the *dependency* blocker, not the
+whole parallel story: the runner is still sequential and sharded because the
+remaining preload singletons (jsdom, Zustand stores, the axios adapter override)
+are shared across files in a worker, and because a single process OOMs on 7 GB
+runners. Re-enabling `bun test --parallel` for web, and deleting
+`WEB_TEST_SHARDS` with the RSS watchdog, is tracked separately and should only
+land on the back of a green full-suite CI run.
 
 **Other globals (partially mitigated).** IndexedDB globals were cleared the same way; `ensureIndexedDbTestEnv()` re-mirrors when `globalThis.indexedDB` is missing (`indexeddb-env.ts`). No equivalent re-patch exists yet for MSW/jsdom XHR.
 
@@ -283,15 +293,21 @@ When a component/hook introduces a new request, add a handler in the test (or sh
 Example per-test override:
 
 ```tsx
-import { rest } from "msw";
+import { http, HttpResponse } from "msw";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 
 server.use(
-  rest.get("http://localhost/version.json", (_req, res, ctx) => {
-    return res(ctx.json({ version: "1.2.3" }));
+  http.get("http://localhost/version.json", () => {
+    return HttpResponse.json({ version: "1.2.3" });
   }),
 );
 ```
+
+The package is on `msw@2`, so handlers use `http.*` and return an
+`HttpResponse` rather than composing `res(ctx.*)`. A resolver receives one
+object: `({ request, params })`. Read a query string with
+`new URL(request.url).searchParams`, a body with `await request.json()`, and
+set a status with the second `HttpResponse.json` argument.
 
 ### Warning-Free React Updates
 

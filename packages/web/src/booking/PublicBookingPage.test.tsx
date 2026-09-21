@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { Status } from "@core/errors/status.codes";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -223,10 +223,8 @@ const publicPagePayload = (overrides: Record<string, unknown> = {}) => ({
 });
 
 function pageHandler() {
-  return rest.get(
-    `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-    (_req, res, ctx) =>
-      res(ctx.status(Status.OK), ctx.json(publicPagePayload())),
+  return http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+    HttpResponse.json(publicPagePayload(), { status: Status.OK }),
   );
 }
 
@@ -234,19 +232,22 @@ function slotsInWindow(
   allSlots: Array<{ slotStart: string; slotEnd: string }>,
   onRequest?: () => void,
 ) {
-  return rest.get(
+  return http.get(
     `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-    (req, res, ctx) => {
+    ({ request }) => {
       onRequest?.();
-      const start = req.url.searchParams.get("start");
-      const end = req.url.searchParams.get("end");
+      const start = new URL(request.url).searchParams.get("start");
+      const end = new URL(request.url).searchParams.get("end");
       const startMs = start ? Date.parse(start) : Number.NEGATIVE_INFINITY;
       const endMs = end ? Date.parse(end) : Number.POSITIVE_INFINITY;
       const slots = allSlots.filter((slot) => {
         const at = Date.parse(slot.slotStart);
         return at >= startMs && at < endMs;
       });
-      return res(ctx.status(Status.OK), ctx.json({ bookable: true, slots }));
+      return HttpResponse.json(
+        { bookable: true, slots },
+        { status: Status.OK },
+      );
     },
   );
 }
@@ -255,23 +256,21 @@ function reservationGetHandler(
   overrides: Record<string, unknown> = {},
   id = "000000000000000000000099",
 ) {
-  return rest.get(
-    `${ENV_WEB.API_BASEURL}/booking/reservations/${id}`,
-    (_req, res, ctx) =>
-      res(
-        ctx.status(Status.OK),
-        ctx.json({
-          slotStart: currentSlot.slotStart,
-          guestTimeZone: "UTC",
-          durationMinutes: 30,
-          hostDisplayName: "Tyler Dane",
-          status: "confirmed",
-          bookingSlug: "tylerdane",
-          guestName: "Guest User",
-          notes: null,
-          ...overrides,
-        }),
-      ),
+  return http.get(`${ENV_WEB.API_BASEURL}/booking/reservations/${id}`, () =>
+    HttpResponse.json(
+      {
+        slotStart: currentSlot.slotStart,
+        guestTimeZone: "UTC",
+        durationMinutes: 30,
+        hostDisplayName: "Tyler Dane",
+        status: "confirmed",
+        bookingSlug: "tylerdane",
+        guestName: "Guest User",
+        notes: null,
+        ...overrides,
+      },
+      { status: Status.OK },
+    ),
   );
 }
 
@@ -342,13 +341,10 @@ describe("PublicBookingPage", () => {
 
   it("does not fire booking_page_viewed for a disabled page", async () => {
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json(publicPagePayload({ enabled: false })),
-          ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+        HttpResponse.json(publicPagePayload({ enabled: false }), {
+          status: Status.OK,
+        }),
       ),
     );
     renderBookingRoute("/meet/tylerdane");
@@ -396,10 +392,8 @@ describe("PublicBookingPage", () => {
 
   it("does not render welcome text on the public page", async () => {
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json(publicPagePayload())),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
       ),
       slotsInWindow([currentSlot]),
     );
@@ -417,13 +411,10 @@ describe("PublicBookingPage", () => {
 
   it("names Teams on the duration line when the destination conference is teams", async () => {
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json(publicPagePayload({ conference: "teams" })),
-          ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+        HttpResponse.json(publicPagePayload({ conference: "teams" }), {
+          status: Status.OK,
+        }),
       ),
       slotsInWindow([currentSlot]),
     );
@@ -439,13 +430,10 @@ describe("PublicBookingPage", () => {
 
   it("omits a conference name when the destination conference is none", async () => {
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json(publicPagePayload({ conference: "none" })),
-          ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+        HttpResponse.json(publicPagePayload({ conference: "none" }), {
+          status: Status.OK,
+        }),
       ),
       slotsInWindow([currentSlot]),
     );
@@ -468,13 +456,12 @@ describe("PublicBookingPage", () => {
       pageHandler(),
       slotsInWindow([currentSlot]),
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        async (req, res, ctx) => {
-          postedBody = await req.json();
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async ({ request }) => {
+          postedBody = await request.json();
+          return HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: currentSlot.slotStart,
               slotEnd: currentSlot.slotEnd,
@@ -483,7 +470,8 @@ describe("PublicBookingPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -597,26 +585,26 @@ describe("PublicBookingPage", () => {
     const slot = nextMonthSlot;
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tzhost`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json(publicPagePayload())),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tzhost`, () =>
+        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
       ),
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tzhost/slots`,
-        (req, res, ctx) => {
-          slotTimeZones.push(req.url.searchParams.get("timeZone") ?? "");
-          const start = req.url.searchParams.get("start");
-          const end = req.url.searchParams.get("end");
+        ({ request }) => {
+          slotTimeZones.push(
+            new URL(request.url).searchParams.get("timeZone") ?? "",
+          );
+          const start = new URL(request.url).searchParams.get("start");
+          const end = new URL(request.url).searchParams.get("end");
           const startMs = start ? Date.parse(start) : Number.NEGATIVE_INFINITY;
           const endMs = end ? Date.parse(end) : Number.POSITIVE_INFINITY;
           const slots = [slot].filter((item) => {
             const at = Date.parse(item.slotStart);
             return at >= startMs && at < endMs;
           });
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots }),
+          return HttpResponse.json(
+            { bookable: true, slots },
+            { status: Status.OK },
           );
         },
       ),
@@ -624,13 +612,12 @@ describe("PublicBookingPage", () => {
         slotStart: slot.slotStart,
         guestTimeZone: overrideZone,
       }),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tzhost/reservations`,
-        async (req, res, ctx) => {
-          postedBody = await req.json();
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async ({ request }) => {
+          postedBody = await request.json();
+          return HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: slot.slotStart,
               slotEnd: slot.slotEnd,
@@ -639,7 +626,8 @@ describe("PublicBookingPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -724,25 +712,23 @@ describe("PublicBookingPage", () => {
     const persistNextSlot = bookableSlotAfterCurrentMonthInZone(overrideZone);
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tzpersist`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json(publicPagePayload())),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tzpersist`, () =>
+        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
       ),
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tzpersist/slots`,
-        (req, res, ctx) => {
-          const start = req.url.searchParams.get("start");
-          const end = req.url.searchParams.get("end");
+        ({ request }) => {
+          const start = new URL(request.url).searchParams.get("start");
+          const end = new URL(request.url).searchParams.get("end");
           const startMs = start ? Date.parse(start) : Number.NEGATIVE_INFINITY;
           const endMs = end ? Date.parse(end) : Number.POSITIVE_INFINITY;
           const slots = [currentSlot, persistNextSlot].filter((slot) => {
             const at = Date.parse(slot.slotStart);
             return at >= startMs && at < endMs;
           });
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots }),
+          return HttpResponse.json(
+            { bookable: true, slots },
+            { status: Status.OK },
           );
         },
       ),
@@ -809,10 +795,11 @@ describe("PublicBookingPage", () => {
   it("shows unavailable when bookable is false", async () => {
     server.use(
       pageHandler(),
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json({ slots: [], bookable: false })),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`, () =>
+        HttpResponse.json(
+          { slots: [], bookable: false },
+          { status: Status.OK },
+        ),
       ),
     );
 
@@ -839,9 +826,9 @@ describe("PublicBookingPage", () => {
       slotsInWindow([currentSlot, laterCurrentSlot], () => {
         slotRequests += 1;
       }),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        (_req, res, ctx) => res(ctx.status(Status.CONFLICT), ctx.json({})),
+        () => HttpResponse.json({}, { status: Status.CONFLICT }),
       ),
     );
 
@@ -927,10 +914,8 @@ describe("PublicBookingPage", () => {
   it("does not boot the calendar shortcut overlay on public booking routes", async () => {
     server.use(
       pageHandler(),
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json({ slots: [], bookable: true })),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`, () =>
+        HttpResponse.json({ slots: [], bookable: true }, { status: Status.OK }),
       ),
     );
 
@@ -952,27 +937,24 @@ describe("PublicBookingPage", () => {
       });
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        async (_req, res, ctx) => {
-          events.push("page-start");
-          await delay(80);
-          events.push("page-end");
-          return res(ctx.status(Status.OK), ctx.json(publicPagePayload()));
-        },
-      ),
-      rest.get(
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, async () => {
+        events.push("page-start");
+        await delay(80);
+        events.push("page-end");
+        return HttpResponse.json(publicPagePayload(), { status: Status.OK });
+      }),
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        async (_req, res, ctx) => {
+        async () => {
           events.push("slots-start");
           await delay(80);
           events.push("slots-end");
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+          return HttpResponse.json(
+            {
               bookable: true,
               slots: [currentSlot],
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -1045,27 +1027,24 @@ describe("PublicBookingPage", () => {
     ).toISOString();
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`,
-        (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json(publicPagePayload({ maxHorizonDays: 7 })),
-          ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
+        HttpResponse.json(publicPagePayload({ maxHorizonDays: 7 }), {
+          status: Status.OK,
+        }),
       ),
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (req, res, ctx) => {
+        ({ request }) => {
           if (slotStartParam == null) {
-            slotStartParam = req.url.searchParams.get("start");
-            slotEndParam = req.url.searchParams.get("end");
+            slotStartParam = new URL(request.url).searchParams.get("start");
+            slotEndParam = new URL(request.url).searchParams.get("end");
           }
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+          return HttpResponse.json(
+            {
               bookable: true,
               slots: [{ slotStart: inWindowStart, slotEnd: inWindowEnd }],
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -1271,14 +1250,13 @@ describe("PublicBookingPage", () => {
       pageHandler(),
       slotsInWindow([currentSlot]),
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        async (_req, res, ctx) => {
+        async () => {
           posts += 1;
           await delay(80);
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+          return HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: currentSlot.slotStart,
               slotEnd: currentSlot.slotEnd,
@@ -1287,7 +1265,8 @@ describe("PublicBookingPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -1328,13 +1307,13 @@ describe("PublicBookingPage", () => {
 
     server.use(
       pageHandler(),
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        async (_req, res, ctx) => {
+        async () => {
           await slotsGate;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [currentSlot] }),
+          return HttpResponse.json(
+            { bookable: true, slots: [currentSlot] },
+            { status: Status.OK },
           );
         },
       ),
@@ -1368,23 +1347,18 @@ describe("PublicBookingPage", () => {
     const slotFailGate = { fail: true };
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/retryhost`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.OK), ctx.json(publicPagePayload())),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/retryhost`, () =>
+        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
       ),
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/retryhost/slots`,
-        (_req, res, ctx) => {
-          if (slotFailGate.fail) {
-            return res(ctx.status(Status.INTERNAL_SERVER), ctx.json({}));
-          }
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [currentSlot] }),
-          );
-        },
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/retryhost/slots`, () => {
+        if (slotFailGate.fail) {
+          return HttpResponse.json({}, { status: Status.INTERNAL_SERVER });
+        }
+        return HttpResponse.json(
+          { bookable: true, slots: [currentSlot] },
+          { status: Status.OK },
+        );
+      }),
     );
 
     renderBookingRoute("/meet/retryhost");
@@ -1440,22 +1414,22 @@ describe("PublicBookingPage", () => {
 
     server.use(
       pageHandler(),
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        async (req, res, ctx) => {
-          const start = req.url.searchParams.get("start") ?? "";
+        async ({ request }) => {
+          const start = new URL(request.url).searchParams.get("start") ?? "";
           const isCurrentMonth = start.startsWith(`${currentMonthKey}-`);
           if (isCurrentMonth) {
             currentMonthRequests += 1;
-            return res(
-              ctx.status(Status.OK),
-              ctx.json({ bookable: true, slots: [currentSlot] }),
+            return HttpResponse.json(
+              { bookable: true, slots: [currentSlot] },
+              { status: Status.OK },
             );
           }
           await nextMonthSlotsGate;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [nextMonthSlot] }),
+          return HttpResponse.json(
+            { bookable: true, slots: [nextMonthSlot] },
+            { status: Status.OK },
           );
         },
       ),
@@ -1730,9 +1704,9 @@ describe("PublicBookingConfirmedPage", () => {
   it("does not navigate on Escape when the reservation is unknown", async () => {
     const user = userEvent.setup({ delay: null });
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/reservations/000000000000000000000099`,
-        (_req, res, ctx) => res(ctx.status(Status.NOT_FOUND), ctx.json({})),
+        () => HttpResponse.json({}, { status: Status.NOT_FOUND }),
       ),
     );
     const { router } = renderBookingRoute(
@@ -1769,9 +1743,9 @@ describe("PublicBookingConfirmedPage", () => {
 
   it("shows a calm state for an unknown reservation", async () => {
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/reservations/000000000000000000000099`,
-        (_req, res, ctx) => res(ctx.status(Status.NOT_FOUND), ctx.json({})),
+        () => HttpResponse.json({}, { status: Status.NOT_FOUND }),
       ),
     );
     renderBookingRoute("/meet/confirmed/000000000000000000000099");
@@ -1783,10 +1757,9 @@ describe("PublicBookingConfirmedPage", () => {
 
   it("shows a retryable state when the public GET fails", async () => {
     server.use(
-      rest.get(
+      http.get(
         `${ENV_WEB.API_BASEURL}/booking/reservations/000000000000000000000099`,
-        (_req, res, ctx) =>
-          res(ctx.status(Status.INTERNAL_SERVER), ctx.json({})),
+        () => HttpResponse.json({}, { status: Status.INTERNAL_SERVER }),
       ),
     );
     renderBookingRoute("/meet/confirmed/000000000000000000000099");
@@ -1803,12 +1776,11 @@ describe("PublicBookingConfirmedPage", () => {
       pageHandler(),
       slotsInWindow([currentSlot]),
       reservationGetHandler(),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        async (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async () =>
+          HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: currentSlot.slotStart,
               slotEnd: currentSlot.slotEnd,
@@ -1817,7 +1789,8 @@ describe("PublicBookingConfirmedPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           ),
       ),
     );
@@ -1865,12 +1838,11 @@ describe("PublicBookingConfirmedPage", () => {
         guestName: "Ada Lovelace",
         notes: "bring coffee",
       }),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        async (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async () =>
+          HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: currentSlot.slotStart,
               slotEnd: currentSlot.slotEnd,
@@ -1879,17 +1851,17 @@ describe("PublicBookingConfirmedPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           ),
       ),
-      rest.patch(
+      http.patch(
         `${ENV_WEB.API_BASEURL}/booking/reservations/000000000000000000000099`,
-        async (req, res, ctx) => {
-          const body = (await req.json()) as Record<string, unknown>;
+        async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
           patches.push(body);
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({
+          return HttpResponse.json(
+            {
               slotStart: currentSlot.slotStart,
               guestTimeZone: "UTC",
               durationMinutes: 30,
@@ -1898,7 +1870,8 @@ describe("PublicBookingConfirmedPage", () => {
               bookingSlug: "tylerdane",
               guestName: body.name,
               notes: body.notes,
-            }),
+            },
+            { status: Status.OK },
           );
         },
       ),
@@ -1961,12 +1934,11 @@ describe("PublicBookingConfirmedPage", () => {
         guestName: "Ada Lovelace",
         notes: "bring coffee",
       }),
-      rest.post(
+      http.post(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/reservations`,
-        async (_req, res, ctx) =>
-          res(
-            ctx.status(Status.OK),
-            ctx.json({
+        async () =>
+          HttpResponse.json(
+            {
               reservationId: "000000000000000000000099",
               slotStart: currentSlot.slotStart,
               slotEnd: currentSlot.slotEnd,
@@ -1975,7 +1947,8 @@ describe("PublicBookingConfirmedPage", () => {
                 "https://compasscalendar.com/meet/cancel/000000000000000000000099?token=abc",
               rescheduleUrl:
                 "https://compasscalendar.com/meet/reschedule/000000000000000000000099?token=abc",
-            }),
+            },
+            { status: Status.OK },
           ),
       ),
     );
