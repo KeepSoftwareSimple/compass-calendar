@@ -17,7 +17,21 @@ const logger = Logger("app:billing");
 
 const sendBillingError = (res: Response, e: unknown) => {
   if (e instanceof BillingHttpError) {
-    logger.error(e.message, e.cause ?? e);
+    // BillingHttpError always represents an expected business or upstream
+    // state (a subscription conflict, a Stripe rejection, a Stripe outage)
+    // with a safe clientMessage already attached, never a code defect.
+    // PostHogExceptionTransport only listens at `error`, so logging these
+    // at `error` captured them as exceptions and, via the error-autofix
+    // pipeline, auto-filed GitHub issues for expected states like "No
+    // billing account yet." (see error.handler.ts's logLevelForError for
+    // the same fix applied to operational 503s). Log at `warn` instead.
+    // Passing `e` itself as the second arg would also double the message,
+    // since winston appends `meta.message` when it matches `e.message`.
+    if (e.cause instanceof Error) {
+      logger.warn(e.message, e.cause);
+    } else {
+      logger.warn(e.message);
+    }
     res.status(e.status).json({ error: e.clientMessage });
     return;
   }

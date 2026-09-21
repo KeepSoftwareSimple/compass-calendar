@@ -108,4 +108,37 @@ describe("BillingController", () => {
       error: "Couldn't start billing. Please try again in a moment.",
     });
   });
+
+  // PostHogExceptionTransport only listens at `error`, so a BillingHttpError
+  // logged at `error` gets captured as an exception and, via the
+  // error-autofix pipeline, auto-files a GitHub issue for an expected
+  // business state (e.g. "No billing account yet." for a user with no Stripe
+  // customer yet). All loggers share one PostHogExceptionTransport instance
+  // (memoized in winston.logger.ts), so spying on its `log` directly proves
+  // whether this failure would have been captured as an exception. Regression
+  // for #3933.
+  it("does not capture an expected BillingHttpError as a PostHog exception", async () => {
+    const { BillingHttpError } = await import(
+      "@backend/billing/billing.errors"
+    );
+    spyOn(billingService, "getStatus").mockRejectedValue(
+      new BillingHttpError(Status.CONFLICT, "No billing account yet."),
+    );
+
+    const { PostHogExceptionTransport } = await import(
+      "@core/logger/posthog-exception.transport"
+    );
+    const captureSpy = spyOn(
+      PostHogExceptionTransport.prototype,
+      "log",
+    ).mockImplementation((_info, next) => next());
+
+    const { res } = jsonRes();
+    await billingController.getStatus(
+      sessionReq("507f1f77bcf86cd799439011"),
+      res,
+    );
+
+    expect(captureSpy).not.toHaveBeenCalled();
+  });
 });
