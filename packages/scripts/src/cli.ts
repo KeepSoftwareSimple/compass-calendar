@@ -3,6 +3,7 @@ import { runApplePollThrottleCommand } from "@scripts/commands/apple-poll-thrott
 import { runAuditConnectionIdentity } from "@scripts/commands/audit-connection-identity";
 import { runBackfillBilling } from "@scripts/commands/backfill-billing";
 import { runBackfillIdentities } from "@scripts/commands/backfill-identities";
+import { runConnectionReport } from "@scripts/commands/connection-report";
 import { runEncryptCredentials } from "@scripts/commands/encrypt-credentials";
 import { runManageFailedJobs } from "@scripts/commands/manage-failed-jobs";
 import { runPurgeUser } from "@scripts/commands/purge-user";
@@ -40,6 +41,9 @@ export default class CompassCLI {
         break;
       case cmd === "encrypt-credentials":
         await runEncryptCredentials();
+        break;
+      case cmd === "connection-report":
+        await runConnectionReport();
         break;
       case cmd === "apple-poll-throttle":
         await runApplePollThrottleCommand();
@@ -95,6 +99,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "Encrypt legacy plaintext OAuth refresh tokens in Sync credentials (--apply to write)",
+      );
+
+    program
+      .command("connection-report")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Read-only report of Sync connections by provider, state, reason, and last activity",
       );
 
     program
