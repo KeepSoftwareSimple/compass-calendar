@@ -29,6 +29,7 @@ const connection = createMockConnection("host@example.com", {
   connectionState: "RECONNECT_REQUIRED",
   state: "actionRequired",
 });
+const healthyConnection = createMockConnection("host@example.com");
 
 const renderHeader = (
   status: BookingPageStatusResponse | undefined,
@@ -46,10 +47,12 @@ const renderHeader = (
   return render(
     <BookingStatusHeader
       addressPreview={null}
+      aggregateState="HEALTHY"
       bookingUrl={bookingUrl}
       savedUrl={null}
       calendars={[workCalendar]}
       connections={reasonOverrides.connections ?? [connection]}
+      hasHealthyConnection
       isLive
       isPending={false}
       onToggle={() => undefined}
@@ -68,7 +71,12 @@ const unbookable = (
 
 describe("BookingStatusHeader", () => {
   it("renders no bookability line when status is bookable", () => {
-    renderHeader({ bookable: true, reasons: [] });
+    renderHeader(
+      { bookable: true, reasons: [] },
+      {
+        connections: [healthyConnection],
+      },
+    );
 
     expect(screen.getByLabelText("Meeting link")).toHaveValue(bookingUrl);
     expect(
@@ -196,6 +204,7 @@ describe("BookingStatusHeader", () => {
   it("names a read-only destination", () => {
     renderHeader(
       unbookable([{ kind: "calendar", reason: "notWritable", calendarId }]),
+      { connections: [healthyConnection] },
     );
 
     expect(
@@ -233,15 +242,43 @@ describe("BookingStatusHeader", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows one message and one action when several reasons stack up", () => {
+    renderHeader(
+      unbookable([
+        { kind: "calendar", reason: "stale", calendarId },
+        {
+          kind: "connection",
+          reason: "actionRequired",
+          connectionState: "actionRequired",
+        },
+        { kind: "calendar", reason: "stale" },
+      ]),
+    );
+
+    expect(
+      screen.getAllByText(new RegExp(BOOKING_NOT_BOOKABLE_PREFIX)),
+    ).toHaveLength(1);
+    expect(
+      screen.getByText(
+        `${BOOKING_NOT_BOOKABLE_PREFIX}: Google Calendar needs reconnecting.`,
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("button", { name: RECONNECT_CALENDAR_LABEL.google }),
+    ).toHaveLength(1);
+  });
+
   it("shows a copyable meeting link without Open when the page is off", () => {
     const { wrapper } = createStoreWrapper();
     render(
       <BookingStatusHeader
         addressPreview={`${window.location.origin}/meet/hostuser`}
+        aggregateState="HEALTHY"
         bookingUrl={null}
         savedUrl={bookingUrl}
         calendars={[workCalendar]}
         connections={[]}
+        hasHealthyConnection
         isLive={false}
         isPending={false}
         onToggle={() => undefined}
@@ -267,10 +304,12 @@ describe("BookingStatusHeader", () => {
     render(
       <BookingStatusHeader
         addressPreview={`${window.location.origin}/meet/hostuser`}
+        aggregateState="HEALTHY"
         bookingUrl={null}
         savedUrl={null}
         calendars={[workCalendar]}
         connections={[]}
+        hasHealthyConnection
         isLive={false}
         isPending={false}
         onToggle={() => undefined}
