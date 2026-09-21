@@ -223,71 +223,97 @@ export async function handleThirdPartySignInUp(
   input: ThirdPartySignInUpInput,
   originalSignInUpPOST: ThirdPartySignInUpPostFn,
 ): Promise<Awaited<ReturnType<ThirdPartySignInUpPostFn>>> {
-  const response = await originalSignInUpPOST(input);
   const thirdPartyId = input.provider?.id ?? "google";
   const kind = providerKindFromThirdPartyId(thirdPartyId);
 
-  if (kind === "microsoft") {
-    const success = createMicrosoftSignInSuccess(
-      response as CreateMicrosoftSignInResponse,
+  let response: Awaited<ReturnType<ThirdPartySignInUpPostFn>>;
+
+  try {
+    response = await originalSignInUpPOST(input);
+  } catch (err) {
+    logger.error("oauth_callback_returned: token exchange threw", {
+      provider: kind,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  }
+
+  if (response.status !== "OK") {
+    logger.warn("oauth_callback_returned: sign-in status not OK", {
+      provider: kind,
+      status: response.status,
+    });
+  }
+
+  try {
+    if (kind === "microsoft") {
+      const success = createMicrosoftSignInSuccess(
+        response as CreateMicrosoftSignInResponse,
+      );
+      if (!success) {
+        return response;
+      }
+      const remapped = await maybeRemapMicrosoftSignInToCompassSession(
+        input,
+        response,
+        success,
+      );
+      await microsoftAuthService.handleMicrosoftAuth(remapped.success, {
+        hasExistingSession: Boolean(input.session),
+      });
+      return remapped.response;
+    }
+
+    if (kind === "apple") {
+      const success = createAppleSignInSuccess(
+        response as CreateAppleSignInResponse,
+      );
+      if (!success) {
+        return response;
+      }
+      const remapped = await maybeRemapAppleSignInToCompassSession(
+        input,
+        response,
+        success,
+      );
+      await appleAuthService.handleAppleAuth(
+        withAppleFirstAuthorizationName(
+          remapped.success,
+          appleFormUserJsonFromInput(input),
+        ),
+        {
+          hasExistingSession: Boolean(input.session),
+        },
+      );
+      return remapped.response;
+    }
+
+    const success = createGoogleSignInSuccess(
+      response as CreateGoogleSignInResponse,
     );
+
     if (!success) {
       return response;
     }
-    const remapped = await maybeRemapMicrosoftSignInToCompassSession(
+
+    const remapped = await maybeRemapGoogleSignInToCompassSession(
       input,
       response,
       success,
     );
-    await microsoftAuthService.handleMicrosoftAuth(remapped.success, {
+
+    await googleAuthService.handleGoogleAuth(remapped.success, {
       hasExistingSession: Boolean(input.session),
     });
+
     return remapped.response;
+  } catch (err) {
+    logger.error("oauth_callback_returned: post-exchange handling threw", {
+      provider: kind,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   }
-
-  if (kind === "apple") {
-    const success = createAppleSignInSuccess(
-      response as CreateAppleSignInResponse,
-    );
-    if (!success) {
-      return response;
-    }
-    const remapped = await maybeRemapAppleSignInToCompassSession(
-      input,
-      response,
-      success,
-    );
-    await appleAuthService.handleAppleAuth(
-      withAppleFirstAuthorizationName(
-        remapped.success,
-        appleFormUserJsonFromInput(input),
-      ),
-      {
-        hasExistingSession: Boolean(input.session),
-      },
-    );
-    return remapped.response;
-  }
-
-  const success = createGoogleSignInSuccess(
-    response as CreateGoogleSignInResponse,
-  );
-
-  if (!success) {
-    return response;
-  }
-
-  const remapped = await maybeRemapGoogleSignInToCompassSession(
-    input,
-    response,
-    success,
-  );
-
-  await googleAuthService.handleGoogleAuth(remapped.success, {
-    hasExistingSession: Boolean(input.session),
-  });
-
-  return remapped.response;
 }
 
 export async function sendPasswordResetEmail<

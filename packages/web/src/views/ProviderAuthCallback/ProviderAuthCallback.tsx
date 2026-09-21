@@ -51,6 +51,7 @@ export async function completeProviderAuthCallback({
     trackSignupFailed(result.reason, {
       method: provider,
       step: "oauth_callback_returned",
+      error: result.error,
     });
     // Cancelling is a choice, not a fault. An error toast for it reads as a
     // Compass failure and discourages the retry that would have worked.
@@ -92,8 +93,11 @@ export function ProviderAuthCallbackView() {
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
-    }).catch(() => {
-      trackSignupFailed("oauth_callback_crashed", { method: providerParam });
+    }).catch((error: unknown) => {
+      trackSignupFailed("oauth_callback_crashed", {
+        method: providerParam,
+        error: error instanceof Error ? error.message : String(error),
+      });
       showErrorToast(PROVIDER_AUTHORIZATION_ERROR_MESSAGE);
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });

@@ -134,6 +134,7 @@ describe("completeProviderAuthorization", () => {
       message: "Google did not grant a fresh authorization. Please try again.",
       returnPath: "/week",
       reason: "oauth_exchange_failed",
+      error: "GOOGLE_REFRESH_TOKEN_MISSING",
     });
 
     expect(consumeGoogleAuthNeedsConsentRetry()).toBe(true);
@@ -161,6 +162,7 @@ describe("completeProviderAuthorization", () => {
       message: PROVIDER_AUTH_CANCELLED_MESSAGE,
       returnPath: "/week",
       reason: "oauth_user_cancelled",
+      error: "access_denied",
     });
 
     expect(deps.authApi.loginOrSignup).not.toHaveBeenCalled();
