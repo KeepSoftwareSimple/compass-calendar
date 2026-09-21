@@ -1,4 +1,4 @@
-import { SignOutIcon } from "@phosphor-icons/react";
+import { SignOutIcon } from "@phosphor-icons/react/dist/csr/SignOut";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { useLogoutConfirmation } from "@web/components/LogoutConfirmation/hooks/useLogoutConfirmation";

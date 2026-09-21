@@ -1,4 +1,4 @@
-import { CheckIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import {
   SHORTCUT_PRO_TOOLTIP,
   ShortcutProBadge,

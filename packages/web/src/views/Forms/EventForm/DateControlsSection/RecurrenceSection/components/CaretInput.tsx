@@ -1,4 +1,5 @@
-import { CaretDown, CaretUp } from "@phosphor-icons/react";
+import { CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown";
+import { CaretUp } from "@phosphor-icons/react/dist/csr/CaretUp";
 import type React from "react";
 
 export interface CaretInputProps {

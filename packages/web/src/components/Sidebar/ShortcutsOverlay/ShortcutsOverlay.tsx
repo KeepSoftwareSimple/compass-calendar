@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import classNames from "classnames";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";

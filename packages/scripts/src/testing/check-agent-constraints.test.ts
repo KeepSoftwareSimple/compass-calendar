@@ -4,6 +4,7 @@ import {
   EM_DASH_ALLOWLIST,
   emDashHits,
   formatHit,
+  inlineBootPhosphorIcons,
   isBarrelSource,
   KEYDOWN_LISTENER_ALLOWLIST,
   keydownListenerHits,
@@ -17,6 +18,7 @@ import {
   scanBunDockerfilePins,
   scanConstraints,
   scanRuntimeStageCopies,
+  stripUnusedPhosphorWeights,
   WEB_LOCATOR_ALLOWLIST,
   ZOD_V3_ALLOWLIST,
   zodV3ImportHits,
@@ -210,6 +212,8 @@ describe("scanConstraints", () => {
         'import mongoService from "@backend/common/services/mongo.service";\n',
       "packages/web/src/dup.ts":
         "const EventSchema = z.object({ title: z.string() });\n",
+      "packages/web/src/icons.ts":
+        'import { XIcon } from "@phosphor-icons/react";\nimport { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";\n',
     });
 
     const hits = scanConstraints(root).map((hit) => `${hit.rule}:${hit.path}`);
@@ -219,12 +223,101 @@ describe("scanConstraints", () => {
       "mongoService-import:packages/backend/src/new.service.test.ts",
     );
     expect(hits).toContain("duplicate-event-schema:packages/web/src/dup.ts");
+    expect(hits).toContain("phosphor-barrel:packages/web/src/icons.ts");
     expect(hits.some((hit) => hit.includes("packages/web/src/index.tsx"))).toBe(
       false,
     );
     expect(
       hits.some((hit) => hit.includes("packages/web/src/Widget.tsx")),
     ).toBe(false);
+  });
+
+  it("rejects a phosphor barrel import and allows a deep icon path", () => {
+    const root = mkdtempSync(join(tmpdir(), "phosphor-barrel-"));
+    writeTree(root, {
+      "packages/web/src/icons.ts":
+        'import { XIcon } from "@phosphor-icons/react";\nimport { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";\n',
+    });
+
+    const lines = scanConstraints(root)
+      .filter((hit) => hit.rule === "phosphor-barrel")
+      .map((hit) => hit.line);
+    expect(lines).toEqual([1]);
+  });
+
+  it("ignores a phosphor barrel import in a test file", () => {
+    const root = mkdtempSync(join(tmpdir(), "phosphor-barrel-test-"));
+    writeTree(root, {
+      "packages/web/src/icons.test.ts":
+        'import { PlusIcon } from "@phosphor-icons/react";\n',
+    });
+
+    const hits = scanConstraints(root).filter(
+      (hit) => hit.rule === "phosphor-barrel",
+    );
+    expect(hits).toEqual([]);
+  });
+
+  it("drops unused phosphor weights and keeps regular, bold, and fill", () => {
+    const source = `const e = /* @__PURE__ */ new Map([
+  [
+    "bold",
+    /* @__PURE__ */ a.createElement("path", { d: "bold" })
+  ],
+  [
+    "duotone",
+    /* @__PURE__ */ a.createElement("path", { d: "duotone" })
+  ],
+  [
+    "fill",
+    /* @__PURE__ */ a.createElement("path", { d: "fill" })
+  ],
+  [
+    "light",
+    /* @__PURE__ */ a.createElement("path", { d: "light" })
+  ],
+  [
+    "regular",
+    /* @__PURE__ */ a.createElement("path", { d: "regular" })
+  ],
+  [
+    "thin",
+    /* @__PURE__ */ a.createElement("path", { d: "thin" })
+  ]
+]);
+`;
+    const stripped = stripUnusedPhosphorWeights(source);
+    expect(stripped).toContain('"bold"');
+    expect(stripped).toContain('"fill"');
+    expect(stripped).toContain('"regular"');
+    expect(stripped).not.toContain('"thin"');
+    expect(stripped).not.toContain('"light"');
+    expect(stripped).not.toContain('"duotone"');
+  });
+
+  it("inlines boot-path X and Check imports and leaves other files alone", () => {
+    const source =
+      'import { XIcon } from "@phosphor-icons/react/dist/csr/X";\nexport const View = () => <XIcon size={16} />;\n';
+    const inlined = inlineBootPhosphorIcons(
+      "/repo/packages/web/src/components/PointerHint/DiscardUnsavedChangesDialog.tsx",
+      source,
+    );
+    expect(inlined).not.toContain("@phosphor-icons/react");
+    expect(inlined).toContain("function XIcon");
+    expect(inlined).toContain("<XIcon size={16} />");
+
+    const check =
+      'import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";\n<CheckIcon weight="bold" />;\n';
+    const checkInlined = inlineBootPhosphorIcons(
+      "/repo/ConnectCalendarPrompt.tsx",
+      check,
+    );
+    expect(checkInlined).not.toContain("@phosphor-icons/react");
+    expect(checkInlined).toContain('weight === "bold"');
+
+    expect(
+      inlineBootPhosphorIcons("/repo/SidebarCloseButton.tsx", source),
+    ).toBe(source);
   });
 
   it("does not require checker edits for new provider test files", () => {

@@ -1,4 +1,4 @@
-import { UsersIcon } from "@phosphor-icons/react";
+import { UsersIcon } from "@phosphor-icons/react/dist/csr/Users";
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";

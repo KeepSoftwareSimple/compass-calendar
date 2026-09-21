@@ -1,4 +1,4 @@
-import { X } from "@phosphor-icons/react";
+import { X } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, type ReactNode, useEffect, useState } from "react";
 import {
   type ProviderKind,

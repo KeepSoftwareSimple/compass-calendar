@@ -1,4 +1,5 @@
-import { ArrowsClockwiseIcon, CloudArrowUpIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowsClockwise";
+import { CloudArrowUpIcon } from "@phosphor-icons/react/dist/csr/CloudArrowUp";
 import {
   type ProviderKind,
   providerDisplayName,

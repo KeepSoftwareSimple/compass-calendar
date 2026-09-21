@@ -1,4 +1,4 @@
-import { CheckIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { type FC, useEffect } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { useSession } from "@web/auth/compass/session/useSession";

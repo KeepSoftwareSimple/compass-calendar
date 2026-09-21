@@ -1,4 +1,5 @@
-import { SignInIcon, UserPlusIcon } from "@phosphor-icons/react";
+import { SignInIcon } from "@phosphor-icons/react/dist/csr/SignIn";
+import { UserPlusIcon } from "@phosphor-icons/react/dist/csr/UserPlus";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";

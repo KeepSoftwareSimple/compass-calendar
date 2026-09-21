@@ -1,4 +1,4 @@
-import { CalendarIcon } from "@phosphor-icons/react";
+import { CalendarIcon } from "@phosphor-icons/react/dist/csr/Calendar";
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";

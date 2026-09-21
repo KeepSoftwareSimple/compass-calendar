@@ -1,4 +1,4 @@
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import classNames from "classnames";
 import { type FC } from "react";
 import { type SyncConnectionSummary } from "@core/types/user.types";

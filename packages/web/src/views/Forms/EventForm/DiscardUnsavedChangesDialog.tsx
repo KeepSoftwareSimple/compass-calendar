@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { useRef } from "react";
 import {
   OverlayPanel,

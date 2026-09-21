@@ -1,4 +1,4 @@
-import { UsersIcon } from "@phosphor-icons/react";
+import { UsersIcon } from "@phosphor-icons/react/dist/csr/Users";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { settingsActions } from "@web/settings/settings.store";

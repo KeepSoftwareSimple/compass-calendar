@@ -1,4 +1,5 @@
-import { MapPinIcon, UsersIcon } from "@phosphor-icons/react";
+import { MapPinIcon } from "@phosphor-icons/react/dist/csr/MapPin";
+import { UsersIcon } from "@phosphor-icons/react/dist/csr/Users";
 import classNames from "classnames";
 import fastDeepEqual from "fast-deep-equal/react";
 import type React from "react";

@@ -1,4 +1,5 @@
-import { MoonStarsIcon, SunIcon } from "@phosphor-icons/react";
+import { MoonStarsIcon } from "@phosphor-icons/react/dist/csr/MoonStars";
+import { SunIcon } from "@phosphor-icons/react/dist/csr/Sun";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import {
   selectTheme,
