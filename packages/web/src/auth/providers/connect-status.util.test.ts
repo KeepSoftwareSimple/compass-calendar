@@ -1,5 +1,6 @@
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import * as userMetadataUtil from "@web/auth/compass/user/util/user-metadata.util";
+import * as Track from "@web/auth/posthog/track";
 import {
   resetMissingPermissionsStoreForTests,
   selectMissingPermissionsProvider,
@@ -70,6 +71,19 @@ describe("connect-status.util", () => {
       ).toBeNull();
       expect(readConnectStatus("?provider=google&status=pending")).toBeNull();
       expect(readConnectStatus("")).toBeNull();
+    });
+
+    it("reads intent and correlation id from the sync callback redirect", () => {
+      expect(
+        readConnectStatus(
+          "?provider=google&status=connected&intent=reconnect&cid=abcd1234",
+        ),
+      ).toEqual({
+        provider: "google",
+        status: "connected",
+        intent: "reconnect",
+        correlationId: "abcd1234",
+      });
     });
 
     // These two are redirected by the sync callback. Dropping them here left
@@ -184,6 +198,60 @@ describe("connect-status.util", () => {
       await applyConnectRedirect({ provider: "microsoft", status: "error" });
       expect(refreshSpy).toHaveBeenCalledWith({ force: true });
 
+      refreshSpy.mockRestore();
+    });
+
+    it("records oauth_return for a connected redirect and keeps calendar_connected", async () => {
+      const refreshSpy = spyOn(
+        userMetadataUtil,
+        "refreshUserMetadata",
+      ).mockResolvedValue(undefined);
+      const trackSpy = spyOn(Track, "track").mockImplementation(() => {});
+
+      await applyConnectRedirect({
+        provider: "google",
+        status: "connected",
+        intent: "connect",
+        correlationId: "abcd1234",
+      });
+
+      expect(trackSpy).toHaveBeenCalledWith("oauth_return", {
+        provider: "google",
+        status: "connected",
+        intent: "connect",
+        correlationId: "abcd1234",
+      });
+      expect(trackSpy).toHaveBeenCalledWith("calendar_connected", {
+        source: "connect_redirect",
+        provider: "google",
+      });
+
+      trackSpy.mockRestore();
+      refreshSpy.mockRestore();
+    });
+
+    it("records oauth_return for an error redirect", async () => {
+      const refreshSpy = spyOn(
+        userMetadataUtil,
+        "refreshUserMetadata",
+      ).mockResolvedValue(undefined);
+      const trackSpy = spyOn(Track, "track").mockImplementation(() => {});
+
+      await applyConnectRedirect({
+        provider: "microsoft",
+        status: "error",
+        intent: "reconnect",
+        correlationId: "efgh5678",
+      });
+
+      expect(trackSpy).toHaveBeenCalledWith("oauth_return", {
+        provider: "microsoft",
+        status: "error",
+        intent: "reconnect",
+        correlationId: "efgh5678",
+      });
+
+      trackSpy.mockRestore();
       refreshSpy.mockRestore();
     });
   });

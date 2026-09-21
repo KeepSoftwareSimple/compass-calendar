@@ -7,6 +7,7 @@ export type ProductEvent =
   | "signup_started"
   | "signup_completed"
   | "oauth_redirect_started"
+  | "oauth_return"
   | "signup_step_viewed"
   | "signup_failed"
   | "login_completed"
