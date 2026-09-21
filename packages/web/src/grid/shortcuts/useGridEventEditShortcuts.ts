@@ -1,3 +1,4 @@
+import { type RegisterableHotkey } from "@tanstack/react-hotkeys";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { type Event } from "@core/types/event.contracts";
@@ -82,6 +83,7 @@ import {
   eventJumpActions,
   isEventJumpActive,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
@@ -108,6 +110,34 @@ const SPATIAL_DIRECTION = {
 
 const isArrowKey = (key: string): key is keyof typeof SPATIAL_DIRECTION =>
   key in SPATIAL_DIRECTION;
+
+// The twelve arrow registrations below differ only in hotkey and legend id:
+// one handler serves all four directions, and the option bundle is fixed per
+// family. These two presets keep each registration a single line, so adding a
+// direction (or remapping one in KEYMAP) is a one-line edit rather than a
+// five-line block that can drift from its siblings.
+function useFocusMoveShortcut(
+  hotkey: RegisterableHotkey,
+  shortcutId: ShortcutRegistryId,
+  handler: (keyboardEvent: KeyboardEvent) => void,
+) {
+  useAppShortcut(hotkey, handler, {
+    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
+    shortcutId,
+  });
+}
+
+function useMoveEventShortcut(
+  hotkey: RegisterableHotkey,
+  shortcutId: ShortcutRegistryId,
+  handler: (keyboardEvent: KeyboardEvent) => void,
+) {
+  useAppShortcut(hotkey, handler, {
+    ...WRITE_EDIT_SHORTCUT,
+    telemetryHintId: "nudge",
+    shortcutId,
+  });
+}
 
 const isFocusInSidebar = () =>
   Boolean(document.activeElement?.closest(`#${ID_SIDEBAR}`));
@@ -483,6 +513,11 @@ export function useGridEventEditShortcuts({
   const moveFocusedCalendarEvent = (keyboardEvent: KeyboardEvent) => {
     if (isEventFormOpen()) return;
 
+    // Narrowed once: the week window's rules (refuse, or carry by shifting the
+    // view) are read three times below, and re-testing the discriminant at each
+    // one only to satisfy the narrowing obscured which check is the real gate.
+    const clamp = dayBoundary.kind === "clamp" ? dayBoundary : null;
+
     const event = getFocusedMutableCalendarEvent();
     if (event?._id) {
       if (isGridEventScheduleLocked(calendarLookup, event)) {
@@ -500,7 +535,6 @@ export function useGridEventEditShortcuts({
         keyboardEvent.key === "ArrowDown" &&
         !keyboardEvent.altKey
       ) {
-        if (!event._id) return;
         keyboardEvent.preventDefault();
         const startMinute =
           getVisibleGridStartMinute() ?? DEFAULT_TIMED_START_MINUTE;
@@ -517,20 +551,16 @@ export function useGridEventEditShortcuts({
       );
       if (!movement) return;
 
-      const crossesWeekWindow =
-        dayBoundary.kind === "clamp" &&
-        isOutsideVisibleWeek(
-          dayjs(event.startDate),
-          movement.days,
-          dayBoundary.weekDays,
-        );
+      const crossesWeekWindow = Boolean(
+        clamp &&
+          isOutsideVisibleWeek(
+            dayjs(event.startDate),
+            movement.days,
+            clamp.weekDays,
+          ),
+      );
       // Without a carry handler the window edge is a wall (old behavior).
-      if (
-        crossesWeekWindow &&
-        !(dayBoundary.kind === "clamp" && dayBoundary.onCrossed)
-      ) {
-        return;
-      }
+      if (crossesWeekWindow && !clamp?.onCrossed) return;
 
       const previousStart = dayjs(event.startDate).startOf("day");
 
@@ -541,13 +571,8 @@ export function useGridEventEditShortcuts({
           shortcutHintProgressActions.demonstrate("nudge");
           commitDeferredNudge(nudgedEvent);
           followAcrossMidnight(previousStart, nudgedEvent);
-          if (
-            crossesWeekWindow &&
-            dayBoundary.kind === "clamp" &&
-            movement.days !== 0 &&
-            nudgedEvent._id
-          ) {
-            dayBoundary.onCrossed?.(movement.days, nudgedEvent._id);
+          if (crossesWeekWindow && movement.days !== 0 && nudgedEvent._id) {
+            clamp?.onCrossed?.(movement.days, nudgedEvent._id);
           }
         },
       });
@@ -770,74 +795,26 @@ export function useGridEventEditShortcuts({
     ignoreInputs: true,
     shortcutId: "edit-paste",
   });
-  useAppShortcut(KEYMAP.moveFocus.hotkeys.up, moveDraftOrFocusAdjacent, {
-    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    shortcutId: "edit-focus-prev",
-  });
-  useAppShortcut(KEYMAP.moveFocus.hotkeys.down, moveDraftOrFocusAdjacent, {
-    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    shortcutId: "edit-focus-next",
-  });
-  useAppShortcut(KEYMAP.moveFocus.hotkeys.left, moveDraftOrFocusAdjacent, {
-    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    shortcutId: "edit-focus-left",
-  });
-  useAppShortcut(KEYMAP.moveFocus.hotkeys.right, moveDraftOrFocusAdjacent, {
-    ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
-    shortcutId: "edit-focus-right",
-  });
-  useAppShortcut(KEYMAP.moveEvent.hotkeys.up, moveFocusedCalendarEvent, {
-    ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
-    shortcutId: "edit-move-earlier",
-  });
-  useAppShortcut(KEYMAP.moveEvent.hotkeys.down, moveFocusedCalendarEvent, {
-    ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
-    shortcutId: "edit-move-later",
-  });
-  useAppShortcut(KEYMAP.moveEvent.hotkeys.left, moveFocusedCalendarEvent, {
-    ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
-    shortcutId: "edit-move-prev-day",
-  });
-  useAppShortcut(KEYMAP.moveEvent.hotkeys.right, moveFocusedCalendarEvent, {
-    ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
-    shortcutId: "edit-move-next-day",
-  });
-  useAppShortcut(KEYMAP.moveEvent.coarseHotkeys.up, moveFocusedCalendarEvent, {
-    ...WRITE_EDIT_SHORTCUT,
-    telemetryHintId: "nudge",
-    shortcutId: "edit-move-hour-earlier",
-  });
-  useAppShortcut(
-    KEYMAP.moveEvent.coarseHotkeys.down,
-    moveFocusedCalendarEvent,
-    {
-      ...WRITE_EDIT_SHORTCUT,
-      telemetryHintId: "nudge",
-      shortcutId: "edit-move-hour-later",
-    },
-  );
-  useAppShortcut(
-    KEYMAP.moveEvent.coarseHotkeys.left,
-    moveFocusedCalendarEvent,
-    {
-      ...WRITE_EDIT_SHORTCUT,
-      telemetryHintId: "nudge",
-      shortcutId: "edit-move-week-earlier",
-    },
-  );
-  useAppShortcut(
-    KEYMAP.moveEvent.coarseHotkeys.right,
-    moveFocusedCalendarEvent,
-    {
-      ...WRITE_EDIT_SHORTCUT,
-      telemetryHintId: "nudge",
-      shortcutId: "edit-move-week-later",
-    },
-  );
+  // One handler per family, one row per direction: the local aliases keep each
+  // registration on a single line so the table reads as the table it is.
+  const onFocusMove = moveDraftOrFocusAdjacent;
+  const focusKeys = KEYMAP.moveFocus.hotkeys;
+  useFocusMoveShortcut(focusKeys.up, "edit-focus-prev", onFocusMove);
+  useFocusMoveShortcut(focusKeys.down, "edit-focus-next", onFocusMove);
+  useFocusMoveShortcut(focusKeys.left, "edit-focus-left", onFocusMove);
+  useFocusMoveShortcut(focusKeys.right, "edit-focus-right", onFocusMove);
+
+  const onMove = moveFocusedCalendarEvent;
+  const { hotkeys: fine, coarseHotkeys: coarse } = KEYMAP.moveEvent;
+  useMoveEventShortcut(fine.up, "edit-move-earlier", onMove);
+  useMoveEventShortcut(fine.down, "edit-move-later", onMove);
+  useMoveEventShortcut(fine.left, "edit-move-prev-day", onMove);
+  useMoveEventShortcut(fine.right, "edit-move-next-day", onMove);
+  useMoveEventShortcut(coarse.up, "edit-move-hour-earlier", onMove);
+  useMoveEventShortcut(coarse.down, "edit-move-hour-later", onMove);
+  useMoveEventShortcut(coarse.left, "edit-move-week-earlier", onMove);
+  useMoveEventShortcut(coarse.right, "edit-move-week-later", onMove);
+
   useAppShortcut(KEYMAP.edgeFocus.hotkey, cycleEdgeFocus, {
     ...DRAFT_MOVEMENT_HOTKEY_OPTIONS,
     ...WRITE_EDIT_SHORTCUT,

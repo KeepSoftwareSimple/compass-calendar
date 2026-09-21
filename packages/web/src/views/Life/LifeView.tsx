@@ -5,7 +5,7 @@ import { ROOT_ROUTES, ROUTE_IDS } from "@web/common/constants/routes";
 import { ID_MAIN } from "@web/common/constants/web.constants";
 import { useResponsiveLayout } from "@web/components/AuthenticatedLayout/useResponsiveLayout";
 import { CalendarHeader } from "@web/components/CalendarHeader/CalendarHeader";
-import { LifeCommandPalette } from "@web/components/CommandPalette/CommandPalette";
+import { LifeCommandPalette } from "@web/components/CommandPalette/LifeCommandPalette";
 import { COMMAND_PALETTE_PLACEHOLDER } from "@web/components/CommandPalette/more.cmd.constants";
 import { ResizableSidebarPanel } from "@web/components/Sidebar/ResizableSidebarPanel";
 import { SidebarShell } from "@web/components/Sidebar/SidebarShell";
