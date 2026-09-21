@@ -5,15 +5,28 @@ import { type LocalEventRecord } from "@web/events/types/local-event.record";
 /**
  * Normalize a list of events into the `{ ids, entities }` shape the query
  * caches store, keyed by `id`. Duplicate ids resolve last-write-wins in
- * `entities`.
+ * `entities`, and `ids` keeps only the FIRST appearance of each id.
+ *
+ * `ids` is the render order: every consumer walks it and looks each id up in
+ * `entities` (event.view-model.ts `eventsFrom`), so an id listed twice draws
+ * the same event twice - two byte-identical cards on the same day, which is
+ * what a duplicated event in the grid actually is. The list arrives already
+ * concatenated from several sources that can each name the same event: the
+ * backend drains every page of a range read and sync appends one series base
+ * row per PAGE, and a series master plus an exception for the same instant
+ * both assemble to the same composed occurrence id. De-duplicating here is
+ * the one place that covers all of them, since id equality already means
+ * "the same event" everywhere downstream.
  */
-export const normalizeEventList = (events: Event[]): NormalizedEvents => ({
-  ids: events.map((event) => event.id),
-  entities: events.reduce<NormalizedEvents["entities"]>((entities, event) => {
+export const normalizeEventList = (events: Event[]): NormalizedEvents => {
+  const entities: NormalizedEvents["entities"] = {};
+  const ids: Event["id"][] = [];
+  for (const event of events) {
+    if (!(event.id in entities)) ids.push(event.id);
     entities[event.id] = event;
-    return entities;
-  }, {}),
-});
+  }
+  return { ids, entities };
+};
 
 /**
  * Normalize local IndexedDB records, preserving demo-event metadata for grid
