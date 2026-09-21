@@ -4,6 +4,10 @@ import {
   selectConnectAppleOpen,
   useConnectAppleStore,
 } from "@web/auth/providers/connect-apple.store";
+import {
+  selectMissingPermissionsProvider,
+  useMissingPermissionsStore,
+} from "@web/auth/providers/missing-permissions.store";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import {
   selectSyncConnections,
@@ -35,6 +39,8 @@ export const ConnectCalendarPromptGate: FC = () => {
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
   const isAboutOpen = useSettingsStore(selectIsAboutOpen);
   const isAppleFormOpen = useConnectAppleStore(selectConnectAppleOpen);
+  const isMissingPermissionsOpen =
+    useMissingPermissionsStore(selectMissingPermissionsProvider) !== null;
 
   const isLive =
     authenticated &&
@@ -46,7 +52,8 @@ export const ConnectCalendarPromptGate: FC = () => {
     !isAuthModalOpen &&
     !isSettingsOpen &&
     !isAboutOpen &&
-    !isAppleFormOpen;
+    !isAppleFormOpen &&
+    !isMissingPermissionsOpen;
 
   if (!isLive) return null;
 

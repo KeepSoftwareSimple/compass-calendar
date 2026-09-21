@@ -6,6 +6,7 @@
  */
 
 import { resetConnectAppleStoreForTests } from "@web/auth/providers/connect-apple.store";
+import { resetMissingPermissionsStoreForTests } from "@web/auth/providers/missing-permissions.store";
 import {
   initialUserMetadataState,
   useUserMetadataStore,
@@ -97,6 +98,7 @@ const storeResets: StoreReset[] = [
   // Storage itself is cleared by resetBrowserState() (test-lifecycle.ts)
   // before this runs; this just resyncs the module-singleton store to match.
   resetConnectAppleStoreForTests,
+  resetMissingPermissionsStoreForTests,
   resetCalendarVisibilityStoreForTests,
   resetDefaultCalendarStoreForTests,
   resetEffectiveTimeZoneStoreForTests,

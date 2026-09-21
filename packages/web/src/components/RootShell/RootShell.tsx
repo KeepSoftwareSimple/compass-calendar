@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
+import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
 import { BillingPastDueBanner } from "@web/billing/BillingPastDueBanner";
 import { BillingReadOnlyBanner } from "@web/billing/BillingReadOnlyBanner";
@@ -127,6 +128,7 @@ export function RootShell() {
       <Outlet />
       <AuthModal />
       <ConnectAppleForm />
+      <MissingPermissionsModal />
       {gateStatus === null && <ConnectCalendarPromptGate />}
       {gateStatus !== null && <BillingGateModal status={gateStatus} />}
       {gateStatus === null && <CheckoutOverlay />}

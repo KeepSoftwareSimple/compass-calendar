@@ -15,6 +15,7 @@ import {
   isSignInProviderKind,
   PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
 } from "@web/auth/providers/authorization/provider-authorization.constants";
+import { missingPermissionsActions } from "@web/auth/providers/missing-permissions.store";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
@@ -57,6 +58,10 @@ export async function completeProviderAuthCallback({
     // Compass failure and discourages the retry that would have worked.
     if (result.reason === "oauth_user_cancelled") {
       getToast().info(result.message, getToastDefaultOptions());
+    } else if (result.reason === "oauth_missing_scopes") {
+      // Unchecking a permission on the consent screen deserves an
+      // explanation and a one-click retry, not a toast.
+      missingPermissionsActions.open(provider);
     } else {
       showErrorToast(result.message);
     }

@@ -11,6 +11,7 @@ import {
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
+import { missingPermissionsActions } from "@web/auth/providers/missing-permissions.store";
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { clearAccountReconnectRequired } from "@web/auth/providers/reconnect.state";
 import {
@@ -69,12 +70,6 @@ const FAILURE_REASON: Record<
   consentRequired: "connect_consent_required",
   accountMismatch: "connect_account_mismatch",
   error: "connect_error",
-};
-
-const MISSING_SCOPES_TOAST_ID: Record<ProviderKind, string> = {
-  google: "google-connect-missing-scopes",
-  microsoft: "connect-missing-scopes",
-  apple: "connect-missing-scopes",
 };
 
 function isConnectStatus(value: string | null): value is ConnectStatus {
@@ -162,14 +157,9 @@ function fireConnectStatusToast({ provider, status }: ConnectRedirect): void {
       );
       return;
     case "missingScopes":
-      toast.error(
-        "Compass needs calendar permission to sync. Reconnect and leave the calendar box checked.",
-        {
-          ...getToastDefaultOptions(),
-          autoClose: false,
-          toastId: MISSING_SCOPES_TOAST_ID[provider],
-        },
-      );
+      // Unchecking a permission on the consent screen deserves an
+      // explanation and a one-click retry, not a toast.
+      missingPermissionsActions.open(provider);
       return;
     case "stateMismatch":
       toast.error(
