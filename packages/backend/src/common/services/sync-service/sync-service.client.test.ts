@@ -1137,6 +1137,31 @@ describe("SyncServiceClient", () => {
     expect(Date.now() - started).toBeLessThan(200);
   });
 
+  it("classifies a SyntaxError after the deadline as timeout, not invalidResponse", async () => {
+    const fn: SyncServiceClientOptions["fetch"] = (_url, init) =>
+      Promise.resolve({
+        status: 200,
+        headers: contentType("application/json"),
+        json: () =>
+          new Promise((_resolve, reject) => {
+            const fail = () => {
+              reject(new SyntaxError("Unexpected end of JSON input"));
+            };
+            if (init.signal?.aborted) {
+              fail();
+              return;
+            }
+            init.signal?.addEventListener("abort", fail, { once: true });
+          }),
+      });
+
+    const result = await client(fn).listConnections(principal());
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.kind).toBe("timeout");
+  });
+
   // Restarting Sync leaves the backend holding dead pooled sockets, so the
   // next write fails with ECONNRESET before Sync is reachable again. That
   // used to surface as an error toast on an edit that would have succeeded.
