@@ -30,6 +30,7 @@ Use this document to find the first files to inspect for common Compass changes.
 - Web Event reads, cache utilities, and view models: `packages/web/src/events/queries`
 - Web Event persisted mutations and pending state: `packages/web/src/events/mutations`
 - Web Event draft/interaction Zustand state: `packages/web/src/events/stores/draft.store.ts`
+- Undo/redo history: `packages/web/src/events/stores/undo.store.ts`, `packages/web/src/events/mutations/useUndoRedo.ts`. Series-wide writes stay as a visible refusal in v1: [Undo of recurring-series writes (v1)](../features/undo-series.md).
 - Event API/repositories: `packages/web/src/events/event.api.ts`, `packages/web/src/events/repositories`
 - Backend event routes: `packages/backend/src/event/event.routes.config.ts`
 - Backend event controller/service: `packages/backend/src/event/controllers/event.controller.ts`, `packages/backend/src/event/services/event.service.ts`
