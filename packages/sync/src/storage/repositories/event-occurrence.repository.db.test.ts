@@ -640,7 +640,12 @@ describe("EventOccurrenceRepository", () => {
       expect(busy).toEqual({
         truncated: false,
         intervals: [
-          { startAt: inLookbackStart, endAt: windowEnd, eventId: eventIn },
+          {
+            calendarId,
+            startAt: inLookbackStart,
+            endAt: windowEnd,
+            eventId: eventIn,
+          },
         ],
       });
     });
