@@ -85,6 +85,7 @@ export interface OccurrenceInterval {
   startAt: Date;
   endAt: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 // Repository for `event_occurrences`. Rebuilding a series' window
@@ -249,6 +250,7 @@ export class EventOccurrenceRepository {
         startAt: 1,
         endAt: 1,
         eventId: 1,
+        calendarId: 1,
         _id: 0,
       })
       .sort({ startAt: 1 })

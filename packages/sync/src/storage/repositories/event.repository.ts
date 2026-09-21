@@ -4,8 +4,15 @@ import {
   type Db,
   ObjectId,
 } from "mongodb";
-import { type DateTime, type EventId } from "@core/types/domain-primitives";
+import { z } from "zod/v4";
 import {
+  type DateTime,
+  type EventId,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
+import { AttendeeResponseStatusSchema } from "@core/types/event-attendance.contracts";
+import {
+  ConnectionIdSchema,
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
@@ -14,6 +21,45 @@ import {
   type EventRecord,
   EventRecordSchema,
 } from "@sync/storage/contracts/event.contracts";
+
+// Inclusion projection for busy-availability hydration. `_id` stays on by
+// default so the caller can join occurrences back to these rows.
+export const OCCUPANCY_EVENT_PROJECTION = {
+  connectionId: 1,
+  "content.organizer.email": 1,
+  "content.attendees.email": 1,
+  "content.attendees.responseStatus": 1,
+} as const;
+
+const OccupancyEventSchema = z.object({
+  _id: EventIdSchema,
+  connectionId: ConnectionIdSchema.nullable().optional(),
+  content: z
+    .object({
+      organizer: z.object({ email: z.string() }).nullable().optional(),
+      attendees: z
+        .array(
+          z.object({
+            email: z.string(),
+            responseStatus: AttendeeResponseStatusSchema,
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+export interface OccupancyEvent {
+  _id: EventId;
+  connectionId: EventRecord["connectionId"] | undefined;
+  content: {
+    organizer?: { email: string } | null;
+    attendees: {
+      email: string;
+      responseStatus: z.infer<typeof AttendeeResponseStatusSchema>;
+    }[];
+  };
+}
 
 // bulkWrite / $in chunks. Matches the 500-1000 doc batching Atlas round-trips
 // want: one page of provider events is typically well under this, so a page
@@ -366,6 +412,32 @@ export class EventRepository {
       .find({ _id: { $in: [...ids] }, tenantId, principalId })
       .toArray();
     return records.map((record) => EventRecordSchema.parse(record));
+  }
+
+  // Busy availability only needs organizer and attendee response facts. The
+  // projection keeps titles, descriptions, and the rest of the document off
+  // the wire for this read.
+  async findOccupancyByIds(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    ids: readonly EventId[],
+  ): Promise<OccupancyEvent[]> {
+    if (ids.length === 0) return [];
+    const records = await this.collection
+      .find({ _id: { $in: [...ids] }, tenantId, principalId })
+      .project(OCCUPANCY_EVENT_PROJECTION)
+      .toArray();
+    return records.map((record) => {
+      const parsed = OccupancyEventSchema.parse(record);
+      return {
+        _id: parsed._id,
+        connectionId: parsed.connectionId ?? null,
+        content: {
+          organizer: parsed.content?.organizer ?? null,
+          attendees: parsed.content?.attendees ?? [],
+        },
+      };
+    });
   }
 
   // Look up one provider-linked event by its provider identity, owner-scoped.

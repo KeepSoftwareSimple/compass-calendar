@@ -210,6 +210,19 @@ describe("POST /internal/availability/busy", () => {
         hostResponseStatus: null,
       },
     ]);
+    expect(body.byCalendar).toEqual([
+      {
+        calendarId: cal,
+        intervals: [
+          {
+            start: "2026-07-14T09:00:00.000Z",
+            end: "2026-07-14T11:00:00.000Z",
+            hostIsOrganizer: true,
+            hostResponseStatus: null,
+          },
+        ],
+      },
+    ]);
     expect(body.complete).toBe(true);
     expect(body.bookable).toBe(true);
     expect(body.issues).toEqual([]);
@@ -217,5 +230,51 @@ describe("POST /internal/availability/busy", () => {
     expect(body.connections[0].state).toBe("healthy");
     // Event content must never leak into the availability response.
     expect(JSON.stringify(body)).not.toContain("secret meeting");
+  });
+
+  it("groups intervals by calendar in one response", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    await startService();
+    const conn = await seedConnection(tenantId, principalId, "healthy");
+    const morning = await seedCalendar(tenantId, principalId, conn, [
+      ["2026-07-14T09:00:00.000Z", "2026-07-14T10:00:00.000Z"],
+    ]);
+    const afternoon = await seedCalendar(tenantId, principalId, conn, [
+      ["2026-07-14T14:00:00.000Z", "2026-07-14T15:00:00.000Z"],
+    ]);
+
+    const res = await post(
+      signedHeaders(tenantId, principalId),
+      validBody([morning, afternoon]),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.byCalendar).toEqual([
+      {
+        calendarId: morning,
+        intervals: [
+          {
+            start: "2026-07-14T09:00:00.000Z",
+            end: "2026-07-14T10:00:00.000Z",
+            hostIsOrganizer: true,
+            hostResponseStatus: null,
+          },
+        ],
+      },
+      {
+        calendarId: afternoon,
+        intervals: [
+          {
+            start: "2026-07-14T14:00:00.000Z",
+            end: "2026-07-14T15:00:00.000Z",
+            hostIsOrganizer: true,
+            hostResponseStatus: null,
+          },
+        ],
+      },
+    ]);
+    expect(body.intervals).toHaveLength(2);
   });
 });
