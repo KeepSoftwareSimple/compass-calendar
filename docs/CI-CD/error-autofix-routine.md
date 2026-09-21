@@ -68,7 +68,11 @@ issue so the next burst becomes `reopened`.
 ## Idempotency
 
 Key: **GitHub issue number** (plus the PostHog fingerprint in the issue
-body for humans). Preflight skips if the issue already has the `autofix`
+body for humans). Server `$exception` events set `$exception_fingerprint`
+to `sha256(error.name + ":" + normalizedMessage)` so grouping is by class
+and sanitized message, not wrapper stack. Normalization replaces 24-hex
+ids, uuids, `attempt N`, ISO timestamps, and integers longer than 3
+digits, then reuses booking-secret redaction. Preflight skips if the issue already has the `autofix`
 label **unless** this is a retry: `autofix:failed`, `issues.reopened`,
 `workflow_dispatch` with `retry=true`, or a closed issue the sweep is
 feeding back in. The prompt forbids a second PR that also says

@@ -10,6 +10,7 @@ export const POSTHOG_ERROR_TRACKING_PROPERTY = {
   namespace: "namespace",
   result: "result",
   errorType: "errorType",
+  exceptionFingerprint: "$exception_fingerprint",
 } as const;
 
 export type PostHogErrorTrackingPropertyName =

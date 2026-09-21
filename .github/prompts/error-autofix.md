@@ -33,7 +33,7 @@ MCP tools to pull the actual signal before doing anything else:
 - Event properties listed in
   `packages/core/src/constants/posthog-error-tracking.properties.ts`
   (`POSTHOG_ERROR_TRACKING_PROPERTY`: environment, service, version,
-  namespace, result, errorType). Some historical issues predate these and
+  namespace, result, errorType, `$exception_fingerprint`). Some historical issues predate these and
   will be generic.
 - Whether this is `staging` or `production` (staging and prod currently
   share one PostHog project — a staging-only error is not urgent and should
@@ -50,7 +50,7 @@ issue's UUID and using the exact property names from that constants file:
 ```sql
 SELECT timestamp, properties.environment, properties.service,
        properties.version, properties.namespace, properties.result,
-       properties.errorType
+       properties.errorType, properties.$exception_fingerprint
 FROM events
 WHERE event = '$exception'
   AND properties.$exception_issue_id = '<issue-uuid>'
