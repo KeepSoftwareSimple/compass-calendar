@@ -300,3 +300,83 @@ describe("compass config — placeholder detection", () => {
     );
   });
 });
+
+describe("compass config — email", () => {
+  const unsubscribeSecret = Buffer.alloc(32, 3).toString("base64");
+
+  const fullResendBlock = `
+email:
+  provider: resend
+  apiKey: re_test_key
+  from: Compass <hello@mail.compasscalendar.com>
+  webhookSecret: whsec_test_webhook
+  unsubscribeSecret: ${unsubscribeSecret}
+  scheduleProfile: real
+  allowlist:
+    - qa@example.com
+`;
+
+  it("parses a full email block", () => {
+    const config = parseCompassConfigText(
+      `${validYaml}${fullResendBlock}`,
+      "compass.yaml",
+    );
+
+    expect(config.email?.provider).toBe("resend");
+    expect(config.email?.apiKey).toBe("re_test_key");
+    expect(config.email?.from).toBe("Compass <hello@mail.compasscalendar.com>");
+    expect(config.email?.webhookSecret).toBe("whsec_test_webhook");
+    expect(config.email?.unsubscribeSecret).toBe(unsubscribeSecret);
+    expect(config.email?.scheduleProfile).toBe("real");
+    expect(config.email?.allowlist).toEqual(["qa@example.com"]);
+  });
+
+  it("leaves email unconfigured when the block is omitted", () => {
+    const config = parseCompassConfigText(validYaml, "compass.yaml");
+    expect(config.email).toBeUndefined();
+  });
+
+  it("rejects resend when any one of the four required values is missing", () => {
+    const base = {
+      provider: "resend",
+      apiKey: "re_test_key",
+      from: "Compass <hello@mail.compasscalendar.com>",
+      webhookSecret: "whsec_test_webhook",
+      unsubscribeSecret,
+    };
+    const missingFields = [
+      "apiKey",
+      "from",
+      "webhookSecret",
+      "unsubscribeSecret",
+    ] as const;
+
+    for (const field of missingFields) {
+      const email = { ...base };
+      delete email[field];
+      const lines = Object.entries(email).map(
+        ([key, value]) => `  ${key}: ${value}`,
+      );
+      const block = `email:\n${lines.join("\n")}\n`;
+      expect(() =>
+        parseCompassConfigText(`${validYaml}${block}`, "compass.yaml"),
+      ).toThrow(`email.${field}`);
+    }
+  });
+
+  it("rejects scheduleProfile fast when nodeEnv is production", () => {
+    const productionYaml = validYaml.replace(
+      "nodeEnv: development",
+      "nodeEnv: production",
+    );
+    expect(() =>
+      parseCompassConfigText(
+        `${productionYaml}${fullResendBlock.replace(
+          "scheduleProfile: real",
+          "scheduleProfile: fast",
+        )}`,
+        "compass.yaml",
+      ),
+    ).toThrow("email.scheduleProfile");
+  });
+});
