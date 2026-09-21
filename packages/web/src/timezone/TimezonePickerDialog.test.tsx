@@ -118,6 +118,29 @@ describe("TimezonePickerDialog", () => {
     expect(getPinnedTimeZone()).toBe("America/New_York");
   });
 
+  it("excludes the currently-displayed timezone from time travel search", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      setPinnedTimeZone("America/New_York");
+    });
+
+    render(
+      <TimezonePickerDialog
+        onDismiss={() => timezoneDialogActions.close()}
+        purpose="time-travel"
+      />,
+    );
+
+    await user.type(
+      screen.getByRole("combobox", { name: "Search timezones" }),
+      "New York",
+    );
+
+    expect(
+      screen.queryByRole("option", { name: /New York/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("offers Stop time travel when a secondary zone is already set", async () => {
     const user = userEvent.setup();
     act(() => {
