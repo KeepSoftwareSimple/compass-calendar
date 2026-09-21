@@ -8,7 +8,7 @@
     "@compass/core": "1.0.0",
     "@googleapis/calendar": "^16.0.0",
     "@googleapis/people": "^8.0.0",
-    "express": "^4.17.1",
+    "express": "^4.22.3",
     "express-rate-limit": "^7.5.0",
     "fast-xml-parser": "^5.11.1",
     "google-auth-library": "^11.0.2",
