@@ -11,13 +11,16 @@ const config = loadCompassConfig();
 
 // Bun resolves package export conditions from the environment it was started
 // with, not from `define` and not from a later write to process.env. Re-exec
-// so runtime.nodeEnv selects production React, matching
-// self-host/Dockerfile.web. CI does not set a shell NODE_ENV, so without this
-// the perf and boot-size builds keep the development build.
-const nodeEnv = config.runtime.nodeEnv || "production";
-if (process.env.NODE_ENV !== nodeEnv) {
+// with NODE_ENV=production for every shipped runtime (staging and production),
+// matching self-host/Dockerfile.web. Only local development should bundle
+// development React. CI perf jobs do not set a shell NODE_ENV, so without this
+// the boot-size build keeps the development build.
+const runtimeNodeEnv = config.runtime.nodeEnv || "production";
+const bundleNodeEnv =
+  runtimeNodeEnv === "development" ? "development" : "production";
+if (process.env.NODE_ENV !== bundleNodeEnv) {
   const child = Bun.spawn([process.execPath, import.meta.path], {
-    env: { ...process.env, NODE_ENV: nodeEnv },
+    env: { ...process.env, NODE_ENV: bundleNodeEnv },
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",
