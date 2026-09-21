@@ -108,7 +108,7 @@ database and must not share the backend's database user/data.
 | `sync.maxConcurrency` | No | Job concurrency hint for Sync workers. |
 | `sync.enforceLeastPrivilege` | No | When `true`, Sync verifies its Mongo user cannot read the API database. |
 | `sync.compassApiDatabase` | No | API database name the least-privilege check must be denied access to. |
-| `sync.credentialEncryptionKey` | No | 32-byte base64 key that encrypts password and OAuth refresh credentials at rest. Required to enable Apple calendar connect and OAuth token storage. |
+| `sync.credentialEncryptionKey` | Yes when any provider is configured | 32-byte base64 key that encrypts password and OAuth refresh credentials at rest. Required when Google, Microsoft, or Apple calendar is configured (32 bytes of base64; generate with `openssl rand -base64 32`). |
 
 ## Optional Integrations
 

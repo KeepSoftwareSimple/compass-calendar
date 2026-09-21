@@ -97,8 +97,9 @@ export const SyncConfigSchema = z
     // Microsoft OAuth client. Both must be set for ProviderRegistry registration.
     MICROSOFT_CLIENT_ID: z.string().trim().min(1).optional(),
     MICROSOFT_CLIENT_SECRET: z.string().trim().min(1).optional(),
-    // AES-256-GCM key for password credentials at rest (Apple). Both custody
-    // encryption and ProviderRegistry Apple registration require this key.
+    // AES-256-GCM key for OAuth refresh tokens and password credentials at
+    // rest. Required whenever a calendar provider is configured (Google,
+    // Microsoft, or Apple). Optional only for a no-provider deployment.
     CREDENTIAL_ENCRYPTION_KEY: z.string().trim().min(1).optional(),
     // Optional PostHog credentials for sanitized sync_health_snapshot events.
     // When absent, the health emitter no-ops (local/dev without analytics).
@@ -123,6 +124,16 @@ export const SyncConfigSchema = z
   });
 export type SyncConfig = z.infer<typeof SyncConfigSchema>;
 
+export const CREDENTIAL_ENCRYPTION_KEY_REQUIRED_MESSAGE =
+  "sync.credentialEncryptionKey is required when a provider is configured (32 bytes of base64, generate with: openssl rand -base64 32)";
+
+function isProviderConfigured(values: {
+  GOOGLE_CLIENT_ID?: string;
+  MICROSOFT_CLIENT_ID?: string;
+}): boolean {
+  return Boolean(values.GOOGLE_CLIENT_ID || values.MICROSOFT_CLIENT_ID);
+}
+
 export function parseSyncConfig(config: CompassConfig): SyncConfig {
   if (!config.sync) {
     throw new Error(
@@ -130,7 +141,7 @@ export function parseSyncConfig(config: CompassConfig): SyncConfig {
     );
   }
 
-  return SyncConfigSchema.parse({
+  const parsed = SyncConfigSchema.parse({
     NODE_ENV: config.runtime.nodeEnv,
     VERSION: config.runtime.version
       ? String(config.runtime.version)
@@ -166,6 +177,12 @@ export function parseSyncConfig(config: CompassConfig): SyncConfig {
       ...perProviderIntFromEnv("RECONCILE_SWEEP_LIMIT"),
     },
   });
+
+  if (isProviderConfigured(parsed) && !parsed.CREDENTIAL_ENCRYPTION_KEY) {
+    throw new Error(CREDENTIAL_ENCRYPTION_KEY_REQUIRED_MESSAGE);
+  }
+
+  return parsed;
 }
 
 export function reconcileStaleAfterMsFor(
