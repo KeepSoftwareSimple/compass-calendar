@@ -23,10 +23,11 @@ Alert on `sync_health_snapshot` properties (low cardinality — safe to alert):
 
 | Signal | Suggested threshold |
 | --- | --- |
-| `connections.actionRequired` | rising or absolute &gt; 0 for 10+ minutes under load |
+| `connections.actionRequired` | rising day over day, or absolute &gt; 0 for 10+ minutes under load |
+| `connections.oldestImportingAgeMs` | &gt; 3600000 (one hour) while any connection is still importing |
 | `jobs.failed` | rising vs baseline |
 | `jobs.oldestDueAgeMs` | &gt; 5 minutes while `execution=active` |
-| `freshness.percentOver30s` | sustained spike vs quiet baseline |
+| `freshness.percentOver30s` | sustained spike vs quiet baseline. Sample is live connections only (`healthy`, `delayed`, `catchingUp`), not `actionRequired` or `disconnected`. |
 
 Also watch:
 

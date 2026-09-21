@@ -20,6 +20,10 @@ export const SyncHealthConnectionCountsSchema = z.strictObject({
   delayed: z.number().int().nonnegative(),
   actionRequired: z.number().int().nonnegative(),
   disconnected: z.number().int().nonnegative(),
+  // Age of the oldest `importing` connection, or null when none. Launch
+  // watches this against one hour: a stuck first import is not a live-fleet
+  // freshness problem.
+  oldestImportingAgeMs: z.number().int().nonnegative().nullable(),
 });
 export type SyncHealthConnectionCounts = z.infer<
   typeof SyncHealthConnectionCountsSchema
@@ -62,7 +66,7 @@ export const SyncHealthFreshnessSchema = z.strictObject({
 });
 export type SyncHealthFreshness = z.infer<typeof SyncHealthFreshnessSchema>;
 
-export const SyncHealthSnapshotSchema = z.strictObject({
+export const SyncHealthSnapshotSchema = z.object({
   [POSTHOG_ERROR_TRACKING_PROPERTY.environment]: z.string().min(1),
   execution: z.enum(["passive", "active"]),
   provider: ProviderKindSchema,

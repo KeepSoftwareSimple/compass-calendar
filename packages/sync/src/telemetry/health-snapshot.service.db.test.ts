@@ -3,6 +3,7 @@ import { NodeEnv } from "@core/constants/core.constants";
 import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
 import { type PostHogCaptureClient } from "@core/logger/posthog-capture";
 import { type DateTime } from "@core/types/domain-primitives";
+import { type ConnectionState } from "@core/types/sync/connection.contracts";
 import {
   type ConnectionId,
   type PrincipalId,
@@ -99,10 +100,7 @@ describe("computeHealthSnapshot", () => {
     now: () => NOW,
   });
 
-  const seedConnection = (
-    provider: ProviderKind,
-    state: "healthy" | "delayed" | "actionRequired" | "disconnected",
-  ) =>
+  const seedConnection = (provider: ProviderKind, state: ConnectionState) =>
     connections.upsertByProviderAccount({
       tenantId: objectId() as TenantId,
       principalId: objectId() as PrincipalId,
@@ -214,6 +212,7 @@ describe("computeHealthSnapshot", () => {
     // The subscribed resource in this fixture has never received a push, so it
     // counts as never notified — the signal that push delivery is broken.
     expect(google?.subscriptions.neverNotified).toBe(1);
+    expect(google?.connections.oldestImportingAgeMs).toBeNull();
     expect(google?.freshness.sampleSize).toBe(2);
     expect(google?.freshness.p50Ms).toBeGreaterThan(0);
     expect(google?.freshness.percentOver30s).toBeGreaterThan(0);
@@ -242,6 +241,81 @@ describe("computeHealthSnapshot", () => {
     for (const snapshot of snapshots) {
       assertNoSafetyCanary(snapshot);
     }
+  });
+
+  it("samples freshness only from live connections", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const healthy = await seedConnection("google", "healthy");
+    const dead = await seedConnection("google", "actionRequired");
+
+    const liveResource = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: healthy._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.advanceCursor(
+      tenantId,
+      principalId,
+      liveResource._id,
+      "cursor",
+      new Date(NOW.getTime() - 4_000),
+    );
+
+    const deadResource = await resources.ensure({
+      tenantId,
+      principalId,
+      connectionId: dead._id as ConnectionId,
+      resourceKind: "events",
+      calendarId: objectId() as never,
+    });
+    await resources.advanceCursor(
+      tenantId,
+      principalId,
+      deadResource._id,
+      "cursor",
+      new Date(NOW.getTime() - 52 * 24 * 60 * 60_000),
+    );
+
+    const snapshot = await computeHealthSnapshotForProvider(deps(), "google");
+    expect(snapshot.freshness.sampleSize).toBe(1);
+    expect(snapshot.freshness.p50Ms).toBe(4_000);
+    expect(snapshot.freshness.percentOver30s).toBe(0);
+  });
+
+  it("reports the older importing connection age", async () => {
+    const older = await seedConnection("google", "importing");
+    const newer = await seedConnection("google", "importing");
+    await connections.updateDerivedState(
+      older.tenantId,
+      older.principalId,
+      older._id,
+      {
+        state: "importing",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+      },
+      new Date(NOW.getTime() - 90 * 60_000),
+    );
+    await connections.updateDerivedState(
+      newer.tenantId,
+      newer.principalId,
+      newer._id,
+      {
+        state: "importing",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+      },
+      new Date(NOW.getTime() - 10 * 60_000),
+    );
+
+    const snapshot = await computeHealthSnapshotForProvider(deps(), "google");
+    expect(snapshot.connections.importing).toBe(2);
+    expect(snapshot.connections.oldestImportingAgeMs).toBe(90 * 60_000);
   });
 
   // The gauge used to read changeNotifiedAt, which the serving pull CLEARS
