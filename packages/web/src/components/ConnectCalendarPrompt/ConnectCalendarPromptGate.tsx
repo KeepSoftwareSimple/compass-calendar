@@ -19,6 +19,7 @@ import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import { ConnectCalendarPrompt } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPrompt";
 import {
   selectConnectCalendarPromptSnoozed,
+  selectConnectCalendarPromptSurfaceEligible,
   useConnectCalendarPromptStore,
 } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import {
@@ -42,18 +43,19 @@ export const ConnectCalendarPromptGate: FC = () => {
   const isMissingPermissionsOpen =
     useMissingPermissionsStore(selectMissingPermissionsProvider) !== null;
 
-  const isLive =
-    authenticated &&
-    metadataStatus === "loaded" &&
-    connections.length === 0 &&
-    !isSnoozed &&
-    availableProviders.length > 0 &&
-    persistentBrowserStore.isAvailable() &&
-    !isAuthModalOpen &&
-    !isSettingsOpen &&
-    !isAboutOpen &&
-    !isAppleFormOpen &&
-    !isMissingPermissionsOpen;
+  const isLive = selectConnectCalendarPromptSurfaceEligible({
+    authenticated,
+    metadataStatus,
+    connectionCount: connections.length,
+    isSnoozed,
+    availableProviderCount: availableProviders.length,
+    storageAvailable: persistentBrowserStore.isAvailable(),
+    isAuthModalOpen,
+    isSettingsOpen,
+    isAboutOpen,
+    isAppleFormOpen,
+    isMissingPermissionsOpen,
+  });
 
   if (!isLive) return null;
 
