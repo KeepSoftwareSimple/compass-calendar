@@ -649,11 +649,19 @@ describe("DayCalendarGrid", () => {
     ]);
 
     await waitFor(() => {
-      expect(screen.getByText("Edit")).toBeInTheDocument();
+      expect(
+        screen.getByRole("menuitem", { name: "Edit" }),
+      ).toBeInTheDocument();
     });
-    expect(screen.getByText("Duplicate")).toBeInTheDocument();
-    expect(screen.getByText("Hide event")).toBeInTheDocument();
-    expect(screen.getByText("Delete")).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Duplicate" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeInTheDocument();
     expect(screen.queryByText("Delete Event")).not.toBeInTheDocument();
   });
 
