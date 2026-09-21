@@ -373,7 +373,19 @@ describe("SyncServiceClient", () => {
     const { fn } = fakeFetch(async () => ({
       status: 200,
       json: async () => ({
-        // People-shaped extras must never ride through the strict contract.
+        suggestions: [{ displayName: "Ada" }],
+      }),
+    }));
+
+    const result = await client(fn).getContactSuggestions(principal(), "ada");
+    if (result.ok) throw new Error("expected invalidResponse");
+    expect(result.error.kind).toBe("invalidResponse");
+  });
+
+  it("strips People-API extras on contact suggestions so a rolling deploy cannot 502", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      json: async () => ({
         suggestions: [
           {
             email: "ada@example.com",
@@ -385,8 +397,10 @@ describe("SyncServiceClient", () => {
     }));
 
     const result = await client(fn).getContactSuggestions(principal(), "ada");
-    if (result.ok) throw new Error("expected invalidResponse");
-    expect(result.error.kind).toBe("invalidResponse");
+    if (!result.ok) throw new Error(`expected ok, got ${result.error.kind}`);
+    expect(result.value.suggestions).toEqual([
+      { email: "ada@example.com", displayName: "Ada" },
+    ]);
   });
 
   it("maps a 403 contacts refusal to unexpectedStatus with the status attached", async () => {
@@ -550,16 +564,25 @@ describe("SyncServiceClient", () => {
     const { fn } = fakeFetch(async () => ({
       status: 200,
       headers: contentType("application/json"),
-      // A field Sync adds during a rolling deploy that the strict schema rejects.
-      json: async () => ({ connections: [], addedByNewerSync: true }),
+      json: async () => ({ connections: "nope" }),
     }));
 
     const result = await client(fn).listConnections(principal());
 
     if (result.ok) throw new Error("expected invalidResponse");
-    expect(result.error.detail).toContain("unrecognized_keys");
-    expect(result.error.detail).toContain("addedByNewerSync");
+    expect(result.error.detail).toContain("connections");
     expect(result.error.detail).toContain("content-type=application/json");
+  });
+
+  it("accepts a connections body with a field a newer sync stamped", async () => {
+    const { fn } = fakeFetch(async () => ({
+      status: 200,
+      json: async () => ({ connections: [], addedByNewerSync: true }),
+    }));
+
+    const result = await client(fn).listConnections(principal());
+    if (!result.ok) throw new Error(`expected ok, got ${result.error.kind}`);
+    expect(result.value).toEqual({ connections: [] });
   });
 
   // A 200 whose body is not JSON at all — HTML the reverse proxy returned in
