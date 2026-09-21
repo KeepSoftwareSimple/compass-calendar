@@ -45,9 +45,12 @@ export async function refreshConnectionState(
       ? (connection.lastHealthyAt ?? at)
       : connection.lastHealthyAt;
 
+  const stateChanged =
+    connection.state !== derived.state ||
+    connection.stateReason !== derived.reason;
+
   if (
-    connection.state === derived.state &&
-    connection.stateReason === derived.reason &&
+    !stateChanged &&
     sameDate(connection.lastSyncedAt, lastSyncedAt) &&
     sameDate(connection.lastHealthyAt, lastHealthyAt)
   ) {
@@ -67,7 +70,12 @@ export async function refreshConnectionState(
     at,
   );
 
-  if (deps.invalidations) {
+  // lastSuccessAt (and therefore lastSyncedAt) moves on every incremental
+  // pass, including idle focus refreshes. The SSE bridge turns a connection
+  // invalidation into eventsChanged, so publishing that tick refetches ranges
+  // that did not change. Wake clients only when the user-visible state or
+  // reason actually changes.
+  if (deps.invalidations && stateChanged) {
     await deps.invalidations.append({
       tenantId: connection.tenantId,
       principalId: connection.principalId,
