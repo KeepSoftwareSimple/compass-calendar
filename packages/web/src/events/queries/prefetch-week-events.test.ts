@@ -1,5 +1,7 @@
 import dayjs from "@core/util/date/dayjs";
+import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
 import { createCompassQueryClient } from "@web/api/query-client";
+import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.options";
 import {
@@ -22,6 +24,7 @@ describe("weekDateStringFromPathname", () => {
 describe("prefetchWeekEventsQuery", () => {
   it("starts the same week-events query the view hook will read", () => {
     const client = createCompassQueryClient();
+    client.setQueryData(calendarQueryKeys.all, [createMockCalendar()]);
     const prefetchQuery = spyOn(client, "prefetchQuery").mockResolvedValue(
       undefined as never,
     );

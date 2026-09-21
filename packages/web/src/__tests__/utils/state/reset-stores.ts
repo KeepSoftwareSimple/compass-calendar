@@ -5,6 +5,7 @@
  * a fresh store per render.
  */
 
+import { resetAuthSessionStoreForTests } from "@web/auth/compass/session/auth-session.store";
 import { resetConnectAppleStoreForTests } from "@web/auth/providers/connect-apple.store";
 import { resetMissingPermissionsStoreForTests } from "@web/auth/providers/missing-permissions.store";
 import {
@@ -95,6 +96,7 @@ const storeResets: StoreReset[] = [
   () => useUndoHistoryStore.setState(initialUndoHistoryState, true),
   recurrenceScopeOpportunityActions.reset,
   resetEventRepositorySourceForTests,
+  resetAuthSessionStoreForTests,
   // Storage itself is cleared by resetBrowserState() (test-lifecycle.ts)
   // before this runs; this just resyncs the module-singleton store to match.
   resetConnectAppleStoreForTests,
