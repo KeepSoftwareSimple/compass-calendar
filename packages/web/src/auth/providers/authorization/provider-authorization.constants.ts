@@ -23,8 +23,6 @@ export const PROVIDER_AUTH_SCOPES_REQUIRED: Record<
 
 export const PROVIDER_AUTHORIZATION_ERROR_MESSAGE =
   "We couldn't finish signing you in. Please try again.";
-export const MISSING_PROVIDER_SCOPES_ERROR_MESSAGE =
-  "Compass needs all the requested permissions to sync your calendar. Please allow them and try again.";
 
 export const GOOGLE_AUTHORIZATION_ERROR_MESSAGE =
   "We couldn't connect your Google account. Please try again.";

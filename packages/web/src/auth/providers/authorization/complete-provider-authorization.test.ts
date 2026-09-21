@@ -2,7 +2,7 @@ import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { completeProviderAuthorization } from "./complete-provider-authorization";
 import {
-  MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+  GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
   PROVIDER_AUTH_CANCELLED_MESSAGE,
   PROVIDER_AUTH_SCOPES_REQUIRED,
 } from "./provider-authorization.constants";
@@ -221,7 +221,7 @@ describe("completeProviderAuthorization", () => {
       }),
     ).resolves.toMatchObject({
       reason: "oauth_missing_scopes",
-      message: MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+      message: GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
     });
   });
 });

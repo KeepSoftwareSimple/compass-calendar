@@ -137,6 +137,57 @@ export function reconnectPointerHint(kind: ProviderKind): string {
   return `Press G to reconnect ${calendarProductName(kind)}.`;
 }
 
+export const MISSING_PERMISSIONS_TITLE = "Compass needs calendar access";
+
+export const MISSING_PERMISSIONS_INTRO: Record<ProviderKind, string> = {
+  google:
+    "Google let you skip some permissions, and Compass can't sync without them. Here is what each one is for:",
+  microsoft:
+    "Microsoft let you skip some permissions, and Compass can't sync without them. Here is what each one is for:",
+  apple: "",
+};
+
+export const REQUESTED_PERMISSIONS: Record<
+  ProviderKind,
+  readonly { name: string; why: string }[]
+> = {
+  google: [
+    {
+      name: "See your email address",
+      why: "Tells Compass which Google account you signed in with.",
+    },
+    {
+      name: "See your calendars",
+      why: "Shows the events already on your calendar in the week view.",
+    },
+    {
+      name: "View and edit events on your calendars",
+      why: "Lets you create and change events from Compass and keeps Google in step, both ways.",
+    },
+  ],
+  microsoft: [
+    {
+      name: "Sign you in and read your profile",
+      why: "Tells Compass which Microsoft account you signed in with.",
+    },
+    {
+      name: "Maintain access you have given it",
+      why: "Keeps your calendar syncing after you close the tab.",
+    },
+    {
+      name: "Read and write your calendars",
+      why: "Shows your events and lets Compass create and change them, both ways.",
+    },
+  ],
+  apple: [],
+};
+
+export const MISSING_PERMISSIONS_NOT_NOW_LABEL = "Not now";
+
+export function missingPermissionsRetryLabel(kind: ProviderKind): string {
+  return `Try again with ${providerDisplayName(kind)}`;
+}
+
 export function relabelConnectCommand(
   commandAction: GoogleUiConfig["commandAction"],
   kind: ProviderKind,

@@ -27,7 +27,9 @@ export type SignupStep =
   | "oauth_callback_returned"
   | "account_created"
   | "connect_prompt_shown"
-  | "calendar_connected";
+  | "calendar_connected"
+  /** Fired when the missing-permissions modal opens, replacing the old toast. */
+  | "permissions_explainer_shown";
 
 export type SignupMethod = "email" | ProviderKind;
 

@@ -285,6 +285,39 @@ Logout should end the server session, but the local rollout gate should still re
 - The logged-out auth affordances still appear after reload because local auth state still has `lastKnownEmail`.
 - The command palette shows `Sign Up` and `Log In` again.
 
+## Scenario 12: Partial Scope Grant Shows The Permissions Modal
+
+### UX
+
+Google and Microsoft let a user uncheck individual permissions on the consent
+screen. Compass cannot sync without them, so declining one should explain
+what was skipped and offer a one-click retry instead of an unexplained toast.
+
+### Steps
+
+1. Open the auth modal from `/day?auth=login` and select `Continue with Google`.
+2. At Google's consent screen, uncheck one of the calendar permissions before
+   approving.
+3. Return to Compass through `/auth/google/callback`.
+4. Confirm the permissions modal opens instead of a toast, listing each
+   requested permission and why Compass needs it.
+5. Select `Try again with Google`.
+6. Complete the consent screen again, this time leaving every permission
+   checked.
+7. Repeat the same flow for an already-authenticated user reconnecting
+   Google or Microsoft from the sidebar (`?provider=<kind>&status=missingScopes`).
+
+### Expected Results
+
+- A partial scope grant on sign-in opens the missing-permissions modal
+  (`Compass needs calendar access`) instead of the old error toast.
+- The modal lists every requested permission with a plain-language reason.
+- `Try again with Google` (or Microsoft) reopens the provider's consent
+  screen with `prompt=consent`, so every permission is checked again.
+- `Not now` closes the modal and leaves the user exactly where they were.
+- The same modal opens for the signed-in connect/reconnect flow, replacing
+  the old `missingScopes` toast.
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping auth changes:

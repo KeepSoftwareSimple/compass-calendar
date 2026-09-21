@@ -121,6 +121,53 @@ test("finishes a saved Google sign-in callback", async ({ page }) => {
   ).toBeNull();
 });
 
+// Unchecking a required permission on Google's consent screen used to dump
+// the user back on the calendar with a toast and no way to retry.
+test("shows the permissions modal and retries with prompt=consent", async ({
+  page,
+}) => {
+  const state = "google-missing-scopes";
+  const apiMocks = await prepareGoogleAuthCallbackPage(page);
+
+  await page.goto("/week");
+  await page.evaluate(
+    ({ key, value }) => {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    },
+    {
+      key: getIntentStorageKey(state),
+      value: { intent: "signIn", returnPath: "/week", createdAt: Date.now() },
+    },
+  );
+
+  await page.goto(getCallbackUrl(state, [REQUIRED_SCOPES[0] ?? "openid"]));
+
+  await expect(page).toHaveURL(/\/week$/);
+  expect(apiMocks.loginOrSignupRequests).toHaveLength(0);
+  const heading = page.getByRole("heading", {
+    name: "Compass needs calendar access",
+  });
+  await expect(heading).toBeVisible();
+
+  let capturedUrl: URL | null = null;
+  await page.route("**://accounts.google.com/**", async (route) => {
+    capturedUrl = new URL(route.request().url());
+    return route.abort();
+  });
+
+  await page
+    .getByRole("button", { name: "Try again with Google" })
+    .click({ noWaitAfter: true });
+
+  await expect
+    .poll(() => capturedUrl !== null, { timeout: 5000 })
+    .toBe(true)
+    .catch(() => undefined);
+  if (capturedUrl) {
+    expect((capturedUrl as URL).searchParams.get("prompt")).toBe("consent");
+  }
+});
+
 // Cancelling at Google's consent screen used to share the generic
 // authorization error, so a deliberate choice read as a Compass crash.
 test("returns the user calmly after a consent-screen cancel", async ({
@@ -256,9 +303,7 @@ test("finishes sign-in when the contacts scopes are denied: connection healthy, 
   await expect(page).toHaveURL(/\/week$/);
   expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
   await expect(
-    page.getByText(
-      "Compass needs all the requested permissions to sync your calendar. Please allow them and try again.",
-    ),
+    page.getByRole("heading", { name: "Compass needs calendar access" }),
   ).not.toBeVisible();
 
   await expect

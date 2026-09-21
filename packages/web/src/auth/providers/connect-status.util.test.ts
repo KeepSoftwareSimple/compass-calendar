@@ -1,5 +1,10 @@
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import * as userMetadataUtil from "@web/auth/compass/user/util/user-metadata.util";
+import {
+  resetMissingPermissionsStoreForTests,
+  selectMissingPermissionsProvider,
+  useMissingPermissionsStore,
+} from "@web/auth/providers/missing-permissions.store";
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
@@ -21,6 +26,7 @@ describe("connect-status.util", () => {
     mocks.success.mockClear();
     mocks.error.mockClear();
     registerToastPort(port);
+    resetMissingPermissionsStoreForTests();
     rafCallbacks = [];
     rafSpy = spyOn(globalThis, "requestAnimationFrame").mockImplementation(((
       callback: FrameRequestCallback,
@@ -143,6 +149,15 @@ describe("connect-status.util", () => {
           toastId: "connect-account-mismatch",
         }),
       );
+    });
+
+    it("opens the missing-permissions modal instead of a toast", () => {
+      showConnectStatusToast({ provider: "google", status: "missingScopes" });
+      runToastAfterPaint();
+      expect(mocks.error).not.toHaveBeenCalled();
+      expect(
+        selectMissingPermissionsProvider(useMissingPermissionsStore.getState()),
+      ).toBe("google");
     });
 
     it("explains a generic connect error without sending the user to Settings", () => {

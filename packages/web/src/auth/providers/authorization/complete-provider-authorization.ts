@@ -8,7 +8,6 @@ import { type SignupFailureReason } from "@web/auth/posthog/signup-funnel";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import {
   GOOGLE_AUTHORIZATION_ERROR_MESSAGE,
-  MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
   PROVIDER_AUTH_CANCELLED_MESSAGE,
   PROVIDER_AUTH_SCOPES_REQUIRED,
   PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
@@ -163,11 +162,14 @@ export async function completeProviderAuthorization({
     const missingScopes = requiredScopes.filter(
       (scope) => !grantedScopes.has(scope),
     );
+    // The message is no longer shown as a toast: the missing-permissions
+    // modal explains this failure instead, so this falls through to the
+    // default per-provider message that other callers still read.
     return fail(
       provider,
       "oauth_missing_scopes",
       returnPath,
-      MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+      undefined,
       `missing_scopes:${missingScopes.join(",")}`,
     );
   }

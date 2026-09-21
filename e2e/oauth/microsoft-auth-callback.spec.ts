@@ -152,8 +152,6 @@ test("rejects a Microsoft callback that is missing required scopes", async ({
   await expect(page).toHaveURL(/\/week$/);
   expect(apiMocks.loginOrSignupRequests).toHaveLength(0);
   await expect(
-    page.getByText(
-      "Compass needs all the requested permissions to sync your calendar. Please allow them and try again.",
-    ),
+    page.getByRole("heading", { name: "Compass needs calendar access" }),
   ).toBeVisible();
 });

@@ -6,6 +6,10 @@ import { createMockConnection } from "@web/__tests__/utils/factories/calendar.fa
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
+  missingPermissionsActions,
+  resetMissingPermissionsStoreForTests,
+} from "@web/auth/providers/missing-permissions.store";
+import {
   CALENDAR_HOST_EXPLAINER,
   CONNECT_CALENDAR_BENEFITS,
   CONNECT_CALENDAR_REASSURANCE,
@@ -126,10 +130,12 @@ describe("ConnectCalendarPromptGate", () => {
       "",
     );
     userMetadataActions.set(emptyMetadata);
+    resetMissingPermissionsStoreForTests();
   });
 
   afterEach(() => {
     userMetadataActions.clear();
+    resetMissingPermissionsStoreForTests();
   });
 
   it("renders for a signed-in user with zero connections", () => {
@@ -213,6 +219,15 @@ describe("ConnectCalendarPromptGate", () => {
     expect(
       screen.getByRole("dialog", { name: CONNECT_THE_CALENDAR_YOU_USE }),
     ).toBeInTheDocument();
+  });
+
+  it("does not render while the missing-permissions modal is open", () => {
+    missingPermissionsActions.open("google");
+    renderGate();
+
+    expect(
+      screen.queryByRole("dialog", { name: CONNECT_THE_CALENDAR_YOU_USE }),
+    ).toBeNull();
   });
 
   it("routes each provider button to its connect flow", async () => {

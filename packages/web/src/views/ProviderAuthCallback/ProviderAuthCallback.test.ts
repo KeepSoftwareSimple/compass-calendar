@@ -5,6 +5,11 @@ import {
   readProviderAuthorizationIntent,
   writeProviderAuthorizationIntent,
 } from "@web/auth/providers/authorization/provider-authorization.storage";
+import {
+  resetMissingPermissionsStoreForTests,
+  selectMissingPermissionsProvider,
+  useMissingPermissionsStore,
+} from "@web/auth/providers/missing-permissions.store";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { completeProviderAuthCallback } from "@web/views/ProviderAuthCallback/ProviderAuthCallback";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
@@ -51,6 +56,7 @@ describe("completeProviderAuthCallback (google)", () => {
     mockLoginOrSignup.mockResolvedValue({
       user: { emails: ["user@example.com"] },
     });
+    resetMissingPermissionsStoreForTests();
   });
 
   it("finishes a saved Google sign-in intent and returns to the saved path", async () => {
@@ -99,10 +105,10 @@ describe("completeProviderAuthCallback (google)", () => {
 
     expect(mockLoginOrSignup).not.toHaveBeenCalled();
     expect(completeAuthentication).not.toHaveBeenCalled();
-    expect(mocks.error).toHaveBeenCalledWith(
-      "Compass needs all the requested permissions to sync your calendar. Please allow them and try again.",
-      expect.any(Object),
-    );
+    expect(mocks.error).not.toHaveBeenCalled();
+    expect(
+      selectMissingPermissionsProvider(useMissingPermissionsStore.getState()),
+    ).toBe("google");
     expect(navigate).toHaveBeenCalledWith("/week", { replace: true });
   });
 

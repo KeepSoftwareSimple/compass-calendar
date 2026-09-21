@@ -51,6 +51,13 @@ interface Window {
       getState: () => import("@web/auth/providers/connect-apple.store").ConnectAppleState;
       open: (initialEmail?: string) => void;
     };
+    missingPermissions?: {
+      close: () => void;
+      getState: () => import("@web/auth/providers/missing-permissions.store").MissingPermissionsState;
+      open: (
+        provider: import("@core/types/sync/identity.contracts").ProviderKind,
+      ) => void;
+    };
     userMetadata?: {
       getState: () => import("@web/auth/state/user-metadata.store").UserMetadataState;
       set: (metadata: import("@core/types/user.types").UserMetadata) => void;
