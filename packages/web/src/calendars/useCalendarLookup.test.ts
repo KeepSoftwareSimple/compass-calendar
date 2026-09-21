@@ -34,20 +34,17 @@ describe("resolveCalendarCardIdentity", () => {
     const work = calendar({ name: "Work" });
     const personal = calendar({ name: "Personal" });
     const lookup = buildCalendarLookup([work, personal]);
-    const duplicate = {
-      accountEmail: "ahab@gmail.com",
-      backgroundColor: "#ef4444",
-    };
+    const duplicate = [{ label: "ahab@gmail.com", backgroundColor: "#ef4444" }];
 
     expect(
       resolveCalendarCardIdentity(lookup, {
         calendarId: work.id,
-        otherAccount: duplicate,
+        otherCopies: duplicate,
       }),
     ).toEqual({
       name: "Work",
       backgroundColor: work.backgroundColor,
-      otherAccount: duplicate,
+      otherCopies: duplicate,
     });
   });
 
