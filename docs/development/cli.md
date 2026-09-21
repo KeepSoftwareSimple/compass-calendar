@@ -20,6 +20,7 @@ Primary file:
 | `bun run cli purge-corrupt-sync-events [--apply]` | `packages/scripts/src/commands/purge-corrupt-sync-events.ts` | Deletes invalid Sync event documents. Defaults to dry-run. |
 | `bun run cli refresh-connection-states [--apply]` | `packages/scripts/src/commands/refresh-connection-states.ts` | Re-derives Sync connection state. Defaults to dry-run. |
 | `bun run cli encrypt-credentials [--apply] [--batch-size 200]` | `packages/scripts/src/commands/encrypt-credentials.ts` | Encrypts legacy plaintext OAuth refresh tokens in Sync credentials. Defaults to dry-run. |
+| `bun run cli connection-report [--json] [--api-mongo-uri <uri>]` | `packages/scripts/src/commands/connection-report.ts` | Read-only inventory of Sync connections grouped by provider, state, and stateReason, with 30/90-day activity from lastSeenAt. Lists importing connections older than one hour by id. Prints "activity unavailable" when the API database cannot be read. |
 | `bun run cli manage-failed-jobs <list\|clear\|requeue> …` | `packages/scripts/src/commands/manage-failed-jobs.ts` | Operator tooling for Sync jobs that exhausted the self-heal requeue budget. Defaults to dry-run; pass `--apply` to persist. |
 
 ### Encrypt OAuth refresh tokens at rest
@@ -42,6 +43,21 @@ Run on staging, confirm the report shows zero matched rows, then run on producti
 #### Key rotation (procedure only)
 
 Each encrypted field carries a `keyVersion` (currently `1`). Rotating `sync.credentialEncryptionKey` is not automated in v1: decrypt with the old key and re-seal with the new key under a higher version, then deploy the new key. Implementing rotation tooling is deferred.
+
+### Connection report
+
+Read-only. Requires `SYNC_MONGO_URI` or `sync.mongoUri`. When
+`sync.enforceLeastPrivilege` is on, pass `--api-mongo-uri` so the report can
+join backend `lastSeenAt` activity. Without that URI it prints
+"activity unavailable" for the 30 and 90 day columns. Never prints emails or
+credentials, only connection ids.
+
+```bash
+export SYNC_MONGO_URI='…'
+
+bun run cli connection-report
+bun run cli connection-report --json --api-mongo-uri "$MONGO_URI"
+```
 
 ### Manage exhausted Sync jobs
 

@@ -113,6 +113,8 @@ export function createSyncService(
     // Full registry replacement (tests inject a fake set of kinds).
     registry?: ProviderRegistry;
     adapterOverrides?: ProviderAdapterOverrides;
+    // Same PostHog client as sync_health_snapshot. Tests inject a fake.
+    posthog?: PostHogCaptureClient | null;
   } = {},
 ): SyncService {
   const identity = buildServiceIdentity({
@@ -172,6 +174,7 @@ export function createSyncService(
         // Fall back to the callback base when no explicit redirect is set.
         postConnectRedirectUrl:
           config.POST_CONNECT_REDIRECT_URL ?? config.CALLBACK_BASE_URL,
+        posthog: deps.posthog ?? null,
       }
     : undefined;
 
@@ -219,7 +222,10 @@ async function start(): Promise<void> {
   // read from it. It is not connected yet; the app binds its port first and the
   // routes access the db lazily, per request.
   const mongo = new SyncMongoService();
-  const service = createSyncService(config, { mongo });
+  // Built before the HTTP app so OAuth callbacks can emit oauth_callback even
+  // when storage is still connecting (or never becomes ready).
+  const posthog = buildPostHogClient(config);
+  const service = createSyncService(config, { mongo, posthog });
 
   // Register the disconnect drain first so, under the coordinator's
   // reverse-order teardown, storage closes LAST — after any workers that
@@ -227,6 +233,9 @@ async function start(): Promise<void> {
   // until Mongo is connected and its indexes are installed.
   service.shutdown.register("mongo", () => mongo.disconnect());
   service.shutdown.register("otel-logs", () => stopOtelLogs());
+  if (posthog) {
+    service.shutdown.register("posthog", () => posthog.shutdown());
+  }
   service.readiness.register("storage", async () => {
     if (!mongo.isConnected) return false;
     await mongo.db.command({ ping: 1 });
@@ -285,10 +294,6 @@ async function start(): Promise<void> {
 
     // Sanitized sync_health_snapshot every five minutes (S44). Runs in passive
     // mode too so the heartbeat stays alive before provider work is enabled.
-    const posthog = buildPostHogClient(config);
-    if (posthog) {
-      service.shutdown.register("posthog", () => posthog.shutdown());
-    }
     const registry = buildProviderRegistry(config);
     const health = buildHealthSnapshotSweep(
       service.identity,

@@ -9,7 +9,10 @@ import {
   BillingSubscriptionResponseSchema,
 } from "@core/types/billing.types";
 import { zObjectId } from "@core/types/type.utils";
-import { BillingHttpError } from "@backend/billing/billing.errors";
+import {
+  BillingHttpError,
+  logBillingHttpError,
+} from "@backend/billing/billing.errors";
 import billingService from "@backend/billing/services/billing.service";
 import stripeService from "@backend/billing/services/stripe.service";
 
@@ -17,7 +20,7 @@ const logger = Logger("app:billing");
 
 const sendBillingError = (res: Response, e: unknown) => {
   if (e instanceof BillingHttpError) {
-    logger.error(e.message, e.cause ?? e);
+    logBillingHttpError(logger, e);
     res.status(e.status).json({ error: e.clientMessage });
     return;
   }

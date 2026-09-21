@@ -4,16 +4,62 @@ import {
   type Db,
   ObjectId,
 } from "mongodb";
-import { type DateTime, type EventId } from "@core/types/domain-primitives";
+import { z } from "zod/v4";
 import {
+  type DateTime,
+  type EventId,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
+import { AttendeeResponseStatusSchema } from "@core/types/event-attendance.contracts";
+import {
+  ConnectionIdSchema,
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  EventReadSchema,
   type EventRecord,
-  EventRecordSchema,
 } from "@sync/storage/contracts/event.contracts";
+
+// Inclusion projection for busy-availability hydration. `_id` stays on by
+// default so the caller can join occurrences back to these rows.
+export const OCCUPANCY_EVENT_PROJECTION = {
+  connectionId: 1,
+  "content.organizer.email": 1,
+  "content.attendees.email": 1,
+  "content.attendees.responseStatus": 1,
+} as const;
+
+const OccupancyEventSchema = z.object({
+  _id: EventIdSchema,
+  connectionId: ConnectionIdSchema.nullable().optional(),
+  content: z
+    .object({
+      organizer: z.object({ email: z.string() }).nullable().optional(),
+      attendees: z
+        .array(
+          z.object({
+            email: z.string(),
+            responseStatus: AttendeeResponseStatusSchema,
+          }),
+        )
+        .optional(),
+    })
+    .optional(),
+});
+
+export interface OccupancyEvent {
+  _id: EventId;
+  connectionId: EventRecord["connectionId"] | undefined;
+  content: {
+    organizer?: { email: string } | null;
+    attendees: {
+      email: string;
+      responseStatus: z.infer<typeof AttendeeResponseStatusSchema>;
+    }[];
+  };
+}
 
 // bulkWrite / $in chunks. Matches the 500-1000 doc batching Atlas round-trips
 // want: one page of provider events is typically well under this, so a page
@@ -147,7 +193,7 @@ export class EventRepository {
 
     return planned.map(
       ({ input, existing: current, insertId, providerMetadata }) =>
-        EventRecordSchema.parse({
+        EventReadSchema.parse({
           ...current,
           ...input,
           providerMetadata,
@@ -253,7 +299,7 @@ export class EventRepository {
           })
           .toArray();
         for (const record of records) {
-          const parsed = EventRecordSchema.parse(record);
+          const parsed = EventReadSchema.parse(record);
           if (!parsed.providerEventId) continue;
           found.set(
             providerIdentityKey({
@@ -293,7 +339,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.recurrence.kind !== "exception") continue;
         found.set(
           seriesExceptionKey({
@@ -325,7 +371,7 @@ export class EventRepository {
   // collides on the unique _id at insert (a caught error) instead of silently
   // clobbering the owner's document.
   async put(record: EventRecord): Promise<EventRecord> {
-    const parsed = EventRecordSchema.parse(record);
+    const parsed = EventReadSchema.parse(record);
     await this.collection.replaceOne(
       {
         _id: parsed._id,
@@ -348,7 +394,7 @@ export class EventRepository {
       tenantId,
       principalId,
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Batch-hydrate full event records by id, owner-scoped. The full-fidelity read
@@ -365,7 +411,33 @@ export class EventRepository {
     const records = await this.collection
       .find({ _id: { $in: [...ids] }, tenantId, principalId })
       .toArray();
-    return records.map((record) => EventRecordSchema.parse(record));
+    return records.map((record) => EventReadSchema.parse(record));
+  }
+
+  // Busy availability only needs organizer and attendee response facts. The
+  // projection keeps titles, descriptions, and the rest of the document off
+  // the wire for this read.
+  async findOccupancyByIds(
+    tenantId: TenantId,
+    principalId: PrincipalId,
+    ids: readonly EventId[],
+  ): Promise<OccupancyEvent[]> {
+    if (ids.length === 0) return [];
+    const records = await this.collection
+      .find({ _id: { $in: [...ids] }, tenantId, principalId })
+      .project(OCCUPANCY_EVENT_PROJECTION)
+      .toArray();
+    return records.map((record) => {
+      const parsed = OccupancyEventSchema.parse(record);
+      return {
+        _id: parsed._id,
+        connectionId: parsed.connectionId ?? null,
+        content: {
+          organizer: parsed.content?.organizer ?? null,
+          attendees: parsed.content?.attendees ?? [],
+        },
+      };
+    });
   }
 
   // Look up one provider-linked event by its provider identity, owner-scoped.
@@ -388,7 +460,7 @@ export class EventRepository {
       // $type: see the PLANNER TRAP note in index-manifest.ts.
       providerEventId: { $eq: identity.providerEventId, $type: "string" },
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Batch form of findByProviderIdentity: one $in per chunk instead of one
@@ -417,7 +489,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.providerEventId) {
           found.set(parsed.providerEventId, parsed);
         }
@@ -445,7 +517,7 @@ export class EventRepository {
       calendarId: identity.calendarId,
       "providerMetadata.href": identity.href,
     });
-    return record ? EventRecordSchema.parse(record) : null;
+    return record ? EventReadSchema.parse(record) : null;
   }
 
   // Remove one event by id, scoped to its owner so a caller can only delete its
@@ -469,7 +541,7 @@ export class EventRepository {
   // whether a document was matched; false means the event vanished since it was
   // read, and the caller should re-evaluate rather than treat it as applied.
   async replaceExisting(record: EventRecord): Promise<boolean> {
-    const parsed = EventRecordSchema.parse(record);
+    const parsed = EventReadSchema.parse(record);
     const result = await this.collection.replaceOne(
       {
         _id: parsed._id,
@@ -590,7 +662,7 @@ export class EventRepository {
         { upsert: true, returnDocument: "after" },
       );
       if (!result) throw new Error("Exception upsert did not return a record");
-      return EventRecordSchema.parse(result);
+      return EventReadSchema.parse(result);
     } catch (error) {
       // Concurrent import won the provider_event_identity insert between our
       // lookup and this upsert. Converge on that row instead of failing the
@@ -667,7 +739,7 @@ export class EventRepository {
     if (!result) {
       throw new Error("Exception provider-identity update returned no record");
     }
-    return EventRecordSchema.parse(result);
+    return EventReadSchema.parse(result);
   }
 
   // Every exception event of a series (overridden or cancelled instances),
@@ -687,7 +759,7 @@ export class EventRepository {
         "recurrence.seriesId": seriesId,
       })
       .toArray();
-    return records.map((r) => EventRecordSchema.parse(r));
+    return records.map((r) => EventReadSchema.parse(r));
   }
 
   // Batch form of findSeriesExceptions: one $in for every series touched on a
@@ -710,7 +782,7 @@ export class EventRepository {
         })
         .toArray();
       for (const record of records) {
-        const parsed = EventRecordSchema.parse(record);
+        const parsed = EventReadSchema.parse(record);
         if (parsed.recurrence.kind !== "exception") continue;
         found.get(parsed.recurrence.seriesId)?.push(parsed);
       }

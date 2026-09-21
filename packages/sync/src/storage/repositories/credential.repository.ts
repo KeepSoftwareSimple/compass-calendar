@@ -2,14 +2,14 @@ import { type Collection, type Db } from "mongodb";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  CredentialReadSchema,
   type CredentialRecord,
-  CredentialRecordSchema,
+  OauthRefreshCredentialReadSchema,
   type OauthRefreshCredentialRecord,
-  OauthRefreshCredentialRecordSchema,
   type OauthRefreshStoredUpsert,
   OauthRefreshStoredUpsertSchema,
+  PasswordCredentialReadSchema,
   type PasswordCredentialRecord,
-  PasswordCredentialRecordSchema,
   type PasswordCredentialUpsert,
   PasswordCredentialUpsertSchema,
 } from "@sync/storage/contracts/credential.contracts";
@@ -85,7 +85,7 @@ export class CredentialRepository {
     if (!result) {
       throw new Error("Credential store did not return a record");
     }
-    return OauthRefreshCredentialRecordSchema.parse(result);
+    return OauthRefreshCredentialReadSchema.parse(result);
   }
 
   // Store or replace a password credential. OAuth fields from a prior kind
@@ -119,14 +119,14 @@ export class CredentialRepository {
     if (!result) {
       throw new Error("Password credential store did not return a record");
     }
-    return PasswordCredentialRecordSchema.parse(result);
+    return PasswordCredentialReadSchema.parse(result);
   }
 
   async findByConnection(
     connectionId: ConnectionId,
   ): Promise<CredentialRecord | null> {
     const record = await this.collection.findOne({ _id: connectionId });
-    return record ? CredentialRecordSchema.parse(record) : null;
+    return record ? CredentialReadSchema.parse(record) : null;
   }
 
   // Cache a freshly-minted access token and its expiry. Returns null if the
@@ -150,7 +150,7 @@ export class CredentialRepository {
       },
       { returnDocument: "after" },
     );
-    return result ? OauthRefreshCredentialRecordSchema.parse(result) : null;
+    return result ? OauthRefreshCredentialReadSchema.parse(result) : null;
   }
 
   // Clear a cached access token without touching the refresh token, so the
@@ -183,7 +183,7 @@ export class CredentialRepository {
       { returnDocument: "after" },
     );
     if (!result) return 0;
-    return OauthRefreshCredentialRecordSchema.parse(result).refreshFailureCount;
+    return OauthRefreshCredentialReadSchema.parse(result).refreshFailureCount;
   }
 
   // Remove a connection's credential (disconnect / account deletion). Returns

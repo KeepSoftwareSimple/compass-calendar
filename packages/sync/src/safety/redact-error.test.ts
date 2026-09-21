@@ -23,11 +23,34 @@ describe("redactedCause", () => {
     expect(cause?.message).toBe("invalid_grant");
     expect(cause).not.toBe(leaky);
     expect((cause as Error & { config?: unknown }).config).toBeUndefined();
+    expect(cause?.name).toBe("Error");
+    expect(cause?.stack).toBe(leaky.stack);
+    expect(Object.hasOwn(cause, "config")).toBe(false);
+    expect(Object.hasOwn(cause, "response")).toBe(false);
     assertNoSafetyCanary({
       message: cause?.message,
       cause,
       leakyKeys: Object.keys(cause ?? {}),
     });
+  });
+
+  it("keeps a gaxios-style error's name and stack and drops config", () => {
+    const leaky = Object.assign(
+      new Error("Request failed with status code 500"),
+      {
+        name: "GaxiosError",
+        config: { url: "https://www.googleapis.com/calendar/v3/calendars" },
+        response: { status: 500 },
+      },
+    );
+    leaky.stack =
+      "GaxiosError: Request failed with status code 500\n    at Google.watch";
+
+    const cause = redactedCause(leaky);
+    expect(cause?.name).toBe("GaxiosError");
+    expect(cause?.stack).toBe(leaky.stack);
+    expect((cause as Error & { config?: unknown }).config).toBeUndefined();
+    expect(Object.hasOwn(cause as object, "response")).toBe(false);
   });
 });
 

@@ -34,6 +34,14 @@ export const DeletionMarkerRecordSchema = z.strictObject({
 });
 export type DeletionMarkerRecord = z.infer<typeof DeletionMarkerRecordSchema>;
 
+// Reads parse through this stripped variant, not the strict schema above.
+// A rolling deploy runs the old build and the new build together: the new
+// build stamps a field the old build has never heard of, the old build then
+// reads that row, and a strictObject rejects the unknown key
+// (`unrecognized_keys`) and throws. Unknown keys are dropped from the
+// in-memory record and left untouched in Mongo. Writes stay strict.
+export const DeletionMarkerReadSchema = DeletionMarkerRecordSchema.strip();
+
 export const DeletionMarkerRecordInputSchema = DeletionMarkerRecordSchema.omit({
   _id: true,
   expiresAt: true,

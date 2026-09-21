@@ -18,7 +18,7 @@ export function useSseDegraded(): boolean {
 /**
  * Epoch ms at which the stream became degraded, or null while healthy. The
  * sidebar uses it to offer a reload once an outage has run long enough that
- * native EventSource reconnect is unlikely to recover on its own.
+ * the SSE client has stopped reconnecting on its own.
  */
 export function useSseDegradedSince(): number | null {
   return useSyncExternalStore(subscribeSseDegraded, getSseDegradedSinceMs);

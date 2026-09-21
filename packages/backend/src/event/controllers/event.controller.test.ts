@@ -143,6 +143,104 @@ describe("EventController", () => {
     });
   });
 
+  it("includes the contract mismatch detail on a list-events failure", async () => {
+    spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+    spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+      listCalendars: mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: { calendars: [{ id: objectId() }] },
+        }),
+      ),
+      listFullEvents: mock(() =>
+        Promise.resolve({
+          ok: false as const,
+          error: {
+            kind: "invalidResponse" as const,
+            status: 200,
+            correlationId: "corr-detail",
+            detail: "issues=instances.0.lastFullListAt: unrecognized_keys",
+          },
+        }),
+      ),
+    } as never);
+
+    const { res, json } = jsonRes();
+    await eventController.readAll(
+      sessionReq(objectId(), {
+        query: {
+          start: "2026-07-14T00:00:00.000Z",
+          end: "2026-07-21T00:00:00.000Z",
+        },
+      }),
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(Status.BAD_GATEWAY);
+    expect(json).toHaveBeenCalledWith({
+      code: "PROVIDER_FAILURE",
+      message:
+        "Failed to list events from sync (invalidResponse): " +
+        "issues=instances.0.lastFullListAt: unrecognized_keys",
+      retryable: true,
+    });
+  });
+
+  it("runs at most four list-events calls in flight across concurrent range reads", async () => {
+    spyOn(calendarService, "getLocalCalendar").mockResolvedValue(null);
+    let active = 0;
+    let peak = 0;
+    const releases: Array<() => void> = [];
+    const listFullEvents = mock(() => {
+      active += 1;
+      peak = Math.max(peak, active);
+      return new Promise((resolve) => {
+        releases.push(() => {
+          active -= 1;
+          resolve({
+            ok: true as const,
+            value: { instances: [], nextCursor: null },
+          });
+        });
+      });
+    });
+    spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+      listCalendars: mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: { calendars: [{ id: objectId() }] },
+        }),
+      ),
+      listFullEvents,
+    } as never);
+
+    const reads = Array.from({ length: 10 }, () => {
+      const { res } = jsonRes();
+      return eventController.readAll(
+        sessionReq(objectId(), {
+          query: {
+            start: "2026-07-14T00:00:00.000Z",
+            end: "2026-07-21T00:00:00.000Z",
+          },
+        }),
+        res,
+      );
+    });
+
+    await Bun.sleep(0);
+    expect(listFullEvents).toHaveBeenCalledTimes(4);
+    expect(peak).toBe(4);
+
+    while (releases.length > 0 || active > 0) {
+      releases.splice(0).forEach((release) => release());
+      await Bun.sleep(0);
+    }
+
+    await Promise.all(reads);
+    expect(listFullEvents).toHaveBeenCalledTimes(10);
+    expect(peak).toBe(4);
+  });
+
   it("resolves owned calendars for a read with activeOnly, never the full list", async () => {
     // resolveSyncCalendarIds intersects the request's calendarIds against
     // "owned" ids — but while the browser's own calendar list is still

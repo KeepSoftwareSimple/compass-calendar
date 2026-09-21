@@ -1,7 +1,10 @@
 import { type QueryClient } from "@tanstack/react-query";
 import dayjs from "@core/util/date/dayjs";
 import { queryClient as defaultQueryClient } from "@web/api/query-client";
-import { dayEventsQueryOptions } from "@web/events/queries/event.query.options";
+import {
+  dayEventsQueryOptions,
+  prefetchRangeEvents,
+} from "@web/events/queries/event.query.options";
 import { getEventRepositorySource } from "@web/events/repositories/event.repository.util";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
@@ -23,13 +26,13 @@ export function prefetchDayEventsQuery({
   const { startDate, endDate } = dayEventQueryRange(
     dayjs.tz(dateString, getEffectiveTimeZone()),
   );
-  void client
-    .prefetchQuery(
-      dayEventsQueryOptions({
-        startDate,
-        endDate,
-        source: getEventRepositorySource(authenticated),
-      }),
-    )
-    .catch(() => undefined);
+  const source = getEventRepositorySource(authenticated);
+  prefetchRangeEvents(client, source, authenticated, (calendarIds) =>
+    dayEventsQueryOptions({
+      startDate,
+      endDate,
+      source,
+      calendarIds,
+    }),
+  );
 }

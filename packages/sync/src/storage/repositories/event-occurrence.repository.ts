@@ -2,6 +2,7 @@ import {
   type ClientSession,
   type Collection,
   type Db,
+  type Filter,
   type MongoClient,
   ObjectId,
 } from "mongodb";
@@ -13,6 +14,7 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  EventOccurrenceReadSchema,
   type EventOccurrenceRecord,
   EventOccurrenceRecordSchema,
 } from "@sync/storage/contracts/event-occurrence.contracts";
@@ -23,6 +25,11 @@ export type OccurrenceInput = Omit<EventOccurrenceRecord, "_id">;
 // overlap window. Keeps calendar_gen_start range-bounded; see
 // listBusyOverlapping and listByCalendarRange.
 export const BUSY_MAX_LOOKBACK_MS = 366 * 24 * 60 * 60 * 1000;
+
+// Caps a single busy overlap read. A normal 60-day window stays under this;
+// a pathological calendar fails closed via `truncated` instead of scanning
+// without a bound.
+export const BUSY_OVERLAP_DEFAULT_LIMIT = 5_000;
 
 // insertMany / bulkWrite chunk. Occurrence rebuilds for a page can be a few
 // thousand rows; 1000 stays inside the 500-1000 doc batch the Atlas round-trip
@@ -63,6 +70,14 @@ export interface BusyOverlapQuery {
   // before `end` and ends after `start`.
   start: Date;
   end: Date;
+  // Defaults to BUSY_OVERLAP_DEFAULT_LIMIT. The read fetches one extra row
+  // so `truncated` is true when more overlaps exist than `limit`.
+  limit?: number;
+}
+
+export interface BusyOverlapResult {
+  intervals: OccurrenceInterval[];
+  truncated: boolean;
 }
 
 // One busy occurrence's normalized half-open interval — the only fields a busy
@@ -71,6 +86,7 @@ export interface OccurrenceInterval {
   startAt: Date;
   endAt: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 // Repository for `event_occurrences`. Rebuilding a series' window
@@ -204,49 +220,12 @@ export class EventOccurrenceRepository {
     query: OccurrenceRangeQuery,
   ): Promise<EventOccurrenceRecord[]> {
     if (query.calendars.length === 0) return [];
-    const base = { tenantId: query.tenantId, principalId: query.principalId };
-    // Read each calendar only at its active generation, so occurrences of a
-    // repair building a newer generation for that calendar stay invisible until
-    // it activates.
-    const activeCalendars = {
-      $or: query.calendars.map((c) => ({
-        calendarId: c.calendarId,
-        generation: c.generation,
-      })),
-    };
-    const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
-    const inRange = {
-      $or: [
-        { startAt: { $gte: query.start, $lt: query.end } },
-        {
-          startAt: { $gte: startAtFloor, $lt: query.start },
-          endAt: { $gt: query.start },
-        },
-      ],
-    };
-
-    // Composite keyset over the (startAt, _id) sort: a later instant, or the
-    // same instant with a greater _id. startAt is a top-level Date and _id a
-    // string, so this is fully typeable — no cast needed.
-    const keyset = query.after
-      ? [
-          {
-            $or: [
-              { startAt: { $gt: query.after.startAt } },
-              { startAt: query.after.startAt, _id: { $gt: query.after.id } },
-            ],
-          },
-        ]
-      : [];
-
-    const filter = { ...base, $and: [activeCalendars, inRange, ...keyset] };
-
     const records = await this.collection
-      .find(filter)
+      .find(occurrenceRangeFilter(query))
       .sort({ startAt: 1, _id: 1 })
       .limit(query.limit)
       .toArray();
-    return records.map((r) => EventOccurrenceRecordSchema.parse(r));
+    return records.map((r) => EventOccurrenceReadSchema.parse(r));
   }
 
   // The busy occurrences overlapping [start, end) for the given calendars, each
@@ -261,36 +240,105 @@ export class EventOccurrenceRepository {
   // Compass's practical horizon (multi-year single instances).
   async listBusyOverlapping(
     query: BusyOverlapQuery,
-  ): Promise<OccurrenceInterval[]> {
-    if (query.calendars.length === 0) return [];
-    const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
-    const filter = {
-      tenantId: query.tenantId,
-      principalId: query.principalId,
-      busy: true,
-      cancelled: false,
-      $and: [
-        {
-          $or: query.calendars.map((c) => ({
-            calendarId: c.calendarId,
-            generation: c.generation,
-          })),
-        },
-        { startAt: { $gte: startAtFloor, $lt: query.end } },
-        { endAt: { $gt: query.start } },
-      ],
-    };
-    return this.collection
-      .find(filter)
+  ): Promise<BusyOverlapResult> {
+    if (query.calendars.length === 0) {
+      return { intervals: [], truncated: false };
+    }
+    const limit = busyOverlapLimit(query.limit);
+    const rows = await this.collection
+      .find(busyOverlapFilter(query))
       .project<OccurrenceInterval>({
         startAt: 1,
         endAt: 1,
         eventId: 1,
+        calendarId: 1,
         _id: 0,
       })
       .sort({ startAt: 1 })
+      .limit(limit + 1)
       .toArray();
+    const truncated = rows.length > limit;
+    return {
+      intervals: truncated ? rows.slice(0, limit) : rows,
+      truncated,
+    };
   }
+}
+
+// Shared with explain tests so the plan is the query the repository runs.
+export function occurrenceRangeClause(
+  query: Pick<OccurrenceRangeQuery, "start" | "end">,
+): Filter<EventOccurrenceRecord> {
+  const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
+  return {
+    $or: [
+      { startAt: { $gte: query.start, $lt: query.end } },
+      {
+        // endAt leads so calendar_gen_end can bound the overlap instead of
+        // fetching every start inside the lookback.
+        endAt: { $gt: query.start },
+        startAt: { $gte: startAtFloor, $lt: query.start },
+      },
+    ],
+  };
+}
+
+export function occurrenceRangeFilter(
+  query: OccurrenceRangeQuery,
+): Filter<EventOccurrenceRecord> {
+  const activeCalendars = {
+    $or: query.calendars.map((c) => ({
+      calendarId: c.calendarId,
+      generation: c.generation,
+    })),
+  };
+  const keyset = query.after
+    ? [
+        {
+          $or: [
+            { startAt: { $gt: query.after.startAt } },
+            { startAt: query.after.startAt, _id: { $gt: query.after.id } },
+          ],
+        },
+      ]
+    : [];
+  return {
+    tenantId: query.tenantId,
+    principalId: query.principalId,
+    $and: [activeCalendars, occurrenceRangeClause(query), ...keyset],
+  };
+}
+
+export function busyOverlapFilter(
+  query: BusyOverlapQuery,
+): Filter<EventOccurrenceRecord> {
+  const startAtFloor = new Date(query.start.getTime() - BUSY_MAX_LOOKBACK_MS);
+  return {
+    tenantId: query.tenantId,
+    principalId: query.principalId,
+    busy: true,
+    cancelled: false,
+    $and: [
+      {
+        $or: query.calendars.map((c) => ({
+          calendarId: c.calendarId,
+          generation: c.generation,
+        })),
+      },
+      {
+        endAt: { $gt: query.start },
+        startAt: { $gte: startAtFloor, $lt: query.end },
+      },
+    ],
+  };
+}
+
+function busyOverlapLimit(limit: number | undefined): number {
+  if (limit === undefined) return BUSY_OVERLAP_DEFAULT_LIMIT;
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new Error("busy overlap limit must be a positive integer");
+  }
+  return limit;
 }
 
 type OccurrenceReplaceEntry = {

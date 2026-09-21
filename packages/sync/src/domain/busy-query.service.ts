@@ -8,8 +8,10 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { occupancyFactsForEvent } from "@sync/domain/booking-occupancy-facts";
-import { type EventRecord } from "@sync/storage/contracts/event.contracts";
-import { type EventRepository } from "@sync/storage/repositories/event.repository";
+import {
+  type EventRepository,
+  type OccupancyEvent,
+} from "@sync/storage/repositories/event.repository";
 import {
   type CalendarGeneration,
   type EventOccurrenceRepository,
@@ -87,6 +89,7 @@ export interface BusyQueryInput {
   end: Date;
   // Drop these events before merge. Unknown ids are ignored.
   excludeEventIds?: readonly EventId[];
+  limit?: number;
 }
 
 // The merged busy intervals within [start, end) for the given calendars. Each
@@ -98,24 +101,25 @@ export interface BusyOccurrenceInterval {
   start: Date;
   end: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 export async function queryBusyOccurrences(
   deps: BusyQueryDeps,
   input: BusyQueryInput,
-): Promise<BusyOccurrenceInterval[]> {
-  const occurrences = await deps.occurrences.listBusyOverlapping({
+): Promise<{ intervals: BusyOccurrenceInterval[]; truncated: boolean }> {
+  const page = await deps.occurrences.listBusyOverlapping({
     tenantId: input.tenantId,
     principalId: input.principalId,
     calendars: input.calendars,
     start: input.start,
     end: input.end,
+    limit: input.limit,
   });
-
   const windowStart = input.start.getTime();
   const windowEnd = input.end.getTime();
   const excluded = new Set(input.excludeEventIds ?? []);
-  return occurrences
+  const intervals = page.intervals
     .map((occurrence) => ({
       start:
         occurrence.startAt.getTime() > windowStart
@@ -124,19 +128,22 @@ export async function queryBusyOccurrences(
       end:
         occurrence.endAt.getTime() < windowEnd ? occurrence.endAt : input.end,
       eventId: occurrence.eventId,
+      calendarId: occurrence.calendarId,
     }))
     .filter(
       (interval) =>
         interval.end.getTime() > interval.start.getTime() &&
         !excluded.has(interval.eventId),
     );
+  return { intervals, truncated: page.truncated };
 }
 
 export async function queryBusyIntervals(
   deps: BusyQueryDeps,
   input: BusyQueryInput,
 ): Promise<BusyInterval[]> {
-  return mergeBusyIntervals(await queryBusyOccurrences(deps, input));
+  const page = await queryBusyOccurrences(deps, input);
+  return mergeBusyIntervals(page.intervals);
 }
 
 // Why a requested calendar's busy data could not be freshly included.
@@ -163,10 +170,17 @@ export interface ConnectionFreshness {
   lastHealthyAt: Date | null;
 }
 
+export interface BusyCalendarBusy {
+  calendarId: SyncEventCalendarId;
+  intervals: BusyInterval[];
+}
+
 export interface BusyAvailability {
   // Merged busy intervals from every requested calendar that had data (including
   // stale ones — their staleness is disclosed in `issues`, not hidden).
   intervals: BusyInterval[];
+  // The same intervals merged per requested calendar, in request order.
+  byCalendar: BusyCalendarBusy[];
   // When this result was computed, so the caller can reason about its own age.
   computedAt: Date;
   // Per-connection freshness for the connections backing the requested calendars.
@@ -178,6 +192,9 @@ export interface BusyAvailability {
   // Fresh enough to confirm a booking: complete AND every backing connection is
   // healthy. Fail-closed — anything unverified makes this false.
   bookable: boolean;
+  // The overlap read hit its limit. Intervals are a prefix, not the full set,
+  // so complete and bookable are false.
+  truncated: boolean;
 }
 
 export interface BusyAvailabilityDeps {
@@ -205,6 +222,7 @@ export interface BusyAvailabilityInput {
   now: Date;
   // Drop these events before merge. Unknown ids are ignored.
   excludeEventIds?: readonly EventId[];
+  limit?: number;
 }
 
 // The busy intervals for a set of calendars plus the freshness/completeness
@@ -281,7 +299,7 @@ export async function computeBusyAvailability(
     }
   }
 
-  const rawIntervals = present.length
+  const busyPage = present.length
     ? await queryBusyOccurrences(
         { occurrences: deps.occurrences },
         {
@@ -291,16 +309,18 @@ export async function computeBusyAvailability(
           start: input.start,
           end: input.end,
           excludeEventIds: input.excludeEventIds,
+          limit: input.limit,
         },
       )
-    : [];
+    : { intervals: [], truncated: false };
+  const rawIntervals = busyPage.intervals;
 
-  const eventsById = new Map<string, EventRecord>();
+  const eventsById = new Map<string, OccupancyEvent>();
   if (deps.events && rawIntervals.length > 0) {
     const eventIds = [
       ...new Set(rawIntervals.map((interval) => interval.eventId)),
     ];
-    const events = await deps.events.findByIds(
+    const events = await deps.events.findOccupancyByIds(
       input.tenantId,
       input.principalId,
       eventIds,
@@ -324,7 +344,9 @@ export async function computeBusyAvailability(
       lastHealthyAt: c.lastHealthyAt,
     }));
 
-  const complete = issues.length === 0;
+  // A truncated overlap read is not the full busy set. Fail closed even when
+  // every calendar is fresh: booking over the omitted tail would double-book.
+  const complete = issues.length === 0 && !busyPage.truncated;
   // Every backing connection must be present in storage AND healthy. A missing
   // connection record (referenced by a resource but not found) fails closed.
   const allBackingHealthy =
@@ -340,29 +362,41 @@ export async function computeBusyAvailability(
   const fallbackEmail =
     [...emailByConnectionId.values()].find((email) => email !== null) ?? null;
 
-  const intervals = mergeBusyIntervals(
-    rawIntervals.map((interval) => {
-      const event = eventsById.get(interval.eventId);
-      const accountEmail =
-        (event?.connectionId
-          ? emailByConnectionId.get(event.connectionId)
-          : undefined) ?? fallbackEmail;
-      const facts = occupancyFactsForEvent(event, accountEmail);
-      return {
-        start: interval.start,
-        end: interval.end,
-        hostIsOrganizer: facts.hostIsOrganizer,
-        hostResponseStatus: facts.hostResponseStatus,
-      };
-    }),
+  const attributed = rawIntervals.map((interval) => {
+    const event = eventsById.get(interval.eventId);
+    const accountEmail =
+      (event?.connectionId
+        ? emailByConnectionId.get(event.connectionId)
+        : undefined) ?? fallbackEmail;
+    const facts = occupancyFactsForEvent(event, accountEmail);
+    return {
+      calendarId: interval.calendarId,
+      start: interval.start,
+      end: interval.end,
+      hostIsOrganizer: facts.hostIsOrganizer,
+      hostResponseStatus: facts.hostResponseStatus,
+    };
+  });
+  const intervals = mergeBusyIntervals(attributed);
+  const byCalendarId = new Map<string, BusyInterval[]>(
+    input.calendarIds.map((calendarId) => [calendarId, []]),
   );
+  for (const interval of attributed) {
+    byCalendarId.get(interval.calendarId)?.push(interval);
+  }
+  const byCalendar = input.calendarIds.map((calendarId) => ({
+    calendarId,
+    intervals: mergeBusyIntervals(byCalendarId.get(calendarId) ?? []),
+  }));
 
   return {
     intervals,
+    byCalendar,
     computedAt: now,
     connections,
     complete,
     issues,
     bookable,
+    truncated: busyPage.truncated,
   };
 }

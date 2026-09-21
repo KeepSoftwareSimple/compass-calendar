@@ -222,4 +222,40 @@ describe("ProviderConnectionRepository", () => {
       collection.insertOne({ _id: objectId(), ...shared } as never),
     ).rejects.toThrow();
   });
+
+  it("retention and diagnostic reads use their partial indexes", async () => {
+    const created = await repo.upsertByProviderAccount(baseUpsert());
+    const before = new Date("2026-08-01T00:00:00.000Z");
+    await repo.markDisconnected(
+      created.tenantId,
+      created.principalId,
+      created._id,
+      new Date("2026-06-01T00:00:00.000Z"),
+    );
+
+    const disconnected = await db
+      .collection("provider_connections")
+      .find({ disconnectedAt: { $type: "date", $lt: before } })
+      .sort({ disconnectedAt: 1 })
+      .explain("queryPlanner");
+    const disconnectedPlan = JSON.stringify(
+      disconnected["queryPlanner"]["winningPlan"],
+    );
+    expect(disconnectedPlan).toContain("IXSCAN");
+    expect(disconnectedPlan).toContain("disconnected_at");
+    expect(disconnectedPlan).not.toContain("COLLSCAN");
+
+    const diagnostic = await db
+      .collection("provider_connections")
+      .find({
+        diagnosticKey: { $eq: created.diagnosticKey, $type: "string" },
+      })
+      .explain("queryPlanner");
+    const diagnosticPlan = JSON.stringify(
+      diagnostic["queryPlanner"]["winningPlan"],
+    );
+    expect(diagnosticPlan).toContain("IXSCAN");
+    expect(diagnosticPlan).toContain("diagnostic_key");
+    expect(diagnosticPlan).not.toContain("COLLSCAN");
+  });
 });

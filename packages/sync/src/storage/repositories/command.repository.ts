@@ -13,8 +13,8 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  CommandReadSchema,
   type CommandRecord,
-  CommandRecordSchema,
   type CommandSubmit,
   CommandSubmitSchema,
 } from "@sync/storage/contracts/command.contracts";
@@ -69,7 +69,7 @@ export class CommandRepository {
       throw new Error("Submit did not return a command record");
     }
     return {
-      record: CommandRecordSchema.parse(result.value),
+      record: CommandReadSchema.parse(result.value),
       inserted: result.lastErrorObject?.["upserted"] != null,
     };
   }
@@ -106,7 +106,7 @@ export class CommandRepository {
       },
       { returnDocument: "after" },
     );
-    return result ? CommandRecordSchema.parse(result) : null;
+    return result ? CommandReadSchema.parse(result) : null;
   }
 
   async findById(
@@ -119,7 +119,7 @@ export class CommandRepository {
       tenantId,
       principalId,
     });
-    return record ? CommandRecordSchema.parse(record) : null;
+    return record ? CommandReadSchema.parse(record) : null;
   }
 
   // Whether an unacknowledged Compass command still targets this event. An
@@ -183,7 +183,7 @@ export class CommandRepository {
       { $set: { outcome, attemptCount, updatedAt: new Date() } },
       { returnDocument: "after" },
     );
-    return result ? CommandRecordSchema.parse(result) : null;
+    return result ? CommandReadSchema.parse(result) : null;
   }
 
   // Commands still working (not in a terminal state), oldest first — the queue
@@ -202,7 +202,7 @@ export class CommandRepository {
       .sort({ createdAt: 1 })
       .limit(limit)
       .toArray();
-    return records.map((r) => CommandRecordSchema.parse(r));
+    return records.map((r) => CommandReadSchema.parse(r));
   }
 
   // Outstanding commands for one connection (support diagnostics / S45).
@@ -272,7 +272,7 @@ export class CommandRepository {
       .sort({ updatedAt: 1 })
       .limit(limit)
       .toArray();
-    return records.map((r) => CommandRecordSchema.parse(r));
+    return records.map((r) => CommandReadSchema.parse(r));
   }
 
   // Hard-delete every command for a principal (account deletion).

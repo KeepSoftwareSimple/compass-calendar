@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { type Db } from "mongodb";
+import { Collection, type Db } from "mongodb";
 import {
   type CalendarId,
   type DateOnly,
@@ -18,8 +18,10 @@ import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
 import { type EventRecord } from "@sync/storage/contracts/event.contracts";
 import {
   EventRepository,
+  OCCUPANCY_EVENT_PROJECTION,
   type ProviderEventUpsert,
 } from "@sync/storage/repositories/event.repository";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -387,6 +389,63 @@ describe("EventRepository", () => {
       const tenantId = objectId() as EventRecord["tenantId"];
       const principalId = objectId() as EventRecord["principalId"];
       expect(await repo.findByIds(tenantId, principalId, [])).toEqual([]);
+    });
+
+    it("hydrates occupancy with a field projection and drops event content", async () => {
+      const saved = await repo.put(
+        compassRecord({
+          content: {
+            ...baseContent,
+            title: "secret title",
+            organizer: { email: "host@example.com", displayName: "Host" },
+            attendees: [
+              {
+                email: "guest@example.com",
+                displayName: "Guest",
+                responseStatus: "accepted",
+              },
+            ],
+          },
+        }),
+      );
+      const projections: unknown[] = [];
+      const originalFind = Collection.prototype.find;
+      const find = spyOn(Collection.prototype, "find");
+      find.mockImplementation(function projectSpy(
+        this: Collection,
+        ...args: Parameters<Collection["find"]>
+      ) {
+        const cursor = originalFind.apply(this, args);
+        const project = cursor.project.bind(cursor);
+        cursor.project = ((projection: unknown) => {
+          projections.push(projection);
+          return project(projection);
+        }) as typeof cursor.project;
+        return cursor;
+      });
+      try {
+        const found = await repo.findOccupancyByIds(
+          saved.tenantId,
+          saved.principalId,
+          [saved._id],
+        );
+        expect(projections).toEqual([OCCUPANCY_EVENT_PROJECTION]);
+        expect(found).toEqual([
+          {
+            _id: saved._id,
+            connectionId: null,
+            content: {
+              organizer: { email: "host@example.com" },
+              attendees: [
+                { email: "guest@example.com", responseStatus: "accepted" },
+              ],
+            },
+          },
+        ]);
+        expect(JSON.stringify(found)).not.toContain("secret title");
+      } finally {
+        find.mockRestore();
+      }
     });
 
     it("silently omits ids that do not exist", async () => {

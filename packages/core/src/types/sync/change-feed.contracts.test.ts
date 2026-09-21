@@ -90,16 +90,14 @@ describe("Sync change-feed contracts", () => {
       expect(SyncInvalidationSchema.safeParse(invalidation).success).toBe(true);
     });
 
-    it("rejects an event invalidation carrying event content (privacy)", () => {
-      const invalidation = {
+    it("strips an event invalidation's content so the feed stays ids-only", () => {
+      const parsed = SyncInvalidationSchema.parse({
         kind: "event",
         eventId: objectId(),
         calendarId: objectId(),
         title: "Therapy",
-      };
-      expect(SyncInvalidationSchema.safeParse(invalidation).success).toBe(
-        false,
-      );
+      });
+      expect("title" in parsed).toBe(false);
     });
 
     it("accepts a command invalidation", () => {
@@ -140,8 +138,8 @@ describe("Sync change-feed contracts", () => {
       expect(InvalidationEnvelopeSchema.safeParse(envelope).success).toBe(true);
     });
 
-    it("rejects a leaked tenantId field", () => {
-      const envelope = {
+    it("strips a leaked tenantId so the per-principal envelope stays scoped", () => {
+      const parsed = InvalidationEnvelopeSchema.parse({
         invalidation: {
           kind: "event",
           eventId: objectId(),
@@ -149,10 +147,8 @@ describe("Sync change-feed contracts", () => {
         },
         emittedAt: "2026-07-20T12:00:00.000Z",
         tenantId: objectId(),
-      };
-      expect(InvalidationEnvelopeSchema.safeParse(envelope).success).toBe(
-        false,
-      );
+      });
+      expect("tenantId" in parsed).toBe(false);
     });
   });
 
@@ -209,9 +205,12 @@ describe("Sync change-feed contracts", () => {
       ).toBe(true);
     });
 
-    it("rejects a resyncRequired response carrying invalidations", () => {
-      const response = { kind: "resyncRequired", invalidations: [] };
-      expect(ChangeFeedResponseSchema.safeParse(response).success).toBe(false);
+    it("strips extra keys on a resyncRequired response", () => {
+      const parsed = ChangeFeedResponseSchema.parse({
+        kind: "resyncRequired",
+        invalidations: [],
+      });
+      expect(parsed).toEqual({ kind: "resyncRequired" });
     });
 
     it("rejects an unrecognized kind", () => {

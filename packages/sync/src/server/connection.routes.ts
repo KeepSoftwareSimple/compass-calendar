@@ -5,6 +5,10 @@ import {
   type Response,
 } from "express";
 import { Status } from "@core/errors/status.codes";
+import {
+  captureSafely,
+  type PostHogCaptureClient,
+} from "@core/logger/posthog-capture";
 import { Logger } from "@core/logger/winston.logger";
 import {
   decryptAdoptAuthorizationCredential,
@@ -96,8 +100,26 @@ import { ProviderCalendarRepository } from "@sync/storage/repositories/provider-
 import { ProviderConnectionRepository } from "@sync/storage/repositories/provider-connection.repository";
 import { type SyncMongoService } from "@sync/storage/sync-mongo.service";
 import { syncRepositories } from "@sync/storage/sync-repositories";
+import { randomUUID } from "node:crypto";
 
 const logger = Logger("sync:connection.routes");
+
+const OAUTH_CALLBACK_EVENT = "oauth_callback";
+const SYNC_POSTHOG_DISTINCT_ID = "compass-sync";
+const CONNECT_CORRELATION_QUERY = "cid";
+const CONNECT_INTENT_QUERY = "intent";
+const CONNECT_CORRELATION_ID_LENGTH = 8;
+
+type OAuthCallbackOutcome =
+  | "connected"
+  | "declined"
+  | "missingScopes"
+  | "stateMismatch"
+  | "consentRequired"
+  | "accountMismatch"
+  | "error";
+
+type OAuthConnectIntent = "connect" | "reconnect";
 
 export class ReconnectAccountMismatchError extends Error {
   readonly status = "accountMismatch" as const;
@@ -158,6 +180,8 @@ export interface ConnectionApiDeps {
   // AES-256-GCM key for password credentials at rest. Absent when yaml omits
   // it (Google-only deployments); storePassword then refuses.
   credentialAtRestKey?: string;
+  // Same PostHog client as sync_health_snapshot. Null when the key is unset.
+  posthog?: PostHogCaptureClient | null;
 }
 
 // Internal, authenticated connection endpoints. The tenant/principal comes from
@@ -437,6 +461,8 @@ export function registerConnectionRoutes(
             complete: false,
             issues: [],
             bookable: false,
+            truncated: false,
+            byCalendar: [],
           }),
         );
         return;
@@ -844,8 +870,13 @@ export function registerConnectionRoutes(
 
   const handleOAuthCallback =
     (routeProvider: ProviderKind) => async (req: Request, res: Response) => {
-      const redirect = (status: string) =>
-        redirectAfterConnect(deps, res, routeProvider, status);
+      const redirect = (status: OAuthCallbackOutcome, error?: unknown) =>
+        captureOAuthCallbackThenRedirect(deps, res, {
+          provider: routeProvider,
+          outcome: status,
+          state: req.query["state"],
+          error,
+        });
 
       if (deps.execution === "passive" || !deps.registry.has(routeProvider)) {
         return redirect("error");
@@ -904,7 +935,7 @@ export function registerConnectionRoutes(
         }
         // Bad code, no refresh token, unverifiable identity — nothing to link.
         logger.error("OAuth code exchange failed", redactedCause(error));
-        return redirect("error");
+        return redirect("error", error);
       }
 
       if (
@@ -926,7 +957,7 @@ export function registerConnectionRoutes(
           "Failed to link connection after OAuth consent",
           redactedCause(error),
         );
-        return redirect("error");
+        return redirect("error", error);
       }
     };
 
@@ -1023,11 +1054,85 @@ function redirectAfterConnect(
   res: Response,
   provider: ProviderKind,
   status: string,
+  extras: {
+    correlationId?: string;
+    intent?: OAuthConnectIntent;
+  } = {},
 ): void {
   const url = new URL(deps.postConnectRedirectUrl);
   url.searchParams.set("provider", provider);
   url.searchParams.set("status", status);
+  if (extras.correlationId) {
+    url.searchParams.set(CONNECT_CORRELATION_QUERY, extras.correlationId);
+  }
+  if (extras.intent) {
+    url.searchParams.set(CONNECT_INTENT_QUERY, extras.intent);
+  }
   res.redirect(url.toString());
+}
+
+function newConnectCorrelationId(): string {
+  return randomUUID()
+    .replaceAll("-", "")
+    .slice(0, CONNECT_CORRELATION_ID_LENGTH);
+}
+
+function oauthCallbackErrorClass(error: unknown): string {
+  if (error instanceof Error && error.name.length > 0) return error.name;
+  return "Error";
+}
+
+function connectIntentFromState(
+  deps: ConnectionApiDeps,
+  state: unknown,
+  expectedProvider: ProviderKind,
+): OAuthConnectIntent | undefined {
+  if (typeof state !== "string") return undefined;
+  const now = (deps.now ?? Date.now)();
+  const withProvider = verifyOAuthState(deps.stateSecret, state, now, {
+    expectedProvider,
+  });
+  if (withProvider.ok) {
+    return withProvider.payload.connectionId !== null ? "reconnect" : "connect";
+  }
+  // Signature-valid state on the wrong provider path still carries intent.
+  const anyProvider = verifyOAuthState(deps.stateSecret, state, now);
+  if (anyProvider.ok) {
+    return anyProvider.payload.connectionId !== null ? "reconnect" : "connect";
+  }
+  return undefined;
+}
+
+async function captureOAuthCallbackThenRedirect(
+  deps: ConnectionApiDeps,
+  res: Response,
+  input: {
+    provider: ProviderKind;
+    outcome: OAuthCallbackOutcome;
+    state: unknown;
+    error?: unknown;
+  },
+): Promise<void> {
+  const correlationId = newConnectCorrelationId();
+  const intent = connectIntentFromState(deps, input.state, input.provider);
+  const properties: Record<string, unknown> = {
+    provider: input.provider,
+    outcome: input.outcome,
+    correlationId,
+  };
+  if (intent) properties["intent"] = intent;
+  if (input.outcome === "error") {
+    properties["errorClass"] = oauthCallbackErrorClass(input.error);
+  }
+  await captureSafely(deps.posthog ?? null, {
+    event: OAUTH_CALLBACK_EVENT,
+    distinctId: SYNC_POSTHOG_DISTINCT_ID,
+    properties,
+  });
+  redirectAfterConnect(deps, res, input.provider, input.outcome, {
+    correlationId,
+    intent,
+  });
 }
 
 async function linkCredentialConnection(
@@ -1283,6 +1388,15 @@ function toBusyAvailabilityResponse(
       reason: issue.reason,
     })),
     bookable: availability.bookable,
+    byCalendar: availability.byCalendar.map((group) => ({
+      calendarId: group.calendarId,
+      intervals: group.intervals.map((interval) => ({
+        start: interval.start.toISOString(),
+        end: interval.end.toISOString(),
+        hostIsOrganizer: interval.hostIsOrganizer,
+        hostResponseStatus: interval.hostResponseStatus,
+      })),
+    })),
   });
 }
 

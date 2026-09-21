@@ -97,6 +97,14 @@ The codebase currently uses both:
 
 Be consistent with nearby code when editing. Do not assume the repo is on a single Zod import style yet.
 
+## Sync HTTP responses vs requests
+
+Sync HTTP **responses** in `packages/core/src/types/sync/*.contracts.ts` use `z.object`, including nested objects those responses contain. Unknown keys are stripped so a rolling deploy cannot 502 when one side stamps a field the other side has not seen yet.
+
+Sync HTTP **request** bodies, command payloads, and upserts stay `z.strictObject`. A typo on a write still fails closed.
+
+Contact suggestion responses follow the same rule: extra People-API fields are stripped, not rejected.
+
 ## When To Put A Type In `core`
 
 Put it in `core` when:

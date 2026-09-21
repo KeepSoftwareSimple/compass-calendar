@@ -19,6 +19,7 @@ const sample = (): SyncHealthSnapshot => ({
     delayed: 2,
     actionRequired: 1,
     disconnected: 3,
+    oldestImportingAgeMs: 1_200_000,
   },
   jobs: {
     pending: 4,
@@ -49,13 +50,12 @@ describe("SyncHealthSnapshotSchema", () => {
     expect(SyncHealthSnapshotSchema.safeParse(sample()).success).toBe(true);
   });
 
-  it("rejects unknown fields (cardinality / leakage guard)", () => {
-    expect(
-      SyncHealthSnapshotSchema.safeParse({
-        ...sample(),
-        tenantId: "should-not-appear",
-      }).success,
-    ).toBe(false);
+  it("strips unknown fields so a leaked tenantId never appears on the snapshot", () => {
+    const parsed = SyncHealthSnapshotSchema.parse({
+      ...sample(),
+      tenantId: "should-not-appear",
+    });
+    expect("tenantId" in parsed).toBe(false);
   });
 
   it("rejects a negative count", () => {

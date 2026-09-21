@@ -50,14 +50,20 @@ describe("Sync busy contracts", () => {
       expect(BusyIntervalSchema.safeParse(interval).success).toBe(false);
     });
 
-    it("rejects a title field (privacy: no event content on a busy interval)", () => {
-      const interval = { ...baseInterval(), title: "Therapy" };
-      expect(BusyIntervalSchema.safeParse(interval).success).toBe(false);
+    it("strips a title field so event content never appears on a busy interval", () => {
+      const parsed = BusyIntervalSchema.parse({
+        ...baseInterval(),
+        title: "Therapy",
+      });
+      expect("title" in parsed).toBe(false);
     });
 
-    it("rejects a calendarId field (intervals are merged/normalized)", () => {
-      const interval = { ...baseInterval(), calendarId: objectId() };
-      expect(BusyIntervalSchema.safeParse(interval).success).toBe(false);
+    it("strips a calendarId field so intervals stay merged and normalized", () => {
+      const parsed = BusyIntervalSchema.parse({
+        ...baseInterval(),
+        calendarId: objectId(),
+      });
+      expect("calendarId" in parsed).toBe(false);
     });
   });
 
@@ -139,16 +145,14 @@ describe("Sync busy contracts", () => {
       );
     });
 
-    it("rejects an unknown field", () => {
-      const evidence = {
+    it("strips an unknown field so a rolling deploy cannot 502", () => {
+      const parsed = BusyConnectionEvidenceSchema.parse({
         connectionId: objectId(),
         lastSyncedAt: null,
         lastHealthyAt: null,
         healthy: true,
-      };
-      expect(BusyConnectionEvidenceSchema.safeParse(evidence).success).toBe(
-        false,
-      );
+      });
+      expect("healthy" in parsed).toBe(false);
     });
   });
 
@@ -205,12 +209,12 @@ describe("Sync busy contracts", () => {
       expect(BusyQueryResponseSchema.safeParse(response).success).toBe(false);
     });
 
-    it("rejects an interval carrying attendee content (privacy)", () => {
-      const response = {
+    it("strips attendee content on an interval so the busy wire stays private", () => {
+      const parsed = BusyQueryResponseSchema.parse({
         ...baseResponse(),
         intervals: [{ ...baseInterval(), attendees: ["guest@example.com"] }],
-      };
-      expect(BusyQueryResponseSchema.safeParse(response).success).toBe(false);
+      });
+      expect("attendees" in parsed.intervals[0]!).toBe(false);
     });
   });
 });

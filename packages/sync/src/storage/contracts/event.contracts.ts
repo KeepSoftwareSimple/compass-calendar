@@ -18,6 +18,12 @@ import {
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
 
+const EventCustomizationsSchema = z.strictObject({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  location: z.string().nullable().optional(),
+});
+
 // Persistence record for `events`. Provider ownership is stored
 // FLAT at top level (not nested under `ownership` like the wire contract)
 // so the unique provider-identity index and the principal_calendar index match
@@ -44,14 +50,7 @@ export const EventRecordSchema = z.strictObject({
   providerMetadata: z.record(z.string(), z.string()).nullable(),
   // Compass overlays for provider-managed events: served over the provider's
   // title, description, and location while schedule follows the provider.
-  customizations: z
-    .strictObject({
-      title: z.string().optional(),
-      description: z.string().optional(),
-      location: z.string().nullable().optional(),
-    })
-    .nullable()
-    .optional(),
+  customizations: EventCustomizationsSchema.nullable().optional(),
   content: SyncEventContentSchema,
   schedule: EventScheduleSchema,
   recurrence: SyncEventRecurrenceSchema,
@@ -65,3 +64,15 @@ export const EventRecordSchema = z.strictObject({
   confirmedAt: z.date().nullable(),
 });
 export type EventRecord = z.infer<typeof EventRecordSchema>;
+
+// Reads parse through this stripped variant, not the strict schema above.
+// A rolling deploy runs the old build and the new build together: the new
+// build stamps a field the old build has never heard of, the old build then
+// reads that row, and a strictObject rejects the unknown key
+// (`unrecognized_keys`) and throws. Unknown keys are dropped from the
+// in-memory record and left untouched in Mongo. Writes stay strict. Nested
+// customizations is stripped on its own because Zod's unknown-key policy is
+// per object.
+export const EventReadSchema = EventRecordSchema.extend({
+  customizations: EventCustomizationsSchema.strip().nullable().optional(),
+}).strip();

@@ -8,8 +8,8 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  ProviderCalendarReadSchema,
   type ProviderCalendarRecord,
-  ProviderCalendarRecordSchema,
   type ProviderCalendarUpsert,
   ProviderCalendarUpsertSchema,
 } from "@sync/storage/contracts/provider-calendar.contracts";
@@ -66,7 +66,7 @@ export class ProviderCalendarRepository {
     if (!result) {
       throw new Error("Upsert did not return a calendar record");
     }
-    return ProviderCalendarRecordSchema.parse(result);
+    return ProviderCalendarReadSchema.parse(result);
   }
 
   // Mark inactive every calendar of a connection whose provider id is NOT in
@@ -121,7 +121,7 @@ export class ProviderCalendarRepository {
       tenantId,
       principalId,
     });
-    return record ? ProviderCalendarRecordSchema.parse(record) : null;
+    return record ? ProviderCalendarReadSchema.parse(record) : null;
   }
 
   // List a principal's calendars, optionally narrowed to one connection and/or
@@ -136,7 +136,7 @@ export class ProviderCalendarRepository {
     if (filter.activeOnly) query.active = true;
 
     const records = await this.collection.find(query).toArray();
-    return records.map((r) => ProviderCalendarRecordSchema.parse(r));
+    return records.map((r) => ProviderCalendarReadSchema.parse(r));
   }
 
   // Hard-delete every calendar for one connection (post-disconnect retention).

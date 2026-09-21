@@ -28,6 +28,15 @@ export function getLocalCalendarSentinelId(): CalendarId {
 // Synthesizes a local Calendar so anonymous/offline mode never branches on
 // "no calendars yet" - downstream code always has at least one calendar to
 // target.
+/** True when the cache still holds only the anonymous local calendar. */
+export function isSentinelCalendarList(
+  calendars: Calendar[] | null | undefined,
+): boolean {
+  return (
+    calendars?.length === 1 && calendars[0]?.id === getLocalCalendarSentinelId()
+  );
+}
+
 export function synthesizeLocalCalendar(id: CalendarId): Calendar {
   return {
     id,

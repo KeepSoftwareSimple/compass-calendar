@@ -1,5 +1,17 @@
 import { type BookingOccupancyFacts } from "@core/booking/occupies-booking-slot";
-import { type EventRecord } from "@sync/storage/contracts/event.contracts";
+import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
+
+// The slice of an event occupancyFactsForEvent reads. A projected hydrate
+// must not need the rest of the event document.
+export interface OccupancyEventFacts {
+  content: {
+    organizer?: { email: string } | null;
+    attendees: readonly {
+      email: string;
+      responseStatus: AttendeeResponseStatus;
+    }[];
+  };
+}
 
 /**
  * Facts only: whether this event's host identity matches the organizer or
@@ -7,7 +19,7 @@ import { type EventRecord } from "@sync/storage/contracts/event.contracts";
  * A missing event (occurrence-only fixture) is treated as host-organized.
  */
 export const occupancyFactsForEvent = (
-  event: EventRecord | undefined,
+  event: OccupancyEventFacts | undefined,
   accountEmail: string | null,
 ): BookingOccupancyFacts => {
   if (!event) {

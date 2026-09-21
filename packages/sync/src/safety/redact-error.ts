@@ -7,5 +7,9 @@
  * diagnostics.
  */
 export function redactedCause(error: unknown): Error | undefined {
-  return error instanceof Error ? new Error(error.message) : undefined;
+  if (!(error instanceof Error)) return undefined;
+  const redacted = new Error(error.message);
+  redacted.name = error.name;
+  redacted.stack = error.stack;
+  return redacted;
 }

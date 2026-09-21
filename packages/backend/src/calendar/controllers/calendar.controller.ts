@@ -95,50 +95,65 @@ const listCalendarsFromSync = async (
 };
 
 // Busy time from the sync service, translated to the browser's per-calendar
-// AvailabilityResponse contract. Sync's busy endpoint reports one MERGED set
-// of intervals across every calendar in a single request — it does not
-// attribute an interval back to its source calendar. The day-grid layout
-// (DayCalendarBusyPeriodsLayer) positions each busy block into a specific
-// per-calendar column and drops any block whose calendarId isn't in that
-// map, so a merged response with a guessed calendarId would silently lose
-// busy time for every calendar but one, not just mislabel it. Query each
-// calendar separately (bounded by AvailabilityQuerySchema's own array size,
-// same fan-out shape the legacy path already does per Google calendar id) so
-// every interval keeps its real, correct calendarId.
+// AvailabilityResponse contract. One Sync call returns `byCalendar`, so each
+// interval keeps the calendar the day grid uses to place it. A single-calendar
+// response that omits the grouping (an older Sync process) still attributes
+// the merged list to that calendar.
 const getAvailabilityFromSync = async (
   userId: string,
   query: AvailabilityQuery,
 ): Promise<AvailabilityResponse> => {
   const client = getSyncServiceClient();
   const principal = toSyncPrincipal(userId);
+  const result = await client.queryBusyAvailability(principal, {
+    calendarIds: query.calendarIds.map((calendarId) =>
+      SyncEventCalendarIdSchema.parse(calendarId),
+    ),
+    start: query.start,
+    end: query.end,
+    maxAgeMs: AVAILABILITY_DISPLAY_MAX_AGE_MS,
+    purpose: "display",
+  });
+  if (!result.ok) {
+    throwSyncProxyFailure(
+      result.error.kind,
+      `Failed to query availability from sync (${result.error.kind})`,
+      result.error.detail,
+    );
+  }
 
-  const perCalendar = await Promise.all(
-    query.calendarIds.map(async (calendarId) => {
-      const result = await client.queryBusyAvailability(principal, {
-        calendarIds: [SyncEventCalendarIdSchema.parse(calendarId)],
-        start: query.start,
-        end: query.end,
-        maxAgeMs: AVAILABILITY_DISPLAY_MAX_AGE_MS,
-        purpose: "display",
-      });
-      if (!result.ok) {
-        throwSyncProxyFailure(
-          result.error.kind,
-          `Failed to query availability from sync (${result.error.kind})`,
-          result.error.detail,
-        );
-      }
-      return result.value.intervals.map((interval) =>
-        BusyPeriodSchema.parse({
-          calendarId,
-          start: interval.start,
-          end: interval.end,
-        }),
-      );
-    }),
-  );
+  const groups = result.value.byCalendar ?? [];
+  if (groups.length > 0) {
+    return {
+      busyPeriods: groups.flatMap((group) =>
+        group.intervals.map((interval) =>
+          BusyPeriodSchema.parse({
+            calendarId: group.calendarId,
+            start: interval.start,
+            end: interval.end,
+          }),
+        ),
+      ),
+    };
+  }
 
-  return { busyPeriods: perCalendar.flat() };
+  if (query.calendarIds.length === 1 || result.value.intervals.length === 0) {
+    const calendarId = query.calendarIds[0];
+    return {
+      busyPeriods:
+        calendarId === undefined
+          ? []
+          : result.value.intervals.map((interval) =>
+              BusyPeriodSchema.parse({
+                calendarId,
+                start: interval.start,
+                end: interval.end,
+              }),
+            ),
+    };
+  }
+
+  throw new Error("Sync availability response omitted per-calendar intervals");
 };
 
 class CalendarController {

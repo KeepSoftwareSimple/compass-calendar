@@ -11,9 +11,13 @@ import {
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Private support lookup for a non-user-facing diagnostic connection key
 // (R-OPS-05 / S45). Metadata and counts only — never tokens or event content.
-export const DiagnosticConnectionResponseSchema = z.strictObject({
+export const DiagnosticConnectionResponseSchema = z.object({
   diagnosticKey: z
     .string()
     .length(32)

@@ -3,14 +3,23 @@ import { SSE_MESSAGE_EVENT } from "@core/constants/sse.constants";
 import { Logger } from "@core/logger/winston.logger";
 import { type CalendarId, type EventId } from "@core/types/domain-primitives";
 import { type ServerMessage } from "@core/types/server-message.contracts";
+import {
+  defaultSchedule,
+  type TickScheduler,
+} from "@backend/servers/sse/tick-scheduler";
 
 const logger = Logger("app:sse.server");
 const HEARTBEAT_INTERVAL_MS = 25_000;
+export const SSE_RETRY_HINT_MS = 5_000;
+export const SSE_STREAM_LIFETIME_MS = 20 * 60 * 1000;
 
-class SSEServer {
+export class SSEServer {
   private connections = new Map<string, Set<Response>>();
+  private lifetimes = new WeakMap<Response, { clear: () => void }>();
+  private schedule: TickScheduler;
 
-  constructor() {
+  constructor(schedule: TickScheduler = defaultSchedule) {
+    this.schedule = schedule;
     // .unref() prevents the interval from keeping the Node.js process alive in
     // tests and graceful shutdown scenarios.
     setInterval(() => {
@@ -27,6 +36,8 @@ class SSEServer {
   }
 
   private removeConnection(userId: string, res: Response): void {
+    this.lifetimes.get(res)?.clear();
+    this.lifetimes.delete(res);
     const conns = this.connections.get(userId);
     if (!conns) return;
     conns.delete(res);
@@ -55,6 +66,24 @@ class SSEServer {
     const conns = this.connections.get(userId) ?? new Set<Response>();
     conns.add(res);
     this.connections.set(userId, conns);
+    try {
+      res.write(`retry: ${SSE_RETRY_HINT_MS}\n\n`);
+    } catch {
+      this.removeConnection(userId, res);
+      return () => {};
+    }
+
+    this.lifetimes.set(
+      res,
+      this.schedule(() => {
+        try {
+          res.end();
+        } catch {
+          // Already closed.
+        }
+        this.removeConnection(userId, res);
+      }, SSE_STREAM_LIFETIME_MS),
+    );
     logger.debug(
       `SSE connection opened for user: ${userId} (total: ${conns.size})`,
     );

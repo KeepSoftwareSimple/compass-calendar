@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, renderHook, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { type PropsWithChildren } from "react";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -104,19 +104,17 @@ describe("fetchEmbeddedCheckoutClientSecret", () => {
 describe("useStripePublishableKey", () => {
   it("reads billing.publishableKey from app config", async () => {
     server.use(
-      rest.get(`${ENV_WEB.API_BASEURL}/config`, (_req, res, ctx) =>
-        res(
-          ctx.json({
-            version: "dev",
-            google: { isConfigured: false },
-            billing: {
-              isConfigured: true,
-              enforcement: true,
-              trialLengthDays: 7,
-              publishableKey: "pk_test_live",
-            },
-          }),
-        ),
+      http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
+        HttpResponse.json({
+          version: "dev",
+          google: { isConfigured: false },
+          billing: {
+            isConfigured: true,
+            enforcement: true,
+            trialLengthDays: 7,
+            publishableKey: "pk_test_live",
+          },
+        }),
       ),
     );
 

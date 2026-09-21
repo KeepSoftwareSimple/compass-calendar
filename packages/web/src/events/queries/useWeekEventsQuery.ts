@@ -6,6 +6,7 @@ import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.opti
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import { useCalendarEventViewModel } from "./useCalendarEventViewModel";
 import { useEventListCalendarIds } from "./useEventListCalendarIds";
+import { useRemoteEventsEnabled } from "./useRemoteEventsEnabled";
 
 type WeekEventsQueryArgs = {
   startOfView: Dayjs;
@@ -24,6 +25,7 @@ export function useWeekEventsQuery({
   const queryClient = useQueryClient();
   const source = useEventRepositorySource();
   const calendarIds = useEventListCalendarIds();
+  const enabled = useRemoteEventsEnabled(source);
   const query = useQuery({
     ...weekEventsViewQueryOptions({
       startOfView,
@@ -31,6 +33,7 @@ export function useWeekEventsQuery({
       source,
       calendarIds,
     }),
+    enabled,
     placeholderData: () =>
       deriveOverlappingEventQueryData(queryClient, {
         source,

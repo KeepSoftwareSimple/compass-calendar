@@ -4,6 +4,11 @@ import EmailPassword from "supertokens-web-js/recipe/emailpassword";
 import Session from "supertokens-web-js/recipe/session";
 import ThirdParty from "supertokens-web-js/recipe/thirdparty";
 import { APP_NAME } from "@core/constants/core.constants";
+import {
+  readAuthenticated,
+  setAuthSessionAuthenticated,
+  subscribeAuthenticated,
+} from "@web/auth/compass/session/auth-session.store";
 import { session } from "@web/auth/compass/session/Session";
 import {
   getLastKnownEmail,
@@ -13,7 +18,6 @@ import { clearGoogleSyncIndicatorOverride } from "@web/auth/providers/sync.indic
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
-import { createExternalStore } from "@web/common/utils/external-store.util";
 import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
 import * as sse from "@web/sse/provider/SSEProvider";
 import { refreshUserMetadata } from "../user/util/user-metadata.util";
@@ -41,13 +45,12 @@ SuperTokens.init({
   ],
 });
 
-const authStore = createExternalStore(false);
 let isCheckingSession = false;
 let isSessionInitialized = false;
 let sessionEventVersion = 0;
 
 const handleAuthenticatedSession = () => {
-  authStore.set(true);
+  setAuthSessionAuthenticated(true);
   markUserAsAuthenticated(getLastKnownEmail());
   void refreshUserMetadata();
 };
@@ -61,7 +64,7 @@ const handleSessionExists = () => {
 };
 
 const handleSessionMissing = () => {
-  authStore.set(false);
+  setAuthSessionAuthenticated(false);
   refreshEventRepositorySource(false);
   userMetadataActions.clear();
   clearGoogleSyncIndicatorOverride();
@@ -75,7 +78,7 @@ async function checkIfSessionExists(): Promise<boolean> {
     return false;
   }
 
-  if (isCheckingSession) return authStore.get();
+  if (isCheckingSession) return readAuthenticated();
 
   isCheckingSession = true;
   const eventVersionAtCheckStart = sessionEventVersion;
@@ -84,7 +87,7 @@ async function checkIfSessionExists(): Promise<boolean> {
     const exists = await session.doesSessionExist();
 
     if (sessionEventVersion !== eventVersionAtCheckStart) {
-      return authStore.get();
+      return readAuthenticated();
     }
 
     if (exists) {
@@ -96,7 +99,7 @@ async function checkIfSessionExists(): Promise<boolean> {
     return exists;
   } catch (error) {
     console.error("Error checking auth status:", error);
-    authStore.set(false);
+    setAuthSessionAuthenticated(false);
     return false;
   } finally {
     isCheckingSession = false;
@@ -141,15 +144,16 @@ export function sessionInit() {
 
 export function SessionProvider({ children }: PropsWithChildren<object>) {
   const authenticated = useSyncExternalStore(
-    authStore.subscribe,
-    authStore.get,
+    subscribeAuthenticated,
+    readAuthenticated,
   );
 
   // Expose test hooks for e2e testing
   useEffect(() => {
     if (typeof window !== "undefined" && window.__COMPASS_E2E_TEST__) {
       window.__COMPASS_E2E_HOOKS__ = {
-        setAuthenticated: (value: boolean) => authStore.set(value),
+        setAuthenticated: (value: boolean) =>
+          setAuthSessionAuthenticated(value),
       };
     }
   }, []);
@@ -158,7 +162,8 @@ export function SessionProvider({ children }: PropsWithChildren<object>) {
     <SessionContext.Provider
       value={{
         authenticated,
-        setAuthenticated: (value: boolean) => authStore.set(value),
+        setAuthenticated: (value: boolean) =>
+          setAuthSessionAuthenticated(value),
       }}
     >
       {children}

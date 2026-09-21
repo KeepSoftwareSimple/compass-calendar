@@ -1,4 +1,6 @@
+import { session } from "@web/auth/compass/session/Session";
 import * as posthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
+import * as sessionExpiredToast from "@web/common/utils/toast/session-expired.toast";
 import {
   closeStream,
   getSseDegradedSinceMs,
@@ -65,30 +67,41 @@ describe("sse.client degraded state", () => {
   const originalEventSource = globalThis.EventSource;
   const originalSetTimeout = globalThis.setTimeout;
   const originalDateNow = Date.now;
+  const originalRandom = Math.random;
   let fakeEs: FakeEventSource;
+  let eventSourceMock: ReturnType<typeof mock>;
   let timerCallbacks: Array<{ callback: () => void; delayMs: number }>;
   let setTimeoutSpy: ReturnType<typeof mock>;
   let nowMs: number;
+  let openAuthModal: ReturnType<typeof spyOn>;
 
   afterAll(() => {
     globalThis.EventSource = originalEventSource;
     globalThis.setTimeout = originalSetTimeout;
     Date.now = originalDateNow;
+    Math.random = originalRandom;
   });
 
   beforeEach(() => {
     capture.mockClear();
     getPosthogClient.mockReturnValue({ capture } as never);
     fakeEs = new FakeEventSource();
+    eventSourceMock = mock(() => {
+      fakeEs = new FakeEventSource();
+      return fakeEs;
+    });
     // @ts-expect-error test double, not a full EventSource
-    globalThis.EventSource = Object.assign(
-      mock(() => fakeEs),
-      {
-        CONNECTING: FakeEventSource.CONNECTING,
-        OPEN: FakeEventSource.OPEN,
-        CLOSED: FakeEventSource.CLOSED,
-      },
-    );
+    globalThis.EventSource = Object.assign(eventSourceMock, {
+      CONNECTING: FakeEventSource.CONNECTING,
+      OPEN: FakeEventSource.OPEN,
+      CLOSED: FakeEventSource.CLOSED,
+    });
+    Math.random = () => 0.5;
+    openAuthModal = spyOn(
+      sessionExpiredToast,
+      "openAuthModalFromOutsideRouter",
+    ).mockResolvedValue(undefined);
+    spyOn(session, "doesSessionExist").mockResolvedValue(true);
 
     timerCallbacks = [];
     setTimeoutSpy = mock((callback: () => void, delayMs: number) => {
@@ -122,21 +135,37 @@ describe("sse.client degraded state", () => {
     due?.callback();
   };
 
-  const openThenError = (readyState = FakeEventSource.CONNECTING) => {
+  const flush = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  const reconnectTimers = () =>
+    timerCallbacks.filter((t) => t.delayMs !== 15_000);
+
+  const runLatestReconnectTimer = async () => {
+    await flush();
+    const due = reconnectTimers().at(-1);
+    due?.callback();
+  };
+
+  const openThenError = async (readyState = FakeEventSource.CONNECTING) => {
     openStream();
     fakeEs.readyState = FakeEventSource.OPEN;
     fakeEs.dispatch("open");
     fakeEs.readyState = readyState;
     fakeEs.dispatch("error");
+    await flush();
   };
 
   it("starts not degraded", () => {
     expect(isSseDegraded()).toBe(false);
   });
 
-  it("flips degraded once the stream has been down past the 15s window", () => {
+  it("flips degraded once the stream has been down past the 15s window", async () => {
     openStream();
     fakeEs.dispatch("error");
+    await flush();
 
     expect(isSseDegraded()).toBe(false);
 
@@ -145,9 +174,10 @@ describe("sse.client degraded state", () => {
     expect(isSseDegraded()).toBe(true);
   });
 
-  it("does not report degraded if the stream reopens before the window elapses", () => {
+  it("does not report degraded if the stream reopens before the window elapses", async () => {
     openStream();
     fakeEs.dispatch("error");
+    await runLatestReconnectTimer();
     fakeEs.readyState = FakeEventSource.OPEN;
     fakeEs.dispatch("open");
 
@@ -157,33 +187,37 @@ describe("sse.client degraded state", () => {
     expect(capture).not.toHaveBeenCalled();
   });
 
-  it("notifies subscribers when degraded flips", () => {
+  it("notifies subscribers when degraded flips", async () => {
     const onChange = mock();
     const unsubscribe = subscribeSseDegraded(onChange);
 
     openStream();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
 
     expect(onChange).toHaveBeenCalled();
     unsubscribe();
   });
 
-  it("clears degraded on reconnect (open event)", () => {
+  it("clears degraded on reconnect (open event)", async () => {
     openStream();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
     expect(isSseDegraded()).toBe(true);
 
+    await runLatestReconnectTimer();
     fakeEs.readyState = FakeEventSource.OPEN;
     fakeEs.dispatch("open");
 
     expect(isSseDegraded()).toBe(false);
   });
 
-  it("clears degraded when the stream is intentionally closed", () => {
+  it("clears degraded when the stream is intentionally closed", async () => {
     openStream();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
     expect(isSseDegraded()).toBe(true);
 
@@ -192,35 +226,39 @@ describe("sse.client degraded state", () => {
     expect(isSseDegraded()).toBe(false);
   });
 
-  it("records when degradation began and keeps the first timestamp", () => {
+  it("records when degradation began and keeps the first timestamp", async () => {
     expect(getSseDegradedSinceMs()).toBeNull();
 
     openStream();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
     expect(getSseDegradedSinceMs()).toBe(nowMs);
 
-    // A later error re-arms the timer; a second fire must not restart the
-    // header's reload countdown.
     const firstDegradedAt = nowMs;
     nowMs += 20_000;
+    await runLatestReconnectTimer();
     fakeEs.dispatch("error");
+    await flush();
     for (const timer of timerCallbacks.filter((t) => t.delayMs === 15_000)) {
       timer.callback();
     }
     expect(getSseDegradedSinceMs()).toBe(firstDegradedAt);
   });
 
-  it("clears the degraded timestamp on reopen and on close", () => {
+  it("clears the degraded timestamp on reopen and on close", async () => {
     openStream();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
+    await runLatestReconnectTimer();
     fakeEs.readyState = FakeEventSource.OPEN;
     fakeEs.dispatch("open");
     expect(getSseDegradedSinceMs()).toBeNull();
 
     fakeEs.readyState = FakeEventSource.CONNECTING;
     fakeEs.dispatch("error");
+    await flush();
     for (const timer of timerCallbacks.filter((t) => t.delayMs === 15_000)) {
       timer.callback();
     }
@@ -230,7 +268,7 @@ describe("sse.client degraded state", () => {
     expect(getSseDegradedSinceMs()).toBeNull();
   });
 
-  it("captures diagnostic properties on the first degraded report", () => {
+  it("captures diagnostic properties on the first degraded report", async () => {
     window.history.replaceState(null, "", "/week");
     openStream();
     fakeEs.readyState = FakeEventSource.OPEN;
@@ -252,6 +290,7 @@ describe("sse.client degraded state", () => {
     nowMs += 4_000;
     fakeEs.readyState = FakeEventSource.CONNECTING;
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
 
     expect(capture).toHaveBeenCalledTimes(1);
@@ -265,13 +304,14 @@ describe("sse.client degraded state", () => {
     });
   });
 
-  it("records connection_duration_ms from last open to the first error", () => {
+  it("records connection_duration_ms from last open to the first error", async () => {
     openStream();
     fakeEs.readyState = FakeEventSource.OPEN;
     fakeEs.dispatch("open");
     nowMs += 12_500;
     fakeEs.readyState = FakeEventSource.CONNECTING;
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
 
     expect(capture).toHaveBeenCalledWith(
@@ -280,10 +320,13 @@ describe("sse.client degraded state", () => {
     );
   });
 
-  it("counts retry_attempt from zero for the first failure in an episode", () => {
-    openThenError();
+  it("counts retry_attempt from zero for the first failure in an episode", async () => {
+    await openThenError();
+    await runLatestReconnectTimer();
     fakeEs.dispatch("error");
+    await runLatestReconnectTimer();
     fakeEs.dispatch("error");
+    await flush();
     runDegradedTimer();
 
     expect(capture).toHaveBeenCalledWith(
@@ -295,8 +338,8 @@ describe("sse.client degraded state", () => {
     );
   });
 
-  it("classifies a closed EventSource as server_closed", () => {
-    openThenError(FakeEventSource.CLOSED);
+  it("classifies a closed EventSource as server_closed", async () => {
+    await openThenError(FakeEventSource.CLOSED);
     runDegradedTimer();
 
     expect(capture).toHaveBeenCalledWith(
@@ -305,12 +348,12 @@ describe("sse.client degraded state", () => {
     );
   });
 
-  it("classifies an offline browser as network_error", () => {
+  it("classifies an offline browser as network_error", async () => {
     Object.defineProperty(navigator, "onLine", {
       configurable: true,
       value: false,
     });
-    openThenError();
+    await openThenError();
     runDegradedTimer();
 
     expect(capture).toHaveBeenCalledWith(
@@ -319,13 +362,63 @@ describe("sse.client degraded state", () => {
     );
   });
 
-  it("does not let a PostHog failure interrupt degraded-state reporting", () => {
+  it("does not let a PostHog failure interrupt degraded-state reporting", async () => {
     capture.mockImplementationOnce(() => {
       throw new Error("capture unavailable");
     });
-    openThenError();
+    await openThenError();
 
     expect(() => runDegradedTimer()).not.toThrow();
     expect(isSseDegraded()).toBe(true);
+  });
+
+  it("backs off reconnect delays then stops after ten consecutive failures", async () => {
+    openStream();
+    expect(eventSourceMock).toHaveBeenCalledTimes(1);
+    const expected = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000, 30_000];
+
+    for (let i = 0; i < 12; i += 1) {
+      fakeEs.dispatch("error");
+      await flush();
+      if (i < 9) {
+        if (i < expected.length) {
+          expect(reconnectTimers().at(-1)?.delayMs).toBe(expected[i]);
+        }
+        await runLatestReconnectTimer();
+      }
+    }
+
+    expect(eventSourceMock).toHaveBeenCalledTimes(10);
+    expect(capture).toHaveBeenCalledWith(
+      "sse_connection_degraded",
+      expect.objectContaining({ stopped_reason: "max_attempts" }),
+    );
+  });
+
+  it("stops reconnecting after one error when the session probe returns 401", async () => {
+    spyOn(session, "doesSessionExist").mockRejectedValue({ status: 401 });
+    openStream();
+    fakeEs.dispatch("error");
+    await flush();
+
+    expect(eventSourceMock).toHaveBeenCalledTimes(1);
+    expect(reconnectTimers()).toHaveLength(0);
+    expect(openAuthModal).toHaveBeenCalledWith("login");
+    expect(capture).toHaveBeenCalledWith(
+      "sse_connection_degraded",
+      expect.objectContaining({ stopped_reason: "auth" }),
+    );
+  });
+
+  it("resets the backoff counter when the stream opens", async () => {
+    openStream();
+    fakeEs.dispatch("error");
+    await runLatestReconnectTimer();
+    fakeEs.readyState = FakeEventSource.OPEN;
+    fakeEs.dispatch("open");
+    fakeEs.dispatch("error");
+    await flush();
+
+    expect(reconnectTimers().at(-1)?.delayMs).toBe(1_000);
   });
 });

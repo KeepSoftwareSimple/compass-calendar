@@ -6,6 +6,7 @@ import {
   sanitizeBookingTelemetry,
 } from "@core/booking/booking-telemetry";
 import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-tracking.properties";
+import { exceptionFingerprint } from "@core/logger/exception-fingerprint";
 import {
   type DescribedError,
   describeErrorChain,
@@ -111,6 +112,8 @@ export class PostHogExceptionTransport extends TransportStream {
 
     const distinctId = userId || "unknown";
     const properties = buildPostHogProperties(info);
+    properties[POSTHOG_ERROR_TRACKING_PROPERTY.exceptionFingerprint] =
+      exceptionFingerprint(err.name, err.message);
 
     const context = getPostHogContext();
     if (context) {

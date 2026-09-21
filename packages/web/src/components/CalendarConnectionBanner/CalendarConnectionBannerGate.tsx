@@ -16,7 +16,14 @@ export const CalendarConnectionBannerGate: FC = () => {
   const provider = connectionProviderKind(target?.connection);
   const { connect, refresh } = useConnectProvider(
     provider,
-    target?.connection ? { connection: target.connection } : undefined,
+    target?.connection
+      ? {
+          connection: target.connection,
+          ...(target.kind === "reconnect"
+            ? { intent: "reconnect" as const }
+            : {}),
+        }
+      : undefined,
   );
   if (!target) return null;
 

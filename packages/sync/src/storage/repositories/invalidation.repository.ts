@@ -8,6 +8,7 @@ import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   type InvalidationAppend,
   InvalidationAppendSchema,
+  InvalidationReadSchema,
   type InvalidationRecord,
   InvalidationRecordSchema,
 } from "@sync/storage/contracts/invalidation.contracts";
@@ -85,7 +86,7 @@ export class InvalidationRepository {
       .sort({ _id: 1 })
       .limit(limit)
       .toArray();
-    return rows.map((row) => InvalidationRecordSchema.parse(row));
+    return rows.map((row) => InvalidationReadSchema.parse(row));
   }
 
   // Highest retained outbox id for the principal, or null when none exist.
@@ -120,7 +121,7 @@ export class InvalidationRepository {
       .sort({ _id: 1 })
       .limit(limit)
       .toArray();
-    return rows.map((row) => InvalidationRecordSchema.parse(row));
+    return rows.map((row) => InvalidationReadSchema.parse(row));
   }
 
   // Highest retained outbox id across every tenant/principal, or null when
