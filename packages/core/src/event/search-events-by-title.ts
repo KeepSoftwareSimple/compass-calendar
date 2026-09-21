@@ -43,7 +43,7 @@ export function searchEventsByTitle(
   const windowStart = Date.parse(window.start);
   const windowEnd = Date.parse(window.end);
 
-  return events
+  const matches = events
     .filter((event) => {
       const start = eventStartMs(event);
       if (Number.isNaN(start) || start < windowStart || start > windowEnd) {
@@ -55,6 +55,22 @@ export function searchEventsByTitle(
       (left, right) =>
         Math.abs(eventStartMs(left) - now) -
         Math.abs(eventStartMs(right) - now),
+    );
+
+  const seenSeriesIds = new Set<string>();
+  const collapsed: Event[] = [];
+  for (const match of matches) {
+    if (match.recurrence.kind === "occurrence") {
+      if (seenSeriesIds.has(match.recurrence.seriesId)) continue;
+      seenSeriesIds.add(match.recurrence.seriesId);
+    }
+    collapsed.push(match);
+  }
+
+  return collapsed
+    .filter(
+      (event) =>
+        event.recurrence.kind !== "series" || !seenSeriesIds.has(event.id),
     )
     .slice(0, limit);
 }

@@ -146,6 +146,7 @@ const CommandPaletteContent = ({
       label: eventTitle(event) || "Untitled",
       detail: eventSearchDetail(event),
       icon: CalendarBlankIcon,
+      badge: event.recurrence.kind !== "single" ? "Repeats" : undefined,
       onClick: () => {
         const eventId = event.id;
         navigateToDate(eventSearchDateString(event), () => {
@@ -181,10 +182,14 @@ const CommandPaletteContent = ({
   }, []);
   const resultCount = flatItems.length;
   const noResultsText = `No results for “${search}”`;
+  const searchingText = `Searching for “${search}”`;
+  const isSearching = eventSearch.isSearching;
   const liveRegionText = !trimmedSearch
     ? ""
     : resultCount === 0
-      ? noResultsText
+      ? isSearching
+        ? ""
+        : noResultsText
       : `${resultCount} result${resultCount === 1 ? "" : "s"}`;
 
   // Invoke the item action directly — not via HTMLElement.click() — so
@@ -262,7 +267,11 @@ const CommandPaletteContent = ({
 
           <div className="max-h-[50vh] overflow-y-auto p-2">
             {filteredSections.length === 0 ? (
-              <div className="px-3 py-2 text-text">{noResultsText}</div>
+              isSearching ? (
+                <div className="px-3 py-2 text-text-muted">{searchingText}</div>
+              ) : (
+                <div className="px-3 py-2 text-text">{noResultsText}</div>
+              )
             ) : (
               filteredSections.map((section) => (
                 <div key={section.id} className="mb-1">

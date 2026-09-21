@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   EVENT_TITLE_SEARCH_MIN,
@@ -22,10 +22,11 @@ function useDebouncedValue(value: string, delayMs: number): string {
 
 export function useEventSearch(query: string) {
   const source = useEventRepositorySource();
-  const debounced = useDebouncedValue(query.trim(), SEARCH_DEBOUNCE_MS);
+  const trimmed = query.trim();
+  const debounced = useDebouncedValue(trimmed, SEARCH_DEBOUNCE_MS);
   const enabled = debounced.length >= EVENT_TITLE_SEARCH_MIN;
 
-  return useQuery({
+  const query_ = useQuery({
     queryKey: eventQueryKeys.search({ source, q: debounced }),
     queryFn: ({ signal }) => {
       if (source === "local") {
@@ -44,5 +45,12 @@ export function useEventSearch(query: string) {
     },
     enabled,
     staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
+
+  const isSearching =
+    trimmed.length >= EVENT_TITLE_SEARCH_MIN &&
+    (debounced !== trimmed || query_.isPending);
+
+  return { data: query_.data, isSearching };
 }

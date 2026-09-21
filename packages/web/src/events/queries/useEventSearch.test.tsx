@@ -43,4 +43,39 @@ describe("useEventSearch", () => {
       expect.any(Number),
     );
   });
+
+  it("reports isSearching while debouncing and while the query is pending", async () => {
+    resetEventRepositorySourceForTests();
+    const store = createMockOfflineDataStore();
+    let resolveSearch: (events: never[]) => void = () => {};
+    store.searchByTitle.mockReturnValue(
+      new Promise((resolve) => {
+        resolveSearch = resolve;
+      }),
+    );
+    resetOfflineDataStoreForTests(store as never);
+    const { wrapper } = createStoreWrapper();
+
+    const { result, rerender } = renderHook(
+      ({ query }: { query: string }) => useEventSearch(query),
+      { wrapper, initialProps: { query: "" } },
+    );
+
+    rerender({ query: "de" });
+    expect(result.current.isSearching).toBe(true);
+
+    await waitFor(() => {
+      expect(store.searchByTitle).toHaveBeenCalled();
+    });
+    expect(result.current.isSearching).toBe(true);
+
+    await act(async () => {
+      resolveSearch([]);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    await waitFor(() => {
+      expect(result.current.isSearching).toBe(false);
+    });
+  });
 });
