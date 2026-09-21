@@ -15,6 +15,7 @@ import {
   eventColorLabel,
 } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { promptContextMenuKeyboardOnly } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   useHiddenEventIds,
@@ -37,6 +38,12 @@ export interface ContextMenuAction {
   onClick: () => void;
   icon: React.ReactNode;
   keys?: string[];
+  /**
+   * Selecting the item (click or Enter/Space) shows a toast naming the
+   * keyboard shortcut instead of running `onClick` - the item is a read-only
+   * pointer to that shortcut, not a working control.
+   */
+  keyboardOnly?: boolean;
 }
 
 // Supplied by ContextMenu so each item can wire into floating-ui's roving-focus
@@ -102,12 +109,16 @@ export function ContextMenuItemsView({
       label: isReadOnly ? "View" : "Edit",
       onClick: actions.edit,
       icon: <PenNib aria-hidden="true" size={20} />,
+      keys: ["Enter"],
+      keyboardOnly: true,
     },
     {
       id: "duplicate",
       label: "Duplicate",
       onClick: actions.duplicate,
       icon: <Copy aria-hidden="true" size={20} />,
+      keys: ["Mod", "D"],
+      keyboardOnly: true,
     },
     {
       id: "hide",
@@ -128,6 +139,8 @@ export function ContextMenuItemsView({
             label: "Delete",
             onClick: actions.delete,
             icon: <Trash aria-hidden="true" size={20} />,
+            keys: ["Delete"],
+            keyboardOnly: true,
           },
         ]),
   ];
@@ -157,8 +170,17 @@ export function ContextMenuItemsView({
       }}
     >
       {menuActions.map((item, index) => {
-        const select = () => {
-          item.onClick();
+        // A real pointer click reports a positive `detail`; Enter/Space
+        // activation of a focused button reports 0 (same signal
+        // PublicBookingMonthGrid uses to tell the two apart). Keyboard
+        // selection of a focused item still runs the action - only the
+        // mouse is turned away, toward the shortcut.
+        const select = (clickEvent: React.MouseEvent) => {
+          if (item.keyboardOnly && clickEvent.detail !== 0) {
+            promptContextMenuKeyboardOnly(item.label, item.keys ?? []);
+          } else {
+            item.onClick();
+          }
           close();
         };
         const itemProps = nav
@@ -166,7 +188,11 @@ export function ContextMenuItemsView({
           : { onClick: select };
         return (
           <button
-            className="c-context-menu-item"
+            className={
+              item.keyboardOnly
+                ? "c-context-menu-item cursor-default"
+                : "c-context-menu-item"
+            }
             key={item.id}
             type="button"
             role="menuitem"
