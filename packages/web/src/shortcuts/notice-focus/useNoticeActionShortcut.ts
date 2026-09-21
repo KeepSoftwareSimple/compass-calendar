@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { isEventJumpActive } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 import { isEditSequenceArmed } from "@web/shortcuts/useEditSequenceShortcut";
@@ -22,6 +23,14 @@ export type NoticeActionKey =
   | typeof START_TRIAL_SHORTCUT_KEY
   | typeof CONNECTION_BANNER_SHORTCUT_KEY;
 
+const activeNoticeActionKeys = new Set<NoticeActionKey>();
+
+/** True while some mounted notice (banner or toast) owns this key, so a
+ * bare-letter shortcut using the same letter (e.g. go-to-date's `g`) can
+ * stand down and let the notice handle it instead. */
+export const isNoticeActionKeyActive = (key: NoticeActionKey): boolean =>
+  activeNoticeActionKeys.has(key);
+
 const canHandleNoticeAction = (event: KeyboardEvent) =>
   !event.isComposing &&
   !event.metaKey &&
@@ -41,6 +50,16 @@ export function useNoticeActionShortcut(
   onClick: () => void,
   options: { enabled?: boolean } = {},
 ) {
+  const enabled = Boolean(key) && (options.enabled ?? true);
+
+  useEffect(() => {
+    if (!key || !enabled) return;
+    activeNoticeActionKeys.add(key);
+    return () => {
+      activeNoticeActionKeys.delete(key);
+    };
+  }, [key, enabled]);
+
   useAppShortcut(
     key ?? TOAST_PRIMARY_ACTION_KEY,
     (event) => {
@@ -48,7 +67,7 @@ export function useNoticeActionShortcut(
       onClick();
     },
     {
-      enabled: Boolean(key) && (options.enabled ?? true),
+      enabled,
       ignoreInputs: true,
       preventDefault: true,
       stopPropagation: true,
