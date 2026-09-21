@@ -15,6 +15,7 @@ import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentin
 import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
+import { KEYMAP } from "@web/shortcuts/keymap";
 import { VIEW_SHORTCUTS } from "@web/shortcuts/shortcuts.constants";
 import { type OfflineDataStore } from "../../offline-data/offline-data.store";
 import { type ExternalMigration } from "../migration.types";
@@ -171,8 +172,7 @@ function generateDemoData() {
     }),
     createEventRecord({
       title: "Try Compass",
-      description:
-        "Welcome! Click any empty time slot to create an event, or press C. When you're ready to sync your calendar, use the connect button in the sidebar.",
+      description: `Welcome! Compass is keyboard-only: clicks won't do the work, but each one shows you the key that will. Press C to create an event, or type a time like 1130 to create one at 11:30. Press ? for every shortcut. Ready to sync your calendar? Sign up from the command palette (${KEYMAP.commandPalette.keycaps.join("+")}).`,
       schedule: {
         kind: "timed",
         start: todayAt(10, 0),
@@ -228,7 +228,7 @@ function generateDemoData() {
     createEventRecord({
       title: "Create your daily plan",
       description:
-        "Press C to create an event, or drag across empty slots on the grid to block time for what matters most.",
+        "Press C to create an event, then hold Shift and use the arrow keys to move it. Block time for what matters most.",
       schedule: {
         kind: "timed",
         start: todayAt(15, 0),
