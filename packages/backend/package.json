@@ -8,7 +8,7 @@
     "@compass/core": "1.0.0",
     "cors": "^2.8.5",
     "exponential-backoff": "^3.1.2",
-    "express": "^4.17.1",
+    "express": "^4.22.3",
     "express-rate-limit": "^7.5.1",
     "google-auth-library": "^11.0.2",
     "helmet": "^8.3.0",
@@ -30,7 +30,7 @@
     "@types/supertest": "^6.0.3",
     "bson": "^7.2.0",
     "mongodb-memory-server": "^9.2.0",
-    "qs": "^6.14.0",
+    "qs": "^6.16.0",
     "supertest": "^7.1.0"
   }
 }

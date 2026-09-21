@@ -4,7 +4,10 @@ import {
   errorHandler as supertokensErrorHandler,
   middleware as supertokensMiddleware,
 } from "supertokens-node/framework/express";
-import { configureHttpServer } from "@core/server/http-server";
+import {
+  configureHttpServer,
+  HTTP_JSON_BODY_LIMIT,
+} from "@core/server/http-server";
 import { AuthRoutes } from "@backend/auth/auth.routes.config";
 import {
   BillingRoutes,
@@ -53,7 +56,7 @@ export const initExpressServer = () => {
   // 400, so this route is handled before either of them.
   mountStripeWebhook(app);
   app.use(supertokensMiddleware());
-  app.use(express.json());
+  app.use(express.json({ limit: HTTP_JSON_BODY_LIMIT }));
 
   const routes: Array<CommonRoutesConfig> = [];
   routes.push(new HealthRoutes(app));

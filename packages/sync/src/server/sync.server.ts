@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import { HTTP_JSON_BODY_LIMIT } from "@core/server/http-server";
 import { type ReadinessRegistry } from "@sync/lifecycle/readiness";
 import { registerChangeFeedRoutes } from "@sync/server/change-feed.routes";
 import { registerCommandRoutes } from "@sync/server/command.routes";
@@ -31,7 +32,7 @@ export function buildSyncApp(deps: {
   // /internal/events/full for any user with more than 20 calendars. The
   // "simple" parser collects repeated keys into a plain array, unbounded.
   app.set("query parser", "simple");
-  app.use(express.json());
+  app.use(express.json({ limit: HTTP_JSON_BODY_LIMIT }));
 
   registerHealthRoutes(app, deps);
   if (deps.connectionApi) {

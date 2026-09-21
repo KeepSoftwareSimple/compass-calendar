@@ -219,7 +219,12 @@ export function parseConfigFromEnv(
     NODE_ENV: nodeEnv,
     VERSION: nonEmpty(rawEnv["VERSION"]),
     TZ: rawEnv["TZ"],
-    ORIGINS_ALLOWED: rawEnv["CORS"] ? rawEnv["CORS"].split(",") : [],
+    ORIGINS_ALLOWED: rawEnv["CORS"]
+      ? rawEnv["CORS"]
+          .split(",")
+          .map((origin) => origin.trim())
+          .filter((origin) => origin.length > 0)
+      : [],
     PORT: rawEnv["PORT"],
     SUPERTOKENS_URI: rawEnv["SUPERTOKENS_URI"],
     SUPERTOKENS_KEY: rawEnv["SUPERTOKENS_KEY"],

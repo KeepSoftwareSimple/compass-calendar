@@ -56,6 +56,18 @@ describe("config.constants", () => {
     expect(isGoogleConfigured(env)).toBe(false);
   });
 
+  it("trims whitespace from comma-separated CORS origins", () => {
+    const env = parseConfigFromEnv({
+      ...validEnv,
+      CORS: " http://localhost:9080 , http://127.0.0.1:9080 ",
+    });
+
+    expect(env.ORIGINS_ALLOWED).toEqual([
+      "http://localhost:9080",
+      "http://127.0.0.1:9080",
+    ]);
+  });
+
   it("parses backend env without Stripe configuration", () => {
     const env = parseConfigFromEnv(validEnv);
 

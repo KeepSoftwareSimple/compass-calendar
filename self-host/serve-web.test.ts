@@ -58,6 +58,19 @@ afterEach(() => {
   rmSync(buildRoot, { force: true, recursive: true });
 });
 
+describe("serve-web security headers", () => {
+  it("sends baseline hardening headers on static responses", async () => {
+    const response = await fetch(`${baseUrl}/index.html`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(response.headers.get("referrer-policy")).toBe(
+      "strict-origin-when-cross-origin",
+    );
+    expect(response.headers.get("x-frame-options")).toBe("SAMEORIGIN");
+  });
+});
+
 describe("serve-web accept-encoding negotiation", () => {
   it("serves the brotli sibling and marks it with Content-Encoding + Vary", async () => {
     const response = await fetch(`${baseUrl}/index.js`, {
