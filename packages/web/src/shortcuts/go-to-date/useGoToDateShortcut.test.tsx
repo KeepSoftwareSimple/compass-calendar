@@ -8,9 +8,21 @@ import {
 import { clearAppLockReasons } from "@web/shortcuts/app-lock";
 import { editSequenceActions } from "@web/shortcuts/edit-sequence/edit-sequence.store";
 import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
+import {
+  CONNECTION_BANNER_SHORTCUT_KEY,
+  useNoticeActionShortcut,
+} from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { resetEditSequenceArm } from "@web/shortcuts/useEditSequenceShortcut";
-import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const pressG = (target: EventTarget = document) => {
   target.dispatchEvent(
@@ -77,6 +89,21 @@ describe("useGoToDateShortcut", () => {
       pressG();
     });
 
+    expect(isPaletteOpen()).toBe(false);
+  });
+
+  it("lets a mounted Google reconnect notice handle G instead of opening the palette", () => {
+    const onAction = mock();
+    renderHook(() => {
+      useGoToDateShortcut();
+      useNoticeActionShortcut(CONNECTION_BANNER_SHORTCUT_KEY, onAction);
+    });
+
+    act(() => {
+      pressG();
+    });
+
+    expect(onAction).toHaveBeenCalledTimes(1);
     expect(isPaletteOpen()).toBe(false);
   });
 
