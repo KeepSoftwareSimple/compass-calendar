@@ -75,12 +75,21 @@ Playwright. Docs index: `docs/README.md`.
   Procedure: `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
-- GitHub milestones and labels: the GitHub MCP server has no milestone tool
-  and Claude Code web sessions have no `gh`. In those sessions `curl` against
-  `https://api.github.com` is authenticated by the session proxy, so
-  `POST /repos/<owner>/<repo>/milestones` creates one and issues can be filed
-  with a `milestone` number. Actions variables stay blocked; a human sets
-  `AGENT_LOOP_MILESTONES`.
+- GitHub from Claude Code web sessions: `gh` is not preinstalled, but it is
+  in Ubuntu 24.04 universe, so `apt-get install -y gh` takes seconds and it
+  authenticates from the environment. It does not persist; install it again
+  each session. GraphQL is blocked there: `gh api repos/...` (REST) works,
+  but GraphQL-backed porcelain such as `gh issue list` and `gh pr list`
+  returns 403. `.claude/settings.json` allowlists `gh pr:*`, which therefore
+  does not do what it looks like it does, and
+  `.github/scripts/agent-loop-next.sh` cannot dry-run in a web session for
+  the same reason. With `curl` against `https://api.github.com`, do not add
+  an `Authorization` header built from `GITHUB_TOKEN`: the session proxy
+  already authenticates, and an explicit credential in the command trips the
+  permission classifier as credential exploration. The GitHub MCP server has
+  no milestone tool; `POST /repos/<owner>/<repo>/milestones` creates one and
+  issues can be filed with a `milestone` number. Actions variables stay
+  blocked; a human sets `AGENT_LOOP_MILESTONES`.
 
 ## Lookups
 
