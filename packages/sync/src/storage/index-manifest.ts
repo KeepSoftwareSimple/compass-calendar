@@ -137,6 +137,16 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       name: "calendar_gen_start",
       key: { calendarId: 1, generation: 1, startAt: 1, _id: 1 },
     },
+    // Overlap reads filter `endAt` after a `startAt` range. calendar_gen_start
+    // fetches every lookback candidate and tests endAt afterwards. This index
+    // bounds that predicate. The start index stays {startAt, _id} so keyset
+    // order on (startAt, _id) is unchanged. Measured: with both indexes the
+    // lookback branch is an IXSCAN on calendar_gen_end and totalDocsExamined
+    // equals nReturned when the fixture includes long-past non-overlapping rows.
+    {
+      name: "calendar_gen_end",
+      key: { calendarId: 1, generation: 1, endAt: 1, startAt: 1 },
+    },
     { name: "principal_start", key: { principalId: 1, startAt: 1 } },
   ],
   [SYNC_COLLECTIONS.syncResources]: [
@@ -238,6 +248,13 @@ export const SYNC_INDEX_MANIFEST: IndexManifest = {
       // is a jobs COLLSCAN per connection.
       name: "connection_runafter",
       key: { connectionId: 1, runAfter: 1 },
+    },
+    {
+      // The retrying arm of findOldestOverdueByConnection sorts by lastErrorAt.
+      // Sparse so jobs that have never recorded an error stay out of the index.
+      name: "connection_last_error",
+      key: { connectionId: 1, lastErrorAt: 1 },
+      options: { sparse: true },
     },
     {
       name: "lease_expiry",

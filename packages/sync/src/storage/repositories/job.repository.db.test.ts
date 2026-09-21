@@ -901,5 +901,55 @@ describe("JobRepository", () => {
       expect(winning).toContain("connection_runafter");
       expect(winning).not.toContain("COLLSCAN");
     });
+
+    it("retrying overdue lookup is served by connection_last_error", async () => {
+      const connectionId = objectId() as ConnectionId;
+      const tenantId = objectId() as TenantId;
+      const principalId = objectId() as PrincipalId;
+      const job = await repo.enqueue(
+        enqueue({
+          tenantId,
+          principalId,
+          connectionId: connectionId as JobEnqueue["connectionId"],
+          runAfter: NOW,
+        }),
+      );
+      await db.collection("jobs").updateOne(
+        { _id: job._id },
+        {
+          $set: {
+            lastErrorAt: new Date(NOW.getTime() - 60_000),
+            state: "pending",
+          },
+        },
+      );
+      for (let i = 0; i < 8; i += 1) {
+        await repo.enqueue(
+          enqueue({
+            coalescingKey: `other-error:${i}`,
+            runAfter: NOW,
+          }),
+        );
+      }
+
+      const plan = await db
+        .collection("jobs")
+        .find({
+          tenantId,
+          principalId,
+          connectionId,
+          lastErrorAt: { $lte: NOW },
+          $or: [
+            { state: "pending" },
+            { state: "claimed", leaseExpiresAt: { $lt: NOW } },
+          ],
+        })
+        .sort({ lastErrorAt: 1 })
+        .explain("queryPlanner");
+      const winning = JSON.stringify(plan["queryPlanner"]["winningPlan"]);
+      expect(winning).toContain("IXSCAN");
+      expect(winning).toContain("connection_last_error");
+      expect(winning).not.toContain("COLLSCAN");
+    });
   });
 });

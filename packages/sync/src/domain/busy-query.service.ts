@@ -87,6 +87,7 @@ export interface BusyQueryInput {
   end: Date;
   // Drop these events before merge. Unknown ids are ignored.
   excludeEventIds?: readonly EventId[];
+  limit?: number;
 }
 
 // The merged busy intervals within [start, end) for the given calendars. Each
@@ -103,19 +104,19 @@ export interface BusyOccurrenceInterval {
 export async function queryBusyOccurrences(
   deps: BusyQueryDeps,
   input: BusyQueryInput,
-): Promise<BusyOccurrenceInterval[]> {
-  const occurrences = await deps.occurrences.listBusyOverlapping({
+): Promise<{ intervals: BusyOccurrenceInterval[]; truncated: boolean }> {
+  const page = await deps.occurrences.listBusyOverlapping({
     tenantId: input.tenantId,
     principalId: input.principalId,
     calendars: input.calendars,
     start: input.start,
     end: input.end,
+    limit: input.limit,
   });
-
   const windowStart = input.start.getTime();
   const windowEnd = input.end.getTime();
   const excluded = new Set(input.excludeEventIds ?? []);
-  return occurrences
+  const intervals = page.intervals
     .map((occurrence) => ({
       start:
         occurrence.startAt.getTime() > windowStart
@@ -130,13 +131,15 @@ export async function queryBusyOccurrences(
         interval.end.getTime() > interval.start.getTime() &&
         !excluded.has(interval.eventId),
     );
+  return { intervals, truncated: page.truncated };
 }
 
 export async function queryBusyIntervals(
   deps: BusyQueryDeps,
   input: BusyQueryInput,
 ): Promise<BusyInterval[]> {
-  return mergeBusyIntervals(await queryBusyOccurrences(deps, input));
+  const page = await queryBusyOccurrences(deps, input);
+  return mergeBusyIntervals(page.intervals);
 }
 
 // Why a requested calendar's busy data could not be freshly included.
@@ -178,6 +181,9 @@ export interface BusyAvailability {
   // Fresh enough to confirm a booking: complete AND every backing connection is
   // healthy. Fail-closed — anything unverified makes this false.
   bookable: boolean;
+  // The overlap read hit its limit. Intervals are a prefix, not the full set,
+  // so complete and bookable are false.
+  truncated: boolean;
 }
 
 export interface BusyAvailabilityDeps {
@@ -205,6 +211,7 @@ export interface BusyAvailabilityInput {
   now: Date;
   // Drop these events before merge. Unknown ids are ignored.
   excludeEventIds?: readonly EventId[];
+  limit?: number;
 }
 
 // The busy intervals for a set of calendars plus the freshness/completeness
@@ -281,7 +288,7 @@ export async function computeBusyAvailability(
     }
   }
 
-  const rawIntervals = present.length
+  const busyPage = present.length
     ? await queryBusyOccurrences(
         { occurrences: deps.occurrences },
         {
@@ -291,9 +298,11 @@ export async function computeBusyAvailability(
           start: input.start,
           end: input.end,
           excludeEventIds: input.excludeEventIds,
+          limit: input.limit,
         },
       )
-    : [];
+    : { intervals: [], truncated: false };
+  const rawIntervals = busyPage.intervals;
 
   const eventsById = new Map<string, EventRecord>();
   if (deps.events && rawIntervals.length > 0) {
@@ -324,7 +333,9 @@ export async function computeBusyAvailability(
       lastHealthyAt: c.lastHealthyAt,
     }));
 
-  const complete = issues.length === 0;
+  // A truncated overlap read is not the full busy set. Fail closed even when
+  // every calendar is fresh: booking over the omitted tail would double-book.
+  const complete = issues.length === 0 && !busyPage.truncated;
   // Every backing connection must be present in storage AND healthy. A missing
   // connection record (referenced by a resource but not found) fails closed.
   const allBackingHealthy =
@@ -364,5 +375,6 @@ export async function computeBusyAvailability(
     complete,
     issues,
     bookable,
+    truncated: busyPage.truncated,
   };
 }
