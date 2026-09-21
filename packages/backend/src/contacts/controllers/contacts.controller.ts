@@ -7,7 +7,7 @@ import {
   CONTACT_SUGGESTION_QUERY_MIN_LENGTH,
   type ContactSuggestionsResponse,
 } from "@core/types/contact.contracts";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { logLevelForSyncClientError } from "@backend/common/services/sync-service/sync-proxy-error";
 import { type SyncClientError } from "@backend/common/services/sync-service/sync-service.client";

@@ -1,4 +1,3 @@
-import { ObjectId } from "bson";
 import { type ValidatedCompassEvent } from "@core/types/compass-event.contracts";
 import { type CalendarId, EventIdSchema } from "@core/types/domain-primitives";
 import { type EventRecurrence } from "@core/types/event.contracts";
@@ -81,11 +80,14 @@ function resolveSchedule(legacy: LegacyLocalEvent): ScheduleCandidate | null {
 }
 
 function resolveCreatedAt(id: string): string {
-  try {
-    return new ObjectId(id).getTimestamp().toISOString();
-  } catch {
-    return new Date().toISOString();
-  }
+  // ObjectId timestamps are the first four bytes. Invalid ids fall back to
+  // now, matching the previous `new ObjectId(id)` throw path.
+  if (!/^[0-9a-f]{24}$/i.test(id)) return new Date().toISOString();
+  const seconds = Number.parseInt(id.slice(0, 8), 16);
+  const date = new Date(seconds * 1000);
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
 }
 
 function resolveUpdatedAt(legacy: LegacyLocalEvent): string | null {

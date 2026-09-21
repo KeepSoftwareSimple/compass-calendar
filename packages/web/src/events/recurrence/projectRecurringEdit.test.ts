@@ -620,10 +620,13 @@ describe("projectSeriesMaterialization", () => {
     end: "2026-07-12T00:00:00.000Z",
   };
 
-  test("expands a daily rule into occurrence instances including the first day", () => {
+  test("expands a daily rule into occurrence instances including the first day", async () => {
     const base = dailyBase();
 
-    const result = projectSeriesMaterialization({ base, ranges: [weekRange] });
+    const result = await projectSeriesMaterialization({
+      base,
+      ranges: [weekRange],
+    });
 
     expect(result.upserts[0]).toBe(base);
     const instances = result.upserts.slice(1);
@@ -642,22 +645,28 @@ describe("projectSeriesMaterialization", () => {
     expect(starts[1]).toBe("2026-07-07T16:00:00.000Z");
   });
 
-  test("is deterministic: same input yields the same instance ids", () => {
+  test("is deterministic: same input yields the same instance ids", async () => {
     const base = dailyBase();
 
-    const first = projectSeriesMaterialization({ base, ranges: [weekRange] });
-    const second = projectSeriesMaterialization({ base, ranges: [weekRange] });
+    const first = await projectSeriesMaterialization({
+      base,
+      ranges: [weekRange],
+    });
+    const second = await projectSeriesMaterialization({
+      base,
+      ranges: [weekRange],
+    });
 
     expect(first.upserts.map(({ id }) => id)).toEqual(
       second.upserts.map(({ id }) => id),
     );
   });
 
-  test("marks stale cached instances for removal", () => {
+  test("marks stale cached instances for removal", async () => {
     const base = dailyBase(["RRULE:FREQ=WEEKLY;COUNT=4"]);
     const stale = [occurrence(1), occurrence(2)];
 
-    const result = projectSeriesMaterialization({
+    const result = await projectSeriesMaterialization({
       base,
       cachedSeriesEvents: stale,
       ranges: [weekRange],
@@ -668,24 +677,24 @@ describe("projectSeriesMaterialization", () => {
     );
   });
 
-  test("returns only the base when there are no ranges", () => {
+  test("returns only the base when there are no ranges", async () => {
     const base = dailyBase();
 
-    const result = projectSeriesMaterialization({ base, ranges: [] });
+    const result = await projectSeriesMaterialization({ base, ranges: [] });
 
     expect(result.upserts).toEqual([base]);
   });
 
-  test("skips excluded occurrence starts", () => {
+  test("skips excluded occurrence starts", async () => {
     const base = dailyBase();
 
-    const withoutExdates = projectSeriesMaterialization({
+    const withoutExdates = await projectSeriesMaterialization({
       base,
       ranges: [weekRange],
     });
     const excludedStart = withoutExdates.upserts[2]!.schedule.start;
 
-    const result = projectSeriesMaterialization({
+    const result = await projectSeriesMaterialization({
       base,
       ranges: [weekRange],
       exdates: [excludedStart],
@@ -697,7 +706,7 @@ describe("projectSeriesMaterialization", () => {
     ).toBe(false);
   });
 
-  test("keeps allDay schedules date-only", () => {
+  test("keeps allDay schedules date-only", async () => {
     const base = createMockEvent({
       id: SERIES_ID,
       schedule: {
@@ -708,7 +717,7 @@ describe("projectSeriesMaterialization", () => {
       recurrence: { kind: "series", rules: ["RRULE:FREQ=DAILY;COUNT=5"] },
     });
 
-    const result = projectSeriesMaterialization({
+    const result = await projectSeriesMaterialization({
       base,
       ranges: [
         { start: "2026-07-05T00:00:00.000Z", end: "2026-07-12T00:00:00.000Z" },
@@ -724,7 +733,7 @@ describe("projectSeriesMaterialization", () => {
     }
   });
 
-  test("flattens instance ids when the base id is already a composite occurrence id", () => {
+  test("flattens instance ids when the base id is already a composite occurrence id", async () => {
     // Simulates a "thisAndFollowing" rebase: the remainder series' optimistic
     // id reuses the clicked instance's own composite id (SERIES_ID::start).
     // A prior implementation composed new instance ids by nesting a second
@@ -746,7 +755,7 @@ describe("projectSeriesMaterialization", () => {
       recurrence: { kind: "series", rules: ["RRULE:FREQ=DAILY;COUNT=5"] },
     });
 
-    const result = projectSeriesMaterialization({
+    const result = await projectSeriesMaterialization({
       base,
       ranges: [
         { start: "2026-07-05T00:00:00.000Z", end: "2026-07-12T00:00:00.000Z" },

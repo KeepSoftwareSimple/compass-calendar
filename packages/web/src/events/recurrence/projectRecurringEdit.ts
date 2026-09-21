@@ -1,4 +1,3 @@
-import { ObjectId } from "bson";
 import { GCAL_MAX_RECURRENCES } from "@core/constants/core.constants";
 import {
   DateOnlySchema,
@@ -7,8 +6,7 @@ import {
 } from "@core/types/domain-primitives";
 import { type Event, type EventSchedule } from "@core/types/event.contracts";
 import { type RecurrenceScope } from "@core/types/event-command.contracts";
-import dayjs from "@core/util/date/dayjs";
-import { CompassEventRRule } from "@core/util/event/compass.event.rrule";
+import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { getCompassEventDateFormat } from "@core/util/event/event.util";
 import {
   composeOccurrenceIdFromSchedule,
@@ -209,35 +207,6 @@ export function projectRecurringDelete({
   return { removeIds, upserts: [] };
 }
 
-// Deterministic occurrence ids (`${seriesId}::${start}`) keep repeated
-// projections idempotent and give LOCAL (IndexedDB) mode stable ids across
-// refetches. Local-mode only: these ids never reach the sync API, so they
-// split on the LAST "::" (a this-and-following split creates a series whose
-// own id is already composed, so its occurrences nest another segment) and
-// never need to match the server's own occurrence-id codec. Remote-facing
-// optimistic ids use composeOccurrenceIdFromSchedule (from @core) instead,
-// which is byte-identical to what sync's projection will mint — see that
-// function's docblock for why the two must never drift.
-export function composeLocalOccurrenceId(
-  seriesId: string,
-  start: string,
-): EventId {
-  return `${seriesId}::${start}` as EventId;
-}
-
-// Split at the LAST "::": a this-and-following split creates a series whose
-// own id is already composed, so its occurrences nest another segment.
-export function parseLocalOccurrenceId(
-  id: string,
-): { seriesId: EventId; start: string } | null {
-  const separator = id.lastIndexOf("::");
-  if (separator <= 0 || separator + 2 >= id.length) return null;
-  return {
-    seriesId: id.slice(0, separator) as EventId,
-    start: id.slice(separator + 2),
-  };
-}
-
 type ProjectSeriesMaterializationInput = {
   /** The series base; `recurrence.kind` must be "series" to expand. */
   base: Event;
@@ -249,6 +218,27 @@ type ProjectSeriesMaterializationInput = {
   exdates?: readonly string[];
 };
 
+// rrule expands BYDAY against dtstart's UTC fields. Timed dtstart must be
+// floating (UTC fields hold wall-clock time) or every candidate shifts by the
+// zone offset. Mirrors CompassEventRRule without importing it: that class
+// value-imports rrule, bson, and lodash, which would put them back on boot.
+function toFloatingMs(wall: Dayjs): number {
+  return Date.UTC(
+    wall.year(),
+    wall.month(),
+    wall.date(),
+    wall.hour(),
+    wall.minute(),
+    wall.second(),
+    wall.millisecond(),
+  );
+}
+
+function localizeFloatingMs(floatingMs: number, timezone: string): number {
+  const wall = dayjs.utc(floatingMs).format("YYYY-MM-DDTHH:mm:ss.SSS");
+  return dayjs.tz(wall, timezone).valueOf();
+}
+
 /**
  * Expand a series base's RRULE into concrete occurrence events so a
  * create/edit that (re)defines recurrence renders instantly instead of after
@@ -257,13 +247,17 @@ type ProjectSeriesMaterializationInput = {
  * filters `kind === "series"`). Expansion is bounded by the latest range end
  * and the server's 730-instance cap; per-entry range membership is enforced
  * downstream by `applyEventProjectionAcrossQueries`.
+ *
+ * Async because the rrule bridge is a dynamic import. Callers that are not a
+ * series return before that import, so a non-series edit stays synchronous
+ * when the caller does not await a pending promise.
  */
-export function projectSeriesMaterialization({
+export async function projectSeriesMaterialization({
   base,
   cachedSeriesEvents = [],
   ranges,
   exdates = [],
-}: ProjectSeriesMaterializationInput): RecurringEditProjection {
+}: ProjectSeriesMaterializationInput): Promise<RecurringEditProjection> {
   const removeIds = new Set<string>(
     cachedSeriesEvents.flatMap((event) =>
       event.id === base.id ? [] : [event.id],
@@ -275,14 +269,13 @@ export function projectSeriesMaterialization({
   }
 
   try {
-    const rrule = new CompassEventRRule({
-      _id: new ObjectId(),
-      startDate: base.schedule.start,
-      endDate: base.schedule.end,
-      recurrence: { rule: [...base.recurrence.rules] },
-    });
-
     const format = getCompassEventDateFormat(base.schedule.start);
+    const isTimed = format !== dayjs.DateFormat.YEAR_MONTH_DAY_FORMAT;
+    const timezone = dayjs.tz.guess();
+    const startWall = dayjs(base.schedule.start, format).tz(timezone);
+    const dtstartMs = isTimed
+      ? toFloatingMs(startWall)
+      : startWall.local().valueOf();
     const durationMs = dayjs(base.schedule.end).diff(
       base.schedule.start,
       "milliseconds",
@@ -291,11 +284,32 @@ export function projectSeriesMaterialization({
       .map((range) => dayjs(range.end))
       .reduce((latest, end) => (end.isAfter(latest) ? end : latest));
     const excluded = new Set(exdates);
+    const ruleText = base.recurrence.rules
+      .filter((line) => /^RRULE:/i.test(line))
+      .join("\n")
+      .trim();
+
+    const { expandOccurrences } = await import("./rrule-expand");
+    const hits = expandOccurrences(ruleText, dtstartMs, {
+      localize: (floatingMs) =>
+        isTimed ? localizeFloatingMs(floatingMs, timezone) : floatingMs,
+      floatUntil: isTimed
+        ? (parsedUntilMs) => toFloatingMs(dayjs(parsedUntilMs).tz(timezone))
+        : undefined,
+      isBeforeEnd: (localizedMs, index) =>
+        index < GCAL_MAX_RECURRENCES && dayjs(localizedMs).isBefore(maxEnd),
+    });
+
+    // CompassEventRRule.all prepends the series start when the first expanded
+    // instant is not dtstart (or when expansion yields nothing).
+    const includesDtStart =
+      hits[0] !== undefined && dayjs(hits[0]).tz(timezone).isSame(startWall);
+    const dates = includesDtStart ? hits : [startWall.valueOf(), ...hits];
 
     // The prefix a new instance's id composes against. `base.id` is itself
     // already a composite occurrence id for a "thisAndFollowing" split (the
     // clicked instance's id, reused as the optimistic remainder series' own
-    // id) — decoding it first and composing against its plain eventId keeps
+    // id). Decoding it first and composing against its plain eventId keeps
     // every optimistic instance id ONE level of "::" deep, never nested.
     // A nested id fails BOTH the client's and the server's decoder, which
     // once meant "delete this one instance" silently widened to the whole
@@ -303,30 +317,25 @@ export function projectSeriesMaterialization({
     // fallback before that fallback was made to fail loud instead.
     const idPrefix = decodeOccurrenceId(base.id)?.eventId ?? base.id;
 
-    const instances = rrule
-      .all(
-        (date, index) =>
-          index < GCAL_MAX_RECURRENCES && dayjs(date).isBefore(maxEnd),
-      )
-      .flatMap((date) => {
-        const start = dayjs(date).format(format);
-        if (excluded.has(start)) return [];
-        return [
-          {
-            ...base,
-            id: composeOccurrenceIdFromSchedule(idPrefix, {
-              kind: base.schedule.kind === "allDay" ? "allDay" : "timed",
-              start,
-            }) as EventId,
-            schedule: {
-              ...base.schedule,
-              start,
-              end: dayjs(date).add(durationMs, "milliseconds").format(format),
-            } as Event["schedule"],
-            recurrence: { kind: "occurrence", seriesId: base.id },
-          } satisfies Event,
-        ];
-      });
+    const instances = dates.flatMap((date) => {
+      const start = dayjs(date).format(format);
+      if (excluded.has(start)) return [];
+      return [
+        {
+          ...base,
+          id: composeOccurrenceIdFromSchedule(idPrefix, {
+            kind: base.schedule.kind === "allDay" ? "allDay" : "timed",
+            start,
+          }) as EventId,
+          schedule: {
+            ...base.schedule,
+            start,
+            end: dayjs(date).add(durationMs, "milliseconds").format(format),
+          } as Event["schedule"],
+          recurrence: { kind: "occurrence", seriesId: base.id },
+        } satisfies Event,
+      ];
+    });
 
     return { removeIds, upserts: [base, ...instances] };
   } catch {
@@ -355,14 +364,14 @@ type ProjectSeriesRulesChangeInput = {
  * projectRecurringDelete take `scope` and internalize their own affected-
  * instance logic, keeping callers thin dispatchers.
  */
-export function projectSeriesRulesChange({
+export async function projectSeriesRulesChange({
   scope,
   edited,
   original,
   seriesId,
   seriesEvents,
   ranges,
-}: ProjectSeriesRulesChangeInput): RecurringEditProjection {
+}: ProjectSeriesRulesChangeInput): Promise<RecurringEditProjection> {
   // "all" rewrites the series base in place (server's replaceSeries keeps the
   // base id); "thisAndFollowing" splits, re-basing at the edited event and
   // keeping earlier instances; single→series keeps the edited event's own id.

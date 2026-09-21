@@ -8,7 +8,7 @@ import {
   HiddenEventIdsResponseSchema,
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import { type UserMetadata, type UserProfile } from "@core/types/user.types";
 import { toClientErrorPayload } from "@backend/common/errors/handlers/error.handler";
 import { type SReqBody } from "@backend/common/types/express.types";

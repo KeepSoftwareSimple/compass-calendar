@@ -11,7 +11,8 @@ import {
   registerLoggerFactory,
   resetLoggerFactory,
 } from "@core/logger/logger.factory";
-import { StringV4Schema, zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
+import { StringV4Schema } from "@core/types/type.utils";
 import { getTestIsolationKey } from "@backend/__tests__/helpers/test-file-context";
 import {
   registerUserIdMappingStore,
