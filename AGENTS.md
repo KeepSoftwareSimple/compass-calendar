@@ -63,7 +63,11 @@ Playwright. Docs index: `docs/README.md`.
   tests, or widen timeouts to go green.
 - Ship: implement, `bun run verify --strict`, open a draft PR with
   `Fixes #N` and the `VERDICT:` line, mark it ready, label it
-  `agent-automerge`, and enable auto-merge yourself. `main` takes changes
+  `agent-automerge`, and enable auto-merge yourself. This applies to every
+  session, interactive ones included: once verify passes and the diff is
+  what was asked, auto-merge without waiting for the user to say "merge".
+  Copy wording, key choices, and similar product judgment calls are not a
+  reason to hold; note them in the PR body instead. `main` takes changes
   only through the merge queue, which squash-merges once required checks
   pass. `.github/scripts/agent-loop-merge-guard.sh` checks size and that
   main is not red; those rails are the gate. Path prefixes are not: there
