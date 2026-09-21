@@ -8,10 +8,10 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  DeletionMarkerReadSchema,
   type DeletionMarkerRecord,
   type DeletionMarkerRecordInput,
   DeletionMarkerRecordInputSchema,
-  DeletionMarkerRecordSchema,
 } from "@sync/storage/contracts/deletion-marker.contracts";
 
 // Confirmed deletions are remembered for 30 days, after which the TTL index
@@ -64,7 +64,7 @@ export class DeletionMarkerRepository {
       { upsert: true, returnDocument: "after" },
     );
     if (!result) throw new Error("record did not return a deletion marker");
-    return DeletionMarkerRecordSchema.parse(result);
+    return DeletionMarkerReadSchema.parse(result);
   }
 
   async exists(

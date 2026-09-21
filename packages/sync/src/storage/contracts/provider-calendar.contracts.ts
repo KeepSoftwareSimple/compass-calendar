@@ -47,6 +47,18 @@ export type ProviderCalendarRecord = z.infer<
   typeof ProviderCalendarRecordSchema
 >;
 
+// Reads parse through this stripped variant, not the strict schema above.
+// A rolling deploy runs the old build and the new build together: the new
+// build stamps a field the old build has never heard of, the old build then
+// reads that row, and a strictObject rejects the unknown key
+// (`unrecognized_keys`) and throws. Unknown keys are dropped from the
+// in-memory record and left untouched in Mongo. Writes stay strict. Nested
+// event labels are stripped on their own because Zod's unknown-key policy is
+// per object.
+export const ProviderCalendarReadSchema = ProviderCalendarRecordSchema.extend({
+  eventLabels: z.array(EventLabelSchema.strip()).readonly().default([]),
+}).strip();
+
 export const ProviderCalendarUpsertSchema = ProviderCalendarRecordSchema.omit({
   _id: true,
   createdAt: true,

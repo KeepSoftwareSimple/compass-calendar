@@ -14,6 +14,7 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
+  EventOccurrenceReadSchema,
   type EventOccurrenceRecord,
   EventOccurrenceRecordSchema,
 } from "@sync/storage/contracts/event-occurrence.contracts";
@@ -223,7 +224,7 @@ export class EventOccurrenceRepository {
       .sort({ startAt: 1, _id: 1 })
       .limit(query.limit)
       .toArray();
-    return records.map((r) => EventOccurrenceRecordSchema.parse(r));
+    return records.map((r) => EventOccurrenceReadSchema.parse(r));
   }
 
   // The busy occurrences overlapping [start, end) for the given calendars, each
