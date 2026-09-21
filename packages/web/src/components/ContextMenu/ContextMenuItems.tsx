@@ -257,7 +257,7 @@ export function ContextMenuItems({ event, close }: ContextMenuItemsProps) {
   const deleteEvent = useDeleteEvent(eventId);
   const duplicateEvent = useDuplicateEvent(eventId);
   const setEventColor = useSetEventColor(eventId);
-  const toggleEventHidden = useToggleEventHidden();
+  const toggleEventHidden = useToggleEventHidden().toggleEventHidden;
 
   const menuActions: ContextMenuItemsActions = {
     delete: () => {

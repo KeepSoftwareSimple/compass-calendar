@@ -173,11 +173,35 @@ describe("undoHistoryActions", () => {
     const seriesOccurrence = occurrence("occurrence", seriesId);
     undoHistoryActions.record({ kind: "delete", event: seriesOccurrence });
     undoHistoryActions.record(editEntry("unrelated"));
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "occurrence",
+      hidden: true,
+    });
 
     undoHistoryActions.discardSeries(seriesId);
 
     expect(useUndoHistoryStore.getState().past).toEqual([
       editEntry("unrelated"),
+      { kind: "hidden", eventId: "occurrence", hidden: true },
+    ]);
+  });
+
+  it("does not coalesce hide/show entries, even for the same event", () => {
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "a",
+      hidden: true,
+    });
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "a",
+      hidden: false,
+    });
+
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: "a", hidden: true },
+      { kind: "hidden", eventId: "a", hidden: false },
     ]);
   });
 

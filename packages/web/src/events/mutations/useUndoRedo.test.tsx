@@ -10,8 +10,13 @@ import {
 } from "@core/types/event-command.contracts";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { EVENT_DELETED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import {
+  useHiddenEventIds,
+  useToggleEventHidden,
+} from "@web/events/hidden/hidden-events.query";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
 import { useRecurrenceScopeOpportunityStore } from "@web/events/recurrence/recurrence-scope-opportunity.store";
@@ -71,10 +76,13 @@ const setup = () => {
   const wrapper = ({ children }: PropsWithChildren) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+  seedHiddenEventIds(queryClient, []);
   const hook = renderHook(
     () => ({
       mutations: useEventMutations(dependencies),
       undoRedo: useUndoRedo(dependencies),
+      hidden: useToggleEventHidden(),
+      ids: useHiddenEventIds(),
     }),
     { wrapper },
   );
@@ -646,6 +654,41 @@ describe("useUndoRedo", () => {
         "2026-07-03T16:00:00.000Z",
       );
     });
+    expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+  });
+
+  test("undoes a hide by restoring visibility, redo hides again, replay records nothing", async () => {
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.hidden.toggleEventHidden(original.id),
+    );
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(true);
+      expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: original.id, hidden: true },
+    ]);
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(false);
+    });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(context.hook.result.current.undoRedo.canRedo).toBe(true);
+
+    act(() => context.hook.result.current.undoRedo.redo());
+
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(true);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: original.id, hidden: true },
+    ]);
     expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
   });
 

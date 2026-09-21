@@ -16,6 +16,7 @@ import {
 } from "@web/events/hidden/hidden-events.query";
 import { readHiddenEventIds } from "@web/events/hidden/hidden-events.storage";
 import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
+import { useUndoHistoryStore } from "@web/events/stores/undo.store";
 import { afterEach, describe, expect, it } from "bun:test";
 
 const hiddenEventsUrl = `${ENV_WEB.API_BASEURL}/user/hidden-events`;
@@ -51,7 +52,7 @@ describe("hidden-events.query", () => {
     const { result } = renderHook(
       () => ({
         ids: useHiddenEventIds(),
-        toggle: useToggleEventHidden(),
+        hidden: useToggleEventHidden(),
       }),
       { wrapper },
     );
@@ -61,7 +62,7 @@ describe("hidden-events.query", () => {
     });
 
     act(() => {
-      result.current.toggle("evt-2");
+      result.current.hidden.toggleEventHidden("evt-2");
     });
 
     await waitFor(() => {
@@ -69,6 +70,9 @@ describe("hidden-events.query", () => {
       expect(result.current.ids.has("evt-2")).toBe(true);
     });
     expect(readHiddenEventIds()).toEqual(["evt-stored", "evt-2"]);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: "evt-2", hidden: true },
+    ]);
   });
 
   it("sends one PUT, updates before the response, and rolls back with a toast on 500", async () => {
@@ -99,7 +103,7 @@ describe("hidden-events.query", () => {
     const { result } = renderHook(
       () => ({
         ids: useHiddenEventIds(),
-        toggle: useToggleEventHidden(),
+        hidden: useToggleEventHidden(),
       }),
       { wrapper },
     );
@@ -109,7 +113,7 @@ describe("hidden-events.query", () => {
     });
 
     act(() => {
-      result.current.toggle("evt-1");
+      result.current.hidden.toggleEventHidden("evt-1");
     });
 
     await waitFor(() => {
@@ -132,5 +136,39 @@ describe("hidden-events.query", () => {
       HIDDEN_EVENT_FAILURE_MESSAGE,
       expect.objectContaining({ role: "alert" }),
     );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+  });
+
+  it("setEventHidden writes the given state and records it once it lands", async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(
+      () => ({
+        ids: useHiddenEventIds(),
+        hidden: useToggleEventHidden(),
+      }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.hidden.setEventHidden("evt-show", true);
+    });
+    await waitFor(() => {
+      expect(result.current.ids.has("evt-show")).toBe(true);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: "evt-show", hidden: true },
+    ]);
+
+    act(() => {
+      result.current.hidden.setEventHidden("evt-show", false);
+    });
+    await waitFor(() => {
+      expect(result.current.ids.has("evt-show")).toBe(false);
+    });
+    expect(useUndoHistoryStore.getState().past.at(-1)).toEqual({
+      kind: "hidden",
+      eventId: "evt-show",
+      hidden: false,
+    });
   });
 });

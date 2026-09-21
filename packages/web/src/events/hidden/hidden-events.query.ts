@@ -18,6 +18,11 @@ import {
 } from "@web/events/hidden/hidden-events.storage";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
+import {
+  isRestoringHistory,
+  type UndoHistoryEntry,
+  undoHistoryActions,
+} from "@web/events/stores/undo.store";
 
 export const HIDDEN_EVENT_FAILURE_MESSAGE =
   "Couldn't update event visibility. The change was undone.";
@@ -61,15 +66,24 @@ export function useHiddenEventIds(): ReadonlySet<string> {
   return data ?? EMPTY_HIDDEN_EVENT_IDS;
 }
 
-export function useToggleEventHidden(): (eventId: string) => void {
+type HiddenMutationVariables = SetEventHiddenInput & {
+  undoEntry?: Extract<UndoHistoryEntry, { kind: "hidden" }>;
+};
+
+export function useToggleEventHidden(): {
+  setEventHidden: (eventId: string, hidden: boolean) => void;
+  toggleEventHidden: (eventId: string) => void;
+} {
   const source = useEventRepositorySource();
   const queryClient = useQueryClient();
   const queryKey = hiddenEventsQueryKeys.source(source);
 
   const mutation = useMutation({
-    mutationFn: async (
-      input: SetEventHiddenInput,
-    ): Promise<readonly string[]> => {
+    mutationFn: async ({
+      eventId,
+      hidden,
+    }: HiddenMutationVariables): Promise<readonly string[]> => {
+      const input = SetEventHiddenInputSchema.parse({ eventId, hidden });
       if (source === "remote") {
         return HiddenEventsApi.set(input);
       }
@@ -82,13 +96,13 @@ export function useToggleEventHidden(): (eventId: string) => void {
       writeHiddenEventIds(next);
       return next;
     },
-    onMutate: async (input) => {
+    onMutate: async ({ eventId, hidden }) => {
       await queryClient.cancelQueries({ queryKey });
       const snapshot =
         queryClient.getQueryData<readonly string[]>(queryKey) ?? [];
       queryClient.setQueryData(
         queryKey,
-        withHiddenEventId(snapshot, input.eventId, input.hidden),
+        withHiddenEventId(snapshot, eventId, hidden),
       );
       return { snapshot };
     },
@@ -98,21 +112,35 @@ export function useToggleEventHidden(): (eventId: string) => void {
         options: { role: "alert" },
       });
     },
-    onSuccess: (list) => {
+    onSuccess: (list, variables) => {
       queryClient.setQueryData(queryKey, list);
+      if (variables.undoEntry) {
+        undoHistoryActions.record(variables.undoEntry);
+      }
     },
   });
 
-  return useCallback(
+  const setEventHidden = useCallback(
+    (eventId: string, hidden: boolean) => {
+      const input = SetEventHiddenInputSchema.parse({ eventId, hidden });
+      mutation.mutate({
+        ...input,
+        undoEntry: isRestoringHistory()
+          ? undefined
+          : { kind: "hidden", eventId: input.eventId, hidden: input.hidden },
+      });
+    },
+    [mutation],
+  );
+
+  const toggleEventHidden = useCallback(
     (eventId: string) => {
       const current =
         queryClient.getQueryData<readonly string[]>(queryKey) ?? [];
-      const input = SetEventHiddenInputSchema.parse({
-        eventId,
-        hidden: !current.includes(eventId),
-      });
-      mutation.mutate(input);
+      setEventHidden(eventId, !current.includes(eventId));
     },
-    [mutation, queryClient, queryKey],
+    [queryClient, queryKey, setEventHidden],
   );
+
+  return { setEventHidden, toggleEventHidden };
 }

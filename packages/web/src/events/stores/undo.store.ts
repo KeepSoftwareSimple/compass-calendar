@@ -8,16 +8,16 @@ import {
 } from "@web/events/repositories/event.repository.source.store";
 
 /**
- * One undoable event change. Edits keep full before/after snapshots so
- * undo/redo are symmetric `replace` replays; deletes keep the full event so
- * undo can recreate it (a single event) or un-cancel it (a recurring
- * occurrence, both under the same original id, A25); creates keep the full
- * optimistic event so undo can delete it and redo can recreate it.
+ * One undoable action. Event writes keep full snapshots so undo/redo are
+ * symmetric replays through the same mutation the user used. Non-event
+ * kinds (starting with hide/show) carry only the fields their own inverse
+ * needs. Each kind owns its inverse; there is no command bus.
  *
- * Every entry is scope-"this" by construction (event.mutation-history.ts
- * only ever records at that scope) or, for create, an unscoped whole-event
- * write — a scope "all"/"thisAndFollowing" edit has no client-computable
- * inverse (the server rewrites/splits the series) and is never recorded.
+ * Event edit/delete entries are scope-"this" by construction
+ * (event.mutation-history.ts only ever records at that scope). A create is
+ * an unscoped whole-event write. A scope "all"/"thisAndFollowing" edit has
+ * no client-computable inverse (the server rewrites/splits the series) and
+ * is never recorded as an event snapshot.
  */
 export type UndoHistoryEntry =
   | {
@@ -27,7 +27,8 @@ export type UndoHistoryEntry =
       after: Event;
     }
   | { kind: "delete"; event: Event }
-  | { kind: "create"; event: Event };
+  | { kind: "create"; event: Event }
+  | { kind: "hidden"; eventId: string; hidden: boolean };
 
 export interface State_UndoHistory {
   past: UndoHistoryEntry[];
@@ -67,15 +68,19 @@ export const runHistoryRestore = (fn: () => void) => {
 };
 
 // The event id a coalescing candidate targets, or null for kinds that never
-// coalesce (delete/create — only a run of same-event edits merges).
+// coalesce (delete/create/hidden — only a run of same-event edits merges).
 const coalesceTargetId = (entry: UndoHistoryEntry): string | null =>
   entry.kind === "edit" ? entry.id : null;
 
-const entryEvent = (entry: UndoHistoryEntry): Event =>
-  entry.kind === "edit" ? entry.before : entry.event;
+const entryEvent = (entry: UndoHistoryEntry): Event | null => {
+  if (entry.kind === "edit") return entry.before;
+  if (entry.kind === "delete" || entry.kind === "create") return entry.event;
+  return null;
+};
 
 const entrySeriesId = (entry: UndoHistoryEntry): string | null => {
   const event = entryEvent(entry);
+  if (!event) return null;
   if (event.recurrence.kind === "occurrence") {
     return event.recurrence.seriesId;
   }
