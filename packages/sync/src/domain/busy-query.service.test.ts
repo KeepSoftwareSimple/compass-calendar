@@ -136,6 +136,7 @@ describe("computeBusyAvailability truncation", () => {
               startAt: new Date("2026-07-14T09:00:00.000Z"),
               endAt: new Date("2026-07-14T10:00:00.000Z"),
               eventId: "event" as EventId,
+              calendarId,
             },
           ],
           truncated: true,
@@ -183,5 +184,12 @@ describe("computeBusyAvailability truncation", () => {
     expect(result.complete).toBe(false);
     expect(result.bookable).toBe(false);
     expect(result.intervals).toHaveLength(1);
+    expect(result.byCalendar).toEqual([
+      expect.objectContaining({
+        calendarId,
+        intervals: expect.any(Array),
+      }),
+    ]);
+    expect(result.byCalendar[0]?.intervals).toHaveLength(1);
   });
 });

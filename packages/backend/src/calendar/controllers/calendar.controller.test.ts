@@ -257,42 +257,41 @@ describe("CalendarController.availability sync outage", () => {
     await expect(settled()).rejects.toThrow();
   });
 
-  it("queries each calendar separately and attributes intervals to their real calendarId", async () => {
-    // The day-grid layout positions a busy block by calendarId and drops
-    // blocks for calendars it doesn't recognize — a merged, single-attributed
-    // response would silently lose busy time for every calendar but one.
-    // This asserts each requested calendar is queried on its own and its
-    // intervals keep their own, correct calendarId in the response.
-    const [first, second] = [objectId(), objectId()];
-    const queryBusyAvailability = mock(
-      (_principal: unknown, request: { calendarIds: readonly string[] }) => {
-        const requested = request.calendarIds[0];
-        const intervals =
-          requested === first
-            ? [
+  it("queries every calendar in one Sync call and keeps each interval's calendarId", async () => {
+    const [first, second, third] = [objectId(), objectId(), objectId()];
+    const queryBusyAvailability = mock(() =>
+      Promise.resolve({
+        ok: true as const,
+        value: {
+          intervals: [],
+          byCalendar: [
+            {
+              calendarId: first,
+              intervals: [
                 {
                   start: "2026-07-14T09:00:00.000Z",
                   end: "2026-07-14T10:00:00.000Z",
                 },
-              ]
-            : [
+              ],
+            },
+            { calendarId: second, intervals: [] },
+            {
+              calendarId: third,
+              intervals: [
                 {
                   start: "2026-07-14T14:00:00.000Z",
                   end: "2026-07-14T15:00:00.000Z",
                 },
-              ];
-        return Promise.resolve({
-          ok: true as const,
-          value: {
-            intervals,
-            computedAt: "2026-07-14T08:00:00.000Z",
-            connections: [],
-            complete: true,
-            issues: [],
-            bookable: true,
-          },
-        });
-      },
+              ],
+            },
+          ],
+          computedAt: "2026-07-14T08:00:00.000Z",
+          connections: [],
+          complete: true,
+          issues: [],
+          bookable: true,
+        },
+      }),
     );
     spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
       queryBusyAvailability,
@@ -300,11 +299,14 @@ describe("CalendarController.availability sync outage", () => {
 
     const { res, settled } = capturingRes();
     await calendarController.availability(
-      availabilityReqFor(objectId(), [first, second]),
+      availabilityReqFor(objectId(), [first, second, third]),
       res,
     );
 
-    expect(queryBusyAvailability).toHaveBeenCalledTimes(2);
+    expect(queryBusyAvailability).toHaveBeenCalledTimes(1);
+    expect(queryBusyAvailability.mock.calls[0]?.[1]).toMatchObject({
+      calendarIds: [first, second, third],
+    });
     await expect(settled()).resolves.toEqual({
       busyPeriods: [
         {
@@ -313,7 +315,7 @@ describe("CalendarController.availability sync outage", () => {
           end: "2026-07-14T10:00:00.000Z",
         },
         {
-          calendarId: second,
+          calendarId: third,
           start: "2026-07-14T14:00:00.000Z",
           end: "2026-07-14T15:00:00.000Z",
         },

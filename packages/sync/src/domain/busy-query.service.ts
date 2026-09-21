@@ -8,8 +8,10 @@ import {
   type TenantId,
 } from "@core/types/sync/identity.contracts";
 import { occupancyFactsForEvent } from "@sync/domain/booking-occupancy-facts";
-import { type EventRecord } from "@sync/storage/contracts/event.contracts";
-import { type EventRepository } from "@sync/storage/repositories/event.repository";
+import {
+  type EventRepository,
+  type OccupancyEvent,
+} from "@sync/storage/repositories/event.repository";
 import {
   type CalendarGeneration,
   type EventOccurrenceRepository,
@@ -99,6 +101,7 @@ export interface BusyOccurrenceInterval {
   start: Date;
   end: Date;
   eventId: EventId;
+  calendarId: SyncEventCalendarId;
 }
 
 export async function queryBusyOccurrences(
@@ -125,6 +128,7 @@ export async function queryBusyOccurrences(
       end:
         occurrence.endAt.getTime() < windowEnd ? occurrence.endAt : input.end,
       eventId: occurrence.eventId,
+      calendarId: occurrence.calendarId,
     }))
     .filter(
       (interval) =>
@@ -166,10 +170,17 @@ export interface ConnectionFreshness {
   lastHealthyAt: Date | null;
 }
 
+export interface BusyCalendarBusy {
+  calendarId: SyncEventCalendarId;
+  intervals: BusyInterval[];
+}
+
 export interface BusyAvailability {
   // Merged busy intervals from every requested calendar that had data (including
   // stale ones — their staleness is disclosed in `issues`, not hidden).
   intervals: BusyInterval[];
+  // The same intervals merged per requested calendar, in request order.
+  byCalendar: BusyCalendarBusy[];
   // When this result was computed, so the caller can reason about its own age.
   computedAt: Date;
   // Per-connection freshness for the connections backing the requested calendars.
@@ -304,12 +315,12 @@ export async function computeBusyAvailability(
     : { intervals: [], truncated: false };
   const rawIntervals = busyPage.intervals;
 
-  const eventsById = new Map<string, EventRecord>();
+  const eventsById = new Map<string, OccupancyEvent>();
   if (deps.events && rawIntervals.length > 0) {
     const eventIds = [
       ...new Set(rawIntervals.map((interval) => interval.eventId)),
     ];
-    const events = await deps.events.findByIds(
+    const events = await deps.events.findOccupancyByIds(
       input.tenantId,
       input.principalId,
       eventIds,
@@ -351,25 +362,36 @@ export async function computeBusyAvailability(
   const fallbackEmail =
     [...emailByConnectionId.values()].find((email) => email !== null) ?? null;
 
-  const intervals = mergeBusyIntervals(
-    rawIntervals.map((interval) => {
-      const event = eventsById.get(interval.eventId);
-      const accountEmail =
-        (event?.connectionId
-          ? emailByConnectionId.get(event.connectionId)
-          : undefined) ?? fallbackEmail;
-      const facts = occupancyFactsForEvent(event, accountEmail);
-      return {
-        start: interval.start,
-        end: interval.end,
-        hostIsOrganizer: facts.hostIsOrganizer,
-        hostResponseStatus: facts.hostResponseStatus,
-      };
-    }),
+  const attributed = rawIntervals.map((interval) => {
+    const event = eventsById.get(interval.eventId);
+    const accountEmail =
+      (event?.connectionId
+        ? emailByConnectionId.get(event.connectionId)
+        : undefined) ?? fallbackEmail;
+    const facts = occupancyFactsForEvent(event, accountEmail);
+    return {
+      calendarId: interval.calendarId,
+      start: interval.start,
+      end: interval.end,
+      hostIsOrganizer: facts.hostIsOrganizer,
+      hostResponseStatus: facts.hostResponseStatus,
+    };
+  });
+  const intervals = mergeBusyIntervals(attributed);
+  const byCalendarId = new Map<string, BusyInterval[]>(
+    input.calendarIds.map((calendarId) => [calendarId, []]),
   );
+  for (const interval of attributed) {
+    byCalendarId.get(interval.calendarId)?.push(interval);
+  }
+  const byCalendar = input.calendarIds.map((calendarId) => ({
+    calendarId,
+    intervals: mergeBusyIntervals(byCalendarId.get(calendarId) ?? []),
+  }));
 
   return {
     intervals,
+    byCalendar,
     computedAt: now,
     connections,
     complete,

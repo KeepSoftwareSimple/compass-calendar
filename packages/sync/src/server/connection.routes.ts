@@ -438,6 +438,7 @@ export function registerConnectionRoutes(
             issues: [],
             bookable: false,
             truncated: false,
+            byCalendar: [],
           }),
         );
         return;
@@ -1284,6 +1285,15 @@ function toBusyAvailabilityResponse(
       reason: issue.reason,
     })),
     bookable: availability.bookable,
+    byCalendar: availability.byCalendar.map((group) => ({
+      calendarId: group.calendarId,
+      intervals: group.intervals.map((interval) => ({
+        start: interval.start.toISOString(),
+        end: interval.end.toISOString(),
+        hostIsOrganizer: interval.hostIsOrganizer,
+        hostResponseStatus: interval.hostResponseStatus,
+      })),
+    })),
   });
 }
 
