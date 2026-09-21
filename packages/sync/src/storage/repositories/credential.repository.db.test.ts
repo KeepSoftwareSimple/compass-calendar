@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 import { type Db, type Document } from "mongodb";
-import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import { type ConnectionId } from "@core/types/sync/identity.contracts";
 import {
   TEST_CREDENTIAL_ENCRYPTION_KEY,
@@ -91,7 +90,7 @@ describe("CredentialRepository", () => {
     expect(reAuthed.accessTokenExpiresAt).toBeNull();
   });
 
-  it("reencrypts a legacy plaintext refresh token", async () => {
+  it("rejects a legacy plaintext row on read", async () => {
     const input = baseCredential();
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
       _id: input.connectionId,
@@ -106,30 +105,7 @@ describe("CredentialRepository", () => {
       updatedAt: new Date(),
     } as Document);
 
-    const sealed = toStoredOauthCredentialUpsert(
-      TEST_CREDENTIAL_ENCRYPTION_KEY,
-      input,
-    );
-    const updated = await repo.reencryptOauthRefresh(input.connectionId, {
-      refreshTokenCiphertext: sealed.refreshTokenCiphertext,
-      refreshTokenIv: sealed.refreshTokenIv,
-      refreshTokenTag: sealed.refreshTokenTag,
-      keyVersion: sealed.keyVersion,
-    });
-
-    expect(updated?.refreshTokenCiphertext).toBe(sealed.refreshTokenCiphertext);
-    const raw = await db
-      .collection(SYNC_COLLECTIONS.credentials)
-      .findOne(stringIdFilter(input.connectionId));
-    expect(raw).not.toHaveProperty("refreshToken");
-    expect(
-      decryptCredentialAtRest(TEST_CREDENTIAL_ENCRYPTION_KEY, {
-        ciphertext: String(raw?.["refreshTokenCiphertext"]),
-        iv: String(raw?.["refreshTokenIv"]),
-        tag: String(raw?.["refreshTokenTag"]),
-        keyVersion: Number(raw?.["keyVersion"]),
-      }),
-    ).toBe("refresh-token-secret");
+    await expect(repo.findByConnection(input.connectionId)).rejects.toThrow();
   });
 
   it("does not resurrect a credential that was deleted mid-refresh", async () => {
@@ -196,7 +172,7 @@ describe("CredentialRepository", () => {
     expect(serialized).not.toContain("access-token-value");
   });
 
-  it("parses a document stored without credentialKind as oauthRefresh", async () => {
+  it("rejects a document stored without credentialKind when it is plaintext", async () => {
     const connectionId = objectId() as ConnectionId;
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
       _id: connectionId,
@@ -210,11 +186,7 @@ describe("CredentialRepository", () => {
       updatedAt: new Date(),
     } as Document);
 
-    const read = await repo.findByConnection(connectionId);
-    expect(read).toMatchObject({
-      credentialKind: "oauthRefresh",
-      refreshToken: "legacy-refresh",
-    });
+    await expect(repo.findByConnection(connectionId)).rejects.toThrow();
   });
 
   it("stores a password credential without mixing oauth fields", async () => {

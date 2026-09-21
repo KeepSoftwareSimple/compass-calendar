@@ -353,15 +353,9 @@ describe("CredentialCustody", () => {
     expect(JSON.stringify(raw)).not.toContain("stored-refresh-token");
   });
 
-  it("re-encrypts a legacy plaintext refresh token after a successful refresh", async () => {
+  it("rejects a legacy plaintext refresh token on read", async () => {
     const connectionId = objectId() as ConnectionId;
-    const adapter = new FakeAdapter({
-      refreshed: {
-        accessToken: "fresh-token",
-        expiresAt: new Date("2026-01-01T01:00:00Z"),
-        grantedScopes: [],
-      },
-    });
+    const adapter = new FakeAdapter();
     const custody = makeCustody(adapter);
     await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
       _id: connectionId,
@@ -376,50 +370,8 @@ describe("CredentialCustody", () => {
       updatedAt: new Date(),
     } as Document);
 
-    await custody.getValidAccessToken(connectionId);
-
-    const raw = await db
-      .collection(SYNC_COLLECTIONS.credentials)
-      .findOne(stringIdFilter(connectionId));
-    expect(raw).not.toHaveProperty("refreshToken");
-    expect(raw?.["refreshTokenCiphertext"]).toBeString();
-    expect(JSON.stringify(raw)).not.toContain("legacy-plaintext-token");
-    expect(adapter.refreshCalls).toBe(1);
-  });
-
-  it("keeps legacy plaintext credentials usable when encryption is not configured", async () => {
-    const connectionId = objectId() as ConnectionId;
-    const adapter = new FakeAdapter({
-      refreshed: {
-        accessToken: "fresh-token",
-        expiresAt: new Date("2026-01-01T01:00:00Z"),
-        grantedScopes: [],
-      },
-    });
-    const custody = new CredentialCustody(repo, () => adapter, fixedNow);
-    await db.collection(SYNC_COLLECTIONS.credentials).insertOne({
-      _id: connectionId,
-      credentialKind: "oauthRefresh",
-      provider: "google",
-      refreshToken: "legacy-plaintext-token",
-      accessToken: null,
-      accessTokenExpiresAt: null,
-      refreshFailureCount: 0,
-      scopes: ["https://www.googleapis.com/auth/calendar.events"],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    } as Document);
-
-    await expect(custody.getValidAccessToken(connectionId)).resolves.toBe(
-      "fresh-token",
-    );
-
-    const raw = await db
-      .collection(SYNC_COLLECTIONS.credentials)
-      .findOne(stringIdFilter(connectionId));
-    expect(raw?.["refreshToken"]).toBe("legacy-plaintext-token");
-    expect(raw).not.toHaveProperty("refreshTokenCiphertext");
-    expect(adapter.refreshCalls).toBe(1);
+    await expect(custody.getValidAccessToken(connectionId)).rejects.toThrow();
+    expect(adapter.refreshCalls).toBe(0);
   });
 
   it("deletes the credential and revokes it on disconnect", async () => {

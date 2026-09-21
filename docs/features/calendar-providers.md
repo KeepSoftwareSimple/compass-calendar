@@ -189,11 +189,12 @@ Apple polling env overrides (see Apple polling cadence):
 Discriminated on `credentialKind: "oauthRefresh" | "password"`. Documents
 without `credentialKind` parse as `oauthRefresh`.
 
-Password credentials are always sealed at rest. New OAuth refresh tokens are
-also sealed by `CredentialCustody.store` with the same
-`sync.credentialEncryptionKey`. Legacy plaintext `refreshToken` rows remain
-readable and are lazily re-encrypted on refresh. Storing a new credential
-requires the key.
+Password credentials are always sealed at rest. OAuth refresh tokens are
+always sealed by `CredentialCustody.store` with
+`sync.credentialEncryptionKey`. Plaintext rows are rejected at read time;
+the sync app refuses to start while any remain. Use
+`bun run cli encrypt-credentials --apply` to backfill legacy rows. Whenever
+any stored OAuth credential exists, the encryption key is required at startup.
 
 ### Poll-only providers
 
@@ -267,12 +268,6 @@ may still be hosted by Google or Microsoft."
 
 Each alias names the release that removes it.
 
-- **OAuth plaintext rows.** New OAuth refresh tokens are encrypted at rest with
-  `sync.credentialEncryptionKey`. Legacy plaintext `refreshToken` rows stay
-  readable and are lazily re-encrypted on refresh. `encrypt-credentials`
-  backfills the rest. Milestone C drops plaintext acceptance. (The tracking
-  issue still listed "encrypt OAuth at rest" as C work; that is already
-  done for new stores.)
 - **`GOOGLE_REVOKED`.** Alias of `CONNECTION_REVOKED` on the SSE and HTTP
   wires. `revokedConnectionServerMessages` emits both. Event mutations still
   return HTTP 410 `GOOGLE_REVOKED`. Milestone C removes `GOOGLE_REVOKED` after
