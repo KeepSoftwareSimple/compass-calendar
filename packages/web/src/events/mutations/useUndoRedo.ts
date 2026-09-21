@@ -2,7 +2,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
-import { UNDO_DECLINED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { setCalendarVisibility } from "@web/calendars/calendar-visibility.store";
+import { calendarVisibilityStatusMessage } from "@web/calendars/useCalendarVisibility";
+import {
+  CALENDAR_VISIBILITY_TOAST_ID,
+  UNDO_DECLINED_TOAST_ID,
+  UNDO_STATUS_TOAST_ID,
+} from "@web/common/constants/toast.constants";
 import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import {
   showRestoredToast,
@@ -11,6 +17,8 @@ import {
 import { dismissRecurrenceScopeToastFor } from "@web/common/utils/toast/recurrence-scope.toast";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { detailsLocation } from "@web/events/grid-event-draft.adapter";
+import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
+import { selfAttendeeResponseStatus } from "@web/events/mutations/event.mutation-history";
 import {
   type EventMutationCallbacks,
   type EventMutationDependencies,
@@ -45,8 +53,47 @@ const isDeleteEntry = (
 ): entry is Extract<UndoHistoryEntry, { kind: "delete" }> =>
   entry.kind === "delete";
 
-const entryEventId = (entry: UndoHistoryEntry): string =>
-  isDeleteEntry(entry) || isCreateEntry(entry) ? entry.event.id : entry.id;
+const isHiddenEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "hidden" }> =>
+  entry.kind === "hidden";
+
+const isCalendarVisibilityEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "calendarVisibility" }> =>
+  entry.kind === "calendarVisibility";
+
+const isRsvpEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "rsvp" }> =>
+  entry.kind === "rsvp";
+
+const isUnrecordedEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "unrecorded" }> =>
+  entry.kind === "unrecorded";
+
+const replayCalendarVisibility = (
+  isVisible: boolean,
+  calendarId: Extract<
+    UndoHistoryEntry,
+    { kind: "calendarVisibility" }
+  >["calendarId"],
+  label: string,
+) => {
+  if (!setCalendarVisibility(calendarId, isVisible)) return;
+  showStatusToast(
+    CALENDAR_VISIBILITY_TOAST_ID,
+    calendarVisibilityStatusMessage(isVisible, label),
+  );
+};
+
+const entryEventId = (entry: UndoHistoryEntry): string | null => {
+  if (isDeleteEntry(entry) || isCreateEntry(entry)) return entry.event.id;
+  if (entry.kind === "edit" || isRsvpEntry(entry)) return entry.id;
+  if (isHiddenEntry(entry)) return entry.eventId;
+  return null;
+};
 
 // Edit replays keep the same React key (in-place update); delete-undo may
 // need a frame or two for the card to remount. `focusCalendarEventElement`
@@ -113,6 +160,7 @@ function snapshotMatches(current: Event, expected: Event): boolean {
  */
 export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
   const mutations = useEventMutations(dependencies);
+  const { setEventHidden } = useToggleEventHidden();
   const queryClient = useQueryClient();
   const activeSource = useEventRepositorySource();
   const source = dependencies.source ?? activeSource;
@@ -220,15 +268,26 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
 
   const undo = useCallback(() => {
     const entry = undoHistoryActions.peekUndo();
-    if (!entry) return;
+    if (!entry) {
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Nothing to undo");
+      return;
+    }
+
+    if (isUnrecordedEntry(entry)) {
+      undoHistoryActions.dropTopUndo();
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Can't undo the last change");
+      return;
+    }
 
     // Remove a promotion affordance only when undoing its own narrow action.
     // Undoing a later, unrelated event must leave the earlier opportunity live.
     const opportunity =
       useRecurrenceScopeOpportunityStore.getState().opportunity;
+    const targetEventId = entryEventId(entry);
     if (
       opportunity?.source === source &&
-      opportunity.original.id === entryEventId(entry)
+      targetEventId !== null &&
+      opportunity.original.id === targetEventId
     ) {
       recurrenceScopeOpportunityActions.clear();
       dismissRecurrenceScopeToastFor(opportunity);
@@ -246,9 +305,36 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
       }
     }
 
+    if (isRsvpEntry(entry)) {
+      const current = findEventInCache(queryClient, entry.id, source);
+      if (
+        current &&
+        selfAttendeeResponseStatus(current, entry.accountEmail) !== entry.after
+      ) {
+        undoHistoryActions.dropTopUndo();
+        showUndoDeclinedToast();
+        return;
+      }
+    }
+
     undoHistoryActions.commitUndo();
     runHistoryRestore(() => {
-      if (isDeleteEntry(entry)) {
+      if (isCalendarVisibilityEntry(entry)) {
+        replayCalendarVisibility(
+          !entry.isVisible,
+          entry.calendarId,
+          entry.label,
+        );
+      } else if (isHiddenEntry(entry)) {
+        setEventHidden(entry.eventId, !entry.hidden);
+      } else if (isRsvpEntry(entry)) {
+        mutations.rsvp({
+          id: entry.id as EventId,
+          responseStatus: entry.before,
+          scope: "single",
+          accountEmail: entry.accountEmail,
+        });
+      } else if (isDeleteEntry(entry)) {
         // A delete surfaced a "Deleted" toast; flip it to "Restored" only
         // once the recreate actually lands (or to a failure toast if it
         // doesn't) — the mutation can still fail the strict write schema or
@@ -264,12 +350,31 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
         replaySnapshot(entry.id as EventId, entry.before);
       }
     });
-    if (!isCreateEntry(entry)) focusCalendarEventElement(entryEventId(entry));
-  }, [queryClient, source, undoDelete, undoCreate, replaySnapshot]);
+    if (targetEventId !== null && !isCreateEntry(entry)) {
+      focusCalendarEventElement(targetEventId);
+    }
+  }, [
+    queryClient,
+    source,
+    undoDelete,
+    undoCreate,
+    replaySnapshot,
+    setEventHidden,
+    mutations,
+  ]);
 
   const redo = useCallback(() => {
     const entry = undoHistoryActions.peekRedo();
-    if (!entry) return;
+    if (!entry) {
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Nothing to redo");
+      return;
+    }
+
+    if (isUnrecordedEntry(entry)) {
+      undoHistoryActions.dropTopRedo();
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Can't undo the last change");
+      return;
+    }
 
     if (entry.kind === "edit") {
       const current = findEventInCache(queryClient, entry.id, source);
@@ -280,9 +385,36 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
       }
     }
 
+    if (isRsvpEntry(entry)) {
+      const current = findEventInCache(queryClient, entry.id, source);
+      if (
+        current &&
+        selfAttendeeResponseStatus(current, entry.accountEmail) !== entry.before
+      ) {
+        undoHistoryActions.dropTopRedo();
+        showUndoDeclinedToast();
+        return;
+      }
+    }
+
     undoHistoryActions.commitRedo();
     runHistoryRestore(() => {
-      if (isDeleteEntry(entry)) {
+      if (isCalendarVisibilityEntry(entry)) {
+        replayCalendarVisibility(
+          entry.isVisible,
+          entry.calendarId,
+          entry.label,
+        );
+      } else if (isHiddenEntry(entry)) {
+        setEventHidden(entry.eventId, entry.hidden);
+      } else if (isRsvpEntry(entry)) {
+        mutations.rsvp({
+          id: entry.id as EventId,
+          responseStatus: entry.after,
+          scope: "single",
+          accountEmail: entry.accountEmail,
+        });
+      } else if (isDeleteEntry(entry)) {
         mutations.delete({ id: entry.event.id as EventId, scope: "this" });
       } else if (isCreateEntry(entry)) {
         const { event } = entry;
@@ -305,12 +437,13 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
         replaySnapshot(entry.id as EventId, entry.after);
       }
     });
+    const redoEventId = entryEventId(entry);
     if (isCreateEntry(entry)) {
       focusCalendarEventElement(entry.event.id);
-    } else if (!isDeleteEntry(entry)) {
-      focusCalendarEventElement(entry.id);
+    } else if (redoEventId !== null && !isDeleteEntry(entry)) {
+      focusCalendarEventElement(redoEventId);
     }
-  }, [queryClient, source, mutations, replaySnapshot]);
+  }, [queryClient, source, mutations, replaySnapshot, setEventHidden]);
 
   return { undo, redo, canUndo, canRedo };
 }

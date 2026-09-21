@@ -34,7 +34,7 @@ export const useDayCalendarContextMenu = ({
   const duplicateContextMenuEvent = useDuplicateEvent(contextMenuEventId);
   const deleteContextMenuEvent = useDeleteEvent(contextMenuEventId);
   const setContextMenuEventColor = useSetEventColor(contextMenuEventId);
-  const toggleEventHidden = useToggleEventHidden();
+  const toggleEventHidden = useToggleEventHidden().toggleEventHidden;
 
   const { context, refs, floatingStyles } = useFloating({
     ...CONTEXT_MENU_FLOATING_OPTIONS,

@@ -120,6 +120,9 @@ import {
   snapshotEventCreateHistory,
   snapshotEventDeleteHistory,
   snapshotEventEditHistory,
+  snapshotRsvpHistory,
+  UNRECORDED_HISTORY_ENTRY,
+  undoEntryForWrite,
 } from "./event.mutation-history";
 
 type EventMutationContext = {
@@ -1053,7 +1056,7 @@ export function useEventMutations(
             input: finalInput,
             writeKey: id,
             callbacks,
-            undoEntry: undoEntry ?? undefined,
+            undoEntry: undoEntryForWrite(undoEntry),
           },
           callbacks,
         );
@@ -1134,7 +1137,7 @@ export function useEventMutations(
             opportunityId,
             callbacks,
             seriesMasterSchedule: seriesMaster.schedule,
-            undoEntry: undoEntry ?? undefined,
+            undoEntry: undoEntryForWrite(undoEntry),
           },
           callbacks,
         );
@@ -1172,7 +1175,7 @@ export function useEventMutations(
           writeKey: payload.id,
           skipRepository: !existing,
           opportunityId,
-          undoEntry: entry ?? undefined,
+          undoEntry: undoEntryForWrite(entry),
           deletedToast,
         });
       },
@@ -1188,11 +1191,21 @@ export function useEventMutations(
         // scope-"all" replace.
         const writeKey =
           scope === "all" ? seriesWriteKey(original, "all", id) : id;
+        const undoEntry = original
+          ? snapshotRsvpHistory({
+              id,
+              original,
+              responseStatus,
+              scope,
+              accountEmail,
+            })
+          : null;
         rsvpMutation.mutate({
           id,
           input: { responseStatus, scope },
           accountEmail,
           writeKey,
+          undoEntry: undoEntryForWrite(undoEntry),
         });
       },
       promoteRecurring: (
@@ -1238,6 +1251,7 @@ export function useEventMutations(
               writeKey: id,
               originalOverride: opportunity.original,
               seriesMasterSchedule: seriesMaster.schedule,
+              undoEntry: UNRECORDED_HISTORY_ENTRY,
             },
             { onSuccess, onSettled },
           );
@@ -1251,6 +1265,7 @@ export function useEventMutations(
             writeKey: id,
             skipRepository: false,
             originalOverride: opportunity.original,
+            undoEntry: UNRECORDED_HISTORY_ENTRY,
           },
           { onSuccess, onSettled },
         );

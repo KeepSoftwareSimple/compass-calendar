@@ -12,6 +12,7 @@ import { ENV_WEB } from "@web/common/constants/env.constants";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
+import { useUndoHistoryStore } from "@web/events/stores/undo.store";
 import { useEventMutations } from "./useEventMutations";
 import { describe, expect, it } from "bun:test";
 
@@ -224,6 +225,7 @@ describe("useEventMutations optimistic rsvp", () => {
         otherGuest,
       ]);
     });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
   });
 
   it("paints the master and every cached occurrence for a series-wide answer", async () => {
@@ -287,5 +289,129 @@ describe("useEventMutations optimistic rsvp", () => {
     await waitFor(() => {
       expect(queryClient.getQueryState(weekKey)?.isInvalidated).toBe(true);
     });
+  });
+});
+
+describe("useEventMutations rsvp undo history", () => {
+  it("records the previous and next status after a this-event answer lands", async () => {
+    captureRsvpRequests();
+    const event = invitedEvent({
+      content: {
+        kind: "details",
+        title: "Planning",
+        description: "",
+        attendees: [selfEntry("declined"), otherGuest],
+      },
+    });
+    const { hook, queryClient } = setup();
+    queryClient.setQueryData(weekKey, normalized(event));
+
+    act(() => {
+      hook.result.current.rsvp({
+        id: event.id,
+        responseStatus: "accepted",
+        scope: "single",
+        accountEmail: ACCOUNT_EMAIL,
+      });
+    });
+
+    await waitFor(() => {
+      expect(useUndoHistoryStore.getState().past).toEqual([
+        {
+          kind: "rsvp",
+          id: event.id,
+          accountEmail: ACCOUNT_EMAIL,
+          before: "declined",
+          after: "accepted",
+        },
+      ]);
+    });
+  });
+
+  it("records an unrecorded marker when the previous status is needsAction", async () => {
+    captureRsvpRequests();
+    const event = invitedEvent();
+    const { hook, queryClient } = setup();
+    queryClient.setQueryData(weekKey, normalized(event));
+
+    act(() => {
+      hook.result.current.rsvp({
+        id: event.id,
+        responseStatus: "accepted",
+        scope: "single",
+        accountEmail: ACCOUNT_EMAIL,
+      });
+    });
+
+    await waitFor(() => {
+      expect(cachedAttendees(queryClient, event.id)?.[0]?.responseStatus).toBe(
+        "accepted",
+      );
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
+  });
+
+  it("records an unrecorded marker for a scope-all answer", async () => {
+    captureRsvpRequests();
+    const event = invitedEvent({
+      content: {
+        kind: "details",
+        title: "Planning",
+        description: "",
+        attendees: [selfEntry("declined"), otherGuest],
+      },
+    });
+    const { hook, queryClient } = setup();
+    queryClient.setQueryData(weekKey, normalized(event));
+
+    act(() => {
+      hook.result.current.rsvp({
+        id: event.id,
+        responseStatus: "accepted",
+        scope: "all",
+        accountEmail: ACCOUNT_EMAIL,
+      });
+    });
+
+    await waitFor(() => {
+      expect(cachedAttendees(queryClient, event.id)?.[0]?.responseStatus).toBe(
+        "accepted",
+      );
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
+  });
+
+  it("records an unrecorded marker when the cache has no self attendee", async () => {
+    captureRsvpRequests();
+    const event = invitedEvent({
+      content: {
+        kind: "details",
+        title: "Planning",
+        description: "",
+        attendees: [otherGuest],
+      },
+    });
+    const { hook, queryClient } = setup();
+    queryClient.setQueryData(weekKey, normalized(event));
+
+    act(() => {
+      hook.result.current.rsvp({
+        id: event.id,
+        responseStatus: "accepted",
+        scope: "single",
+        accountEmail: ACCOUNT_EMAIL,
+      });
+    });
+
+    await waitFor(() => {
+      expect(cachedAttendees(queryClient, event.id)).toEqual([otherGuest]);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 });

@@ -284,18 +284,19 @@ With a grid event focused and no form field being typed in, pressing `E` then `T
 
 ### UX
 
-After deleting or moving an event, pressing Cmd+Z (Mac) or Ctrl+Z (Windows/Linux) undoes it — equivalent to clicking the undo toast.
+After deleting or moving an event, pressing Cmd+Z (Mac) or Ctrl+Z (Windows/Linux) undoes it. After a series-wide edit or delete (scope All Events or This and Following), Cmd+Z toasts `Can't undo the last change` and leaves the previous undoable action intact; a second press then undoes that earlier action. Empty history toasts `Nothing to undo`.
 
 ### Steps
 
 1. Delete an event (see Scenario 9).
 2. Immediately press Cmd+Z (Mac) or Ctrl+Z (Windows/Linux).
+3. Edit a recurring event and apply it to All Events, then press Cmd+Z, then press Cmd+Z again.
 
 ### Expected Results
 
 - The deleted event is restored with its original properties.
-- The undo toast dismisses.
 - Pressing Cmd+Shift+Z (or Ctrl+Shift+Z) immediately after redoes the undone action.
+- After the series-wide edit, the first Cmd+Z toasts `Can't undo the last change` and does not reverse an older, unrelated change. The second Cmd+Z undoes the earlier delete or edit.
 
 ---
 

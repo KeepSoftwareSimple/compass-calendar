@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
-import { type EventId } from "@core/types/domain-primitives";
+import { CalendarIdSchema, type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
@@ -10,8 +10,20 @@ import {
 } from "@core/types/event-command.contracts";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
-import { EVENT_DELETED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
+import { useHiddenCalendarIds } from "@web/calendars/calendar-visibility.store";
+import { useCalendarVisibility } from "@web/calendars/useCalendarVisibility";
+import {
+  CALENDAR_VISIBILITY_TOAST_ID,
+  EVENT_DELETED_TOAST_ID,
+  UNDO_STATUS_TOAST_ID,
+} from "@web/common/constants/toast.constants";
+import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
+import {
+  useHiddenEventIds,
+  useToggleEventHidden,
+} from "@web/events/hidden/hidden-events.query";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
 import { useRecurrenceScopeOpportunityStore } from "@web/events/recurrence/recurrence-scope-opportunity.store";
@@ -71,10 +83,15 @@ const setup = () => {
   const wrapper = ({ children }: PropsWithChildren) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
+  seedHiddenEventIds(queryClient, []);
   const hook = renderHook(
     () => ({
       mutations: useEventMutations(dependencies),
       undoRedo: useUndoRedo(dependencies),
+      hidden: useToggleEventHidden(),
+      ids: useHiddenEventIds(),
+      calendar: useCalendarVisibility(),
+      hiddenCalendarIds: useHiddenCalendarIds(),
     }),
     { wrapper },
   );
@@ -349,11 +366,22 @@ describe("useUndoRedo", () => {
     );
   });
 
-  test("undo and redo are no-ops with empty history", () => {
+  test("undo and redo toast when history is empty", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
     const context = setup();
 
     act(() => context.hook.result.current.undoRedo.undo());
+    expect(mocks.update).toHaveBeenCalledWith(
+      UNDO_STATUS_TOAST_ID,
+      expect.objectContaining({ render: "Nothing to undo" }),
+    );
+
     act(() => context.hook.result.current.undoRedo.redo());
+    expect(mocks.update).toHaveBeenCalledWith(
+      UNDO_STATUS_TOAST_ID,
+      expect.objectContaining({ render: "Nothing to redo" }),
+    );
 
     expect(context.calls).toEqual([]);
     expect(context.hook.result.current.undoRedo.canUndo).toBe(false);
@@ -649,6 +677,41 @@ describe("useUndoRedo", () => {
     expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
   });
 
+  test("undoes a hide by restoring visibility, redo hides again, replay records nothing", async () => {
+    const context = setup();
+    const original = event();
+    context.queryClient.setQueryData(calendarKey, normalized(original));
+
+    act(() =>
+      context.hook.result.current.hidden.toggleEventHidden(original.id),
+    );
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(true);
+      expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: original.id, hidden: true },
+    ]);
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(false);
+    });
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(context.hook.result.current.undoRedo.canRedo).toBe(true);
+
+    act(() => context.hook.result.current.undoRedo.redo());
+
+    await waitFor(() => {
+      expect(context.hook.result.current.ids.has(original.id)).toBe(true);
+    });
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: original.id, hidden: true },
+    ]);
+    expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+  });
+
   test("undoes a series create with a scope-all delete", async () => {
     const context = setup();
     const created = event({
@@ -683,5 +746,183 @@ describe("useUndoRedo", () => {
     });
     const deleteCall = context.calls.find(({ method }) => method === "delete");
     expect(deleteCall?.value).toEqual({ id: created.id, scope: "all" });
+  });
+
+  test("undoes hiding a calendar, toasts Showing X calendar, and redo re-hides it", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const context = setup();
+    const calendarId = CalendarIdSchema.parse(createObjectIdString());
+
+    act(() =>
+      context.hook.result.current.calendar.toggleCalendarVisibility(
+        calendarId,
+        false,
+        "Work",
+      ),
+    );
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      true,
+    );
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      {
+        kind: "calendarVisibility",
+        calendarId,
+        label: "Work",
+        isVisible: false,
+      },
+    ]);
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      false,
+    );
+    expect(mocks.update).toHaveBeenCalledWith(
+      CALENDAR_VISIBILITY_TOAST_ID,
+      expect.objectContaining({ render: "Showing Work calendar" }),
+    );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(context.hook.result.current.undoRedo.canRedo).toBe(true);
+
+    act(() => context.hook.result.current.undoRedo.redo());
+
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      true,
+    );
+    expect(mocks.update).toHaveBeenCalledWith(
+      CALENDAR_VISIBILITY_TOAST_ID,
+      expect.objectContaining({ render: "Hidden Work calendar" }),
+    );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(1);
+  });
+
+  test("a scope-all edit toasts instead of undoing the previous entry; a second undo then undoes it", async () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const context = setup();
+    const original = event();
+    const other = event({
+      content: { kind: "details", title: "Other", description: "" },
+    });
+    context.queryClient.setQueryData(calendarKey, normalized(original, other));
+
+    act(() =>
+      context.hook.result.current.mutations.replace({
+        id: original.id,
+        input: {
+          content: {
+            kind: "details",
+            title: "Moved",
+            description: "",
+            location: "",
+          },
+          schedule: original.schedule as never,
+          recurrence: { kind: "preserve" },
+          scope: "this",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(context.hook.result.current.undoRedo.canUndo).toBe(true);
+    });
+
+    act(() =>
+      context.hook.result.current.mutations.replace({
+        id: other.id,
+        input: {
+          content: {
+            kind: "details",
+            title: "Series",
+            description: "",
+            location: "",
+          },
+          schedule: other.schedule as never,
+          recurrence: { kind: "preserve" },
+          scope: "all",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(useUndoHistoryStore.getState().past.at(-1)).toEqual({
+        kind: "unrecorded",
+      });
+    });
+    const recordedBeforeMarker = useUndoHistoryStore
+      .getState()
+      .past.filter((entry) => entry.kind !== "unrecorded");
+    expect(recordedBeforeMarker).toHaveLength(1);
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    expect(mocks.update).toHaveBeenCalledWith(
+      UNDO_STATUS_TOAST_ID,
+      expect.objectContaining({ render: "Can't undo the last change" }),
+    );
+    expect(useUndoHistoryStore.getState().past).toEqual(recordedBeforeMarker);
+    expect(
+      context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+        ?.entities[original.id]?.content,
+    ).toMatchObject({ title: "Moved" });
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    await waitFor(() => {
+      const title =
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
+          ?.entities[original.id]?.content;
+      expect(title?.kind === "details" && title.title).toBe("Original");
+    });
+    expect(mocks.update).not.toHaveBeenCalledWith(
+      UNDO_STATUS_TOAST_ID,
+      expect.objectContaining({ render: "Nothing to undo" }),
+    );
+  });
+
+  test("two consecutive unrecorded writes collapse to one marker", async () => {
+    const context = setup();
+    const first = event();
+    const second = event({
+      content: { kind: "details", title: "Second", description: "" },
+    });
+    context.queryClient.setQueryData(calendarKey, normalized(first, second));
+
+    act(() =>
+      context.hook.result.current.mutations.replace({
+        id: first.id,
+        input: {
+          content: first.content as {
+            kind: "details";
+            title: string;
+            description: string;
+            location: string;
+          },
+          schedule: first.schedule as never,
+          recurrence: { kind: "preserve" },
+          scope: "all",
+        },
+      }),
+    );
+    act(() =>
+      context.hook.result.current.mutations.replace({
+        id: second.id,
+        input: {
+          content: second.content as {
+            kind: "details";
+            title: string;
+            description: string;
+            location: string;
+          },
+          schedule: second.schedule as never,
+          recurrence: { kind: "preserve" },
+          scope: "all",
+        },
+      }),
+    );
+    await waitFor(() => {
+      expect(useUndoHistoryStore.getState().past).toEqual([
+        { kind: "unrecorded" },
+      ]);
+    });
   });
 });

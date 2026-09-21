@@ -173,12 +173,66 @@ describe("undoHistoryActions", () => {
     const seriesOccurrence = occurrence("occurrence", seriesId);
     undoHistoryActions.record({ kind: "delete", event: seriesOccurrence });
     undoHistoryActions.record(editEntry("unrelated"));
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "occurrence",
+      hidden: true,
+    });
 
     undoHistoryActions.discardSeries(seriesId);
 
     expect(useUndoHistoryStore.getState().past).toEqual([
       editEntry("unrelated"),
+      { kind: "hidden", eventId: "occurrence", hidden: true },
     ]);
+  });
+
+  it("does not coalesce hide/show entries, even for the same event", () => {
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "a",
+      hidden: true,
+    });
+    undoHistoryActions.record({
+      kind: "hidden",
+      eventId: "a",
+      hidden: false,
+    });
+
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "hidden", eventId: "a", hidden: true },
+      { kind: "hidden", eventId: "a", hidden: false },
+    ]);
+  });
+
+  it("does not coalesce calendar visibility entries", () => {
+    const calendarId = "cal-a" as never;
+    undoHistoryActions.record({
+      kind: "calendarVisibility",
+      calendarId,
+      label: "Work",
+      isVisible: false,
+    });
+    undoHistoryActions.record({
+      kind: "calendarVisibility",
+      calendarId,
+      label: "Work",
+      isVisible: true,
+    });
+
+    expect(useUndoHistoryStore.getState().past).toHaveLength(2);
+  });
+
+  it("collapses consecutive unrecorded markers into one and still clears redo", () => {
+    undoHistoryActions.record(editEntry("a"));
+    undoHistoryActions.commitUndo();
+    undoHistoryActions.record({ kind: "unrecorded" });
+    undoHistoryActions.record({ kind: "unrecorded" });
+    undoHistoryActions.record({ kind: "unrecorded" });
+
+    const { past, future } = useUndoHistoryStore.getState();
+    expect(past).toEqual([{ kind: "unrecorded" }]);
+    expect(future).toHaveLength(0);
   });
 
   it("commitRedo caps past at 30, dropping the oldest on a long redo run", () => {

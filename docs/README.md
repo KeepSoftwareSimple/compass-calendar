@@ -34,6 +34,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [Calendar providers](./features/calendar-providers.md)
 - [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md)
 - [Hidden Events](./features/hidden-events.md)
+- [Undo of recurring-series writes (v1)](./features/undo-series.md)
 - [Offline Storage And Migrations](./features/offline-storage-and-migrations.md)
 - [Password Auth Flow](./features/password-auth-flow.md)
 - [Welcome Email Sequence](./features/welcome-email-sequence.md) (plan)

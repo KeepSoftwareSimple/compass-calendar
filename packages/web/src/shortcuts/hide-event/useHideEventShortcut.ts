@@ -9,7 +9,7 @@ import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
  * jump owning letters.
  */
 export function useHideEventShortcut() {
-  const toggleEventHidden = useToggleEventHidden();
+  const toggleEventHidden = useToggleEventHidden().toggleEventHidden;
 
   useBareLetterShortcut(
     HIDE_EVENT_LETTER,

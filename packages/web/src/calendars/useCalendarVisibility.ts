@@ -2,9 +2,18 @@ import { useState } from "react";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { setCalendarVisibility } from "@web/calendars/calendar-visibility.store";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import {
+  isRestoringHistory,
+  undoHistoryActions,
+} from "@web/events/stores/undo.store";
 
 export const CALENDAR_VISIBILITY_FAILURE_MESSAGE =
   "Couldn't update calendar visibility. The change was undone.";
+
+export const calendarVisibilityStatusMessage = (
+  isVisible: boolean,
+  label: string,
+) => (isVisible ? `Showing ${label} calendar` : `Hidden ${label} calendar`);
 
 /**
  * Client-owned calendar visibility toggle (S39 A2).
@@ -32,9 +41,16 @@ export function useCalendarVisibility() {
       return;
     }
 
-    setAnnouncement(
-      isVisible ? `Showing ${label} calendar` : `Hidden ${label} calendar`,
-    );
+    if (!isRestoringHistory()) {
+      undoHistoryActions.record({
+        kind: "calendarVisibility",
+        calendarId,
+        label,
+        isVisible,
+      });
+    }
+
+    setAnnouncement(calendarVisibilityStatusMessage(isVisible, label));
   };
 
   return { toggleCalendarVisibility, announcement };
