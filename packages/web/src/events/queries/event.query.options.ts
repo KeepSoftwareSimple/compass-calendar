@@ -1,11 +1,19 @@
-import { queryOptions } from "@tanstack/react-query";
+import { type QueryClient, queryOptions } from "@tanstack/react-query";
+import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type Dayjs } from "@core/util/date/dayjs";
 import { isBackendUnavailableError } from "@web/api/util/backend-unavailable-error.util";
+import { setAuthSessionAuthenticated } from "@web/auth/compass/session/auth-session.store";
+import {
+  calendarQueryKeys,
+  ensureRemoteCalendars,
+} from "@web/calendars/calendar.query";
+import { isSentinelCalendarList } from "@web/calendars/local-calendar.sentinel";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import { getEventRepositoryBySource } from "@web/events/repositories/event.repository.util";
 import { fetchDayEvents } from "./day.event.query";
+import { deriveEventListCalendarIds } from "./derive-event-list-calendar-ids";
 import { eventQueryKeys } from "./event.query.keys";
 import { fetchWeekEvents } from "./week.event.query";
 
@@ -49,7 +57,6 @@ function rangeEventsQueryOptions(
       source,
       start: startDate,
       end: endDate,
-      calendarIds,
     }),
     queryFn: ({ signal }) =>
       fetchFn(
@@ -92,4 +99,43 @@ export function weekEventsViewQueryOptions({
     endDate: toUTCOffset(endOfView),
     calendarIds,
   });
+}
+
+/**
+ * Route prefetch for a day or week window. Remote reads wait for a real
+ * calendar list so the request that fills the view's query key carries
+ * server ids. Visibility is not part of that key, so this prefetch and the
+ * later hook share one entry.
+ */
+export function prefetchRangeEvents(
+  client: QueryClient,
+  source: EventRepositorySource,
+  authenticated: boolean,
+  optionsFor: (
+    calendarIds?: CalendarId[],
+  ) => ReturnType<typeof dayEventsQueryOptions>,
+): void {
+  if (authenticated) setAuthSessionAuthenticated(true);
+
+  const start = (calendarIds?: CalendarId[]) => {
+    void client.prefetchQuery(optionsFor(calendarIds)).catch(() => undefined);
+  };
+
+  if (source !== "remote") {
+    start();
+    return;
+  }
+
+  const cached = client.getQueryData<Calendar[]>(calendarQueryKeys.all);
+  if (cached && !isSentinelCalendarList(cached)) {
+    start(deriveEventListCalendarIds(cached));
+    return;
+  }
+
+  void ensureRemoteCalendars(client)
+    .then((calendars) => {
+      if (!calendars) return;
+      start(deriveEventListCalendarIds(calendars));
+    })
+    .catch(() => undefined);
 }

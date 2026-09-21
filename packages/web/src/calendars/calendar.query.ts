@@ -1,11 +1,19 @@
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  queryOptions,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useEffect } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { CalendarApi } from "@web/api/calendar.api";
+import { readAuthenticated } from "@web/auth/compass/session/auth-session.store";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { applyClientVisibility } from "@web/calendars/apply-client-visibility";
 import { useHiddenCalendarIds } from "@web/calendars/calendar-visibility.store";
 import {
   getLocalCalendarSentinelId,
+  isSentinelCalendarList,
   synthesizeLocalCalendar,
 } from "@web/calendars/local-calendar.sentinel";
 
@@ -24,7 +32,10 @@ export function calendarsQueryOptions(authenticated: boolean) {
   return queryOptions({
     queryKey: calendarQueryKeys.all,
     queryFn: async (): Promise<Calendar[]> => {
-      if (!authenticated) {
+      // `authenticated` is the hook/loader argument. `readAuthenticated`
+      // covers the gap before React re-renders after the session store flips,
+      // so a still-mounted anonymous observer cannot write the sentinel back.
+      if (!authenticated && !readAuthenticated()) {
         return [synthesizeLocalCalendar(getLocalCalendarSentinelId())];
       }
 
@@ -69,13 +80,56 @@ function selectVisibleCalendars(
   return result;
 }
 
+/**
+ * Remote calendar list for event prefetch. Drops a fresh anonymous sentinel
+ * first: staleTime would otherwise return it without calling the API.
+ * Returns undefined when the fetch still produced only the sentinel.
+ */
+export async function ensureRemoteCalendars(
+  client: QueryClient,
+): Promise<Calendar[] | undefined> {
+  const cached = client.getQueryData<Calendar[]>(calendarQueryKeys.all);
+  if (cached && !isSentinelCalendarList(cached)) return cached;
+
+  if (isSentinelCalendarList(cached)) {
+    client.removeQueries({ queryKey: calendarQueryKeys.all });
+  }
+
+  const calendars = await client.fetchQuery(calendarsQueryOptions(true));
+  if (isSentinelCalendarList(calendars)) return undefined;
+  return calendars;
+}
+
 export function useCalendarsQuery() {
   const { authenticated } = useSession();
   const hiddenIds = useHiddenCalendarIds();
-
-  return useQuery({
+  const queryClient = useQueryClient();
+  const query = useQuery({
     ...calendarsQueryOptions(authenticated),
     select: (calendars: Calendar[]) =>
       selectVisibleCalendars(calendars, hiddenIds),
   });
+
+  // The calendars key stays `["calendars"]` so existing cache writers keep
+  // working. Auth lives outside the key, and staleTime will not refetch when
+  // the query function identity changes, so drop the sentinel explicitly once
+  // a session exists.
+  useEffect(() => {
+    if (!authenticated && !readAuthenticated()) return;
+    // A just-settled anonymous fetch bumps dataUpdatedAt while the cache is
+    // still the sentinel. Reading it here re-runs this effect so that fetch
+    // is replaced instead of sitting for staleTime.
+    if (query.dataUpdatedAt === 0) return;
+    const cached = queryClient.getQueryData<Calendar[]>(calendarQueryKeys.all);
+    if (!isSentinelCalendarList(cached)) return;
+    if (
+      queryClient.getQueryState(calendarQueryKeys.all)?.fetchStatus ===
+      "fetching"
+    ) {
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: calendarQueryKeys.all });
+  }, [authenticated, query.dataUpdatedAt, queryClient]);
+
+  return query;
 }

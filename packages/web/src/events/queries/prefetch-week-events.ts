@@ -2,7 +2,10 @@ import { type QueryClient } from "@tanstack/react-query";
 import dayjs from "@core/util/date/dayjs";
 import { queryClient as defaultQueryClient } from "@web/api/query-client";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
-import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.options";
+import {
+  prefetchRangeEvents,
+  weekEventsViewQueryOptions,
+} from "@web/events/queries/event.query.options";
 import { getEventRepositorySource } from "@web/events/repositories/event.repository.util";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { weekEventsQueryWindow } from "@web/views/Week/util/week-window.util";
@@ -40,13 +43,13 @@ export function prefetchWeekEventsQuery({
   const { startOfView, endOfView } = weekEventsQueryWindow(
     weekAnchorForPrefetch(dateString),
   );
-  void client
-    .prefetchQuery(
-      weekEventsViewQueryOptions({
-        startOfView,
-        endOfView,
-        source: getEventRepositorySource(authenticated),
-      }),
-    )
-    .catch(() => undefined);
+  const source = getEventRepositorySource(authenticated);
+  prefetchRangeEvents(client, source, authenticated, (calendarIds) =>
+    weekEventsViewQueryOptions({
+      startOfView,
+      endOfView,
+      source,
+      calendarIds,
+    }),
+  );
 }
