@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker";
 import { NodeEnv } from "@core/constants/core.constants";
+import { type PostHogCaptureClient } from "@core/logger/posthog-capture";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { decryptCredentialAtRest } from "@core/security/credential-at-rest";
 import {
@@ -92,6 +93,21 @@ const objectId = () => faker.database.mongodbObjectId();
 const SECRET = "internal-secret";
 // The service signs OAuth state with a key derived from the root secret.
 const STATE_SECRET = deriveOAuthStateSecret(SECRET);
+
+const capturingPosthog = () => {
+  const events: Array<{
+    event: string;
+    distinctId: string;
+    properties: Record<string, unknown>;
+  }> = [];
+  const client: PostHogCaptureClient = {
+    capture: async (input) => {
+      events.push(input);
+    },
+    shutdown: async () => {},
+  };
+  return { client, events };
+};
 
 const testConfig = (overrides: Partial<SyncConfig> = {}): SyncConfig =>
   ({
@@ -805,8 +821,14 @@ describe("GET /sync/google", () => {
     config: SyncConfig,
     authAdapter?: ProviderAuthAdapter,
     registry?: ProviderRegistry,
+    posthog?: PostHogCaptureClient | null,
   ) => {
-    service = createSyncService(config, { mongo, authAdapter, registry });
+    service = createSyncService(config, {
+      mongo,
+      authAdapter,
+      registry,
+      posthog,
+    });
     await new Promise<void>((resolve) => service.httpServer.listen(0, resolve));
     const { port } = service.httpServer.address() as AddressInfo;
     base = `http://127.0.0.1:${port}`;
@@ -1143,6 +1165,203 @@ describe("GET /sync/google", () => {
 
     expect(statusOf(res)).toBe("error");
     expect(adapter.exchanges).toHaveLength(0);
+  });
+
+  const oauthCallbackOf = (
+    events: Array<{
+      event: string;
+      distinctId: string;
+      properties: Record<string, unknown>;
+    }>,
+  ) => events.filter((event) => event.event === "oauth_callback");
+
+  const locationParams = (res: Response) =>
+    new URL(res.headers.get("location") as string).searchParams;
+
+  it("captures oauth_callback for a first connect with intent connect", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    const res = await hitCallback(
+      `code=auth-code&state=${encodeURIComponent(validState(tenantId, principalId))}`,
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.distinctId).toBe("compass-sync");
+    expect(captured[0]!.properties).toEqual(
+      expect.objectContaining({
+        provider: "google",
+        outcome: "connected",
+        intent: "connect",
+      }),
+    );
+    expect(captured[0]!.properties).not.toHaveProperty("errorClass");
+    const params = locationParams(res);
+    expect(params.get("status")).toBe("connected");
+    expect(params.get("intent")).toBe("connect");
+    expect(params.get("cid")).toBe(
+      captured[0]!.properties["correlationId"] as string,
+    );
+  });
+
+  it("captures oauth_callback with intent reconnect when state names a connection", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const existing = await seedConnection(
+      connections,
+      tenantId,
+      principalId,
+      "reauth@example.com",
+    );
+    adapter.exchangeResult = {
+      ...adapter.exchangeResult,
+      account: {
+        providerAccountId: existing.account.providerAccountId,
+        email: "reauth@example.com",
+        displayName: null,
+      },
+    };
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    await hitCallback(
+      `code=c&state=${encodeURIComponent(reconnectState(tenantId, principalId, existing._id))}`,
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("connected");
+    expect(captured[0]!.properties["intent"]).toBe("reconnect");
+  });
+
+  it("captures oauth_callback declined when the user rejects consent", async () => {
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    await hitCallback("error=access_denied");
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("declined");
+  });
+
+  it("captures oauth_callback missingScopes when calendar access was withheld", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    adapter.exchangeResult = {
+      ...adapter.exchangeResult,
+      grantedScopes: ["https://www.googleapis.com/auth/userinfo.email"],
+    };
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    await hitCallback(
+      `code=auth-code&state=${encodeURIComponent(validState(tenantId, principalId))}`,
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("missingScopes");
+    expect(captured[0]!.properties["intent"]).toBe("connect");
+  });
+
+  it("captures oauth_callback accountMismatch on a wrong-account reconnect", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const existing = await seedConnection(
+      connections,
+      tenantId,
+      principalId,
+      "original@example.com",
+    );
+    adapter.exchangeResult = {
+      ...adapter.exchangeResult,
+      account: {
+        providerAccountId: "some-other-google-sub" as ProviderAccountId,
+        email: "other@example.com",
+        displayName: null,
+      },
+    };
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    await hitCallback(
+      `code=c&state=${encodeURIComponent(reconnectState(tenantId, principalId, existing._id))}`,
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("accountMismatch");
+    expect(captured[0]!.properties["intent"]).toBe("reconnect");
+  });
+
+  it("captures oauth_callback stateMismatch when state is for another provider", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    const posthog = capturingPosthog();
+    await startService(
+      activeConfig(),
+      adapter,
+      registryWithMicrosoft(adapter),
+      posthog.client,
+    );
+
+    await fetch(
+      `${base}/sync/microsoft?code=auth-code&state=${encodeURIComponent(validState(tenantId, principalId))}`,
+      { redirect: "manual" },
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("stateMismatch");
+    expect(captured[0]!.properties["provider"]).toBe("microsoft");
+    expect(captured[0]!.properties["intent"]).toBe("connect");
+  });
+
+  it("captures oauth_callback consentRequired for a Microsoft admin-consent error", async () => {
+    const posthog = capturingPosthog();
+    await startService(
+      activeConfig(),
+      adapter,
+      registryWithMicrosoft(adapter),
+      posthog.client,
+    );
+
+    await fetch(`${base}/sync/microsoft?error=consent_required`, {
+      redirect: "manual",
+    });
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("consentRequired");
+    expect(captured[0]!.properties["provider"]).toBe("microsoft");
+  });
+
+  it("captures oauth_callback error with the class name and no message text", async () => {
+    const tenantId = objectId() as TenantId;
+    const principalId = objectId() as PrincipalId;
+    adapter.exchangeError = new ProviderAuthError(
+      "exchangeFailed",
+      "token secret xyz should never leak",
+    );
+    const posthog = capturingPosthog();
+    await startService(activeConfig(), adapter, undefined, posthog.client);
+
+    await hitCallback(
+      `code=bad&state=${encodeURIComponent(validState(tenantId, principalId))}`,
+    );
+
+    const captured = oauthCallbackOf(posthog.events);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]!.properties["outcome"]).toBe("error");
+    expect(captured[0]!.properties["errorClass"]).toBe("ProviderAuthError");
+    expect(captured[0]!.properties).not.toHaveProperty("message");
+    expect(JSON.stringify(captured[0]!.properties)).not.toContain(
+      "token secret xyz should never leak",
+    );
   });
 });
 

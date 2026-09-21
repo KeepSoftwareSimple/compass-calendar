@@ -48,6 +48,8 @@ export type ConnectStatus = (typeof CONNECT_STATUSES)[number];
 export type ConnectRedirect = {
   provider: ProviderKind;
   status: ConnectStatus;
+  intent?: "connect" | "reconnect";
+  correlationId?: string;
 };
 
 const DECLINED_TOAST_ID: Record<ProviderKind, string> = {
@@ -76,6 +78,12 @@ function isConnectStatus(value: string | null): value is ConnectStatus {
   return (CONNECT_STATUSES as readonly string[]).includes(value ?? "");
 }
 
+function isConnectIntent(
+  value: string | null,
+): value is "connect" | "reconnect" {
+  return value === "connect" || value === "reconnect";
+}
+
 export function readConnectStatus(
   search = window.location.search,
 ): ConnectRedirect | null {
@@ -84,9 +92,13 @@ export function readConnectStatus(
   if (!providerResult.success) return null;
   const status = params.get("status");
   if (!isConnectStatus(status)) return null;
+  const intent = params.get("intent");
+  const correlationId = params.get("cid");
   return {
     provider: providerResult.data,
     status,
+    ...(isConnectIntent(intent) ? { intent } : {}),
+    ...(correlationId ? { correlationId } : {}),
   };
 }
 
@@ -105,6 +117,14 @@ export function showConnectStatusToast(redirect: ConnectRedirect): void {
 export async function applyConnectRedirect(
   redirect: ConnectRedirect,
 ): Promise<void> {
+  track("oauth_return", {
+    provider: redirect.provider,
+    status: redirect.status,
+    ...(redirect.intent ? { intent: redirect.intent } : {}),
+    ...(redirect.correlationId
+      ? { correlationId: redirect.correlationId }
+      : {}),
+  });
   await refreshUserMetadata({ force: true });
   if (redirect.status === "connected") {
     clearReconnectOverrideForProvider(redirect.provider);

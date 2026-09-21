@@ -37,6 +37,11 @@ export type UseConnectGoogleOptions = {
    * the begin request stays byte-identical to before features existed.
    */
   features?: ConnectionBeginFeatures;
+  /**
+   * Why this OAuth round-trip started. The reconnect banner passes
+   * `"reconnect"` so PostHog can split reconnects from first connects.
+   */
+  intent?: "connect" | "reconnect";
 };
 
 export type UseConnectGoogleResult = GoogleUiConfig & {

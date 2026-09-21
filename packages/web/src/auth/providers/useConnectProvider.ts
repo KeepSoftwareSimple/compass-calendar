@@ -6,6 +6,7 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
+import { track } from "@web/auth/posthog/track";
 import {
   type UseConnectGoogleOptions,
   type UseConnectGoogleResult,
@@ -142,6 +143,17 @@ export const useConnectProvider = (
         };
         const result = await AuthApi.beginConnection(beginRequest);
         if ("authorizationUrl" in result) {
+          const connectIntent =
+            options?.intent ??
+            (options?.newAccount
+              ? "connect"
+              : state === "RECONNECT_REQUIRED" && syncConnection?.id
+                ? "reconnect"
+                : "connect");
+          track("oauth_redirect_started", {
+            provider: kind,
+            intent: connectIntent,
+          });
           window.location.assign(result.authorizationUrl);
           return;
         }
@@ -163,6 +175,7 @@ export const useConnectProvider = (
   }, [
     kind,
     options?.features,
+    options?.intent,
     options?.newAccount,
     queryClient,
     state,

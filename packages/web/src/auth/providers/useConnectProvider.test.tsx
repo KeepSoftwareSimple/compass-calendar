@@ -3,6 +3,7 @@ import { ConnectionIdSchema } from "@core/types/sync/identity.contracts";
 import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { AuthApi } from "@web/api/auth.api";
+import * as Track from "@web/auth/posthog/track";
 import {
   connectAppleActions,
   useConnectAppleStore,
@@ -174,5 +175,39 @@ describe("useConnectProvider", () => {
     });
 
     beginSpy.mockRestore();
+  });
+
+  it("starts reconnect authorization with intent reconnect", async () => {
+    const assign = spyOn(window.location, "assign").mockImplementation(
+      () => {},
+    );
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
+      authorizationUrl: "#consent",
+    });
+    const trackSpy = spyOn(Track, "track").mockImplementation(() => {});
+
+    const { wrapper } = createStoreWrapper();
+    const { result } = renderHook(
+      () =>
+        useConnectProvider("google", {
+          connection: connection({ id: "connection-second" }),
+          intent: "reconnect",
+        }),
+      { wrapper },
+    );
+    act(() => result.current.connect());
+
+    await waitFor(() => {
+      expect(assign).toHaveBeenCalledWith("#consent");
+    });
+    expect(trackSpy).toHaveBeenCalledWith("oauth_redirect_started", {
+      provider: "google",
+      intent: "reconnect",
+    });
+
+    trackSpy.mockRestore();
+    beginSpy.mockRestore();
+    assign.mockRestore();
   });
 });

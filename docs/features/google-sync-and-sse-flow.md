@@ -210,6 +210,24 @@ Constraints:
 Without this, a user can stare at a stale “Updated …” label until they
 remember to click **Refresh calendar**.
 
+## Connect funnel observability
+
+Every Google or Microsoft calendar connect round-trip emits two PostHog events
+that share a short `correlationId` (`cid` on the redirect URL):
+
+1. Sync's public OAuth callback captures `oauth_callback` (distinct id
+   `compass-sync`) with `provider`, `outcome` (the redirect status), `intent`
+   (`connect` or `reconnect`, recovered from whether the signed state named a
+   connection), and `errorClass` (the Error class name, never the message)
+   when the outcome is `error`.
+2. The web app's `applyConnectRedirect` captures `oauth_return` with
+   `provider`, `status`, `intent`, and the same `correlationId` for every
+   parsed redirect, including `connected`. Existing `calendar_connected` and
+   `signup_failed` events are unchanged.
+
+The reconnect banner starts authorization with `intent: "reconnect"` so those
+events split reconnects from first connects.
+
 ## Revoked Token And Reconnect Lifecycle (`CONNECTION_REVOKED`)
 
 1. Sync classifies a dead grant as `authorizationRevoked`, discards the
