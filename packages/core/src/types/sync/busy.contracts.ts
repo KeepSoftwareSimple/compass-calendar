@@ -3,6 +3,10 @@ import { DateTimeSchema } from "@core/types/domain-primitives";
 import { SyncEventCalendarIdSchema } from "@core/types/sync/event.contracts";
 import { ConnectionIdSchema } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Busy-query contracts for Compass Sync. Availability results
 // must disclose freshness/completeness rather than presenting stale or
 // incomplete data as known-current, and a booking must fail closed when any
@@ -16,7 +20,7 @@ const isEndAfterStart = ({ start, end }: { start: string; end: string }) =>
 // Half-open [start, end) interval only: no calendar id, title, or other
 // event content ever appears on a busy interval, for privacy.
 export const BusyIntervalSchema = z
-  .strictObject({
+  .object({
     start: DateTimeSchema,
     end: DateTimeSchema,
   })
@@ -62,7 +66,7 @@ export const BusyQuerySchema = z
   );
 export type BusyQuery = z.infer<typeof BusyQuerySchema>;
 
-export const BusyConnectionEvidenceSchema = z.strictObject({
+export const BusyConnectionEvidenceSchema = z.object({
   connectionId: ConnectionIdSchema,
   lastSyncedAt: DateTimeSchema.nullable(),
   lastHealthyAt: DateTimeSchema.nullable(),
@@ -81,14 +85,14 @@ export type IncompleteCalendarReason = z.infer<
   typeof IncompleteCalendarReasonSchema
 >;
 
-export const IncompleteCalendarSchema = z.strictObject({
+export const IncompleteCalendarSchema = z.object({
   calendarId: SyncEventCalendarIdSchema,
   reason: IncompleteCalendarReasonSchema,
 });
 export type IncompleteCalendar = z.infer<typeof IncompleteCalendarSchema>;
 
 export const BusyQueryResponseSchema = z
-  .strictObject({
+  .object({
     intervals: z.array(BusyIntervalSchema).readonly(),
     computedAt: DateTimeSchema,
     connections: z.array(BusyConnectionEvidenceSchema).readonly(),

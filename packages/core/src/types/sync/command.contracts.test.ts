@@ -437,9 +437,11 @@ describe("Sync command contracts", () => {
       expect(SyncCommandSchema.safeParse(command).success).toBe(false);
     });
 
-    it("rejects a raw provider credential field", () => {
-      const command = baseCommand({ accessToken: "leak" });
-      expect(SyncCommandSchema.safeParse(command).success).toBe(false);
+    it("strips a raw provider credential field so it never appears on the command", () => {
+      const parsed = SyncCommandSchema.parse(
+        baseCommand({ accessToken: "leak" }),
+      );
+      expect("accessToken" in parsed).toBe(false);
     });
 
     it("round-trips through JSON unchanged", () => {

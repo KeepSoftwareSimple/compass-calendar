@@ -9,6 +9,10 @@ import {
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Resumable internal change-feed contracts for Compass Sync.
 // Compass API consumes this feed and translates it into typed browser SSE;
 // it never appears in the browser directly. Invalidations carry only IDs and
@@ -23,7 +27,7 @@ export const CHANGE_FEED_PAGE_SIZE = 100;
 // has finished, though the converse isn't required — a cursor-finalization
 // pass may still be pending even after every calendar's window fills.
 export const ImportProgressSchema = z
-  .strictObject({
+  .object({
     calendarsTotal: z.number().int().min(0),
     calendarsCompleted: z.number().int().min(0),
     complete: z.boolean(),
@@ -47,18 +51,18 @@ export const ImportProgressSchema = z
   );
 export type ImportProgress = z.infer<typeof ImportProgressSchema>;
 
-const ConnectionInvalidationSchema = z.strictObject({
+const ConnectionInvalidationSchema = z.object({
   kind: z.literal("connection"),
   connectionId: ConnectionIdSchema,
 });
 
-const CalendarInvalidationSchema = z.strictObject({
+const CalendarInvalidationSchema = z.object({
   kind: z.literal("calendar"),
   connectionId: ConnectionIdSchema,
   calendarId: ProviderCalendarIdSchema,
 });
 
-const EventInvalidationSchema = z.strictObject({
+const EventInvalidationSchema = z.object({
   kind: z.literal("event"),
   eventId: EventIdSchema,
   // Needed so Compass API can emit typed browser `eventsChanged` without a
@@ -66,12 +70,12 @@ const EventInvalidationSchema = z.strictObject({
   calendarId: SyncEventCalendarIdSchema,
 });
 
-const CommandInvalidationSchema = z.strictObject({
+const CommandInvalidationSchema = z.object({
   kind: z.literal("command"),
   commandId: SyncCommandIdSchema,
 });
 
-const ImportProgressInvalidationSchema = z.strictObject({
+const ImportProgressInvalidationSchema = z.object({
   kind: z.literal("importProgress"),
   connectionId: ConnectionIdSchema,
   progress: ImportProgressSchema,
@@ -94,7 +98,7 @@ export const ChangeFeedCursorSchema = z
   .brand<"ChangeFeedCursor">();
 export type ChangeFeedCursor = z.infer<typeof ChangeFeedCursorSchema>;
 
-export const InvalidationEnvelopeSchema = z.strictObject({
+export const InvalidationEnvelopeSchema = z.object({
   invalidation: SyncInvalidationSchema,
   emittedAt: DateTimeSchema,
 });
@@ -108,7 +112,7 @@ export const ChangeFeedResumeQuerySchema = z.strictObject({
 });
 export type ChangeFeedResumeQuery = z.infer<typeof ChangeFeedResumeQuerySchema>;
 
-const ChangeFeedOkSchema = z.strictObject({
+const ChangeFeedOkSchema = z.object({
   kind: z.literal("ok"),
   invalidations: z.array(InvalidationEnvelopeSchema).readonly(),
   nextCursor: ChangeFeedCursorSchema,
@@ -118,7 +122,7 @@ const ChangeFeedOkSchema = z.strictObject({
 // all affected cached queries rather than trust a partial replay. Exported so
 // the global (cross-tenant) feed's response union below can reuse it verbatim
 // — "the cursor is stale" means the same thing on both feeds.
-export const ChangeFeedResyncRequiredSchema = z.strictObject({
+export const ChangeFeedResyncRequiredSchema = z.object({
   kind: z.literal("resyncRequired"),
 });
 
@@ -141,7 +145,7 @@ export type GlobalInvalidationEnvelope = z.infer<
   typeof GlobalInvalidationEnvelopeSchema
 >;
 
-const GlobalChangeFeedOkSchema = z.strictObject({
+const GlobalChangeFeedOkSchema = z.object({
   kind: z.literal("ok"),
   invalidations: z.array(GlobalInvalidationEnvelopeSchema).readonly(),
   nextCursor: ChangeFeedCursorSchema,

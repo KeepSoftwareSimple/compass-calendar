@@ -148,11 +148,12 @@ describe("Sync connection contracts", () => {
       expect(ProviderConnectionSchema.safeParse(connection).success).toBe(true);
     });
 
-    it("rejects unknown fields", () => {
-      const connection = { ...validConnection(), accessToken: "leak" };
-      expect(ProviderConnectionSchema.safeParse(connection).success).toBe(
-        false,
-      );
+    it("strips unknown fields so a leaked accessToken never appears", () => {
+      const parsed = ProviderConnectionSchema.parse({
+        ...validConnection(),
+        accessToken: "leak",
+      });
+      expect("accessToken" in parsed).toBe(false);
     });
 
     it("rejects an unknown provider", () => {
@@ -358,14 +359,18 @@ describe("Sync connection contracts", () => {
       expect(ProviderAccountFactsSchema.safeParse(facts).success).toBe(true);
     });
 
-    it("rejects unknown fields", () => {
-      const facts = {
+    it("strips unknown fields so a leaked refreshToken never appears", () => {
+      const parsed = ProviderAccountFactsSchema.parse({
         providerAccountId: "1122334455" as ProviderAccountId,
         email: null,
         displayName: null,
         refreshToken: "leak",
-      };
-      expect(ProviderAccountFactsSchema.safeParse(facts).success).toBe(false);
+      });
+      expect(parsed).toEqual({
+        providerAccountId: "1122334455" as ProviderAccountId,
+        email: null,
+        displayName: null,
+      });
     });
   });
 
@@ -481,9 +486,12 @@ describe("Sync connection contracts", () => {
       ).toBe(false);
     });
 
-    it("rejects product preference fields", () => {
-      const calendar = { ...validCalendar(), visible: true };
-      expect(ProviderCalendarSchema.safeParse(calendar).success).toBe(false);
+    it("strips product preference fields so they never appear on the calendar", () => {
+      const parsed = ProviderCalendarSchema.parse({
+        ...validCalendar(),
+        visible: true,
+      });
+      expect("visible" in parsed).toBe(false);
     });
 
     it("rejects a missing capability field", () => {

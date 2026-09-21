@@ -5,6 +5,10 @@ import { ConnectionStateSchema } from "@core/types/sync/connection.contracts";
 import { SyncEventCalendarIdSchema } from "@core/types/sync/event.contracts";
 import { ConnectionIdSchema } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Why the caller wants the busy data. The caller sends its intent (and a
 // matching maxAge); Sync reports the same freshness facts either way — the
 // booking decision is the caller's.
@@ -51,7 +55,7 @@ export type BusyAvailabilityRequest = z.infer<
 // A normalized half-open busy interval on the wire (ISO instants).
 // Occupancy facts are optional so display callers can keep {start,end} only.
 // Booking uses hostIsOrganizer / hostResponseStatus; emails never appear.
-export const BusyIntervalSchema = z.strictObject({
+export const BusyIntervalSchema = z.object({
   start: DateTimeSchema,
   end: DateTimeSchema,
   hostIsOrganizer: z.boolean().optional(),
@@ -65,14 +69,14 @@ export const CalendarFreshnessIssueReasonSchema = z.enum([
   "stale",
 ]);
 
-export const CalendarIssueSchema = z.strictObject({
+export const CalendarIssueSchema = z.object({
   calendarId: SyncEventCalendarIdSchema,
   reason: CalendarFreshnessIssueReasonSchema,
 });
 
 // Freshness evidence for one connection backing a requested calendar. State and
 // timestamps are reported as-is; the caller decides how to use them.
-export const ConnectionFreshnessSchema = z.strictObject({
+export const ConnectionFreshnessSchema = z.object({
   connectionId: ConnectionIdSchema,
   state: ConnectionStateSchema,
   lastSyncedAt: DateTimeSchema.nullable(),
@@ -81,7 +85,7 @@ export const ConnectionFreshnessSchema = z.strictObject({
 
 // Busy intervals plus the freshness/completeness/bookability evidence. Event
 // titles, descriptions, locations, attendees, and conference links never appear.
-export const BusyAvailabilityResponseSchema = z.strictObject({
+export const BusyAvailabilityResponseSchema = z.object({
   intervals: z.array(BusyIntervalSchema),
   computedAt: DateTimeSchema,
   connections: z.array(ConnectionFreshnessSchema),

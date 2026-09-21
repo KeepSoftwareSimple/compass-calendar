@@ -3,6 +3,10 @@ import { POSTHOG_ERROR_TRACKING_PROPERTY } from "@core/constants/posthog-error-t
 import { DateTimeSchema } from "@core/types/domain-primitives";
 import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 const syncServiceName = "compass-sync" as const;
 
 // Sanitized, bounded-cardinality sync health snapshot (R-OPS / S44).
@@ -12,7 +16,7 @@ const syncServiceName = "compass-sync" as const;
 // emitted by the backend. This snapshot remains the provider-health gauge
 // reused by Meeting dashboards (PostHog 1905421). Do not duplicate booking
 // backlog counts here.
-export const SyncHealthConnectionCountsSchema = z.strictObject({
+export const SyncHealthConnectionCountsSchema = z.object({
   connecting: z.number().int().nonnegative(),
   importing: z.number().int().nonnegative(),
   catchingUp: z.number().int().nonnegative(),
@@ -25,7 +29,7 @@ export type SyncHealthConnectionCounts = z.infer<
   typeof SyncHealthConnectionCountsSchema
 >;
 
-export const SyncHealthJobBacklogSchema = z.strictObject({
+export const SyncHealthJobBacklogSchema = z.object({
   pending: z.number().int().nonnegative(),
   claimed: z.number().int().nonnegative(),
   failed: z.number().int().nonnegative(),
@@ -34,7 +38,7 @@ export const SyncHealthJobBacklogSchema = z.strictObject({
 });
 export type SyncHealthJobBacklog = z.infer<typeof SyncHealthJobBacklogSchema>;
 
-export const SyncHealthSubscriptionCountsSchema = z.strictObject({
+export const SyncHealthSubscriptionCountsSchema = z.object({
   healthy: z.number().int().nonnegative(),
   renewSoon: z.number().int().nonnegative(),
   expired: z.number().int().nonnegative(),
@@ -52,7 +56,7 @@ export type SyncHealthSubscriptionCounts = z.infer<
   typeof SyncHealthSubscriptionCountsSchema
 >;
 
-export const SyncHealthFreshnessSchema = z.strictObject({
+export const SyncHealthFreshnessSchema = z.object({
   sampleSize: z.number().int().nonnegative(),
   p50Ms: z.number().int().nonnegative().nullable(),
   p95Ms: z.number().int().nonnegative().nullable(),
@@ -62,7 +66,7 @@ export const SyncHealthFreshnessSchema = z.strictObject({
 });
 export type SyncHealthFreshness = z.infer<typeof SyncHealthFreshnessSchema>;
 
-export const SyncHealthSnapshotSchema = z.strictObject({
+export const SyncHealthSnapshotSchema = z.object({
   [POSTHOG_ERROR_TRACKING_PROPERTY.environment]: z.string().min(1),
   execution: z.enum(["passive", "active"]),
   provider: ProviderKindSchema,

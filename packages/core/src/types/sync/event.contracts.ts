@@ -27,6 +27,9 @@ import {
 // Google/Microsoft SDK shapes stay inside provider adapters and
 // never appear here. Schedule reuses the app-facing EventScheduleSchema
 // (event.contracts.ts) since timed-vs-all-day/DST semantics are identical.
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
 
 export const ClientEventIdSchema = z
   .string()
@@ -177,7 +180,7 @@ export type OccurrenceKey = z.infer<typeof OccurrenceKeySchema>;
 //     suppresses it from rendering), plus
 //   - one `occurrence` row per projected instance in range.
 // A non-recurring event is a single `single` row.
-const SyncInstanceContentSchema = z.strictObject({
+const SyncInstanceContentSchema = z.object({
   title: z.string(),
   description: z.string(),
   location: z.string().nullable(),
@@ -189,13 +192,13 @@ const SyncInstanceContentSchema = z.strictObject({
 });
 export type SyncInstanceContent = z.infer<typeof SyncInstanceContentSchema>;
 
-const SingleInstanceRecurrenceSchema = z.strictObject({
+const SingleInstanceRecurrenceSchema = z.object({
   kind: z.literal("single"),
 });
 
 // The series master row: carries the recurrence rule the app needs to offer
 // "edit this and all following". Its schedule is the master's own schedule.
-const SeriesInstanceRecurrenceSchema = z.strictObject({
+const SeriesInstanceRecurrenceSchema = z.object({
   kind: z.literal("series"),
   rules: RRuleSchema,
 });
@@ -203,7 +206,7 @@ const SeriesInstanceRecurrenceSchema = z.strictObject({
 // One projected (or overridden) instance of a series. recurrenceId is the
 // instance's original scheduled start — the identity the write path uses to
 // address exactly this occurrence. The owning series is `eventId`.
-const OccurrenceInstanceRecurrenceSchema = z.strictObject({
+const OccurrenceInstanceRecurrenceSchema = z.object({
   kind: z.literal("occurrence"),
   recurrenceId: DateTimeSchema,
 });
@@ -217,7 +220,7 @@ export type SyncInstanceRecurrence = z.infer<
   typeof SyncInstanceRecurrenceSchema
 >;
 
-export const SyncEventInstanceSchema = z.strictObject({
+export const SyncEventInstanceSchema = z.object({
   // The real id of the owning event: the single, or the series master that
   // owns a `series`/`occurrence` row. Never a synthesized id — the backend
   // composes any app-facing per-occurrence id from (eventId, recurrenceId).
@@ -257,7 +260,7 @@ export type EventInstanceListQuery = z.infer<
   typeof EventInstanceListQuerySchema
 >;
 
-export const EventInstanceListResponseSchema = z.strictObject({
+export const EventInstanceListResponseSchema = z.object({
   instances: z.array(SyncEventInstanceSchema).readonly(),
   nextCursor: z.string().trim().min(1).max(1024).nullable(),
 });
