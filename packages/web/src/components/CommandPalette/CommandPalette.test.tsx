@@ -96,8 +96,7 @@ afterAll(() => {
   isSessionMocked = false;
 });
 
-const { CommandPalette } = await import("./CommandPalette");
-const { LifeCommandPalette } = await import("./LifeCommandPalette");
+const { CommandPalette, LifeCommandPalette } = await import("./CommandPalette");
 
 const onGoToToday = mock();
 const onShowShortcuts = mock();

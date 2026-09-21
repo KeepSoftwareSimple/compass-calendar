@@ -10,13 +10,6 @@ import {
   writeRecentCommandIds,
 } from "./recent-commands.storage";
 
-/**
- * Section id the palette lists recent commands under. Shared because the
- * palette builds the section and the content shell drops it before filtering
- * (a recent row would otherwise duplicate its home section's row).
- */
-export const RECENT_SECTION_ID = "recent";
-
 const recentStore = createExternalStore<readonly string[]>(
   readRecentCommandIds(),
 );
