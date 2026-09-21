@@ -24,6 +24,13 @@ mock.module("@scripts/commands/backfill-billing", () => ({
   runBackfillBilling: mock(() => mockRunBackfillBilling()),
 }));
 
+const mockRunConnectionReport = mock((): Promise<void> => Promise.resolve());
+
+mock.module("@scripts/commands/connection-report", () => ({
+  __esModule: true,
+  runConnectionReport: mock(() => mockRunConnectionReport()),
+}));
+
 const { default: CompassCLI } = requireActual(
   "@scripts/cli",
 ) as typeof import("@scripts/cli");
@@ -47,6 +54,14 @@ describe("CompassCLI", () => {
     await cli.run();
 
     expect(mockRunBackfillBilling).toHaveBeenCalled();
+  });
+
+  it("runs connection-report command", async () => {
+    const cli = new CompassCLI(["node", "cli", "connection-report"]);
+
+    await cli.run();
+
+    expect(mockRunConnectionReport).toHaveBeenCalled();
   });
 
   it("calls exitHelpfully for unsupported command", async () => {
