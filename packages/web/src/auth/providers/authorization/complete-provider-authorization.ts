@@ -55,6 +55,8 @@ export type CompleteProviderAuthorizationResult =
       status: "failed";
       /** Why it failed, so the callback can both report and count it. */
       reason: SignupFailureReason;
+      /** The underlying error, so `signup_failed` never ships with it empty. */
+      error: string;
     };
 
 const AUTHORIZATION_ERROR_MESSAGE: Record<ProviderKind, string> = {
@@ -74,11 +76,13 @@ const fail = (
   reason: SignupFailureReason,
   returnPath: string = DEFAULT_CALENDAR_ROUTE,
   message = AUTHORIZATION_ERROR_MESSAGE[provider],
+  error: string = reason,
 ): CompleteProviderAuthorizationResult => ({
   message,
   reason,
   returnPath,
   status: "failed",
+  error,
 });
 
 const getApiError = (error: unknown): ApiError | undefined => {
@@ -124,6 +128,7 @@ export async function completeProviderAuthorization({
       "oauth_user_cancelled",
       returnPath,
       PROVIDER_AUTH_CANCELLED_MESSAGE,
+      "access_denied",
     );
   }
 
@@ -131,8 +136,15 @@ export async function completeProviderAuthorization({
     return fail(provider, "oauth_missing_intent", returnPath);
   }
 
-  if (params.get("error")) {
-    return fail(provider, "oauth_exchange_failed", returnPath);
+  const providerError = params.get("error");
+  if (providerError) {
+    return fail(
+      provider,
+      "oauth_exchange_failed",
+      returnPath,
+      undefined,
+      providerError,
+    );
   }
 
   const code = params.get("code");
@@ -148,11 +160,15 @@ export async function completeProviderAuthorization({
   );
 
   if (isMissingRequiredScope) {
+    const missingScopes = requiredScopes.filter(
+      (scope) => !grantedScopes.has(scope),
+    );
     return fail(
       provider,
       "oauth_missing_scopes",
       returnPath,
       MISSING_PROVIDER_SCOPES_ERROR_MESSAGE,
+      `missing_scopes:${missingScopes.join(",")}`,
     );
   }
 
@@ -189,9 +205,16 @@ export async function completeProviderAuthorization({
         "oauth_exchange_failed",
         returnPath,
         parsedError.message,
+        parsedError.code ?? parsedError.message,
       );
     }
 
-    return fail(provider, "oauth_exchange_failed", returnPath);
+    return fail(
+      provider,
+      "oauth_exchange_failed",
+      returnPath,
+      undefined,
+      error instanceof Error ? error.message : String(error),
+    );
   }
 }

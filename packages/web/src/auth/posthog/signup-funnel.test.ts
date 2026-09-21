@@ -62,6 +62,23 @@ describe("signup funnel", () => {
     });
   });
 
+  // The whole point of adding this field: reason_code alone can't say what
+  // Google (or the exchange) actually returned, only that something failed.
+  it("carries the underlying error on signup_failed", () => {
+    trackSignupFailed("oauth_exchange_failed", {
+      method: "google",
+      step: "oauth_callback_returned",
+      error: "invalid_grant",
+    });
+
+    expect(capture).toHaveBeenCalledWith("signup_failed", {
+      reason_code: "oauth_exchange_failed",
+      method: "google",
+      step: "oauth_callback_returned",
+      error: "invalid_grant",
+    });
+  });
+
   // The legacy events feed existing PostHog insights. Their names and
   // properties must stay byte-identical while the new steps ride alongside.
   it("keeps signup_started unchanged and adds its step", () => {

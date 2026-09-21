@@ -69,6 +69,8 @@ type StepProperties = {
 type FailureProperties = {
   method?: SignupMethod;
   step?: SignupStep;
+  /** The underlying error text, so `reason_code` says what and this says why. */
+  error?: string;
 };
 
 export function trackSignupStep(

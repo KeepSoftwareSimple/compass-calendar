@@ -95,8 +95,11 @@ export function AppleAuthCallbackView() {
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
-    }).catch(() => {
-      trackSignupFailed("oauth_callback_crashed", { method: "apple" });
+    }).catch((error: unknown) => {
+      trackSignupFailed("oauth_callback_crashed", {
+        method: "apple",
+        error: error instanceof Error ? error.message : String(error),
+      });
       showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
