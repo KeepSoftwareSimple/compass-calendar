@@ -9,6 +9,22 @@ import path from "node:path";
 
 const config = loadCompassConfig();
 
+// Bun resolves package export conditions from the environment it was started
+// with, not from `define` and not from a later write to process.env. Re-exec
+// so runtime.nodeEnv selects production React, matching
+// self-host/Dockerfile.web. CI does not set a shell NODE_ENV, so without this
+// the perf and boot-size builds keep the development build.
+const nodeEnv = config.runtime.nodeEnv || "production";
+if (process.env.NODE_ENV !== nodeEnv) {
+  const child = Bun.spawn([process.execPath, import.meta.path], {
+    env: { ...process.env, NODE_ENV: nodeEnv },
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "inherit",
+  });
+  process.exit(await child.exited);
+}
+
 function getBuildHash(): string {
   const fallbackBuildRef = process.env.COMPASS_BUILD_REF || "self-host";
   const compassRepoRoot = path.resolve(import.meta.dir, "../..");
