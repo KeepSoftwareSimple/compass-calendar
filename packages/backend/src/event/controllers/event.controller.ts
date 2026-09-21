@@ -34,6 +34,7 @@ import {
   toRsvpSubmitRequest,
 } from "@backend/common/services/sync-service/event-command.translation";
 import { syncEventInstanceToBrowser } from "@backend/common/services/sync-service/event-list.translation";
+import { runWithListEventsLimit } from "@backend/common/services/sync-service/list-events-concurrency";
 import { submitCommandOrThrow } from "@backend/common/services/sync-service/submit-command-or-throw";
 import { toSyncPrincipal } from "@backend/common/services/sync-service/sync-principal";
 import { logLevelForSyncClientError } from "@backend/common/services/sync-service/sync-proxy-error";
@@ -103,6 +104,14 @@ export const syncFailureLogContext = (syncError?: SyncClientError): string => {
   );
 };
 
+const providerFailureMessage = (
+  action: string,
+  error: SyncClientError,
+): string => {
+  const base = `Failed to ${action} from sync (${error.kind})`;
+  return error.detail ? `${base}: ${error.detail}` : base;
+};
+
 const send = (res: Response, e: unknown) => {
   const { status, body } = toEventMutationError(e);
   const syncError =
@@ -160,7 +169,7 @@ const resolveSyncCalendarIds = async (
   if (!calendarsResult.ok) {
     throw eventMutationError(
       "PROVIDER_FAILURE",
-      `Failed to list calendars from sync (${calendarsResult.error.kind})`,
+      providerFailureMessage("list calendars", calendarsResult.error),
       calendarsResult.error,
     );
   }
@@ -222,11 +231,13 @@ const listAllFullEvents = async (
       limit,
       ...(cursor !== undefined ? { cursor } : {}),
     };
-    const result = await client.listFullEvents(principal, pageQuery);
+    const result = await runWithListEventsLimit(() =>
+      client.listFullEvents(principal, pageQuery),
+    );
     if (!result.ok) {
       throw eventMutationError(
         "PROVIDER_FAILURE",
-        `Failed to list events from sync (${result.error.kind})`,
+        providerFailureMessage("list events", result.error),
         result.error,
       );
     }

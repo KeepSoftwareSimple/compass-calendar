@@ -96,6 +96,10 @@ const RETRY_TIME_MULTIPLE = 3;
 // mid-delete leaves Sync applying the mutation while Compass API returns an
 // error (staging: DELETE appeared to fail with 5xx while the event was gone).
 export const COMMAND_TIMEOUT_MS = 30_000;
+// List-events pages are larger than a default 5s read. A 15s budget per page
+// is still far below a hung connection, and the process-wide limiter in
+// list-events-concurrency.ts stops a page load from stacking dozens of them.
+export const LIST_FULL_EVENTS_TIMEOUT_MS = 15_000;
 
 // The identity a request acts on behalf of. Signed into the request so the Sync
 // service derives ownership from the signature, never the body.
@@ -529,6 +533,7 @@ export class SyncServiceClient {
       principal,
       schema: EventInstanceListResponseSchema,
       correlationId,
+      timeoutMs: LIST_FULL_EVENTS_TIMEOUT_MS,
     });
   }
 
@@ -853,6 +858,11 @@ export class SyncServiceClient {
         try {
           body = await readJson(response, controller.signal);
         } catch (error) {
+          // Bun often throws SyntaxError when the deadline aborts the body
+          // mid-read, not AbortError. The signal is the source of truth.
+          if (controller.signal.aborted) {
+            return { ok: false, error: { kind: "timeout", correlationId } };
+          }
           if (isAbortError(error)) {
             return { ok: false, error: { kind: "timeout", correlationId } };
           }
