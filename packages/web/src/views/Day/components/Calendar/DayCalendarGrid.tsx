@@ -50,10 +50,10 @@ import {
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { ShiftHintOverlay } from "@web/shortcuts/shift-hint/ShiftHintOverlay";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { dayEventQueryRange } from "@web/views/Day/hooks/events/useDayEvents";
 import { useDateInView } from "@web/views/Day/hooks/navigation/useDateInView";
 import { useDateNavigation } from "@web/views/Day/hooks/navigation/useDateNavigation";
 import { useDayEventNudgeShortcuts } from "@web/views/Day/hooks/shortcuts/useDayEventNudgeShortcuts";
+import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 import { useToday } from "@web/views/Week/hooks/useToday";
 import { DayCalendarColumnHeaders } from "./DayCalendarColumnHeaders";
 import { useDayCalendarContextMenu } from "./DayCalendarContextMenu";

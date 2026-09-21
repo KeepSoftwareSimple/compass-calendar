@@ -5,6 +5,7 @@ import {
   DEFAULT_CALENDAR_ROUTE,
   ROOT_ROUTES,
 } from "@web/common/constants/routes";
+import { prefetchDayEventsQuery } from "@web/events/queries/prefetch-day-events";
 import {
   prefetchWeekEventsQuery,
   weekDateStringFromPathname,
@@ -101,6 +102,25 @@ export function loadDateParam({
     dateString: params.dateString,
     dateInView: dayjs.tz(params.dateString, getEffectiveTimeZone()),
   };
+}
+
+type DayEventsLoaderArgs = {
+  params: { dateString: string };
+  context: { authenticated?: boolean };
+};
+
+export function loadDayEvents({ params, context }: DayEventsLoaderArgs): void {
+  prefetchDayEventsQuery({
+    dateString: params.dateString,
+    authenticated: context.authenticated === true,
+  });
+}
+
+// Starts the day-events prefetch alongside the lazy DayViewContent chunk
+// load (see dayDateRoute), instead of after it mounts.
+export function loadDayDate(opts: DayEventsLoaderArgs): DayLoaderData {
+  loadDayEvents(opts);
+  return loadDateParam(opts);
 }
 
 type WeekEventsLoaderArgs = {

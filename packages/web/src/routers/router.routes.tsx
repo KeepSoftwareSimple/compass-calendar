@@ -25,7 +25,7 @@ import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal
 import { ShortcutsCatalogView } from "@web/components/ShortcutsPage/ShortcutsCatalogView";
 import {
   loadAuthenticated,
-  loadDateParam,
+  loadDayDate,
   loadWeekDate,
   loadWeekEvents,
   redirectToDefaultCalendar,
@@ -178,7 +178,7 @@ export const dayDateRoute = createRoute({
   getParentRoute: () => dayRoute,
   path: "$dateString",
   beforeLoad: validateDayDateParam,
-  loader: loadDateParam,
+  loader: loadDayDate,
   component: lazyRouteComponent(
     () => import("@web/views/Day/view/DayViewContent"),
     "DayViewContent",

@@ -1,23 +1,9 @@
 import { useMemo } from "react";
 import type dayjs from "@core/util/date/dayjs";
-import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { dayEventsQueryOptions } from "@web/events/queries/event.query.options";
 import { useDayEventsQuery } from "@web/events/queries/useDayEventsQuery";
 import { usePrefetchAdjacentEvents } from "@web/events/queries/usePrefetchAdjacentEvents";
-
-/**
- * A day's event query range as `[startDate, endDate)`: `endDate` is the next
- * calendar day's start, not this day's end, so all-day events spanning only
- * this single day still fall within the range's exclusive upper bound.
- *
- * Bounds keep their local UTC offset (like the week query) so they are real
- * local-midnight instants; relabeling them as UTC shifts the window by the
- * offset and drops evening events.
- */
-export const dayEventQueryRange = (date: dayjs.Dayjs) => ({
-  startDate: toUTCOffset(date.startOf("day")),
-  endDate: toUTCOffset(date.add(1, "day").startOf("day")),
-});
+import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 
 export function useDayEvents(dateInView: dayjs.Dayjs) {
   const { startDate, endDate } = useMemo(
