@@ -652,7 +652,7 @@ export function useEventMutations(
   const buildMutation = <Variables extends EventWriteVariables>(
     operation: EventMutationOperation,
     mutationFn: (variables: Variables) => Promise<unknown>,
-    optimistic: (variables: Variables) => void,
+    optimistic: (variables: Variables) => void | Promise<void>,
   ) => ({
     mutationKey: eventMutationKeys.operation(operation),
     mutationFn,
@@ -661,7 +661,8 @@ export function useEventMutations(
       const previousQueries = queryClient.getQueriesData<unknown>({
         queryKey: eventQueryKeys.all,
       });
-      optimistic(variables);
+      const pendingOptimistic = optimistic(variables);
+      if (pendingOptimistic) await pendingOptimistic;
       // Callers that tear down their own pre-save UI (the event form's grid
       // draft) run it here so the teardown lands in the same task — and so
       // the same React commit — as the cache write. useBaseQuery recomputes
@@ -821,17 +822,16 @@ export function useEventMutations(
         const event = optimisticEventFromCreate(input);
         // A recurring create's base is metadata-only (the grid filters
         // series bases), so expand its instances too or the event would be
-        // invisible until the settle refetch.
+        // invisible until the settle refetch. The rrule bridge loads only
+        // for a series. Non-series creates stay synchronous so the cache
+        // write and the caller's draft teardown land in the same task.
         if (event.recurrence.kind === "series") {
-          applyEventProjectionAcrossQueries(
-            queryClient,
-            projectSeriesMaterialization({
-              base: event,
-              ranges: cachedRanges(),
-            }),
-            source,
-          );
-          return;
+          return projectSeriesMaterialization({
+            base: event,
+            ranges: cachedRanges(),
+          }).then((projection) => {
+            applyEventProjectionAcrossQueries(queryClient, projection, source);
+          });
         }
         insertEventIntoQueries(queryClient, event, (entry) =>
           eventBelongsToEntry(event, entry, source),
@@ -901,21 +901,22 @@ export function useEventMutations(
               edited.recurrence.rules.join("\n");
 
           if (rulesChanged) {
-            applyEventProjectionAcrossQueries(
-              queryClient,
-              projectSeriesRulesChange({
-                scope: input.scope,
-                edited,
-                original,
-                seriesId,
-                seriesEvents: seriesId
-                  ? findSeriesEventsInCache(queryClient, seriesId, source)
-                  : [],
-                ranges: cachedRanges(),
-              }),
-              source,
-            );
-            return;
+            return projectSeriesRulesChange({
+              scope: input.scope,
+              edited,
+              original,
+              seriesId,
+              seriesEvents: seriesId
+                ? findSeriesEventsInCache(queryClient, seriesId, source)
+                : [],
+              ranges: cachedRanges(),
+            }).then((projection) => {
+              applyEventProjectionAcrossQueries(
+                queryClient,
+                projection,
+                source,
+              );
+            });
           }
         }
 

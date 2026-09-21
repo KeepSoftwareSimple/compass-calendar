@@ -216,7 +216,9 @@ export class IndexedDbOfflineDataStore implements OfflineDataStore {
     const window = eventTitleSearchWindow(now);
     const records = await this.getAllEvents();
     return searchEventsByTitle(
-      expandLocalEventRecords(records, window).map((record) => record.event),
+      (await expandLocalEventRecords(records, window)).map(
+        (record) => record.event,
+      ),
       q,
       now,
     );

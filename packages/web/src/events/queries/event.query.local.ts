@@ -29,7 +29,10 @@ export async function fetchLocalEventsRange(
   await ensureOfflineDataStoreReady();
   const records = await getOfflineDataStore().getAllEvents();
   return normalizeLocalEventRecords(
-    expandLocalEventRecords(records, { start: query.start, end: query.end }),
+    await expandLocalEventRecords(records, {
+      start: query.start,
+      end: query.end,
+    }),
   );
 }
 

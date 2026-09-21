@@ -1,6 +1,6 @@
 import { type ObjectId } from "mongodb";
 import { z } from "zod/v4";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import {
   BOOKING_OPERATION_IN_FLIGHT_STATUSES,

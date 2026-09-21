@@ -21,7 +21,7 @@ import { expandLocalEventRecords } from "@web/events/recurrence/expandLocalEvent
 import {
   composeLocalOccurrenceId,
   parseLocalOccurrenceId,
-} from "@web/events/recurrence/projectRecurringEdit";
+} from "@web/events/recurrence/local-occurrence-id";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
 import { type EventRepository } from "./event.repository.types";
 
@@ -132,10 +132,12 @@ export class LocalEventRepository implements EventRepository {
       return this.store.searchByTitle(query.q);
     }
     const records = await this.store.getAllEvents();
-    return expandLocalEventRecords(records, {
-      start: query.start,
-      end: query.end,
-    }).map((record) => record.event);
+    return (
+      await expandLocalEventRecords(records, {
+        start: query.start,
+        end: query.end,
+      })
+    ).map((record) => record.event);
   }
 
   private async findRecordById(
