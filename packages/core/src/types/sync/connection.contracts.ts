@@ -11,6 +11,10 @@ import {
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Connection and calendar contracts for Compass Sync.
 // Provider facts only — no credentials, and no product preferences
 // (visibility, blocking, booking target) which belong to the Compass product
@@ -44,7 +48,7 @@ export type ConnectionStateReason = z.infer<typeof ConnectionStateReasonSchema>;
 // Display facts about the authorized provider account. The stable
 // providerAccountId is the only ownership proof; email is display data and
 // may change without changing identity.
-export const ProviderAccountFactsSchema = z.strictObject({
+export const ProviderAccountFactsSchema = z.object({
   providerAccountId: ProviderAccountIdSchema,
   email: z.string().trim().min(1).max(320).nullable(),
   displayName: z.string().trim().min(1).max(256).nullable(),
@@ -99,7 +103,7 @@ export const GoogleConnectionAdoptionRequestSchema =
   ProviderConnectionAdoptionRequestSchema;
 export type GoogleConnectionAdoptionRequest = ProviderConnectionAdoptionRequest;
 
-export const ProviderConnectionAdoptionResponseSchema = z.strictObject({});
+export const ProviderConnectionAdoptionResponseSchema = z.object({});
 export type ProviderConnectionAdoptionResponse = z.infer<
   typeof ProviderConnectionAdoptionResponseSchema
 >;
@@ -114,7 +118,7 @@ const STATES_WITH_REASON: ReadonlySet<ConnectionState> = new Set([
 ]);
 
 export const ProviderConnectionSchema = z
-  .strictObject({
+  .object({
     id: ConnectionIdSchema,
     tenantId: TenantIdSchema,
     principalId: PrincipalIdSchema,
@@ -159,7 +163,7 @@ export const CalendarAccessRoleSchema = z.enum([
 ]);
 export type CalendarAccessRole = z.infer<typeof CalendarAccessRoleSchema>;
 
-export const SyncCalendarCapabilitiesSchema = z.strictObject({
+export const SyncCalendarCapabilitiesSchema = z.object({
   canReadEvents: z.boolean(),
   canWriteEvents: z.boolean(),
   canReadBusy: z.boolean(),
@@ -169,7 +173,7 @@ export type SyncCalendarCapabilities = z.infer<
   typeof SyncCalendarCapabilitiesSchema
 >;
 
-export const ProviderCalendarSchema = z.strictObject({
+export const ProviderCalendarSchema = z.object({
   id: ProviderCalendarIdSchema,
   tenantId: TenantIdSchema,
   principalId: PrincipalIdSchema,
@@ -189,7 +193,7 @@ export const ProviderCalendarSchema = z.strictObject({
 });
 export type ProviderCalendar = z.infer<typeof ProviderCalendarSchema>;
 
-export const ConnectionListResponseSchema = z.strictObject({
+export const ConnectionListResponseSchema = z.object({
   connections: z.array(ProviderConnectionSchema).readonly(),
 });
 export type ConnectionListResponse = z.infer<
@@ -220,7 +224,7 @@ export type ConnectionBeginRequest = z.infer<
 // `connected` lands in Apple WP-03). The legacy `{ authorizationUrl }` body
 // is still accepted so a backend/web build that lands before the wrap still
 // parses, and so the sync-internal begin reply stays byte-identical.
-export const ConnectionBeginRedirectResponseSchema = z.strictObject({
+export const ConnectionBeginRedirectResponseSchema = z.object({
   kind: z.literal("redirect"),
   authorizationUrl: z.string().url(),
 });
@@ -228,7 +232,7 @@ export type ConnectionBeginRedirectResponse = z.infer<
   typeof ConnectionBeginRedirectResponseSchema
 >;
 
-export const ConnectionBeginConnectedResponseSchema = z.strictObject({
+export const ConnectionBeginConnectedResponseSchema = z.object({
   kind: z.literal("connected"),
   connectionId: ConnectionIdSchema,
 });
@@ -276,14 +280,14 @@ export type ConnectionCredentialSubmitRequest = z.infer<
   typeof ConnectionCredentialSubmitRequestSchema
 >;
 
-export const ConnectionCredentialResponseSchema = z.strictObject({
+export const ConnectionCredentialResponseSchema = z.object({
   connectionId: ConnectionIdSchema,
 });
 export type ConnectionCredentialResponse = z.infer<
   typeof ConnectionCredentialResponseSchema
 >;
 
-export const ConnectionBeginLegacyRedirectResponseSchema = z.strictObject({
+export const ConnectionBeginLegacyRedirectResponseSchema = z.object({
   authorizationUrl: z.string().url(),
 });
 
@@ -315,7 +319,7 @@ export function toConnectionBeginRedirect(
 // - `resources`: events resources considered (may exceed enqueued+inFlight when
 //   a coalesced key races between the three writes — outcome is then mislabeled,
 //   never corrupted)
-export const ConnectionRefreshResponseSchema = z.strictObject({
+export const ConnectionRefreshResponseSchema = z.object({
   enqueued: z.number().int().nonnegative(),
   // Defaults so a web/backend build that lands before sync still accepts the
   // old `{ enqueued }` body instead of failing Refresh closed.
@@ -344,7 +348,7 @@ export const CalendarListQuerySchema = z.strictObject({
 });
 export type CalendarListQuery = z.infer<typeof CalendarListQuerySchema>;
 
-export const SyncCalendarListResponseSchema = z.strictObject({
+export const SyncCalendarListResponseSchema = z.object({
   calendars: z.array(ProviderCalendarSchema).readonly(),
 });
 export type SyncCalendarListResponse = z.infer<

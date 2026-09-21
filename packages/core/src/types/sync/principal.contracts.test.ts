@@ -40,13 +40,12 @@ describe("PrincipalPurgeResponseSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects an unknown field", () => {
-    expect(
-      PrincipalPurgeResponseSchema.safeParse({
-        ...okCounts(),
-        extra: 1,
-      }).success,
-    ).toBe(false);
+  it("strips an unknown field so a rolling deploy cannot 502", () => {
+    const parsed = PrincipalPurgeResponseSchema.parse({
+      ...okCounts(),
+      extra: 1,
+    });
+    expect("extra" in parsed).toBe(false);
   });
 
   it("rejects a missing field", () => {

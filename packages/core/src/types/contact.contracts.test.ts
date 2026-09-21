@@ -36,7 +36,7 @@ describe("ContactSuggestionSchema", () => {
     ).toBe(false);
   });
 
-  it("rejects People-API fields riding along — the wire carries email + name ONLY", () => {
+  it("strips People-API fields riding along so the wire keeps email + name only", () => {
     for (const extra of [
       { photos: [{ url: "https://example.com/a.png" }] },
       { phoneNumbers: [{ value: "555-0100" }] },
@@ -44,13 +44,15 @@ describe("ContactSuggestionSchema", () => {
       { metadata: { primary: true } },
       { responseStatus: "accepted" },
     ]) {
-      expect(
-        ContactSuggestionSchema.safeParse({
-          email: "alice@example.com",
-          displayName: null,
-          ...extra,
-        }).success,
-      ).toBe(false);
+      const parsed = ContactSuggestionSchema.parse({
+        email: "alice@example.com",
+        displayName: null,
+        ...extra,
+      });
+      expect(parsed).toEqual({
+        email: "alice@example.com",
+        displayName: null,
+      });
     }
   });
 });

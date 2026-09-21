@@ -50,12 +50,12 @@ describe("SyncHealthSnapshotSchema", () => {
     expect(SyncHealthSnapshotSchema.safeParse(sample()).success).toBe(true);
   });
 
-  it("strips unknown fields (cardinality / leakage guard)", () => {
+  it("strips unknown fields so a leaked tenantId never appears on the snapshot", () => {
     const parsed = SyncHealthSnapshotSchema.parse({
       ...sample(),
       tenantId: "should-not-appear",
     });
-    expect(parsed).not.toHaveProperty("tenantId");
+    expect("tenantId" in parsed).toBe(false);
   });
 
   it("rejects a negative count", () => {

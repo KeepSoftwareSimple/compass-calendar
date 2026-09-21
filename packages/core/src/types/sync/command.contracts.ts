@@ -24,6 +24,10 @@ import {
   TenantIdSchema,
 } from "@core/types/sync/identity.contracts";
 
+// HTTP responses (and nested objects they contain) use z.object so a rolling
+// deploy cannot 502 on a field the other side has not seen yet. Request
+// bodies, command payloads, and upserts stay z.strictObject.
+
 // Durable event command contracts for Compass Sync. A command
 // records acknowledged user intent and is persisted before any asynchronous
 // work begins. This file adds contracts only — nothing here executes a command
@@ -177,14 +181,14 @@ export type SyncCommandFailureReason = z.infer<
 // at the provider), reconciling (response was ambiguous; identity must be
 // confirmed before another attempt).
 // Terminal: confirmed, failed, cancelled.
-const PendingOutcomeSchema = z.strictObject({ state: z.literal("pending") });
-const ApplyingOutcomeSchema = z.strictObject({ state: z.literal("applying") });
-const ReconcilingOutcomeSchema = z.strictObject({
+const PendingOutcomeSchema = z.object({ state: z.literal("pending") });
+const ApplyingOutcomeSchema = z.object({ state: z.literal("applying") });
+const ReconcilingOutcomeSchema = z.object({
   state: z.literal("reconciling"),
 });
 
 const ConfirmedOutcomeSchema = z
-  .strictObject({
+  .object({
     state: z.literal("confirmed"),
     // Both null when the event has no provider target: confirmation is
     // durable cloud persistence only.
@@ -203,12 +207,12 @@ const ConfirmedOutcomeSchema = z
     },
   );
 
-const FailedOutcomeSchema = z.strictObject({
+const FailedOutcomeSchema = z.object({
   state: z.literal("failed"),
   failureReason: SyncCommandFailureReasonSchema,
 });
 
-const CancelledOutcomeSchema = z.strictObject({
+const CancelledOutcomeSchema = z.object({
   state: z.literal("cancelled"),
 });
 
@@ -223,7 +227,7 @@ export const SyncCommandOutcomeSchema = z.discriminatedUnion("state", [
 export type SyncCommandOutcome = z.infer<typeof SyncCommandOutcomeSchema>;
 
 export const SyncCommandSchema = z
-  .strictObject({
+  .object({
     id: SyncCommandIdSchema,
     tenantId: TenantIdSchema,
     principalId: PrincipalIdSchema,
@@ -304,7 +308,7 @@ export const CommandSubmitRequestSchema = z
   });
 export type CommandSubmitRequest = z.infer<typeof CommandSubmitRequestSchema>;
 
-export const CommandSubmitResponseSchema = z.strictObject({
+export const CommandSubmitResponseSchema = z.object({
   command: SyncCommandSchema,
 });
 export type CommandSubmitResponse = z.infer<typeof CommandSubmitResponseSchema>;

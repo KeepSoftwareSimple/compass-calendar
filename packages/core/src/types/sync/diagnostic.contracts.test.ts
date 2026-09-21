@@ -36,19 +36,17 @@ describe("DiagnosticConnectionResponseSchema", () => {
     );
   });
 
-  it("rejects event content / credential fields", () => {
-    expect(
-      DiagnosticConnectionResponseSchema.safeParse({
-        ...sample(),
-        title: "Secret meeting",
-      }).success,
-    ).toBe(false);
-    expect(
-      DiagnosticConnectionResponseSchema.safeParse({
-        ...sample(),
-        refreshToken: "tok",
-      }).success,
-    ).toBe(false);
+  it("strips event content / credential fields so they never appear on the payload", () => {
+    const withTitle = DiagnosticConnectionResponseSchema.parse({
+      ...sample(),
+      title: "Secret meeting",
+    });
+    expect("title" in withTitle).toBe(false);
+    const withToken = DiagnosticConnectionResponseSchema.parse({
+      ...sample(),
+      refreshToken: "tok",
+    });
+    expect("refreshToken" in withToken).toBe(false);
   });
 
   it("rejects a short diagnostic key", () => {
