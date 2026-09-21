@@ -9,7 +9,8 @@ import {
 import { CalendarIdSchema, EventIdSchema } from "@core/types/domain-primitives";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import { createMockStandaloneEvent } from "@core/util/test/ccal.event.factory";
-import { render, screen, waitFor } from "@web/__tests__/__mocks__/mock.render";
+import { render, screen, within } from "@web/__tests__/__mocks__/mock.render";
+import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import {
   seedPendingEventMutations,
   toNormalizedEventQueryData,
@@ -21,6 +22,8 @@ import { ID_CONTEXT_MENU_ITEMS } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import { CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID } from "@web/common/utils/toast/context-menu-keyboard-only.toast";
+import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { editGridEventDraft } from "@web/events/grid-event-draft.adapter";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import {
@@ -108,8 +111,13 @@ const renderWithTheme = (
 };
 
 describe("ContextMenuItems", () => {
+  const { port: toastPort, mocks: toastMocks } = createTestToastPort();
+
   beforeEach(() => {
     mockClose.mockClear();
+    toastMocks.toast.mockClear();
+    toastMocks.update.mockClear();
+    registerToastPort(toastPort);
     useDraftStore.setState({ gridDraft: null, status: null });
   });
 
@@ -122,13 +130,38 @@ describe("ContextMenuItems", () => {
       event,
     });
 
-    expect(screen.getByText("Edit")).toBeInTheDocument();
-    expect(screen.getByText("Duplicate")).toBeInTheDocument();
-    expect(screen.getByText("Hide event")).toBeInTheDocument();
-    expect(screen.getByText("Delete")).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Edit" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Duplicate" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Hide event" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Delete" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("menuitemradio", { name: "Blue" }),
     ).toBeInTheDocument();
+  });
+
+  it("shows the keyboard shortcut for each read-only menu item", () => {
+    const event = createMockGridEvent({
+      title: "Test Event",
+    });
+
+    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
+      event,
+    });
+
+    const editButton = screen.getByRole("menuitem", { name: "Edit" });
+    expect(within(editButton).getByTestId("enter-icon")).toBeInTheDocument();
+
+    const duplicateButton = screen.getByRole("menuitem", { name: "Duplicate" });
+    expect(within(duplicateButton).getByTestId("d-icon")).toBeInTheDocument();
+
+    const deleteButton = screen.getByRole("menuitem", { name: "Delete" });
+    expect(within(deleteButton).getByTestId("delete-icon")).toBeInTheDocument();
   });
 
   it("applies a color from the swatch strip and closes", async () => {
@@ -194,7 +227,7 @@ describe("ContextMenuItems", () => {
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it("should call onClick handlers", async () => {
+  it("points Edit at its shortcut instead of opening the form", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({
       title: "Test Event",
@@ -208,11 +241,17 @@ describe("ContextMenuItems", () => {
     const editButton = screen.getByRole("menuitem", { name: "Edit" });
     await user.click(editButton);
 
-    expect(selectIsEventFormOpen(useDraftStore.getState())).toBe(true);
+    expect(selectIsEventFormOpen(useDraftStore.getState())).toBe(false);
+    expect(toastMocks.toast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        toastId: CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
+      }),
+    );
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it("allows delete while the event's own mutation is pending", async () => {
+  it("points Delete at its shortcut instead of deleting the event", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({
       title: "Pending Event",
@@ -230,37 +269,22 @@ describe("ContextMenuItems", () => {
     expect(deleteButton).not.toBeDisabled();
     await user.click(deleteButton);
 
-    await waitFor(() =>
-      expect(
-        queryClient
-          .getMutationCache()
-          .getAll()
-          .some((mutation) => mutation.options.mutationKey?.[2] === "delete"),
-      ).toBe(true),
+    expect(toastMocks.toast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        toastId: CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
+      }),
     );
+    expect(
+      queryClient
+        .getMutationCache()
+        .getAll()
+        .some((mutation) => mutation.options.mutationKey?.[2] === "delete"),
+    ).toBe(false);
     expect(mockClose).toHaveBeenCalled();
   });
 
-  it("allows edit while the event's own mutation is pending", async () => {
-    const user = userEvent.setup();
-    const event = createMockGridEvent({
-      title: "Pending Event",
-    });
-    seedGridDraftForEvent(event);
-
-    renderWithTheme(<ContextMenuItems event={event} close={mockClose} />, {
-      pendingEventIds: [EVENT_ID],
-      event,
-    });
-
-    const editButton = screen.getByRole("menuitem", { name: "Edit" });
-    await user.click(editButton);
-
-    expect(selectIsEventFormOpen(useDraftStore.getState())).toBe(true);
-    expect(mockClose).toHaveBeenCalled();
-  });
-
-  it("allows duplicate while the event's own mutation is pending", async () => {
+  it("points Duplicate at its shortcut instead of duplicating the event", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({
       title: "Pending Event",
@@ -274,10 +298,13 @@ describe("ContextMenuItems", () => {
     const duplicateButton = screen.getByRole("menuitem", { name: "Duplicate" });
     await user.click(duplicateButton);
 
-    await waitFor(() => {
-      expect(useDraftStore.getState().gridDraft?.kind).toBe("create");
-      expect(selectIsEventFormOpen(useDraftStore.getState())).toBe(true);
-    });
+    expect(toastMocks.toast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        toastId: CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
+      }),
+    );
+    expect(useDraftStore.getState().gridDraft?.kind).not.toBe("create");
     expect(mockClose).toHaveBeenCalled();
   });
 
