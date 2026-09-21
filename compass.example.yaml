@@ -93,4 +93,4 @@ sync:
   # reservedPullLanes: 1 # of maxConcurrency, how many drains never claim initialImport/repair — keeps pulls from starving behind a wave of long imports. Must stay < maxConcurrency.
   # enforceLeastPrivilege: false # true only where a scoped compass_sync database user exists (managed cloud)
   # compassApiDatabase: prod_calendar # API database the least-privilege check must be denied access to
-  # credentialEncryptionKey: REPLACE_WITH_SYNC_CREDENTIAL_ENCRYPTION_KEY # 32-byte base64; required to enable Apple calendar connect
+  # credentialEncryptionKey: REPLACE_WITH_SYNC_CREDENTIAL_ENCRYPTION_KEY # 32-byte base64; required when any provider is configured (openssl rand -base64 32)

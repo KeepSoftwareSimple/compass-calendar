@@ -1,5 +1,11 @@
 import { type CompassConfig } from "@core/config/compass.config";
-import { parseSyncConfig, SyncConfigSchema } from "@sync/config/sync.config";
+import {
+  CREDENTIAL_ENCRYPTION_KEY_REQUIRED_MESSAGE,
+  parseSyncConfig,
+  SyncConfigSchema,
+} from "@sync/config/sync.config";
+
+const VALID_ENCRYPTION_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 const baseSyncSection = () => ({
   mongoUri: "mongodb+srv://compass_sync:pw@cluster/compass_sync",
@@ -83,12 +89,16 @@ describe("Sync service configuration", () => {
     });
 
     it("reads the Google client id and secret from the google section", () => {
-      const config = parseSyncConfig(
-        withGoogle({
+      const config = parseSyncConfig({
+        ...withGoogle({
           clientId: "id.apps.googleusercontent.com",
           clientSecret: "secret",
         }),
-      );
+        sync: {
+          ...baseSyncSection(),
+          credentialEncryptionKey: VALID_ENCRYPTION_KEY,
+        },
+      } as unknown as CompassConfig);
       expect(config.GOOGLE_CLIENT_ID).toBe("id.apps.googleusercontent.com");
       expect(config.GOOGLE_CLIENT_SECRET).toBe("secret");
     });
@@ -113,7 +123,10 @@ describe("Sync service configuration", () => {
     it("reads microsoft client credentials from the microsoft section", () => {
       const config = parseSyncConfig({
         runtime: { nodeEnv: "staging", timezone: "Etc/UTC" },
-        sync: baseSyncSection(),
+        sync: {
+          ...baseSyncSection(),
+          credentialEncryptionKey: VALID_ENCRYPTION_KEY,
+        },
         microsoft: { clientId: "ms-id", clientSecret: "ms-secret" },
       } as unknown as CompassConfig);
       expect(config.MICROSOFT_CLIENT_ID).toBe("ms-id");
@@ -121,11 +134,12 @@ describe("Sync service configuration", () => {
     });
 
     it("reads credentialEncryptionKey from the sync section", () => {
-      const key = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
       const config = parseSyncConfig(
-        compassConfigWithSync({ credentialEncryptionKey: key }),
+        compassConfigWithSync({
+          credentialEncryptionKey: VALID_ENCRYPTION_KEY,
+        }),
       );
-      expect(config.CREDENTIAL_ENCRYPTION_KEY).toBe(key);
+      expect(config.CREDENTIAL_ENCRYPTION_KEY).toBe(VALID_ENCRYPTION_KEY);
     });
 
     it("defaults Apple reconcile cadence and sweep sizing", () => {
@@ -133,6 +147,44 @@ describe("Sync service configuration", () => {
       expect(config.reconcileStaleAfterMsByKind.apple).toBe(60_000);
       expect(config.reconcileSweepIntervalMsByKind.apple).toBe(30_000);
       expect(config.reconcileSweepLimitByKind.apple).toBe(500);
+    });
+  });
+
+  describe("credential encryption key when a provider is configured", () => {
+    it("rejects a Google client id without the encryption key", () => {
+      expect(() =>
+        parseSyncConfig({
+          runtime: { nodeEnv: "staging", timezone: "Etc/UTC" },
+          sync: baseSyncSection(),
+          google: {
+            clientId: "id.apps.googleusercontent.com",
+            clientSecret: "secret",
+          },
+        } as unknown as CompassConfig),
+      ).toThrow(CREDENTIAL_ENCRYPTION_KEY_REQUIRED_MESSAGE);
+    });
+
+    it("parses a Google client id when the encryption key is set", () => {
+      const config = parseSyncConfig({
+        runtime: { nodeEnv: "staging", timezone: "Etc/UTC" },
+        sync: {
+          ...baseSyncSection(),
+          credentialEncryptionKey: VALID_ENCRYPTION_KEY,
+        },
+        google: {
+          clientId: "id.apps.googleusercontent.com",
+          clientSecret: "secret",
+        },
+      } as unknown as CompassConfig);
+      expect(config.GOOGLE_CLIENT_ID).toBe("id.apps.googleusercontent.com");
+      expect(config.CREDENTIAL_ENCRYPTION_KEY).toBe(VALID_ENCRYPTION_KEY);
+    });
+
+    it("parses a config with no providers and no encryption key", () => {
+      const config = parseSyncConfig(compassConfigWithSync());
+      expect(config.GOOGLE_CLIENT_ID).toBeUndefined();
+      expect(config.MICROSOFT_CLIENT_ID).toBeUndefined();
+      expect(config.CREDENTIAL_ENCRYPTION_KEY).toBeUndefined();
     });
   });
 
