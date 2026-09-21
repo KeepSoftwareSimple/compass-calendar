@@ -3,7 +3,7 @@ import { type CalendarId } from "@core/types/domain-primitives";
 import { isCalendarReconnectRequired } from "@web/auth/providers/reconnect.calendar";
 import { useGoogleReconnectRequiredVersion } from "@web/auth/providers/reconnect.state";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
-import { type CrossAccountDuplicate } from "@web/common/types/web.event.types";
+import { type DuplicateCopy } from "@web/common/types/web.event.types";
 
 const EMPTY_CALENDAR_LOOKUP: ReadonlyMap<CalendarId, Calendar> = new Map();
 
@@ -66,12 +66,12 @@ export type CalendarCardIdentity = {
   backgroundColor: string;
   /**
    * Set when this card is standing in for a meeting that also exists on
-   * another connected account (the event's own `otherAccount`, joined by the
-   * view model). The card paints a two-color gradient accent from it and
-   * names the account in its label - the merge is otherwise invisible (A5),
-   * so this is the only surviving signal that a second copy exists.
+   * other calendars (the event's own `otherCopies`, joined by the view
+   * model). The card paints a gradient accent across their colors and names
+   * them in its label - the merge is otherwise invisible (A5), so this is the
+   * only surviving signal that further copies exist.
    */
-  otherAccount?: CrossAccountDuplicate;
+  otherCopies?: DuplicateCopy[];
 };
 
 /**
@@ -82,7 +82,7 @@ export type CalendarCardIdentity = {
  * either the accent or a redundant name suffix, since every card would say
  * the same thing.
  *
- * Takes the event rather than a calendar id plus its `otherAccount`, which
+ * Takes the event rather than a calendar id plus its `otherCopies`, which
  * every call site was reading off the same object anyway - and matches
  * {@link isGridEventInteractionReadOnly}, its neighbor at those call sites.
  */
@@ -90,10 +90,10 @@ export function resolveCalendarCardIdentity(
   lookup: ReadonlyMap<CalendarId, Calendar>,
   event: {
     calendarId?: CalendarId | null;
-    otherAccount?: CrossAccountDuplicate;
+    otherCopies?: DuplicateCopy[];
   },
 ): CalendarCardIdentity | null {
-  const { calendarId, otherAccount } = event;
+  const { calendarId, otherCopies } = event;
   if (!calendarId || lookup.size <= 1) return null;
 
   const calendar = lookup.get(calendarId);
@@ -102,7 +102,7 @@ export function resolveCalendarCardIdentity(
   return {
     name: calendar.name,
     backgroundColor: calendar.backgroundColor,
-    ...(otherAccount ? { otherAccount } : {}),
+    ...(otherCopies?.length ? { otherCopies } : {}),
   };
 }
 
