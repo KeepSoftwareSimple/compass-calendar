@@ -2,6 +2,7 @@ import {
   type JobDrainer,
   SyncScheduler,
 } from "@sync/domain/sync-scheduler.service";
+import { notifyJobsWaiting } from "@sync/storage/job-wake";
 
 const OWNER = "worker-1";
 
@@ -153,6 +154,28 @@ describe("SyncScheduler", () => {
 
     expect(errors).toHaveLength(1); // the thrown drain was caught, not fatal
     expect(worker.calls).toBeGreaterThanOrEqual(2); // it kept going
+  });
+
+  it("wakes an idle drain when work is enqueued", async () => {
+    const worker = new FakeWorker([]);
+    const jobs = releaser();
+    const scheduler = new SyncScheduler(
+      { worker, jobs },
+      { owner: OWNER, pollMs: 30_000 },
+    );
+
+    const first = worker.nextDrain();
+    scheduler.start();
+    await first;
+
+    const started = Date.now();
+    const second = worker.nextDrain();
+    notifyJobsWaiting();
+    await second;
+
+    expect(Date.now() - started).toBeLessThan(100);
+    expect(worker.calls).toBe(2);
+    await scheduler.stop();
   });
 
   it("start is idempotent and stop is safe when never started", async () => {

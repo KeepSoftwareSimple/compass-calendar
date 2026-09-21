@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker";
-import { type Db } from "mongodb";
+import { Collection, type Db } from "mongodb";
 import {
   type ConnectionId,
   type PrincipalId,
@@ -8,11 +8,13 @@ import {
 } from "@core/types/sync/identity.contracts";
 import { stringIdFilter } from "@sync/__tests__/helpers/mongo-id";
 import { setupSyncStorage } from "@sync/__tests__/helpers/storage";
+import { SyncScheduler } from "@sync/domain/sync-scheduler.service";
 import {
   JOB_PRIORITY,
   type JobEnqueue,
 } from "@sync/storage/contracts/job.contracts";
 import { JobRepository } from "@sync/storage/repositories/job.repository";
+import { beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const objectId = () => faker.database.mongodbObjectId();
 
@@ -901,5 +903,69 @@ describe("JobRepository", () => {
       expect(winning).toContain("connection_runafter");
       expect(winning).not.toContain("COLLSCAN");
     });
+  });
+
+  it("an empty queue issues one read and no claim write", async () => {
+    await db.collection("jobs").deleteMany({});
+    const now = new Date();
+    const findOne = spyOn(Collection.prototype, "findOne");
+    const findOneAndUpdate = spyOn(Collection.prototype, "findOneAndUpdate");
+    try {
+      expect(await repo.claimDueJob("worker", now, 60_000)).toBeNull();
+      expect(findOne).toHaveBeenCalledTimes(1);
+      expect(findOneAndUpdate).not.toHaveBeenCalled();
+    } finally {
+      findOne.mockRestore();
+      findOneAndUpdate.mockRestore();
+    }
+
+    const plan = await db
+      .collection("jobs")
+      .find({
+        $or: [
+          { state: "pending", runAfter: { $lte: now } },
+          { state: "claimed", leaseExpiresAt: { $lt: now } },
+        ],
+      })
+      .explain("queryPlanner");
+    const winning = JSON.stringify(plan);
+    expect(winning).toContain("IXSCAN");
+    expect(winning).not.toContain("COLLSCAN");
+  });
+
+  it("enqueue wakes an idle drain and the job is claimed within 100ms", async () => {
+    let resolveIdle: () => void = () => {};
+    const idle = new Promise<void>((resolve) => {
+      resolveIdle = resolve;
+    });
+    let claimed = false;
+    const scheduler = new SyncScheduler(
+      {
+        worker: {
+          drain: async () => {
+            const job = await repo.claimDueJob("drain", new Date(), 60_000);
+            if (job) claimed = true;
+            else resolveIdle();
+            return job ? 1 : 0;
+          },
+        },
+        jobs: { releaseOwned: async () => 0 },
+      },
+      { owner: "drain", pollMs: 30_000 },
+    );
+    scheduler.start();
+    await idle;
+
+    const started = Date.now();
+    await repo.enqueue(enqueue({ runAfter: new Date() }));
+    const deadline = started + 100;
+    while (!claimed && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    const elapsed = Date.now() - started;
+    await scheduler.stop();
+
+    expect(claimed).toBe(true);
+    expect(elapsed).toBeLessThan(100);
   });
 });
