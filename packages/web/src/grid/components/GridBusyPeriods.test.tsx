@@ -36,7 +36,7 @@ import {
   type GridMeasurements,
   type GridVisibleDate,
 } from "@web/grid/types/grid.types";
-import { dayEventQueryRange } from "@web/views/Day/hooks/events/useDayEvents";
+import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 import { afterEach, describe, expect, it } from "bun:test";
 
 let seededCalendars: Calendar[] = [];

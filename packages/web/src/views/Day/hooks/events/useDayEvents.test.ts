@@ -26,8 +26,10 @@ const { renderHook } =
   require("@web/__tests__/__mocks__/mock.render") as typeof import("@web/__tests__/__mocks__/mock.render");
 const { createCompassQueryClient } =
   require("@web/api/query-client") as typeof import("@web/api/query-client");
-const { dayEventQueryRange, useDayEvents } =
+const { useDayEvents } =
   require("@web/views/Day/hooks/events/useDayEvents") as typeof import("@web/views/Day/hooks/events/useDayEvents");
+const { dayEventQueryRange } =
+  require("@web/views/Day/util/day-window.util") as typeof import("@web/views/Day/util/day-window.util");
 
 describe("useDayEvents", () => {
   beforeEach(() => {
