@@ -1,6 +1,13 @@
 import { type QueryClient } from "@tanstack/react-query";
 import { type Event } from "@core/types/event.contracts";
-import { type RecurrenceScope } from "@core/types/event-command.contracts";
+import {
+  type RsvpResponseStatus,
+  RsvpResponseStatusSchema,
+} from "@core/types/event-attendance.contracts";
+import {
+  type RecurrenceScope,
+  type RsvpEventInput,
+} from "@core/types/event-command.contracts";
 import { findEventInCache } from "@web/events/queries/event.query.cache";
 import { type EventRepositorySource } from "@web/events/repositories/event.repository.factory";
 import {
@@ -108,5 +115,39 @@ export function snapshotEventDeleteHistory({
     existing,
     entry: undoable ? { kind: "delete", event: existing } : null,
     deletedToast: undoable,
+  };
+}
+
+export function selfAttendeeResponseStatus(event: Event, accountEmail: string) {
+  if (event.content.kind !== "details") return undefined;
+  return event.content.attendees?.find(
+    (attendee) => attendee.email.toLowerCase() === accountEmail.toLowerCase(),
+  )?.responseStatus;
+}
+
+export function snapshotRsvpHistory({
+  id,
+  original,
+  responseStatus,
+  scope,
+  accountEmail,
+}: {
+  id: string;
+  original: Event;
+  responseStatus: RsvpResponseStatus;
+  scope: RsvpEventInput["scope"];
+  accountEmail: string;
+}): UndoHistoryEntry | null {
+  if (isRestoringHistory() || scope !== "single") return null;
+  const before = RsvpResponseStatusSchema.safeParse(
+    selfAttendeeResponseStatus(original, accountEmail),
+  );
+  if (!before.success) return null;
+  return {
+    kind: "rsvp",
+    id,
+    accountEmail,
+    before: before.data,
+    after: responseStatus,
   };
 }

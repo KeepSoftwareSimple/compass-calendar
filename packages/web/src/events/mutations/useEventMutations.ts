@@ -120,6 +120,7 @@ import {
   snapshotEventCreateHistory,
   snapshotEventDeleteHistory,
   snapshotEventEditHistory,
+  snapshotRsvpHistory,
 } from "./event.mutation-history";
 
 type EventMutationContext = {
@@ -1188,11 +1189,21 @@ export function useEventMutations(
         // scope-"all" replace.
         const writeKey =
           scope === "all" ? seriesWriteKey(original, "all", id) : id;
+        const undoEntry = original
+          ? snapshotRsvpHistory({
+              id,
+              original,
+              responseStatus,
+              scope,
+              accountEmail,
+            })
+          : null;
         rsvpMutation.mutate({
           id,
           input: { responseStatus, scope },
           accountEmail,
           writeKey,
+          undoEntry: undoEntry ?? undefined,
         });
       },
       promoteRecurring: (

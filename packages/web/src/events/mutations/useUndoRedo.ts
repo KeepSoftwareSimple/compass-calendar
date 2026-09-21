@@ -17,6 +17,7 @@ import { dismissRecurrenceScopeToastFor } from "@web/common/utils/toast/recurren
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { detailsLocation } from "@web/events/grid-event-draft.adapter";
 import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
+import { selfAttendeeResponseStatus } from "@web/events/mutations/event.mutation-history";
 import {
   type EventMutationCallbacks,
   type EventMutationDependencies,
@@ -61,6 +62,11 @@ const isCalendarVisibilityEntry = (
 ): entry is Extract<UndoHistoryEntry, { kind: "calendarVisibility" }> =>
   entry.kind === "calendarVisibility";
 
+const isRsvpEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "rsvp" }> =>
+  entry.kind === "rsvp";
+
 const replayCalendarVisibility = (
   isVisible: boolean,
   calendarId: Extract<
@@ -78,7 +84,7 @@ const replayCalendarVisibility = (
 
 const entryEventId = (entry: UndoHistoryEntry): string | null => {
   if (isDeleteEntry(entry) || isCreateEntry(entry)) return entry.event.id;
-  if (entry.kind === "edit") return entry.id;
+  if (entry.kind === "edit" || isRsvpEntry(entry)) return entry.id;
   if (isHiddenEntry(entry)) return entry.eventId;
   return null;
 };
@@ -284,6 +290,18 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
       }
     }
 
+    if (isRsvpEntry(entry)) {
+      const current = findEventInCache(queryClient, entry.id, source);
+      if (
+        current &&
+        selfAttendeeResponseStatus(current, entry.accountEmail) !== entry.after
+      ) {
+        undoHistoryActions.dropTopUndo();
+        showUndoDeclinedToast();
+        return;
+      }
+    }
+
     undoHistoryActions.commitUndo();
     runHistoryRestore(() => {
       if (isCalendarVisibilityEntry(entry)) {
@@ -294,6 +312,13 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
         );
       } else if (isHiddenEntry(entry)) {
         setEventHidden(entry.eventId, !entry.hidden);
+      } else if (isRsvpEntry(entry)) {
+        mutations.rsvp({
+          id: entry.id as EventId,
+          responseStatus: entry.before,
+          scope: "single",
+          accountEmail: entry.accountEmail,
+        });
       } else if (isDeleteEntry(entry)) {
         // A delete surfaced a "Deleted" toast; flip it to "Restored" only
         // once the recreate actually lands (or to a failure toast if it
@@ -320,6 +345,7 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
     undoCreate,
     replaySnapshot,
     setEventHidden,
+    mutations,
   ]);
 
   const redo = useCallback(() => {
@@ -329,6 +355,18 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
     if (entry.kind === "edit") {
       const current = findEventInCache(queryClient, entry.id, source);
       if (current && !snapshotMatches(current, entry.before)) {
+        undoHistoryActions.dropTopRedo();
+        showUndoDeclinedToast();
+        return;
+      }
+    }
+
+    if (isRsvpEntry(entry)) {
+      const current = findEventInCache(queryClient, entry.id, source);
+      if (
+        current &&
+        selfAttendeeResponseStatus(current, entry.accountEmail) !== entry.before
+      ) {
         undoHistoryActions.dropTopRedo();
         showUndoDeclinedToast();
         return;
@@ -345,6 +383,13 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
         );
       } else if (isHiddenEntry(entry)) {
         setEventHidden(entry.eventId, entry.hidden);
+      } else if (isRsvpEntry(entry)) {
+        mutations.rsvp({
+          id: entry.id as EventId,
+          responseStatus: entry.after,
+          scope: "single",
+          accountEmail: entry.accountEmail,
+        });
       } else if (isDeleteEntry(entry)) {
         mutations.delete({ id: entry.event.id as EventId, scope: "this" });
       } else if (isCreateEntry(entry)) {

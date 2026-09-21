@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
+import { type RsvpResponseStatus } from "@core/types/event-attendance.contracts";
 import { IS_DEV } from "@web/common/constants/env.constants";
 import {
   getEventRepositorySourceSnapshot,
@@ -35,6 +36,13 @@ export type UndoHistoryEntry =
       calendarId: CalendarId;
       label: string;
       isVisible: boolean;
+    }
+  | {
+      kind: "rsvp";
+      id: string;
+      accountEmail: string;
+      before: RsvpResponseStatus;
+      after: RsvpResponseStatus;
     };
 
 export interface State_UndoHistory {
