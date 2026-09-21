@@ -328,7 +328,7 @@ describe("useEventMutations rsvp undo history", () => {
     });
   });
 
-  it("records nothing when the previous status is needsAction", async () => {
+  it("records an unrecorded marker when the previous status is needsAction", async () => {
     captureRsvpRequests();
     const event = invitedEvent();
     const { hook, queryClient } = setup();
@@ -348,10 +348,12 @@ describe("useEventMutations rsvp undo history", () => {
         "accepted",
       );
     });
-    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 
-  it("records nothing for a scope-all answer", async () => {
+  it("records an unrecorded marker for a scope-all answer", async () => {
     captureRsvpRequests();
     const event = invitedEvent({
       content: {
@@ -378,10 +380,12 @@ describe("useEventMutations rsvp undo history", () => {
         "accepted",
       );
     });
-    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 
-  it("records nothing when the cache has no self attendee", async () => {
+  it("records an unrecorded marker when the cache has no self attendee", async () => {
     captureRsvpRequests();
     const event = invitedEvent({
       content: {
@@ -406,6 +410,8 @@ describe("useEventMutations rsvp undo history", () => {
     await waitFor(() => {
       expect(cachedAttendees(queryClient, event.id)).toEqual([otherGuest]);
     });
-    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 });

@@ -223,6 +223,18 @@ describe("undoHistoryActions", () => {
     expect(useUndoHistoryStore.getState().past).toHaveLength(2);
   });
 
+  it("collapses consecutive unrecorded markers into one and still clears redo", () => {
+    undoHistoryActions.record(editEntry("a"));
+    undoHistoryActions.commitUndo();
+    undoHistoryActions.record({ kind: "unrecorded" });
+    undoHistoryActions.record({ kind: "unrecorded" });
+    undoHistoryActions.record({ kind: "unrecorded" });
+
+    const { past, future } = useUndoHistoryStore.getState();
+    expect(past).toEqual([{ kind: "unrecorded" }]);
+    expect(future).toHaveLength(0);
+  });
+
   it("commitRedo caps past at 30, dropping the oldest on a long redo run", () => {
     for (let i = 0; i < 30; i++) {
       undoHistoryActions.record(editEntry(`e${i}`));

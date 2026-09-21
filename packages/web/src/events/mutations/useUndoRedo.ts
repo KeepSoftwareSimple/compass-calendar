@@ -7,6 +7,7 @@ import { calendarVisibilityStatusMessage } from "@web/calendars/useCalendarVisib
 import {
   CALENDAR_VISIBILITY_TOAST_ID,
   UNDO_DECLINED_TOAST_ID,
+  UNDO_STATUS_TOAST_ID,
 } from "@web/common/constants/toast.constants";
 import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import {
@@ -66,6 +67,11 @@ const isRsvpEntry = (
   entry: UndoHistoryEntry,
 ): entry is Extract<UndoHistoryEntry, { kind: "rsvp" }> =>
   entry.kind === "rsvp";
+
+const isUnrecordedEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "unrecorded" }> =>
+  entry.kind === "unrecorded";
 
 const replayCalendarVisibility = (
   isVisible: boolean,
@@ -262,7 +268,16 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
 
   const undo = useCallback(() => {
     const entry = undoHistoryActions.peekUndo();
-    if (!entry) return;
+    if (!entry) {
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Nothing to undo");
+      return;
+    }
+
+    if (isUnrecordedEntry(entry)) {
+      undoHistoryActions.dropTopUndo();
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Can't undo the last change");
+      return;
+    }
 
     // Remove a promotion affordance only when undoing its own narrow action.
     // Undoing a later, unrelated event must leave the earlier opportunity live.
@@ -350,7 +365,16 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
 
   const redo = useCallback(() => {
     const entry = undoHistoryActions.peekRedo();
-    if (!entry) return;
+    if (!entry) {
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Nothing to redo");
+      return;
+    }
+
+    if (isUnrecordedEntry(entry)) {
+      undoHistoryActions.dropTopRedo();
+      showStatusToast(UNDO_STATUS_TOAST_ID, "Can't undo the last change");
+      return;
+    }
 
     if (entry.kind === "edit") {
       const current = findEventInCache(queryClient, entry.id, source);

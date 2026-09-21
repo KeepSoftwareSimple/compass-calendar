@@ -2081,7 +2081,7 @@ describe("undo history recording", () => {
     expect(useUndoHistoryStore.getState().past).toHaveLength(0);
   });
 
-  test("skips series-scope edits and edits missing from cache", () => {
+  test("records an unrecorded marker for series-scope edits and edits missing from cache", async () => {
     const context = setup();
     const original = event();
     context.queryClient.setQueryData(calendarKey, normalized(original));
@@ -2096,7 +2096,10 @@ describe("undo history recording", () => {
     );
 
     expect(useUndoHistoryStore.getState().past).toHaveLength(0);
-    context.pending.resolve();
+    await persist(context);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 
   test("records a recurring occurrence edit at this-event scope (undoable via un-cancel replay)", async () => {
@@ -2131,7 +2134,7 @@ describe("undo history recording", () => {
     });
   });
 
-  test("still skips a series-master edit (scope all/thisAndFollowing never reaches this-scope recording)", () => {
+  test("records an unrecorded marker for a series-master edit", async () => {
     const context = setup();
     const seriesBase = event({
       recurrence: { kind: "series", rules: ["RRULE:FREQ=WEEKLY"] },
@@ -2152,7 +2155,10 @@ describe("undo history recording", () => {
       ),
     );
     expect(useUndoHistoryStore.getState().past).toHaveLength(0);
-    context.pending.resolve();
+    await persist(context);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 
   test("records create snapshots for both a single event and a new series", async () => {
@@ -2283,7 +2289,7 @@ describe("undo history recording", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
   });
 
-  test("still skips deleting a series master (scope all/thisAndFollowing never reaches this-scope recording)", () => {
+  test("records an unrecorded marker when deleting a series master", async () => {
     const context = setup();
     const seriesBase = event({
       recurrence: { kind: "series", rules: ["RRULE:FREQ=WEEKLY"] },
@@ -2297,10 +2303,13 @@ describe("undo history recording", () => {
       }),
     );
     expect(useUndoHistoryStore.getState().past).toHaveLength(0);
-    context.pending.resolve();
+    await persist(context);
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      { kind: "unrecorded" },
+    ]);
   });
 
-  test("does not record replays run inside runHistoryRestore", () => {
+  test("does not record replays run inside runHistoryRestore", async () => {
     const context = setup();
     const original = event();
     context.queryClient.setQueryData(calendarKey, normalized(original));
@@ -2340,8 +2349,8 @@ describe("undo history recording", () => {
       );
     });
 
+    await persist(context);
     expect(useUndoHistoryStore.getState().past).toHaveLength(0);
-    context.pending.resolve();
   });
 
   test("tracks event_created for a genuine create", async () => {

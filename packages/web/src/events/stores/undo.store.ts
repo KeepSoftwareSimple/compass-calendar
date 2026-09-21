@@ -43,7 +43,8 @@ export type UndoHistoryEntry =
       accountEmail: string;
       before: RsvpResponseStatus;
       after: RsvpResponseStatus;
-    };
+    }
+  | { kind: "unrecorded" };
 
 export interface State_UndoHistory {
   past: UndoHistoryEntry[];
@@ -114,8 +115,11 @@ export const undoHistoryActions = {
   record: (entry: UndoHistoryEntry) =>
     useUndoHistoryStore.setState(
       (state) => {
-        const targetId = coalesceTargetId(entry);
         const top = state.past.at(-1);
+        if (entry.kind === "unrecorded" && top?.kind === "unrecorded") {
+          return { past: state.past, future: [] };
+        }
+        const targetId = coalesceTargetId(entry);
         if (
           targetId !== null &&
           state.future.length === 0 &&

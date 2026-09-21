@@ -151,3 +151,16 @@ export function snapshotRsvpHistory({
     after: responseStatus,
   };
 }
+
+export const UNRECORDED_HISTORY_ENTRY: Extract<
+  UndoHistoryEntry,
+  { kind: "unrecorded" }
+> = { kind: "unrecorded" };
+
+export function undoEntryForWrite(
+  entry: UndoHistoryEntry | null,
+): UndoHistoryEntry | undefined {
+  if (entry) return entry;
+  if (isRestoringHistory()) return undefined;
+  return UNRECORDED_HISTORY_ENTRY;
+}
