@@ -120,3 +120,10 @@ database and must not share the backend's database user/data.
 | `stripe.webhookSecret` | No | Stripe webhook signing secret. |
 | `stripe.priceId` | No | Stripe Price id for the hosted subscription. The amount lives on that Price in Stripe. |
 | `stripe.publishableKey` | No | Stripe publishable key (`pk_test_...` is fine on staging). Served to the web as `billing.publishableKey` on `/api/config` so Stripe.js can load on the first checkout surface without a rebuild. |
+| `email.provider` | No | `resend` or `log`. Omit the whole `email:` block to keep email off (no enrollment, poller, or send routes). Self-host defaults to off. |
+| `email.apiKey` | Yes when `provider` is `resend` | Resend API key. Required together with `from`, `webhookSecret`, and `unsubscribeSecret` when using `resend`. |
+| `email.from` | Yes when `provider` is `resend` | From address (for example `Compass <hello@mail.compasscalendar.com>`). |
+| `email.webhookSecret` | Yes when `provider` is `resend` | Resend webhook signing secret (Svix). |
+| `email.unsubscribeSecret` | Yes when `provider` is `resend` | HMAC key for one-click unsubscribe links (`openssl rand -base64 32`). |
+| `email.scheduleProfile` | No | `real` (default) or `fast`. `fast` compresses step delays for staging; config refuses `fast` when `runtime.nodeEnv` is `production`. |
+| `email.allowlist` | No | Optional send-time guard. Non-listed addresses still enroll but sends are skipped until the allowlist is cleared. Matched case-insensitively; empty when omitted. |
