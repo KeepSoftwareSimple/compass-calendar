@@ -59,6 +59,55 @@ const customerIdOf = (value: unknown): string | undefined => {
 const paymentMethodIdOf = (value: unknown): string | undefined =>
   customerIdOf(value);
 
+const isAwaitingCheckoutActivation = (status: string | undefined): boolean =>
+  !status || status === "none" || status === "awaiting_checkout";
+
+async function captureCheckoutCompleted(
+  userId: string,
+  subscription: Stripe.Subscription,
+  checkoutSessionId?: string,
+): Promise<void> {
+  await billingAnalytics.capture({
+    event: "checkout_completed",
+    userId,
+    properties: {
+      ...(checkoutSessionId ? { checkout_session_id: checkoutSessionId } : {}),
+      subscription_status: subscription.status,
+      trial: subscription.status === "trialing",
+    },
+  });
+}
+
+async function resolveSubscriptionForCheckoutSession(
+  stripe: StripeBillingGateway,
+  session: Stripe.Checkout.Session,
+): Promise<{
+  session: Stripe.Checkout.Session;
+  subscription: Stripe.Subscription;
+} | null> {
+  let subscriptionId = subscriptionIdOf(session.subscription);
+  let resolvedSession = session;
+  if (!subscriptionId) {
+    resolvedSession = await stripe.retrieveCheckoutSession(session.id, {
+      expand: ["subscription"],
+    });
+    subscriptionId = subscriptionIdOf(resolvedSession.subscription);
+  }
+  if (!subscriptionId) {
+    logger.warn("checkout.session.completed had no subscription id");
+    return null;
+  }
+  const expanded = resolvedSession.subscription;
+  if (typeof expanded === "object" && expanded !== null) {
+    return {
+      session: resolvedSession,
+      subscription: expanded as Stripe.Subscription,
+    };
+  }
+  const subscription = await stripe.retrieveSubscription(subscriptionId);
+  return { session: resolvedSession, subscription };
+}
+
 /**
  * The single place Stripe subscription fields are mapped onto `billing.*`.
  * Exported because ending a trial early applies the Subscription that
@@ -222,32 +271,32 @@ async function handleEvent(
       await handleSetupCheckoutSession(stripe, session, eventCreatedAt);
       return;
     }
-    const subscriptionId = subscriptionIdOf(session.subscription);
-    if (!subscriptionId) {
-      logger.warn("checkout.session.completed had no subscription id");
-      return;
-    }
-    const subscription = await stripe.retrieveSubscription(subscriptionId);
+    const resolved = await resolveSubscriptionForCheckoutSession(
+      stripe,
+      session,
+    );
+    if (!resolved) return;
+    const { session: resolvedSession, subscription } = resolved;
     const userId = await findUserIdForSubscription(
       subscription,
-      session.client_reference_id,
+      resolvedSession.client_reference_id,
     );
     if (!userId) {
       logger.warn(
-        `No Compass user for checkout session ${session.id} (client_reference_id=${session.client_reference_id})`,
+        `No Compass user for checkout session ${resolvedSession.id} (client_reference_id=${resolvedSession.client_reference_id})`,
       );
       return;
     }
-    await applySubscription(userId, subscription, eventCreatedAt);
-    await billingAnalytics.capture({
-      event: "checkout_completed",
-      userId,
-      properties: {
-        checkout_session_id: session.id,
-        subscription_status: subscription.status,
-        trial: subscription.status === "trialing",
-      },
+    const user = await mongoService.user.findOne({
+      _id: mongoService.objectId(userId),
     });
+    const shouldCaptureCheckoutCompleted = isAwaitingCheckoutActivation(
+      user?.billing?.subscriptionStatus,
+    );
+    await applySubscription(userId, subscription, eventCreatedAt);
+    if (shouldCaptureCheckoutCompleted) {
+      await captureCheckoutCompleted(userId, subscription, resolvedSession.id);
+    }
     return;
   }
 
@@ -282,7 +331,16 @@ async function handleEvent(
     );
     return;
   }
+  const user = await mongoService.user.findOne({
+    _id: mongoService.objectId(userId),
+  });
+  const shouldCaptureCheckoutCompleted =
+    event.type === "customer.subscription.created" &&
+    isAwaitingCheckoutActivation(user?.billing?.subscriptionStatus);
   await applySubscription(userId, subscription, eventCreatedAt);
+  if (shouldCaptureCheckoutCompleted) {
+    await captureCheckoutCompleted(userId, subscription);
+  }
 }
 
 export async function processStripeEvent(

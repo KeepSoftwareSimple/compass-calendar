@@ -364,6 +364,154 @@ describe("Stripe webhook", () => {
     });
   });
 
+  it("retrieves the checkout session when the webhook payload omits subscription id", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "retrieve@example.com",
+      name: "Retrieve",
+      firstName: "Retrieve",
+      lastName: "User",
+      locale: "en",
+      billing: { subscriptionStatus: "awaiting_checkout" },
+    });
+    const sub = subscription({
+      metadata: { compassUserId: userId.toString() },
+    });
+    const sessionsRetrieve = mock(() =>
+      Promise.resolve({
+        id: "cs_thin",
+        client_reference_id: userId.toString(),
+        customer: "cus_1",
+        subscription: sub,
+      } as Stripe.Checkout.Session),
+    );
+    const retrieveSubscription = mock(() => Promise.resolve(sub));
+    const stripe = stubBillingGateway({
+      retrieveCheckoutSession: sessionsRetrieve,
+      retrieveSubscription,
+    });
+
+    await processStripeEvent(
+      {
+        id: "evt_checkout_thin",
+        type: "checkout.session.completed",
+        created: 1_775_000_100,
+        data: {
+          object: {
+            id: "cs_thin",
+            client_reference_id: userId.toString(),
+            customer: "cus_1",
+            subscription: null,
+          },
+        },
+      } as unknown as Stripe.Event,
+      stripe,
+    );
+
+    expect(sessionsRetrieve).toHaveBeenCalledWith("cs_thin", {
+      expand: ["subscription"],
+    });
+    expect(retrieveSubscription).not.toHaveBeenCalled();
+    expect(capture).toHaveBeenCalledWith({
+      event: "checkout_completed",
+      userId: userId.toString(),
+      properties: {
+        checkout_session_id: "cs_thin",
+        subscription_status: "trialing",
+        trial: true,
+      },
+    });
+  });
+
+  it("captures checkout_completed from customer.subscription.created when checkout.session.completed never ran", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "sub-created@example.com",
+      name: "Sub",
+      firstName: "Sub",
+      lastName: "Created",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "awaiting_checkout",
+        stripeCustomerId: "cus_1",
+      },
+    });
+    const sub = subscription({
+      metadata: { compassUserId: userId.toString() },
+    });
+    const stripe = stubBillingGateway({
+      retrieveSubscription: mock(() => Promise.resolve(sub)),
+    });
+
+    await processStripeEvent(
+      {
+        id: "evt_sub_created",
+        type: "customer.subscription.created",
+        created: 1_775_000_100,
+        data: { object: { id: "sub_1", customer: "cus_1" } },
+      } as unknown as Stripe.Event,
+      stripe,
+    );
+
+    expect(capture).toHaveBeenCalledWith({
+      event: "checkout_completed",
+      userId: userId.toString(),
+      properties: {
+        subscription_status: "trialing",
+        trial: true,
+      },
+    });
+    const stored = await mongoService.user.findOne({ _id: userId });
+    expect(stored?.billing?.subscriptionStatus).toBe("trialing");
+  });
+
+  it("does not capture checkout_completed again when billing is already trialing", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "already@example.com",
+      name: "Already",
+      firstName: "Already",
+      lastName: "Trialing",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "trialing",
+        stripeCustomerId: "cus_1",
+        stripeSubscriptionId: "sub_1",
+      },
+    });
+    const stripe = stubBillingGateway({
+      retrieveSubscription: mock(() => Promise.resolve(subscription())),
+    });
+
+    await processStripeEvent(
+      {
+        id: "evt_checkout_repeat",
+        type: "checkout.session.completed",
+        created: 1_775_000_100,
+        data: {
+          object: {
+            id: "cs_repeat",
+            client_reference_id: userId.toString(),
+            customer: "cus_1",
+            subscription: "sub_1",
+          },
+        },
+      } as unknown as Stripe.Event,
+      stripe,
+    );
+
+    expect(capture).not.toHaveBeenCalled();
+  });
+
   it("captures checkout_expired by customer id and leaves billing untouched", async () => {
     using _env = mockEnv(stripeConfigured);
     const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
