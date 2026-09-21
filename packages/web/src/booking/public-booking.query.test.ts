@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { rest } from "msw";
+import { HttpResponse, http } from "msw";
 import { Status } from "@core/errors/status.codes";
 import dayjs from "@core/util/date/dayjs";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
@@ -22,16 +22,13 @@ describe("prefetchPublicBookingMonth", () => {
     let slotRequests = 0;
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) => {
-          slotRequests += 1;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [] }),
-          );
-        },
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`, () => {
+        slotRequests += 1;
+        return HttpResponse.json(
+          { bookable: true, slots: [] },
+          { status: Status.OK },
+        );
+      }),
     );
 
     const queryClient = new QueryClient({
@@ -63,16 +60,13 @@ describe("prefetchPublicBookingMonth", () => {
     let slotRequests = 0;
 
     server.use(
-      rest.get(
-        `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
-        (_req, res, ctx) => {
-          slotRequests += 1;
-          return res(
-            ctx.status(Status.OK),
-            ctx.json({ bookable: true, slots: [] }),
-          );
-        },
-      ),
+      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`, () => {
+        slotRequests += 1;
+        return HttpResponse.json(
+          { bookable: true, slots: [] },
+          { status: Status.OK },
+        );
+      }),
     );
 
     const queryClient = new QueryClient({
