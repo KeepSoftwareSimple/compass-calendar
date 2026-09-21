@@ -5,7 +5,7 @@ import {
 import { describe, expect, it } from "bun:test";
 
 describe("POSTHOG_ERROR_TRACKING_PROPERTY", () => {
-  it("lists the six error-autofix SQL property names", () => {
+  it("lists the error-autofix SQL property names", () => {
     expect(POSTHOG_ERROR_TRACKING_PROPERTY_NAMES).toEqual([
       "environment",
       "service",
@@ -13,6 +13,7 @@ describe("POSTHOG_ERROR_TRACKING_PROPERTY", () => {
       "namespace",
       "result",
       "errorType",
+      "$exception_fingerprint",
     ]);
   });
 
@@ -25,6 +26,7 @@ describe("POSTHOG_ERROR_TRACKING_PROPERTY", () => {
         "properties.namespace",
         "properties.result",
         "properties.errorType",
+        "properties.$exception_fingerprint",
       ].join(",\n       "),
     );
   });
