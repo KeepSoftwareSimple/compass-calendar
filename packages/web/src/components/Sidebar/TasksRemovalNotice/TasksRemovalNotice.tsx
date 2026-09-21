@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { useRef, useState } from "react";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { EXPORT_MY_DATA_TOAST_ID } from "@web/common/constants/toast.constants";

@@ -1,4 +1,5 @@
-import { UsersIcon, VideoCameraIcon } from "@phosphor-icons/react";
+import { UsersIcon } from "@phosphor-icons/react/dist/csr/Users";
+import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import { useState } from "react";
 import { type EventContent } from "@core/types/event.contracts";
 import { CopyButton } from "@web/components/CopyButton/CopyButton";

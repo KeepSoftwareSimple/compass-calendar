@@ -49,6 +49,8 @@ export const RULE_HELP: Record<string, string> = {
     "user-facing strings must not contain an em-dash; use a comma, period, or colon. Comments are ignored. Parsers that accept typed dashes: EM_DASH_ALLOWLIST.",
   "keydown-listener":
     "register shortcuts through useAppShortcut or the engines under packages/web/src/shortcuts/, not a raw keydown listener. Existing engines: KEYDOWN_LISTENER_ALLOWLIST.",
+  "phosphor-barrel":
+    'import icons from "@phosphor-icons/react/dist/csr/<Icon>" (and IconContext / Icon types from dist/lib). The package barrel pulls every glyph into the boot set. Test files are exempt; they are not in the bundle.',
 };
 
 /** Empty: remaining barrels were deleted; imports target the concrete files. */
@@ -193,6 +195,8 @@ const DUPLICATE_EVENT_SCHEMA =
   /(?:const|let|var)\s+EventSchema\s*=\s*z\.object/;
 const ZOD_V3_IMPORT = /from\s+["']zod(?:\/v3)?["']/;
 const KEYDOWN_LISTENER = /addEventListener\(\s*["']keydown["']/;
+const PHOSPHOR_BARREL =
+  /(?:from\s+|import\s*\(\s*)["']@phosphor-icons\/react["']/;
 const EM_DASH = /\u2014/;
 const BLOCK_COMMENT = /\/\*[\s\S]*?\*\//g;
 const LINE_COMMENT = /(^|\s)\/\/.*$/gm;
@@ -244,6 +248,85 @@ export function zodV3ImportHits(source: string): number[] {
 
 export function keydownListenerHits(source: string): number[] {
   return lineNumbers(source, KEYDOWN_LISTENER);
+}
+
+export function phosphorBarrelHits(source: string): number[] {
+  return lineNumbers(source, PHOSPHOR_BARREL);
+}
+
+/**
+ * Phosphor CSR defs ship six SVG weights in one Map. IconBase picks the
+ * weight at runtime, so unused thin/light/duotone entries cannot tree-shake.
+ * The web build plugin calls this while loading those def modules.
+ */
+const UNUSED_PHOSPHOR_WEIGHT =
+  /\n {2}\[\n {4}"(?:thin|light|duotone)",[\s\S]*?\n {2}\],?/g;
+
+export function stripUnusedPhosphorWeights(source: string): string {
+  return source.replace(UNUSED_PHOSPHOR_WEIGHT, "");
+}
+
+/**
+ * These four modules are the boot-graph importers of X and Check. Sharing
+ * those two glyphs across boot chunks extracts a phosphor-only chunk and
+ * pushes the boot chunk count up by one. Inlining them here keeps that
+ * chunk on the lazy route graph. Paths are Phosphor's regular X and
+ * regular/bold Check (MIT).
+ */
+const BOOT_PHOSPHOR_INLINE_FILES = new Set([
+  "ConnectCalendarPrompt.tsx",
+  "DiscardUnsavedChangesDialog.tsx",
+  "MissingPermissionsModal.tsx",
+  "PointerHint.tsx",
+]);
+
+const PHOSPHOR_X_IMPORT =
+  /^import \{ (X|XIcon) \} from "@phosphor-icons\/react\/dist\/csr\/X";\r?\n/m;
+const PHOSPHOR_CHECK_IMPORT =
+  /^import \{ CheckIcon \} from "@phosphor-icons\/react\/dist\/csr\/Check";\r?\n/m;
+
+function phosphorXComponent(name: string): string {
+  return `function ${name}({ size = 16, ...props }: { size?: number | string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="currentColor" viewBox="0 0 256 256" {...props}>
+      <path d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z" />
+    </svg>
+  );
+}
+`;
+}
+
+function phosphorCheckComponent(): string {
+  return `function CheckIcon({ size = 16, weight = "regular", ...props }: { size?: number | string; weight?: string }) {
+  const d = weight === "bold"
+    ? "M232.49,80.49l-128,128a12,12,0,0,1-17,0l-56-56a12,12,0,1,1,17-17L96,183,215.51,63.51a12,12,0,0,1,17,17Z"
+    : "M229.66,77.66l-128,128a8,8,0,0,1-11.32,0l-56-56a8,8,0,0,1,11.32-11.32L96,188.69,218.34,66.34a8,8,0,0,1,11.32,11.32Z";
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} fill="currentColor" viewBox="0 0 256 256" {...props}>
+      <path d={d} />
+    </svg>
+  );
+}
+`;
+}
+
+export function inlineBootPhosphorIcons(
+  filePath: string,
+  source: string,
+): string {
+  const base = filePath.split(/[/\\]/).pop() ?? "";
+  if (!BOOT_PHOSPHOR_INLINE_FILES.has(base)) return source;
+  let next = source;
+  const xImport = next.match(PHOSPHOR_X_IMPORT);
+  if (xImport?.[1]) {
+    next = next.replace(xImport[0], "");
+    next += `\n${phosphorXComponent(xImport[1])}`;
+  }
+  if (PHOSPHOR_CHECK_IMPORT.test(next)) {
+    next = next.replace(PHOSPHOR_CHECK_IMPORT, "");
+    next += `\n${phosphorCheckComponent()}`;
+  }
+  return next;
 }
 
 /** Em-dashes outside comments. Comment bodies are blanked so line numbers hold. */
@@ -441,6 +524,16 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
     if (!matchesConstraintAllow(rel, ZOD_V3_ALLOWLIST)) {
       for (const line of zodV3ImportHits(source)) {
         hits.push({ path: rel, rule: "zod-import", line });
+      }
+    }
+
+    if (
+      rel.startsWith("packages/web/src/") &&
+      !rel.includes(".test.") &&
+      !rel.includes(".spec.")
+    ) {
+      for (const line of phosphorBarrelHits(source)) {
+        hits.push({ path: rel, rule: "phosphor-barrel", line });
       }
     }
 

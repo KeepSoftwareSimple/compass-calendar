@@ -1,14 +1,12 @@
-import {
-  ArrowUDownLeftIcon,
-  CalendarDotsIcon,
-  CalendarIcon,
-  CompassIcon,
-  HourglassSimpleIcon,
-  type Icon,
-  KeyboardIcon,
-  SidebarSimpleIcon,
-  VideoCameraIcon,
-} from "@phosphor-icons/react";
+import { ArrowUDownLeftIcon } from "@phosphor-icons/react/dist/csr/ArrowUDownLeft";
+import { CalendarIcon } from "@phosphor-icons/react/dist/csr/Calendar";
+import { CalendarDotsIcon } from "@phosphor-icons/react/dist/csr/CalendarDots";
+import { CompassIcon } from "@phosphor-icons/react/dist/csr/Compass";
+import { HourglassSimpleIcon } from "@phosphor-icons/react/dist/csr/HourglassSimple";
+import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
+import { SidebarSimpleIcon } from "@phosphor-icons/react/dist/csr/SidebarSimple";
+import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
+import { type Icon } from "@phosphor-icons/react/dist/lib/types";
 import { type Dayjs } from "@core/util/date/dayjs";
 import {
   goToDatePaletteLabel,

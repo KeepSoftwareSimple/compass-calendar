@@ -1,4 +1,4 @@
-import { CalendarIcon } from "@phosphor-icons/react";
+import { CalendarIcon } from "@phosphor-icons/react/dist/csr/Calendar";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";

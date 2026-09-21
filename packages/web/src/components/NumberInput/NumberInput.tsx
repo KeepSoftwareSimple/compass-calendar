@@ -1,4 +1,5 @@
-import { MinusIcon, PlusIcon } from "@phosphor-icons/react";
+import { MinusIcon } from "@phosphor-icons/react/dist/csr/Minus";
+import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { type ChangeEvent } from "react";
 
 interface NumberInputProps {

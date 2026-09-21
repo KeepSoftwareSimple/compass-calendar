@@ -1,4 +1,4 @@
-import { ShuffleIcon } from "@phosphor-icons/react";
+import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
 import { useEffect, useRef, useState } from "react";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";

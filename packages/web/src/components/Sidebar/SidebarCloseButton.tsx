@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC } from "react";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import {

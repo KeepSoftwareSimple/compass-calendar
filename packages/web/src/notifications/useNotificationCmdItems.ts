@@ -1,4 +1,5 @@
-import { BellIcon, BellSlashIcon } from "@phosphor-icons/react";
+import { BellIcon } from "@phosphor-icons/react/dist/csr/Bell";
+import { BellSlashIcon } from "@phosphor-icons/react/dist/csr/BellSlash";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { getNotificationPort } from "@web/notifications/notification.port";
 import {

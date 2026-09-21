@@ -1,4 +1,4 @@
-import { VideoCameraIcon } from "@phosphor-icons/react";
+import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import { type FC } from "react";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";

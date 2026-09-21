@@ -1,4 +1,5 @@
-import { Check, Copy } from "@phosphor-icons/react";
+import { Check } from "@phosphor-icons/react/dist/csr/Check";
+import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
 import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";

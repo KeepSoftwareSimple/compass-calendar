@@ -1,4 +1,4 @@
-import { PlusIcon } from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 

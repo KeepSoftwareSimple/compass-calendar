@@ -1,4 +1,4 @@
-import { XIcon } from "@phosphor-icons/react";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import IconButton from "@web/components/IconButton/IconButton";
 import { settingsActions } from "@web/settings/settings.store";

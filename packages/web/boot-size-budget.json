@@ -2,7 +2,7 @@
   "chunkCount": 87,
   "totalGzipBytes": 702784,
   "packages": {
-    "@phosphor-icons/react": 173248,
+    "@phosphor-icons/react": 17997,
     "@react-oauth/google": 2011,
     "@tanstack/history": 4500,
     "@tanstack/hotkeys": 9250,

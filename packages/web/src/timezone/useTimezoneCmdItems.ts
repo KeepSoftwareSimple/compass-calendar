@@ -1,4 +1,4 @@
-import { GlobeIcon } from "@phosphor-icons/react";
+import { GlobeIcon } from "@phosphor-icons/react/dist/csr/Globe";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { settingsActions } from "@web/settings/settings.store";

@@ -1,4 +1,4 @@
-import { ArrowClockwiseIcon } from "@phosphor-icons/react";
+import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
 import { type FC, useEffect, useState } from "react";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
 import { useVersionCheck } from "@web/components/Sidebar/SidebarActions/useVersionCheck";

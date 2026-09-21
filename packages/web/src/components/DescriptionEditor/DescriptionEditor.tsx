@@ -1,9 +1,7 @@
-import {
-  ListBulletsIcon,
-  ListNumbersIcon,
-  TextBIcon,
-  TextItalicIcon,
-} from "@phosphor-icons/react";
+import { ListBulletsIcon } from "@phosphor-icons/react/dist/csr/ListBullets";
+import { ListNumbersIcon } from "@phosphor-icons/react/dist/csr/ListNumbers";
+import { TextBIcon } from "@phosphor-icons/react/dist/csr/TextB";
+import { TextItalicIcon } from "@phosphor-icons/react/dist/csr/TextItalic";
 import { Link } from "@tiptap/extension-link";
 import { Placeholder } from "@tiptap/extension-placeholder";
 import { EditorContent, useEditor, useEditorState } from "@tiptap/react";

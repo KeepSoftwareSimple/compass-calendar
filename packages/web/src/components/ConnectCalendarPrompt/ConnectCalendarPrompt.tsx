@@ -1,4 +1,4 @@
-import { CheckIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { type FC, useEffect, useRef } from "react";
 import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
 import {
