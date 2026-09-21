@@ -51,12 +51,12 @@ describe("MobileGate", () => {
       expect(
         screen.getByRole("heading", {
           level: 1,
-          name: "Compass is a keyboard-first calendar",
+          name: "Compass is a keyboard calendar",
         }),
       ).toBeInTheDocument();
       expect(
         screen.getByText(
-          "It's built for the desktop, so it doesn't run on phones yet. While you're here, we made you a little game for fun.",
+          "It's built for the keyboard, so it doesn't run on phones yet. While you're here, we made you a little game for fun.",
         ),
       ).toBeInTheDocument();
       expect(
