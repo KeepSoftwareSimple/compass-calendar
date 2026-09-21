@@ -4,7 +4,7 @@ import {
   type ProviderEventId,
 } from "@core/types/sync/identity.contracts";
 import {
-  scheduleStartAt,
+  isFollowingSplitAtSeriesStart,
   truncateRulesBefore,
 } from "@sync/domain/occurrence-projection";
 import { executeProviderDelete } from "@sync/domain/provider-command.delete";
@@ -66,7 +66,7 @@ export async function executeProviderSeriesFollowingDelete(
     );
   const splitAt = new Date(recurrenceId);
 
-  if (splitAt.getTime() <= scheduleStartAt(master.schedule).getTime()) {
+  if (isFollowingSplitAtSeriesStart(master.schedule, splitAt)) {
     return executeProviderDelete(deps, command, master, calendar, now);
   }
 
@@ -221,7 +221,7 @@ export async function executeProviderSeriesFollowingUpdate(
     );
   const splitAt = new Date(recurrenceId);
 
-  if (splitAt.getTime() <= scheduleStartAt(master.schedule).getTime()) {
+  if (isFollowingSplitAtSeriesStart(master.schedule, splitAt)) {
     return executeProviderSeriesUpdate(deps, command, master, calendar, now);
   }
 
