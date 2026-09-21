@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
-import { type EventId } from "@core/types/domain-primitives";
+import { CalendarIdSchema, type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
@@ -11,7 +11,13 @@ import {
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
-import { EVENT_DELETED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { useHiddenCalendarIds } from "@web/calendars/calendar-visibility.store";
+import { useCalendarVisibility } from "@web/calendars/useCalendarVisibility";
+import {
+  CALENDAR_VISIBILITY_TOAST_ID,
+  EVENT_DELETED_TOAST_ID,
+} from "@web/common/constants/toast.constants";
+import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import {
   useHiddenEventIds,
@@ -83,6 +89,8 @@ const setup = () => {
       undoRedo: useUndoRedo(dependencies),
       hidden: useToggleEventHidden(),
       ids: useHiddenEventIds(),
+      calendar: useCalendarVisibility(),
+      hiddenCalendarIds: useHiddenCalendarIds(),
     }),
     { wrapper },
   );
@@ -726,5 +734,54 @@ describe("useUndoRedo", () => {
     });
     const deleteCall = context.calls.find(({ method }) => method === "delete");
     expect(deleteCall?.value).toEqual({ id: created.id, scope: "all" });
+  });
+
+  test("undoes hiding a calendar, toasts Showing X calendar, and redo re-hides it", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+    const context = setup();
+    const calendarId = CalendarIdSchema.parse(createObjectIdString());
+
+    act(() =>
+      context.hook.result.current.calendar.toggleCalendarVisibility(
+        calendarId,
+        false,
+        "Work",
+      ),
+    );
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      true,
+    );
+    expect(useUndoHistoryStore.getState().past).toEqual([
+      {
+        kind: "calendarVisibility",
+        calendarId,
+        label: "Work",
+        isVisible: false,
+      },
+    ]);
+
+    act(() => context.hook.result.current.undoRedo.undo());
+
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      false,
+    );
+    expect(mocks.update).toHaveBeenCalledWith(
+      CALENDAR_VISIBILITY_TOAST_ID,
+      expect.objectContaining({ render: "Showing Work calendar" }),
+    );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(0);
+    expect(context.hook.result.current.undoRedo.canRedo).toBe(true);
+
+    act(() => context.hook.result.current.undoRedo.redo());
+
+    expect(context.hook.result.current.hiddenCalendarIds.has(calendarId)).toBe(
+      true,
+    );
+    expect(mocks.update).toHaveBeenCalledWith(
+      CALENDAR_VISIBILITY_TOAST_ID,
+      expect.objectContaining({ render: "Hidden Work calendar" }),
+    );
+    expect(useUndoHistoryStore.getState().past).toHaveLength(1);
   });
 });

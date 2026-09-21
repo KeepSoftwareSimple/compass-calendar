@@ -205,6 +205,24 @@ describe("undoHistoryActions", () => {
     ]);
   });
 
+  it("does not coalesce calendar visibility entries", () => {
+    const calendarId = "cal-a" as never;
+    undoHistoryActions.record({
+      kind: "calendarVisibility",
+      calendarId,
+      label: "Work",
+      isVisible: false,
+    });
+    undoHistoryActions.record({
+      kind: "calendarVisibility",
+      calendarId,
+      label: "Work",
+      isVisible: true,
+    });
+
+    expect(useUndoHistoryStore.getState().past).toHaveLength(2);
+  });
+
   it("commitRedo caps past at 30, dropping the oldest on a long redo run", () => {
     for (let i = 0; i < 30; i++) {
       undoHistoryActions.record(editEntry(`e${i}`));

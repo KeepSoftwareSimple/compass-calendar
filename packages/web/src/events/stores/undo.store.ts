@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { type CalendarId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
 import { IS_DEV } from "@web/common/constants/env.constants";
 import {
@@ -28,7 +29,13 @@ export type UndoHistoryEntry =
     }
   | { kind: "delete"; event: Event }
   | { kind: "create"; event: Event }
-  | { kind: "hidden"; eventId: string; hidden: boolean };
+  | { kind: "hidden"; eventId: string; hidden: boolean }
+  | {
+      kind: "calendarVisibility";
+      calendarId: CalendarId;
+      label: string;
+      isVisible: boolean;
+    };
 
 export interface State_UndoHistory {
   past: UndoHistoryEntry[];

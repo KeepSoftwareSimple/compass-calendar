@@ -2,7 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { type EventId } from "@core/types/domain-primitives";
 import { type Event } from "@core/types/event.contracts";
-import { UNDO_DECLINED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { setCalendarVisibility } from "@web/calendars/calendar-visibility.store";
+import { calendarVisibilityStatusMessage } from "@web/calendars/useCalendarVisibility";
+import {
+  CALENDAR_VISIBILITY_TOAST_ID,
+  UNDO_DECLINED_TOAST_ID,
+} from "@web/common/constants/toast.constants";
 import { focusCalendarEventElement } from "@web/common/utils/event/event.util";
 import {
   showRestoredToast,
@@ -50,6 +55,26 @@ const isHiddenEntry = (
   entry: UndoHistoryEntry,
 ): entry is Extract<UndoHistoryEntry, { kind: "hidden" }> =>
   entry.kind === "hidden";
+
+const isCalendarVisibilityEntry = (
+  entry: UndoHistoryEntry,
+): entry is Extract<UndoHistoryEntry, { kind: "calendarVisibility" }> =>
+  entry.kind === "calendarVisibility";
+
+const replayCalendarVisibility = (
+  isVisible: boolean,
+  calendarId: Extract<
+    UndoHistoryEntry,
+    { kind: "calendarVisibility" }
+  >["calendarId"],
+  label: string,
+) => {
+  if (!setCalendarVisibility(calendarId, isVisible)) return;
+  showStatusToast(
+    CALENDAR_VISIBILITY_TOAST_ID,
+    calendarVisibilityStatusMessage(isVisible, label),
+  );
+};
 
 const entryEventId = (entry: UndoHistoryEntry): string | null => {
   if (isDeleteEntry(entry) || isCreateEntry(entry)) return entry.event.id;
@@ -261,7 +286,13 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
 
     undoHistoryActions.commitUndo();
     runHistoryRestore(() => {
-      if (isHiddenEntry(entry)) {
+      if (isCalendarVisibilityEntry(entry)) {
+        replayCalendarVisibility(
+          !entry.isVisible,
+          entry.calendarId,
+          entry.label,
+        );
+      } else if (isHiddenEntry(entry)) {
         setEventHidden(entry.eventId, !entry.hidden);
       } else if (isDeleteEntry(entry)) {
         // A delete surfaced a "Deleted" toast; flip it to "Restored" only
@@ -306,7 +337,13 @@ export function useUndoRedo(dependencies: EventMutationDependencies = {}) {
 
     undoHistoryActions.commitRedo();
     runHistoryRestore(() => {
-      if (isHiddenEntry(entry)) {
+      if (isCalendarVisibilityEntry(entry)) {
+        replayCalendarVisibility(
+          entry.isVisible,
+          entry.calendarId,
+          entry.label,
+        );
+      } else if (isHiddenEntry(entry)) {
         setEventHidden(entry.eventId, entry.hidden);
       } else if (isDeleteEntry(entry)) {
         mutations.delete({ id: entry.event.id as EventId, scope: "this" });
