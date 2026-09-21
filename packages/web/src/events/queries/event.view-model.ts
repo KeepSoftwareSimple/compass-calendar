@@ -9,6 +9,7 @@ import {
   timedMultiDayToAllDayDates,
 } from "@web/common/utils/event/event-nudge.util";
 import { assignEventsToRow } from "@web/common/utils/grid/assign.row";
+import { gridRecurrenceFromEvent } from "@web/events/grid-event-recurrence";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 import { type NormalizedEventQueryData } from "./event.query.types";
 
@@ -70,12 +71,7 @@ const eventToGridEvent = (
     isAllDay,
     startDate,
     endDate,
-    recurrence:
-      event.recurrence.kind === "series"
-        ? { rule: [...event.recurrence.rules], eventId: event.id }
-        : event.recurrence.kind === "occurrence"
-          ? { eventId: event.recurrence.seriesId }
-          : undefined,
+    recurrence: gridRecurrenceFromEvent(event),
     updatedAt: event.updatedAt ?? undefined,
     position: gridEventDefaultPosition,
     calendarId: event.calendarId,

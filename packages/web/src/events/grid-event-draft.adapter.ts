@@ -30,6 +30,7 @@ import {
   type GridEventDraft,
   type GridScheduleDraft,
 } from "@web/events/event-draft.types";
+import { gridRecurrenceFromEvent } from "@web/events/grid-event-recurrence";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import {
   calendarDateInEffectiveTimeZone,
@@ -230,28 +231,6 @@ export function allDayGridSchedule(
   };
 }
 
-// Mirrors event.view-model.ts's scheduledEventToSchemaEvent recurrence
-// conversion (the now-deleted event.legacy-bridge.ts used the same mapping),
-// duplicated locally so this adapter has no dependency on that module.
-//
-// An occurrence's own recurrence pointer carries no rule (only the series
-// base does), so opening one always reads as non-recurring unless the
-// caller resolves the base event and passes its rules through - see
-// EventForm.tsx's `seriesRules`.
-function legacyRecurrenceFromEvent(
-  event: Event,
-  seriesRules?: readonly string[],
-): CompassEvent["recurrence"] {
-  return event.recurrence.kind === "series"
-    ? { rule: [...event.recurrence.rules], eventId: event.id }
-    : event.recurrence.kind === "occurrence"
-      ? {
-          eventId: event.recurrence.seriesId,
-          ...(seriesRules?.length ? { rule: [...seriesRules] } : {}),
-        }
-      : undefined;
-}
-
 // Reflects the draft's *live* recurrence edit (e.g. from RecurrenceSection's
 // toggle, mid-form), not just the source event's original recurrence — a
 // user editing recurrence on an existing draft must see that edit echoed
@@ -263,7 +242,7 @@ function legacyRecurrenceFromDraft(
   const { recurrence } = draft.values;
 
   if (draft.kind === "edit" && recurrence.kind === "preserve") {
-    return legacyRecurrenceFromEvent(draft.source, seriesRules);
+    return gridRecurrenceFromEvent(draft.source, seriesRules);
   }
 
   if (recurrence.kind === "series") {

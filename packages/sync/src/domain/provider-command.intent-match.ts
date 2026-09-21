@@ -115,7 +115,7 @@ export function patchExpectedVersion(
 // The recurrence a patch would write for a stored record as it stands: a
 // series master carries its rules, an exception addresses one instance, and
 // anything else is a single event.
-export function storedWriteRecurrence(
+function storedWriteRecurrence(
   recurrence: EventRecord["recurrence"],
 ): ProviderWriteRecurrence {
   if (recurrence.kind === "seriesMaster") {
@@ -163,7 +163,7 @@ export function attendeesMatchIntent(
 // misses (e.g. a provider injecting a non-default WKST we never sent) can still
 // false-miss — acceptable because Compass emits simple rules and the only
 // consequence is a spurious conflict in the narrow landed-then-retried window.
-export function recurrenceMatches(
+function recurrenceMatches(
   current: ProviderEvent["recurrence"],
   intended: ProviderWriteRecurrence,
 ): boolean {

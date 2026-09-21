@@ -200,6 +200,9 @@ function snapshotSeriesMasterSchedule(
 const SERIES_BASE_MISSING_MESSAGE =
   "This series is still loading. Reload the page and try again.";
 
+export const PROVIDER_MANAGED_SCHEDULE_TOAST =
+  "This event's time follows your calendar provider and can't be moved in Compass.";
+
 // A remote scope-"all" edit addressed through an occurrence needs the series
 // base to rebase the occurrence's dates onto. Without it the absolute dates
 // would become the series start: sync moves the master to them and shifts
@@ -317,6 +320,15 @@ function optimisticGuestList(
   );
 }
 
+function optimisticAttendeesFromInput(
+  attendees: CreateEventInput["content"]["attendees"],
+  existing?: readonly Attendee[],
+) {
+  return isGuestEditInput(attendees)
+    ? optimisticGuestList(attendees, existing)
+    : readAttendees(attendees);
+}
+
 // Optimistic RSVP: rewrite only the caller's own attendee entry (matched by
 // the calendar's account email, case-insensitively — the same self-match sync
 // applies), leaving every other guest's provider-owned status untouched.
@@ -347,9 +359,7 @@ function rsvpEventContent(
 // "series"), so it's assignable as-is.
 function optimisticEventFromCreate(input: CreateEventInput): Event {
   const { attendees, ...details } = input.content;
-  const optimisticAttendees = isGuestEditInput(attendees)
-    ? optimisticGuestList(attendees, undefined)
-    : readAttendees(attendees);
+  const optimisticAttendees = optimisticAttendeesFromInput(attendees);
   return {
     id: input.id as EventId,
     calendarId: input.calendarId,
@@ -381,9 +391,10 @@ function mergeReplaceContent(
   const { attendees, ...details } = input;
   const existingAttendees =
     existing.kind === "details" ? existing.attendees : undefined;
-  const optimisticAttendees = isGuestEditInput(attendees)
-    ? optimisticGuestList(attendees, existingAttendees)
-    : readAttendees(attendees);
+  const optimisticAttendees = optimisticAttendeesFromInput(
+    attendees,
+    existingAttendees,
+  );
   const replayInput =
     optimisticAttendees === undefined
       ? details
@@ -1066,9 +1077,7 @@ export function useEventMutations(
           original?.providerManaged === true &&
           !eventSchedulesEqual(original.schedule, payload.input.schedule)
         ) {
-          showErrorToast(
-            "This event's time follows your calendar provider and can't be moved in Compass.",
-          );
+          showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);
           return false;
         }
         if (

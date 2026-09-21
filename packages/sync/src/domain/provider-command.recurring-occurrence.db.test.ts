@@ -186,47 +186,6 @@ describe("provider-linked recurring scopes (this / thisAndFollowing)", () => {
       })
     ).record;
 
-  const _followingCommand = async (
-    master: EventRecord,
-    kind: "update" | "delete",
-    splitAt = SECOND_START,
-    title = "Split",
-  ) =>
-    (
-      await commands.submit({
-        tenantId: master.tenantId,
-        principalId: master.principalId,
-        idempotencyKey: `idem-${objectId()}` as IdempotencyKey,
-        eventId: master._id,
-        input:
-          kind === "update"
-            ? ({
-                kind: "update",
-                invitation: "none",
-                content: content(title),
-                schedule: {
-                  kind: "timed",
-                  start: splitAt,
-                  end: "2026-07-21T10:00:00-06:00",
-                  timeZone: "America/Denver",
-                },
-                recurrence: {
-                  kind: "series",
-                  rules: ["RRULE:FREQ=WEEKLY;COUNT=2"],
-                },
-                scope: "thisAndFollowing",
-                recurrenceId: splitAt,
-              } as unknown as SyncCommandInput)
-            : ({
-                kind: "delete",
-                invitation: "none",
-                scope: "thisAndFollowing",
-                recurrenceId: splitAt,
-              } as unknown as SyncCommandInput),
-        expectedVersion: null,
-      })
-    ).record;
-
   const deps = (writer: FakeProviderEventWriter) =>
     providerMutationDeps(repos, writer);
   const deleteDeps = (writer: FakeProviderEventWriter) =>

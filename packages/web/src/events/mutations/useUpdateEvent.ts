@@ -22,6 +22,7 @@ import { eventSchedulesEqual } from "@web/events/mutations/event-schedule-equal"
 import {
   type EventMutationCallbacks,
   type EventMutationDependencies,
+  PROVIDER_MANAGED_SCHEDULE_TOAST,
   useEventMutations,
 } from "@web/events/mutations/useEventMutations";
 import {
@@ -87,9 +88,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
           return finishWithoutMutation();
         }
         if (sourceEvent.providerManaged === true) {
-          showErrorToast(
-            "This event's time follows your calendar provider and can't be moved in Compass.",
-          );
+          showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);
           return finishWithoutMutation();
         }
         const lookup = buildCalendarLookup(
@@ -145,9 +144,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
         sourceEvent.providerManaged === true &&
         !eventSchedulesEqual(sourceEvent.schedule, parsed.input.schedule)
       ) {
-        showErrorToast(
-          "This event's time follows your calendar provider and can't be moved in Compass.",
-        );
+        showErrorToast(PROVIDER_MANAGED_SCHEDULE_TOAST);
         return finishWithoutMutation();
       }
 
