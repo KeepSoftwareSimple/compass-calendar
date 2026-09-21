@@ -57,7 +57,6 @@ function rangeEventsQueryOptions(
       source,
       start: startDate,
       end: endDate,
-      calendarIds,
     }),
     queryFn: ({ signal }) =>
       fetchFn(
