@@ -85,16 +85,12 @@ async function handleSuppression(
     return;
   }
   await markUserSuppressed(resolved.userId);
-  const row = await mongoService.emailSend.findOne(
-    { userId: resolved.userId },
-    { sort: { updatedAt: -1 }, projection: { stepKey: 1 } },
-  );
   const analyticsEvent =
     eventType === "email.bounced" ? "email_bounced" : "email_complained";
   void emailAnalytics.capture({
     event: analyticsEvent,
     userId: resolved.userId.toHexString(),
-    step: row?.stepKey,
+    step: await emailSendRepository.findLastSentStepKey(resolved.userId),
   });
 }
 

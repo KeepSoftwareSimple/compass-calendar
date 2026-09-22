@@ -35,7 +35,8 @@ export function buildUnsubscribeUrls(token: string): {
   mailtoUrl: string;
   listUnsubscribeHeader: string;
 } {
-  const httpsUrl = `${CONFIG.BASEURL}/api/email/unsubscribe?token=${encodeURIComponent(token)}`;
+  // BASEURL is `backend.apiUrl`, which already ends in `/api`.
+  const httpsUrl = `${CONFIG.BASEURL}/email/unsubscribe?token=${encodeURIComponent(token)}`;
   const domain = extractMailboxDomain(CONFIG.EMAIL_FROM ?? "");
   const mailtoUrl = `mailto:unsubscribe@${domain}?subject=${encodeURIComponent("Unsubscribe")}&body=${encodeURIComponent(token)}`;
   const listUnsubscribeHeader = `<${mailtoUrl}>, <${httpsUrl}>`;

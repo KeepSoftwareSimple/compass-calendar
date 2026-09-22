@@ -71,6 +71,11 @@ describe("email suppression", () => {
     const shortcuts = rows.find((row) => row.stepKey === "shortcuts");
     expect(welcome?.status).toBe("canceled");
     expect(shortcuts?.status).toBe("sent");
+    // The canceled row is now the most recently updated; analytics must
+    // still attribute to the last email actually sent.
+    expect(await emailSendRepository.findLastSentStepKey(userId)).toBe(
+      "shortcuts",
+    );
     const user = await mongoService.user.findOne({ _id: userId });
     expect(user?.emailPreferences?.unsubscribedAt).toBeInstanceOf(Date);
   });
