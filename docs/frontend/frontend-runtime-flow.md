@@ -57,17 +57,21 @@ This is the shell for the main desktop app experience.
 Files:
 
 - `packages/web/src/components/RootShell/RootShell.tsx`
+- `packages/web/src/components/RootShell/onboarding-surface.ts`
 - `packages/web/src/components/WelcomeModal/WelcomeModal.tsx`
+- `packages/web/src/components/WelcomeModal/WelcomeGuideModal.tsx`
 - `packages/web/src/components/ShortcutShowcase/`
 - `packages/web/src/components/FirstEventPrompt/`
+- `packages/web/src/components/ConnectCalendarPrompt/ConnectCalendarPromptGate.tsx`
 
-`RootShell` mounts the welcome modal, Shortcut Showcase, the first-event
-prompt, global navigation / calendar-shell shortcuts, and the click hint tracker.
-Those calendar-onboarding overlays are skipped on `/life` and on mobile OSes
-(the overlays would paint over `MobileGate`, so a phone user sees the gate
-first instead of a walkthrough they cannot use). Pointer suppression is also
-skipped on `/life` so first-time visitors can click the page like a normal
-site; the calendar views stay keyboard-only.
+`RootShell` builds onboarding flags and mounts at most one onboarding card or
+modal at a time via `selectActiveSurface` (billing gate and checkout
+celebration win first; then welcome, Block Party, welcome guide replay,
+connect-calendar prompt, first-event prompt, and palette `PointerHint`). Global
+navigation and calendar-shell shortcuts stay mounted separately. Calendar
+onboarding overlays are skipped on `/life` and on mobile OSes (they would paint
+over `MobileGate`, so a phone user sees the gate first instead of a walkthrough
+they cannot use).
 
 Welcome → signup → first-event contract:
 
@@ -131,7 +135,8 @@ Palette shortcut teaching (from `RootShell`):
 - clicks on the grid and chrome no longer open that pill; see
   [Contextual Pointer Guidance](./contextual-pointer-guidance.md)
 
-See [Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and
+See [Onboarding](../acceptance/onboarding.md) and
+[Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and
 [Feature File Map](../development/feature-file-map.md#keyboard-shortcuts) for
 file pointers.
 

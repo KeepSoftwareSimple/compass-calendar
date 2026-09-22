@@ -2,6 +2,9 @@
 
 This runbook covers keyboard shortcut parity in Compass. The principle: anything a user can do with a mouse should also be doable with the keyboard.
 
+Welcome, Block Party opt-in, billing-gate behavior, sidebar tip mute, and
+one-surface-at-a-time rules are in [Onboarding](./onboarding.md).
+
 The product rules behind those bindings — hold-Mod discovery, targeting
 any on-screen field, hints that never lie — are
 [Shortcut Commandments](../frontend/shortcut-commandments.md).
@@ -741,7 +744,7 @@ If time is limited, run these checks before shipping shortcut-related changes:
 13. Cmd+D / Ctrl+D duplicates a focused event in Day and Week view.
 14. With a focused event, `E` then `T` opens the form with the title focused; `E` then `A` / `C` jump to guests / color; bare `E` alone does nothing.
 15. Pressing `H` shows event jump chips; a day letter + digit focuses that event; `Shift` + the day letter enters a column without a prior `H`, including an empty column, and `C` then creates there; Shift+Tab does not show chips.
-16. Mouse clicks, right-clicks, and double-clicks are inert on calendar views; a blocked click shows the keyboard-only hint. `/life` allows normal clicks. `M` opens the focused event's menu; `F` focuses the newest notice.
+16. Grid clicks no longer open click-to-teach `PointerHint` pills; palette teaching is scenario 25. `/life` allows normal clicks. `M` opens the focused event's menu; `F` focuses the newest notice.
 17. PageUp / PageDown scroll the timed grid by one viewport in Day and Week view even when an event is focused; they do not fire in a text input.
 18. Alt+ArrowUp / Alt+ArrowDown pan the timed grid by one hour in Day and Week view even when an event is focused; they do not fire in a text input.
 19. `Z` opens time travel in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.
