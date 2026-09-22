@@ -37,7 +37,6 @@ describe("FirstEventPrompt", () => {
     useSettingsStore.setState(initialSettingsState);
     persistentBrowserStore.set(STORAGE_KEYS.FIRST_EVENT_DONE, "");
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "");
-    localStorage.setItem("compass.onboarding.checklist-done", "");
   });
 
   afterEach(() => {

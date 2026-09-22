@@ -2,6 +2,8 @@ import { type FC, useEffect, useRef, useState } from "react";
 import { track } from "@web/auth/posthog/track";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   POINTER_ACTION_ATTRIBUTE,
@@ -21,13 +23,30 @@ function trialCardBannerMessage(daysLeft: number): string {
   return `Your trial ends in ${daysLeft} days. Add a card to keep creating events.`;
 }
 
+function isTrialCardBannerDismissed(trialEndsAt: string): boolean {
+  if (!persistentBrowserStore.isAvailable()) return false;
+  return (
+    persistentBrowserStore.get(STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR) ===
+    trialEndsAt
+  );
+}
+
 /**
  * Non-blocking ask to add a card while a local trial still has three or
- * fewer days left. Dismiss lasts for this tab session only.
+ * fewer days left. Dismiss is device-local for the current trial end date.
  */
-export const TrialCardBanner: FC<{ daysLeft: number }> = ({ daysLeft }) => {
-  const [dismissed, setDismissed] = useState(false);
+export const TrialCardBanner: FC<{
+  daysLeft: number;
+  trialEndsAt: string;
+}> = ({ daysLeft, trialEndsAt }) => {
+  const [dismissed, setDismissed] = useState(() =>
+    isTrialCardBannerDismissed(trialEndsAt),
+  );
   const shownRef = useRef(false);
+
+  useEffect(() => {
+    setDismissed(isTrialCardBannerDismissed(trialEndsAt));
+  }, [trialEndsAt]);
 
   useEffect(() => {
     if (shownRef.current) return;
@@ -70,7 +89,13 @@ export const TrialCardBanner: FC<{ daysLeft: number }> = ({ daysLeft }) => {
       </button>
       <button
         className="c-focus-ring font-medium text-text-muted underline-offset-4 hover:underline"
-        onClick={() => setDismissed(true)}
+        onClick={() => {
+          persistentBrowserStore.set(
+            STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR,
+            trialEndsAt,
+          );
+          setDismissed(true);
+        }}
         type="button"
       >
         Dismiss

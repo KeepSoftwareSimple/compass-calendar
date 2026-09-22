@@ -98,7 +98,6 @@ describe("ShortcutShowcase", () => {
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "");
     persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_STEP);
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_WELCOME, "");
-    localStorage.setItem("compass.onboarding.has-seen-onboarding-tour", "");
     clearAppLockReasons();
   });
 

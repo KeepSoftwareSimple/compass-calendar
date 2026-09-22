@@ -22,7 +22,6 @@ describe("firstEventPromptActions", () => {
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
     persistentBrowserStore.set(STORAGE_KEYS.FIRST_EVENT_DONE, "");
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "");
-    localStorage.setItem("compass.onboarding.checklist-done", "");
   });
 
   it("completes and celebrates on the first real event when the showcase is not active", () => {
