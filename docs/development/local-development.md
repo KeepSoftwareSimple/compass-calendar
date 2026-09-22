@@ -28,6 +28,21 @@ Use this for:
 
 You do not need the backend for basic frontend rendering.
 
+## Booking web (scaffold)
+
+Command:
+
+```bash
+bun run dev:booking-web
+```
+
+The scaffold serves at <http://localhost:9081> (override with `BOOKING_WEB_PORT`).
+It is an empty React shell for the future public `/meet` guest app. Calendar host
+settings and the live public booking UI still live in `packages/web` until later
+work packages move them.
+
+Build the scaffold with `bun run build:booking-web` (output under `build/booking-web`).
+
 ## Backend
 
 Command:

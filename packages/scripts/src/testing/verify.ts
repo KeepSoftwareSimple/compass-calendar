@@ -33,6 +33,7 @@ const WORKSPACE_PACKAGES = [
   "web",
   "backend",
   "scripts",
+  "booking-web",
 ] as const;
 /** Suites with a `test:<name>` script that live outside `packages/`. */
 const STANDALONE_PREFIXES = { "self-host/": "self-host" } as const;
@@ -42,12 +43,19 @@ const VALID_PACKAGES = [
 ] as const;
 export type Package = (typeof VALID_PACKAGES)[number];
 
-const PACKAGE_PREFIXES: Record<string, Package> = {
-  ...Object.fromEntries(
-    WORKSPACE_PACKAGES.map((pkg) => [`packages/${pkg}/`, pkg]),
-  ),
-  ...STANDALONE_PREFIXES,
+const PACKAGE_ROOTS: Record<Package, string> = {
+  core: "packages/core/",
+  sync: "packages/sync/",
+  web: "packages/web/",
+  backend: "packages/backend/",
+  scripts: "packages/scripts/",
+  "booking-web": "apps/booking-web/",
+  "self-host": "self-host/",
 };
+
+const PACKAGE_PREFIXES: Record<string, Package> = Object.fromEntries(
+  Object.entries(PACKAGE_ROOTS).map(([pkg, root]) => [root, pkg as Package]),
+);
 
 const MERGE_BASE_REFS = ["origin/main", "main", "master"] as const;
 export const PLAYWRIGHT_INSTALL_COMMAND = "bunx playwright install chromium";
@@ -162,7 +170,7 @@ async function detectChromiumAvailable(spawn: SpawnFn): Promise<boolean> {
 }
 
 function filesForPackage(pkg: Package, files: string[]): string[] {
-  const prefix = `packages/${pkg}/`;
+  const prefix = PACKAGE_ROOTS[pkg];
   return files.filter((file) => file.startsWith(prefix));
 }
 
