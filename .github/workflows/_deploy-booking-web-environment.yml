@@ -1,0 +1,125 @@
+name: Deploy booking-web to environment
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Release tag being deployed, such as v1.2.3'
+        required: true
+        type: string
+      environment:
+        description: 'GitHub Environment to deploy to (staging-cloud or production)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy booking-web ${{ inputs.tag }} to ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-booking-web-${{ inputs.environment }}
+      cancel-in-progress: false
+      queue: max
+
+    steps:
+      - name: Derive image version
+        id: version
+        run: |
+          IMAGE_VERSION="${{ inputs.tag }}"
+          IMAGE_VERSION="${IMAGE_VERSION#v}"
+          echo "image_version=${IMAGE_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out release tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push environment-specific booking-web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/booking-web/Dockerfile
+          push: true
+          build-args: |
+            API_BASEURL=${{ vars.BACKEND_API_URL }}
+            NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
+          tags: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
+
+      - name: Deploy booking-web to ${{ inputs.environment }}
+        env:
+          BACKEND_API_URL: ${{ vars.BACKEND_API_URL }}
+          BOOKING_WEB_IMAGE: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
+          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT }}
+          COMPOSE_GIT_REF: ${{ vars.COMPOSE_GIT_REF }}
+          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "Deploying booking-web ${RELEASE_TAG} to ${{ inputs.environment }}"
+          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          if ! ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" test -f ~/compass/compass.yaml; then
+            echo "Missing ~/compass/compass.yaml on the host. Run a full calendar deploy first." >&2
+            exit 1
+          fi
+
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" cat ~/compass/compass.yaml \
+            > /tmp/compass.yaml.before
+          python3 .github/scripts/deploy-patch-booking-web-yaml.py \
+            --image "$BOOKING_WEB_IMAGE" \
+            --port "$BOOKING_WEB_PORT" \
+            /tmp/compass.yaml.before \
+            > /tmp/compass.yaml.patched
+          scp -i ~/.ssh/staging_key /tmp/compass.yaml.patched \
+            "$SSH_USER@$SSH_HOST:~/compass/compass.yaml.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
+            "mv ~/compass/compass.yaml.$$ ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
+
+          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${RELEASE_TAG}}"
+          compose_url="https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml"
+          if ! curl -fsSL "$compose_url" -o /dev/null; then
+            echo "Could not fetch self-host files from ${COMPOSE_GIT_REF}; falling back to ${RELEASE_TAG}."
+            COMPOSE_GIT_REF="${RELEASE_TAG}"
+          fi
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml -o ~/compass/compose.yaml"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
+
+          DEPLOY_PROFILES="${COMPOSE_PROFILES:+${COMPOSE_PROFILES},}booking,sync"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
+            "cd ~/compass && COMPOSE_PROFILES='${DEPLOY_PROFILES}' ./compass update-booking-web"
+
+      - name: Smoke booking-web HTTP on the host
+        env:
+          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
+            "curl -fsS http://127.0.0.1:${BOOKING_WEB_PORT}/ >/dev/null"

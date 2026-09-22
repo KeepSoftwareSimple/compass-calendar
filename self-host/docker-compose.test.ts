@@ -727,6 +727,25 @@ describe("staging deploy workflow", () => {
     );
   });
 
+  it("deploys booking-web to staging without calling the full calendar deploy workflow", () => {
+    const stagingBooking = readRepoFile(
+      ".github/workflows/deploy-staging-booking-web.yml",
+    );
+    const bookingDeploy = readRepoFile(
+      ".github/workflows/_deploy-booking-web-environment.yml",
+    );
+
+    expect(stagingBooking).toContain(
+      "uses: ./.github/workflows/_deploy-booking-web-environment.yml",
+    );
+    expect(stagingBooking).not.toContain("_deploy-environment.yml");
+    expect(bookingDeploy).toContain(
+      "switchbacktech/compass-booking-web:${{ inputs.environment }}-",
+    );
+    expect(bookingDeploy).toContain("file: apps/booking-web/Dockerfile");
+    expect(bookingDeploy).toContain("./compass update-booking-web");
+  });
+
   it("runs deploy health checks after each staging deploy", () => {
     const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
 

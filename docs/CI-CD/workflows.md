@@ -162,6 +162,30 @@ expected Docker volumes inside the self-hosted stack.
 Manual staging redeploys do not rebuild images. Run `Deploy staging` with an
 existing tag after confirming the desired image tags already exist on Docker Hub.
 
+### Staging booking-web only
+
+Source: [`.github/workflows/deploy-staging-booking-web.yml`](../../.github/workflows/deploy-staging-booking-web.yml)
+
+Use this when a change touches only `apps/booking-web` (or its static assets)
+and you want staging to pick up a new guest container without rebuilding
+calendar-web or restarting the full stack.
+
+1. In GitHub Actions, run **Deploy staging booking-web**.
+2. Set **tag** to a semver release tag that contains the booking-web change
+   (usually the latest `v*.*.*` on `main` after merge).
+3. The workflow builds `switchbacktech/compass-booking-web:staging-cloud-<version>`,
+   patches `bookingWeb.image` in the existing `~/compass/compass.yaml` on the
+   staging VPS, refreshes self-host compose files from `COMPOSE_GIT_REF`, and
+   runs `./compass update-booking-web` with the `booking` and `sync` profiles.
+
+The full **Deploy staging** workflow and **Release on main** path are unchanged.
+Caddy still routes public `/meet/*` traffic until WP-05; after deploy, verify
+the container with `curl http://127.0.0.1:9081/` on the host (or the port in
+`bookingWeb.port`).
+
+Optional GitHub Environment variable on `staging-cloud`: `BOOKING_WEB_PORT`
+(default `9081` when unset).
+
 ### Required secrets and variables
 
 Secrets and variables are split between repository level (shared across workflows) and the `Staging` GitHub Environment (scoped to the deploy job).
