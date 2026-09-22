@@ -1,6 +1,7 @@
 import { type ObjectId } from "mongodb";
 import { zObjectId } from "@core/types/object-id.schema";
 import mongoService from "@backend/common/services/mongo.service";
+import { emailAnalytics } from "@backend/email/email.analytics";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 
 export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
@@ -14,6 +15,15 @@ export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
     },
   );
   await emailSendRepository.cancelQueuedForUser(userId);
+  const row = await mongoService.emailSend.findOne(
+    { userId },
+    { sort: { updatedAt: -1 }, projection: { stepKey: 1 } },
+  );
+  void emailAnalytics.capture({
+    event: "email_unsubscribed",
+    userId: userId.toHexString(),
+    step: row?.stepKey,
+  });
 }
 
 export async function markUserSuppressed(userId: ObjectId): Promise<void> {

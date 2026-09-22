@@ -59,6 +59,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - [Testing Playbook](./development/testing-playbook.md)
 - [Launch Ops Checklist](./development/launch-ops-checklist.md)
 - [Meeting monitoring](./development/meeting-monitoring.md)
+- [Welcome email staging verification](./development/email-staging-verification.md)
 - [Performance Baselines](./development/performance-baselines.md)
 - [Meeting release evidence](./development/meeting-release-evidence.md)
 - [Types And Validation](./development/types-and-validation.md)

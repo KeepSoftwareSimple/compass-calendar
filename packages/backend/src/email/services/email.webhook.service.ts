@@ -1,6 +1,7 @@
 import { type ObjectId } from "mongodb";
 import { normalizeEmail } from "@core/util/email.util";
 import mongoService from "@backend/common/services/mongo.service";
+import { emailAnalytics } from "@backend/email/email.analytics";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { type EmailWebhookEvent } from "@backend/email/providers/email.port";
 import { markUserSuppressed } from "@backend/email/services/email-suppression.service";
@@ -68,7 +69,10 @@ async function handleDelivered(data: Record<string, unknown>): Promise<void> {
   await emailSendRepository.markDelivered(emailId);
 }
 
-async function handleSuppression(data: Record<string, unknown>): Promise<void> {
+async function handleSuppression(
+  data: Record<string, unknown>,
+  eventType: "email.bounced" | "email.complained",
+): Promise<void> {
   const resolved = await resolveUserForWebhookEvent(data);
   if (!resolved) {
     return;
@@ -81,6 +85,17 @@ async function handleSuppression(data: Record<string, unknown>): Promise<void> {
     return;
   }
   await markUserSuppressed(resolved.userId);
+  const row = await mongoService.emailSend.findOne(
+    { userId: resolved.userId },
+    { sort: { updatedAt: -1 }, projection: { stepKey: 1 } },
+  );
+  const analyticsEvent =
+    eventType === "email.bounced" ? "email_bounced" : "email_complained";
+  void emailAnalytics.capture({
+    event: analyticsEvent,
+    userId: resolved.userId.toHexString(),
+    step: row?.stepKey,
+  });
 }
 
 export async function processEmailWebhookEvent(
@@ -106,8 +121,10 @@ export async function processEmailWebhookEvent(
         await handleDelivered(data);
         break;
       case "email.bounced":
+        await handleSuppression(data, "email.bounced");
+        break;
       case "email.complained":
-        await handleSuppression(data);
+        await handleSuppression(data, "email.complained");
         break;
       default:
         break;

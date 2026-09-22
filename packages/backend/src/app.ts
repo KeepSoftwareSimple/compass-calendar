@@ -41,6 +41,11 @@ async function start() {
             `Billing bypass: ${CONFIG.BILLING_BYPASS_EMAILS.length} account(s)`,
           );
         }
+        if (CONFIG.EMAIL_PROVIDER) {
+          logger.info(
+            `Welcome email: provider=${CONFIG.EMAIL_PROVIDER}, allowlist=${CONFIG.EMAIL_ALLOWLIST.length} address(es)`,
+          );
+        }
         resolve(undefined);
       }),
     );
