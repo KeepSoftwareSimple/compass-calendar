@@ -166,3 +166,9 @@ export const selectSkipPending = (state: ShortcutShowcaseState) =>
 
 export const selectShowcaseEntry = (state: ShortcutShowcaseState) =>
   state.entry;
+
+/** Whether the practice takeover should claim the onboarding surface slot. */
+export const selectShortcutShowcaseSurfaceEligible = (
+  showCalendarOnboarding: boolean,
+  isActive: boolean,
+): boolean => showCalendarOnboarding && isActive;

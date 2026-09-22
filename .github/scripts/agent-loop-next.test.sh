@@ -268,6 +268,13 @@ else
   PASS=$((PASS + 1))
 fi
 
+# shellcheck disable=SC1091
+source "${ROOT}/.github/scripts/agent-loop-lib.sh"
+got=$(AGENT_LOOP_MILESTONES="A: one,B: two, C: three" parse_milestones | paste -sd'|' -)
+assert_eq "$got" "A: one|B: two|C: three" "single-line milestones split on commas"
+got=$(AGENT_LOOP_MILESTONES=$'Email-ready v1: reconnect, realtime, signal\nSimplify v1: one teaching surface\n' parse_milestones | paste -sd'|' -)
+assert_eq "$got" "Email-ready v1: reconnect, realtime, signal|Simplify v1: one teaching surface" "multi-line milestones keep commas inside titles"
+
 if grep -qE 'BOOKING_LOOP_|booking-loop-|booking-automerge|LEGACY_|DEFAULT_MILESTONES|Compass Booking v1' \
   "${ROOT}/.github/scripts/agent-loop-lib.sh" \
   "${ROOT}/.github/scripts/agent-loop-next.sh"; then

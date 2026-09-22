@@ -6,9 +6,9 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import {
   firstEventPromptActions,
-  isShowcaseHandoffEligible,
   selectFirstEventCelebrating,
   selectFirstEventDone,
+  selectFirstEventPromptSurfaceEligible,
   useFirstEventPromptStore,
 } from "@web/components/FirstEventPrompt/first-event.store";
 import {
@@ -116,14 +116,16 @@ export const FirstEventPrompt: FC = () => {
   // the event form paint below this tooltip layer, so hide rather than
   // compete. Opening the form is not completion: cancel brings the card
   // back, and a real create still celebrates after the form closes.
-  const isLive =
-    !isAuthModalOpen &&
-    !isSettingsOpen &&
-    !isAboutOpen &&
-    !isFormOpen &&
-    !isDone &&
-    persistentBrowserStore.isAvailable() &&
-    isShowcaseHandoffEligible(isShowcaseActive, seenThisSession);
+  const isLive = selectFirstEventPromptSurfaceEligible({
+    isAuthModalOpen,
+    isSettingsOpen,
+    isAboutOpen,
+    isFormOpen,
+    isDone,
+    storageAvailable: persistentBrowserStore.isAvailable(),
+    showcaseActive: isShowcaseActive,
+    hasSeenShowcaseThisSession: seenThisSession,
+  });
   if (!isLive) return null;
   return <PromptCard />;
 };

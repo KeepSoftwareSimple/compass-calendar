@@ -1,5 +1,7 @@
 import { parse } from "yaml";
 import { z } from "zod";
+import { type NodeEnv } from "@core/constants/core.constants";
+import { isNonProduction } from "@core/util/env.util";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -78,10 +80,19 @@ const CompassConfigSchema = z
           .nullish(),
       })
       .nullish(),
-    // Accepted but ignored. Compass no longer sends email; the list is
-    // managed outside the app. Retained so existing config files stay valid
-    // on upgrade.
-    email: z.unknown().optional(),
+    // Welcome-sequence email delivery. Omit the whole block to keep email off
+    // (no enrollment, poller, or send routes). Self-host defaults to off.
+    email: z
+      .object({
+        provider: z.enum(["resend", "log"]),
+        apiKey: optionalString,
+        from: optionalString,
+        webhookSecret: optionalString,
+        unsubscribeSecret: optionalString,
+        scheduleProfile: z.enum(["real", "fast"]).optional(),
+        allowlist: z.array(z.string()).optional(),
+      })
+      .nullish(),
     posthog: z
       .object({
         key: optionalString,
@@ -196,6 +207,37 @@ const CompassConfigSchema = z
         code: z.ZodIssueCode.custom,
         message: "sync.credentialEncryptionKey must be 32 bytes of base64",
         path: ["sync", "credentialEncryptionKey"],
+      });
+    }
+
+    const email = config.email;
+    if (email?.provider === "resend") {
+      const resendRequired: Array<[string, string | null | undefined]> = [
+        ["apiKey", email.apiKey],
+        ["from", email.from],
+        ["webhookSecret", email.webhookSecret],
+        ["unsubscribeSecret", email.unsubscribeSecret],
+      ];
+      for (const [field, value] of resendRequired) {
+        if (!isPresent(value)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `email.${field} is required when email.provider is resend`,
+            path: ["email", field],
+          });
+        }
+      }
+    }
+
+    if (
+      email?.scheduleProfile === "fast" &&
+      !isNonProduction(config.runtime.nodeEnv as NodeEnv)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "email.scheduleProfile fast is not allowed when runtime.nodeEnv is production",
+        path: ["email", "scheduleProfile"],
       });
     }
   });

@@ -46,7 +46,7 @@ Sources of truth:
 | Variable | Kind | Meaning |
 | --- | --- | --- |
 | `AGENT_LOOP_ENABLED` | repo var | Kill switch. String `"true"` turns the workflow on. |
-| `AGENT_LOOP_MILESTONES` | repo var | Ordered milestone titles, comma or newline separated. Higher entries drain first. Example: `Providers L: loop + CI acceleration,Booking v1.5`. Empty idles the picker; it does not invent a queue. |
+| `AGENT_LOOP_MILESTONES` | repo var | Ordered milestone titles, one per line (a single line may be comma separated; a multi-line value keeps commas inside titles). Higher entries drain first. Example: `Providers L: loop + CI acceleration,Booking v1.5`. Empty idles the picker; it does not invent a queue. |
 | `AGENT_LOOP_CONCURRENCY` | repo var | Max in-flight WPs (default 3). The picker never launches two issues that share a partition label. |
 | `AGENT_LOOP_GITHUB_TOKEN` | secret | PAT with `contents:write` + `pull_requests:write` so squash-merge triggers `release-on-main`. Falls back to `AUTOFIX_GITHUB_TOKEN`. |
 | `CURSOR_API_KEY` | secret | Cloud Agents API. Required. Launch fails with `agent-loop-needs-human` and Discord if unset. |

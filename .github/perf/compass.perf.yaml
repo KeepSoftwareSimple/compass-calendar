@@ -3,6 +3,9 @@
 # Only the values baked into the web bundle matter (nodeEnv, apiUrl,
 # empty PostHog key so analytics stays out of the measurement); the rest
 # exist to satisfy config schema validation and are never used.
+# packages/web/build.ts re-execs itself with NODE_ENV=production before
+# bundling unless runtime.nodeEnv is development. Bun's export conditions are
+# fixed at process start.
 #
 # self-host/Dockerfile.web generates the config that actually ships and is
 # canonical for the boot-size budget. It differs from this file only in

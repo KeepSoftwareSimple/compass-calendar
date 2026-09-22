@@ -8,7 +8,7 @@ import {
   type BillingSubscriptionResponse,
   BillingSubscriptionResponseSchema,
 } from "@core/types/billing.types";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import {
   BillingHttpError,
   logBillingHttpError,

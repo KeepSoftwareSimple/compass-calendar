@@ -59,3 +59,33 @@ export const resetConnectCalendarPromptStoreForTests = (): void => {
 export const selectConnectCalendarPromptSnoozed = (
   state: ConnectCalendarPromptState,
 ): boolean => state.isSnoozed;
+
+export type ConnectCalendarPromptEligibility = {
+  authenticated: boolean;
+  metadataStatus: "idle" | "loading" | "loaded";
+  connectionCount: number;
+  isSnoozed: boolean;
+  availableProviderCount: number;
+  storageAvailable: boolean;
+  isAuthModalOpen: boolean;
+  isSettingsOpen: boolean;
+  isAboutOpen: boolean;
+  isAppleFormOpen: boolean;
+  isMissingPermissionsOpen: boolean;
+};
+
+/** Whether the connect-calendar card should claim the onboarding surface slot. */
+export const selectConnectCalendarPromptSurfaceEligible = (
+  input: ConnectCalendarPromptEligibility,
+): boolean =>
+  input.authenticated &&
+  input.metadataStatus === "loaded" &&
+  input.connectionCount === 0 &&
+  !input.isSnoozed &&
+  input.availableProviderCount > 0 &&
+  input.storageAvailable &&
+  !input.isAuthModalOpen &&
+  !input.isSettingsOpen &&
+  !input.isAboutOpen &&
+  !input.isAppleFormOpen &&
+  !input.isMissingPermissionsOpen;

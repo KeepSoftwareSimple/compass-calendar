@@ -19,11 +19,11 @@ import {
   editGridEventDraft,
   gridEventDraftToGridEvent,
   parseGridEventDraft,
-  patchGridDraftRecurrence,
   replaceGridDraftSchedule,
   resolveDraftRecurrenceRules,
   suppressedSeriesIdForDraft,
 } from "./grid-event-draft.adapter";
+import { patchGridDraftRecurrence } from "./recurrence/recurrence-rules-equal";
 import { expect, test } from "bun:test";
 
 const timedEvent = {

@@ -5,7 +5,7 @@ import {
 } from "@core/config/compass.config";
 import { NodeEnv, PORT_DEFAULT_BACKEND } from "@core/constants/core.constants";
 import { Logger } from "@core/logger/winston.logger";
-import { isDev } from "@core/util/env.util";
+import { isDev, isNonProduction } from "@core/util/env.util";
 import {
   isGoogleClientIdValid,
   isGoogleClientSecretValid,
@@ -70,6 +70,13 @@ const ConfigSchema = z
     // Accounts exempt from billing gates while enforcement is on. Operator
     // config only -- never user-supplied. Empty by default.
     BILLING_BYPASS_EMAILS: z.array(z.string()).default([]),
+    EMAIL_PROVIDER: z.enum(["resend", "log"]).optional(),
+    EMAIL_API_KEY: z.string().nonempty().optional(),
+    EMAIL_FROM: z.string().nonempty().optional(),
+    EMAIL_WEBHOOK_SECRET: z.string().nonempty().optional(),
+    EMAIL_UNSUBSCRIBE_SECRET: z.string().nonempty().optional(),
+    EMAIL_SCHEDULE_PROFILE: z.enum(["real", "fast"]).optional(),
+    EMAIL_ALLOWLIST: z.array(z.string()).default([]),
   })
   .strict()
   .superRefine((env, context) => {
@@ -135,6 +142,48 @@ const ConfigSchema = z
         path: ["STRIPE_SECRET_KEY"],
       });
     }
+
+    if (env.EMAIL_PROVIDER === "resend") {
+      const resendRequired: Array<
+        [
+          (
+            | "EMAIL_API_KEY"
+            | "EMAIL_FROM"
+            | "EMAIL_WEBHOOK_SECRET"
+            | "EMAIL_UNSUBSCRIBE_SECRET"
+          ),
+          string | undefined,
+        ]
+      > = [
+        ["EMAIL_API_KEY", env.EMAIL_API_KEY],
+        ["EMAIL_FROM", env.EMAIL_FROM],
+        ["EMAIL_WEBHOOK_SECRET", env.EMAIL_WEBHOOK_SECRET],
+        ["EMAIL_UNSUBSCRIBE_SECRET", env.EMAIL_UNSUBSCRIBE_SECRET],
+      ];
+      for (const [path, value] of resendRequired) {
+        if (!value) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            fatal: true,
+            message: `${path} is required when EMAIL_PROVIDER is resend`,
+            path: [path],
+          });
+        }
+      }
+    }
+
+    if (
+      env.EMAIL_SCHEDULE_PROFILE === "fast" &&
+      !isNonProduction(env.NODE_ENV)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        fatal: true,
+        message:
+          "EMAIL_SCHEDULE_PROFILE fast is not allowed when NODE_ENV is production",
+        path: ["EMAIL_SCHEDULE_PROFILE"],
+      });
+    }
   });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -194,6 +243,13 @@ export function parseRawConfig(config: CompassConfig): Config {
     STRIPE_PUBLISHABLE_KEY: nonEmpty(config.stripe?.publishableKey),
     BILLING_ENFORCEMENT: config.billing?.enforcement,
     BILLING_BYPASS_EMAILS: toEmailList(config.billing?.bypassEmails),
+    EMAIL_PROVIDER: config.email?.provider,
+    EMAIL_API_KEY: nonEmpty(config.email?.apiKey),
+    EMAIL_FROM: nonEmpty(config.email?.from),
+    EMAIL_WEBHOOK_SECRET: nonEmpty(config.email?.webhookSecret),
+    EMAIL_UNSUBSCRIBE_SECRET: nonEmpty(config.email?.unsubscribeSecret),
+    EMAIL_SCHEDULE_PROFILE: config.email?.scheduleProfile,
+    EMAIL_ALLOWLIST: toEmailList(config.email?.allowlist),
   });
 }
 
@@ -246,6 +302,19 @@ export function parseConfigFromEnv(
     BILLING_BYPASS_EMAILS: toEmailList(
       rawEnv["BILLING_BYPASS_EMAILS"]?.split(","),
     ),
+    EMAIL_PROVIDER: nonEmpty(rawEnv["EMAIL_PROVIDER"]) as
+      | "resend"
+      | "log"
+      | undefined,
+    EMAIL_API_KEY: nonEmpty(rawEnv["EMAIL_API_KEY"]),
+    EMAIL_FROM: nonEmpty(rawEnv["EMAIL_FROM"]),
+    EMAIL_WEBHOOK_SECRET: nonEmpty(rawEnv["EMAIL_WEBHOOK_SECRET"]),
+    EMAIL_UNSUBSCRIBE_SECRET: nonEmpty(rawEnv["EMAIL_UNSUBSCRIBE_SECRET"]),
+    EMAIL_SCHEDULE_PROFILE: nonEmpty(rawEnv["EMAIL_SCHEDULE_PROFILE"]) as
+      | "real"
+      | "fast"
+      | undefined,
+    EMAIL_ALLOWLIST: toEmailList(rawEnv["EMAIL_ALLOWLIST"]?.split(",")),
   });
 }
 

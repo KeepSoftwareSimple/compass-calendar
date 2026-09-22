@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Status } from "@core/errors/status.codes";
 import { type BookingLifecycleOperation } from "@core/types/booking-lifecycle.contracts";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import {
   bookingError,
   toBookingErrorResponse,

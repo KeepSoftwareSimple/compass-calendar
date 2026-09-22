@@ -25,8 +25,8 @@ If `AGENT_LOOP_ENABLED` is not `true` in the launch context, stop.
 
 If the launch named an issue number, that is the WP. Otherwise:
 
-- Walk repo variable `AGENT_LOOP_MILESTONES` (comma or newline
-  separated) in order. A higher-priority milestone always drains first.
+- Walk repo variable `AGENT_LOOP_MILESTONES` (one title per line, or a
+  single comma-separated line) in order. A higher-priority milestone always drains first.
 - Open issues, label `agent-ready`
 - Skip Approval boundary `human` (the picker also skips these)
 - Skip any issue labeled `agent-loop-running` or

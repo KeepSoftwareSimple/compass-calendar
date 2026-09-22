@@ -12,12 +12,14 @@ import dayjs from "@core/util/date/dayjs";
 import { CompassEventRRule } from "@core/util/event/compass.event.rrule";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
-  patchGridDraftRecurrence,
-  recurrenceRulesSemanticallyEqual,
   resolveDraftRecurrenceRules,
   scheduleDatesFromDraft,
-  sortedByweekday,
 } from "@web/events/grid-event-draft.adapter";
+import {
+  patchGridDraftRecurrence,
+  recurrenceRulesSemanticallyEqual,
+  sortedByweekday,
+} from "@web/events/recurrence/recurrence-rules-equal";
 import {
   type FrequencyValues,
   WEEKDAY_RRULE_MAP,

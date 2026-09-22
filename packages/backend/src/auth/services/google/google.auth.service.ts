@@ -1,10 +1,11 @@
 import { type Credentials, type TokenPayload } from "google-auth-library";
 import { LoggerFactory } from "@core/logger/logger.factory";
+import { zObjectId } from "@core/types/object-id.schema";
 import {
   type ProviderAccountFacts,
   ProviderAccountFactsSchema,
 } from "@core/types/sync/connection.contracts";
-import { StringV4Schema, zObjectId } from "@core/types/type.utils";
+import { StringV4Schema } from "@core/types/type.utils";
 import { normalizeEmail } from "@core/util/email.util";
 import {
   determineGoogleAuthMode,

@@ -18,6 +18,10 @@ const CHECKS: { id: string; cmd: string[] }[] = [
     cmd: ["bun", "packages/scripts/src/testing/check-agent-constraints.ts"],
   },
   {
+    id: "todo-copy",
+    cmd: ["bun", "packages/scripts/src/testing/check-todo-copy.ts"],
+  },
+  {
     id: "biome",
     cmd: [
       "biome",
@@ -45,4 +49,6 @@ if (failed.length > 0) {
   console.error(`\nlint failed: ${failed.join(", ")}`);
   process.exit(1);
 }
-console.log("\nlint passed: semantic-colors, agent-constraints, biome");
+console.log(
+  "\nlint passed: semantic-colors, agent-constraints, todo-copy, biome",
+);

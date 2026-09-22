@@ -490,8 +490,9 @@ async function runSyncJob(
           );
         }
         // Idle applied pulls still advance the cursor; they must not wake the
-        // SPA. Connection status (importing -> catchingUp -> healthy) is a
+        // SPA. A user-visible connection transition (importing -> healthy) is a
         // separate `connection` invalidation from refreshConnectionStateAfterJob.
+        // A lastSyncedAt tick on an already-healthy connection is not.
         // initialImport / repair / bootstrapCatchup keep unconditional appends.
         const generationPromoted =
           pull.resource.activeGeneration !== resource.activeGeneration;

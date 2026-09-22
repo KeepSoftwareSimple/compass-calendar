@@ -16,6 +16,7 @@ import compassAuthService from "@backend/auth/services/compass/compass.auth.serv
 import supertokensUserCleanupService from "@backend/auth/services/supertokens/supertokens.user-cleanup.service";
 import stripeService from "@backend/billing/services/stripe.service";
 import calendarService from "@backend/calendar/services/calendar.service";
+import { CONFIG } from "@backend/common/constants/config.constants";
 import { UserError } from "@backend/common/errors/user/user.errors";
 import * as supertokensMiddleware from "@backend/common/middleware/supertokens.middleware";
 import { initSupertokens } from "@backend/common/middleware/supertokens.middleware";
@@ -1026,6 +1027,63 @@ describe("UserService", () => {
       ).toBe(0);
       expect(await mongoService.event.countDocuments({})).toBe(0);
 
+      resolveSpy.mockRestore();
+      revokeSpy.mockRestore();
+      cleanupSpy.mockRestore();
+    });
+
+    it("deletes welcome email rows and counts them in the summary", async () => {
+      const user = await UserDriver.createUser();
+      const userId = user._id.toString();
+      const originalProvider = CONFIG.EMAIL_PROVIDER;
+      CONFIG.EMAIL_PROVIDER = "log";
+
+      const resolveSpy = spyOn(
+        supertokensUserCleanupService,
+        "resolveByExternalUserId",
+      ).mockResolvedValue({
+        externalUserIds: [],
+        superTokensUserIds: [],
+      });
+      const revokeSpy = spyOn(
+        compassAuthService,
+        "revokeSessionsByUser",
+      ).mockResolvedValue({ sessionsRevoked: 0 });
+      const cleanupSpy = spyOn(
+        supertokensUserCleanupService,
+        "cleanupResolvedTarget",
+      ).mockResolvedValue({
+        superTokensUsers: 0,
+        superTokensMappings: 0,
+        superTokensMetadata: 0,
+      });
+
+      await mongoService.emailSend.insertMany([
+        {
+          _id: `${userId}:welcome`,
+          userId: user._id,
+          sequence: "welcome",
+          stepKey: "welcome",
+          status: "queued",
+          sendAt: new Date(),
+          attemptCount: 0,
+          nextAttemptAt: new Date(),
+          lastError: null,
+          providerMessageId: null,
+          sentAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      const summary = await userService.deleteCompassDataForUser(userId);
+
+      expect(summary.emailSends).toBe(1);
+      expect(
+        await mongoService.emailSend.countDocuments({ userId: user._id }),
+      ).toBe(0);
+
+      CONFIG.EMAIL_PROVIDER = originalProvider;
       resolveSpy.mockRestore();
       revokeSpy.mockRestore();
       cleanupSpy.mockRestore();

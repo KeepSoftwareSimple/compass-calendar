@@ -1,7 +1,22 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
+import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
+import {
+  selectConnectAppleOpen,
+  useConnectAppleStore,
+} from "@web/auth/providers/connect-apple.store";
 import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
+import {
+  selectMissingPermissionsProvider,
+  useMissingPermissionsStore,
+} from "@web/auth/providers/missing-permissions.store";
+import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
+import {
+  selectSyncConnections,
+  selectUserMetadataStatus,
+  useUserMetadataStore,
+} from "@web/auth/state/user-metadata.store";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
 import { BillingPastDueBanner } from "@web/billing/BillingPastDueBanner";
 import { BillingReadOnlyBanner } from "@web/billing/BillingReadOnlyBanner";
@@ -21,24 +36,69 @@ import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
 import { AuthModalProvider } from "@web/components/AuthModal/AuthModalProvider";
+import { useAuthModalState } from "@web/components/AuthModal/hooks/useAuthModal";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
+import {
+  selectConnectCalendarPromptSnoozed,
+  selectConnectCalendarPromptSurfaceEligible,
+  useConnectCalendarPromptStore,
+} from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
+import {
+  selectFirstEventDone,
+  selectFirstEventPromptSurfaceEligible,
+  useFirstEventPromptStore,
+} from "@web/components/FirstEventPrompt/first-event.store";
 import { PointerHint } from "@web/components/PointerHint/PointerHint";
-import { ShowcasePlayLink } from "@web/components/ShortcutShowcase/play-link";
+import {
+  type OnboardingSurfaceFlags,
+  selectActiveSurface,
+} from "@web/components/RootShell/onboarding-surface";
+import {
+  hasPlayDeepLink,
+  ShowcasePlayLink,
+} from "@web/components/ShortcutShowcase/play-link";
 import { ShortcutShowcase } from "@web/components/ShortcutShowcase/ShortcutShowcase";
+import {
+  selectHasSeenShowcase,
+  selectShortcutShowcaseSurfaceEligible,
+  selectShowcaseActive,
+  shortcutShowcaseActions,
+  useShortcutShowcaseStore,
+} from "@web/components/ShortcutShowcase/showcase.store";
 import { WelcomeGuideModal } from "@web/components/WelcomeModal/WelcomeGuideModal";
 import { WelcomeModal } from "@web/components/WelcomeModal/WelcomeModal";
 import {
+  selectWelcomeFirstVisitOpen,
   selectWelcomeGuideOpen,
+  selectWelcomeGuideSurfaceEligible,
   useWelcomeGuideStore,
 } from "@web/components/WelcomeModal/welcome.guide.store";
+import {
+  hasSeenWelcome,
+  selectWelcomeModalSurfaceEligible,
+} from "@web/components/WelcomeModal/welcome.modal.util";
+import {
+  selectIsEventFormOpen,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
+import {
+  selectIsAboutOpen,
+  selectIsSettingsOpen,
+  useSettingsStore,
+} from "@web/settings/settings.store";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
 import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
+import {
+  selectPointerHintSurfaceEligible,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
 import {
@@ -57,14 +117,37 @@ export function RootShell() {
   const { pathname } = useLocation();
   const isLifeView = isLifePathname(pathname);
   const deferCalendarOnboarding = isLifeView;
+  const { authenticated } = useContext(SessionContext);
+  const { isOpen: isAuthModalOpen } = useAuthModalState();
   // The keyboard onboarding overlays paint over MobileGate (they're fixed
   // full-screen), so a phone user would finish the whole walkthrough only to
   // land on "open this on a computer". Gate them up front instead.
   const isMobile = useMemo(() => isMobileOS(), []);
   const isWelcomeGuideOpen = useWelcomeGuideStore(selectWelcomeGuideOpen);
+  const isWelcomeFirstVisitOpen = useWelcomeGuideStore(
+    selectWelcomeFirstVisitOpen,
+  );
   const access = useAppAccess();
   const isPreviewing = useBillingPreviewStore(selectBillingPreviewing);
   const isCelebrating = useCheckoutCelebrationStore(selectIsCelebrating);
+  const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
+  const hasSeenShowcaseThisSession = useShortcutShowcaseStore(
+    selectHasSeenShowcase,
+  );
+  const isFirstEventDone = useFirstEventPromptStore(selectFirstEventDone);
+  const pointerHintState = usePointerHintStore((state) => state);
+  const connections = useUserMetadataStore(selectSyncConnections);
+  const metadataStatus = useUserMetadataStore(selectUserMetadataStatus);
+  const isConnectSnoozed = useConnectCalendarPromptStore(
+    selectConnectCalendarPromptSnoozed,
+  );
+  const availableConnectProviders = useAvailableConnectProviders();
+  const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
+  const isAboutOpen = useSettingsStore(selectIsAboutOpen);
+  const isAppleFormOpen = useConnectAppleStore(selectConnectAppleOpen);
+  const isMissingPermissionsOpen =
+    useMissingPermissionsStore(selectMissingPermissionsProvider) !== null;
+  const isFormOpen = useDraftStore(selectIsEventFormOpen);
   useSyncBillingWriteLock();
   usePlanChangeToasts();
   useNavigationShortcuts();
@@ -112,6 +195,86 @@ export function RootShell() {
   const showTrialCardBanner =
     trialDaysLeft !== null && trialDaysLeft <= 3 && !isCelebrating;
 
+  useEffect(() => {
+    if (!showCalendarOnboarding || hasPlayDeepLink()) return;
+    if (!hasSeenWelcome()) return;
+    shortcutShowcaseActions.resumeIfInProgress();
+  }, [showCalendarOnboarding]);
+
+  const onboardingFlags = useMemo((): OnboardingSurfaceFlags => {
+    const billingGateClear = gateStatus === null;
+    return {
+      billingGate: gateStatus !== null,
+      checkoutCelebration: isCelebrating,
+      welcomeModal: selectWelcomeModalSurfaceEligible(
+        showCalendarOnboarding,
+        authenticated,
+        isWelcomeFirstVisitOpen,
+      ),
+      shortcutShowcase: selectShortcutShowcaseSurfaceEligible(
+        showCalendarOnboarding,
+        isShowcaseActive,
+      ),
+      welcomeGuide: selectWelcomeGuideSurfaceEligible(
+        billingGateClear,
+        isWelcomeGuideOpen,
+      ),
+      connectCalendarPrompt:
+        billingGateClear &&
+        selectConnectCalendarPromptSurfaceEligible({
+          authenticated,
+          metadataStatus,
+          connectionCount: connections.length,
+          isSnoozed: isConnectSnoozed,
+          availableProviderCount: availableConnectProviders.length,
+          storageAvailable: persistentBrowserStore.isAvailable(),
+          isAuthModalOpen,
+          isSettingsOpen,
+          isAboutOpen,
+          isAppleFormOpen,
+          isMissingPermissionsOpen,
+        }),
+      firstEventPrompt:
+        showCalendarOnboarding &&
+        selectFirstEventPromptSurfaceEligible({
+          isAuthModalOpen,
+          isSettingsOpen,
+          isAboutOpen,
+          isFormOpen,
+          isDone: isFirstEventDone,
+          storageAvailable: persistentBrowserStore.isAvailable(),
+          showcaseActive: isShowcaseActive,
+          hasSeenShowcaseThisSession,
+        }),
+      pointerHint:
+        !isLifeView && selectPointerHintSurfaceEligible(pointerHintState),
+    };
+  }, [
+    gateStatus,
+    isCelebrating,
+    showCalendarOnboarding,
+    authenticated,
+    isShowcaseActive,
+    isWelcomeGuideOpen,
+    isWelcomeFirstVisitOpen,
+    metadataStatus,
+    connections.length,
+    isConnectSnoozed,
+    availableConnectProviders.length,
+    isAuthModalOpen,
+    isSettingsOpen,
+    isAboutOpen,
+    isAppleFormOpen,
+    isMissingPermissionsOpen,
+    isFormOpen,
+    isFirstEventDone,
+    hasSeenShowcaseThisSession,
+    isLifeView,
+    pointerHintState,
+  ]);
+
+  const activeOnboardingSurface = selectActiveSurface(onboardingFlags);
+
   // The gate and the celebration own the screen: the onboarding cards sit at
   // Z_INDEX_TOOLTIP (above Z_INDEX_MODAL), so leaving them mounted would let
   // a gated or celebrating user click straight through and keep touring. They
@@ -129,16 +292,22 @@ export function RootShell() {
       <AuthModal />
       <ConnectAppleForm />
       <MissingPermissionsModal />
-      {gateStatus === null && <ConnectCalendarPromptGate />}
-      {gateStatus !== null && <BillingGateModal status={gateStatus} />}
       {gateStatus === null && <CheckoutOverlay />}
-      <CheckoutCelebrationModal />
-      {showCalendarOnboarding && <WelcomeModal />}
       {showCalendarOnboarding && <ShowcasePlayLink />}
-      {showCalendarOnboarding && <ShortcutShowcase />}
-      {showCalendarOnboarding && <FirstEventPrompt />}
-      {gateStatus === null && isWelcomeGuideOpen && <WelcomeGuideModal />}
-      {!isLifeView && <PointerHint />}
+      {activeOnboardingSurface === "billingGate" && gateStatus !== null && (
+        <BillingGateModal status={gateStatus} />
+      )}
+      {activeOnboardingSurface === "checkoutCelebration" && (
+        <CheckoutCelebrationModal />
+      )}
+      {activeOnboardingSurface === "welcomeModal" && <WelcomeModal />}
+      {activeOnboardingSurface === "shortcutShowcase" && <ShortcutShowcase />}
+      {activeOnboardingSurface === "welcomeGuide" && <WelcomeGuideModal />}
+      {activeOnboardingSurface === "connectCalendarPrompt" && (
+        <ConnectCalendarPromptGate />
+      )}
+      {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
+      {activeOnboardingSurface === "pointerHint" && <PointerHint />}
     </AuthModalProvider>
   );
 }
