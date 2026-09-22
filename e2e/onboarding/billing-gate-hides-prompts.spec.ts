@@ -35,7 +35,11 @@ test("hides welcome, practice, and first-event prompts while the billing gate is
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: false },
+          providers: {
+            google: { signIn: false, connect: false },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
           billing: {
             isConfigured: true,
             enforcement: true,
@@ -68,7 +72,7 @@ test("hides welcome, practice, and first-event prompts while the billing gate is
     if (path.endsWith("/api/user/metadata")) {
       return route.fulfill(
         jsonResponse({
-          google: { connectionState: "NOT_CONNECTED", connections: [] },
+          connections: [],
         }),
       );
     }

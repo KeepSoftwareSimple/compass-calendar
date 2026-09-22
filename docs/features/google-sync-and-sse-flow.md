@@ -37,7 +37,7 @@ flowchart LR
   Stream -->|subscribe + replay| Srv
   Bridge -->|poll| Feed
   Bridge -->|publish| Srv
-  Err -->|CONNECTION_REVOKED / GOOGLE_REVOKED| Srv
+  Err -->|CONNECTION_REVOKED / CONNECTION_REVOKED| Srv
   Srv -->|SSE over HTTP, one "message" event| ES
   Prov --> ES
   Ev --> ES
@@ -125,12 +125,12 @@ learns about changes by polling Sync's own change feed:
    `eventsChanged`. An `importProgress` invalidation becomes
    `syncStatusChanged` / `importCompleted`.
 3. The backend publishes each translated message over SSE.
-4. Revocation on the mutation path is HTTP 410 `GOOGLE_REVOKED`
+4. Revocation on the mutation path is HTTP 410 `CONNECTION_REVOKED`
    (`event.controller.ts` maps Sync `authorizationRevoked`). The SSE attention
    codes are `CONNECTION_REVOKED` (with `connectionId`) and the one-release
-   alias `GOOGLE_REVOKED`. Helper `revokedConnectionServerMessages` in
+   alias `CONNECTION_REVOKED`. Helper `revokedConnectionServerMessages` in
    `packages/core/src/types/server-message.contracts.ts` emits both. Milestone
-   C drops `GOOGLE_REVOKED` after every client reads `CONNECTION_REVOKED`.
+   C drops `CONNECTION_REVOKED` after every client reads `CONNECTION_REVOKED`.
 
 An `incrementalPull` that applied without writing events (`changed + deleted
 === 0`) does not append a `calendar` invalidation, unless the resource's
@@ -182,7 +182,7 @@ The client:
 - opens `EventSource` when a session exists (`SessionProvider` + `SSEProvider`)
 - refetches events when `eventsChanged` arrives (by invalidating the matching event query scopes)
 - tracks Google sync/import status from `syncStatusChanged`/`importCompleted` and `userMetadataChanged`
-- handles the `GOOGLE_REVOKED` `syncStatusChanged` code consistently with REST 410 payloads. `CONNECTION_REVOKED` is the provider-neutral alias on the same wire; clients must treat both until milestone C drops `GOOGLE_REVOKED`
+- handles the `CONNECTION_REVOKED` `syncStatusChanged` code consistently with REST 410 payloads. `CONNECTION_REVOKED` is the provider-neutral alias on the same wire; clients must treat both until milestone C drops `CONNECTION_REVOKED`
 - auto-refreshes Google Calendar sync on app focus (below)
 
 Refetches are driven by TanStack Query invalidation keyed to the message
@@ -233,10 +233,10 @@ events split reconnects from first connects.
 1. Sync classifies a dead grant as `authorizationRevoked`, discards the
    credential, and derives connection state `actionRequired`. A `connection`
    invalidation fans out as `calendarsChanged` / `eventsChanged`. Event
-   mutations against a revoked grant return HTTP 410 `GOOGLE_REVOKED`.
+   mutations against a revoked grant return HTTP 410 `CONNECTION_REVOKED`.
 2. The SSE attention payload may carry `CONNECTION_REVOKED` (with
-   `connectionId`) and the alias `GOOGLE_REVOKED` (see
-   `revokedConnectionServerMessages`). Clients that only read `GOOGLE_REVOKED`
+   `connectionId`) and the alias `CONNECTION_REVOKED` (see
+   `revokedConnectionServerMessages`). Clients that only read `CONNECTION_REVOKED`
    still work until milestone C.
 3. Web app marks the connection as revoked in session memory.
 4. User initiates re-consent via the OAuth flow (`POST /api/auth/connections/begin`,

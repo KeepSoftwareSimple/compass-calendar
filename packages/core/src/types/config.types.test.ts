@@ -5,7 +5,11 @@ describe("AppConfigSchema", () => {
   it("defaults billing.publishableKey to null when the field is omitted", () => {
     const parsed = AppConfigSchema.parse({
       version: "0.5.4",
-      google: { isConfigured: false },
+      providers: {
+        google: { signIn: false, connect: false },
+        microsoft: { signIn: false, connect: false },
+        apple: { signIn: false, connect: false },
+      },
       billing: {
         isConfigured: false,
         enforcement: false,
@@ -16,17 +20,16 @@ describe("AppConfigSchema", () => {
     expect(parsed.billing.publishableKey).toBeNull();
   });
 
-  it("derives providers from google.isConfigured when providers is omitted", () => {
+  it("parses provider flags from the wire payload", () => {
     const parsed = AppConfigSchema.parse({
       version: "dev",
-      google: { isConfigured: true },
+      providers: {
+        google: { signIn: true, connect: true },
+        microsoft: { signIn: false, connect: false },
+        apple: { signIn: false, connect: false },
+      },
     });
 
-    expect(parsed.google.isConfigured).toBe(true);
-    expect(parsed.providers).toEqual({
-      google: { signIn: true, connect: true },
-      microsoft: { signIn: false, connect: false },
-      apple: { signIn: false, connect: false },
-    });
+    expect(parsed.providers.google).toEqual({ signIn: true, connect: true });
   });
 });

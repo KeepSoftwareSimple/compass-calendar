@@ -136,7 +136,6 @@ export type SyncConnectionSummary = {
   // never an error surface.
   canSuggestContacts: boolean;
 };
-export type GoogleSyncConnectionSummary = SyncConnectionSummary;
 
 // Intersection (not extends): SuperTokens JSONObject's string index signature
 // rejects a nested `google.connection` object on an interface extends clause,
@@ -145,17 +144,7 @@ export type UserMetadata = SupertokensUserMetadata.JSONObject & {
   sync?: {
     importGCal?: string | null;
   };
-  // Every connected provider account. WP-08b reads this; until then the
-  // overlap `google.connections` copy stays so the existing web keeps working.
   connections?: SyncConnectionSummary[];
-  google?: {
-    connectionState?: GoogleConnectionState;
-    // Every connected Google account, in connection order. The
-    // precedence-winning one (for the top-level banner / unscoped hooks) is
-    // derived client-side from this plus connectionState - see
-    // selectPrimaryGoogleSyncConnection.
-    connections?: GoogleSyncConnectionSummary[];
-  };
 };
 
 export interface UserProfile

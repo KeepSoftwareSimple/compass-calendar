@@ -80,16 +80,11 @@ const { ConnectCalendarPromptGate: GateUnderTest } = (await import(
 )) as typeof import("./ConnectCalendarPromptGate");
 
 const emptyMetadata = {
-  google: { connectionState: "NOT_CONNECTED" as const, connections: [] },
   connections: [],
 };
 
 const oneConnection = createMockConnection("user@example.com");
 const oneConnectionMetadata = {
-  google: {
-    connectionState: "HEALTHY" as const,
-    connections: [oneConnection],
-  },
   connections: [oneConnection],
 };
 

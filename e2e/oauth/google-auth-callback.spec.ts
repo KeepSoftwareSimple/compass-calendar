@@ -31,7 +31,19 @@ const prepareGoogleAuthCallbackPage = async (
 ) => {
   const loginOrSignupRequests: unknown[] = [];
   const metadata = options.metadata ?? {
-    google: { connectionState: "HEALTHY" },
+    connections: [
+      {
+        id: "e2e-conn",
+        provider: "google",
+        state: "healthy",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+        accountEmail: "e2e@example.com",
+        connectionState: "HEALTHY",
+        canSuggestContacts: false,
+      },
+    ],
   };
 
   await page.addInitScript(() => {
@@ -72,7 +84,11 @@ const prepareGoogleAuthCallbackPage = async (
         contentType: "application/json",
         body: JSON.stringify({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
         }),
       });
     }
@@ -223,6 +239,7 @@ const seedSignInIntent = async (page: Page, state: string) => {
 
 const connectionSummary = (canSuggestContacts: boolean) => ({
   id: "e2e-connection-1",
+  provider: "google" as const,
   state: "healthy",
   stateReason: null,
   lastSyncedAt: null,
@@ -243,14 +260,35 @@ const readStoredGoogleMetadata = (page: Page) =>
     ).__COMPASS_E2E_STORE__;
     const current = bridge?.userMetadata?.getState().current as
       | {
-          google?: {
+          connections?: Array<{
+            provider?: string;
             connectionState?: string;
-            connections?: Array<{ canSuggestContacts?: boolean }>;
-          };
+            canSuggestContacts?: boolean;
+          }>;
         }
       | null
       | undefined;
-    return current?.google ?? null;
+    const googleConnections =
+      current?.connections?.filter(
+        (connection) => connection.provider === "google",
+      ) ?? [];
+    if (googleConnections.length === 0) return null;
+    const precedence = [
+      "RECONNECT_REQUIRED",
+      "ATTENTION",
+      "IMPORTING",
+      "HEALTHY",
+    ] as const;
+    const connectionState =
+      precedence.find((state) =>
+        googleConnections.some(
+          (connection) => connection.connectionState === state,
+        ),
+      ) ?? "NOT_CONNECTED";
+    return {
+      connectionState,
+      connections: googleConnections,
+    };
   });
 
 test("finishes sign-in with the optional contacts scopes granted and surfaces the capability", async ({
@@ -259,10 +297,7 @@ test("finishes sign-in with the optional contacts scopes granted and surfaces th
   const state = "sign-in-contacts-granted";
   const apiMocks = await prepareGoogleAuthCallbackPage(page, {
     metadata: {
-      google: {
-        connectionState: "HEALTHY",
-        connections: [connectionSummary(true)],
-      },
+      connections: [connectionSummary(true)],
     },
   });
 
@@ -287,10 +322,7 @@ test("finishes sign-in when the contacts scopes are denied: connection healthy, 
   const state = "sign-in-contacts-denied";
   const apiMocks = await prepareGoogleAuthCallbackPage(page, {
     metadata: {
-      google: {
-        connectionState: "HEALTHY",
-        connections: [connectionSummary(false)],
-      },
+      connections: [connectionSummary(false)],
     },
   });
 

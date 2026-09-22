@@ -395,7 +395,7 @@ This is deliberate and prevents events from "disappearing" after login when loca
 Revoked state details:
 
 - stored in memory only (not persisted)
-- set when `GOOGLE_REVOKED` is detected from SSE or API error responses
+- set when `CONNECTION_REVOKED` is detected from SSE or API error responses
 - cleared when Google auth succeeds again
 
 ## Storage Initialization
@@ -448,7 +448,7 @@ Runtime nuances:
   metadata and Google connection status.
 - auto-import is triggered only when `sync.importGCal === "RESTART"` and `google.connectionState` is neither `NOT_CONNECTED` nor `RECONNECT_REQUIRED`.
 - On connect, backend may proactively send `syncStatusChanged` with
-  `code: "GOOGLE_REVOKED"`; the client clears Google-origin events and falls
+  `code: "CONNECTION_REVOKED"`; the client clears Google-origin events and falls
   back to local event storage until reconnect.
 - Focus refresh is a no-op unless the connection is `HEALTHY` or `ATTENTION`.
   It passes `silent: true` so a transient failure does not toast. Manual

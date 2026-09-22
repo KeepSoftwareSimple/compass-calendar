@@ -11,7 +11,6 @@ export type ProviderAvailabilityMode = "signIn" | "connect";
 type ProviderFlags = { signIn: boolean; connect: boolean };
 
 type AppConfigResponse = {
-  google?: { isConfigured?: boolean };
   providers?: Partial<
     Record<ProviderKind, { signIn?: boolean; connect?: boolean }>
   >;
@@ -27,14 +26,13 @@ const unavailableFlags: ProviderFlags = { signIn: false, connect: false };
 const flagsFromConfig = (
   config: AppConfigResponse,
 ): Record<ProviderKind, ProviderFlags> => {
-  const googleConfigured = Boolean(config.google?.isConfigured);
   const google = config.providers?.google;
   const microsoft = config.providers?.microsoft;
   const apple = config.providers?.apple;
   return {
     google: {
-      signIn: google?.signIn ?? googleConfigured,
-      connect: google?.connect ?? googleConfigured,
+      signIn: google?.signIn ?? false,
+      connect: google?.connect ?? false,
     },
     microsoft: {
       signIn: microsoft?.signIn ?? false,

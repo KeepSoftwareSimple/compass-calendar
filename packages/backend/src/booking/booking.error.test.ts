@@ -30,23 +30,15 @@ describe("toBookingErrorResponse", () => {
     expect(body.code).toBe("AVAILABILITY_REQUIRED");
   });
 
-  it("maps both calendar-not-connected codes to forbidden", () => {
+  it("maps calendar-not-connected to forbidden", () => {
     const next = toBookingErrorResponse(
       bookingError(
         "CALENDAR_NOT_CONNECTED",
         "Connect a healthy calendar account before enabling your meeting page",
       ),
     );
-    const alias = toBookingErrorResponse(
-      bookingError(
-        "GOOGLE_NOT_CONNECTED",
-        "Connect a healthy Google account before enabling booking",
-      ),
-    );
     expect(next.status).toBe(Status.FORBIDDEN);
     expect(next.body.code).toBe("CALENDAR_NOT_CONNECTED");
-    expect(alias.status).toBe(Status.FORBIDDEN);
-    expect(alias.body.code).toBe("GOOGLE_NOT_CONNECTED");
   });
 
   it("returns a generic message for ZodError without leaking issue paths", () => {

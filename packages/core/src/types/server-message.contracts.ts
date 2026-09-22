@@ -22,7 +22,6 @@ const SyncStateSchema = z.discriminatedUnion("status", [
   z.strictObject({
     status: z.literal("attention"),
     code: z.enum([
-      "GOOGLE_REVOKED",
       "CONNECTION_REVOKED",
       "IMPORT_FAILED",
       "WATCH_REPAIR_FAILED",
@@ -58,7 +57,7 @@ export type UserMetadataMessage = z.infer<typeof UserMetadataMessageSchema>;
 
 // Completeness rule (A27): every backend publish site emits a member of this
 // union. The five current SSE names (EVENT_CHANGED, IMPORT_GCAL_START,
-// IMPORT_GCAL_END, GOOGLE_REVOKED, USER_METADATA) each map to a member or are
+// IMPORT_GCAL_END, USER_METADATA) each map to a member or are
 // explicitly retired; a contract test enforces the mapping.
 export const ServerMessageSchema = z.discriminatedUnion("type", [
   EventChangeMessageSchema,
@@ -80,14 +79,6 @@ export function revokedConnectionServerMessages(
         status: "attention",
         code: "CONNECTION_REVOKED",
         connectionId: parsedId,
-        retryable: false,
-      },
-    },
-    {
-      type: "syncStatusChanged",
-      sync: {
-        status: "attention",
-        code: "GOOGLE_REVOKED",
         retryable: false,
       },
     },

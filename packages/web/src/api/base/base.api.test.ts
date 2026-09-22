@@ -20,7 +20,7 @@ describe("BaseApi", () => {
         config,
         response: {
           config,
-          data: { code: "GOOGLE_REVOKED" },
+          data: { code: "CONNECTION_REVOKED" },
           headers: new Headers(),
           status: 410,
           statusText: "Gone",

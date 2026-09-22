@@ -110,26 +110,17 @@ class UserMetadataService {
     // SuperTokens metadata and the Sync connection list are independent
     // upstreams. Await them together so GET /api/user/metadata and the SSE
     // connect handshake pay one hop, not two in series.
-    const [storedMetadata, { connectionState, connections }] =
-      await Promise.all([
-        this.getStoredUserMetadata(userId, userContext),
-        this.assessGoogleMetadata(userId),
-      ]);
+    const [storedMetadata, { connections }] = await Promise.all([
+      this.getStoredUserMetadata(userId, userContext),
+      this.assessGoogleMetadata(userId),
+    ]);
     const metadata = hasLegacyEmailUpdatesMetadata(storedMetadata)
       ? removeLegacyEmailUpdatesMetadata(storedMetadata)
       : storedMetadata;
 
-    const googleConnections = connections.filter(
-      (connection) => connection.provider === "google",
-    );
-
     return {
       ...metadata,
       connections,
-      google: {
-        connectionState,
-        connections: googleConnections,
-      },
     };
   };
 }

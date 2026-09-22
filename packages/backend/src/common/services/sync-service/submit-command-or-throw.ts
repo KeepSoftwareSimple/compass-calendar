@@ -19,7 +19,7 @@ const mapSyncFailure = (reason: SyncCommandFailureReason) => {
       );
     case "authorizationRevoked":
       return eventMutationError(
-        "GOOGLE_REVOKED",
+        "CONNECTION_REVOKED",
         "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
       );
     case "unsupportedCapability":

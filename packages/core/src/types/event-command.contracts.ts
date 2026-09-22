@@ -211,9 +211,6 @@ export const EventMutationErrorCodeSchema = z.enum([
   // provider answered badly: this is our own backpressure, so it is a 503 and
   // always safe to retry with the same idempotency key.
   "SYNC_UNAVAILABLE",
-  "GOOGLE_REVOKED",
-  // Provider-neutral alias of GOOGLE_REVOKED. Both codes stay on the wire
-  // until milestone C drops the Google-named one.
   "CONNECTION_REVOKED",
   // Scoped cutover maintenance: cloud/provider mutations paused (S50).
   "MAINTENANCE",

@@ -5,7 +5,7 @@ import authController from "./auth.controller";
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 describe("auth.controller", () => {
-  describe("beginGoogleConnection", () => {
+  describe("beginConnection maintenance", () => {
     const originalMutationMode = CONFIG.SYNC_CLOUD_MUTATION_MODE;
 
     afterEach(() => {
@@ -18,9 +18,9 @@ describe("auth.controller", () => {
       const json = mock();
       const promise = mock();
 
-      authController.beginGoogleConnection(
+      authController.beginConnection(
         {
-          body: {},
+          body: { provider: "google" },
           session: { getUserId: () => "507f1f77bcf86cd799439011" },
         } as never,
         { status, json, promise } as never,

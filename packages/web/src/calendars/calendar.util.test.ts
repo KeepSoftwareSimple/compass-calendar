@@ -3,7 +3,7 @@ import {
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   accountKey,
   canInviteOnCalendar,
@@ -473,7 +473,7 @@ describe("groupCalendarsByAccount", () => {
   const connection = (
     accountEmail: string,
     provider?: ProviderKind,
-  ): GoogleSyncConnectionSummary => ({
+  ): SyncConnectionSummary => ({
     id: `conn-${provider ?? "google"}-${accountEmail}`,
     state: "healthy",
     stateReason: null,

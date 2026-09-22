@@ -38,7 +38,11 @@ test("keeps billing receipts aligned and plan actions on one row", async ({
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
           billing: {
             isConfigured: true,
             enforcement: true,
@@ -106,7 +110,7 @@ test("keeps billing receipts aligned and plan actions on one row", async ({
     if (path.endsWith("/api/user/metadata")) {
       return route.fulfill(
         jsonResponse({
-          google: { connectionState: "NOT_CONNECTED", connections: [] },
+          connections: [],
         }),
       );
     }

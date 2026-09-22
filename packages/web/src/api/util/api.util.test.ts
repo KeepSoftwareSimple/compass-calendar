@@ -187,8 +187,8 @@ describe("getApiErrorMessage", () => {
 
 describe("getApiErrorCode", () => {
   it("returns the code when response.data has a string code property", () => {
-    const error = createApiError({ data: { code: "GOOGLE_REVOKED" } });
-    expect(getApiErrorCode(error)).toBe("GOOGLE_REVOKED");
+    const error = createApiError({ data: { code: "CONNECTION_REVOKED" } });
+    expect(getApiErrorCode(error)).toBe("CONNECTION_REVOKED");
   });
 
   it("returns the code for arbitrary error codes", () => {
@@ -235,9 +235,9 @@ describe("getApiErrorCode", () => {
 
   it("preserves message when data has both code and message", () => {
     const error = createApiError({
-      data: { code: "GOOGLE_REVOKED", message: "Google access revoked." },
+      data: { code: "CONNECTION_REVOKED", message: "Google access revoked." },
     });
-    expect(getApiErrorCode(error)).toBe("GOOGLE_REVOKED");
+    expect(getApiErrorCode(error)).toBe("CONNECTION_REVOKED");
   });
 });
 
@@ -313,26 +313,6 @@ describe("handleErrorResponse", () => {
   it.each([
     Status.UNAUTHORIZED,
     Status.GONE,
-  ])("delegates Google revocation for status %s and rethrows the API error", async (status) => {
-    const onGoogleRevoked = mock();
-    const error = createApiError(
-      {
-        data: { code: "GOOGLE_REVOKED" },
-        status,
-      },
-      { body: { calendarId: "cal-123" } },
-    );
-
-    await expect(handleErrorResponse(error, { onGoogleRevoked })).rejects.toBe(
-      error,
-    );
-
-    expect(onGoogleRevoked).toHaveBeenCalledWith({ calendarId: "cal-123" });
-  });
-
-  it.each([
-    Status.UNAUTHORIZED,
-    Status.GONE,
   ])("delegates connection revocation for status %s and rethrows the API error", async (status) => {
     const onGoogleRevoked = mock();
     const error = createApiError(
@@ -366,7 +346,7 @@ describe("handleErrorResponse", () => {
 
   it("fails clearly when the calendar revocation handler is not configured", async () => {
     const error = createApiError({
-      data: { code: "GOOGLE_REVOKED" },
+      data: { code: "CONNECTION_REVOKED" },
       status: Status.UNAUTHORIZED,
     });
 
