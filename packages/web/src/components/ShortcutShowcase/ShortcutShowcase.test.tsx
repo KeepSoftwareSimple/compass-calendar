@@ -161,7 +161,7 @@ describe("ShortcutShowcase", () => {
 
   it("shows the how-to card, and Enter starts an untimed run on task 1", () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
 
     expect(screen.getByText("Block Party")).toBeTruthy();
     expect(
@@ -182,7 +182,7 @@ describe("ShortcutShowcase", () => {
 
   it("offers no timed start from the how-to card", () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
 
     // The clock is only offered on the end screen, after a practice run.
     expect(screen.queryByRole("button", { name: /Race the clock/ })).toBeNull();
@@ -192,7 +192,7 @@ describe("ShortcutShowcase", () => {
 
   it("swaps the task card's chips as the move unfolds", () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
     pressKey("Enter");
 
     // Esc-skip to the jump task. With every board task skipped, letters run
@@ -217,7 +217,7 @@ describe("ShortcutShowcase", () => {
 
   it("clears the queue with the taught keys and reaches the end screen", async () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
 
     await playWinningRun();
 
@@ -234,7 +234,7 @@ describe("ShortcutShowcase", () => {
 
   it("graduates from the end screen and fades out before unmounting", async () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
     await playWinningRun();
 
     // O opens the calendar for anonymous players (Enter belongs to signup).
@@ -272,7 +272,7 @@ describe("ShortcutShowcase", () => {
 
     try {
       render(<ShortcutShowcase />);
-      act(() => shortcutShowcaseActions.startFromWelcome());
+      act(() => shortcutShowcaseActions.replay());
       await playWinningRun();
       pressKey("o");
       await waitFor(() => {
@@ -286,7 +286,7 @@ describe("ShortcutShowcase", () => {
 
   it("Enter on the end screen hands an anonymous player to signup", async () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
     await playWinningRun();
 
     pressKey("Enter");
@@ -298,7 +298,7 @@ describe("ShortcutShowcase", () => {
 
   it("offers a timed rematch from the end screen with a fresh board", async () => {
     render(<ShortcutShowcase />);
-    act(() => shortcutShowcaseActions.startFromWelcome());
+    act(() => shortcutShowcaseActions.replay());
     await playWinningRun();
     expect(screen.getByText("You cleared the week!")).toBeTruthy();
     // After an untimed run the replay slot is the timed challenge.

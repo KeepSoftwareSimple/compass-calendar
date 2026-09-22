@@ -20,7 +20,6 @@ import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
-import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -69,7 +68,6 @@ export async function completeProviderAuthCallback({
     trackSignupCompleted(provider);
     track("calendar_connected", { source: `signup_${provider}` });
     trackSignupStep("calendar_connected", { method: provider });
-    shortcutShowcaseActions.offerAfterSignupIfPending();
   } else {
     track("login_completed", { method: provider });
   }

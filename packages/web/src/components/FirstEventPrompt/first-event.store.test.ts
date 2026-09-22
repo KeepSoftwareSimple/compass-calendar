@@ -25,8 +25,7 @@ describe("firstEventPromptActions", () => {
     localStorage.setItem("compass.onboarding.checklist-done", "");
   });
 
-  it("completes and celebrates on the first real event, once the showcase has been seen", () => {
-    markShowcaseSeen();
+  it("completes and celebrates on the first real event when the showcase is not active", () => {
     noteFirstRealEventCreated();
     expect(useFirstEventPromptStore.getState().isCelebrating).toBe(true);
     expect(persistentBrowserStore.get(STORAGE_KEYS.FIRST_EVENT_DONE)).toBe(
@@ -38,10 +37,10 @@ describe("firstEventPromptActions", () => {
     expect(useFirstEventPromptStore.getState().isCelebrating).toBe(true);
   });
 
-  it("ignores a create before the showcase has ever been offered", () => {
+  it("completes on the first create even when the showcase was never seen", () => {
     noteFirstRealEventCreated();
-    expect(useFirstEventPromptStore.getState().isCelebrating).toBe(false);
-    expect(persistentBrowserStore.get(STORAGE_KEYS.FIRST_EVENT_DONE)).not.toBe(
+    expect(useFirstEventPromptStore.getState().isCelebrating).toBe(true);
+    expect(persistentBrowserStore.get(STORAGE_KEYS.FIRST_EVENT_DONE)).toBe(
       "completed",
     );
   });

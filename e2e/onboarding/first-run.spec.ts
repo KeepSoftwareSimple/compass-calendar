@@ -50,13 +50,9 @@ test("welcomes a first-time user and seeds sample events", async ({
   ).toBeVisible();
   await page.keyboard.press("s");
   await expect(welcomeDialog).toBeHidden();
-
-  const showcase = page.getByRole("region", { name: "Shortcut practice" });
-  await expect(showcase).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(showcase).toContainText("Press Esc again to leave practice.");
-  await page.keyboard.press("Escape");
-  await expect(showcase).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Shortcut practice" }),
+  ).toHaveCount(0);
 
   await expect(
     page.getByText(/Sample events to help you explore/i),

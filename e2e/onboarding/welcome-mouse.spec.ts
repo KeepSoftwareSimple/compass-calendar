@@ -38,9 +38,8 @@ test("walks the welcome flow with the mouse only", async ({
   await expect(welcomeDialog.getByText("Step 3 of 3")).toBeVisible();
 
   await welcomeDialog
-    .getByRole("button", { name: "Explore without an account" })
+    .getByRole("link", { name: "Practice the shortcuts" })
     .click();
-  await expect(welcomeDialog).toBeHidden();
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
   await expect(showcase).toBeVisible();

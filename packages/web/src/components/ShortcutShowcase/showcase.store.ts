@@ -2,12 +2,10 @@ import { create } from "zustand";
 import { track } from "@web/auth/posthog/track";
 import {
   clearShowcaseProgress,
-  consumePendingShowcaseOffer,
   hasSeenShortcutShowcase,
   hasShowcaseInProgress,
   markShortcutShowcaseSeen,
   markShowcaseInProgress,
-  markShowcaseOfferPending,
 } from "@web/components/ShortcutShowcase/showcase.storage";
 
 /** How the practice arena was opened, so the activation funnel can tell them apart. */
@@ -72,10 +70,6 @@ const activate = (entry: ShowcaseEntry) => {
 };
 
 export const shortcutShowcaseActions = {
-  /** Explore / Escape / backdrop from the welcome modal. */
-  startFromWelcome: () => {
-    activate("welcome");
-  },
   /** Palette re-entry: always allowed. The how-to card is one Enter long. */
   replay: () => {
     activate("palette");
@@ -143,23 +137,10 @@ export const shortcutShowcaseActions = {
     track("shortcut_showcase_skipped", { ...context, exit });
     endShowcase();
   },
-  /** Welcome-modal signup: redeem the practice after signup completes. */
-  deferUntilSignup: () => {
-    markShowcaseOfferPending();
-  },
-  /** Called once, right after signup completes, to redeem a pending offer. */
-  offerAfterSignupIfPending: () => {
-    if (!consumePendingShowcaseOffer()) return;
-    if (hasSeenShortcutShowcase()) return;
-    activate("post_signup");
-  },
 };
 
 export const selectShowcaseActive = (state: ShortcutShowcaseState) =>
   state.isActive;
-
-export const selectHasSeenShowcase = (state: ShortcutShowcaseState) =>
-  state.hasSeenShowcase;
 
 export const selectSkipPending = (state: ShortcutShowcaseState) =>
   state.skipPending;

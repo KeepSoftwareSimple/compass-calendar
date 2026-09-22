@@ -5,7 +5,6 @@ import {
   useFirstEventPromptStore,
 } from "@web/components/FirstEventPrompt/first-event.store";
 import {
-  selectHasSeenShowcase,
   selectShowcaseActive,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
@@ -28,9 +27,6 @@ export function useFirstEventPromptSurfaceEligible(
   isAuthModalOpen: boolean,
 ): boolean {
   const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
-  const hasSeenShowcaseThisSession = useShortcutShowcaseStore(
-    selectHasSeenShowcase,
-  );
   const isDone = useFirstEventPromptStore(selectFirstEventDone);
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
   const isAboutOpen = useSettingsStore(selectIsAboutOpen);
@@ -44,6 +40,5 @@ export function useFirstEventPromptSurfaceEligible(
     isDone,
     storageAvailable: persistentBrowserStore.isAvailable(),
     showcaseActive: isShowcaseActive,
-    hasSeenShowcaseThisSession,
   });
 }

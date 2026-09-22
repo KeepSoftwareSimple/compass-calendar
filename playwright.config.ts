@@ -35,6 +35,13 @@ export default defineConfig({
               origin: `http://localhost:${TEST_PORT}`,
               localStorage: [
                 { name: "compass.onboarding.has-seen-welcome", value: "true" },
+                // Generic calendar specs are not testing first-event handoff;
+                // without this, the prompt wins the onboarding surface over
+                // pointer hints for users who never opted into Block Party.
+                {
+                  name: "compass.onboarding.first-event-done",
+                  value: "dismissed",
+                },
               ],
             },
           ],
