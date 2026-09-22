@@ -16,12 +16,7 @@ import {
 import { findSyncConnectionsFromMetadata } from "@web/auth/state/user-metadata.store";
 import { GOOGLE_REPAIR_FAILED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { type OnServerMessage } from "@web/sse/client/sse.client";
-
-const IN_PROGRESS_SYNC_STATES = new Set([
-  "connecting",
-  "importing",
-  "catchingUp",
-]);
+import { hasTransientSyncConnection } from "@web/sse/hooks/transient-sync-states";
 
 export type SyncSSEDependencies = {
   handleConnectionRevoked: (context?: ConnectionRevokedContext) => void;
@@ -106,9 +101,7 @@ export const createUseSyncSSE = (dependencies: SyncSSEDependencies) => {
         // Prefer Sync's in-progress states when present; otherwise the collapsed
         // product enum. Never clear syncing from local optimism alone (S41).
         const connections = findSyncConnectionsFromMetadata(metadata);
-        const syncInProgress = connections.some((connection) =>
-          IN_PROGRESS_SYNC_STATES.has(connection.state),
-        );
+        const syncInProgress = hasTransientSyncConnection(connections);
         const enumImporting = metadata.google?.connectionState === "IMPORTING";
         if (!syncInProgress && !enumImporting) {
           clearSyncingSyncIndicatorOverride();

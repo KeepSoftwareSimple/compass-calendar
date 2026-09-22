@@ -2,25 +2,13 @@ import {
   type AuditConnectionIdentityOptions,
   auditConnectionIdentity,
 } from "@scripts/commands/audit-connection-identity/audit";
-import { loadCompassConfig } from "@core/config/compass.config";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { Logger } from "@core/logger/winston.logger";
 import { ProviderKindSchema } from "@core/types/sync/identity.contracts";
 import mongoService from "@backend/common/services/mongo.service";
 import { SyncMongoService } from "@sync/storage/sync-mongo.service";
 
 const logger = Logger("scripts.commands.audit-connection-identity");
-
-function syncMongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const uri = loadCompassConfig().sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before audit-connection-identity",
-    );
-  }
-  return uri;
-}
 
 export function parseAuditConnectionIdentityArgs(
   argv: string[],
@@ -56,7 +44,7 @@ export async function runAuditConnectionIdentity(): Promise<void> {
     const options = parseAuditConnectionIdentityArgs(process.argv.slice(3));
     await mongoService.start();
     await syncMongo.connect({
-      uri: syncMongoUri(),
+      uri: resolveSyncMongoUri("audit-connection-identity"),
       enforceLeastPrivilege: false,
       forbiddenDatabaseName: "prod_calendar",
     });

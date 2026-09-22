@@ -2,30 +2,14 @@ import { type FC, useContext, useEffect } from "react";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
-import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
 import {
   firstEventPromptActions,
   selectFirstEventCelebrating,
-  selectFirstEventDone,
-  selectFirstEventPromptSurfaceEligible,
   useFirstEventPromptStore,
 } from "@web/components/FirstEventPrompt/first-event.store";
-import {
-  selectHasSeenShowcase,
-  selectShowcaseActive,
-  useShortcutShowcaseStore,
-} from "@web/components/ShortcutShowcase/showcase.store";
+import { useFirstEventPromptSurfaceEligible } from "@web/components/FirstEventPrompt/useFirstEventPromptSurfaceEligible";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import {
-  selectIsEventFormOpen,
-  useDraftStore,
-} from "@web/events/stores/draft.store";
-import {
-  selectIsAboutOpen,
-  selectIsSettingsOpen,
-  useSettingsStore,
-} from "@web/settings/settings.store";
 import { KEYMAP } from "@web/shortcuts/keymap";
 
 /** How long the celebration copy holds before it fades out for good. */
@@ -101,14 +85,6 @@ const PromptCard: FC = () => {
  */
 export const FirstEventPrompt: FC = () => {
   const { isOpen: isAuthModalOpen } = useContext(AuthModalContext);
-  const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
-  // The store flag covers a markSeen this session (storage notifies nobody);
-  // the storage read covers earlier sessions and the legacy tour key.
-  const seenThisSession = useShortcutShowcaseStore(selectHasSeenShowcase);
-  const isDone = useFirstEventPromptStore(selectFirstEventDone);
-  const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
-  const isAboutOpen = useSettingsStore(selectIsAboutOpen);
-  const isFormOpen = useDraftStore(selectIsEventFormOpen);
   // Without storage (private mode), completion and dismissal can never
   // persist, so the card would haunt every reload; better to not show it.
   // Sit above the auth modal in z-index, so stay hidden while login/signup
@@ -116,16 +92,7 @@ export const FirstEventPrompt: FC = () => {
   // the event form paint below this tooltip layer, so hide rather than
   // compete. Opening the form is not completion: cancel brings the card
   // back, and a real create still celebrates after the form closes.
-  const isLive = selectFirstEventPromptSurfaceEligible({
-    isAuthModalOpen,
-    isSettingsOpen,
-    isAboutOpen,
-    isFormOpen,
-    isDone,
-    storageAvailable: persistentBrowserStore.isAvailable(),
-    showcaseActive: isShowcaseActive,
-    hasSeenShowcaseThisSession: seenThisSession,
-  });
+  const isLive = useFirstEventPromptSurfaceEligible(isAuthModalOpen);
   if (!isLive) return null;
   return <PromptCard />;
 };

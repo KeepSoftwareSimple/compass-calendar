@@ -4,12 +4,8 @@ import {
   selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
+import { hasTransientSyncConnection } from "@web/sse/hooks/transient-sync-states";
 
-const TRANSIENT_CONNECTION_STATES = new Set([
-  "connecting",
-  "importing",
-  "catchingUp",
-]);
 const TRANSIENT_POLL_MS = 20_000;
 
 /**
@@ -20,9 +16,7 @@ const TRANSIENT_POLL_MS = 20_000;
  */
 export const useTransientSyncPolling = () => {
   const connections = useUserMetadataStore(selectSyncConnections);
-  const anyTransient = connections.some((connection) =>
-    TRANSIENT_CONNECTION_STATES.has(connection.state),
-  );
+  const anyTransient = hasTransientSyncConnection(connections);
 
   useEffect(() => {
     if (!anyTransient) return;

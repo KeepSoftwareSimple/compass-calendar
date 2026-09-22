@@ -9,22 +9,9 @@
  * empty/throwaway Sync database). Never point this at production without an
  * explicit maintenance window.
  */
-import { loadCompassConfig } from "@core/config/compass.config";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
-
-function mongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const config = loadCompassConfig();
-  const uri = config.sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before restoring",
-    );
-  }
-  return uri;
-}
 
 function fromDir(argv: string[]): string {
   const flag = argv.indexOf("--from");
@@ -36,7 +23,7 @@ function fromDir(argv: string[]): string {
 
 function main(): void {
   const argv = process.argv.slice(2);
-  const uri = mongoUri();
+  const uri = resolveSyncMongoUri("restoring");
   const source = fromDir(argv);
   if (!existsSync(source)) {
     throw new Error(`Dump directory not found: ${source}`);

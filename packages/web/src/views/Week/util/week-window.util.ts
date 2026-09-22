@@ -1,5 +1,6 @@
 import { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import {
   DAY_COLUMN_MIN_USABLE_WIDTH,
   GRID_MARGIN_LEFT,
@@ -21,6 +22,15 @@ export function weekEventsQueryWindow(anchor: Dayjs) {
   const startOfView = anchor.startOf("day");
   const endOfView = startOfView.add(WEEK_DAY_COUNT, "day").startOf("day");
   return { startOfView, endOfView };
+}
+
+/** Query range strings for {@link weekEventsQueryWindow}, matching dayEventQueryRange. */
+export function weekEventQueryRange(anchor: Dayjs) {
+  const { startOfView, endOfView } = weekEventsQueryWindow(anchor);
+  return {
+    startDate: toUTCOffset(startOfView),
+    endDate: toUTCOffset(endOfView),
+  };
 }
 
 /**

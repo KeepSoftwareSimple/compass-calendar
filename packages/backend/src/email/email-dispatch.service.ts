@@ -34,6 +34,9 @@ const isAllowlistedRecipient = (email: string): boolean => {
   return allowlist.some((entry) => normalizeEmail(entry) === normalized);
 };
 
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -111,34 +114,34 @@ export class EmailDispatchService {
   };
 
   async #dispatchRow(row: EmailSendRecord): Promise<void> {
+    const skip = (reason: string) =>
+      emailSendRepository.markSkipped(row._id, reason);
+
     const step = findWelcomeStep(row.stepKey);
     if (!step) {
-      await emailSendRepository.markSkipped(row._id, "Unknown welcome step");
+      await skip("Unknown welcome step");
       return;
     }
 
     const user = await loadWelcomeSequenceUser(row.userId);
     if (!user) {
-      await emailSendRepository.markSkipped(row._id, "User not found");
+      await skip("User not found");
       return;
     }
 
     if (step.skipIf?.(user)) {
-      await emailSendRepository.markSkipped(row._id, "Step skipped by skipIf");
+      await skip("Step skipped by skipIf");
       return;
     }
 
     if (!isAllowlistedRecipient(user.email)) {
-      await emailSendRepository.markSkipped(
-        row._id,
-        "Recipient not allowlisted",
-      );
+      await skip("Recipient not allowlisted");
       return;
     }
 
     const content = getWelcomeEmailContent(row.stepKey);
     if (!content) {
-      await emailSendRepository.markSkipped(row._id, "Missing email content");
+      await skip("Missing email content");
       return;
     }
 
@@ -155,22 +158,16 @@ export class EmailDispatchService {
       });
       await emailSendRepository.markSent(row._id, result.messageId);
     } catch (error) {
+      const message = errorMessage(error);
       if (isInvalidRecipientError(error)) {
-        await emailSendRepository.markSkipped(
-          row._id,
-          error instanceof Error ? error.message : String(error),
-        );
+        await skip(message);
         return;
       }
 
       const nextAttemptAt = new Date(
         Date.now() + emailSendBackoffMs(row.attemptCount + 1),
       );
-      await emailSendRepository.recordFailure(
-        row._id,
-        error instanceof Error ? error.message : String(error),
-        nextAttemptAt,
-      );
+      await emailSendRepository.recordFailure(row._id, message, nextAttemptAt);
     }
   }
 }
