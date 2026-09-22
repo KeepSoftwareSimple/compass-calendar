@@ -15,14 +15,10 @@ export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
     },
   );
   await emailSendRepository.cancelQueuedForUser(userId);
-  const row = await mongoService.emailSend.findOne(
-    { userId },
-    { sort: { updatedAt: -1 }, projection: { stepKey: 1 } },
-  );
   void emailAnalytics.capture({
     event: "email_unsubscribed",
     userId: userId.toHexString(),
-    step: row?.stepKey,
+    step: await emailSendRepository.findLastSentStepKey(userId),
   });
 }
 

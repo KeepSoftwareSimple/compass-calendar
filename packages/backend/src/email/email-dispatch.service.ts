@@ -51,9 +51,12 @@ const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
   }
+  // Only request-validation statuses mean the address itself is bad. A 401 or
+  // 403 ("API key is invalid") is our misconfiguration and must retry toward
+  // `failed`, or a revoked key silently skips every email.
   const message = error.message;
   return (
-    /\(\s*4\d\d\s*\)/.test(message) &&
+    /\(\s*(400|422)\s*\)/.test(message) &&
     /invalid|recipient|bounce|undeliverable/i.test(message)
   );
 };

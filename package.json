@@ -24,6 +24,7 @@
     "dev:sync": "cd packages/sync && bun --watch src/app.ts",
     "dev:update": "git checkout main && git pull &&bun install",
     "dev:web": "bun run dev:ports web && cd packages/web &&bun run dev.ts",
+    "dev:booking-web": "cd apps/booking-web && bun run dev",
     "lint": "bun packages/scripts/src/testing/lint.ts",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -39,6 +40,7 @@
     "test:sync": "bun packages/scripts/src/testing/test-mongo-env.ts sync --",
     "test:sync:fast": "bun packages/scripts/src/testing/test-parallel.ts sync-fast -- --path-ignore-patterns '**/*.db.test.ts'",
     "test:web": "bun packages/scripts/src/testing/test-parallel.ts web --",
+    "test:booking-web": "cd apps/booking-web && bun test",
     "test:scripts": "bun packages/scripts/src/testing/test-mongo-env.ts scripts --",
     "test:self-host": "bun test ./self-host",
     "test:scripts:fast": "bun packages/scripts/src/testing/test-parallel.ts scripts-fast -- --path-ignore-patterns '**/*.db.test.ts'",
@@ -48,6 +50,7 @@
     "build:backend": "bun packages/scripts/src/commands/build.backend.ts",
     "build:sync": "bun packages/scripts/src/commands/build.sync.ts",
     "build:web": "cd packages/web && bun run build.ts",
+    "build:booking-web": "cd apps/booking-web && bun run build",
     "sync:backup": "bun packages/scripts/src/commands/sync-backup.ts",
     "sync:restore": "bun packages/scripts/src/commands/sync-restore.ts",
     "microsoft:mint-token": "bun packages/scripts/src/commands/microsoft-mint-refresh-token.ts"
@@ -90,7 +93,8 @@
     "body-parser": "^1.20.6"
   },
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "apps/*"
   ],
   "packageManager": "bun@1.3.14",
   "trustedDependencies": [

@@ -148,7 +148,13 @@ describe("EmailDispatchService", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("records failure with backoff when the provider throws", async () => {
+  it.each([
+    ["an upstream error", "Resend send failed (500): upstream"],
+    [
+      "a rejected API key",
+      'Resend send failed (401): {"statusCode":401,"name":"validation_error","message":"API key is invalid"}',
+    ],
+  ])("records failure with backoff on %s", async (_label, message) => {
     CONFIG.EMAIL_PROVIDER = "log";
     const row = baseRow();
     spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
@@ -161,9 +167,10 @@ describe("EmailDispatchService", () => {
       emailSendRepository,
       "recordFailure",
     ).mockResolvedValue(row);
+    const markSkipped = spyOn(emailSendRepository, "markSkipped");
     spyOn(emailClient, "buildEmailProvider").mockReturnValue({
       send: mock(async () => {
-        throw new Error("Resend send failed (500): upstream");
+        throw new Error(message);
       }),
       verifyWebhook: () => [],
     });
@@ -171,5 +178,35 @@ describe("EmailDispatchService", () => {
     await new EmailDispatchService().dispatchDue();
 
     expect(recordFailure).toHaveBeenCalled();
+    expect(markSkipped).not.toHaveBeenCalled();
+  });
+
+  it("skips the row when the provider rejects the recipient", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "guest@example.com",
+      hasConnectedCalendar: false,
+      billing: undefined,
+    });
+    const recordFailure = spyOn(emailSendRepository, "recordFailure");
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    const message =
+      'Resend send failed (422): {"statusCode":422,"name":"validation_error","message":"Invalid `to` field."}';
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send: mock(async () => {
+        throw new Error(message);
+      }),
+      verifyWebhook: () => [],
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, message);
+    expect(recordFailure).not.toHaveBeenCalled();
   });
 });
