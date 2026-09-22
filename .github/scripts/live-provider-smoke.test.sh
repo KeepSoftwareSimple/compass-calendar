@@ -60,9 +60,14 @@ exit "${SMOKE_TEST_BUN_EXIT:-0}"
 STUB
 chmod +x "${STUB_DIR}/bin/bun"
 
+# Write smoke output to a file, not stdout. When this script runs under
+# `bun test --parallel` on GitHub Actions, the runner intercepts the first
+# `::warning::` workflow command on the step stream and the captured text
+# loses the prefix, so command substitution would flake on google only.
 run_smoke() {
   local summary=$1
-  shift
+  local log=$2
+  shift 2
   env -i \
     PATH="${STUB_DIR}/bin:/usr/bin:/bin" \
     HOME="$STUB_DIR" \
@@ -70,24 +75,21 @@ run_smoke() {
     SMOKE_TEST_BUN_LOG="${STUB_DIR}/bun.log" \
     SMOKE_TEST_BUN_EXIT="${SMOKE_TEST_BUN_EXIT:-0}" \
     "$@" \
-    bash "${ROOT}/.github/scripts/live-provider-smoke.sh"
+    bash "${ROOT}/.github/scripts/live-provider-smoke.sh" >"$log" 2>&1
 }
 
 # 1. Expected provider skipped exits 1, warns, summarizes, and notifies.
 summary="${STUB_DIR}/expected-skip.md"
+log="${STUB_DIR}/expected-skip.log"
 set +e
-out=$(
-  run_smoke "$summary" SMOKE_EXPECTED_PROVIDERS=microsoft 2>&1
-)
+run_smoke "$summary" "$log" SMOKE_EXPECTED_PROVIDERS=microsoft
 status=$?
 set -e
+out=$(cat "$log")
 assert_eq "$status" "1" "expected microsoft skipped exits 1"
-assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
-  "expected-skip still warns on google"
-assert_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
-  "expected microsoft skip is a warning"
-assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
-  "expected-skip still warns on apple"
+assert_contains "$out" "::warning::google skipped:" "expected-skip still warns on google"
+assert_contains "$out" "::warning::microsoft skipped:" "expected microsoft skip is a warning"
+assert_contains "$out" "::warning::apple skipped:" "expected-skip still warns on apple"
 assert_contains "$out" "live-provider-smoke passed=none skipped=google microsoft apple failed=none" \
   "expected-skip prints the summary line"
 assert_contains "$out" "live-provider-smoke expected provider skipped: microsoft" \
@@ -101,24 +103,20 @@ assert_not_contains "$(cat "${STUB_DIR}/bun.log" 2>/dev/null || true)" "LIVE_PRO
 # 2. Unexpected provider skipped exits 0 with a warning; expected provider runs.
 : > "${STUB_DIR}/bun.log"
 summary="${STUB_DIR}/unexpected-skip.md"
+log="${STUB_DIR}/unexpected-skip.log"
 set +e
-out=$(
-  run_smoke "$summary" \
-    SMOKE_EXPECTED_PROVIDERS=microsoft \
-    SMOKE_MICROSOFT_REFRESH_TOKEN=rt \
-    MICROSOFT_CLIENT_ID=id \
-    MICROSOFT_CLIENT_SECRET=secret \
-    2>&1
-)
+run_smoke "$summary" "$log" \
+  SMOKE_EXPECTED_PROVIDERS=microsoft \
+  SMOKE_MICROSOFT_REFRESH_TOKEN=rt \
+  MICROSOFT_CLIENT_ID=id \
+  MICROSOFT_CLIENT_SECRET=secret
 status=$?
 set -e
+out=$(cat "$log")
 assert_eq "$status" "0" "unexpected skip exits 0 when expected provider ran"
-assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
-  "unexpected google skip is a warning"
-assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
-  "unexpected apple skip is a warning"
-assert_not_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
-  "ready microsoft is not skipped"
+assert_contains "$out" "::warning::google skipped:" "unexpected google skip is a warning"
+assert_contains "$out" "::warning::apple skipped:" "unexpected apple skip is a warning"
+assert_not_contains "$out" "::warning::microsoft skipped:" "ready microsoft is not skipped"
 assert_contains "$out" "live-provider-smoke passed=microsoft skipped=google apple failed=none" \
   "unexpected-skip summary lists microsoft as passed"
 assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=microsoft" \
@@ -130,19 +128,16 @@ assert_contains "$(cat "$summary")" \
 # 3. Nothing expected: every provider skipped still exits 0 (today's behaviour).
 : > "${STUB_DIR}/bun.log"
 summary="${STUB_DIR}/nothing-expected.md"
+log="${STUB_DIR}/nothing-expected.log"
 set +e
-out=$(
-  run_smoke "$summary" 2>&1
-)
+run_smoke "$summary" "$log"
 status=$?
 set -e
+out=$(cat "$log")
 assert_eq "$status" "0" "nothing expected and all skipped exits 0"
-assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
-  "nothing-expected warns on google"
-assert_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
-  "nothing-expected warns on microsoft"
-assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
-  "nothing-expected warns on apple"
+assert_contains "$out" "::warning::google skipped:" "nothing-expected warns on google"
+assert_contains "$out" "::warning::microsoft skipped:" "nothing-expected warns on microsoft"
+assert_contains "$out" "::warning::apple skipped:" "nothing-expected warns on apple"
 assert_contains "$out" "live-provider-smoke passed=none skipped=google microsoft apple failed=none" \
   "nothing-expected prints the summary line"
 assert_not_contains "$out" "expected provider skipped" \
