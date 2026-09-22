@@ -268,6 +268,26 @@ function gridEventCard(page: Page, title: string, hidden: boolean) {
   });
 }
 
+function gridEventCardAt(page: Page, title: string) {
+  return page.locator("#mainGrid").getByRole("button", { name: title }).last();
+}
+
+/** Wait until calendar lookup has stamped the committed card (see read-only drag test). */
+async function waitForCommittedGridEventCard(
+  page: Page,
+  title: string,
+  eventId: string,
+  calendarName: string,
+) {
+  const card = gridEventCardAt(page, title);
+  await card.scrollIntoViewIfNeeded();
+  await expect(card).toHaveAttribute("data-week-interaction-event-id", eventId);
+  await expect(card).toHaveAccessibleName(
+    new RegExp(`${title}.*${calendarName} calendar`),
+  );
+  return card;
+}
+
 async function expectEventCardWidth(
   page: Page,
   title: string,
@@ -287,9 +307,12 @@ async function expectEventCardWidth(
 
 async function hideFocusedEventViaMenu(page: Page) {
   await page.keyboard.press("m");
-  const hideItem = page
-    .getByRole("menu")
-    .getByRole("menuitem", { name: "Hide event", exact: true });
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const hideItem = menu.getByRole("menuitem", {
+    name: "Hide event",
+    exact: true,
+  });
   await expect(hideItem).toBeVisible();
   // Enter, not click: a pointer click on the item can fall through to the
   // grid after the menu unmounts and open a draft overlay on the same slot.
@@ -358,6 +381,15 @@ async function setupCalendarExperiencePage(
         lastKnownEmail: "e2e@example.com",
         shouldPromptSignUpAfterAnonymousCalendarChange: false,
       }),
+    );
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem(
+      "compass.onboarding.has-seen-shortcut-showcase",
+      "true",
+    );
+    localStorage.setItem(
+      "compass.onboarding.has-dismissed-connect-calendar-prompt",
+      String(Date.now()),
     );
   });
 
@@ -616,26 +648,11 @@ test("a new event form offers only writable calendars", async ({ page }) => {
 
 test("a read-only event blocks a drag attempt", async ({ page }) => {
   const harness = await setupCalendarExperiencePage(page);
-  const card = page
-    .locator("#mainGrid")
-    .getByRole("button", { name: EVENT_B_TITLE })
-    .last();
-
-  await card.scrollIntoViewIfNeeded();
-
-  // isEventReadOnly (useCalendarLookup.ts) fails OPEN as writable until the
-  // authenticated calendars query resolves, so the card can briefly register
-  // for drag/resize right after setupCalendarExperiencePage returns (its
-  // own wait only confirms the sidebar reflects the refetch, not this
-  // card's next render). Id attrs now stamp even for read-only cards; wait
-  // for the calendar-name accessible suffix instead - that only appears
-  // once the multi-calendar lookup that drives isReadOnly has settled.
-  await expect(card).toHaveAttribute(
-    "data-week-interaction-event-id",
+  const card = await waitForCommittedGridEventCard(
+    page,
+    EVENT_B_TITLE,
     EVENT_B_ID,
-  );
-  await expect(card).toHaveAccessibleName(
-    new RegExp(`${EVENT_B_TITLE}.*${CALENDAR_B_NAME} calendar`),
+    CALENDAR_B_NAME,
   );
 
   // A read-only event is not a mutable nudge target, so Shift+Arrow on the
@@ -652,18 +669,20 @@ test("a read-only event blocks a drag attempt", async ({ page }) => {
 
 test("a read-only event opens as a read-only form", async ({ page }) => {
   const harness = await setupCalendarExperiencePage(page);
-  const card = page
-    .locator("#mainGrid")
-    .getByRole("button", { name: EVENT_B_TITLE })
-    .last();
+  const card = await waitForCommittedGridEventCard(
+    page,
+    EVENT_B_TITLE,
+    EVENT_B_ID,
+    CALENDAR_B_NAME,
+  );
 
   // Opens via the context menu's View action, driven by the keyboard: m
   // opens the menu on the focused card, and Enter runs the seeded item.
   await card.focus();
   await page.keyboard.press("m");
-  const viewItem = page
-    .getByRole("menu")
-    .getByRole("menuitem", { name: "View" });
+  const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
+  const viewItem = menu.getByRole("menuitem", { name: "View" });
   await viewItem.focus();
   await page.keyboard.press("Enter");
 
@@ -682,15 +701,18 @@ test("a read-only event's context menu offers view, duplicate, and hide but not 
   page,
 }) => {
   await setupCalendarExperiencePage(page);
-  const card = page
-    .locator("#mainGrid")
-    .getByRole("button", { name: EVENT_B_TITLE })
-    .last();
+  const card = await waitForCommittedGridEventCard(
+    page,
+    EVENT_B_TITLE,
+    EVENT_B_ID,
+    CALENDAR_B_NAME,
+  );
 
   await card.focus();
   await page.keyboard.press("m");
 
   const menu = page.getByRole("menu");
+  await expect(menu).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "View" })).toBeVisible();
   await expect(menu.getByRole("menuitem", { name: "Duplicate" })).toBeVisible();
   await expect(
@@ -703,10 +725,12 @@ test("a read-only event can be hidden from the menu, shown with x, and stays hid
   page,
 }) => {
   await setupCalendarExperiencePage(page);
-  const card = page
-    .locator("#mainGrid")
-    .getByRole("button", { name: EVENT_B_TITLE })
-    .last();
+  const card = await waitForCommittedGridEventCard(
+    page,
+    EVENT_B_TITLE,
+    EVENT_B_ID,
+    CALENDAR_B_NAME,
+  );
 
   await card.focus();
   await hideFocusedEventViaMenu(page);
@@ -745,10 +769,12 @@ test("a writable event can be hidden from the menu and shown with x", async ({
   page,
 }) => {
   await setupCalendarExperiencePage(page);
-  const card = page
-    .locator("#mainGrid")
-    .getByRole("button", { name: EVENT_A_TITLE })
-    .last();
+  const card = await waitForCommittedGridEventCard(
+    page,
+    EVENT_A_TITLE,
+    EVENT_A_ID,
+    CALENDAR_A_NAME,
+  );
 
   await card.focus();
   await hideFocusedEventViaMenu(page);
