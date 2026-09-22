@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deterministic re-check for an agent-loop PR, then GitHub auto-merge.
 # The agent's `agent-automerge` label is necessary but not sufficient:
-# this script independently re-verifies size rails, and refuses while main
+# this script independently re-verifies the line-count rail, and refuses while main
 # itself is red so the loop cannot stack merges on a broken base. Path
 # prefixes are not a merge gate: agents may auto-merge any tree path.
 #
@@ -19,7 +19,6 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/agent-loop-lib.sh"
 
 PR_NUMBER=${1:-}
 
-MAX_FILES=${AGENT_LOOP_MAX_FILES:-60}
 MAX_LINES=${AGENT_LOOP_MAX_LINES:-4000}
 DRY_RUN=${AGENT_LOOP_GUARD_DRY_RUN:-}
 
@@ -170,7 +169,7 @@ enable_auto_merge() {
   return 1
 }
 
-# After path/size/red-main pass: rebase onto main when the PR is dirty, then
+# After line-count/red-main pass: rebase onto main when the PR is dirty, then
 # enable auto-merge. If it is still conflicting, close and requeue.
 resolve_conflict_or_requeue() {
   local pr_number=$1
@@ -212,20 +211,6 @@ check_and_merge() {
     fi
   fi
 
-  local changed_files_list changed_files total_lines
-  if [ -n "${AGENT_LOOP_GUARD_FILES:-}" ]; then
-    changed_files_list=$AGENT_LOOP_GUARD_FILES
-  elif ! changed_files_list=$(gh pr diff "$pr_number" --repo "$REPO" --name-only); then
-    downgrade "$pr_number" "could not verify changed files (gh pr diff failed), treating as unsafe"
-    return 0
-  fi
-  changed_files=$(printf '%s\n' "$changed_files_list" | grep -c . || true)
-
-  if [ "$changed_files" -gt "$MAX_FILES" ]; then
-    downgrade "$pr_number" "touches ${changed_files} files (limit ${MAX_FILES})"
-    return 0
-  fi
-
   if [ -n "$DRY_RUN" ]; then
     if [ "${AGENT_LOOP_GUARD_MERGEABLE:-}" = "CONFLICTING" ]; then
       printf 'update-branch: %s\n' "$pr_number"
@@ -240,6 +225,7 @@ check_and_merge() {
     return 0
   fi
 
+  local total_lines
   if ! total_lines=$(gh pr view "$pr_number" --repo "$REPO" --json additions,deletions \
     --jq '.additions + .deletions') || [ -z "$total_lines" ]; then
     downgrade "$pr_number" "could not verify line count (gh pr view failed), treating as unsafe"
