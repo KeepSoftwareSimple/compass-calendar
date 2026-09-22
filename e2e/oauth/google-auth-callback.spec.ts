@@ -1,8 +1,9 @@
 import { expect, type Page, test } from "@playwright/test";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
+import { providerAuthCallbackPath } from "../../packages/web/src/auth/providers/authorization/provider-authorization.constants";
 import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
-const CALLBACK_PATH = "/auth/google/callback";
+const CALLBACK_PATH = providerAuthCallbackPath("google");
 const INTENT_STORAGE_PREFIX = "compass.googleAuthorizationIntent";
 const REQUIRED_SCOPES = [...GOOGLE_SCOPES];
 
@@ -30,9 +31,7 @@ const prepareGoogleAuthCallbackPage = async (
   options: { metadata?: MetadataPayload } = {},
 ) => {
   const loginOrSignupRequests: unknown[] = [];
-  const metadata = options.metadata ?? {
-    google: { connectionState: "HEALTHY" },
-  };
+  const metadata = options.metadata ?? { connections: [] };
 
   await page.addInitScript(() => {
     (
@@ -72,7 +71,11 @@ const prepareGoogleAuthCallbackPage = async (
         contentType: "application/json",
         body: JSON.stringify({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
         }),
       });
     }
@@ -232,7 +235,7 @@ const connectionSummary = (canSuggestContacts: boolean) => ({
   canSuggestContacts,
 });
 
-const readStoredGoogleMetadata = (page: Page) =>
+const readStoredConnections = (page: Page) =>
   page.evaluate(() => {
     const bridge = (
       window as Window & {
@@ -243,14 +246,14 @@ const readStoredGoogleMetadata = (page: Page) =>
     ).__COMPASS_E2E_STORE__;
     const current = bridge?.userMetadata?.getState().current as
       | {
-          google?: {
+          connections?: Array<{
             connectionState?: string;
-            connections?: Array<{ canSuggestContacts?: boolean }>;
-          };
+            canSuggestContacts?: boolean;
+          }>;
         }
       | null
       | undefined;
-    return current?.google ?? null;
+    return current?.connections ?? [];
   });
 
 test("finishes sign-in with the optional contacts scopes granted and surfaces the capability", async ({
@@ -259,10 +262,7 @@ test("finishes sign-in with the optional contacts scopes granted and surfaces th
   const state = "sign-in-contacts-granted";
   const apiMocks = await prepareGoogleAuthCallbackPage(page, {
     metadata: {
-      google: {
-        connectionState: "HEALTHY",
-        connections: [connectionSummary(true)],
-      },
+      connections: [connectionSummary(true)],
     },
   });
 
@@ -275,10 +275,10 @@ test("finishes sign-in with the optional contacts scopes granted and surfaces th
   expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
 
   await expect
-    .poll(async () => (await readStoredGoogleMetadata(page))?.connectionState)
+    .poll(async () => (await readStoredConnections(page))[0]?.connectionState)
     .toBe("HEALTHY");
-  const google = await readStoredGoogleMetadata(page);
-  expect(google?.connections?.[0]?.canSuggestContacts).toBe(true);
+  const connections = await readStoredConnections(page);
+  expect(connections[0]?.canSuggestContacts).toBe(true);
 });
 
 test("finishes sign-in when the contacts scopes are denied: connection healthy, capability false", async ({
@@ -287,10 +287,7 @@ test("finishes sign-in when the contacts scopes are denied: connection healthy, 
   const state = "sign-in-contacts-denied";
   const apiMocks = await prepareGoogleAuthCallbackPage(page, {
     metadata: {
-      google: {
-        connectionState: "HEALTHY",
-        connections: [connectionSummary(false)],
-      },
+      connections: [connectionSummary(false)],
     },
   });
 
@@ -307,8 +304,8 @@ test("finishes sign-in when the contacts scopes are denied: connection healthy, 
   ).not.toBeVisible();
 
   await expect
-    .poll(async () => (await readStoredGoogleMetadata(page))?.connectionState)
+    .poll(async () => (await readStoredConnections(page))[0]?.connectionState)
     .toBe("HEALTHY");
-  const google = await readStoredGoogleMetadata(page);
-  expect(google?.connections?.[0]?.canSuggestContacts).toBe(false);
+  const connections = await readStoredConnections(page);
+  expect(connections[0]?.canSuggestContacts).toBe(false);
 });

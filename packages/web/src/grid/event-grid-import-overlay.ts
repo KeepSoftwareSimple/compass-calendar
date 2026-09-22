@@ -1,4 +1,4 @@
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { type GoogleUiState } from "@web/auth/providers/connect.types";
 import {
   isFirstImportFailed,
@@ -17,7 +17,7 @@ export function eventGridFirstImportFlags({
   hasVisibleEvents,
   queryReady,
 }: {
-  connection?: GoogleSyncConnectionSummary | null;
+  connection?: SyncConnectionSummary | null;
   googleState: GoogleUiState;
   hasVisibleEvents: boolean;
   queryReady: boolean;

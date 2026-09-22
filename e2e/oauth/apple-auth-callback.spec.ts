@@ -51,8 +51,11 @@ const prepareAppleAuthCallbackPage = async (page: Page) => {
         contentType: "application/json",
         body: JSON.stringify({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
-          apple: { signIn: true, calendar: false },
+          providers: {
+            google: { signIn: false, connect: false },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: true, connect: false },
+          },
         }),
       });
     }

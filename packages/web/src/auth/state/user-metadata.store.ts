@@ -2,10 +2,10 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import {
   type GoogleConnectionState,
-  type GoogleSyncConnectionSummary,
   type SyncConnectionSummary,
   type UserMetadata,
 } from "@core/types/user.types";
+import { aggregateConnectionState } from "@web/auth/providers/connection-health-copy.util";
 import { IS_DEV } from "@web/common/constants/env.constants";
 
 export type UserMetadataStatus = "idle" | "loading" | "loaded";
@@ -56,35 +56,17 @@ export const userMetadataActions = {
   removeConnection: (connectionId: string) =>
     useUserMetadataStore.setState(
       (state) => {
-        if (!state.current) return state;
-        const filter = (connections: SyncConnectionSummary[] | undefined) =>
-          (connections ?? []).filter(
-            (connection) => connection.id !== connectionId,
-          );
-        const nextConnections = filter(state.current.connections);
-        const nextGoogleConnections = state.current.google
-          ? filter(state.current.google.connections)
-          : undefined;
-        if (
-          nextConnections === state.current.connections &&
-          nextGoogleConnections === state.current.google?.connections
-        ) {
+        if (!state.current?.connections) return state;
+        const nextConnections = state.current.connections.filter(
+          (connection) => connection.id !== connectionId,
+        );
+        if (nextConnections.length === state.current.connections.length) {
           return state;
         }
         return {
           current: {
             ...state.current,
-            ...(state.current.connections
-              ? { connections: nextConnections }
-              : {}),
-            ...(state.current.google
-              ? {
-                  google: {
-                    ...state.current.google,
-                    connections: nextGoogleConnections,
-                  },
-                }
-              : {}),
+            connections: nextConnections,
           },
         };
       },
@@ -111,13 +93,17 @@ export const selectUserMetadataStatus = (state: UserMetadataState) =>
   state.status;
 
 /**
- * Selects the unified Google connection state computed by the server.
+ * Selects the unified connection state computed from every connected account.
  * Returns "NOT_CONNECTED" if metadata hasn't loaded yet.
  */
 export const selectGoogleConnectionState = (
   state: UserMetadataState,
-): GoogleConnectionState =>
-  state.current?.google?.connectionState ?? "NOT_CONNECTED";
+): GoogleConnectionState => {
+  if (!state.current) {
+    return "NOT_CONNECTED";
+  }
+  return aggregateConnectionState(selectSyncConnections(state));
+};
 
 // Stable identity so the selector below never hands the store a fresh array
 // (which would re-render on every state change; see the note above the hook).
@@ -125,20 +111,16 @@ const NO_CONNECTIONS: SyncConnectionSummary[] = [];
 
 /**
  * Every connected provider account, in connection order. Empty when metadata
- * hasn't loaded or no account is connected. Falls back to the legacy
- * `google.connections` copy until every client reads `connections[]`.
+ * hasn't loaded or no account is connected.
  */
 export const selectSyncConnections = (
   state: UserMetadataState,
-): SyncConnectionSummary[] =>
-  state.current?.connections ??
-  state.current?.google?.connections ??
-  NO_CONNECTIONS;
+): SyncConnectionSummary[] => state.current?.connections ?? NO_CONNECTIONS;
 
 /** @deprecated Prefer {@link selectSyncConnections}. */
 export const selectGoogleSyncConnections = (
   state: UserMetadataState,
-): GoogleSyncConnectionSummary[] => selectSyncConnections(state);
+): SyncConnectionSummary[] => selectSyncConnections(state);
 
 /**
  * True when ANY connected account granted the optional contacts scopes, so
@@ -152,43 +134,40 @@ export const selectCanSuggestContacts = (state: UserMetadataState): boolean =>
   );
 
 /**
- * The connection whose own state matches the aggregate `connectionState` -
+ * The connection whose own state matches the aggregate connection state,
  * the account most responsible for it, so an unscoped reconnect targets the
  * broken one, not a healthy sibling. Falls back to the first connection when
- * none match (shouldn't happen: the aggregate is itself derived by the same
- * precedence over these same connections - defensive only).
- *
- * Mirrors the sync service's own selectPrimaryGoogleConnection: the server
- * used to compute this and send it as a second `google.connection` field,
- * which was exactly this array's own connectionState re-derived - the browser
- * has everything it needs to compute it locally instead.
+ * none match (defensive only).
  */
-function findPrimaryGoogleSyncConnection(
-  google: UserMetadata["google"],
-): GoogleSyncConnectionSummary | null {
-  const connections = google?.connections ?? NO_CONNECTIONS;
+function findPrimarySyncConnection(
+  connections: SyncConnectionSummary[],
+  aggregateState: GoogleConnectionState,
+): SyncConnectionSummary | null {
   if (connections.length === 0) return null;
   return (
-    connections.find((c) => c.connectionState === google?.connectionState) ??
+    connections.find((c) => c.connectionState === aggregateState) ??
     connections[0] ??
     null
   );
 }
 
-/** Store-selector form of {@link findPrimaryGoogleSyncConnection}. */
+/** Store-selector form of {@link findPrimarySyncConnection}. */
 export const selectPrimaryGoogleSyncConnection = (
   state: UserMetadataState,
-): GoogleSyncConnectionSummary | null =>
-  findPrimaryGoogleSyncConnection(state.current?.google);
+): SyncConnectionSummary | null => {
+  const connections = selectSyncConnections(state);
+  return findPrimarySyncConnection(
+    connections,
+    selectGoogleConnectionState(state),
+  );
+};
 
 /**
- * Every connection on a raw metadata payload (SSE `userMetadataChanged`),
- * preferring the WP-07 `connections[]` field.
+ * Every connection on a raw metadata payload (SSE `userMetadataChanged`).
  */
 export const findSyncConnectionsFromMetadata = (
   metadata: UserMetadata,
-): SyncConnectionSummary[] =>
-  metadata.connections ?? metadata.google?.connections ?? NO_CONNECTIONS;
+): SyncConnectionSummary[] => metadata.connections ?? NO_CONNECTIONS;
 
 /**
  * Look up one connection by id on a raw payload. Without an id, falls back
@@ -204,15 +183,22 @@ export const findSyncConnectionFromMetadata = (
       connections.find((connection) => connection.id === connectionId) ?? null
     );
   }
-  return findPrimaryGoogleSyncConnection(metadata.google);
+  return findPrimarySyncConnection(
+    connections,
+    aggregateConnectionState(connections),
+  );
 };
 
 /**
  * Same selection, for a raw `UserMetadata` payload that hasn't gone through
- * the store yet (an SSE `userMetadataChanged` message) - see
- * useSyncSSE.factory.ts.
+ * the store yet (an SSE `userMetadataChanged` message).
  */
 export const findPrimaryGoogleSyncConnectionFromMetadata = (
   metadata: UserMetadata,
-): GoogleSyncConnectionSummary | null =>
-  findPrimaryGoogleSyncConnection(metadata.google);
+): SyncConnectionSummary | null => {
+  const connections = findSyncConnectionsFromMetadata(metadata);
+  return findPrimarySyncConnection(
+    connections,
+    aggregateConnectionState(connections),
+  );
+};

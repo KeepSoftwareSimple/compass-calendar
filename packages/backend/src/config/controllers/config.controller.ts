@@ -23,9 +23,6 @@ export const buildAppConfig = (config: typeof CONFIG): AppConfig => {
 
   return AppConfigSchema.parse({
     version: normalizeDeployVersion(config.VERSION),
-    google: {
-      isConfigured: google,
-    },
     providers: {
       google: { signIn: google, connect: google },
       microsoft: { signIn: microsoft, connect: microsoft },

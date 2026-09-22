@@ -264,10 +264,7 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
-      google: {
-        connectionState: "IMPORTING",
-        connections: [connection],
-      },
+      connections: [connection],
     });
 
     renderHeader();
@@ -307,10 +304,7 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [otherAccountsBrokenConnection, ownConnection],
-      },
+      connections: [otherAccountsBrokenConnection, ownConnection],
     });
 
     renderHeader();

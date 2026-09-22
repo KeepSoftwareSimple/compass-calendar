@@ -42,7 +42,11 @@ test("shows the trial card banner and opens Checkout while writable", async ({
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: false },
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
           billing: {
             isConfigured: true,
             enforcement: true,
@@ -81,7 +85,7 @@ test("shows the trial card banner and opens Checkout while writable", async ({
     if (path.endsWith("/api/user/metadata")) {
       return route.fulfill(
         jsonResponse({
-          google: { connectionState: "NOT_CONNECTED", connections: [] },
+          connections: [],
         }),
       );
     }

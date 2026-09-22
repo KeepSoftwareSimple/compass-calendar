@@ -6,6 +6,7 @@ import {
   type UserMetadataMessage,
 } from "@core/types/server-message.contracts";
 import { type UserMetadata } from "@core/types/user.types";
+import { aggregateConnectionState } from "@web/auth/providers/connection-health-copy.util";
 import { type ConnectionRevokedContext } from "@web/auth/providers/connection-revoked.util.factory";
 import {
   clearGoogleSyncIndicatorOverride,
@@ -57,10 +58,7 @@ export const createUseSyncSSE = (dependencies: SyncSSEDependencies) => {
       // attention
       clearGoogleSyncIndicatorOverride();
 
-      if (
-        message.sync.code === "CONNECTION_REVOKED" ||
-        message.sync.code === "GOOGLE_REVOKED"
-      ) {
+      if (message.sync.code === "CONNECTION_REVOKED") {
         dependencies.handleConnectionRevoked({
           connectionId: revokedConnectionId(message),
         });
@@ -102,8 +100,9 @@ export const createUseSyncSSE = (dependencies: SyncSSEDependencies) => {
         // product enum. Never clear syncing from local optimism alone (S41).
         const connections = findSyncConnectionsFromMetadata(metadata);
         const syncInProgress = hasTransientSyncConnection(connections);
-        const enumImporting = metadata.google?.connectionState === "IMPORTING";
-        if (!syncInProgress && !enumImporting) {
+        const aggregateImporting =
+          aggregateConnectionState(connections) === "IMPORTING";
+        if (!syncInProgress && !aggregateImporting) {
           clearSyncingSyncIndicatorOverride();
         }
       },

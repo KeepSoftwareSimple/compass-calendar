@@ -1068,7 +1068,7 @@ describe("EventController", () => {
     expect(submitCommand).not.toHaveBeenCalled();
   });
 
-  it("maps authorizationRevoked to 410 GOOGLE_REVOKED (not retryable)", async () => {
+  it("maps authorizationRevoked to 410 CONNECTION_REVOKED (not retryable)", async () => {
     mockSyncCommandFailure("authorizationRevoked");
     const { res, json } = await createViaSync();
 
@@ -1076,7 +1076,7 @@ describe("EventController", () => {
       Status.GONE,
     );
     expect(json).toHaveBeenCalledWith({
-      code: "GOOGLE_REVOKED",
+      code: "CONNECTION_REVOKED",
       message:
         "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
       retryable: false,
@@ -1333,7 +1333,7 @@ describe("logLevelForEventFailure", () => {
     ["EVENT_NOT_FOUND", Status.NOT_FOUND],
     ["INVALID_INPUT", Status.BAD_REQUEST],
     ["CALENDAR_READ_ONLY", Status.FORBIDDEN],
-    ["GOOGLE_REVOKED", Status.GONE],
+    ["CONNECTION_REVOKED", Status.GONE],
     ["RECURRENCE_CONFLICT", Status.CONFLICT],
   ] as const)("does not log %s (%d)", (_code, status) => {
     expect(logLevelForEventFailure(status)).toBeUndefined();

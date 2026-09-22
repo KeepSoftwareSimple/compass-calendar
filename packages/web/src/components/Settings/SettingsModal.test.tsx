@@ -15,7 +15,7 @@ import {
   type CalendarId,
   CalendarIdSchema,
 } from "@core/types/domain-primitives";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import dayjs from "@core/util/date/dayjs";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
@@ -45,7 +45,7 @@ import { ENV_WEB } from "@web/common/constants/env.constants";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import {
   ACCOUNT_DISCONNECTED_TOAST_ID,
-  GOOGLE_REVOKED_TOAST_ID,
+  CONNECTION_REVOKED_TOAST_ID,
 } from "@web/common/constants/toast.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -160,8 +160,8 @@ const { SettingsModal, SETTINGS_HOLD_MOD_HINT_PARTS } = (await import(
 )) as typeof import("./SettingsModal");
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary> = {},
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary> = {},
+): SyncConnectionSummary => ({
   id: "connection-1",
   state: "healthy",
   stateReason: null,
@@ -182,7 +182,7 @@ const renderSettings = ({
   fromPalette = false,
 }: {
   authenticated?: boolean;
-  connections?: GoogleSyncConnectionSummary[];
+  connections?: SyncConnectionSummary[];
   calendars?: Calendar[];
   open?: boolean;
   page?: "accounts" | "billing" | "booking";
@@ -190,7 +190,7 @@ const renderSettings = ({
 } = {}) => {
   authenticated = isAuthenticated;
   userMetadataActions.set({
-    google: { connectionState: "HEALTHY", connections },
+    connections,
   });
   const { queryClient, wrapper } = createStoreWrapper();
   queryClient.setQueryData(calendarQueryKeys.all, calendars);
@@ -412,7 +412,9 @@ describe("SettingsModal", () => {
     );
 
     await waitFor(() => {
-      expect(toastMocks.dismiss).toHaveBeenCalledWith(GOOGLE_REVOKED_TOAST_ID);
+      expect(toastMocks.dismiss).toHaveBeenCalledWith(
+        CONNECTION_REVOKED_TOAST_ID,
+      );
       expect(toastMocks.toast).toHaveBeenCalledWith(
         "Disconnected ahab@pequod.com",
         expect.objectContaining({ toastId: ACCOUNT_DISCONNECTED_TOAST_ID }),
@@ -811,7 +813,7 @@ describe("SettingsModal", () => {
       renderSettings({ authenticated: false, connections: [] });
       act(() => {
         userMetadataActions.set({
-          google: { connectionState: "NOT_CONNECTED", connections: [] },
+          connections: [],
         });
       });
 

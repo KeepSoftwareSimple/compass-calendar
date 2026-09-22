@@ -1,4 +1,5 @@
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
+import { providerAuthCallbackPath } from "./provider-authorization.constants";
 import {
   buildMicrosoftAuthorizationUrl,
   buildProviderAuthCallbackUrl,
@@ -7,11 +8,14 @@ import {
 } from "./provider-authorization.util";
 import { describe, expect, it } from "bun:test";
 
+const LOCAL_ORIGIN = "http://localhost:9080";
+const googleCallbackPath = providerAuthCallbackPath("google");
+
 describe("buildProviderAuthCallbackUrl", () => {
   it("builds the callback URL from the current origin", () => {
-    expect(
-      buildProviderAuthCallbackUrl("google", "http://localhost:9080"),
-    ).toBe("http://localhost:9080/auth/google/callback");
+    expect(buildProviderAuthCallbackUrl("google", LOCAL_ORIGIN)).toBe(
+      `${LOCAL_ORIGIN}${googleCallbackPath}`,
+    );
   });
 });
 
@@ -55,14 +59,13 @@ describe("buildProviderAuthCodePayload", () => {
         code: "auth-code",
         scope: "email profile",
         state: "state-1",
-        redirectUri: "http://localhost:9080/auth/google/callback",
+        redirectUri: `${LOCAL_ORIGIN}${googleCallbackPath}`,
       }),
     ).toEqual({
       thirdPartyId: "google",
       clientType: "web",
       redirectURIInfo: {
-        redirectURIOnProviderDashboard:
-          "http://localhost:9080/auth/google/callback",
+        redirectURIOnProviderDashboard: `${LOCAL_ORIGIN}${googleCallbackPath}`,
         redirectURIQueryParams: {
           code: "auth-code",
           scope: "email profile",

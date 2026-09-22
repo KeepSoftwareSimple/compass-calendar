@@ -1,4 +1,4 @@
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   findPrimaryGoogleSyncConnectionFromMetadata,
   findSyncConnectionFromMetadata,
@@ -9,8 +9,8 @@ import {
 import { describe, expect, it } from "bun:test";
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary>,
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary>,
+): SyncConnectionSummary => ({
   id: "connection-1",
   state: "healthy",
   stateReason: null,
@@ -40,10 +40,7 @@ describe("selectPrimaryGoogleSyncConnection", () => {
       canSuggestContacts: false,
     });
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [healthy, broken],
-      },
+      connections: [healthy, broken],
     });
 
     expect(
@@ -54,7 +51,7 @@ describe("selectPrimaryGoogleSyncConnection", () => {
   it("falls back to the first connection when none match the aggregate", () => {
     const solo = connection({ connectionState: "HEALTHY" });
     userMetadataActions.set({
-      google: { connectionState: "ATTENTION", connections: [solo] },
+      connections: [solo],
     });
 
     expect(
@@ -71,14 +68,14 @@ describe("userMetadataActions.removeConnection", () => {
       accountEmail: "starbuck@pequod.com",
     });
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [kept, removed] },
+      connections: [kept, removed],
     });
 
     userMetadataActions.removeConnection("removed");
 
-    expect(
-      useUserMetadataStore.getState().current?.google?.connections,
-    ).toEqual([kept]);
+    expect(useUserMetadataStore.getState().current?.connections).toEqual([
+      kept,
+    ]);
   });
 
   it("is a no-op when metadata hasn't loaded yet", () => {
@@ -103,15 +100,12 @@ describe("findPrimaryGoogleSyncConnectionFromMetadata", () => {
 
     expect(
       findPrimaryGoogleSyncConnectionFromMetadata({
-        google: {
-          connectionState: "RECONNECT_REQUIRED",
-          connections: [healthy, broken],
-        },
+        connections: [healthy, broken],
       })?.id,
     ).toBe("broken");
   });
 
-  it("returns null when the payload has no google field at all", () => {
+  it("returns null when the payload has no connections", () => {
     expect(findPrimaryGoogleSyncConnectionFromMetadata({})).toBeNull();
   });
 });
@@ -131,7 +125,6 @@ describe("findSyncConnectionFromMetadata", () => {
     expect(
       findSyncConnectionFromMetadata(
         {
-          google: { connectionState: "HEALTHY", connections: [google] },
           connections: [
             { ...google, provider: "google" },
             { ...microsoft, provider: "microsoft" },

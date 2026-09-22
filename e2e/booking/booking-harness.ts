@@ -1105,52 +1105,42 @@ export async function prepareSignedInBookingSettingsPage(
   };
   const hostMetadata = healthyConnection
     ? {
-        google: {
-          connectionState: "HEALTHY" as const,
-          connections: [
-            {
-              id: "e2e-connection-1",
-              provider: "google" as const,
-              state: "healthy",
-              stateReason: null,
-              lastSyncedAt: null,
-              lastHealthyAt: null,
-              accountEmail: HOST_ACCOUNT_EMAIL,
-              connectionState: "HEALTHY" as const,
-              canSuggestContacts: false,
-            },
-          ],
-        },
+        connections: [
+          {
+            id: "e2e-connection-1",
+            provider: "google" as const,
+            state: "healthy",
+            stateReason: null,
+            lastSyncedAt: null,
+            lastHealthyAt: null,
+            accountEmail: HOST_ACCOUNT_EMAIL,
+            connectionState: "HEALTHY" as const,
+            canSuggestContacts: false,
+          },
+        ],
       }
     : connectionState === "RECONNECT_REQUIRED" ||
         connectionState === "IMPORTING" ||
         connectionState === "ATTENTION"
       ? {
-          google: {
-            connectionState,
-            connections: [
-              {
-                id: "e2e-connection-1",
-                provider: "google" as const,
-                state:
-                  connectionState === "IMPORTING"
-                    ? "importing"
-                    : "actionRequired",
-                stateReason: null,
-                lastSyncedAt: null,
-                lastHealthyAt: null,
-                accountEmail: HOST_ACCOUNT_EMAIL,
-                connectionState,
-                canSuggestContacts: false,
-              },
-            ],
-          },
+          connections: [
+            {
+              id: "e2e-connection-1",
+              provider: "google" as const,
+              state:
+                connectionState === "IMPORTING"
+                  ? "importing"
+                  : "actionRequired",
+              stateReason: null,
+              lastSyncedAt: null,
+              lastHealthyAt: null,
+              accountEmail: HOST_ACCOUNT_EMAIL,
+              connectionState,
+              canSuggestContacts: false,
+            },
+          ],
         }
       : {
-          google: {
-            connectionState: "NOT_CONNECTED" as const,
-            connections: [],
-          },
           connections: [],
         };
 
@@ -1214,7 +1204,6 @@ export async function prepareSignedInBookingSettingsPage(
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },
             microsoft: {

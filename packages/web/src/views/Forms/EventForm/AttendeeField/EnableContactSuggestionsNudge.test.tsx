@@ -62,12 +62,9 @@ afterAll(() => {
 
 const seedHealthyConnection = () => {
   userMetadataActions.set({
-    google: {
-      connectionState: "HEALTHY",
-      connections: [
-        createMockConnection("a@example.com", { canSuggestContacts: false }),
-      ],
-    },
+    connections: [
+      createMockConnection("a@example.com", { canSuggestContacts: false }),
+    ],
   });
 };
 

@@ -1,5 +1,5 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { AuthApi } from "@web/api/auth.api";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
@@ -11,8 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 // one the top-level banner shows.
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary>,
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary>,
+): SyncConnectionSummary => ({
   id: "connection-primary",
   state: "actionRequired",
   stateReason: "authorizationRevoked",
@@ -24,7 +24,7 @@ const connection = (
   ...overrides,
 });
 
-const renderScoped = (scoped?: GoogleSyncConnectionSummary) => {
+const renderScoped = (scoped?: SyncConnectionSummary) => {
   const { wrapper } = createStoreWrapper();
   return renderHook(
     () =>
@@ -36,20 +36,17 @@ const renderScoped = (scoped?: GoogleSyncConnectionSummary) => {
 describe("useConnectProvider account scoping", () => {
   beforeEach(() => {
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [
-          connection({}),
-          connection({
-            id: "connection-healthy",
-            state: "healthy",
-            stateReason: null,
-            accountEmail: "second@example.com",
-            connectionState: "HEALTHY",
-            canSuggestContacts: false,
-          }),
-        ],
-      },
+      connections: [
+        connection({}),
+        connection({
+          id: "connection-healthy",
+          state: "healthy",
+          stateReason: null,
+          accountEmail: "second@example.com",
+          connectionState: "HEALTHY",
+          canSuggestContacts: false,
+        }),
+      ],
     });
   });
 

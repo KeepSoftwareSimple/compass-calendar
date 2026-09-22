@@ -66,13 +66,13 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireUserMetadata({
-        google: { connectionState: "ATTENTION" },
+        connections: [],
         sync: { importGCal: "RESTART" },
       });
     });
 
     expect(useUserMetadataStore.getState().current).toEqual({
-      google: { connectionState: "ATTENTION" },
+      connections: [],
       sync: { importGCal: "RESTART" },
     });
   });
@@ -82,13 +82,13 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireUserMetadata({
-        google: { connectionState: "IMPORTING" },
+        connections: [],
         sync: { importGCal: "IMPORTING" },
       });
     });
 
     expect(useUserMetadataStore.getState().current).toEqual({
-      google: { connectionState: "IMPORTING" },
+      connections: [],
       sync: { importGCal: "IMPORTING" },
     });
   });
@@ -110,7 +110,7 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "HEALTHY" } });
+      fireUserMetadata({ connections: [] });
     });
 
     await waitFor(() => {
@@ -123,7 +123,13 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "ATTENTION" } });
+      fireUserMetadata({
+        connections: [
+          createMockConnection("host@example.com", {
+            connectionState: "ATTENTION",
+          }),
+        ],
+      });
     });
 
     await waitFor(() => {
@@ -136,7 +142,13 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "IMPORTING" } });
+      fireUserMetadata({
+        connections: [
+          createMockConnection("host@example.com", {
+            connectionState: "IMPORTING",
+          }),
+        ],
+      });
     });
 
     await waitFor(() => {
@@ -226,7 +238,11 @@ describe("useSyncSSE", () => {
     act(() => {
       fireMessage({
         type: "syncStatusChanged",
-        sync: { status: "attention", code: "GOOGLE_REVOKED", retryable: false },
+        sync: {
+          status: "attention",
+          code: "CONNECTION_REVOKED",
+          retryable: false,
+        },
       });
     });
 
@@ -247,7 +263,6 @@ describe("useSyncSSE", () => {
     });
     const microsoftId = ConnectionIdSchema.parse(microsoft.id);
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [google] },
       connections: [google, microsoft],
     });
     setSyncingSyncIndicatorOverride();
@@ -279,7 +294,7 @@ describe("useSyncSSE", () => {
         <GoogleReconnectToast
           accountEmail={microsoft.accountEmail}
           connectionId={microsoft.id}
-          toastId="google-revoked-api"
+          toastId="connection-revoked-api"
         />
       </HotkeysProvider>,
       { wrapper },

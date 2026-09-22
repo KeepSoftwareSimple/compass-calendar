@@ -5,7 +5,6 @@ export const ROOT_ROUTES = {
   BOOK_RESCHEDULE: "/meet/reschedule/$reservationId",
   BOOK_CONFIRMED: "/meet/confirmed/$reservationId",
   CLEANUP: "/cleanup",
-  GOOGLE_AUTH_CALLBACK: "/auth/google/callback",
   PROVIDER_AUTH_CALLBACK: "/auth/$provider/callback",
   APPLE_AUTH_CALLBACK: "/auth/apple/callback",
   LIFE: "/life",

@@ -1,4 +1,5 @@
 import { createMemoryHistory, createRouter } from "@tanstack/react-router";
+import { providerAuthCallbackPath } from "@web/auth/providers/authorization/provider-authorization.constants";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import {
   appleAuthCallbackRoute,
@@ -96,7 +97,8 @@ describe("routeTree", () => {
     expect(weekDateRoute.options.loader).toBeDefined();
   });
 
-  it("registers /auth/google/callback on the provider auth callback route", async () => {
+  it("registers the provider auth callback route for Google", async () => {
+    const googleCallbackPath = providerAuthCallbackPath("google");
     expect(providerAuthCallbackRoute.fullPath).toBe(
       ROOT_ROUTES.PROVIDER_AUTH_CALLBACK,
     );
@@ -104,12 +106,12 @@ describe("routeTree", () => {
     const router = createRouter({
       routeTree,
       history: createMemoryHistory({
-        initialEntries: ["/auth/google/callback?state=test"],
+        initialEntries: [`${googleCallbackPath}?state=test`],
       }),
     });
 
     await router.load();
-    expect(router.state.location.pathname).toBe("/auth/google/callback");
+    expect(router.state.location.pathname).toBe(googleCallbackPath);
     const callbackMatch = router.state.matches.find((match) =>
       match.routeId.includes("callback"),
     );

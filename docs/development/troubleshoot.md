@@ -121,7 +121,7 @@ Recommended action:
 ### Revoked token during refresh
 
 If access was revoked (for example Google returns `invalid_grant`), backend
-prunes Google data and emits `syncStatusChanged` with `code: "GOOGLE_REVOKED"`.
+prunes Google data and emits `syncStatusChanged` with `code: "CONNECTION_REVOKED"`.
 
 Operational notes:
 
@@ -131,7 +131,7 @@ Operational notes:
 
 ## Google Connect Aborts With Local Events Sync Error
 
-When a password-authenticated user connects Google from an existing session, the client now attempts to sync IndexedDB-only Compass events **before** `POST /api/auth/google/connect`.
+When a password-authenticated user connects Google from an existing session, the client now attempts to sync IndexedDB-only Compass events **before** `POST /api/auth/connections/begin`.
 
 If that pre-connect local sync fails, connect is intentionally aborted and the user sees:
 

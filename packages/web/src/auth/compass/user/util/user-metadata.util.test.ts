@@ -10,10 +10,29 @@ import {
 } from "./user-metadata.util";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
-const healthy: UserMetadata = { google: { connectionState: "HEALTHY" } };
-const attention: UserMetadata = { google: { connectionState: "ATTENTION" } };
+const healthyConnection = {
+  id: "conn-healthy",
+  provider: "google" as const,
+  state: "healthy",
+  stateReason: null,
+  lastSyncedAt: null,
+  lastHealthyAt: null,
+  accountEmail: "lance@example.com",
+  connectionState: "HEALTHY" as const,
+  canSuggestContacts: false,
+};
+
+const attentionConnection = {
+  ...healthyConnection,
+  id: "conn-attention",
+  state: "delayed",
+  stateReason: "workOverdue",
+  connectionState: "ATTENTION" as const,
+};
+
+const healthy: UserMetadata = { connections: [healthyConnection] };
+const attention: UserMetadata = { connections: [attentionConnection] };
 const reconnectRequired: UserMetadata = {
-  google: { connectionState: "RECONNECT_REQUIRED" },
   connections: [
     {
       id: "conn-1",

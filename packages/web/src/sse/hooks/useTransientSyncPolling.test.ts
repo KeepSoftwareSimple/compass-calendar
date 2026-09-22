@@ -43,21 +43,18 @@ describe("useTransientSyncPolling", () => {
 
   it("polls metadata while a connection is importing and stops when it settles", () => {
     userMetadataActions.set({
-      google: {
-        connectionState: "IMPORTING",
-        connections: [
-          {
-            id: "c1",
-            state: "importing",
-            stateReason: null,
-            lastSyncedAt: null,
-            lastHealthyAt: null,
-            accountEmail: "a@example.com",
-            connectionState: "IMPORTING",
-            canSuggestContacts: false,
-          },
-        ],
-      },
+      connections: [
+        {
+          id: "c1",
+          state: "importing",
+          stateReason: null,
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "a@example.com",
+          connectionState: "IMPORTING",
+          canSuggestContacts: false,
+        },
+      ],
     });
 
     const hook = renderHook(() => useTransientSyncPolling());
@@ -74,33 +71,6 @@ describe("useTransientSyncPolling", () => {
 
     act(() => {
       userMetadataActions.set({
-        google: {
-          connectionState: "HEALTHY",
-          connections: [
-            {
-              id: "c1",
-              state: "healthy",
-              stateReason: null,
-              lastSyncedAt: null,
-              lastHealthyAt: null,
-              accountEmail: "a@example.com",
-              connectionState: "HEALTHY",
-              canSuggestContacts: false,
-            },
-          ],
-        },
-      });
-    });
-    hook.rerender();
-
-    expect(clearIntervalSpy).toHaveBeenCalled();
-    hook.unmount();
-  });
-
-  it("does not poll when no connection is transient", () => {
-    userMetadataActions.set({
-      google: {
-        connectionState: "HEALTHY",
         connections: [
           {
             id: "c1",
@@ -113,7 +83,28 @@ describe("useTransientSyncPolling", () => {
             canSuggestContacts: false,
           },
         ],
-      },
+      });
+    });
+    hook.rerender();
+
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    hook.unmount();
+  });
+
+  it("does not poll when no connection is transient", () => {
+    userMetadataActions.set({
+      connections: [
+        {
+          id: "c1",
+          state: "healthy",
+          stateReason: null,
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "a@example.com",
+          connectionState: "HEALTHY",
+          canSuggestContacts: false,
+        },
+      ],
     });
 
     const { unmount } = renderHook(() => useTransientSyncPolling());

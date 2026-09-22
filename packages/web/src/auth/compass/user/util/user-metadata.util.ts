@@ -2,6 +2,7 @@ import { Status } from "@core/errors/status.codes";
 import { type UserMetadata } from "@core/types/user.types";
 import { UserApi } from "@web/api/user.api";
 import { connectionHasReconnectRequired } from "@web/auth/providers/connect.util";
+import { aggregateConnectionState } from "@web/auth/providers/connection-health-copy.util";
 import { syncReconnectRequiredFromConnections } from "@web/auth/providers/reconnect.state";
 import {
   findSyncConnectionsFromMetadata,
@@ -43,7 +44,7 @@ export const applyUserMetadataSideEffects = (metadata: UserMetadata): void => {
     clearGoogleReconnectToastGate();
   }
 
-  if (metadata.google?.connectionState === "ATTENTION") {
+  if (aggregateConnectionState(connections) === "ATTENTION") {
     if (!hasShownDelayedToastThisLoad) {
       hasShownDelayedToastThisLoad = true;
       showGoogleDelayedToast();

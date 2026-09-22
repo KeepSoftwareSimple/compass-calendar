@@ -2,7 +2,7 @@ import { type Icon } from "@phosphor-icons/react/dist/lib/types";
 import { type ConnectionBeginFeatures } from "@core/types/sync/connection.contracts";
 import {
   type GoogleConnectionState,
-  type GoogleSyncConnectionSummary,
+  type SyncConnectionSummary,
 } from "@core/types/user.types";
 
 export type GoogleUiState = "checking" | GoogleConnectionState;
@@ -23,7 +23,7 @@ export type UseConnectGoogleOptions = {
    * and status, and reconnect rebinds consent to that connection rather than
    * the precedence-winning one. Omit for the aggregate (whole-user) view.
    */
-  connection?: GoogleSyncConnectionSummary | null;
+  connection?: SyncConnectionSummary | null;
   /**
    * Always start a new-account OAuth round-trip (`{}`), even when some other
    * account is `RECONNECT_REQUIRED`. Settings "Add account" must never bind
@@ -46,7 +46,7 @@ export type UseConnectGoogleOptions = {
 
 export type UseConnectGoogleResult = GoogleUiConfig & {
   /** The scoped connection when passed in, else the aggregate's primary. */
-  connection: GoogleSyncConnectionSummary | null;
+  connection: SyncConnectionSummary | null;
   isAvailable: boolean;
   /** True while connect/reconnect OAuth is starting (before redirect). */
   isConnecting: boolean;

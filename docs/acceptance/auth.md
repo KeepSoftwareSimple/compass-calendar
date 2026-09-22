@@ -190,7 +190,7 @@ An already-authenticated password user should be able to connect Google from ins
 - The Google status moves away from `NOT_CONNECTED` and into an importing or connected state.
 - The network flow uses the authenticated backend connect path rather than
   logged-out Google sign-in:
-  - `POST /api/auth/google/connect`
+  - `POST /api/auth/connections/begin`
   - not `POST /api/signinup`
 
 ## Scenario 8: Sign In With Google After Connect-Later
@@ -234,7 +234,7 @@ or mutating the current account session.
 
 ### Expected Results
 
-- `POST /api/auth/google/connect` returns `409`.
+- `POST /api/auth/connections/begin` returns `409`.
 - Response payload includes:
   - `result: "User not connected"`
   - `code: "GOOGLE_ACCOUNT_ALREADY_CONNECTED"`

@@ -14,7 +14,7 @@ import {
   type CalendarId,
   CalendarIdSchema,
 } from "@core/types/domain-primitives";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection as makeConnection } from "@web/__tests__/utils/factories/calendar.factory";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
@@ -49,12 +49,12 @@ const renderCalendarSelect = (
   }: {
     value?: CalendarId | null;
     onChange?: (id: CalendarId) => void;
-    connections?: GoogleSyncConnectionSummary[];
+    connections?: SyncConnectionSummary[];
   } = {},
 ) => {
   if (connections) {
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections },
+      connections,
     });
   }
 

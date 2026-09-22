@@ -35,7 +35,7 @@ describe("useDisconnectGoogleAccount", () => {
       provider: "microsoft",
     });
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [google, microsoft] },
+      connections: [google, microsoft],
     });
     const googleCal = createMockCalendar({
       name: "Google primary",

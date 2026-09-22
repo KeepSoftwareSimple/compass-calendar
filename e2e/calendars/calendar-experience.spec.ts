@@ -341,8 +341,19 @@ async function setupCalendarExperiencePage(
     (entry) => entry.provider === "microsoft",
   );
   const metadata = options.metadata ?? {
-    connections: [],
-    google: { connectionState: "HEALTHY" },
+    connections: [
+      {
+        id: "e2e-connection-1",
+        provider: "google",
+        state: "healthy",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+        accountEmail: "e2e@example.com",
+        connectionState: "HEALTHY",
+        canSuggestContacts: false,
+      },
+    ],
   };
   const microsoftConnect = Boolean(options.microsoftConnect || hasMicrosoft);
   const hiddenEventIds = new Set<string>();
@@ -773,7 +784,6 @@ test("sidebar lists a Microsoft calendar under its account heading", async ({
     extraCalendars: [microsoftCalendar()],
     metadata: {
       connections: [summary],
-      google: { connectionState: "HEALTHY", connections: [summary] },
     },
   });
   await ensureSidebarOpen(page);

@@ -72,7 +72,6 @@ describe("UserMetadataService.fetchUserMetadata", () => {
     expect(settled).toMatchObject({
       sync: { importGCal: "RESTART" },
       connections: [],
-      google: { connectionState: "NOT_CONNECTED", connections: [] },
     });
   });
 });

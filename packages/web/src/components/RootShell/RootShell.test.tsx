@@ -204,7 +204,11 @@ describe("RootShell billing gates", () => {
     setEmbeddedCheckoutForTests(FakeCheckout);
     const queryClient = createCompassQueryClient();
     queryClient.setQueryData(billingQueryKeys.config, {
-      google: { isConfigured: false },
+      providers: {
+        google: { signIn: false, connect: false },
+        microsoft: { signIn: false, connect: false },
+        apple: { signIn: false, connect: false },
+      },
       billing: {
         isConfigured: true,
         enforcement: true,
@@ -325,7 +329,11 @@ describe("RootShell billing gates", () => {
     setEmbeddedCheckoutForTests(FakeCheckout);
     const queryClient = createCompassQueryClient();
     queryClient.setQueryData(billingQueryKeys.config, {
-      google: { isConfigured: false },
+      providers: {
+        google: { signIn: false, connect: false },
+        microsoft: { signIn: false, connect: false },
+        apple: { signIn: false, connect: false },
+      },
       billing: {
         isConfigured: true,
         enforcement: true,

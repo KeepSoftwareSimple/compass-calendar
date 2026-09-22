@@ -21,12 +21,9 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const seedCapability = (canSuggestContacts: boolean) => {
   userMetadataActions.set({
-    google: {
-      connectionState: "HEALTHY",
-      connections: [
-        createMockConnection("a@example.com", { canSuggestContacts }),
-      ],
-    },
+    connections: [
+      createMockConnection("a@example.com", { canSuggestContacts }),
+    ],
   });
 };
 

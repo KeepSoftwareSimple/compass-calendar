@@ -208,6 +208,21 @@ function connectionPrecedenceRank(
   return index === -1 ? CONNECTION_STATE_PRECEDENCE.length : index;
 }
 
+/** Worst product state across every connected account (matches sync precedence). */
+export function aggregateConnectionState(
+  connections: readonly SyncConnectionSummary[],
+): GoogleConnectionState {
+  if (connections.length === 0) {
+    return "NOT_CONNECTED";
+  }
+  return connections.reduce<GoogleConnectionState>((worst, connection) => {
+    const state = connection.connectionState ?? "NOT_CONNECTED";
+    return connectionPrecedenceRank(state) < connectionPrecedenceRank(worst)
+      ? state
+      : worst;
+  }, "HEALTHY");
+}
+
 export type SidebarStatusEntry = {
   connection: SyncConnectionSummary;
   status: { variant: SyncStatusVariant; text: string };

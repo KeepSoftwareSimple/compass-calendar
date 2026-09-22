@@ -61,12 +61,7 @@ const makeMeetingEvent = (calendarId: Calendar["id"]): Event =>
 
 const seedContactsCapability = (canSuggestContacts: boolean) => {
   userMetadataActions.set({
-    google: {
-      connectionState: "HEALTHY",
-      connections: [
-        createMockConnection(ACCOUNT_EMAIL, { canSuggestContacts }),
-      ],
-    },
+    connections: [createMockConnection(ACCOUNT_EMAIL, { canSuggestContacts })],
   });
 };
 

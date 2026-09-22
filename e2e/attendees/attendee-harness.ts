@@ -70,7 +70,7 @@ const microsoftCalendar = {
   accountEmail: MICROSOFT_ACCOUNT_EMAIL,
 };
 
-/** A GoogleSyncConnectionSummary shape for the stubbed GET /api/user/metadata. */
+/** A SyncConnectionSummary shape for the stubbed GET /api/user/metadata. */
 const connectionSummary = (
   accountEmail: string,
   canSuggestContacts: boolean,
@@ -212,10 +212,6 @@ export const prepareSignedInGooglePage = async (
   );
   const metadata = {
     connections: [summary],
-    google: {
-      connectionState: summary.connectionState,
-      connections: [summary],
-    },
   };
 
   await page.addInitScript((accountEmail) => {
@@ -332,7 +328,6 @@ export const prepareSignedInGooglePage = async (
       return route.fulfill(
         json({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },
             microsoft: {

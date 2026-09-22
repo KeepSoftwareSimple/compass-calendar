@@ -161,10 +161,7 @@ const putSavedPage = (body: Record<string, unknown>) => {
 };
 
 const healthyGoogleMetadata = {
-  google: {
-    connectionState: "HEALTHY" as const,
-    connections: [createMockConnection("host@example.com")],
-  },
+  connections: [createMockConnection("host@example.com")],
 };
 
 function BookingSettingsWithShortcuts() {
@@ -192,12 +189,7 @@ function findStickyAncestor(element: HTMLElement): HTMLElement | null {
 describe("BookingSettingsSection", () => {
   it("shows a connect prompt when no healthy connection exists", async () => {
     setProviderAvailabilityForTests("google", "available", "connect");
-    userMetadataActions.set({
-      google: {
-        connectionState: "NOT_CONNECTED",
-        connections: [],
-      },
-    });
+    userMetadataActions.set({ connections: [] });
     server.use(
       http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
     );
@@ -228,12 +220,7 @@ describe("BookingSettingsSection", () => {
     setProviderAvailabilityForTests("google", "unavailable", "connect");
     setProviderAvailabilityForTests("microsoft", "unavailable", "connect");
     setProviderAvailabilityForTests("apple", "unavailable", "connect");
-    userMetadataActions.set({
-      google: {
-        connectionState: "NOT_CONNECTED",
-        connections: [],
-      },
-    });
+    userMetadataActions.set({ connections: [] });
     server.use(
       http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
     );
@@ -255,15 +242,12 @@ describe("BookingSettingsSection", () => {
   it("keeps the form and shows a reconnect banner when Google needs reconnecting", async () => {
     setProviderAvailabilityForTests("google", "available", "connect");
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [
-          createMockConnection("host@example.com", {
-            connectionState: "RECONNECT_REQUIRED",
-            state: "actionRequired",
-          }),
-        ],
-      },
+      connections: [
+        createMockConnection("host@example.com", {
+          connectionState: "RECONNECT_REQUIRED",
+          state: "actionRequired",
+        }),
+      ],
     });
     const bookingUrl = "https://compasscalendar.com/meet/hostuser";
     server.use(
@@ -303,15 +287,12 @@ describe("BookingSettingsSection", () => {
 
   it("keeps the form and shows an importing banner with no reconnect button", async () => {
     userMetadataActions.set({
-      google: {
-        connectionState: "IMPORTING",
-        connections: [
-          createMockConnection("host@example.com", {
-            connectionState: "IMPORTING",
-            state: "importing",
-          }),
-        ],
-      },
+      connections: [
+        createMockConnection("host@example.com", {
+          connectionState: "IMPORTING",
+          state: "importing",
+        }),
+      ],
     });
     server.use(
       http.get(bookingPageUrl, () =>
@@ -343,10 +324,6 @@ describe("BookingSettingsSection", () => {
 
   it("shows booking settings when a healthy non-google connection exists", async () => {
     userMetadataActions.set({
-      google: {
-        connectionState: "NOT_CONNECTED",
-        connections: [],
-      },
       connections: [
         createMockConnection("user@outlook.com", { provider: "microsoft" }),
       ],
@@ -1521,12 +1498,7 @@ describe("BookingSettingsSection", () => {
 
   it("fires booking_settings_opened when the connect prompt mounts", async () => {
     setProviderAvailabilityForTests("google", "available", "connect");
-    userMetadataActions.set({
-      google: {
-        connectionState: "NOT_CONNECTED",
-        connections: [],
-      },
-    });
+    userMetadataActions.set({ connections: [] });
     server.use(
       http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
     );
@@ -2029,12 +2001,9 @@ describe("BookingSettingsSection", () => {
     });
 
     userMetadataActions.set({
-      google: {
-        connectionState: "HEALTHY" as const,
-        connections: [
-          createMockConnection("host@icloud.com", { provider: "apple" }),
-        ],
-      },
+      connections: [
+        createMockConnection("host@icloud.com", { provider: "apple" }),
+      ],
     });
 
     server.use(
@@ -2081,10 +2050,6 @@ describe("BookingSettingsSection", () => {
     });
 
     userMetadataActions.set({
-      google: {
-        connectionState: "NOT_CONNECTED",
-        connections: [],
-      },
       connections: [
         createMockConnection("host@outlook.com", { provider: "microsoft" }),
       ],
@@ -2923,13 +2888,10 @@ describe("BookingSettingsSection", () => {
       accountEmail: "second@example.com",
     });
     userMetadataActions.set({
-      google: {
-        connectionState: "HEALTHY" as const,
-        connections: [
-          createMockConnection("host@example.com"),
-          createMockConnection("second@example.com"),
-        ],
-      },
+      connections: [
+        createMockConnection("host@example.com"),
+        createMockConnection("second@example.com"),
+      ],
     });
     server.use(
       http.get(bookingPageUrl, () =>
@@ -2979,13 +2941,10 @@ describe("BookingSettingsSection", () => {
       createsGoogleMeet: false,
     });
     userMetadataActions.set({
-      google: {
-        connectionState: "HEALTHY" as const,
-        connections: [
-          createMockConnection("host@example.com"),
-          createMockConnection("host@outlook.com", { provider: "microsoft" }),
-        ],
-      },
+      connections: [
+        createMockConnection("host@example.com"),
+        createMockConnection("host@outlook.com", { provider: "microsoft" }),
+      ],
     });
     server.use(
       http.get(bookingPageUrl, () => HttpResponse.json(savedOffPage())),

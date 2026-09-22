@@ -4,7 +4,7 @@ import {
   getCalendarCapabilities,
 } from "@core/types/calendar.contracts";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 
 /**
@@ -47,8 +47,8 @@ export function createMockCalendar(
 /** A healthy connected-account summary; override state fields to break it. */
 export function createMockConnection(
   accountEmail: string,
-  overrides: Partial<GoogleSyncConnectionSummary> = {},
-): GoogleSyncConnectionSummary {
+  overrides: Partial<SyncConnectionSummary> = {},
+): SyncConnectionSummary {
   return {
     id: createObjectIdString(),
     state: "healthy",

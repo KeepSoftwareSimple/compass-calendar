@@ -5,11 +5,16 @@ import authController from "./auth.controller";
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 describe("auth.controller", () => {
-  describe("beginGoogleConnection", () => {
+  describe("beginConnection", () => {
     const originalMutationMode = CONFIG.SYNC_CLOUD_MUTATION_MODE;
+    const originalMicrosoftId = CONFIG.MICROSOFT_CLIENT_ID;
+    const originalMicrosoftSecret = CONFIG.MICROSOFT_CLIENT_SECRET;
 
     afterEach(() => {
       CONFIG.SYNC_CLOUD_MUTATION_MODE = originalMutationMode;
+      CONFIG.MICROSOFT_CLIENT_ID = originalMicrosoftId;
+      CONFIG.MICROSOFT_CLIENT_SECRET = originalMicrosoftSecret;
+      mock.restore();
     });
 
     it("rejects connect begin with typed MAINTENANCE during cutover", () => {
@@ -18,9 +23,9 @@ describe("auth.controller", () => {
       const json = mock();
       const promise = mock();
 
-      authController.beginGoogleConnection(
+      authController.beginConnection(
         {
-          body: {},
+          body: { provider: "google" },
           session: { getUserId: () => "507f1f77bcf86cd799439011" },
         } as never,
         { status, json, promise } as never,
@@ -33,17 +38,6 @@ describe("auth.controller", () => {
         message: "Cloud edits are paused for maintenance",
         retryable: true,
       });
-    });
-  });
-
-  describe("beginConnection", () => {
-    const originalMicrosoftId = CONFIG.MICROSOFT_CLIENT_ID;
-    const originalMicrosoftSecret = CONFIG.MICROSOFT_CLIENT_SECRET;
-
-    afterEach(() => {
-      CONFIG.MICROSOFT_CLIENT_ID = originalMicrosoftId;
-      CONFIG.MICROSOFT_CLIENT_SECRET = originalMicrosoftSecret;
-      mock.restore();
     });
 
     it("rejects an unconfigured microsoft provider with 409 PROVIDER_NOT_CONFIGURED", async () => {

@@ -38,10 +38,7 @@ const renderHeader = (
   } = {},
 ) => {
   userMetadataActions.set({
-    google: {
-      connectionState: "HEALTHY",
-      connections: reasonOverrides.connections ?? [connection],
-    },
+    connections: reasonOverrides.connections ?? [connection],
   });
   const { wrapper } = createStoreWrapper();
   return render(

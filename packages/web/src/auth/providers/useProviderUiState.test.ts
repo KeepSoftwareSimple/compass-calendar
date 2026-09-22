@@ -20,7 +20,20 @@ afterEach(() => {
 
 describe("useGoogleUiState", () => {
   it("reflects the loaded Google connection state", () => {
-    userMetadataActions.set({ google: { connectionState: "HEALTHY" } });
+    userMetadataActions.set({
+      connections: [
+        {
+          id: "conn-1",
+          state: "healthy",
+          stateReason: null,
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "host@example.com",
+          connectionState: "HEALTHY",
+          canSuggestContacts: false,
+        },
+      ],
+    });
 
     const { result } = renderHook(() => useGoogleUiState());
 
@@ -28,7 +41,7 @@ describe("useGoogleUiState", () => {
   });
 
   it("prioritizes the transient syncing state", () => {
-    userMetadataActions.set({ google: { connectionState: "HEALTHY" } });
+    userMetadataActions.set({ connections: [] });
     const { result } = renderHook(() => useGoogleUiState());
 
     act(() => setSyncingSyncIndicatorOverride());

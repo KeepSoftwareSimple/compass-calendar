@@ -78,7 +78,11 @@ describe("Server Message Contracts", () => {
     it("parses an attention status with code and retryable", () => {
       const message = {
         type: "syncStatusChanged",
-        sync: { status: "attention", code: "GOOGLE_REVOKED", retryable: false },
+        sync: {
+          status: "attention",
+          code: "CONNECTION_REVOKED",
+          retryable: false,
+        },
       };
 
       expect(SyncStatusMessageSchema.safeParse(message).success).toBe(true);
@@ -185,7 +189,7 @@ describe("Server Message Contracts", () => {
       }
     });
 
-    it("emits CONNECTION_REVOKED and GOOGLE_REVOKED for a revoked connection", () => {
+    it("emits a single CONNECTION_REVOKED message for a revoked connection", () => {
       const connectionId = calendarId();
       const messages = revokedConnectionServerMessages(connectionId);
 
@@ -196,14 +200,6 @@ describe("Server Message Contracts", () => {
             status: "attention",
             code: "CONNECTION_REVOKED",
             connectionId,
-            retryable: false,
-          },
-        },
-        {
-          type: "syncStatusChanged",
-          sync: {
-            status: "attention",
-            code: "GOOGLE_REVOKED",
             retryable: false,
           },
         },

@@ -14,7 +14,7 @@ import {
 } from "@web/calendars/calendar.util";
 import {
   ACCOUNT_DISCONNECTED_TOAST_ID,
-  GOOGLE_REVOKED_TOAST_ID,
+  CONNECTION_REVOKED_TOAST_ID,
 } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
@@ -46,7 +46,7 @@ export function useDisconnectGoogleAccount(): {
         .then(async () => {
           // Show success confirmation and dismiss any stale reconnect warning.
           clearAccountReconnectRequired({ connectionId, accountEmail });
-          getToast().dismiss(GOOGLE_REVOKED_TOAST_ID);
+          getToast().dismiss(CONNECTION_REVOKED_TOAST_ID);
           showStatusToast(
             ACCOUNT_DISCONNECTED_TOAST_ID,
             `Disconnected ${accountEmail}`,

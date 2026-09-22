@@ -133,7 +133,7 @@ describe("SessionProvider sessionInit", () => {
     expect(openStream).toHaveBeenCalledTimes(1);
 
     // Simulate SIGN_OUT event; user metadata should be cleared
-    userMetadataActions.set({ google: { connectionState: "HEALTHY" } });
+    userMetadataActions.set({ connections: [] });
     session.emit({ action: "SIGN_OUT", userContext: undefined });
 
     expect(useUserMetadataStore.getState()).toEqual(initialUserMetadataState);
