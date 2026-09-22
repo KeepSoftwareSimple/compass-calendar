@@ -36,24 +36,20 @@ export function WelcomeFaqList({
 
         return (
           <div key={item.question} className="py-3">
-            <div
-              className="flex items-center justify-between gap-3"
+            <button
+              type="button"
+              aria-controls={answerId}
+              aria-expanded={isExpanded}
+              className="c-focus-ring flex w-full cursor-pointer select-none items-center justify-between gap-3 text-left font-medium text-sm text-text transition-colors hover:text-text-lightest"
+              onClick={(event) =>
+                onToggle(
+                  item.question,
+                  event.detail === 0 ? "keyboard" : "pointer",
+                )
+              }
               {...pointerShortcutAttributes(digit)}
             >
-              <button
-                type="button"
-                aria-controls={answerId}
-                aria-expanded={isExpanded}
-                className="c-focus-ring w-full cursor-pointer select-none text-left font-medium text-sm text-text transition-colors hover:text-text-lightest"
-                onClick={(event) =>
-                  onToggle(
-                    item.question,
-                    event.detail === 0 ? "keyboard" : "pointer",
-                  )
-                }
-              >
-                {item.question}
-              </button>
+              <span>{item.question}</span>
               <span
                 className={classNames(
                   "shrink-0",
@@ -62,7 +58,7 @@ export function WelcomeFaqList({
               >
                 <ShortcutHint>{digit}</ShortcutHint>
               </span>
-            </div>
+            </button>
             <div
               id={answerId}
               aria-hidden={!isExpanded}

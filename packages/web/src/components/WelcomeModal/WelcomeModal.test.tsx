@@ -62,6 +62,7 @@ afterAll(() => {
 
 const { WelcomeModal } =
   require("./WelcomeModal") as typeof import("./WelcomeModal");
+const { FAQ_ITEMS } = require("./faq") as typeof import("./faq");
 const { STORAGE_KEYS } =
   require("@web/common/constants/storage.constants") as typeof import("@web/common/constants/storage.constants");
 
@@ -116,7 +117,10 @@ describe("WelcomeModal", () => {
         name: "The Keyboard Calendar",
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/No clicks allowed/)).toBeTruthy();
+    expect(
+      screen.getByText(/Click any button here, or use Enter and the key hints/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No clicks allowed/)).toBeNull();
     expect(screen.getByRole("img", { name: /pixel pirate/i })).toBeTruthy();
     expect(screen.getByText("No signup required")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Product Hunt/i })).toBeNull();
@@ -249,6 +253,39 @@ describe("WelcomeModal", () => {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
     expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
+  });
+
+  it("advances through every step and FAQ row with pointer clicks only", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeModal />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Get started for free" }),
+    );
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+
+    for (const [index, item] of FAQ_ITEMS.entries()) {
+      const row = screen.getByRole("button", { name: item.question });
+      await user.click(within(row).getByText(String(index + 1)));
+      expect(row).toHaveAttribute("aria-expanded", "true");
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      await user.click(row);
+      expect(row).toHaveAttribute("aria-expanded", "false");
+    }
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Explore without an account" }),
+    );
+    await waitFor(() => {
+      expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+    });
   });
 
   it("advances with Enter or a click, and Escape steps back", async () => {
