@@ -65,7 +65,7 @@ Playwright. Docs index: `docs/README.md`.
   `Fixes #N` and the `VERDICT:` line, mark it ready, label it
   `agent-automerge`, and enable auto-merge yourself. `main` takes changes
   only through the merge queue, which squash-merges once required checks
-  pass. `.github/scripts/agent-loop-merge-guard.sh` checks size and that
+  pass. `.github/scripts/agent-loop-merge-guard.sh` checks line count and that
   main is not red; those rails are the gate. There is no path denylist; do
   not look for one. A local verdict that fails only on sandbox-bound
   Playwright timeouts, in specs the diff cannot reach, is evidence to report

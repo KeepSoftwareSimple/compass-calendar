@@ -145,15 +145,10 @@ ALLGREEN`, squash). Unit and E2E workflows listen for `merge_group` so
 the queue can emit the required checks. If the queue rule cannot be
 written, the equivalent is `strict_required_status_checks_policy: true`.
 
-## Size limits
+## Line limit
 
-Merge-guard defaults:
-
-- `MAX_FILES=60`
-- `MAX_LINES=4000`
-
-Override per run with env `AGENT_LOOP_MAX_FILES` and
-`AGENT_LOOP_MAX_LINES`.
+Merge-guard default: `MAX_LINES=4000` (additions + deletions). Override per
+run with env `AGENT_LOOP_MAX_LINES`.
 
 ## Staging smoke
 
@@ -201,7 +196,7 @@ staging drill.
 | Kill switch on, no eligible WP | `agent-loop-next.sh` `found=false`; no launch |
 | Empty milestones | `AGENT_LOOP_MILESTONES` unset → idle; no invented queue |
 | Missing API key | Launch adds `agent-loop-needs-human` and Discord; no issue comment |
-| Merge-guard size fail | Same downgrade if files > `MAX_FILES=60` or lines > `MAX_LINES=4000` |
+| Merge-guard line limit | Same downgrade if lines > `MAX_LINES=4000` |
 | Merge-guard conflict | `update-branch` then auto-merge; still dirty → PR closed, issue stays `agent-ready`, no `needs-human` |
 | Staging 5xx | Smoke fails; next WP not launched |
 | Credentials | Smoke and prompt never enter a password or complete OAuth |
