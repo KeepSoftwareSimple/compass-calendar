@@ -1,18 +1,21 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { IS_DEV } from "@web/common/constants/env.constants";
-import { type BlockedPointerAttempt } from "@web/shortcuts/keyboard-only/pointer-action";
 import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 
 const HINT_VISIBLE_MS = 2500;
 
 let hideTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 
+export type PalettePointerHintAttempt = {
+  shortcutKey: string | string[];
+  source: "palette";
+};
+
 export type PointerHintState = {
-  /** Increments on every teachable click so the pointer hint can show. */
+  /** Increments on every palette teach pulse so the hint can re-animate. */
   pulse: number;
-  /** Semantic intent of the latest teachable pointerdown. */
-  latestAttempt: BlockedPointerAttempt | null;
+  latestAttempt: PalettePointerHintAttempt | null;
   /** True while the pill should paint (pulse-driven, timed hide). */
   isVisible: boolean;
 };
@@ -31,7 +34,7 @@ export const usePointerHintStore = create<PointerHintState>()(
 );
 
 export const pointerHintActions = {
-  pulse: (attempt: BlockedPointerAttempt = { actionId: "unknown" }) => {
+  pulse: (attempt: PalettePointerHintAttempt) => {
     if (hideTimer !== undefined) globalThis.clearTimeout(hideTimer);
     usePointerHintStore.setState(
       (state) => ({

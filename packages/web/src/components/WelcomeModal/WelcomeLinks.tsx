@@ -6,7 +6,6 @@ import { type ReactNode } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { SOCIAL_LINKS } from "@web/common/constants/social.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import { flashedShortcutClass } from "./useFlashedWelcomeShortcut";
 
 const SOCIAL_ICONS = {
@@ -70,7 +69,6 @@ function JumpAnchor({
         jumpIndex !== undefined ? String(jumpIndex) : undefined
       }
       data-welcome-letter={letter}
-      {...pointerShortcutAttributes(digit)}
     >
       {children}
       <span

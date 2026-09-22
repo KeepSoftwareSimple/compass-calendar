@@ -81,9 +81,8 @@ Welcome → signup → first-event contract:
   on. Escape, the backdrop and **Back** step back one screen and
   are a no-op on the first, so a stray Escape never drops a first-timer into
   the practice game
-- the welcome overlay is the one calendar surface where the mouse works
-  (`data-pointer-pass`): a landing page should behave like a normal site, and
-  keyboard-only starts once the visitor enters the calendar
+- the welcome overlay works with the mouse: a landing page should behave like a
+  normal site, and keyboard-only starts once the visitor enters the calendar
 - the last screen is titled **Let's get started** with the subtitle
   **Connect a calendar or start fresh**. Its CTA order is **Continue with Google**
   (`G`, when Google is available), **Sign up with email** (`U`), then
@@ -125,17 +124,12 @@ Welcome → signup → first-event contract:
 - users who already finished or skipped the retired guided tour are treated as
   having seen the showcase so it does not ambush them
 
-Pointer suppression (always on, mounted from `RootShell`):
+Palette shortcut teaching (from `RootShell`):
 
-- blocks pointer clicks, right-clicks, and double-clicks everywhere; scroll
-  and hover remain
-- keyboard-activation clicks (Enter/Space on a native button), keyboard
-  contextmenu (Shift+F10), and synthetic `.click()` calls pass through
-- blocked clicks pulse `PointerHint`, a transient pill: known targets get
-  the matching shortcut (including HHMM digits for an empty timed-grid
-  click), and unannotated controls fall back to "keyboard only"
-- `MobileGate` opts its subtree out (`data-pointer-pass`) so Copy and
-  Waitlist can be tapped on a phone
+- after a palette row with a shortcut runs, `PointerHint` shows **Next time,
+  press …** unless the user turned keyboard tips off
+- clicks on the grid and chrome no longer open that pill; see
+  [Contextual Pointer Guidance](./contextual-pointer-guidance.md)
 
 See [Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and
 [Feature File Map](../development/feature-file-map.md#keyboard-shortcuts) for

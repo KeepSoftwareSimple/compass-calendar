@@ -8,12 +8,6 @@ import { MICROSOFT_SELF_HOSTING_DOC_URL } from "@web/auth/providers/connection-h
 import { CONSENT_REQUIRED_COPY } from "@web/auth/providers/provider-copy.util";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
-  POINTER_ACTION_ATTRIBUTE,
-  POINTER_ACTIONS,
-  POINTER_PROVIDER_ATTRIBUTE,
-  pointerShortcutAttributes,
-} from "@web/shortcuts/keyboard-only/pointer-action";
-import {
   CONNECTION_BANNER_SHORTCUT_KEY,
   useNoticeActionShortcut,
 } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
@@ -61,8 +55,6 @@ export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
     kind === "reconnect" ||
     kind === "consentRequired" ||
     kind === "importFailed";
-  const pointerAction =
-    kind === "reconnect" ? POINTER_ACTIONS.reconnectGoogle : undefined;
 
   useNoticeActionShortcut(CONNECTION_BANNER_SHORTCUT_KEY, onAction);
 
@@ -93,13 +85,6 @@ export const CalendarConnectionBanner: FC<CalendarConnectionBannerProps> = ({
         className="c-focus-ring inline-flex shrink-0 items-center gap-2 rounded-xs px-2 py-1 font-medium text-text hover:bg-surface-overlay"
         onClick={handleAction}
         type="button"
-        {...pointerShortcutAttributes(CONNECTION_BANNER_SHORTCUT_KEY)}
-        {...(pointerAction
-          ? {
-              [POINTER_ACTION_ATTRIBUTE]: pointerAction,
-              [POINTER_PROVIDER_ATTRIBUTE]: provider,
-            }
-          : {})}
       >
         {action}
         <ShortcutKeys keys={CONNECTION_BANNER_SHORTCUT_KEY} />

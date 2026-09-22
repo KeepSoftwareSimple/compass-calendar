@@ -239,7 +239,6 @@ describe("RootShell billing gates", () => {
     const startPlanning = screen.getByRole("button", {
       name: "Start planning",
     });
-    expect(startPlanning).toHaveAttribute("data-pointer-pass", "");
     await userEvent.click(startPlanning);
 
     await waitFor(() => {
@@ -360,7 +359,7 @@ describe("RootShell billing gates", () => {
     await renderShell("/week");
 
     act(() => {
-      pointerHintActions.pulse({ actionId: "unknown" });
+      pointerHintActions.pulse({ shortcutKey: "?", source: "palette" });
     });
 
     expect(
@@ -429,7 +428,7 @@ describe("RootShell calendar onboarding on /life", () => {
     await renderShell("/life", { anonymous: true });
 
     act(() => {
-      pointerHintActions.pulse({ actionId: "unknown" });
+      pointerHintActions.pulse({ shortcutKey: "?", source: "palette" });
     });
 
     expect(

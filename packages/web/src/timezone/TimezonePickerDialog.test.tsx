@@ -31,10 +31,6 @@ describe("TimezonePickerDialog", () => {
       <TimezonePickerDialog onDismiss={() => timezoneDialogActions.close()} />,
     );
 
-    expect(
-      screen.getByRole("option", { name: /Use browser timezone \(Auto\)/ }),
-    ).toHaveAttribute("data-pointer-shortcut", "Enter");
-
     await user.type(
       screen.getByRole("combobox", { name: "Search timezones" }),
       "Chi",

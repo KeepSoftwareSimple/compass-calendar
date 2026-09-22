@@ -3,11 +3,6 @@ import { track } from "@web/auth/posthog/track";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import {
-  POINTER_ACTION_ATTRIBUTE,
-  POINTER_ACTIONS,
-  pointerShortcutAttributes,
-} from "@web/shortcuts/keyboard-only/pointer-action";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
@@ -62,8 +57,6 @@ export const TrialCardBanner: FC<{ daysLeft: number }> = ({ daysLeft }) => {
         className="c-focus-ring inline-flex items-center gap-2 font-medium text-warning underline-offset-4 hover:underline"
         onClick={openCheckout}
         type="button"
-        {...pointerShortcutAttributes(START_TRIAL_SHORTCUT_KEY)}
-        {...{ [POINTER_ACTION_ATTRIBUTE]: POINTER_ACTIONS.startTrial }}
       >
         Add a card
         <ShortcutKeys keys={START_TRIAL_SHORTCUT_KEY} />

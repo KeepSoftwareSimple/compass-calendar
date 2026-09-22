@@ -7,9 +7,7 @@ describe("pulsePaletteTaughtShortcut", () => {
   it("pulses the pointer hint for a row with a shortcut", () => {
     pulsePaletteTaughtShortcut("t");
     expect(usePointerHintStore.getState().latestAttempt).toEqual({
-      actionId: "unknown",
       shortcutKey: "t",
-      performed: true,
       source: "palette",
     });
     expect(usePointerHintStore.getState().pulse).toBe(1);

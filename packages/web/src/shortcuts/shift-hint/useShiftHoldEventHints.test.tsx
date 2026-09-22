@@ -5,7 +5,7 @@ import { dispatchMissingKey } from "@web/__tests__/utils/keyboard.test.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
-import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-action";
+import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   eventJumpActions,

@@ -24,11 +24,6 @@ import {
   selectSettingsPage,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import {
-  POINTER_ACTION_ATTRIBUTE,
-  POINTER_ACTIONS,
-  POINTER_SHORTCUT_ATTRIBUTE,
-} from "@web/shortcuts/keyboard-only/pointer-action";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
@@ -51,7 +46,6 @@ const renderBanner = (onCta = mock(), disabled = false) =>
         disabled={disabled}
         message="You're looking around in read-only mode."
         onCta={onCta}
-        pointerAction={POINTER_ACTIONS.startTrial}
         shortcutKey={START_TRIAL_SHORTCUT_KEY}
       />
     </HotkeysProvider>,
@@ -72,14 +66,6 @@ describe("BillingBanner", () => {
       name: "Start your free 7-day trial to save changes",
     });
     expect(within(button).getByText("S")).toBeTruthy();
-    expect(button).toHaveAttribute(
-      POINTER_SHORTCUT_ATTRIBUTE,
-      START_TRIAL_SHORTCUT_KEY,
-    );
-    expect(button).toHaveAttribute(
-      POINTER_ACTION_ATTRIBUTE,
-      POINTER_ACTIONS.startTrial,
-    );
 
     pressKey("S");
 

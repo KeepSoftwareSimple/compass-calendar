@@ -6,7 +6,6 @@ import {
   useDraftStore,
 } from "@web/events/stores/draft.store";
 import { viewActions } from "@web/events/stores/view.store";
-import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import { useCloseEventForm } from "@web/views/Forms/hooks/useCloseEventForm";
 import {
   focusSidebarControl,
@@ -43,7 +42,6 @@ export const SidebarCloseButton: FC = () => {
         type="button"
         aria-label="Dismiss sidebar"
         data-sidebar-control={SIDEBAR_DISMISS_CONTROL}
-        data-pointer-action={POINTER_ACTIONS.sidebarClose}
         className="c-focus-ring flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted"
       >
         <XIcon aria-hidden="true" size={16} />

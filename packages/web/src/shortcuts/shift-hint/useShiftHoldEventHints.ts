@@ -23,7 +23,7 @@ import {
   POINTER_GRID_CREATE_REQUEST,
   pointerEventJumpId,
   pointerGridIntent,
-} from "@web/shortcuts/keyboard-only/pointer-action";
+} from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   canQuickTimeBufferGrow,

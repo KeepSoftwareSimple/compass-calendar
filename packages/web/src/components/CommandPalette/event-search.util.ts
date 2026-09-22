@@ -4,10 +4,7 @@ import dayjs from "@core/util/date/dayjs";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { eventStartDay } from "@web/events/mutations/event-on-target-day";
 import { isAppLocked } from "@web/shortcuts/app-lock";
-import {
-  POINTER_EVENT_ID_ATTRIBUTE,
-  requestPointerEventJump,
-} from "@web/shortcuts/keyboard-only/pointer-action";
+import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 
 const FOCUS_WAIT_MS = 2_000;
@@ -26,10 +23,15 @@ export function eventSearchDetail(event: Event): string {
     .format("ddd, MMM D, h:mm A");
 }
 
-const eventCardInDom = (eventId: string): boolean =>
-  document.querySelector(
-    `[${POINTER_EVENT_ID_ATTRIBUTE}="${CSS.escape(eventId)}"]`,
-  ) !== null;
+const eventCardInDom = (eventId: string): boolean => {
+  const escaped = CSS.escape(eventId);
+  return (
+    document.querySelector(`[data-week-interaction-event-id="${escaped}"]`) !==
+      null ||
+    document.querySelector(`[data-day-interaction-event-id="${escaped}"]`) !==
+      null
+  );
+};
 
 export function startFocusEventCard(eventId: string): void {
   const deadline = Date.now() + FOCUS_WAIT_MS;

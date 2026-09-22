@@ -1,5 +1,3 @@
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
-
 export function TimezoneOptionButton({
   active,
   description,
@@ -26,7 +24,6 @@ export function TimezoneOptionButton({
       role="option"
       tabIndex={-1}
       type="button"
-      {...pointerShortcutAttributes("Enter")}
     >
       <span className="text-text">{label}</span>
       <span className="text-text-muted text-xs">{description}</span>

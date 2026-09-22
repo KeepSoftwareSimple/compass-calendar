@@ -344,10 +344,6 @@ describe("SidebarStatusBar", () => {
     const settingsButton = screen.getByRole("button", {
       name: "Calendar updates are delayed. Open account settings",
     });
-    expect(settingsButton).toHaveAttribute(
-      "data-pointer-shortcut",
-      '["Mod",","]',
-    );
     await user.click(settingsButton);
 
     expect(openSettings).toHaveBeenCalledTimes(1);

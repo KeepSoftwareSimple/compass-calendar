@@ -19,7 +19,6 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
-import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import { PixelPirate } from "./PixelPirate";
 import { useFaqDisclosure } from "./useFaqDisclosure";
 import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
@@ -278,11 +277,7 @@ export function WelcomeModal() {
           works: a landing page should behave like a normal site. Keyboard-only
           starts once the visitor enters the calendar. */}
       {/* biome-ignore lint/a11y/noStaticElementInteractions: keydown here is a modal-scoped shortcut layer, not an interactive element in its own right */}
-      <div
-        className="flex w-full flex-col gap-6"
-        onKeyDown={handleShortcutKey}
-        {...pointerPassAttributes}
-      >
+      <div className="flex w-full flex-col gap-6" onKeyDown={handleShortcutKey}>
         {/* Top row: pirate top-left, Log in top-right, on every screen so a
             returning user is never walked through the pitch. Back sits
             beside Log in once there is a previous screen. */}
