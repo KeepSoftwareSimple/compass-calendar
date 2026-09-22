@@ -28,7 +28,7 @@ Use this for:
 
 You do not need the backend for basic frontend rendering.
 
-## Booking web (scaffold)
+## Booking web (public guest /meet)
 
 Command:
 
@@ -36,12 +36,15 @@ Command:
 bun run dev:booking-web
 ```
 
-The scaffold serves at <http://localhost:9081> (override with `BOOKING_WEB_PORT`).
-It is an empty React shell for the future public `/meet` guest app. Calendar host
-settings and the live public booking UI still live in `packages/web` until later
-work packages move them.
+The guest app serves at <http://localhost:9081> (override with `BOOKING_WEB_PORT`).
+It owns public `/meet` and legacy `/book` guest routes. Host Meeting Settings stay
+in `packages/web` (`bun run dev:web`).
 
-Build the scaffold with `bun run build:booking-web` (output under `build/booking-web`).
+Guest Playwright specs open `http://localhost:9151` (booking-web) via
+`publicBookingAppUrl()` in `e2e/booking/booking-harness.ts`. Host settings specs
+stay on calendar-web (`9150` in CI).
+
+Build with `bun run build:booking-web` (output under `build/booking-web`).
 
 ### Docker and compose (staging-shaped)
 

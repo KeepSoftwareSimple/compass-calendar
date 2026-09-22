@@ -41,7 +41,7 @@
       "project": ["src/**/*.{ts,tsx}!"]
     },
     "apps/booking-web": {
-      "entry": ["dev.ts", "build.ts"],
+      "entry": ["dev.ts", "build.ts", "src/shims/stub-web-routers.ts"],
       "project": ["src/**/*.{ts,tsx}!"]
     }
   },
