@@ -1,6 +1,7 @@
 import { Logger } from "@core/logger/winston.logger";
 import { normalizeEmail } from "@core/util/email.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { emailAnalytics } from "@backend/email/email.analytics";
 import {
   EMAIL_SEND_BATCH_SIZE,
   EMAIL_SEND_CLAIM_LEASE_MS,
@@ -8,6 +9,10 @@ import {
   EMAIL_SEND_PROVIDER_SPACING_MS,
   emailSendBackoffMs,
 } from "@backend/email/email.constants";
+import {
+  startEmailSendHeartbeat,
+  stopEmailSendHeartbeat,
+} from "@backend/email/email.heartbeat";
 import { renderWelcomeEmail } from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
@@ -66,6 +71,7 @@ export class EmailDispatchService {
     if (!isWelcomeEmailEnabled() || this.#pollTimer) {
       return;
     }
+    startEmailSendHeartbeat();
     this.#runCycle();
     this.#pollTimer = setInterval(() => {
       this.#runCycle();
@@ -73,6 +79,7 @@ export class EmailDispatchService {
   };
 
   stopPolling = async (): Promise<void> => {
+    stopEmailSendHeartbeat();
     if (this.#pollTimer) {
       clearInterval(this.#pollTimer);
       this.#pollTimer = undefined;
@@ -117,19 +124,47 @@ export class EmailDispatchService {
 
   async #dispatchRow(row: EmailSendRecord): Promise<void> {
     const step = findWelcomeStep(row.stepKey);
+    const userIdHex = row.userId.toHexString();
     if (!step) {
       await emailSendRepository.markSkipped(row._id, "Unknown welcome step");
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
       return;
     }
 
     const user = await loadWelcomeSequenceUser(row.userId);
     if (!user) {
       await emailSendRepository.markSkipped(row._id, "User not found");
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
       return;
     }
 
     if (step.skipIf?.(user)) {
       await emailSendRepository.markSkipped(row._id, "Step skipped by skipIf");
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
       return;
     }
 
@@ -143,12 +178,30 @@ export class EmailDispatchService {
         row._id,
         "Recipient not allowlisted",
       );
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
       return;
     }
 
     const content = getWelcomeEmailContent(row.stepKey);
     if (!content) {
       await emailSendRepository.markSkipped(row._id, "Missing email content");
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
       return;
     }
 
@@ -186,23 +239,53 @@ export class EmailDispatchService {
         headers,
       });
       await emailSendRepository.markSent(row._id, result.messageId);
+      void emailAnalytics.capture({
+        event: "email_sent",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email sent", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
     } catch (error) {
       if (isInvalidRecipientError(error)) {
         await emailSendRepository.markSkipped(
           row._id,
           error instanceof Error ? error.message : String(error),
         );
+        void emailAnalytics.capture({
+          event: "email_skipped",
+          userId: userIdHex,
+          step: row.stepKey,
+        });
+        logger.info("Welcome email skipped", {
+          rowId: row._id,
+          stepKey: row.stepKey,
+        });
         return;
       }
 
       const nextAttemptAt = new Date(
         Date.now() + emailSendBackoffMs(row.attemptCount + 1),
       );
-      await emailSendRepository.recordFailure(
+      const updated = await emailSendRepository.recordFailure(
         row._id,
         error instanceof Error ? error.message : String(error),
         nextAttemptAt,
       );
+      if (updated?.status === "failed") {
+        void emailAnalytics.capture({
+          event: "email_failed",
+          userId: userIdHex,
+          step: row.stepKey,
+        });
+      }
+      logger.warn("Welcome email send failed", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+        message: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 }

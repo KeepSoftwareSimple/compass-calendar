@@ -74,6 +74,11 @@ failure rate, missing heartbeat) are defined in
 must not notify a new recipient until the release owner confirms the
 channel. Hourly evaluation is coarser than the 5-minute pending SLO.
 
+Welcome email launch checks (provider complaint rate above 0.1%, non-zero
+`failed_count_24h` on `email_send_heartbeat`) are defined in
+[Welcome email staging verification](./email-staging-verification.md). Same
+**not armed** rule until the release owner confirms the channel.
+
 ## During launch
 
 - [ ] Watch Sync health snapshot + Error Tracking side by side
