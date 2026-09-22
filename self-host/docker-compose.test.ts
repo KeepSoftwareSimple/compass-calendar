@@ -125,6 +125,7 @@ describe("self-host docker compose", () => {
       "self-host/Dockerfile.backend",
       "self-host/Dockerfile.sync",
       "self-host/Dockerfile.web",
+      "apps/booking-web/Dockerfile",
       ".github/docker/Dockerfile.web",
     ]) {
       const dockerfile = readRepoFile(file);
@@ -148,6 +149,34 @@ describe("self-host docker compose", () => {
         `cache-to: type=gha,mode=max,scope=compass-${image}`,
       );
     }
+  });
+
+  it("gates booking-web behind its own profile without changing calendar-web", () => {
+    const compose = readFileSync(join(import.meta.dir, "compose.yaml"), {
+      encoding: "utf8",
+    });
+
+    const webBlock = compose
+      .slice(compose.indexOf("\n  web:\n") + 1)
+      .split(/\n {2}\w/)[0];
+    expect(webBlock).toContain("switchbacktech/compass-web:");
+    expect(webBlock).toContain("*web-port");
+    expect(webBlock).toContain("depends_on:");
+    expect(webBlock).toContain("condition: service_healthy");
+
+    expect(compose).toContain("switchbacktech/compass-booking-web:");
+    expect(compose).toContain(
+      'booking-web: &booking-web-port "127.0.0.1:'.concat(
+        "$",
+        '{BOOKING_WEB_PORT:-9081}:9081"',
+      ),
+    );
+    const bookingBlock = compose
+      .slice(compose.indexOf("  booking-web:\n"))
+      .split(/\n {2}\w/)[0];
+    expect(bookingBlock).toContain("profiles: [booking]");
+    expect(bookingBlock).toContain("apps/booking-web/Dockerfile");
+    expect(bookingBlock).toContain("WEB_ROOT: /app/build/booking-web");
   });
 
   it("gates the passive sync service behind its own profile", () => {
@@ -450,6 +479,17 @@ describe("self-host helper", () => {
 
     expect(helper).toContain(
       'export SYNC_PORT="$(strip_quotes "$(read_config_value sync.port)")"',
+    );
+  });
+
+  it("exports booking-web compose env from bookingWeb config keys", () => {
+    const helper = readRepoFile("self-host/compass");
+
+    expect(helper).toContain(
+      'export COMPASS_BOOKING_WEB_IMAGE="$(strip_quotes "$(read_config_value bookingWeb.image)")"',
+    );
+    expect(helper).toContain(
+      'export BOOKING_WEB_PORT="$(strip_quotes "$(read_config_value bookingWeb.port)")"',
     );
   });
 
