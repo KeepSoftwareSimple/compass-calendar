@@ -10,6 +10,7 @@ COPY packages/core/package.json packages/core/package.json
 COPY packages/scripts/package.json packages/scripts/package.json
 COPY packages/sync/package.json packages/sync/package.json
 COPY packages/web/package.json packages/web/package.json
+COPY apps/booking-web/package.json apps/booking-web/package.json
 RUN bun install --frozen-lockfile
 COPY . .
 
