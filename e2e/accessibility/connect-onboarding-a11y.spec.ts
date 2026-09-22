@@ -53,7 +53,6 @@ async function prepareSignedInZeroConnectionsPage(
       return route.fulfill(
         jsonResponse({
           connections: [],
-          connections: [],
         }),
       );
     }
