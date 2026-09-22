@@ -1,4 +1,9 @@
-import { type ClientSession, type ObjectId } from "mongodb";
+import {
+  type ClientSession,
+  type Filter,
+  type MatchKeysAndValues,
+  type ObjectId,
+} from "mongodb";
 import mongoService from "@backend/common/services/mongo.service";
 import { EMAIL_SEND_MAX_ATTEMPTS } from "@backend/email/email.constants";
 import {
@@ -24,15 +29,33 @@ const isDuplicateKeyError = (error: unknown): boolean => {
   return writeErrors.every((entry) => entry.code === 11000);
 };
 
-const parseRecord = (record: unknown): EmailSendRecord => {
-  const raw = record as EmailSendRecord;
-  return EmailSendRecordSchema.parse({
-    ...raw,
-    deliveredAt: raw.deliveredAt ?? null,
+const parseRecord = (record: { deliveredAt?: Date | null }): EmailSendRecord =>
+  EmailSendRecordSchema.parse({
+    ...record,
+    deliveredAt: record.deliveredAt ?? null,
   });
-};
 
 const truncateError = (error: string): string => error.trim().slice(0, 500);
+
+/**
+ * The write every status transition below makes: patch the matched row and
+ * return it parsed, or null when nothing matched (another attempt already
+ * settled it, or the filter's own guard excluded the row). `updatedAt` moves
+ * with every patch, and `fields` receives that same instant so a transition
+ * stamping its own timestamp records it identically.
+ */
+const patchRow = async (
+  filter: Filter<EmailSendRecord>,
+  fields: (now: Date) => MatchKeysAndValues<EmailSendRecord>,
+): Promise<EmailSendRecord | null> => {
+  const now = new Date();
+  const result = await mongoService.emailSend.findOneAndUpdate(
+    filter,
+    { $set: { ...fields(now), updatedAt: now } },
+    { returnDocument: "after" },
+  );
+  return result ? parseRecord(result) : null;
+};
 
 export type InsertEmailSendInput = Omit<
   EmailSendRecord,
@@ -114,57 +137,31 @@ class EmailSendRepository {
     id: string,
     providerMessageId: string,
   ): Promise<EmailSendRecord | null> {
-    const now = new Date();
-    const result = await mongoService.emailSend.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          status: "sent",
-          providerMessageId,
-          sentAt: now,
-          updatedAt: now,
-          lastError: null,
-        },
-      },
-      { returnDocument: "after" },
-    );
-    return result ? parseRecord(result) : null;
+    return patchRow({ _id: id }, (now) => ({
+      status: "sent",
+      providerMessageId,
+      sentAt: now,
+      lastError: null,
+    }));
   }
 
   async markSkipped(
     id: string,
     reason: string,
   ): Promise<EmailSendRecord | null> {
-    const now = new Date();
-    const result = await mongoService.emailSend.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          status: "skipped",
-          lastError: truncateError(reason),
-          updatedAt: now,
-        },
-      },
-      { returnDocument: "after" },
-    );
-    return result ? parseRecord(result) : null;
+    return patchRow({ _id: id }, () => ({
+      status: "skipped",
+      lastError: truncateError(reason),
+    }));
   }
 
   async markCanceled(id: string): Promise<EmailSendRecord | null> {
-    const now = new Date();
-    const result = await mongoService.emailSend.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          status: "canceled",
-          updatedAt: now,
-        },
-      },
-      { returnDocument: "after" },
-    );
-    return result ? parseRecord(result) : null;
+    return patchRow({ _id: id }, () => ({ status: "canceled" }));
   }
 
+  // One more attempt left requeues at `nextAttemptAt`; the last one fails
+  // terminally. The attempt count is read first rather than $inc'd so the
+  // decision and the stored count come from the same value.
   async recordFailure(
     id: string,
     error: string,
@@ -174,39 +171,14 @@ class EmailSendRepository {
     if (!existing) {
       return null;
     }
-    const parsed = parseRecord(existing);
-    const attemptCount = parsed.attemptCount + 1;
-    const now = new Date();
+    const attemptCount = parseRecord(existing).attemptCount + 1;
     const lastError = truncateError(error);
-    if (attemptCount >= EMAIL_SEND_MAX_ATTEMPTS) {
-      const result = await mongoService.emailSend.findOneAndUpdate(
-        { _id: id },
-        {
-          $set: {
-            status: "failed",
-            attemptCount,
-            lastError,
-            updatedAt: now,
-          },
-        },
-        { returnDocument: "after" },
-      );
-      return result ? parseRecord(result) : null;
-    }
-    const result = await mongoService.emailSend.findOneAndUpdate(
-      { _id: id },
-      {
-        $set: {
-          status: "queued",
-          attemptCount,
-          lastError,
-          nextAttemptAt,
-          updatedAt: now,
-        },
-      },
-      { returnDocument: "after" },
+    const exhausted = attemptCount >= EMAIL_SEND_MAX_ATTEMPTS;
+    return patchRow({ _id: id }, () =>
+      exhausted
+        ? { status: "failed", attemptCount, lastError }
+        : { status: "queued", attemptCount, lastError, nextAttemptAt },
     );
-    return result ? parseRecord(result) : null;
   }
 
   async deleteAllByUser(
@@ -236,21 +208,14 @@ class EmailSendRepository {
     return result ? parseRecord(result) : null;
   }
 
+  // The `deliveredAt: null` guard makes this idempotent: a replayed provider
+  // webhook matches nothing and returns null rather than restamping.
   async markDelivered(
     providerMessageId: string,
   ): Promise<EmailSendRecord | null> {
-    const now = new Date();
-    const result = await mongoService.emailSend.findOneAndUpdate(
-      { providerMessageId, deliveredAt: null },
-      {
-        $set: {
-          deliveredAt: now,
-          updatedAt: now,
-        },
-      },
-      { returnDocument: "after" },
-    );
-    return result ? parseRecord(result) : null;
+    return patchRow({ providerMessageId, deliveredAt: null }, (now) => ({
+      deliveredAt: now,
+    }));
   }
 }
 
