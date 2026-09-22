@@ -10,7 +10,6 @@ import { act, type PropsWithChildren, type ReactElement } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { MonthPicker } from "@web/components/Sidebar/MonthPicker/MonthPicker";
-import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import {
   pageJumpHintActions,
   usePageJumpHintStore,
@@ -72,7 +71,7 @@ describe("MonthPicker", () => {
     expect(dayNamed("Choose Monday, May 25th, 2026")).not.toHaveFocus();
     expect(
       screen.getByRole("group", { name: "Date navigation" }),
-    ).toHaveAttribute("data-pointer-action", POINTER_ACTIONS.datePick);
+    ).toBeInTheDocument();
   });
 
   it("marks the calendar as using theme text so day numbers follow --text", () => {
@@ -490,17 +489,13 @@ describe("MonthPicker", () => {
     );
   });
 
-  it("labels the today control with the t shortcut and pointer-teaching action", async () => {
+  it("labels the today control with the t shortcut in its tooltip", async () => {
     const user = userEvent.setup();
     renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
 
     const todayButton = screen.getByRole("button", {
       name: "Go to this month",
     });
-    expect(todayButton).toHaveAttribute(
-      "data-pointer-action",
-      POINTER_ACTIONS.goToToday,
-    );
 
     await user.hover(todayButton);
 

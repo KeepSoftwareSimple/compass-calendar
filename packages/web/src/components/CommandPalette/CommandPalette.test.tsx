@@ -29,10 +29,7 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import {
-  POINTER_EVENT_ID_ATTRIBUTE,
-  POINTER_EVENT_JUMP_REQUEST,
-} from "@web/shortcuts/keyboard-only/pointer-action";
+import { POINTER_EVENT_JUMP_REQUEST } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { usePointerHintStore } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   eventJumpActions,
@@ -382,9 +379,7 @@ describe("CommandPalette", () => {
     });
     expect(isOpen()).toBe(false);
     expect(usePointerHintStore.getState().latestAttempt).toEqual({
-      actionId: "unknown",
       shortcutKey: "c",
-      performed: true,
       source: "palette",
     });
     unsubscribe();
@@ -643,7 +638,7 @@ describe("CommandPalette", () => {
     store.searchByTitle.mockResolvedValue([dentist]);
     resetOfflineDataStoreForTests(store as never);
     const card = document.createElement("div");
-    card.setAttribute(POINTER_EVENT_ID_ATTRIBUTE, dentist.id);
+    card.setAttribute("data-week-interaction-event-id", dentist.id);
     document.body.appendChild(card);
     const jumps: string[] = [];
     const onJump = (event: Event) => {

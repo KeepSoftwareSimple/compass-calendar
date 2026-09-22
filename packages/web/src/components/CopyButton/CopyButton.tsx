@@ -4,7 +4,6 @@ import classNames from "classnames";
 import { useEffect, useRef, useState } from "react";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import IconButton from "@web/components/IconButton/IconButton";
-import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 
 const COPIED_RESET_MS = 1500;
 const ICON_SIZE = 16;
@@ -62,7 +61,6 @@ export function CopyButton({
 
   return (
     <IconButton
-      {...pointerPassAttributes}
       aria-label={ariaLabel}
       className={classNames(
         "shrink-0 opacity-25 transition-opacity hover:opacity-100 focus-visible:opacity-100",

@@ -383,10 +383,8 @@ describe("WelcomeModal", () => {
     render(<WelcomeModal />);
 
     expect(
-      screen
-        .getByRole("button", { name: "Get started for free" })
-        .closest("[data-pointer-pass]"),
-    ).not.toBeNull();
+      screen.getByRole("button", { name: "Get started for free" }),
+    ).toBeEnabled();
   });
 
   it("expands and collapses FAQ answers on the second screen", async () => {

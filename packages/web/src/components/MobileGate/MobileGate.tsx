@@ -18,7 +18,6 @@ import {
   startGame,
 } from "@web/components/MobileGate/mobile-game.state";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
-import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 
 /**
  * The mobile landing experience: instead of a cold "use a desktop" wall,
@@ -72,7 +71,7 @@ export const MobileGate: React.FC<{
   };
 
   return (
-    <div className="min-h-dvh bg-background" {...pointerPassAttributes}>
+    <div className="min-h-dvh bg-background">
       {game.phase === "intro" && (
         <div className="flex min-h-dvh items-center justify-center p-4">
           <div className="flex w-[400px] max-w-[90vw] flex-col items-center rounded border border-border bg-surface p-8 text-center">

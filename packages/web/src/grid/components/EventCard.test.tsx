@@ -72,7 +72,6 @@ describe("EventCard", () => {
     });
     expect(card).not.toHaveAttribute("aria-disabled");
     expect(card).toHaveAttribute("data-week-interaction-event-id", "event-1");
-    expect(card).toHaveAttribute("data-pointer-action", "event.open");
     expect(screen.getByText("Planning block")).toBeInTheDocument();
 
     const timeLabel = screen.getByText("9 - 10 AM");
@@ -345,7 +344,6 @@ describe("EventCard", () => {
     });
     expect(card).not.toHaveAttribute("aria-disabled");
     expect(card).toHaveAttribute("data-week-interaction-event-id", "event-2");
-    expect(card).toHaveAttribute("data-pointer-action", "event.open");
     expect(card).toHaveAttribute("data-week-interaction-event-type", "all-day");
     expect(screen.getByText("Conference")).toBeInTheDocument();
   });

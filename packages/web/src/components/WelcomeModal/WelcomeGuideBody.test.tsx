@@ -165,15 +165,15 @@ describe("WelcomeGuideBody", () => {
 
     act(() => {
       pointerHintActions.pulse({
-        actionId: "unknown",
         shortcutKey: "1",
+        source: "palette",
       });
     });
 
     expect(hintWrap?.className).toMatch(/c-keycap-flash/);
 
     act(() => {
-      pointerHintActions.pulse({ actionId: "unknown" });
+      pointerHintActions.pulse({ shortcutKey: "?", source: "palette" });
     });
 
     expect(hintWrap?.className).not.toMatch(/c-keycap-flash/);
@@ -184,8 +184,8 @@ describe("WelcomeGuideBody", () => {
 
     act(() => {
       pointerHintActions.pulse({
-        actionId: "unknown",
         shortcutKey: "1",
+        source: "palette",
       });
     });
 

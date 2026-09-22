@@ -6,7 +6,6 @@ import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
-import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
 import { useUpNextEvent } from "./useUpNextEvent";
@@ -102,7 +101,6 @@ export const UpNextBanner: FC = () => {
         <button
           aria-label="Dismiss"
           className="c-focus-ring shrink-0 rounded-xs px-1 text-text-muted hover:text-text"
-          data-pointer-action={POINTER_ACTIONS.upNextDismiss}
           onClick={dismiss}
           type="button"
         >

@@ -106,13 +106,6 @@ describe("BillingGateModal", () => {
     expect(
       screen.queryByRole("button", { name: "Export my data" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start trial" })).toHaveAttribute(
-      "data-pointer-shortcut",
-      "S",
-    );
-    expect(
-      screen.getByRole("button", { name: "Look around first" }),
-    ).toHaveAttribute("data-pointer-shortcut", "L");
   });
 
   it("does not mention a price on the start-trial or subscribe copy", () => {

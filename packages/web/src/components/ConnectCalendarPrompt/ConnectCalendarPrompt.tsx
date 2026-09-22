@@ -12,7 +12,6 @@ import { MODAL_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { connectCalendarPromptActions } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
-import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 
 // Names the consequence rather than just offering an exit, so skipping is an
 // informed choice instead of a reflex. It comes back in a week either way.
@@ -39,7 +38,7 @@ export const ConnectCalendarPrompt: FC = () => {
       skipFocusRestoreRef={skipFocusRestoreRef}
       widthClassName="w-120"
     >
-      <div className="flex w-full flex-col gap-6" {...pointerPassAttributes}>
+      <div className="flex w-full flex-col gap-6">
         <div className="flex w-full flex-col gap-2">
           <h2 className="font-bold text-2xl text-text leading-snug">
             {CONNECT_THE_CALENDAR_YOU_USE}

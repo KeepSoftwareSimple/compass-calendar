@@ -142,8 +142,5 @@ export const selectPointerDraftDateKey = (state: EventJumpState) =>
 export const selectEventJumpAnnouncement = (state: EventJumpState) =>
   state.announcement;
 
-export const selectEventJumpPointerHintKey = (state: EventJumpState) =>
-  state.pointerHintKey;
-
 export const selectJumpableDayPrefixes = (state: EventJumpState) =>
   state.jumpableDayPrefixes;

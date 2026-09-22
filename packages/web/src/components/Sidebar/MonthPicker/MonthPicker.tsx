@@ -10,7 +10,6 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { TrialBadge } from "@web/billing/TrialBadge";
 import { ID_DATEPICKER_SIDEBAR } from "@web/common/constants/web.constants";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
-import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { MonthPickerHint } from "./MonthPickerHint";
 import {
@@ -43,7 +42,7 @@ const DAY_SELECTOR = ".react-datepicker__day";
 const TAB_STOP_DAY_SELECTOR = '.react-datepicker__day[tabindex="0"]';
 
 /** Day clicks are inert: the picker is keyboard driven and the pointer hint
- * teaches the keyboard path on click (data-pointer-action below). */
+ * exposes keyboard shortcuts in tooltips. */
 const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
   const target = event.target;
   if (!(target instanceof Element) || !target.closest(DAY_SELECTOR)) return;
@@ -160,7 +159,6 @@ export const MonthPicker: FC<Props> = ({
       className={`c-month-picker ${monthPickerClassName}`}
       data-testid="Month picker"
       data-picker-unit={unit}
-      data-pointer-action={POINTER_ACTIONS.datePick}
       aria-label="Date navigation"
       onClickCapture={swallowDayPointer}
       onMouseDownCapture={swallowDayPointer}

@@ -14,10 +14,6 @@ import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
-import {
-  POINTER_ACTIONS,
-  pointerShortcutAttributes,
-} from "@web/shortcuts/keyboard-only/pointer-action";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import {
   LIFE_SHORTCUT,
@@ -156,7 +152,6 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
           aria-expanded={isOpen}
           aria-haspopup="listbox"
           aria-controls={isOpen ? dropdownId : undefined}
-          data-pointer-action={POINTER_ACTIONS.switchView}
         >
           <span>{label}</span>
           <CaretDownIcon size={14} aria-hidden="true" />
@@ -204,7 +199,6 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
                 role="option"
                 aria-selected={isSelected}
                 tabIndex={isActive ? 0 : -1}
-                {...pointerShortcutAttributes(option.key)}
                 className={classNames(
                   "c-focus-ring flex w-full cursor-pointer items-center gap-2 whitespace-nowrap px-3 py-2 text-left text-sm transition-colors",
                   isSelected ? "text-accent" : "text-text-muted",

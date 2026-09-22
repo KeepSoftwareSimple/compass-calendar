@@ -34,9 +34,7 @@ export function pulsePaletteTaughtShortcut(
 ): void {
   if (!shortcut || readPointerHintDismissedPermanently()) return;
   pointerHintActions.pulse({
-    actionId: "unknown",
     shortcutKey: shortcut,
-    performed: true,
     source: "palette",
   });
 }

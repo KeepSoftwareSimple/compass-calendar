@@ -375,10 +375,6 @@ describe("OverlayPanel", () => {
     expect(
       within(screen.getByRole("button", { name: "Cancel" })).getByText("Esc"),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Cancel" })).toHaveAttribute(
-      "data-pointer-shortcut",
-      "Esc",
-    );
   });
 
   it("hides a shortcut chip when showShortcut is false", () => {

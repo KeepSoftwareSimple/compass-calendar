@@ -14,7 +14,6 @@ import { getFocusableElements } from "@web/common/utils/focusable-elements";
 import { useOverlayEscape } from "@web/components/OverlayPanel/overlay-escape";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 
 /** Stable, low-cardinality label for a panel's app-lock reason. */
 function lockLabel(name: string | undefined): string {
@@ -338,7 +337,6 @@ export const OverlayPanelActionButton = forwardRef<
         onPointerEnter?.(event);
       }}
       {...buttonProps}
-      {...(shortcut ? pointerShortcutAttributes(shortcut) : {})}
     >
       {children}
       {shortcut && showShortcut ? (

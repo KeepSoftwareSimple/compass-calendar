@@ -102,30 +102,30 @@ describe("TooltipWrapper", () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
-  it("annotates a single-key shortcut for blocked-click teaching", () => {
+  it("shows a single-key shortcut in the tooltip", async () => {
+    const user = userEvent.setup();
     render(
-      <TooltipWrapper shortcut="?">
+      <TooltipWrapper description="Help" shortcut="?">
         <button type="button">Shortcuts</button>
       </TooltipWrapper>,
     );
 
-    expect(screen.getByRole("button", { name: /shortcuts/i })).toHaveAttribute(
-      "data-pointer-shortcut",
-      "?",
-    );
+    await user.hover(screen.getByRole("button", { name: /shortcuts/i }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("?");
   });
 
-  it("annotates a chord shortcut as JSON for blocked-click teaching", () => {
+  it("shows a chord shortcut in the tooltip", async () => {
+    const user = userEvent.setup();
     render(
-      <TooltipWrapper shortcut={["Mod", "K"]}>
+      <TooltipWrapper description="Open" shortcut={["Mod", "K"]}>
         <button type="button">Palette</button>
       </TooltipWrapper>,
     );
 
-    expect(screen.getByRole("button", { name: /palette/i })).toHaveAttribute(
-      "data-pointer-shortcut",
-      '["Mod","K"]',
-    );
+    await user.hover(screen.getByRole("button", { name: /palette/i }));
+    const tooltip = await screen.findByRole("tooltip");
+    expect(tooltip).toHaveTextContent("Open");
+    expect(tooltip).toHaveTextContent("K");
   });
 
   it("still opens on hover when the child is a function component without forwardRef", async () => {
@@ -148,10 +148,6 @@ describe("TooltipWrapper", () => {
     await user.hover(screen.getByRole("button", { name: "Duplicate" }));
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toBe("DuplicateD");
-    expect(screen.getByRole("button", { name: "Duplicate" })).toHaveAttribute(
-      "data-pointer-shortcut",
-      '["Mod","D"]',
-    );
   });
 
   it("does not render tooltip content until opened", async () => {
