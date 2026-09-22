@@ -5,6 +5,11 @@ export const EMAIL_SEND_STATUS_NEXT_ATTEMPT_INDEX =
 
 export const EMAIL_SEND_USER_ID_INDEX = "email_send_user_id";
 
+export const EMAIL_SEND_PROVIDER_MESSAGE_ID_INDEX =
+  "email_send_provider_message_id";
+
+export const EMAIL_EVENT_RETENTION_SECONDS = 35 * 24 * 60 * 60;
+
 type EmailSendIndex = {
   name?: string;
   key?: Record<string, unknown>;
@@ -46,4 +51,24 @@ export async function ensureEmailIndexes(): Promise<void> {
       { name: EMAIL_SEND_USER_ID_INDEX },
     );
   }
+
+  if (
+    !existing.some((index) => indexKeyMatches(index, { providerMessageId: 1 }))
+  ) {
+    await mongoService.emailSend.createIndex(
+      { providerMessageId: 1 },
+      {
+        name: EMAIL_SEND_PROVIDER_MESSAGE_ID_INDEX,
+        sparse: true,
+      },
+    );
+  }
+
+  await mongoService.emailEvent.createIndex(
+    { receivedAt: 1 },
+    {
+      name: "email_event_received_at_ttl",
+      expireAfterSeconds: EMAIL_EVENT_RETENTION_SECONDS,
+    },
+  );
 }

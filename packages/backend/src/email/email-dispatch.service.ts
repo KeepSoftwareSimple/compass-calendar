@@ -1,6 +1,7 @@
 import { Logger } from "@core/logger/winston.logger";
 import { normalizeEmail } from "@core/util/email.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { emailAnalytics } from "@backend/email/email.analytics";
 import {
   EMAIL_SEND_BATCH_SIZE,
   EMAIL_SEND_CLAIM_LEASE_MS,
@@ -8,9 +9,18 @@ import {
   EMAIL_SEND_PROVIDER_SPACING_MS,
   emailSendBackoffMs,
 } from "@backend/email/email.constants";
+import {
+  startEmailSendHeartbeat,
+  stopEmailSendHeartbeat,
+} from "@backend/email/email.heartbeat";
 import { renderWelcomeEmail } from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
+import {
+  buildUnsubscribeTokenForUser,
+  buildUnsubscribeUrls,
+  isEmailSequenceStopped,
+} from "@backend/email/email-unsubscribe";
 import { buildEmailProvider } from "@backend/email/providers/email.client";
 import { type EmailProvider } from "@backend/email/providers/email.port";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
@@ -64,6 +74,7 @@ export class EmailDispatchService {
     if (!isWelcomeEmailEnabled() || this.#pollTimer) {
       return;
     }
+    startEmailSendHeartbeat();
     this.#runCycle();
     this.#pollTimer = setInterval(() => {
       this.#runCycle();
@@ -71,6 +82,7 @@ export class EmailDispatchService {
   };
 
   stopPolling = async (): Promise<void> => {
+    stopEmailSendHeartbeat();
     if (this.#pollTimer) {
       clearInterval(this.#pollTimer);
       this.#pollTimer = undefined;
@@ -114,8 +126,19 @@ export class EmailDispatchService {
   };
 
   async #dispatchRow(row: EmailSendRecord): Promise<void> {
-    const skip = (reason: string) =>
-      emailSendRepository.markSkipped(row._id, reason);
+    const userIdHex = row.userId.toHexString();
+    const skip = async (reason: string) => {
+      await emailSendRepository.markSkipped(row._id, reason);
+      void emailAnalytics.capture({
+        event: "email_skipped",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email skipped", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
+    };
 
     const step = findWelcomeStep(row.stepKey);
     if (!step) {
@@ -134,6 +157,11 @@ export class EmailDispatchService {
       return;
     }
 
+    if (isEmailSequenceStopped(user.emailPreferences)) {
+      await emailSendRepository.markCanceled(row._id);
+      return;
+    }
+
     if (!isAllowlistedRecipient(user.email)) {
       await skip("Recipient not allowlisted");
       return;
@@ -145,7 +173,27 @@ export class EmailDispatchService {
       return;
     }
 
-    const rendered = renderWelcomeEmail(row.stepKey, content);
+    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
+    const unsubscribe =
+      unsubscribeToken !== null
+        ? buildUnsubscribeUrls(unsubscribeToken)
+        : undefined;
+    const rendered = renderWelcomeEmail(
+      row.stepKey,
+      content,
+      unsubscribe
+        ? {
+            httpsUrl: unsubscribe.httpsUrl,
+            listUnsubscribeHeader: unsubscribe.listUnsubscribeHeader,
+          }
+        : undefined,
+    );
+
+    const headers: Record<string, string> = {};
+    if (unsubscribe) {
+      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
+      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+    }
 
     try {
       const result = await this.getProvider().send({
@@ -154,9 +202,18 @@ export class EmailDispatchService {
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
-        headers: {},
+        headers,
       });
       await emailSendRepository.markSent(row._id, result.messageId);
+      void emailAnalytics.capture({
+        event: "email_sent",
+        userId: userIdHex,
+        step: row.stepKey,
+      });
+      logger.info("Welcome email sent", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+      });
     } catch (error) {
       const message = errorMessage(error);
       if (isInvalidRecipientError(error)) {
@@ -167,7 +224,23 @@ export class EmailDispatchService {
       const nextAttemptAt = new Date(
         Date.now() + emailSendBackoffMs(row.attemptCount + 1),
       );
-      await emailSendRepository.recordFailure(row._id, message, nextAttemptAt);
+      const updated = await emailSendRepository.recordFailure(
+        row._id,
+        message,
+        nextAttemptAt,
+      );
+      if (updated?.status === "failed") {
+        void emailAnalytics.capture({
+          event: "email_failed",
+          userId: userIdHex,
+          step: row.stepKey,
+        });
+      }
+      logger.warn("Welcome email send failed", {
+        rowId: row._id,
+        stepKey: row.stepKey,
+        message,
+      });
     }
   }
 }

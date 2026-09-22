@@ -1,5 +1,8 @@
 import { type ObjectId } from "mongodb";
-import { type Schema_UserBilling } from "@core/types/user.types";
+import {
+  type Schema_User,
+  type Schema_UserBilling,
+} from "@core/types/user.types";
 import { type InsertEmailSendInput } from "@backend/email/email-send.repository";
 
 export type ScheduleProfile = "real" | "fast";
@@ -7,6 +10,7 @@ export type ScheduleProfile = "real" | "fast";
 export type WelcomeSequenceUser = {
   hasConnectedCalendar: boolean;
   billing?: Schema_UserBilling;
+  emailPreferences?: Schema_User["emailPreferences"];
 };
 
 export type EmailStep = {

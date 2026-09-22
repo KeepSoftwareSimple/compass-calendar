@@ -114,6 +114,13 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          EMAIL_PROVIDER: ${{ vars.EMAIL_PROVIDER }}
+          EMAIL_FROM: ${{ vars.EMAIL_FROM }}
+          EMAIL_SCHEDULE_PROFILE: ${{ vars.EMAIL_SCHEDULE_PROFILE }}
+          EMAIL_ALLOWLIST: ${{ vars.EMAIL_ALLOWLIST }}
+          EMAIL_API_KEY: ${{ secrets.EMAIL_API_KEY }}
+          EMAIL_WEBHOOK_SECRET: ${{ secrets.EMAIL_WEBHOOK_SECRET }}
+          EMAIL_UNSUBSCRIBE_SECRET: ${{ secrets.EMAIL_UNSUBSCRIBE_SECRET }}
         run: |
           echo "Deploying Compass ${RELEASE_TAG} (image version: ${IMAGE_VERSION}) to ${{ inputs.environment }}"
           # Only "production" ever runs the production runtime.nodeEnv; every
@@ -257,6 +264,16 @@ jobs:
                 printf '%s\n' "  bypassEmails: [${bypass_seq}]"
                 echo "Billing config: ${BILLING_BYPASS_EMAILS} on the bypass allowlist" >&2
               fi
+            fi
+            # Hosted cloud only. staging-selfhosted must omit this block even
+            # when repo-level email secrets exist. Log to stderr — this group
+            # is piped into compass.yaml.
+            if { [ "${{ inputs.environment }}" = "production" ] || [ "${{ inputs.environment }}" = "staging-cloud" ]; }; then
+              # shellcheck source=.github/scripts/deploy-write-email-block.sh
+              . .github/scripts/deploy-write-email-block.sh
+              write_email_block
+            else
+              echo "Email config: omitting email block (environment=${{ inputs.environment }})" >&2
             fi
             printf '%s\n' \
               'sync:' \

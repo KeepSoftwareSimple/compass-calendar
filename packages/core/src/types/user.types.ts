@@ -48,6 +48,17 @@ export interface Schema_User {
    * for this schema.
    */
   billing?: Schema_UserBilling;
+  /**
+   * Welcome-sequence email preferences. Optional and absent for users who
+   * existed before this field shipped. Either timestamp stops the dispatch
+   * loop from sending further queued rows.
+   */
+  emailPreferences?: {
+    /** The recipient clicked the unsubscribe link. */
+    unsubscribedAt?: Date;
+    /** The provider reported a hard bounce or complaint. */
+    suppressedAt?: Date;
+  };
 }
 
 /**
