@@ -439,7 +439,6 @@ describe("Event Command Contracts", () => {
         "DUPLICATE_EVENT_ID",
         "INVALID_SCHEDULE",
         "PROVIDER_FAILURE",
-        "GOOGLE_REVOKED",
         "CONNECTION_REVOKED",
         "MAINTENANCE",
       ] as const;

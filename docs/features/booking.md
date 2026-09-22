@@ -556,7 +556,7 @@ Authenticated (host session + writable billing, same as event writes):
   are omitted. Concurrent claims do not double-report. A failed read
   does not move the watermark.
 - Enabling without a healthy calendar connection is a typed `403`
-  (`CALENDAR_NOT_CONNECTED`; `GOOGLE_NOT_CONNECTED` remains an alias).
+  (`CALENDAR_NOT_CONNECTED`; `CALENDAR_NOT_CONNECTED` remains an alias).
 - Enabling with zero weekly hours is a typed `400` (`AVAILABILITY_REQUIRED`).
 
 ## Out of v1 / v1.1

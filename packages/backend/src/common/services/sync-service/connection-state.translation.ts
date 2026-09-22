@@ -11,7 +11,7 @@ import {
 /**
  * Translate the sync service's multi-connection health model into the single
  * `GoogleConnectionState` enum the browser already reads from
- * `metadata.google.connectionState`.
+ * the aggregate Google connection state derived from `connections[]`.
  *
  * The enum stays Google-specific during the overlap: only Google connections
  * collapse into it. Per-connection state lives on each summary. Keeping this
@@ -88,7 +88,7 @@ export function toGoogleConnectionState(
   return "NOT_CONNECTED";
 }
 
-export function toGoogleSyncConnectionSummary(
+export function toSyncConnectionSummary(
   connection: ProviderConnection,
 ): SyncConnectionSummary {
   return {

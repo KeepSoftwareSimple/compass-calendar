@@ -130,7 +130,7 @@ describe("UserMetadataService", () => {
       expect(metadata.sync?.importGCal).toBe("RESTART");
     });
 
-    it("returns connections[] with provider and keeps metadata.google", async () => {
+    it("returns connections[] with provider on fetchUserMetadata", async () => {
       const user = await UserDriver.createUser();
       const userId = user._id.toString();
       const google = providerConnection("healthy");
@@ -151,16 +151,7 @@ describe("UserMetadataService", () => {
           connectionState: "HEALTHY",
         }),
       ]);
-      expect(metadata.google).toEqual({
-        connectionState: "HEALTHY",
-        connections: [
-          expect.objectContaining({
-            id: google.id,
-            provider: "google",
-            connectionState: "HEALTHY",
-          }),
-        ],
-      });
+      expect(metadata).not.toHaveProperty("google");
     });
 
     // assessGoogleMetadata's local fallback (no Sync client configured) is

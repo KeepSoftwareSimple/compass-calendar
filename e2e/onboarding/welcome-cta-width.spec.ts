@@ -13,7 +13,11 @@ test("keeps Google, email signup, and explore buttons the same width", async ({
       contentType: "application/json",
       body: JSON.stringify({
         version: E2E_APP_CONFIG_VERSION,
-        google: { isConfigured: true },
+        providers: {
+          google: { signIn: true, connect: true },
+          microsoft: { signIn: false, connect: false },
+          apple: { signIn: false, connect: false },
+        },
       }),
     });
   });

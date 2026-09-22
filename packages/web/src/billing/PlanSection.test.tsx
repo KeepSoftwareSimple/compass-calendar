@@ -115,7 +115,11 @@ const renderPlan = async () => {
     defaultOptions: { queries: { retry: false } },
   });
   queryClient.setQueryData(billingQueryKeys.config, {
-    google: { isConfigured: false },
+    providers: {
+      google: { signIn: false, connect: false },
+      microsoft: { signIn: false, connect: false },
+      apple: { signIn: false, connect: false },
+    },
     billing: {
       isConfigured: true,
       enforcement: true,

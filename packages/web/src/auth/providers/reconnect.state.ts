@@ -1,7 +1,7 @@
 /**
  * Session-scoped reconnect-required overrides for connected accounts.
  *
- * Sync metadata can lag behind a live `410 GOOGLE_REVOKED` (or briefly report
+ * Sync metadata can lag behind a live `410 CONNECTION_REVOKED` (or briefly report
  * healthy/catchingUp while credentials are already dead). This store keeps a
  * durable per-connection truth so toast, sidebar, Settings, and write gates stay
  * congruent until metadata catches up or the user reconnects.
@@ -161,7 +161,7 @@ export function clearAllGoogleReconnectRequired(): void {
  *
  * Do **not** clear an override just because metadata still reports healthy /
  * catchingUp — that lag is exactly why the session override exists after a
- * live `410 GOOGLE_REVOKED`. A confirmed OAuth `connected` round-trip clears
+ * live `410 CONNECTION_REVOKED`. A confirmed OAuth `connected` round-trip clears
  * the rows that completed; Disconnect removes the connection row.
  */
 export function syncReconnectRequiredFromConnections(

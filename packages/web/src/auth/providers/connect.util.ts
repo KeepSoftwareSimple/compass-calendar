@@ -4,7 +4,7 @@ import {
   type ProviderKind,
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   attentionFallbackCopy,
   connectionHealthCopy,
@@ -41,7 +41,7 @@ const CONSENT_REQUIRED_STATUS: SyncStatus = {
 };
 
 const connectionNeedsAdminConsent = (
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): boolean => connection?.stateReason === "consentRequired";
 
 // Settings lists every account as its own row (email visible right above this
@@ -60,7 +60,7 @@ const reconnectStatusFor = (
 
 /** Sync disconnected / product reconnect / session override after a live 410. */
 export const connectionHasReconnectRequired = (
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): boolean =>
   connection?.connectionState === "RECONNECT_REQUIRED" ||
   connection?.state === "disconnected" ||
@@ -73,7 +73,7 @@ export const connectionHasReconnectRequired = (
 /** Aggregate UI state or a specific connection needs reconnect. */
 export const connectionNeedsReconnect = (
   state: GoogleUiState,
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): boolean =>
   state === "RECONNECT_REQUIRED" || connectionHasReconnectRequired(connection);
 
@@ -258,7 +258,7 @@ export const calendarReconnectBannerMessage = (
 };
 
 const delayedSettingsStatus = (
-  connection: GoogleSyncConnectionSummary,
+  connection: SyncConnectionSummary,
   nowMs: number,
 ): SyncStatus => {
   const text =
@@ -273,7 +273,7 @@ const delayedSettingsStatus = (
 };
 
 const reauthSettingsStatus = (
-  connection: GoogleSyncConnectionSummary,
+  connection: SyncConnectionSummary,
 ): SyncStatus => {
   const text =
     connectionHealthCopy({
@@ -286,7 +286,7 @@ const reauthSettingsStatus = (
 };
 
 const catchingUpSettingsStatus = (
-  connection: GoogleSyncConnectionSummary,
+  connection: SyncConnectionSummary,
   nowMs: number,
 ): SyncStatus => {
   if (!connection.lastHealthyAt) {
@@ -311,7 +311,7 @@ export type GoogleSyncStatusOptions = {
 // over healthy/catchingUp so a stale Sync summary cannot contradict a toast.
 export const getGoogleSyncStatus = (
   state: GoogleUiState,
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
   nowMs: number = Date.now(),
   options: GoogleSyncStatusOptions = {},
 ): SyncStatus => {
@@ -394,7 +394,7 @@ export const getGoogleSyncStatus = (
  * never cleared.
  */
 export const isFirstImportInProgress = (
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): boolean =>
   Boolean(
     connection &&
@@ -410,7 +410,7 @@ export const isFirstImportInProgress = (
  * account's delayed catch-up (which has lastHealthyAt).
  */
 export const isFirstImportFailed = (
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): boolean =>
   Boolean(
     connection &&
@@ -437,7 +437,7 @@ const BANNER_KIND_RANK: Record<CalendarConnectionBannerKind, number> = {
 // stays on the grid overlay, not this banner.
 export const getCalendarConnectionBannerKind = (
   state: GoogleUiState,
-  connection?: GoogleSyncConnectionSummary | null,
+  connection?: SyncConnectionSummary | null,
 ): CalendarConnectionBannerKind | null => {
   if (connectionNeedsAdminConsent(connection)) return "consentRequired";
   if (connectionNeedsReconnect(state, connection)) return "reconnect";
@@ -449,7 +449,7 @@ export const getCalendarConnectionBannerKind = (
 };
 
 export type CalendarBannerTarget = {
-  connection: GoogleSyncConnectionSummary;
+  connection: SyncConnectionSummary;
   kind: CalendarConnectionBannerKind;
 };
 
@@ -460,7 +460,7 @@ export type CalendarBannerTarget = {
  * needs help.
  */
 export const pickCalendarBannerTarget = (
-  connections: readonly GoogleSyncConnectionSummary[],
+  connections: readonly SyncConnectionSummary[],
 ): CalendarBannerTarget | null => {
   let best: (CalendarBannerTarget & { rank: number }) | null = null;
   for (const connection of connections) {
@@ -492,7 +492,7 @@ export const getSidebarSyncStatus = ({
   refreshGaveUp = false,
   refreshInFlight = false,
 }: {
-  connection?: GoogleSyncConnectionSummary | null;
+  connection?: SyncConnectionSummary | null;
   isConnecting: boolean;
   state: GoogleUiState;
   nowMs?: number;
@@ -599,7 +599,7 @@ export const getAggregateSidebarSyncStatus = ({
   refreshGaveUp = false,
   refreshInFlight = false,
 }: {
-  connections: readonly GoogleSyncConnectionSummary[];
+  connections: readonly SyncConnectionSummary[];
   isConnecting: boolean;
   state: GoogleUiState;
   nowMs?: number;

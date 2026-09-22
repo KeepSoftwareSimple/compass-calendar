@@ -1,6 +1,6 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { ConnectionIdSchema } from "@core/types/sync/identity.contracts";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { AuthApi } from "@web/api/auth.api";
 import * as Track from "@web/auth/posthog/track";
@@ -13,9 +13,10 @@ import { useConnectProvider } from "./useConnectProvider";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary>,
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary>,
+): SyncConnectionSummary => ({
   id: "connection-primary",
+  provider: "google",
   state: "actionRequired",
   stateReason: "authorizationRevoked",
   lastSyncedAt: null,
@@ -29,10 +30,7 @@ const connection = (
 describe("useConnectProvider", () => {
   beforeEach(() => {
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [connection({})],
-      },
+      connections: [connection({ connectionState: "RECONNECT_REQUIRED" })],
     });
   });
 
@@ -91,17 +89,15 @@ describe("useConnectProvider", () => {
 
   it("pre-fills Apple reconnect email when authorization expired", async () => {
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [
-          connection({
-            id: "connection-apple",
-            provider: "apple",
-            stateReason: "authorizationExpired",
-            accountEmail: "host@icloud.com",
-          }),
-        ],
-      },
+      connections: [
+        connection({
+          id: "connection-apple",
+          provider: "apple",
+          connectionState: "RECONNECT_REQUIRED",
+          stateReason: "authorizationExpired",
+          accountEmail: "host@icloud.com",
+        }),
+      ],
     });
 
     const { wrapper } = createStoreWrapper();
@@ -154,7 +150,8 @@ describe("useConnectProvider", () => {
   });
 
   it("binds reconnect to the scoped account's connection id", async () => {
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -171,6 +168,7 @@ describe("useConnectProvider", () => {
     await waitFor(() => {
       expect(beginSpy).toHaveBeenCalledWith({
         connectionId: "connection-second",
+        provider: "google",
       });
     });
 

@@ -244,7 +244,7 @@ describe("SSE Server", () => {
         publish: (userId) =>
           sseServerModule.sseServer.publishSyncStatus(userId, {
             status: "attention",
-            code: "GOOGLE_REVOKED",
+            code: "CONNECTION_REVOKED",
             retryable: false,
           }),
       },

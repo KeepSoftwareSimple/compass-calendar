@@ -6,7 +6,7 @@ import {
 import { providerConnection } from "@backend/__tests__/factories/provider-connection.factory";
 import {
   toGoogleConnectionState,
-  toGoogleSyncConnectionSummary,
+  toSyncConnectionSummary,
 } from "./connection-state.translation";
 import { describe, expect, it } from "bun:test";
 
@@ -105,7 +105,7 @@ describe("toGoogleConnectionState", () => {
   });
 });
 
-describe("toGoogleSyncConnectionSummary", () => {
+describe("toSyncConnectionSummary", () => {
   it("maps id, state, timestamps, account email, and the connection's own product state", () => {
     const record = {
       ...connection("delayed", "workOverdue"),
@@ -118,7 +118,7 @@ describe("toGoogleSyncConnectionSummary", () => {
       lastSyncedAt: "2026-07-24T10:00:00.000Z" as DateTime,
       lastHealthyAt: "2026-07-23T10:00:00.000Z" as DateTime,
     };
-    expect(toGoogleSyncConnectionSummary(record)).toEqual({
+    expect(toSyncConnectionSummary(record)).toEqual({
       id: "c-summary" as ConnectionId,
       provider: "google",
       state: "delayed",
@@ -138,20 +138,16 @@ describe("toGoogleSyncConnectionSummary", () => {
     const granted = connection("healthy", null, {
       capabilities: ["readEvents", "writeEvents", "suggestContacts"],
     });
-    expect(toGoogleSyncConnectionSummary(granted).canSuggestContacts).toBe(
-      true,
-    );
+    expect(toSyncConnectionSummary(granted).canSuggestContacts).toBe(true);
 
     const notGranted = connection("healthy", null, {
       capabilities: ["readEvents", "writeEvents"],
     });
-    expect(toGoogleSyncConnectionSummary(notGranted).canSuggestContacts).toBe(
-      false,
-    );
+    expect(toSyncConnectionSummary(notGranted).canSuggestContacts).toBe(false);
   });
 
   it("preserves consentRequired stateReason on the web-facing summary", () => {
-    const summary = toGoogleSyncConnectionSummary(
+    const summary = toSyncConnectionSummary(
       connection("actionRequired", "consentRequired", {
         provider: "microsoft",
       }),

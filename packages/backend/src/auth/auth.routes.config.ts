@@ -80,28 +80,6 @@ export class AuthRoutes extends CommonRoutesConfig {
         authController.disconnectConnection(req, res);
       });
 
-    // Google aliases kept for one release. They force provider: google.
-    this.app
-      .route(`/api/auth/google/connect/begin`)
-      .all(requireSession)
-      .post((req, res) => {
-        authController.beginGoogleConnection(req, res);
-      });
-
-    this.app
-      .route(`/api/auth/google/connect/:connectionId`)
-      .all(requireSession)
-      .delete((req, res) => {
-        authController.disconnectGoogleConnection(req, res);
-      });
-
-    this.app
-      .route(`/api/auth/google/sync/refresh`)
-      .all(requireSession)
-      .post((req, res) => {
-        authController.refreshGoogleSync(req, res);
-      });
-
     this.app
       .route(APPLE_SIGNIN_FORM_POST_PATH)
       .post(

@@ -135,7 +135,7 @@ export const createGoogleSyncRefreshCoordinator = (
 };
 
 const coordinator = createGoogleSyncRefreshCoordinator(async () => {
-  const result = await AuthApi.refreshGoogleSync();
+  const result = await AuthApi.refreshConnections();
   await refreshUserMetadata({ force: true });
   return result;
 });

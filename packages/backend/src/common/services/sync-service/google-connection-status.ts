@@ -5,7 +5,7 @@ import {
 } from "@core/types/user.types";
 import {
   toGoogleConnectionState,
-  toGoogleSyncConnectionSummary,
+  toSyncConnectionSummary,
 } from "./connection-state.translation";
 import {
   type SyncPrincipal,
@@ -48,7 +48,7 @@ export async function resolveGoogleConnectionFromSync(
     );
     return {
       connectionState: toGoogleConnectionState(connections),
-      connections: connections.map(toGoogleSyncConnectionSummary),
+      connections: connections.map(toSyncConnectionSummary),
     };
   }
 

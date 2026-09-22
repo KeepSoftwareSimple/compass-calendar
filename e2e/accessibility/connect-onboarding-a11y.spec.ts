@@ -52,7 +52,6 @@ async function prepareSignedInZeroConnectionsPage(
     if (path.endsWith("/api/user/metadata")) {
       return route.fulfill(
         jsonResponse({
-          google: { connectionState: "NOT_CONNECTED", connections: [] },
           connections: [],
         }),
       );
@@ -62,7 +61,6 @@ async function prepareSignedInZeroConnectionsPage(
       return route.fulfill(
         jsonResponse({
           version: E2E_APP_CONFIG_VERSION,
-          google: { isConfigured: true },
           providers: {
             google: { signIn: true, connect: true },
             microsoft: { signIn: true, connect: true },

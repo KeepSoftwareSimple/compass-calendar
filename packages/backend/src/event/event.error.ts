@@ -24,7 +24,6 @@ const STATUS_BY_CODE: Record<EventMutationErrorCode, Status> = {
   // 410 Gone, not 401: SuperTokens treats every 401 as a Compass session
   // expiry and retries the request after refresh. Google revocation must not
   // share that status or event creates loop until maxRetryAttemptsForSessionRefresh.
-  GOOGLE_REVOKED: Status.GONE,
   CONNECTION_REVOKED: Status.GONE,
   MAINTENANCE: Status.SERVICE_UNAVAILABLE,
   MOVE_UNSUPPORTED: Status.BAD_REQUEST,
@@ -49,7 +48,6 @@ const RETRYABLE_BY_CODE: Record<EventMutationErrorCode, boolean> = {
   INVALID_OCCURRENCE_ID: false,
   PROVIDER_FAILURE: true,
   SYNC_UNAVAILABLE: true,
-  GOOGLE_REVOKED: false,
   CONNECTION_REVOKED: false,
   MAINTENANCE: true,
   MOVE_UNSUPPORTED: false,

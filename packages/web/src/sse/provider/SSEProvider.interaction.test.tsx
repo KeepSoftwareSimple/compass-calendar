@@ -44,6 +44,14 @@ const HookHost = () => {
   return null;
 };
 
+const googleMetadata = (
+  connectionState: ReturnType<typeof createMockConnection>["connectionState"],
+  extra: Partial<UserMetadata> = {},
+): UserMetadata => ({
+  connections: [createMockConnection("test@example.com", { connectionState })],
+  ...extra,
+});
+
 const fireUserMetadata = (metadata: UserMetadata) => {
   fireMessage({
     type: "userMetadataChanged",
@@ -65,15 +73,14 @@ describe("useSyncSSE", () => {
     render(<HookHost />);
 
     act(() => {
-      fireUserMetadata({
-        google: { connectionState: "ATTENTION" },
-        sync: { importGCal: "RESTART" },
-      });
+      fireUserMetadata(
+        googleMetadata("ATTENTION", { sync: { importGCal: "RESTART" } }),
+      );
     });
 
-    expect(useUserMetadataStore.getState().current).toEqual({
-      google: { connectionState: "ATTENTION" },
+    expect(useUserMetadataStore.getState().current).toMatchObject({
       sync: { importGCal: "RESTART" },
+      connections: [expect.objectContaining({ connectionState: "ATTENTION" })],
     });
   });
 
@@ -81,15 +88,14 @@ describe("useSyncSSE", () => {
     render(<HookHost />);
 
     act(() => {
-      fireUserMetadata({
-        google: { connectionState: "IMPORTING" },
-        sync: { importGCal: "IMPORTING" },
-      });
+      fireUserMetadata(
+        googleMetadata("IMPORTING", { sync: { importGCal: "IMPORTING" } }),
+      );
     });
 
-    expect(useUserMetadataStore.getState().current).toEqual({
-      google: { connectionState: "IMPORTING" },
+    expect(useUserMetadataStore.getState().current).toMatchObject({
       sync: { importGCal: "IMPORTING" },
+      connections: [expect.objectContaining({ connectionState: "IMPORTING" })],
     });
   });
 
@@ -110,7 +116,7 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "HEALTHY" } });
+      fireUserMetadata(googleMetadata("HEALTHY"));
     });
 
     await waitFor(() => {
@@ -123,7 +129,7 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "ATTENTION" } });
+      fireUserMetadata(googleMetadata("ATTENTION"));
     });
 
     await waitFor(() => {
@@ -136,7 +142,7 @@ describe("useSyncSSE", () => {
 
     act(() => {
       fireMessage({ type: "syncStatusChanged", sync: { status: "syncing" } });
-      fireUserMetadata({ google: { connectionState: "IMPORTING" } });
+      fireUserMetadata(googleMetadata("IMPORTING"));
     });
 
     await waitFor(() => {
@@ -226,7 +232,11 @@ describe("useSyncSSE", () => {
     act(() => {
       fireMessage({
         type: "syncStatusChanged",
-        sync: { status: "attention", code: "GOOGLE_REVOKED", retryable: false },
+        sync: {
+          status: "attention",
+          code: "CONNECTION_REVOKED",
+          retryable: false,
+        },
       });
     });
 
@@ -247,7 +257,6 @@ describe("useSyncSSE", () => {
     });
     const microsoftId = ConnectionIdSchema.parse(microsoft.id);
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [google] },
       connections: [google, microsoft],
     });
     setSyncingSyncIndicatorOverride();

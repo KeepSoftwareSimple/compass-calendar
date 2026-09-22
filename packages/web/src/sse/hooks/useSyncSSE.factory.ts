@@ -57,10 +57,7 @@ export const createUseSyncSSE = (dependencies: SyncSSEDependencies) => {
       // attention
       clearGoogleSyncIndicatorOverride();
 
-      if (
-        message.sync.code === "CONNECTION_REVOKED" ||
-        message.sync.code === "GOOGLE_REVOKED"
-      ) {
+      if (message.sync.code === "CONNECTION_REVOKED") {
         dependencies.handleConnectionRevoked({
           connectionId: revokedConnectionId(message),
         });
@@ -102,8 +99,10 @@ export const createUseSyncSSE = (dependencies: SyncSSEDependencies) => {
         // product enum. Never clear syncing from local optimism alone (S41).
         const connections = findSyncConnectionsFromMetadata(metadata);
         const syncInProgress = hasTransientSyncConnection(connections);
-        const enumImporting = metadata.google?.connectionState === "IMPORTING";
-        if (!syncInProgress && !enumImporting) {
+        const importing = connections.some(
+          (connection) => connection.connectionState === "IMPORTING",
+        );
+        if (!syncInProgress && !importing) {
           clearSyncingSyncIndicatorOverride();
         }
       },
