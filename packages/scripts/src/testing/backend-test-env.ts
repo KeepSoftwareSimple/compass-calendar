@@ -25,6 +25,9 @@ export function applyBackendTestEnv(mongoUri: string): void {
   // an otherwise green run. Any DEBUG_COLORS value makes `debug` skip the tty
   // probe entirely.
   process.env["DEBUG_COLORS"] = "0";
+  // Bun util/colors (via node:assert in follow-redirects) can hit the same
+  // piped-stderr epoll_ctl race when mongodb-memory-server loads in parallel.
+  process.env["NO_COLOR"] = "1";
 }
 
 export function backendTestSpawnEnv(
