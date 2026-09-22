@@ -141,30 +141,33 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Sidebar next-shortcut selector: `packages/web/src/shortcuts/tips/selectShortcutHint.ts`
 - What counts as a hint impression: `packages/web/src/shortcuts/tips/shortcut-telemetry.ts`
 - Sidebar tip progress (demonstrated primitives): `packages/web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
+- Sidebar tip mute (`compass.shortcuts.tips-muted`): `packages/web/src/shortcuts/tips/shortcut-tips-muted.store.ts`, `ShortcutTipIndicator.tsx`
 - Global shell shortcuts (sidebar `]`, palette, settings, navigation): `packages/web/src/shortcuts/useGlobalShortcuts.ts`
 - Event-jump chips (`H`): `packages/web/src/shortcuts/shift-hint/`
 - Hide/show focused event (`x`): `packages/web/src/shortcuts/hide-event/useHideEventShortcut.ts`
-- Pointer suppression (mouse permanently inert; keyboard clicks pass): `packages/web/src/shortcuts/keyboard-only/`
+- Palette pointer-hint store and grid bridge: `packages/web/src/shortcuts/keyboard-only/`
 - Escape ownership (modals/form before lower handlers): `packages/web/src/shortcuts/escape-ownership.ts`
 - App lock (suppress shortcuts while a modal owns the UI): `packages/web/src/shortcuts/app-lock.ts`
 - Event title search in the command palette: `packages/web/src/events/queries/useEventSearch.ts`, `packages/web/src/components/CommandPalette/event-search.util.ts`
 - Typed-date parser and go-to-date announcement: `parseUserDate` / `goToDateAnnouncement` in `packages/web/src/common/utils/datetime/web.date.util.ts`, `packages/web/src/shortcuts/go-to-date/useGoToDateShortcut.ts`
 - Palette-teaches hint: `packages/web/src/components/CommandPalette/palette-shortcut-telemetry.ts`, `packages/web/src/components/CommandPalette/hooks/usePaletteLegendCmdItems.ts`
 - Public printable `/shortcuts` catalog: `packages/web/src/views/NotFound/ShortcutsCatalogView.tsx` (snapshot in `shortcuts-catalog.json`; stays off a new `import()` root)
-- Mount point for global shortcuts and the palette `PointerHint`: `packages/web/src/components/RootShell/RootShell.tsx`
-- Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md)
+- Mount point for global shortcuts and onboarding surface selection: `packages/web/src/components/RootShell/RootShell.tsx`, `onboarding-surface.ts`
+- Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md), [Onboarding](../acceptance/onboarding.md)
 
 ## Welcome, Showcase, And First-Event Handoff
 
 Anonymous calendar onboarding (welcome modal with an opt-in practice link,
 the Block Party practice game, first-event prompt) lives under
 `packages/web/src/components/{WelcomeModal,ShortcutShowcase,FirstEventPrompt}`.
-Game pieces: `game.tasks.ts` (task queue, scoring constants, seed board),
-`game.state.ts` (pure run reducer), `practice.state.ts` (sandbox board),
-`GameHud.tsx` / `GameEndScreen.tsx` (HUD and scoreboard),
-`GameSimOverlays.tsx` (simulated legend / page-jump / palette overlays).
-The flow, its entry points, and the storage contract are documented in
-[Frontend Runtime Flow](../frontend/frontend-runtime-flow.md#welcome-showcase-and-first-event-handoff).
+`WelcomeGuideModal` and `welcome.guide.store.ts` replay the guide for signed-in
+users. `ConnectCalendarPromptGate` mounts the connect prompt only when it wins
+the onboarding slot. Game pieces: `game.tasks.ts` (task queue, scoring
+constants, seed board), `game.state.ts` (pure run reducer),
+`practice.state.ts` (sandbox board), `GameHud.tsx` / `GameEndScreen.tsx` (HUD
+and scoreboard), `GameSimOverlays.tsx` (simulated legend / page-jump / palette
+overlays). The flow, its entry points, and the storage contract are documented
+in [Frontend Runtime Flow](../frontend/frontend-runtime-flow.md#welcome-showcase-and-first-event-handoff).
 
 ## Sidebar
 
