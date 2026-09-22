@@ -15,6 +15,12 @@ web:
   port: 9080
   url: http://localhost:9080
 
+# Public booking guest app (Docker compose profile `booking`). Optional until you
+# run apps/booking-web beside calendar-web.
+# bookingWeb:
+#   port: 9081
+#   image: switchbacktech/compass-booking-web:latest
+
 backend:
   port: 3000
   apiUrl: http://localhost:3000/api

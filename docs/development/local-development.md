@@ -43,6 +43,46 @@ work packages move them.
 
 Build the scaffold with `bun run build:booking-web` (output under `build/booking-web`).
 
+### Docker and compose (staging-shaped)
+
+Build the production image from the repo root:
+
+```bash
+docker build -f apps/booking-web/Dockerfile -t compass-booking-web:local .
+```
+
+The image bakes `API_BASEURL` at build time (default `http://localhost:3000/api`).
+Pass a different public API URL when the browser will not reach the API on
+loopback, for example:
+
+```bash
+docker build -f apps/booking-web/Dockerfile \
+  --build-arg API_BASEURL=https://staging.compasscalendar.com/api \
+  -t compass-booking-web:local .
+```
+
+Run booking-web beside the existing Compass stack without changing the
+calendar-web (`web`) service. From a directory that has `compose.yaml` (self-host
+install layout or repo `self-host/`), enable the `booking` profile:
+
+```bash
+export COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}booking"
+docker compose -f compose.yaml build booking-web   # after uncommenting the build block, or set COMPASS_BOOKING_WEB_IMAGE
+docker compose -f compose.yaml up -d booking-web
+```
+
+The guest app listens on `http://127.0.0.1:9081` (`BOOKING_WEB_PORT`). It still
+depends on a healthy backend container; Caddy `/meet/*` routing and production
+deploy wiring are separate work packages.
+
+Optional `compass.yaml` keys (self-host installs):
+
+```yaml
+bookingWeb:
+  port: 9081
+  # image: your-registry/compass-booking-web:your-tag
+```
+
 ## Backend
 
 Command:
