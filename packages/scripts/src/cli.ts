@@ -4,6 +4,7 @@ import { runAuditConnectionIdentity } from "@scripts/commands/audit-connection-i
 import { runBackfillBilling } from "@scripts/commands/backfill-billing";
 import { runBackfillIdentities } from "@scripts/commands/backfill-identities";
 import { runConnectionReport } from "@scripts/commands/connection-report";
+import { runEmailPreviewCommand } from "@scripts/commands/email-preview";
 import { runEncryptCredentials } from "@scripts/commands/encrypt-credentials";
 import { runManageFailedJobs } from "@scripts/commands/manage-failed-jobs";
 import { runPurgeUser } from "@scripts/commands/purge-user";
@@ -50,6 +51,9 @@ export default class CompassCLI {
         break;
       case cmd === "record-apple-contract":
         await runRecordAppleContractCommand();
+        break;
+      case cmd === "email-preview":
+        await runEmailPreviewCommand(process.argv.slice(3));
         break;
       default:
         this.validator.exitHelpfully(`${cmd as string} is not a supported cmd`);
@@ -123,6 +127,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "Record redacted Apple CalDAV fixtures for the adapter contract suite (founder account)",
+      );
+
+    program
+      .command("email-preview")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "render every welcome-sequence step to HTML and text files (--output <dir>)",
       );
 
     program

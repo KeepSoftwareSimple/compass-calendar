@@ -1,4 +1,4 @@
-import { type ObjectId } from "mongodb";
+import { type ClientSession, type ObjectId } from "mongodb";
 import mongoService from "@backend/common/services/mongo.service";
 import { EMAIL_SEND_MAX_ATTEMPTS } from "@backend/email/email.constants";
 import {
@@ -45,7 +45,10 @@ export type InsertEmailSendInput = Omit<
 };
 
 class EmailSendRepository {
-  async insertMany(rows: InsertEmailSendInput[]): Promise<void> {
+  async insertMany(
+    rows: InsertEmailSendInput[],
+    session?: ClientSession,
+  ): Promise<void> {
     if (rows.length === 0) {
       return;
     }
@@ -62,7 +65,10 @@ class EmailSendRepository {
       }),
     );
     try {
-      await mongoService.emailSend.insertMany(records, { ordered: false });
+      await mongoService.emailSend.insertMany(records, {
+        ordered: false,
+        session,
+      });
     } catch (error) {
       if (!isDuplicateKeyError(error)) {
         throw error;
@@ -193,6 +199,17 @@ class EmailSendRepository {
       { returnDocument: "after" },
     );
     return result ? parseRecord(result) : null;
+  }
+
+  async deleteAllByUser(
+    userId: ObjectId,
+    session?: ClientSession,
+  ): Promise<number> {
+    const result = await mongoService.emailSend.deleteMany(
+      { userId },
+      { session },
+    );
+    return result.deletedCount;
   }
 
   async cancelQueuedForUser(userId: ObjectId): Promise<number> {
