@@ -66,6 +66,7 @@ export function mergeDuplicateCopies(
   if (calendars.length < 2) return data;
 
   const calendarsById = new Map(calendars.map((c) => [c.id, c]));
+  const calendarOrder = new Map(calendars.map((c, i) => [c.id, i]));
 
   // Group only events that can possibly merge: they need a correlation key
   // and a calendar to compare against another copy's.
@@ -100,7 +101,7 @@ export function mergeDuplicateCopies(
     const rank = (copy: Copy) =>
       copy.calendar.accountEmail === defaultAccountEmail
         ? -1
-        : calendars.findIndex((c) => c.id === copy.calendar.id);
+        : (calendarOrder.get(copy.calendar.id) ?? calendars.length);
     const [winner, ...others] = [...copies].sort((a, b) => rank(a) - rank(b));
     if (!winner || others.length === 0) continue;
 

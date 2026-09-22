@@ -44,6 +44,9 @@ const isAllowlistedRecipient = (email: string): boolean => {
   return allowlist.some((entry) => normalizeEmail(entry) === normalized);
 };
 
+const errorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
 const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -123,10 +126,9 @@ export class EmailDispatchService {
   };
 
   async #dispatchRow(row: EmailSendRecord): Promise<void> {
-    const step = findWelcomeStep(row.stepKey);
     const userIdHex = row.userId.toHexString();
-    if (!step) {
-      await emailSendRepository.markSkipped(row._id, "Unknown welcome step");
+    const skip = async (reason: string) => {
+      await emailSendRepository.markSkipped(row._id, reason);
       void emailAnalytics.capture({
         event: "email_skipped",
         userId: userIdHex,
@@ -136,35 +138,22 @@ export class EmailDispatchService {
         rowId: row._id,
         stepKey: row.stepKey,
       });
+    };
+
+    const step = findWelcomeStep(row.stepKey);
+    if (!step) {
+      await skip("Unknown welcome step");
       return;
     }
 
     const user = await loadWelcomeSequenceUser(row.userId);
     if (!user) {
-      await emailSendRepository.markSkipped(row._id, "User not found");
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-      });
-      logger.info("Welcome email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
+      await skip("User not found");
       return;
     }
 
     if (step.skipIf?.(user)) {
-      await emailSendRepository.markSkipped(row._id, "Step skipped by skipIf");
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-      });
-      logger.info("Welcome email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
+      await skip("Step skipped by skipIf");
       return;
     }
 
@@ -174,40 +163,17 @@ export class EmailDispatchService {
     }
 
     if (!isAllowlistedRecipient(user.email)) {
-      await emailSendRepository.markSkipped(
-        row._id,
-        "Recipient not allowlisted",
-      );
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-      });
-      logger.info("Welcome email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
+      await skip("Recipient not allowlisted");
       return;
     }
 
     const content = getWelcomeEmailContent(row.stepKey);
     if (!content) {
-      await emailSendRepository.markSkipped(row._id, "Missing email content");
-      void emailAnalytics.capture({
-        event: "email_skipped",
-        userId: userIdHex,
-        step: row.stepKey,
-      });
-      logger.info("Welcome email skipped", {
-        rowId: row._id,
-        stepKey: row.stepKey,
-      });
+      await skip("Missing email content");
       return;
     }
 
-    const unsubscribeToken = buildUnsubscribeTokenForUser(
-      row.userId.toHexString(),
-    );
+    const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
     const unsubscribe =
       unsubscribeToken !== null
         ? buildUnsubscribeUrls(unsubscribeToken)
@@ -249,20 +215,9 @@ export class EmailDispatchService {
         stepKey: row.stepKey,
       });
     } catch (error) {
+      const message = errorMessage(error);
       if (isInvalidRecipientError(error)) {
-        await emailSendRepository.markSkipped(
-          row._id,
-          error instanceof Error ? error.message : String(error),
-        );
-        void emailAnalytics.capture({
-          event: "email_skipped",
-          userId: userIdHex,
-          step: row.stepKey,
-        });
-        logger.info("Welcome email skipped", {
-          rowId: row._id,
-          stepKey: row.stepKey,
-        });
+        await skip(message);
         return;
       }
 
@@ -271,7 +226,7 @@ export class EmailDispatchService {
       );
       const updated = await emailSendRepository.recordFailure(
         row._id,
-        error instanceof Error ? error.message : String(error),
+        message,
         nextAttemptAt,
       );
       if (updated?.status === "failed") {
@@ -284,7 +239,7 @@ export class EmailDispatchService {
       logger.warn("Welcome email send failed", {
         rowId: row._id,
         stepKey: row.stepKey,
-        message: error instanceof Error ? error.message : String(error),
+        message,
       });
     }
   }

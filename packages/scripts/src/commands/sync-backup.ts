@@ -8,23 +8,10 @@
  * Requires mongodump on PATH and SYNC_MONGO_URI (or compass.yaml `sync.mongoUri`).
  * Does not dump the Compass API database.
  */
-import { loadCompassConfig } from "@core/config/compass.config";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-
-function mongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const config = loadCompassConfig();
-  const uri = config.sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before backing up",
-    );
-  }
-  return uri;
-}
 
 function outDir(argv: string[]): string {
   const flag = argv.indexOf("--out");
@@ -34,7 +21,7 @@ function outDir(argv: string[]): string {
 }
 
 function main(): void {
-  const uri = mongoUri();
+  const uri = resolveSyncMongoUri("backing up");
   const dest = outDir(process.argv.slice(2));
   mkdirSync(dest, { recursive: true });
 
