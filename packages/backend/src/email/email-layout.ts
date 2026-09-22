@@ -15,9 +15,15 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+export type WelcomeEmailUnsubscribe = {
+  httpsUrl: string;
+  listUnsubscribeHeader: string;
+};
+
 export function renderWelcomeEmail(
   stepKey: string,
   content: WelcomeEmailContentEntry,
+  unsubscribe?: WelcomeEmailUnsubscribe,
 ): { subject: string; html: string; text: string } {
   const ctaHref = appendUtm(content.cta.href, stepKey);
   const paragraphHtml = content.paragraphs
@@ -43,6 +49,13 @@ export function renderWelcomeEmail(
       <p style="margin:24px 0 0;">
         <a href="${escapeHtml(ctaHref)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:16px;line-height:24px;padding:12px 20px;border-radius:6px;">${escapeHtml(content.cta.label)}</a>
       </p>
+      ${
+        unsubscribe
+          ? `<p style="margin:32px 0 0;font-size:13px;line-height:20px;color:#6b7280;">
+        <a href="${escapeHtml(unsubscribe.httpsUrl)}" style="color:#6b7280;">Unsubscribe</a>
+      </p>`
+          : ""
+      }
     </div>
   </body>
 </html>`;
@@ -51,7 +64,9 @@ export function renderWelcomeEmail(
 
 ${paragraphText}
 
-${content.cta.label}: ${ctaHref}`;
+${content.cta.label}: ${ctaHref}${
+    unsubscribe ? `\n\nUnsubscribe: ${unsubscribe.httpsUrl}` : ""
+  }`;
 
   return {
     subject: content.subject,

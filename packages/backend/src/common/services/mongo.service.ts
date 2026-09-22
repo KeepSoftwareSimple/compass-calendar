@@ -21,6 +21,7 @@ import { type BookingReservationRecord } from "@backend/booking/booking-reservat
 import { type CalendarRecord } from "@backend/calendar/calendar.record";
 import { Collections } from "@backend/common/constants/collections";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { type EmailEventRecord } from "@backend/email/email-event.record";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { type EventRecord } from "@backend/event/event.record";
 import { type HiddenEventRecord } from "@backend/user/hidden-event.record";
@@ -37,6 +38,7 @@ interface InternalClient {
   bookingReservation: Collection<BookingReservationRecord>;
   bookingOperation: Collection<BookingOperationRecord>;
   emailSend: Collection<EmailSendRecord>;
+  emailEvent: Collection<EmailEventRecord>;
   calendar: Collection<CalendarRecord>;
   event: Collection<EventRecord>;
   hiddenEvent: Collection<HiddenEventRecord>;
@@ -86,6 +88,10 @@ class MongoService {
 
   get emailSend(): InternalClient["emailSend"] {
     return this.#accessInternalCollectionProps("emailSend");
+  }
+
+  get emailEvent(): InternalClient["emailEvent"] {
+    return this.#accessInternalCollectionProps("emailEvent");
   }
 
   get hiddenEvent(): InternalClient["hiddenEvent"] {
@@ -154,6 +160,7 @@ class MongoService {
         Collections.BOOKING_OPERATION,
       ),
       emailSend: db.collection<EmailSendRecord>(Collections.EMAIL_SEND),
+      emailEvent: db.collection<EmailEventRecord>(Collections.EMAIL_EVENT),
       calendar: db.collection<CalendarRecord>(Collections.CALENDAR),
       event: db.collection<EventRecord>(Collections.EVENT),
       hiddenEvent: db.collection<HiddenEventRecord>(Collections.HIDDEN_EVENT),
