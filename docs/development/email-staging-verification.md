@@ -14,7 +14,13 @@ Founder-only: sign in on staging. Unattended agents never enter credentials.
   about twelve minutes.
 - `email.allowlist` holds team staging addresses only.
 - Resend reserved test addresses for bounce and complaint checks are recorded
-  in WP-00 (#3913), not in this doc.
+  in WP-00 (#3913), not in this doc. They must also be on the allowlist: the
+  allowlist is checked before the provider, so an unlisted test address lands
+  `skipped` and no webhook ever fires. The match is exact, so `+label` variants
+  need their own entries.
+- The staging `EMAIL_API_KEY` is send-only and cannot read messages back.
+  Inspect headers and the text part (check 3) in the Resend dashboard or a
+  team inbox.
 
 ## Acceptance checks (WP-06)
 
@@ -39,6 +45,14 @@ message headers where relevant. Do not paste secret values.
 
 Restore `EMAIL_API_KEY` after check 5 and re-enable the `email:` block after
 check 12.
+
+Checks 5 and 12 are faster on the host than through a redeploy: copy
+`~/compass/compass.yaml` aside, edit it, run `./compass restart`, and move the
+copy back (then restart again) when the check is done.
+
+Checks 1 to 11 need only the backend's own code path, not a browser sign-in: an
+operator script that calls `userService.upsertUserFromAuth` against the staging
+config enrolls a user exactly as sign-up does.
 
 Two-replica claim exclusivity is covered by the database test in #3915, not
 this runbook.
@@ -80,3 +94,9 @@ After deploy, backend logs include one line (no addresses):
 
 Config is read once at startup; this line confirms a redeploy picked up
 allowlist or provider changes.
+
+Redeploying the **same** tag rewrites `compass.yaml` but does not restart the
+backend, because `./compass update` only recreates containers whose image
+changed. After changing any `EMAIL_*` value, run `./compass restart` on the host
+and look for this line with the new timestamp. Until then the webhook route
+answers 404 (`Email is not configured`).

@@ -208,6 +208,17 @@ class EmailSendRepository {
     return result ? parseRecord(result) : null;
   }
 
+  // Analytics attribute unsubscribe and suppression to the last email the
+  // user actually received. Sorting by `updatedAt` instead would pick a row
+  // the same request just canceled.
+  async findLastSentStepKey(userId: ObjectId): Promise<string | undefined> {
+    const row = await mongoService.emailSend.findOne(
+      { userId, status: "sent" },
+      { sort: { sentAt: -1 }, projection: { stepKey: 1 } },
+    );
+    return row?.stepKey;
+  }
+
   // The `deliveredAt: null` guard makes this idempotent: a replayed provider
   // webhook matches nothing and returns null rather than restamping.
   async markDelivered(
