@@ -48,7 +48,7 @@ describe("useShortcutHintContext", () => {
 
   it("returns create-event on an idle calendar before the first real event", () => {
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("create-event");
+    expect(result.current!.id).toBe("create-event");
   });
 
   it("switches to first-event-save when the form opens", () => {
@@ -67,35 +67,35 @@ describe("useShortcutHintContext", () => {
       draftActions.setFormOpen(true);
     });
 
-    expect(result.current.id).toBe("first-event-save");
+    expect(result.current!.id).toBe("first-event-save");
   });
 
   it("returns page-jump once the first event is done and the calendar is idle", () => {
     useFirstEventPromptStore.setState({ isDone: true }, false);
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("page-jump");
+    expect(result.current!.id).toBe("page-jump");
   });
 
   it("returns edit-sequence when a calendar event is focused", () => {
     focusCalendarEvent();
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("edit-sequence");
+    expect(result.current!.id).toBe("edit-sequence");
   });
 
   it("returns life-this-week on the Life path", () => {
     window.history.replaceState({}, "", "/life");
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("life-this-week");
+    expect(result.current!.id).toBe("life-this-week");
   });
 
   it("advances to event-jump after hold-Mod is demonstrated", () => {
     useFirstEventPromptStore.setState({ isDone: true }, false);
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("page-jump");
+    expect(result.current!.id).toBe("page-jump");
 
     act(() => shortcutHintProgressActions.demonstrate("page-jump"));
 
-    expect(result.current.id).toBe("event-jump");
+    expect(result.current!.id).toBe("event-jump");
   });
 
   it("teaches week-column letters on /week after event jump is demonstrated", () => {
@@ -110,8 +110,10 @@ describe("useShortcutHintContext", () => {
     });
 
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("week-day-focus");
-    expect(getHintPlainText(result.current)).toBe("Shift+W jumps to Wednesday");
+    expect(result.current!.id).toBe("week-day-focus");
+    expect(getHintPlainText(result.current!)).toBe(
+      "Shift+W jumps to Wednesday",
+    );
   });
 
   it("falls through the column tip when no day has a jump key", () => {
@@ -124,7 +126,22 @@ describe("useShortcutHintContext", () => {
     });
 
     const { result } = renderHook(() => useShortcutHintContext());
-    expect(result.current.id).toBe("command-palette");
+    expect(result.current!.id).toBe("command-palette");
+  });
+
+  it("re-ranks on a five-minute cadence while the tab is visible", () => {
+    jest.useFakeTimers();
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+
+    const { result } = renderHook(() => useShortcutHintContext());
+    const first = result.current;
+
+    act(() => {
+      jest.advanceTimersByTime(SHORTCUT_HINT_ROTATION_MS);
+    });
+
+    expect(result.current).not.toBe(first);
+    jest.useRealTimers();
   });
 
   it("does not re-rank while the document is hidden and re-ranks once on return", () => {

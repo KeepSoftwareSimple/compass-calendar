@@ -1,6 +1,13 @@
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
-import { getHintPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
+import {
+  getHintPlainText,
+  type RankedShortcutHint,
+} from "@web/shortcuts/tips/shortcut-tips.data";
 import { describe, expect, it } from "bun:test";
+
+const hintFor = (
+  ...args: Parameters<typeof selectShortcutHint>
+): RankedShortcutHint => selectShortcutHint(...args)!;
 
 const calendarIdle = {
   isFormOpen: false,
@@ -15,9 +22,15 @@ const afterFirstEvent = {
 };
 
 describe("selectShortcutHint", () => {
+  it("returns null when sidebar tips are muted", () => {
+    expect(
+      selectShortcutHint(calendarIdle, [], undefined, Date.now(), true),
+    ).toBe(null);
+  });
+
   it("teaches title then Enter while the first-event form is open", () => {
     expect(
-      selectShortcutHint({
+      hintFor({
         ...calendarIdle,
         isFormOpen: true,
       }).id,
@@ -26,7 +39,7 @@ describe("selectShortcutHint", () => {
 
   it("teaches save and Mod jump once the first event is done and the form is open", () => {
     expect(
-      selectShortcutHint({
+      hintFor({
         ...calendarIdle,
         isFormOpen: true,
         firstEventDone: true,
@@ -36,7 +49,7 @@ describe("selectShortcutHint", () => {
 
   it("teaches T on Life even before the first real event", () => {
     expect(
-      selectShortcutHint({
+      hintFor({
         ...calendarIdle,
         isLifeView: true,
       }).id,
@@ -45,7 +58,7 @@ describe("selectShortcutHint", () => {
 
   it("prefers a focused event over the first-event create prompt", () => {
     expect(
-      selectShortcutHint({
+      hintFor({
         ...calendarIdle,
         eventFocused: true,
       }).id,
@@ -53,16 +66,16 @@ describe("selectShortcutHint", () => {
   });
 
   it("asks for C until the first real event exists", () => {
-    expect(selectShortcutHint(calendarIdle).id).toBe("create-event");
+    expect(hintFor(calendarIdle).id).toBe("create-event");
   });
 
   it("teaches hold-Mod on an idle calendar after the first event", () => {
-    expect(selectShortcutHint(afterFirstEvent).id).toBe("page-jump");
+    expect(hintFor(afterFirstEvent).id).toBe("page-jump");
   });
 
   it("keeps form hints ahead of Life, focus, and first-event create", () => {
     expect(
-      selectShortcutHint({
+      hintFor({
         isFormOpen: true,
         isLifeView: true,
         eventFocused: true,
@@ -72,14 +85,12 @@ describe("selectShortcutHint", () => {
   });
 
   it("skips hold-Mod on an idle calendar once the user has demonstrated it", () => {
-    expect(selectShortcutHint(afterFirstEvent, ["page-jump"]).id).toBe(
-      "event-jump",
-    );
+    expect(hintFor(afterFirstEvent, ["page-jump"]).id).toBe("event-jump");
   });
 
   it("teaches week-column letters after event jump on week view", () => {
     expect(
-      selectShortcutHint(
+      hintFor(
         {
           ...afterFirstEvent,
           isWeekView: true,
@@ -91,7 +102,7 @@ describe("selectShortcutHint", () => {
   });
 
   it("names the first jumpable column at or after tomorrow", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       {
         ...afterFirstEvent,
         isWeekView: true,
@@ -105,7 +116,7 @@ describe("selectShortcutHint", () => {
   });
 
   it("wraps past the end of the week when nothing later is jumpable", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       {
         ...afterFirstEvent,
         isWeekView: true,
@@ -119,7 +130,7 @@ describe("selectShortcutHint", () => {
 
   it("teaches the column even while an event is focused, since Shift always works", () => {
     expect(
-      selectShortcutHint(
+      hintFor(
         {
           ...afterFirstEvent,
           eventFocused: true,
@@ -133,7 +144,7 @@ describe("selectShortcutHint", () => {
 
   it("skips the column tip when no day has a jump key", () => {
     expect(
-      selectShortcutHint(
+      hintFor(
         { ...afterFirstEvent, isWeekView: true, jumpableDayPrefixes: [] },
         ["page-jump", "event-jump"],
       ).id,
@@ -141,21 +152,18 @@ describe("selectShortcutHint", () => {
   });
 
   it("walks the idle pool in showcase order as primitives are demonstrated", () => {
+    expect(hintFor(afterFirstEvent, ["page-jump", "event-jump"]).id).toBe(
+      "command-palette",
+    );
     expect(
-      selectShortcutHint(afterFirstEvent, ["page-jump", "event-jump"]).id,
-    ).toBe("command-palette");
-    expect(
-      selectShortcutHint(afterFirstEvent, [
-        "page-jump",
-        "event-jump",
-        "command-palette",
-      ]).id,
+      hintFor(afterFirstEvent, ["page-jump", "event-jump", "command-palette"])
+        .id,
     ).toBe("create-event");
   });
 
   it("rotates the idle pool after every primitive has been demonstrated", () => {
     expect(
-      selectShortcutHint(afterFirstEvent, [
+      hintFor(afterFirstEvent, [
         "event-jump",
         "command-palette",
         "create-event",
@@ -163,7 +171,7 @@ describe("selectShortcutHint", () => {
       ]).id,
     ).toBe("event-jump");
     expect(
-      selectShortcutHint(afterFirstEvent, [
+      hintFor(afterFirstEvent, [
         "page-jump",
         "event-jump",
         "command-palette",
@@ -174,15 +182,13 @@ describe("selectShortcutHint", () => {
 
   it("teaches nudge after the edit sequence once an event is focused", () => {
     expect(
-      selectShortcutHint({ ...afterFirstEvent, eventFocused: true }, [
-        "edit-sequence",
-      ]).id,
+      hintFor({ ...afterFirstEvent, eventFocused: true }, ["edit-sequence"]).id,
     ).toBe("nudge");
   });
 
   it("teaches edge focus after nudge once an event is focused", () => {
     expect(
-      selectShortcutHint({ ...afterFirstEvent, eventFocused: true }, [
+      hintFor({ ...afterFirstEvent, eventFocused: true }, [
         "edit-sequence",
         "nudge",
       ]).id,
@@ -191,15 +197,13 @@ describe("selectShortcutHint", () => {
 
   it("teaches the action toolbar after save-draft is demonstrated", () => {
     expect(
-      selectShortcutHint({ ...afterFirstEvent, isFormOpen: true }, [
-        "save-draft",
-      ]).id,
+      hintFor({ ...afterFirstEvent, isFormOpen: true }, ["save-draft"]).id,
     ).toBe("form-actions");
   });
 
   it("falls through to the command palette once the form tips are demonstrated", () => {
     expect(
-      selectShortcutHint({ ...afterFirstEvent, isFormOpen: true }, [
+      hintFor({ ...afterFirstEvent, isFormOpen: true }, [
         "save-draft",
         "form-actions",
       ]).id,
@@ -208,17 +212,13 @@ describe("selectShortcutHint", () => {
 
   it("falls through to the command palette after Life T is demonstrated", () => {
     expect(
-      selectShortcutHint({ ...calendarIdle, isLifeView: true }, [
-        "life-this-week",
-      ]).id,
+      hintFor({ ...calendarIdle, isLifeView: true }, ["life-this-week"]).id,
     ).toBe("command-palette");
   });
 
   it("keeps the first-event save funnel sticky even after Enter is demonstrated", () => {
     expect(
-      selectShortcutHint({ ...calendarIdle, isFormOpen: true }, [
-        "first-event-save",
-      ]).id,
+      hintFor({ ...calendarIdle, isFormOpen: true }, ["first-event-save"]).id,
     ).toBe("first-event-save");
   });
 });

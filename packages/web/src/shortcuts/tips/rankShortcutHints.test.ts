@@ -1,6 +1,11 @@
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { type RankedShortcutHint } from "@web/shortcuts/tips/shortcut-tips.data";
 import { describe, expect, it } from "bun:test";
+
+const hintFor = (
+  ...args: Parameters<typeof selectShortcutHint>
+): RankedShortcutHint => selectShortcutHint(...args)!;
 
 const NOW = new Date("2026-08-27T12:00:00.000Z").getTime();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -17,14 +22,14 @@ const profile = (
 
 describe("shortcut hint personalization", () => {
   it("preserves the deterministic order when local history is missing", () => {
-    expect(selectShortcutHint(calendarIdle).id).toBe("page-jump");
-    expect(
-      selectShortcutHint(calendarIdle, ["page-jump", "event-jump"]).id,
-    ).toBe("command-palette");
+    expect(hintFor(calendarIdle).id).toBe("page-jump");
+    expect(hintFor(calendarIdle, ["page-jump", "event-jump"]).id).toBe(
+      "command-palette",
+    );
   });
 
   it("cools down a repeatedly shown suggestion without leaving its context pool", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       [],
       profile({
@@ -48,7 +53,7 @@ describe("shortcut hint personalization", () => {
       "create-event",
       "page-jump",
     ] as const;
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       demonstrated,
       profile({
@@ -71,7 +76,7 @@ describe("shortcut hint personalization", () => {
   });
 
   it("cools down after two impressions in the window", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       [],
       profile({
@@ -89,7 +94,7 @@ describe("shortcut hint personalization", () => {
   });
 
   it("stops teaching a shortcut the user has clearly learned", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       [],
       profile({
@@ -102,7 +107,7 @@ describe("shortcut hint personalization", () => {
   });
 
   it("keeps teaching the pool once every shortcut in it is learned", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       [],
       profile({
@@ -121,7 +126,7 @@ describe("shortcut hint personalization", () => {
   });
 
   it("never promotes an ineligible focused-event action into an idle calendar", () => {
-    const hint = selectShortcutHint(
+    const hint = hintFor(
       calendarIdle,
       [],
       profile({

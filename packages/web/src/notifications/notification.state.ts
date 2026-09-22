@@ -7,8 +7,8 @@ import { subscribeToStorageKey } from "@web/common/utils/external-store.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { getNotificationPort } from "@web/notifications/notification.port";
 
-/** Where a toggle came from, so the funnel can tell the two surfaces apart. */
-export type NotificationToggleSource = "palette" | "showcase";
+/** Where a toggle came from for analytics. */
+export type NotificationToggleSource = "palette";
 
 /**
  * Device-local opt-in, deliberately not synced: a grant belongs to one
