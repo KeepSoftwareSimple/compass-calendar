@@ -44,10 +44,6 @@ describe("CalendarConnectionBannerGate", () => {
       userMetadata: {
         current: {
           connections: [connection],
-          google: {
-            connectionState: "RECONNECT_REQUIRED",
-            connections: [connection],
-          },
         },
         status: "loaded",
       },

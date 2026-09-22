@@ -22,7 +22,7 @@ import {
   shouldDeferAttentionToasts,
   takePendingReconnect,
 } from "@web/billing/billing-gate-attention";
-import { GOOGLE_REVOKED_TOAST_ID } from "@web/common/constants/toast.constants";
+import { CONNECTION_REVOKED_TOAST_ID } from "@web/common/constants/toast.constants";
 import {
   ErrorToastSeverity,
   showErrorToast,
@@ -122,19 +122,19 @@ export function showGoogleReconnectToast(
   lastReconnectTarget = target;
   if (shouldDeferAttentionToasts()) {
     rememberPendingReconnect(target);
-    return GOOGLE_REVOKED_TOAST_ID;
+    return CONNECTION_REVOKED_TOAST_ID;
   }
 
   hasShownReconnectToastThisLoad = true;
   return showErrorToast(
     createElement(GoogleReconnectToast, {
-      toastId: GOOGLE_REVOKED_TOAST_ID,
+      toastId: CONNECTION_REVOKED_TOAST_ID,
       accountEmail: target.accountEmail,
       connectionId: target.connectionId,
       provider: target.provider ?? undefined,
     }),
     {
-      toastId: GOOGLE_REVOKED_TOAST_ID,
+      toastId: CONNECTION_REVOKED_TOAST_ID,
       severity: ErrorToastSeverity.CRITICAL,
     },
   );
@@ -142,7 +142,7 @@ export function showGoogleReconnectToast(
 
 export function deferGoogleReconnectToastIfVisible(): void {
   const toast = getToast();
-  const visible = toast.isActive?.(GOOGLE_REVOKED_TOAST_ID) === true;
+  const visible = toast.isActive?.(CONNECTION_REVOKED_TOAST_ID) === true;
   if (!visible && !hasShownReconnectToastThisLoad) return;
 
   rememberPendingReconnect(lastReconnectTarget);
@@ -157,7 +157,7 @@ export function flushDeferredGoogleReconnectToast(): void {
 }
 
 export function dismissGoogleReconnectToast(): void {
-  getToast().dismiss(GOOGLE_REVOKED_TOAST_ID);
+  getToast().dismiss(CONNECTION_REVOKED_TOAST_ID);
 }
 
 /** Drop a live-410 toast once its target is no longer reconnect-required. */

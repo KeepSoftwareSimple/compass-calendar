@@ -219,10 +219,6 @@ async function setupCrossProviderDuplicatesPage(page: Page) {
     if (pathname.endsWith("/api/user/metadata")) {
       return json({
         connections: [googleConnection, microsoftConnection, appleConnection],
-        google: {
-          connectionState: "HEALTHY",
-          connections: [googleConnection],
-        },
       });
     }
     if (pathname.endsWith("/api/config")) {

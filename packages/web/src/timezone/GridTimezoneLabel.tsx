@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
 import { GRID_TIME_COLUMN_WIDTH } from "@web/grid/grid.constants";
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import {
   refreshEffectiveTimeZoneFromBrowser,
   useEffectiveTimeZone,
@@ -59,7 +58,6 @@ export const GridTimezoneLabel = () => {
           onClick={openTimeTravel}
           style={{ width: GRID_TIME_COLUMN_WIDTH }}
           type="button"
-          {...pointerShortcutAttributes("z")}
         >
           {travelAbbreviation}
         </button>
@@ -74,7 +72,6 @@ export const GridTimezoneLabel = () => {
         onClick={openTimeTravel}
         style={isTraveling ? { width: GRID_TIME_COLUMN_WIDTH } : undefined}
         type="button"
-        {...pointerShortcutAttributes("z")}
       >
         {abbreviation}
       </button>

@@ -39,7 +39,7 @@ must say so as soon as that terminal state is known, and must offer a direct
 path to help (Reconnect).
 
 Do not wait for a failed create/edit/delete (for example HTTP `410` with
-`GOOGLE_REVOKED`) to reveal the problem. Prefer steering the user toward
+`CONNECTION_REVOKED`) to reveal the problem. Prefer steering the user toward
 reconnect before they invest time writing an event that will not save.
 
 The one exception is the billing gate. While `BillingGateModal` owns the
@@ -343,12 +343,12 @@ save an event.
   Google Calendar**. The sidebar footer does not repeat the reconnect
   sentence.
 - A named reconnect toast appears only for a live revoke (`410` /
-  `GOOGLE_REVOKED`) or a blocked write, not again from a metadata refresh
+  `CONNECTION_REVOKED`) or a blocked write, not again from a metadata refresh
   while the banner is already on screen.
 - Settings → Accounts for the affected account matches the sidebar: it does
   not claim “Calendar connected” / “Updated just now” while reconnect is
   required.
-- The user does not need a failed create/edit (`410` / `GOOGLE_REVOKED`) to
+- The user does not need a failed create/edit (`410` / `CONNECTION_REVOKED`) to
   learn that reconnect is required; that failure path is a last resort, not
   the primary signal.
 - Last-known Google events for the affected account remain visible as

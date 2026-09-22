@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { seedPendingEventMutations } from "@web/__tests__/utils/event-query-test-data";
 import { createMockConnection } from "@web/__tests__/utils/factories/calendar.factory";
@@ -64,7 +64,7 @@ const actualUseConnectGoogle = (
 let isConnectGoogleMocked = true;
 let googleState: GoogleUiState = "HEALTHY";
 let isConnecting = false;
-let connection: GoogleSyncConnectionSummary | null = null;
+let connection: SyncConnectionSummary | null = null;
 mock.module("@web/auth/providers/useConnectProvider", () => ({
   useConnectGoogle: (...args: Parameters<typeof actualUseConnectGoogle>) =>
     isConnectGoogleMocked
@@ -100,15 +100,10 @@ afterAll(() => {
 });
 
 const seedSidebarConnections = (
-  connections: GoogleSyncConnectionSummary[],
-  connectionState: GoogleUiState = "HEALTHY",
+  connections: SyncConnectionSummary[],
+  _connectionState: GoogleUiState = "HEALTHY",
 ) => {
-  const aggregate =
-    connectionState === "checking" ? ("HEALTHY" as const) : connectionState;
-  userMetadataActions.set({
-    google: { connectionState: aggregate, connections },
-    connections,
-  });
+  userMetadataActions.set({ connections });
 };
 const statusBarModuleUrl = new URL(
   `./SidebarStatusBar.tsx?test=${Math.random().toString(36).slice(2)}`,
@@ -357,10 +352,6 @@ describe("SidebarStatusBar", () => {
     const settingsButton = screen.getByRole("button", {
       name: "Calendar updates are delayed. Open account settings",
     });
-    expect(settingsButton).toHaveAttribute(
-      "data-pointer-shortcut",
-      '["Mod",","]',
-    );
     await user.click(settingsButton);
 
     expect(openSettings).toHaveBeenCalledTimes(1);

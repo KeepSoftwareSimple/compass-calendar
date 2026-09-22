@@ -133,7 +133,21 @@ describe("SessionProvider sessionInit", () => {
     expect(openStream).toHaveBeenCalledTimes(1);
 
     // Simulate SIGN_OUT event; user metadata should be cleared
-    userMetadataActions.set({ google: { connectionState: "HEALTHY" } });
+    userMetadataActions.set({
+      connections: [
+        {
+          id: "conn-1",
+          provider: "google",
+          state: "healthy",
+          stateReason: null,
+          lastSyncedAt: null,
+          lastHealthyAt: null,
+          accountEmail: "user@example.com",
+          connectionState: "HEALTHY",
+          canSuggestContacts: false,
+        },
+      ],
+    });
     session.emit({ action: "SIGN_OUT", userContext: undefined });
 
     expect(useUserMetadataStore.getState()).toEqual(initialUserMetadataState);

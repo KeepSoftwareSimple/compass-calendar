@@ -81,22 +81,14 @@ describe("auth.controller connections API", () => {
       authorizationUrl: AUTHORIZATION_URL,
     };
 
-    const next = await baseDriver
+    const response = await baseDriver
       .getServer()
       .post("/api/auth/connections/begin")
       .use(sessionFor(user._id.toString()))
       .send({ provider: "google" })
       .expect(Status.OK);
 
-    const alias = await baseDriver
-      .getServer()
-      .post("/api/auth/google/connect/begin")
-      .use(sessionFor(user._id.toString()))
-      .send({})
-      .expect(Status.OK);
-
-    expect(next.body).toEqual(expected);
-    expect(alias.body).toEqual(expected);
+    expect(response.body).toEqual(expected);
   });
 
   it("returns 409 PROVIDER_NOT_CONFIGURED for microsoft on a Google-only deployment", async () => {

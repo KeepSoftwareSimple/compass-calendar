@@ -9,7 +9,7 @@ import {
   CalendarIdSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { toNormalizedEventQueryData } from "@web/__tests__/utils/event-query-test-data";
 import { createMockConnection as makeConnection } from "@web/__tests__/utils/factories/calendar.factory";
@@ -135,7 +135,7 @@ const renderCalendarList = (
     connections,
   }: {
     authenticated?: boolean;
-    connections?: GoogleSyncConnectionSummary[];
+    connections?: SyncConnectionSummary[];
   } = {},
 ) => {
   mockUseSession.mockReturnValue({
@@ -145,7 +145,7 @@ const renderCalendarList = (
 
   if (connections) {
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections },
+      connections,
     });
   }
 

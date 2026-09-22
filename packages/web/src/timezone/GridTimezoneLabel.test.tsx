@@ -41,8 +41,6 @@ describe("GridTimezoneLabel", () => {
       name: `Calendar timezone: ${abbreviation}`,
     });
     expect(label).toHaveTextContent(abbreviation);
-    expect(label).toHaveAttribute("data-pointer-shortcut", "z");
-
     await user.tab();
     expect(screen.getByRole("button", { name: "Before" })).toHaveFocus();
     await user.tab();

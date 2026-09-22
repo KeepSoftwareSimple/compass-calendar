@@ -121,7 +121,7 @@ PR draft waiting for a human look.
 
 `main` takes changes only through the merge queue, so a direct merge is
 refused by rule; the queue squash-merges when the required checks pass, and
-the merge launches the next WP. The merge guard's size rails and its
+the merge launches the next WP. The merge guard's line-count rail and its
 main-is-not-red check are the gate, and they stay. Path prefixes are not a
 gate: no denylist exists in this repo, so do not look for one or hold a PR
 because you cannot find it. Do not wait for CI, and do not wait for a human

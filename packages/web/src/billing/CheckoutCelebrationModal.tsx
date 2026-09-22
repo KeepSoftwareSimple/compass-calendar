@@ -9,7 +9,6 @@ import { type AppAccess, useAppAccess } from "@web/billing/useAppAccess";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { PixelPirate } from "@web/components/WelcomeModal/PixelPirate";
-import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 
 const PANEL_CLASSNAME =
   "max-w-full gap-4 border border-border bg-surface text-center text-text shadow-xl";
@@ -76,7 +75,6 @@ export const CheckoutCelebrationModal: FC = () => {
           onClick={dismiss}
           ref={primaryButtonRef}
           type="button"
-          {...pointerPassAttributes}
         >
           Start planning
           <ShortcutHint className="ml-2">Enter</ShortcutHint>

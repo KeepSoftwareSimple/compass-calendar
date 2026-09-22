@@ -17,7 +17,6 @@ describe("CopyButton", () => {
     const button = screen.getByRole("button", {
       name: "copy guest@example.com",
     });
-    expect(button).toHaveAttribute("data-pointer-pass", "");
     await user.click(button);
 
     expect(await screen.findByRole("button", { name: "Copied" })).toBeVisible();

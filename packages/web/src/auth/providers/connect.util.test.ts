@@ -1,4 +1,4 @@
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   formatLastSyncedLabel,
   formatLastUpdatedClause,
@@ -479,8 +479,8 @@ describe("getSidebarSyncStatus", () => {
 
 describe("isFirstImportInProgress", () => {
   const makeConnection = (
-    overrides: Partial<GoogleSyncConnectionSummary> = {},
-  ): GoogleSyncConnectionSummary => ({
+    overrides: Partial<SyncConnectionSummary> = {},
+  ): SyncConnectionSummary => ({
     id: "c1",
     state: "importing",
     stateReason: null,
@@ -549,8 +549,8 @@ describe("isFirstImportInProgress", () => {
 
 describe("isFirstImportFailed", () => {
   const makeConnection = (
-    overrides: Partial<GoogleSyncConnectionSummary> = {},
-  ): GoogleSyncConnectionSummary => ({
+    overrides: Partial<SyncConnectionSummary> = {},
+  ): SyncConnectionSummary => ({
     id: "c1",
     state: "delayed",
     stateReason: "providerErrors",
@@ -595,8 +595,8 @@ describe("isFirstImportFailed", () => {
 
 describe("getCalendarConnectionBannerKind", () => {
   const makeConnection = (
-    overrides: Partial<GoogleSyncConnectionSummary> = {},
-  ): GoogleSyncConnectionSummary => ({
+    overrides: Partial<SyncConnectionSummary> = {},
+  ): SyncConnectionSummary => ({
     id: "c1",
     state: "healthy",
     stateReason: null,
@@ -665,8 +665,8 @@ describe("getCalendarConnectionBannerKind", () => {
 
 describe("pickCalendarBannerTarget", () => {
   const makeConnection = (
-    overrides: Partial<GoogleSyncConnectionSummary> = {},
-  ): GoogleSyncConnectionSummary => ({
+    overrides: Partial<SyncConnectionSummary> = {},
+  ): SyncConnectionSummary => ({
     id: "c1",
     state: "healthy",
     stateReason: null,

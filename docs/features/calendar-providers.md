@@ -149,9 +149,6 @@ aliases `GOOGLE_CALLBACK_PATH` and `GOOGLE_NOTIFICATIONS_PATH`.
 | `POST /api/auth/connections/begin` | Start OAuth; body `{provider?, connectionId?, features?}` |
 | `POST /api/auth/connections/refresh` | User-triggered catch-up |
 | `DELETE /api/auth/connections/:connectionId` | Disconnect |
-| `POST /api/auth/google/connect/begin` | Google alias of begin (one release) |
-| `DELETE /api/auth/google/connect/:connectionId` | Google alias of disconnect (one release) |
-| `POST /api/auth/google/sync/refresh` | Google alias of refresh (one release) |
 
 Begin returns `{kind: "redirect", authorizationUrl}`. The connected response
 kind `{kind: "connected", connectionId}` is on
@@ -203,11 +200,11 @@ capabilities omit `changeNotifications`. `buildReconcileSweepRows` adds a
 `reconcile-<kind>` row per poll-only kind. Apple defaults: 60 s stale window,
 30 s sweep interval (±20% jitter), batch limit 500.
 
-### User metadata overlap
+### User metadata
 
-`UserMetadata.connections[]` is the provider-neutral list. `metadata.google`
-(including `metadata.google.connections`) stays as an overlap copy so clients
-that have not migrated still work.
+`UserMetadata.connections[]` is the provider-neutral list of every connected
+account. The browser derives aggregate Google UI state from the Google rows in
+that list.
 
 ## Connect flows
 
@@ -236,8 +233,6 @@ iCloud send mail. Compass maps `invitation: "none"` to
 Booking enables when any healthy connection offers a writable destination
 calendar (`canWriteEvents`). Empty healthy set is `CALENDAR_NOT_CONNECTED`.
 A destination that cannot be written is `DESTINATION_NOT_WRITABLE`.
-`GOOGLE_NOT_CONNECTED` remains a one-release wire alias of
-`CALENDAR_NOT_CONNECTED`.
 
 The confirmation copy names the conference kind the destination supports
 (`meet`, `teams`, `none`). An Apple destination creates the event without a
@@ -268,14 +263,6 @@ may still be hosted by Google or Microsoft."
 
 Each alias names the release that removes it.
 
-- **`GOOGLE_REVOKED`.** Alias of `CONNECTION_REVOKED` on the SSE and HTTP
-  wires. `revokedConnectionServerMessages` emits both. Event mutations still
-  return HTTP 410 `GOOGLE_REVOKED`. Milestone C removes `GOOGLE_REVOKED` after
-  every client reads `CONNECTION_REVOKED`.
-- **`metadata.google` overlap.** `UserMetadata.connections[]` is the
-  provider-neutral list; `metadata.google` (and `metadata.google.connections`)
-  stays until WP-08c clients read `connections[]`. Drop the overlap in
-  milestone C.
 - Microsoft category colors are read but never written back.
 - Apple freshness depends on polling and is bounded by iCloud rate limits.
 - **Provider-managed events.** Google is the only provider that sets

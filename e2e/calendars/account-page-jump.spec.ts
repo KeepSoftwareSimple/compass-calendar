@@ -113,9 +113,6 @@ const setupTwoAccountWeek = async (page: Page) => {
           connection("conn-work", WORK_EMAIL),
           connection("conn-personal", PERSONAL_EMAIL),
         ],
-        google: {
-          connectionState: "HEALTHY",
-        },
       });
     }
     if (pathname.endsWith("/api/config")) {

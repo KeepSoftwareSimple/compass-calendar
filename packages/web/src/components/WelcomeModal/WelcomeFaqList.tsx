@@ -1,7 +1,6 @@
 import classNames from "classnames";
 import { useId } from "react";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 import { FAQ_ITEMS } from "./faq";
 import { flashedShortcutClass } from "./useFlashedWelcomeShortcut";
@@ -47,7 +46,6 @@ export function WelcomeFaqList({
                   event.detail === 0 ? "keyboard" : "pointer",
                 )
               }
-              {...pointerShortcutAttributes(digit)}
             >
               <span>{item.question}</span>
               <span

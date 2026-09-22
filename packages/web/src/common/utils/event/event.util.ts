@@ -255,7 +255,7 @@ const MUTATION_ERROR_TOAST_MESSAGES: Partial<
     "This calendar is read-only, so its events can't be changed from Compass.",
   RECURRENCE_CONFLICT:
     "This event was changed somewhere else. Refresh to load the latest version, then try again.",
-  GOOGLE_REVOKED:
+  CONNECTION_REVOKED:
     "Calendar access expired or was revoked. Reconnect your calendar in Compass to resume syncing.",
   SYNC_UNAVAILABLE:
     "Couldn't save that change, the calendar service is briefly unavailable. Your edit was not applied.",

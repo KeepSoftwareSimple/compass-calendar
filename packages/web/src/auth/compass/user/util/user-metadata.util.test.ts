@@ -10,21 +10,41 @@ import {
 } from "./user-metadata.util";
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
-const healthy: UserMetadata = { google: { connectionState: "HEALTHY" } };
-const attention: UserMetadata = { google: { connectionState: "ATTENTION" } };
-const reconnectRequired: UserMetadata = {
-  google: { connectionState: "RECONNECT_REQUIRED" },
+const googleConnection = (
+  connectionState: UserMetadata["connections"] extends (infer T)[] | undefined
+    ? T extends { connectionState: infer S }
+      ? S
+      : never
+    : never,
+) => ({
+  id: "conn-1",
+  provider: "google" as const,
+  state: "healthy",
+  stateReason: null,
+  lastSyncedAt: null,
+  lastHealthyAt: null,
+  accountEmail: "lance@example.com",
+  connectionState,
+  canSuggestContacts: false,
+});
+
+const healthy: UserMetadata = {
+  connections: [googleConnection("HEALTHY")],
+};
+const attention: UserMetadata = {
   connections: [
     {
-      id: "conn-1",
-      provider: "google",
+      ...googleConnection("ATTENTION"),
+      state: "delayed",
+    },
+  ],
+};
+const reconnectRequired: UserMetadata = {
+  connections: [
+    {
+      ...googleConnection("RECONNECT_REQUIRED"),
       state: "actionRequired",
       stateReason: "authorizationRevoked",
-      lastSyncedAt: null,
-      lastHealthyAt: null,
-      accountEmail: "lance@example.com",
-      connectionState: "RECONNECT_REQUIRED",
-      canSuggestContacts: false,
     },
   ],
 };
@@ -110,10 +130,6 @@ describe("refreshUserMetadata force coalescing", () => {
   });
 
   it("chains concurrent force calls onto one trailing fetch", async () => {
-    // Spy BaseApi.get, not UserApi.getMetadata: other files' mock.module of
-    // UserApi can leave this file spying a different object than the util
-    // closed over at first load. Always restore in afterEach — a leaked spy
-    // would swallow CalendarList's adapter-based error path.
     get = spyOn(BaseApi, "get");
 
     let resolveFirst!: (value: { data: UserMetadata }) => void;

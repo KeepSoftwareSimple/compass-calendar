@@ -66,7 +66,6 @@ import {
   selectPointerHintSurfaceEligible,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
-import { usePointerHintTracker } from "@web/shortcuts/keyboard-only/usePointerHintTracker";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
 import {
   useCalendarShellShortcuts,
@@ -109,7 +108,6 @@ export function RootShell() {
   usePlanChangeToasts();
   useNavigationShortcuts();
   useCalendarShellShortcuts();
-  usePointerHintTracker(!isLifeView);
   useFocusNoticeShortcut();
   useEventContextMenuShortcut();
   useHideEventShortcut();

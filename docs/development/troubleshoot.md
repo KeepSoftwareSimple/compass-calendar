@@ -121,7 +121,7 @@ Recommended action:
 ### Revoked token during refresh
 
 If access was revoked (for example Google returns `invalid_grant`), backend
-prunes Google data and emits `syncStatusChanged` with `code: "GOOGLE_REVOKED"`.
+prunes Google data and emits `syncStatusChanged` with `code: "CONNECTION_REVOKED"`.
 
 Operational notes:
 

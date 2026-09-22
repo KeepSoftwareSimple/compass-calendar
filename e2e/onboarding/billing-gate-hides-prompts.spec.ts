@@ -9,11 +9,7 @@ const jsonResponse = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
-const trialEndsAt = new Date(
-  Date.now() + 2 * 24 * 60 * 60 * 1000,
-).toISOString();
-
-test("shows the trial card banner and opens Checkout while writable", async ({
+test("hides welcome, practice, and first-event prompts while the billing gate is up", async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -27,12 +23,9 @@ test("shows the trial card banner and opens Checkout while writable", async ({
         lastKnownEmail: "host@example.com",
       }),
     );
-    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-    localStorage.setItem(
-      "compass.onboarding.has-seen-shortcut-showcase",
-      "true",
-    );
-    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+    localStorage.removeItem("compass.onboarding.has-seen-welcome");
+    localStorage.removeItem("compass.onboarding.has-seen-shortcut-showcase");
+    localStorage.removeItem("compass.onboarding.first-event-done");
   });
 
   await page.route("**/api/**", async (route) => {
@@ -60,17 +53,11 @@ test("shows the trial card banner and opens Checkout while writable", async ({
     if (path.endsWith("/api/billing/status")) {
       return route.fulfill(
         jsonResponse({
-          subscriptionStatus: "trialing",
-          trialEndsAt,
-          isReadOnly: false,
-          needsPaymentMethod: true,
+          subscriptionStatus: "awaiting_checkout",
+          trialEndsAt: null,
+          isReadOnly: true,
+          needsPaymentMethod: false,
         }),
-      );
-    }
-
-    if (path.endsWith("/api/billing/checkout/session")) {
-      return route.fulfill(
-        jsonResponse({ clientSecret: "cs_test_e2e_trial_banner" }),
       );
     }
 
@@ -93,7 +80,7 @@ test("shows the trial card banner and opens Checkout while writable", async ({
     return route.fulfill(jsonResponse({}));
   });
 
-  await page.goto("/week", { waitUntil: "domcontentloaded" });
+  await page.goto("/week?play=1", { waitUntil: "domcontentloaded" });
   await page.waitForFunction(
     () =>
       (
@@ -110,15 +97,20 @@ test("shows the trial card banner and opens Checkout while writable", async ({
     ).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
   });
 
-  const banner = page.getByRole("status").filter({
-    hasText: "Your trial ends in 2 days. Add a card to keep creating events.",
-  });
-  await expect(banner).toBeVisible({ timeout: 15000 });
   await expect(
-    page.getByRole("dialog", { name: "Subscribe to keep using Compass" }),
-  ).toHaveCount(0);
+    page.getByRole("dialog", { name: "Start your 7-day trial" }),
+  ).toBeVisible({ timeout: 15000 });
 
-  await page.keyboard.press("Escape");
-  await banner.getByRole("button", { name: "Add a card" }).click();
-  await expect(page.getByRole("dialog", { name: "Checkout" })).toBeVisible();
+  await expect(
+    page.getByRole("dialog", { name: "Welcome to Compass Calendar" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Shortcut practice" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("complementary", { name: "Create your first event" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "Connect the calendar you use" }),
+  ).toHaveCount(0);
 });

@@ -2,7 +2,6 @@ import { type FC } from "react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { pointerShortcutAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   DEMO_EVENTS_BANNER_SHORTCUT_KEY,
@@ -41,7 +40,6 @@ export const DemoEventsBanner: FC<DemoEventsBannerProps> = ({ onDismiss }) => {
     <div
       className="flex items-center justify-between gap-3 border-border border-b bg-surface-panel px-4 py-2 text-text-muted text-xs"
       role="status"
-      {...pointerShortcutAttributes(DEMO_EVENTS_BANNER_SHORTCUT_KEY)}
     >
       <span className="inline-flex flex-wrap items-center gap-1.5">
         Sample events to help you explore. Clear them from the command palette

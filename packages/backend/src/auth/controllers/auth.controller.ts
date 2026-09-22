@@ -137,13 +137,6 @@ class AuthController {
     );
   };
 
-  beginGoogleConnection = (
-    req: SReqBody<ConnectionBeginRequest>,
-    res: Res_Promise,
-  ): void => {
-    this.beginConnection(req, res, "google");
-  };
-
   connectCredential = (req: SReqBody<unknown>, res: Res_Promise): void => {
     if (rejectIfMaintenance(res)) return;
 
@@ -188,13 +181,6 @@ class AuthController {
     );
   };
 
-  disconnectGoogleConnection = (
-    req: SessionRequest,
-    res: Res_Promise,
-  ): void => {
-    this.disconnectConnection(req, res);
-  };
-
   refreshConnection = (req: SessionRequest, res: Res_Promise): void => {
     if (rejectIfMaintenance(res)) return;
 
@@ -210,10 +196,6 @@ class AuthController {
         }),
       ),
     );
-  };
-
-  refreshGoogleSync = (req: SessionRequest, res: Res_Promise): void => {
-    this.refreshConnection(req, res);
   };
 
   appleSignInCallback = (

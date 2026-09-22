@@ -1,11 +1,6 @@
 import { type FC } from "react";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
-  POINTER_ACTION_ATTRIBUTE,
-  type PointerActionId,
-  pointerShortcutAttributes,
-} from "@web/shortcuts/keyboard-only/pointer-action";
-import {
   type NoticeActionKey,
   useNoticeActionShortcut,
 } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
@@ -16,7 +11,6 @@ type BillingBannerProps = {
   disabled?: boolean;
   onCta: () => void;
   shortcutKey?: NoticeActionKey;
-  pointerAction?: PointerActionId;
 };
 
 /**
@@ -31,7 +25,6 @@ export const BillingBanner: FC<BillingBannerProps> = ({
   disabled = false,
   onCta,
   shortcutKey,
-  pointerAction,
 }) => {
   useNoticeActionShortcut(shortcutKey, onCta, { enabled: !disabled });
 
@@ -47,10 +40,6 @@ export const BillingBanner: FC<BillingBannerProps> = ({
         disabled={disabled}
         onClick={onCta}
         type="button"
-        {...(shortcutKey ? pointerShortcutAttributes(shortcutKey) : {})}
-        {...(pointerAction
-          ? { [POINTER_ACTION_ATTRIBUTE]: pointerAction }
-          : {})}
       >
         {ctaLabel}
         {shortcutKey ? <ShortcutKeys keys={shortcutKey} /> : null}

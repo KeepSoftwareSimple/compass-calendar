@@ -23,9 +23,6 @@ export const selectWelcomeGuideOpen = (state: WelcomeGuideState) =>
 export const selectWelcomeFirstVisitOpen = (state: WelcomeGuideState) =>
   state.isFirstVisitOpen;
 
-export const selectWelcomeSurfaceOpen = (state: WelcomeGuideState) =>
-  state.isOpen || state.isFirstVisitOpen;
-
 /** Whether the post-signup welcome guide should claim the onboarding slot. */
 export const selectWelcomeGuideSurfaceEligible = (
   billingGateClear: boolean,

@@ -57,17 +57,21 @@ This is the shell for the main desktop app experience.
 Files:
 
 - `packages/web/src/components/RootShell/RootShell.tsx`
+- `packages/web/src/components/RootShell/onboarding-surface.ts`
 - `packages/web/src/components/WelcomeModal/WelcomeModal.tsx`
+- `packages/web/src/components/WelcomeModal/WelcomeGuideModal.tsx`
 - `packages/web/src/components/ShortcutShowcase/`
 - `packages/web/src/components/FirstEventPrompt/`
+- `packages/web/src/components/ConnectCalendarPrompt/ConnectCalendarPromptGate.tsx`
 
-`RootShell` mounts the welcome modal, Shortcut Showcase, the first-event
-prompt, global navigation / calendar-shell shortcuts, and the click hint tracker.
-Those calendar-onboarding overlays are skipped on `/life` and on mobile OSes
-(the overlays would paint over `MobileGate`, so a phone user sees the gate
-first instead of a walkthrough they cannot use). Pointer suppression is also
-skipped on `/life` so first-time visitors can click the page like a normal
-site; the calendar views stay keyboard-only.
+`RootShell` builds onboarding flags and mounts at most one onboarding card or
+modal at a time via `selectActiveSurface` (billing gate and checkout
+celebration win first; then welcome, Block Party, welcome guide replay,
+connect-calendar prompt, first-event prompt, and palette `PointerHint`). Global
+navigation and calendar-shell shortcuts stay mounted separately. Calendar
+onboarding overlays are skipped on `/life` and on mobile OSes (they would paint
+over `MobileGate`, so a phone user sees the gate first instead of a walkthrough
+they cannot use).
 
 Welcome → signup → first-event contract:
 
@@ -81,9 +85,8 @@ Welcome → signup → first-event contract:
   on. Escape, the backdrop and **Back** step back one screen and
   are a no-op on the first, so a stray Escape never drops a first-timer into
   the practice game
-- the welcome overlay is the one calendar surface where the mouse works
-  (`data-pointer-pass`): a landing page should behave like a normal site, and
-  keyboard-only starts once the visitor enters the calendar
+- the welcome overlay works with the mouse: a landing page should behave like a
+  normal site, and keyboard-only starts once the visitor enters the calendar
 - the last screen is titled **Let's get started** with the subtitle
   **Connect a calendar or start fresh**. Its CTA order is **Continue with Google**
   (`G`, when Google is available), **Sign up with email** (`U`), then
@@ -125,19 +128,15 @@ Welcome → signup → first-event contract:
 - users who already finished or skipped the retired guided tour are treated as
   having seen the showcase so it does not ambush them
 
-Pointer suppression (always on, mounted from `RootShell`):
+Palette shortcut teaching (from `RootShell`):
 
-- blocks pointer clicks, right-clicks, and double-clicks everywhere; scroll
-  and hover remain
-- keyboard-activation clicks (Enter/Space on a native button), keyboard
-  contextmenu (Shift+F10), and synthetic `.click()` calls pass through
-- blocked clicks pulse `PointerHint`, a transient pill: known targets get
-  the matching shortcut (including HHMM digits for an empty timed-grid
-  click), and unannotated controls fall back to "keyboard only"
-- `MobileGate` opts its subtree out (`data-pointer-pass`) so Copy and
-  Waitlist can be tapped on a phone
+- after a palette row with a shortcut runs, `PointerHint` shows **Next time,
+  press …** unless the user turned keyboard tips off
+- clicks on the grid and chrome no longer open that pill; see
+  [Contextual Pointer Guidance](./contextual-pointer-guidance.md)
 
-See [Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and
+See [Onboarding](../acceptance/onboarding.md) and
+[Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and
 [Feature File Map](../development/feature-file-map.md#keyboard-shortcuts) for
 file pointers.
 
@@ -396,7 +395,7 @@ This is deliberate and prevents events from "disappearing" after login when loca
 Revoked state details:
 
 - stored in memory only (not persisted)
-- set when `GOOGLE_REVOKED` is detected from SSE or API error responses
+- set when `CONNECTION_REVOKED` is detected from SSE or API error responses
 - cleared when Google auth succeeds again
 
 ## Storage Initialization
@@ -449,7 +448,7 @@ Runtime nuances:
   metadata and Google connection status.
 - auto-import is triggered only when `sync.importGCal === "RESTART"` and `google.connectionState` is neither `NOT_CONNECTED` nor `RECONNECT_REQUIRED`.
 - On connect, backend may proactively send `syncStatusChanged` with
-  `code: "GOOGLE_REVOKED"`; the client clears Google-origin events and falls
+  `code: "CONNECTION_REVOKED"`; the client clears Google-origin events and falls
   back to local event storage until reconnect.
 - Focus refresh is a no-op unless the connection is `HEALTHY` or `ATTENTION`.
   It passes `silent: true` so a transient failure does not toast. Manual

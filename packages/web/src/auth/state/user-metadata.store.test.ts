@@ -1,4 +1,4 @@
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import {
   findPrimaryGoogleSyncConnectionFromMetadata,
   findSyncConnectionFromMetadata,
@@ -9,9 +9,10 @@ import {
 import { describe, expect, it } from "bun:test";
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary>,
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary>,
+): SyncConnectionSummary => ({
   id: "connection-1",
+  provider: "google",
   state: "healthy",
   stateReason: null,
   lastSyncedAt: null,
@@ -30,8 +31,6 @@ describe("selectPrimaryGoogleSyncConnection", () => {
   });
 
   it("picks the connection whose own state matches the aggregate - the broken one, not the first", () => {
-    // Mirrors the sync service's own precedence: the account most responsible
-    // for the aggregate state, so an unscoped reconnect targets it.
     const healthy = connection({ id: "healthy", connectionState: "HEALTHY" });
     const broken = connection({
       id: "broken",
@@ -40,10 +39,7 @@ describe("selectPrimaryGoogleSyncConnection", () => {
       canSuggestContacts: false,
     });
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [healthy, broken],
-      },
+      connections: [healthy, broken],
     });
 
     expect(
@@ -51,10 +47,10 @@ describe("selectPrimaryGoogleSyncConnection", () => {
     ).toBe("broken");
   });
 
-  it("falls back to the first connection when none match the aggregate", () => {
+  it("falls back to the first google connection when none match the aggregate", () => {
     const solo = connection({ connectionState: "HEALTHY" });
     userMetadataActions.set({
-      google: { connectionState: "ATTENTION", connections: [solo] },
+      connections: [solo],
     });
 
     expect(
@@ -71,14 +67,14 @@ describe("userMetadataActions.removeConnection", () => {
       accountEmail: "starbuck@pequod.com",
     });
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [kept, removed] },
+      connections: [kept, removed],
     });
 
     userMetadataActions.removeConnection("removed");
 
-    expect(
-      useUserMetadataStore.getState().current?.google?.connections,
-    ).toEqual([kept]);
+    expect(useUserMetadataStore.getState().current?.connections).toEqual([
+      kept,
+    ]);
   });
 
   it("is a no-op when metadata hasn't loaded yet", () => {
@@ -92,8 +88,6 @@ describe("userMetadataActions.removeConnection", () => {
 
 describe("findPrimaryGoogleSyncConnectionFromMetadata", () => {
   it("applies the same precedence to a raw payload, not just the store", () => {
-    // useSyncSSE.factory.ts calls this directly on an SSE message's metadata,
-    // before it reaches the store.
     const healthy = connection({ id: "healthy", connectionState: "HEALTHY" });
     const broken = connection({
       id: "broken",
@@ -103,15 +97,12 @@ describe("findPrimaryGoogleSyncConnectionFromMetadata", () => {
 
     expect(
       findPrimaryGoogleSyncConnectionFromMetadata({
-        google: {
-          connectionState: "RECONNECT_REQUIRED",
-          connections: [healthy, broken],
-        },
+        connections: [healthy, broken],
       })?.id,
     ).toBe("broken");
   });
 
-  it("returns null when the payload has no google field at all", () => {
+  it("returns null when the payload has no connections", () => {
     expect(findPrimaryGoogleSyncConnectionFromMetadata({})).toBeNull();
   });
 });
@@ -124,6 +115,7 @@ describe("findSyncConnectionFromMetadata", () => {
     });
     const microsoft = connection({
       id: "ms-secondary",
+      provider: "microsoft",
       accountEmail: "ada@outlook.com",
       connectionState: "HEALTHY",
     });
@@ -131,11 +123,7 @@ describe("findSyncConnectionFromMetadata", () => {
     expect(
       findSyncConnectionFromMetadata(
         {
-          google: { connectionState: "HEALTHY", connections: [google] },
-          connections: [
-            { ...google, provider: "google" },
-            { ...microsoft, provider: "microsoft" },
-          ],
+          connections: [google, microsoft],
         },
         "ms-secondary",
       )?.accountEmail,

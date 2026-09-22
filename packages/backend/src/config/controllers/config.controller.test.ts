@@ -131,7 +131,6 @@ describe("buildAppConfig provider flags", () => {
 
     try {
       const config = buildAppConfig(CONFIG);
-      expect(config.google.isConfigured).toBe(false);
       expect(config.providers.google).toEqual({
         signIn: false,
         connect: false,
@@ -156,7 +155,6 @@ describe("buildAppConfig provider flags", () => {
 
     try {
       const config = buildAppConfig(CONFIG);
-      expect(config.google.isConfigured).toBe(true);
       expect(config.providers.google.connect).toBe(true);
       expect(config.providers.microsoft.connect).toBe(false);
     } finally {

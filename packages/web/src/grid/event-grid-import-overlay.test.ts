@@ -1,8 +1,8 @@
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { eventGridFirstImportFlags } from "@web/grid/event-grid-import-overlay";
 import { describe, expect, it } from "bun:test";
 
-const firstImport: GoogleSyncConnectionSummary = {
+const firstImport: SyncConnectionSummary = {
   id: "c1",
   state: "importing",
   stateReason: null,
@@ -13,7 +13,7 @@ const firstImport: GoogleSyncConnectionSummary = {
   canSuggestContacts: false,
 };
 
-const established: GoogleSyncConnectionSummary = {
+const established: SyncConnectionSummary = {
   ...firstImport,
   lastHealthyAt: "2026-09-01T00:00:00.000Z",
 };

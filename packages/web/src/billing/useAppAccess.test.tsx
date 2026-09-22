@@ -29,7 +29,11 @@ const stubConfig = (isConfigured: boolean, enforcement = true) => {
     http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
       HttpResponse.json({
         version: "dev",
-        google: { isConfigured: false },
+        providers: {
+          google: { signIn: false, connect: false },
+          microsoft: { signIn: false, connect: false },
+          apple: { signIn: false, connect: false },
+        },
         billing: {
           isConfigured,
           enforcement,
@@ -277,7 +281,11 @@ describe("useAppAccess", () => {
         await delay(500);
         return HttpResponse.json({
           version: "dev",
-          google: { isConfigured: false },
+          providers: {
+            google: { signIn: false, connect: false },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
           billing: {
             isConfigured: true,
             enforcement: true,

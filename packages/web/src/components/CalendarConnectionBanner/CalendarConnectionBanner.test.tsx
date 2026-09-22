@@ -4,12 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
-import {
-  POINTER_ACTION_ATTRIBUTE,
-  POINTER_ACTIONS,
-  POINTER_SHORTCUT_ATTRIBUTE,
-} from "@web/shortcuts/keyboard-only/pointer-action";
-import { CONNECTION_BANNER_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { CalendarConnectionBanner } from "./CalendarConnectionBanner";
 
@@ -110,14 +104,6 @@ describe("CalendarConnectionBanner", () => {
 
     const button = screen.getByRole("button", { name: "Reconnect" });
     expect(within(button).getByText("G")).toBeTruthy();
-    expect(button).toHaveAttribute(
-      POINTER_SHORTCUT_ATTRIBUTE,
-      CONNECTION_BANNER_SHORTCUT_KEY,
-    );
-    expect(button).toHaveAttribute(
-      POINTER_ACTION_ATTRIBUTE,
-      POINTER_ACTIONS.reconnectGoogle,
-    );
 
     pressKey("G");
 

@@ -19,7 +19,14 @@ beforeEach(() => {
 test("provides the injected query client", () => {
   server.use(
     http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
-      HttpResponse.json({ version: "dev", google: { isConfigured: false } }),
+      HttpResponse.json({
+        version: "dev",
+        providers: {
+          google: { signIn: false, connect: false },
+          microsoft: { signIn: false, connect: false },
+          apple: { signIn: false, connect: false },
+        },
+      }),
     ),
   );
   const queryClient = createCompassQueryClient();
@@ -45,7 +52,14 @@ test("provides the injected query client", () => {
 test("Escape dismisses the toast (proves the hook is actually mounted)", () => {
   server.use(
     http.get(`${ENV_WEB.API_BASEURL}/config`, () =>
-      HttpResponse.json({ version: "dev", google: { isConfigured: false } }),
+      HttpResponse.json({
+        version: "dev",
+        providers: {
+          google: { signIn: false, connect: false },
+          microsoft: { signIn: false, connect: false },
+          apple: { signIn: false, connect: false },
+        },
+      }),
     ),
   );
   const { port, mocks } = createTestToastPort();

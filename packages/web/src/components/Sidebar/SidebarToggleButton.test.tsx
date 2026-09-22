@@ -33,7 +33,7 @@ describe("SidebarToggleButton", () => {
 
     expect(
       screen.getByRole("button", { name: "Open sidebar" }),
-    ).toHaveAttribute("data-pointer-action", "sidebar.open");
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Open sidebar" }));
 
@@ -51,7 +51,7 @@ describe("SidebarToggleButton", () => {
 
     expect(
       screen.getByRole("button", { name: "Close sidebar" }),
-    ).toHaveAttribute("data-pointer-action", "sidebar.close");
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Close sidebar" }));
 

@@ -150,7 +150,11 @@ export const globalHandlers = [
     return HttpResponse.json(
       {
         version: "dev",
-        google: { isConfigured: false },
+        providers: {
+          google: { signIn: false, connect: false },
+          microsoft: { signIn: false, connect: false },
+          apple: { signIn: false, connect: false },
+        },
         billing: {
           isConfigured: false,
           enforcement: true,

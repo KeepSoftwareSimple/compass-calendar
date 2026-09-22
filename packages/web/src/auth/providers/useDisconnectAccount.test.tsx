@@ -25,17 +25,16 @@ describe("useDisconnectGoogleAccount", () => {
 
   it("drops only the disconnected provider's calendars when another provider shares the address", async () => {
     registerToastPort(createTestToastPort().port);
-    const disconnect = spyOn(
-      AuthApi,
-      "disconnectGoogleConnection",
-    ).mockResolvedValue(undefined);
+    const disconnect = spyOn(AuthApi, "disconnectConnection").mockResolvedValue(
+      undefined,
+    );
     const google = createMockConnection(EMAIL, { id: "google-conn" });
     const microsoft = createMockConnection(EMAIL, {
       id: "ms-conn",
       provider: "microsoft",
     });
     userMetadataActions.set({
-      google: { connectionState: "HEALTHY", connections: [google, microsoft] },
+      connections: [google, microsoft],
     });
     const googleCal = createMockCalendar({
       name: "Google primary",

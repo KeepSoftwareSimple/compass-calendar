@@ -264,10 +264,7 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
-      google: {
-        connectionState: "IMPORTING",
-        connections: [connection],
-      },
+      connections: [{ ...connection, provider: "google" }],
     });
 
     renderHeader();
@@ -307,16 +304,16 @@ describe("CalendarListHeader", () => {
       canSuggestContacts: false,
     };
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [otherAccountsBrokenConnection, ownConnection],
-      },
+      connections: [
+        { ...otherAccountsBrokenConnection, provider: "google" },
+        { ...ownConnection, provider: "google" },
+      ],
     });
 
     renderHeader();
 
     expect(mockUseConnectProvider).toHaveBeenCalledWith("google", {
-      connection: ownConnection,
+      connection: { ...ownConnection, provider: "google" },
     });
   });
 });

@@ -5,10 +5,7 @@ import {
   paletteEventRoute,
   startFocusEventCard,
 } from "@web/components/CommandPalette/event-search.util";
-import {
-  POINTER_EVENT_ID_ATTRIBUTE,
-  POINTER_EVENT_JUMP_REQUEST,
-} from "@web/shortcuts/keyboard-only/pointer-action";
+import { POINTER_EVENT_JUMP_REQUEST } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { describe, expect, it } from "bun:test";
 
 const timed = (overrides: { start: string; timeZone: string }): Event =>
@@ -62,7 +59,7 @@ describe("event-search.util", () => {
   it("waits for app-lock to clear before focusing a search hit", async () => {
     document.body.dataset.appLocked = "true";
     const card = document.createElement("div");
-    card.setAttribute(POINTER_EVENT_ID_ATTRIBUTE, "evt-1");
+    card.setAttribute("data-week-interaction-event-id", "evt-1");
     document.body.appendChild(card);
     const jumps: string[] = [];
     const onJump = (event: globalThis.Event) => {

@@ -21,11 +21,6 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
-import {
-  POINTER_ACTION_ATTRIBUTE,
-  POINTER_ACTIONS,
-  pointerShortcutAttributes,
-} from "@web/shortcuts/keyboard-only/pointer-action";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -130,10 +125,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
               onClick={openCheckout}
               onPointerEnter={focusOnPointerEnter}
               type="button"
-              {...pointerShortcutAttributes(START_TRIAL_SHORTCUT_KEY)}
-              {...(isAwaitingCheckout
-                ? { [POINTER_ACTION_ATTRIBUTE]: POINTER_ACTIONS.startTrial }
-                : {})}
             >
               {primaryLabel}
               <ShortcutHint className="ml-2">
@@ -146,7 +137,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
                 onClick={lookAround}
                 onPointerEnter={focusOnPointerEnter}
                 type="button"
-                {...pointerShortcutAttributes("L")}
               >
                 Look around first
                 <ShortcutHint className="ml-2">L</ShortcutHint>

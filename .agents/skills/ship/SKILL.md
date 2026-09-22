@@ -44,7 +44,7 @@ the repo records it.
    launches the next work package.
 
    Do not wait for a human on a PR that is green and mergeable. The gate is
-   the size rails and the main-is-not-red check in
+   the line-count rail and the main-is-not-red check in
    `.github/scripts/agent-loop-merge-guard.sh`, and those stay. Path prefixes
    are not a gate: no denylist exists in this repo, so do not look for one or
    hold a PR because you cannot find it.

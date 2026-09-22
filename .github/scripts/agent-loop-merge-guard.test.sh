@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local assertions for agent-loop-merge-guard.sh size rails.
+# Local assertions for agent-loop-merge-guard.sh (path allow, conflicts, requeue).
 # Run: bash .github/scripts/agent-loop-merge-guard.test.sh
 set -euo pipefail
 
@@ -35,14 +35,12 @@ assert_not_contains() {
 }
 
 run_guard() {
-  local files=$1
   AGENT_LOOP_GUARD_DRY_RUN=1 \
-    AGENT_LOOP_GUARD_FILES="$files" \
     GH_REPO="example/compass" \
     bash "${ROOT}/.github/scripts/agent-loop-merge-guard.sh" 1
 }
 
-# Formerly denied prefixes may auto-merge. Size rails still refuse.
+# Formerly denied prefixes may auto-merge; merge-guard does not path-gate.
 for allowed in \
   "packages/web/src/auth/providers/ConnectProviderChooser.tsx" \
   "packages/backend/src/auth/x.ts" \
@@ -54,24 +52,13 @@ for allowed in \
   ".github/prompts/agent-loop.md" \
   "self-host/compose.yml" \
   "packages/web/src/billing/CheckoutCelebrationModal.tsx"; do
-  out=$(run_guard "$allowed")
+  out=$(run_guard)
   assert_contains "$out" "proceed" "${allowed} proceeds"
   assert_not_contains "$out" "downgrade:" "${allowed} is not refused"
 done
 
 out=$(
-  AGENT_LOOP_MAX_FILES=1 \
-    AGENT_LOOP_GUARD_DRY_RUN=1 \
-    AGENT_LOOP_GUARD_FILES=$'a.ts\nb.ts' \
-    GH_REPO="example/compass" \
-    bash "${ROOT}/.github/scripts/agent-loop-merge-guard.sh" 1
-)
-assert_contains "$out" "downgrade:" "over-size diffs are refused"
-assert_not_contains "$out" "proceed" "over-size diffs do not proceed"
-
-out=$(
   AGENT_LOOP_GUARD_DRY_RUN=1 \
-    AGENT_LOOP_GUARD_FILES="packages/web/src/foo.ts" \
     AGENT_LOOP_GUARD_MERGEABLE=CONFLICTING \
     GH_REPO="example/compass" \
     bash "${ROOT}/.github/scripts/agent-loop-merge-guard.sh" 1
@@ -83,7 +70,6 @@ assert_not_contains "$out" "requeue:" "resolved conflict does not close the PR"
 
 out=$(
   AGENT_LOOP_GUARD_DRY_RUN=1 \
-    AGENT_LOOP_GUARD_FILES="packages/web/src/foo.ts" \
     AGENT_LOOP_GUARD_MERGEABLE=CONFLICTING \
     AGENT_LOOP_GUARD_STILL_DIRTY=1 \
     GH_REPO="example/compass" \
@@ -171,7 +157,6 @@ out=$(
   GH_STUB="${STUB_DIR}/gh" \
     GH_TOKEN=test \
     GH_REPO="example/compass" \
-    AGENT_LOOP_GUARD_FILES="packages/web/src/foo.ts" \
     bash "${ROOT}/.github/scripts/agent-loop-merge-guard.sh" 7
 )
 assert_contains "$out" "closed PR #7 and requeued" "auto-merge conflict closes and requeues"

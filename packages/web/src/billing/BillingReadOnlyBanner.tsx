@@ -3,7 +3,6 @@ import { track } from "@web/auth/posthog/track";
 import { BillingBanner } from "@web/billing/BillingBanner";
 import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
-import { POINTER_ACTIONS } from "@web/shortcuts/keyboard-only/pointer-action";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 
 /**
@@ -22,7 +21,6 @@ export const BillingReadOnlyBanner: FC = () => {
         billingPreviewActions.exit();
         checkoutPanelActions.open({ kind: "banner" });
       }}
-      pointerAction={POINTER_ACTIONS.startTrial}
       shortcutKey={START_TRIAL_SHORTCUT_KEY}
     />
   );

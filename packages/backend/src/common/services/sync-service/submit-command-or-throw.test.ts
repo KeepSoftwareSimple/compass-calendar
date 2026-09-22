@@ -44,7 +44,7 @@ describe("submitCommandOrThrow", () => {
     const cases = [
       ["readOnlyCalendar", "CALENDAR_READ_ONLY"],
       ["versionConflict", "RECURRENCE_CONFLICT"],
-      ["authorizationRevoked", "GOOGLE_REVOKED"],
+      ["authorizationRevoked", "CONNECTION_REVOKED"],
       ["unsupportedCapability", "UNSUPPORTED_OPERATION"],
       ["permanentProviderError", "PROVIDER_FAILURE"],
     ] as const;

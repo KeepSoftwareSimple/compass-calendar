@@ -1,5 +1,5 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
-import { type GoogleSyncConnectionSummary } from "@core/types/user.types";
+import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { AuthApi } from "@web/api/auth.api";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
@@ -11,9 +11,10 @@ import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
 // one the top-level banner shows.
 
 const connection = (
-  overrides: Partial<GoogleSyncConnectionSummary>,
-): GoogleSyncConnectionSummary => ({
+  overrides: Partial<SyncConnectionSummary>,
+): SyncConnectionSummary => ({
   id: "connection-primary",
+  provider: "google",
   state: "actionRequired",
   stateReason: "authorizationRevoked",
   lastSyncedAt: null,
@@ -24,7 +25,7 @@ const connection = (
   ...overrides,
 });
 
-const renderScoped = (scoped?: GoogleSyncConnectionSummary) => {
+const renderScoped = (scoped?: SyncConnectionSummary) => {
   const { wrapper } = createStoreWrapper();
   return renderHook(
     () =>
@@ -36,20 +37,17 @@ const renderScoped = (scoped?: GoogleSyncConnectionSummary) => {
 describe("useConnectProvider account scoping", () => {
   beforeEach(() => {
     userMetadataActions.set({
-      google: {
-        connectionState: "RECONNECT_REQUIRED",
-        connections: [
-          connection({}),
-          connection({
-            id: "connection-healthy",
-            state: "healthy",
-            stateReason: null,
-            accountEmail: "second@example.com",
-            connectionState: "HEALTHY",
-            canSuggestContacts: false,
-          }),
-        ],
-      },
+      connections: [
+        connection({ connectionState: "RECONNECT_REQUIRED" }),
+        connection({
+          id: "connection-healthy",
+          state: "healthy",
+          stateReason: null,
+          accountEmail: "second@example.com",
+          connectionState: "HEALTHY",
+          canSuggestContacts: false,
+        }),
+      ],
     });
   });
 
@@ -78,11 +76,8 @@ describe("useConnectProvider account scoping", () => {
       id: "connection-second",
       accountEmail: "second@example.com",
     });
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
-      // A hash target: the hook navigates to whatever URL it gets back, and
-      // jsdom implements only hash navigation (a real URL logs a noisy
-      // "Not implemented: navigation" error). The assertion is on the request,
-      // not the redirect.
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -92,6 +87,7 @@ describe("useConnectProvider account scoping", () => {
     await waitFor(() => {
       expect(beginSpy).toHaveBeenCalledWith({
         connectionId: "connection-second",
+        provider: "google",
       });
     });
 
@@ -99,11 +95,8 @@ describe("useConnectProvider account scoping", () => {
   });
 
   it("falls back to the precedence-winning connection when unscoped", async () => {
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
-      // A hash target: the hook navigates to whatever URL it gets back, and
-      // jsdom implements only hash navigation (a real URL logs a noisy
-      // "Not implemented: navigation" error). The assertion is on the request,
-      // not the redirect.
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -113,6 +106,7 @@ describe("useConnectProvider account scoping", () => {
     await waitFor(() => {
       expect(beginSpy).toHaveBeenCalledWith({
         connectionId: "connection-primary",
+        provider: "google",
       });
     });
 
@@ -120,7 +114,8 @@ describe("useConnectProvider account scoping", () => {
   });
 
   it("never sends connectionId for a new-account connect, even under RECONNECT_REQUIRED", async () => {
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -132,14 +127,15 @@ describe("useConnectProvider account scoping", () => {
     act(() => result.current.connect());
 
     await waitFor(() => {
-      expect(beginSpy).toHaveBeenCalledWith({});
+      expect(beginSpy).toHaveBeenCalledWith({ provider: "google" });
     });
 
     beginSpy.mockRestore();
   });
 
   it("adds requested feature groups to the begin body (WP-06 contacts nudge)", async () => {
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -156,6 +152,7 @@ describe("useConnectProvider account scoping", () => {
       expect(beginSpy).toHaveBeenCalledWith({
         connectionId: "connection-primary",
         features: ["contacts"],
+        provider: "google",
       });
     });
 
@@ -163,7 +160,8 @@ describe("useConnectProvider account scoping", () => {
   });
 
   it("keeps the begin body free of features when none are requested", async () => {
-    const beginSpy = spyOn(AuthApi, "beginGoogleConnection").mockResolvedValue({
+    const beginSpy = spyOn(AuthApi, "beginConnection").mockResolvedValue({
+      kind: "redirect",
       authorizationUrl: "#consent",
     });
 
@@ -179,8 +177,7 @@ describe("useConnectProvider account scoping", () => {
     await waitFor(() => {
       expect(beginSpy).toHaveBeenCalledTimes(1);
     });
-    // Byte-identical legacy body: no features key at all.
-    expect(Object.keys(beginSpy.mock.calls[0]?.[0] ?? {})).toEqual([]);
+    expect(beginSpy.mock.calls[0]?.[0]).toEqual({ provider: "google" });
 
     beginSpy.mockRestore();
   });
