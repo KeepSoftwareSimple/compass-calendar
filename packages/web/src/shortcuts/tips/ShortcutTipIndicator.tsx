@@ -11,6 +11,7 @@ import {
   getHintPlainText,
   type RankedShortcutHint,
 } from "@web/shortcuts/tips/shortcut-tips.data";
+import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 
 const isWriteHint = (featureArea: RankedShortcutHint["featureArea"]) =>
   featureArea === "event_creation" || featureArea === "event_editing";
@@ -38,7 +39,7 @@ export const ShortcutTipIndicator: FC<{
   );
 
   const showLock = locked && isWriteHint(featureArea);
-  const body = (
+  const hintBody = (
     <span
       aria-live="polite"
       className={classNames(
@@ -58,9 +59,24 @@ export const ShortcutTipIndicator: FC<{
     </span>
   );
 
-  if (!showLock) return body;
+  const body = showLock ? (
+    <TooltipWrapper description={SHORTCUT_PRO_TOOLTIP}>
+      {hintBody}
+    </TooltipWrapper>
+  ) : (
+    hintBody
+  );
 
   return (
-    <TooltipWrapper description={SHORTCUT_PRO_TOOLTIP}>{body}</TooltipWrapper>
+    <div className="flex w-full min-w-0 flex-col items-center gap-0.5">
+      {body}
+      <button
+        className="c-focus-ring rounded-xs px-1 text-text-muted text-xs leading-5 opacity-80 hover:text-text-primary hover:opacity-100"
+        onClick={() => setTipsMuted(true)}
+        type="button"
+      >
+        Hide tips
+      </button>
+    </div>
   );
 };

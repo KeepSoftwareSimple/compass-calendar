@@ -18,12 +18,13 @@ import {
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useShortcutHintProgress } from "@web/shortcuts/tips/shortcut-tips.progress.store";
+import { useIsTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
 
 /** Re-rank this often so a tip that nothing else disturbs still gives way.
  * Impressions are only recorded when the rendered tip changes, so without a
  * tick one tip can hold the bar for a whole session and never fatigue. */
-export const SHORTCUT_HINT_ROTATION_MS = 90 * 1000;
+export const SHORTCUT_HINT_ROTATION_MS = 5 * 60 * 1000;
 
 /**
  * Reads onboarding + current-doing stores and returns the sidebar's next
@@ -41,6 +42,7 @@ export function useShortcutHintContext() {
     pathname === ROOT_ROUTES.WEEK ||
     pathname.startsWith(`${ROOT_ROUTES.WEEK}/`);
   const progress = useShortcutHintProgress();
+  const tipsMuted = useIsTipsMuted();
   const jumpableDayPrefixes = useEventJumpStore(selectJumpableDayPrefixes);
   const [now, setNow] = useState(() => Date.now());
 
@@ -73,5 +75,6 @@ export function useShortcutHintContext() {
     progress,
     readShortcutUsageProfile(),
     now,
+    tipsMuted,
   );
 }
