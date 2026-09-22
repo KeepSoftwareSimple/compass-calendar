@@ -1,10 +1,16 @@
-import { App } from "@booking-web/App";
-import { createRoot } from "react-dom/client";
-import "./index.css";
+import { initPosthog } from "@web/auth/posthog/posthog.bootstrap";
 
-const container = document.getElementById("root");
-if (!container) {
-  throw new Error("Root container with id 'root' not found in index.html");
-}
+initPosthog();
 
-createRoot(container).render(<App />);
+void import("./app.bootstrap")
+  .then(({ bootstrapApp }) => bootstrapApp())
+  .catch((error) => {
+    console.error("Failed to initialize booking-web:", error);
+    const container = document.getElementById("root");
+    if (!container) return;
+    container.innerHTML =
+      '<main style="align-items:center;display:flex;flex-direction:column;height:100vh;justify-content:center;padding:1.5rem;text-align:center"><h1>Could not load booking</h1><p>The meeting page failed to start.</p><button type="button">Reload</button></main>';
+    container.querySelector("button")?.addEventListener("click", () => {
+      window.location.reload();
+    });
+  });

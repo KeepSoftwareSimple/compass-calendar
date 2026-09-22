@@ -1,9 +1,24 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light-beach">
   <head>
     <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Compass Booking</title>
+    <meta name="theme-color" content="#f3eee2" />
+    <title>Compass Meeting</title>
+    <script>
+      try {
+        const html = document.documentElement;
+        if (localStorage.getItem("compass.theme") === "dark-abyss") {
+          html.setAttribute("data-theme", "dark-abyss");
+          document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute("content", "#06090f");
+        }
+      } catch {
+        /* ignore */
+      }
+    </script>
     <link rel="stylesheet" href="/index.css" />
   </head>
   <body>

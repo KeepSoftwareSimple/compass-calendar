@@ -17,11 +17,6 @@ export const ROOT_ROUTES = {
   DAY_DATE: "/day/$dateString",
 } as const;
 
-export const LEGACY_BOOK = "/book/$username";
-export const LEGACY_BOOK_CANCEL = "/book/cancel/$reservationId";
-export const LEGACY_BOOK_RESCHEDULE = "/book/reschedule/$reservationId";
-export const LEGACY_BOOK_CONFIRMED = "/book/confirmed/$reservationId";
-
 export const DEFAULT_CALENDAR_ROUTE = ROOT_ROUTES.WEEK;
 
 // TanStack route *ids* (used for useMatch/useParams `from`), which diverge

@@ -8,21 +8,25 @@ import {
   microsoftBookingCalendar,
   preparePublicBookingConfirmedPage,
   preparePublicBookingPage,
+  publicBookingAppUrl,
 } from "./booking-harness";
 
 test.describe("public booking page", () => {
   test("legacy /book path redirects to /meet and keeps the query string", async ({
     page,
   }) => {
-    await page.goto("/book/tylerdane?token=abc", {
+    await page.goto(publicBookingAppUrl("/book/tylerdane?token=abc"), {
       waitUntil: "domcontentloaded",
     });
     await expect(page).toHaveURL(/\/meet\/tylerdane/);
     expect(new URL(page.url()).searchParams.get("token")).toBe("abc");
 
-    await page.goto("/book/cancel/000000000000000000000099?token=abc", {
-      waitUntil: "domcontentloaded",
-    });
+    await page.goto(
+      publicBookingAppUrl("/book/cancel/000000000000000000000099?token=abc"),
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
     await expect(page).toHaveURL(/\/meet\/cancel\/000000000000000000000099/);
     expect(new URL(page.url()).searchParams.get("token")).toBe("abc");
   });

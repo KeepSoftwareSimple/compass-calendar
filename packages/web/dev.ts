@@ -111,6 +111,22 @@ Bun.serve({
     const url = new URL(req.url);
     const { pathname } = url;
 
+    const bookingWebUpstream = process.env.BOOKING_WEB_UPSTREAM;
+    if (bookingWebUpstream && /^\/(?:meet|book)(?:\/|$)/.test(pathname)) {
+      const upstreamUrl = new URL(
+        `${pathname}${url.search}`,
+        bookingWebUpstream,
+      );
+      const proxyHeaders = new Headers(req.headers);
+      proxyHeaders.delete("host");
+      return fetch(upstreamUrl, {
+        method: req.method,
+        headers: proxyHeaders,
+        body:
+          req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+      });
+    }
+
     // SSE endpoint for live reload (dev mode only)
     if (IS_DEV && pathname === "/__live-reload") {
       let ctrl!: ReadableStreamDefaultController<Uint8Array>;

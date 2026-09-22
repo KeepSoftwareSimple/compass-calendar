@@ -2,6 +2,12 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
 import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
+/** Guest `/meet` pages are served by apps/booking-web (see playwright.config.ts). */
+export function publicBookingAppUrl(path: string): string {
+  const port = process.env.BOOKING_WEB_PORT ?? "9151";
+  return `http://localhost:${port}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 /** ObjectId-shaped id for stubbed Google calendar in host settings e2e. */
 export const BOOKING_CALENDAR_ID = "64b7f0a1c2d3e4f5a6b7c8d9";
 
@@ -606,7 +612,9 @@ export async function preparePublicBookingPage(
     return route.fulfill(jsonResponse({}));
   });
 
-  await page.goto(`/meet/${slug}`, { waitUntil: "domcontentloaded" });
+  await page.goto(publicBookingAppUrl(`/meet/${slug}`), {
+    waitUntil: "domcontentloaded",
+  });
   if (options.notFound || options.enabled === false) {
     await expect(
       page.getByRole("heading", { name: "Meeting page not found" }),
@@ -726,9 +734,12 @@ export async function preparePublicBookingConfirmedPage(
   const search = options.token
     ? `?token=${encodeURIComponent(options.token)}`
     : "";
-  await page.goto(`/meet/confirmed/${reservationId}${search}`, {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto(
+    publicBookingAppUrl(`/meet/confirmed/${reservationId}${search}`),
+    {
+      waitUntil: "domcontentloaded",
+    },
+  );
 
   return captured;
 }
@@ -813,9 +824,12 @@ export async function preparePublicBookingCancelPage(
   });
 
   const search = token ? `?token=${encodeURIComponent(token)}` : "";
-  await page.goto(`/meet/cancel/${reservationId}${search}`, {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto(
+    publicBookingAppUrl(`/meet/cancel/${reservationId}${search}`),
+    {
+      waitUntil: "domcontentloaded",
+    },
+  );
 
   return captured;
 }
@@ -972,9 +986,12 @@ export async function preparePublicBookingReschedulePage(
   });
 
   const search = token ? `?token=${encodeURIComponent(token)}` : "";
-  await page.goto(`/meet/reschedule/${reservationId}${search}`, {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto(
+    publicBookingAppUrl(`/meet/reschedule/${reservationId}${search}`),
+    {
+      waitUntil: "domcontentloaded",
+    },
+  );
 
   if (options.bookable === false) {
     await expect(

@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import { join } from "node:path";
 
 const TEST_PORT = 9150;
+const BOOKING_WEB_PORT = 9151;
 const TEST_CONFIG_PATH = join(process.cwd(), "e2e/compass.playwright.yaml");
 
 export default defineConfig({
@@ -49,13 +50,25 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: "cd packages/web && bun run dev.ts",
-    env: {
-      COMPASS_CONFIG_FILE: TEST_CONFIG_PATH,
+  webServer: [
+    {
+      command: "cd apps/booking-web && bun run dev.ts",
+      env: {
+        BOOKING_WEB_PORT: String(BOOKING_WEB_PORT),
+        COMPASS_CONFIG_FILE: TEST_CONFIG_PATH,
+      },
+      port: BOOKING_WEB_PORT,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
     },
-    port: TEST_PORT,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
+    {
+      command: "cd packages/web && bun run dev.ts",
+      env: {
+        COMPASS_CONFIG_FILE: TEST_CONFIG_PATH,
+      },
+      port: TEST_PORT,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+  ],
 });

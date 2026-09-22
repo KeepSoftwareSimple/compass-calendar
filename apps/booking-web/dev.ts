@@ -1,17 +1,31 @@
+import { loadCompassConfig } from "@core/config/compass.config";
+import { postcssPlugin } from "../../packages/web/plugins/postcss.plugin";
 import { copyStaticAssets } from "./copy-static-assets";
 import { watch } from "node:fs";
 import path from "node:path";
 
+const configFile = process.env.COMPASS_CONFIG_FILE;
+const config = configFile ? loadCompassConfig(configFile) : loadCompassConfig();
+
 const WEB_PORT = Number(process.env.BOOKING_WEB_PORT) || 9081;
 const OUTDIR = path.resolve(import.meta.dir, "../../build/booking-web");
 const SRCDIR = path.resolve(import.meta.dir, "src");
-const IS_DEV = (process.env.NODE_ENV ?? "development") === "development";
+const IS_DEV = (config.runtime.nodeEnv ?? "development") === "development";
 
 const define: Record<string, string> = {
   "process.env": JSON.stringify({
-    NODE_ENV: IS_DEV ? "development" : "production",
-    API_BASEURL: process.env.API_BASEURL ?? "http://localhost:3000/api",
+    NODE_ENV: config.runtime.nodeEnv || "development",
+    API_BASEURL: config.backend.apiUrl,
+    GOOGLE_CLIENT_ID: config.google?.clientId || "",
+    MICROSOFT_CLIENT_ID:
+      process.env.MICROSOFT_CLIENT_ID || config.microsoft?.clientId || "",
+    APPLE_SERVICES_ID:
+      process.env.APPLE_SERVICES_ID || config.apple?.signIn?.servicesId || "",
+    POSTHOG_KEY: config.posthog?.key || "",
+    POSTHOG_HOST: config.posthog?.host || "",
+    PORT: String(config.backend.port ?? 3000),
   }),
+  BUILD_VERSION: JSON.stringify("dev"),
 };
 
 const reloadClients = new Set<ReadableStreamDefaultController<Uint8Array>>();
@@ -36,6 +50,7 @@ async function build() {
     minify: !IS_DEV,
     splitting: true,
     define,
+    plugins: [postcssPlugin],
     publicPath: "/",
   });
 
