@@ -8,24 +8,34 @@ import {
   initialCheckoutPanelState,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const track = mock();
 mockModuleForFile("@web/auth/posthog/track", Track, { track });
 
 const { TrialCardBanner } = await import("@web/billing/TrialCardBanner");
 
-const renderBanner = (daysLeft = 3) =>
+const TRIAL_END = "2026-09-25T00:00:00.000Z";
+const OTHER_TRIAL_END = "2026-10-01T00:00:00.000Z";
+
+const renderBanner = (daysLeft = 3, trialEndsAt: string = TRIAL_END) =>
   render(
     <HotkeysProvider>
-      <TrialCardBanner daysLeft={daysLeft} />
+      <TrialCardBanner daysLeft={daysLeft} trialEndsAt={trialEndsAt} />
     </HotkeysProvider>,
   );
 
 describe("TrialCardBanner", () => {
+  beforeEach(() => {
+    persistentBrowserStore.remove(STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR);
+  });
+
   afterEach(() => {
     useCheckoutPanelStore.setState(initialCheckoutPanelState, true);
     track.mockClear();
+    persistentBrowserStore.remove(STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR);
   });
 
   it("opens checkout from the Add a card action and records shown and clicked", async () => {
@@ -51,8 +61,8 @@ describe("TrialCardBanner", () => {
     });
   });
 
-  it("hides for the rest of the session when dismissed", async () => {
-    renderBanner(2);
+  it("stays hidden after dismiss and remount for the same trial end", async () => {
+    const { unmount } = renderBanner(2);
 
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
 
@@ -62,5 +72,31 @@ describe("TrialCardBanner", () => {
       ),
     ).not.toBeInTheDocument();
     expect(useCheckoutPanelStore.getState().isOpen).toBe(false);
+    expect(
+      persistentBrowserStore.get(STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR),
+    ).toBe(TRIAL_END);
+
+    unmount();
+    renderBanner(2);
+
+    expect(
+      screen.queryByText(
+        "Your trial ends in 2 days. Add a card to keep creating events.",
+      ),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows again when the trial end date changes", async () => {
+    const { unmount } = renderBanner(2);
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    unmount();
+
+    renderBanner(2, OTHER_TRIAL_END);
+
+    expect(
+      screen.getByText(
+        "Your trial ends in 2 days. Add a card to keep creating events.",
+      ),
+    ).toBeInTheDocument();
   });
 });
