@@ -22,6 +22,11 @@ const PRICING_LINK = {
   href: "https://compasscalendar.com/pricing",
 } as const;
 
+const PRACTICE_LINK = {
+  label: "Practice the shortcuts",
+  href: "?play=1",
+} as const;
+
 const DIGIT_LEGAL_LINKS = [
   {
     digit: "9",
@@ -107,6 +112,12 @@ export function WelcomeLinks({ flashedKey }: { flashedKey: string | null }) {
           className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
         >
           Shortcuts
+        </a>
+        <a
+          href={PRACTICE_LINK.href}
+          className="c-focus-ring inline-flex items-center gap-1 underline-offset-4 hover:text-text hover:underline"
+        >
+          {PRACTICE_LINK.label}
         </a>
         <JumpAnchor
           letter={PRICING_LINK.letter}

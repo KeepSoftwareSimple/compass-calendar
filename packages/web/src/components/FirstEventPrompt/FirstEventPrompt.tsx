@@ -77,9 +77,8 @@ const PromptCard: FC = () => {
 };
 
 /**
- * Non-blocking prompt shown in the real app once the showcase is done
- * (finished or skipped): the contextual handoff from practice to the real
- * product. Completes on the first genuine event create (see
+ * Non-blocking prompt in the real calendar once the practice takeover is not
+ * active. Completes on the first genuine event create (see
  * noteFirstRealEventCreated in useEventMutations.ts), celebrates, and retires
  * the card forever. Dismissing retires it silently.
  */

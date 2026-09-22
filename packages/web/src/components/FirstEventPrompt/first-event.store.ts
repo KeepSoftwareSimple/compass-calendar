@@ -5,9 +5,7 @@ import {
   getFirstEventDone,
   markFirstEventDone,
 } from "@web/components/FirstEventPrompt/first-event.storage";
-import { hasSeenShortcutShowcase } from "@web/components/ShortcutShowcase/showcase.storage";
 import {
-  selectHasSeenShowcase,
   selectShowcaseActive,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
@@ -31,26 +29,14 @@ export const useFirstEventPromptStore = create<FirstEventPromptState>()(() => ({
   isDone: getFirstEventDone() !== null,
 }));
 
-/**
- * Shared eligibility predicate, given the two showcase flags: not active, and
- * seen (this session, an earlier one, or the legacy tour key). Takes plain
- * booleans rather than reading the store itself so FirstEventPrompt.tsx can
- * reuse it from its own reactive `useShortcutShowcaseStore` selectors instead
- * of re-deriving the same two-part check.
- */
-export const isShowcaseHandoffEligible = (
-  showcaseActive: boolean,
-  hasSeenShowcaseThisSession: boolean,
-): boolean =>
-  !showcaseActive && (hasSeenShowcaseThisSession || hasSeenShortcutShowcase());
+/** True when the first-event card may show: the practice takeover is not active. */
+export const isShowcaseHandoffEligible = (showcaseActive: boolean): boolean =>
+  !showcaseActive;
 
-const isEligibleNow = (): boolean => {
-  const showcase = useShortcutShowcaseStore.getState();
-  return isShowcaseHandoffEligible(
-    selectShowcaseActive(showcase),
-    selectHasSeenShowcase(showcase),
+const isEligibleNow = (): boolean =>
+  isShowcaseHandoffEligible(
+    selectShowcaseActive(useShortcutShowcaseStore.getState()),
   );
-};
 
 export const firstEventPromptActions = {
   /**
@@ -111,7 +97,6 @@ export type FirstEventPromptEligibility = {
   isDone: boolean;
   storageAvailable: boolean;
   showcaseActive: boolean;
-  hasSeenShowcaseThisSession: boolean;
 };
 
 /** Whether the first-event card should claim the onboarding surface slot. */
@@ -124,7 +109,4 @@ export const selectFirstEventPromptSurfaceEligible = (
   !input.isFormOpen &&
   !input.isDone &&
   input.storageAvailable &&
-  isShowcaseHandoffEligible(
-    input.showcaseActive,
-    input.hasSeenShowcaseThisSession,
-  );
+  isShowcaseHandoffEligible(input.showcaseActive);

@@ -461,9 +461,8 @@ describe("RootShell calendar onboarding on /life", () => {
     );
   });
 
-  it("shows the first-event prompt on /week after the showcase has been seen", async () => {
+  it("shows the first-event prompt on /week for a visitor who never saw the showcase", async () => {
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_WELCOME, "true");
-    persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "true");
 
     await renderShell("/week", { anonymous: true });
 

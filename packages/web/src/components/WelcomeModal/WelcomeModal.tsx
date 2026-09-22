@@ -17,7 +17,6 @@ import { SignInProviderButtons } from "@web/components/AuthModal/components/Sign
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
-import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
 import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
@@ -88,10 +87,6 @@ export function WelcomeModal() {
   // Suppress OverlayPanel's unmount restore when handing off to Auth — Auth
   // seats its own focus; restoring the underlay first causes a focus flash.
   const skipFocusRestoreRef = useRef(false);
-  // Explore starts the practice after this dialog unmounts. A login/signup
-  // handoff during the fade must cancel that so the takeover does not cover
-  // the auth form.
-  const startShowcaseAfterDismissRef = useRef(false);
   // openModal() only schedules a URL update. Keep this overlay up until
   // Auth actually opens so the calendar does not flash through the gap.
   // hidingForAuthRef still blocks Explore and shortcuts during that wait.
@@ -199,20 +194,13 @@ export function WelcomeModal() {
     skipFocusRestoreRef.current = true;
     markWelcomeSeen();
     track("welcome_modal_dismissed", { cta: "explore" });
-    startShowcaseAfterDismissRef.current = true;
-    // Start after this dialog unmounts so the practice takeover does not
-    // share a focus trap with the fading welcome overlay.
     beginDismiss(() => {
-      if (!startShowcaseAfterDismissRef.current) return;
-      startShowcaseAfterDismissRef.current = false;
       setIsOpen(false);
-      shortcutShowcaseActions.startFromWelcome();
     });
   };
 
   const beginAuthHandoff = () => {
     skipFocusRestoreRef.current = true;
-    startShowcaseAfterDismissRef.current = false;
     hidingForAuthRef.current = true;
     setHandingOff(true);
     cancelDismiss();
@@ -224,7 +212,6 @@ export function WelcomeModal() {
     beginAuthHandoff();
     markWelcomeSeen();
     if (cta === "sign_up") {
-      shortcutShowcaseActions.deferUntilSignup();
       trackSignupStarted("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
@@ -235,12 +222,10 @@ export function WelcomeModal() {
     // Stay mounted: OAuth is a redirect, and a provider-side error must not
     // hide welcome for the rest of the session. Ignore Explore while it loads.
     skipFocusRestoreRef.current = true;
-    startShowcaseAfterDismissRef.current = false;
     providerHandoffRef.current = true;
     setHandingOff(true);
     cancelDismiss();
     markWelcomeSeen();
-    shortcutShowcaseActions.deferUntilSignup();
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
     trackSignupStarted(`welcome_modal_${kind}`);
     startSignIn(kind);

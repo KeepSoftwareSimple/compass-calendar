@@ -48,27 +48,3 @@ export function markShowcaseInProgress(): void {
 export function clearShowcaseProgress(): void {
   persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_STEP);
 }
-
-/** Set when a welcome-modal exit hands off to signup instead of practicing. */
-export function markShowcaseOfferPending(): void {
-  persistentBrowserStore.set(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER, "true");
-}
-
-/**
- * A signup that straddles the tour-to-showcase deploy wrote the retired
- * tour's pending key; honor it once so those users still get onboarded.
- */
-const LEGACY_PENDING_OFFER_KEY = "compass.onboarding.has-pending-tour-offer";
-
-/** Consumed once, right after signup completes, to offer the showcase then. */
-export function consumePendingShowcaseOffer(): boolean {
-  if (!persistentBrowserStore.isAvailable()) return false;
-  const pending =
-    isStoredTrue(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER) ||
-    isStoredTrue(LEGACY_PENDING_OFFER_KEY);
-  if (pending) {
-    persistentBrowserStore.remove(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER);
-    persistentBrowserStore.remove(LEGACY_PENDING_OFFER_KEY);
-  }
-  return pending;
-}

@@ -215,7 +215,7 @@ describe("PointerHint", () => {
 
   it("uses showcase copy while practice mode is active", () => {
     act(() => {
-      shortcutShowcaseActions.startFromWelcome();
+      shortcutShowcaseActions.replay();
     });
     render(<PointerHint />);
 

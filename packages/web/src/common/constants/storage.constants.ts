@@ -13,9 +13,6 @@ type StorageKey =
   // Current Shortcut Showcase step id while practice is in progress. Cleared
   // on finish or a confirmed skip so a reload can resume instead of restarting.
   | "compass.onboarding.shortcut-showcase-step"
-  // Set when a welcome-modal exit hands off to signup before the showcase;
-  // consumed once, right after signup completes, to offer it then.
-  | "compass.onboarding.has-pending-showcase-offer"
   // "completed" | "dismissed": the first-event prompt's terminal state.
   // Absent means it is still live (or never shown).
   | "compass.onboarding.first-event-done"
@@ -70,7 +67,6 @@ export const STORAGE_KEYS: Record<
   | "HAS_DISMISSED_MEETING_PAGE_NUDGE"
   | "HAS_SEEN_SHORTCUT_SHOWCASE"
   | "SHORTCUT_SHOWCASE_STEP"
-  | "HAS_PENDING_SHOWCASE_OFFER"
   | "FIRST_EVENT_DONE"
   | "CONNECT_CALENDAR_PROMPT_SNOOZED_AT"
   | "SHORTCUT_TIPS_MUTED"
@@ -104,7 +100,6 @@ export const STORAGE_KEYS: Record<
     "compass.onboarding.has-dismissed-meeting-page-nudge",
   HAS_SEEN_SHORTCUT_SHOWCASE: "compass.onboarding.has-seen-shortcut-showcase",
   SHORTCUT_SHOWCASE_STEP: "compass.onboarding.shortcut-showcase-step",
-  HAS_PENDING_SHOWCASE_OFFER: "compass.onboarding.has-pending-showcase-offer",
   FIRST_EVENT_DONE: "compass.onboarding.first-event-done",
   // Holds an epoch-ms timestamp. Older browsers hold the literal "true" from
   // when dismissing was permanent; the reader treats that as a lapsed snooze.

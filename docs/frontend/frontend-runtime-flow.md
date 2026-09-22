@@ -93,12 +93,13 @@ Welcome → signup → first-event contract:
   because the scopes Compass requests include the calendar, so that one round
   trip signs the user up *and* connects it, the moment the product starts
   being worth keeping
-- **Explore without an account** starts the Shortcut Showcase
-  (`entry: "welcome"`) after the welcome dialog unmounts
+- **Explore without an account** closes the welcome dialog and leaves the
+  Shortcut Showcase closed until the visitor opts in
 - **Log in** opens the auth modal and leaves the showcase flags alone, so a
   returning user is not handed the practice or the first-event prompt
-- signing up (either route) defers a showcase offer via `showcase.storage.ts`;
-  `offerAfterSignupIfPending()` redeems it once, right after signup completes
+- **Practice the shortcuts** in the welcome footer (or `?play=1`, or the
+  command palette replay) is the opt-in entry to Block Party
+- signing up (either route) does not start or defer the showcase
 - the Shortcut Showcase is **Block Party**: a practice-only game whose state
   never reaches real calendar storage. A run clears a fixed queue of
   scheduling tasks (create, typed quick-times, nudge, edge resize, delete,
