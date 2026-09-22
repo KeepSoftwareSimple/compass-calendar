@@ -2,10 +2,7 @@ import { useSyncExternalStore } from "react";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import {
-  createExternalStore,
-  subscribeToStorageKey,
-} from "@web/common/utils/external-store.util";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 
 /**
  * The calendar new events are created on, chosen by the user from the
@@ -24,13 +21,10 @@ function readDefaultCalendarId(): string | null {
   return raw && raw.trim().length > 0 ? raw : null;
 }
 
-const defaultCalendarIdStore = createExternalStore<string | null>(
-  readDefaultCalendarId(),
+const defaultCalendarIdStore = createStorageBackedStore<string | null>(
+  STORAGE_KEYS.DEFAULT_CALENDAR_ID,
+  readDefaultCalendarId,
 );
-
-function refreshFromStorage(): void {
-  defaultCalendarIdStore.set(readDefaultCalendarId());
-}
 
 /**
  * Persist + broadcast the chosen default calendar; pass null to clear it and
@@ -51,24 +45,14 @@ export function setDefaultCalendarId(calendarId: CalendarId | null): boolean {
   return saved;
 }
 
-function subscribe(onChange: () => void): () => void {
-  const unsubscribeStore = defaultCalendarIdStore.subscribe(onChange);
-  const unsubscribeStorage = subscribeToStorageKey(
-    STORAGE_KEYS.DEFAULT_CALENDAR_ID,
-    refreshFromStorage,
-  );
-
-  return () => {
-    unsubscribeStore();
-    unsubscribeStorage();
-  };
-}
-
 export function useDefaultCalendarId(): string | null {
-  return useSyncExternalStore(subscribe, defaultCalendarIdStore.get);
+  return useSyncExternalStore(
+    defaultCalendarIdStore.subscribe,
+    defaultCalendarIdStore.get,
+  );
 }
 
 /** Test-only: resyncs the in-memory store from storage. */
 export function resetDefaultCalendarStoreForTests(): void {
-  refreshFromStorage();
+  defaultCalendarIdStore.refresh();
 }

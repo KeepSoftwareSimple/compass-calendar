@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
-import {
-  createExternalStore,
-  subscribeToStorageKey,
-} from "@web/common/utils/external-store.util";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import {
   readHiddenCalendarIds,
   writeHiddenCalendarIds,
@@ -20,13 +17,10 @@ import {
  * mutation, test seeding) gets the overlay for free - there's nothing left
  * to remember to re-run.
  */
-const hiddenIdsStore = createExternalStore<ReadonlySet<string>>(
-  readHiddenCalendarIds(),
+const hiddenIdsStore = createStorageBackedStore<ReadonlySet<string>>(
+  STORAGE_KEYS.HIDDEN_CALENDAR_IDS,
+  readHiddenCalendarIds,
 );
-
-function refreshFromStorage(): void {
-  hiddenIdsStore.set(readHiddenCalendarIds());
-}
 
 /**
  * Persist + broadcast a visibility change. Returns false (and leaves the
@@ -49,21 +43,8 @@ export function setCalendarVisibility(
   return saved;
 }
 
-function subscribe(onChange: () => void): () => void {
-  const unsubscribeStore = hiddenIdsStore.subscribe(onChange);
-  const unsubscribeStorage = subscribeToStorageKey(
-    STORAGE_KEYS.HIDDEN_CALENDAR_IDS,
-    refreshFromStorage,
-  );
-
-  return () => {
-    unsubscribeStore();
-    unsubscribeStorage();
-  };
-}
-
 export function useHiddenCalendarIds(): ReadonlySet<string> {
-  return useSyncExternalStore(subscribe, hiddenIdsStore.get);
+  return useSyncExternalStore(hiddenIdsStore.subscribe, hiddenIdsStore.get);
 }
 
 /**
@@ -74,5 +55,5 @@ export function useHiddenCalendarIds(): ReadonlySet<string> {
  * before render.
  */
 export function resetCalendarVisibilityStoreForTests(): void {
-  refreshFromStorage();
+  hiddenIdsStore.refresh();
 }
