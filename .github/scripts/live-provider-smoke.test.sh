@@ -82,9 +82,12 @@ out=$(
 status=$?
 set -e
 assert_eq "$status" "1" "expected microsoft skipped exits 1"
-assert_contains "$out" "::warning::google skipped:" "expected-skip still warns on google"
-assert_contains "$out" "::warning::microsoft skipped:" "expected microsoft skip is a warning"
-assert_contains "$out" "::warning::apple skipped:" "expected-skip still warns on apple"
+assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
+  "expected-skip still warns on google"
+assert_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
+  "expected microsoft skip is a warning"
+assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
+  "expected-skip still warns on apple"
 assert_contains "$out" "live-provider-smoke passed=none skipped=google microsoft apple failed=none" \
   "expected-skip prints the summary line"
 assert_contains "$out" "live-provider-smoke expected provider skipped: microsoft" \
@@ -110,9 +113,12 @@ out=$(
 status=$?
 set -e
 assert_eq "$status" "0" "unexpected skip exits 0 when expected provider ran"
-assert_contains "$out" "::warning::google skipped:" "unexpected google skip is a warning"
-assert_contains "$out" "::warning::apple skipped:" "unexpected apple skip is a warning"
-assert_not_contains "$out" "::warning::microsoft skipped:" "ready microsoft is not skipped"
+assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
+  "unexpected google skip is a warning"
+assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
+  "unexpected apple skip is a warning"
+assert_not_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
+  "ready microsoft is not skipped"
 assert_contains "$out" "live-provider-smoke passed=microsoft skipped=google apple failed=none" \
   "unexpected-skip summary lists microsoft as passed"
 assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=microsoft" \
@@ -131,9 +137,12 @@ out=$(
 status=$?
 set -e
 assert_eq "$status" "0" "nothing expected and all skipped exits 0"
-assert_contains "$out" "::warning::google skipped:" "nothing-expected warns on google"
-assert_contains "$out" "::warning::microsoft skipped:" "nothing-expected warns on microsoft"
-assert_contains "$out" "::warning::apple skipped:" "nothing-expected warns on apple"
+assert_contains "$out" "google skipped: SMOKE_GOOGLE_REFRESH_TOKEN or Google client id/secret absent" \
+  "nothing-expected warns on google"
+assert_contains "$out" "microsoft skipped: SMOKE_MICROSOFT_REFRESH_TOKEN or Microsoft client id/secret absent" \
+  "nothing-expected warns on microsoft"
+assert_contains "$out" "apple skipped: SMOKE_APPLE_EMAIL or SMOKE_APPLE_APP_PASSWORD absent" \
+  "nothing-expected warns on apple"
 assert_contains "$out" "live-provider-smoke passed=none skipped=google microsoft apple failed=none" \
   "nothing-expected prints the summary line"
 assert_not_contains "$out" "expected provider skipped" \
