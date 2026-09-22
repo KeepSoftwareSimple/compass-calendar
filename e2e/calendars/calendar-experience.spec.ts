@@ -340,21 +340,9 @@ async function setupCalendarExperiencePage(
   const hasMicrosoft = extraCalendars.some(
     (entry) => entry.provider === "microsoft",
   );
-  const metadata = options.metadata ?? {
-    connections: [
-      {
-        id: "e2e-connection-1",
-        provider: "google",
-        state: "healthy",
-        stateReason: null,
-        lastSyncedAt: null,
-        lastHealthyAt: null,
-        accountEmail: "e2e@example.com",
-        connectionState: "HEALTHY",
-        canSuggestContacts: false,
-      },
-    ],
-  };
+  // Empty connections keeps useConnectedAccountEmails() false so the local
+  // calendar stays a writable create target (see getWritableCalendars).
+  const metadata = options.metadata ?? { connections: [] };
   const microsoftConnect = Boolean(options.microsoftConnect || hasMicrosoft);
   const hiddenEventIds = new Set<string>();
 
