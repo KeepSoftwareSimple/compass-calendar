@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import {
-  createExternalStore,
-  subscribeToStorageKey,
-} from "@web/common/utils/external-store.util";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import { isValidTimeZone } from "@web/timezone/browser-timezone";
 
 function readTimeTravelZone(): string | null {
@@ -15,13 +12,10 @@ function readTimeTravelZone(): string | null {
   return raw;
 }
 
-const timeTravelZoneStore = createExternalStore<string | null>(
-  readTimeTravelZone(),
+const timeTravelZoneStore = createStorageBackedStore<string | null>(
+  STORAGE_KEYS.TIME_TRAVEL_TIMEZONE,
+  readTimeTravelZone,
 );
-
-function refreshFromStorage(): void {
-  timeTravelZoneStore.set(readTimeTravelZone());
-}
 
 export function getTimeTravelZone(): string | null {
   return timeTravelZoneStore.get();
@@ -47,21 +41,8 @@ export function setTimeTravelZone(timeZone: string | null): boolean {
   return saved;
 }
 
-function subscribe(onChange: () => void): () => void {
-  const unsubscribeStore = timeTravelZoneStore.subscribe(onChange);
-  const unsubscribeStorage = subscribeToStorageKey(
-    STORAGE_KEYS.TIME_TRAVEL_TIMEZONE,
-    refreshFromStorage,
-  );
-
-  return () => {
-    unsubscribeStore();
-    unsubscribeStorage();
-  };
-}
-
 export function useTimeTravelZone(): string | null {
-  return useSyncExternalStore(subscribe, getTimeTravelZone);
+  return useSyncExternalStore(timeTravelZoneStore.subscribe, getTimeTravelZone);
 }
 
 export function resetTimeTravelStoreForTests(): void {
