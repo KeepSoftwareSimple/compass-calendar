@@ -56,8 +56,11 @@ export interface ConnectionStateEvidence {
   // updatedAt) for longer than BOOTSTRAP_STALLED_AFTER_MS. Only consulted when
   // initialImportComplete is false.
   readonly bootstrapOverdue: boolean;
-  // A non-destructive repair or post-gap reconciliation is running while
-  // existing data stays queryable.
+  // A non-destructive repair, calendar-list discovery, import, or post-gap
+  // reconciliation is running while existing data stays queryable. Routine
+  // incremental pulls are not included: a foreground tick enqueues one on an
+  // already-healthy connection, and treating it as catching up republishes
+  // the connection on every tick.
   readonly catchingUp: boolean;
   // The oldest piece of due-but-incomplete work, or null when none is overdue.
   readonly oldestDueWorkAt: Date | null;

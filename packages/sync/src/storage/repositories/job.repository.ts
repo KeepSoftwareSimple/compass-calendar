@@ -745,8 +745,14 @@ export class JobRepository {
   }
 
   // Read work that makes a connected calendar's freshness unknown. Command
-  // writes and subscription renewal are intentionally excluded: they should
-  // not turn an otherwise current sidebar into a broad "Syncing" state.
+  // writes, subscription renewal, and incrementalPull are excluded: they
+  // should not turn an otherwise current sidebar into a broad "Syncing"
+  // state. Foreground focus refreshes enqueue incrementalPull about every
+  // 30s on an already-healthy connection. Counting that job flips
+  // healthy -> catchingUp and back when it settles, and both flips append a
+  // connection invalidation that the SSE bridge turns into a range refetch.
+  // A manual Refresh still reports catchingUp because it also enqueues
+  // calendarListSync. A webhook pull wakes the client only when events change.
   async hasOutstandingReadWorkByConnection(
     tenantId: TenantId,
     principalId: PrincipalId,
@@ -763,7 +769,6 @@ export class JobRepository {
             "calendarListSync",
             "initialImport",
             "bootstrapCatchup",
-            "incrementalPull",
             "repair",
           ],
         },
