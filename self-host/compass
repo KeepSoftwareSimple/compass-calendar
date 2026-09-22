@@ -50,6 +50,8 @@ Commands:
   logs      Follow Compass logs
   status    Show container status
   update    Pull updated images from Docker Hub and restart
+  update-booking-web
+            Pull and restart only the booking-web container
   open      Open Compass in your browser
 USAGE
 }
@@ -243,6 +245,40 @@ case $command_name in
       compose logs --tail=100 mongo backend sync >&2 || true
       fail "Compass updated, but the backend health check did not pass. Run './compass logs' for details."
     fi
+    ;;
+  update-booking-web)
+    require_stack
+    case ",${COMPOSE_PROFILES}," in
+      *,booking,*);;
+      *)
+        export COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}booking"
+        ;;
+    esac
+    booking_port=$(strip_quotes "$(read_config_value bookingWeb.port)")
+    booking_port=${booking_port:-9081}
+    booking_image=$(strip_quotes "$(read_config_value bookingWeb.image)")
+    [ -n "$booking_image" ] || fail "Missing bookingWeb.image in $CONFIG_FILE. Deploy booking-web before running update-booking-web."
+    prune_unused_images
+    compose pull booking-web || fail "Could not pull the booking-web image from Docker Hub."
+    if ! compose up -d booking-web --wait; then
+      compose ps -a booking-web >&2 || true
+      compose logs --tail=100 booking-web >&2 || true
+      fail "Docker Compose failed to start booking-web."
+    fi
+    prune_unused_images
+    if command -v curl >/dev/null 2>&1; then
+      if curl -fsS "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
+        info "booking-web updated (${booking_image}) on port ${booking_port}"
+        exit 0
+      fi
+    fi
+    if command -v wget >/dev/null 2>&1; then
+      if wget -q -O /dev/null "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
+        info "booking-web updated (${booking_image}) on port ${booking_port}"
+        exit 0
+      fi
+    fi
+    fail "booking-web started, but the HTTP check on port ${booking_port} did not pass."
     ;;
   open)
     open_browser

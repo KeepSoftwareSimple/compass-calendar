@@ -1,0 +1,32 @@
+name: Deploy staging booking-web
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to build and deploy booking-web from, such as v1.2.3'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  notify-failure:
+    name: Notify on failure
+    if: failure()
+    needs:
+      - deploy-cloud
+    uses: ./.github/workflows/_notify-failure.yml
+    with:
+      tag: ${{ inputs.tag }}
+      needs_json: ${{ toJSON(needs) }}
+    secrets: inherit
+
+  deploy-cloud:
+    name: Deploy booking-web to staging-cloud
+    uses: ./.github/workflows/_deploy-booking-web-environment.yml
+    with:
+      tag: ${{ inputs.tag }}
+      environment: staging-cloud
+    secrets: inherit
