@@ -4,21 +4,10 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 const isStoredTrue = (key: string) =>
   persistentBrowserStore.get(key) === "true";
 
-/**
- * Users who finished or skipped the retired guided tour wrote this key; treat
- * them as having seen the showcase so the takeover never ambushes an
- * established user. Deliberately outside the typed StorageKey union: the key
- * is dead except for this one read.
- */
-const LEGACY_TOUR_SEEN_KEY = "compass.onboarding.has-seen-onboarding-tour";
-
 export function hasSeenShortcutShowcase(): boolean {
   // Fail closed: never auto-launch a takeover when storage is unavailable.
   if (!persistentBrowserStore.isAvailable()) return true;
-  return (
-    isStoredTrue(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE) ||
-    isStoredTrue(LEGACY_TOUR_SEEN_KEY)
-  );
+  return isStoredTrue(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE);
 }
 
 export function markShortcutShowcaseSeen(): void {

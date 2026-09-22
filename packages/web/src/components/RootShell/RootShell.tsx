@@ -142,13 +142,14 @@ export function RootShell() {
     !deferCalendarOnboarding &&
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
-  const trialDaysLeft =
+  const trialEndsAt =
     access.kind === "server" &&
     access.status === "trialing" &&
-    access.needsPaymentMethod &&
-    access.trialEndsAt
-      ? getTrialDaysLeft(access.trialEndsAt)
+    access.needsPaymentMethod
+      ? access.trialEndsAt
       : null;
+  const trialDaysLeft =
+    trialEndsAt !== null ? getTrialDaysLeft(trialEndsAt) : null;
   const showTrialCardBanner =
     trialDaysLeft !== null && trialDaysLeft <= 3 && !isCelebrating;
 
@@ -206,8 +207,8 @@ export function RootShell() {
     <AuthModalProvider>
       {showPastDue && <BillingPastDueBanner />}
       {showReadOnlyBanner && <BillingReadOnlyBanner />}
-      {showTrialCardBanner && trialDaysLeft !== null && (
-        <TrialCardBanner daysLeft={trialDaysLeft} />
+      {showTrialCardBanner && trialDaysLeft !== null && trialEndsAt && (
+        <TrialCardBanner daysLeft={trialDaysLeft} trialEndsAt={trialEndsAt} />
       )}
       <Outlet />
       <AuthModal />
