@@ -1,9 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
-import {
-  createExternalStore,
-  subscribeToStorageKey,
-} from "@web/common/utils/external-store.util";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import {
   readCollapsedAccountKeys,
   writeCollapsedAccountKeys,
@@ -18,13 +15,10 @@ export function accountCalendarListId(accountKey: string): string {
   return `account-calendars-${accountKey}`;
 }
 
-const collapsedStore = createExternalStore<ReadonlySet<string>>(
-  readCollapsedAccountKeys(),
+const collapsedStore = createStorageBackedStore<ReadonlySet<string>>(
+  STORAGE_KEYS.COLLAPSED_ACCOUNTS,
+  readCollapsedAccountKeys,
 );
-
-function refreshFromStorage(): void {
-  collapsedStore.set(readCollapsedAccountKeys());
-}
 
 /**
  * Toggle one account's collapsed state. Returns false (leaving the store
@@ -40,25 +34,12 @@ export function toggleAccountCollapsed(key: string): boolean {
   return saved;
 }
 
-function subscribe(onChange: () => void): () => void {
-  const unsubscribeStore = collapsedStore.subscribe(onChange);
-  const unsubscribeStorage = subscribeToStorageKey(
-    STORAGE_KEYS.COLLAPSED_ACCOUNTS,
-    refreshFromStorage,
-  );
-
-  return () => {
-    unsubscribeStore();
-    unsubscribeStorage();
-  };
-}
-
 export function useCollapsedAccountKeys(): ReadonlySet<string> {
-  return useSyncExternalStore(subscribe, collapsedStore.get);
+  return useSyncExternalStore(collapsedStore.subscribe, collapsedStore.get);
 }
 
 /** Test-only: resyncs the in-memory store from storage. Registered in
  * reset-stores.ts for between-test cleanup. */
 export function resetCollapsedAccountsStoreForTests(): void {
-  refreshFromStorage();
+  collapsedStore.refresh();
 }

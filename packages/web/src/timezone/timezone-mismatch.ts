@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import {
-  createExternalStore,
-  subscribeToStorageKey,
-} from "@web/common/utils/external-store.util";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 import { timeZoneCityName } from "@web/timezone/timezone-catalog";
 
@@ -26,13 +23,10 @@ function readSnoozedBrowser(): string | null {
   );
 }
 
-const snoozedBrowserStore = createExternalStore<string | null>(
-  readSnoozedBrowser(),
+const snoozedBrowserStore = createStorageBackedStore<string | null>(
+  STORAGE_KEYS.TIMEZONE_MISMATCH_SNOOZED_BROWSER,
+  readSnoozedBrowser,
 );
-
-function refreshSnoozeFromStorage(): void {
-  snoozedBrowserStore.set(readSnoozedBrowser());
-}
 
 export function getTimezoneMismatchSnoozedBrowser(): string | null {
   return snoozedBrowserStore.get();
@@ -49,22 +43,9 @@ export function snoozeTimezoneMismatch(browserTimeZone: string): boolean {
   return saved;
 }
 
-function subscribeSnooze(onChange: () => void): () => void {
-  const unsubscribeStore = snoozedBrowserStore.subscribe(onChange);
-  const unsubscribeStorage = subscribeToStorageKey(
-    STORAGE_KEYS.TIMEZONE_MISMATCH_SNOOZED_BROWSER,
-    refreshSnoozeFromStorage,
-  );
-
-  return () => {
-    unsubscribeStore();
-    unsubscribeStorage();
-  };
-}
-
 export function useTimezoneMismatchSnoozedBrowser(): string | null {
   return useSyncExternalStore(
-    subscribeSnooze,
+    snoozedBrowserStore.subscribe,
     getTimezoneMismatchSnoozedBrowser,
   );
 }
