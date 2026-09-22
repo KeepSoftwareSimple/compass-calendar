@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   initialPointerHintState,
@@ -95,9 +95,7 @@ describe("WelcomeGuideBody", () => {
     );
 
     expect(
-      screen.getByText(
-        /Compass is keyboard-driven to help users stay in the flow/,
-      ),
+      screen.getByText(/This welcome screen works with your mouse, too/),
     ).toBeTruthy();
   });
 
@@ -162,7 +160,7 @@ describe("WelcomeGuideBody", () => {
     const question = screen.getByRole("button", {
       name: "Who is Compass for?",
     });
-    const hintWrap = question.nextElementSibling;
+    const hintWrap = within(question).getByText("1").parentElement;
     expect(hintWrap?.className).not.toMatch(/c-keycap-flash/);
 
     act(() => {

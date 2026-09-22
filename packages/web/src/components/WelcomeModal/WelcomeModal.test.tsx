@@ -62,6 +62,7 @@ afterAll(() => {
 
 const { WelcomeModal } =
   require("./WelcomeModal") as typeof import("./WelcomeModal");
+const { FAQ_ITEMS } = require("./faq") as typeof import("./faq");
 const { STORAGE_KEYS } =
   require("@web/common/constants/storage.constants") as typeof import("@web/common/constants/storage.constants");
 
@@ -116,7 +117,10 @@ describe("WelcomeModal", () => {
         name: "The Keyboard Calendar",
       }),
     ).toBeTruthy();
-    expect(screen.getByText(/No clicks allowed/)).toBeTruthy();
+    expect(
+      screen.getByText(/Click any button here, or use Enter and the key hints/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No clicks allowed/)).toBeNull();
     expect(screen.getByRole("img", { name: /pixel pirate/i })).toBeTruthy();
     expect(screen.getByText("No signup required")).toBeTruthy();
     expect(screen.queryByRole("link", { name: /Product Hunt/i })).toBeNull();
@@ -170,8 +174,11 @@ describe("WelcomeModal", () => {
     expect(explore.getAttribute("aria-busy")).toBe("true");
 
     await waitFor(() => {
-      expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+      expect(
+        screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
+      ).toBeNull();
     });
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
   });
 
   it("does not restore underlay focus when handing off to auth", async () => {
@@ -251,6 +258,42 @@ describe("WelcomeModal", () => {
     expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
   });
 
+  it("advances through every step and FAQ row with pointer clicks only", async () => {
+    const user = userEvent.setup();
+    render(<WelcomeModal />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Get started for free" }),
+    );
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+
+    for (const [index, item] of FAQ_ITEMS.entries()) {
+      const row = screen.getByRole("button", { name: item.question });
+      await user.click(within(row).getByText(String(index + 1)));
+      expect(row).toHaveAttribute("aria-expanded", "true");
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      await user.click(row);
+      expect(row).toHaveAttribute("aria-expanded", "false");
+    }
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+    expect(screen.getByText("Step 3 of 3")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByText("Step 2 of 3")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await user.click(
+      screen.getByRole("button", { name: "Explore without an account" }),
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
+      ).toBeNull();
+    });
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
+  });
+
   it("advances with Enter or a click, and Escape steps back", async () => {
     const user = userEvent.setup();
     render(<WelcomeModal />);
@@ -279,6 +322,9 @@ describe("WelcomeModal", () => {
     expect(screen.queryByText(/You can sign up later/)).toBeNull();
     expect(screen.getByRole("link", { name: "Terms" })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Pricing" })).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "Practice the shortcuts" }),
+    ).toHaveAttribute("href", "?play=1");
     expect(screen.getByRole("link", { name: "GitHub" })).toHaveAttribute(
       "href",
       "https://github.com/KeepSoftwareSimple/compass-calendar",
@@ -465,7 +511,7 @@ describe("WelcomeModal", () => {
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
   });
 
-  it("starts the practice after exploring without an account", async () => {
+  it("closes without starting the practice after exploring without an account", async () => {
     const user = userEvent.setup();
 
     render(<WelcomeModal />);
@@ -475,45 +521,14 @@ describe("WelcomeModal", () => {
 
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
     await waitFor(() => {
-      expect(useShortcutShowcaseStore.getState().isActive).toBe(true);
+      expect(
+        screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
+      ).toBeNull();
     });
-    expect(useShortcutShowcaseStore.getState().entry).toBe("welcome");
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).not.toBe("true");
-    expect(
-      localStorage.getItem(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER),
-    ).toBeNull();
-  });
-
-  it("cancels a pending practice start when login opens during dismiss", async () => {
-    const user = userEvent.setup();
-    const { rerender } = render(<WelcomeModal />);
-    await goToChooseScreen(user);
-
-    await user.keyboard("s");
-    await user.keyboard("i");
-
-    expect(mockOpenModal).toHaveBeenCalledWith("login");
-    authModalState.isOpen = true;
-    rerender(<WelcomeModal />);
-    expect(
-      screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
-    ).toBeNull();
-
-    await act(async () => {
-      await new Promise((resolve) => {
-        setTimeout(resolve, 500);
-      });
-    });
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
-
-    authModalState.isOpen = false;
-    rerender(<WelcomeModal />);
-    expect(
-      screen.getByRole("dialog", { name: "Welcome to Compass Calendar" }),
-    ).toBeVisible();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
   });
 
   it("does not start practice if explore is pressed after login before auth opens", async () => {
@@ -546,12 +561,9 @@ describe("WelcomeModal", () => {
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).not.toBe("true");
-    expect(
-      localStorage.getItem(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER),
-    ).toBeNull();
   });
 
-  it("defers the practice offer to after signup", async () => {
+  it("does not defer the practice offer when signing up from welcome", async () => {
     const user = userEvent.setup();
     render(<WelcomeModal />);
     await goToChooseScreen(user);
@@ -559,9 +571,7 @@ describe("WelcomeModal", () => {
     await user.click(screen.getByRole("button", { name: "Sign up" }));
 
     expect(mockOpenModal).toHaveBeenCalledWith("signUp");
-    expect(localStorage.getItem(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER)).toBe(
-      "true",
-    );
+    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).not.toBe("true");
@@ -685,7 +695,7 @@ describe("WelcomeModal", () => {
       ).toHaveClass("w-full", "h-10");
     });
 
-    it("starts Google auth from the button and queues the practice offer", async () => {
+    it("starts Google auth from the button without queueing the practice", async () => {
       const user = userEvent.setup();
       render(<WelcomeModal />);
       await goToChooseScreen(user);
@@ -696,9 +706,7 @@ describe("WelcomeModal", () => {
 
       expect(startGoogleAuthorization).toHaveBeenCalled();
       expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBe("true");
-      expect(
-        localStorage.getItem(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER),
-      ).toBe("true");
+      expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     });
 
     it("starts Google auth with the G shortcut", async () => {

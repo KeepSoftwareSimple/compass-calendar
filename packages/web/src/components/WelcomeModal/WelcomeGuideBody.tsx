@@ -23,8 +23,9 @@ export function WelcomeGuideBody({
           The Keyboard Calendar
         </h2>
         <p className="text-text-muted">
-          Rediscover the joy of shortcuts as you build your perfect schedule. No
-          clicks allowed.
+          Rediscover the joy of shortcuts as you build your perfect schedule.
+          Click any button here, or use Enter and the key hints beside each
+          action.
         </p>
       </div>
 

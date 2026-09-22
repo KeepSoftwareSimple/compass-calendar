@@ -59,6 +59,10 @@ export const useSyncFocusRefresh = (
     silentRefresh();
   }, [canRefresh, silentRefresh]);
 
-  useVisibleAfterHidden(silentRefresh, MIN_HIDDEN_DURATION_MS, canRefresh);
-  useVisibleAfterHidden(reconcileMetadata, MIN_HIDDEN_DURATION_MS, true);
+  const onVisibleAfterHidden = useCallback(() => {
+    if (canRefresh) silentRefresh();
+    reconcileMetadata();
+  }, [canRefresh, silentRefresh, reconcileMetadata]);
+
+  useVisibleAfterHidden(onVisibleAfterHidden, MIN_HIDDEN_DURATION_MS);
 };

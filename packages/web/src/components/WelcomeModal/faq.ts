@@ -23,7 +23,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Why doesn't my mouse work?",
     answer:
-      "Compass is keyboard-driven to help users stay in the flow. Disabling clicks forces us to deliver a first-class keyboard experience.",
+      "The calendar grid is built for the keyboard. This welcome screen works with your mouse, too: every button and link here responds to a click.",
   },
   {
     question: "I don't know any shortcuts yet. Will I be lost?",

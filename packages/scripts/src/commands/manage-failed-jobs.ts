@@ -1,4 +1,4 @@
-import { loadCompassConfig } from "@core/config/compass.config";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { Logger } from "@core/logger/winston.logger";
 import { SyncJobIdSchema } from "@core/types/sync/identity.contracts";
 import { FAILED_JOB_MAX_REQUEUES } from "@sync/domain/failed-job-requeue.service";
@@ -6,18 +6,6 @@ import { JobRepository } from "@sync/storage/repositories/job.repository";
 import { SyncMongoService } from "@sync/storage/sync-mongo.service";
 
 const logger = Logger("scripts.commands.manage-failed-jobs");
-
-function syncMongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const uri = loadCompassConfig().sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before manage-failed-jobs",
-    );
-  }
-  return uri;
-}
 
 function flagValue(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
@@ -47,7 +35,7 @@ export async function runManageFailedJobs(): Promise<void> {
   const syncMongo = new SyncMongoService();
   try {
     await syncMongo.connect({
-      uri: syncMongoUri(),
+      uri: resolveSyncMongoUri("manage-failed-jobs"),
       enforceLeastPrivilege: false,
       forbiddenDatabaseName: "prod_calendar",
     });

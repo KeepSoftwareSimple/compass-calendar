@@ -47,11 +47,11 @@ describe("FirstEventPrompt", () => {
     useSettingsStore.setState(initialSettingsState);
   });
 
-  it("stays hidden before the showcase has ever been seen", () => {
+  it("shows before the showcase has ever been seen", () => {
     render(<FirstEventPrompt />);
     expect(
-      screen.queryByRole("complementary", { name: "Create your first event" }),
-    ).toBeNull();
+      screen.getByRole("complementary", { name: "Create your first event" }),
+    ).toBeTruthy();
   });
 
   it("stays hidden while the auth modal is open", () => {

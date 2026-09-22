@@ -24,8 +24,13 @@ const isDuplicateKeyError = (error: unknown): boolean => {
   return writeErrors.every((entry) => entry.code === 11000);
 };
 
-const parseRecord = (record: unknown): EmailSendRecord =>
-  EmailSendRecordSchema.parse(record);
+const parseRecord = (record: unknown): EmailSendRecord => {
+  const raw = record as EmailSendRecord;
+  return EmailSendRecordSchema.parse({
+    ...raw,
+    deliveredAt: raw.deliveredAt ?? null,
+  });
+};
 
 const truncateError = (error: string): string => error.trim().slice(0, 500);
 
@@ -37,11 +42,13 @@ export type InsertEmailSendInput = Omit<
   | "lastError"
   | "providerMessageId"
   | "sentAt"
+  | "deliveredAt"
 > & {
   attemptCount?: number;
   lastError?: string | null;
   providerMessageId?: string | null;
   sentAt?: Date | null;
+  deliveredAt?: Date | null;
 };
 
 class EmailSendRepository {
@@ -60,6 +67,7 @@ class EmailSendRepository {
         lastError: row.lastError ?? null,
         providerMessageId: row.providerMessageId ?? null,
         sentAt: row.sentAt ?? null,
+        deliveredAt: row.deliveredAt ?? null,
         createdAt: now,
         updatedAt: now,
       }),
@@ -219,6 +227,30 @@ class EmailSendRepository {
       { $set: { status: "canceled", updatedAt: now } },
     );
     return result.modifiedCount;
+  }
+
+  async findByProviderMessageId(
+    providerMessageId: string,
+  ): Promise<EmailSendRecord | null> {
+    const result = await mongoService.emailSend.findOne({ providerMessageId });
+    return result ? parseRecord(result) : null;
+  }
+
+  async markDelivered(
+    providerMessageId: string,
+  ): Promise<EmailSendRecord | null> {
+    const now = new Date();
+    const result = await mongoService.emailSend.findOneAndUpdate(
+      { providerMessageId, deliveredAt: null },
+      {
+        $set: {
+          deliveredAt: now,
+          updatedAt: now,
+        },
+      },
+      { returnDocument: "after" },
+    );
+    return result ? parseRecord(result) : null;
   }
 }
 

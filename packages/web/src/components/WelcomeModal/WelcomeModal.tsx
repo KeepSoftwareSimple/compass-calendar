@@ -17,7 +17,6 @@ import { SignInProviderButtons } from "@web/components/AuthModal/components/Sign
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
-import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
 import { pointerPassAttributes } from "@web/shortcuts/keyboard-only/pointer-action";
@@ -88,10 +87,6 @@ export function WelcomeModal() {
   // Suppress OverlayPanel's unmount restore when handing off to Auth — Auth
   // seats its own focus; restoring the underlay first causes a focus flash.
   const skipFocusRestoreRef = useRef(false);
-  // Explore starts the practice after this dialog unmounts. A login/signup
-  // handoff during the fade must cancel that so the takeover does not cover
-  // the auth form.
-  const startShowcaseAfterDismissRef = useRef(false);
   // openModal() only schedules a URL update. Keep this overlay up until
   // Auth actually opens so the calendar does not flash through the gap.
   // hidingForAuthRef still blocks Explore and shortcuts during that wait.
@@ -162,19 +157,25 @@ export function WelcomeModal() {
   // Auth handoffs win over everything else. The explore fade (`closing`) is
   // not one of them: a login during that fade must still cancel the pending
   // practice start, so only the step and explore actions check it.
-  const isHandingOff = () =>
-    hidingForAuthRef.current || providerHandoffRef.current || isLoading;
-  const busy = closing || handingOff || isLoading;
+  const isAuthHandoffInFlight = () =>
+    hidingForAuthRef.current || providerHandoffRef.current;
+  const isAuthShortcutBlocked = () => isAuthHandoffInFlight() || isLoading;
+  const navigationBusy = closing || handingOff;
+  const authActionBusy = navigationBusy || isLoading;
   // Not `disabled`: that would blur the focused primary button and drop the
   // wrapper's shortcut layer and the focus trap. Pointer-events off is enough
   // to make repeat clicks inert while the keyboard keeps working.
-  const busyProps = {
-    "aria-busy": busy,
-    "data-busy": busy ? "" : undefined,
+  const navigationBusyProps = {
+    "aria-busy": navigationBusy,
+    "data-busy": navigationBusy ? "" : undefined,
+  } as const;
+  const authBusyProps = {
+    "aria-busy": authActionBusy,
+    "data-busy": authActionBusy ? "" : undefined,
   } as const;
 
   const advance = () => {
-    if (closing || isHandingOff()) return;
+    if (closing || isAuthHandoffInFlight()) return;
     setStep((current) => (current < 3 ? ((current + 1) as WelcomeStep) : 3));
   };
 
@@ -182,31 +183,24 @@ export function WelcomeModal() {
   // first screen they do nothing: a stray Escape must not drop a first-time
   // visitor into the practice game before they chose anything.
   const goBack = () => {
-    if (closing || isHandingOff()) return;
+    if (closing || isAuthHandoffInFlight()) return;
     setStep((current) => (current > 1 ? ((current - 1) as WelcomeStep) : 1));
   };
 
   // Fade the backdrop and gently scale the panel before unmounting, so the
   // first reveal of the sidebar underneath feels smooth rather than abrupt.
   const explore = () => {
-    if (closing || isHandingOff()) return;
+    if (closing || isAuthHandoffInFlight()) return;
     skipFocusRestoreRef.current = true;
     markWelcomeSeen();
     track("welcome_modal_dismissed", { cta: "explore" });
-    startShowcaseAfterDismissRef.current = true;
-    // Start after this dialog unmounts so the practice takeover does not
-    // share a focus trap with the fading welcome overlay.
     beginDismiss(() => {
-      if (!startShowcaseAfterDismissRef.current) return;
-      startShowcaseAfterDismissRef.current = false;
       setIsOpen(false);
-      shortcutShowcaseActions.startFromWelcome();
     });
   };
 
   const beginAuthHandoff = () => {
     skipFocusRestoreRef.current = true;
-    startShowcaseAfterDismissRef.current = false;
     hidingForAuthRef.current = true;
     setHandingOff(true);
     cancelDismiss();
@@ -218,7 +212,6 @@ export function WelcomeModal() {
     beginAuthHandoff();
     markWelcomeSeen();
     if (cta === "sign_up") {
-      shortcutShowcaseActions.deferUntilSignup();
       trackSignupStarted("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
@@ -229,12 +222,10 @@ export function WelcomeModal() {
     // Stay mounted: OAuth is a redirect, and a provider-side error must not
     // hide welcome for the rest of the session. Ignore Explore while it loads.
     skipFocusRestoreRef.current = true;
-    startShowcaseAfterDismissRef.current = false;
     providerHandoffRef.current = true;
     setHandingOff(true);
     cancelDismiss();
     markWelcomeSeen();
-    shortcutShowcaseActions.deferUntilSignup();
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
     trackSignupStarted(`welcome_modal_${kind}`);
     startSignIn(kind);
@@ -247,7 +238,7 @@ export function WelcomeModal() {
       e.preventDefault();
       return;
     }
-    if (isHandingOff()) return;
+    if (isAuthShortcutBlocked()) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const key = keyboardKey(e).toLowerCase();
     if (key === "i") {
@@ -314,7 +305,7 @@ export function WelcomeModal() {
                 type="button"
                 onClick={goBack}
                 className={COMPACT_PILL_CLASS}
-                {...busyProps}
+                {...navigationBusyProps}
               >
                 Back
                 <ShortcutHint className="ml-2">Esc</ShortcutHint>
@@ -324,7 +315,7 @@ export function WelcomeModal() {
               type="button"
               onClick={() => handOffToAuth("log_in")}
               className={COMPACT_PILL_CLASS}
-              {...busyProps}
+              {...authBusyProps}
             >
               Log in
               <ShortcutHint className="ml-2">i</ShortcutHint>
@@ -340,7 +331,8 @@ export function WelcomeModal() {
               </h1>
               <p className="text-text-muted">
                 Rediscover the joy of shortcuts as you build your perfect
-                schedule. No clicks allowed.
+                schedule. Click any button here, or use Enter and the key hints
+                beside each action.
               </p>
               <p className="text-sm text-text-muted">
                 Compass is a faster, simpler, open-source calendar for busy
@@ -353,7 +345,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={advance}
                 className={PRIMARY_CTA_CLASS}
-                {...busyProps}
+                {...navigationBusyProps}
               >
                 Get started for free
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
@@ -372,7 +364,7 @@ export function WelcomeModal() {
                 How Compass works
               </h2>
               <p id={faqHintId} className="text-text-muted">
-                Press a number to open a question.
+                Click a question or press its number to open it.
               </p>
             </div>
             <WelcomeFaqList
@@ -387,7 +379,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={advance}
                 className={PRIMARY_CTA_CLASS}
-                {...busyProps}
+                {...navigationBusyProps}
               >
                 Next
                 <ShortcutHint className="ml-2">Enter</ShortcutHint>
@@ -438,7 +430,7 @@ export function WelcomeModal() {
                 ref={primaryRef}
                 onClick={() => handOffToAuth("sign_up")}
                 className={PRIMARY_CTA_CLASS}
-                {...busyProps}
+                {...authBusyProps}
               >
                 {hasSignInProviders ? "Sign up with email" : "Sign up"}
                 <ShortcutHint className="ml-2">U</ShortcutHint>
@@ -447,7 +439,7 @@ export function WelcomeModal() {
                 type="button"
                 onClick={explore}
                 className={SECONDARY_CTA_CLASS}
-                {...busyProps}
+                {...navigationBusyProps}
               >
                 Explore without an account
                 <ShortcutHint className="ml-2">S</ShortcutHint>

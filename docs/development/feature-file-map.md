@@ -156,8 +156,8 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 
 ## Welcome, Showcase, And First-Event Handoff
 
-Anonymous calendar onboarding (welcome modal, the Block Party practice game,
-first-event prompt) lives under
+Anonymous calendar onboarding (welcome modal with an opt-in practice link,
+the Block Party practice game, first-event prompt) lives under
 `packages/web/src/components/{WelcomeModal,ShortcutShowcase,FirstEventPrompt}`.
 Game pieces: `game.tasks.ts` (task queue, scoring constants, seed board),
 `game.state.ts` (pure run reducer), `practice.state.ts` (sandbox board),

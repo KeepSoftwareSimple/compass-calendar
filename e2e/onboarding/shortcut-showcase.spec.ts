@@ -4,7 +4,7 @@ import { expect, type Page, test } from "@playwright/test";
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1600, height: 900 } });
 
-const leaveWelcome = async (page: Page) => {
+const dismissWelcomeWithExplore = async (page: Page) => {
   const welcomeDialog = page.getByRole("dialog", {
     name: "Welcome to Compass Calendar",
   });
@@ -23,6 +23,18 @@ const leaveWelcome = async (page: Page) => {
   ).toBeVisible();
   await page.keyboard.press("s");
   await expect(welcomeDialog).toBeHidden();
+};
+
+/** Opt-in entry: the shared ?play= deep link, consumed on load. */
+const openPracticeViaPlayLink = async (page: Page) => {
+  await page.goto("/week?play=1", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("dialog", { name: "Welcome to Compass Calendar" }),
+  ).toBeHidden();
+  const showcase = page.getByRole("region", { name: "Shortcut practice" });
+  await expect(showcase).toBeVisible();
+  await expect(showcase).toContainText("Block Party");
+  await expect(page).not.toHaveURL(/play=/);
 };
 
 const startPracticing = async (page: Page) => {
@@ -117,23 +129,25 @@ const clearTheQueue = async (page: Page) => {
   await expect(showcase).toContainText("You cleared the week!");
 };
 
-test("exploring without an account offers the game's how-to card", async ({
+test("exploring without an account leaves Block Party closed", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await dismissWelcomeWithExplore(page);
 
-  const showcase = page.getByRole("region", { name: "Shortcut practice" });
-  await expect(showcase).toBeVisible();
-  await expect(showcase).toContainText("Block Party");
-  await expect(showcase).toContainText("keyboard-only");
+  await expect(
+    page.getByRole("region", { name: "Shortcut practice" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("complementary", { name: "Create your first event" }),
+  ).toBeVisible();
 });
 
 test("stalling on a task surfaces its hint, and progress clears it", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
   await startPracticing(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
@@ -151,7 +165,7 @@ test("a full run clears the queue, shows the score, and graduates", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
   await startPracticing(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
@@ -187,7 +201,7 @@ test("the end screen's rematch races the clock with a full timer", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
 
   // The how-to card only starts practice: no timed option up front.
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
@@ -213,7 +227,7 @@ test("Enter on the end screen hands an anonymous player to signup", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
   await startPracticing(page);
   await clearTheQueue(page);
 
@@ -228,7 +242,7 @@ test("Skip to sign up leaves the game for the signup form", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
   await expect(showcase).toContainText("Block Party");
@@ -245,7 +259,7 @@ test("Escape mid-run skips one task and keeps the game up", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
   await startPracticing(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
@@ -259,7 +273,7 @@ test("Escape leaves from the how-to card and it never auto-replays", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });
   await expect(showcase).toContainText("Block Party");
@@ -284,7 +298,7 @@ test("reloading mid-game re-offers a fresh run from the how-to card", async ({
   page,
 }) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
-  await leaveWelcome(page);
+  await openPracticeViaPlayLink(page);
   await startPracticing(page);
 
   const showcase = page.getByRole("region", { name: "Shortcut practice" });

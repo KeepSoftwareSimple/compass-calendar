@@ -2,21 +2,7 @@ import { Outlet, useLocation } from "@tanstack/react-router";
 import { useContext, useEffect, useMemo } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
-import {
-  selectConnectAppleOpen,
-  useConnectAppleStore,
-} from "@web/auth/providers/connect-apple.store";
 import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
-import {
-  selectMissingPermissionsProvider,
-  useMissingPermissionsStore,
-} from "@web/auth/providers/missing-permissions.store";
-import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
-import {
-  selectSyncConnections,
-  selectUserMetadataStatus,
-  useUserMetadataStore,
-} from "@web/auth/state/user-metadata.store";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
 import { BillingPastDueBanner } from "@web/billing/BillingPastDueBanner";
 import { BillingReadOnlyBanner } from "@web/billing/BillingReadOnlyBanner";
@@ -36,23 +22,14 @@ import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
-import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
 import { AuthModalProvider } from "@web/components/AuthModal/AuthModalProvider";
 import { useAuthModalState } from "@web/components/AuthModal/hooks/useAuthModal";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
-import {
-  selectConnectCalendarPromptSnoozed,
-  selectConnectCalendarPromptSurfaceEligible,
-  useConnectCalendarPromptStore,
-} from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
+import { useConnectCalendarPromptSurfaceEligible } from "@web/components/ConnectCalendarPrompt/useConnectCalendarPromptSurfaceEligible";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
-import {
-  selectFirstEventDone,
-  selectFirstEventPromptSurfaceEligible,
-  useFirstEventPromptStore,
-} from "@web/components/FirstEventPrompt/first-event.store";
+import { useFirstEventPromptSurfaceEligible } from "@web/components/FirstEventPrompt/useFirstEventPromptSurfaceEligible";
 import { PointerHint } from "@web/components/PointerHint/PointerHint";
 import {
   type OnboardingSurfaceFlags,
@@ -64,7 +41,6 @@ import {
 } from "@web/components/ShortcutShowcase/play-link";
 import { ShortcutShowcase } from "@web/components/ShortcutShowcase/ShortcutShowcase";
 import {
-  selectHasSeenShowcase,
   selectShortcutShowcaseSurfaceEligible,
   selectShowcaseActive,
   shortcutShowcaseActions,
@@ -82,16 +58,7 @@ import {
   hasSeenWelcome,
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
-import {
-  selectIsEventFormOpen,
-  useDraftStore,
-} from "@web/events/stores/draft.store";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
-import {
-  selectIsAboutOpen,
-  selectIsSettingsOpen,
-  useSettingsStore,
-} from "@web/settings/settings.store";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
 import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
@@ -131,23 +98,13 @@ export function RootShell() {
   const isPreviewing = useBillingPreviewStore(selectBillingPreviewing);
   const isCelebrating = useCheckoutCelebrationStore(selectIsCelebrating);
   const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
-  const hasSeenShowcaseThisSession = useShortcutShowcaseStore(
-    selectHasSeenShowcase,
+  const pointerHintEligible = usePointerHintStore(
+    selectPointerHintSurfaceEligible,
   );
-  const isFirstEventDone = useFirstEventPromptStore(selectFirstEventDone);
-  const pointerHintState = usePointerHintStore((state) => state);
-  const connections = useUserMetadataStore(selectSyncConnections);
-  const metadataStatus = useUserMetadataStore(selectUserMetadataStatus);
-  const isConnectSnoozed = useConnectCalendarPromptStore(
-    selectConnectCalendarPromptSnoozed,
-  );
-  const availableConnectProviders = useAvailableConnectProviders();
-  const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
-  const isAboutOpen = useSettingsStore(selectIsAboutOpen);
-  const isAppleFormOpen = useConnectAppleStore(selectConnectAppleOpen);
-  const isMissingPermissionsOpen =
-    useMissingPermissionsStore(selectMissingPermissionsProvider) !== null;
-  const isFormOpen = useDraftStore(selectIsEventFormOpen);
+  const connectCalendarPromptEligible =
+    useConnectCalendarPromptSurfaceEligible(isAuthModalOpen);
+  const firstEventPromptEligible =
+    useFirstEventPromptSurfaceEligible(isAuthModalOpen);
   useSyncBillingWriteLock();
   usePlanChangeToasts();
   useNavigationShortcuts();
@@ -219,35 +176,9 @@ export function RootShell() {
         billingGateClear,
         isWelcomeGuideOpen,
       ),
-      connectCalendarPrompt:
-        billingGateClear &&
-        selectConnectCalendarPromptSurfaceEligible({
-          authenticated,
-          metadataStatus,
-          connectionCount: connections.length,
-          isSnoozed: isConnectSnoozed,
-          availableProviderCount: availableConnectProviders.length,
-          storageAvailable: persistentBrowserStore.isAvailable(),
-          isAuthModalOpen,
-          isSettingsOpen,
-          isAboutOpen,
-          isAppleFormOpen,
-          isMissingPermissionsOpen,
-        }),
-      firstEventPrompt:
-        showCalendarOnboarding &&
-        selectFirstEventPromptSurfaceEligible({
-          isAuthModalOpen,
-          isSettingsOpen,
-          isAboutOpen,
-          isFormOpen,
-          isDone: isFirstEventDone,
-          storageAvailable: persistentBrowserStore.isAvailable(),
-          showcaseActive: isShowcaseActive,
-          hasSeenShowcaseThisSession,
-        }),
-      pointerHint:
-        !isLifeView && selectPointerHintSurfaceEligible(pointerHintState),
+      connectCalendarPrompt: billingGateClear && connectCalendarPromptEligible,
+      firstEventPrompt: showCalendarOnboarding && firstEventPromptEligible,
+      pointerHint: !isLifeView && pointerHintEligible,
     };
   }, [
     gateStatus,
@@ -257,20 +188,10 @@ export function RootShell() {
     isShowcaseActive,
     isWelcomeGuideOpen,
     isWelcomeFirstVisitOpen,
-    metadataStatus,
-    connections.length,
-    isConnectSnoozed,
-    availableConnectProviders.length,
-    isAuthModalOpen,
-    isSettingsOpen,
-    isAboutOpen,
-    isAppleFormOpen,
-    isMissingPermissionsOpen,
-    isFormOpen,
-    isFirstEventDone,
-    hasSeenShowcaseThisSession,
+    connectCalendarPromptEligible,
+    firstEventPromptEligible,
     isLifeView,
-    pointerHintState,
+    pointerHintEligible,
   ]);
 
   const activeOnboardingSurface = selectActiveSurface(onboardingFlags);

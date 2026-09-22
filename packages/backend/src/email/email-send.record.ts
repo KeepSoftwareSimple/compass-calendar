@@ -22,6 +22,7 @@ export const EmailSendRecordSchema = z.strictObject({
   lastError: z.string().trim().max(500).nullable(),
   providerMessageId: z.string().nullable(),
   sentAt: z.date().nullable(),
+  deliveredAt: z.date().nullable(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

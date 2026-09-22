@@ -1,22 +1,11 @@
 import { encryptCredentials } from "@scripts/commands/encrypt-credentials/backfill";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { loadCompassConfig } from "@core/config/compass.config";
 import { Logger } from "@core/logger/winston.logger";
 import { decodeCredentialAtRestKey } from "@core/security/credential-at-rest";
 import { SyncMongoService } from "@sync/storage/sync-mongo.service";
 
 const logger = Logger("scripts.commands.encrypt-credentials");
-
-function syncMongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const uri = loadCompassConfig().sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before encrypt-credentials",
-    );
-  }
-  return uri;
-}
 
 function credentialEncryptionKey(): string {
   const fromEnv = process.env["SYNC_CREDENTIAL_ENCRYPTION_KEY"]?.trim();
@@ -58,7 +47,7 @@ export async function runEncryptCredentials(): Promise<void> {
     const { dryRun, batchSize } = parseArgs(process.argv.slice(3));
     const encryptionKey = credentialEncryptionKey();
     await syncMongo.connect({
-      uri: syncMongoUri(),
+      uri: resolveSyncMongoUri("encrypt-credentials"),
       enforceLeastPrivilege: false,
       forbiddenDatabaseName: "prod_calendar",
     });

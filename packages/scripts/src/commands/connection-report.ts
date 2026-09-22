@@ -2,6 +2,7 @@ import {
   buildConnectionReport,
   formatConnectionReport,
 } from "@scripts/commands/connection-report/report";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { MongoClient } from "mongodb";
 import { loadCompassConfig } from "@core/config/compass.config";
 import { Logger } from "@core/logger/winston.logger";
@@ -46,18 +47,6 @@ export function parseConnectionReportArgs(
   }
 
   return { json: argv.includes("--json"), apiMongoUri, help: false };
-}
-
-function syncMongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const uri = loadCompassConfig().sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before connection-report",
-    );
-  }
-  return uri;
 }
 
 function configMongoUri(): string | undefined {
@@ -117,7 +106,7 @@ export async function runConnectionReport(): Promise<void> {
     });
 
     await syncMongo.connect({
-      uri: syncMongoUri(),
+      uri: resolveSyncMongoUri("connection-report"),
       enforceLeastPrivilege: false,
       forbiddenDatabaseName: "prod_calendar",
     });

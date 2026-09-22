@@ -11,15 +11,11 @@ import {
 } from "@web/components/ShortcutShowcase/showcase.store";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
-const LEGACY_TOUR_SEEN_KEY = "compass.onboarding.has-seen-onboarding-tour";
-
 describe("shortcutShowcaseActions", () => {
   beforeEach(() => {
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
     persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "");
-    persistentBrowserStore.set(STORAGE_KEYS.HAS_PENDING_SHOWCASE_OFFER, "");
     persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_STEP);
-    localStorage.setItem(LEGACY_TOUR_SEEN_KEY, "");
   });
 
   // Module-level singleton shared across the bun process: never leave the
@@ -28,11 +24,11 @@ describe("shortcutShowcaseActions", () => {
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
   });
 
-  it("activates from the welcome modal and records the entry", () => {
-    shortcutShowcaseActions.startFromWelcome();
+  it("activates from the palette and records the entry", () => {
+    shortcutShowcaseActions.replay();
     const state = useShortcutShowcaseStore.getState();
     expect(state.isActive).toBe(true);
-    expect(state.entry).toBe("welcome");
+    expect(state.entry).toBe("palette");
     expect(hasShowcaseInProgress()).toBe(true);
     expect(
       persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
@@ -40,7 +36,7 @@ describe("shortcutShowcaseActions", () => {
   });
 
   it("activates from a shared link even after the showcase was seen", () => {
-    shortcutShowcaseActions.startFromWelcome();
+    shortcutShowcaseActions.replay();
     shortcutShowcaseActions.finish();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
 
@@ -51,36 +47,13 @@ describe("shortcutShowcaseActions", () => {
   });
 
   it("finish leaves, marks seen, and clears the in-progress marker", () => {
-    shortcutShowcaseActions.startFromWelcome();
+    shortcutShowcaseActions.replay();
     shortcutShowcaseActions.finish();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
     expect(
       persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
     ).toBe("true");
     expect(hasShowcaseInProgress()).toBe(false);
-  });
-
-  it("never offers itself twice after signup, but replay always works", () => {
-    shortcutShowcaseActions.deferUntilSignup();
-    shortcutShowcaseActions.replay();
-    shortcutShowcaseActions.skip();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
-
-    // The offer is still pending, but the practice has now been seen.
-    shortcutShowcaseActions.offerAfterSignupIfPending();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
-
-    shortcutShowcaseActions.replay();
-    const state = useShortcutShowcaseStore.getState();
-    expect(state.isActive).toBe(true);
-    expect(state.entry).toBe("palette");
-  });
-
-  it("treats legacy tour finishers as having seen the showcase", () => {
-    localStorage.setItem(LEGACY_TOUR_SEEN_KEY, "true");
-    shortcutShowcaseActions.deferUntilSignup();
-    shortcutShowcaseActions.offerAfterSignupIfPending();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
   });
 
   it("skip() leaves immediately and marks seen; skipping inactive is a no-op", () => {
@@ -121,7 +94,7 @@ describe("shortcutShowcaseActions", () => {
   });
 
   it("re-offers an unfinished attempt after reload without marking seen", () => {
-    shortcutShowcaseActions.startFromWelcome();
+    shortcutShowcaseActions.replay();
 
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
     shortcutShowcaseActions.resumeIfInProgress();
@@ -148,30 +121,6 @@ describe("shortcutShowcaseActions", () => {
     shortcutShowcaseActions.skip();
     markShowcaseInProgress();
     shortcutShowcaseActions.resumeIfInProgress();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
-  });
-
-  it("defers the offer through signup and redeems it exactly once", () => {
-    shortcutShowcaseActions.deferUntilSignup();
-    expect(
-      persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
-    ).not.toBe("true");
-
-    shortcutShowcaseActions.offerAfterSignupIfPending();
-    const state = useShortcutShowcaseStore.getState();
-    expect(state.isActive).toBe(true);
-    expect(state.entry).toBe("post_signup");
-
-    useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
-    shortcutShowcaseActions.offerAfterSignupIfPending();
-    expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
-  });
-
-  it("does not start the practice until the pending signup offer is redeemed", () => {
-    expect(
-      persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE),
-    ).not.toBe("true");
-    shortcutShowcaseActions.offerAfterSignupIfPending();
     expect(useShortcutShowcaseStore.getState().isActive).toBe(false);
   });
 });

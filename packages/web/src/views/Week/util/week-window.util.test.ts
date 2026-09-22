@@ -11,6 +11,7 @@ import {
   isAllDayEventInVisibleDays,
   isTimedEventInVisibleDays,
   WEEK_DAY_COUNT,
+  weekEventQueryRange,
   weekEventsQueryWindow,
 } from "@web/views/Week/util/week-window.util";
 import { afterEach, describe, expect, it } from "bun:test";
@@ -167,5 +168,15 @@ describe("weekEventsQueryWindow", () => {
     expect(startOfView.format("YYYY-MM-DD HH:mm")).toBe("2026-06-28 00:00");
     expect(endOfView.format("YYYY-MM-DD HH:mm")).toBe("2026-07-05 00:00");
     expect(endOfView.diff(startOfView, "day")).toBe(WEEK_DAY_COUNT);
+  });
+});
+
+describe("weekEventQueryRange", () => {
+  it("formats the same window as weekEventsQueryWindow", () => {
+    const { startOfView, endOfView } = weekEventsQueryWindow(weekStart);
+    const range = weekEventQueryRange(weekStart);
+
+    expect(range.startDate).toBe(startOfView.format());
+    expect(range.endDate).toBe(endOfView.format());
   });
 });

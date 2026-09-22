@@ -14,7 +14,6 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
-import { shortcutShowcaseActions } from "@web/components/ShortcutShowcase/showcase.store";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
 import { type AuthView } from "./useAuthModal";
 
@@ -82,7 +81,6 @@ export function useAuthFormHandlers({
             });
             trackSignupCompleted("email");
             closeModal();
-            shortcutShowcaseActions.offerAfterSignupIfPending();
             return;
           case "FIELD_ERROR":
             trackSignupFailed("email_field_error", { method: "email" });

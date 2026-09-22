@@ -1,6 +1,6 @@
 import { purgeUserByEmail } from "@scripts/commands/purge-user/purge";
 import { type PurgeUserTarget } from "@scripts/commands/purge-user/report.types";
-import { loadCompassConfig } from "@core/config/compass.config";
+import { resolveSyncMongoUri } from "@scripts/common/sync-mongo-uri";
 import { Logger } from "@core/logger/winston.logger";
 import supertokensUserCleanupService from "@backend/auth/services/supertokens/supertokens.user-cleanup.service";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -10,18 +10,6 @@ import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const logger = Logger("scripts.commands.purge-user");
-
-function syncMongoUri(): string {
-  const fromEnv = process.env["SYNC_MONGO_URI"]?.trim();
-  if (fromEnv) return fromEnv;
-  const uri = loadCompassConfig().sync?.mongoUri?.trim();
-  if (!uri) {
-    throw new Error(
-      "Set SYNC_MONGO_URI or add sync.mongoUri to compass.yaml before purging a user",
-    );
-  }
-  return uri;
-}
 
 /** Host only - never the credentials that precede it in the URI. */
 function hostOf(uri: string): string {
@@ -67,7 +55,7 @@ export async function runPurgeUser(): Promise<void> {
 
   try {
     const { dryRun, email, outPath } = parseArgs(process.argv.slice(3));
-    const syncUri = syncMongoUri();
+    const syncUri = resolveSyncMongoUri("purging a user");
 
     await mongoService.start();
     await syncMongo.connect({

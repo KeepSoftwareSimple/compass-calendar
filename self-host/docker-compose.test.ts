@@ -590,6 +590,20 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain("staging-selfhosted must omit this block");
   });
 
+  it("binds email secrets directly and only writes the email block on hosted cloud", () => {
+    const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
+
+    expect(workflow).toContain(
+      "EMAIL_API_KEY: $".concat("{{ secrets.EMAIL_API_KEY }}"),
+    );
+    expect(workflow).toContain(
+      "EMAIL_WEBHOOK_SECRET: $".concat("{{ secrets.EMAIL_WEBHOOK_SECRET }}"),
+    );
+    expect(workflow).not.toContain("&& secrets.EMAIL_API_KEY ||");
+    expect(workflow).toContain("deploy-write-email-block.sh");
+    expect(workflow).toContain("Email config: omitting email block");
+  });
+
   it("builds cloud deploy web images from a GitHub-only Dockerfile with PostHog config", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
     const dockerfile = readRepoFile(".github/docker/Dockerfile.web");

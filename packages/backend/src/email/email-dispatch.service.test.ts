@@ -23,6 +23,7 @@ const baseRow = (overrides: Partial<EmailSendRecord> = {}): EmailSendRecord => {
     lastError: null,
     providerMessageId: null,
     sentAt: null,
+    deliveredAt: null,
     createdAt: now,
     updatedAt: now,
     ...overrides,
@@ -90,6 +91,7 @@ describe("EmailDispatchService", () => {
   it("marks sent rows with the provider message id", async () => {
     CONFIG.EMAIL_PROVIDER = "log";
     CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "unsub-secret";
     const row = baseRow();
     spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
     spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
@@ -100,14 +102,50 @@ describe("EmailDispatchService", () => {
     const markSent = spyOn(emailSendRepository, "markSent").mockResolvedValue(
       row,
     );
+    const send = mock(async () => ({ messageId: "provider-123" }));
     spyOn(emailClient, "buildEmailProvider").mockReturnValue({
-      send: mock(async () => ({ messageId: "provider-123" })),
+      send,
       verifyWebhook: () => [],
     });
 
     await new EmailDispatchService().dispatchDue();
 
     expect(markSent).toHaveBeenCalledWith(row._id, "provider-123");
+    expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
+      "mailto:",
+    );
+    expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
+      "https://",
+    );
+    expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe-Post"]).toBe(
+      "List-Unsubscribe=One-Click",
+    );
+  });
+
+  it("cancels queued rows for unsubscribed users without calling the provider", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    const row = baseRow();
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markCanceled = spyOn(
+      emailSendRepository,
+      "markCanceled",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "guest@example.com",
+      hasConnectedCalendar: false,
+      billing: undefined,
+      emailPreferences: { unsubscribedAt: new Date() },
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markCanceled).toHaveBeenCalledWith(row._id);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("records failure with backoff when the provider throws", async () => {
