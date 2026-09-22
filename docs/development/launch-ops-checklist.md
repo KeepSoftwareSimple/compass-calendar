@@ -5,6 +5,22 @@ Short checklist for release / high-traffic days. Pair with
 
 ## Before send
 
+Staging auto-deploys from `main`; production Google connect/reconnect smokes
+(WP-00, #3841) run at the next production release, not before staging send.
+
+### Staging (2026-09-22, Email-ready v1)
+
+- [x] `GET /api/health` on staging returns `200 {"status":"ok"}`
+      (verified 2026-09-22)
+- [ ] Google connect smoke on staging (founder or agent with test account)
+- [ ] Google reconnect smoke on staging (revoke, banner, refresh)
+- [ ] Production Google connect smoke (deferred, #3841)
+- [ ] Production Google reconnect smoke (deferred, #3841)
+- [x] `sse_connection_degraded` PostHog alert uses a trailing **60** minute
+      window (see table below)
+
+### All environments
+
 - [ ] `GET /api/health` returns `200 {"status":"ok"}`
 - [ ] Sync `GET /health/live` and `GET /health/ready` are healthy; logs show
       `execution=active` when Google sync is enabled
