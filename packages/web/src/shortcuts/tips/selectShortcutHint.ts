@@ -101,7 +101,10 @@ export function selectShortcutHint(
   demonstratedIds: readonly ShortcutHintId[] = [],
   profile: ShortcutUsageProfile = EMPTY_USAGE_PROFILE,
   now = Date.now(),
-): RankedShortcutHint {
+  tipsMuted = false,
+): RankedShortcutHint | null {
+  if (tipsMuted) return null;
+
   const dayPrefix = pickWeekDayPrefix(ctx);
   const showWeekDay = Boolean(ctx.isWeekView) && dayPrefix !== null;
   const pick = (pool: readonly ShortcutHintId[]) => {

@@ -28,6 +28,7 @@ import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmd
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
+import { useShortcutTipsCmdItems } from "@web/components/CommandPalette/hooks/useShortcutTipsCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
 import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/useShowBillingCmdItems";
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
@@ -415,6 +416,7 @@ export const CommandPalette = ({
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
   const legendCmdItems = usePaletteLegendCmdItems();
+  const shortcutTipsCmdItems = useShortcutTipsCmdItems();
   const { undo, redo, canUndo, canRedo } = useUndoRedo(mutationDependencies);
   const recentCommandIds = useRecentCommandIds();
 
@@ -432,6 +434,7 @@ export const CommandPalette = ({
           onPracticeShortcuts: () => shortcutShowcaseActions.replay(),
           onShowWelcomeGuide,
         }),
+        ...shortcutTipsCmdItems,
         ...legendCmdItems,
       ],
     },
@@ -527,6 +530,7 @@ export const LifeCommandPalette = ({
   const timezoneCmdItems = useTimezoneCmdItems();
   const notificationCmdItems = useNotificationCmdItems();
   const legendCmdItems = usePaletteLegendCmdItems();
+  const shortcutTipsCmdItems = useShortcutTipsCmdItems();
 
   if (!open) return null;
 
@@ -544,6 +548,7 @@ export const LifeCommandPalette = ({
               onNavigateToView: (viewName) =>
                 navigate({ to: getNavigationViewRoute(viewName) }),
             }),
+            ...shortcutTipsCmdItems,
             ...legendCmdItems,
           ],
         },

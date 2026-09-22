@@ -107,9 +107,9 @@ export const SidebarStatusBar: FC = () => {
   ) : !status ? (
     isTimeTraveling ? (
       <TimeTravelIndicator />
-    ) : (
+    ) : hint ? (
       <ShortcutTipIndicator hint={hint} locked={writeLocked} />
-    )
+    ) : null
   ) : null;
 
   return (

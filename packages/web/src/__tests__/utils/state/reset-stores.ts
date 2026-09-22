@@ -82,6 +82,7 @@ import {
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { resetShortcutTelemetryForTests } from "@web/shortcuts/tips/shortcut-telemetry";
 import { resetShortcutHintProgressStoreForTests } from "@web/shortcuts/tips/shortcut-tips.progress.store";
+import { resetShortcutTipsMutedStoreForTests } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { resetEffectiveTimeZoneStoreForTests } from "@web/timezone/effective-timezone.store";
 import { resetTimeTravelStoreForTests } from "@web/timezone/time-travel.store";
 import { useTimezoneDialogStore } from "@web/timezone/timezone-dialog.store";
@@ -130,6 +131,7 @@ const storeResets: StoreReset[] = [
   () => useCheckoutPanelStore.setState(initialCheckoutPanelState, true),
   () => useCardUpdateStore.setState(initialCardUpdateState, true),
   resetShortcutHintProgressStoreForTests,
+  resetShortcutTipsMutedStoreForTests,
   resetShortcutTelemetryForTests,
 ];
 

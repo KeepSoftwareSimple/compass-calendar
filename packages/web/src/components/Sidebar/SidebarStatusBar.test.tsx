@@ -37,6 +37,7 @@ import {
   getShortcutHint,
 } from "@web/shortcuts/tips/shortcut-tips.data";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
+import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import * as realUsessedegraded from "@web/sse/hooks/useSseDegraded";
 import { TIME_TRAVEL_HINT_PARTS } from "@web/timezone/TimeTravelIndicator";
 import {
@@ -189,6 +190,18 @@ describe("SidebarStatusBar", () => {
     render(<SidebarStatusBar />, { wrapper });
 
     expect(screen.getByRole("status")).toHaveTextContent(CREATE_EVENT_HINT);
+  });
+
+  it("falls through to account settings when sidebar tips are muted", () => {
+    setTipsMuted(true);
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarStatusBar />, { wrapper });
+
+    expect(screen.queryByText(CREATE_EVENT_HINT)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Open account settings" }),
+    ).toBeInTheDocument();
   });
 
   it("wraps the shortcut instead of clipping it, so no hint ends in an ellipsis", () => {
