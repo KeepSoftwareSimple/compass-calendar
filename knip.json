@@ -39,6 +39,10 @@
     "packages/web": {
       "entry": ["src/__tests__/utils/render.test.util.tsx"],
       "project": ["src/**/*.{ts,tsx}!"]
+    },
+    "apps/booking-web": {
+      "entry": ["dev.ts", "build.ts"],
+      "project": ["src/**/*.{ts,tsx}!"]
     }
   },
   "ignoreDependencies": ["@compass/core", "@compass/backend"],
