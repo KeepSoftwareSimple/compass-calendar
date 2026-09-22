@@ -11,6 +11,11 @@ import {
 import { renderWelcomeEmail } from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
+import {
+  buildUnsubscribeTokenForUser,
+  buildUnsubscribeUrls,
+  isEmailSequenceStopped,
+} from "@backend/email/email-unsubscribe";
 import { buildEmailProvider } from "@backend/email/providers/email.client";
 import { type EmailProvider } from "@backend/email/providers/email.port";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
@@ -128,6 +133,11 @@ export class EmailDispatchService {
       return;
     }
 
+    if (isEmailSequenceStopped(user.emailPreferences)) {
+      await emailSendRepository.markCanceled(row._id);
+      return;
+    }
+
     if (!isAllowlistedRecipient(user.email)) {
       await emailSendRepository.markSkipped(
         row._id,
@@ -142,7 +152,29 @@ export class EmailDispatchService {
       return;
     }
 
-    const rendered = renderWelcomeEmail(row.stepKey, content);
+    const unsubscribeToken = buildUnsubscribeTokenForUser(
+      row.userId.toHexString(),
+    );
+    const unsubscribe =
+      unsubscribeToken !== null
+        ? buildUnsubscribeUrls(unsubscribeToken)
+        : undefined;
+    const rendered = renderWelcomeEmail(
+      row.stepKey,
+      content,
+      unsubscribe
+        ? {
+            httpsUrl: unsubscribe.httpsUrl,
+            listUnsubscribeHeader: unsubscribe.listUnsubscribeHeader,
+          }
+        : undefined,
+    );
+
+    const headers: Record<string, string> = {};
+    if (unsubscribe) {
+      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
+      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
+    }
 
     try {
       const result = await this.getProvider().send({
@@ -151,7 +183,7 @@ export class EmailDispatchService {
         subject: rendered.subject,
         html: rendered.html,
         text: rendered.text,
-        headers: {},
+        headers,
       });
       await emailSendRepository.markSent(row._id, result.messageId);
     } catch (error) {

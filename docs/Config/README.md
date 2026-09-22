@@ -124,6 +124,6 @@ database and must not share the backend's database user/data.
 | `email.apiKey` | Yes when `provider` is `resend` | Resend API key. Required together with `from`, `webhookSecret`, and `unsubscribeSecret` when using `resend`. |
 | `email.from` | Yes when `provider` is `resend` | From address (for example `Compass <hello@mail.compasscalendar.com>`). |
 | `email.webhookSecret` | Yes when `provider` is `resend` | Resend webhook signing secret (Svix). |
-| `email.unsubscribeSecret` | Yes when `provider` is `resend` | HMAC key for one-click unsubscribe links (`openssl rand -base64 32`). |
+| `email.unsubscribeSecret` | Yes when `provider` is `resend` | HMAC key for one-click unsubscribe links (`openssl rand -base64 32`). Rotating this value invalidates outstanding unsubscribe links. |
 | `email.scheduleProfile` | No | `real` (default) or `fast`. `fast` compresses step delays for staging; config refuses `fast` when `runtime.nodeEnv` is `production`. |
 | `email.allowlist` | No | Optional send-time guard. Non-listed addresses still enroll but sends are skipped until the allowlist is cleared. Matched case-insensitively; empty when omitted. |

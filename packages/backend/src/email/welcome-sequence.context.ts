@@ -23,5 +23,6 @@ export async function loadWelcomeSequenceUser(
     email: typed.email,
     hasConnectedCalendar: connectedCalendar !== null,
     billing: typed.billing,
+    emailPreferences: typed.emailPreferences,
   };
 }

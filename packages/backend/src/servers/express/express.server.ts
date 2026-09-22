@@ -25,6 +25,10 @@ import {
 } from "@backend/common/middleware/supertokens.middleware";
 import { ConfigRoutes } from "@backend/config/config.routes.config";
 import { ContactsRoutes } from "@backend/contacts/contacts.routes.config";
+import {
+  EmailRoutes,
+  mountResendEmailWebhook,
+} from "@backend/email/email.routes.config";
 import { EventRoutes } from "@backend/event/event.routes.config";
 import { HealthRoutes } from "@backend/health/health.routes.config";
 import { EventsRoutes } from "@backend/servers/sse/events-stream.routes.config";
@@ -55,6 +59,7 @@ export const initExpressServer = () => {
   // express.json() both parse JSON and would make every signature check
   // 400, so this route is handled before either of them.
   mountStripeWebhook(app);
+  mountResendEmailWebhook(app);
   app.use(supertokensMiddleware());
   app.use(express.json({ limit: HTTP_JSON_BODY_LIMIT }));
 
@@ -64,6 +69,7 @@ export const initExpressServer = () => {
   routes.push(new AuthRoutes(app));
   routes.push(new UserRoutes(app));
   routes.push(new BillingRoutes(app));
+  routes.push(new EmailRoutes(app));
   routes.push(new EventRoutes(app));
   routes.push(new EventsRoutes(app));
   routes.push(new CalendarRoutes(app));

@@ -18,6 +18,7 @@ export const Collections = {
   BOOKING_RATE_LIMIT: IS_DEV ? "_dev.bookingRateLimit" : "bookingRateLimit",
   BOOKING_OPERATION: IS_DEV ? "_dev.bookingOperation" : "bookingOperation",
   EMAIL_SEND: IS_DEV ? "_dev.emailSend" : "emailSend",
+  EMAIL_EVENT: IS_DEV ? "_dev.emailEvent" : "emailEvent",
   HIDDEN_EVENT: IS_DEV ? "_dev.hiddenEvent" : "hiddenEvent",
   USER: IS_DEV ? "_dev.user" : "user",
 };
