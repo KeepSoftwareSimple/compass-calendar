@@ -6,6 +6,7 @@ import {
   formatSlotWhenLabel,
   preparePublicBookingPage,
   preparePublicBookingReschedulePage,
+  publicBookingAppUrl,
 } from "./booking-harness";
 
 async function guestTimeZone(page: Page): Promise<string> {
@@ -49,7 +50,9 @@ test.describe("public booking reschedule", () => {
     // Create returns an absolute compasscalendar.com URL; follow its path on
     // the Playwright origin instead of leaving the stubbed app.
     const rescheduleUrl = new URL(rescheduleHref ?? "", page.url());
-    await page.goto(`${rescheduleUrl.pathname}${rescheduleUrl.search}`);
+    await page.goto(
+      publicBookingAppUrl(`${rescheduleUrl.pathname}${rescheduleUrl.search}`),
+    );
 
     await expect(page).toHaveURL(
       /\/meet\/reschedule\/000000000000000000000099\?token=abc/,

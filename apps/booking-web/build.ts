@@ -1,3 +1,4 @@
+import { postcssPlugin } from "../../packages/web/plugins/postcss.plugin";
 import { copyStaticAssets } from "./copy-static-assets";
 import path from "node:path";
 
@@ -19,7 +20,12 @@ const define: Record<string, string> = {
   "process.env": JSON.stringify({
     NODE_ENV: bundleNodeEnv,
     API_BASEURL: process.env.API_BASEURL ?? "http://localhost:3000/api",
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ?? "",
+    POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
+    POSTHOG_HOST: process.env.POSTHOG_HOST ?? "",
+    PORT: process.env.PORT ?? "3000",
   }),
+  BUILD_VERSION: JSON.stringify(process.env.BUILD_VERSION ?? "production"),
 };
 
 console.log("[booking-web] building...");
@@ -32,6 +38,7 @@ const result = await Bun.build({
   minify: true,
   splitting: true,
   define,
+  plugins: [postcssPlugin],
   publicPath: "/",
 });
 

@@ -14,7 +14,11 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@booking-web/*": ["./src/*"]
+      "@booking-web/*": ["./src/*"],
+      "@web/routers": ["./src/shims/stub-web-routers.ts"],
+      "@web/routers/*": ["./src/shims/stub-web-routers.ts"],
+      "@web/*": ["../../packages/web/src/*"],
+      "@core/*": ["../../packages/core/src/*"]
     }
   }
 }

@@ -1,12 +1,9 @@
-import { App } from "@booking-web/App";
-import { render, screen } from "@testing-library/react";
+import { publicBookRoute, routeTree } from "@booking-web/routers/router.routes";
 import { describe, expect, it } from "bun:test";
 
 describe("App", () => {
-  it("renders the booking scaffold heading", () => {
-    render(<App />);
-    expect(
-      screen.getByRole("heading", { name: "Compass Booking" }),
-    ).toBeTruthy();
+  it("registers the public meet route on the booking-web tree", () => {
+    expect(routeTree.children?.length).toBeGreaterThan(0);
+    expect(publicBookRoute.fullPath).toBe("/meet/$username");
   });
 });

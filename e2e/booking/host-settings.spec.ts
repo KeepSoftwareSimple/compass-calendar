@@ -9,6 +9,7 @@ import {
   expectMeetingShortcutChips,
   holdSettingsMod,
   prepareSignedInBookingSettingsPage,
+  publicBookingAppUrl,
   releaseSettingsMod,
 } from "./booking-harness";
 
@@ -254,7 +255,7 @@ test("first visit: keyboard setup wizard through go live", async ({
     await releaseSettingsMod(page);
   }
 
-  await page.goto("/book/hostuser?token=abc", {
+  await page.goto(publicBookingAppUrl("/book/hostuser?token=abc"), {
     waitUntil: "domcontentloaded",
   });
   await expect(page).toHaveURL(/\/meet\/hostuser/);
