@@ -1,0 +1,147 @@
+name: Apply staging Caddy config
+
+on:
+  workflow_dispatch:
+    inputs:
+      infra_ref:
+        description: >-
+          Branch or tag on compass-calendar-infra for caddy/Caddyfile.
+          Leave empty to use main when it includes staging /meet, otherwise
+          cursor/staging-caddy-meet-booking-web-0e20.
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    name: Apply Caddyfile to staging-cloud VPS
+    runs-on: ubuntu-latest
+    environment: staging-cloud
+    concurrency:
+      group: apply-staging-caddy
+      cancel-in-progress: false
+
+    steps:
+      - name: Fetch Caddyfile from compass-calendar-infra
+        id: fetch
+        env:
+          INFRA_REF_INPUT: ${{ inputs.infra_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p caddy
+          fallback_ref="cursor/staging-caddy-meet-booking-web-0e20"
+          base="https://raw.githubusercontent.com/KeepSoftwareSimple/compass-calendar-infra"
+
+          fetch_ref() {
+            curl -fsSL "${base}/${1}/caddy/Caddyfile" -o caddy/Caddyfile
+          }
+
+          if [ -n "$INFRA_REF_INPUT" ]; then
+            fetch_ref "$INFRA_REF_INPUT"
+            used_ref="$INFRA_REF_INPUT"
+          else
+            if fetch_ref main && grep -q '@meet path /meet /meet/\*' caddy/Caddyfile; then
+              used_ref="main"
+            else
+              fetch_ref "$fallback_ref"
+              used_ref="$fallback_ref"
+            fi
+          fi
+
+          echo "infra_ref=${used_ref}" >> "$GITHUB_OUTPUT"
+          echo "Using compass-calendar-infra@${used_ref}"
+
+      - name: Guard required staging routes
+        run: |
+          set -euo pipefail
+          missing=""
+          grep -q 'staging.compasscalendar.com' caddy/Caddyfile \
+            || missing="${missing} staging.compasscalendar.com site"
+          grep -q 'handle /sync/\*' caddy/Caddyfile \
+            || missing="${missing} /sync/*"
+          grep -q 'handle /api/\*' caddy/Caddyfile \
+            || missing="${missing} /api/*"
+          grep -q '@meet path /meet /meet/\*' caddy/Caddyfile \
+            || missing="${missing} staging /meet"
+          if [ -n "$missing" ]; then
+            echo "Fetched Caddyfile is missing:${missing}" >&2
+            exit 1
+          fi
+
+      - name: Validate Caddyfile (local)
+        run: |
+          docker run --rm -v "${PWD}/caddy:/config:ro" caddy:2.11-alpine \
+            caddy validate --config /config/Caddyfile --adapter caddyfile
+
+      - name: Apply Caddyfile to staging-cloud
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT }}
+        run: |
+          set -euo pipefail
+          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          ssh_run() {
+            ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" "$1"
+          }
+
+          backup="/etc/caddy/Caddyfile.bak.$(date -u +%Y%m%d%H%M%S)"
+          if ! ssh_run "cp /etc/caddy/Caddyfile ${backup}"; then
+            echo "could not back up the live Caddyfile; refusing to apply" >&2
+            exit 1
+          fi
+
+          rollback() {
+            echo "restoring ${backup} and reloading" >&2
+            ssh_run "cp ${backup} /etc/caddy/Caddyfile && systemctl reload caddy" >&2 \
+              || echo "rollback failed; inspect /etc/caddy/Caddyfile on the host" >&2
+          }
+
+          if ! scp -i ~/.ssh/deploy_key caddy/Caddyfile "$SSH_USER@$SSH_HOST:/etc/caddy/Caddyfile"; then
+            echo "scp failed; live file was not overwritten" >&2
+            exit 1
+          fi
+
+          if ! ssh_run "caddy validate --config /etc/caddy/Caddyfile && systemctl reload caddy"; then
+            echo "remote validate/reload failed" >&2
+            rollback
+            exit 1
+          fi
+
+          probe_ok=1
+          probe() {
+            local method=$1 url=$2 min_status=$3 max_status=$4 out status
+            out=$(curl -sS -X "$method" --max-time 20 -o /dev/null -w '%{http_code}' "$url") || {
+              echo "curl failed for ${method} ${url}" >&2
+              return 1
+            }
+            status="$out"
+            if [ "$status" -lt "$min_status" ] || [ "$status" -gt "$max_status" ]; then
+              echo "expected HTTP ${min_status}-${max_status} from ${method} ${url}, got ${status}" >&2
+              return 1
+            fi
+          }
+
+          probe GET https://staging.compasscalendar.com/api/health 200 200 || probe_ok=0
+          probe GET https://staging.compasscalendar.com/meet/ 100 499 || probe_ok=0
+
+          if ! ssh_run "status=\$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:${BOOKING_WEB_PORT}/); case \$status in 5*) exit 1;; *) exit 0;; esac"; then
+            echo "warning: booking-web on 127.0.0.1:${BOOKING_WEB_PORT} returned 5xx or is unreachable (non-fatal)" >&2
+          fi
+
+          if [ "$probe_ok" != 1 ]; then
+            echo "post-apply staging probes failed" >&2
+            rollback
+            exit 1
+          fi
+
+          echo "applied compass-calendar-infra@${{ steps.fetch.outputs.infra_ref }} and probed clean"
