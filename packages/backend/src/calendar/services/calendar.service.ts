@@ -1,5 +1,5 @@
 import { type ClientSession, ObjectId } from "mongodb";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 import { CalendarRecordSchema } from "@backend/calendar/calendar.record";
 import mongoService from "@backend/common/services/mongo.service";
 

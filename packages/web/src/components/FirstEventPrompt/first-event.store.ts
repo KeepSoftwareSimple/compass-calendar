@@ -102,3 +102,29 @@ export const selectFirstEventDone = (state: FirstEventPromptState) =>
 
 export const selectFirstEventCelebrating = (state: FirstEventPromptState) =>
   state.isCelebrating;
+
+export type FirstEventPromptEligibility = {
+  isAuthModalOpen: boolean;
+  isSettingsOpen: boolean;
+  isAboutOpen: boolean;
+  isFormOpen: boolean;
+  isDone: boolean;
+  storageAvailable: boolean;
+  showcaseActive: boolean;
+  hasSeenShowcaseThisSession: boolean;
+};
+
+/** Whether the first-event card should claim the onboarding surface slot. */
+export const selectFirstEventPromptSurfaceEligible = (
+  input: FirstEventPromptEligibility,
+): boolean =>
+  !input.isAuthModalOpen &&
+  !input.isSettingsOpen &&
+  !input.isAboutOpen &&
+  !input.isFormOpen &&
+  !input.isDone &&
+  input.storageAvailable &&
+  isShowcaseHandoffEligible(
+    input.showcaseActive,
+    input.hasSeenShowcaseThisSession,
+  );

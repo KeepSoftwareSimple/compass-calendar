@@ -11,40 +11,43 @@ import { projectSeriesMaterialization } from "./projectRecurringEdit";
  * list join, the series base record is returned only alongside its in-range
  * instances.
  */
-export function expandLocalEventRecords(
+export async function expandLocalEventRecords(
   records: readonly LocalEventRecord[],
   range: { start: string; end: string },
-): LocalEventRecord[] {
+): Promise<LocalEventRecord[]> {
   const storedIds = new Set(records.map((record) => record.id));
+  const expanded = await Promise.all(
+    records.map(async (record) => {
+      if (record.event.recurrence.kind !== "series") {
+        return eventMatchesRange(record.event, range.start, range.end)
+          ? [record]
+          : [];
+      }
 
-  return records.flatMap((record) => {
-    if (record.event.recurrence.kind !== "series") {
-      return eventMatchesRange(record.event, range.start, range.end)
-        ? [record]
-        : [];
-    }
+      const { upserts } = await projectSeriesMaterialization({
+        base: record.event,
+        ranges: [range],
+        exdates: record.exdates,
+      });
+      const instances = upserts
+        .filter(
+          (event) =>
+            event.recurrence.kind === "occurrence" &&
+            !storedIds.has(event.id) &&
+            eventMatchesRange(event, range.start, range.end),
+        )
+        .map(
+          (event): LocalEventRecord => ({
+            version: 2,
+            id: event.id,
+            event,
+            isDemo: record.isDemo,
+          }),
+        );
 
-    const { upserts } = projectSeriesMaterialization({
-      base: record.event,
-      ranges: [range],
-      exdates: record.exdates,
-    });
-    const instances = upserts
-      .filter(
-        (event) =>
-          event.recurrence.kind === "occurrence" &&
-          !storedIds.has(event.id) &&
-          eventMatchesRange(event, range.start, range.end),
-      )
-      .map(
-        (event): LocalEventRecord => ({
-          version: 2,
-          id: event.id,
-          event,
-          isDemo: record.isDemo,
-        }),
-      );
+      return instances.length > 0 ? [record, ...instances] : [];
+    }),
+  );
 
-    return instances.length > 0 ? [record, ...instances] : [];
-  });
+  return expanded.flat();
 }

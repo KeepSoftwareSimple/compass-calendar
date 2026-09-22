@@ -25,10 +25,10 @@ export const BUSY_EVENT_TITLE = "Busy";
 
 // The per-event annotations stamped on NormalizedEventQueryData that this
 // view model joins onto each GridEvent (demoEventIds -> isDemo,
-// crossAccountDuplicates -> otherAccount).
+// duplicateCopies -> otherCopies).
 type EventAnnotations = Pick<
   NormalizedEventQueryData,
-  "demoEventIds" | "crossAccountDuplicates"
+  "demoEventIds" | "duplicateCopies"
 >;
 
 type EventToGridEventOptions = EventAnnotations & {
@@ -50,7 +50,7 @@ const eventToGridEvent = (
   event: Event,
   {
     demoEventIds,
-    crossAccountDuplicates,
+    duplicateCopies,
     scheduleOverride,
   }: EventToGridEventOptions = {},
 ): GridEvent => {
@@ -78,8 +78,8 @@ const eventToGridEvent = (
     isBusy,
     ...(isProviderManaged ? { isProviderManaged: true as const } : {}),
     isDemo: Boolean(demoEventIds?.includes(event.id)),
-    ...(crossAccountDuplicates?.has(event.id)
-      ? { otherAccount: crossAccountDuplicates.get(event.id) }
+    ...(duplicateCopies?.has(event.id)
+      ? { otherCopies: duplicateCopies.get(event.id) }
       : {}),
     ...(scheduleOverride?.isTimedMultiDayDisplay
       ? { isTimedMultiDayDisplay: true }
@@ -211,7 +211,7 @@ const computeCalendarEventViewModel = (
   const demoEventIds = data?.demoEventIds;
   const annotations: EventAnnotations = {
     demoEventIds,
-    crossAccountDuplicates: data?.crossAccountDuplicates,
+    duplicateCopies: data?.duplicateCopies,
   };
   const timedEvents = timedEventsFrom(events, annotations);
   const allDayEvents = allDayEventsFrom(events, annotations);

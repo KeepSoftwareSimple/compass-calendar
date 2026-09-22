@@ -7,7 +7,7 @@ import {
   deriveCalendarEventViewModel,
 } from "./event.view-model";
 import { filterEventsByVisibleCalendars } from "./filter-events-by-visible-calendars";
-import { mergeCrossAccountDuplicates } from "./merge-cross-account-duplicates";
+import { mergeDuplicateCopies } from "./merge-duplicate-copies";
 
 // Stable stand-in for calendars that haven't loaded, so the empty default
 // doesn't churn the memo below (or useDefaultTargetCalendar) once per render.
@@ -60,7 +60,7 @@ export function useCalendarEventViewModel(
   }
 
   const viewModel = deriveCalendarEventViewModel(
-    mergeCrossAccountDuplicates(
+    mergeDuplicateCopies(
       filterEventsByVisibleCalendars(data, calendars),
       calendars,
       defaultAccountEmail,

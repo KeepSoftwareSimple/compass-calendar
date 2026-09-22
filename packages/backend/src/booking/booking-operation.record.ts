@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 
 const ObjectIdSchema = zObjectId;
 

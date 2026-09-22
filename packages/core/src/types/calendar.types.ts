@@ -1,9 +1,6 @@
 import { z } from "zod/v4";
-import {
-  RGBHexSchema,
-  TimezoneSchema,
-  zObjectId,
-} from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
+import { RGBHexSchema, TimezoneSchema } from "@core/types/type.utils";
 
 // NOTE: distinct from calendar.contracts.ts's `CalendarProvider` type
 // (z.enum(["local", "google"])) — this is the legacy value set, retained

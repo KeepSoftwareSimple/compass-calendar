@@ -14,18 +14,18 @@ describe("calendarAccentStyle", () => {
     ).toEqual({ backgroundColor: "#3b82f6" });
   });
 
-  it("is a two-stop gradient into the other account's color for a merged card", () => {
+  it("is a gradient through every other copy's color for a merged card", () => {
     const style = calendarAccentStyle({
       name: "Work",
       backgroundColor: "#3b82f6",
-      otherAccount: {
-        accountEmail: "ahab@gmail.com",
-        backgroundColor: "#ef4444",
-      },
+      otherCopies: [
+        { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+        { label: "Miscellaneous", backgroundColor: "#22c55e" },
+      ],
     });
 
     expect(style).toEqual({
-      backgroundImage: "linear-gradient(to bottom, #3b82f6, #ef4444)",
+      backgroundImage: "linear-gradient(to bottom, #3b82f6, #ef4444, #22c55e)",
     });
     // A flat fill and a gradient must never both apply - the gradient would
     // render underneath an opaque solid color and never be visible.
@@ -43,17 +43,27 @@ describe("calendarAccentAccessibleSuffix", () => {
     ).toBe(", Work calendar");
   });
 
-  it("names the other account too for a merged card", () => {
+  it("names the other copies too for a merged card", () => {
     expect(
       calendarAccentAccessibleSuffix({
         name: "Work",
         backgroundColor: "#3b82f6",
-        otherAccount: {
-          accountEmail: "ahab@gmail.com",
-          backgroundColor: "#ef4444",
-        },
+        otherCopies: [{ label: "ahab@gmail.com", backgroundColor: "#ef4444" }],
       }),
     ).toBe(", Work calendar, also on ahab@gmail.com");
+  });
+
+  it("joins several other copies in the label", () => {
+    expect(
+      calendarAccentAccessibleSuffix({
+        name: "Work",
+        backgroundColor: "#3b82f6",
+        otherCopies: [
+          { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+          { label: "Miscellaneous", backgroundColor: "#22c55e" },
+        ],
+      }),
+    ).toBe(", Work calendar, also on ahab@gmail.com and Miscellaneous");
   });
 });
 

@@ -7,8 +7,8 @@ import {
   mergeGoogleLoginIdentity,
   mergeLoginIdentities,
 } from "@core/mappers/map.user";
+import { zObjectId } from "@core/types/object-id.schema";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
-import { zObjectId } from "@core/types/type.utils";
 import {
   type Schema_User,
   type Schema_UserIdentity,

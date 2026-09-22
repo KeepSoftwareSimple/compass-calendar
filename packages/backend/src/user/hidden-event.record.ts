@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 
 export const HiddenEventRecordSchema = z.object({
   _id: zObjectId,

@@ -24,14 +24,16 @@ export enum RecurringEventUpdateScope {
   ALL_EVENTS = "All Events",
 }
 
-// The other connected account a cross-account duplicate meeting also exists
-// on (see merge-cross-account-duplicates.ts). Display-only: the card paints a
-// two-color accent gradient from it and names the account in its label.
-const CrossAccountDuplicateSchema = z.object({
-  accountEmail: z.string(),
+// Another of the user's calendars the same meeting also exists on (see
+// merge-duplicate-copies.ts). Display-only: the card paints an accent
+// gradient from these colors and names them in its label. `label` is the
+// other account's email when the copy is on a different account, else that
+// calendar's name.
+const DuplicateCopySchema = z.object({
+  label: z.string(),
   backgroundColor: z.string(),
 });
-export type CrossAccountDuplicate = z.infer<typeof CrossAccountDuplicateSchema>;
+export type DuplicateCopy = z.infer<typeof DuplicateCopySchema>;
 
 const WebEventSchema = ValidatedCompassEventSchema.extend({
   recurrence: z
@@ -74,9 +76,9 @@ const GridEventSchema = WebEventSchema.extend({
   // A provider custom color (e.g. a Google event label) with no Compass slot
   // equivalent. Takes precedence over `color` when both are somehow present.
   colorHex: OptionalHexEventColorSchema,
-  // The meeting also exists on this other connected account; this card is the
-  // surviving copy of a cross-account merge. Joined like isDemo above.
-  otherAccount: CrossAccountDuplicateSchema.optional(),
+  // The meeting also exists on these other calendars; this card is the
+  // surviving copy of a duplicate merge. Joined like isDemo above.
+  otherCopies: z.array(DuplicateCopySchema).optional(),
   // Read-only, provider-sourced. Joined like calendarId/color above.
   location: z.string().nullable().optional(),
   organizer: OrganizerSchema.nullable().optional(),

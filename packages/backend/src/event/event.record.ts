@@ -5,7 +5,7 @@ import {
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
 import { EventContentSchema } from "@core/types/event.contracts";
-import { zObjectId } from "@core/types/type.utils";
+import { zObjectId } from "@core/types/object-id.schema";
 
 // See calendar.record.ts: zObjectId, not z.instanceof(ObjectId), so the
 // derived $jsonSchema keeps bsonType "objectId". Refinements (end > start) do
