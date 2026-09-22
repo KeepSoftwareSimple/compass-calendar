@@ -138,6 +138,28 @@ describe("self-host docker compose", () => {
     }
   });
 
+  it("copies every workspace package.json before frozen bun install", () => {
+    const workspacePackageJson = [
+      "packages/backend/package.json",
+      "packages/core/package.json",
+      "packages/scripts/package.json",
+      "packages/sync/package.json",
+      "packages/web/package.json",
+      "apps/booking-web/package.json",
+    ];
+    for (const file of [
+      "self-host/Dockerfile.backend",
+      "self-host/Dockerfile.sync",
+      "self-host/Dockerfile.web",
+      ".github/docker/Dockerfile.web",
+    ]) {
+      const dockerfile = readRepoFile(file);
+      for (const pkgJson of workspacePackageJson) {
+        expect(dockerfile).toContain(`COPY ${pkgJson} ${pkgJson}`);
+      }
+    }
+  });
+
   it("caches each publish-docker-images build with a per-image GHA scope", () => {
     const workflow = readRepoFile(
       ".github/workflows/publish-docker-images.yml",
