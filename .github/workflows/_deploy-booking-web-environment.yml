@@ -77,12 +77,12 @@ jobs:
           chmod 600 ~/.ssh/staging_key
           ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
 
-          if ! ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" test -f ~/compass/compass.yaml; then
+          if ! ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" 'test -f ~/compass/compass.yaml'; then
             echo "Missing ~/compass/compass.yaml on the host. Run a full calendar deploy first." >&2
             exit 1
           fi
 
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" cat ~/compass/compass.yaml \
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" 'cat ~/compass/compass.yaml' \
             > /tmp/compass.yaml.before
           python3 .github/scripts/deploy-patch-booking-web-yaml.py \
             --image "$BOOKING_WEB_IMAGE" \
