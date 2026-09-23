@@ -64,6 +64,7 @@ export default defineConfig({
     {
       command: "cd packages/web && bun run dev.ts",
       env: {
+        BOOKING_WEB_PORT: String(BOOKING_WEB_PORT),
         COMPASS_CONFIG_FILE: TEST_CONFIG_PATH,
       },
       port: TEST_PORT,
