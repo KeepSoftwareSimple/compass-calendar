@@ -141,6 +141,17 @@ describe("serve-web 304 behavior", () => {
   });
 });
 
+describe("serve-web guest /meet cutover", () => {
+  it("does not SPA-fallback guest booking paths onto calendar-web", async () => {
+    const response = await fetch(`${baseUrl}/meet/hostuser`, {
+      headers: { "Accept-Encoding": "br" },
+    });
+
+    expect(response.status).toBe(404);
+    expect(await response.text()).not.toContain("compass");
+  });
+});
+
 describe("serve-web path traversal", () => {
   it("blocks a traversal attempt from escaping the build root", async () => {
     const response = await fetch(`${baseUrl}/..%2f..%2f..%2fetc%2fpasswd`, {

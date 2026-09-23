@@ -1,9 +1,5 @@
 export const ROOT_ROUTES = {
   API: "/api",
-  BOOK: "/meet/$username",
-  BOOK_CANCEL: "/meet/cancel/$reservationId",
-  BOOK_RESCHEDULE: "/meet/reschedule/$reservationId",
-  BOOK_CONFIRMED: "/meet/confirmed/$reservationId",
   CLEANUP: "/cleanup",
   GOOGLE_AUTH_CALLBACK: "/auth/google/callback",
   PROVIDER_AUTH_CALLBACK: "/auth/$provider/callback",
