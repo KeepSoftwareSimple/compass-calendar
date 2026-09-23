@@ -275,12 +275,17 @@ async function expectEventCardWidth(
 ) {
   const card = gridEventCard(page, title, hidden);
   await expect(card).toBeVisible();
-  const box = await card.boundingBox();
-  expect(box).not.toBeNull();
+  // Hidden strips render at HIDDEN_EVENT_STRIP_WIDTH (8px); full cards are
+  // much wider. A single boundingBox read can land mid-toggle before React
+  // Query + layout settle, so poll until the strip vs card width holds.
   if (hidden) {
-    expect(box!.width).toBeLessThan(12);
+    await expect
+      .poll(async () => (await card.boundingBox())?.width ?? 999)
+      .toBeLessThan(12);
   } else {
-    expect(box!.width).toBeGreaterThan(12);
+    await expect
+      .poll(async () => (await card.boundingBox())?.width ?? 0)
+      .toBeGreaterThan(12);
   }
   return card;
 }
@@ -609,10 +614,16 @@ test("a new event form offers only writable calendars", async ({ page }) => {
   // Scoped by name: the sidebar's always-visible month picker is also a
   // role="listbox" (of day options), and the two would otherwise collide.
   const listbox = page.getByRole("listbox", { name: "Calendar" });
-  await expect(listbox.getByRole("option")).toHaveCount(2);
+  // Metadata seeds a healthy Google connection, so getWritableCalendars drops
+  // the local calendar (LCV3). Only the owner Google calendar is writable;
+  // the reader calendar must not appear as a create target.
+  await expect(listbox.getByRole("option")).toHaveCount(1);
+  await expect(
+    listbox.getByRole("option", { name: `${CALENDAR_A_NAME} (primary)` }),
+  ).toBeVisible();
   await expect(
     listbox.getByRole("option", { name: LOCAL_CALENDAR_NAME, exact: true }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   await expect(
     listbox.getByRole("option", { name: CALENDAR_B_NAME }),
   ).toHaveCount(0);
