@@ -12,13 +12,6 @@
     "module": "ES2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true,
-    "allowSyntheticDefaultImports": true,
-    "paths": {
-      "@booking-web/*": ["./src/*"],
-      "@web/routers": ["./src/shims/stub-web-routers.ts"],
-      "@web/routers/*": ["./src/shims/stub-web-routers.ts"],
-      "@web/*": ["../../packages/web/src/*"],
-      "@core/*": ["../../packages/core/src/*"]
-    }
+    "allowSyntheticDefaultImports": true
   }
 }
