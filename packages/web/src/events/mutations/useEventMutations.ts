@@ -33,7 +33,7 @@ import { track } from "@web/auth/posthog/track";
 import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
 import { isCalendarReconnectRequired } from "@web/auth/providers/reconnect.calendar";
 import {
-  selectGoogleSyncConnections,
+  selectSyncConnections,
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { billingQueryKeys } from "@web/billing/billing.query";
@@ -600,7 +600,7 @@ export function useEventMutations(
       const calendar = calendars.find((entry) => entry.id === calendarId);
       if (!calendar || !isCalendarReconnectRequired(calendar)) return false;
 
-      const connection = selectGoogleSyncConnections(
+      const connection = selectSyncConnections(
         useUserMetadataStore.getState(),
       ).find(
         (entry) =>
