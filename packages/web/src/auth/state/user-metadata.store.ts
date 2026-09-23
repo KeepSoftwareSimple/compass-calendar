@@ -143,11 +143,6 @@ export const selectSyncConnections = (
   state: UserMetadataState,
 ): SyncConnectionSummary[] => state.current?.connections ?? NO_CONNECTIONS;
 
-/** @deprecated Prefer {@link selectSyncConnections}. */
-export const selectGoogleSyncConnections = (
-  state: UserMetadataState,
-): SyncConnectionSummary[] => selectSyncConnections(state);
-
 /**
  * True when ANY connected account granted the optional contacts scopes, so
  * the attendee field can query live suggestions (the backend proxy fans out

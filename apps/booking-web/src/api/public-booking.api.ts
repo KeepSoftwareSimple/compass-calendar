@@ -34,19 +34,25 @@ export class PublicBookingNotFoundError extends Error {
   }
 }
 
+async function rejectNotFound<T>(request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (error) {
+    if (getErrorStatus(error) === 404) {
+      throw new PublicBookingNotFoundError();
+    }
+    throw error;
+  }
+}
+
 const PublicBookingApi = {
   async getPage(slug: string): Promise<PublicGetBookingPageResponse> {
-    try {
-      const data = await publicBookingHttp.get<unknown>(
+    const data = await rejectNotFound(
+      publicBookingHttp.get<unknown>(
         `/booking/pages/${encodeURIComponent(slug)}`,
-      );
-      return PublicGetBookingPageResponseSchema.parse(data);
-    } catch (error) {
-      if (getErrorStatus(error) === 404) {
-        throw new PublicBookingNotFoundError();
-      }
-      throw error;
-    }
+      ),
+    );
+    return PublicGetBookingPageResponseSchema.parse(data);
   },
 
   async getSlots(
@@ -82,17 +88,12 @@ const PublicBookingApi = {
   async getReservation(
     reservationId: string,
   ): Promise<PublicGetBookingReservationResponse> {
-    try {
-      const data = await publicBookingHttp.get<unknown>(
+    const data = await rejectNotFound(
+      publicBookingHttp.get<unknown>(
         `/booking/reservations/${encodeURIComponent(reservationId)}`,
-      );
-      return PublicGetBookingReservationResponseSchema.parse(data);
-    } catch (error) {
-      if (getErrorStatus(error) === 404) {
-        throw new PublicBookingNotFoundError();
-      }
-      throw error;
-    }
+      ),
+    );
+    return PublicGetBookingReservationResponseSchema.parse(data);
   },
 
   async patchReservation(
@@ -100,18 +101,13 @@ const PublicBookingApi = {
     input: PatchBookingReservationInput,
   ): Promise<PublicGetBookingReservationResponse> {
     const parsed = PatchBookingReservationInputSchema.parse(input);
-    try {
-      const data = await publicBookingHttp.patch<unknown>(
+    const data = await rejectNotFound(
+      publicBookingHttp.patch<unknown>(
         `/booking/reservations/${encodeURIComponent(reservationId)}`,
         parsed,
-      );
-      return PublicGetBookingReservationResponseSchema.parse(data);
-    } catch (error) {
-      if (getErrorStatus(error) === 404) {
-        throw new PublicBookingNotFoundError();
-      }
-      throw error;
-    }
+      ),
+    );
+    return PublicGetBookingReservationResponseSchema.parse(data);
   },
 
   async cancelReservation(
@@ -137,18 +133,13 @@ const PublicBookingApi = {
       end: parsed.end,
       timeZone: parsed.timeZone,
     });
-    try {
-      const data = await publicBookingHttp.get<unknown>(
+    const data = await rejectNotFound(
+      publicBookingHttp.get<unknown>(
         `/booking/reservations/${encodeURIComponent(reservationId)}/slots?${params.toString()}`,
         signal,
-      );
-      return BookingSlotsResponseSchema.parse(data);
-    } catch (error) {
-      if (getErrorStatus(error) === 404) {
-        throw new PublicBookingNotFoundError();
-      }
-      throw error;
-    }
+      ),
+    );
+    return BookingSlotsResponseSchema.parse(data);
   },
 
   async rescheduleReservation(
@@ -156,18 +147,13 @@ const PublicBookingApi = {
     input: RescheduleBookingReservationInput,
   ): Promise<RescheduleBookingReservationResponse> {
     const parsed = RescheduleBookingReservationInputSchema.parse(input);
-    try {
-      const data = await publicBookingHttp.post<unknown>(
+    const data = await rejectNotFound(
+      publicBookingHttp.post<unknown>(
         `/booking/reservations/${encodeURIComponent(reservationId)}/reschedule`,
         parsed,
-      );
-      return RescheduleBookingReservationResponseSchema.parse(data);
-    } catch (error) {
-      if (getErrorStatus(error) === 404) {
-        throw new PublicBookingNotFoundError();
-      }
-      throw error;
-    }
+      ),
+    );
+    return RescheduleBookingReservationResponseSchema.parse(data);
   },
 };
 

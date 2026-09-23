@@ -17,7 +17,6 @@ import { ROOT_ROUTES } from "@booking-web/common/constants/routes";
 import { useBookingShortcut } from "@booking-web/shortcuts/useBookingShortcut";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 
 type CancelActionState =
   | "idle"
@@ -132,9 +131,6 @@ export function PublicBookingCancelPage() {
   useBookingShortcut(
     "Escape",
     (event) => {
-      if (isHigherEscapeOwner()) {
-        return;
-      }
       if (!isConfirmView || inFlightRef.current || !reservationId) {
         return;
       }

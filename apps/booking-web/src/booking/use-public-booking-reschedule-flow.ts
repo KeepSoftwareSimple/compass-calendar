@@ -26,7 +26,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useRef } from "react";
 import { RescheduleBookingReservationInputSchema } from "@core/types/booking.contracts";
-import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 
 /**
  * The guest reschedule flow. The shared slot picker lives in
@@ -116,9 +115,6 @@ export function usePublicBookingRescheduleFlow() {
   useBookingShortcut(
     "Escape",
     (event) => {
-      if (isHigherEscapeOwner()) {
-        return;
-      }
       if (submitInFlightRef.current || !reservationId) {
         return;
       }

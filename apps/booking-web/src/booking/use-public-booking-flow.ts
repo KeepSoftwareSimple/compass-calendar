@@ -36,7 +36,6 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { CreateBookingReservationInputSchema } from "@core/types/booking.contracts";
 import { track } from "@web/auth/posthog/track";
-import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 
 const EMPTY_GUEST_DETAILS: PublicBookingGuestDetails = {
   guestName: "",
@@ -202,9 +201,6 @@ export function usePublicBookingFlow() {
   useBookingShortcut(
     "Escape",
     (event) => {
-      if (isHigherEscapeOwner()) {
-        return;
-      }
       event.preventDefault();
       handleChangeTime();
     },

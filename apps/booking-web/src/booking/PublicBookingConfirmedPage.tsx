@@ -27,7 +27,6 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useState } from "react";
-import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 
 const BOOKING_LOADING = {
   title: "Loading meeting",
@@ -131,9 +130,6 @@ export function PublicBookingConfirmedPage() {
   useBookingShortcut(
     "Escape",
     (event) => {
-      if (isHigherEscapeOwner()) {
-        return;
-      }
       event.preventDefault();
       if (isEditing) {
         setIsEditing(false);

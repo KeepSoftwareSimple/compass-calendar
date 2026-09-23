@@ -1,8 +1,5 @@
 import { useHotkey } from "@tanstack/react-hotkeys";
-
-function isHigherEscapeOwner() {
-  return false;
-}
+import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 
 type BookingShortcutOptions = {
   enabled?: boolean;
