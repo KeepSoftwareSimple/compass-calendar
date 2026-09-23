@@ -39,9 +39,13 @@ and End time menus, the v1.8 booking gate fix, and the v1.10 meeting-flow
 fixes). Booking
 is enabled in development and staging (`runtime.nodeEnv` other than
 `production`) and disabled in production. Do not flip `isBookingEnabled`.
-A standalone Compass Booking product (separate brand, domain, or
-deployable) is **explicitly deferred**. The seams below are the
-extraction path; they are not a second service in v1.
+Guest `/meet` runs in **`apps/booking-web`**: its own frontend image and
+deploy pipeline on the same Compass Cloud host (shared VPS, MongoDB, API,
+and Sync). Caddy on that host routes `/meet/*` to the booking-web
+container; calendar-web no longer serves those guest paths. A standalone
+Compass Booking product (separate brand or domain) remains **explicitly
+deferred**. Booking rules and reservations stay in the API monolith; there
+is no Booking microservice in v1.
 
 ## Public URL
 
@@ -465,14 +469,21 @@ Sync own events and busy. No Booking microservice in v1.
 ```mermaid
 flowchart LR
   guest[Guest browser]
-  host[Host Compass Web]
+  host[Host browser]
+  bookingWeb[booking-web]
+  calendarWeb[calendar-web]
+  caddy[Edge Caddy]
   api[Backend API monolith]
   booking[Booking module]
   calendar[Calendar app interface]
   sync[Sync service]
 
-  guest -->|"public /meet/:slug"| api
-  host -->|authenticated admin| api
+  guest -->|"https://…/meet/:slug"| caddy
+  caddy -->|"/meet/*"| bookingWeb
+  caddy -->|"other paths"| calendarWeb
+  bookingWeb -->|"/api/booking/*"| api
+  host -->|"Settings, calendar"| calendarWeb
+  calendarWeb -->|authenticated API| api
   api --> booking
   booking -->|"getAvailability / createEvent / updateEvent / deleteEvent"| calendar
   calendar --> sync
@@ -484,9 +495,15 @@ flowchart LR
 - **Persistence:** Booking-owned Mongo collections (page config,
   reservations). Calendar collections stay Calendar/Sync-owned.
   Cross-domain references are stable ids only.
-- **Web:** same Compass Web deploy. Public `/meet/$username` routes do
-  **not** sit under the authenticated layout and must lazy-load a small
-  booking bundle so the keyboard-first calendar does not boot.
+- **Web (guest):** `apps/booking-web` is a separate static SPA container
+  and CI deploy path (`Deploy staging booking-web`, `./compass
+  update-booking-web`). On shared Compass Cloud and self-host stacks it
+  listens on `bookingWeb.port` (default `9081`) behind Caddy's `/meet/*`
+  path matcher. Local dev: `bun run dev:booking-web` on port `9081`;
+  `bun run dev:web` redirects guest `/meet` and `/book` to that origin.
+- **Web (host):** Meeting Settings and host booking funnels stay in
+  `packages/web` (calendar-web). They use the authenticated layout and
+  `packages/web/src/api/booking.api.ts`; they do not boot the guest SPA.
 - Native iOS/desktop later call the same Booking HTTP contracts. They do
   not import web views.
 - Confirm path: compute slots from availability + busy; on submit,
@@ -569,7 +586,8 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 - Team pages and round-robin
 - Compass-sent email or SMS
 - `guestsCanModify`
-- Standalone booking brand, domain, or deployable
+- Standalone booking brand or domain (guest `/meet` SPA already ships in
+  `apps/booking-web` on shared infra)
 - Production billing packaging specific to booking (uses the existing
   calendar write gate)
 - Flipping the production gate
@@ -594,12 +612,15 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
 | Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
-| Booking funnels | `packages/web/src/auth/posthog/booking-funnel.ts`, `packages/web/src/auth/posthog/track.ts` |
+| Host booking funnels | `packages/web/src/auth/posthog/booking-funnel.ts`, `packages/web/src/auth/posthog/track.ts` |
+| Guest booking funnels | `apps/booking-web/src/telemetry/guest-booking-funnel.ts` |
 | Sidebar discovery | `packages/web/src/components/Sidebar/MeetingPageNudge/` |
 | Description flattening | `packages/web/src/components/DescriptionEditor/plain-text-description.ts` |
-| Public guest UI | `packages/web/src/booking/PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx` |
-| Public web API client | `packages/web/src/api/public-booking.api.ts`, `packages/web/src/api/booking.api.ts` |
-| E2e | `e2e/booking/`, `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts` |
+| Public guest UI | `apps/booking-web/src/booking/` (for example `PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx`) |
+| Guest web API client | `apps/booking-web/src/api/public-booking.api.ts` |
+| Host web API client | `packages/web/src/api/booking.api.ts` |
+| booking-web app | `apps/booking-web/` (`Dockerfile`, `dev.ts`, deploy workflow) |
+| E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
 
 ### Analytics
 
@@ -618,10 +639,10 @@ is also applied to backend HTTP access logs, Winston messages, OTel log
 attributes, PostHog exception properties, and server `capture()` payloads.
 Diagnostic reservation ids stay in Mongo; they are not exported analytics.
 
-Guests are never `identify`'d or `alias`'d. `useIdentifyUser` only runs
-inside the authenticated calendar shell, and it no-ops on `/meet` and
-`/book` if a host session is present. Anonymous pageviews stay anonymous
-and do not join to a host. Production, staging, and test traffic split on
+Guests are never `identify`'d or `alias`'d. Host `useIdentifyUser` runs
+only inside calendar-web. booking-web does not mount the authenticated
+shell. Anonymous guest pageviews stay anonymous and do not join to a
+host. Production, staging, and test traffic split on
 the registered super-property `environment` (`NODE_ENV`); that is not PII.
 
 `track()` swallows capture exceptions, so analytics failure never
@@ -634,10 +655,10 @@ five minutes including zeros so missing telemetry is distinct from an
 idle queue. Provider connection health stays on Sync
 `sync_health_snapshot` (PostHog dashboard 1905421).
 
-Owner for every **browser** event below is the web client
-(`packages/web/src/auth/posthog/booking-funnel.ts` and the five original
-call sites). Conversion windows: host settings_opened to link_copied, 7
-days; guest page_viewed to reservation_created, 1 day.
+Host funnel events: `packages/web/src/auth/posthog/booking-funnel.ts`.
+Guest funnel events: `apps/booking-web/src/telemetry/guest-booking-funnel.ts`.
+Conversion windows: host settings_opened to link_copied, 7 days; guest
+page_viewed to reservation_created, 1 day.
 
 #### Counting
 
