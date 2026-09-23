@@ -1,4 +1,4 @@
-import { postcssPlugin } from "../../packages/web/plugins/postcss.plugin";
+import { postcssPlugin } from "@web-build/plugins/postcss.plugin";
 import { copyStaticAssets } from "./copy-static-assets";
 import path from "node:path";
 

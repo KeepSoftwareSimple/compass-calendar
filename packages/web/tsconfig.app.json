@@ -5,7 +5,8 @@
     "./src/**/*.ts",
     "./src/**/*.tsx",
     "./boot-size-report.ts",
-    "./inject-module-preloads.ts"
+    "./inject-module-preloads.ts",
+    "./static-dev-server.ts"
   ],
   "exclude": [
     "./src/**/__tests__/**",
