@@ -10,9 +10,8 @@
     "types": ["bun-types"],
     "paths": {
       "@booking-web/*": ["./src/*"],
-      "@web/routers": ["./src/shims/stub-web-routers.ts"],
-      "@web/routers/*": ["./src/shims/stub-web-routers.ts"],
       "@web/*": ["../../packages/web/src/*"],
+      "@web-build/*": ["../../packages/web/*"],
       "@core/*": ["../../packages/core/src/*"]
     },
     "lib": ["ES6", "dom"]

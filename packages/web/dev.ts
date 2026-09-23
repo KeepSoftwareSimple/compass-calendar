@@ -2,7 +2,7 @@ import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
 import { isGuestMeetStaticPath } from "./guest-meet-static-path";
 import { postcssPlugin } from "./plugins/postcss.plugin";
-import { watch } from "node:fs";
+import { startStaticDevServer } from "./static-dev-server";
 import path from "node:path";
 
 const config = loadCompassConfig();
@@ -36,20 +36,6 @@ const define: Record<string, string> = {
   BUILD_VERSION: JSON.stringify("dev"),
 };
 
-// SSE clients waiting for reload signals (dev mode only)
-const reloadClients = new Set<ReadableStreamDefaultController<Uint8Array>>();
-
-function notifyReload() {
-  const msg = new TextEncoder().encode("data: reload\n\n");
-  for (const ctrl of reloadClients) {
-    try {
-      ctrl.enqueue(msg);
-    } catch {
-      reloadClients.delete(ctrl);
-    }
-  }
-}
-
 async function build() {
   const result = await Bun.build({
     entrypoints: [path.resolve(import.meta.dir, "src/index.tsx")],
@@ -68,7 +54,7 @@ async function build() {
   });
 
   if (!result.success) {
-    console.error("[build] failed:");
+    console.error("[compass] build failed:");
     for (const message of result.logs) console.error(message);
     return false;
   }
@@ -77,97 +63,21 @@ async function build() {
 
   return true;
 }
-// biome-ignore lint/suspicious/noConsole: Preserve dev-server progress output.
-console.log("[compass] building...");
-await build();
-// biome-ignore lint/suspicious/noConsole: Preserve dev-server progress output.
-console.log(`[compass] dev server → http://localhost:${WEB_PORT}`);
 
-if (IS_DEV) {
-  // Watch src/ and rebuild on changes (debounced) — dev mode only
-  let rebuildTimer: ReturnType<typeof setTimeout> | null = null;
-  watch(SRCDIR, { recursive: true }, (_event, filename) => {
-    if (!filename || filename.includes(".test.")) return;
-    if (rebuildTimer) clearTimeout(rebuildTimer);
-    rebuildTimer = setTimeout(async () => {
-      // biome-ignore lint/suspicious/noConsole: Preserve dev-server rebuild output.
-      console.log(`[rebuild] ${filename}`);
-      const ok = await build();
-      if (ok) notifyReload();
-    }, 80);
-  });
-}
-
-// Live reload script injected into HTML responses (dev mode only)
-const LIVE_RELOAD_SCRIPT = IS_DEV
-  ? `<script>
-  new EventSource('/__live-reload').onmessage = () => location.reload();
-</script>`
-  : "";
-
-Bun.serve({
+await startStaticDevServer({
+  label: "compass",
   port: WEB_PORT,
-  // Prevent Bun from closing long-lived SSE connections prematurely.
-  // Default is 10 s which produces "[Bun.serve]: request timed out" noise in CI.
-  idleTimeout: IS_DEV ? 255 : 0,
-  async fetch(req) {
-    const url = new URL(req.url);
-    const { pathname } = url;
-
-    // SSE endpoint for live reload (dev mode only)
-    if (IS_DEV && pathname === "/__live-reload") {
-      let ctrl!: ReadableStreamDefaultController<Uint8Array>;
-      const stream = new ReadableStream<Uint8Array>({
-        start(c) {
-          ctrl = c;
-          reloadClients.add(ctrl);
-        },
-        cancel() {
-          reloadClients.delete(ctrl);
-        },
-      });
-      return new Response(stream, {
-        headers: {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
-        },
-      });
-    }
-
-    if (isGuestMeetStaticPath(pathname)) {
-      const target = `${BOOKING_WEB_ORIGIN}${pathname}${url.search}`;
-      return Response.redirect(target, 307);
-    }
-
-    // Try to serve a file from the build output
-    const filePath = path.join(
-      OUTDIR,
-      pathname === "/" ? "index.html" : pathname,
-    );
-    const file = Bun.file(filePath);
-
-    if (await file.exists()) {
-      if (filePath.endsWith(".html")) {
-        const html = (await file.text()).replace(
-          "</body>",
-          `${LIVE_RELOAD_SCRIPT}</body>`,
-        );
-        return new Response(html, {
-          headers: { "Content-Type": "text/html" },
-        });
-      }
-      return new Response(file);
-    }
-
-    // SPA fallback — return index.html for client-side routes
-    const index = Bun.file(path.join(OUTDIR, "index.html"));
-    const html = (await index.text()).replace(
-      "</body>",
-      `${LIVE_RELOAD_SCRIPT}</body>`,
-    );
-    return new Response(html, {
-      headers: { "Content-Type": "text/html" },
-    });
-  },
+  outdir: OUTDIR,
+  srcdir: SRCDIR,
+  isDev: IS_DEV,
+  build,
+  // Guest /meet lives in booking-web now; hand those paths over rather than
+  // serving calendar-web's SPA fallback for them.
+  handleRequest: (url) =>
+    isGuestMeetStaticPath(url.pathname)
+      ? Response.redirect(
+          `${BOOKING_WEB_ORIGIN}${url.pathname}${url.search}`,
+          307,
+        )
+      : undefined,
 });
