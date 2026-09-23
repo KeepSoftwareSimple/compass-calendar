@@ -29,14 +29,20 @@ jobs:
         id: fetch
         env:
           INFRA_REF_INPUT: ${{ inputs.infra_ref }}
+          # Private infra repo: raw.githubusercontent.com 404s without auth.
+          GH_TOKEN: ${{ secrets.AGENT_LOOP_GITHUB_TOKEN || secrets.AUTOFIX_GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "Need AGENT_LOOP_GITHUB_TOKEN or AUTOFIX_GITHUB_TOKEN to read compass-calendar-infra." >&2
+            exit 1
+          fi
           mkdir -p caddy
           fallback_ref="cursor/staging-caddy-meet-booking-web-0e20"
-          base="https://raw.githubusercontent.com/KeepSoftwareSimple/compass-calendar-infra"
 
           fetch_ref() {
-            curl -fsSL "${base}/${1}/caddy/Caddyfile" -o caddy/Caddyfile
+            gh api "repos/KeepSoftwareSimple/compass-calendar-infra/contents/caddy/Caddyfile?ref=${1}" \
+              --jq '.content' | base64 -d > caddy/Caddyfile
           }
 
           if [ -n "$INFRA_REF_INPUT" ]; then
