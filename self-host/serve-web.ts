@@ -1,4 +1,5 @@
 import { COMPRESSIBLE_STATIC_TYPES } from "../packages/web/compressible-static-types";
+import { isGuestMeetStaticPath } from "../packages/web/guest-meet-static-path";
 import { type Stats } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -251,6 +252,10 @@ Bun.serve({
     }
 
     if (path.extname(safePath)) {
+      return new Response("Not Found", { status: 404 });
+    }
+
+    if (isGuestMeetStaticPath(pathname)) {
       return new Response("Not Found", { status: 404 });
     }
 

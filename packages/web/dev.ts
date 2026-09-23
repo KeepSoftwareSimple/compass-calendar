@@ -1,5 +1,6 @@
 import { loadCompassConfig } from "@core/config/compass.config";
 import { copyStaticAssets } from "./copy-static-assets";
+import { isGuestMeetStaticPath } from "./guest-meet-static-path";
 import { postcssPlugin } from "./plugins/postcss.plugin";
 import { watch } from "node:fs";
 import path from "node:path";
@@ -7,6 +8,8 @@ import path from "node:path";
 const config = loadCompassConfig();
 
 const WEB_PORT = Number(config.web?.port) || 9080;
+const BOOKING_WEB_PORT = Number(process.env.BOOKING_WEB_PORT) || 9081;
+const BOOKING_WEB_ORIGIN = `http://localhost:${BOOKING_WEB_PORT}`;
 const OUTDIR = path.resolve(import.meta.dir, "../../build/web");
 const SRCDIR = path.resolve(import.meta.dir, "src");
 
@@ -130,6 +133,11 @@ Bun.serve({
           Connection: "keep-alive",
         },
       });
+    }
+
+    if (isGuestMeetStaticPath(pathname)) {
+      const target = `${BOOKING_WEB_ORIGIN}${pathname}${url.search}`;
+      return Response.redirect(target, 307);
     }
 
     // Try to serve a file from the build output
