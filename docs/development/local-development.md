@@ -75,7 +75,8 @@ docker compose -f compose.yaml up -d booking-web
 ```
 
 The guest app listens on `http://127.0.0.1:9081` (`BOOKING_WEB_PORT`). It still
-depends on a healthy backend container; Caddy `/meet/*` routing is WP-05.
+depends on a healthy backend container. On staging and self-host stacks, Caddy
+routes `/meet/*` to this service; calendar-web does not serve guest `/meet`.
 
 **Staging:** ship booking-web only with the GitHub Actions workflow
 [Deploy staging booking-web](../CI-CD/workflows.md#staging-booking-web-only).

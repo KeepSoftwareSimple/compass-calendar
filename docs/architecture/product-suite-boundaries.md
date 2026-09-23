@@ -16,7 +16,7 @@ The near-term shape is:
 ```text
 apps/
   calendar-web/       # current packages/web, moved only when useful
-  booking-web/        # public booking and booking administration UI
+  booking-web/        # public guest /meet SPA (host Meeting Settings stay in calendar-web)
   calendar-macos/     # native shell and macOS-only integration
   api/                # current packages/backend; one modular backend
   sync/               # current provider-sync service
@@ -79,16 +79,19 @@ questions, reservations, and cancellation/rescheduling policy. A confirmed
 booking requests creation or mutation of Calendar events through a Calendar
 application interface; it does not write Calendar persistence directly.
 
-Start Booking as:
+Booking ships as:
 
-1. a separate web app because its public routes, bundle, and user journey are
-   distinct; and
-2. a module in the existing API process because auth, billing, deployment, and
-   operations are initially shared.
+1. **`apps/booking-web`** for guest `/meet` (and legacy `/book` redirects): a
+   separate frontend image and deploy pipeline, colocated on the same Compass
+   Cloud or self-host stack as calendar-web, API, MongoDB, and Sync. Edge Caddy
+   routes `/meet/*` to the booking-web container; calendar-web serves the rest.
+2. **`packages/web` (calendar-web)** for host Meeting Settings and calendar UX.
+3. A **booking module** in the existing API process because auth, billing, and
+   data stay shared until a measurable split trigger applies.
 
-This gives code boundaries without paying the distributed-system cost of a
-Booking microservice. It can become a service later if independent scaling,
-availability, data residency, or team ownership makes that cost worthwhile.
+This gives frontend and code boundaries without a Booking microservice. The API
+module can become its own service later if independent scaling, availability,
+data residency, or team ownership makes that cost worthwhile.
 
 ### Reminders
 
@@ -200,17 +203,20 @@ rule is maintained now.
 
 1. **Now:** document and enforce the dependency direction. Put attendee work
    in Calendar. Keep Sync as-is operationally.
-2. **First Booking slice:** specified in
-   [Compass Calendar Booking (v1)](../features/booking.md). Add a `booking`
-   domain module in the existing API and public `/meet/` routes in Compass
-   Web. Use Calendar application interfaces. Do not extract a microservice.
+2. **Booking v1 (shipped):** specified in
+   [Compass Calendar Booking (v1)](../features/booking.md). The API booking
+   module, host Meeting Settings in calendar-web, and guest `/meet` in
+   `apps/booking-web` are live on staging (separate booking-web container,
+   Caddy `/meet/*` split, dedicated staging deploy workflow). Production guest
+   `/meet` stays gated off per product policy; infra matches staging when the
+   gate opens. Use Calendar application interfaces; no Booking microservice.
 3. **First Reminders slice:** add reminder contracts/policy plus a worker
    entrypoint backed by durable, idempotent jobs.
 4. **Contract cleanup while touching code:** create domain contract entrypoints
    and shrink `core`; do not perform a flag-day migration.
-5. **Directory rename later:** move deployables under `apps/` only when the
-   move makes tooling or ownership clearer. Renaming is not an architectural
-   prerequisite.
+5. **Directory rename later:** `apps/booking-web` already exists; move
+   calendar-web and other deployables under `apps/` when tooling or ownership
+   benefits. Renaming is not an architectural prerequisite.
 
 ## Extraction triggers
 
