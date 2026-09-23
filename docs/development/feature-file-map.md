@@ -73,7 +73,8 @@ RSVP](../features/attendees.md).
 Product spec: [Compass Calendar Booking](../features/booking.md).
 
 - Public URL: `/meet/:username`, confirmation `/meet/confirmed/:id`,
-  cancel `/meet/cancel/:id` (guest routes outside the calendar shell)
+  cancel `/meet/cancel/:id` (guest SPA in `apps/booking-web`; host settings in
+  calendar-web)
 - Shared contracts: `packages/core/src/types/booking.contracts.ts`
 - Slot engine: `packages/core/src/booking/compute-booking-slots.ts`
 - Backend admin: `packages/backend/src/booking/controllers/booking.controller.ts`,
@@ -96,13 +97,15 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
   `packages/web/src/components/Switch/Switch.tsx`
 - Description flattening: `packages/web/src/components/DescriptionEditor/plain-text-description.ts`
 - Sidebar discovery: `packages/web/src/components/Sidebar/MeetingPageNudge/`
-- Public guest UI: `packages/web/src/booking/PublicBookingPage.tsx`,
-  `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`,
-  `PublicBookingCancelPage.tsx`,
-  `PublicBookingReschedulePage.tsx`
-- Web API client: `packages/web/src/api/public-booking.api.ts`,
-  `packages/web/src/api/booking.api.ts`
-- E2e: `e2e/booking/`, `e2e/accessibility/booking-a11y.spec.ts`
+- Public guest UI: `apps/booking-web/src/booking/` (for example
+  `PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`,
+  `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`,
+  `PublicBookingReschedulePage.tsx`)
+- Guest web API client: `apps/booking-web/src/api/public-booking.api.ts`
+- Host web API client: `packages/web/src/api/booking.api.ts`
+- booking-web deployable: `apps/booking-web/Dockerfile`, `.github/workflows/deploy-staging-booking-web.yml`
+- E2e: `e2e/booking/` (guest against booking-web), `e2e/accessibility/booking-a11y.spec.ts`,
+  `e2e/booking/calendar-web-guest-meet.spec.ts`
 - Meeting dashboard and alert evaluation:
   `packages/scripts/src/telemetry/meeting-dashboard.ts`,
   [Meeting monitoring](./meeting-monitoring.md)
