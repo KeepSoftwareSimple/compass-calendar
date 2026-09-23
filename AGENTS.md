@@ -75,12 +75,13 @@ Playwright. Docs index: `docs/README.md`.
   Procedure: `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
-- GitHub milestones and labels: the GitHub MCP server has no milestone tool
-  and Claude Code web sessions have no `gh`. In those sessions `curl` against
-  `https://api.github.com` is authenticated by the session proxy, so
-  `POST /repos/<owner>/<repo>/milestones` creates one and issues can be filed
-  with a `milestone` number. Actions variables stay blocked; a human sets
-  `AGENT_LOOP_MILESTONES`.
+- Claude Code web sessions: `apt-get install -y gh` (not persistent; reinstall
+  each session). GraphQL blocked: `gh issue list` and `gh pr list` return 403;
+  REST `gh api repos/...` works. On `curl https://api.github.com`, omit
+  `Authorization` from `GITHUB_TOKEN` (session proxy auths; explicit tokens
+  trigger credential exploration). GitHub MCP has no milestone tool; REST
+  `POST /repos/<owner>/<repo>/milestones` and issue `milestone` work. Actions
+  variables blocked; a human sets `AGENT_LOOP_MILESTONES`.
 
 ## Lookups
 
