@@ -63,6 +63,7 @@ import {
   resolveAdaptersFrom,
   resolveAuthFrom,
 } from "@sync/providers/provider-registry";
+import { logSyncJobEngineError } from "@sync/providers/provider-transient-error.util";
 import { redactedCause } from "@sync/safety/redact-error";
 import { buildSyncApp } from "@sync/server/sync.server";
 import { buildServiceIdentity } from "@sync/service-identity";
@@ -559,7 +560,8 @@ function buildSchedulers(
       owner,
       {
         onError: (error, job) =>
-          logger.error(
+          logSyncJobEngineError(
+            logger,
             // resourceId is null for connection-wide kinds (calendarListSync);
             // say so rather than logging the literal string "null".
             `Sync job engine failed for resource ${
