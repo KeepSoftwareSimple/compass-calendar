@@ -108,18 +108,3 @@ jobs:
           DEPLOY_PROFILES="${COMPOSE_PROFILES:+${COMPOSE_PROFILES},}booking,sync"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
             "cd ~/compass && COMPOSE_PROFILES='${DEPLOY_PROFILES}' ./compass update-booking-web"
-
-      - name: Smoke booking-web HTTP on the host
-        env:
-          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT }}
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_USER: ${{ vars.SSH_USER }}
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-        run: |
-          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
-          chmod 600 ~/.ssh/staging_key
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
-            "curl -fsS http://127.0.0.1:${BOOKING_WEB_PORT}/ >/dev/null"

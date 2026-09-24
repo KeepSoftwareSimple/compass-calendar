@@ -64,10 +64,7 @@ export class EmailUnsubscribeController {
         : typeof req.query["token"] === "string"
           ? req.query["token"]
           : "";
-    const userId = await resolveUserIdFromUnsubscribeToken(
-      token,
-      parseUnsubscribeUserId,
-    );
+    const userId = await resolveUserIdFromUnsubscribeToken(token);
     if (!userId) {
       res.status(Status.OK).type("html").send(invalidPage());
       return;

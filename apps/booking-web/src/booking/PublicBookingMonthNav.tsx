@@ -3,11 +3,13 @@ import {
   isBookingMonthAvailable,
   shiftBookingMonthKey,
 } from "@booking-web/booking/public-booking.format";
+import dayjs from "@core/util/date/dayjs";
 
 interface PublicBookingMonthNavProps {
   monthKey: string;
   timeZone: string;
   maxHorizonDays: number;
+  todayKey?: string;
   onMonthChange: (monthKey: string) => void;
   onPrefetchMonth: (monthKey: string) => void;
 }
@@ -16,20 +18,24 @@ export function PublicBookingMonthNav({
   monthKey,
   timeZone,
   maxHorizonDays,
+  todayKey,
   onMonthChange,
   onPrefetchMonth,
 }: PublicBookingMonthNavProps) {
   const previousMonthKey = shiftBookingMonthKey(monthKey, -1, timeZone);
   const nextMonthKey = shiftBookingMonthKey(monthKey, 1, timeZone);
+  const now = todayKey ? dayjs.tz(todayKey, timeZone).startOf("day") : dayjs();
   const canGoPrevious = isBookingMonthAvailable(
     previousMonthKey,
     timeZone,
     maxHorizonDays,
+    now,
   );
   const canGoNext = isBookingMonthAvailable(
     nextMonthKey,
     timeZone,
     maxHorizonDays,
+    now,
   );
   const prefetchIfEnabled = (enabled: boolean, target: string) => {
     if (enabled) {

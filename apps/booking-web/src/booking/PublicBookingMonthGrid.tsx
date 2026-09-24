@@ -146,6 +146,7 @@ export function PublicBookingMonthGrid({
         monthKey={monthKey}
         timeZone={timeZone}
         maxHorizonDays={maxHorizonDays}
+        todayKey={todayKey}
         onMonthChange={onMonthChange}
         onPrefetchMonth={onPrefetchMonth}
       />

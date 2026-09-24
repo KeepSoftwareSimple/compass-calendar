@@ -85,5 +85,3 @@ export const useRecurrenceScopeConfirmation = ({
     standaloneDraft,
   };
 };
-
-export { isExistingEventRecurring } from "@web/events/recurrence/recurrence-scope-decision";

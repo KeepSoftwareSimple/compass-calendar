@@ -1,3 +1,4 @@
+import { readHttpHeader } from "@backend/email/http-header.util";
 import {
   type EmailProvider,
   type EmailWebhookEvent,
@@ -6,15 +7,6 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { type IncomingHttpHeaders } from "node:http";
 
 const RESEND_API_URL = "https://api.resend.com/emails";
-
-function headerValue(
-  headers: IncomingHttpHeaders,
-  name: string,
-): string | undefined {
-  const raw = headers[name];
-  if (raw === undefined) return undefined;
-  return Array.isArray(raw) ? raw[0] : raw;
-}
 
 function decodeSvixSecret(secret: string): Buffer {
   const trimmed = secret.trim();
@@ -29,9 +21,9 @@ function verifySvixSignature(
   headers: IncomingHttpHeaders,
   webhookSecret: string,
 ): void {
-  const svixId = headerValue(headers, "svix-id");
-  const svixTimestamp = headerValue(headers, "svix-timestamp");
-  const svixSignature = headerValue(headers, "svix-signature");
+  const svixId = readHttpHeader(headers, "svix-id");
+  const svixTimestamp = readHttpHeader(headers, "svix-timestamp");
+  const svixSignature = readHttpHeader(headers, "svix-signature");
 
   if (!svixId || !svixTimestamp || !svixSignature) {
     throw new Error("Resend webhook is missing Svix signature headers");

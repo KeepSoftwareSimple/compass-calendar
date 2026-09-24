@@ -2,23 +2,13 @@ import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { readHttpHeader } from "@backend/email/http-header.util";
 import { buildEmailProvider } from "@backend/email/providers/email.client";
 import { type EmailWebhookEvent } from "@backend/email/providers/email.port";
 import { processEmailWebhookEvent } from "@backend/email/services/email.webhook.service";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
 
 const logger = Logger("app:email.webhook");
-
-function headerValue(
-  headers: Request["headers"],
-  name: string,
-): string | undefined {
-  const raw = headers[name];
-  if (raw === undefined) {
-    return undefined;
-  }
-  return Array.isArray(raw) ? raw[0] : raw;
-}
 
 export class EmailWebhookController {
   handleResend = async (req: Request, res: Response): Promise<void> => {
@@ -48,7 +38,7 @@ export class EmailWebhookController {
     }
 
     try {
-      const eventId = headerValue(req.headers, "svix-id") ?? "";
+      const eventId = readHttpHeader(req.headers, "svix-id") ?? "";
       for (const event of events) {
         const id = eventId || `${event.type}:${JSON.stringify(event.data)}`;
         await processEmailWebhookEvent(event, id);
