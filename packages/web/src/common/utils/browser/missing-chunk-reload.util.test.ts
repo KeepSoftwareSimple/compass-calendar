@@ -1,7 +1,21 @@
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as realBrowserNavigationUtil from "@web/common/utils/browser/browser-navigation.util";
 import {
+  importOrReload,
   isMissingChunkError,
   reloadOnceForMissingChunk,
-} from "./missing-chunk-reload.util";
+} from "@web/common/utils/browser/missing-chunk-reload.util";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
+const mockReload = mock();
+
+mockModuleForFile(
+  "@web/common/utils/browser/browser-navigation.util",
+  realBrowserNavigationUtil,
+  {
+    reloadLocation: mockReload,
+  },
+);
 
 const missingChunk = () =>
   new TypeError(
@@ -42,9 +56,14 @@ describe("reloadOnceForMissingChunk", () => {
     const storage = memoryStorage();
     let reloads = 0;
 
-    const reloaded = reloadOnceForMissingChunk(missingChunk(), storage, () => {
-      reloads += 1;
-    });
+    const reloaded = reloadOnceForMissingChunk(
+      missingChunk(),
+      "app-boot",
+      storage,
+      () => {
+        reloads += 1;
+      },
+    );
 
     expect(reloaded).toBe(true);
     expect(reloads).toBe(1);
@@ -57,8 +76,13 @@ describe("reloadOnceForMissingChunk", () => {
       reloads += 1;
     };
 
-    reloadOnceForMissingChunk(missingChunk(), storage, reload);
-    const reloaded = reloadOnceForMissingChunk(missingChunk(), storage, reload);
+    reloadOnceForMissingChunk(missingChunk(), "app-boot", storage, reload);
+    const reloaded = reloadOnceForMissingChunk(
+      missingChunk(),
+      "app-boot",
+      storage,
+      reload,
+    );
 
     expect(reloaded).toBe(false);
     expect(reloads).toBe(1);
@@ -69,6 +93,7 @@ describe("reloadOnceForMissingChunk", () => {
 
     const reloaded = reloadOnceForMissingChunk(
       new Error("boom"),
+      "app-boot",
       memoryStorage(),
       () => {
         reloads += 1;
@@ -90,11 +115,68 @@ describe("reloadOnceForMissingChunk", () => {
       },
     };
 
-    const reloaded = reloadOnceForMissingChunk(missingChunk(), throwing, () => {
-      reloads += 1;
-    });
+    const reloaded = reloadOnceForMissingChunk(
+      missingChunk(),
+      "app-boot",
+      throwing,
+      () => {
+        reloads += 1;
+      },
+    );
 
     expect(reloaded).toBe(false);
     expect(reloads).toBe(0);
+  });
+});
+
+describe("importOrReload", () => {
+  beforeEach(() => {
+    mockReload.mockClear();
+    sessionStorage.clear();
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+  });
+
+  it("resolves with the module when the chunk loads", async () => {
+    const module = { value: 1 };
+
+    await expect(importOrReload(async () => module)).resolves.toBe(module);
+    expect(mockReload).not.toHaveBeenCalled();
+  });
+
+  it("reloads once and never settles when a deploy removed the chunk", async () => {
+    let settled = false;
+
+    void importOrReload(() => Promise.reject(missingChunk())).then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(mockReload).toHaveBeenCalledTimes(1);
+    expect(settled).toBe(false);
+  });
+
+  it("rejects when the chunk is still missing after the reload", async () => {
+    void importOrReload(() => Promise.reject(missingChunk()));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    await expect(
+      importOrReload(() => Promise.reject(missingChunk())),
+    ).rejects.toThrow("Failed to fetch dynamically imported module");
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an unrelated error without a reload", async () => {
+    await expect(
+      importOrReload(() => Promise.reject(new Error("boom"))),
+    ).rejects.toThrow("boom");
+    expect(mockReload).not.toHaveBeenCalled();
   });
 });

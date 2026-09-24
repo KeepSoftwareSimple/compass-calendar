@@ -1,4 +1,5 @@
 import { type Id } from "react-toastify";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
@@ -21,7 +22,7 @@ interface SessionExpiredToastProps {
 export async function openAuthModalFromOutsideRouter(
   view: AuthView = "login",
 ): Promise<void> {
-  const { router } = await import("@web/routers");
+  const { router } = await importOrReload(() => import("@web/routers"));
   router.navigate({
     to: ".",
     search: (prev: Record<string, unknown>) => ({

@@ -5,6 +5,7 @@ import {
   DEFAULT_CALENDAR_ROUTE,
   ROOT_ROUTES,
 } from "@web/common/constants/routes";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { prefetchDayEventsQuery } from "@web/events/queries/prefetch-day-events";
 import {
   prefetchWeekEventsQuery,
@@ -28,7 +29,9 @@ export async function loadAuthenticated() {
     return { authenticated: false };
   }
 
-  const { session } = await import("../auth/compass/session/Session");
+  const { session } = await importOrReload(
+    () => import("@web/auth/compass/session/Session"),
+  );
 
   const authenticated = await session.doesSessionExist();
 

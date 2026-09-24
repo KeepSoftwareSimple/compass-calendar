@@ -1,3 +1,4 @@
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { IndexedDbOfflineDataStore } from "./indexeddb-offline-data.store";
 import { type OfflineDataStore } from "./offline-data.store";
 
@@ -56,7 +57,9 @@ export async function initializeOfflineDataStore(): Promise<void> {
     await offlineDataStore.initialize();
 
     // Import migrations dynamically to avoid circular dependencies
-    const { runAllMigrations } = await import("../migrations/migrations");
+    const { runAllMigrations } = await importOrReload(
+      () => import("@web/common/storage/migrations/migrations"),
+    );
     await runAllMigrations(offlineDataStore);
   })().catch((error) => {
     // Allow retry if initialization fails.
