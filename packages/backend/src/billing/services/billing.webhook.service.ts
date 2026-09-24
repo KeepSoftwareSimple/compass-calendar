@@ -42,6 +42,20 @@ const stripeReferenceIdOf = (value: unknown): string | undefined => {
 const isAwaitingCheckoutActivation = (status: string | undefined): boolean =>
   !status || status === "none" || status === "awaiting_checkout";
 
+/** First Stripe subscription Checkout: legacy awaiting_checkout or card-less signup trial. */
+const shouldEmitCheckoutCompleted = (
+  billing:
+    | {
+        subscriptionStatus?: string;
+        stripeSubscriptionId?: string;
+      }
+    | undefined,
+): boolean => {
+  const status = billing?.subscriptionStatus;
+  if (isAwaitingCheckoutActivation(status)) return true;
+  return status === "trialing" && !billing?.stripeSubscriptionId;
+};
+
 async function captureCheckoutCompleted(
   userId: string,
   subscription: Stripe.Subscription,
@@ -271,8 +285,8 @@ async function handleEvent(
     const user = await mongoService.user.findOne({
       _id: mongoService.objectId(userId),
     });
-    const shouldCaptureCheckoutCompleted = isAwaitingCheckoutActivation(
-      user?.billing?.subscriptionStatus,
+    const shouldCaptureCheckoutCompleted = shouldEmitCheckoutCompleted(
+      user?.billing,
     );
     await applySubscription(userId, subscription, eventCreatedAt);
     if (shouldCaptureCheckoutCompleted) {
@@ -317,7 +331,7 @@ async function handleEvent(
   });
   const shouldCaptureCheckoutCompleted =
     event.type === "customer.subscription.created" &&
-    isAwaitingCheckoutActivation(user?.billing?.subscriptionStatus);
+    shouldEmitCheckoutCompleted(user?.billing);
   await applySubscription(userId, subscription, eventCreatedAt);
   if (shouldCaptureCheckoutCompleted) {
     await captureCheckoutCompleted(userId, subscription);
