@@ -1,39 +1,18 @@
-import { Status } from "@core/errors/status.codes";
-import {
-  getApiErrorCode,
-  getErrorStatus,
-  isApiError,
-} from "@web/api/util/api.util";
+import { getApiErrorCode, isApiError } from "@web/api/util/api.util";
 import { track } from "@web/auth/posthog/track";
 import { type SetupStepId } from "@web/booking/setup/setup-steps";
 
 /**
- * Host setup and guest conversion funnels, as one enumerable vocabulary.
+ * The host setup funnel, as one enumerable vocabulary.
  *
- * The five shipped booking events keep their names and properties.
- * These helpers only add the missing transitions. `booking_reservation_created`
- * stays the browser-observed confirmation; WP-11 owns authoritative server
- * completion.
+ * The guest conversion half of this funnel moved to booking-web with the
+ * guest UI (`@booking-web/telemetry/guest-booking-funnel`); calendar-web no
+ * longer renders a /meet page, so nothing here may fire a guest event.
  *
  * Counting: a transition fires when its identity changes, not when React
  * re-renders or TanStack Query refetches the same result. Back into a setup
- * step or picking a different slot is a new transition. Reload is a new
- * session. Confirm clicks always count; retries after conflict or transport
- * failure are additional attempts.
+ * step is a new transition. Reload is a new session.
  */
-export type BookingSlotsOutcome =
-  | "available"
-  | "empty"
-  | "unbookable"
-  | "error";
-
-export type BookingSubmitFailureReason =
-  | "validation"
-  | "conflict"
-  | "unavailable"
-  | "rate_limited"
-  | "transport";
-
 export type BookingSetupSaveFailureReason =
   | "validation"
   | "slug_taken"
@@ -77,57 +56,6 @@ export function trackBookingSetupSaveFailed(
   });
 }
 
-export function trackBookingSlotsLoaded(
-  outcome: BookingSlotsOutcome,
-  properties: { duration_minutes: number },
-): void {
-  track("booking_slots_loaded", {
-    outcome,
-    duration_minutes: properties.duration_minutes,
-  });
-}
-
-export function trackBookingSlotSelected(properties: {
-  duration_minutes: number;
-  timezone_differs: boolean;
-}): void {
-  track("booking_slot_selected", properties);
-}
-
-export function trackBookingDetailsReached(properties: {
-  duration_minutes: number;
-  timezone_differs: boolean;
-}): void {
-  track("booking_details_reached", properties);
-}
-
-export function trackBookingSubmitAttempted(properties: {
-  duration_minutes: number;
-}): void {
-  track("booking_submit_attempted", properties);
-}
-
-export function trackBookingSubmitFailed(
-  reason: BookingSubmitFailureReason,
-  properties: { duration_minutes: number },
-): void {
-  track("booking_submit_failed", {
-    reason,
-    duration_minutes: properties.duration_minutes,
-  });
-}
-
-export function bookingSlotsOutcome(input: {
-  bookable?: boolean;
-  slotCount: number;
-  isError: boolean;
-}): BookingSlotsOutcome | null {
-  if (input.isError) return "error";
-  if (input.bookable === false) return "unbookable";
-  if (input.bookable !== true) return null;
-  return input.slotCount > 0 ? "available" : "empty";
-}
-
 export function bookingSetupSaveFailureReason(
   error: unknown,
 ): BookingSetupSaveFailureReason {
@@ -151,19 +79,4 @@ export function bookingSetupSaveFailureReason(
     default:
       return "transport";
   }
-}
-
-export function bookingSubmitFailureReason(
-  error: unknown,
-): BookingSubmitFailureReason {
-  const status = getErrorStatus(error);
-  if (status === Status.CONFLICT) return "conflict";
-  if (status === Status.NOT_FOUND) return "unavailable";
-  if (
-    status === Status.TOO_MANY_REQUESTS ||
-    status === Status.SERVICE_UNAVAILABLE
-  ) {
-    return "rate_limited";
-  }
-  return "transport";
 }

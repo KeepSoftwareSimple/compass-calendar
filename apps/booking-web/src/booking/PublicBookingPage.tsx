@@ -1,8 +1,4 @@
 import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api";
-import {
-  formatBookingDurationWithConference,
-  resolveBookingConference,
-} from "@booking-web/booking/guest-conference.copy";
 import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@booking-web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestForm";
@@ -30,6 +26,10 @@ import { ROOT_ROUTES } from "@booking-web/common/constants/routes";
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { track } from "@web/auth/posthog/track";
+import {
+  formatBookingDurationWithConference,
+  resolveBookingConference,
+} from "@web/booking/booking-conference.copy";
 
 export function PublicBookingPage() {
   const { username } = useParams({ from: ROOT_ROUTES.BOOK });
