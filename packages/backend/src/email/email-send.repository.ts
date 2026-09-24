@@ -4,30 +4,13 @@ import {
   type MatchKeysAndValues,
   type ObjectId,
 } from "mongodb";
+import { isOnlyDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { EMAIL_SEND_MAX_ATTEMPTS } from "@backend/email/email.constants";
 import {
   type EmailSendRecord,
   EmailSendRecordSchema,
 } from "@backend/email/email-send.record";
-
-const isDuplicateKeyError = (error: unknown): boolean => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === 11000
-  ) {
-    return true;
-  }
-  const writeErrors = (
-    error as { writeErrors?: readonly { code?: unknown }[] } | null
-  )?.writeErrors;
-  if (!writeErrors?.length) {
-    return false;
-  }
-  return writeErrors.every((entry) => entry.code === 11000);
-};
 
 const parseRecord = (record: { deliveredAt?: Date | null }): EmailSendRecord =>
   EmailSendRecordSchema.parse({
@@ -101,7 +84,7 @@ class EmailSendRepository {
         session,
       });
     } catch (error) {
-      if (!isDuplicateKeyError(error)) {
+      if (!isOnlyDuplicateKeyError(error)) {
         throw error;
       }
     }

@@ -1,13 +1,13 @@
-import {
-  BOOKING_CONFERENCE_INVITE_COPY,
-  resolveBookingConference,
-} from "@booking-web/booking/guest-conference.copy";
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@booking-web/booking/PublicBookingSlotSummary";
 import { PUBLIC_BOOKING_HEADING_CLASS } from "@booking-web/booking/PublicBookingStatusMessage";
 import { useBookingHeadingFocus } from "@booking-web/booking/use-booking-heading-focus";
 import { CheckCircleIcon } from "@phosphor-icons/react/dist/csr/CheckCircle";
 import { type CalendarConference } from "@core/types/calendar.contracts";
+import {
+  BOOKING_CONFERENCE_INVITE_COPY,
+  resolveBookingConference,
+} from "@web/booking/booking-conference.copy";
 
 interface PublicBookingConfirmationViewProps {
   hostDisplayName: string;
