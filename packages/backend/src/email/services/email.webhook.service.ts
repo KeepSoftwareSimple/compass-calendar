@@ -21,6 +21,10 @@ const isDuplicateKeyError = (error: unknown): boolean => {
 const readString = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
+const readProviderEmailId = (
+  data: Record<string, unknown>,
+): string | undefined => readString(data["email_id"]) ?? readString(data["id"]);
+
 const readRecipient = (data: Record<string, unknown>): string | undefined => {
   const to = data["to"];
   if (Array.isArray(to) && typeof to[0] === "string") {
@@ -32,7 +36,7 @@ const readRecipient = (data: Record<string, unknown>): string | undefined => {
 async function resolveUserForWebhookEvent(
   data: Record<string, unknown>,
 ): Promise<{ userId: ObjectId; recipient: string } | null> {
-  const emailId = readString(data["email_id"]) ?? readString(data["id"]);
+  const emailId = readProviderEmailId(data);
   if (emailId) {
     const row = await emailSendRepository.findByProviderMessageId(emailId);
     if (row) {
@@ -62,7 +66,7 @@ async function resolveUserForWebhookEvent(
 }
 
 async function handleDelivered(data: Record<string, unknown>): Promise<void> {
-  const emailId = readString(data["email_id"]) ?? readString(data["id"]);
+  const emailId = readProviderEmailId(data);
   if (!emailId) {
     return;
   }

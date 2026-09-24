@@ -1,10 +1,8 @@
 import { useCallback } from "react";
 import { useEventById } from "@web/events/queries/useEventById";
 import { toRecurrenceScope } from "@web/events/recurrence/recurrence-scope";
-import {
-  isExistingEventRecurring,
-  useRecurrenceScopeConfirmation,
-} from "@web/events/recurrence/useRecurrenceScopeConfirmation";
+import { isExistingEventRecurring } from "@web/events/recurrence/recurrence-scope-decision";
+import { useRecurrenceScopeConfirmation } from "@web/events/recurrence/useRecurrenceScopeConfirmation";
 import {
   draftActions,
   selectGridDraft,

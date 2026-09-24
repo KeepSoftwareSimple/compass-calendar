@@ -3,18 +3,25 @@ import { zObjectId } from "@core/types/object-id.schema";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailAnalytics } from "@backend/email/email.analytics";
 import { emailSendRepository } from "@backend/email/email-send.repository";
+import { parseUnsubscribeUserId } from "@backend/email/email-unsubscribe";
 
-export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
-  const now = new Date();
+async function stampEmailPreference(
+  userId: ObjectId,
+  field: "unsubscribedAt" | "suppressedAt",
+): Promise<void> {
   await mongoService.user.updateOne(
     { _id: userId },
     {
       $set: {
-        "emailPreferences.unsubscribedAt": now,
+        [`emailPreferences.${field}`]: new Date(),
       },
     },
   );
   await emailSendRepository.cancelQueuedForUser(userId);
+}
+
+export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
+  await stampEmailPreference(userId, "unsubscribedAt");
   void emailAnalytics.capture({
     event: "email_unsubscribed",
     userId: userId.toHexString(),
@@ -23,23 +30,13 @@ export async function markUserUnsubscribed(userId: ObjectId): Promise<void> {
 }
 
 export async function markUserSuppressed(userId: ObjectId): Promise<void> {
-  const now = new Date();
-  await mongoService.user.updateOne(
-    { _id: userId },
-    {
-      $set: {
-        "emailPreferences.suppressedAt": now,
-      },
-    },
-  );
-  await emailSendRepository.cancelQueuedForUser(userId);
+  await stampEmailPreference(userId, "suppressedAt");
 }
 
 export async function resolveUserIdFromUnsubscribeToken(
   token: string,
-  parseUserId: (token: string) => string | null,
 ): Promise<ObjectId | null> {
-  const userId = parseUserId(token);
+  const userId = parseUnsubscribeUserId(token);
   if (!userId) {
     return null;
   }
