@@ -42,6 +42,12 @@ const Boom = () => {
   throw new Error("render exploded");
 };
 
+const MissingChunk = () => {
+  throw new TypeError(
+    "Failed to fetch dynamically imported module: https://compasscalendar.com/chunk-w3x1et3v.js",
+  );
+};
+
 describe("ErrorBoundary", () => {
   // React logs the caught error to console.error; silence it so the suite
   // output stays readable.
@@ -121,12 +127,6 @@ describe("ErrorBoundary", () => {
   });
 
   it("reloads once instead of the error screen when a deploy removed a chunk", () => {
-    const MissingChunk = () => {
-      throw new TypeError(
-        "Failed to fetch dynamically imported module: https://compasscalendar.com/chunk-w3x1et3v.js",
-      );
-    };
-
     render(
       <ErrorBoundary>
         <MissingChunk />
@@ -141,11 +141,6 @@ describe("ErrorBoundary", () => {
   });
 
   it("shows the error screen and reports when the chunk is still missing after the reload", () => {
-    const MissingChunk = () => {
-      throw new TypeError(
-        "Failed to fetch dynamically imported module: https://compasscalendar.com/chunk-w3x1et3v.js",
-      );
-    };
     const first = render(
       <ErrorBoundary>
         <MissingChunk />
