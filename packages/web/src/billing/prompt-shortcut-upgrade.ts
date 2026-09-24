@@ -6,6 +6,7 @@ import {
   isBillingWriteLocked,
 } from "@web/billing/billing-write-lock";
 import { type CheckoutPanelSource } from "@web/billing/checkout-panel.store";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { hasAppLockReason } from "@web/shortcuts/app-lock";
 import {
@@ -119,7 +120,7 @@ export function promptShortcutUpgrade(
  * (`billing-preview.store` → delayed/reconnect toasts → `AppConfigApi`).
  */
 function enterBillingLookAround(): void {
-  void import("@web/billing/billing-preview.store").then(
+  void importOrReload(() => import("@web/billing/billing-preview.store")).then(
     ({ billingPreviewActions }) => {
       billingPreviewActions.enter();
     },
@@ -130,7 +131,7 @@ function showUpgradeToast(
   copy: ShortcutUpgradeCopy,
   checkoutSource: CheckoutPanelSource,
 ): void {
-  void import("@web/billing/ShortcutUpgradeToast").then(
+  void importOrReload(() => import("@web/billing/ShortcutUpgradeToast")).then(
     ({ ShortcutUpgradeToast }) => {
       showStatusToast(
         SHORTCUT_UPGRADE_TOAST_ID,

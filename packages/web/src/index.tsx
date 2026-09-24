@@ -11,7 +11,7 @@ void import("./app.bootstrap")
   .catch((error) => {
     // A deploy between this index.html and the import: one reload picks up
     // the new chunk names. Only a reload that still fails is worth a report.
-    if (reloadOnceForMissingChunk(error)) return;
+    if (reloadOnceForMissingChunk(error, "app-boot")) return;
 
     getPosthogClient()?.captureException(error, {
       $exception_handled: false,

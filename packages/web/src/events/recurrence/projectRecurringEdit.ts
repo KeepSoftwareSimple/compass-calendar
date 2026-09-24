@@ -12,6 +12,7 @@ import {
   composeOccurrenceIdFromSchedule,
   decodeOccurrenceId,
 } from "@core/util/occurrence-id";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 
 export type RecurringEditProjection = {
   removeIds: ReadonlySet<string>;
@@ -289,7 +290,9 @@ export async function projectSeriesMaterialization({
       .join("\n")
       .trim();
 
-    const { expandOccurrences } = await import("./rrule-expand");
+    const { expandOccurrences } = await importOrReload(
+      () => import("@web/events/recurrence/rrule-expand"),
+    );
     const hits = expandOccurrences(ruleText, dtstartMs, {
       localize: (floatingMs) =>
         isTimed ? localizeFloatingMs(floatingMs, timezone) : floatingMs,

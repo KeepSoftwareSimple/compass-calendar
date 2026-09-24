@@ -51,10 +51,12 @@ describe("ErrorBoundary", () => {
     mockCaptureException.mockClear();
     mockReload.mockClear();
     consoleError = spyOn(console, "error").mockImplementation(() => {});
+    sessionStorage.clear();
   });
 
   afterEach(() => {
     consoleError.mockRestore();
+    sessionStorage.clear();
   });
 
   it("renders the recovery surface instead of a blank page when a child throws", () => {
@@ -116,6 +118,52 @@ describe("ErrorBoundary", () => {
       .click(screen.getByRole("button", { name: /reload the app/i }));
 
     expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads once instead of the error screen when a deploy removed a chunk", () => {
+    const MissingChunk = () => {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: https://compasscalendar.com/chunk-w3x1et3v.js",
+      );
+    };
+
+    render(
+      <ErrorBoundary>
+        <MissingChunk />
+      </ErrorBoundary>,
+    );
+
+    expect(mockReload).toHaveBeenCalledTimes(1);
+    expect(mockCaptureException).not.toHaveBeenCalled();
+    expect(
+      screen.queryByRole("button", { name: /reload the app/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows the error screen and reports when the chunk is still missing after the reload", () => {
+    const MissingChunk = () => {
+      throw new TypeError(
+        "Failed to fetch dynamically imported module: https://compasscalendar.com/chunk-w3x1et3v.js",
+      );
+    };
+    const first = render(
+      <ErrorBoundary>
+        <MissingChunk />
+      </ErrorBoundary>,
+    );
+    first.unmount();
+
+    render(
+      <ErrorBoundary>
+        <MissingChunk />
+      </ErrorBoundary>,
+    );
+
+    expect(mockReload).toHaveBeenCalledTimes(1);
+    expect(mockCaptureException).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole("button", { name: /reload the app/i }),
+    ).toBeInTheDocument();
   });
 
   it("renders children untouched when nothing throws", () => {

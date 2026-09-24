@@ -3,6 +3,7 @@ import { type Id } from "react-toastify";
 import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
@@ -53,7 +54,7 @@ interface AnonymousSaveToastProps {
 }
 
 async function openSignUpFromOutsideRouter(): Promise<void> {
-  const { router } = await import("@web/routers");
+  const { router } = await importOrReload(() => import("@web/routers"));
   router.navigate({
     to: ".",
     search: (prev: Record<string, unknown>) => ({
