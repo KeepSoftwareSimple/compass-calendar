@@ -471,6 +471,58 @@ describe("Stripe webhook", () => {
     expect(stored?.billing?.subscriptionStatus).toBe("trialing");
   });
 
+  it("captures checkout_completed for a card-less local trial finishing Checkout", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const userId = mongoService.objectId();
+    const trialStartedAt = new Date("2026-09-01T00:00:00.000Z");
+    const trialEndsAt = new Date("2026-09-08T00:00:00.000Z");
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "local-trial@example.com",
+      name: "Local",
+      firstName: "Local",
+      lastName: "Trial",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "trialing",
+        trialStartedAt,
+        trialEndsAt,
+        stripeCustomerId: "cus_1",
+      },
+    });
+    const stripe = stubBillingGateway({
+      retrieveSubscription: mock(() => Promise.resolve(subscription())),
+    });
+
+    await processStripeEvent(
+      {
+        id: "evt_checkout_local_trial",
+        type: "checkout.session.completed",
+        created: 1_775_000_100,
+        data: {
+          object: {
+            id: "cs_local_trial",
+            client_reference_id: userId.toString(),
+            customer: "cus_1",
+            subscription: "sub_1",
+          },
+        },
+      } as unknown as Stripe.Event,
+      stripe,
+    );
+
+    expect(capture).toHaveBeenCalledWith({
+      event: "checkout_completed",
+      userId: userId.toString(),
+      properties: {
+        checkout_session_id: "cs_local_trial",
+        subscription_status: "trialing",
+        trial: true,
+      },
+    });
+  });
+
   it("does not capture checkout_completed again when billing is already trialing", async () => {
     using _env = mockEnv(stripeConfigured);
     const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
