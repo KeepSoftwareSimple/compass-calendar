@@ -1,22 +1,11 @@
 import { type ObjectId } from "mongodb";
 import { normalizeEmail } from "@core/util/email.util";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { emailAnalytics } from "@backend/email/email.analytics";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import { type EmailWebhookEvent } from "@backend/email/providers/email.port";
 import { markUserSuppressed } from "@backend/email/services/email-suppression.service";
-
-const isDuplicateKeyError = (error: unknown): boolean => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === 11000
-  ) {
-    return true;
-  }
-  return false;
-};
 
 const readString = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;

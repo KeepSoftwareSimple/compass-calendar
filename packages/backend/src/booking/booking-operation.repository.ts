@@ -1,6 +1,7 @@
 import { type ObjectId } from "mongodb";
 import { z } from "zod/v4";
 import { zObjectId } from "@core/types/object-id.schema";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import {
   BOOKING_OPERATION_IN_FLIGHT_STATUSES,
@@ -18,12 +19,6 @@ import {
   RescheduleBookingOperationRecordSchema,
 } from "@backend/booking/booking-operation.record";
 import mongoService from "@backend/common/services/mongo.service";
-
-const isDuplicateKeyError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  (error as { code?: unknown }).code === 11000;
 
 /**
  * What a caller supplies for a new operation: the operation's own fields,

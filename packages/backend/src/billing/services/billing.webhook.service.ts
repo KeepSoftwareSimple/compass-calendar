@@ -1,5 +1,6 @@
 import type Stripe from "stripe";
 import { Logger } from "@core/logger/winston.logger";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import { billingAnalytics } from "@backend/billing/billing.analytics";
 import {
   isStripeSubscriptionStatus,
@@ -20,12 +21,6 @@ const HANDLED_TYPES = new Set<Stripe.Event.Type>([
   "customer.subscription.updated",
   "customer.subscription.deleted",
 ]);
-
-const isDuplicateKeyError = (error: unknown): boolean =>
-  typeof error === "object" &&
-  error !== null &&
-  "code" in error &&
-  (error as { code: unknown }).code === 11000;
 
 const toDate = (unixSeconds: number | null | undefined): Date | undefined =>
   typeof unixSeconds === "number" ? new Date(unixSeconds * 1000) : undefined;

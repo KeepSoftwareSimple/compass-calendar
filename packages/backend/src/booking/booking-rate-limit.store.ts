@@ -1,8 +1,8 @@
 import { type Options, type Store } from "express-rate-limit";
-import { MongoServerError } from "mongodb";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { createHash } from "node:crypto";
 
@@ -10,9 +10,6 @@ const logger = Logger("app:booking.rate-limit");
 
 const hashKey = (prefix: string, key: string): string =>
   createHash("sha256").update(`${prefix}\0${key}`).digest("hex");
-
-const isDuplicateKey = (error: unknown): boolean =>
-  error instanceof MongoServerError && error.code === 11000;
 
 /**
  * Mongo-backed express-rate-limit store. Each limiter gets its own instance
@@ -52,7 +49,7 @@ export const createBookingRateLimitStore = (prefix: string): Store => {
       });
       return { totalHits: 1, resetTime: freshExpiry };
     } catch (error) {
-      if (!isDuplicateKey(error)) throw error;
+      if (!isDuplicateKeyError(error)) throw error;
       const raced = await collection().findOneAndUpdate(
         { _id: id, expiresAt: { $gt: new Date() } },
         { $inc: { hits: 1 } },
