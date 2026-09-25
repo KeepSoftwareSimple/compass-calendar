@@ -90,7 +90,7 @@ jobs:
           BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT }}
         run: |
           set -euo pipefail
-          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
+          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9082}"
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key

@@ -180,11 +180,11 @@ calendar-web or restarting the full stack.
 
 The full **Deploy staging** workflow and **Release on main** path are unchanged.
 Staging Caddy already routes public `/meet/*` to booking-web; after deploy,
-verify the container with `curl http://127.0.0.1:9081/` on the host (or the
+verify the container with `curl http://127.0.0.1:9082/` on the host (or the
 port in `bookingWeb.port`) and `curl -I https://staging.compasscalendar.com/meet/`.
 
 Optional GitHub Environment variable on `staging-cloud`: `BOOKING_WEB_PORT`
-(default `9081` when unset).
+(default `9082` on the shared VPS; `9081` is compass-static).
 
 ### Required secrets and variables
 

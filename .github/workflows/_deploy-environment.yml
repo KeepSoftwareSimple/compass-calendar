@@ -82,7 +82,7 @@ jobs:
           BOOKING_WEB_IMAGE: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
           # Production keeps 127.0.0.1:9081 for compass-static (blog), so
           # booking-web binds 9082 there. Caddy's /meet handle must match.
-          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT || (inputs.environment == 'production' && '9082' || '9081') }}
+          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT || '9082' }}
           COMPOSE_GIT_REF: ${{ vars.COMPOSE_GIT_REF }}
           COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
