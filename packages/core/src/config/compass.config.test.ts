@@ -63,6 +63,23 @@ describe("compass config", () => {
     expect(config.email).toBeUndefined();
     expect(config.posthog).toBeUndefined();
     expect(config.sync).toBeUndefined();
+    expect(config.bookingWeb).toBeUndefined();
+  });
+
+  it("parses the optional bookingWeb section when provided", () => {
+    const config = parseCompassConfigText(
+      `${validYaml}
+bookingWeb:
+  port: 9081
+  image: switchbacktech/compass-booking-web:latest
+`,
+      "compass.yaml",
+    );
+
+    expect(config.bookingWeb?.port).toBe(9081);
+    expect(config.bookingWeb?.image).toBe(
+      "switchbacktech/compass-booking-web:latest",
+    );
   });
 
   it("parses the optional sync section when provided", () => {
