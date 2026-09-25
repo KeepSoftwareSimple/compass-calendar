@@ -120,6 +120,14 @@ describe("self-host docker compose", () => {
     expect(dockerfile).not.toContain("--environment");
   });
 
+  it("ships guest-meet routing helpers in the booking-web runtime image", () => {
+    const dockerfile = readRepoFile("apps/booking-web/Dockerfile");
+
+    expect(dockerfile).toContain("guest-meet-static-path.ts");
+    expect(dockerfile).toContain("compressible-static-types.ts");
+    expect(dockerfile).toContain("self-host/serve-web.ts");
+  });
+
   it("installs bun deps before copying the full source tree", () => {
     for (const file of [
       "self-host/Dockerfile.backend",
@@ -578,9 +586,10 @@ describe("staging deploy workflow", () => {
   it("copies self-host orchestration from the workflow ref instead of curling raw GitHub", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
-    expect(workflow).toContain("path: self-host-orchestration");
+    expect(workflow).toContain("path: deploy-overlay");
+    expect(workflow).toContain("apps/booking-web/Dockerfile");
     expect(workflow).toContain(
-      'ORCHESTRATION_DIR="$GITHUB_WORKSPACE/self-host-orchestration/self-host"',
+      'ORCHESTRATION_DIR="$GITHUB_WORKSPACE/deploy-overlay/self-host"',
     );
     expect(workflow).toContain(
       'scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml"',

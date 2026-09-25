@@ -38,6 +38,18 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
+      - name: Check out deploy overlay from workflow ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          sparse-checkout: |
+            self-host
+            apps/booking-web/Dockerfile
+          path: deploy-overlay
+
+      - name: Use booking-web Dockerfile from workflow ref
+        run: cp deploy-overlay/apps/booking-web/Dockerfile apps/booking-web/Dockerfile
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -74,13 +86,6 @@ jobs:
             API_BASEURL=${{ vars.BACKEND_API_URL }}
             NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
           tags: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
-
-      - name: Check out self-host orchestration from workflow ref
-        uses: actions/checkout@v7
-        with:
-          ref: ${{ github.ref }}
-          sparse-checkout: self-host
-          path: self-host-orchestration
 
       - name: Deploy release to ${{ inputs.environment }}
         env:
@@ -319,7 +324,7 @@ jobs:
             printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
           } | ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
                 "umask 077 && mkdir -p ~/compass && cat > ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
-          ORCHESTRATION_DIR="$GITHUB_WORKSPACE/self-host-orchestration/self-host"
+          ORCHESTRATION_DIR="$GITHUB_WORKSPACE/deploy-overlay/self-host"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.yaml"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.selfhosted.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.selfhosted.yaml"
           scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/config.sh" "$SSH_USER@$SSH_HOST:~/compass/config.sh.$$"

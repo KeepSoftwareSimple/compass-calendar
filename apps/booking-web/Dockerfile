@@ -38,6 +38,7 @@ COPY --from=build --chown=compass:compass /app/build/booking-web ./build/booking
 # file on disk; without it bun exits on an unresolved module and the container
 # restart-loops.
 COPY --from=build --chown=compass:compass /app/packages/web/compressible-static-types.ts ./packages/web/compressible-static-types.ts
+COPY --from=build --chown=compass:compass /app/packages/web/guest-meet-static-path.ts ./packages/web/guest-meet-static-path.ts
 COPY --from=build --chown=compass:compass /app/self-host/serve-web.ts ./self-host/serve-web.ts
 
 USER compass

@@ -40,7 +40,8 @@ describe("deploy booking-web config", () => {
     );
     expect(workflow).toContain("secrets.DOCKERHUB_USERNAME");
     expect(workflow).toContain("deploy-patch-booking-web-yaml.py");
-    expect(workflow).toContain("self-host-orchestration");
+    expect(workflow).toContain("deploy-overlay");
+    expect(workflow).toContain("Use booking-web Dockerfile from workflow ref");
     expect(workflow).not.toContain("raw.githubusercontent.com");
     expect(workflow).not.toContain("MONGO_URI");
     expect(workflow).not.toContain("SUPERTOKENS_KEY");
