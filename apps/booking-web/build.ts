@@ -32,14 +32,16 @@ console.log("[booking-web] building...");
 
 const result = await Bun.build({
   entrypoints: [path.resolve(import.meta.dir, "src/index.tsx")],
-  outdir: OUTDIR,
+  // Bundle under /meet/ so every asset URL stays inside the path the proxy
+  // routes to booking-web. Root /index.js belongs to calendar-web.
+  outdir: path.join(OUTDIR, "meet"),
   target: "browser",
   sourcemap: "external",
   minify: true,
   splitting: true,
   define,
   plugins: [postcssPlugin],
-  publicPath: "/",
+  publicPath: "/meet/",
 });
 
 if (!result.success) {

@@ -27,14 +27,14 @@ const define: Record<string, string> = {
 async function build() {
   const result = await Bun.build({
     entrypoints: [path.resolve(import.meta.dir, "src/index.tsx")],
-    outdir: OUTDIR,
+    outdir: path.join(OUTDIR, "meet"),
     target: "browser",
     sourcemap: IS_DEV ? "inline" : "none",
     minify: !IS_DEV,
     splitting: true,
     define,
     plugins: [postcssPlugin],
-    publicPath: "/",
+    publicPath: "/meet/",
   });
 
   if (!result.success) {
