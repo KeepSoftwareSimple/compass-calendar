@@ -24,6 +24,29 @@ const details = {
 };
 
 describe("EventDetailsSection", () => {
+  it("copies the meeting link from a button beside the join link", async () => {
+    const user = userEvent.setup();
+    render(
+      <EventDetailsSection
+        details={{
+          organizer: null,
+          attendees: [],
+          conference: {
+            url: "https://meet.google.com/abc-defg-hij",
+            label: "Google Meet",
+          },
+        }}
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Google Meet" })).toHaveAttribute(
+      "id",
+      "event-form-conference",
+    );
+    await user.click(screen.getByRole("button", { name: "copy meeting link" }));
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeVisible();
+  });
+
   it("copies each guest email instead of the whole attendee list", async () => {
     const user = userEvent.setup();
     render(<EventDetailsSection details={details} />);

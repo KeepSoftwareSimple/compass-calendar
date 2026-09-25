@@ -7,7 +7,8 @@ import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.p
 
 /**
  * Mod+digit jumps focus straight to a form field (1=title ... 9=description,
- * 0=actions, -=RSVP; see edit-sequence.fields.ts for the assignment). Holding
+ * 0=actions, -=RSVP, ==meeting link; see edit-sequence.fields.ts for the
+ * assignment). Holding
  * Mod alone reveals the mapping as hint chips (FormDigitHintOverlay) via the
  * shared hold-Mod engine — the same discoverability contract as the
  * `e`-leader's which-key menu, but driven by a hold instead of a second

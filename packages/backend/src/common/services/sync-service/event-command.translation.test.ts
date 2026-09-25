@@ -235,6 +235,33 @@ describe("toCreateSubmitRequest", () => {
     });
   });
 
+  it("forwards createConference so the provider mints a meeting link", () => {
+    const { request } = toCreateSubmitRequest({
+      calendarId: objectId() as CalendarId,
+      content: { kind: "details", title: "X", description: "", location: "" },
+      schedule: timedSchedule,
+      recurrence: { kind: "single" },
+      createConference: true,
+    });
+
+    expect(request.input).toMatchObject({
+      kind: "create",
+      createConference: true,
+    });
+    expect(() => CommandSubmitRequestSchema.parse(request)).not.toThrow();
+  });
+
+  it("defaults createConference to false when the input omits it", () => {
+    const { request } = toCreateSubmitRequest({
+      calendarId: objectId() as CalendarId,
+      content: { kind: "details", title: "X", description: "", location: "" },
+      schedule: timedSchedule,
+      recurrence: { kind: "single" },
+    });
+
+    expect(request.input).toMatchObject({ createConference: false });
+  });
+
   it("forwards restore:true from an undo-of-delete input", () => {
     const { request } = toCreateSubmitRequest({
       id: objectId() as EventId,

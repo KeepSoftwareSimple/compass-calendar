@@ -220,6 +220,9 @@ export function parseEventDraft(draft: EventDraft): ParseEventDraftResult {
       content,
       schedule,
       recurrence,
+      // Only a draft that switched the meeting link on carries the flag, so
+      // an untouched save stays byte-identical to today's payload.
+      ...(draft.values.createConference ? { createConference: true } : {}),
     };
 
     const parsed = CreateEventInputSchema.safeParse(candidate);

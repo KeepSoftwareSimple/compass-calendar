@@ -77,7 +77,11 @@ Important event fields:
   optional `color` as an `EventColorSlot`) or `busy` (free/busy-only
   calendars). `color` maps 1:1 onto Google's 11 event `colorId` values; when
   absent, the card keeps the theme-flat fill and calendar identity stays the
-  accent stripe.
+  accent stripe. `details` also carries the provider-sourced `location`,
+  `organizer`, `attendees`, and `conference` (`{ url, label }`, the meeting
+  link the provider minted). `conference` is read-only on the event; a
+  create requests one through `CreateEventInputSchema.createConference`
+  (`event-command.contracts.ts`), and the provider decides the kind.
 - `schedule`: discriminated union: `timed` (`start`/`end`/`timeZone`) or
   `allDay` (`DateOnly` `start`/`end`, exclusive end)
 - `recurrence`: discriminated union: `single` (standalone event), `series`

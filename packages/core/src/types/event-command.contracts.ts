@@ -91,6 +91,12 @@ export const CreateEventInputSchema = z.strictObject({
   // the backend's default (today: none). Only meaningful when the guest set
   // changed.
   invitation: InvitationIntentValueSchema.optional(),
+  // Ask the provider to mint a conference link (Google Meet, Microsoft Teams)
+  // on this event. Create-only: sync's update command has no conference
+  // channel. The kind is the provider's choice; the browser offers the toggle
+  // only when the target calendar's `capabilities.conferenceKinds` is
+  // non-empty. Omitted or false means no link.
+  createConference: z.boolean().optional(),
 });
 export type CreateEventInput = z.infer<typeof CreateEventInputSchema>;
 

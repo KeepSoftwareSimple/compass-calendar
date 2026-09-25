@@ -196,6 +196,9 @@ export const toCreateSubmitRequest = (
       // absent means the pre-attendee default of notifying no one.
       invitation: input.invitation ?? "none",
       attendeesEdit: toAttendeesEdit(input.content),
+      // The provider mints the link (Meet on Google, Teams on Microsoft) and
+      // sync stores it on the record; the schema default is false.
+      ...(input.createConference ? { createConference: true } : {}),
       content: toSyncContent(input.content),
       schedule: input.schedule,
       recurrence: input.recurrence,

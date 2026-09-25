@@ -12,16 +12,19 @@ import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 // `digit` is the field's Mod+digit jump shortcut, assigned in the form's DOM
 // order (title → schedule → recurrence → calendar → color → location →
 // attendees → description → RSVP) so the mapping is guessable without the
-// hold-Mod hint chips. 1–9 are those fields, 0 is the action toolbar, and
-// `-` (the next physical top-row key) is RSVP so existing digits stay put.
-// The array itself keeps its original key-taught order (unrelated to digit
-// order) since EditSequenceMenu renders straight off this order. Account
-// keeps digit 5 but has no letter key: `a` is guests, and Actions is
-// digit-only too — it's a toolbar, not a field, so `e`-leader has nothing to
-// focus there.
+// hold-Mod hint chips. 1–9 are those fields, 0 is the action toolbar, `-`
+// (the next physical top-row key) is RSVP and `=` (the key after it) is the
+// meeting link, each added later so existing digits stay put. The array
+// itself keeps its original key-taught order (unrelated to digit order)
+// since EditSequenceMenu renders straight off this order. Account keeps
+// digit 5 but has no letter key: `a` is guests, and Actions is digit-only
+// too — it's a toolbar, not a field, so `e`-leader has nothing to focus
+// there. Meeting link lands on the "Add Google Meet" switch of a create
+// draft or the join link of an existing event, whichever is rendered.
 export const EDIT_SEQUENCE_FIELDS = [
   { key: "t", field: "title", label: "Title", digit: "1" },
   { key: "l", field: "location", label: "Location", digit: "7" },
+  { key: "m", field: "conference", label: "Meeting link", digit: "=" },
   { key: "d", field: "description", label: "Description", digit: "9" },
   { key: "s", field: "start", label: "Start time", digit: "2" },
   { key: "e", field: "end", label: "End time", digit: "3" },

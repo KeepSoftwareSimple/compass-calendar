@@ -96,7 +96,11 @@ stored occurrences, so no provider free/busy API is called.
 - Display names: `PROVIDER_DISPLAY_NAMES` / `providerDisplayName(kind)`.
 - Conference kind on a calendar: `CalendarConferenceSchema` =
   `meet | teams | none`, derived by `conferenceForProvider` from
-  `CONFERENCE_BY_PROVIDER` (not a `provider ===` branch).
+  `CONFERENCE_BY_PROVIDER` (not a `provider ===` branch). The browser
+  `Calendar` exposes it as `capabilities.conferenceKinds`; when non-empty,
+  the event form offers an "Add <kind>" switch on a create draft and sends
+  `createConference` on the create request, which the backend forwards to
+  the sync create command. Create only; updates have no conference channel.
 
 ### Registry
 

@@ -20,15 +20,16 @@ describe("edit-sequence.fields", () => {
       "7",
       "8",
       "9",
+      "=",
     ]);
     expect(new Set(digits).size).toBe(digits.length);
   });
 
-  it("orders FORM_FIELD_DIGITS by physical top-row key, fields then actions then RSVP", () => {
+  it("orders FORM_FIELD_DIGITS by physical top-row key, fields then actions then RSVP then meeting link", () => {
     // The jump engine resolves a keypress to a physical key index, so `0`
     // must land after `9` (where the key sits) even though the actions
     // toolbar it points at renders first, above the title. RSVP uses `-`,
-    // the next key after `0`.
+    // the next key after `0`, and the meeting link `=`, the key after that.
     expect(FORM_FIELD_DIGITS.map((entry) => entry.field)).toEqual([
       "title",
       "start",
@@ -41,6 +42,7 @@ describe("edit-sequence.fields", () => {
       "description",
       "actions",
       "rsvp",
+      "conference",
     ]);
   });
 

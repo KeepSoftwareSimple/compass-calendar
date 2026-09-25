@@ -1,4 +1,7 @@
-import { type Calendar } from "@core/types/calendar.contracts";
+import {
+  type Calendar,
+  type CalendarConferenceKind,
+} from "@core/types/calendar.contracts";
 import {
   type ProviderKind,
   providerDisplayName,
@@ -310,6 +313,18 @@ export const canInviteOnCalendar = (calendar: Calendar | undefined): boolean =>
   Boolean(
     calendar?.capabilities.canInviteAttendees && calendar.capabilities.canWrite,
   );
+
+/**
+ * The conference link kind a create on this calendar can mint (Google Meet,
+ * Microsoft Teams), or null when the calendar cannot mint one or is not
+ * writable. Capability-driven: the provider name never enters into it.
+ */
+export const creatableConferenceKind = (
+  calendar: Calendar | undefined,
+): CalendarConferenceKind | null =>
+  calendar?.capabilities.canWrite
+    ? (calendar.capabilities.conferenceKinds[0] ?? null)
+    : null;
 
 /**
  * Where a new event lands: the user's chosen default if it is still usable,

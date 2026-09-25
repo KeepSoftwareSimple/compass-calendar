@@ -2,6 +2,7 @@ import {
   type Calendar,
   type CalendarConference,
   type CalendarProvider,
+  CONFERENCE_KIND_LABEL,
 } from "@core/types/calendar.contracts";
 
 const BOOKING_CONFERENCE_DURATION_SUFFIX: Record<CalendarConference, string> = {
@@ -24,10 +25,7 @@ export const BOOKING_DESTINATION_NO_VIDEO_SUFFIX = "No video link";
 export const BOOKING_DESTINATION_CONFERENCE_SUFFIX: Record<
   Exclude<CalendarConference, "none">,
   string
-> = {
-  meet: "Google Meet",
-  teams: "Microsoft Teams",
-};
+> = CONFERENCE_KIND_LABEL;
 
 export const BOOKING_APPLE_DESTINATION_HINT =
   "Meetings on an iCloud calendar are created without a video link. Add one in the meeting notes if you need it.";

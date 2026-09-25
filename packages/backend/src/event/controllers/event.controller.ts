@@ -6,6 +6,8 @@ import {
   searchEventsByTitle,
 } from "@core/event/search-events-by-title";
 import { Logger } from "@core/logger/winston.logger";
+import { DateTimeSchema } from "@core/types/domain-primitives";
+import { type Event } from "@core/types/event.contracts";
 import {
   type CreateEventInput,
   CreateEventInputSchema,
@@ -311,6 +313,65 @@ const assertAttendeesSupported = async (
   }
 };
 
+// The create response is assembled from the input before the command runs,
+// so it can never carry fields the provider mints (the Meet URL). When the
+// browser asked for a conference link, re-read the stored event so the
+// response includes it and the browser can offer "copy link" right away.
+// Deliberately the simple path: one extra range read on this one calendar,
+// only for link requests, instead of teaching the sync command response to
+// carry the event. Sync stores `content.conference` before it confirms the
+// command, so the read sees the link. Singles and series-master rows keep
+// the real eventId (syncEventInstanceToBrowser); a miss or a read failure
+// falls back to the pre-submit event because the create already succeeded.
+const ONE_MINUTE_MS = 60_000;
+const rereadCreatedEvent = async (
+  client: SyncServiceClient,
+  userId: string,
+  input: CreateEventInput,
+  eventId: string,
+): Promise<Event | null> => {
+  const { schedule } = input;
+  // Sync rejects an empty range while a timed schedule may have zero
+  // duration; widen the end by a minute in that case.
+  const window: Pick<EventListQuery, "start" | "end"> =
+    schedule.kind === "timed"
+      ? {
+          start: schedule.start,
+          end:
+            Date.parse(schedule.end) > Date.parse(schedule.start)
+              ? schedule.end
+              : DateTimeSchema.parse(
+                  new Date(
+                    Date.parse(schedule.start) + ONE_MINUTE_MS,
+                  ).toISOString(),
+                ),
+        }
+      : {
+          start: DateTimeSchema.parse(`${schedule.start}T00:00:00.000Z`),
+          end: DateTimeSchema.parse(`${schedule.end}T00:00:00.000Z`),
+        };
+  try {
+    const instances = await listAllFullEvents(
+      client,
+      userId,
+      { kind: "range", ...window },
+      [input.calendarId],
+    );
+    const created = instances.find(
+      (instance) =>
+        instance.eventId === eventId &&
+        instance.recurrence.kind !== "occurrence",
+    );
+    return created ? syncEventInstanceToBrowser(created) : null;
+  } catch (error) {
+    logger.warn("Created event re-read failed; answering without the link", {
+      eventId,
+      error,
+    });
+    return null;
+  }
+};
+
 const createFromSync = async (userId: string, input: CreateEventInput) => {
   const client = getSyncServiceClient();
   if (input.content.attendees !== undefined) {
@@ -318,7 +379,11 @@ const createFromSync = async (userId: string, input: CreateEventInput) => {
   }
   const { request, responseEvent } = toCreateSubmitRequest(input);
   await submitCommandOrThrow(client, userId, request);
-  return responseEvent;
+  if (!input.createConference) return responseEvent;
+  return (
+    (await rereadCreatedEvent(client, userId, input, responseEvent.id)) ??
+    responseEvent
+  );
 };
 
 const replaceFromSync = async (

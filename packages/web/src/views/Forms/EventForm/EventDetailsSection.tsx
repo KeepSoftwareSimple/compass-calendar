@@ -12,6 +12,10 @@ import {
 type EventDetails = Extract<EventContent, { kind: "details" }>;
 
 const EVENT_FORM_GUEST_LIST_ID = "event-form-guest-list";
+/** Focus target for the `e m` / `Mod+=` "meeting link" field: the join link
+ * here on an existing event, or the "Add Google Meet" switch on a create
+ * draft (EventForm renders whichever applies, never both). */
+export const EVENT_FORM_CONFERENCE_ID = "event-form-conference";
 
 interface EventDetailsSectionProps {
   details: Pick<EventDetails, "organizer" | "attendees" | "conference">;
@@ -51,17 +55,21 @@ export const EventDetailsSection = ({
   return (
     <div className="flex flex-col gap-2 rounded-md bg-surface-overlay p-3 text-text text-xs">
       {conference && (
-        <a
-          href={conference.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 hover:underline"
-        >
-          <VideoCameraIcon size={16} className="shrink-0 text-text-muted" />
-          <span className="min-w-0 flex-1 truncate">
-            {conference.label ?? "Join meeting"}
-          </span>
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            id={EVENT_FORM_CONFERENCE_ID}
+            href={conference.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-xs hover:underline"
+          >
+            <VideoCameraIcon size={16} className="shrink-0 text-text-muted" />
+            <span className="min-w-0 flex-1 truncate">
+              {conference.label ?? "Join meeting"}
+            </span>
+          </a>
+          <CopyButton label="copy meeting link" text={conference.url} />
+        </div>
       )}
 
       {hasAttendees && (

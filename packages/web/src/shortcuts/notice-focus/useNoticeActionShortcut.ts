@@ -25,12 +25,17 @@ export const DEMO_EVENTS_BANNER_SHORTCUT_KEY = "O" as const;
 /** Sidebar meeting-page nudge CTA. `M` as in Meeting page. */
 export const MEETING_PAGE_NUDGE_SHORTCUT_KEY = "M" as const;
 
+/** "Meeting link added" toast CTA. `L` as in Link. Bare `l` is also the
+ * Life view, bound on keyup, so the handler swallows the release. */
+export const COPY_LINK_SHORTCUT_KEY = "L" as const;
+
 export type NoticeActionKey =
   | typeof TOAST_PRIMARY_ACTION_KEY
   | typeof START_TRIAL_SHORTCUT_KEY
   | typeof CONNECTION_BANNER_SHORTCUT_KEY
   | typeof DEMO_EVENTS_BANNER_SHORTCUT_KEY
-  | typeof MEETING_PAGE_NUDGE_SHORTCUT_KEY;
+  | typeof MEETING_PAGE_NUDGE_SHORTCUT_KEY
+  | typeof COPY_LINK_SHORTCUT_KEY;
 
 const activeNoticeActionKeys = new Set<NoticeActionKey>();
 
