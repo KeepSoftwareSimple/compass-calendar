@@ -38,6 +38,18 @@ jobs:
         with:
           ref: ${{ inputs.tag }}
 
+      - name: Check out deploy overlay from workflow ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          sparse-checkout: |
+            self-host
+            apps/booking-web/Dockerfile
+          path: deploy-overlay
+
+      - name: Use booking-web Dockerfile from workflow ref
+        run: cp deploy-overlay/apps/booking-web/Dockerfile apps/booking-web/Dockerfile
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -312,19 +324,13 @@ jobs:
             printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
           } | ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
                 "umask 077 && mkdir -p ~/compass && cat > ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
-          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${RELEASE_TAG}}"
-          compose_url="https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml"
-          if ! curl -fsSL "$compose_url" -o /dev/null; then
-            echo "Could not fetch self-host files from ${COMPOSE_GIT_REF}; falling back to ${RELEASE_TAG}."
-            COMPOSE_GIT_REF="${RELEASE_TAG}"
-          fi
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml -o ~/compass/compose.yaml"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml"
-          # Install the shared parser before the helper that sources it. Each
-          # download is promoted atomically so a network failure leaves the
-          # previously working helper untouched.
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
+          ORCHESTRATION_DIR="$GITHUB_WORKSPACE/deploy-overlay/self-host"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.yaml"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.selfhosted.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.selfhosted.yaml"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/config.sh" "$SSH_USER@$SSH_HOST:~/compass/config.sh.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mv ~/compass/config.sh.$$ ~/compass/config.sh"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compass" "$SSH_USER@$SSH_HOST:~/compass/compass.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
           # Always enable the booking and sync profiles: their config is always
           # written above, and an explicit COMPOSE_PROFILES var (e.g.
           # `selfhosted`) would otherwise override the helper's

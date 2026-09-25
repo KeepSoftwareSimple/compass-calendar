@@ -255,7 +255,8 @@ case $command_name in
         ;;
     esac
     booking_port=$(strip_quotes "$(read_config_value bookingWeb.port)")
-    booking_port=${booking_port:-9081}
+    booking_port=${booking_port:-9082}
+    booking_host_port=$booking_port
     booking_image=$(strip_quotes "$(read_config_value bookingWeb.image)")
     [ -n "$booking_image" ] || fail "Missing bookingWeb.image in $CONFIG_FILE. Deploy booking-web before running update-booking-web."
     prune_unused_images
@@ -266,19 +267,44 @@ case $command_name in
       fail "Docker Compose failed to start booking-web."
     fi
     prune_unused_images
-    if command -v curl >/dev/null 2>&1; then
-      if curl -fsS "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
-        info "booking-web updated (${booking_image}) on port ${booking_port}"
-        exit 0
+    booking_probe_ok=0
+    attempt=1
+    while [ "$attempt" -le 15 ]; do
+      mapped_port=$(compose port booking-web 9081 2>/dev/null | sed 's/.*://')
+      if [ -n "$mapped_port" ]; then
+        booking_host_port=$mapped_port
       fi
-    fi
-    if command -v wget >/dev/null 2>&1; then
-      if wget -q -O /dev/null "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
-        info "booking-web updated (${booking_image}) on port ${booking_port}"
-        exit 0
+      for booking_probe_path in /meet/ /; do
+        booking_probe_url="http://127.0.0.1:${booking_host_port}${booking_probe_path}"
+        if command -v curl >/dev/null 2>&1; then
+          status=$(curl -sS -o /dev/null -w '%{http_code}' "$booking_probe_url" 2>/dev/null) || status=""
+          case "$status" in
+            ''|5*) ;;
+            *)
+              booking_probe_ok=1
+              break
+              ;;
+          esac
+        elif command -v wget >/dev/null 2>&1; then
+          if wget -q -O /dev/null "$booking_probe_url" >/dev/null 2>&1; then
+            booking_probe_ok=1
+            break
+          fi
+        fi
+      done
+      if [ "$booking_probe_ok" -eq 1 ]; then
+        break
       fi
+      sleep 2
+      attempt=$((attempt + 1))
+    done
+    if [ "$booking_probe_ok" -eq 1 ]; then
+      info "booking-web updated (${booking_image}) on port ${booking_host_port}"
+      exit 0
     fi
-    fail "booking-web started, but the HTTP check on port ${booking_port} did not pass."
+    compose ps -a booking-web >&2 || true
+    compose logs --tail=50 booking-web >&2 || true
+    fail "booking-web started, but the HTTP check on port ${booking_host_port} did not pass."
     ;;
   open)
     open_browser

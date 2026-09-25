@@ -120,6 +120,14 @@ describe("self-host docker compose", () => {
     expect(dockerfile).not.toContain("--environment");
   });
 
+  it("ships guest-meet routing helpers in the booking-web runtime image", () => {
+    const dockerfile = readRepoFile("apps/booking-web/Dockerfile");
+
+    expect(dockerfile).toContain("guest-meet-static-path.ts");
+    expect(dockerfile).toContain("compressible-static-types.ts");
+    expect(dockerfile).toContain("self-host/serve-web.ts");
+  });
+
   it("installs bun deps before copying the full source tree", () => {
     for (const file of [
       "self-host/Dockerfile.backend",
@@ -190,7 +198,7 @@ describe("self-host docker compose", () => {
     expect(compose).toContain(
       'booking-web: &booking-web-port "127.0.0.1:'.concat(
         "$",
-        '{BOOKING_WEB_PORT:-9081}:9081"',
+        '{BOOKING_WEB_PORT:-9082}:9081"',
       ),
     );
     const bookingBlock = compose
@@ -199,6 +207,9 @@ describe("self-host docker compose", () => {
     expect(bookingBlock).toContain("profiles: [booking]");
     expect(bookingBlock).toContain("apps/booking-web/Dockerfile");
     expect(bookingBlock).toContain("WEB_ROOT: /app/build/booking-web");
+    expect(bookingBlock).toContain('WEB_SERVES_GUEST_MEET: "true"');
+    expect(bookingBlock).toContain("tmpfs:");
+    expect(bookingBlock).toContain("healthcheck:");
   });
 
   it("gates the passive sync service behind its own profile", () => {
@@ -357,9 +368,9 @@ describe("self-host installer", () => {
     );
 
     const deploy = readRepoFile(".github/workflows/_deploy-environment.yml");
-    expect(deploy).toContain("self-host/config.sh");
-    expect(deploy.indexOf("self-host/config.sh")).toBeLessThan(
-      deploy.lastIndexOf("self-host/compass"),
+    expect(deploy).toContain('ORCHESTRATION_DIR/config.sh"');
+    expect(deploy.indexOf('ORCHESTRATION_DIR/config.sh"')).toBeLessThan(
+      deploy.indexOf('ORCHESTRATION_DIR/compass"'),
     );
   });
 
@@ -572,13 +583,18 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain('NODE_ENV="staging"');
   });
 
-  it("falls back to the release tag when a configured compose ref is unavailable", () => {
+  it("copies self-host orchestration from the workflow ref instead of curling raw GitHub", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
+    expect(workflow).toContain("path: deploy-overlay");
+    expect(workflow).toContain("apps/booking-web/Dockerfile");
     expect(workflow).toContain(
-      'COMPOSE_GIT_REF="$'.concat("{COMPOSE_GIT_REF:-$", '{RELEASE_TAG}}"'),
+      'ORCHESTRATION_DIR="$GITHUB_WORKSPACE/deploy-overlay/self-host"',
     );
-    expect(workflow).toContain('COMPOSE_GIT_REF="$'.concat('{RELEASE_TAG}"'));
+    expect(workflow).toContain(
+      'scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml"',
+    );
+    expect(workflow).not.toContain("raw.githubusercontent.com");
   });
 
   it("updates the stack in place without tearing down data services first", () => {
@@ -593,7 +609,7 @@ describe("staging deploy workflow", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
     expect(workflow).toContain(
-      "self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml",
+      'scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.selfhosted.yaml"',
     );
   });
 

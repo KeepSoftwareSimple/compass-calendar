@@ -1,6 +1,6 @@
 x-local-bindings:
   web: &web-port "127.0.0.1:${WEB_PORT:-9080}:9080"
-  booking-web: &booking-web-port "127.0.0.1:${BOOKING_WEB_PORT:-9081}:9081"
+  booking-web: &booking-web-port "127.0.0.1:${BOOKING_WEB_PORT:-9082}:9081"
   backend: &backend-port "127.0.0.1:${PORT:-3000}:3000"
   sync: &sync-port "127.0.0.1:${SYNC_PORT:-3010}:3010"
 
@@ -40,10 +40,23 @@ services:
     environment:
       WEB_PORT: "9081"
       WEB_ROOT: /app/build/booking-web
+      WEB_SERVES_GUEST_MEET: "true"
     ports:
       - *booking-web-port
     read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bun -e \"fetch('http://127.0.0.1:9081/meet/').then((r) => process.exit(r.status >= 500 ? 1 : 0)).catch(() => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   backend:
     image: switchbacktech/compass-backend:${COMPASS_VERSION:-latest}
