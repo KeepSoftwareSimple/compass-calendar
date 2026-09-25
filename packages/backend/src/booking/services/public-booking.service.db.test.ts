@@ -1874,7 +1874,7 @@ describe("PublicBookingService", () => {
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
   });
 
-  it("includes cancel and reschedule URLs in the event description", async () => {
+  it("links cancel and reschedule in the event description", async () => {
     const { slug } = await enableBookingPage();
 
     const created = await service.createReservation(slug, {
@@ -1892,7 +1892,29 @@ describe("PublicBookingService", () => {
       description: string;
     };
     expect(eventInput.description).toBe(
-      `bring coffee\n\nCancel: ${created.cancelUrl}\n\nReschedule: ${created.rescheduleUrl}`,
+      `bring coffee<br><br><a href="${created.cancelUrl.replace(/&/g, "&amp;")}">Cancel</a> | <a href="${created.rescheduleUrl.replace(/&/g, "&amp;")}">Reschedule</a>`,
+    );
+  });
+
+  it("escapes guest notes and keeps their line breaks in the description", async () => {
+    const { slug } = await enableBookingPage();
+
+    await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      notes: "<script>x</script>\nsecond line",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+
+    const eventInput = (
+      createBookingEvent.mock.calls as unknown[][]
+    )[0]![1] as {
+      description: string;
+    };
+    expect(eventInput.description).toStartWith(
+      "&lt;script&gt;x&lt;/script&gt;<br>second line<br><br><a href=",
     );
   });
 
@@ -1970,7 +1992,9 @@ describe("PublicBookingService", () => {
         description: string;
       }
     ).description;
-    expect(description).toMatch(/^bring tea\n\nCancel: .+\n\nReschedule: .+$/);
+    expect(description).toMatch(
+      /^bring tea<br><br><a href=".+">Cancel<\/a> \| <a href=".+">Reschedule<\/a>$/,
+    );
     const stored = await bookingReservationRepository.findById(reservationId);
     expect(stored?.guestName).toBe("Grace Hopper");
     expect(stored?.notes).toBe("bring tea");
