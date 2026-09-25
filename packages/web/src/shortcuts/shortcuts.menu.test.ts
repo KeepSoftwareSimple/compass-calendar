@@ -182,17 +182,20 @@ describe("shortcut menu sections", () => {
       ["day", false, "Go to today"],
       ["week", true, "Scroll to now"],
       ["week", false, "Go to current week"],
-    ] as const)("labels 't' for %s view when isViewingCurrentPeriod=%p", (view, isViewingCurrentPeriod, label) => {
-      const [navigate] = getShortcutMenuSections({
-        view,
-        isViewingCurrentPeriod,
-      });
+    ] as const)(
+      "labels 't' for %s view when isViewingCurrentPeriod=%p",
+      (view, isViewingCurrentPeriod, label) => {
+        const [navigate] = getShortcutMenuSections({
+          view,
+          isViewingCurrentPeriod,
+        });
 
-      expect(stripMetadata(navigate.shortcuts)).toContainEqual({
-        keys: ["t"],
-        label,
-      });
-    });
+        expect(stripMetadata(navigate.shortcuts)).toContainEqual({
+          keys: ["t"],
+          label,
+        });
+      },
+    );
 
     it("includes the all-day event shortcut in both views' Create section", () => {
       const findCreate = (view: "day" | "week") =>

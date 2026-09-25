@@ -88,12 +88,12 @@ const editDraftOrThrow = (event: Event) => {
 };
 
 const replaceVariables = (queryClient: QueryClient) =>
-  queryClient.getMutationCache().getAll()[0]?.state.variables as
+  queryClient.getMutationCache().getAll()[0]!.state.variables as
     | { id: string; input: ReplaceEventInput }
     | undefined;
 
 const createVariables = (queryClient: QueryClient) =>
-  queryClient.getMutationCache().getAll()[0]?.state.variables as
+  queryClient.getMutationCache().getAll()[0]!.state.variables as
     | { input: CreateEventInput }
     | undefined;
 

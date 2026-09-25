@@ -55,8 +55,7 @@ const buildEditDraft = ({
     schedule: SCHEDULE,
   });
   const draft = editGridEventDraft(source);
-  if (!draft || draft.kind !== "edit")
-    throw new Error("Expected an edit draft");
+  if (draft?.kind !== "edit") throw new Error("Expected an edit draft");
 
   return { ...draft, values: { ...draft.values, recurrence: liveRecurrence } };
 };

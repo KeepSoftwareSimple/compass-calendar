@@ -249,19 +249,17 @@ describe("Sync event contracts", () => {
       expect(OrganizerSchema.safeParse(organizer).success).toBe(true);
     });
 
-    it.each([
-      "needsAction",
-      "accepted",
-      "declined",
-      "tentative",
-    ] as const)("accepts attendee response status %s", (responseStatus) => {
-      const attendee = {
-        email: "guest@example.com",
-        displayName: null,
-        responseStatus,
-      };
-      expect(AttendeeSchema.safeParse(attendee).success).toBe(true);
-    });
+    it.each(["needsAction", "accepted", "declined", "tentative"] as const)(
+      "accepts attendee response status %s",
+      (responseStatus) => {
+        const attendee = {
+          email: "guest@example.com",
+          displayName: null,
+          responseStatus,
+        };
+        expect(AttendeeSchema.safeParse(attendee).success).toBe(true);
+      },
+    );
 
     it("rejects an unknown response status", () => {
       const attendee = {

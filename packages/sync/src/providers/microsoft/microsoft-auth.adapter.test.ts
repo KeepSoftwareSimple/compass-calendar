@@ -110,12 +110,12 @@ async function signedIdToken(
 }
 
 describe("isMicrosoftConsentRequired", () => {
-  it.each([
-    "consent_required",
-    "interaction_required",
-  ] as const)("detects %s", (error) => {
-    expect(isMicrosoftConsentRequired(error)).toBe(true);
-  });
+  it.each(["consent_required", "interaction_required"] as const)(
+    "detects %s",
+    (error) => {
+      expect(isMicrosoftConsentRequired(error)).toBe(true);
+    },
+  );
 
   it("detects AADSTS65001 in the description", () => {
     expect(
@@ -353,26 +353,26 @@ describe("MicrosoftAuthAdapter", () => {
       expect((error as ProviderAuthError).reason).toBe("consentRequired");
     });
 
-    it.each([
-      "consent_required",
-      "interaction_required",
-    ] as const)("maps %s to consentRequired", async (oauthError) => {
-      const adapter = adapterWith(
-        new FakeTokenEndpoint({
-          exchangeResponse: { error: oauthError },
-        }),
-        new FakeIdTokenVerifier(),
-      );
+    it.each(["consent_required", "interaction_required"] as const)(
+      "maps %s to consentRequired",
+      async (oauthError) => {
+        const adapter = adapterWith(
+          new FakeTokenEndpoint({
+            exchangeResponse: { error: oauthError },
+          }),
+          new FakeIdTokenVerifier(),
+        );
 
-      const error = await adapter
-        .exchangeAuthorizationCode({
-          code: "auth-code",
-          redirectUri: "https://staging.example.com/sync/microsoft",
-        })
-        .catch((e) => e);
+        const error = await adapter
+          .exchangeAuthorizationCode({
+            code: "auth-code",
+            redirectUri: "https://staging.example.com/sync/microsoft",
+          })
+          .catch((e) => e);
 
-      expect((error as ProviderAuthError).reason).toBe("consentRequired");
-    });
+        expect((error as ProviderAuthError).reason).toBe("consentRequired");
+      },
+    );
 
     it("treats a failed code exchange as exchangeFailed", async () => {
       const adapter = adapterWith(

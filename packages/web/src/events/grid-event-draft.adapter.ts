@@ -332,7 +332,7 @@ export function scheduleDatesFromDraft(draft: GridEventDraft) {
 export function suppressedSeriesIdForDraft(
   draft: GridEventDraft | null,
 ): string | null {
-  if (!draft || draft.kind !== "edit") return null;
+  if (draft?.kind !== "edit") return null;
   if (draft.values.recurrence.kind === "preserve") return null;
 
   const { recurrence } = draft.source;

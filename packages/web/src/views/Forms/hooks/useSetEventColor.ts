@@ -33,7 +33,7 @@ export function useSetEventColor(_id: string) {
       }
 
       const draft = editGridEventDraft(existingEvent);
-      if (!draft || draft.kind !== "edit") return;
+      if (draft?.kind !== "edit") return;
 
       const patchedDraft = patchGridDraftFields(draft, { color });
       const parsed = parseGridEventDraft(patchedDraft);

@@ -118,7 +118,7 @@ const isDroppableException = (entry: ExceptionEntry): boolean => {
 export function filterPosthogBeforeSend(
   event: CaptureResult | null,
 ): CaptureResult | null {
-  if (!event || event.event !== "$exception") {
+  if (event?.event !== "$exception") {
     return event;
   }
 

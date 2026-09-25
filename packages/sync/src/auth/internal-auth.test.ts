@@ -63,21 +63,22 @@ describe("verifyInternalRequest", () => {
     }
   });
 
-  it.each(
-    Object.values(INTERNAL_AUTH_HEADERS),
-  )("rejects a request missing the %s header", (missing) => {
-    const headers = signedHeaders({ timestamp: 1_000_000 }) as Record<
-      string,
-      string
-    >;
-    delete headers[missing];
-    const result = verifyInternalRequest({
-      secret: SECRET,
-      headers,
-      now: 1_000_000,
-    });
-    expect(result).toEqual({ ok: false, reason: "missing" });
-  });
+  it.each(Object.values(INTERNAL_AUTH_HEADERS))(
+    "rejects a request missing the %s header",
+    (missing) => {
+      const headers = signedHeaders({ timestamp: 1_000_000 }) as Record<
+        string,
+        string
+      >;
+      delete headers[missing];
+      const result = verifyInternalRequest({
+        secret: SECRET,
+        headers,
+        now: 1_000_000,
+      });
+      expect(result).toEqual({ ok: false, reason: "missing" });
+    },
+  );
 
   it("rejects a signature made with the wrong secret", () => {
     const headers = signedHeaders({

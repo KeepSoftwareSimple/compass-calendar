@@ -101,8 +101,8 @@ describe("useUpdateEvent", () => {
     let startAtCallback: unknown;
     const onOptimisticApplied = mock(() => {
       startAtCallback = (
-        queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
-          ?.entities[existing.id].schedule as { start?: string }
+        queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)!
+          .entities[existing.id].schedule as { start?: string }
       ).start;
       draftActions.discard();
     });
@@ -165,8 +165,8 @@ describe("useUpdateEvent", () => {
     );
     expect(
       (
-        queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
-          ?.entities[existing.id].schedule as { start?: string }
+        queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)!
+          .entities[existing.id].schedule as { start?: string }
       ).start,
     ).toBe("2026-07-02T16:00:00.000Z");
   });

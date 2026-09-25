@@ -71,7 +71,7 @@ function createWrapper() {
 }
 
 const createVariables = (queryClient: QueryClient) =>
-  queryClient.getMutationCache().getAll()[0]?.state.variables as
+  queryClient.getMutationCache().getAll()[0]!.state.variables as
     | { input: CreateEventInput }
     | undefined;
 

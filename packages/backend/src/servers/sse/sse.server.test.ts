@@ -268,30 +268,28 @@ describe("SSE Server", () => {
       },
     ];
 
-    it.each(
-      cases,
-    )("$method's written frame parses with ServerMessageSchema", async ({
-      type,
-      publish,
-    }) => {
-      const userId = new ObjectId().toString();
-      const stream = baseDriver.openSSEStream({ userId });
+    it.each(cases)(
+      "$method's written frame parses with ServerMessageSchema",
+      async ({ type, publish }) => {
+        const userId = new ObjectId().toString();
+        const stream = baseDriver.openSSEStream({ userId });
 
-      // Cold-start replay: also confirms the subscription is registered
-      // server-side before `publish` runs below, same synchronization the
-      // other tests in this file rely on to avoid a publish-before-
-      // subscribe race.
-      await stream.waitForEvent("userMetadataChanged", 2000);
+        // Cold-start replay: also confirms the subscription is registered
+        // server-side before `publish` runs below, same synchronization the
+        // other tests in this file rely on to avoid a publish-before-
+        // subscribe race.
+        await stream.waitForEvent("userMetadataChanged", 2000);
 
-      const framePromise = stream.waitForEvent(type, 2000);
-      publish(userId);
+        const framePromise = stream.waitForEvent(type, 2000);
+        publish(userId);
 
-      const frame = await framePromise;
-      expect(() => ServerMessageSchema.parse(frame)).not.toThrow();
-      expect((frame as { type: string }).type).toBe(type);
+        const frame = await framePromise;
+        expect(() => ServerMessageSchema.parse(frame)).not.toThrow();
+        expect((frame as { type: string }).type).toBe(type);
 
-      stream.close();
-    });
+        stream.close();
+      },
+    );
 
     // Mirrors gcal.service.test.ts's quotaUser conformance table (packet 07):
     // enumerate the SSEServer instance's own method surface and require

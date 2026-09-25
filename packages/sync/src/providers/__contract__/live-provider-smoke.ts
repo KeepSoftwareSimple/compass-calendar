@@ -594,7 +594,7 @@ async function runExceptionCase(
       created.providerEventId,
       start.toISOString(),
     );
-    if (!instance || instance.kind !== "event") {
+    if (instance?.kind !== "event") {
       throw new LiveSmokeError(
         provider,
         "exception",

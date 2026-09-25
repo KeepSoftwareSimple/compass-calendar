@@ -73,23 +73,23 @@ describe("sync-proxy-error", () => {
   // Backpressure from Sync is not a provider verdict. It used to surface as a
   // 502 on mutations while the read path already used 503, which made a Sync
   // throttle indistinguishable from a bad gateway in the logs (2026-08-23).
-  it.each([
-    "timeout",
-    "unavailable",
-  ] as const)("maps command submit %s to retryable SYNC_UNAVAILABLE 503", (kind) => {
-    try {
-      throwSyncCommandSubmitFailure(kind);
-      throw new Error("expected throw");
-    } catch (e) {
-      expect(e).toBeInstanceOf(EventMutationException);
-      expect((e as EventMutationException).mutationCode).toBe(
-        "SYNC_UNAVAILABLE",
-      );
-      const mapped = toEventMutationError(e);
-      expect(mapped.status).toBe(Status.SERVICE_UNAVAILABLE);
-      expect(mapped.body.retryable).toBe(true);
-    }
-  });
+  it.each(["timeout", "unavailable"] as const)(
+    "maps command submit %s to retryable SYNC_UNAVAILABLE 503",
+    (kind) => {
+      try {
+        throwSyncCommandSubmitFailure(kind);
+        throw new Error("expected throw");
+      } catch (e) {
+        expect(e).toBeInstanceOf(EventMutationException);
+        expect((e as EventMutationException).mutationCode).toBe(
+          "SYNC_UNAVAILABLE",
+        );
+        const mapped = toEventMutationError(e);
+        expect(mapped.status).toBe(Status.SERVICE_UNAVAILABLE);
+        expect(mapped.body.retryable).toBe(true);
+      }
+    },
+  );
 
   it("still maps an unexpected command submit failure to PROVIDER_FAILURE 502", () => {
     try {
@@ -109,12 +109,12 @@ describe("sync-proxy-error", () => {
 
 describe("logLevelForSyncClientError", () => {
   // Only our own backpressure / a Sync restart stays quiet.
-  it.each([
-    "timeout",
-    "unavailable",
-  ] as const)("keeps %s at warn so a Sync restart files no exception", (kind) => {
-    expect(logLevelForSyncClientError(kind)).toBe("warn");
-  });
+  it.each(["timeout", "unavailable"] as const)(
+    "keeps %s at warn so a Sync restart files no exception",
+    (kind) => {
+      expect(logLevelForSyncClientError(kind)).toBe("warn");
+    },
+  );
 
   // These are defects, and PostHogExceptionTransport only listens at `error`:
   // logging them at `warn` is what let the >20-calendar badRequest outage run
@@ -126,9 +126,12 @@ describe("logLevelForSyncClientError", () => {
     "conflict",
     "invalidResponse",
     "unexpectedStatus",
-  ] as const)("reports %s at error so it is captured as an exception", (kind) => {
-    expect(logLevelForSyncClientError(kind)).toBe("error");
-  });
+  ] as const)(
+    "reports %s at error so it is captured as an exception",
+    (kind) => {
+      expect(logLevelForSyncClientError(kind)).toBe("error");
+    },
+  );
 
   // Pins the two to one rule: a new kind must not be quiet on the log side
   // while the status side treats it as a 502 defect.

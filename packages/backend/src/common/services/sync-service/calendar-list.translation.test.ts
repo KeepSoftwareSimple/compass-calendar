@@ -139,27 +139,30 @@ describe("syncCalendarToBrowser", () => {
     ["editor", "writer"],
     ["viewer", "reader"],
     ["busyOnly", "freeBusyReader"],
-  ] as const)("maps sync access role %s to browser access %s and derives capabilities", (syncRole, browserAccess) => {
-    const canWrite = syncRole === "owner" || syncRole === "editor";
-    const result = syncCalendarToBrowser(
-      providerCalendar({
-        accessRole: syncRole,
-        capabilities: {
-          canReadEvents: true,
-          canWriteEvents: canWrite,
-          canReadBusy: true,
-          canInviteAttendees: canWrite,
-        },
-      }),
-    );
-    expect(result.access).toBe(browserAccess);
-    const baseCapabilities = getCalendarCapabilities(browserAccess);
-    expect(result.capabilities).toEqual({
-      ...baseCapabilities,
-      canInviteAttendees: canWrite,
-      conferenceKinds: ["meet"],
-    });
-  });
+  ] as const)(
+    "maps sync access role %s to browser access %s and derives capabilities",
+    (syncRole, browserAccess) => {
+      const canWrite = syncRole === "owner" || syncRole === "editor";
+      const result = syncCalendarToBrowser(
+        providerCalendar({
+          accessRole: syncRole,
+          capabilities: {
+            canReadEvents: true,
+            canWriteEvents: canWrite,
+            canReadBusy: true,
+            canInviteAttendees: canWrite,
+          },
+        }),
+      );
+      expect(result.access).toBe(browserAccess);
+      const baseCapabilities = getCalendarCapabilities(browserAccess);
+      expect(result.capabilities).toEqual({
+        ...baseCapabilities,
+        canInviteAttendees: canWrite,
+        conferenceKinds: ["meet"],
+      });
+    },
+  );
 
   it("maps a microsoft connection's provider through to the calendar", () => {
     const calendar = providerCalendar();

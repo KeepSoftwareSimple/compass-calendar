@@ -137,15 +137,14 @@ describe("Sync command contracts", () => {
       }
     });
 
-    it.each([
-      "this",
-      "thisAndFollowing",
-      "all",
-    ] as const)("accepts an update input with scope %s", (scope) => {
-      expect(SyncCommandInputSchema.safeParse(updateInput(scope)).success).toBe(
-        true,
-      );
-    });
+    it.each(["this", "thisAndFollowing", "all"] as const)(
+      "accepts an update input with scope %s",
+      (scope) => {
+        expect(
+          SyncCommandInputSchema.safeParse(updateInput(scope)).success,
+        ).toBe(true);
+      },
+    );
 
     it("defaults an update's invitation to none when absent", () => {
       const parsed = SyncCommandInputSchema.safeParse(updateInput());
@@ -184,15 +183,14 @@ describe("Sync command contracts", () => {
       expect(SyncCommandInputSchema.safeParse(input).success).toBe(false);
     });
 
-    it.each([
-      "this",
-      "thisAndFollowing",
-      "all",
-    ] as const)("accepts a delete input with scope %s", (scope) => {
-      expect(SyncCommandInputSchema.safeParse(deleteInput(scope)).success).toBe(
-        true,
-      );
-    });
+    it.each(["this", "thisAndFollowing", "all"] as const)(
+      "accepts a delete input with scope %s",
+      (scope) => {
+        expect(
+          SyncCommandInputSchema.safeParse(deleteInput(scope)).success,
+        ).toBe(true);
+      },
+    );
 
     it("defaults a delete's invitation to none when absent", () => {
       const parsed = SyncCommandInputSchema.safeParse(deleteInput());
@@ -213,20 +211,20 @@ describe("Sync command contracts", () => {
       ).toBe(false);
     });
 
-    it.each([
-      "create",
-      "update",
-    ] as const)("defaults a legacy %s input without attendeesEdit to preserve", (kind) => {
-      const legacy = kind === "create" ? createInput() : updateInput();
-      const parsed = SyncCommandInputSchema.safeParse(legacy);
-      expect(parsed.success && parsed.data.kind === kind).toBe(true);
-      if (
-        parsed.success &&
-        (parsed.data.kind === "create" || parsed.data.kind === "update")
-      ) {
-        expect(parsed.data.attendeesEdit).toBe("preserve");
-      }
-    });
+    it.each(["create", "update"] as const)(
+      "defaults a legacy %s input without attendeesEdit to preserve",
+      (kind) => {
+        const legacy = kind === "create" ? createInput() : updateInput();
+        const parsed = SyncCommandInputSchema.safeParse(legacy);
+        expect(parsed.success && parsed.data.kind === kind).toBe(true);
+        if (
+          parsed.success &&
+          (parsed.data.kind === "create" || parsed.data.kind === "update")
+        ) {
+          expect(parsed.data.attendeesEdit).toBe("preserve");
+        }
+      },
+    );
 
     it("round-trips an explicit attendeesEdit replace on an update", () => {
       const parsed = SyncCommandInputSchema.safeParse({
@@ -255,24 +253,22 @@ describe("Sync command contracts", () => {
       }
     });
 
-    it.each([
-      "this",
-      "thisAndFollowing",
-      "all",
-    ] as const)("accepts an rsvp input with scope %s", (scope) => {
-      expect(SyncCommandInputSchema.safeParse(rsvpInput(scope)).success).toBe(
-        true,
-      );
-    });
+    it.each(["this", "thisAndFollowing", "all"] as const)(
+      "accepts an rsvp input with scope %s",
+      (scope) => {
+        expect(SyncCommandInputSchema.safeParse(rsvpInput(scope)).success).toBe(
+          true,
+        );
+      },
+    );
 
-    it.each([
-      "accepted",
-      "declined",
-      "tentative",
-    ] as const)("accepts an rsvp answering %s", (responseStatus) => {
-      const input = { ...rsvpInput(), responseStatus };
-      expect(SyncCommandInputSchema.safeParse(input).success).toBe(true);
-    });
+    it.each(["accepted", "declined", "tentative"] as const)(
+      "accepts an rsvp answering %s",
+      (responseStatus) => {
+        const input = { ...rsvpInput(), responseStatus };
+        expect(SyncCommandInputSchema.safeParse(input).success).toBe(true);
+      },
+    );
 
     it("rejects an rsvp answering needsAction", () => {
       const input = { ...rsvpInput(), responseStatus: "needsAction" };
@@ -300,14 +296,14 @@ describe("Sync command contracts", () => {
   });
 
   describe("SyncCommandOutcomeSchema", () => {
-    it.each([
-      "pending",
-      "applying",
-      "reconciling",
-      "cancelled",
-    ] as const)("accepts the bare %s state", (state) => {
-      expect(SyncCommandOutcomeSchema.safeParse({ state }).success).toBe(true);
-    });
+    it.each(["pending", "applying", "reconciling", "cancelled"] as const)(
+      "accepts the bare %s state",
+      (state) => {
+        expect(SyncCommandOutcomeSchema.safeParse({ state }).success).toBe(
+          true,
+        );
+      },
+    );
 
     it("accepts a locally confirmed outcome with no provider target", () => {
       expect(
@@ -331,12 +327,13 @@ describe("Sync command contracts", () => {
       expect(SyncCommandOutcomeSchema.safeParse(outcome).success).toBe(false);
     });
 
-    it.each(
-      SyncCommandFailureReasonSchema.options,
-    )("accepts a failed outcome with reason %s", (failureReason) => {
-      const outcome = { state: "failed", failureReason };
-      expect(SyncCommandOutcomeSchema.safeParse(outcome).success).toBe(true);
-    });
+    it.each(SyncCommandFailureReasonSchema.options)(
+      "accepts a failed outcome with reason %s",
+      (failureReason) => {
+        const outcome = { state: "failed", failureReason };
+        expect(SyncCommandOutcomeSchema.safeParse(outcome).success).toBe(true);
+      },
+    );
 
     it("rejects a failed outcome missing a failureReason", () => {
       expect(
@@ -456,15 +453,15 @@ describe("Sync command contracts", () => {
       ).toEqual(parsed);
     });
 
-    it.each([
-      "this",
-      "thisAndFollowing",
-    ] as const)("rejects a %s-scope command that omits a recurrenceId", (scope) => {
-      const command = baseCommand({
-        input: { ...updateInput(scope), recurrenceId: null },
-      });
-      expect(SyncCommandSchema.safeParse(command).success).toBe(false);
-    });
+    it.each(["this", "thisAndFollowing"] as const)(
+      "rejects a %s-scope command that omits a recurrenceId",
+      (scope) => {
+        const command = baseCommand({
+          input: { ...updateInput(scope), recurrenceId: null },
+        });
+        expect(SyncCommandSchema.safeParse(command).success).toBe(false);
+      },
+    );
 
     it("rejects an all-scope command that carries a recurrenceId", () => {
       const command = baseCommand({

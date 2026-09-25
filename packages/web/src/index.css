@@ -406,10 +406,12 @@
     border-radius: 6px;
   }
 
+  /* biome-ignore lint/style/noDescendingSpecificity: base layer body styles follow scrollbar styling. */
   body {
     background-color: var(--color-background);
   }
 
+  /* biome-ignore lint/style/noDescendingSpecificity: base layer root layout follows body styles. */
   #root {
     display: flex;
     flex-direction: column;
@@ -1053,7 +1055,6 @@
 @utility c-scroll {
   @layer components {
     /* scrollbar styling */
-    /* biome-ignore lint/style/noDescendingSpecificity: Keep the scrollbar pseudo-elements grouped inside this utility. */
     &::-webkit-scrollbar {
       /* Always reserve scrollbar space */
       width: var(--scrollbar-width, 6px);
@@ -1363,6 +1364,7 @@
     background: var(--date-picker-hover-bg);
     content: "";
   }
+  /* biome-ignore lint/style/noDescendingSpecificity: week-selected day styling stacks on base day rules. */
   & .react-datepicker__week--selected .react-datepicker__day {
     position: relative;
     z-index: 10;
