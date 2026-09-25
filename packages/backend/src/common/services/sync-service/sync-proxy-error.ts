@@ -1,3 +1,4 @@
+import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AuthError } from "@backend/common/errors/auth/auth.errors";
 import { error } from "@backend/common/errors/handlers/error.handler";
@@ -50,6 +51,19 @@ export function throwSyncProxyFailure(
       code: "SYNC_PROXY_FAILURE",
     },
     message,
+  );
+}
+
+// True for the errors throwSyncProxyFailure raises. Callers that answer their
+// own errors use this to keep the 502/503 instead of a generic 500.
+export function isSyncProxyFailure(e: unknown): e is BaseError {
+  if (!(e instanceof BaseError)) return false;
+  if (e.code === "SYNC_PROXY_FAILURE") return true;
+  const unavailable = AuthError.SyncConnectionUnavailable;
+  return (
+    e.code === undefined &&
+    e.statusCode === unavailable.status &&
+    e.description === unavailable.description
   );
 }
 

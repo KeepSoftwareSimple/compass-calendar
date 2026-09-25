@@ -4,13 +4,22 @@ import {
   bookingError,
   toBookingErrorResponse,
 } from "@backend/booking/booking.error";
-import { AuthError } from "@backend/common/errors/auth/auth.errors";
 import {
-  error,
   errorHandler,
+  logLevelForError,
 } from "@backend/common/errors/handlers/error.handler";
+import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
+import { type SyncClientErrorKind } from "@backend/common/services/sync-service/sync-service.client";
 import { EventMutationException } from "@backend/event/event.error";
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
+
+const syncProxyFailure = (kind: SyncClientErrorKind): unknown => {
+  try {
+    throwSyncProxyFailure(kind, `Failed to list calendars from sync (${kind})`);
+  } catch (e) {
+    return e;
+  }
+};
 
 describe("toBookingErrorResponse", () => {
   afterEach(() => {
@@ -101,23 +110,33 @@ describe("toBookingErrorResponse", () => {
     expect(body.code).toBe("INTERNAL_ERROR");
   });
 
-  // A sync-service timeout surfaces here as a plain BaseError with no booking
-  // code, so it used to fall straight to `logger.error`, which
-  // PostHogExceptionTransport captures and the error-autofix pipeline turns
-  // into a GitHub issue for what is really upstream downtime. Routing through
-  // errorHandler.log lets logLevelForError downgrade this operational 503 to
-  // `warn` instead (see error.handler.test.ts's "logLevelForError" suite).
-  it("routes an unrecognized BaseError through errorHandler.log instead of logging it directly", () => {
-    const logSpy = spyOn(errorHandler, "log").mockImplementation(() => {});
-    const syncUnavailable = error(
-      AuthError.SyncConnectionUnavailable,
-      "Failed to list calendars from sync (timeout)",
-    );
+  // A Sync restart during a deploy is operational: 503 at warn, so it opens
+  // no error-tracking issue and the host can retry.
+  it.each(["timeout", "unavailable"] as const)(
+    "maps a Sync %s to 503 CALENDAR_UNAVAILABLE at warn",
+    (kind) => {
+      const log = spyOn(errorHandler, "log").mockImplementation(() => {});
+      const error = syncProxyFailure(kind);
 
-    const { status, body } = toBookingErrorResponse(syncUnavailable);
+      const { status, body } = toBookingErrorResponse(error);
 
-    expect(status).toBe(Status.INTERNAL_SERVER);
-    expect(body.code).toBe("INTERNAL_ERROR");
-    expect(logSpy).toHaveBeenCalledWith(syncUnavailable);
+      expect(status).toBe(Status.SERVICE_UNAVAILABLE);
+      expect(body.code).toBe("CALENDAR_UNAVAILABLE");
+      expect(log).toHaveBeenCalledWith(error);
+      expect(logLevelForError(error as Error)).toBe("warn");
+    },
+  );
+
+  it("maps a Sync defect to 502 CALENDAR_SYNC_FAILED at error", () => {
+    const log = spyOn(errorHandler, "log").mockImplementation(() => {});
+    const error = syncProxyFailure("unexpectedStatus");
+
+    const { status, body } = toBookingErrorResponse(error);
+
+    expect(status).toBe(Status.BAD_GATEWAY);
+    expect(body.code).toBe("CALENDAR_SYNC_FAILED");
+    expect(body.message).not.toContain("sync");
+    expect(log).toHaveBeenCalledWith(error);
+    expect(logLevelForError(error as Error)).toBe("error");
   });
 });

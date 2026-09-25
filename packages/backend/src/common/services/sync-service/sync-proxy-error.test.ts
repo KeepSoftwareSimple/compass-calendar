@@ -1,6 +1,9 @@
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
+import { AuthError } from "@backend/common/errors/auth/auth.errors";
+import { error } from "@backend/common/errors/handlers/error.handler";
 import {
+  isSyncProxyFailure,
   logLevelForSyncClientError,
   throwSyncCommandSubmitFailure,
   throwSyncProxyFailure,
@@ -157,5 +160,34 @@ describe("logLevelForSyncClientError", () => {
       const expected = status === Status.SERVICE_UNAVAILABLE ? "warn" : "error";
       expect(logLevelForSyncClientError(kind)).toBe(expected);
     }
+  });
+});
+
+describe("isSyncProxyFailure", () => {
+  it.each([
+    "timeout",
+    "unavailable",
+    "invalidResponse",
+    "unexpectedStatus",
+  ] as const)("recognizes the %s failure", (kind) => {
+    let thrown: unknown;
+    try {
+      throwSyncProxyFailure(kind, "msg");
+    } catch (e) {
+      thrown = e;
+    }
+    expect(isSyncProxyFailure(thrown)).toBe(true);
+  });
+
+  it("ignores other 503s and non-BaseErrors", () => {
+    expect(
+      isSyncProxyFailure(error(AuthError.GoogleNotConfigured, "not set")),
+    ).toBe(false);
+    expect(
+      isSyncProxyFailure(
+        new EventMutationException("SYNC_UNAVAILABLE", "sync down"),
+      ),
+    ).toBe(false);
+    expect(isSyncProxyFailure(new Error("boom"))).toBe(false);
   });
 });

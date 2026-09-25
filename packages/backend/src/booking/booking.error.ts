@@ -3,6 +3,7 @@ import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import { errorHandler } from "@backend/common/errors/handlers/error.handler";
+import { isSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
 import { EventMutationException } from "@backend/event/event.error";
 
 const logger = Logger("app:booking.error");
@@ -20,6 +21,8 @@ export const BookingErrorCodeSchema = z.enum([
   "SLOT_UNAVAILABLE",
   "RESERVATION_CONFLICT",
   "RESERVATION_NOT_FOUND",
+  "CALENDAR_UNAVAILABLE",
+  "CALENDAR_SYNC_FAILED",
   "INTERNAL_ERROR",
 ]);
 export type BookingErrorCode = z.infer<typeof BookingErrorCodeSchema>;
@@ -37,6 +40,8 @@ const STATUS_BY_CODE: Record<BookingErrorCode, Status> = {
   SLOT_UNAVAILABLE: Status.CONFLICT,
   RESERVATION_CONFLICT: Status.CONFLICT,
   RESERVATION_NOT_FOUND: Status.NOT_FOUND,
+  CALENDAR_UNAVAILABLE: Status.SERVICE_UNAVAILABLE,
+  CALENDAR_SYNC_FAILED: Status.BAD_GATEWAY,
   INTERNAL_ERROR: Status.INTERNAL_SERVER,
 };
 
@@ -87,6 +92,26 @@ export const toBookingErrorResponse = (
       status: STATUS_BY_CODE.INVALID_INPUT,
       body: { code: "INVALID_INPUT", message: "Invalid input" },
     };
+  }
+
+  if (isSyncProxyFailure(e)) {
+    // Logs a Sync restart (503) at warn and a Sync defect (502) at error.
+    errorHandler.log(e);
+    return e.statusCode === Status.SERVICE_UNAVAILABLE
+      ? {
+          status: STATUS_BY_CODE.CALENDAR_UNAVAILABLE,
+          body: {
+            code: "CALENDAR_UNAVAILABLE",
+            message: "Calendar is not reachable right now. Try again shortly.",
+          },
+        }
+      : {
+          status: STATUS_BY_CODE.CALENDAR_SYNC_FAILED,
+          body: {
+            code: "CALENDAR_SYNC_FAILED",
+            message: "Could not check the calendar. Please try again.",
+          },
+        };
   }
 
   if (e instanceof BaseError && e.code) {
