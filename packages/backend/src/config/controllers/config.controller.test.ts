@@ -197,6 +197,41 @@ describe("buildAppConfig provider flags", () => {
     }
   });
 
+  it("hides Apple in production even when the credential key is set", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      encryptionKey: CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Production;
+    CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY = "a".repeat(44);
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.apple).toEqual({
+        signIn: false,
+        connect: false,
+      });
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY = originals.encryptionKey;
+    }
+  });
+
+  it("offers Apple connect in staging when the credential key is set", () => {
+    const originals = {
+      nodeEnv: CONFIG.NODE_ENV,
+      encryptionKey: CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY,
+    };
+    CONFIG.NODE_ENV = NodeEnv.Staging;
+    CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY = "a".repeat(44);
+
+    try {
+      expect(buildAppConfig(CONFIG).providers.apple.connect).toBe(true);
+    } finally {
+      CONFIG.NODE_ENV = originals.nodeEnv;
+      CONFIG.SYNC_CREDENTIAL_ENCRYPTION_KEY = originals.encryptionKey;
+    }
+  });
+
   it("offers Microsoft in staging when credentials are configured", () => {
     const originals = {
       nodeEnv: CONFIG.NODE_ENV,

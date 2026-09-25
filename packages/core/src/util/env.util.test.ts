@@ -1,5 +1,6 @@
 import { NodeEnv } from "@core/constants/core.constants";
 import {
+  isAppleOffered,
   isBookingEnabled,
   isDev,
   isMicrosoftOffered,
@@ -45,5 +46,18 @@ describe("isMicrosoftOffered", () => {
   it("is off in production while publisher verification is pending", () => {
     expect(isMicrosoftOffered(NodeEnv.Production)).toBe(false);
     expect(isMicrosoftOffered("production")).toBe(false);
+  });
+});
+
+describe("isAppleOffered", () => {
+  it("is on in development, staging, and tests", () => {
+    expect(isAppleOffered(NodeEnv.Development)).toBe(true);
+    expect(isAppleOffered(NodeEnv.Staging)).toBe(true);
+    expect(isAppleOffered(NodeEnv.Test)).toBe(true);
+  });
+
+  it("is off in production until Apple calendar is supported there", () => {
+    expect(isAppleOffered(NodeEnv.Production)).toBe(false);
+    expect(isAppleOffered("production")).toBe(false);
   });
 });
