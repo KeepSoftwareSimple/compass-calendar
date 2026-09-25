@@ -39,9 +39,6 @@ const stripeReferenceIdOf = (value: unknown): string | undefined => {
   return undefined;
 };
 
-const isAwaitingCheckoutActivation = (status: string | undefined): boolean =>
-  !status || status === "none" || status === "awaiting_checkout";
-
 /** First Stripe subscription Checkout: legacy awaiting_checkout or card-less signup trial. */
 const shouldEmitCheckoutCompleted = (
   billing:
@@ -52,7 +49,9 @@ const shouldEmitCheckoutCompleted = (
     | undefined,
 ): boolean => {
   const status = billing?.subscriptionStatus;
-  if (isAwaitingCheckoutActivation(status)) return true;
+  if (!status || status === "none" || status === "awaiting_checkout") {
+    return true;
+  }
   return status === "trialing" && !billing?.stripeSubscriptionId;
 };
 
@@ -182,6 +181,22 @@ async function findUserIdForSubscription(
   return null;
 }
 
+async function applySubscriptionAndMaybeCaptureCheckoutCompleted(
+  userId: string,
+  subscription: Stripe.Subscription,
+  eventCreatedAt: Date,
+  checkoutSessionId?: string,
+): Promise<void> {
+  const user = await mongoService.user.findOne({
+    _id: mongoService.objectId(userId),
+  });
+  const shouldCapture = shouldEmitCheckoutCompleted(user?.billing);
+  await applySubscription(userId, subscription, eventCreatedAt);
+  if (shouldCapture) {
+    await captureCheckoutCompleted(userId, subscription, checkoutSessionId);
+  }
+}
+
 async function findUserIdForCheckoutSession(
   session: Pick<Stripe.Checkout.Session, "client_reference_id" | "customer">,
 ): Promise<string | null> {
@@ -282,16 +297,12 @@ async function handleEvent(
       );
       return;
     }
-    const user = await mongoService.user.findOne({
-      _id: mongoService.objectId(userId),
-    });
-    const shouldCaptureCheckoutCompleted = shouldEmitCheckoutCompleted(
-      user?.billing,
+    await applySubscriptionAndMaybeCaptureCheckoutCompleted(
+      userId,
+      subscription,
+      eventCreatedAt,
+      resolvedSession.id,
     );
-    await applySubscription(userId, subscription, eventCreatedAt);
-    if (shouldCaptureCheckoutCompleted) {
-      await captureCheckoutCompleted(userId, subscription, resolvedSession.id);
-    }
     return;
   }
 
@@ -326,16 +337,15 @@ async function handleEvent(
     );
     return;
   }
-  const user = await mongoService.user.findOne({
-    _id: mongoService.objectId(userId),
-  });
-  const shouldCaptureCheckoutCompleted =
-    event.type === "customer.subscription.created" &&
-    shouldEmitCheckoutCompleted(user?.billing);
-  await applySubscription(userId, subscription, eventCreatedAt);
-  if (shouldCaptureCheckoutCompleted) {
-    await captureCheckoutCompleted(userId, subscription);
+  if (event.type === "customer.subscription.created") {
+    await applySubscriptionAndMaybeCaptureCheckoutCompleted(
+      userId,
+      subscription,
+      eventCreatedAt,
+    );
+    return;
   }
+  await applySubscription(userId, subscription, eventCreatedAt);
 }
 
 export async function processStripeEvent(

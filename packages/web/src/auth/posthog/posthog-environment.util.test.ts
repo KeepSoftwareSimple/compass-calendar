@@ -1,31 +1,25 @@
 import { NodeEnv } from "@core/constants/core.constants";
 import { resolvePosthogEnvironment } from "@web/auth/posthog/posthog-environment.util";
+import { ENV_WEB } from "@web/common/constants/env.constants";
 import { describe, expect, it } from "bun:test";
 
 describe("resolvePosthogEnvironment", () => {
   it("maps the staging hostname to staging", () => {
-    const original = globalThis.window;
-    globalThis.window = {
-      location: { hostname: "staging.compasscalendar.com" },
-    } as Window & typeof globalThis;
-
-    try {
-      expect(resolvePosthogEnvironment()).toBe(NodeEnv.Staging);
-    } finally {
-      globalThis.window = original;
-    }
+    expect(resolvePosthogEnvironment("staging.compasscalendar.com")).toBe(
+      NodeEnv.Staging,
+    );
   });
 
-  it("maps the production hostname to production", () => {
-    const original = globalThis.window;
-    globalThis.window = {
-      location: { hostname: "compasscalendar.com" },
-    } as Window & typeof globalThis;
+  it("maps production hostnames to production", () => {
+    expect(resolvePosthogEnvironment("compasscalendar.com")).toBe(
+      NodeEnv.Production,
+    );
+    expect(resolvePosthogEnvironment("www.compasscalendar.com")).toBe(
+      NodeEnv.Production,
+    );
+  });
 
-    try {
-      expect(resolvePosthogEnvironment()).toBe(NodeEnv.Production);
-    } finally {
-      globalThis.window = original;
-    }
+  it("falls back to the Compass runtime env for unknown hosts", () => {
+    expect(resolvePosthogEnvironment("localhost")).toBe(ENV_WEB.NODE_ENV);
   });
 });

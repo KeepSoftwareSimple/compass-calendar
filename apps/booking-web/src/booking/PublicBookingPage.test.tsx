@@ -1,4 +1,9 @@
 import {
+  pageHandler,
+  publicPagePayload,
+  reservationGetHandler as publicReservationGetHandler,
+} from "@booking-web/__tests__/public-booking.msw";
+import {
   formatBookingDateKey,
   formatBookingMonthDayLabel,
   formatBookingMonthHeading,
@@ -213,19 +218,11 @@ const hostTimeZone = "America/Chicago";
 const timezoneDiffers =
   Intl.DateTimeFormat().resolvedOptions().timeZone !== hostTimeZone;
 
-const publicPagePayload = (overrides: Record<string, unknown> = {}) => ({
-  hostDisplayName: "Tyler Dane",
-  durationMinutes: 30,
-  timeZone: "America/Chicago",
-  enabled: true,
-  maxHorizonDays: 60,
-  ...overrides,
-});
-
-function pageHandler() {
-  return http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-    HttpResponse.json(publicPagePayload(), { status: Status.OK }),
-  );
+function reservationGetHandler(
+  overrides: Record<string, unknown> = {},
+  id?: string,
+) {
+  return publicReservationGetHandler(currentSlot.slotStart, overrides, id);
 }
 
 function slotsInWindow(
@@ -249,28 +246,6 @@ function slotsInWindow(
         { status: Status.OK },
       );
     },
-  );
-}
-
-function reservationGetHandler(
-  overrides: Record<string, unknown> = {},
-  id = "000000000000000000000099",
-) {
-  return http.get(`${ENV_WEB.API_BASEURL}/booking/reservations/${id}`, () =>
-    HttpResponse.json(
-      {
-        slotStart: currentSlot.slotStart,
-        guestTimeZone: "UTC",
-        durationMinutes: 30,
-        hostDisplayName: "Tyler Dane",
-        status: "confirmed",
-        bookingSlug: "tylerdane",
-        guestName: "Guest User",
-        notes: null,
-        ...overrides,
-      },
-      { status: Status.OK },
-    ),
   );
 }
 
@@ -340,13 +315,7 @@ describe("PublicBookingPage", () => {
   });
 
   it("does not fire booking_page_viewed for a disabled page", async () => {
-    server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-        HttpResponse.json(publicPagePayload({ enabled: false }), {
-          status: Status.OK,
-        }),
-      ),
-    );
+    server.use(pageHandler({ enabled: false }));
     renderBookingRoute("/meet/tylerdane");
 
     expect(
@@ -391,12 +360,7 @@ describe("PublicBookingPage", () => {
   });
 
   it("does not render welcome text on the public page", async () => {
-    server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
-      ),
-      slotsInWindow([currentSlot]),
-    );
+    server.use(pageHandler(), slotsInWindow([currentSlot]));
 
     renderBookingRoute("/meet/tylerdane");
 
@@ -411,11 +375,7 @@ describe("PublicBookingPage", () => {
 
   it("names Teams on the duration line when the destination conference is teams", async () => {
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-        HttpResponse.json(publicPagePayload({ conference: "teams" }), {
-          status: Status.OK,
-        }),
-      ),
+      pageHandler({ conference: "teams" }),
       slotsInWindow([currentSlot]),
     );
 
@@ -430,11 +390,7 @@ describe("PublicBookingPage", () => {
 
   it("omits a conference name when the destination conference is none", async () => {
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-        HttpResponse.json(publicPagePayload({ conference: "none" }), {
-          status: Status.OK,
-        }),
-      ),
+      pageHandler({ conference: "none" }),
       slotsInWindow([currentSlot]),
     );
 
@@ -585,9 +541,7 @@ describe("PublicBookingPage", () => {
     const slot = nextMonthSlot;
 
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tzhost`, () =>
-        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
-      ),
+      pageHandler({}, "tzhost"),
       http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tzhost/slots`,
         ({ request }) => {
@@ -712,9 +666,7 @@ describe("PublicBookingPage", () => {
     const persistNextSlot = bookableSlotAfterCurrentMonthInZone(overrideZone);
 
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tzpersist`, () =>
-        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
-      ),
+      pageHandler({}, "tzpersist"),
       http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tzpersist/slots`,
         ({ request }) => {
@@ -1027,11 +979,7 @@ describe("PublicBookingPage", () => {
     ).toISOString();
 
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-        HttpResponse.json(publicPagePayload({ maxHorizonDays: 7 }), {
-          status: Status.OK,
-        }),
-      ),
+      pageHandler({ maxHorizonDays: 7 }),
       http.get(
         `${ENV_WEB.API_BASEURL}/booking/pages/tylerdane/slots`,
         ({ request }) => {
@@ -1347,9 +1295,7 @@ describe("PublicBookingPage", () => {
     const slotFailGate = { fail: true };
 
     server.use(
-      http.get(`${ENV_WEB.API_BASEURL}/booking/pages/retryhost`, () =>
-        HttpResponse.json(publicPagePayload(), { status: Status.OK }),
-      ),
+      pageHandler({}, "retryhost"),
       http.get(`${ENV_WEB.API_BASEURL}/booking/pages/retryhost/slots`, () => {
         if (slotFailGate.fail) {
           return HttpResponse.json({}, { status: Status.INTERNAL_SERVER });
