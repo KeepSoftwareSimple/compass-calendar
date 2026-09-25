@@ -2,6 +2,7 @@ import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import {
   logLevelForSyncClientError,
+  SyncProxyFailure,
   throwSyncCommandSubmitFailure,
   throwSyncProxyFailure,
 } from "@backend/common/services/sync-service/sync-proxy-error";
@@ -157,5 +158,16 @@ describe("logLevelForSyncClientError", () => {
       const expected = status === Status.SERVICE_UNAVAILABLE ? "warn" : "error";
       expect(logLevelForSyncClientError(kind)).toBe(expected);
     }
+  });
+});
+
+describe("SyncProxyFailure", () => {
+  it.each([
+    "timeout",
+    "unavailable",
+    "invalidResponse",
+    "unexpectedStatus",
+  ] as const)("is what throwSyncProxyFailure raises for %s", (kind) => {
+    expect(() => throwSyncProxyFailure(kind, "msg")).toThrow(SyncProxyFailure);
   });
 });

@@ -1,7 +1,8 @@
+import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AuthError } from "@backend/common/errors/auth/auth.errors";
-import { error } from "@backend/common/errors/handlers/error.handler";
 import { type SyncClientErrorKind } from "@backend/common/services/sync-service/sync-service.client";
+import { type ErrorMetadata } from "@backend/common/types/error.types";
 import { eventMutationError } from "@backend/event/event.error";
 
 // The one place that decides which Sync failures are operational: our own
@@ -24,6 +25,20 @@ export function logLevelForSyncClientError(
   return isOperationalKind(kind) ? "warn" : "error";
 }
 
+// Thrown only by throwSyncProxyFailure. Callers that answer their own errors
+// check for it to keep the 502/503 instead of a generic 500.
+export class SyncProxyFailure extends BaseError {
+  constructor(cause: ErrorMetadata, result: string) {
+    super(
+      result,
+      cause.description,
+      cause.status,
+      cause.isOperational,
+      cause.code,
+    );
+  }
+}
+
 // Map a failed Sync HTTP call on a read/proxy route into a real HTTP status.
 // Never Status.UNSURE (600). Timeout/unavailable → 503; other failures → 502.
 // `detail` is the log-safe SyncClientError.detail (an invalidResponse's
@@ -40,9 +55,9 @@ export function throwSyncProxyFailure(
 ): never {
   const message = detail ? `${userMessage}: ${detail}` : userMessage;
   if (isOperationalKind(kind)) {
-    throw error(AuthError.SyncConnectionUnavailable, message);
+    throw new SyncProxyFailure(AuthError.SyncConnectionUnavailable, message);
   }
-  throw error(
+  throw new SyncProxyFailure(
     {
       description: "Sync service returned an unexpected failure",
       status: Status.BAD_GATEWAY,
