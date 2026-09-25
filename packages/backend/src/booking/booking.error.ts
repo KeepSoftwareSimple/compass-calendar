@@ -2,6 +2,7 @@ import { ZodError, z } from "zod/v4";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
+import { errorHandler } from "@backend/common/errors/handlers/error.handler";
 import { EventMutationException } from "@backend/event/event.error";
 
 const logger = Logger("app:booking.error");
@@ -98,7 +99,16 @@ export const toBookingErrorResponse = (
     }
   }
 
-  logger.error(e instanceof Error ? e : `Unexpected booking error: ${e}`);
+  // Route through errorHandler.log rather than logger.error directly: it
+  // applies logLevelForError, which downgrades an operational 503 (e.g. a
+  // sync-service timeout surfacing here as a plain BaseError with no booking
+  // code) to `warn` so it stops being captured by PostHogExceptionTransport
+  // and auto-filed as a GitHub issue for what is really upstream downtime.
+  if (e instanceof Error) {
+    errorHandler.log(e);
+  } else {
+    logger.error(`Unexpected booking error: ${e}`);
+  }
   return {
     status: STATUS_BY_CODE.INTERNAL_ERROR,
     body: {
