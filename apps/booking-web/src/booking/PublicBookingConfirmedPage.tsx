@@ -7,6 +7,8 @@ import {
   usePublicBookingReservationQuery,
 } from "@booking-web/booking/public-booking.query";
 import {
+  PUBLIC_BOOKING_CANCELLED,
+  PUBLIC_BOOKING_LOAD_FAILED,
   type PublicBookingReservationView,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
@@ -39,17 +41,6 @@ const BOOKING_NOT_FOUND = {
     "This confirmation link may be incorrect or no longer available.",
 } as const;
 
-const BOOKING_LOAD_FAILED = {
-  title: "Could not load meeting",
-  description: "Please refresh and try again.",
-} as const;
-
-const BOOKING_CANCELED = {
-  title: "This meeting was canceled",
-  description:
-    "The appointment is no longer on the host calendar. You can close this page.",
-} as const;
-
 const BOOKING_CANCELLING = {
   title: "This meeting is being canceled",
   description:
@@ -62,8 +53,8 @@ const resolveConfirmedPageView = (
   resolvePublicBookingReservationView(reservationQuery, {
     loading: BOOKING_LOADING,
     notFound: BOOKING_NOT_FOUND,
-    loadFailed: BOOKING_LOAD_FAILED,
-    cancelled: BOOKING_CANCELED,
+    loadFailed: PUBLIC_BOOKING_LOAD_FAILED,
+    cancelled: PUBLIC_BOOKING_CANCELLED,
     cancelling: BOOKING_CANCELLING,
   });
 

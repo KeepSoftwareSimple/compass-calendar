@@ -1,4 +1,3 @@
-import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api";
 import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import {
   PUBLIC_BOOKING_STICKY_STEP_CLASS,
@@ -14,33 +13,20 @@ import {
 import { PublicBookingTimezoneControl } from "@booking-web/booking/PublicBookingTimezoneControl";
 import { type usePublicBookingReservationQuery } from "@booking-web/booking/public-booking.query";
 import {
-  PUBLIC_BOOKING_UNBOOKABLE,
+  PUBLIC_BOOKING_CANCELLED,
+  PUBLIC_BOOKING_LOAD_FAILED,
+  PUBLIC_BOOKING_RESERVATION_LOADING,
   type PublicBookingReservationView,
+  resolvePublicBookingPageView,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
 import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-document-title";
 import { useBookingHeadingFocus } from "@booking-web/booking/use-booking-heading-focus";
 import { usePublicBookingRescheduleFlow } from "@booking-web/booking/use-public-booking-reschedule-flow";
 
-const BOOKING_LOADING = {
-  title: "Loading meeting",
-  description: "One moment while we load this meeting.",
-} as const;
-
 const BOOKING_NOT_FOUND = {
   title: "Meeting not found",
   description: "This reschedule link may be invalid or already used.",
-} as const;
-
-const BOOKING_LOAD_FAILED = {
-  title: "Could not load meeting",
-  description: "Please refresh and try again.",
-} as const;
-
-const BOOKING_CANCELED = {
-  title: "This meeting was canceled",
-  description:
-    "The appointment is no longer on the host calendar. You can close this page.",
 } as const;
 
 export function PublicBookingReschedulePage() {
@@ -66,33 +52,18 @@ export function PublicBookingReschedulePage() {
   }
 
   const { reservation } = reservationView;
+  const pageView = resolvePublicBookingPageView(
+    pageQuery,
+    slotsQuery.data,
+    BOOKING_NOT_FOUND,
+  );
 
-  if (pageQuery.isLoading) {
-    return (
-      <PublicBookingStatusMessage
-        title="Loading meeting page"
-        description="One moment while we load available times."
-      />
-    );
+  if (pageView.kind === "status") {
+    return <PublicBookingStatusMessage {...pageView} />;
   }
 
-  if (
-    pageQuery.error instanceof PublicBookingNotFoundError ||
-    (pageQuery.isSuccess && !pageQuery.data.enabled)
-  ) {
-    return <PublicBookingStatusMessage {...BOOKING_NOT_FOUND} />;
-  }
-
-  if (pageQuery.isError || !pageQuery.isSuccess || !pageQuery.data) {
-    return <PublicBookingStatusMessage {...BOOKING_LOAD_FAILED} />;
-  }
-
-  const page = pageQuery.data;
+  const { page } = pageView;
   const busy = flow.rescheduleReservation.isPending;
-
-  if (slotsQuery.data && !slotsQuery.data.bookable) {
-    return <PublicBookingStatusMessage {...PUBLIC_BOOKING_UNBOOKABLE} />;
-  }
 
   return (
     <PublicBookingLayout wide>
@@ -182,9 +153,9 @@ const resolveReschedulePageView = (
     return { kind: "status", ...BOOKING_NOT_FOUND };
   }
   return resolvePublicBookingReservationView(reservationQuery, {
-    loading: BOOKING_LOADING,
+    loading: PUBLIC_BOOKING_RESERVATION_LOADING,
     notFound: BOOKING_NOT_FOUND,
-    loadFailed: BOOKING_LOAD_FAILED,
-    cancelled: BOOKING_CANCELED,
+    loadFailed: PUBLIC_BOOKING_LOAD_FAILED,
+    cancelled: PUBLIC_BOOKING_CANCELLED,
   });
 };
