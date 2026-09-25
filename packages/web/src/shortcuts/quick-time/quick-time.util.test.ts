@@ -29,6 +29,11 @@ describe("resolveQuickTimeStart", () => {
     expect(resolve("1700", "21:00")).toBe("17:00");
   });
 
+  it("takes a leading-zero hour as morning, whatever the time of day", () => {
+    expect(resolve("0500", "15:00")).toBe("05:00");
+    expect(resolve("0900", "21:00")).toBe("09:00");
+  });
+
   it("reads 1200 as noon, not midnight, whatever the time of day", () => {
     expect(resolve("1200", "09:00")).toBe("12:00");
     expect(resolve("1200", "21:00")).toBe("12:00");
@@ -77,10 +82,8 @@ describe("quickTimeSequenceForHour", () => {
     expect(quickTimeSequenceForHour(9, at("09:00"), DAY)).toBe("0900");
   });
 
-  it("declines an hour no digits can reach from now", () => {
-    // In the evening, meridiem inheritance pulls "0900" to 9 PM, so the
-    // morning hour has no sequence of its own.
-    expect(quickTimeSequenceForHour(9, at("21:00"), DAY)).toBeNull();
+  it("advertises a morning hour in the evening", () => {
+    expect(quickTimeSequenceForHour(9, at("21:00"), DAY)).toBe("0900");
   });
 
   it("skips midnight, which has no useful shortcut", () => {

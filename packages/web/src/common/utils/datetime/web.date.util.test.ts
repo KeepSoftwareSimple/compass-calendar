@@ -493,6 +493,12 @@ describe("parseUserTime", () => {
     expect(result?.value).toBe("2:33 PM");
   });
 
+  it("leading-zero hour ignores currentValue meridiem", () => {
+    expect(parseUserTime("0500", "3:00 PM")?.value).toBe("5:00 AM");
+    expect(parseUserTime("05:00", "3:00 PM")?.value).toBe("5:00 AM");
+    expect(parseUserTime("500", "3:00 PM")?.value).toBe("5:00 PM");
+  });
+
   it("rejects empty input", () => {
     const result = parseUserTime("");
     expect(result).toBeNull();

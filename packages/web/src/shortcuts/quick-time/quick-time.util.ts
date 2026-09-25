@@ -29,7 +29,8 @@ const isTwelveOClockDigits = (digits: string) => {
  *
  * The 12-hour ambiguity ("1130" at 9am vs 9pm) is settled by `parseUserTime`'s
  * meridiem inheritance: passing `now` as its current value shifts an hour in
- * 1-11 into PM when now is PM, and leaves 13-23 ("1700") alone. "12" / "1200"
+ * 1-11 into PM when now is PM, and leaves 13-23 ("1700") and leading-zero
+ * hours ("0500") alone. "12" / "1200"
  * is the exception: parseUserTime would pull those to midnight while the
  * current time is AM, but the shortcut always lands them at noon. Midnight
  * has no advertised sequence.
@@ -58,9 +59,7 @@ export function resolveQuickTimeStart(
  * sequence reaches that hour from `now`.
  *
  * Round-tripping the 24-hour form through `resolveQuickTimeStart` is what makes
- * that guarantee: in the evening, meridiem inheritance pulls "0900" to 9 PM, so
- * the morning slots (already past) simply get no chip rather than one that
- * lands somewhere else.
+ * that guarantee: an advertised chip never lands somewhere else.
  */
 export function quickTimeSequenceForHour(
   hour: number,

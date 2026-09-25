@@ -118,9 +118,15 @@ export const parseUserTime = (
     hour = (hour % 12) + (meridiem === "p" ? 12 : 0);
   } else if (hour > 23) {
     return null;
-  } else if (currentValue && hour >= 1 && hour <= 12) {
-    // No meridiem: inherit it from the current value. Hours 0 and 13-23
-    // are unambiguous.
+  } else if (
+    currentValue &&
+    !hourText?.startsWith("0") &&
+    hour >= 1 &&
+    hour <= 12
+  ) {
+    // No meridiem: inherit it from the current value. A leading zero
+    // ("0500", "05:00") is 24-hour notation, and hours 0 and 13-23 are
+    // unambiguous.
     const current = getDayjsByTimeValue(currentValue);
     if (current.isValid()) {
       const currentIsPM = current.hour() >= 12;
