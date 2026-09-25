@@ -4,8 +4,13 @@ import {
   bookingError,
   toBookingErrorResponse,
 } from "@backend/booking/booking.error";
+import { AuthError } from "@backend/common/errors/auth/auth.errors";
+import {
+  error,
+  errorHandler,
+} from "@backend/common/errors/handlers/error.handler";
 import { EventMutationException } from "@backend/event/event.error";
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, spyOn } from "bun:test";
 
 describe("toBookingErrorResponse", () => {
   it("maps BookingException to its code and status", () => {
@@ -90,5 +95,27 @@ describe("toBookingErrorResponse", () => {
     const { status, body } = toBookingErrorResponse("boom");
     expect(status).toBe(Status.INTERNAL_SERVER);
     expect(body.code).toBe("INTERNAL_ERROR");
+  });
+
+  // A sync-service timeout surfaces here as a plain BaseError with no booking
+  // code, so it used to fall straight to `logger.error`, which
+  // PostHogExceptionTransport captures and the error-autofix pipeline turns
+  // into a GitHub issue for what is really upstream downtime. Routing through
+  // errorHandler.log lets logLevelForError downgrade this operational 503 to
+  // `warn` instead (see error.handler.test.ts's "logLevelForError" suite).
+  it("routes an unrecognized BaseError through errorHandler.log instead of logging it directly", () => {
+    const logSpy = spyOn(errorHandler, "log").mockImplementation(() => {});
+    const syncUnavailable = error(
+      AuthError.SyncConnectionUnavailable,
+      "Failed to list calendars from sync (timeout)",
+    );
+
+    const { status, body } = toBookingErrorResponse(syncUnavailable);
+
+    expect(status).toBe(Status.INTERNAL_SERVER);
+    expect(body.code).toBe("INTERNAL_ERROR");
+    expect(logSpy).toHaveBeenCalledWith(syncUnavailable);
+
+    logSpy.mockRestore();
   });
 });
