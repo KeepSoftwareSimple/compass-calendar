@@ -190,7 +190,7 @@ describe("self-host docker compose", () => {
     expect(compose).toContain(
       'booking-web: &booking-web-port "127.0.0.1:'.concat(
         "$",
-        '{BOOKING_WEB_PORT:-9081}:9081"',
+        '{BOOKING_WEB_PORT:-9082}:9081"',
       ),
     );
     const bookingBlock = compose
@@ -199,6 +199,7 @@ describe("self-host docker compose", () => {
     expect(bookingBlock).toContain("profiles: [booking]");
     expect(bookingBlock).toContain("apps/booking-web/Dockerfile");
     expect(bookingBlock).toContain("WEB_ROOT: /app/build/booking-web");
+    expect(bookingBlock).toContain("tmpfs:");
   });
 
   it("gates the passive sync service behind its own profile", () => {

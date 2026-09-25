@@ -1,6 +1,6 @@
 x-local-bindings:
   web: &web-port "127.0.0.1:${WEB_PORT:-9080}:9080"
-  booking-web: &booking-web-port "127.0.0.1:${BOOKING_WEB_PORT:-9081}:9081"
+  booking-web: &booking-web-port "127.0.0.1:${BOOKING_WEB_PORT:-9082}:9081"
   backend: &backend-port "127.0.0.1:${PORT:-3000}:3000"
   sync: &sync-port "127.0.0.1:${SYNC_PORT:-3010}:3010"
 
@@ -43,6 +43,8 @@ services:
     ports:
       - *booking-web-port
     read_only: true
+    tmpfs:
+      - /tmp
     restart: unless-stopped
 
   backend:

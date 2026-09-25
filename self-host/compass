@@ -255,7 +255,7 @@ case $command_name in
         ;;
     esac
     booking_port=$(strip_quotes "$(read_config_value bookingWeb.port)")
-    booking_port=${booking_port:-9081}
+    booking_port=${booking_port:-9082}
     booking_image=$(strip_quotes "$(read_config_value bookingWeb.image)")
     [ -n "$booking_image" ] || fail "Missing bookingWeb.image in $CONFIG_FILE. Deploy booking-web before running update-booking-web."
     prune_unused_images
@@ -266,14 +266,19 @@ case $command_name in
       fail "Docker Compose failed to start booking-web."
     fi
     prune_unused_images
+    booking_probe_url="http://127.0.0.1:${booking_port}/meet/"
     if command -v curl >/dev/null 2>&1; then
-      if curl -fsS "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
-        info "booking-web updated (${booking_image}) on port ${booking_port}"
-        exit 0
-      fi
+      status=$(curl -sS -o /dev/null -w '%{http_code}' "$booking_probe_url" 2>/dev/null) || status=""
+      case "$status" in
+        ''|5*) ;;
+        *)
+          info "booking-web updated (${booking_image}) on port ${booking_port}"
+          exit 0
+          ;;
+      esac
     fi
     if command -v wget >/dev/null 2>&1; then
-      if wget -q -O /dev/null "http://127.0.0.1:${booking_port}/" >/dev/null 2>&1; then
+      if wget -q -O /dev/null "$booking_probe_url" >/dev/null 2>&1; then
         info "booking-web updated (${booking_image}) on port ${booking_port}"
         exit 0
       fi

@@ -140,6 +140,7 @@ describe("compass update-booking-web", () => {
     expect(block).toContain("compose up -d booking-web --wait");
     expect(block).not.toContain("compose pull ||");
     expect(block).toContain("bookingWeb.image");
-    expect(block).toContain("127.0.0.1:${booking_port}/");
+    expect(block).toContain("/meet/");
+    expect(block).toContain("127.0.0.1:${booking_port}/meet/");
   });
 });

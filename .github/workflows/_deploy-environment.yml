@@ -312,19 +312,20 @@ jobs:
             printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
           } | ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
                 "umask 077 && mkdir -p ~/compass && cat > ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
-          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${RELEASE_TAG}}"
-          compose_url="https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml"
+          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-main}"
+          SELF_HOST_REPO="${GITHUB_REPOSITORY}"
+          compose_url="https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.yaml"
           if ! curl -fsSL "$compose_url" -o /dev/null; then
-            echo "Could not fetch self-host files from ${COMPOSE_GIT_REF}; falling back to ${RELEASE_TAG}."
+            echo "Could not fetch self-host files from ${SELF_HOST_REPO}@${COMPOSE_GIT_REF}; falling back to ${RELEASE_TAG}."
             COMPOSE_GIT_REF="${RELEASE_TAG}"
           fi
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.yaml -o ~/compass/compose.yaml"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.yaml -o ~/compass/compose.yaml"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml"
           # Install the shared parser before the helper that sources it. Each
           # download is promoted atomically so a network failure leaves the
           # previously working helper untouched.
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
           # Always enable the booking and sync profiles: their config is always
           # written above, and an explicit COMPOSE_PROFILES var (e.g.
           # `selfhosted`) would otherwise override the helper's
