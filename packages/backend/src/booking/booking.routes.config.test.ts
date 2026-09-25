@@ -23,18 +23,18 @@ describe("BookingRoutes registration", () => {
     CONFIG.NODE_ENV = originalNodeEnv;
   });
 
-  it.each([
-    NodeEnv.Test,
-    NodeEnv.Production,
-  ] as const)("registers /api/booking routes when NODE_ENV is %s", (nodeEnv) => {
-    CONFIG.NODE_ENV = nodeEnv;
-    const app = express();
-    new BookingRoutes(app);
-    expect(bookingRoutePaths(app)).toContain("/api/booking/page");
-    expect(bookingRoutePaths(app)).toContain(
-      "/api/booking/page/new-meetings/claim",
-    );
-    expect(bookingRoutePaths(app)).toContain("/api/booking/page/status");
-    expect(bookingRoutePaths(app)).toContain("/api/booking/pages/:slug");
-  });
+  it.each([NodeEnv.Test, NodeEnv.Production] as const)(
+    "registers /api/booking routes when NODE_ENV is %s",
+    (nodeEnv) => {
+      CONFIG.NODE_ENV = nodeEnv;
+      const app = express();
+      new BookingRoutes(app);
+      expect(bookingRoutePaths(app)).toContain("/api/booking/page");
+      expect(bookingRoutePaths(app)).toContain(
+        "/api/booking/page/new-meetings/claim",
+      );
+      expect(bookingRoutePaths(app)).toContain("/api/booking/page/status");
+      expect(bookingRoutePaths(app)).toContain("/api/booking/pages/:slug");
+    },
+  );
 });
