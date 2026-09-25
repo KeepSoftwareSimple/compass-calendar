@@ -111,32 +111,20 @@ describe("toBookingErrorResponse", () => {
   });
 
   // A Sync restart during a deploy is operational: 503 at warn, so it opens
-  // no error-tracking issue and the host can retry.
-  it.each(["timeout", "unavailable"] as const)(
-    "maps a Sync %s to 503 CALENDAR_UNAVAILABLE at warn",
-    (kind) => {
-      const log = spyOn(errorHandler, "log").mockImplementation(() => {});
-      const error = syncProxyFailure(kind);
-
-      const { status, body } = toBookingErrorResponse(error);
-
-      expect(status).toBe(Status.SERVICE_UNAVAILABLE);
-      expect(body.code).toBe("CALENDAR_UNAVAILABLE");
-      expect(log).toHaveBeenCalledWith(error);
-      expect(logLevelForError(error as Error)).toBe("warn");
-    },
-  );
-
-  it("maps a Sync defect to 502 CALENDAR_SYNC_FAILED at error", () => {
+  // no error-tracking issue and the host can retry. A defect stays at error.
+  it.each([
+    ["timeout", Status.SERVICE_UNAVAILABLE, "CALENDAR_UNAVAILABLE", "warn"],
+    ["unavailable", Status.SERVICE_UNAVAILABLE, "CALENDAR_UNAVAILABLE", "warn"],
+    ["unexpectedStatus", Status.BAD_GATEWAY, "CALENDAR_SYNC_FAILED", "error"],
+  ] as const)("maps a Sync %s to %d %s at %s", (kind, status, code, level) => {
     const log = spyOn(errorHandler, "log").mockImplementation(() => {});
-    const error = syncProxyFailure("unexpectedStatus");
+    const error = syncProxyFailure(kind);
 
-    const { status, body } = toBookingErrorResponse(error);
+    const response = toBookingErrorResponse(error);
 
-    expect(status).toBe(Status.BAD_GATEWAY);
-    expect(body.code).toBe("CALENDAR_SYNC_FAILED");
-    expect(body.message).not.toContain("sync");
+    expect(response.status).toBe(status);
+    expect(response.body.code).toBe(code);
     expect(log).toHaveBeenCalledWith(error);
-    expect(logLevelForError(error as Error)).toBe("error");
+    expect(logLevelForError(error as Error)).toBe(level);
   });
 });

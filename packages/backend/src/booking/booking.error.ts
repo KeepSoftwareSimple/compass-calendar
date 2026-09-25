@@ -3,7 +3,7 @@ import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import { errorHandler } from "@backend/common/errors/handlers/error.handler";
-import { isSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
+import { SyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
 import { EventMutationException } from "@backend/event/event.error";
 
 const logger = Logger("app:booking.error");
@@ -44,6 +44,12 @@ const STATUS_BY_CODE: Record<BookingErrorCode, Status> = {
   CALENDAR_SYNC_FAILED: Status.BAD_GATEWAY,
   INTERNAL_ERROR: Status.INTERNAL_SERVER,
 };
+
+const SYNC_FAILURE_MESSAGE = {
+  CALENDAR_UNAVAILABLE:
+    "Calendar is not reachable right now. Try again shortly.",
+  CALENDAR_SYNC_FAILED: "Could not check the calendar. Please try again.",
+} as const;
 
 export class BookingException extends BaseError {
   constructor(
@@ -94,24 +100,17 @@ export const toBookingErrorResponse = (
     };
   }
 
-  if (isSyncProxyFailure(e)) {
+  if (e instanceof SyncProxyFailure) {
     // Logs a Sync restart (503) at warn and a Sync defect (502) at error.
     errorHandler.log(e);
-    return e.statusCode === Status.SERVICE_UNAVAILABLE
-      ? {
-          status: STATUS_BY_CODE.CALENDAR_UNAVAILABLE,
-          body: {
-            code: "CALENDAR_UNAVAILABLE",
-            message: "Calendar is not reachable right now. Try again shortly.",
-          },
-        }
-      : {
-          status: STATUS_BY_CODE.CALENDAR_SYNC_FAILED,
-          body: {
-            code: "CALENDAR_SYNC_FAILED",
-            message: "Could not check the calendar. Please try again.",
-          },
-        };
+    const code =
+      e.statusCode === Status.SERVICE_UNAVAILABLE
+        ? "CALENDAR_UNAVAILABLE"
+        : "CALENDAR_SYNC_FAILED";
+    return {
+      status: STATUS_BY_CODE[code],
+      body: { code, message: SYNC_FAILURE_MESSAGE[code] },
+    };
   }
 
   if (e instanceof BaseError && e.code) {
