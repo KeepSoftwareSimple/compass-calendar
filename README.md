@@ -22,7 +22,7 @@ Cool things you can do with in Compass
 - Find the perfect slot for an event with your keyboard
 - Do everything from the keyboard
 - Google Calendar and Microsoft (Outlook) calendar sync
-- Create a public booking page at `/book/:username`
+- Create a public booking page at `/meet/:username`
 
 Things you can't do in Compass Calendar:
 
