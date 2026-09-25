@@ -16,22 +16,18 @@ function bookingRoutePaths(app: express.Express): string[] {
   });
 }
 
-describe("BookingRoutes production gate", () => {
+describe("BookingRoutes registration", () => {
   const originalNodeEnv = CONFIG.NODE_ENV;
 
   afterEach(() => {
     CONFIG.NODE_ENV = originalNodeEnv;
   });
 
-  it("does not register /api/booking routes in production", () => {
-    CONFIG.NODE_ENV = NodeEnv.Production;
-    const app = express();
-    new BookingRoutes(app);
-    expect(bookingRoutePaths(app)).toEqual([]);
-  });
-
-  it("registers /api/booking routes outside production", () => {
-    CONFIG.NODE_ENV = NodeEnv.Test;
+  it.each([
+    NodeEnv.Test,
+    NodeEnv.Production,
+  ] as const)("registers /api/booking routes when NODE_ENV is %s", (nodeEnv) => {
+    CONFIG.NODE_ENV = nodeEnv;
     const app = express();
     new BookingRoutes(app);
     expect(bookingRoutePaths(app)).toContain("/api/booking/page");

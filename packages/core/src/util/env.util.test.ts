@@ -17,15 +17,12 @@ describe("isDev", () => {
 });
 
 describe("isBookingEnabled", () => {
-  it("is on in development, staging, and tests", () => {
+  it("is on in every runtime environment", () => {
     expect(isBookingEnabled(NodeEnv.Development)).toBe(true);
     expect(isBookingEnabled(NodeEnv.Staging)).toBe(true);
     expect(isBookingEnabled(NodeEnv.Test)).toBe(true);
-  });
-
-  it("is off in production", () => {
-    expect(isBookingEnabled(NodeEnv.Production)).toBe(false);
-    expect(isBookingEnabled("production")).toBe(false);
+    expect(isBookingEnabled(NodeEnv.Production)).toBe(true);
+    expect(isBookingEnabled("production")).toBe(true);
   });
 });
 
