@@ -153,9 +153,10 @@ run with env `AGENT_LOOP_MAX_LINES`.
 ## Staging smoke
 
 `GET https://staging.compasscalendar.com`, the legacy book homepage and
-a known slug, `/meet/`, and `/meet/tylerdeane` must not return 5xx. 404
-is success (page disabled or not yet shipped). The smoke script never
-logs in.
+a known slug, and `/meet/` must not return 5xx (404 is fine there).
+`/meet/tylerdeane` must return 200: a 404 means the edge is not routing
+`/meet` to booking-web, which is exactly the failure this catches. The
+smoke script never logs in.
 
 Authenticated Settings is out of unattended smoke.
 The `qa-test-staging` skill remains the signed-in sweep when a human is present

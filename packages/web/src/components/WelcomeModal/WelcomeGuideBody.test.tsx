@@ -146,7 +146,7 @@ describe("WelcomeGuideBody", () => {
     );
     expect(screen.getByRole("link", { name: "Pricing" })).toHaveAttribute(
       "href",
-      "https://compasscalendar.com/pricing",
+      "https://www.compasscalendar.com/pricing",
     );
     expect(screen.getByRole("link", { name: "Shortcuts" })).toHaveAttribute(
       "href",

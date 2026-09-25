@@ -1044,37 +1044,6 @@ describe("BookingSettingsSection", () => {
     expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
   });
 
-  it("k on the hours step advances and j returns", async () => {
-    const user = userEvent.setup({ delay: null });
-    userMetadataActions.set(healthyGoogleMetadata);
-
-    server.use(
-      http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
-      http.put(bookingPageUrl, async ({ request }) => {
-        const body = await request.json();
-        return HttpResponse.json(putSavedPage(body as Record<string, unknown>));
-      }),
-    );
-
-    const { wrapper, queryClient } = createStoreWrapper();
-    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
-    render(
-      <HotkeysProvider>
-        <BookingSettingsSection />
-      </HotkeysProvider>,
-      { wrapper },
-    );
-
-    await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
-
-    await user.keyboard("k");
-    expect(await screen.findByText("Step 3 of 4")).toBeInTheDocument();
-
-    await user.keyboard("j");
-    expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
-  });
-
   it("Enter inside the duration radiogroup does not advance while Space selects", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
@@ -1097,7 +1066,7 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     expect(await screen.findByText("Step 3 of 4")).toBeInTheDocument();
 
     const durationGroup = screen.getByRole("radiogroup", {
@@ -1143,8 +1112,8 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     expect(screen.getByText("Step 4 of 4")).toBeInTheDocument();
     expect(screen.getByText("Timezone")).toBeInTheDocument();
     expect(screen.getByText("UTC (UTC)")).toBeInTheDocument();
@@ -1204,8 +1173,8 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     expect(await screen.findByText("Step 4 of 5")).toBeInTheDocument();
     expect(screen.getByLabelText("Destination calendar")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
@@ -1244,8 +1213,8 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     expect(await screen.findByText("Step 4 of 5")).toBeInTheDocument();
     expect(
       screen.getByText(
@@ -1290,8 +1259,8 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     await user.click(
       await screen.findByRole("button", { name: /Turn on and copy link/ }),
     );
@@ -1300,7 +1269,7 @@ describe("BookingSettingsSection", () => {
       BOOKING_SAVE_ERROR_COPY.AVAILABILITY_REQUIRED,
     );
     expect(screen.getByText("Step 4 of 4")).toBeInTheDocument();
-    await user.keyboard("j");
+    await user.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByText("Step 3 of 4")).toBeInTheDocument();
   });
 
@@ -1605,8 +1574,8 @@ describe("BookingSettingsSection", () => {
     );
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
-    await user.keyboard("k");
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     await user.click(
       await screen.findByRole("button", { name: /Turn on and copy link/ }),
     );

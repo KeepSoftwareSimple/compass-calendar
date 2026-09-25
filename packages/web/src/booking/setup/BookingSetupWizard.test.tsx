@@ -125,15 +125,12 @@ describe("BookingSetupWizard", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("labels keyboard hint chips", () => {
+  it("shows shortcuts on the buttons instead of a hint row", () => {
     renderWizard({ setupStep: "hours", writableCalendarCount: 1 });
 
-    const hintRow = screen.getByText("Next").closest(".text-text-muted");
-    expect(hintRow).not.toBeNull();
-    const hints = within(hintRow as HTMLElement);
-    expect(hints.getByText("Continue")).toBeInTheDocument();
-    expect(hints.getByText("Next")).toBeInTheDocument();
-    expect(hints.getAllByText("Back")).toHaveLength(2);
+    const back = screen.getByRole("button", { name: /^Back/ });
+    expect(within(back).getByText("Esc")).toBeInTheDocument();
+    expect(screen.queryByText("Next")).not.toBeInTheDocument();
   });
 
   it("focuses the address field after a SLUG_TAKEN error", async () => {
