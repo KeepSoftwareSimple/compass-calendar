@@ -19,6 +19,7 @@ export const BookingErrorCodeSchema = z.enum([
   "SLOT_UNAVAILABLE",
   "RESERVATION_CONFLICT",
   "RESERVATION_NOT_FOUND",
+  "TEMPORARILY_UNAVAILABLE",
   "INTERNAL_ERROR",
 ]);
 export type BookingErrorCode = z.infer<typeof BookingErrorCodeSchema>;
@@ -36,6 +37,7 @@ const STATUS_BY_CODE: Record<BookingErrorCode, Status> = {
   SLOT_UNAVAILABLE: Status.CONFLICT,
   RESERVATION_CONFLICT: Status.CONFLICT,
   RESERVATION_NOT_FOUND: Status.NOT_FOUND,
+  TEMPORARILY_UNAVAILABLE: Status.SERVICE_UNAVAILABLE,
   INTERNAL_ERROR: Status.INTERNAL_SERVER,
 };
 
@@ -96,6 +98,26 @@ export const toBookingErrorResponse = (
         body: { code, message: e.description },
       };
     }
+  }
+
+  // Mirrors logLevelForError: an operational 503 (a Sync restart, maintenance)
+  // is upstream downtime the caller retries through, so log it at `warn` and
+  // keep it out of error tracking.
+  if (
+    e instanceof BaseError &&
+    e.isOperational &&
+    e.statusCode === Status.SERVICE_UNAVAILABLE
+  ) {
+    logger.warn(
+      `Booking dependency unavailable: ${e.result}: ${e.description}`,
+    );
+    return {
+      status: STATUS_BY_CODE.TEMPORARILY_UNAVAILABLE,
+      body: {
+        code: "TEMPORARILY_UNAVAILABLE",
+        message: "Booking is temporarily unavailable. Try again shortly.",
+      },
+    };
   }
 
   logger.error(e instanceof Error ? e : `Unexpected booking error: ${e}`);

@@ -1,13 +1,19 @@
 import { type ZodError, z } from "zod/v4";
 import { Status } from "@core/errors/status.codes";
+import { PostHogExceptionTransport } from "@core/logger/posthog-exception.transport";
 import {
   bookingError,
   toBookingErrorResponse,
 } from "@backend/booking/booking.error";
+import { throwSyncProxyFailure } from "@backend/common/services/sync-service/sync-proxy-error";
 import { EventMutationException } from "@backend/event/event.error";
-import { describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 describe("toBookingErrorResponse", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
   it("maps BookingException to its code and status", () => {
     const { status, body } = toBookingErrorResponse(
       bookingError("SLOT_UNAVAILABLE", "Selected slot is no longer available"),
@@ -75,6 +81,36 @@ describe("toBookingErrorResponse", () => {
       code: "RESERVATION_CONFLICT",
       message: "This meeting was changed. Try again.",
     });
+  });
+
+  it("maps a sync timeout to a retryable 503 kept out of error tracking", () => {
+    const captured = spyOn(PostHogExceptionTransport.prototype, "log");
+    let thrown: unknown;
+    try {
+      throwSyncProxyFailure(
+        "timeout",
+        "Failed to list calendars from sync (timeout)",
+      );
+    } catch (e) {
+      thrown = e;
+    }
+
+    const { status, body } = toBookingErrorResponse(thrown);
+
+    expect(status).toBe(Status.SERVICE_UNAVAILABLE);
+    expect(body).toEqual({
+      code: "TEMPORARILY_UNAVAILABLE",
+      message: "Booking is temporarily unavailable. Try again shortly.",
+    });
+    expect(captured).not.toHaveBeenCalled();
+  });
+
+  it("still sends a non-operational failure to error tracking", () => {
+    const captured = spyOn(PostHogExceptionTransport.prototype, "log");
+
+    toBookingErrorResponse(new Error("unexpected"));
+
+    expect(captured).toHaveBeenCalled();
   });
 
   it("returns INTERNAL_ERROR without echoing the internal message", () => {
