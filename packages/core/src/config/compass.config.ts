@@ -27,6 +27,15 @@ const CompassConfigSchema = z
       port: z.union([z.string(), z.number()]).optional(),
       url: z.string(),
     }),
+    // Public booking guest app (Docker compose profile `booking`). Optional
+    // until booking-web runs beside calendar-web; self-host and deploy scripts
+    // read bookingWeb.image and bookingWeb.port from the YAML directly.
+    bookingWeb: z
+      .object({
+        port: z.union([z.string(), z.number()]).optional(),
+        image: z.string().optional(),
+      })
+      .nullish(),
     backend: z.object({
       port: z.union([z.string(), z.number()]).optional(),
       apiUrl: z.string(),
