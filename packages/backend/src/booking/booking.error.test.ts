@@ -10,9 +10,13 @@ import {
   errorHandler,
 } from "@backend/common/errors/handlers/error.handler";
 import { EventMutationException } from "@backend/event/event.error";
-import { describe, expect, it, spyOn } from "bun:test";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 describe("toBookingErrorResponse", () => {
+  afterEach(() => {
+    mock.restore();
+  });
+
   it("maps BookingException to its code and status", () => {
     const { status, body } = toBookingErrorResponse(
       bookingError("SLOT_UNAVAILABLE", "Selected slot is no longer available"),
@@ -115,7 +119,5 @@ describe("toBookingErrorResponse", () => {
     expect(status).toBe(Status.INTERNAL_SERVER);
     expect(body.code).toBe("INTERNAL_ERROR");
     expect(logSpy).toHaveBeenCalledWith(syncUnavailable);
-
-    logSpy.mockRestore();
   });
 });
