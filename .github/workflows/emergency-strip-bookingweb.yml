@@ -1,0 +1,124 @@
+name: Emergency strip bookingWeb from host compass.yaml
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment (production or staging-cloud VPS)
+        required: true
+        type: choice
+        options:
+          - production
+          - staging-cloud
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    name: Strip bookingWeb on ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: emergency-strip-bookingweb-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out workflow scripts
+        uses: actions/checkout@v7
+
+      - name: Strip bookingWeb and restart calendar stack
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          TARGET_ENV: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          scp -i ~/.ssh/deploy_key \
+            .github/scripts/emergency-strip-bookingweb-yaml.py \
+            "$SSH_USER@$SSH_HOST:~/compass/emergency-strip-bookingweb-yaml.py"
+
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$SSH_HOST" bash -s <<'REMOTE'
+          set -euo pipefail
+          CONFIG=~/compass/compass.yaml
+          COMPOSE_DIR=~/compass
+          STRIP_SCRIPT=~/compass/emergency-strip-bookingweb-yaml.py
+
+          if [ ! -f "$CONFIG" ]; then
+            echo "Missing $CONFIG" >&2
+            exit 1
+          fi
+
+          backup="${CONFIG}.bak.emergency-strip-bookingweb.$(date -u +%Y%m%d%H%M%S)"
+          cp "$CONFIG" "$backup"
+          echo "Backed up compass.yaml to ${backup}"
+
+          python3 "$STRIP_SCRIPT" --in-place "$CONFIG"
+
+          cd "$COMPOSE_DIR"
+          [ -f compose.yaml ] || { echo "Missing compose.yaml" >&2; exit 1; }
+
+          # Do not run ./compass update (pull/regenerate). Restart core API only.
+          booking_stopped=0
+          if docker compose --profile booking ps -q booking-web 2>/dev/null | grep -q .; then
+            echo "Stopping booking-web (bookingWeb removed from schema until fix ships)..."
+            docker compose --profile booking stop booking-web || true
+            booking_stopped=1
+          fi
+
+          export COMPOSE_PROFILES="${COMPOSE_PROFILES:-sync}"
+          case ",${COMPOSE_PROFILES}," in
+            *,booking,*)
+              COMPOSE_PROFILES=$(printf '%s' "$COMPOSE_PROFILES" | tr ',' '\n' | grep -vx booking | paste -sd, -)
+              export COMPOSE_PROFILES
+              ;;
+          esac
+
+          if [ -x ./compass ]; then
+            ./compass restart
+          else
+            docker compose restart backend sync web
+          fi
+
+          echo "--- docker compose ps ---"
+          docker compose ps -a || true
+
+          echo "--- backend health (localhost) ---"
+          health_status=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/health || echo "000")
+          echo "http://127.0.0.1:3000/api/health -> ${health_status}"
+          if [ "$health_status" != "200" ]; then
+            echo "--- recent backend logs ---"
+            docker compose logs --tail=80 backend || true
+            exit 1
+          fi
+
+          echo "booking_web_stopped=${booking_stopped}"
+          REMOTE
+
+          case "$TARGET_ENV" in
+            production)
+              public_url="https://compasscalendar.com/api/health"
+              ;;
+            staging-cloud)
+              public_url="https://staging.compasscalendar.com/api/health"
+              ;;
+            *)
+              echo "Unknown environment: $TARGET_ENV" >&2
+              exit 1
+              ;;
+          esac
+
+          public_status=$(curl -sS -o /dev/null -w '%{http_code}' "$public_url" || echo "000")
+          echo "${public_url} -> ${public_status}"
+          if [ "$public_status" != "200" ]; then
+            echo "Public health check failed" >&2
+            exit 1
+          fi
+
+          echo "Restore complete for ${TARGET_ENV}"
