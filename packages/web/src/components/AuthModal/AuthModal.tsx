@@ -76,7 +76,12 @@ export const AuthModal: FC = () => {
   const isLoginView =
     currentView === "login" || currentView === "loginAfterReset";
   const search = useSearch({ from: "__root__" });
-  const [authToken] = useState(() => getInitialAuthToken(search));
+  const authTokenRef = useRef<string | undefined>(undefined);
+  const authTokenFromSearch = getInitialAuthToken(search);
+  if (authTokenRef.current === undefined && authTokenFromSearch) {
+    authTokenRef.current = authTokenFromSearch;
+  }
+  const authToken = authTokenRef.current;
   const {
     isSubmitting,
     submitError,

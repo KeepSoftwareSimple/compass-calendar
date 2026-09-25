@@ -1133,10 +1133,13 @@ describe("URL Parameter Support", () => {
     // modal (auth stays "reset" so the modal itself stays open) before the
     // user finishes the form.
     await act(async () => {
-      await router.navigate({
+      void router.navigate({
         to: ".",
         search: (prev) => ({ auth: prev.auth }),
       });
+    });
+    await waitFor(() => {
+      expect(router.state.status).toBe("idle");
     });
 
     await user.type(

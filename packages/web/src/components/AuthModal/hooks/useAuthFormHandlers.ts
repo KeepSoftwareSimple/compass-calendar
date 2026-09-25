@@ -1,5 +1,5 @@
-import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type AnyRouter, useRouter, useSearch } from "@tanstack/react-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getEmailPasswordPort } from "@web/auth/compass/hooks/emailpassword.port";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -15,7 +15,20 @@ import {
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
-import { type AuthView } from "./useAuthModal";
+import { type AuthSearch, type AuthView } from "./useAuthModal";
+
+async function commitAuthSearch(
+  router: AnyRouter,
+  search: (prev: AuthSearch) => AuthSearch,
+) {
+  const location = router.buildLocation({
+    to: ".",
+    search,
+    _includeValidateSearch: true,
+  });
+  router.history.replace(location.href, location.state);
+  await router.load({ sync: true });
+}
 
 interface UseAuthFormHandlersOptions {
   currentView: AuthView;
@@ -40,15 +53,16 @@ export function useAuthFormHandlers({
   setView,
 }: UseAuthFormHandlersOptions): UseAuthFormHandlersResult {
   const completeAuthentication = useCompleteAuthentication();
-  const navigate = useNavigate();
+  const router = useRouter();
   const search = useSearch({ from: "__root__" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: capture the token once, before handleResetPassword removes it from the URL on success.
-  const initialAuthToken = useMemo(
-    () => authToken || search.token || undefined,
-    [authToken],
-  );
+  const initialAuthTokenRef = useRef<string | undefined>(undefined);
+  const tokenCandidate = authToken || search.token || undefined;
+  if (initialAuthTokenRef.current === undefined && tokenCandidate) {
+    initialAuthTokenRef.current = tokenCandidate;
+  }
+  const initialAuthToken = initialAuthTokenRef.current;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: submit errors should clear when the auth modal changes view.
   useEffect(() => {
@@ -185,11 +199,7 @@ export function useAuthFormHandlers({
         const token = initialAuthToken;
 
         if (token) {
-          await navigate({
-            to: ".",
-            replace: true,
-            search: (prev) => ({ ...prev, token }),
-          });
+          await commitAuthSearch(router, (prev) => ({ ...prev, token }));
         }
         const response = await getEmailPasswordPort().submitNewPassword({
           formFields: [{ id: "password", value: data.password }],
@@ -197,13 +207,9 @@ export function useAuthFormHandlers({
 
         switch (response.status) {
           case "OK":
-            await navigate({
-              to: ".",
-              replace: true,
-              search: (prev) => {
-                const { token: _token, ...rest } = prev;
-                return rest;
-              },
+            await commitAuthSearch(router, (prev) => {
+              const { token: _token, ...rest } = prev;
+              return rest;
             });
             setView("loginAfterReset");
             return;
@@ -226,7 +232,7 @@ export function useAuthFormHandlers({
         setIsSubmitting(false);
       }
     },
-    [initialAuthToken, navigate, setView],
+    [initialAuthToken, router, setView],
   );
 
   return {

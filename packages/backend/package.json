@@ -28,9 +28,9 @@
     "@types/node": "^24.7.2",
     "@types/qs": "^6.15.1",
     "@types/supertest": "^7.2.1",
-    "bson": "^7.2.0",
+    "bson": "^7.3.3",
     "mongodb-memory-server": "^9.2.0",
     "qs": "^6.16.0",
-    "supertest": "^7.1.0"
+    "supertest": "^7.3.0"
   }
 }
