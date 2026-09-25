@@ -94,6 +94,34 @@ describe("UpNextBanner", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
+  it("shows Join and V when the meeting link lives only in the description", () => {
+    const start = dayjs().add(2, "minute");
+    render(<UpNextBanner />, {
+      events: [
+        createMockEvent({
+          id: EventIdSchema.parse(SOON_EVENT_ID),
+          content: {
+            kind: "details",
+            title: "Standup",
+            description:
+              'Join <a href="https://zoom.us/j/123456789">Zoom</a> from the invite.',
+            conference: null,
+          },
+          schedule: EventScheduleSchema.parse({
+            kind: "timed",
+            start: start.format(),
+            end: start.add(30, "minute").format(),
+            timeZone: "UTC",
+          }),
+        }),
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Join" })).toBeInTheDocument();
+    expect(screen.getByText("V")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open" })).toBeNull();
+  });
+
   it("shows a Join action with the meeting link instead of Open", () => {
     render(<UpNextBanner />, {
       events: [

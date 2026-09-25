@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { useMinuteTick } from "@web/common/hooks/useMinuteTick";
+import { resolveUpNextJoinUrl } from "@web/components/Sidebar/UpNextCard/resolve-up-next-join-url";
 import { upNextAvailabilityActions } from "@web/components/Sidebar/UpNextCard/up-next.availability.store";
 import { editGridEventDraft } from "@web/events/grid-event-draft.adapter";
 import { useDayEventViewModel } from "@web/events/queries/useDayEventsQuery";
@@ -75,7 +76,7 @@ export function useUpNextEvent() {
     [sourceEvent],
   );
 
-  const conferenceUrl = upNext?.conference?.url;
+  const conferenceUrl = resolveUpNextJoinUrl(upNext, sourceEvent);
 
   useEffect(() => {
     upNextAvailabilityActions.publish({
