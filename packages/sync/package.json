@@ -14,10 +14,10 @@
     "google-auth-library": "^11.1.0",
     "ical.js": "^2.2.1",
     "jose": "^5.9.6",
-    "mongodb": "^7.2.0",
+    "mongodb": "^7.6.0",
     "rrule": "^2.7.2",
     "tslib": "^2.4.0",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
