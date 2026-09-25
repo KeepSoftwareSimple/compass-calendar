@@ -8,6 +8,7 @@ import {
 } from "@booking-web/booking/PublicBookingStatusMessage";
 import { usePublicBookingReservationQuery } from "@booking-web/booking/public-booking.query";
 import {
+  PUBLIC_BOOKING_RESERVATION_LOADING,
   type PublicBookingReservationView,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
@@ -46,11 +47,6 @@ const BOOKING_CANCEL_FAILED = {
   description: "Please try again or use the link from your calendar invite.",
 } as const;
 
-const BOOKING_LOADING = {
-  title: "Loading meeting",
-  description: "One moment while we load this meeting.",
-} as const;
-
 const resolveCancelPageView = (
   canLoad: boolean,
   action: CancelActionState,
@@ -62,7 +58,7 @@ const resolveCancelPageView = (
   if (action === "cancelled") return { kind: "status", ...BOOKING_CANCELED };
   if (action === "error") return { kind: "status", ...BOOKING_CANCEL_FAILED };
   return resolvePublicBookingReservationView(reservationQuery, {
-    loading: BOOKING_LOADING,
+    loading: PUBLIC_BOOKING_RESERVATION_LOADING,
     notFound: BOOKING_NOT_FOUND,
     loadFailed: BOOKING_CANCEL_FAILED,
     cancelled: BOOKING_CANCELED,
