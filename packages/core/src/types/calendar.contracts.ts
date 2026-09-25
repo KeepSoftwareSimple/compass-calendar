@@ -42,6 +42,12 @@ export type CalendarConferenceKind = z.infer<
   typeof CalendarConferenceKindSchema
 >;
 
+/** User-facing product name for each conference link kind. */
+export const CONFERENCE_KIND_LABEL: Record<CalendarConferenceKind, string> = {
+  meet: "Google Meet",
+  teams: "Microsoft Teams",
+};
+
 export function conferenceKindsForConference(
   conference: CalendarConference,
 ): readonly CalendarConferenceKind[] {

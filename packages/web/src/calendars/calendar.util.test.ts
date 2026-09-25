@@ -8,6 +8,7 @@ import {
   accountKey,
   canInviteOnCalendar,
   compareCalendars,
+  creatableConferenceKind,
   emailsSharedAcrossProviders,
   getDefaultTargetCalendar,
   getLocalCalendar,
@@ -141,6 +142,36 @@ describe("canInviteOnCalendar", () => {
 
   it("is false for an undefined calendar", () => {
     expect(canInviteOnCalendar(undefined)).toBe(false);
+  });
+});
+
+describe("creatableConferenceKind", () => {
+  it("returns the calendar's first conference kind when it is writable", () => {
+    expect(
+      creatableConferenceKind(
+        makeCalendar({
+          capabilities: {
+            ...getCalendarCapabilities("owner"),
+            conferenceKinds: ["meet"],
+          },
+        }),
+      ),
+    ).toBe("meet");
+  });
+
+  it("is null when the calendar has no conference kinds, is read-only, or is missing", () => {
+    expect(creatableConferenceKind(makeCalendar({}))).toBeNull();
+    expect(
+      creatableConferenceKind(
+        makeCalendar({
+          capabilities: {
+            ...getCalendarCapabilities("reader"),
+            conferenceKinds: ["meet"],
+          },
+        }),
+      ),
+    ).toBeNull();
+    expect(creatableConferenceKind(undefined)).toBeNull();
   });
 });
 

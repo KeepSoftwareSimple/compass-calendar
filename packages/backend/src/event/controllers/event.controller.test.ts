@@ -1068,6 +1068,166 @@ describe("EventController", () => {
     expect(submitCommand).not.toHaveBeenCalled();
   });
 
+  describe("createConference", () => {
+    const confirmedSubmit = () =>
+      mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: {
+            command: { outcome: { state: "confirmed" as const } },
+          },
+        }),
+      );
+
+    const storedInstance = (
+      eventId: string,
+      calendarId: string,
+      conference: { url: string; label: string | null } | null,
+    ) => ({
+      eventId,
+      calendarId,
+      content: {
+        title: "Lunch",
+        description: "",
+        location: null,
+        organizer: null,
+        attendees: [] as const,
+        conference,
+      },
+      schedule: {
+        kind: "timed" as const,
+        start: "2026-07-14T12:00:00.000Z",
+        end: "2026-07-14T13:00:00.000Z",
+        timeZone: "UTC",
+      },
+      recurrence: { kind: "single" as const },
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    });
+
+    it("re-reads the created event so the response carries the minted link", async () => {
+      const body = { ...sampleCreateBody(), createConference: true };
+      const listFullEvents = mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: {
+            instances: [
+              storedInstance(body.id, body.calendarId, {
+                url: "https://meet.google.com/abc-defg-hij",
+                label: "Google Meet",
+              }),
+            ],
+            nextCursor: null,
+          },
+        }),
+      );
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        submitCommand: confirmedSubmit(),
+        listFullEvents,
+      } as never);
+
+      const { res, json } = jsonRes();
+      await eventController.create(sessionReq(objectId(), { body }), res);
+
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+      expect(listFullEvents).toHaveBeenCalledTimes(1);
+      const query = (listFullEvents.mock.calls as unknown[][])[0]?.[1] as {
+        calendarIds: string[];
+        start: string;
+        end: string;
+      };
+      expect(query.calendarIds).toEqual([body.calendarId]);
+      expect(query.start).toBe("2026-07-14T12:00:00.000Z");
+      expect(query.end).toBe("2026-07-14T13:00:00.000Z");
+      expect(json).toHaveBeenCalledWith({
+        event: expect.objectContaining({
+          id: body.id,
+          content: expect.objectContaining({
+            conference: {
+              url: "https://meet.google.com/abc-defg-hij",
+              label: "Google Meet",
+            },
+          }),
+        }),
+      });
+    });
+
+    it("widens a zero-duration window so sync accepts the re-read range", async () => {
+      const body = {
+        ...sampleCreateBody(),
+        createConference: true,
+        schedule: {
+          kind: "timed",
+          start: "2026-07-14T12:00:00.000Z",
+          end: "2026-07-14T12:00:00.000Z",
+          timeZone: "UTC",
+        },
+      };
+      const listFullEvents = mock(() =>
+        Promise.resolve({
+          ok: true as const,
+          value: { instances: [], nextCursor: null },
+        }),
+      );
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        submitCommand: confirmedSubmit(),
+        listFullEvents,
+      } as never);
+
+      const { res } = jsonRes();
+      await eventController.create(sessionReq(objectId(), { body }), res);
+
+      const query = (listFullEvents.mock.calls as unknown[][])[0]?.[1] as {
+        start: string;
+        end: string;
+      };
+      expect(query.start).toBe("2026-07-14T12:00:00.000Z");
+      expect(query.end).toBe("2026-07-14T12:01:00.000Z");
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+    });
+
+    it("skips the re-read when no link was requested", async () => {
+      const listFullEvents = mock();
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        submitCommand: confirmedSubmit(),
+        listFullEvents,
+      } as never);
+
+      const { res, json } = await createViaSync();
+
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+      expect(listFullEvents).not.toHaveBeenCalled();
+      expect(json).toHaveBeenCalledWith({
+        event: expect.objectContaining({
+          content: expect.not.objectContaining({
+            conference: expect.anything(),
+          }),
+        }),
+      });
+    });
+
+    it("still answers 200 with the pre-submit event when the re-read fails", async () => {
+      const body = { ...sampleCreateBody(), createConference: true };
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        submitCommand: confirmedSubmit(),
+        listFullEvents: mock(() =>
+          Promise.resolve({
+            ok: false as const,
+            error: { kind: "unavailable" as const },
+          }),
+        ),
+      } as never);
+
+      const { res, json } = jsonRes();
+      await eventController.create(sessionReq(objectId(), { body }), res);
+
+      expect(res.status).toHaveBeenCalledWith(Status.OK);
+      expect(json).toHaveBeenCalledWith({
+        event: expect.objectContaining({ id: body.id }),
+      });
+    });
+  });
+
   it("maps authorizationRevoked to 410 CONNECTION_REVOKED (not retryable)", async () => {
     mockSyncCommandFailure("authorizationRevoked");
     const { res, json } = await createViaSync();

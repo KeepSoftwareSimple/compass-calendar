@@ -36,7 +36,10 @@ afterAll(() => {
 });
 
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
-import { EVENT_DELETED_TOAST_ID } from "@web/common/constants/toast.constants";
+import {
+  CONFERENCE_LINK_ADDED_TOAST_ID,
+  EVENT_DELETED_TOAST_ID,
+} from "@web/common/constants/toast.constants";
 import { RECURRENCE_SCOPE_TOAST_ID } from "@web/common/utils/toast/recurrence-scope.toast";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
@@ -156,7 +159,15 @@ const pendingControl = () => {
   };
 };
 
-const setup = (source: EventRepositorySource = "local") => {
+const setup = (
+  source: EventRepositorySource = "local",
+  {
+    createdEvent,
+  }: {
+    /** What the repository answers a create with; defaults to a bare echo. */
+    createdEvent?: (input: CreateEventInput) => Event;
+  } = {},
+) => {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
@@ -167,7 +178,10 @@ const setup = (source: EventRepositorySource = "local") => {
     create: async (input: CreateEventInput) => {
       calls.push({ method: "create", value: input });
       await pending.wait();
-      return event({ id: (input.id ?? event().id) as EventId });
+      return (
+        createdEvent?.(input) ??
+        event({ id: (input.id ?? event().id) as EventId })
+      );
     },
     replace: async (id: EventId, input: ReplaceEventInput) => {
       calls.push({ method: "replace", value: { id, input } });
@@ -2381,6 +2395,7 @@ describe("undo history recording", () => {
       expect(track).toHaveBeenCalledWith("event_created", {
         event_source: "local",
         recurrence: "single",
+        with_conference: false,
       });
     });
   });
@@ -2495,5 +2510,112 @@ describe("undo history recording", () => {
     });
     // The event still exists server-side, so there is nothing to recreate.
     expect(context.calls.some(({ method }) => method === "create")).toBe(false);
+  });
+
+  describe("meeting link creates", () => {
+    const conference = {
+      url: "https://meet.google.com/abc-defg-hij",
+      label: "Google Meet",
+    };
+    const createInput = (createConference?: boolean) => ({
+      calendarId: event().calendarId,
+      content: {
+        kind: "details" as const,
+        title: "Planning",
+        description: "",
+        location: "",
+      },
+      schedule: timedSchedule(
+        "2026-07-02T16:00:00.000Z",
+        "2026-07-02T17:00:00.000Z",
+      ),
+      recurrence: { kind: "single" as const },
+      ...(createConference ? { createConference } : {}),
+    });
+    const withMintedLink = (input: CreateEventInput) =>
+      event({
+        id: input.id as EventId,
+        content: {
+          kind: "details",
+          title: "Planning",
+          description: "",
+          conference,
+        },
+      });
+
+    test("posts createConference and offers to copy the minted link", async () => {
+      const { port, mocks } = createTestToastPort();
+      registerToastPort(port);
+      const context = setup("local", { createdEvent: withMintedLink });
+      context.queryClient.setQueryData(calendarKey, normalized());
+
+      act(() =>
+        context.hook.result.current.mutations.create(createInput(true)),
+      );
+      context.pending.resolve();
+
+      await waitFor(() => {
+        expect(mocks.toast).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.objectContaining({ toastId: CONFERENCE_LINK_ADDED_TOAST_ID }),
+        );
+      });
+      expect(context.calls).toContainEqual({
+        method: "create",
+        value: expect.objectContaining({ createConference: true }),
+      });
+      expect(track).toHaveBeenCalledWith(
+        "event_created",
+        expect.objectContaining({ with_conference: true }),
+      );
+    });
+
+    test("stays quiet when the server answered without a link", async () => {
+      const { port, mocks } = createTestToastPort();
+      registerToastPort(port);
+      const context = setup();
+      context.queryClient.setQueryData(calendarKey, normalized());
+
+      act(() =>
+        context.hook.result.current.mutations.create(createInput(true)),
+      );
+      context.pending.resolve();
+
+      await waitFor(() => {
+        expect(context.hook.result.current.hasPending).toBe(false);
+      });
+      expect(mocks.toast).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ toastId: CONFERENCE_LINK_ADDED_TOAST_ID }),
+      );
+    });
+
+    test("stays quiet when no link was requested, even if the event carries one", async () => {
+      const { port, mocks } = createTestToastPort();
+      registerToastPort(port);
+      const context = setup("local", { createdEvent: withMintedLink });
+      context.queryClient.setQueryData(calendarKey, normalized());
+
+      act(() => context.hook.result.current.mutations.create(createInput()));
+      context.pending.resolve();
+
+      await waitFor(() => {
+        expect(context.hook.result.current.hasPending).toBe(false);
+      });
+      expect(context.calls).toContainEqual({
+        method: "create",
+        value: expect.not.objectContaining({
+          createConference: expect.anything(),
+        }),
+      });
+      expect(mocks.toast).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ toastId: CONFERENCE_LINK_ADDED_TOAST_ID }),
+      );
+      expect(track).toHaveBeenCalledWith(
+        "event_created",
+        expect.objectContaining({ with_conference: false }),
+      );
+    });
   });
 });

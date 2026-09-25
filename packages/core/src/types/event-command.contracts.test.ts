@@ -45,6 +45,22 @@ describe("Event Command Contracts", () => {
       expect(CreateEventInputSchema.safeParse(input).success).toBe(true);
     });
 
+    it("accepts the create-only createConference request flag", () => {
+      const parsed = CreateEventInputSchema.safeParse({
+        ...base(),
+        createConference: true,
+      });
+
+      expect(parsed.success).toBe(true);
+      expect(parsed.data?.createConference).toBe(true);
+      expect(
+        CreateEventInputSchema.safeParse({
+          ...base(),
+          createConference: "yes",
+        }).success,
+      ).toBe(false);
+    });
+
     it("rejects an occurrence recurrence", () => {
       const input = {
         ...base(),

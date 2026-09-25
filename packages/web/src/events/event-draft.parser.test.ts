@@ -123,6 +123,19 @@ describe("parseEventDraft", () => {
       expect(cleared.input.content.color).toBeNull();
     });
 
+    it("carries the meeting link request only when the draft switched it on", () => {
+      const requested = parseEventDraft(newDraft({ createConference: true }));
+      expect(requested.ok).toBe(true);
+      if (!requested.ok || requested.mode !== "create")
+        throw new Error("expected create");
+      expect(requested.input.createConference).toBe(true);
+
+      const untouched = parseEventDraft(newDraft());
+      expect(untouched.ok).toBe(true);
+      if (!untouched.ok) throw new Error("expected ok");
+      expect(untouched.input).not.toContainKey("createConference");
+    });
+
     it("includes the edited location", () => {
       const result = parseEventDraft(newDraft({ location: "Room A" }));
       expect(result.ok).toBe(true);

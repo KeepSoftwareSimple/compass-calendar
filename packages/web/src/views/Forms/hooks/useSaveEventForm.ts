@@ -4,7 +4,10 @@ import { EventIdSchema } from "@core/types/domain-primitives";
 import { type CreateEventInput } from "@core/types/event-command.contracts";
 import { providerDisplayName } from "@core/types/sync/identity.contracts";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
-import { canInviteOnCalendar } from "@web/calendars/calendar.util";
+import {
+  canInviteOnCalendar,
+  creatableConferenceKind,
+} from "@web/calendars/calendar.util";
 import { useDefaultTargetCalendar } from "@web/calendars/useDefaultTargetCalendar";
 import { RecurringEventUpdateScope } from "@web/common/types/web.event.types";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -135,10 +138,24 @@ export function useSaveEventForm() {
           return;
         }
 
-        const parsed = parseGridEventDraft({
-          ...draft,
-          values: { ...draft.values, calendarId },
-        });
+        const values = { ...draft.values, calendarId };
+        // Belt behind the switch's own render gate: the "Add Google Meet"
+        // switch only renders for a calendar that can mint a link, but the
+        // flag survives a later calendar change in the same draft. A
+        // request the target cannot honor is dropped rather than sent to a
+        // provider that would refuse the whole create.
+        if (
+          values.createConference &&
+          !creatableConferenceKind(
+            calendars?.find((entry) => entry.id === calendarId),
+          )
+        ) {
+          console.warn(
+            "[useSaveEventForm] dropped meeting link request: target calendar cannot mint one",
+          );
+          values.createConference = false;
+        }
+        const parsed = parseGridEventDraft({ ...draft, values });
 
         if (!parsed.ok) {
           setFieldErrors(parsed.fieldErrors);
@@ -203,6 +220,7 @@ export function useSaveEventForm() {
       }
     },
     [
+      calendars,
       defaultTargetCalendarId,
       clearFieldErrors,
       closeEventForm,

@@ -41,12 +41,12 @@ describe("EditSequenceMenu", () => {
     expect(
       screen.getByRole("status", { hidden: true }).textContent,
     ).toStrictEqual(
-      "Edit which field? T for title, L for location, D for description, " +
-        "S for start time, E for end time, R for recurrence, C for color, " +
-        "A for guests, G for going. " +
+      "Edit which field? T for title, L for location, M for meeting link, " +
+        "D for description, S for start time, E for end time, " +
+        "R for recurrence, C for color, A for guests, G for going. " +
         "Escape to cancel." +
-        "Edit which field?TTitleLLocationDDescriptionSStart timeEEnd time" +
-        "RRecurrenceCColorAGuestsGGoingEsc to cancel",
+        "Edit which field?TTitleLLocationMMeeting linkDDescription" +
+        "SStart timeEEnd timeRRecurrenceCColorAGuestsGGoingEsc to cancel",
     );
   });
 
@@ -58,6 +58,7 @@ describe("EditSequenceMenu", () => {
     for (const label of [
       "Title",
       "Location",
+      "Meeting link",
       "Description",
       "Start time",
       "End time",

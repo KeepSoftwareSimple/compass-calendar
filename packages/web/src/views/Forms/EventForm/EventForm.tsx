@@ -1,5 +1,6 @@
 import { MapPinIcon } from "@phosphor-icons/react/dist/csr/MapPin";
 import { UsersIcon } from "@phosphor-icons/react/dist/csr/Users";
+import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import classNames from "classnames";
 import fastDeepEqual from "fast-deep-equal/react";
 import type React from "react";
@@ -13,11 +14,15 @@ import {
   useRef,
   useState,
 } from "react";
+import { CONFERENCE_KIND_LABEL } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type AttendeeInput } from "@core/types/event-attendance.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
-import { canInviteOnCalendar } from "@web/calendars/calendar.util";
+import {
+  canInviteOnCalendar,
+  creatableConferenceKind,
+} from "@web/calendars/calendar.util";
 import {
   isEventReadOnly,
   useCalendarLookup,
@@ -43,6 +48,7 @@ import {
   Focusable,
   INPUT_RESET_CLASSNAME,
 } from "@web/components/Focusable/Focusable";
+import { Switch } from "@web/components/Switch/Switch";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   patchGridDraftFields,
@@ -71,7 +77,10 @@ import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/Dat
 import { RecurrenceSection } from "@web/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSection";
 import { DiscardUnsavedChangesDialog } from "@web/views/Forms/EventForm/DiscardUnsavedChangesDialog";
 import { EventColorPicker } from "@web/views/Forms/EventForm/EventColorPicker/EventColorPicker";
-import { EventDetailsSection } from "@web/views/Forms/EventForm/EventDetailsSection";
+import {
+  EVENT_FORM_CONFERENCE_ID,
+  EventDetailsSection,
+} from "@web/views/Forms/EventForm/EventDetailsSection";
 import { FormActionsRow } from "@web/views/Forms/EventForm/FormActionsRow";
 import { RsvpControl } from "@web/views/Forms/EventForm/RsvpControl";
 import { SaveSection } from "@web/views/Forms/EventForm/SaveSection/SaveSection";
@@ -264,6 +273,14 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           attendeeCalendar.accountEmail.toLowerCase());
     const showAttendeeEditor =
       !isReadOnly && canInviteOnCalendar(attendeeCalendar) && organizesEvent;
+    // Meeting-link gate: a create draft whose target calendar can mint a
+    // conference link (Google Meet, Microsoft Teams) offers an "Add <kind>"
+    // switch. Create only: sync has no conference channel on update, and an
+    // existing link is shown read-only by EventDetailsSection instead.
+    const conferenceKind =
+      draft.kind === "create" && !isReadOnly
+        ? creatableConferenceKind(attendeeCalendar)
+        : null;
     const guestEditIsSeriesWide =
       draft.kind === "edit" && draft.source.recurrence.kind !== "single";
     // RSVP gate (WP-08): show Going / Maybe / Decline when the calendar's
@@ -342,6 +359,20 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         setLatestDraft((current) => {
           if (current?.kind !== "create") return current;
           return { ...current, values: { ...current.values, calendarId } };
+        });
+      },
+      [setLatestDraft],
+    );
+
+    // Create-only like onSelectCalendar: the switch never renders on an edit.
+    const onCreateConferenceChange = useCallback(
+      (createConference: boolean) => {
+        setLatestDraft((current) => {
+          if (current?.kind !== "create") return current;
+          return {
+            ...current,
+            values: { ...current.values, createConference },
+          };
         });
       },
       [setLatestDraft],
@@ -839,6 +870,20 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     value={location}
                   />
                 </div>
+                {conferenceKind && draft.kind === "create" && (
+                  <div className="flex items-center gap-2">
+                    <VideoCameraIcon
+                      size={16}
+                      className="shrink-0 text-text-muted"
+                    />
+                    <Switch
+                      id={EVENT_FORM_CONFERENCE_ID}
+                      checked={draft.values.createConference ?? false}
+                      onCheckedChange={onCreateConferenceChange}
+                      label={`Add ${CONFERENCE_KIND_LABEL[conferenceKind]}`}
+                    />
+                  </div>
+                )}
               </FormCard>
 
               {showAttendeeEditor && (

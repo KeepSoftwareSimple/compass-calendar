@@ -45,6 +45,7 @@ import {
 } from "@web/calendars/useCalendarLookup";
 import { handleError } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
+import { showConferenceLinkAddedToast } from "@web/common/utils/toast/conference-link-added.toast";
 import { showDeletedToast } from "@web/common/utils/toast/deleted-toast.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showGoogleReconnectToast } from "@web/common/utils/toast/google-reconnect.toast";
@@ -787,6 +788,10 @@ export function useEventMutations(
         // Undo-of-delete restores via create with the original id; waiting
         // here keeps the POST from landing before the DELETE server-side.
         // Normal creates use fresh ids and resolve immediately.
+        // The server's answer to a create that asked for a meeting link
+        // carries the minted URL (the backend re-reads the stored event);
+        // every other create discards the response, as before.
+        let created: Event | undefined;
         const wrote = await writeAfterPreceding(
           variables.writeKey,
           variables,
@@ -797,11 +802,12 @@ export function useEventMutations(
           // the one place every create funnels through, so it's the only
           // spot that needs to know the write schema is stricter than the
           // read shape.
-          () =>
-            repository.create({
+          async () => {
+            created = await repository.create({
               ...variables.input,
               content: editableContent(variables.input.content),
-            }),
+            });
+          },
         );
         // Only past this point did the write actually land - a throw above
         // (network/validation failure) skips this, so a failed create never
@@ -814,7 +820,16 @@ export function useEventMutations(
               variables.input.recurrence.kind === "series"
                 ? "series"
                 : "single",
+            with_conference: Boolean(variables.input.createConference),
           });
+        }
+        if (
+          wrote &&
+          variables.input.createConference &&
+          created?.content.kind === "details" &&
+          created.content.conference
+        ) {
+          showConferenceLinkAddedToast(created.content.conference);
         }
         return wrote ? completedEventWrite : skippedEventWrite;
       },

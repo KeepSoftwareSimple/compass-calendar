@@ -68,6 +68,20 @@ RSVP](../features/attendees.md).
 - Sync Google writer/people adapters: `packages/sync/src/providers/google/google-event-writer.adapter.ts`, `packages/sync/src/providers/google/google-people.adapter.ts`
 - E2e coverage: `e2e/attendees/`
 
+## Meeting Links (Google Meet, Microsoft Teams)
+
+Create-only: the browser asks the provider to mint a link with
+`createConference`; sync's update command has no conference channel.
+
+- Browser create flag and conference kind labels: `CreateEventInputSchema.createConference` in `packages/core/src/types/event-command.contracts.ts`, `CONFERENCE_KIND_LABEL` in `packages/core/src/types/calendar.contracts.ts`
+- Capability gate (`capabilities.conferenceKinds`, never a provider name): `creatableConferenceKind` in `packages/web/src/calendars/calendar.util.ts`
+- "Add Google Meet" switch and the `e m` / `Mod+=` meeting-link field: `packages/web/src/views/Forms/EventForm/EventForm.tsx`, `packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `packages/web/src/common/utils/form/form.util.ts`
+- Save-time belt (drops the flag when the target calendar cannot mint a link): `packages/web/src/views/Forms/hooks/useSaveEventForm.ts`
+- Post-save "Copy link" toast (`L`): `packages/web/src/common/utils/toast/conference-link-added.toast.tsx`, shown from the create path in `packages/web/src/events/mutations/useEventMutations.ts`
+- Read-only link with copy button on an existing event: `packages/web/src/views/Forms/EventForm/EventDetailsSection.tsx`
+- Backend: flag forwarded by `toCreateSubmitRequest`, created event re-read so the response carries the minted link: `packages/backend/src/common/services/sync-service/event-command.translation.ts`, `packages/backend/src/event/controllers/event.controller.ts`
+- Sync: `createConference` on the create command, Google `conferenceData.createRequest`, Microsoft `isOnlineMeeting`: `packages/core/src/types/sync/command.contracts.ts`, `packages/sync/src/providers/google/google-event-writer.adapter.ts`, `packages/sync/src/providers/microsoft/microsoft-event-writer.adapter.ts`
+
 ## Booking (v1 / v1.10)
 
 Product spec: [Compass Calendar Booking](../features/booking.md).
@@ -154,7 +168,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Event title search in the command palette: `packages/web/src/events/queries/useEventSearch.ts`, `packages/web/src/components/CommandPalette/event-search.util.ts`
 - Typed-date parser and go-to-date announcement: `parseUserDate` / `goToDateAnnouncement` in `packages/web/src/common/utils/datetime/web.date.util.ts`, `packages/web/src/shortcuts/go-to-date/useGoToDateShortcut.ts`
 - Palette-teaches hint: `packages/web/src/components/CommandPalette/palette-shortcut-telemetry.ts`, `packages/web/src/components/CommandPalette/hooks/usePaletteLegendCmdItems.ts`
-- Public printable `/shortcuts` catalog: `packages/web/src/views/NotFound/ShortcutsCatalogView.tsx` (snapshot in `shortcuts-catalog.json`; stays off a new `import()` root)
+- Public printable `/shortcuts` catalog: `packages/web/src/components/ShortcutsPage/ShortcutsCatalogView.tsx` (snapshot in `packages/web/src/shortcuts/shortcuts-catalog.json`, updated by hand when the registry changes; stays off a new `import()` root)
 - Mount point for global shortcuts and onboarding surface selection: `packages/web/src/components/RootShell/RootShell.tsx`, `onboarding-surface.ts`
 - Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md), [Onboarding](../acceptance/onboarding.md)
 

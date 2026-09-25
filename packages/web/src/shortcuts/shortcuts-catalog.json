@@ -226,6 +226,13 @@
         "requiresWrite": true
       },
       {
+        "id": "edit-focus-conference",
+        "keys": ["e", "m"],
+        "label": "Edit meeting link",
+        "section": "edit",
+        "requiresWrite": true
+      },
+      {
         "id": "edit-focus-description",
         "keys": ["e", "d"],
         "label": "Edit description",
