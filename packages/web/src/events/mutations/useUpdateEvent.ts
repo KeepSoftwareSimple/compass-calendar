@@ -105,7 +105,7 @@ export function useUpdateEvent(dependencies: EventMutationDependencies = {}) {
         sourceEvent,
         toRecurrenceScope(applyTo),
       );
-      if (!sourceDraft || sourceDraft.kind !== "edit") {
+      if (sourceDraft?.kind !== "edit") {
         return finishWithoutMutation();
       }
 

@@ -73,8 +73,8 @@ describe("useSetEventColor", () => {
     await waitFor(() => {
       expect(
         (
-          queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
-            ?.entities[existing.id].content as { color?: string }
+          queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)!
+            .entities[existing.id].content as { color?: string }
         ).color,
       ).toBe("coral");
     });

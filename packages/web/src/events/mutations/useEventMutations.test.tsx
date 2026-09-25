@@ -249,7 +249,7 @@ const replaceAndGetOpportunity = (
     ),
   );
   const opportunity = useRecurrenceScopeOpportunityStore.getState().opportunity;
-  if (!opportunity || opportunity.kind !== "replace") {
+  if (opportunity?.kind !== "replace") {
     throw new Error("Expected a recurrence edit opportunity");
   }
   return opportunity;
@@ -1946,8 +1946,8 @@ describe("useEventMutations", () => {
     let colorAtCallback: unknown;
     const onOptimisticApplied = mock(() => {
       colorAtCallback = (
-        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)
-          ?.entities[original.id].content as { color?: string }
+        context.queryClient.getQueryData<NormalizedEventQueryData>(calendarKey)!
+          .entities[original.id].content as { color?: string }
       ).color;
     });
 

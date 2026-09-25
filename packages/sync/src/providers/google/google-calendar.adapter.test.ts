@@ -550,22 +550,25 @@ describe("GoogleCalendarAdapter", () => {
     "userRateLimitExceeded",
     "quotaExceeded",
     "dailyLimitExceeded",
-  ])("maps a 403 %s to transient rather than discoveryFailed", async (reason) => {
-    const quota = Object.assign(new Error("Request failed with status 403"), {
-      response: {
-        status: 403,
-        data: {
-          error: { errors: [{ reason }] },
+  ])(
+    "maps a 403 %s to transient rather than discoveryFailed",
+    async (reason) => {
+      const quota = Object.assign(new Error("Request failed with status 403"), {
+        response: {
+          status: 403,
+          data: {
+            error: { errors: [{ reason }] },
+          },
         },
-      },
-    });
-    const api = new FakeCalendarListApi([], quota);
-    const { adapter } = adapterWith(api);
+      });
+      const api = new FakeCalendarListApi([], quota);
+      const { adapter } = adapterWith(api);
 
-    const error = (await adapter
-      .discoverCalendars({ accessToken: "at" })
-      .catch((e) => e)) as ProviderCalendarError;
+      const error = (await adapter
+        .discoverCalendars({ accessToken: "at" })
+        .catch((e) => e)) as ProviderCalendarError;
 
-    expect(error.reason).toBe("transient");
-  });
+      expect(error.reason).toBe("transient");
+    },
+  );
 });

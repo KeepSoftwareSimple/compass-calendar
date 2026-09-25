@@ -20,18 +20,17 @@ describe("occupiesBookingSlot", () => {
     ).toBe(true);
   });
 
-  it.each([
-    "needsAction",
-    "declined",
-    "tentative",
-  ] as const)("does not occupy a %s invite", (hostResponseStatus) => {
-    expect(
-      occupiesBookingSlot({
-        hostIsOrganizer: false,
-        hostResponseStatus,
-      }),
-    ).toBe(false);
-  });
+  it.each(["needsAction", "declined", "tentative"] as const)(
+    "does not occupy a %s invite",
+    (hostResponseStatus) => {
+      expect(
+        occupiesBookingSlot({
+          hostIsOrganizer: false,
+          hostResponseStatus,
+        }),
+      ).toBe(false);
+    },
+  );
 
   it("occupies a legacy interval that has no RSVP facts", () => {
     expect(occupiesBookingSlot({})).toBe(true);

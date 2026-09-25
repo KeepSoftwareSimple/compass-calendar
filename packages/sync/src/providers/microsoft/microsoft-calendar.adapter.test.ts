@@ -172,20 +172,23 @@ describe("MicrosoftCalendarAdapter", () => {
     ["owner", { isDefaultCalendar: true, canEdit: false }],
     ["editor", { isDefaultCalendar: false, canEdit: true }],
     ["viewer", { isDefaultCalendar: false, canEdit: false }],
-  ] as const)("maps access role %s from default-calendar and canEdit flags", async (accessRole, flags) => {
-    const api = new FakeCalendarListApi([
-      page({
-        items: [calendar({ id: accessRole, ...flags })],
-      }),
-    ]);
-    const { adapter } = adapterWith(api);
+  ] as const)(
+    "maps access role %s from default-calendar and canEdit flags",
+    async (accessRole, flags) => {
+      const api = new FakeCalendarListApi([
+        page({
+          items: [calendar({ id: accessRole, ...flags })],
+        }),
+      ]);
+      const { adapter } = adapterWith(api);
 
-    const { calendars } = await adapter.discoverCalendars({
-      accessToken: "at",
-    });
+      const { calendars } = await adapter.discoverCalendars({
+        accessToken: "at",
+      });
 
-    expect(calendars[0]?.accessRole).toBe(accessRole);
-  });
+      expect(calendars[0]?.accessRole).toBe(accessRole);
+    },
+  );
 
   it("derives write and invite capabilities from canEdit", async () => {
     const api = new FakeCalendarListApi([

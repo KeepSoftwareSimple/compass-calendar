@@ -36,62 +36,64 @@ const opaqueIdSchemas = {
 } as const;
 
 describe("Sync identity contracts", () => {
-  describe.each(
-    Object.entries(objectIdSchemas),
-  )("%s (ObjectId-shaped)", (_name, schema) => {
-    it("accepts a 24-character hex id", () => {
-      expect(schema.safeParse(faker.database.mongodbObjectId()).success).toBe(
-        true,
-      );
-    });
+  describe.each(Object.entries(objectIdSchemas))(
+    "%s (ObjectId-shaped)",
+    (_name, schema) => {
+      it("accepts a 24-character hex id", () => {
+        expect(schema.safeParse(faker.database.mongodbObjectId()).success).toBe(
+          true,
+        );
+      });
 
-    it("rejects a short id", () => {
-      expect(schema.safeParse("abc123").success).toBe(false);
-    });
+      it("rejects a short id", () => {
+        expect(schema.safeParse("abc123").success).toBe(false);
+      });
 
-    it("rejects a non-hex id", () => {
-      expect(schema.safeParse("g".repeat(24)).success).toBe(false);
-    });
+      it("rejects a non-hex id", () => {
+        expect(schema.safeParse("g".repeat(24)).success).toBe(false);
+      });
 
-    it("rejects a non-string value", () => {
-      expect(schema.safeParse(42).success).toBe(false);
-    });
+      it("rejects a non-string value", () => {
+        expect(schema.safeParse(42).success).toBe(false);
+      });
 
-    it("round-trips through JSON unchanged", () => {
-      const id = faker.database.mongodbObjectId() as ConnectionId;
-      const parsed = schema.parse(id);
-      expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(id);
-    });
-  });
+      it("round-trips through JSON unchanged", () => {
+        const id = faker.database.mongodbObjectId() as ConnectionId;
+        const parsed = schema.parse(id);
+        expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(id);
+      });
+    },
+  );
 
-  describe.each(
-    Object.entries(opaqueIdSchemas),
-  )("%s (provider-issued/opaque)", (_name, schema) => {
-    it("accepts an opaque non-empty string", () => {
-      expect(
-        schema.safeParse("abc_DEF-123@group.calendar.google.com").success,
-      ).toBe(true);
-    });
+  describe.each(Object.entries(opaqueIdSchemas))(
+    "%s (provider-issued/opaque)",
+    (_name, schema) => {
+      it("accepts an opaque non-empty string", () => {
+        expect(
+          schema.safeParse("abc_DEF-123@group.calendar.google.com").success,
+        ).toBe(true);
+      });
 
-    it("rejects an empty string", () => {
-      expect(schema.safeParse("").success).toBe(false);
-    });
+      it("rejects an empty string", () => {
+        expect(schema.safeParse("").success).toBe(false);
+      });
 
-    it("rejects a whitespace-only string", () => {
-      expect(schema.safeParse("   ").success).toBe(false);
-    });
+      it("rejects a whitespace-only string", () => {
+        expect(schema.safeParse("   ").success).toBe(false);
+      });
 
-    it("rejects a non-string value", () => {
-      expect(schema.safeParse(42).success).toBe(false);
-    });
+      it("rejects a non-string value", () => {
+        expect(schema.safeParse(42).success).toBe(false);
+      });
 
-    it("round-trips through JSON unchanged", () => {
-      const parsed = schema.parse("stable-opaque-id");
-      expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(
-        "stable-opaque-id" as ProviderAccountId,
-      );
-    });
-  });
+      it("round-trips through JSON unchanged", () => {
+        const parsed = schema.parse("stable-opaque-id");
+        expect(schema.parse(JSON.parse(JSON.stringify(parsed)))).toBe(
+          "stable-opaque-id" as ProviderAccountId,
+        );
+      });
+    },
+  );
 
   describe("ProviderAccountIdSchema length bound", () => {
     it("rejects a value over 256 characters", () => {

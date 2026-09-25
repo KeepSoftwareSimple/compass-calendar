@@ -81,19 +81,18 @@ describe("useSyncFocusRefresh", () => {
     expect(mockRefreshUserMetadata).toHaveBeenCalledWith({ force: true });
   });
 
-  it.each([
-    "NOT_CONNECTED",
-    "RECONNECT_REQUIRED",
-    "IMPORTING",
-  ] as const)("does not provider-refresh on mount for %s", (state) => {
-    const refresh = mock();
-    renderHook(() =>
-      useSyncFocusRefresh(() => fakeConnectGoogle({ refresh, state })),
-    );
+  it.each(["NOT_CONNECTED", "RECONNECT_REQUIRED", "IMPORTING"] as const)(
+    "does not provider-refresh on mount for %s",
+    (state) => {
+      const refresh = mock();
+      renderHook(() =>
+        useSyncFocusRefresh(() => fakeConnectGoogle({ refresh, state })),
+      );
 
-    expect(refresh).not.toHaveBeenCalled();
-    expect(mockRefreshUserMetadata).toHaveBeenCalledWith({ force: true });
-  });
+      expect(refresh).not.toHaveBeenCalled();
+      expect(mockRefreshUserMetadata).toHaveBeenCalledWith({ force: true });
+    },
+  );
 
   it("does not provider-refresh when Google is unavailable", () => {
     const refresh = mock();

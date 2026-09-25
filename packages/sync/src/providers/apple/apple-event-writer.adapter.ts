@@ -151,7 +151,7 @@ export class AppleEventWriter implements ProviderEventWriter {
     const master = reads.find(
       (read) => read.kind === "event" && read.recurrence.kind !== "instance",
     );
-    if (!master || master.kind !== "event") {
+    if (master?.kind !== "event") {
       throw new ProviderWriteError(
         "permanentProviderError",
         "Apple event resource had no patchable master",
@@ -268,7 +268,7 @@ export class AppleEventWriter implements ProviderEventWriter {
         read.recurrence.kind === "seriesMaster" &&
         read.providerEventId === input.seriesProviderEventId,
     );
-    if (!master || master.kind !== "event") return null;
+    if (master?.kind !== "event") return null;
 
     return synthesizeInstanceFromMaster(master, input, resource.etag);
   }

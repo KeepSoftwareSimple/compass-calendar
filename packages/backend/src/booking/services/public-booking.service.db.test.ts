@@ -1249,7 +1249,7 @@ describe("PublicBookingService", () => {
     }
     const availabilityQuery = (
       getAvailability.mock.calls as unknown[][]
-    )[0]?.[1] as {
+    )[0]![1] as {
       end: string;
     };
     expect(Date.parse(availabilityQuery.end)).toBeLessThanOrEqual(
@@ -1888,7 +1888,7 @@ describe("PublicBookingService", () => {
 
     const eventInput = (
       createBookingEvent.mock.calls as unknown[][]
-    )[0]?.[1] as {
+    )[0]![1] as {
       description: string;
     };
     expect(eventInput.description).toBe(
@@ -1952,13 +1952,13 @@ describe("PublicBookingService", () => {
       title: "Grace Hopper and Host User",
     });
     expect(
-      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
+      (updateBookingEvent.mock.calls as unknown[][])[0]![1] as {
         start?: string;
         end?: string;
       },
     ).not.toHaveProperty("start");
     expect(
-      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+      (updateBookingEvent.mock.calls as unknown[][])[0]![1] as object,
     ).not.toHaveProperty("end");
     expect(
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
@@ -1966,7 +1966,7 @@ describe("PublicBookingService", () => {
       operationId: expect.any(String),
     });
     const description = (
-      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as {
+      (updateBookingEvent.mock.calls as unknown[][])[0]![1] as {
         description: string;
       }
     ).description;
@@ -2101,7 +2101,7 @@ describe("PublicBookingService", () => {
       end: `${BOOKING_MONDAY}T11:30:00.000Z`,
     });
     expect(
-      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+      (updateBookingEvent.mock.calls as unknown[][])[0]![1] as object,
     ).not.toHaveProperty("title");
     expect(
       (updateBookingEvent.mock.calls as unknown[][])[0]?.[1],
@@ -2333,7 +2333,7 @@ describe("PublicBookingService", () => {
       `${BOOKING_MONDAY}T11:00:00.000Z` as DateTime,
     );
     expect(
-      (updateBookingEvent.mock.calls as unknown[][])[0]?.[1] as object,
+      (updateBookingEvent.mock.calls as unknown[][])[0]![1] as object,
     ).not.toHaveProperty("start");
     const stored = await bookingReservationRepository.findById(reservationId);
     expect(stored?.slotStart.toISOString()).toBe(

@@ -68,12 +68,12 @@ describe("Sync busy contracts", () => {
   });
 
   describe("BusyQueryPurposeSchema", () => {
-    it.each([
-      "display",
-      "bookingConfirmation",
-    ] as const)("accepts %s", (purpose) => {
-      expect(BusyQueryPurposeSchema.safeParse(purpose).success).toBe(true);
-    });
+    it.each(["display", "bookingConfirmation"] as const)(
+      "accepts %s",
+      (purpose) => {
+        expect(BusyQueryPurposeSchema.safeParse(purpose).success).toBe(true);
+      },
+    );
 
     it("rejects an unknown purpose", () => {
       expect(BusyQueryPurposeSchema.safeParse("debugging").success).toBe(false);

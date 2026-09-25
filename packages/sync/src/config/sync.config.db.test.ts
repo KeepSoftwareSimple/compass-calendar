@@ -196,21 +196,20 @@ describe("Sync service configuration", () => {
       );
     });
 
-    it.each([
-      "mongoUri",
-      "internalAuthToken",
-      "callbackBaseUrl",
-    ])("rejects a config missing %s", (field) => {
-      const section = baseSyncSection() as Record<string, unknown>;
-      delete section[field];
-      const config = {
-        runtime: { nodeEnv: "staging", timezone: "Etc/UTC" },
-        sync: section,
-      };
-      expect(() =>
-        parseSyncConfig(config as unknown as CompassConfig),
-      ).toThrow();
-    });
+    it.each(["mongoUri", "internalAuthToken", "callbackBaseUrl"])(
+      "rejects a config missing %s",
+      (field) => {
+        const section = baseSyncSection() as Record<string, unknown>;
+        delete section[field];
+        const config = {
+          runtime: { nodeEnv: "staging", timezone: "Etc/UTC" },
+          sync: section,
+        };
+        expect(() =>
+          parseSyncConfig(config as unknown as CompassConfig),
+        ).toThrow();
+      },
+    );
 
     it("rejects an empty mongoUri", () => {
       expect(() =>

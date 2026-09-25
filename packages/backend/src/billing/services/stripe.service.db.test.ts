@@ -929,29 +929,28 @@ describe("StripeService", () => {
       expect(stored?.billing?.cancelAtPeriodEnd).toBe(false);
     });
 
-    it.each([
-      "awaiting_checkout",
-      "expired",
-      "canceled",
-    ] as const)("rejects with 409 when status is %s", async (status) => {
-      using _env = mockEnv(stripeConfigured);
-      const userId = await seedSubscriber({ subscriptionStatus: status });
-      const update = mock(() => Promise.resolve(updatedSubscription(true)));
-      const stripeService = new StripeService(
-        stubBillingGateway({
-          updateSubscription: update,
-        }),
-      );
+    it.each(["awaiting_checkout", "expired", "canceled"] as const)(
+      "rejects with 409 when status is %s",
+      async (status) => {
+        using _env = mockEnv(stripeConfigured);
+        const userId = await seedSubscriber({ subscriptionStatus: status });
+        const update = mock(() => Promise.resolve(updatedSubscription(true)));
+        const stripeService = new StripeService(
+          stubBillingGateway({
+            updateSubscription: update,
+          }),
+        );
 
-      await expect(
-        stripeService.setCancelAtPeriodEnd(userId.toString(), true),
-      ).rejects.toMatchObject({
-        name: "BillingHttpError",
-        status: 409,
-        clientMessage: "No active subscription to update.",
-      });
-      expect(update).not.toHaveBeenCalled();
-    });
+        await expect(
+          stripeService.setCancelAtPeriodEnd(userId.toString(), true),
+        ).rejects.toMatchObject({
+          name: "BillingHttpError",
+          status: 409,
+          clientMessage: "No active subscription to update.",
+        });
+        expect(update).not.toHaveBeenCalled();
+      },
+    );
 
     it("rejects with 409 when there is no subscription id", async () => {
       using _env = mockEnv(stripeConfigured);
