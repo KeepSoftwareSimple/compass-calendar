@@ -1,5 +1,5 @@
 import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "bun:test";
 
 describe("PublicBookingLayout", () => {
@@ -27,5 +27,21 @@ describe("PublicBookingLayout", () => {
     );
 
     expect(screen.getByRole("main").className).toContain("max-w-3xl");
+  });
+
+  it("links back to Compass from the footer", () => {
+    render(
+      <PublicBookingLayout>
+        <p>Booking content</p>
+      </PublicBookingLayout>,
+    );
+
+    const footer = screen.getByRole("contentinfo");
+    expect(footer).toHaveTextContent(
+      "Compass Calendar · Your calendar and meeting pages in one app.",
+    );
+    expect(
+      within(footer).getByRole("link", { name: "Open Compass →" }),
+    ).toHaveAttribute("href", "/");
   });
 });
