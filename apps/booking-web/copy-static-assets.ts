@@ -1,9 +1,9 @@
 import path from "node:path";
 
 export async function copyStaticAssets(outdir: string) {
-  if (!(await Bun.file(path.join(outdir, "index.js")).exists())) {
+  if (!(await Bun.file(path.join(outdir, "meet", "index.js")).exists())) {
     throw new Error(
-      `Bundle output index.js missing from ${outdir}, but index.html references it by name`,
+      `Bundle output meet/index.js missing from ${outdir}, but index.html references it by name`,
     );
   }
 

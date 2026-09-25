@@ -150,6 +150,33 @@ describe("serve-web guest /meet cutover", () => {
     expect(response.status).toBe(404);
     expect(await response.text()).not.toContain("compass");
   });
+
+  it("SPA-fallbacks guest booking paths when serving booking-web", async () => {
+    const port = 30000 + Math.floor(Math.random() * 10000);
+    const bookingServer = Bun.spawn(
+      ["bun", join(import.meta.dir, "serve-web.ts")],
+      {
+        env: {
+          ...process.env,
+          WEB_PORT: String(port),
+          WEB_ROOT: buildRoot,
+          WEB_SERVES_GUEST_MEET: "true",
+        },
+        stderr: "pipe",
+        stdout: "pipe",
+      },
+    );
+
+    try {
+      await waitForServer(`http://localhost:${port}/index.html`);
+      const response = await fetch(`http://localhost:${port}/meet/hostuser`);
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toContain("compass");
+    } finally {
+      bookingServer.kill();
+    }
+  });
 });
 
 describe("serve-web path traversal", () => {

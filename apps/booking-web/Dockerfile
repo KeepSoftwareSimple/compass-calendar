@@ -31,6 +31,7 @@ RUN groupadd --system --gid 1001 compass \
 
 ENV WEB_PORT=9081
 ENV WEB_ROOT=/app/build/booking-web
+ENV WEB_SERVES_GUEST_MEET=true
 
 COPY --from=build --chown=compass:compass /app/build/booking-web ./build/booking-web
 # serve-web.ts imports this map at runtime, so the runtime stage needs the
