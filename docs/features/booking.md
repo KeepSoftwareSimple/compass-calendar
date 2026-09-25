@@ -21,7 +21,6 @@ alignment, destination under More options, confirmation links only, host
 reconnect and bookability status, the setup wizard dead-end fixes, host
 new-meeting notice, sidebar discovery, an off page that keeps its
 link, and unavailable guest-month days that announce no times available.
-The production gate stays off.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
@@ -36,9 +35,8 @@ funnel analytics, meeting copy, hold-Mod section chords, the on/off
 switch, a per-day weekly hours list that can hold several blocks, meeting
 timezone under More options, the guided first-run setup wizard, Start
 and End time menus, the v1.8 booking gate fix, and the v1.10 meeting-flow
-fixes). Booking
-is enabled in development and staging (`runtime.nodeEnv` other than
-`production`) and disabled in production. Do not flip `isBookingEnabled`.
+fixes). Booking is enabled in every runtime environment, including
+production (`isBookingEnabled` in `packages/core/src/util/env.util.ts`).
 Guest `/meet` runs in **`apps/booking-web`**: its own frontend image and
 deploy pipeline on the same Compass Cloud host (shared VPS, MongoDB, API,
 and Sync). Caddy on that host routes `/meet/*` to the booking-web
@@ -331,8 +329,8 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   card, **Let people book time with you**, under the calendar list. **Set
   up meeting page** opens Settings on the Meeting tab. **Dismiss** hides
   the card on that browser. Turning the page on hides it everywhere. The
-  card does not show on mobile, while the booking gate is off, or while
-  the first-event prompt is still pending.
+  card does not show on mobile or while the first-event prompt is still
+  pending.
 - **Timezone** uses the same searchable combobox as time travel. The
   trigger is one tab stop and still renders a stored non-canonical alias.
   It lives under More options on the configured form. The setup wizard
@@ -590,7 +588,6 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
   `apps/booking-web` on shared infra)
 - Production billing packaging specific to booking (uses the existing
   calendar write gate)
-- Flipping the production gate
 - Host reservation inbox
 - Meet URL on the confirmation screen (Google creates conference
   asynchronously; the invite email already has it once

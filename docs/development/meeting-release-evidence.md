@@ -2,8 +2,10 @@
 
 Recorded 2026-09-14. Related issue:
 [#3719](https://github.com/KeepSoftwareSimple/compass-calendar/issues/3719).
-This file does not enable production booking. Do not flip
-`isBookingEnabled`.
+
+**2026-09-25:** Founder authorized production booking ([#3982](https://github.com/KeepSoftwareSimple/compass-calendar/issues/3982)).
+`isBookingEnabled` no longer disables production; deploy production to take
+effect. Historical NO-GO evidence below stays for audit.
 
 ## Recorded decision (needs human signature)
 
@@ -14,9 +16,9 @@ This file does not enable production booking. Do not flip
 | Release owner | Tyler Dane |
 | Intended provider set if later enabled | Google only (Google Meet conference) |
 | Explicitly excluded | Microsoft, Apple |
-| Production booking | remains disabled (`isBookingEnabled` is false in production) |
+| Production booking | **enabled in code** (founder decision #3982). Requires production deploy |
 | Notification destination | Founder's PostHog account. Meeting alerts are **not armed** |
-| Rollback / disable | Keep production `NODE_ENV` on the current `isBookingEnabled` path. Do not deploy a production `true`. If a future change enables it, revert that change and leave Meeting routes 404 in production |
+| Rollback / disable | Revert the production enable change to `isBookingEnabled` and redeploy production so Meeting routes 404 again |
 | First-week review | Daily for seven days after a future production enable, then weekly. Sample-size caveat: do not promote a rate with fewer than 20 accepted operations in the window. Post-launch: [#3720](https://github.com/KeepSoftwareSimple/compass-calendar/issues/3720) |
 
 The owner records this NO-GO by merging
@@ -68,8 +70,8 @@ WP-14 (#3720) is post-launch and outside this milestone.
 Stubbed Playwright covers Microsoft Teams copy and Apple no-video copy on
 the public page. That is capability copy, not a live provider.
 
-`isBookingEnabled` is on in development, staging, and tests, and off in
-production (`packages/core/src/util/env.util.test.ts`, 6/6).
+`isBookingEnabled` is on in every runtime environment, including production
+(`packages/core/src/util/env.util.ts`).
 
 ## Live HTTP (unauthenticated)
 

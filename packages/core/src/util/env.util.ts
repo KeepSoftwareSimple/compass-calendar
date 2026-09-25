@@ -7,9 +7,8 @@ export const isDev = (nodeEnv: NodeEnv | string) =>
 export const isNonProduction = (nodeEnv: NodeEnv | string) =>
   nodeEnv !== NodeEnv.Production;
 
-/** Booking v1 is on in development, staging, and tests. Not production. */
-export const isBookingEnabled = (nodeEnv: NodeEnv | string) =>
-  isNonProduction(nodeEnv);
+/** Booking v1 is on in every runtime environment, including production. */
+export const isBookingEnabled = (_nodeEnv: NodeEnv | string) => true;
 
 /**
  * Microsoft sign-in and connect stay off in production until publisher
