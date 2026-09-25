@@ -71,7 +71,7 @@ jobs:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           echo "Deploying booking-web ${RELEASE_TAG} to ${{ inputs.environment }}"
-          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9081}"
+          BOOKING_WEB_PORT="${BOOKING_WEB_PORT:-9082}"
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
           chmod 600 ~/.ssh/staging_key

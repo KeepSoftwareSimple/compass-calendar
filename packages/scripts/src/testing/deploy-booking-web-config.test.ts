@@ -69,6 +69,19 @@ describe("deploy booking-web config", () => {
     expect(workflow).not.toContain("_deploy-environment.yml");
   });
 
+  it("exposes a manual production booking-web workflow", () => {
+    const workflow = readFileSync(
+      ".github/workflows/deploy-production-booking-web.yml",
+      "utf8",
+    );
+    expect(workflow).toContain("workflow_dispatch:");
+    expect(workflow).toContain(
+      "uses: ./.github/workflows/_deploy-booking-web-environment.yml",
+    );
+    expect(workflow).toContain("environment: production");
+    expect(workflow).not.toContain("_deploy-environment.yml");
+  });
+
   it("inserts bookingWeb after the web block when missing", async () => {
     const input = [
       "runtime:",
