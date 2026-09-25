@@ -15,6 +15,7 @@ const IS_DEV = (config.runtime.nodeEnv ?? "development") === "development";
 const define: Record<string, string> = {
   "process.env": JSON.stringify({
     NODE_ENV: config.runtime.nodeEnv || "development",
+    COMPASS_NODE_ENV: config.runtime.nodeEnv || "development",
     API_BASEURL: config.backend.apiUrl,
     POSTHOG_KEY: config.posthog?.key || "",
     POSTHOG_HOST: config.posthog?.host || "",

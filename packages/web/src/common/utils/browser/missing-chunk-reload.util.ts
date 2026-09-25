@@ -17,7 +17,7 @@ const MISSING_CHUNK_MESSAGES = [
 
 const RELOAD_KEY_PREFIX = "compass_missing_chunk_reload:";
 
-export type MissingChunkReloadSource =
+type MissingChunkReloadSource =
   | "app-boot"
   | "react-error-boundary"
   | "lazy-import";

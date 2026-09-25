@@ -12,15 +12,16 @@ const PRODUCTION_HOSTNAMES = new Set([
  * known Compass deploy, so staging traffic stays staging even if an image was
  * built with the wrong runtime.nodeEnv. Falls back to the baked runtime env.
  */
-export function resolvePosthogEnvironment(): string {
-  if (typeof window !== "undefined") {
-    const hostname = window.location.hostname;
-    if (hostname === STAGING_HOSTNAME) {
-      return NodeEnv.Staging;
-    }
-    if (PRODUCTION_HOSTNAMES.has(hostname)) {
-      return NodeEnv.Production;
-    }
+export function resolvePosthogEnvironment(
+  hostname = typeof window !== "undefined"
+    ? window.location.hostname
+    : undefined,
+): string {
+  if (hostname === STAGING_HOSTNAME) {
+    return NodeEnv.Staging;
+  }
+  if (hostname !== undefined && PRODUCTION_HOSTNAMES.has(hostname)) {
+    return NodeEnv.Production;
   }
 
   return ENV_WEB.NODE_ENV;
