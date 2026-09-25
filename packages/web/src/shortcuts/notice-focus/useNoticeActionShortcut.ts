@@ -22,11 +22,15 @@ export const CONNECTION_BANNER_SHORTCUT_KEY = "G" as const;
  * key is its only way off the screen. */
 export const DEMO_EVENTS_BANNER_SHORTCUT_KEY = "O" as const;
 
+/** Sidebar meeting-page nudge CTA. `M` as in Meeting page. */
+export const MEETING_PAGE_NUDGE_SHORTCUT_KEY = "M" as const;
+
 export type NoticeActionKey =
   | typeof TOAST_PRIMARY_ACTION_KEY
   | typeof START_TRIAL_SHORTCUT_KEY
   | typeof CONNECTION_BANNER_SHORTCUT_KEY
-  | typeof DEMO_EVENTS_BANNER_SHORTCUT_KEY;
+  | typeof DEMO_EVENTS_BANNER_SHORTCUT_KEY
+  | typeof MEETING_PAGE_NUDGE_SHORTCUT_KEY;
 
 const activeNoticeActionKeys = new Set<NoticeActionKey>();
 
