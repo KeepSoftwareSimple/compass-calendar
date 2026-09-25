@@ -497,15 +497,14 @@ describe("isFirstImportInProgress", () => {
     expect(isFirstImportInProgress(undefined)).toBe(false);
   });
 
-  it.each([
-    "connecting",
-    "importing",
-    "catchingUp",
-  ] as const)("returns true for a never-healthy connection in state %s", (state) => {
-    expect(
-      isFirstImportInProgress(makeConnection({ state, lastHealthyAt: null })),
-    ).toBe(true);
-  });
+  it.each(["connecting", "importing", "catchingUp"] as const)(
+    "returns true for a never-healthy connection in state %s",
+    (state) => {
+      expect(
+        isFirstImportInProgress(makeConnection({ state, lastHealthyAt: null })),
+      ).toBe(true);
+    },
+  );
 
   it("returns false once the connection has ever gone healthy, even mid-catchingUp", () => {
     // This is the exact bug it fixes: an established account's ROUTINE
@@ -728,15 +727,14 @@ describe("getGoogleConnectionConfig", () => {
     onRefreshGoogle.mockClear();
   });
 
-  it.each([
-    "HEALTHY",
-    "checking",
-    "IMPORTING",
-  ] as const)("returns no command action for %s", (state) => {
-    expect(getGoogleConnectionConfig(state, handlers)).toEqual({
-      commandAction: null,
-    });
-  });
+  it.each(["HEALTHY", "checking", "IMPORTING"] as const)(
+    "returns no command action for %s",
+    (state) => {
+      expect(getGoogleConnectionConfig(state, handlers)).toEqual({
+        commandAction: null,
+      });
+    },
+  );
 
   it("wires ATTENTION to onRefreshGoogle", () => {
     const config = getGoogleConnectionConfig("ATTENTION", handlers);

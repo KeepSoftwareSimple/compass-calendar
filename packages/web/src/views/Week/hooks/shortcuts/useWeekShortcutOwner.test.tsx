@@ -576,7 +576,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
       .getMutationCache()
       .getAll()
       .find((mutation) => mutation.options.mutationKey?.[2] === "create");
-    const { input } = created?.state.variables as {
+    const { input } = created!.state.variables as {
       input: { calendarId: string; content: { title: string } };
     };
     expect(input.calendarId).toBe(editableEvent.calendarId);
@@ -608,7 +608,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
       .getMutationCache()
       .getAll()
       .find((mutation) => mutation.options.mutationKey?.[2] === "create");
-    const { input } = created?.state.variables as {
+    const { input } = created!.state.variables as {
       input: { calendarId: string; content: { title: string } };
     };
     expect(input.calendarId).toBe(editableEvent.calendarId);
@@ -640,7 +640,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
       .getMutationCache()
       .getAll()
       .find((mutation) => mutation.options.mutationKey?.[2] === "create");
-    const { input } = created?.state.variables as {
+    const { input } = created!.state.variables as {
       input: { content: { title: string } };
     };
     expect(input.content.title).toBe("Leftmost event");
@@ -814,7 +814,7 @@ describe("useWeekShortcutOwner calendar event targeting", () => {
       .getMutationCache()
       .getAll()
       .find((mutation) => mutation.options.mutationKey?.[2] === "create");
-    const { input } = created?.state.variables as {
+    const { input } = created!.state.variables as {
       input: { calendarId: string; content: { title: string } };
     };
     expect(input.content.title).toBe("Read-only event");
@@ -1109,7 +1109,7 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -1182,7 +1182,7 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const movedUp = getEditMutation(queryClient)?.state.variables as {
+    const movedUp = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(movedUp.input.schedule.start).toBe(
@@ -1204,8 +1204,8 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     const movedDown = queryClient
       .getMutationCache()
       .getAll()
-      .filter((mutation) => mutation.options.mutationKey?.[2] === "replace")[1]
-      ?.state.variables as { input: { schedule: { start: string } } };
+      .filter((mutation) => mutation.options.mutationKey?.[2] === "replace")[1]!
+      .state.variables as { input: { schedule: { start: string } } };
     // ArrowDown starts from the already-nudged cache (08:45), so +15m returns
     // to the original start — not another +15m from the pre-Up fixture.
     expect(movedDown.input.schedule.start).toBe(
@@ -1265,7 +1265,7 @@ describe("useWeekShortcutOwner shift+arrow event moves", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const moved = getEditMutation(queryClient)?.state.variables as {
+    const moved = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(moved.input.schedule.start).toBe(
@@ -1498,7 +1498,7 @@ describe("useWeekShortcutOwner edge focus", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -1556,7 +1556,7 @@ describe("useWeekShortcutOwner edge focus", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe("2026-05-22");
@@ -1868,7 +1868,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyUpInit: { ctrlKey: true },
     });
 
-    const { input } = getCreateMutation(queryClient)?.state.variables as {
+    const { input } = getCreateMutation(queryClient)!.state.variables as {
       input: {
         content: { title: string };
         schedule: { start: string; end: string };
@@ -1900,7 +1900,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyUpInit: { ctrlKey: true },
     });
 
-    const { input } = getCreateMutation(queryClient)?.state.variables as {
+    const { input } = getCreateMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(dayjs(input.schedule.start).format("YYYY-MM-DDTHH:mm")).toBe(
@@ -1928,7 +1928,7 @@ describe("useWeekShortcutOwner create shortcuts honor the selected column", () =
       keyUpInit: { ctrlKey: true },
     });
 
-    const { input } = getCreateMutation(queryClient)?.state.variables as {
+    const { input } = getCreateMutation(queryClient)!.state.variables as {
       input: { schedule: { kind: string; start: string; end: string } };
     };
     expect(input.schedule).toEqual({

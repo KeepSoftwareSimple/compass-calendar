@@ -447,21 +447,21 @@ describe("GoogleAuthAdapter", () => {
       expect(error.reason).toBe("authorizationRevoked");
     });
 
-    it.each([
-      "unauthorized_client",
-      "invalid_client",
-    ] as const)("classifies %s as authorizationRevoked", async (code) => {
-      const client = new FakeGoogleClient({
-        refreshError: { response: { data: { error: code } } },
-      });
-      const { adapter } = adapterWith(client);
+    it.each(["unauthorized_client", "invalid_client"] as const)(
+      "classifies %s as authorizationRevoked",
+      async (code) => {
+        const client = new FakeGoogleClient({
+          refreshError: { response: { data: { error: code } } },
+        });
+        const { adapter } = adapterWith(client);
 
-      const error = (await adapter
-        .refreshAccessToken({ refreshToken: "rt" })
-        .catch((e) => e)) as ProviderAuthError;
+        const error = (await adapter
+          .refreshAccessToken({ refreshToken: "rt" })
+          .catch((e) => e)) as ProviderAuthError;
 
-      expect(error.reason).toBe("authorizationRevoked");
-    });
+        expect(error.reason).toBe("authorizationRevoked");
+      },
+    );
 
     it("classifies an HTTP 401 refresh rejection as authorizationRevoked even without invalid_grant", async () => {
       const client = new FakeGoogleClient({

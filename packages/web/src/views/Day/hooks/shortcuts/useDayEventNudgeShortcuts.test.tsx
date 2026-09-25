@@ -295,7 +295,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -315,7 +315,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(input.schedule.start).toBe(
@@ -333,7 +333,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(input.schedule.start).toBe(
@@ -351,7 +351,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -372,7 +372,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string } };
     };
     expect(input.schedule.start).toBe(
@@ -393,7 +393,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe("2026-05-13");
@@ -424,7 +424,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe("2026-05-19");
@@ -443,7 +443,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -799,7 +799,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -820,7 +820,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -842,7 +842,7 @@ describe("useDayEventNudgeShortcuts", () => {
     await waitFor(() => {
       expect(getEditMutation(queryClient)).toBeDefined();
     });
-    const { input } = getEditMutation(queryClient)?.state.variables as {
+    const { input } = getEditMutation(queryClient)!.state.variables as {
       input: { schedule: { start: string; end: string } };
     };
     expect(input.schedule.start).toBe(
@@ -925,7 +925,7 @@ describe("useDayEventNudgeShortcuts", () => {
       keyUpInit: { ctrlKey: true },
     });
 
-    const { input } = getCreateMutation(queryClient)?.state.variables as {
+    const { input } = getCreateMutation(queryClient)!.state.variables as {
       input: {
         content: { title: string };
         schedule: { start: string; end: string };
@@ -955,7 +955,7 @@ describe("useDayEventNudgeShortcuts", () => {
       keyUpInit: { ctrlKey: true },
     });
 
-    const { input } = getCreateMutation(queryClient)?.state.variables as {
+    const { input } = getCreateMutation(queryClient)!.state.variables as {
       input: { schedule: { kind: string; start: string; end: string } };
     };
     expect(input.schedule).toEqual({

@@ -116,7 +116,7 @@ export function assembleEventInstances(
   // master's own schedule may fall entirely outside the queried range).
   for (const masterId of seriesMasterIds) {
     const master = eventsById.get(masterId);
-    if (!master || master.recurrence.kind !== "seriesMaster") continue;
+    if (master?.recurrence.kind !== "seriesMaster") continue;
     instances.push(
       SyncEventInstanceSchema.parse({
         eventId: master._id,

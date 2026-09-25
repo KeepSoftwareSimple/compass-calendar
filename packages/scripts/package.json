@@ -13,9 +13,9 @@
   "devDependencies": {
     "@sinonjs/fake-timers": "^10.3.0",
     "@types/node": "^24.7.2",
-    "mongodb": "^7.2.0",
+    "mongodb": "^7.6.0",
     "mongodb-memory-server": "^9.2.0",
     "typescript": "^7.0.2",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   }
 }

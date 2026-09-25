@@ -260,11 +260,14 @@ describe("Event Command Contracts", () => {
       ["accepted", "single"],
       ["declined", "all"],
       ["tentative", "single"],
-    ] as const)("accepts responseStatus %s with scope %s", (responseStatus, scope) => {
-      const input = { responseStatus, scope };
+    ] as const)(
+      "accepts responseStatus %s with scope %s",
+      (responseStatus, scope) => {
+        const input = { responseStatus, scope };
 
-      expect(RsvpEventInputSchema.safeParse(input).success).toBe(true);
-    });
+        expect(RsvpEventInputSchema.safeParse(input).success).toBe(true);
+      },
+    );
 
     it("rejects needsAction — un-answering is not an RSVP", () => {
       const input = { responseStatus: "needsAction", scope: "single" };

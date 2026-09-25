@@ -340,7 +340,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     const onSelectCalendar = useCallback(
       (calendarId: CalendarId) => {
         setLatestDraft((current) => {
-          if (!current || current.kind !== "create") return current;
+          if (current?.kind !== "create") return current;
           return { ...current, values: { ...current.values, calendarId } };
         });
       },

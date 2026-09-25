@@ -154,7 +154,7 @@ export class LocalEventRepository implements EventRepository {
     const parsed = parseLocalOccurrenceId(id);
     if (!parsed) return null;
     const record = await this.findRecordById(parsed.seriesId);
-    if (!record || record.event.recurrence.kind !== "series") return null;
+    if (record?.event.recurrence.kind !== "series") return null;
     return { record: record as SeriesRecord, occurrenceStart: parsed.start };
   }
 

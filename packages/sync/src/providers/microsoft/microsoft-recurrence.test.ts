@@ -243,11 +243,12 @@ describe("microsoft-recurrence", () => {
     ),
   ];
 
-  it.each(
-    roundTripCases.map((value, index) => [index, value] as const),
-  )("round-trips Graph patternedRecurrence table row %i", (_index, input) => {
-    expectGraphRoundTrip(input);
-  });
+  it.each(roundTripCases.map((value, index) => [index, value] as const))(
+    "round-trips Graph patternedRecurrence table row %i",
+    (_index, input) => {
+      expectGraphRoundTrip(input);
+    },
+  );
 
   const supportedRules: readonly (readonly string[])[] = [
     ["RRULE:FREQ=DAILY"],
@@ -272,21 +273,22 @@ describe("microsoft-recurrence", () => {
     ["RRULE:FREQ=YEARLY;BYMONTH=12;BYMONTHDAY=25;COUNT=10"],
   ];
 
-  it.each(
-    supportedRules.map((rules, index) => [index, rules] as const),
-  )("round-trips supported RRULE property case %i", (_index, rules) => {
-    const normalized = toRRule(
-      fromRRule(rules, { startDate: START, ianaTimeZone: PACIFIC_IANA }),
-    );
-    expect(
-      toRRule(
-        fromRRule(normalized, {
-          startDate: START,
-          ianaTimeZone: PACIFIC_IANA,
-        }),
-      ),
-    ).toEqual(normalized);
-  });
+  it.each(supportedRules.map((rules, index) => [index, rules] as const))(
+    "round-trips supported RRULE property case %i",
+    (_index, rules) => {
+      const normalized = toRRule(
+        fromRRule(rules, { startDate: START, ianaTimeZone: PACIFIC_IANA }),
+      );
+      expect(
+        toRRule(
+          fromRRule(normalized, {
+            startDate: START,
+            ianaTimeZone: PACIFIC_IANA,
+          }),
+        ),
+      ).toEqual(normalized);
+    },
+  );
 
   it("rejects unsupported RRULE features for Graph writes", () => {
     const rejects = [

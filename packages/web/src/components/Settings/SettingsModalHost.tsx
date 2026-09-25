@@ -3,6 +3,7 @@ import {
   selectIsSettingsOpen,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { useSettingsBrowserBack } from "@web/settings/useSettingsBrowserBack";
 
 /**
  * Mounts Settings only while it is open. Unmounting on close also clears
@@ -14,6 +15,7 @@ import {
  */
 export function SettingsModalHost() {
   const isOpen = useSettingsStore(selectIsSettingsOpen);
+  useSettingsBrowserBack();
   if (!isOpen) return null;
 
   return <SettingsModal />;

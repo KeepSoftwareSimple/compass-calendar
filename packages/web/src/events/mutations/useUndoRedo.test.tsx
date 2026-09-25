@@ -214,7 +214,7 @@ describe("useUndoRedo", () => {
       ({ method }) => method === "create",
     );
     expect(createCalls).toHaveLength(2);
-    expect((createCalls.at(-1)?.value as CreateEventInput).id).toBe(created.id);
+    expect((createCalls.at(-1)!.value as CreateEventInput).id).toBe(created.id);
   });
 
   test("undoes a delete by recreating the snapshot with its original id", async () => {
@@ -244,7 +244,7 @@ describe("useUndoRedo", () => {
       ).toBeDefined();
     });
     const createCall = context.calls.find(({ method }) => method === "create");
-    expect((createCall?.value as CreateEventInput).id).toBe(original.id);
+    expect((createCall!.value as CreateEventInput).id).toBe(original.id);
 
     act(() => context.hook.result.current.undoRedo.redo());
 

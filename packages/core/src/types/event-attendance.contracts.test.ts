@@ -87,13 +87,12 @@ describe("Event attendance contracts", () => {
   });
 
   describe("RsvpResponseStatusSchema", () => {
-    it.each([
-      "accepted",
-      "declined",
-      "tentative",
-    ] as const)("accepts %s", (status) => {
-      expect(RsvpResponseStatusSchema.safeParse(status).success).toBe(true);
-    });
+    it.each(["accepted", "declined", "tentative"] as const)(
+      "accepts %s",
+      (status) => {
+        expect(RsvpResponseStatusSchema.safeParse(status).success).toBe(true);
+      },
+    );
 
     it("rejects needsAction — a user answers, they don't un-answer", () => {
       expect(RsvpResponseStatusSchema.safeParse("needsAction").success).toBe(

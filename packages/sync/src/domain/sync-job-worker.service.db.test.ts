@@ -743,17 +743,15 @@ describe("SyncJobWorker", () => {
     while (!onHeartbeat) await new Promise((r) => setTimeout(r, 5));
 
     const claimed = await jobByKey(`incrementalPull:${resource._id}`);
-    const claimedLease = (claimed?.["leaseExpiresAt"] as Date).getTime();
+    const claimedLease = (claimed!["leaseExpiresAt"] as Date).getTime();
 
     // Advance time and fire one heartbeat; the lease must move forward.
     clock += 60_000;
     await onHeartbeat?.();
 
     const beaten = await jobByKey(`incrementalPull:${resource._id}`);
-    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBe(
-      clock + 300_000,
-    );
-    expect((beaten?.["leaseExpiresAt"] as Date).getTime()).toBeGreaterThan(
+    expect((beaten!["leaseExpiresAt"] as Date).getTime()).toBe(clock + 300_000);
+    expect((beaten!["leaseExpiresAt"] as Date).getTime()).toBeGreaterThan(
       claimedLease,
     );
 

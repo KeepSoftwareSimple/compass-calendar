@@ -27,7 +27,7 @@ const NON_ZERO_METRICS = ["LCP", "FCP", "INP"] as const;
 export function filterPosthogWebVitals(
   event: CaptureResult | null,
 ): CaptureResult | null {
-  if (!event || event.event !== "$web_vitals") return event;
+  if (event?.event !== "$web_vitals") return event;
 
   const properties = event.properties;
   if (!properties) return event;

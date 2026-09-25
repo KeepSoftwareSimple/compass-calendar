@@ -98,12 +98,12 @@ describe("getErrorStatus", () => {
 });
 
 describe("isSessionLevelError", () => {
-  it.each([
-    Status.UNAUTHORIZED,
-    Status.GONE,
-  ])("is true for session status %s", (status) => {
-    expect(isSessionLevelError(createApiError({ status }))).toBe(true);
-  });
+  it.each([Status.UNAUTHORIZED, Status.GONE])(
+    "is true for session status %s",
+    (status) => {
+      expect(isSessionLevelError(createApiError({ status }))).toBe(true);
+    },
+  );
 
   it("is false for other HTTP failures", () => {
     expect(
@@ -310,25 +310,25 @@ describe("parseGoogleConnectError", () => {
 });
 
 describe("handleErrorResponse", () => {
-  it.each([
-    Status.UNAUTHORIZED,
-    Status.GONE,
-  ])("delegates connection revocation for status %s and rethrows the API error", async (status) => {
-    const onGoogleRevoked = mock();
-    const error = createApiError(
-      {
-        data: { code: "CONNECTION_REVOKED" },
-        status,
-      },
-      { body: { calendarId: "cal-456" } },
-    );
+  it.each([Status.UNAUTHORIZED, Status.GONE])(
+    "delegates connection revocation for status %s and rethrows the API error",
+    async (status) => {
+      const onGoogleRevoked = mock();
+      const error = createApiError(
+        {
+          data: { code: "CONNECTION_REVOKED" },
+          status,
+        },
+        { body: { calendarId: "cal-456" } },
+      );
 
-    await expect(handleErrorResponse(error, { onGoogleRevoked })).rejects.toBe(
-      error,
-    );
+      await expect(
+        handleErrorResponse(error, { onGoogleRevoked }),
+      ).rejects.toBe(error);
 
-    expect(onGoogleRevoked).toHaveBeenCalledWith({ calendarId: "cal-456" });
-  });
+      expect(onGoogleRevoked).toHaveBeenCalledWith({ calendarId: "cal-456" });
+    },
+  );
 
   it("does not delegate unrelated API errors", async () => {
     const onGoogleRevoked = mock();

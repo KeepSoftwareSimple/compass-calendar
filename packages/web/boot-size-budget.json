@@ -3,7 +3,7 @@
   "totalGzipBytes": 506628,
   "packages": {
     "@phosphor-icons/react": 17995,
-    "@react-oauth/google": 2011,
+    "@react-oauth/google": 2043,
     "@tanstack/history": 4480,
     "@tanstack/hotkeys": 9244,
     "@tanstack/query-core": 35381,
@@ -18,7 +18,7 @@
     "clsx": 390,
     "dayjs": 21333,
     "dexie": 106083,
-    "posthog-js": 259090,
+    "posthog-js": 315159,
     "react": 7376,
     "react-dom": 137854,
     "react-toastify": 36073,

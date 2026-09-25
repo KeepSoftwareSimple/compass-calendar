@@ -75,15 +75,15 @@ describe("Sync connection contracts", () => {
       ).toBe(true);
     });
 
-    it.each([
-      "connecting",
-      "importing",
-      "catchingUp",
-      "disconnected",
-    ] as const)("accepts state %s without a reason", (state) => {
-      const connection = { ...validConnection(), state };
-      expect(ProviderConnectionSchema.safeParse(connection).success).toBe(true);
-    });
+    it.each(["connecting", "importing", "catchingUp", "disconnected"] as const)(
+      "accepts state %s without a reason",
+      (state) => {
+        const connection = { ...validConnection(), state };
+        expect(ProviderConnectionSchema.safeParse(connection).success).toBe(
+          true,
+        );
+      },
+    );
 
     it("accepts delayed with and without a reason", () => {
       const delayed = { ...validConnection(), state: "delayed" };
@@ -454,15 +454,13 @@ describe("Sync connection contracts", () => {
       expect(ProviderCalendarSchema.safeParse(calendar).success).toBe(true);
     });
 
-    it.each([
-      "owner",
-      "editor",
-      "viewer",
-      "busyOnly",
-    ] as const)("accepts access role %s", (accessRole) => {
-      const calendar = { ...validCalendar(), accessRole };
-      expect(ProviderCalendarSchema.safeParse(calendar).success).toBe(true);
-    });
+    it.each(["owner", "editor", "viewer", "busyOnly"] as const)(
+      "accepts access role %s",
+      (accessRole) => {
+        const calendar = { ...validCalendar(), accessRole };
+        expect(ProviderCalendarSchema.safeParse(calendar).success).toBe(true);
+      },
+    );
 
     it("rejects a provider-specific access role", () => {
       expect(CalendarAccessRoleSchema.safeParse("freeBusyReader").success).toBe(

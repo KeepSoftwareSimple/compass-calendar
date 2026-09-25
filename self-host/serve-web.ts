@@ -11,6 +11,9 @@ const MIN_PORT = 1;
 const port = parsePort(process.env.WEB_PORT);
 const root =
   process.env.WEB_ROOT || path.resolve(import.meta.dir, "../build/web");
+// booking-web shares this server and must SPA-fallback its own /meet routes;
+// calendar-web must not.
+const servesGuestMeet = process.env.WEB_SERVES_GUEST_MEET === "true";
 const textTypes: Record<string, string> = COMPRESSIBLE_STATIC_TYPES;
 
 const STATIC_SECURITY_HEADERS: Record<string, string> = {
@@ -255,7 +258,7 @@ Bun.serve({
       return new Response("Not Found", { status: 404 });
     }
 
-    if (isGuestMeetStaticPath(pathname)) {
+    if (!servesGuestMeet && isGuestMeetStaticPath(pathname)) {
       return new Response("Not Found", { status: 404 });
     }
 

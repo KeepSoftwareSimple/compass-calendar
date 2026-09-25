@@ -27,7 +27,7 @@ export function useTodayTimedEvents() {
     .filter((event) => event.isTimedMultiDayDisplay)
     .flatMap((gridEvent) => {
       const source = events.find((event) => event.id === gridEvent._id);
-      if (!source || source.schedule.kind !== "timed") return [];
+      if (source?.schedule.kind !== "timed") return [];
       return [
         {
           ...gridEvent,

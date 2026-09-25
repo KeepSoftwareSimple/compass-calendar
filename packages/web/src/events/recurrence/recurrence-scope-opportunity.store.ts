@@ -65,7 +65,7 @@ const setOpportunity = (opportunity: RecurrenceScopeOpportunity | null) =>
 const recordDeclineIfReadyEdit = (
   current: RecurrenceScopeOpportunity | null,
 ) => {
-  if (!current || current.kind !== "replace" || current.status !== "ready") {
+  if (current?.kind !== "replace" || current.status !== "ready") {
     return;
   }
   useRecurrenceScopeOpportunityStore.setState((state) => ({
@@ -144,7 +144,7 @@ export const recurrenceScopeOpportunityActions = {
 
   claimPromotion: (): RecurrenceScopeOpportunity | null => {
     const current = useRecurrenceScopeOpportunityStore.getState().opportunity;
-    if (!current || current.status !== "requested" || !current.requestedScope) {
+    if (current?.status !== "requested" || !current.requestedScope) {
       return null;
     }
     // Promoting is the opposite of declining: the user chose the series, so

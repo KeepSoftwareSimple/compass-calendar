@@ -531,6 +531,31 @@ describe("parseUserTime", () => {
     expect(result?.value).toBe("10:33 PM");
   });
 
+  it("parses digits with a spaced meridiem", () => {
+    expect(parseUserTime("430 am", "5:30 PM")?.value).toBe("4:30 AM");
+    expect(parseUserTime("430 p")?.value).toBe("4:30 PM");
+    expect(parseUserTime("1030pm")?.value).toBe("10:30 PM");
+    expect(parseUserTime("8 pm")?.value).toBe("8:00 PM");
+  });
+
+  it("accepts dotted meridiems and alternate separators", () => {
+    expect(parseUserTime("4:30 p.m.")?.value).toBe("4:30 PM");
+    expect(parseUserTime("9a.m.")?.value).toBe("9:00 AM");
+    expect(parseUserTime("4.30pm")?.value).toBe("4:30 PM");
+    expect(parseUserTime("16h30")?.value).toBe("4:30 PM");
+  });
+
+  it("parses midnight and noon with a meridiem", () => {
+    expect(parseUserTime("12a")?.value).toBe("12:00 AM");
+    expect(parseUserTime("12p")?.value).toBe("12:00 PM");
+    expect(parseUserTime("0")?.value).toBe("12:00 AM");
+  });
+
+  it("rejects a 24-hour time with a meridiem", () => {
+    expect(parseUserTime("14pm")).toBeNull();
+    expect(parseUserTime("0am")).toBeNull();
+  });
+
   it("correctly normalizes 10:00 to label '10 AM' (strips :00)", () => {
     const result = parseUserTime("10:00");
     expect(result?.label).toBe("10 AM");
@@ -558,6 +583,19 @@ describe("filterTimeOption", () => {
     expect(filterTimeOption(twelveFortyFiveAm, "12:4")).toBe(true);
     expect(filterTimeOption(twelveFortyFivePm, "12:4")).toBe(true);
     expect(filterTimeOption(twoAm, "12:4")).toBe(false);
+  });
+
+  it("matches partial digits without the colon", () => {
+    const fourThirtyAm = { label: "4:30 AM", value: "4:30 AM" };
+    const fourThirtyPm = { label: "4:30 PM", value: "4:30 PM" };
+    expect(filterTimeOption(fourThirtyAm, "43")).toBe(true);
+    expect(filterTimeOption(fourThirtyPm, "43")).toBe(true);
+    expect(filterTimeOption(twoAm, "43")).toBe(false);
+  });
+
+  it("matches digits with a spaced meridiem", () => {
+    const fourThirtyAm = { label: "4:30 AM", value: "4:30 AM" };
+    expect(filterTimeOption(fourThirtyAm, "430 am", "5:30 PM")).toBe(true);
   });
 
   it("shows every option when the filter is empty", () => {

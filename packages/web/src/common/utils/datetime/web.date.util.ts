@@ -91,10 +91,10 @@ export const getTimeOptions = (): TimeOption[] => {
   return options;
 };
 
-const expandMeridiem = (mer: string) => {
-  const upper = mer.toUpperCase();
-  return upper.length === 1 ? `${upper}M` : upper;
-};
+// Hours, optional minutes (with or without a ":", "." or "h" separator), and an
+// optional a/p/am/pm/a.m./p.m. suffix, matched after whitespace is removed.
+// "430", "4:30", "4.30", "430 am", "4:30p", and "16h30" all parse.
+const USER_TIME_PATTERN = /^(\d{1,2})(?:[:.h]?(\d{2}))?(?:([ap])\.?m?\.?)?$/;
 
 export const parseUserTime = (
   input: string,
@@ -102,89 +102,41 @@ export const parseUserTime = (
 ): TimeOption | null => {
   if (!input || typeof input !== "string") return null;
 
-  // Normalize: trim, uppercase, collapse whitespace
-  let normalized = input.trim().toUpperCase().replace(/\s+/g, " ");
+  const match = input
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .match(USER_TIME_PATTERN);
+  if (!match) return null;
 
-  // Handle glued meridiem (e.g., "10:33pm" -> "10:33 PM", "8p" -> "8 PM").
-  // Expand A/P so dayjs's AM/PM token can parse them, and skip a dangling
-  // colon when the user omitted minutes ("8pm" must not become "8: PM").
-  normalized = normalized.replace(
-    /^(\d{1,2}):?(\d{0,2})(AM|PM|A|P)$/i,
-    (_match, hours: string, minutes: string, mer: string) => {
-      const meridiem = expandMeridiem(mer);
-      return minutes
-        ? `${hours}:${minutes} ${meridiem}`
-        : `${hours} ${meridiem}`;
-    },
-  );
+  const [, hourText, minuteText = "0", meridiem] = match;
+  let hour = Number(hourText);
+  const minute = Number(minuteText);
+  if (minute > 59) return null;
 
-  // Digits-only preprocessing
-  const digitsMatch = normalized.match(/^(\d{1,4})$/);
-  if (digitsMatch) {
-    const digits = digitsMatch[1];
-    if (digits.length === 3 || digits.length === 4) {
-      const hours = digits.slice(0, -2);
-      const minutes = digits.slice(-2);
-      normalized = `${hours}:${minutes}`;
-    } else if (digits.length === 1 || digits.length === 2) {
-      normalized = `${digits}:00`;
-    }
-  }
-
-  // Try parsing with various formats (meridiem formats first)
-  const formats = ["h:mm A", "h:mmA", "h A", "hA", "H:mm", "HH:mm"];
-  let parsed: Dayjs | null = null;
-
-  for (const fmt of formats) {
-    const candidate = dayjs(normalized, fmt, true);
-    if (candidate.isValid()) {
-      parsed = candidate;
-      break;
-    }
-  }
-
-  if (!parsed) return null;
-
-  // Validate hour and minute ranges
-  if (
-    parsed.hour() < 0 ||
-    parsed.hour() > 23 ||
-    parsed.minute() < 0 ||
-    parsed.minute() > 59
-  ) {
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    hour = (hour % 12) + (meridiem === "p" ? 12 : 0);
+  } else if (hour > 23) {
     return null;
-  }
-
-  // A leading zero ("0500", "05:00") is 24-hour notation, so the hour is literal.
-  const isTwentyFourHour = /^0\d/.test(normalized);
-
-  // Meridiem inheritance: if input has no explicit AM/PM and hour is 1-12,
-  // inherit meridiem from currentValue. Leading-zero hours, 0, and 13-23 are
-  // unambiguous.
-  if (
+  } else if (
     currentValue &&
-    !isTwentyFourHour &&
-    normalized.toUpperCase().indexOf("A") === -1 &&
-    normalized.toUpperCase().indexOf("P") === -1 &&
-    parsed.hour() >= 1 &&
-    parsed.hour() <= 12
+    !hourText?.startsWith("0") &&
+    hour >= 1 &&
+    hour <= 12
   ) {
+    // No meridiem: inherit it from the current value. A leading zero
+    // ("0500", "05:00") is 24-hour notation, and hours 0 and 13-23 are
+    // unambiguous.
     const current = getDayjsByTimeValue(currentValue);
     if (current.isValid()) {
       const currentIsPM = current.hour() >= 12;
-
-      if (currentIsPM && parsed.hour() !== 12) {
-        // Current is PM (1-11 PM), so adjust parsed AM hour to PM
-        parsed = parsed.add(12, "hour");
-      } else if (!currentIsPM && parsed.hour() === 12) {
-        // Current is AM, parsed is 12 (12 AM/PM ambiguous), so 12 AM
-        parsed = parsed.subtract(12, "hour");
-      }
+      if (currentIsPM && hour !== 12) hour += 12;
+      else if (!currentIsPM && hour === 12) hour = 0;
     }
   }
 
   // Return via getTimeOptionByValue so it normalizes like list options
-  return getTimeOptionByValue(parsed);
+  return getTimeOptionByValue(dayjs().startOf("day").hour(hour).minute(minute));
 };
 
 const MONTH_NAME_TO_INDEX: Record<string, number> = {
@@ -343,11 +295,15 @@ export const filterTimeOption = (
     return option.value === parsed.value || option.label === parsed.label;
   }
 
-  const needle = input.trim().toLowerCase();
+  // Partial input ("43", "12:4"): compare letters and digits only,
+  // so "43" finds 4:30 AM and 4:30 PM.
+  const compact = (text: string) =>
+    text.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const needle = compact(input);
   if (!needle) return true;
   return (
-    option.label.toLowerCase().includes(needle) ||
-    option.value.toLowerCase().includes(needle)
+    compact(option.label).includes(needle) ||
+    compact(option.value).includes(needle)
   );
 };
 

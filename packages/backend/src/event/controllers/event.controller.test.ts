@@ -385,7 +385,7 @@ describe("EventController", () => {
     };
 
     const titles = (json: ReturnType<typeof mock>) =>
-      (json.mock.calls[0]?.[0] as { events: { content: { title: string } }[] })
+      (json.mock.calls[0]![0] as { events: { content: { title: string } }[] })
         .events;
 
     it("matches titles case-insensitively", async () => {

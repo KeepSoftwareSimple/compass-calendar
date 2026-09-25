@@ -63,7 +63,7 @@ export async function terminalReplayIsStale(
     );
     // Double-undo, or a retry after the restore already landed: the event is
     // already back, so re-executing would risk a duplicate provider insert.
-    return !existing || existing.lifecycleState !== "active";
+    return existing?.lifecycleState !== "active";
   }
 
   if (command.input.kind !== "delete") return false;
@@ -76,7 +76,7 @@ export async function terminalReplayIsStale(
 
   // Absence (or a pending-deletion row) is the delete's own desired end
   // state — a genuine timeout-retry short-circuits exactly as before.
-  if (!existing || existing.lifecycleState !== "active") return false;
+  if (existing?.lifecycleState !== "active") return false;
 
   if (command.input.scope === "all") return true;
 

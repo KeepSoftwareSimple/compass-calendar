@@ -893,25 +893,24 @@ describe("SettingsModal", () => {
     expect(screen.queryByRole("button", { name: "Meeting" })).toBeNull();
   });
 
-  it.each([
-    "accounts",
-    "billing",
-    "booking",
-  ] as const)("tells the host to hold Mod on the %s screen", (page) => {
-    access = {
-      kind: "server",
-      status: "active",
-      isReadOnly: false,
-      trialEndsAt: null,
-    };
-    renderSettings({ authenticated: true, page });
+  it.each(["accounts", "billing", "booking"] as const)(
+    "tells the host to hold Mod on the %s screen",
+    (page) => {
+      access = {
+        kind: "server",
+        status: "active",
+        isReadOnly: false,
+        trialEndsAt: null,
+      };
+      renderSettings({ authenticated: true, page });
 
-    expect(
-      within(screen.getByRole("dialog", { name: "Settings" })).getByText(
-        getPartsPlainText(SETTINGS_HOLD_MOD_HINT_PARTS),
-      ),
-    ).toBeInTheDocument();
-  });
+      expect(
+        within(screen.getByRole("dialog", { name: "Settings" })).getByText(
+          getPartsPlainText(SETTINGS_HOLD_MOD_HINT_PARTS),
+        ),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("says nothing about a plan on an install without billing", () => {
     renderSettings({ authenticated: true });
