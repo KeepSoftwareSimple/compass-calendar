@@ -1,3 +1,4 @@
+import { PublicBookingFooter } from "@booking-web/booking/PublicBookingFooter";
 import { type PropsWithChildren } from "react";
 
 export const PUBLIC_BOOKING_STICKY_STEP_CLASS =
@@ -29,6 +30,7 @@ export function PublicBookingLayout({
         }`}
       >
         {children}
+        <PublicBookingFooter />
       </main>
     </div>
   );

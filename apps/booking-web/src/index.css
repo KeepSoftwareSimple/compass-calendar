@@ -1,1 +1,10 @@
 @import "../../../packages/web/src/index.css";
+
+/*
+ * booking-web builds from its own directory, so Tailwind only scans this app.
+ * Shared @web components rendered here must be listed or their classes are
+ * never generated (the timezone modal rendered inline without these). Add a
+ * line when booking-web starts rendering another @web component.
+ */
+@source "../../../packages/web/src/components/OverlayPanel";
+@source "../../../packages/web/src/timezone";

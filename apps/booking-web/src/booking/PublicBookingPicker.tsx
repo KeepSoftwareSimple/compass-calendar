@@ -126,11 +126,11 @@ export function PublicBookingPicker({
   };
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
+    <div className="flex w-full min-w-0 flex-col gap-3 sm:min-h-80 sm:flex-1">
       <p aria-live="polite" className="sr-only" role="status">
         {liveMessage}
       </p>
-      <div className="grid min-h-0 w-full min-w-0 flex-1 gap-6 sm:grid-cols-2">
+      <div className="grid w-full min-w-0 gap-6 sm:min-h-80 sm:flex-1 sm:grid-cols-2">
         <div className="min-w-0">
           {showGridSkeleton ? (
             <PublicBookingMonthGridSkeleton

@@ -3,7 +3,7 @@ import {
   formatBookingSlotLabel,
   formatDurationMinutes,
 } from "@booking-web/booking/public-booking.format";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, mock } from "bun:test";
 
@@ -79,9 +79,10 @@ describe("PublicBookingConfirmationView", () => {
       screen.getByRole("link", { name: "Reschedule this meeting" }),
     ).toHaveAttribute("href", rescheduleUrl);
     expect(
-      screen.getByRole("group", { name: "Meeting actions" }),
-    ).toBeInTheDocument();
-    expect(screen.getAllByRole("link")).toHaveLength(2);
+      within(
+        screen.getByRole("group", { name: "Meeting actions" }),
+      ).getAllByRole("link"),
+    ).toHaveLength(2);
 
     heading.focus();
     await user.tab();
