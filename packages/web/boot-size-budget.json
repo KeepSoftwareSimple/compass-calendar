@@ -4,10 +4,10 @@
   "packages": {
     "@phosphor-icons/react": 17995,
     "@react-oauth/google": 2043,
-    "@tanstack/history": 4633,
-    "@tanstack/hotkeys": 13579,
+    "@tanstack/history": 4480,
+    "@tanstack/hotkeys": 9244,
     "@tanstack/query-core": 35381,
-    "@tanstack/react-hotkeys": 1249,
+    "@tanstack/react-hotkeys": 1228,
     "@tanstack/react-query": 4068,
     "@tanstack/react-router": 22287,
     "@tanstack/react-store": 282,
