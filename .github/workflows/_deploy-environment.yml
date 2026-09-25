@@ -64,10 +64,25 @@ jobs:
             NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
           tags: switchbacktech/compass-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
 
+      - name: Build and push environment-specific booking-web image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: apps/booking-web/Dockerfile
+          push: true
+          build-args: |
+            API_BASEURL=${{ vars.BACKEND_API_URL }}
+            NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
+          tags: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
+
       - name: Deploy release to ${{ inputs.environment }}
         env:
           # Non-sensitive
           BACKEND_API_URL: ${{ vars.BACKEND_API_URL }}
+          BOOKING_WEB_IMAGE: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
+          # Production keeps 127.0.0.1:9081 for compass-static (blog), so
+          # booking-web binds 9082 there. Caddy's /meet handle must match.
+          BOOKING_WEB_PORT: ${{ vars.BOOKING_WEB_PORT || (inputs.environment == 'production' && '9082' || '9081') }}
           COMPOSE_GIT_REF: ${{ vars.COMPOSE_GIT_REF }}
           COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
           FRONTEND_URL: ${{ vars.FRONTEND_URL }}
@@ -187,6 +202,9 @@ jobs:
               '  port: 9080' \
               "  url: \"${FRONTEND_URL}\"" \
               "  image: \"${WEB_IMAGE}\"" \
+              'bookingWeb:' \
+              "  port: ${BOOKING_WEB_PORT}" \
+              "  image: \"${BOOKING_WEB_IMAGE}\"" \
               'backend:' \
               '  port: 3000' \
               "  apiUrl: \"${BACKEND_API_URL}\"" \
@@ -307,8 +325,9 @@ jobs:
           # previously working helper untouched.
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/SwitchbackTech/compass/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
-          # Always enable the sync profile: config is always written above, and
-          # an explicit COMPOSE_PROFILES var (e.g. `selfhosted`) would otherwise
-          # override the helper's default_profiles() and leave sync unstarted.
-          DEPLOY_PROFILES="${COMPOSE_PROFILES:+${COMPOSE_PROFILES},}sync"
+          # Always enable the booking and sync profiles: their config is always
+          # written above, and an explicit COMPOSE_PROFILES var (e.g.
+          # `selfhosted`) would otherwise override the helper's
+          # default_profiles() and leave them unstarted.
+          DEPLOY_PROFILES="${COMPOSE_PROFILES:+${COMPOSE_PROFILES},}booking,sync"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "cd ~/compass && COMPOSE_PROFILES='${DEPLOY_PROFILES}' ./compass update"

@@ -714,7 +714,9 @@ test.describe("settings booking section", () => {
         .locator("p.text-text-muted")
         .filter({ hasText: /^Step 2 of \d+$/ }),
     ).toBeVisible();
-    await page.keyboard.press("k");
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /^Continue/ }),
+    );
     await expect(
       settingsDialog.getByRole("heading", { name: "How long is a meeting?" }),
     ).toBeVisible();
@@ -741,8 +743,12 @@ test.describe("settings booking section", () => {
         .locator("p.text-text-muted")
         .filter({ hasText: /^Step 2 of \d+$/ }),
     ).toBeVisible();
-    await page.keyboard.press("k");
-    await page.keyboard.press("k");
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /^Continue/ }),
+    );
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /^Continue/ }),
+    );
     await expect(
       settingsDialog
         .locator("p.text-text-muted")
@@ -781,8 +787,12 @@ test.describe("settings booking section", () => {
         .locator("p.text-text-muted")
         .filter({ hasText: /^Step 2 of \d+$/ }),
     ).toBeVisible();
-    await page.keyboard.press("k");
-    await page.keyboard.press("k");
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /^Continue/ }),
+    );
+    await dispatchClick(
+      settingsDialog.getByRole("button", { name: /^Continue/ }),
+    );
     await expect(
       settingsDialog.getByRole("heading", { name: "Ready to go live" }),
     ).toBeVisible();

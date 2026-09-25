@@ -241,8 +241,12 @@ with an existing release tag, such as `v1.2.3`; it is not called by
 `release-on-main.yml` and does not run automatically after PR merges.
 
 The workflow deploys to the GitHub `production` environment through
-`_deploy-environment.yml`, builds an environment-specific web image tagged
-`switchbacktech/compass-web:production-<version>`, then runs
+`_deploy-environment.yml`, builds environment-specific web and booking-web
+images tagged `switchbacktech/compass-web:production-<version>` and
+`switchbacktech/compass-booking-web:production-<version>`, writes the
+`bookingWeb` block into `compass.yaml` (port `BOOKING_WEB_PORT`, default
+`9082` on production because `9081` is `compass-static`), starts the
+`booking` and `sync` profiles, then runs
 `deploy-health-check.yml` with the `cloud` profile. Production is expected to use
 external MongoDB and SuperTokens Cloud rather than self-hosted data services.
 

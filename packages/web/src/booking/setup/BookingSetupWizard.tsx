@@ -18,12 +18,10 @@ import {
   setupStepSentence,
   visibleSetupSteps,
 } from "@web/booking/setup/setup-steps";
-import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
-import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { settingsShortcutAttrs } from "@web/settings/useSettingsShortcuts";
 
 interface BookingSetupWizardProps {
@@ -137,21 +135,6 @@ export function BookingSetupWizard({
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
-    if (!isEditableKeyboardTarget(event)) {
-      const navKey = event.key.toLowerCase();
-      if (navKey === "k") {
-        if (!canContinue) return;
-        event.preventDefault();
-        onContinue();
-        return;
-      }
-      if (navKey === "j") {
-        event.preventDefault();
-        onBack();
-        return;
-      }
-    }
-
     if (event.key !== "Enter" || event.shiftKey || event.altKey) return;
 
     const isTextInput =
@@ -230,38 +213,31 @@ export function BookingSetupWizard({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <span className="inline-flex flex-wrap items-center gap-2 text-sm text-text-muted">
-          <ShortcutKeys keys="Enter" />
-          <span>Continue</span>
-          <ShortcutKeys keys="Esc" />
-          <span>Back</span>
-          <ShortcutKeys keys="K" />
-          <span>Next</span>
-          <ShortcutKeys keys="J" />
-          <span>Back</span>
-        </span>
-        <OverlayPanelActions>
-          {!isFirstStep ? (
-            <OverlayPanelActionButton onClick={onBack} type="button">
-              Back
-            </OverlayPanelActionButton>
-          ) : null}
+      <OverlayPanelActions>
+        {!isFirstStep ? (
           <OverlayPanelActionButton
-            aria-busy={isPending || undefined}
-            aria-keyshortcuts="Meta+Enter Control+Enter"
-            disabled={!canContinue}
-            onClick={onContinue}
-            ref={continueRef}
-            shortcut={["Mod", "Enter"]}
-            showShortcut
-            variant="primary"
-            {...settingsShortcutAttrs("save-booking")}
+            aria-keyshortcuts="Escape"
+            onClick={onBack}
+            shortcut="Esc"
+            type="button"
           >
-            {isGoLive ? "Turn on and copy link" : "Continue"}
+            Back
           </OverlayPanelActionButton>
-        </OverlayPanelActions>
-      </div>
+        ) : null}
+        <OverlayPanelActionButton
+          aria-busy={isPending || undefined}
+          aria-keyshortcuts="Meta+Enter Control+Enter"
+          disabled={!canContinue}
+          onClick={onContinue}
+          ref={continueRef}
+          shortcut={["Mod", "Enter"]}
+          showShortcut
+          variant="primary"
+          {...settingsShortcutAttrs("save-booking")}
+        >
+          {isGoLive ? "Turn on and copy link" : "Continue"}
+        </OverlayPanelActionButton>
+      </OverlayPanelActions>
     </div>
   );
 }

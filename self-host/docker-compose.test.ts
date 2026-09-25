@@ -542,13 +542,13 @@ describe("staging deploy workflow", () => {
   it("always passes COMPOSE_PROFILES including sync to compass update", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
-    // Sync is required, so the deploy never falls back to an unscoped
-    // `./compass update` that could omit the sync profile when an explicit
+    // Booking and sync are required, so the deploy never falls back to an
+    // unscoped `./compass update` that could omit them when an explicit
     // COMPOSE_PROFILES var (e.g. `selfhosted`) is set.
     expect(workflow).toContain(
       'DEPLOY_PROFILES="$'.concat(
         "{COMPOSE_PROFILES:+$",
-        '{COMPOSE_PROFILES},}sync"',
+        '{COMPOSE_PROFILES},}booking,sync"',
       ),
     );
     expect(workflow).toContain(
@@ -722,7 +722,7 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain(
       'DEPLOY_PROFILES="$'.concat(
         "{COMPOSE_PROFILES:+$",
-        '{COMPOSE_PROFILES},}sync"',
+        '{COMPOSE_PROFILES},}booking,sync"',
       ),
     );
   });

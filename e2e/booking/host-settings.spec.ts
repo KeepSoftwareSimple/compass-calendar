@@ -209,13 +209,17 @@ test("first visit: keyboard setup wizard through go live", async ({
       .locator("p.text-text-muted")
       .filter({ hasText: /^Step 2 of \d+$/ }),
   ).toBeVisible();
-  await page.keyboard.press("k");
+  await dispatchClick(
+    settingsDialog.getByRole("button", { name: /^Continue/ }),
+  );
   await expect(
     settingsDialog
       .locator("p.text-text-muted")
       .filter({ hasText: /^Step 3 of \d+$/ }),
   ).toBeVisible();
-  await page.keyboard.press("k");
+  await dispatchClick(
+    settingsDialog.getByRole("button", { name: /^Continue/ }),
+  );
   await expect(
     settingsDialog
       .locator("p.text-text-muted")

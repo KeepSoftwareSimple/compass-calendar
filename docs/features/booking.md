@@ -316,11 +316,10 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   "Connect a calendar you can write to before going live." and connect
   buttons, **Continue** stays disabled, and go live is unreachable until a
   writable calendar exists), then go live. Every step after the first shows
-  a **Back** button beside **Continue**. The keyboard hint row labels its
-  keys ("Enter Continue", "Esc Back", "K Next", "J Back"). Plain Enter
-  continues from the address input or the Continue button; `k` continues and
-  `j` goes back when focus is not in an editable target; Esc goes back one
-  step (on step 1 it closes Settings). When the address step fails with
+  a **Back** button (Esc) beside **Continue** (Mod+Enter); the shortcuts sit
+  on the buttons, there is no separate hint row. Plain Enter also continues
+  from the address input or the Continue button; Esc goes back one step (on
+  step 1 it closes Settings). When the address step fails with
   "That address is already taken. Try another.", focus moves to the address
   field. Address **Continue** saves a disabled draft so the slug is reserved.
   **Turn on and copy link** on the last step saves with `enabled: true`,
@@ -493,11 +492,12 @@ flowchart LR
 - **Persistence:** Booking-owned Mongo collections (page config,
   reservations). Calendar collections stay Calendar/Sync-owned.
   Cross-domain references are stable ids only.
-- **Web (guest):** `apps/booking-web` is a separate static SPA container
-  and CI deploy path (`Deploy staging booking-web`, `./compass
-  update-booking-web`). On shared Compass Cloud and self-host stacks it
-  listens on `bookingWeb.port` (default `9081`) behind Caddy's `/meet/*`
-  path matcher. Local dev: `bun run dev:booking-web` on port `9081`;
+- **Web (guest):** `apps/booking-web` is a separate static SPA container.
+  Full deploys (`Deploy staging`, `Deploy production`) build and start it
+  with the `booking` profile; `Deploy staging booking-web` (`./compass
+  update-booking-web`) is the staging-only fast path. On shared Compass
+  Cloud and self-host stacks it listens on `bookingWeb.port` (default
+  `9081`; `9082` on production) behind Caddy's `/meet/*` path matcher. Local dev: `bun run dev:booking-web` on port `9081`;
   `bun run dev:web` redirects guest `/meet` and `/book` to that origin.
 - **Web (host):** Meeting Settings and host booking funnels stay in
   `packages/web` (calendar-web). They use the authenticated layout and

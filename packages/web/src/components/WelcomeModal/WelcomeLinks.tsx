@@ -18,7 +18,7 @@ const PRICING_LINK = {
   shortcut: "P",
   letter: "p",
   label: "Pricing",
-  href: "https://compasscalendar.com/pricing",
+  href: "https://www.compasscalendar.com/pricing",
 } as const;
 
 const PRACTICE_LINK = {
@@ -30,12 +30,12 @@ const DIGIT_LEGAL_LINKS = [
   {
     digit: "9",
     label: "Privacy",
-    href: "https://compasscalendar.com/privacy",
+    href: "https://www.compasscalendar.com/privacy",
   },
   {
     digit: "0",
     label: "Terms",
-    href: "https://compasscalendar.com/terms",
+    href: "https://www.compasscalendar.com/terms",
   },
 ] as const;
 
