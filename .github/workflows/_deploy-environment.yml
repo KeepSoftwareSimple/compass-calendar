@@ -75,6 +75,13 @@ jobs:
             NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
           tags: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
 
+      - name: Check out self-host orchestration from workflow ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          sparse-checkout: self-host
+          path: self-host-orchestration
+
       - name: Deploy release to ${{ inputs.environment }}
         env:
           # Non-sensitive

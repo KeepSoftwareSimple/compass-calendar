@@ -58,6 +58,13 @@ jobs:
             NODE_ENV=${{ inputs.environment == 'production' && 'production' || 'staging' }}
           tags: switchbacktech/compass-booking-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
 
+      - name: Check out self-host orchestration from workflow ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref }}
+          sparse-checkout: self-host
+          path: self-host-orchestration
+
       - name: Deploy booking-web to ${{ inputs.environment }}
         env:
           BACKEND_API_URL: ${{ vars.BACKEND_API_URL }}
@@ -94,17 +101,13 @@ jobs:
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
             "mv ~/compass/compass.yaml.$$ ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
 
-          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${GITHUB_REF_NAME}}"
-          SELF_HOST_REPO="${GITHUB_REPOSITORY}"
-          compose_url="https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.yaml"
-          if ! curl -fsSL "$compose_url" -o /dev/null; then
-            echo "Could not fetch self-host files from ${SELF_HOST_REPO}@${COMPOSE_GIT_REF}; falling back to ${RELEASE_TAG}."
-            COMPOSE_GIT_REF="${RELEASE_TAG}"
-          fi
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.yaml -o ~/compass/compose.yaml"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/config.sh -o ~/compass/config.sh.$$ && mv ~/compass/config.sh.$$ ~/compass/config.sh"
-          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "curl -fsSL https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compass -o ~/compass/compass.$$ && chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
+          ORCHESTRATION_DIR="$GITHUB_WORKSPACE/self-host-orchestration/self-host"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.yaml"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.selfhosted.yaml" "$SSH_USER@$SSH_HOST:~/compass/compose.selfhosted.yaml"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/config.sh" "$SSH_USER@$SSH_HOST:~/compass/config.sh.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "mv ~/compass/config.sh.$$ ~/compass/config.sh"
+          scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compass" "$SSH_USER@$SSH_HOST:~/compass/compass.$$"
+          ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" "chmod +x ~/compass/compass.$$ && mv ~/compass/compass.$$ ~/compass/compass"
 
           DEPLOY_PROFILES="${COMPOSE_PROFILES:+${COMPOSE_PROFILES},}booking,sync"
           ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
