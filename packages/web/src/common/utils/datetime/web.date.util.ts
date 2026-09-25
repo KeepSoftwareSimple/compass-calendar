@@ -155,10 +155,15 @@ export const parseUserTime = (
     return null;
   }
 
+  // A leading zero ("0500", "05:00") is 24-hour notation, so the hour is literal.
+  const isTwentyFourHour = /^0\d/.test(normalized);
+
   // Meridiem inheritance: if input has no explicit AM/PM and hour is 1-12,
-  // inherit meridiem from currentValue. Hours 0, 13-23 are unambiguous.
+  // inherit meridiem from currentValue. Leading-zero hours, 0, and 13-23 are
+  // unambiguous.
   if (
     currentValue &&
+    !isTwentyFourHour &&
     normalized.toUpperCase().indexOf("A") === -1 &&
     normalized.toUpperCase().indexOf("P") === -1 &&
     parsed.hour() >= 1 &&
