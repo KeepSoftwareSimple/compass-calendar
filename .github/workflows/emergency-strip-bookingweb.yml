@@ -102,7 +102,16 @@ jobs:
           docker compose ps -a || true
 
           echo "--- backend health (localhost) ---"
-          health_status=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/health || echo "000")
+          health_status=000
+          tries=45
+          while [ "$tries" -gt 0 ]; do
+            health_status=$(curl -sS -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/api/health 2>/dev/null || printf '000')
+            if [ "$health_status" = 200 ]; then
+              break
+            fi
+            tries=$((tries - 1))
+            sleep 2
+          done
           echo "http://127.0.0.1:3000/api/health -> ${health_status}"
           if [ "$health_status" != "200" ]; then
             echo "--- recent backend logs ---"
@@ -126,7 +135,16 @@ jobs:
               ;;
           esac
 
-          public_status=$(curl -sS -o /dev/null -w '%{http_code}' "$public_url" || echo "000")
+          public_status=000
+          tries=15
+          while [ "$tries" -gt 0 ]; do
+            public_status=$(curl -sS -o /dev/null -w '%{http_code}' "$public_url" 2>/dev/null || printf '000')
+            if [ "$public_status" = 200 ]; then
+              break
+            fi
+            tries=$((tries - 1))
+            sleep 2
+          done
           echo "${public_url} -> ${public_status}"
           if [ "$public_status" != "200" ]; then
             echo "Public health check failed" >&2
