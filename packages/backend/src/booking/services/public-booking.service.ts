@@ -307,18 +307,29 @@ const assertPinnedDuration = (
   }
 };
 
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+/**
+ * HTML, the same format the web description editor saves, so the guest links
+ * render as short "Cancel | Reschedule" anchors instead of raw token URLs.
+ * Guest notes are escaped: they are untrusted input landing in the host's
+ * calendar.
+ */
 const bookingEventDescription = (
   notes: string | null | undefined,
   cancelUrl: string,
   rescheduleUrl: string,
-): string =>
-  [
-    notes?.trim() || null,
-    `Cancel: ${cancelUrl}`,
-    `Reschedule: ${rescheduleUrl}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+): string => {
+  const links = `<a href="${escapeHtml(cancelUrl)}">Cancel</a> | <a href="${escapeHtml(rescheduleUrl)}">Reschedule</a>`;
+  const trimmed = notes?.trim();
+  if (!trimmed) return links;
+  return `${escapeHtml(trimmed).replace(/\n/g, "<br>")}<br><br>${links}`;
+};
 
 const durationMinutesForReservation = (
   reservation: BookingReservationRecord,
