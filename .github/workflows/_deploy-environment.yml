@@ -312,7 +312,7 @@ jobs:
             printf '%s\n' "  credentialEncryptionKey: \"${SYNC_CREDENTIAL_ENCRYPTION_KEY}\""
           } | ssh -i ~/.ssh/staging_key "$SSH_USER@$SSH_HOST" \
                 "umask 077 && mkdir -p ~/compass && cat > ~/compass/compass.yaml && chmod 644 ~/compass/compass.yaml"
-          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-main}"
+          COMPOSE_GIT_REF="${COMPOSE_GIT_REF:-${GITHUB_REF_NAME}}"
           SELF_HOST_REPO="${GITHUB_REPOSITORY}"
           compose_url="https://raw.githubusercontent.com/${SELF_HOST_REPO}/${COMPOSE_GIT_REF}/self-host/compose.yaml"
           if ! curl -fsSL "$compose_url" -o /dev/null; then
