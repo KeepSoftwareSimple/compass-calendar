@@ -1,0 +1,105 @@
+name: Emergency restore service (strip bookingWeb)
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GitHub Environment / VPS target
+        required: true
+        type: choice
+        options:
+          - production
+          - staging-cloud
+          - both
+      image_version:
+        description: Runtime version to pin (without v prefix), e.g. 1.2.463
+        required: true
+        default: "1.2.463"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  restore:
+    name: Restore ${{ matrix.environment }}
+    if: inputs.environment == 'both' || inputs.environment == matrix.environment
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [production, staging-cloud]
+    environment: ${{ matrix.environment }}
+    concurrency:
+      group: emergency-restore-${{ matrix.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Restore Compass on VPS (no deploy yaml rewrite)
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          COMPOSE_PROFILES: ${{ vars.COMPOSE_PROFILES }}
+          IMAGE_VERSION: ${{ inputs.image_version }}
+          GH_ENVIRONMENT: ${{ matrix.environment }}
+          FRONTEND_URL: ${{ vars.FRONTEND_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_PRIVATE_KEY:-}" ]; then
+            echo "Missing SSH_PRIVATE_KEY for ${GH_ENVIRONMENT}." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/emergency_restore_key
+          chmod 600 ~/.ssh/emergency_restore_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+          if [ "$GH_ENVIRONMENT" = "production" ]; then
+            WEB_TAG_PREFIX="production"
+            PUBLIC_HEALTH="https://compasscalendar.com/api/health"
+          else
+            WEB_TAG_PREFIX="staging-cloud"
+            PUBLIC_HEALTH="https://staging.compasscalendar.com/api/health"
+          fi
+          WEB_IMAGE="switchbacktech/compass-web:${WEB_TAG_PREFIX}-${IMAGE_VERSION}"
+
+          scp -i ~/.ssh/emergency_restore_key \
+            .github/scripts/emergency-remove-booking-web-yaml.py \
+            "$SSH_USER@$SSH_HOST:/tmp/emergency-remove-booking-web-yaml.py"
+
+          ssh -i ~/.ssh/emergency_restore_key "$SSH_USER@$SSH_HOST" bash -s <<EOF
+          set -euo pipefail
+          CONFIG=~/compass/compass.yaml
+          test -f "\$CONFIG"
+          BACKUP="\${CONFIG}.bak-emergency-\$(date -u +%Y%m%dT%H%M%SZ)"
+          cp "\$CONFIG" "\$BACKUP"
+          echo "Backed up to \$BACKUP"
+          if grep -q '^bookingWeb:' "\$CONFIG"; then
+            echo "Found bookingWeb block; removing."
+          else
+            echo "No bookingWeb block (already stripped?)."
+          fi
+          python3 /tmp/emergency-remove-booking-web-yaml.py \
+            --in-place "\$CONFIG" \
+            --runtime-version "${IMAGE_VERSION}" \
+            --web-image "${WEB_IMAGE}"
+          grep -q '^bookingWeb:' "\$CONFIG" && { echo "bookingWeb still present"; exit 1; } || true
+          cd ~/compass
+          PROFILES="\${COMPOSE_PROFILES:-cloud}"
+          case ",\${PROFILES}," in
+            *,sync,*);;
+            *) PROFILES="\${PROFILES},sync";;
+          esac
+          echo "Using COMPOSE_PROFILES=\${PROFILES} (booking profile omitted)"
+          COMPOSE_PROFILES="\${PROFILES}" ./compass update
+          curl -fsS http://127.0.0.1:3000/api/health
+          EOF
+
+          echo "Public health: ${PUBLIC_HEALTH}"
+          curl -fsS "${PUBLIC_HEALTH}"
+          echo ""
+          echo "Restore complete for ${GH_ENVIRONMENT} at version ${IMAGE_VERSION}"
