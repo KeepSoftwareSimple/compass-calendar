@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode } from "react";
 import { renderWithStore } from "@web/__tests__/render-with-store";
+import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { viewActions } from "@web/events/stores/view.store";
 import { LifeView } from "./LifeView";
@@ -359,14 +360,22 @@ describe("LifeView", () => {
 
   it("cycles life variations with J and K", async () => {
     await renderLifeViewWithSidebar();
+    (
+      screen.getByRole("textbox", { name: "Date of birth" }) as HTMLElement
+    ).blur();
+    document.body.focus();
 
-    fireEvent.keyUp(document, { key: "k" });
+    act(() => {
+      pressKey("k");
+    });
     expect(screen.getByText("Long")).toBeInTheDocument();
     expect(
       screen.getByText("This is your life if you live to 100"),
     ).toBeInTheDocument();
 
-    fireEvent.keyUp(document, { key: "j" });
+    act(() => {
+      pressKey("j");
+    });
     expect(screen.getByText("Average")).toBeInTheDocument();
     expect(
       screen.getByText("This is your life if you live to 77"),
@@ -465,11 +474,17 @@ describe("LifeView", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Date of birth" }), {
       target: { value: "1990-06-15" },
     });
+    const dateOfBirth = screen.getByRole("textbox", { name: "Date of birth" });
+    fireEvent.blur(dateOfBirth);
+    (dateOfBirth as HTMLElement).blur();
+    document.body.focus();
 
     const currentWeek = screen.getByRole("button", {
       name: /January 1, 2026 \| week/,
     });
-    fireEvent.keyUp(document, { key: "t" });
+    act(() => {
+      pressKey("t");
+    });
 
     expect(currentWeek).toHaveFocus();
   });

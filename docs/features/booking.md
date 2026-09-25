@@ -325,7 +325,7 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   **Turn on and copy link** on the last step saves with `enabled: true`,
   copies the link, and then shows the full form with the switch focused.
 - **Discovery:** a signed-in host whose page is not live sees a sidebar
-  card, **Let people book time with you**, under the calendar list. **Set
+  card, **Skip back & forth**, under the calendar list. **Set
   up meeting page** opens Settings on the Meeting tab. **Dismiss** hides
   the card on that browser. Turning the page on hides it everywhere. The
   card does not show on mobile or while the first-event prompt is still

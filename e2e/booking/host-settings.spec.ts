@@ -513,6 +513,9 @@ test("sidebar nudge opens Meeting settings and hides once the page is live", asy
 
   const nudge = page.getByRole("region", { name: "Meeting page" });
   await expect(nudge).toBeVisible();
+  await expect(
+    nudge.getByRole("heading", { name: "Skip back & forth" }),
+  ).toBeVisible();
   await nudge.getByRole("button", { name: "Set up meeting page" }).click();
 
   const settingsDialog = page.getByRole("dialog", { name: "Settings" });
@@ -587,4 +590,26 @@ test("sidebar nudge opens Meeting settings and hides once the page is live", asy
   await expect(page.getByRole("region", { name: "Meeting page" })).toHaveCount(
     0,
   );
+});
+
+test("sidebar nudge M shortcut opens Meeting settings", async ({ page }) => {
+  await prepareSignedInBookingSettingsPage(page, {
+    configured: false,
+    openSettings: false,
+    completeOnboarding: true,
+  });
+
+  const nudge = page.getByRole("region", { name: "Meeting page" });
+  await expect(nudge).toBeVisible();
+  await expect(
+    nudge.getByRole("button", { name: "Set up meeting page" }),
+  ).toContainText("M");
+
+  await page.keyboard.press("M");
+
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(settingsDialog).toBeVisible();
+  await expect(
+    settingsDialog.getByRole("button", { name: "Meeting" }),
+  ).toHaveAttribute("aria-current", "true");
 });

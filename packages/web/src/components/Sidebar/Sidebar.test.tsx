@@ -143,7 +143,7 @@ describe("Sidebar", () => {
 
     expect(await screen.findByText("Calendar list")).toBeTruthy();
     const nudge = await screen.findByRole("heading", {
-      name: "Let people book time with you",
+      name: "Skip back & forth",
     });
     const calendarList = screen.getByText("Calendar list");
     expect(

@@ -1,10 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { HotkeyManager, HotkeysProvider } from "@tanstack/react-hotkeys";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import { type PropsWithChildren } from "react";
 import { DEFAULT_WEEKLY_AVAILABILITY } from "@core/types/booking.contracts";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
+import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { bookingQueryKeys } from "@web/booking/booking.query";
 import { ENV_WEB } from "@web/common/constants/env.constants";
@@ -19,6 +21,7 @@ import {
   selectSettingsPage,
   useSettingsStore,
 } from "@web/settings/settings.store";
+import { MEETING_PAGE_NUDGE_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { MeetingPageNudge } from "./MeetingPageNudge";
 import { beforeEach, describe, expect, it } from "bun:test";
 
@@ -57,11 +60,13 @@ function renderNudge({
   function Wrapper({ children }: PropsWithChildren) {
     return (
       <StoreWrapper>
-        <SessionContext.Provider
-          value={{ authenticated, setAuthenticated: () => {} }}
-        >
-          {children}
-        </SessionContext.Provider>
+        <HotkeysProvider>
+          <SessionContext.Provider
+            value={{ authenticated, setAuthenticated: () => {} }}
+          >
+            {children}
+          </SessionContext.Provider>
+        </HotkeysProvider>
       </StoreWrapper>
     );
   }
@@ -77,6 +82,7 @@ function renderNudge({
 
 describe("MeetingPageNudge", () => {
   beforeEach(() => {
+    HotkeyManager.resetInstance();
     useFirstEventPromptStore.setState(
       { ...initialFirstEventPromptState, isDone: true },
       true,
@@ -88,9 +94,7 @@ describe("MeetingPageNudge", () => {
     renderNudge();
 
     expect(
-      await screen.findByRole("heading", {
-        name: "Let people book time with you",
-      }),
+      await screen.findByRole("heading", { name: "Skip back & forth" }),
     ).toBeTruthy();
     expect(
       screen.getByText(
@@ -110,6 +114,23 @@ describe("MeetingPageNudge", () => {
     await user.click(
       await screen.findByRole("button", { name: "Set up meeting page" }),
     );
+
+    expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(true);
+    expect(selectSettingsPage(useSettingsStore.getState())).toBe("booking");
+  });
+
+  it("opens Settings on the Meeting tab from the M shortcut", async () => {
+    server.use(http.get(bookingPageUrl, () => HttpResponse.json(savedOffPage)));
+    renderNudge();
+
+    const button = await screen.findByRole("button", {
+      name: "Set up meeting page",
+    });
+    expect(
+      within(button).getByText(MEETING_PAGE_NUDGE_SHORTCUT_KEY),
+    ).toBeTruthy();
+
+    pressKey(MEETING_PAGE_NUDGE_SHORTCUT_KEY);
 
     expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(true);
     expect(selectSettingsPage(useSettingsStore.getState())).toBe("booking");
