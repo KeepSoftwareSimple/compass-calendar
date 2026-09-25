@@ -16,6 +16,7 @@ import {
   type PrincipalId,
   type TenantId,
 } from "@core/types/sync/identity.contracts";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import { SYNC_COLLECTIONS } from "@sync/storage/collections";
 import {
   EventReadSchema,
@@ -861,21 +862,6 @@ function providerEventIdsFilter(
       { providerEventId: { $type: "string" } },
     ],
   };
-}
-
-function isDuplicateKeyError(error: unknown): boolean {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code: unknown }).code === 11000
-  ) {
-    return true;
-  }
-  const writeErrors = (
-    error as { writeErrors?: readonly { code?: unknown }[] } | null
-  )?.writeErrors;
-  return writeErrors?.some((entry) => entry.code === 11000) ?? false;
 }
 
 function providerIdentityFilter(input: {

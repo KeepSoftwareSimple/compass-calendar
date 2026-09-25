@@ -19,6 +19,7 @@ const OUTDIR = path.resolve(import.meta.dir, "../../build/booking-web");
 const define: Record<string, string> = {
   "process.env": JSON.stringify({
     NODE_ENV: bundleNodeEnv,
+    COMPASS_NODE_ENV: bundleNodeEnv,
     API_BASEURL: process.env.API_BASEURL ?? "http://localhost:3000/api",
     POSTHOG_KEY: process.env.POSTHOG_KEY ?? "",
     POSTHOG_HOST: process.env.POSTHOG_HOST ?? "",

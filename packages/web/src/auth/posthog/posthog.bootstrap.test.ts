@@ -1,6 +1,6 @@
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as posthogUtil from "@web/auth/posthog/posthog.util";
-import { ENV_WEB } from "@web/common/constants/env.constants";
+import { resolvePosthogEnvironment } from "@web/auth/posthog/posthog-environment.util";
 import { APP_VERSION } from "@web/common/constants/version.constants";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
@@ -40,7 +40,7 @@ describe("initPosthog", () => {
     initPosthog();
 
     expect(register).toHaveBeenCalledWith({
-      environment: ENV_WEB.NODE_ENV,
+      environment: resolvePosthogEnvironment(),
       version: APP_VERSION,
     });
   });

@@ -8,6 +8,7 @@ import { session } from "@web/auth/compass/session/Session";
 import { hasUserEverAuthenticated } from "@web/auth/compass/state/auth.state.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import {
   showErrorToast,
   showSessionExpiredToast,
@@ -159,7 +160,7 @@ export const signOut = async (status: SignoutStatus) => {
   // the user they were signed out was destroyed on every route that needed it.
   // Imported dynamically for the same module-cycle reason SessionExpiredToast
   // documents (this file sits on the API error path the router pulls back in).
-  const { router } = await import("@web/routers");
+  const { router } = await importOrReload(() => import("@web/routers"));
   await router.navigate({ to: DEFAULT_CALENDAR_ROUTE });
 };
 

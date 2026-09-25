@@ -1,6 +1,10 @@
 import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api";
 import { type UseQueryResult } from "@tanstack/react-query";
-import { type PublicGetBookingReservationResponse } from "@core/types/booking.contracts";
+import {
+  type BookingSlotsResponse,
+  type PublicGetBookingPageResponse,
+  type PublicGetBookingReservationResponse,
+} from "@core/types/booking.contracts";
 
 /** Title and description handed straight to `PublicBookingStatusMessage`. */
 export interface PublicBookingStatusCopy {
@@ -12,6 +16,33 @@ export const PUBLIC_BOOKING_UNBOOKABLE: PublicBookingStatusCopy = {
   title: "Meeting temporarily unavailable",
   description:
     "The host calendar is not ready for new meetings. Please try again later.",
+};
+
+/**
+ * Copy shared verbatim by more than one guest page. Whatever names the link
+ * the guest followed ("this cancel link", "this confirmation link") stays with
+ * that page; everything below reads the same wherever it appears, so it is
+ * spelled once.
+ */
+export const PUBLIC_BOOKING_LOAD_FAILED: PublicBookingStatusCopy = {
+  title: "Could not load meeting",
+  description: "Please refresh and try again.",
+};
+
+export const PUBLIC_BOOKING_CANCELLED: PublicBookingStatusCopy = {
+  title: "This meeting was canceled",
+  description:
+    "The appointment is no longer on the host calendar. You can close this page.",
+};
+
+export const PUBLIC_BOOKING_RESERVATION_LOADING: PublicBookingStatusCopy = {
+  title: "Loading meeting",
+  description: "One moment while we load this meeting.",
+};
+
+const PUBLIC_BOOKING_PAGE_LOADING: PublicBookingStatusCopy = {
+  title: "Loading meeting page",
+  description: "One moment while we load available times.",
 };
 
 export const PUBLIC_BOOKING_SLOT_CONFLICT =
@@ -70,4 +101,41 @@ export const resolvePublicBookingReservationView = (
     };
   }
   return { kind: "reservation", reservation };
+};
+
+/**
+ * What a slot-picking page should render once the booking page query has
+ * settled: a terminal status message, or the host's page.
+ */
+export type PublicBookingPageView =
+  | ({ kind: "status" } & PublicBookingStatusCopy)
+  | { kind: "page"; page: PublicGetBookingPageResponse };
+
+/**
+ * The gate both slot-picking pages run before they can draw a picker. A host
+ * who turned the page off is indistinguishable from a bad link, and a calendar
+ * that cannot take bookings ends the flow before the picker renders, so the
+ * ladder lives here once and the pages differ only in `notFound`.
+ */
+export const resolvePublicBookingPageView = (
+  pageQuery: UseQueryResult<PublicGetBookingPageResponse>,
+  slotsData: BookingSlotsResponse | undefined,
+  notFound: PublicBookingStatusCopy,
+): PublicBookingPageView => {
+  if (pageQuery.isLoading) {
+    return { kind: "status", ...PUBLIC_BOOKING_PAGE_LOADING };
+  }
+  if (pageQuery.error instanceof PublicBookingNotFoundError) {
+    return { kind: "status", ...notFound };
+  }
+  if (!pageQuery.isSuccess) {
+    return { kind: "status", ...PUBLIC_BOOKING_LOAD_FAILED };
+  }
+  if (!pageQuery.data.enabled) {
+    return { kind: "status", ...notFound };
+  }
+  if (slotsData && !slotsData.bookable) {
+    return { kind: "status", ...PUBLIC_BOOKING_UNBOOKABLE };
+  }
+  return { kind: "page", page: pageQuery.data };
 };

@@ -15,6 +15,7 @@ import {
   getToastDefaultOptions,
   NEW_MEETINGS_TOAST_ID,
 } from "@web/common/constants/toast.constants";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
@@ -63,7 +64,7 @@ export function NewMeetingsToast({
     const dateString = inEffectiveTimeZone(latest.slotStart, timeZone).format(
       YEAR_MONTH_DAY_FORMAT,
     );
-    void import("@web/routers").then(({ router }) => {
+    void importOrReload(() => import("@web/routers")).then(({ router }) => {
       void router.navigate({
         to: ROOT_ROUTES.WEEK_DATE,
         params: { dateString },

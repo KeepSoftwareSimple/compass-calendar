@@ -1,3 +1,7 @@
+import {
+  pageHandler,
+  reservationGetHandler as publicReservationGetHandler,
+} from "@booking-web/__tests__/public-booking.msw";
 import { formatBookingSlotTime } from "@booking-web/booking/public-booking.format";
 import { routeTree } from "@booking-web/routers/router.routes";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
@@ -26,39 +30,7 @@ const slotStart = (() => {
 const slotEnd = new Date(Date.parse(slotStart) + 30 * 60 * 1000).toISOString();
 
 function reservationGetHandler(overrides: Record<string, unknown> = {}) {
-  return http.get(
-    `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}`,
-    () =>
-      HttpResponse.json(
-        {
-          slotStart,
-          guestTimeZone: "UTC",
-          durationMinutes: 30,
-          hostDisplayName: "Tyler Dane",
-          status: "confirmed",
-          bookingSlug: "tylerdane",
-          guestName: "Guest User",
-          notes: null,
-          ...overrides,
-        },
-        { status: Status.OK },
-      ),
-  );
-}
-
-function pageHandler() {
-  return http.get(`${ENV_WEB.API_BASEURL}/booking/pages/tylerdane`, () =>
-    HttpResponse.json(
-      {
-        hostDisplayName: "Tyler Dane",
-        durationMinutes: 30,
-        timeZone: "America/Chicago",
-        enabled: true,
-        maxHorizonDays: 60,
-      },
-      { status: Status.OK },
-    ),
-  );
+  return publicReservationGetHandler(slotStart, overrides, reservationId);
 }
 
 function reservationSlotsHandler(

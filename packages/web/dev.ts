@@ -18,11 +18,12 @@ const SRCDIR = path.resolve(import.meta.dir, "src");
 // so Playwright tests can parse it quickly on CI's limited CPU).
 const IS_DEV = (config.runtime.nodeEnv ?? "development") === "development";
 
-// Define process.env as a whole object so both dot and bracket notation work:
-// process.env.NODE_ENV and process.env["NODE_ENV"] are both replaced correctly.
+// Define process.env as a whole object so both dot and bracket notation work.
+// COMPASS_NODE_ENV mirrors runtime.nodeEnv for readCompassRuntimeNodeEnv().
 const define: Record<string, string> = {
   "process.env": JSON.stringify({
     NODE_ENV: config.runtime.nodeEnv || "development",
+    COMPASS_NODE_ENV: config.runtime.nodeEnv || "development",
     API_BASEURL: config.backend.apiUrl,
     GOOGLE_CLIENT_ID: config.google?.clientId || "",
     MICROSOFT_CLIENT_ID:

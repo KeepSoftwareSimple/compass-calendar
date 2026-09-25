@@ -109,7 +109,7 @@ empty. Version the filter with `environment` and, once server events ship,
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Release owner                       | Tyler Dane (founder)                                                                                      |
 | Authorized notification destination | Founder's PostHog account (already used by Sync/SSE alerts). **Not activated for Meeting in this issue.** |
-| Rollback                            | Leave `isBookingEnabled` unchanged here. Disable criteria live on WP-13.                                  |
+| Rollback                            | Revert the production enable change to `isBookingEnabled` and redeploy. Disable criteria live on WP-13.   |
 | Provider health                     | Sync dashboard 1905421, not this dashboard                                                                |
 
 Pair with the [launch ops checklist](./launch-ops-checklist.md).

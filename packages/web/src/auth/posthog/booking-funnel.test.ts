@@ -37,20 +37,13 @@ afterAll(() => {
 
 const {
   bookingSetupSaveFailureReason,
-  bookingSlotsOutcome,
-  bookingSubmitFailureReason,
-  trackBookingDetailsReached,
   trackBookingSetupSaveFailed,
   trackBookingSetupSaveSucceeded,
   trackBookingSetupStepCompleted,
   trackBookingSetupStepViewed,
-  trackBookingSlotSelected,
-  trackBookingSlotsLoaded,
-  trackBookingSubmitAttempted,
-  trackBookingSubmitFailed,
 } = await import("@web/auth/posthog/booking-funnel");
 
-describe("booking funnel", () => {
+describe("booking setup funnel", () => {
   beforeEach(() => {
     capture.mockClear();
   });
@@ -81,57 +74,7 @@ describe("booking funnel", () => {
     });
   });
 
-  it("shapes guest slot-load, selection, details, and submit", () => {
-    trackBookingSlotsLoaded("available", { duration_minutes: 30 });
-    trackBookingSlotSelected({
-      duration_minutes: 30,
-      timezone_differs: true,
-    });
-    trackBookingDetailsReached({
-      duration_minutes: 30,
-      timezone_differs: true,
-    });
-    trackBookingSubmitAttempted({ duration_minutes: 30 });
-    trackBookingSubmitFailed("conflict", { duration_minutes: 30 });
-
-    expect(capture).toHaveBeenCalledWith("booking_slots_loaded", {
-      outcome: "available",
-      duration_minutes: 30,
-    });
-    expect(capture).toHaveBeenCalledWith("booking_slot_selected", {
-      duration_minutes: 30,
-      timezone_differs: true,
-    });
-    expect(capture).toHaveBeenCalledWith("booking_details_reached", {
-      duration_minutes: 30,
-      timezone_differs: true,
-    });
-    expect(capture).toHaveBeenCalledWith("booking_submit_attempted", {
-      duration_minutes: 30,
-    });
-    expect(capture).toHaveBeenCalledWith("booking_submit_failed", {
-      reason: "conflict",
-      duration_minutes: 30,
-    });
-  });
-
-  it("maps slot-load outcomes without inventing a result while pending", () => {
-    expect(
-      bookingSlotsOutcome({ bookable: true, slotCount: 2, isError: false }),
-    ).toBe("available");
-    expect(
-      bookingSlotsOutcome({ bookable: true, slotCount: 0, isError: false }),
-    ).toBe("empty");
-    expect(
-      bookingSlotsOutcome({ bookable: false, slotCount: 0, isError: false }),
-    ).toBe("unbookable");
-    expect(
-      bookingSlotsOutcome({ bookable: true, slotCount: 0, isError: true }),
-    ).toBe("error");
-    expect(bookingSlotsOutcome({ slotCount: 0, isError: false })).toBeNull();
-  });
-
-  it("maps save and submit failures onto low-cardinality reasons", () => {
+  it("maps save failures onto low-cardinality reasons", () => {
     expect(
       bookingSetupSaveFailureReason(
         apiError(Status.CONFLICT, { code: "SLUG_TAKEN" }),
@@ -140,16 +83,5 @@ describe("booking funnel", () => {
     expect(bookingSetupSaveFailureReason(new Error("offline"))).toBe(
       "transport",
     );
-
-    expect(bookingSubmitFailureReason(apiError(Status.CONFLICT, {}))).toBe(
-      "conflict",
-    );
-    expect(bookingSubmitFailureReason(apiError(Status.NOT_FOUND, {}))).toBe(
-      "unavailable",
-    );
-    expect(
-      bookingSubmitFailureReason(apiError(Status.TOO_MANY_REQUESTS, {})),
-    ).toBe("rate_limited");
-    expect(bookingSubmitFailureReason(new Error("network"))).toBe("transport");
   });
 });

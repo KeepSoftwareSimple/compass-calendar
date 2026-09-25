@@ -1,4 +1,4 @@
-import { MongoServerError, type ObjectId } from "mongodb";
+import { type ObjectId } from "mongodb";
 import {
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
@@ -9,6 +9,7 @@ import {
   buildDefaultAdminPutInput,
 } from "@core/types/booking.contracts";
 import { type TimeZone, TimeZoneSchema } from "@core/types/domain-primitives";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import { assertBillingAllowsWrites } from "@backend/billing/billing.guard";
 import { bookingError } from "@backend/booking/booking.error";
 import {
@@ -129,9 +130,6 @@ const suggestSlugForUser = async (userId: ObjectId): Promise<string> => {
   );
 };
 
-const isDuplicateSlugError = (error: unknown): boolean =>
-  error instanceof MongoServerError && error.code === 11000;
-
 const resolveSuggestedSlug = async (
   userId: ObjectId,
   bookingSlug: string | undefined,
@@ -242,7 +240,7 @@ class BookingPageService {
           await reconcileBookingPageBlockingCalendars(saved, eligible),
         );
       } catch (error) {
-        if (!isDuplicateSlugError(error)) {
+        if (!isDuplicateKeyError(error)) {
           throw error;
         }
         if (slugSource === "requested") {

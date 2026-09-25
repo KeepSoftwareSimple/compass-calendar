@@ -1,4 +1,4 @@
-import { MongoServerError, type ObjectId } from "mongodb";
+import { type ObjectId } from "mongodb";
 import {
   type ComputeBookingSlotsInput,
   computeBookingSlots,
@@ -42,6 +42,7 @@ import {
   type BusyAvailabilityResponse,
 } from "@core/types/sync/availability.contracts";
 import dayjs from "@core/util/date/dayjs";
+import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
 import { BookingException, bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
@@ -128,9 +129,6 @@ const guestTokenFrom = (raw: unknown): string => {
   return raw.token;
 };
 
-const isDuplicateSlotError = (error: unknown): boolean =>
-  error instanceof MongoServerError && error.code === 11000;
-
 const isSlotUnavailable = (error: unknown): boolean =>
   error instanceof BookingException && error.bookingCode === "SLOT_UNAVAILABLE";
 
@@ -215,7 +213,7 @@ const inFlightInsertConflict = async (
   reservationId: ObjectId,
   error: unknown,
 ): Promise<unknown> => {
-  if (!isDuplicateSlotError(error)) {
+  if (!isDuplicateKeyError(error)) {
     return error;
   }
   const existing =
@@ -1350,7 +1348,7 @@ export class PublicBookingService {
       await bookingOperationRepository.markStatus(current._id, "confirmed");
       return presentRescheduled(updated, page, hostDisplayName);
     } catch (error) {
-      if (isDuplicateSlotError(error)) {
+      if (isDuplicateKeyError(error)) {
         await this.compensateRescheduleOperation(current);
         throw slotNoLongerAvailable();
       }
@@ -1543,7 +1541,7 @@ export class PublicBookingService {
         });
       }
     } catch (error) {
-      if (!isDuplicateSlotError(error)) {
+      if (!isDuplicateKeyError(error)) {
         throw error;
       }
       const inserted = await bookingReservationRepository.findById(
@@ -1613,7 +1611,7 @@ export class PublicBookingService {
           eventId: reservation.calendarEventId,
         });
       } catch (error) {
-        if (!isDuplicateSlotError(error)) {
+        if (!isDuplicateKeyError(error)) {
           throw error;
         }
         const existing =

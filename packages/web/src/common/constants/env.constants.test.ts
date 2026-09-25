@@ -2,7 +2,20 @@ import { describe, expect, it } from "bun:test";
 
 process.env.PORT = "3000";
 
-const { getApiBaseUrl } = await import("./env.constants");
+const { getApiBaseUrl, readCompassRuntimeNodeEnv } = await import(
+  "./env.constants"
+);
+
+describe("readCompassRuntimeNodeEnv", () => {
+  it("prefers COMPASS_NODE_ENV over NODE_ENV", () => {
+    expect(
+      readCompassRuntimeNodeEnv({
+        COMPASS_NODE_ENV: "staging",
+        NODE_ENV: "production",
+      }),
+    ).toBe("staging");
+  });
+});
 
 describe("getApiBaseUrl", () => {
   it("defaults to the local backend API using the configured port", () => {

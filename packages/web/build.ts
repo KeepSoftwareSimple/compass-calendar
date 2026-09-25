@@ -60,11 +60,15 @@ const BUILD_VERSION =
   buildHash === "self-host" ? `${Date.now()}-self-host` : buildHash;
 const OUTDIR = path.resolve(import.meta.dir, "../../build/web");
 
-// Define process.env as a whole object so both dot and bracket notation work:
-// process.env.NODE_ENV and process.env["NODE_ENV"] are both replaced correctly.
+// Define process.env as a whole object so both dot and bracket notation work.
+// COMPASS_NODE_ENV holds runtime.nodeEnv; NODE_ENV in the define object is the
+// React bundle mode (production for every shipped build). Bun still inlines the
+// shell NODE_ENV into bare `process.env.NODE_ENV` reads, so app code must use
+// COMPASS_NODE_ENV via readCompassRuntimeNodeEnv(), not NODE_ENV alone.
 const define: Record<string, string> = {
   "process.env": JSON.stringify({
-    NODE_ENV: config.runtime.nodeEnv || "production",
+    NODE_ENV: bundleNodeEnv,
+    COMPASS_NODE_ENV: runtimeNodeEnv,
     API_BASEURL: config.backend.apiUrl,
     GOOGLE_CLIENT_ID: config.google?.clientId || "",
     MICROSOFT_CLIENT_ID:

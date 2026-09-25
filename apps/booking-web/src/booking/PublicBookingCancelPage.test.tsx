@@ -1,3 +1,4 @@
+import { reservationGetHandler as publicReservationGetHandler } from "@booking-web/__tests__/public-booking.msw";
 import { routeTree } from "@booking-web/routers/router.routes";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import {
@@ -19,24 +20,7 @@ const cancelPath = `/meet/cancel/${reservationId}?token=abc`;
 const slotStart = "2026-09-15T15:00:00.000Z";
 
 function reservationGetHandler(overrides: Record<string, unknown> = {}) {
-  return http.get(
-    `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}`,
-    () =>
-      HttpResponse.json(
-        {
-          slotStart,
-          guestTimeZone: "UTC",
-          durationMinutes: 30,
-          hostDisplayName: "Tyler Dane",
-          status: "confirmed",
-          bookingSlug: "tylerdane",
-          guestName: "Guest User",
-          notes: null,
-          ...overrides,
-        },
-        { status: Status.OK },
-      ),
-  );
+  return publicReservationGetHandler(slotStart, overrides, reservationId);
 }
 
 function renderCancelRoute(path: string) {

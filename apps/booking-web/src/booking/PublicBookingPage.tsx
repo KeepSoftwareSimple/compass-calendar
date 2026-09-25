@@ -1,8 +1,3 @@
-import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api";
-import {
-  formatBookingDurationWithConference,
-  resolveBookingConference,
-} from "@booking-web/booking/guest-conference.copy";
 import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@booking-web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestForm";
@@ -18,7 +13,7 @@ import {
 } from "@booking-web/booking/PublicBookingStatusMessage";
 import { PublicBookingTimezoneControl } from "@booking-web/booking/PublicBookingTimezoneControl";
 import { formatDurationMinutes } from "@booking-web/booking/public-booking.format";
-import { PUBLIC_BOOKING_UNBOOKABLE } from "@booking-web/booking/public-booking.view";
+import { resolvePublicBookingPageView } from "@booking-web/booking/public-booking.view";
 import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-document-title";
 import {
   isPublicBookingPageHeadingFocusPending,
@@ -30,6 +25,16 @@ import { ROOT_ROUTES } from "@booking-web/common/constants/routes";
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { track } from "@web/auth/posthog/track";
+import {
+  formatBookingDurationWithConference,
+  resolveBookingConference,
+} from "@web/booking/booking-conference.copy";
+
+const BOOKING_PAGE_NOT_FOUND = {
+  title: "Meeting page not found",
+  description:
+    "This link may be incorrect or the host has turned this meeting page off.",
+} as const;
 
 export function PublicBookingPage() {
   const { username } = useParams({ from: ROOT_ROUTES.BOOK });
@@ -67,41 +72,17 @@ export function PublicBookingPage() {
       : null,
   );
 
-  if (pageQuery.isLoading) {
-    return (
-      <PublicBookingStatusMessage
-        title="Loading meeting page"
-        description="One moment while we load available times."
-      />
-    );
+  const pageView = resolvePublicBookingPageView(
+    pageQuery,
+    slotsQuery.data,
+    BOOKING_PAGE_NOT_FOUND,
+  );
+
+  if (pageView.kind === "status") {
+    return <PublicBookingStatusMessage {...pageView} />;
   }
 
-  if (
-    pageQuery.error instanceof PublicBookingNotFoundError ||
-    (pageQuery.isSuccess && !pageQuery.data.enabled)
-  ) {
-    return (
-      <PublicBookingStatusMessage
-        title="Meeting page not found"
-        description="This link may be incorrect or the host has turned this meeting page off."
-      />
-    );
-  }
-
-  if (pageQuery.isError || !pageQuery.isSuccess || !pageQuery.data) {
-    return (
-      <PublicBookingStatusMessage
-        title="Could not load meeting"
-        description="Please refresh and try again."
-      />
-    );
-  }
-
-  const page = pageQuery.data;
-
-  if (slotsQuery.data && !slotsQuery.data.bookable) {
-    return <PublicBookingStatusMessage {...PUBLIC_BOOKING_UNBOOKABLE} />;
-  }
+  const { page } = pageView;
 
   return (
     <PublicBookingLayout wide>

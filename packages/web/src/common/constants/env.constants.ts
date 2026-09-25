@@ -16,6 +16,18 @@ export const getApiBaseUrl = (apiBaseUrl?: string, port?: string): string => {
 const API_BASEURL = getApiBaseUrl(process.env.API_BASEURL, process.env.PORT);
 const BACKEND_BASEURL = API_BASEURL.replace(/\/[^/]*$/, "");
 
+/**
+ * Compass runtime environment from compass.yaml (`runtime.nodeEnv`), not Bun's
+ * bundler NODE_ENV. Shipped web builds re-exec with NODE_ENV=production for
+ * React, and Bun inlines that shell value into `process.env.NODE_ENV` even
+ * when define also sets NODE_ENV from config. COMPASS_NODE_ENV is define-only.
+ */
+export function readCompassRuntimeNodeEnv(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  return env.COMPASS_NODE_ENV ?? env.NODE_ENV ?? "production";
+}
+
 const webEnvSchema = z.object({
   API_BASEURL: z.string().url(),
   BACKEND_BASEURL: z.string().url(),
@@ -39,7 +51,7 @@ export const ENV_WEB = webEnvSchema.parse({
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   MICROSOFT_CLIENT_ID: process.env.MICROSOFT_CLIENT_ID,
   APPLE_SERVICES_ID: process.env.APPLE_SERVICES_ID,
-  NODE_ENV: process.env.NODE_ENV,
+  NODE_ENV: readCompassRuntimeNodeEnv(),
   POSTHOG_KEY: process.env.POSTHOG_KEY,
   POSTHOG_HOST: process.env.POSTHOG_HOST,
 });

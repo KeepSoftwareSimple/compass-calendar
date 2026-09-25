@@ -2,6 +2,7 @@ import { type PostHog } from "posthog-js";
 import * as posthogUtil from "@web/auth/posthog/posthog.util";
 import { filterPosthogBookingTelemetry } from "@web/auth/posthog/posthog-booking-filter.util";
 import { filterPosthogDeadClick } from "@web/auth/posthog/posthog-dead-click-filter.util";
+import { resolvePosthogEnvironment } from "@web/auth/posthog/posthog-environment.util";
 import { filterPosthogBeforeSend } from "@web/auth/posthog/posthog-exception-filter.util";
 import { filterPosthogWebVitals } from "@web/auth/posthog/posthog-web-vitals-filter.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
@@ -96,13 +97,13 @@ export function initPosthog(): PostHog | undefined {
   });
   // Staging and production share this PostHog project with the same key, so
   // without this, staging traffic is indistinguishable from production in
-  // every insight (env.constants.ts NODE_ENV mirrors sync/backend's
-  // `environment` property for the same reason). The key is `version` to
+  // every insight (resolvePosthogEnvironment mirrors backend's `environment`
+  // property for the same reason). The key is `version` to
   // match backend and sync events so a web regression can be attributed to
   // a release. `app_version` on the feedback event is a separate, existing
   // property and is left alone.
   posthog.register({
-    environment: ENV_WEB.NODE_ENV,
+    environment: resolvePosthogEnvironment(),
     version: APP_VERSION,
   });
 

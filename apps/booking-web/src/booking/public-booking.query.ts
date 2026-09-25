@@ -15,7 +15,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   type BookingSlotsQuery,
   type BookingSlotsResponse,
@@ -214,8 +214,15 @@ export function usePrefetchAdjacentBookingMonths(
   maxHorizonDays: number | undefined,
   enabled: boolean,
 ) {
+  const queryClient = useQueryClient();
+  const prefetchMonth = useCallback(
+    (cursor: string, horizon: number) =>
+      prefetchPublicBookingMonth(queryClient, slug, cursor, timeZone, horizon),
+    [queryClient, slug, timeZone],
+  );
+
   usePrefetchAdjacentPublicMonths(
-    { kind: "page", slug },
+    prefetchMonth,
     monthKey,
     timeZone,
     maxHorizonDays,
@@ -231,8 +238,22 @@ export function usePrefetchAdjacentReservationMonths(
   maxHorizonDays: number | undefined,
   enabled: boolean,
 ) {
+  const queryClient = useQueryClient();
+  const prefetchMonth = useCallback(
+    (cursor: string, horizon: number) =>
+      prefetchPublicBookingReservationMonth(
+        queryClient,
+        reservationId,
+        token,
+        cursor,
+        timeZone,
+        horizon,
+      ),
+    [queryClient, reservationId, timeZone, token],
+  );
+
   usePrefetchAdjacentPublicMonths(
-    { kind: "reservation", reservationId, token },
+    prefetchMonth,
     monthKey,
     timeZone,
     maxHorizonDays,
@@ -362,64 +383,31 @@ export function isPublicBookingConflictError(error: unknown): boolean {
 
 type BookingQueryClient = ReturnType<typeof useQueryClient>;
 
-type AdjacentMonthPrefetch =
-  | { kind: "page"; slug: string }
-  | { kind: "reservation"; reservationId: string; token: string };
-
+/**
+ * Warm the months either side of `monthKey`. The caller owns which slots
+ * endpoint that means, and hands in a `prefetchMonth` stable across renders
+ * so this effect re-runs on a real change rather than on a fresh callback
+ * identity every render.
+ */
 function usePrefetchAdjacentPublicMonths(
-  target: AdjacentMonthPrefetch,
+  prefetchMonth: (monthKey: string, maxHorizonDays: number) => unknown,
   monthKey: string,
   timeZone: string,
   maxHorizonDays: number | undefined,
   enabled: boolean,
 ) {
-  const queryClient = useQueryClient();
   const previousMonthKey = shiftBookingMonthKey(monthKey, -1, timeZone);
   const nextMonthKey = shiftBookingMonthKey(monthKey, 1, timeZone);
-  // Flattened to primitives so the effect below re-runs on a real change
-  // rather than on `target`'s new object identity every render.
-  const slug = target.kind === "page" ? target.slug : "";
-  const reservationId =
-    target.kind === "reservation" ? target.reservationId : "";
-  const token = target.kind === "reservation" ? target.token : "";
 
   useEffect(() => {
     if (!enabled || maxHorizonDays == null) {
       return;
     }
-    // Both prefetchers no-op on a missing id or token, so the caller's
+    // Both prefetchers no-op on a missing slug, id, or token, so the caller's
     // `enabled` guard is the only one needed here.
-    const prefetchMonth = (cursor: string) =>
-      slug
-        ? prefetchPublicBookingMonth(
-            queryClient,
-            slug,
-            cursor,
-            timeZone,
-            maxHorizonDays,
-          )
-        : prefetchPublicBookingReservationMonth(
-            queryClient,
-            reservationId,
-            token,
-            cursor,
-            timeZone,
-            maxHorizonDays,
-          );
-
-    void prefetchMonth(previousMonthKey);
-    void prefetchMonth(nextMonthKey);
-  }, [
-    enabled,
-    maxHorizonDays,
-    nextMonthKey,
-    previousMonthKey,
-    queryClient,
-    reservationId,
-    slug,
-    timeZone,
-    token,
-  ]);
+    void prefetchMonth(previousMonthKey, maxHorizonDays);
+    void prefetchMonth(nextMonthKey, maxHorizonDays);
+  }, [enabled, maxHorizonDays, nextMonthKey, prefetchMonth, previousMonthKey]);
 }
 
 function publicBookingMonthSlotsQueryOptions(
