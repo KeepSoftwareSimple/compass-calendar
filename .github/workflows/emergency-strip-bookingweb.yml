@@ -80,13 +80,22 @@ jobs:
               ;;
           esac
 
-          # Prefer compose restart so we never pull images or rewrite yaml via ./compass update.
-          docker compose restart backend sync web || fail_restart=1
-          if [ "${fail_restart:-0}" = 1 ] && [ -x ./compass ]; then
-            ./compass restart
-          elif [ "${fail_restart:-0}" = 1 ]; then
-            echo "docker compose restart failed" >&2
-            exit 1
+          remove_orphan_compose_containers() {
+            docker ps -a --format '{{.Names}}' | while IFS= read -r name; do
+              case "$name" in
+                *_compass-web-1|*_compass-backend-1|*_compass-sync-1|*_compass-booking-web-1)
+                  echo "Removing orphan container ${name}"
+                  docker rm -f "$name" || true
+                  ;;
+              esac
+            done
+          }
+
+          # Never ./compass update or ./compass restart (restarts every container, including orphans).
+          remove_orphan_compose_containers
+          if ! docker compose restart backend sync web; then
+            remove_orphan_compose_containers
+            docker compose restart backend sync web
           fi
 
           echo "--- docker compose ps ---"
