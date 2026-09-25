@@ -2,6 +2,7 @@ import { ZodError, z } from "zod/v4";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
+import { logLevelForError } from "@backend/common/errors/handlers/error.handler";
 import { EventMutationException } from "@backend/event/event.error";
 
 const logger = Logger("app:booking.error");
@@ -100,14 +101,10 @@ export const toBookingErrorResponse = (
     }
   }
 
-  // Mirrors logLevelForError: an operational 503 (a Sync restart, maintenance)
-  // is upstream downtime the caller retries through, so log it at `warn` and
-  // keep it out of error tracking.
-  if (
-    e instanceof BaseError &&
-    e.isOperational &&
-    e.statusCode === Status.SERVICE_UNAVAILABLE
-  ) {
+  // An operational 503 (a Sync restart, maintenance) is upstream downtime the
+  // caller retries through: keep it out of error tracking like the global
+  // handler does.
+  if (e instanceof BaseError && logLevelForError(e) === "warn") {
     logger.warn(
       `Booking dependency unavailable: ${e.result}: ${e.description}`,
     );
