@@ -199,7 +199,9 @@ describe("self-host docker compose", () => {
     expect(bookingBlock).toContain("profiles: [booking]");
     expect(bookingBlock).toContain("apps/booking-web/Dockerfile");
     expect(bookingBlock).toContain("WEB_ROOT: /app/build/booking-web");
+    expect(bookingBlock).toContain('WEB_SERVES_GUEST_MEET: "true"');
     expect(bookingBlock).toContain("tmpfs:");
+    expect(bookingBlock).toContain("healthcheck:");
   });
 
   it("gates the passive sync service behind its own profile", () => {
@@ -358,9 +360,9 @@ describe("self-host installer", () => {
     );
 
     const deploy = readRepoFile(".github/workflows/_deploy-environment.yml");
-    expect(deploy).toContain("self-host/config.sh");
-    expect(deploy.indexOf("self-host/config.sh")).toBeLessThan(
-      deploy.lastIndexOf("self-host/compass"),
+    expect(deploy).toContain('ORCHESTRATION_DIR/config.sh"');
+    expect(deploy.indexOf('ORCHESTRATION_DIR/config.sh"')).toBeLessThan(
+      deploy.indexOf('ORCHESTRATION_DIR/compass"'),
     );
   });
 
@@ -573,13 +575,17 @@ describe("staging deploy workflow", () => {
     expect(workflow).toContain('NODE_ENV="staging"');
   });
 
-  it("falls back to the release tag when a configured compose ref is unavailable", () => {
+  it("copies self-host orchestration from the workflow ref instead of curling raw GitHub", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
+    expect(workflow).toContain("path: self-host-orchestration");
     expect(workflow).toContain(
-      'COMPOSE_GIT_REF="$'.concat("{COMPOSE_GIT_REF:-$", '{RELEASE_TAG}}"'),
+      'ORCHESTRATION_DIR="$GITHUB_WORKSPACE/self-host-orchestration/self-host"',
     );
-    expect(workflow).toContain('COMPOSE_GIT_REF="$'.concat('{RELEASE_TAG}"'));
+    expect(workflow).toContain(
+      'scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.yaml"',
+    );
+    expect(workflow).not.toContain("raw.githubusercontent.com");
   });
 
   it("updates the stack in place without tearing down data services first", () => {
@@ -594,7 +600,7 @@ describe("staging deploy workflow", () => {
     const workflow = readRepoFile(".github/workflows/_deploy-environment.yml");
 
     expect(workflow).toContain(
-      "self-host/compose.selfhosted.yaml -o ~/compass/compose.selfhosted.yaml",
+      'scp -i ~/.ssh/staging_key "$ORCHESTRATION_DIR/compose.selfhosted.yaml"',
     );
   });
 

@@ -12,7 +12,7 @@ async function runPatch(input: string, args: { image: string; port?: string }) {
       "--image",
       args.image,
       "--port",
-      args.port ?? "9081",
+      args.port ?? "9082",
     ],
     {
       cwd: process.cwd(),
@@ -40,6 +40,8 @@ describe("deploy booking-web config", () => {
     );
     expect(workflow).toContain("secrets.DOCKERHUB_USERNAME");
     expect(workflow).toContain("deploy-patch-booking-web-yaml.py");
+    expect(workflow).toContain("self-host-orchestration");
+    expect(workflow).not.toContain("raw.githubusercontent.com");
     expect(workflow).not.toContain("MONGO_URI");
     expect(workflow).not.toContain("SUPERTOKENS_KEY");
   });
@@ -100,7 +102,7 @@ describe("deploy booking-web config", () => {
     expect(result.stdout).toContain(
       'image: "switchbacktech/compass-booking-web:staging-cloud-1.0.0"',
     );
-    expect(result.stdout).toContain("port: 9081");
+    expect(result.stdout).toContain("port: 9082");
     expect(result.stdout.indexOf("bookingWeb:")).toBeGreaterThan(
       result.stdout.indexOf("web:"),
     );
@@ -141,6 +143,7 @@ describe("compass update-booking-web", () => {
     expect(block).not.toContain("compose pull ||");
     expect(block).toContain("bookingWeb.image");
     expect(block).toContain("/meet/");
-    expect(block).toContain("127.0.0.1:${booking_port}/meet/");
+    expect(block).toContain("compose port booking-web 9081");
+    expect(block).toContain("booking_host_port");
   });
 });

@@ -40,12 +40,23 @@ services:
     environment:
       WEB_PORT: "9081"
       WEB_ROOT: /app/build/booking-web
+      WEB_SERVES_GUEST_MEET: "true"
     ports:
       - *booking-web-port
     read_only: true
     tmpfs:
       - /tmp
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "bun -e \"fetch('http://127.0.0.1:9081/meet/').then((r) => process.exit(r.status >= 500 ? 1 : 0)).catch(() => process.exit(1))\"",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
 
   backend:
     image: switchbacktech/compass-backend:${COMPASS_VERSION:-latest}

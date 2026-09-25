@@ -64,7 +64,7 @@ def patch_compass_yaml(content: str, *, image: str, port: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True)
-    parser.add_argument("--port", default="9081")
+    parser.add_argument("--port", default="9082")
     parser.add_argument("--in-place", type=Path)
     parser.add_argument("input", nargs="?", type=Path)
     args = parser.parse_args()
