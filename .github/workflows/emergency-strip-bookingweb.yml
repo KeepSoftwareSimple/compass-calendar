@@ -80,10 +80,13 @@ jobs:
               ;;
           esac
 
-          if [ -x ./compass ]; then
+          # Prefer compose restart so we never pull images or rewrite yaml via ./compass update.
+          docker compose restart backend sync web || fail_restart=1
+          if [ "${fail_restart:-0}" = 1 ] && [ -x ./compass ]; then
             ./compass restart
-          else
-            docker compose restart backend sync web
+          elif [ "${fail_restart:-0}" = 1 ]; then
+            echo "docker compose restart failed" >&2
+            exit 1
           fi
 
           echo "--- docker compose ps ---"
@@ -103,7 +106,7 @@ jobs:
 
           case "$TARGET_ENV" in
             production)
-              public_url="https://compasscalendar.com/api/health"
+              public_url="https://www.compasscalendar.com/api/health"
               ;;
             staging-cloud)
               public_url="https://staging.compasscalendar.com/api/health"
