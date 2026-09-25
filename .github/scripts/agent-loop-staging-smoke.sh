@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Unauthenticated smoke of staging.compasscalendar.com.
-# Never logs in. 404 is success (disabled or unknown booking page). 5xx fails.
+# Never logs in. 5xx fails. /meet/ may 404; the known host slug must be 200,
+# which catches an edge that never routes /meet to booking-web.
 set -euo pipefail
 
 # shellcheck disable=SC1091
@@ -12,6 +13,7 @@ failures=0
 
 check_url() {
   local path=$1
+  local expect=${2:-}
   local url="${base}${path}"
   local tmp http_code
   tmp=$(mktemp)
@@ -32,6 +34,11 @@ check_url() {
     failures=$((failures + 1))
     return 0
   fi
+  if [ -n "$expect" ] && [ "$http_code" != "$expect" ]; then
+    echo "FAIL ${url} HTTP ${http_code} (expected ${expect})" >&2
+    failures=$((failures + 1))
+    return 0
+  fi
   echo "ok ${url} HTTP ${http_code}"
 }
 
@@ -39,7 +46,7 @@ check_url "/"
 check_url "/book/"
 check_url "/book/tylerdeane"
 check_url "/meet/"
-check_url "/meet/tylerdeane"
+check_url "/meet/tylerdeane" 200
 
 if [ "$failures" -gt 0 ]; then
   echo "staging smoke failed (${failures} URL(s))" >&2
