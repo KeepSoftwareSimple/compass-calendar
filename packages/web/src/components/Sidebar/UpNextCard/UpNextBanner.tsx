@@ -9,6 +9,7 @@ import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
 import { useUpNextEvent } from "./useUpNextEvent";
+import { useUpNextOsNotification } from "./useUpNextOsNotification";
 
 const MINUTES_BEFORE_START = 2;
 
@@ -31,6 +32,17 @@ export const UpNextBanner: FC = () => {
       dayjs(upNext?.startDate).diff(now, "minute", true) <=
         MINUTES_BEFORE_START);
   const isVisible = isWithinWindow && upNext?._id !== dismissedId;
+
+  useUpNextOsNotification(
+    upNext?._id
+      ? {
+          _id: upNext._id,
+          title: upNext.title,
+          startDate: upNext.startDate,
+        }
+      : undefined,
+    isVisible,
+  );
 
   const openConference = () =>
     window.open(conferenceUrl, "_blank", "noopener,noreferrer");

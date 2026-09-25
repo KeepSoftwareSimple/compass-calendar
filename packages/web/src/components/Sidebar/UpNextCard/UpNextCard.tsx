@@ -86,9 +86,9 @@ export const UpNextCard: FC = () => {
           <span className="min-w-0 truncate font-medium text-sm text-text">
             {upNext.title}
           </span>
-          {upNext.conference && (
+          {conferenceUrl && (
             <a
-              href={upNext.conference.url}
+              href={conferenceUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="c-focus-ring relative z-10 flex w-fit items-center gap-1 text-accent text-xs hover:underline"
