@@ -175,7 +175,7 @@ describe("buildAppConfig provider flags", () => {
     }
   });
 
-  it("hides Microsoft in production even when credentials are configured", () => {
+  it("offers Microsoft in production when credentials are configured", () => {
     const originals = {
       nodeEnv: CONFIG.NODE_ENV,
       microsoftId: CONFIG.MICROSOFT_CLIENT_ID,
@@ -187,8 +187,8 @@ describe("buildAppConfig provider flags", () => {
 
     try {
       expect(buildAppConfig(CONFIG).providers.microsoft).toEqual({
-        signIn: false,
-        connect: false,
+        signIn: true,
+        connect: true,
       });
     } finally {
       CONFIG.NODE_ENV = originals.nodeEnv;

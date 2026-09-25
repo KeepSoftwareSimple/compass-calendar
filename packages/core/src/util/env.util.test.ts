@@ -3,7 +3,6 @@ import {
   isAppleOffered,
   isBookingEnabled,
   isDev,
-  isMicrosoftOffered,
   isNonProduction,
 } from "@core/util/env.util";
 import { describe, expect, it } from "bun:test";
@@ -33,19 +32,6 @@ describe("isNonProduction", () => {
     expect(isNonProduction(NodeEnv.Staging)).toBe(true);
     expect(isNonProduction(NodeEnv.Test)).toBe(true);
     expect(isNonProduction(NodeEnv.Production)).toBe(false);
-  });
-});
-
-describe("isMicrosoftOffered", () => {
-  it("is on in development, staging, and tests", () => {
-    expect(isMicrosoftOffered(NodeEnv.Development)).toBe(true);
-    expect(isMicrosoftOffered(NodeEnv.Staging)).toBe(true);
-    expect(isMicrosoftOffered(NodeEnv.Test)).toBe(true);
-  });
-
-  it("is off in production while publisher verification is pending", () => {
-    expect(isMicrosoftOffered(NodeEnv.Production)).toBe(false);
-    expect(isMicrosoftOffered("production")).toBe(false);
   });
 });
 
