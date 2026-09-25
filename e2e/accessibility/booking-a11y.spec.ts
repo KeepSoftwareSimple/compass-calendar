@@ -594,7 +594,7 @@ test.describe("settings booking section", () => {
     });
     const nudge = page.getByRole("region", { name: "Meeting page" });
     await expect(
-      nudge.getByRole("heading", { name: "Let people book time with you" }),
+      nudge.getByRole("heading", { name: "Skip back & forth" }),
     ).toBeVisible();
     await expect(
       nudge.getByRole("button", { name: "Set up meeting page" }),
