@@ -1,3 +1,4 @@
+import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { type PropsWithChildren, type ReactElement } from "react";
@@ -24,7 +25,11 @@ export function createStoreWrapper(
 
   function StoreWrapper({ children }: PropsWithChildren) {
     return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+      <HotkeysProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+        </QueryClientProvider>
+      </HotkeysProvider>
     );
   }
 

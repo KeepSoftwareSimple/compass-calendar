@@ -222,6 +222,8 @@
   "patchedDependencies": {
     "@tanstack/react-router@1.170.17": "patches/@tanstack%2Freact-router@1.170.17.patch",
     "@tanstack/hotkeys@0.3.3": "patches/@tanstack%2Fhotkeys@0.3.3.patch",
+    "@tanstack/react-router@1.170.38": "patches/@tanstack%2Freact-router@1.170.38.patch",
+    "@tanstack/hotkeys@0.9.0": "patches/@tanstack%2Fhotkeys@0.9.0.patch",
   },
   "overrides": {
     "body-parser": "^1.20.6",
