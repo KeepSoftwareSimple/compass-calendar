@@ -20,7 +20,7 @@
     "@tiptap/pm": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
-    "bson": "^7.3.3",
+    "bson": "^7.2.0",
     "classnames": "^2.3.1",
     "date-fns": "^4.4.0",
     "dexie": "^4.4.6",
