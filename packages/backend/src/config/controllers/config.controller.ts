@@ -2,7 +2,7 @@ import { type Request, type Response } from "express";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type AppConfig, AppConfigSchema } from "@core/types/config.types";
 import { normalizeDeployVersion } from "@core/util/deploy-version.util";
-import { isAppleOffered, isMicrosoftOffered } from "@core/util/env.util";
+import { isAppleOffered } from "@core/util/env.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import {
   isAppleConnectConfigured,
@@ -15,8 +15,7 @@ import {
 
 export const buildAppConfig = (config: typeof CONFIG): AppConfig => {
   const google = isGoogleConfigured(config);
-  const microsoft =
-    isMicrosoftConfigured(config) && isMicrosoftOffered(config.NODE_ENV);
+  const microsoft = isMicrosoftConfigured(config);
   const appleOffered = isAppleOffered(config.NODE_ENV);
   const appleSignIn = isAppleSignInConfigured(config) && appleOffered;
   const appleConnect = isAppleConnectConfigured(config) && appleOffered;
