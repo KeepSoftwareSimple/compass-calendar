@@ -1496,7 +1496,7 @@ describe("SettingsModal", () => {
 
     await user.click(await screen.findByRole("button", { name: /^Continue/ }));
     expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
-    await user.keyboard("k");
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
     expect(await screen.findByText("Step 3 of 4")).toBeInTheDocument();
     await user.keyboard("{Escape}");
 
