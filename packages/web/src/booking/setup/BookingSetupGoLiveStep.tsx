@@ -4,8 +4,8 @@ import {
 } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type TimeZone } from "@core/types/domain-primitives";
-import { bookingAddressPrefix } from "@web/booking/BookingAddressField";
 import { formatBookingTimezoneLabel } from "@web/booking/BookingTimezoneField";
+import { bookingAddressPrefix } from "@web/booking/booking-address.util";
 import { formatBookingDestinationOptionLabel } from "@web/booking/booking-conference.copy";
 import { summarizeAvailability } from "@web/booking/weekly-hours";
 

@@ -1,48 +1,36 @@
-import { type RefCallback, useState } from "react";
+import { type RefCallback } from "react";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
-import { bookingSlugParseMessage } from "@web/booking/booking.util";
+import { BookingSlugFieldMessages } from "@web/booking/BookingSlugFieldMessages";
+import { bookingAddressPrefix } from "@web/booking/booking-address.util";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
-
-export const BOOKING_ADDRESS_CHANGE_WARNING =
-  "Links using your old address will stop working.";
-
-export function bookingAddressPrefix(bookingUrl: string | null): string {
-  const origin = bookingUrl
-    ? new URL(bookingUrl).origin
-    : window.location.origin;
-  return `${origin}/meet/`;
-}
+import { useBookingSlugField } from "@web/booking/useBookingSlugField";
 
 interface BookingAddressFieldProps {
   bookingUrl: string | null;
   forceInvalid?: boolean;
   inputRef?: RefCallback<HTMLInputElement | null>;
   onChange: (slug: string) => void;
-  savedSlug: string | null;
   slug: string;
 }
 
+/**
+ * Bare slug input for the setup wizard, where the page has no saved address
+ * yet. Hosts editing a live page get BookingMeetingLinkField instead.
+ */
 export function BookingAddressField({
   bookingUrl,
   forceInvalid = false,
   inputRef,
   onChange,
-  savedSlug,
   slug,
 }: BookingAddressFieldProps) {
-  const [blurred, setBlurred] = useState(false);
   const prefix = bookingAddressPrefix(bookingUrl);
-  const parseMessage = bookingSlugParseMessage(slug);
-  const showError = (blurred || forceInvalid) && parseMessage != null;
-  const showWarning = savedSlug != null && slug !== savedSlug;
-  const errorId = "booking-address-error";
-  const warningId = "booking-address-warning";
-  const describedBy = [
-    showError ? errorId : null,
-    showWarning ? warningId : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const field = useBookingSlugField({
+    forceInvalid,
+    idPrefix: "booking-address",
+    savedSlug: null,
+    slug,
+  });
 
   return (
     <div className="min-w-0">
@@ -51,14 +39,14 @@ export function BookingAddressField({
       </BookingFieldLabel>
       <input
         {...bookingFieldAttrs("address")}
-        aria-describedby={describedBy || undefined}
-        aria-invalid={showError || undefined}
+        aria-describedby={field.describedBy}
+        aria-invalid={field.showError || undefined}
         autoCapitalize="none"
         className={`c-focus-ring w-full min-w-0 rounded border bg-surface-overlay px-2 py-1 text-sm text-text ${
-          showError ? "border-error" : "border-border"
+          field.showError ? "border-error" : "border-border"
         }`}
         id="booking-address"
-        onBlur={() => setBlurred(true)}
+        onBlur={field.markBlurred}
         ref={inputRef}
         onChange={(event) => onChange(event.target.value.toLowerCase())}
         spellCheck={false}
@@ -68,20 +56,7 @@ export function BookingAddressField({
         Your link: {prefix}
         {slug}
       </p>
-      {showError ? (
-        <p className="font-medium text-sm text-text" id={errorId} role="alert">
-          {parseMessage}
-        </p>
-      ) : null}
-      {showWarning ? (
-        <p
-          className="font-medium text-sm text-text"
-          id={warningId}
-          role="status"
-        >
-          {BOOKING_ADDRESS_CHANGE_WARNING}
-        </p>
-      ) : null}
+      <BookingSlugFieldMessages field={field} />
     </div>
   );
 }

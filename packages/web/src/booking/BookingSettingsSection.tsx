@@ -38,15 +38,11 @@ import {
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { useAppAccess } from "@web/billing/useAppAccess";
-import { bookingAddressPrefix } from "@web/booking/BookingAddressField";
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
 import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
-import {
-  BookingMeetingLinkField,
-  copyMeetingLinkThenToast,
-} from "@web/booking/BookingMeetingLinkField";
+import { BookingMeetingLinkField } from "@web/booking/BookingMeetingLinkField";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
 import { BookingSaveBar } from "@web/booking/BookingSaveBar";
@@ -71,7 +67,9 @@ import {
   toBookingPageInput,
   validateBookingForm,
 } from "@web/booking/booking.util";
+import { bookingAddressPrefix } from "@web/booking/booking-address.util";
 import { BOOKING_SELECT_CLASS_NAME } from "@web/booking/booking-form.styles";
+import { copyMeetingLinkThenToast } from "@web/booking/booking-link-copy";
 import {
   type BookingField,
   bookingFieldAttrs,

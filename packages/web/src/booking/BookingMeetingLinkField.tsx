@@ -1,18 +1,14 @@
 import { ArrowSquareOut } from "@phosphor-icons/react/dist/csr/ArrowSquareOut";
 import { Check } from "@phosphor-icons/react/dist/csr/Check";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
-import { type RefCallback, useState } from "react";
-import { track } from "@web/auth/posthog/track";
-import {
-  BOOKING_ADDRESS_CHANGE_WARNING,
-  bookingAddressPrefix,
-} from "@web/booking/BookingAddressField";
+import { type RefCallback } from "react";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
-import { bookingSlugParseMessage } from "@web/booking/booking.util";
+import { BookingSlugFieldMessages } from "@web/booking/BookingSlugFieldMessages";
+import { bookingAddressPrefix } from "@web/booking/booking-address.util";
+import { reportBookingLinkCopied } from "@web/booking/booking-link-copy";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { useCopiedFlag } from "@web/booking/use-copied-flag";
-import { copyText } from "@web/common/utils/clipboard/clipboard.util";
-import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
+import { useBookingSlugField } from "@web/booking/useBookingSlugField";
 import IconButton, {
   iconButtonClassName,
 } from "@web/components/IconButton/IconButton";
@@ -39,31 +35,17 @@ export function BookingMeetingLinkField({
   showOpen = true,
   slug,
 }: BookingMeetingLinkFieldProps) {
-  const [blurred, setBlurred] = useState(false);
   const prefix = bookingAddressPrefix(bookingUrl);
   const meetingUrl = slug ? `${prefix}${slug}` : prefix;
-  const parseMessage = bookingSlugParseMessage(slug);
-  const showError = (blurred || forceInvalid) && parseMessage != null;
-  const showWarning = savedSlug != null && slug !== savedSlug;
-  const errorId = "booking-meeting-link-error";
-  const warningId = "booking-meeting-link-warning";
-  const describedBy = [
-    showError ? errorId : null,
-    showWarning ? warningId : null,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const field = useBookingSlugField({
+    forceInvalid,
+    idPrefix: "booking-meeting-link",
+    savedSlug,
+    slug,
+  });
 
   const { copied, copy } = useCopiedFlag(meetingUrl, (didCopy) => {
-    if (didCopy) {
-      track("booking_link_copied", { source: "button" });
-    }
-    showStatusToast(
-      "booking-link-copied",
-      didCopy
-        ? "Meeting link copied"
-        : "Could not copy. Select the link to copy it.",
-    );
+    reportBookingLinkCopied(didCopy, "button");
   });
 
   const handleInputChange = (raw: string) => {
@@ -83,15 +65,15 @@ export function BookingMeetingLinkField({
       <div className="flex items-center gap-1">
         <input
           {...bookingFieldAttrs("address")}
-          aria-describedby={describedBy || undefined}
-          aria-invalid={showError || undefined}
+          aria-describedby={field.describedBy}
+          aria-invalid={field.showError || undefined}
           aria-label="Meeting link"
           autoCapitalize="none"
           className={`c-focus-ring min-w-0 flex-1 rounded border bg-surface-overlay px-2 py-1 text-sm text-text ${
-            showError ? "border-error" : "border-border"
+            field.showError ? "border-error" : "border-border"
           }`}
           id="booking-meeting-link"
-          onBlur={() => setBlurred(true)}
+          onBlur={field.markBlurred}
           onChange={(event) => handleInputChange(event.target.value)}
           ref={inputRef}
           spellCheck={false}
@@ -120,33 +102,7 @@ export function BookingMeetingLinkField({
           </TooltipWrapper>
         ) : null}
       </div>
-      {showError ? (
-        <p className="font-medium text-sm text-text" id={errorId} role="alert">
-          {parseMessage}
-        </p>
-      ) : null}
-      {showWarning ? (
-        <p
-          className="font-medium text-sm text-text"
-          id={warningId}
-          role="status"
-        >
-          {BOOKING_ADDRESS_CHANGE_WARNING}
-        </p>
-      ) : null}
+      <BookingSlugFieldMessages field={field} />
     </div>
   );
-}
-
-/** Copy the public link after save when the field is not on screen. */
-export function copyMeetingLinkThenToast(
-  bookingUrl: string,
-  copy: { onCopy: string; onFail: string },
-) {
-  void copyText(bookingUrl).then((didCopy) => {
-    if (didCopy) {
-      track("booking_link_copied", { source: "save" });
-    }
-    showStatusToast("booking-link-copied", didCopy ? copy.onCopy : copy.onFail);
-  });
 }

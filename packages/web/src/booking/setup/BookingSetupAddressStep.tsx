@@ -27,7 +27,6 @@ export function BookingSetupAddressStep({
         forceInvalid={forceInvalid}
         inputRef={focusInput}
         onChange={onChange}
-        savedSlug={null}
         slug={slug}
       />
       {error ? (
