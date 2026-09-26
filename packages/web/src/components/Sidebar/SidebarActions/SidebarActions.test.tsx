@@ -81,4 +81,21 @@ describe("SidebarActions", () => {
       screen.getByRole("button", { name: "Close shortcuts" }),
     ).toBeInTheDocument();
   });
+
+  it("puts the level badge right after the shortcuts button", () => {
+    const { wrapper } = createStoreWrapper();
+
+    render(<SidebarActions />, { wrapper });
+
+    const buttons = screen.getAllByRole("button");
+    const shortcutsIndex = buttons.findIndex(
+      (button) => button.getAttribute("aria-label") === "Open shortcuts",
+    );
+    const levelIndex = buttons.findIndex((button) =>
+      button.getAttribute("aria-label")?.startsWith("Shortcut level"),
+    );
+
+    expect(shortcutsIndex).toBeGreaterThanOrEqual(0);
+    expect(levelIndex).toBe(shortcutsIndex + 1);
+  });
 });
