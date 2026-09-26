@@ -80,6 +80,7 @@ import {
   initialEventJumpState,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { resetShortcutUsageProfileStoreForTests } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { resetShortcutTelemetryForTests } from "@web/shortcuts/tips/shortcut-telemetry";
 import { resetShortcutHintProgressStoreForTests } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { resetShortcutTipsMutedStoreForTests } from "@web/shortcuts/tips/shortcut-tips-muted.store";
@@ -133,6 +134,7 @@ const storeResets: StoreReset[] = [
   resetShortcutHintProgressStoreForTests,
   resetShortcutTipsMutedStoreForTests,
   resetShortcutTelemetryForTests,
+  resetShortcutUsageProfileStoreForTests,
 ];
 
 export function resetAllStores() {

@@ -1,7 +1,14 @@
+import { act, renderHook } from "@testing-library/react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { afterEach, describe, expect, it } from "bun:test";
+import {
+  readShortcutUsageProfile,
+  resetShortcutUsageProfileStoreForTests,
+  usedShortcutIds,
+  useShortcutUsageProfile,
+  writeShortcutUsageProfile,
+} from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 afterEach(() => {
   persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_PERSONALIZATION);
@@ -59,5 +66,76 @@ describe("readShortcutUsageProfile", () => {
       lastInvokedAt: 42,
       recentImpressions: 0,
     });
+  });
+});
+
+describe("useShortcutUsageProfile", () => {
+  afterEach(() => {
+    persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_PERSONALIZATION);
+    resetShortcutUsageProfileStoreForTests();
+  });
+
+  it("re-renders after a write through writeShortcutUsageProfile", () => {
+    const { result } = renderHook(() => useShortcutUsageProfile());
+    expect(result.current.shortcuts["nav-today"]).toBeUndefined();
+
+    act(() => {
+      writeShortcutUsageProfile({
+        version: 2,
+        actions: {},
+        shortcuts: { "nav-today": { invocations: 1, recentImpressions: 0 } },
+      });
+    });
+
+    expect(result.current.shortcuts["nav-today"]?.invocations).toBe(1);
+  });
+
+  it("resyncs from a direct storage seed after resetShortcutUsageProfileStoreForTests", () => {
+    const { result } = renderHook(() => useShortcutUsageProfile());
+
+    persistentBrowserStore.set(
+      STORAGE_KEYS.SHORTCUT_PERSONALIZATION,
+      JSON.stringify({
+        version: 2,
+        actions: {},
+        shortcuts: { "nav-next": { invocations: 2, recentImpressions: 0 } },
+      }),
+    );
+    act(() => {
+      resetShortcutUsageProfileStoreForTests();
+    });
+
+    expect(result.current.shortcuts["nav-next"]?.invocations).toBe(2);
+  });
+
+  it("leaves the reactive store untouched when a write fails", () => {
+    const { result } = renderHook(() => useShortcutUsageProfile());
+    const setSpy = spyOn(persistentBrowserStore, "set").mockReturnValue(false);
+
+    const wrote = writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: { "nav-today": { invocations: 1, recentImpressions: 0 } },
+    });
+
+    expect(wrote).toBe(false);
+    expect(result.current.shortcuts["nav-today"]).toBeUndefined();
+    setSpy.mockRestore();
+  });
+});
+
+describe("usedShortcutIds", () => {
+  it("includes only ids with at least one invocation", () => {
+    const ids = usedShortcutIds({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 0, recentImpressions: 0 },
+      },
+    });
+
+    expect(ids.has("nav-today")).toBe(true);
+    expect(ids.has("nav-next")).toBe(false);
   });
 });
