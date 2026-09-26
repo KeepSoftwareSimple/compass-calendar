@@ -13,8 +13,8 @@ type EventDetails = Extract<EventContent, { kind: "details" }>;
 
 const EVENT_FORM_GUEST_LIST_ID = "event-form-guest-list";
 /** Focus target for the `e m` / `Mod+=` "meeting link" field: the join link
- * here on an existing event, or the "Add Google Meet" switch on a create
- * draft (EventForm renders whichever applies, never both). */
+ * here on an existing event, or the "Add <kind>" switch on a create draft
+ * (EventForm renders whichever applies, never both). */
 export const EVENT_FORM_CONFERENCE_ID = "event-form-conference";
 
 interface EventDetailsSectionProps {
@@ -31,11 +31,11 @@ const MAX_VISIBLE_ATTENDEES = 6;
 
 /**
  * Read-only display for provider-sourced event fields Compass doesn't let
- * the user edit: the Google Meet link and the attendee list with RSVP
- * status. Location is editable now (see EventForm.tsx's own location
- * field) and no longer rendered here. Rendered only when the event has at
- * least one of these - absent for a plain Compass-native event and for a
- * busy-projection event (whose content carries none of this).
+ * the user edit: the meeting link and the attendee list with RSVP status.
+ * Location is editable now (see EventForm.tsx's own location field) and no
+ * longer rendered here. Rendered only when the event has at least one of
+ * these - absent for a plain Compass-native event and for a busy-projection
+ * event (whose content carries none of this).
  */
 export const EventDetailsSection = ({
   details,

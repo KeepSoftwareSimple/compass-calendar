@@ -17,6 +17,7 @@ import {
   PUBLIC_BOOKING_LOAD_FAILED,
   PUBLIC_BOOKING_RESERVATION_LOADING,
   type PublicBookingReservationView,
+  publicBookingMeetingNotFound,
   resolvePublicBookingPageView,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
@@ -24,10 +25,9 @@ import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-docume
 import { useBookingHeadingFocus } from "@booking-web/booking/use-booking-heading-focus";
 import { usePublicBookingRescheduleFlow } from "@booking-web/booking/use-public-booking-reschedule-flow";
 
-const BOOKING_NOT_FOUND = {
-  title: "Meeting not found",
-  description: "This reschedule link may be invalid or already used.",
-} as const;
+const BOOKING_NOT_FOUND = publicBookingMeetingNotFound(
+  "This reschedule link may be invalid or already used.",
+);
 
 export function PublicBookingReschedulePage() {
   const flow = usePublicBookingRescheduleFlow();

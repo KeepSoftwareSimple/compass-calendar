@@ -47,7 +47,7 @@ type SharedEventFormValues = {
 export type NewEventFormValues = SharedEventFormValues & {
   calendarId: CalendarId | null;
   recurrence: NewEventRecurrenceDraft;
-  // Ask the provider to mint a meeting link on save (the "Add Google Meet"
+  // Ask the provider to mint a meeting link on save (the "Add <kind>"
   // switch). Create-only: sync has no conference channel on update. Absent
   // or false means no link.
   createConference?: boolean;

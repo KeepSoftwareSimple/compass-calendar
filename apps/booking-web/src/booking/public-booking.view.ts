@@ -48,6 +48,16 @@ const PUBLIC_BOOKING_PAGE_LOADING: PublicBookingStatusCopy = {
 export const PUBLIC_BOOKING_SLOT_CONFLICT =
   "This time is no longer available. Pick another slot.";
 
+/** Reservation cancel, reschedule, and confirmation 404s share this title.
+ * Page-specific descriptions stay at the call site so a bad cancel link
+ * and a bad confirmation link do not read as the same sentence. */
+export const publicBookingMeetingNotFound = (
+  description: string,
+): PublicBookingStatusCopy => ({
+  title: "Meeting not found",
+  description,
+});
+
 /**
  * What a guest page should render once the reservation query has settled:
  * either a terminal status message, or the reservation itself.

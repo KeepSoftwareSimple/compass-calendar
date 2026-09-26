@@ -1,3 +1,4 @@
+import { escapeHtml } from "@backend/common/helpers/escape-html";
 import { type WelcomeEmailContentEntry } from "@backend/email/welcome-sequence.content";
 
 const UTM_PARAMS = "utm_source=email&utm_campaign=welcome";
@@ -5,14 +6,6 @@ const UTM_PARAMS = "utm_source=email&utm_campaign=welcome";
 function appendUtm(href: string, stepKey: string): string {
   const separator = href.includes("?") ? "&" : "?";
   return `${href}${separator}${UTM_PARAMS}&utm_content=${encodeURIComponent(stepKey)}`;
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 }
 
 export type WelcomeEmailUnsubscribe = {

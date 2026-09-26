@@ -10,6 +10,7 @@ import {
   PUBLIC_BOOKING_CANCELLED,
   PUBLIC_BOOKING_LOAD_FAILED,
   type PublicBookingReservationView,
+  publicBookingMeetingNotFound,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
 import {
@@ -35,11 +36,9 @@ const BOOKING_LOADING = {
   description: "One moment while we load this confirmation.",
 } as const;
 
-const BOOKING_NOT_FOUND = {
-  title: "Meeting not found",
-  description:
-    "This confirmation link may be incorrect or no longer available.",
-} as const;
+const BOOKING_NOT_FOUND = publicBookingMeetingNotFound(
+  "This confirmation link may be incorrect or no longer available.",
+);
 
 const BOOKING_CANCELLING = {
   title: "This meeting is being canceled",

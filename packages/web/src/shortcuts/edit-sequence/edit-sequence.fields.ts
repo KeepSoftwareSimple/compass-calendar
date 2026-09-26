@@ -19,7 +19,7 @@ import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 // since EditSequenceMenu renders straight off this order. Account keeps
 // digit 5 but has no letter key: `a` is guests, and Actions is digit-only
 // too — it's a toolbar, not a field, so `e`-leader has nothing to focus
-// there. Meeting link lands on the "Add Google Meet" switch of a create
+// there. Meeting link lands on the "Add <kind>" switch of a create
 // draft or the join link of an existing event, whichever is rendered.
 export const EDIT_SEQUENCE_FIELDS = [
   { key: "t", field: "title", label: "Title", digit: "1" },

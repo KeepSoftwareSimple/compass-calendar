@@ -64,7 +64,7 @@ const FIELD_SELECTORS: Record<EventFormFocusField, string[]> = {
   color: [`#event-form-color`],
   attendees: [`#event-form-attendees`, `#event-form-guest-list`],
   rsvp: [`#event-form-rsvp`],
-  // The "Add Google Meet" switch on a create draft, or the meeting link of an
+  // The "Add <kind>" switch on a create draft, or the meeting link of an
   // existing event (EventDetailsSection); absent when neither is rendered.
   conference: [`${EVENT_FORM_SELECTOR} #event-form-conference`],
 };
