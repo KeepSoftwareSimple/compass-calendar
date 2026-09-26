@@ -239,6 +239,33 @@ describe("UpNextCard", () => {
     expect(screen.queryByRole("link", { name: "Join" })).toBeNull();
     expect(screen.getByText("N")).toBeInTheDocument();
   });
+
+  it("shows no Join link when the description only has a Notion URL", () => {
+    const start = dayjs().add(30, "minute");
+    render(<UpNextCard />, {
+      events: [
+        createMockEvent({
+          id: EventIdSchema.parse(SOON_EVENT_ID),
+          content: {
+            kind: "details",
+            title: "Update",
+            description:
+              "https://app.notion.com/p/alpaca-ty/Forever-Today-4e2d",
+            conference: null,
+          },
+          schedule: EventScheduleSchema.parse({
+            kind: "timed",
+            start: start.format(),
+            end: start.add(30, "minute").format(),
+            timeZone: "UTC",
+          }),
+        }),
+      ],
+    });
+
+    expect(screen.queryByRole("link", { name: "Join" })).toBeNull();
+    expect(screen.getByText("N")).toBeInTheDocument();
+  });
 });
 
 // A timed event that crosses midnight is projected into the all-day row with

@@ -16,10 +16,28 @@ describe("joinUrlFromDescription", () => {
     ).toBe("https://zoom.us/j/123456789");
   });
 
-  it("reads a bare URL from plain-text descriptions", () => {
+  it("reads a bare meeting URL from plain-text descriptions", () => {
     expect(
-      joinUrlFromDescription("Dial in at https://meet.example.com/room."),
-    ).toBe("https://meet.example.com/room");
+      joinUrlFromDescription(
+        "Dial in at https://meet.google.com/abc-defg-hij.",
+      ),
+    ).toBe("https://meet.google.com/abc-defg-hij");
+  });
+
+  it("ignores non-meeting links", () => {
+    expect(
+      joinUrlFromDescription(
+        "Notes: https://app.notion.com/p/workspace/page-id",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("prefers the first meeting link when a doc link appears first", () => {
+    expect(
+      joinUrlFromDescription(
+        'Agenda https://app.notion.com/p/x/y then <a href="https://zoom.us/j/999">Zoom</a>',
+      ),
+    ).toBe("https://zoom.us/j/999");
   });
 });
 
@@ -56,5 +74,37 @@ describe("resolveUpNextJoinUrl", () => {
     expect(resolveUpNextJoinUrl(undefined, source)).toBe(
       "https://zoom.us/j/999",
     );
+  });
+
+  it("returns undefined when only a non-meeting link is present", () => {
+    const source = createMockEvent({
+      id: EventIdSchema.parse("aaaaaaaaaaaaaaaaaaaaaaaa"),
+      content: {
+        kind: "details",
+        title: "Update",
+        description: "https://app.notion.com/p/alpaca-ty/Forever-Today-4e2d",
+        conference: null,
+      },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-25T10:00:00.000Z",
+        end: "2026-09-25T10:30:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+
+    expect(resolveUpNextJoinUrl(undefined, source)).toBeUndefined();
+  });
+
+  it("drops a structured conference url that is not a meeting link", () => {
+    const gridEvent = {
+      _id: "abc",
+      conference: {
+        url: "https://app.notion.com/p/alpaca-ty/page",
+        label: "Link",
+      },
+    } as Parameters<typeof resolveUpNextJoinUrl>[0];
+
+    expect(resolveUpNextJoinUrl(gridEvent, undefined)).toBeUndefined();
   });
 });
