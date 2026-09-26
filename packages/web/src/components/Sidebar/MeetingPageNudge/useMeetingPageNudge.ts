@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
-import { isSavedBookingPage } from "@core/types/booking.contracts";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { useBookingPageQuery } from "@web/booking/booking.query";
+import { isLiveBookingPage } from "@web/booking/booking.util";
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import {
