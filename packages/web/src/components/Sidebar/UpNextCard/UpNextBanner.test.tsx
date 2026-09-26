@@ -73,7 +73,7 @@ describe("UpNextBanner", () => {
     render(<UpNextBanner />, {
       events: [
         timedEvent(SOON_EVENT_ID, "Soon Event", 2, {
-          url: "https://meet.example/join",
+          url: "https://meet.google.com/abc-defg-hij",
           label: null,
         }),
       ],
@@ -92,6 +92,35 @@ describe("UpNextBanner", () => {
     });
 
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("shows Open and N when the description only has a Notion URL", () => {
+    const start = dayjs().add(2, "minute");
+    render(<UpNextBanner />, {
+      events: [
+        createMockEvent({
+          id: EventIdSchema.parse(SOON_EVENT_ID),
+          content: {
+            kind: "details",
+            title: "Update",
+            description:
+              "https://app.notion.com/p/alpaca-ty/Forever-Today-4e2d",
+            conference: null,
+          },
+          schedule: EventScheduleSchema.parse({
+            kind: "timed",
+            start: start.format(),
+            end: start.add(30, "minute").format(),
+            timeZone: "UTC",
+          }),
+        }),
+      ],
+    });
+
+    expect(screen.getByRole("button", { name: "Open" })).toBeInTheDocument();
+    expect(screen.getByText("N")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Join" })).toBeNull();
+    expect(screen.queryByText("V")).toBeNull();
   });
 
   it("shows Join and V when the meeting link lives only in the description", () => {
