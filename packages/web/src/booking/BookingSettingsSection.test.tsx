@@ -511,7 +511,7 @@ describe("BookingSettingsSection", () => {
     ]);
   });
 
-  it("shows only address, destination calendar, blocking calendars, notice, and horizon in More options", async () => {
+  it("shows only destination calendar, blocking calendars, notice, and horizon in More options", async () => {
     userMetadataActions.set(healthyGoogleMetadata);
 
     server.use(
@@ -531,7 +531,7 @@ describe("BookingSettingsSection", () => {
     const summary = await screen.findByText(BOOKING_MORE_OPTIONS_LABEL);
     await userEvent.setup({ delay: null }).click(summary);
 
-    expect(screen.getByLabelText("Page address")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Page address")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Destination calendar")).toBeInTheDocument();
     expect(screen.getByText("Blocking calendars")).toBeInTheDocument();
     expect(screen.getByLabelText("Minimum notice (hours)")).toBeInTheDocument();
@@ -568,14 +568,9 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    await user.click(await screen.findByText(BOOKING_MORE_OPTIONS_LABEL));
-    expect(
-      screen.queryByText(/3 to 32 lowercase letters, digits, or hyphens\./),
-    ).not.toBeInTheDocument();
-
-    const address = screen.getByLabelText("Page address");
+    const address = await screen.findByLabelText("Meeting link");
     await user.clear(address);
-    await user.type(address, "ab");
+    await user.type(address, `${window.location.origin}/meet/ab`);
     await user.tab();
 
     expect(
@@ -723,8 +718,8 @@ describe("BookingSettingsSection", () => {
     });
     expect(screen.queryByText(/Times in/)).not.toBeInTheDocument();
 
+    const meetingLink = await screen.findByLabelText("Meeting link");
     await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
-    const address = screen.getByLabelText("Page address");
     const destination = screen.getByRole("combobox", {
       name: "Destination calendar",
     });
@@ -732,7 +727,7 @@ describe("BookingSettingsSection", () => {
       name: /^Meeting timezone:/,
     });
     expect(
-      address.compareDocumentPosition(destination) &
+      meetingLink.compareDocumentPosition(destination) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(
@@ -1299,16 +1294,13 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    const address = await screen.findByLabelText("Page address");
-    expect(address).toHaveValue("hostuser");
-    expect(
-      screen.getByText("Your link: https://compasscalendar.com/meet/hostuser"),
-    ).toBeInTheDocument();
+    const address = await screen.findByLabelText("Meeting link");
+    expect(address).toHaveValue("https://compasscalendar.com/meet/hostuser");
     expect(
       screen.queryByRole("heading", { name: "Your meeting page" }),
     ).not.toBeInTheDocument();
     await user.clear(address);
-    await user.type(address, "tyler-dane");
+    await user.type(address, "https://compasscalendar.com/meet/tyler-dane");
     await user.click(
       screen.getByRole("button", { name: BOOKING_SAVE_CHANGES_LABEL }),
     );
@@ -1340,9 +1332,9 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    const address = await screen.findByLabelText("Page address");
+    const address = await screen.findByLabelText("Meeting link");
     await user.clear(address);
-    await user.type(address, "ab");
+    await user.type(address, `${window.location.origin}/meet/ab`);
     await user.tab();
 
     expect(
@@ -1395,7 +1387,7 @@ describe("BookingSettingsSection", () => {
     expect(mocks.error).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(document.activeElement).toBe(
-        screen.getByLabelText("Page address"),
+        screen.getByLabelText("Meeting link"),
       );
     });
   });
@@ -1459,11 +1451,12 @@ describe("BookingSettingsSection", () => {
       { wrapper: live.wrapper },
     );
 
-    const liveSummary = await screen.findByText(BOOKING_MORE_OPTIONS_LABEL);
-    await user.click(liveSummary);
-    const liveAddressField = await screen.findByLabelText("Page address");
+    const liveAddressField = await screen.findByLabelText("Meeting link");
     await user.clear(liveAddressField);
-    await user.type(liveAddressField, "new-address");
+    await user.type(
+      liveAddressField,
+      `${window.location.origin}/meet/new-address`,
+    );
     const warning = await screen.findByText(BOOKING_ADDRESS_CHANGE_WARNING);
     expect(warning).toBeInTheDocument();
     expect(warning).toHaveAttribute("role", "status");
@@ -1530,7 +1523,7 @@ describe("BookingSettingsSection", () => {
       { wrapper },
     );
 
-    await screen.findByLabelText("Page address");
+    await screen.findByLabelText("Meeting link");
     await waitFor(() => {
       expect(mockTrack).toHaveBeenCalledWith("booking_settings_opened", {
         has_connection: true,
@@ -1706,12 +1699,17 @@ describe("BookingSettingsSection", () => {
     await screen.findByRole("switch", { name: "Meeting page" });
     await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
 
+    expect(
+      within(screen.getByText("Meeting link")).queryByText("U", {
+        exact: true,
+      }),
+    ).toBeNull();
+
     for (const caption of [
       "Duration",
       "Meeting timezone",
       "Weekly hours",
       "Destination calendar",
-      "Page address",
       "Blocking calendars",
       "Minimum notice (hours)",
       "Maximum horizon (days)",
@@ -2603,7 +2601,7 @@ describe("BookingSettingsSection", () => {
     expect(screen.queryByLabelText("Meeting link")).not.toBeInTheDocument();
   });
 
-  it("does not change the off-page meeting link when the address is edited unsaved", async () => {
+  it("updates the off-page meeting link when the slug is edited unsaved", async () => {
     const user = userEvent.setup({ delay: null });
     userMetadataActions.set(healthyGoogleMetadata);
     server.use(
@@ -2636,12 +2634,13 @@ describe("BookingSettingsSection", () => {
     const savedUrl = `${window.location.origin}/meet/hostuser`;
     expect(meetingLink).toHaveValue(savedUrl);
 
-    await user.click(screen.getByText(BOOKING_MORE_OPTIONS_LABEL));
-    const address = screen.getByLabelText("Page address");
+    const address = screen.getByLabelText("Meeting link");
     await user.clear(address);
-    await user.type(address, "newhost");
+    await user.type(address, `${window.location.origin}/meet/newhost`);
 
-    expect(screen.getByLabelText("Meeting link")).toHaveValue(savedUrl);
+    expect(screen.getByLabelText("Meeting link")).toHaveValue(
+      `${window.location.origin}/meet/newhost`,
+    );
   });
 
   it("turns off a live page", async () => {

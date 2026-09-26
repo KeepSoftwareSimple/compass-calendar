@@ -22,6 +22,7 @@ import {
 } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId, TimeZoneSchema } from "@core/types/domain-primitives";
+import { useSession } from "@web/auth/compass/session/useSession";
 import {
   bookingSetupSaveFailureReason,
   trackBookingSetupSaveFailed,
@@ -29,6 +30,7 @@ import {
   trackBookingSetupStepCompleted,
   trackBookingSetupStepViewed,
 } from "@web/auth/posthog/booking-funnel";
+import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   selectGoogleConnectionState,
@@ -36,14 +38,15 @@ import {
   useUserMetadataStore,
 } from "@web/auth/state/user-metadata.store";
 import { useAppAccess } from "@web/billing/useAppAccess";
-import {
-  BookingAddressField,
-  bookingAddressPrefix,
-} from "@web/booking/BookingAddressField";
+import { bookingAddressPrefix } from "@web/booking/BookingAddressField";
 import { BookingBlockingCalendarsField } from "@web/booking/BookingBlockingCalendarsField";
 import { BookingConnectPrompt } from "@web/booking/BookingConnectPrompt";
 import { BookingDestinationCalendarField } from "@web/booking/BookingDestinationCalendarField";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
+import {
+  BookingMeetingLinkField,
+  copyMeetingLinkThenToast,
+} from "@web/booking/BookingMeetingLinkField";
 import { BookingMoreOptions } from "@web/booking/BookingMoreOptions";
 import { BookingNumberField } from "@web/booking/BookingNumberField";
 import { BookingSaveBar } from "@web/booking/BookingSaveBar";
@@ -74,6 +77,11 @@ import {
   bookingFieldAttrs,
   focusBookingField,
 } from "@web/booking/booking-sequence.fields";
+import {
+  clearGuestMeetingSetupDraft,
+  readGuestMeetingSetupDraft,
+  writeGuestMeetingSetupDraft,
+} from "@web/booking/guest-meeting-setup.util";
 import { BookingSetupWizard } from "@web/booking/setup/BookingSetupWizard";
 import {
   nextSetupStep,
@@ -87,13 +95,18 @@ import {
 } from "@web/calendars/calendar.util";
 import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
 import { useConnectedAccountEmails } from "@web/calendars/useDefaultTargetCalendar";
-import { copyText } from "@web/common/utils/clipboard/clipboard.util";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
+import { VIEW_TO_PARAM } from "@web/components/AuthModal/hooks/useAuthModal";
+import {
+  selectGuestMeetingSetupActive,
+  settingsActions,
+  useSettingsStore,
+} from "@web/settings/settings.store";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { DiscardUnsavedChangesDialog } from "@web/views/Forms/EventForm/DiscardUnsavedChangesDialog";
 
 const MORE_OPTIONS_FIELDS = new Set<BookingField>([
-  "address",
   "destination",
   "timezone",
   "blocking",
@@ -120,19 +133,6 @@ function configuredHostFromPage(
 ): boolean {
   return page != null && !isUnconfiguredBookingPage(page);
 }
-
-/** Copy the public link, then report whichever of the two outcomes happened. */
-const copyBookingLinkThenToast = (
-  bookingUrl: string,
-  copy: { onCopy: string; onFail: string },
-) => {
-  void copyText(bookingUrl).then((didCopy) => {
-    if (didCopy) {
-      track("booking_link_copied", { source: "save" });
-    }
-    showStatusToast("booking-link-copied", didCopy ? copy.onCopy : copy.onFail);
-  });
-};
 
 const parseBookingCount = (
   raw: string,
@@ -210,6 +210,11 @@ export function BookingSettingsSection({
   dismissGuardRef,
   onDiscardUnsaved,
 }: BookingSettingsSectionProps) {
+  const { authenticated } = useSession();
+  const guestMeetingSetupActive = useSettingsStore(
+    selectGuestMeetingSetupActive,
+  );
+  const guestPreview = guestMeetingSetupActive && !authenticated;
   const googleConnectionState = useUserMetadataStore(
     selectGoogleConnectionState,
   );
@@ -274,7 +279,7 @@ export function BookingSettingsSection({
     writableCalendars.length,
   ]);
 
-  const { data: serverPage, isPending } = useBookingPageQuery(true);
+  const { data: serverPage, isPending } = useBookingPageQuery(!guestPreview);
   const isLiveSavedPage =
     isSavedBookingPage(serverPage) && serverPage.enabled === true;
   const statusQuery = useBookingStatusQuery(isLiveSavedPage);
@@ -330,6 +335,7 @@ export function BookingSettingsSection({
     undefined,
   );
   useEffect(() => {
+    if (guestPreview) return;
     if (!serverPage || seededPageRef.current === serverPage) return;
     if (setupStep != null) return;
     // The week-view cache can still be the anonymous local calendar after
@@ -359,16 +365,35 @@ export function BookingSettingsSection({
     availabilityCalendars,
     calendarsPending,
     effectiveTimeZone,
+    guestPreview,
     serverPage,
     setupStep,
     waitingForHostCalendars,
     writableCalendars,
   ]);
 
+  useEffect(() => {
+    if (!guestPreview) return;
+    const draft = readGuestMeetingSetupDraft();
+    if (draft) {
+      setForm(draft);
+      setMinNoticeText(String(draft.minNoticeHours));
+      setHorizonText(String(draft.maxHorizonDays));
+      baselineFormRef.current = draft;
+    }
+    setSetupStep((current) => current ?? "address");
+  }, [guestPreview]);
+
+  useEffect(() => {
+    if (!guestPreview) return;
+    writeGuestMeetingSetupDraft(form);
+  }, [form, guestPreview]);
+
   // Not ready until the calendars settle and the effect above has consumed
   // this server page. The analytics effect and the render guard must read the
   // same value, or "settings opened" fires against a form the host cannot see.
   const isSeedingForm =
+    !guestPreview &&
     setupStep == null &&
     (isPending ||
       calendarsPending ||
@@ -393,10 +418,10 @@ export function BookingSettingsSection({
   }, [availabilityCalendars, isSeedingForm]);
 
   useEffect(() => {
-    if (isSeedingForm) return;
+    if (guestPreview || isSeedingForm) return;
     if (serverPage == null || !isUnconfiguredBookingPage(serverPage)) return;
     setSetupStep((current) => current ?? "address");
-  }, [isSeedingForm, serverPage]);
+  }, [guestPreview, isSeedingForm, serverPage]);
 
   const isDirty =
     baselineFormRef.current !== null &&
@@ -478,10 +503,31 @@ export function BookingSettingsSection({
     });
   }, [setupStep]);
 
+  useEffect(() => {
+    if (!authenticated || !guestMeetingSetupActive) return;
+    settingsActions.clearGuestMeetingSetup();
+  }, [authenticated, guestMeetingSetupActive]);
+
   const showFirstRunConnectPrompt =
+    !guestPreview &&
     !hasHealthyConnection &&
     ((serverPage != null && isUnconfiguredBookingPage(serverPage)) ||
       (!isPending && serverPage == null));
+
+  const promptSignupBeforeSave = (): boolean => {
+    if (!guestPreview) return false;
+    trackSignupStarted("meeting_page_setup");
+    void importOrReload(() => import("@web/routers")).then(({ router }) => {
+      void router.navigate({
+        to: ".",
+        search: (prev: Record<string, unknown>) => ({
+          ...prev,
+          auth: VIEW_TO_PARAM.signUp,
+        }),
+      });
+    });
+    return true;
+  };
 
   if (showFirstRunConnectPrompt) {
     return <BookingConnectPrompt />;
@@ -541,6 +587,7 @@ export function BookingSettingsSection({
     enabled: boolean,
     options?: { silent?: boolean; fromSetupGoLive?: boolean },
   ) => {
+    if (promptSignupBeforeSave()) return;
     const error = validateBookingForm({
       enabling: enabled,
       form,
@@ -598,8 +645,10 @@ export function BookingSettingsSection({
             setSetupStep(null);
             focusSwitchAfterSetupRef.current = true;
           }
+          clearGuestMeetingSetupDraft();
+          settingsActions.clearGuestMeetingSetup();
           if (!isSavedBookingPage(page)) return;
-          copyBookingLinkThenToast(
+          copyMeetingLinkThenToast(
             page.bookingUrl,
             wasLive
               ? {
@@ -645,6 +694,11 @@ export function BookingSettingsSection({
       if (parseMessage) {
         trackBookingSetupSaveFailed("validation", { step: "address" });
         setSaveError({ field: "address", message: parseMessage });
+        return;
+      }
+      if (guestPreview) {
+        trackBookingSetupStepCompleted("address");
+        advanceSetupStep();
         return;
       }
       void saveMutation
@@ -693,6 +747,7 @@ export function BookingSettingsSection({
     }
 
     if (setupStep === "live") {
+      if (promptSignupBeforeSave()) return;
       submit(true, { fromSetupGoLive: true });
       return;
     }
@@ -743,7 +798,6 @@ export function BookingSettingsSection({
         <BookingStatusHeader
           addressPreview={addressPreview}
           aggregateState={googleConnectionState}
-          bookingUrl={savedPage?.bookingUrl ?? null}
           savedUrl={savedMeetingLinkUrl(serverPage)}
           calendars={calendars}
           connections={connections}
@@ -753,6 +807,17 @@ export function BookingSettingsSection({
           onToggle={(next) => submit(next)}
           status={statusQuery.data}
         />
+
+        {savedSlug != null ? (
+          <BookingMeetingLinkField
+            bookingUrl={savedPage?.bookingUrl ?? null}
+            forceInvalid={saveError?.field === "address"}
+            onChange={(nextSlug) => updateForm({ slug: nextSlug })}
+            savedSlug={savedSlug}
+            showOpen={isLive}
+            slug={form.slug ?? ""}
+          />
+        ) : null}
 
         <div className="max-w-[50%]">
           <BookingFieldLabel htmlFor="booking-duration">
@@ -789,14 +854,6 @@ export function BookingSettingsSection({
         </div>
 
         <BookingMoreOptions forceOpen={forceOpenMoreOptions}>
-          <BookingAddressField
-            bookingUrl={savedPage?.bookingUrl ?? null}
-            forceInvalid={saveError?.field === "address"}
-            onChange={(nextSlug) => updateForm({ slug: nextSlug })}
-            savedSlug={savedSlug}
-            slug={form.slug ?? ""}
-          />
-
           <div>
             <BookingFieldLabel htmlFor="booking-destination-calendar">
               Destination calendar

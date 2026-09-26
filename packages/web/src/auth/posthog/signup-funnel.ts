@@ -43,7 +43,8 @@ export type SignupSource =
   | "anon_nudge"
   | "command_palette"
   | "connect_chooser"
-  | "shortcut_showcase";
+  | "shortcut_showcase"
+  | "meeting_page_setup";
 
 export type SignupFailureReason =
   | "oauth_user_cancelled"

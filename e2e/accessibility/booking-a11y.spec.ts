@@ -436,7 +436,9 @@ test.describe("settings booking section", () => {
       settingsDialog.getByRole("combobox", { name: "Tuesday start 2" }),
     ).toBeVisible();
     await settingsDialog.getByText("More options", { exact: true }).click();
-    await expect(settingsDialog.getByLabel("Page address")).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("textbox", { name: "Meeting link" }),
+    ).toBeVisible();
     await expect(
       settingsDialog.getByRole("button", { name: /Meeting timezone:/ }),
     ).toBeVisible();
@@ -451,8 +453,9 @@ test.describe("settings booking section", () => {
   }) => {
     await prepareSignedInBookingSettingsPage(page);
     const settingsDialog = page.getByRole("dialog", { name: "Settings" });
-    await settingsDialog.getByText("More options", { exact: true }).click();
-    const address = settingsDialog.getByLabel("Page address");
+    const address = settingsDialog.getByRole("textbox", {
+      name: "Meeting link",
+    });
     await address.click();
     await dispatchFill(address, "ab");
     await settingsDialog.getByLabel("Duration").click();
@@ -472,9 +475,8 @@ test.describe("settings booking section", () => {
   }) => {
     await prepareSignedInBookingSettingsPage(page);
     const settingsDialog = page.getByRole("dialog", { name: "Settings" });
-    await settingsDialog.getByText("More options", { exact: true }).click();
     await dispatchFill(
-      settingsDialog.getByLabel("Page address"),
+      settingsDialog.getByRole("textbox", { name: "Meeting link" }),
       "new-address",
     );
     await expect(
@@ -633,7 +635,9 @@ test.describe("settings booking section", () => {
     await prepareSignedInBookingSettingsPage(page);
     const settingsDialog = page.getByRole("dialog", { name: "Settings" });
     await settingsDialog.getByText("More options", { exact: true }).click();
-    await expect(settingsDialog.getByLabel("Page address")).toBeVisible();
+    await expect(
+      settingsDialog.getByRole("textbox", { name: "Meeting link" }),
+    ).toBeVisible();
     await expect(
       settingsDialog.getByLabel("Minimum notice (hours)"),
     ).toBeVisible();

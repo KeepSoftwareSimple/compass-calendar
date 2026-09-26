@@ -19,6 +19,8 @@ export const STORAGE_KEYS = {
   // turning the page on hides the card everywhere without this key.
   HAS_DISMISSED_MEETING_PAGE_NUDGE:
     "compass.onboarding.has-dismissed-meeting-page-nudge",
+  // Anonymous meeting-page setup draft from the public /meet footer CTA.
+  GUEST_MEETING_SETUP_DRAFT: "compass.booking.guest-meeting-setup-draft",
   // Set when the user finishes or skips the Shortcut Showcase, so it never
   // auto-launches twice (palette replay ignores it).
   HAS_SEEN_SHORTCUT_SHOWCASE: "compass.onboarding.has-seen-shortcut-showcase",

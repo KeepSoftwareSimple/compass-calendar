@@ -228,7 +228,7 @@ export const getLegendNavigationCommandItems = ({
     },
     {
       id: "join-up-next-meeting",
-      label: "Join Up Next meeting",
+      label: "Join meeting",
       icon: VideoCameraIcon,
       shortcut: [...B.navJoinMeeting.keycaps],
       keywords: ["conference", "video", "call", "meet"],

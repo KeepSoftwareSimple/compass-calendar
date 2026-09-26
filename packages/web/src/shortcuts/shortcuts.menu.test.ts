@@ -168,7 +168,7 @@ describe("shortcut menu sections", () => {
         });
         expect(stripMetadata(navigate.shortcuts)).toContainEqual({
           keys: ["v"],
-          label: "Join Up Next meeting",
+          label: "Join meeting",
         });
         expect(stripMetadata(navigate.shortcuts)).toContainEqual({
           keys: ["g"],

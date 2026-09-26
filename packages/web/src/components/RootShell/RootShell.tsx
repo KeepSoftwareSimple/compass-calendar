@@ -21,6 +21,7 @@ import { getTrialDaysLeft } from "@web/billing/trialDaysLeft";
 import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
+import { useGuestMeetingSetupEntry } from "@web/booking/useGuestMeetingSetupEntry";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
@@ -119,6 +120,7 @@ export function RootShell() {
   // after five minutes). No-ops when booking is off or the session is
   // anonymous.
   useNewMeetingsNotice();
+  useGuestMeetingSetupEntry();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

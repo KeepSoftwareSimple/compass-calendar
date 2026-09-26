@@ -5,7 +5,6 @@ import {
   type SyncConnectionSummary,
 } from "@core/types/user.types";
 import { BookingBlockerNotice } from "@web/booking/BookingBlockerNotice";
-import { BookingCopyLink } from "@web/booking/BookingCopyLink";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { Switch } from "@web/components/Switch/Switch";
 
@@ -15,7 +14,6 @@ interface BookingStatusHeaderProps {
   isLive: boolean;
   isPending: boolean;
   onToggle: (next: boolean) => void;
-  bookingUrl: string | null;
   savedUrl: string | null;
   addressPreview: string | null;
   calendars: readonly Calendar[];
@@ -29,7 +27,6 @@ export function BookingStatusHeader({
   isLive,
   isPending,
   onToggle,
-  bookingUrl,
   savedUrl,
   addressPreview,
   calendars,
@@ -46,17 +43,10 @@ export function BookingStatusHeader({
         label="Meeting page"
         onCheckedChange={onToggle}
       />
-      {isLive ? (
-        bookingUrl ? (
-          <BookingCopyLink bookingUrl={bookingUrl} />
-        ) : null
-      ) : savedUrl ? (
-        <>
-          <BookingCopyLink bookingUrl={savedUrl} showOpen={false} />
-          <p className="text-sm text-text">
-            Off. Guests can use this link once you turn it on.
-          </p>
-        </>
+      {isLive ? null : savedUrl ? (
+        <p className="text-sm text-text">
+          Off. Guests can use this link once you turn it on.
+        </p>
       ) : (
         <>
           <p className="text-sm text-text">
