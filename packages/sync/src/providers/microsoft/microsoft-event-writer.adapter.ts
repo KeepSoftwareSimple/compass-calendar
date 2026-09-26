@@ -11,6 +11,7 @@ import {
   mapConference,
   normalizeMicrosoftEvent,
 } from "@sync/providers/microsoft/microsoft-event.normalizer";
+import { microsoftCategoryFields } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph-request";
 import {
   MICROSOFT_EVENT_SELECT,
@@ -85,6 +86,7 @@ export interface GraphEventWriteBody {
   readonly transactionId?: string;
   readonly isOnlineMeeting?: boolean;
   readonly onlineMeetingProvider?: string;
+  readonly categories?: readonly string[];
 }
 
 export interface MicrosoftEventWriteApi {
@@ -273,6 +275,7 @@ function toGraphWriteBody(
     showAs: "busy",
     ...recurrenceField(recurrence, schedule),
     ...attendeesField(attendees, invitation),
+    ...microsoftCategoryFields(content.color),
   };
 }
 

@@ -12,6 +12,11 @@ import {
   MICROSOFT_GRAPH_BASE_URL,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import {
+  defaultMicrosoftMasterCategoryApiFactory,
+  listMicrosoftEventLabels,
+  type MicrosoftMasterCategoryApiFactory,
+} from "@sync/providers/microsoft/microsoft-master-categories";
+import {
   type CalendarDiscovery,
   type DiscoveredCalendar,
   type ProviderCalendarAdapter,
@@ -55,9 +60,14 @@ const defaultApiFactory: MicrosoftCalendarListApiFactory = (accessToken) =>
 // null cursor and relies on periodic re-list sweeps for drift.
 export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
   #makeApi: MicrosoftCalendarListApiFactory;
+  #makeMasterCategoryApi: MicrosoftMasterCategoryApiFactory;
 
-  constructor(makeApi: MicrosoftCalendarListApiFactory = defaultApiFactory) {
+  constructor(
+    makeApi: MicrosoftCalendarListApiFactory = defaultApiFactory,
+    makeMasterCategoryApi: MicrosoftMasterCategoryApiFactory = defaultMicrosoftMasterCategoryApiFactory,
+  ) {
     this.#makeApi = makeApi;
+    this.#makeMasterCategoryApi = makeMasterCategoryApi;
   }
 
   async discoverCalendars(input: {
@@ -78,7 +88,18 @@ export class MicrosoftCalendarAdapter implements ProviderCalendarAdapter {
       nextLink = page.nextLink ?? undefined;
     } while (nextLink);
 
-    return { calendars, cursor: null };
+    const eventLabels = await listMicrosoftEventLabels(
+      input.accessToken,
+      this.#makeMasterCategoryApi,
+    );
+
+    return {
+      calendars: calendars.map((calendar) => ({
+        ...calendar,
+        eventLabels,
+      })),
+      cursor: null,
+    };
   }
 
   async #listPage(

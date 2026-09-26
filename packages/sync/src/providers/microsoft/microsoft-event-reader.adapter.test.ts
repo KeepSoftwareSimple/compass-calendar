@@ -222,7 +222,7 @@ describe("MicrosoftEventReaderAdapter", () => {
     });
 
     expect(result.events[0]).toMatchObject({
-      content: { colorHex: "#0078D4" },
+      content: { color: "blue" },
     });
   });
 

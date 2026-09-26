@@ -262,6 +262,11 @@ describe("microsoft discovery contract", () => {
     it(testCase.name, async () => {
       const adapter = new MicrosoftCalendarAdapter(
         () => new ContractCalendarListApi(),
+        () => ({
+          list: async () => [
+            { displayName: "Blue category", color: "preset7" },
+          ],
+        }),
       );
       await testCase.run(adapter);
     });
@@ -350,7 +355,7 @@ describe("microsoft normalizer contract", () => {
       url: "https://teams.microsoft.com/l/meetup-join/abc",
       label: "Microsoft Teams",
     });
-    expect(read.content.colorHex).toBe("#0078D4");
+    expect(read.content.color).toBe("blue");
   });
 });
 

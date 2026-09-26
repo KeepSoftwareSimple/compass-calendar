@@ -307,7 +307,17 @@ describe("normalizeMicrosoftEvent", () => {
       ),
     );
 
-    expect(read.content.colorHex).toBe("#0078D4");
+    expect(read.content.color).toBe("blue");
+    expect(read.content).not.toHaveProperty("colorHex");
+  });
+
+  it("maps a Compass category name to a slot without masterCategories", () => {
+    const read = asProviderEvent(
+      normalizeMicrosoftEvent(mEvent({ categories: ["Coral"] })),
+    );
+
+    expect(read.content.color).toBe("coral");
+    expect(read.content).not.toHaveProperty("colorHex");
   });
 
   it("omits colorHex when the category has no matching color", () => {
