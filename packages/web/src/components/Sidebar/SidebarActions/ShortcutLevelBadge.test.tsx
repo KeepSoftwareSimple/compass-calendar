@@ -1,6 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
+import * as Track from "@web/auth/posthog/track";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { SHORTCUT_LEVEL_UP_TOAST_ID } from "@web/common/constants/toast.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import {
+  registerToastPort,
+  resetToastPort,
+} from "@web/common/utils/toast/toast.port";
 import { ShortcutLevelBadge } from "@web/components/Sidebar/SidebarActions/ShortcutLevelBadge";
 import {
   selectIsShortcutsOpen,
@@ -10,7 +19,7 @@ import { setLevelHidden } from "@web/shortcuts/level/shortcut-level-hidden.store
 import { SHORTCUTS_REGISTRY } from "@web/shortcuts/shortcuts.registry";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, spyOn } from "bun:test";
 
 // The level is computed over the real registry, not the sections a caller
 // passes in (those only drive "try next"), so assertions on the count use
@@ -156,5 +165,100 @@ describe("ShortcutLevelBadge", () => {
     expect(
       screen.queryByRole("button", { name: /Shortcut level/ }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ShortcutLevelBadge level-up celebration", () => {
+  const { port, mocks } = createTestToastPort();
+
+  afterEach(() => {
+    document.body.innerHTML = "";
+    persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED);
+    mocks.toast.mockClear();
+    resetToastPort();
+  });
+
+  it("seeds the celebrated level silently on first mount", () => {
+    registerToastPort(port);
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-delete": { invocations: 1, recentImpressions: 0 },
+        "edit-duplicate": { invocations: 1, recentImpressions: 0 },
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+
+    renderBadge();
+
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(
+      persistentBrowserStore.get(STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED),
+    ).toBe("2");
+  });
+
+  it("pulses, toasts once, and tracks when a threshold is crossed", async () => {
+    registerToastPort(port);
+    const track = spyOn(Track, "track");
+    persistentBrowserStore.set(STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED, "1");
+    renderBadge();
+    const button = screen.getByRole("button", { name: /Shortcut level 1/ });
+    expect(button.className).not.toContain("c-level-pulse");
+
+    act(() => {
+      writeShortcutUsageProfile({
+        version: 2,
+        actions: {},
+        shortcuts: {
+          "edit-delete": { invocations: 1, recentImpressions: 0 },
+          "edit-duplicate": { invocations: 1, recentImpressions: 0 },
+          "nav-today": { invocations: 1, recentImpressions: 0 },
+          "nav-next": { invocations: 1, recentImpressions: 0 },
+        },
+      });
+    });
+
+    const leveledButton = await screen.findByRole("button", {
+      name: /Shortcut level 2, Explorer/,
+    });
+    expect(leveledButton.className).toContain("c-level-pulse");
+    expect(mocks.toast).toHaveBeenCalledTimes(1);
+    const [, toastOptions] = mocks.toast.mock.calls[0] as unknown as [
+      unknown,
+      { toastId?: unknown },
+    ];
+    expect(toastOptions).toMatchObject({ toastId: SHORTCUT_LEVEL_UP_TOAST_ID });
+    expect(track).toHaveBeenCalledWith("shortcut_level_up", {
+      level: 2,
+      level_name: "Explorer",
+      used: 4,
+      total: REGISTRY_TOTAL,
+    });
+
+    await waitFor(() => {
+      expect(leveledButton.className).not.toContain("c-level-pulse");
+    });
+    track.mockRestore();
+  });
+
+  it("does not re-celebrate the same level on a later write", () => {
+    registerToastPort(port);
+    persistentBrowserStore.set(STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED, "2");
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-delete": { invocations: 1, recentImpressions: 0 },
+        "edit-duplicate": { invocations: 1, recentImpressions: 0 },
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+
+    renderBadge();
+
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 });

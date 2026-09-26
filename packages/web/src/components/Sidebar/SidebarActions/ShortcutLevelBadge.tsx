@@ -1,5 +1,10 @@
-import { useMemo } from "react";
+import classNames from "classnames";
+import { useEffect, useMemo, useState } from "react";
 import { track } from "@web/auth/posthog/track";
+import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
+import { SHORTCUT_LEVEL_UP_TOAST_ID } from "@web/common/constants/toast.constants";
+import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   Tooltip,
@@ -20,6 +25,8 @@ import {
   useShortcutUsageProfile,
 } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
+
+export const LEVEL_PULSE_MS = 700;
 
 // This is the one place the badge imports the registry as a value: the
 // level model itself stays pure and never touches it, so it can never be
@@ -75,6 +82,45 @@ export function ShortcutLevelBadge({ sections }: Props) {
     () => tryNextShortcuts(sections, usedIds, eventFocused),
     [sections, usedIds, eventFocused],
   );
+  const [pulsing, setPulsing] = useState(false);
+
+  // Celebrates a level-up once: the last celebrated level is stored so a
+  // returning user with existing history is not congratulated for a level
+  // they already had (an absent key seeds silently on first run). Skipped
+  // entirely while hidden; re-showing celebrates the accumulated jump once.
+  useEffect(() => {
+    if (hidden) return;
+
+    const stored = persistentBrowserStore.get(
+      STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED,
+    );
+    if (stored === null) {
+      persistentBrowserStore.set(
+        STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED,
+        String(level.level),
+      );
+      return;
+    }
+    if (level.level <= Number(stored)) return;
+
+    persistentBrowserStore.set(
+      STORAGE_KEYS.SHORTCUT_LEVEL_CELEBRATED,
+      String(level.level),
+    );
+    setPulsing(true);
+    showStatusToast(
+      SHORTCUT_LEVEL_UP_TOAST_ID,
+      `Level ${level.level}: ${level.name}. ${level.used} shortcuts learned.`,
+    );
+    track("shortcut_level_up", {
+      level: level.level,
+      level_name: level.name,
+      used: level.used,
+      total: level.total,
+    });
+    const timer = window.setTimeout(() => setPulsing(false), LEVEL_PULSE_MS);
+    return () => window.clearTimeout(timer);
+  }, [hidden, level.level, level.name, level.used, level.total]);
 
   if (hidden) return null;
 
@@ -87,7 +133,10 @@ export function ShortcutLevelBadge({ sections }: Props) {
       <TooltipTrigger asChild>
         <button
           aria-label={`Shortcut level ${level.level}, ${level.name}. ${level.used} of ${level.total} shortcuts used. Open shortcuts.`}
-          className="c-keycap c-focus-ring cursor-pointer text-xs"
+          className={classNames(
+            "c-keycap c-focus-ring cursor-pointer text-xs",
+            pulsing && "c-level-pulse",
+          )}
           onClick={viewActions.toggleShortcuts}
           type="button"
         >
