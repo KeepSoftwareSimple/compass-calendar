@@ -294,8 +294,10 @@ test("changes the page address and PUTs slug", async ({ page }) => {
   const captured = await prepareSignedInBookingSettingsPage(page);
 
   const settingsDialog = page.getByRole("dialog", { name: "Settings" });
-  await openMoreOptions(settingsDialog);
-  await dispatchFill(settingsDialog.getByLabel("Page address"), "new-address");
+  await dispatchFill(
+    settingsDialog.getByRole("textbox", { name: "Meeting link" }),
+    "new-address",
+  );
   await dispatchClick(
     settingsDialog.getByRole("button", { name: "Save changes" }),
   );
