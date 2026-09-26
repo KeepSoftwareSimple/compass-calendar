@@ -12,9 +12,11 @@ import { EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { renderWithStore } from "@web/__tests__/render-with-store";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { createMockOfflineDataStore } from "@web/__tests__/utils/storage/mock-offline-data-store.util";
 import * as Track from "@web/auth/posthog/track";
 import { type AppAccess } from "@web/billing/useAppAccess";
+import * as realBookingQuery from "@web/booking/booking.query";
 import { resetOfflineDataStoreForTests } from "@web/common/storage/offline-data/offline-data.store.registry";
 import { onViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
@@ -46,6 +48,19 @@ import {
   setSystemTime,
   spyOn,
 } from "bun:test";
+
+const mockUseBookingPageQuery = mock(() => ({
+  data: undefined,
+  isSuccess: true,
+  isFetching: false,
+}));
+
+mockModuleForFile("@web/booking/booking.query", realBookingQuery, {
+  useBookingPageQuery: (enabled: boolean) =>
+    enabled
+      ? mockUseBookingPageQuery()
+      : { data: undefined, isSuccess: false, isFetching: false },
+});
 
 const mockNavigate = mock();
 // Bun's mock.module is process-wide, so mock the router's useNavigate directly

@@ -1,5 +1,4 @@
 import { type FC, Suspense, useEffect, useRef, useState } from "react";
-import { isSavedBookingPage } from "@core/types/booking.contracts";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type SyncConnectionSummary } from "@core/types/user.types";
@@ -30,6 +29,7 @@ import {
   useBookingPageQuery,
   useBookingStatusQuery,
 } from "@web/booking/booking.query";
+import { isLiveBookingPage } from "@web/booking/booking.util";
 import { BOOKING_NAV_NEEDS_ATTENTION } from "@web/booking/booking-bookability.copy";
 import { AccountGroupedCalendarOptions } from "@web/calendars/AccountGroupedCalendarOptions";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
@@ -157,13 +157,12 @@ export const SettingsModal: FC = () => {
   const showBookingNav =
     (authenticated && IS_BOOKING_ENABLED) || guestMeetingPreview;
   const { data: bookingPage } = useBookingPageQuery(isOpen && showBookingNav);
-  const isLiveBookingPage =
-    isSavedBookingPage(bookingPage) && bookingPage.enabled === true;
+  const meetingPageLive = isLiveBookingPage(bookingPage);
   const { data: bookingStatus } = useBookingStatusQuery(
-    isOpen && showBookingNav && isLiveBookingPage,
+    isOpen && showBookingNav && meetingPageLive,
   );
   const bookingNeedsAttention =
-    isLiveBookingPage && bookingStatus?.bookable === false;
+    meetingPageLive && bookingStatus?.bookable === false;
   const accountEmailOrder = useConnectedAccountEmails();
   // useDefaultTargetCalendar subscribes to session reconnect overrides, so
   // writableCalendars recomputes when a 410 lands before Sync metadata catches up.

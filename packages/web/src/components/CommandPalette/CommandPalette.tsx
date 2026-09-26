@@ -27,6 +27,7 @@ import { HighlightedLabel } from "@web/components/CommandPalette/HighlightedLabe
 import { useAuthCmdItems } from "@web/components/CommandPalette/hooks/useAuthCmdItems";
 import { useDemoEventsCmdItems } from "@web/components/CommandPalette/hooks/useDemoEventsCmdItems";
 import { useLogoutCmdItems } from "@web/components/CommandPalette/hooks/useLogoutCmdItems";
+import { useMeetingPageCmdItems } from "@web/components/CommandPalette/hooks/useMeetingPageCmdItems";
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { useShortcutTipsCmdItems } from "@web/components/CommandPalette/hooks/useShortcutTipsCmdItems";
 import { useShowAccountsCmdItems } from "@web/components/CommandPalette/hooks/useShowAccountsCmdItems";
@@ -412,6 +413,7 @@ export const CommandPalette = ({
   const showAccountsCmdItems = useShowAccountsCmdItems();
   const showBillingCmdItems = useShowBillingCmdItems();
   const showBookingCmdItems = useShowBookingCmdItems();
+  const meetingPageCmdItems = useMeetingPageCmdItems(open);
   const logoutCmdItems = useLogoutCmdItems();
   const themeCmdItems = useThemeCmdItems();
   const upgradeCmdItems = useUpgradeCmdItems();
@@ -484,6 +486,7 @@ export const CommandPalette = ({
         ...showAccountsCmdItems,
         ...showBillingCmdItems,
         ...showBookingCmdItems,
+        ...meetingPageCmdItems,
         ...logoutCmdItems,
       ],
     },
