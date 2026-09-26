@@ -263,7 +263,7 @@ describe("CommandPalette", () => {
     expect(optionKeycaps("Toggle sidebar")).toBe("]");
     expect(optionKeycaps("Focus month picker")).toBe("I");
     expect(optionKeycaps("Open Up Next event")).toBe("N");
-    expect(optionKeycaps("Join Up Next meeting")).toBe("V");
+    expect(optionKeycaps("Join meeting")).toBe("V");
     expect(optionKeycaps("Time travel")).toBe("Z");
     expect(
       screen

@@ -38,10 +38,12 @@ describe("PublicBookingLayout", () => {
 
     const footer = screen.getByRole("contentinfo");
     expect(footer).toHaveTextContent(
-      "Compass Calendar · Your calendar and meeting pages in one app.",
+      "Compass Calendar, the keyboard calendar.",
     );
     expect(
-      within(footer).getByRole("link", { name: "Open Compass →" }),
-    ).toHaveAttribute("href", "/");
+      within(footer).getByRole("link", {
+        name: "Set up your own meeting page",
+      }),
+    ).toHaveAttribute("href", "/?meetingSetup=1");
   });
 });

@@ -64,6 +64,7 @@ import {
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
+  selectGuestMeetingSetupActive,
   selectIsSettingsOpen,
   selectSettingsPage,
   settingsActions,
@@ -115,6 +116,11 @@ export const SettingsModal: FC = () => {
   useAppLockReason("settingsModal", isOpen);
   const { openDeleteAccountConfirmation } = useDeleteAccountConfirmation();
   const { authenticated } = useSession();
+  const guestMeetingSetupActive = useSettingsStore(
+    selectGuestMeetingSetupActive,
+  );
+  const guestMeetingPreview =
+    guestMeetingSetupActive && !authenticated && IS_BOOKING_ENABLED;
   const { openLogoutConfirmation } = useLogoutConfirmation();
   const { isOpen: isUpgradeOpen } = useUpgradeConfirmation();
   const access = useAppAccess();
@@ -153,7 +159,8 @@ export const SettingsModal: FC = () => {
 
   const { data } = useCalendarsQuery();
   const connections = useUserMetadataStore(selectSyncConnections);
-  const showBookingNav = authenticated && IS_BOOKING_ENABLED;
+  const showBookingNav =
+    (authenticated && IS_BOOKING_ENABLED) || guestMeetingPreview;
   const { data: bookingPage } = useBookingPageQuery(isOpen && showBookingNav);
   const isLiveBookingPage =
     isSavedBookingPage(bookingPage) && bookingPage.enabled === true;
@@ -232,68 +239,79 @@ export const SettingsModal: FC = () => {
       widthClassName="w-[640px]"
     >
       <div className="flex w-full gap-6">
-        <nav className="w-32 shrink-0">
-          <button
-            aria-current={page === "accounts" ? "true" : undefined}
-            className={navButtonClassName(page === "accounts")}
-            onClick={() => settingsActions.setSettingsPage("accounts")}
-            onPointerEnter={focusOnPointerEnter}
-            ref={page === "accounts" ? initialFocusRef : undefined}
-            type="button"
-            {...settingsShortcutAttrs("nav-accounts")}
-          >
-            Accounts
-            {areHintsVisible ? <ShortcutKeys keys="1" /> : null}
-          </button>
-          {hasBilling || page === "billing" ? (
+        {guestMeetingPreview ? null : (
+          <nav className="w-32 shrink-0">
             <button
-              aria-current={page === "billing" ? "true" : undefined}
-              className={navButtonClassName(page === "billing")}
-              onClick={() => settingsActions.setSettingsPage("billing")}
+              aria-current={page === "accounts" ? "true" : undefined}
+              className={navButtonClassName(page === "accounts")}
+              onClick={() => settingsActions.setSettingsPage("accounts")}
               onPointerEnter={focusOnPointerEnter}
-              ref={page === "billing" ? initialFocusRef : undefined}
+              ref={page === "accounts" ? initialFocusRef : undefined}
               type="button"
-              {...settingsShortcutAttrs("nav-billing")}
+              {...settingsShortcutAttrs("nav-accounts")}
             >
-              Billing
-              {areHintsVisible ? <ShortcutKeys keys="2" /> : null}
+              Accounts
+              {areHintsVisible ? <ShortcutKeys keys="1" /> : null}
             </button>
-          ) : null}
-          {authenticated && IS_BOOKING_ENABLED ? (
-            <button
-              aria-current={page === "booking" ? "true" : undefined}
-              className={navButtonClassName(page === "booking")}
-              onClick={() => settingsActions.setSettingsPage("booking")}
-              onPointerEnter={focusOnPointerEnter}
-              ref={page === "booking" ? initialFocusRef : undefined}
-              type="button"
-              {...settingsShortcutAttrs("nav-booking")}
-            >
-              <span className="flex items-center gap-2">
-                Meeting
-                {bookingNeedsAttention ? (
-                  <span
-                    aria-hidden
-                    className="size-1.5 shrink-0 rounded-full bg-warning"
-                  />
-                ) : null}
-                {bookingNeedsAttention ? (
-                  <span className="sr-only">{BOOKING_NAV_NEEDS_ATTENTION}</span>
-                ) : null}
-              </span>
-              {areHintsVisible ? <ShortcutKeys keys="3" /> : null}
-            </button>
-          ) : null}
-          {!areHintsVisible ? (
-            <p className="mt-2 px-2 text-text-muted text-xs">
-              <ShortcutTipParts parts={SETTINGS_HOLD_MOD_HINT_PARTS} />
+            {hasBilling || page === "billing" ? (
+              <button
+                aria-current={page === "billing" ? "true" : undefined}
+                className={navButtonClassName(page === "billing")}
+                onClick={() => settingsActions.setSettingsPage("billing")}
+                onPointerEnter={focusOnPointerEnter}
+                ref={page === "billing" ? initialFocusRef : undefined}
+                type="button"
+                {...settingsShortcutAttrs("nav-billing")}
+              >
+                Billing
+                {areHintsVisible ? <ShortcutKeys keys="2" /> : null}
+              </button>
+            ) : null}
+            {authenticated && IS_BOOKING_ENABLED ? (
+              <button
+                aria-current={page === "booking" ? "true" : undefined}
+                className={navButtonClassName(page === "booking")}
+                onClick={() => settingsActions.setSettingsPage("booking")}
+                onPointerEnter={focusOnPointerEnter}
+                ref={page === "booking" ? initialFocusRef : undefined}
+                type="button"
+                {...settingsShortcutAttrs("nav-booking")}
+              >
+                <span className="flex items-center gap-2">
+                  Meeting
+                  {bookingNeedsAttention ? (
+                    <span
+                      aria-hidden
+                      className="size-1.5 shrink-0 rounded-full bg-warning"
+                    />
+                  ) : null}
+                  {bookingNeedsAttention ? (
+                    <span className="sr-only">
+                      {BOOKING_NAV_NEEDS_ATTENTION}
+                    </span>
+                  ) : null}
+                </span>
+                {areHintsVisible ? <ShortcutKeys keys="3" /> : null}
+              </button>
+            ) : null}
+            {!areHintsVisible ? (
+              <p className="mt-2 px-2 text-text-muted text-xs">
+                <ShortcutTipParts parts={SETTINGS_HOLD_MOD_HINT_PARTS} />
+              </p>
+            ) : null}
+          </nav>
+        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          {guestMeetingPreview ? (
+            <p className="text-sm text-text-muted">
+              Set up your meeting page, then sign up to save and go live.
             </p>
           ) : null}
-        </nav>
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
           {page === "billing" ? (
             <PlanSection showShortcuts={areHintsVisible} />
-          ) : page === "booking" && IS_BOOKING_ENABLED ? (
+          ) : page === "booking" &&
+            IS_BOOKING_ENABLED &&
+            (authenticated || guestMeetingPreview) ? (
             <Suspense
               fallback={<div aria-hidden className="min-h-[28rem] w-full" />}
             >

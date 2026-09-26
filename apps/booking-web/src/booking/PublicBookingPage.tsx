@@ -33,7 +33,7 @@ import {
 const BOOKING_PAGE_NOT_FOUND = {
   title: "Meeting page not found",
   description:
-    "This link may be incorrect or the host has turned this meeting page off.",
+    "This link may be incorrect or the host stopped taking meetings.",
 } as const;
 
 export function PublicBookingPage() {

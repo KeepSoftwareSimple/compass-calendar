@@ -39,6 +39,8 @@ export interface AuthSearch {
   token?: string;
   /** ?play=1 launches the Block Party practice game directly (any value). */
   play?: string | number | boolean;
+  /** ?meetingSetup=1 opens Meeting settings from the public /meet footer. */
+  meetingSetup?: string | number | boolean;
 }
 
 export function validateAuthSearch(
@@ -54,6 +56,12 @@ export function validateAuthSearch(
       typeof search.play === "number" ||
       typeof search.play === "boolean"
         ? search.play
+        : undefined,
+    meetingSetup:
+      typeof search.meetingSetup === "string" ||
+      typeof search.meetingSetup === "number" ||
+      typeof search.meetingSetup === "boolean"
+        ? search.meetingSetup
         : undefined,
   };
 }

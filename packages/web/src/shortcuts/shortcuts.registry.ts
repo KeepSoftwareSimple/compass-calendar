@@ -30,7 +30,7 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "nav-join-meeting",
     keys: [...B.navJoinMeeting.keycaps],
-    label: "Join Up Next meeting",
+    label: "Join meeting",
     section: "navigate",
   },
 

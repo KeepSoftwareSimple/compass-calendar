@@ -45,7 +45,6 @@ const renderHeader = (
     <BookingStatusHeader
       addressPreview={null}
       aggregateState="HEALTHY"
-      bookingUrl={bookingUrl}
       savedUrl={null}
       calendars={[workCalendar]}
       connections={reasonOverrides.connections ?? [connection]}
@@ -75,7 +74,6 @@ describe("BookingStatusHeader", () => {
       },
     );
 
-    expect(screen.getByLabelText("Meeting link")).toHaveValue(bookingUrl);
     expect(
       screen.queryByText(new RegExp(BOOKING_NOT_BOOKABLE_PREFIX)),
     ).not.toBeInTheDocument();
@@ -265,13 +263,12 @@ describe("BookingStatusHeader", () => {
     ).toHaveLength(1);
   });
 
-  it("shows a copyable meeting link without Open when the page is off", () => {
+  it("shows off copy when a saved link exists but the page is off", () => {
     const { wrapper } = createStoreWrapper();
     render(
       <BookingStatusHeader
         addressPreview={`${window.location.origin}/meet/hostuser`}
         aggregateState="HEALTHY"
-        bookingUrl={null}
         savedUrl={bookingUrl}
         calendars={[workCalendar]}
         connections={[]}
@@ -284,13 +281,6 @@ describe("BookingStatusHeader", () => {
       { wrapper },
     );
 
-    expect(screen.getByLabelText("Meeting link")).toHaveValue(bookingUrl);
-    expect(
-      screen.getByRole("button", { name: "Copy meeting link" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Open meeting page" }),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByText("Off. Guests can use this link once you turn it on."),
     ).toBeInTheDocument();
@@ -302,7 +292,6 @@ describe("BookingStatusHeader", () => {
       <BookingStatusHeader
         addressPreview={`${window.location.origin}/meet/hostuser`}
         aggregateState="HEALTHY"
-        bookingUrl={null}
         savedUrl={null}
         calendars={[workCalendar]}
         connections={[]}

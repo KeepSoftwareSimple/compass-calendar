@@ -12,7 +12,7 @@
       {
         "id": "nav-join-meeting",
         "keys": ["v"],
-        "label": "Join Up Next meeting",
+        "label": "Join meeting",
         "section": "navigate"
       },
       {

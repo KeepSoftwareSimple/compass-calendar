@@ -15,6 +15,8 @@ interface SettingsState {
   settingsPage: SettingsPage;
   /** True when the current overlay was opened from the command palette. */
   overlayOpenedFromPalette: boolean;
+  /** Public /meet footer CTA: preview setup before sign-up. */
+  guestMeetingSetupActive: boolean;
 }
 
 export const initialSettingsState: SettingsState = {
@@ -23,6 +25,7 @@ export const initialSettingsState: SettingsState = {
   isAboutOpen: false,
   settingsPage: "accounts",
   overlayOpenedFromPalette: false,
+  guestMeetingSetupActive: false,
 };
 
 // Selectors passed to this hook must return primitives or stable references;
@@ -55,12 +58,28 @@ export const settingsActions = {
         isSettingsOpen: false,
         settingsPage: "accounts",
         overlayOpenedFromPalette: false,
+        guestMeetingSetupActive: false,
       },
       false,
       {
         type: "closeSettings",
       },
     ),
+  beginGuestMeetingSetup: (resumeDraft: boolean) =>
+    useSettingsStore.setState(
+      {
+        isSettingsOpen: true,
+        settingsPage: "booking",
+        guestMeetingSetupActive: true,
+        overlayOpenedFromPalette: false,
+      },
+      false,
+      { type: "beginGuestMeetingSetup", resumeDraft },
+    ),
+  clearGuestMeetingSetup: () =>
+    useSettingsStore.setState({ guestMeetingSetupActive: false }, false, {
+      type: "clearGuestMeetingSetup",
+    }),
   openSettings: (
     page: SettingsPage = "accounts",
     { fromPalette = false }: OpenFromPaletteOptions = {},
@@ -151,3 +170,6 @@ export const selectSettingsPage = (state: SettingsState) => state.settingsPage;
 
 export const selectOverlayOpenedFromPalette = (state: SettingsState) =>
   state.overlayOpenedFromPalette;
+
+export const selectGuestMeetingSetupActive = (state: SettingsState) =>
+  state.guestMeetingSetupActive;
