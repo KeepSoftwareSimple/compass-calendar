@@ -5,8 +5,6 @@ import {
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 
-export const MEETING_SETUP_SEARCH_PARAM = "meetingSetup";
-
 export function readGuestMeetingSetupDraft(): AdminPutBookingPageInput | null {
   if (!persistentBrowserStore.isAvailable()) return null;
   const raw = persistentBrowserStore.get(

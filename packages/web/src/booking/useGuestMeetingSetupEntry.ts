@@ -1,17 +1,11 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useSession } from "@web/auth/compass/session/useSession";
-import {
-  MEETING_SETUP_SEARCH_PARAM,
-  readGuestMeetingSetupDraft,
-} from "@web/booking/guest-meeting-setup.util";
+import { readGuestMeetingSetupDraft } from "@web/booking/guest-meeting-setup.util";
+import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
+import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { type AuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
 import { settingsActions } from "@web/settings/settings.store";
-
-function hasMeetingSetupIntent(search: AuthSearch): boolean {
-  const value = search.meetingSetup;
-  return value === true || value === 1 || value === "1" || value === "true";
-}
 
 /**
  * Opens Meeting settings when a guest follows the public-page footer CTA
@@ -25,7 +19,7 @@ export function useGuestMeetingSetupEntry() {
   const consumedRef = useRef(false);
 
   useEffect(() => {
-    if (consumedRef.current || !hasMeetingSetupIntent(search)) return;
+    if (consumedRef.current || !isSearchFlagOn(search.meetingSetup)) return;
     consumedRef.current = true;
     if (authenticated) {
       settingsActions.openSettings("booking");

@@ -1,4 +1,4 @@
-import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/guest-meeting-setup.util";
+import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
 
 /**
  * One quiet line that serves both audiences: hosts previewing their own page

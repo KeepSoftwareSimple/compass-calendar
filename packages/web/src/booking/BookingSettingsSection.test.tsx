@@ -25,12 +25,12 @@ import {
   setProviderAvailabilityForTests,
 } from "@web/auth/providers/useIsProviderAvailable";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
-import { BOOKING_ADDRESS_CHANGE_WARNING } from "@web/booking/BookingAddressField";
 import { BOOKING_CONNECT_EMPTY_ENV_COPY } from "@web/booking/BookingConnectPrompt";
 import { BOOKING_MORE_OPTIONS_LABEL } from "@web/booking/BookingMoreOptions";
 import { BOOKING_SAVE_CHANGES_LABEL } from "@web/booking/BookingSaveBar";
 import { BookingSettingsSection } from "@web/booking/BookingSettingsSection";
 import { BOOKING_SAVE_ERROR_COPY } from "@web/booking/booking.query";
+import { BOOKING_ADDRESS_CHANGE_WARNING } from "@web/booking/booking-address.util";
 import { BOOKING_APPLE_DESTINATION_HINT } from "@web/booking/booking-conference.copy";
 import {
   bookingFieldAttrs,
