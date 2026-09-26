@@ -2,6 +2,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { type EventId, EventIdSchema } from "@core/types/domain-primitives";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import * as Track from "@web/auth/posthog/track";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { recurrenceScopeOpportunityActions } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
@@ -19,7 +20,15 @@ import {
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useShiftHoldEventHints } from "@web/shortcuts/shift-hint/useShiftHoldEventHints";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const TARGET_DAY = dayjs().startOf("day");
 /** The Sunday-to-Saturday week around TARGET_DAY; every fixture below sits in it. */
@@ -104,6 +113,22 @@ describe("typed-time ownership", () => {
     expect(createAt).toHaveBeenCalledTimes(1);
     expect(startedAt(createAt)).toBe("17:00");
     expect(useEventJumpStore.getState().quickTimeDigits).toBe("");
+  });
+
+  it("records create-typed-time once per commit, not once per digit", () => {
+    const track = spyOn(Track, "track");
+    const { createAt, type } = mountOwner();
+
+    type(["1", "7", "0", "0"]);
+
+    expect(createAt).toHaveBeenCalledTimes(1);
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "create-typed-time",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("creates at noon when 1200 is typed", () => {

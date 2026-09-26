@@ -60,7 +60,10 @@ import {
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
-import { recordShortcutUnavailableAttempt } from "@web/shortcuts/tips/shortcut-telemetry";
+import {
+  recordHandledShortcutInvocation,
+  recordShortcutUnavailableAttempt,
+} from "@web/shortcuts/tips/shortcut-telemetry";
 import { useTimezoneCmdItems } from "@web/timezone/useTimezoneCmdItems";
 import { filterSections, getLabelMatchRanges } from "./command-palette.search";
 import { type CommandItem, type CommandSection } from "./command-palette.types";
@@ -147,6 +150,7 @@ const CommandPaletteContent = ({
       badge: event.recurrence.kind !== "single" ? "Repeats" : undefined,
       onClick: () => {
         const eventId = event.id;
+        recordHandledShortcutInvocation("focus-find-event");
         navigateToDate(eventSearchDateString(event), () => {
           startFocusEventCard(eventId);
         });

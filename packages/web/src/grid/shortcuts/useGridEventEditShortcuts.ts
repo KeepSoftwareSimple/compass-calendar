@@ -85,6 +85,7 @@ import {
 } from "@web/shortcuts/shift-hint/event-jump.store";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
   useAppShortcut,
@@ -466,6 +467,7 @@ export function useGridEventEditShortcuts({
       keyboardEvent,
       onNudge: (nudgedEvent, nextEdge) => {
         shortcutHintProgressActions.demonstrate("edge-focus");
+        recordHandledShortcutInvocation("edit-move-edge");
         commit(nudgedEvent);
         edgeFocusActions.setEdge(
           event._id!,
@@ -607,7 +609,10 @@ export function useGridEventEditShortcuts({
       return;
     }
 
-    placeTimedDraft?.();
+    if (placeTimedDraft) {
+      placeTimedDraft();
+      recordHandledShortcutInvocation("create-place-timed");
+    }
   };
 
   const cycleEdgeFocus = (keyboardEvent: KeyboardEvent) => {
@@ -724,6 +729,7 @@ export function useGridEventEditShortcuts({
     const didMove = repositionDraftByKey(keyboardEvent.key);
     if (didMove) {
       claimShortcut(keyboardEvent);
+      recordHandledShortcutInvocation("edit-move");
       return;
     }
 

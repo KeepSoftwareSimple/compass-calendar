@@ -26,6 +26,7 @@ import {
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
 import { type EventPosition } from "@web/grid/types/grid.types";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
 const REPEAT_ICON_MIN_WIDTH = 60;
@@ -151,7 +152,12 @@ const AllDayEventCardBase = (
 
         e.preventDefault();
         e.stopPropagation();
-        onEventKeyDown?.(event);
+        if (!onEventKeyDown) {
+          return;
+        }
+
+        onEventKeyDown(event);
+        recordHandledShortcutInvocation("edit-open");
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

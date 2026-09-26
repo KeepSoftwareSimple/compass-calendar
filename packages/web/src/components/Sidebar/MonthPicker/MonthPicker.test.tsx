@@ -9,13 +9,22 @@ import userEvent from "@testing-library/user-event";
 import { act, type PropsWithChildren, type ReactElement } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import * as Track from "@web/auth/posthog/track";
 import { MonthPicker } from "@web/components/Sidebar/MonthPicker/MonthPicker";
 import {
   pageJumpHintActions,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
 import { MONTH_PICKER_IN_VIEW_CLASS } from "./monthPickerDayClassName";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 
 const getTabStopDay = () =>
   document.querySelector<HTMLElement>('.react-datepicker__day[tabindex="0"]');
@@ -128,6 +137,23 @@ describe("MonthPicker", () => {
         ".react-datepicker__week",
       ),
     ).toHaveClass("react-datepicker__week--selected");
+  });
+
+  it("records nav-picker-step when an arrow key moves the picker cursor", async () => {
+    const track = spyOn(Track, "track");
+    const user = userEvent.setup({ skipHover: true });
+    renderPicker(<MonthPicker onSelectDate={mock()} {...pickerProps} />);
+
+    act(() => getTabStopDay()?.focus());
+    await user.keyboard("{ArrowDown}");
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "nav-picker-step",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("anchors the cursor week on Monday when the view starts Monday", async () => {

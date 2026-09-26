@@ -291,6 +291,7 @@ export function useShiftHoldEventHints({
       // creating so they do not flash over the new draft.
       eventJumpActions.setActive(false);
       createAtTimeRef.current(start);
+      recordHandledShortcutInvocation("create-typed-time");
     };
 
     const tryQuickTimeKey = (event: KeyboardEvent): boolean => {

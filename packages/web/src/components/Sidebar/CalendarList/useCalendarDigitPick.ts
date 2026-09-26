@@ -4,6 +4,7 @@ import {
   digitPickIndex,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 
 /**
  * Digit-pick for a focused calendar-account section: 1-9, 0, -, = map to
@@ -34,6 +35,7 @@ export function useCalendarDigitPick({
       event.preventDefault();
       event.stopPropagation();
       onPick(calendar);
+      recordHandledShortcutInvocation("focus-calendar-digit");
     },
   };
 

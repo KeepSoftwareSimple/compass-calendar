@@ -32,6 +32,7 @@ import {
 } from "@web/shortcuts/digit-pick.util";
 import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
 import { isBareLetterKey } from "@web/shortcuts/is-bare-letter-key";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useDeleteEvent } from "@web/views/Forms/hooks/useDeleteEvent";
 import { useDuplicateEvent } from "@web/views/Forms/hooks/useDuplicateEvent";
 import { useSetEventColor } from "@web/views/Forms/hooks/useSetEventColor";
@@ -223,6 +224,7 @@ export function ContextMenuItemsView({
               keyEvent.preventDefault();
               keyEvent.stopPropagation();
               pickColor(pickedColor);
+              recordHandledShortcutInvocation("edit-pick-by-number");
             }
           }}
         >

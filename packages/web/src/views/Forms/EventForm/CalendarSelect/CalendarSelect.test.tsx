@@ -17,12 +17,13 @@ import {
 import { type SyncConnectionSummary } from "@core/types/user.types";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { createMockConnection as makeConnection } from "@web/__tests__/utils/factories/calendar.factory";
+import * as Track from "@web/auth/posthog/track";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { setDefaultCalendarId } from "@web/calendars/default-calendar.store";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { CalendarSelect } from "@web/views/Forms/EventForm/CalendarSelect/CalendarSelect";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const makeCalendar = (overrides: Partial<Calendar> = {}): Calendar => ({
   id: CalendarIdSchema.parse(createObjectIdString()),
@@ -304,6 +305,27 @@ describe("CalendarSelect", () => {
 
     expect(onChange).toHaveBeenCalledWith(team.id);
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("records edit-pick-by-number when a digit picks a calendar", () => {
+    const track = spyOn(Track, "track");
+    const primary = makeCalendar({ name: "Personal", isPrimary: true });
+    const team = makeCalendar({ name: "Team" });
+
+    renderCalendarSelect([primary, team]);
+
+    const button = screen.getByRole("combobox", { name: /calendar/i });
+    button.focus();
+    fireEvent.keyDown(button, { code: "Digit2", key: "2" });
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id ===
+          "edit-pick-by-number",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("picks a calendar by digit from the open list and shows per-option chips", async () => {

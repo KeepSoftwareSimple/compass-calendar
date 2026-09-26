@@ -101,6 +101,10 @@ export function useEditSequenceShortcut<
   useEffect(() => {
     const isMac = resolveModifier("Mod") === "Meta";
     let menuTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    // Whether the currently armed sequence started from Mod+E (the in-form
+    // leader) rather than the bare-letter grid leader, so the follow key can
+    // credit `edit-field-leader-in-form` only for that path.
+    let armedByMod = false;
     const keyupSwallow = createKeyupSwallow();
 
     const disarm = () => {
@@ -184,6 +188,9 @@ export function useEditSequenceShortcut<
           recordHandledShortcutInvocation(
             `edit-focus-${field}` as ShortcutRegistryId,
           );
+          if (armedByMod && scope === "event") {
+            recordHandledShortcutInvocation("edit-field-leader-in-form");
+          }
           return;
         }
 
@@ -236,6 +243,7 @@ export function useEditSequenceShortcut<
         event.preventDefault();
         event.stopPropagation();
       }
+      armedByMod = isMod;
       arm();
     };
 

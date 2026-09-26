@@ -11,6 +11,7 @@ import {
   digitPickIndex,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 
 const COLOR_SLOTS = EventColorSlotSchema.options;
 
@@ -77,6 +78,7 @@ export const EventColorPicker = ({
     event.currentTarget
       .querySelector<HTMLInputElement>(`input[data-pick-index="${index}"]`)
       ?.focus();
+    recordHandledShortcutInvocation("edit-pick-by-number");
   };
 
   return (
