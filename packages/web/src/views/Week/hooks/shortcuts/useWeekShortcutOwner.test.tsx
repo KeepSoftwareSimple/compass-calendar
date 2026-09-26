@@ -48,10 +48,6 @@ import {
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
 import {
-  EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-  SHORTCUT_UNAVAILABLE_TOAST_ID,
-} from "@web/shortcuts/prompt-shortcut-unavailable";
-import {
   eventJumpActions,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
@@ -1563,7 +1559,7 @@ describe("useWeekShortcutOwner edge focus", () => {
     expect(input.schedule.end).toBe("2026-05-25");
   });
 
-  it("explains that Tab cannot pick an edge while the event form is open", () => {
+  it("leaves Tab to native focus while the event form is open", () => {
     const { port, mocks } = createTestToastPort();
     registerToastPort(port);
     const button = addCalendarTarget();
@@ -1583,10 +1579,7 @@ describe("useWeekShortcutOwner edge focus", () => {
     pressKey("Tab");
 
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
-    expect(mocks.toast).toHaveBeenCalledWith(
-      EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-      expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
-    );
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 });
 
@@ -1634,13 +1627,10 @@ describe("useWeekShortcutOwner draft edge focus", () => {
     pressKey("Tab");
 
     expect(useEdgeFocusStore.getState().eventId).toBeNull();
-    expect(mocks.toast).toHaveBeenCalledWith(
-      EVENT_EDITING_SHORTCUT_UNAVAILABLE_MESSAGE,
-      expect.objectContaining({ toastId: SHORTCUT_UNAVAILABLE_TOAST_ID }),
-    );
+    expect(mocks.toast).not.toHaveBeenCalled();
   });
 
-  it("does not explain blocked edge-focus while Tab is navigating the event form", () => {
+  it("does not toast while Tab is navigating the event form", () => {
     const { port, mocks } = createTestToastPort();
     registerToastPort(port);
     seedFocusedKeyboardPlaceDraft();

@@ -78,7 +78,6 @@ import {
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
 import { KEYMAP } from "@web/shortcuts/keymap";
-import { promptShortcutUnavailableWhileEditingEvent } from "@web/shortcuts/prompt-shortcut-unavailable";
 import {
   eventJumpActions,
   isEventJumpActive,
@@ -611,13 +610,12 @@ export function useGridEventEditShortcuts({
   };
 
   const cycleEdgeFocus = (keyboardEvent: KeyboardEvent) => {
-    // Form fields and the sidebar keep native Tab. Explain when the form is
-    // open and Tab would otherwise no-op on the grid.
-    if (isEditableKeyboardTarget(keyboardEvent) || isFocusInSidebar()) return;
-    if (isEventFormOpen()) {
-      if (!isEventFormKeyboardTarget(keyboardEvent)) {
-        promptShortcutUnavailableWhileEditingEvent();
-      }
+    // Form fields, the sidebar, and an open event form keep native Tab.
+    if (
+      isEditableKeyboardTarget(keyboardEvent) ||
+      isFocusInSidebar() ||
+      isEventFormOpen()
+    ) {
       return;
     }
 
