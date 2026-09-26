@@ -226,6 +226,23 @@ describe("MicrosoftEventWriter", () => {
     });
   });
 
+  it("maps content.color onto Outlook categories and clears on null", async () => {
+    const api = new FakeWriteApi();
+    const { writer } = writerWith(api);
+
+    await writer.createEvent({
+      ...baseCreate,
+      content: content({ color: "coral" }),
+    });
+    await writer.patchEvent({
+      ...basePatch,
+      content: content({ color: null }),
+    });
+
+    expect(api.calls.create[0]?.body.categories).toEqual(["Coral"]);
+    expect(api.calls.patch[0]?.body.categories).toEqual([]);
+  });
+
   it("writes timed schedule, text body, and showAs busy", async () => {
     const api = new FakeWriteApi();
     const { writer } = writerWith(api);

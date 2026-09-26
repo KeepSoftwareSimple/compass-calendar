@@ -65,7 +65,7 @@ each with a tracking issue:
 | Push notifications | yes (channels) | yes (Graph subscriptions) | no; poll every 60 to 90 s |
 | Incremental reads | syncToken | deltaLink | RFC 6578 sync-token |
 | Conference link on create | Google Meet | Microsoft Teams when the mailbox allows it | none |
-| Event colors | 11 slots plus labels | categories read as hex; no write in v1 | calendar color only |
+| Event colors | 11 slots plus labels | categories mapped to slots; write on patch | calendar color only |
 | Attendees and invitations | yes | yes | yes, server-side scheduling |
 | Provider-managed events | yes (`eventType !== "default"`) | no equivalent | no equivalent |
 | Contact suggestions | People API | `/me/people` | none |
@@ -267,7 +267,6 @@ may still be hosted by Google or Microsoft."
 
 Each alias names the release that removes it.
 
-- Microsoft category colors are read but never written back.
 - Apple freshness depends on polling and is bounded by iCloud rate limits.
 - **Provider-managed events.** Google is the only provider that sets
   `providerManaged` today: its reader marks any event whose `eventType` is not

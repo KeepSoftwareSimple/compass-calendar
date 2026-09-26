@@ -5,6 +5,7 @@ import {
   type MicrosoftGraphCalendar,
 } from "@sync/providers/microsoft/microsoft-calendar.adapter";
 import { MICROSOFT_CALENDAR_COLOR_HEX } from "@sync/providers/microsoft/microsoft-calendar-colors";
+import { type MicrosoftMasterCategoryApi } from "@sync/providers/microsoft/microsoft-master-categories";
 import { type ProviderCalendarError } from "@sync/providers/provider-calendar.port";
 
 class FakeCalendarListApi implements MicrosoftCalendarListApi {
@@ -48,12 +49,27 @@ const page = (
   ...overrides,
 });
 
-function adapterWith(api: MicrosoftCalendarListApi) {
+class FakeMasterCategoryApi implements MicrosoftMasterCategoryApi {
+  async list() {
+    return [
+      { displayName: "Blue category", color: "preset7" },
+      { displayName: "None", color: "none" },
+    ];
+  }
+}
+
+function adapterWith(
+  api: MicrosoftCalendarListApi,
+  masterCategoryApi: MicrosoftMasterCategoryApi = new FakeMasterCategoryApi(),
+) {
   const tokensSeen: string[] = [];
-  const adapter = new MicrosoftCalendarAdapter((accessToken) => {
-    tokensSeen.push(accessToken);
-    return api;
-  });
+  const adapter = new MicrosoftCalendarAdapter(
+    (accessToken) => {
+      tokensSeen.push(accessToken);
+      return api;
+    },
+    () => masterCategoryApi,
+  );
   return { adapter, tokensSeen };
 }
 
@@ -82,7 +98,7 @@ describe("MicrosoftCalendarAdapter", () => {
         providerCalendarId: "default-cal",
         displayName: "Calendar",
         color: "#112233",
-        eventLabels: [],
+        eventLabels: [{ id: "Blue category", hex: "#5CA9E5" }],
         primary: true,
         active: true,
         accessRole: "owner",
@@ -239,7 +255,9 @@ describe("MicrosoftCalendarAdapter", () => {
 
     expect(calendars).toHaveLength(1);
     expect(calendars[0]?.displayName).toBe("bare-id");
-    expect(calendars[0]?.eventLabels).toEqual([]);
+    expect(calendars[0]?.eventLabels).toEqual([
+      { id: "Blue category", hex: "#5CA9E5" },
+    ]);
     expect(calendars[0]?.createsGoogleMeet).toBe(false);
   });
 

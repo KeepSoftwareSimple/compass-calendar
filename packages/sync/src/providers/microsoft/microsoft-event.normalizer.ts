@@ -5,10 +5,11 @@ import {
   ConferenceSchema,
   type Organizer,
 } from "@core/types/event-attendance.contracts";
-import { withColorHex } from "@core/types/event-color.contracts";
+import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
 import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
+import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
@@ -161,9 +162,14 @@ function mapContent(
   item: GraphEvent,
   masterCategories: ReadonlyMap<string, string>,
 ) {
-  const colorHex = item.categories?.[0]
-    ? masterCategories.get(item.categories[0])
+  const categoryName = item.categories?.[0];
+  const colorFromCategory = categoryName
+    ? outlookCategoryNameToSlot(categoryName)
     : undefined;
+  const colorHex =
+    categoryName && colorFromCategory === undefined
+      ? masterCategories.get(categoryName)
+      : undefined;
   const parsed = SyncEventContentSchema.safeParse({
     title: item.subject ?? "",
     description: mapDescription(item),
@@ -171,6 +177,7 @@ function mapContent(
     organizer: mapOrganizer(item.organizer),
     attendees: mapAttendees(item.attendees),
     conference: mapConference(item),
+    ...withColor(colorFromCategory),
     ...withColorHex(colorHex),
   });
   if (!parsed.success) {
