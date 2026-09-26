@@ -72,6 +72,7 @@ import {
   resetPointerHintTimerForTests,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import { resetShortcutLevelHiddenStoreForTests } from "@web/shortcuts/level/shortcut-level-hidden.store";
 import {
   initialPageJumpHintState,
   usePageJumpHintStore,
@@ -135,6 +136,7 @@ const storeResets: StoreReset[] = [
   resetShortcutTipsMutedStoreForTests,
   resetShortcutTelemetryForTests,
   resetShortcutUsageProfileStoreForTests,
+  resetShortcutLevelHiddenStoreForTests,
 ];
 
 export function resetAllStores() {
