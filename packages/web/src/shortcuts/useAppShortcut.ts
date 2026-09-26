@@ -6,10 +6,6 @@ import {
 import { isBillingWriteLocked } from "@web/billing/billing-write-lock";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { hasAppLockReason, isAppLocked } from "@web/shortcuts/app-lock";
-import {
-  getOverlayUnavailableMessage,
-  promptShortcutUnavailable,
-} from "@web/shortcuts/prompt-shortcut-unavailable";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import {
   recordHandledShortcutInvocation,
@@ -55,13 +51,6 @@ export interface UseAppShortcutOptions {
   /** Feature area for the upgrade prompt when `requiresWrite` is set. */
   upgradeFeatureArea?: ShortcutFeatureArea;
   /**
-   * Shown when a non-billing overlay holds the app lock so the handler never
-   * runs. Use for shortcuts whose silent no-op is confusing (C while a
-   * dialog owns the keyboard). Native browser keys (Tab, Escape, arrows)
-   * must not set this: overlays need those keys to move focus.
-   */
-  overlayUnavailableMessage?: string;
-  /**
    * Legend row this registration backs. After the handler runs, emit
    * `shortcut_invoked` with this id unless `telemetryHintId` is set (those
    * outcome sites already report).
@@ -100,7 +89,6 @@ export function useAppShortcut(
     telemetryHintId,
     requiresWrite = false,
     upgradeFeatureArea,
-    overlayUnavailableMessage,
     shortcutId,
     conflictBehavior = "allow",
   } = options;
@@ -120,22 +108,14 @@ export function useAppShortcut(
             { hotkey, event },
           );
         }
+        // Other overlays (modals, the form, the palette) own the keyboard on
+        // purpose, so the blocked key stays silent.
         if (
           requiresWrite &&
           isBillingWriteLocked() &&
           hasAppLockReason("billingGate")
         ) {
           promptLockedWriteShortcut(telemetryHintId, upgradeFeatureArea);
-        } else if (!hasAppLockReason("shortcutShowcase")) {
-          // A recorded unavailable attempt should never feel like a silent
-          // failure. Callers can provide context-specific copy, while every
-          // instrumented shortcut gets a concise default.
-          const unavailableMessage =
-            overlayUnavailableMessage ??
-            (telemetryHintId
-              ? getOverlayUnavailableMessage(telemetryHintId)
-              : undefined);
-          if (unavailableMessage) promptShortcutUnavailable(unavailableMessage);
         }
         return;
       }
