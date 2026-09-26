@@ -45,6 +45,7 @@ import {
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
 import { type EventPosition } from "@web/grid/types/grid.types";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
 // Gate the repeat indicator on the event's duration, not its rendered pixel
@@ -284,6 +285,7 @@ const TimedEventCardBase = (
         }
 
         onEventKeyDown(event);
+        recordHandledShortcutInvocation("edit-open");
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

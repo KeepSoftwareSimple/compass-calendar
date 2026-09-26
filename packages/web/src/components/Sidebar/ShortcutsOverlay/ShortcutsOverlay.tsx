@@ -10,7 +10,10 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
-import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import {
+  usedShortcutIds,
+  useShortcutUsageProfile,
+} from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 interface Props {
@@ -23,20 +26,9 @@ const normalizeSearch = (text: string): string => text.toLowerCase().trim();
 const matchesSearch = (normalizedQuery: string, text: string): boolean =>
   normalizeSearch(text).includes(normalizedQuery);
 
-const EMPTY_USED_IDS = new Set<string>();
-
-function usedShortcutIds(): Set<string> {
-  const profile = readShortcutUsageProfile();
-  return new Set(
-    Object.entries(profile.shortcuts)
-      .filter(([, usage]) => usage.invocations > 0)
-      .map(([id]) => id),
-  );
-}
-
 function withUsedFlags(
   sections: ShortcutOverlaySection[],
-  usedIds: Set<string>,
+  usedIds: ReadonlySet<string>,
 ): ShortcutOverlaySection[] {
   return sections.map((section) => ({
     ...section,
@@ -50,10 +42,11 @@ function withUsedFlags(
 export function ShortcutsOverlay({ sections, viewLabel }: Props) {
   const isOpen = useViewStore(selectIsShortcutsOpen);
   const [searchQuery, setSearchQuery] = useState("");
-  const usedIds = useMemo(
-    () => (isOpen ? usedShortcutIds() : EMPTY_USED_IDS),
-    [isOpen],
-  );
+  const profile = useShortcutUsageProfile();
+  // Deliberately keyed on `shortcuts` alone: a tip-impression write only
+  // touches `actions` (every ~5s dwell), and that must not recompute this.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  const usedIds = useMemo(() => usedShortcutIds(profile), [profile.shortcuts]);
   const overlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 

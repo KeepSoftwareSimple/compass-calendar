@@ -86,6 +86,24 @@ describe("useEditSequenceShortcut", () => {
       track.mockRestore();
     });
 
+    it("does not record edit-field-leader-in-form for the bare-letter leader", () => {
+      const track = spyOn(Track, "track");
+      const onSequence = mock(() => {});
+      renderHook(() => useEditSequenceShortcut({ onSequence }));
+
+      pressKey("e");
+      pressKey("t");
+
+      const recorded = track.mock.calls.filter(
+        ([name, props]) =>
+          name === "shortcut_invoked" &&
+          (props as { shortcut_id?: string }).shortcut_id ===
+            "edit-field-leader-in-form",
+      );
+      expect(recorded).toHaveLength(0);
+      track.mockRestore();
+    });
+
     it("stays silent within the arm window", () => {
       const onSequence = mock(() => {});
       renderHook(() => useEditSequenceShortcut({ onSequence }));
@@ -259,6 +277,27 @@ describe("useEditSequenceShortcut", () => {
       pressKey("l", {}, input);
 
       expect(onSequence).toHaveBeenCalledWith("location");
+    });
+
+    it("records edit-field-leader-in-form when the sequence completes from Mod+E", () => {
+      const track = spyOn(Track, "track");
+      const onSequence = mock(() => {});
+      const input = document.createElement("input");
+      document.body.appendChild(input);
+      input.focus();
+
+      renderHook(() => useEditSequenceShortcut({ onSequence }));
+      pressKey("e", { keyDownInit: MOD_INIT, keyUpInit: MOD_INIT }, input);
+      pressKey("l", {}, input);
+
+      const recorded = track.mock.calls.filter(
+        ([name, props]) =>
+          name === "shortcut_invoked" &&
+          (props as { shortcut_id?: string }).shortcut_id ===
+            "edit-field-leader-in-form",
+      );
+      expect(recorded).toHaveLength(1);
+      track.mockRestore();
     });
 
     it("stays inert while the app lock is held", () => {

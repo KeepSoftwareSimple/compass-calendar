@@ -725,6 +725,34 @@ The `?` legend is a progress surface. Rows you have invoked in this browser show
 
 ---
 
+## Scenario 28: Shortcut Level Badge
+
+### UX
+
+The sidebar footer, between the `?` legend button and Refresh, shows a small `Lv N` badge: how many distinct registry shortcuts this browser has used, against a fixed level table. Hover or focus opens a tooltip with the level name, progress to the next level, and up to three shortcuts to try next in the current view (edit-section rows first when an event is focused). Click opens the `?` legend, same as the `?` button. It is additive: the sidebar tip line and the legend's own check marks are unchanged. Reaching a new level pulses the badge and shows a toast. "Hide shortcut level" / "Show shortcut level" in the command palette, and the tooltip's own "Hide level" button, toggle it off and on; hidden survives a reload.
+
+### Steps
+
+1. Navigate to `/week` on a fresh browser (or a private window). The badge reads "Lv 1".
+2. Press a few registered shortcuts (`T`, `J`, `C` then Escape).
+3. Hover the badge.
+4. Open the command palette and run "Hide shortcut level".
+5. Reload the page.
+6. Open the command palette and run "Show shortcut level" to restore it.
+7. Reach a level threshold (used shortcuts >= 4) in one session.
+
+### Expected Results
+
+- Step 1: the badge is visible and reads "Lv 1"; its accessible name is "Shortcut level 1, Newcomer. 0 of &lt;total&gt; shortcuts used. Open shortcuts."
+- Step 3: the tooltip shows the level name, "N of M shortcuts used" (plus ", Z more to &lt;next level&gt;" until the top level), and a "Try next" list when unused, unlocked rows exist for the current context.
+- Step 4: the badge disappears immediately; the palette item now reads "Show shortcut level".
+- Step 5: the badge stays hidden after reload.
+- Step 6: the badge reappears.
+- Step 7: the badge pulses briefly and a status toast reads "Level N: &lt;name&gt;. X shortcuts learned." A returning browser with existing history is not congratulated on first load for a level it already had.
+- Reduced motion (`prefers-reduced-motion: reduce`): the pulse animation is suppressed; the toast still shows.
+
+---
+
 ## Focused Regression Checks
 
 If time is limited, run these checks before shipping shortcut-related changes:
@@ -760,3 +788,4 @@ If time is limited, run these checks before shipping shortcut-related changes:
 29. Running a palette command that has a shortcut shows "Next time, press …".
 30. The `?` legend check-marks used shortcuts and counts "You've used N of M shortcuts here".
 31. `/shortcuts` is a public printable catalog with an `h1` and per-section `h2` headings.
+32. The sidebar footer's `Lv N` badge shows a level, tooltip progress, and try-next rows; a level-up pulses and toasts once; the command palette hides and shows it.

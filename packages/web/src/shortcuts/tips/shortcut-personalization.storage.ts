@@ -1,9 +1,11 @@
+import { useSyncExternalStore } from "react";
 import { z } from "zod/v4";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import {
   readJsonValue,
   writeJsonValue,
 } from "@web/common/storage/json-value.store";
+import { createStorageBackedStore } from "@web/common/utils/external-store.util";
 import {
   SHORTCUT_HINTS,
   type ShortcutActionId,
@@ -82,8 +84,40 @@ export function readShortcutUsageProfile(): ShortcutUsageProfile {
   );
 }
 
+/** Publishes writes to {@link useShortcutUsageProfile} - storage stays the
+ * source of truth, this only makes changes to it observable. */
+const profileStore = createStorageBackedStore(
+  STORAGE_KEYS.SHORTCUT_PERSONALIZATION,
+  readShortcutUsageProfile,
+);
+
 export function writeShortcutUsageProfile(
   profile: ShortcutUsageProfile,
 ): boolean {
-  return writeJsonValue(STORAGE_KEYS.SHORTCUT_PERSONALIZATION, profile);
+  const wrote = writeJsonValue(STORAGE_KEYS.SHORTCUT_PERSONALIZATION, profile);
+  if (wrote) profileStore.set(profile);
+  return wrote;
+}
+
+/** Reactive read of the usage profile, for the legend and the shortcut level
+ * badge. Republishes on every write from this tab and on a cross-tab
+ * storage event for the same key. */
+export function useShortcutUsageProfile(): ShortcutUsageProfile {
+  return useSyncExternalStore(profileStore.subscribe, profileStore.get);
+}
+
+/** The registry ids this browser has used at least once. */
+export function usedShortcutIds(
+  profile: ShortcutUsageProfile,
+): ReadonlySet<string> {
+  return new Set(
+    Object.entries(profile.shortcuts)
+      .filter(([, usage]) => usage.invocations > 0)
+      .map(([id]) => id),
+  );
+}
+
+/** Test-only: resyncs the reactive store from storage after a direct seed. */
+export function resetShortcutUsageProfileStoreForTests(): void {
+  profileStore.refresh();
 }

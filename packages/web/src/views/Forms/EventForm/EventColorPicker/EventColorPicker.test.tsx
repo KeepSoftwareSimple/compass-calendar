@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, mock } from "bun:test";
+import * as Track from "@web/auth/posthog/track";
+import { describe, expect, it, mock, spyOn } from "bun:test";
 import "@testing-library/jest-dom";
 
 import { EventColorPicker } from "./EventColorPicker";
@@ -58,6 +59,25 @@ describeColorPicker("EventColorPicker", () => {
     expect(onChange).toHaveBeenCalledWith("mint");
     rerender(<EventColorPicker value="mint" onChange={onChange} />);
     expect(mintRadio).toHaveFocus();
+  });
+
+  it("records edit-pick-by-number when a digit picks a swatch", () => {
+    const track = spyOn(Track, "track");
+    render(<EventColorPicker value={null} onChange={mock()} />);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "Calendar default" }), {
+      code: "Digit3",
+      key: "3",
+    });
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id ===
+          "edit-pick-by-number",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("picks calendar default with the first digit and red with the last pick key", () => {

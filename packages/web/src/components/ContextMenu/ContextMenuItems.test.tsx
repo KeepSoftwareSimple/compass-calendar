@@ -17,6 +17,7 @@ import {
 } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
+import * as Track from "@web/auth/posthog/track";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ID_CONTEXT_MENU_ITEMS } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
@@ -30,7 +31,7 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const mockClose = mock();
 
@@ -225,6 +226,43 @@ describe("ContextMenuItems", () => {
 
     expect(setColor).toHaveBeenCalledWith(null);
     expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("records edit-pick-by-number when a digit picks a color", () => {
+    const track = spyOn(Track, "track");
+    const event = createMockGridEvent({ title: "Test Event" });
+
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor: mock(),
+          toggleHidden: mock(),
+        }}
+      />,
+      { event },
+    );
+
+    fireEvent.keyDown(screen.getByRole("menuitemradio", { name: "Coral" }), {
+      code: "Digit1",
+      key: "1",
+    });
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id ===
+          "edit-pick-by-number",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("still runs Edit when the focused item is activated from the keyboard", () => {

@@ -27,6 +27,7 @@ import {
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
+import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 
 interface CalendarSelectProps {
   value: CalendarId | null;
@@ -142,6 +143,7 @@ export const CalendarSelect = ({
     e.preventDefault();
     e.stopPropagation();
     selectCalendar(pickedCalendar);
+    recordHandledShortcutInvocation("edit-pick-by-number");
     return true;
   };
 

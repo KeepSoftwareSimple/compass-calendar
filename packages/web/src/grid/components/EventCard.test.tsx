@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import * as Track from "@web/auth/posthog/track";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
@@ -12,7 +13,7 @@ import {
   initialEdgeFocusState,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
-import { afterEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 import "@testing-library/jest-dom";
 
 import { AllDayEventCard } from "./AllDayEventCard";
@@ -224,6 +225,30 @@ describe("EventCard", () => {
     expect(onParentKeyDown).not.toHaveBeenCalled();
   });
 
+  it("records edit-open when Enter opens a timed event", () => {
+    const track = spyOn(Track, "track");
+
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent()}
+        motionMode="idle"
+        onEventKeyDown={mock()}
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-open",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
+  });
+
   it("announces recurring timed events", () => {
     render(
       <TimedEventCard
@@ -371,6 +396,29 @@ describe("EventCard", () => {
 
     expect(onEventKeyDown).toHaveBeenCalledTimes(1);
     expect(onParentKeyDown).not.toHaveBeenCalled();
+  });
+
+  it("records edit-open when Enter opens an all-day event", () => {
+    const track = spyOn(Track, "track");
+
+    render(
+      <AllDayEventCard
+        event={createEvent({ isAllDay: true, title: "Conference" })}
+        isPlaceholder={false}
+        onEventKeyDown={mock()}
+        position={position}
+      />,
+    );
+
+    fireEvent.keyDown(screen.getByRole("button"), { key: "Enter" });
+
+    const recorded = track.mock.calls.filter(
+      ([name, props]) =>
+        name === "shortcut_invoked" &&
+        (props as { shortcut_id?: string }).shortcut_id === "edit-open",
+    );
+    expect(recorded).toHaveLength(1);
+    track.mockRestore();
   });
 
   it("places the all-day repeat indicator bottom-right", () => {

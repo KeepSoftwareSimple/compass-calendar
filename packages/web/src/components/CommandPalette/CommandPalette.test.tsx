@@ -352,6 +352,7 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Hide shortcut tips
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Hide shortcut level
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Practice shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Toggle sidebar
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Focus month picker
@@ -667,6 +668,44 @@ describe("CommandPalette", () => {
     } finally {
       document.removeEventListener(POINTER_EVENT_JUMP_REQUEST, onJump);
       card.remove();
+      resetOfflineDataStoreForTests();
+    }
+  });
+
+  it("records focus-find-event when a search result is picked", async () => {
+    resetEventRepositorySourceForTests();
+    const track = spyOn(Track, "track");
+    const dentist = createMockEvent({
+      content: { kind: "details", title: "Dentist", description: "" },
+      schedule: EventScheduleSchema.parse({
+        kind: "timed",
+        start: "2026-09-16T14:00:00.000Z",
+        end: "2026-09-16T15:00:00.000Z",
+        timeZone: "UTC",
+      }),
+    });
+    const store = createMockOfflineDataStore();
+    store.searchByTitle.mockResolvedValue([dentist]);
+    resetOfflineDataStoreForTests(store as never);
+
+    try {
+      renderPalette();
+      fireEvent.change(getInput(), { target: { value: "dent" } });
+
+      const row = await screen.findByRole("option", {
+        name: "Dentist Wed, Sep 16, 2:00 PM",
+      });
+      fireEvent.click(row);
+
+      const recorded = track.mock.calls.filter(
+        ([name, props]) =>
+          name === "shortcut_invoked" &&
+          (props as { shortcut_id?: string }).shortcut_id ===
+            "focus-find-event",
+      );
+      expect(recorded).toHaveLength(1);
+    } finally {
+      track.mockRestore();
       resetOfflineDataStoreForTests();
     }
   });

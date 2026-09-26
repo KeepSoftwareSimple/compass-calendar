@@ -42,6 +42,11 @@ export const STORAGE_KEYS = {
   // Privacy-safe, device-local shortcut counters and timestamps used to rank
   // eligible sidebar tips without a network read.
   SHORTCUT_PERSONALIZATION: "compass.shortcuts.personalization",
+  SHORTCUT_LEVEL_HIDDEN: "compass.shortcuts.level-hidden",
+  // The last shortcut level this browser was celebrated for, so a returning
+  // user with existing history is not congratulated for a level they already
+  // had.
+  SHORTCUT_LEVEL_CELEBRATED: "compass.shortcuts.level-celebrated",
   LIFE_PREFERENCES: "compass.life.preferences",
   SIDEBAR_WIDTH: "compass.sidebar.width",
   SIDEBAR_OPEN: "compass.view.sidebar-open",

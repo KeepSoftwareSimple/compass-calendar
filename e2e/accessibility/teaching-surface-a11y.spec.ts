@@ -68,3 +68,31 @@ test("the sidebar Hide tips control is keyboard reachable", async ({
   await page.keyboard.press("Enter");
   await expect(hideTips).toHaveCount(0);
 });
+
+test("the shortcut level badge's open tooltip has no automatically detectable accessibility violations", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem(
+      "compass.onboarding.has-seen-shortcut-showcase",
+      "true",
+    );
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+  });
+
+  await page.goto("/week", { waitUntil: "domcontentloaded" });
+
+  const badge = page.getByRole("button", { name: /Shortcut level/ });
+  await expect(badge).toBeVisible({ timeout: 15000 });
+  await badge.focus();
+  await expect(page.getByRole("button", { name: "Hide level" })).toBeVisible();
+
+  // The tooltip is portaled to the document body via floating-ui, so it
+  // never lives inside the sidebar's own DOM subtree; `.c-tooltip` is the
+  // real styling class on that portaled content, not a test-only hook.
+  await expectNoAxeViolations(page, {
+    checkpoint: "shortcut level badge tooltip",
+    include: ".c-tooltip",
+  });
+});
