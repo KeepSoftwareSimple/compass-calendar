@@ -39,7 +39,7 @@ export function useMeetingPageNudge({
     !dismissed;
 
   const { data, isSuccess } = useBookingPageQuery(eligible);
-  const live = isSavedBookingPage(data) && data.enabled === true;
+  const live = isLiveBookingPage(data);
 
   const dismiss = useCallback(() => {
     markMeetingPageNudgeDismissed();
