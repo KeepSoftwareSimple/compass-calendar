@@ -147,10 +147,12 @@ export function ShortcutLevelBadge({ sections }: Props) {
         <span className="font-medium text-text">
           {`Level ${level.level}: ${level.name}`}
         </span>
-        <span className="text-text-muted text-xs">{progressText}</span>
+        {/* text-text, not muted: c-keycap hit the same 12px-on-surface-raised
+         * contrast failure (axe 3.97:1 here vs the required 4.5:1). */}
+        <span className="text-text text-xs">{progressText}</span>
         {tryNext.length > 0 ? (
           <div className="flex flex-col gap-1 border-border border-t pt-1.5">
-            <span className="text-text-muted text-xs">Try next</span>
+            <span className="text-text text-xs">Try next</span>
             {tryNext.map((shortcut) => (
               <div
                 key={shortcut.id}
@@ -171,7 +173,7 @@ export function ShortcutLevelBadge({ sections }: Props) {
             Open shortcuts
           </button>
           <button
-            className="c-focus-ring rounded-xs text-text-muted text-xs hover:text-text hover:underline"
+            className="c-focus-ring rounded-xs text-text text-xs hover:underline"
             onClick={() => {
               setLevelHidden(true);
               track("shortcut_level_badge_toggled", { hidden: true });

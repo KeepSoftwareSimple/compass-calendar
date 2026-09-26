@@ -352,6 +352,7 @@ describe("CommandPalette", () => {
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Go to Life
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Show shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Hide shortcut tips
+    fireEvent.keyDown(input, { key: "ArrowDown" }); // Hide shortcut level
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Practice shortcuts
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Toggle sidebar
     fireEvent.keyDown(input, { key: "ArrowDown" }); // Focus month picker
