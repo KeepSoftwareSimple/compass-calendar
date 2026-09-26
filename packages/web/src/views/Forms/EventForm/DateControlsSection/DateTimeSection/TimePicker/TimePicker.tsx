@@ -99,6 +99,7 @@ export const TimePicker = ({
 
   const { value: selectValue, options: selectOptions } =
     resolveTimePickerSelection(value, options);
+  const parseInput = (input: string) => parseUserTime(input, value?.value);
 
   const cancelScrollToSelected = () => {
     if (scrollRafRef.current !== null) {
@@ -262,7 +263,7 @@ export const TimePicker = ({
           },
         }}
         isValidNewOption={(inputValue) => {
-          const parsed = parseUserTime(inputValue, value?.value);
+          const parsed = parseInput(inputValue);
           if (!parsed) return false;
           // Don't show create row if the parsed time is already in options
           if (
@@ -273,10 +274,10 @@ export const TimePicker = ({
           return true;
         }}
         getNewOptionData={(inputValue) => {
-          return parseUserTime(inputValue, value?.value) as TimeOption;
+          return parseInput(inputValue) as TimeOption;
         }}
         formatCreateLabel={(inputValue) => {
-          return parseUserTime(inputValue, value?.value)?.label ?? inputValue;
+          return parseInput(inputValue)?.label ?? inputValue;
         }}
         createOptionPosition="first"
       />

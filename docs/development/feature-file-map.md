@@ -75,7 +75,7 @@ Create-only: the browser asks the provider to mint a link with
 
 - Browser create flag and conference kind labels: `CreateEventInputSchema.createConference` in `packages/core/src/types/event-command.contracts.ts`, `CONFERENCE_KIND_LABEL` in `packages/core/src/types/calendar.contracts.ts`
 - Capability gate (`capabilities.conferenceKinds`, never a provider name): `creatableConferenceKind` in `packages/web/src/calendars/calendar.util.ts`
-- "Add Google Meet" switch and the `e m` / `Mod+=` meeting-link field: `packages/web/src/views/Forms/EventForm/EventForm.tsx`, `packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `packages/web/src/common/utils/form/form.util.ts`
+- "Add <kind>" switch and the `e m` / `Mod+=` meeting-link field: `packages/web/src/views/Forms/EventForm/EventForm.tsx`, `packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `packages/web/src/common/utils/form/form.util.ts`
 - Save-time belt (drops the flag when the target calendar cannot mint a link): `packages/web/src/views/Forms/hooks/useSaveEventForm.ts`
 - Post-save "Copy link" toast (`L`): `packages/web/src/common/utils/toast/conference-link-added.toast.tsx`, shown from the create path in `packages/web/src/events/mutations/useEventMutations.ts`
 - Read-only link with copy button on an existing event: `packages/web/src/views/Forms/EventForm/EventDetailsSection.tsx`

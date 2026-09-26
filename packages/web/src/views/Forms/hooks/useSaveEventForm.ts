@@ -139,7 +139,7 @@ export function useSaveEventForm() {
         }
 
         const values = { ...draft.values, calendarId };
-        // Belt behind the switch's own render gate: the "Add Google Meet"
+        // Belt behind the switch's own render gate: the "Add <kind>"
         // switch only renders for a calendar that can mint a link, but the
         // flag survives a later calendar change in the same draft. A
         // request the target cannot honor is dropped rather than sent to a

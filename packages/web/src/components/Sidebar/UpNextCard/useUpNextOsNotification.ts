@@ -5,8 +5,8 @@ import { useNotificationsEffectivelyOn } from "@web/notifications/notification.s
 import {
   type NotifiableEvent,
   notificationKey,
+  showUpcomingEventNotification,
 } from "@web/notifications/upcoming-notifier.logic";
-import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
 /**
  * When the in-app Up Next banner appears, try the OS notification again with
@@ -27,12 +27,7 @@ export function useUpNextOsNotification(
     const key = notificationKey(upNext);
     if (attemptedKeysRef.current.has(key)) return;
 
-    const port = getNotificationPort();
-    const shown = port.show(upNext.title?.trim() || "Untitled event", {
-      body: `Starts at ${inEffectiveTimeZone(upNext.startDate).format("h:mm A")}`,
-      tag: key,
-      onClick: () => window.focus(),
-    });
+    const shown = showUpcomingEventNotification(getNotificationPort(), upNext);
     attemptedKeysRef.current.add(key);
 
     if (shown) {

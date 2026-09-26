@@ -10,6 +10,7 @@ import { usePublicBookingReservationQuery } from "@booking-web/booking/public-bo
 import {
   PUBLIC_BOOKING_RESERVATION_LOADING,
   type PublicBookingReservationView,
+  publicBookingMeetingNotFound,
   resolvePublicBookingReservationView,
 } from "@booking-web/booking/public-booking.view";
 import { useBookingDocumentTitle } from "@booking-web/booking/use-booking-document-title";
@@ -26,10 +27,9 @@ type CancelActionState =
   | "not-found"
   | "error";
 
-const BOOKING_NOT_FOUND = {
-  title: "Meeting not found",
-  description: "This cancel link may be invalid or already used.",
-} as const;
+const BOOKING_NOT_FOUND = publicBookingMeetingNotFound(
+  "This cancel link may be invalid or already used.",
+);
 
 const BOOKING_CANCELED = {
   title: "Meeting canceled",

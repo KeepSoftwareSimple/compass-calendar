@@ -41,6 +41,15 @@ describe("booking conference copy", () => {
     );
   });
 
+  it("formats duration with the product name for Meet and Teams", () => {
+    expect(formatBookingDurationWithConference("30 minutes", "meet")).toBe(
+      "30 minutes Google Meet",
+    );
+    expect(formatBookingDurationWithConference("30 minutes", "teams")).toBe(
+      "30 minutes Microsoft Teams",
+    );
+  });
+
   it("labels an Apple destination with No video link in the chooser", () => {
     expect(
       formatBookingDestinationOptionLabel(

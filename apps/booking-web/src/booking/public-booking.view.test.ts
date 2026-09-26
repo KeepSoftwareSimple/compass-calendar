@@ -2,6 +2,7 @@ import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api"
 import {
   PUBLIC_BOOKING_LOAD_FAILED,
   PUBLIC_BOOKING_UNBOOKABLE,
+  publicBookingMeetingNotFound,
   resolvePublicBookingPageView,
 } from "@booking-web/booking/public-booking.view";
 import { type UseQueryResult } from "@tanstack/react-query";
@@ -11,10 +12,7 @@ import {
 } from "@core/types/booking.contracts";
 import { describe, expect, it } from "bun:test";
 
-const NOT_FOUND = {
-  title: "Meeting not found",
-  description: "This link may be incorrect.",
-};
+const NOT_FOUND = publicBookingMeetingNotFound("This link may be incorrect.");
 
 const enabledPage = {
   enabled: true,

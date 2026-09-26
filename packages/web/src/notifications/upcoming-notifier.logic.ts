@@ -117,6 +117,20 @@ export function pruneFiredKeys(
   );
 }
 
+/** Title, start-time body, and de-dupe tag used by the 5-minute notifier
+ * and the Up Next banner retry. Same payload so the second attempt replaces
+ * the first instead of stacking. */
+export function showUpcomingEventNotification(
+  port: NotificationPort,
+  event: NotifiableEvent,
+): boolean {
+  return port.show(event.title?.trim() || "Untitled event", {
+    body: `Starts at ${inEffectiveTimeZone(event.startDate).format("h:mm A")}`,
+    tag: notificationKey(event),
+    onClick: () => window.focus(),
+  });
+}
+
 /**
  * Announce everything due and return the keys announced so far. Keeping this
  * out of the hook means the notification a user actually sees - its title,
@@ -135,13 +149,7 @@ export function announceUpcomingEvents(
   const announced = pruneFiredKeys(firedKeys, now);
   for (const event of due) {
     const key = notificationKey(event);
-    const shown = port.show(event.title?.trim() || "Untitled event", {
-      body: `Starts at ${inEffectiveTimeZone(event.startDate).format("h:mm A")}`,
-      // Same value as the de-dupe key, so a reload inside the lead window
-      // replaces the earlier notification instead of stacking a second.
-      tag: key,
-      onClick: () => window.focus(),
-    });
+    const shown = showUpcomingEventNotification(port, event);
     if (shown) {
       announced.add(key);
       track("notifications_shown");
