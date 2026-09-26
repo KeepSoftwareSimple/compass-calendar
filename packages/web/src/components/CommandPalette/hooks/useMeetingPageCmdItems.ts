@@ -9,10 +9,11 @@ import { settingsActions } from "@web/settings/settings.store";
 
 /** Opens the public meeting page or starts setup, depending on host state. */
 export function useMeetingPageCmdItems(
+  paletteOpen: boolean,
   bookingEnabled = IS_BOOKING_ENABLED,
 ): CommandItem[] {
   const { authenticated } = useSession();
-  const queryEnabled = authenticated && bookingEnabled;
+  const queryEnabled = paletteOpen && authenticated && bookingEnabled;
   const { data, isSuccess } = useBookingPageQuery(queryEnabled);
 
   if (!queryEnabled || !isSuccess) {

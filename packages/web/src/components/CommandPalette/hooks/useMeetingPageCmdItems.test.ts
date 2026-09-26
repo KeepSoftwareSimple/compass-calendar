@@ -76,7 +76,18 @@ describe("useMeetingPageCmdItems", () => {
       isSuccess: true,
     });
 
-    const { result } = renderHook(() => useMeetingPageCmdItems());
+    const { result } = renderHook(() => useMeetingPageCmdItems(true));
+
+    expect(result.current).toEqual([]);
+  });
+
+  it("returns no items when the palette is closed", () => {
+    mockUseBookingPageQuery.mockReturnValue({
+      data: { ...savedPage, enabled: true },
+      isSuccess: true,
+    });
+
+    const { result } = renderHook(() => useMeetingPageCmdItems(false));
 
     expect(result.current).toEqual([]);
   });
@@ -87,7 +98,7 @@ describe("useMeetingPageCmdItems", () => {
       isSuccess: false,
     });
 
-    const { result } = renderHook(() => useMeetingPageCmdItems());
+    const { result } = renderHook(() => useMeetingPageCmdItems(true));
 
     expect(result.current).toEqual([]);
   });
@@ -98,7 +109,7 @@ describe("useMeetingPageCmdItems", () => {
       isSuccess: true,
     });
 
-    const { result } = renderHook(() => useMeetingPageCmdItems());
+    const { result } = renderHook(() => useMeetingPageCmdItems(true));
 
     expect(result.current).toHaveLength(1);
     expect(result.current[0].label).toBe("Open meeting page");
@@ -121,7 +132,7 @@ describe("useMeetingPageCmdItems", () => {
       isSuccess: true,
     });
 
-    const { result } = renderHook(() => useMeetingPageCmdItems());
+    const { result } = renderHook(() => useMeetingPageCmdItems(true));
 
     expect(result.current).toHaveLength(1);
     expect(result.current[0].label).toBe("Set up meeting page");
