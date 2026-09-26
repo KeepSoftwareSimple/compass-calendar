@@ -20,6 +20,7 @@ export function useMeetingPageCmdItems(
   }
 
   if (isLiveBookingPage(data)) {
+    const bookingUrl = data.bookingUrl;
     return [
       {
         id: "open-meeting-page",
@@ -34,7 +35,7 @@ export function useMeetingPageCmdItems(
           "schedule",
         ],
         onClick: () => {
-          window.open(data.bookingUrl, "_blank", "noopener,noreferrer");
+          window.open(bookingUrl, "_blank", "noopener,noreferrer");
         },
       },
     ];

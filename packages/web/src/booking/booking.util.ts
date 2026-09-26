@@ -1,4 +1,5 @@
 import {
+  type AdminGetBookingPageResponse,
   type AdminGetBookingPageResult,
   type AdminPutBookingPageInput,
   BOOKING_PLACEHOLDER_CALENDAR_ID,
@@ -166,7 +167,7 @@ export function isUnconfiguredBookingPage(
 /** Saved page with the public link turned on. */
 export function isLiveBookingPage(
   page: AdminGetBookingPageResult | undefined,
-): boolean {
+): page is AdminGetBookingPageResponse & { enabled: true } {
   return isSavedBookingPage(page) && page.enabled === true;
 }
 
