@@ -1,7 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useSession } from "@web/auth/compass/session/useSession";
-import { readGuestMeetingSetupDraft } from "@web/booking/guest-meeting-setup.util";
 import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
 import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { type AuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
@@ -24,9 +23,7 @@ export function useGuestMeetingSetupEntry() {
     if (authenticated) {
       settingsActions.openSettings("booking");
     } else {
-      settingsActions.beginGuestMeetingSetup(
-        Boolean(readGuestMeetingSetupDraft()),
-      );
+      settingsActions.beginGuestMeetingSetup();
     }
     void navigate({
       to: ".",

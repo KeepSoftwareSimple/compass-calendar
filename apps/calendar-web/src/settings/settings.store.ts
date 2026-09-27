@@ -65,7 +65,7 @@ export const settingsActions = {
         type: "closeSettings",
       },
     ),
-  beginGuestMeetingSetup: (resumeDraft: boolean) =>
+  beginGuestMeetingSetup: () =>
     useSettingsStore.setState(
       {
         isSettingsOpen: true,
@@ -74,7 +74,7 @@ export const settingsActions = {
         overlayOpenedFromPalette: false,
       },
       false,
-      { type: "beginGuestMeetingSetup", resumeDraft },
+      { type: "beginGuestMeetingSetup" },
     ),
   clearGuestMeetingSetup: () =>
     useSettingsStore.setState({ guestMeetingSetupActive: false }, false, {
@@ -101,18 +101,11 @@ export const settingsActions = {
     }),
   toggleSettings: () =>
     useSettingsStore.setState(
-      (state) =>
-        state.isSettingsOpen
-          ? {
-              isSettingsOpen: false,
-              settingsPage: "accounts",
-              overlayOpenedFromPalette: false,
-            }
-          : {
-              isSettingsOpen: true,
-              settingsPage: "accounts",
-              overlayOpenedFromPalette: false,
-            },
+      (state) => ({
+        isSettingsOpen: !state.isSettingsOpen,
+        settingsPage: "accounts",
+        overlayOpenedFromPalette: false,
+      }),
       false,
       { type: "toggleSettings" },
     ),

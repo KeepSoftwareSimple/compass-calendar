@@ -127,9 +127,10 @@ function savedMeetingLinkUrl(
   return null;
 }
 
-function configuredHostFromPage(
+/** A page the host has already set up: saved, or configured server-side. */
+function isConfiguredBookingPage(
   page: AdminGetBookingPageResult | undefined,
-): boolean {
+): page is AdminGetBookingPageResult {
   return page != null && !isUnconfiguredBookingPage(page);
 }
 
@@ -177,10 +178,9 @@ const buildInitialForm = (
           availabilityCalendars,
         );
 
-  const timeZone =
-    page && !isUnconfiguredBookingPage(page)
-      ? base.timeZone
-      : effectiveTimeZone;
+  const timeZone = isConfiguredBookingPage(page)
+    ? base.timeZone
+    : effectiveTimeZone;
 
   const slug = page ? slugFromAdminBookingPage(page) : undefined;
 
@@ -430,7 +430,12 @@ export function BookingSettingsSection({
       minNoticeText,
     });
 
-  if (dismissGuardRef) {
+  // Installed after commit rather than written during render: Escape can only
+  // reach the guard once the panel is on screen, and a render-phase ref write
+  // is not safe to repeat. No dependency list on purpose, so every commit
+  // reinstalls a guard closing over the current setupStep and isDirty.
+  useLayoutEffect(() => {
+    if (!dismissGuardRef) return;
     dismissGuardRef.current = () => {
       if (setupStep != null) {
         if (setupStep === "address") return false;
@@ -442,13 +447,10 @@ export function BookingSettingsSection({
       setIsConfirmOpen(true);
       return true;
     };
-  }
-
-  useEffect(() => {
     return () => {
-      if (dismissGuardRef) dismissGuardRef.current = null;
+      dismissGuardRef.current = null;
     };
-  }, [dismissGuardRef]);
+  });
 
   const settingsOpenedRef = useRef(false);
   const configuredHostAtOpenRef = useRef(false);
@@ -459,7 +461,7 @@ export function BookingSettingsSection({
     if (!hasHealthyConnection) {
       if (isPending) return;
       settingsOpenedRef.current = true;
-      configuredHostAtOpenRef.current = configuredHostFromPage(serverPage);
+      configuredHostAtOpenRef.current = isConfiguredBookingPage(serverPage);
       track("booking_settings_opened", {
         has_connection: false,
         is_live: false,
@@ -471,7 +473,7 @@ export function BookingSettingsSection({
     if (isSeedingForm) return;
     if (isLive && !statusQuery.isFetched) return;
     settingsOpenedRef.current = true;
-    configuredHostAtOpenRef.current = configuredHostFromPage(serverPage);
+    configuredHostAtOpenRef.current = isConfiguredBookingPage(serverPage);
     track("booking_settings_opened", {
       has_connection: true,
       is_live: isLive,
@@ -535,10 +537,9 @@ export function BookingSettingsSection({
   }
 
   const savedPage = isSavedBookingPage(serverPage) ? serverPage : null;
-  const savedSlug =
-    serverPage && !isUnconfiguredBookingPage(serverPage)
-      ? slugFromAdminBookingPage(serverPage)
-      : null;
+  const savedSlug = isConfiguredBookingPage(serverPage)
+    ? slugFromAdminBookingPage(serverPage)
+    : null;
   const addressPrefix = bookingAddressPrefix(savedPage?.bookingUrl ?? null);
   const addressPreview = form.slug ? `${addressPrefix}${form.slug}` : null;
   const destinationCalendar = writableCalendars.find(
