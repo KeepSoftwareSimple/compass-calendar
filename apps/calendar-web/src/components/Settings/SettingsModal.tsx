@@ -1,21 +1,5 @@
 import { type FC, Suspense, useEffect, useRef, useState } from "react";
-import { type Calendar } from "@core/types/calendar.contracts";
-import { type CalendarId } from "@core/types/domain-primitives";
-import { type SyncConnectionSummary } from "@core/types/user.types";
 import { useSession } from "@web/auth/compass/session/useSession";
-import { ConnectProviderChooser } from "@web/auth/providers/ConnectProviderChooser";
-import {
-  formatLastSyncedLabel,
-  getGoogleSyncStatus,
-  googleSyncSupportMailto,
-  SSE_DEGRADED_STATUS,
-} from "@web/auth/providers/connect.util";
-import { MICROSOFT_SELF_HOSTING_DOC_URL } from "@web/auth/providers/connection-health-copy.util";
-import { connectionProviderKind } from "@web/auth/providers/connection-provider.util";
-import { ProviderMark } from "@web/auth/providers/ProviderMark";
-import { CALENDAR_HOST_EXPLAINER } from "@web/auth/providers/provider-copy.util";
-import { useGoogleSyncRefreshSnapshot } from "@web/auth/providers/sync.refresh";
-import { useDisconnectGoogleAccount } from "@web/auth/providers/useDisconnectAccount";
 import {
   selectSyncConnections,
   useUserMetadataStore,
@@ -31,20 +15,11 @@ import {
 } from "@web/booking/booking.query";
 import { isLiveBookingPage } from "@web/booking/booking.util";
 import { BOOKING_NAV_NEEDS_ATTENTION } from "@web/booking/booking-bookability.copy";
-import { AccountGroupedCalendarOptions } from "@web/calendars/AccountGroupedCalendarOptions";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
-  accountKey,
-  calendarAccount,
   compareCalendars,
-  connectionAccount,
   getWritableCalendars,
 } from "@web/calendars/calendar.util";
-import {
-  setDefaultCalendarId,
-  useDefaultCalendarId,
-} from "@web/calendars/default-calendar.store";
-import { SyncStatusLine } from "@web/calendars/SyncStatusLine";
 import {
   useConnectedAccountEmails,
   useDefaultTargetCalendar,
@@ -52,7 +27,6 @@ import {
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { EXPORT_MY_DATA_TOAST_ID } from "@web/common/constants/toast.constants";
 import { runExportMyData } from "@web/common/storage/offline-data/export-user-data.util";
-import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { useDeleteAccountConfirmation } from "@web/components/DeleteAccountConfirmation/hooks/useDeleteAccountConfirmation";
@@ -62,6 +36,8 @@ import {
   OverlayPanelActionButton,
   OverlayPanelActions,
 } from "@web/components/OverlayPanel/OverlayPanel";
+import { AccountsSection } from "@web/components/Settings/AccountsSection";
+import { DefaultCalendarPicker } from "@web/components/Settings/DefaultCalendarPicker";
 import { SettingsNavButton } from "@web/components/Settings/SettingsNavButton";
 import {
   selectGuestMeetingSetupActive,
@@ -78,11 +54,7 @@ import {
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
-import { useSseDegraded } from "@web/sse/hooks/useSseDegraded";
 import { DefaultTimezonePicker } from "@web/timezone/DefaultTimezonePicker";
-
-const OUTLINE_BUTTON_CLASSNAME =
-  "c-focus-ring shrink-0 rounded border border-border bg-surface-overlay px-2 py-1 text-xs text-text transition-colors hover:bg-surface-panel disabled:pointer-events-none disabled:opacity-60";
 
 export const SETTINGS_HOLD_MOD_HINT_PARTS: readonly ShortcutTipPart[] = [
   "Hold ",
@@ -342,252 +314,5 @@ export const SettingsModal: FC = () => {
         </div>
       </div>
     </OverlayPanel>
-  );
-};
-
-interface DefaultCalendarPickerProps {
-  calendars: Calendar[];
-  connections: SyncConnectionSummary[];
-  resolvedDefault: Calendar | undefined;
-}
-
-const DefaultCalendarPicker: FC<DefaultCalendarPickerProps> = ({
-  calendars,
-  connections,
-  resolvedDefault,
-}) => {
-  const storedId = useDefaultCalendarId();
-  const value = storedId ?? resolvedDefault?.id ?? "";
-
-  if (calendars.length === 0) return null;
-
-  return (
-    <div>
-      <label
-        className="mb-1 block text-sm text-text"
-        htmlFor="default-calendar"
-      >
-        Default Calendar
-      </label>
-      <select
-        className="c-focus-ring w-full rounded border border-border bg-surface-overlay px-2 py-1 text-sm text-text hover:bg-surface-panel"
-        id="default-calendar"
-        onChange={(e) => setDefaultCalendarId(e.target.value as CalendarId)}
-        value={value}
-      >
-        <AccountGroupedCalendarOptions
-          calendars={calendars}
-          connections={connections}
-          optionLabel={(calendar) => calendar.name}
-        />
-      </select>
-    </div>
-  );
-};
-
-interface AccountsSectionProps {
-  confirmingId: string | null;
-  connections: SyncConnectionSummary[];
-  resolvedDefault: Calendar | undefined;
-  setConfirmingId: (id: string | null) => void;
-  showShortcuts: boolean;
-}
-
-const AccountsSection: FC<AccountsSectionProps> = ({
-  confirmingId,
-  connections,
-  resolvedDefault,
-  setConfirmingId,
-  showShortcuts,
-}) => {
-  const { disconnect, disconnectingId } = useDisconnectGoogleAccount();
-  const defaultAccount = resolvedDefault && calendarAccount(resolvedDefault);
-  const defaultKey = defaultAccount && accountKey(defaultAccount);
-
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-3">
-        {connections.length === 0 ? (
-          <p className="text-sm text-text-muted">No accounts connected yet.</p>
-        ) : (
-          connections.map((connection) => {
-            const account = connectionAccount(connection);
-            return (
-              <AccountRow
-                connection={connection}
-                disconnect={disconnect}
-                isConfirming={confirmingId === connection.id}
-                isDefault={
-                  account !== undefined && accountKey(account) === defaultKey
-                }
-                isDisconnecting={disconnectingId === connection.id}
-                key={connection.id}
-                setConfirming={(confirming) =>
-                  setConfirmingId(confirming ? connection.id : null)
-                }
-              />
-            );
-          })
-        )}
-      </div>
-
-      <OverlayPanelActions align="start">
-        <ConnectProviderChooser
-          idleLabel="Add account"
-          newAccount
-          showShortcut={showShortcuts}
-          shortcut="A"
-          shortcutAttrs={settingsShortcutAttrs("add-account")}
-          variant="overlay-primary"
-        />
-      </OverlayPanelActions>
-      <p className="text-text-muted text-xs">{CALENDAR_HOST_EXPLAINER}</p>
-    </div>
-  );
-};
-
-interface AccountRowProps {
-  connection: SyncConnectionSummary;
-  disconnect: (connection: SyncConnectionSummary) => Promise<void>;
-  isConfirming: boolean;
-  isDefault: boolean;
-  isDisconnecting: boolean;
-  setConfirming: (confirming: boolean) => void;
-}
-
-/**
- * One connected account: email with its provider mark (the same address can
- * be connected on two providers), its own full sync status (including when
- * healthy - the sidebar hides that, but this is the one place a user comes
- * to check), a "Default" badge when it owns the default calendar, and a
- * two-step disconnect (not undoable without redoing the whole OAuth flow).
- */
-const AccountRow: FC<AccountRowProps> = ({
-  connection,
-  disconnect,
-  isConfirming,
-  isDefault,
-  isDisconnecting,
-  setConfirming,
-}) => {
-  const accountEmail = connection.accountEmail ?? "Unknown account";
-  const refreshSnapshot = useGoogleSyncRefreshSnapshot();
-  const sseDegraded = useSseDegraded();
-  const syncStatus = getGoogleSyncStatus(
-    connection.connectionState ?? "NOT_CONNECTED",
-    connection,
-    Date.now(),
-    {
-      refreshGaveUp: refreshSnapshot.gaveUp,
-      refreshInFlight: refreshSnapshot.isRefreshing,
-    },
-  );
-  // Only override an otherwise-healthy "Calendar connected" - a real
-  // reconnect/attention/importing status already says something more
-  // important and must not be preempted by the live-updates warning.
-  const isOtherwiseHealthy = syncStatus?.variant === "healthy";
-  const status =
-    isOtherwiseHealthy && sseDegraded ? SSE_DEGRADED_STATUS : syncStatus;
-  // The "Updated N minutes ago" freshness claim is exactly the thing that
-  // goes silently stale on a dead SSE stream - suppress it rather than
-  // presenting last-known data as current.
-  const lastSyncedLabel =
-    isOtherwiseHealthy && sseDegraded
-      ? null
-      : formatLastSyncedLabel(connection.lastSyncedAt);
-  const confirmButtonRef = useRef<HTMLButtonElement>(null);
-  const disconnectButtonRef = useRef<HTMLButtonElement>(null);
-  const wasConfirmingRef = useRef(isConfirming);
-
-  // Both directions replace whichever button had focus with a fresh one, so
-  // without this, focus falls back to <body> - outside the panel, which
-  // breaks the modal's ESC-steps-back handling (OverlayPanel's Escape
-  // listener only fires for events bubbling from inside it).
-  useEffect(() => {
-    if (isConfirming) confirmButtonRef.current?.focus();
-    else if (wasConfirmingRef.current) disconnectButtonRef.current?.focus();
-    wasConfirmingRef.current = isConfirming;
-  }, [isConfirming]);
-
-  return (
-    <div className="flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <ProviderMark provider={connectionProviderKind(connection)} />
-          <p className="truncate text-sm text-text" translate="no">
-            {accountEmail}
-          </p>
-          {isDefault ? (
-            <span className="shrink-0 rounded border border-border px-1.5 text-text-muted text-xs">
-              Default
-            </span>
-          ) : null}
-        </div>
-        <SyncStatusLine status={status} />
-        {lastSyncedLabel ? (
-          <p className="text-text-muted text-xs">{lastSyncedLabel}</p>
-        ) : null}
-        {refreshSnapshot.gaveUp && connection.state === "delayed" ? (
-          <p className="text-text-muted text-xs">
-            <a
-              className="underline hover:text-text"
-              href={googleSyncSupportMailto}
-            >
-              Email support
-            </a>
-          </p>
-        ) : null}
-        {connection.stateReason === "consentRequired" ? (
-          <p className="text-text-muted text-xs">
-            <a
-              className="underline hover:text-text"
-              href={MICROSOFT_SELF_HOSTING_DOC_URL}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              Admin consent setup guide
-            </a>
-          </p>
-        ) : null}
-      </div>
-      {isConfirming ? (
-        <div className="flex shrink-0 items-center gap-1">
-          <button
-            aria-busy={isDisconnecting || undefined}
-            aria-label={`Confirm disconnecting ${accountEmail}`}
-            className={`${OUTLINE_BUTTON_CLASSNAME} text-error`}
-            disabled={isDisconnecting}
-            onClick={() =>
-              void disconnect(connection).finally(() => setConfirming(false))
-            }
-            onPointerEnter={focusOnPointerEnter}
-            ref={confirmButtonRef}
-            type="button"
-          >
-            {isDisconnecting ? "Disconnecting…" : "Confirm"}
-          </button>
-          <button
-            className={OUTLINE_BUTTON_CLASSNAME}
-            disabled={isDisconnecting}
-            onClick={() => setConfirming(false)}
-            onPointerEnter={focusOnPointerEnter}
-            type="button"
-          >
-            Cancel
-          </button>
-        </div>
-      ) : (
-        <button
-          aria-label={`Disconnect ${accountEmail}`}
-          className={OUTLINE_BUTTON_CLASSNAME}
-          onClick={() => setConfirming(true)}
-          onPointerEnter={focusOnPointerEnter}
-          ref={disconnectButtonRef}
-          type="button"
-        >
-          Disconnect
-        </button>
-      )}
-    </div>
   );
 };
