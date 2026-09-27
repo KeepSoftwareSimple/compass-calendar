@@ -1,7 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
-import { createTestNotificationPort } from "@web/__tests__/helpers/web-test-seams";
+import {
+  createTestNotificationPort,
+  createTestToastPort,
+} from "@web/__tests__/helpers/web-test-seams";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import {
+  registerToastPort,
+  resetToastPort,
+} from "@web/common/utils/toast/toast.port";
 import {
   getNotificationPort,
   registerNotificationPort,
@@ -9,10 +16,14 @@ import {
 import {
   areNotificationsEffectivelyOn,
   isNotificationsPrefEnabled,
+  NOTIFICATIONS_ENABLED_NO_SAMPLE_TOAST,
+  NOTIFICATIONS_ENABLED_TOAST,
   notificationActions,
+  SAMPLE_NOTIFICATION_BODY,
+  SAMPLE_NOTIFICATION_TITLE,
   useNotificationsEffectivelyOn,
 } from "@web/notifications/notification.state";
-import { beforeEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 const installPort = (
   options?: Parameters<typeof createTestNotificationPort>[0],
@@ -40,7 +51,7 @@ describe("notificationActions.enable", () => {
   });
 
   it("stays off, and writes nothing, when permission is denied", async () => {
-    installPort({ respondWith: "denied" });
+    const seam = installPort({ respondWith: "denied" });
 
     await notificationActions.enable("palette");
 
@@ -48,6 +59,47 @@ describe("notificationActions.enable", () => {
     expect(
       persistentBrowserStore.get(STORAGE_KEYS.NOTIFICATIONS_ENABLED),
     ).toBeNull();
+    expect(seam.mocks.show).not.toHaveBeenCalled();
+  });
+
+  describe("sample notification", () => {
+    const toastSeam = createTestToastPort();
+
+    beforeEach(() => {
+      toastSeam.mocks.toast.mockClear();
+      registerToastPort(toastSeam.port);
+    });
+
+    afterEach(() => {
+      resetToastPort();
+    });
+
+    it("fires one immediately so an OS-level block is visible right away", async () => {
+      const seam = installPort({ respondWith: "granted" });
+
+      await notificationActions.enable("palette");
+
+      expect(seam.mocks.show).toHaveBeenCalledTimes(1);
+      const [title, options] = seam.mocks.show.mock.calls[0] ?? [];
+      expect(title).toBe(SAMPLE_NOTIFICATION_TITLE);
+      expect(options?.body).toBe(SAMPLE_NOTIFICATION_BODY);
+      expect(toastSeam.mocks.toast).toHaveBeenCalledWith(
+        NOTIFICATIONS_ENABLED_TOAST,
+        expect.anything(),
+      );
+    });
+
+    it("keeps the plain confirmation when the browser refuses to construct one", async () => {
+      installPort({ respondWith: "granted", showSucceeds: false });
+
+      await notificationActions.enable("palette");
+
+      expect(areNotificationsEffectivelyOn()).toBe(true);
+      expect(toastSeam.mocks.toast).toHaveBeenCalledWith(
+        NOTIFICATIONS_ENABLED_NO_SAMPLE_TOAST,
+        expect.anything(),
+      );
+    });
   });
 
   it("stays off when the prompt is dismissed without a choice", async () => {

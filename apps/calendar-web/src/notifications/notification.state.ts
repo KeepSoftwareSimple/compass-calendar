@@ -5,10 +5,37 @@ import { NOTIFICATIONS_STATUS_TOAST_ID } from "@web/common/constants/toast.const
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { subscribeToStorageKey } from "@web/common/utils/external-store.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
-import { getNotificationPort } from "@web/notifications/notification.port";
+import {
+  getNotificationPort,
+  type NotificationPort,
+} from "@web/notifications/notification.port";
 
 /** Where a toggle came from for analytics. */
 export type NotificationToggleSource = "palette";
+
+export const SAMPLE_NOTIFICATION_TITLE = "Compass notifications are on";
+export const SAMPLE_NOTIFICATION_BODY =
+  "You'll get a heads-up like this 5 minutes before each event.";
+
+export const NOTIFICATIONS_ENABLED_TOAST =
+  "Event notifications on. A test notification should have just appeared. If it didn't, allow this browser in your system's notification settings.";
+/** Fallback when the browser accepted the grant but refused to construct one. */
+export const NOTIFICATIONS_ENABLED_NO_SAMPLE_TOAST =
+  "Event notifications on. You'll get a heads-up 5 minutes before each event while this browser is open.";
+
+/**
+ * A browser grant is not the whole story: the OS can still swallow every
+ * notification (macOS never asked for the browser, a Focus mode, screen
+ * sharing) while the constructor reports success. Firing one right away is
+ * the only way the user finds that out before a meeting does it for them.
+ */
+function showSampleNotification(port: NotificationPort): boolean {
+  return port.show(SAMPLE_NOTIFICATION_TITLE, {
+    body: SAMPLE_NOTIFICATION_BODY,
+    tag: "compass-notifications-enabled",
+    onClick: () => window.focus(),
+  });
+}
 
 /**
  * Device-local opt-in, deliberately not synced: a grant belongs to one
@@ -108,11 +135,14 @@ export const notificationActions = {
     if (permission === "granted") {
       persistNotificationsPref(true);
       emit();
+      const sampleShown = showSampleNotification(port);
       showStatusToast(
         NOTIFICATIONS_STATUS_TOAST_ID,
-        "Event notifications on. You'll get a heads-up 5 minutes before each event while this browser is open.",
+        sampleShown
+          ? NOTIFICATIONS_ENABLED_TOAST
+          : NOTIFICATIONS_ENABLED_NO_SAMPLE_TOAST,
       );
-      track("notifications_enabled", { source });
+      track("notifications_enabled", { source, sampleShown });
       return;
     }
 
