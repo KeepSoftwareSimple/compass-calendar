@@ -1,17 +1,9 @@
 import { useSyncExternalStore } from "react";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
-import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
-import { createStorageBackedStore } from "@web/common/utils/external-store.util";
+import { createBooleanPreferenceStore } from "@web/common/storage/boolean-preference.store";
 
-function readLevelHidden(): boolean {
-  return (
-    persistentBrowserStore.get(STORAGE_KEYS.SHORTCUT_LEVEL_HIDDEN) === "true"
-  );
-}
-
-const hiddenStore = createStorageBackedStore(
+const hiddenStore = createBooleanPreferenceStore(
   STORAGE_KEYS.SHORTCUT_LEVEL_HIDDEN,
-  readLevelHidden,
 );
 
 /** Whether the sidebar shortcut level badge is hidden on this browser. */
@@ -24,12 +16,7 @@ export function useIsLevelHidden(): boolean {
 }
 
 export function setLevelHidden(hidden: boolean): void {
-  if (hidden) {
-    persistentBrowserStore.set(STORAGE_KEYS.SHORTCUT_LEVEL_HIDDEN, "true");
-  } else {
-    persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_LEVEL_HIDDEN);
-  }
-  hiddenStore.refresh();
+  hiddenStore.set(hidden);
 }
 
 /** Test-only: resyncs the in-memory store from storage. */
