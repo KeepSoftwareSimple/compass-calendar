@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { z } from "zod/v4";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import {
@@ -115,6 +115,14 @@ export function usedShortcutIds(
       .filter(([, usage]) => usage.invocations > 0)
       .map(([id]) => id),
   );
+}
+
+/** Distinct used registry ids for the legend and level badge. Impression
+ * writes only touch `actions`, so this stays stable across a ~5s dwell. */
+export function useUsedShortcutIds(): ReadonlySet<string> {
+  const profile = useShortcutUsageProfile();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
+  return useMemo(() => usedShortcutIds(profile), [profile.shortcuts]);
 }
 
 /** Test-only: resyncs the reactive store from storage after a direct seed. */

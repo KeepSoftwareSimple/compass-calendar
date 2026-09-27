@@ -61,6 +61,7 @@ import {
   defaultBlockingCalendarIdsForDestination,
   getAvailabilityReadableCalendars,
   isBookingSettingsFormDirty,
+  isLiveBookingPage,
   isPlaceholderDestinationCalendar,
   isUnconfiguredBookingPage,
   slugFromAdminBookingPage,
@@ -278,9 +279,8 @@ export function BookingSettingsSection({
   ]);
 
   const { data: serverPage, isPending } = useBookingPageQuery(!guestPreview);
-  const isLiveSavedPage =
-    isSavedBookingPage(serverPage) && serverPage.enabled === true;
-  const statusQuery = useBookingStatusQuery(isLiveSavedPage);
+  const isLive = isLiveBookingPage(serverPage);
+  const statusQuery = useBookingStatusQuery(isLive);
   const saveMutation = useSaveBookingPageMutation();
   const [form, setForm] = useState<AdminPutBookingPageInput>(() =>
     buildInitialForm(
@@ -469,8 +469,6 @@ export function BookingSettingsSection({
       return;
     }
     if (isSeedingForm) return;
-    const isLive =
-      isSavedBookingPage(serverPage) && serverPage.enabled === true;
     if (isLive && !statusQuery.isFetched) return;
     settingsOpenedRef.current = true;
     configuredHostAtOpenRef.current = configuredHostFromPage(serverPage);
@@ -482,6 +480,7 @@ export function BookingSettingsSection({
     });
   }, [
     hasHealthyConnection,
+    isLive,
     isPending,
     isSeedingForm,
     serverPage,
@@ -536,7 +535,6 @@ export function BookingSettingsSection({
   }
 
   const savedPage = isSavedBookingPage(serverPage) ? serverPage : null;
-  const isLive = savedPage?.enabled === true;
   const savedSlug =
     serverPage && !isUnconfiguredBookingPage(serverPage)
       ? slugFromAdminBookingPage(serverPage)
