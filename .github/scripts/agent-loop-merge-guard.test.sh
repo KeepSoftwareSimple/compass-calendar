@@ -42,16 +42,16 @@ run_guard() {
 
 # Formerly denied prefixes may auto-merge; merge-guard does not path-gate.
 for allowed in \
-  "packages/web/src/auth/providers/ConnectProviderChooser.tsx" \
+  "apps/calendar-web/src/auth/providers/ConnectProviderChooser.tsx" \
   "packages/backend/src/auth/x.ts" \
-  "packages/web/src/supertokens.ts" \
+  "apps/calendar-web/src/supertokens.ts" \
   "packages/sync/src/telemetry/x.ts" \
   "packages/core/src/config/compass.config.ts" \
   ".github/scripts/agent-loop-merge-guard.sh" \
   ".github/workflows/agent-loop.yml" \
   ".github/prompts/agent-loop.md" \
   "self-host/compose.yml" \
-  "packages/web/src/billing/CheckoutCelebrationModal.tsx"; do
+  "apps/calendar-web/src/billing/CheckoutCelebrationModal.tsx"; do
   out=$(run_guard)
   assert_contains "$out" "proceed" "${allowed} proceeds"
   assert_not_contains "$out" "downgrade:" "${allowed} is not refused"

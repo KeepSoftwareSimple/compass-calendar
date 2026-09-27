@@ -25,7 +25,7 @@ For API errors that the web app needs to understand structurally, use the same p
 Current reference files:
 
 - `packages/core/src/types/auth.types.ts`
-- `packages/web/src/api/util/api.util.ts`
+- `apps/calendar-web/src/api/util/api.util.ts`
 - `packages/backend/src/common/errors/handlers/error.handler.ts`
 
 Example:
@@ -60,9 +60,9 @@ Use the generic base schema with `parseApiError(error, ApiErrorResponseSchema)` 
 
 ### Web form/client validation
 
-- `packages/web/src/auth/compass/schemas`
-- `packages/web/src/common/constants/env.constants.ts`
-- feature-specific form hooks such as `packages/web/src/components/AuthModal/hooks/useZodForm.ts`
+- `apps/calendar-web/src/auth/compass/schemas`
+- `apps/calendar-web/src/common/constants/env.constants.ts`
+- feature-specific form hooks such as `apps/calendar-web/src/components/AuthModal/hooks/useZodForm.ts`
 
 ## Shared Event Contract
 

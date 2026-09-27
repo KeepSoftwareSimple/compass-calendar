@@ -9,9 +9,9 @@ import {
 import { describe, expect, it } from "bun:test";
 
 const argvOpts = {
-  preloadPath: "packages/web/src/__tests__/web.preload.ts",
+  preloadPath: "apps/calendar-web/src/__tests__/web.preload.ts",
   bunFlags: [] as string[],
-  targets: ["./packages/web/src"],
+  targets: ["./apps/calendar-web/src"],
 };
 
 describe("parallelArgsFor", () => {

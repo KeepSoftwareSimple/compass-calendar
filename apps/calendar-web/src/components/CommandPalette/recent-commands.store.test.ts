@@ -10,7 +10,7 @@ import { describe, expect, it, spyOn } from "bun:test";
 
 // Storage clearing + the recent-commands store resync between tests are both
 // handled by the global test-lifecycle afterEach (resetBrowserState +
-// resetAllStores) - see packages/web/src/__tests__/setup/test-lifecycle.ts.
+// resetAllStores) - see apps/calendar-web/src/__tests__/setup/test-lifecycle.ts.
 
 describe("recent-commands.store", () => {
   it("records a command and notifies subscribers", () => {

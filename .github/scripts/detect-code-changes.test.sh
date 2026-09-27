@@ -57,7 +57,7 @@ assert_output "$ALL_OFF" "docs-only PR skips every check"
 run_detector pull_request 'packages/backend/src/app.ts'
 assert_output $'code=true\ne2e=false\ncore=false\nweb=false\nbackend=true\nsync=false\nscripts=false\n' \
   "backend-only PR skips e2e and other unit legs"
-run_detector pull_request 'packages/web/src/app.tsx'
+run_detector pull_request 'apps/calendar-web/src/app.tsx'
 assert_output $'code=true\ne2e=true\ncore=false\nweb=true\nbackend=false\nsync=false\nscripts=false\n' \
   "web-only PR runs web and e2e"
 run_detector pull_request 'packages/core/src/types.ts'
@@ -66,7 +66,7 @@ run_detector pull_request 'bun.lock'
 assert_output "$ALL_ON" "lockfile PR runs every unit leg"
 run_detector pull_request 'tsconfig.json'
 assert_output "$ALL_ON" "root tsconfig PR runs every unit leg"
-run_detector pull_request 'packages/web/tsconfig.json'
+run_detector pull_request 'apps/calendar-web/tsconfig.json'
 assert_output $'code=true\ne2e=true\ncore=false\nweb=true\nbackend=false\nsync=false\nscripts=false\n' \
   "nested tsconfig does not turn every leg on"
 

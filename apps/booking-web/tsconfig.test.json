@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "include": [
     "./declaration.d.ts",
-    "../../packages/web/src/__tests__/jest-dom.d.ts",
+    "../../apps/calendar-web/src/__tests__/jest-dom.d.ts",
     "./src/**/*.test.ts",
     "./src/**/*.test.tsx"
   ],

@@ -3,7 +3,7 @@ import { join, posix, relative } from "node:path";
 
 const repoRoot = join(import.meta.dir, "../../../..");
 
-const APP_ENTRY = "packages/web/src/index.tsx";
+const APP_ENTRY = "apps/calendar-web/src/index.tsx";
 const CI_WORKFLOW = ".github/workflows/test-unit.yml";
 const CI_BUN_VERSION = /bun-version:\s*([\d.]+)/g;
 // The e2e shards run inside the Playwright image and install Bun from npm
@@ -48,7 +48,7 @@ export const RULE_HELP: Record<string, string> = {
   "em-dash":
     "user-facing strings must not contain an em-dash; use a comma, period, or colon. Comments are ignored. Parsers that accept typed dashes: EM_DASH_ALLOWLIST.",
   "keydown-listener":
-    "register shortcuts through useAppShortcut or the engines under packages/web/src/shortcuts/, not a raw keydown listener. Existing engines: KEYDOWN_LISTENER_ALLOWLIST.",
+    "register shortcuts through useAppShortcut or the engines under apps/calendar-web/src/shortcuts/, not a raw keydown listener. Existing engines: KEYDOWN_LISTENER_ALLOWLIST.",
   "phosphor-barrel":
     'import icons from "@phosphor-icons/react/dist/csr/<Icon>" (and IconContext / Icon types from dist/lib). The package barrel pulls every glyph into the boot set. Test files are exempt; they are not in the bundle.',
 };
@@ -58,60 +58,60 @@ export const BARREL_ALLOWLIST: ConstraintAllow[] = [];
 
 /**
  * Structural locator exceptions. New tests outside these globs are still
- * flagged, including `packages/web/src/auth/providers/**`.
+ * flagged, including `apps/calendar-web/src/auth/providers/**`.
  */
 export const WEB_LOCATOR_ALLOWLIST: ConstraintAllow[] = [
   {
-    glob: "packages/web/src/shortcuts/**/*.test.tsx",
+    glob: "apps/calendar-web/src/shortcuts/**/*.test.tsx",
     reason:
       "hint overlays and the edit-sequence menu expose data-* roots, not roles",
   },
   {
-    glob: "packages/web/src/grid/components/*.test.tsx",
+    glob: "apps/calendar-web/src/grid/components/*.test.tsx",
     reason: "grid layers and edge-focus are data-* layout hooks",
   },
   {
-    glob: "packages/web/src/components/Sidebar/MonthPicker/*.test.tsx",
+    glob: "apps/calendar-web/src/components/Sidebar/MonthPicker/*.test.tsx",
     reason: "react-datepicker internals have no accessible names",
   },
   {
-    glob: "packages/web/src/components/CommandPalette/*.test.tsx",
+    glob: "apps/calendar-web/src/components/CommandPalette/*.test.tsx",
     reason: "command rows expose aria-hidden keycaps",
   },
   {
-    glob: "packages/web/src/components/ContextMenu/*.test.tsx",
+    glob: "apps/calendar-web/src/components/ContextMenu/*.test.tsx",
     reason: "the portal menu is class-based, not a named role",
   },
   {
-    glob: "packages/web/src/components/Focusable/*.test.tsx",
+    glob: "apps/calendar-web/src/components/Focusable/*.test.tsx",
     reason: "the focus ring is a CSS class with no role",
   },
   {
-    glob: "packages/web/src/components/SelectView/*.test.tsx",
+    glob: "apps/calendar-web/src/components/SelectView/*.test.tsx",
     reason: "the open listbox is still a testid surface",
   },
   {
-    glob: "packages/web/src/components/Shortcuts/*.test.tsx",
+    glob: "apps/calendar-web/src/components/Shortcuts/*.test.tsx",
     reason: "keycaps are aria-hidden",
   },
   {
-    glob: "packages/web/src/components/Sidebar/CalendarList/*.test.tsx",
+    glob: "apps/calendar-web/src/components/Sidebar/CalendarList/*.test.tsx",
     reason: "the color swatch is aria-hidden",
   },
   {
-    glob: "packages/web/src/components/Tooltip/*.test.tsx",
+    glob: "apps/calendar-web/src/components/Tooltip/*.test.tsx",
     reason: "shortcut-node is a test-only child without a name",
   },
   {
-    glob: "packages/web/src/components/AuthenticatedLayout/*.test.tsx",
+    glob: "apps/calendar-web/src/components/AuthenticatedLayout/*.test.tsx",
     reason: "route-outlet fixtures use testids",
   },
   {
-    glob: "packages/web/src/views/Forms/EventForm/**/*.test.tsx",
+    glob: "apps/calendar-web/src/views/Forms/EventForm/**/*.test.tsx",
     reason: "recurrence data-selected chips and read-only fieldsets",
   },
   {
-    glob: "packages/web/src/views/Life/*.test.tsx",
+    glob: "apps/calendar-web/src/views/Life/*.test.tsx",
     reason: "life-grid dots are data-total-dots and ring classes",
   },
 ];
@@ -157,28 +157,28 @@ export const ZOD_V3_ALLOWLIST: ConstraintAllow[] = [
 export const EM_DASH_ALLOWLIST: ConstraintAllow[] = [];
 
 /**
- * Raw keydown listeners outside packages/web/src/shortcuts/. Each existing one
+ * Raw keydown listeners outside apps/calendar-web/src/shortcuts/. Each existing one
  * is an engine or an isolated modal; new bindings go through useAppShortcut.
  */
 export const KEYDOWN_LISTENER_ALLOWLIST: ConstraintAllow[] = [
   {
-    glob: "packages/web/src/settings/useSettingsShortcuts.ts",
+    glob: "apps/calendar-web/src/settings/useSettingsShortcuts.ts",
     reason: "settings modal owns its own scoped bindings",
   },
   {
-    glob: "packages/web/src/components/WelcomeModal/useWelcomeJumpShortcuts.ts",
+    glob: "apps/calendar-web/src/components/WelcomeModal/useWelcomeJumpShortcuts.ts",
     reason: "welcome modal jump keys run before the shortcut engine mounts",
   },
   {
-    glob: "packages/web/src/components/OverlayPanel/overlay-escape.ts",
+    glob: "apps/calendar-web/src/components/OverlayPanel/overlay-escape.ts",
     reason: "shared Escape handler for overlay panels",
   },
   {
-    glob: "packages/web/src/components/AuthModal/AuthModal.tsx",
+    glob: "apps/calendar-web/src/components/AuthModal/AuthModal.tsx",
     reason: "auth modal traps Escape while a request is in flight",
   },
   {
-    glob: "packages/web/src/components/ShortcutShowcase/ShortcutShowcase.tsx",
+    glob: "apps/calendar-web/src/components/ShortcutShowcase/ShortcutShowcase.tsx",
     reason: "the showcase game simulates the engine in capture phase",
   },
 ];
@@ -483,9 +483,20 @@ export function scanRuntimeStageCopies(root = repoRoot): ConstraintHit[] {
   return hits;
 }
 
+function walkPackageTrees(root: string): string[] {
+  const files: string[] = [];
+  for (const top of ["packages", "apps"] as const) {
+    const dir = join(root, top);
+    if (existsSync(dir)) {
+      files.push(...walk(dir));
+    }
+  }
+  return files;
+}
+
 export function scanConstraints(root = repoRoot): ConstraintHit[] {
   const hits: ConstraintHit[] = [];
-  for (const file of walk(join(root, "packages"))) {
+  for (const file of walkPackageTrees(root)) {
     const rel = posixRel(root, file);
     const source = readFileSync(file, "utf8");
 
@@ -511,7 +522,7 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
     }
 
     if (
-      (rel.startsWith("packages/web/") ||
+      (rel.startsWith("apps/calendar-web/") ||
         rel.startsWith("packages/backend/")) &&
       !rel.includes(".test.") &&
       !rel.includes(".spec.")
@@ -528,7 +539,7 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
     }
 
     if (
-      rel.startsWith("packages/web/src/") &&
+      rel.startsWith("apps/calendar-web/src/") &&
       !rel.includes(".test.") &&
       !rel.includes(".spec.")
     ) {
@@ -552,7 +563,7 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
         }
       }
       if (
-        !rel.startsWith("packages/web/src/shortcuts/") &&
+        !rel.startsWith("apps/calendar-web/src/shortcuts/") &&
         !matchesConstraintAllow(rel, KEYDOWN_LISTENER_ALLOWLIST)
       ) {
         for (const line of keydownListenerHits(source)) {
@@ -566,7 +577,7 @@ export function scanConstraints(root = repoRoot): ConstraintHit[] {
 
 function isWebSource(rel: string): boolean {
   return (
-    rel.startsWith("packages/web/src/") &&
+    rel.startsWith("apps/calendar-web/src/") &&
     !rel.includes(".test.") &&
     !rel.includes(".spec.") &&
     !rel.includes("/__tests__/") &&
@@ -588,7 +599,7 @@ function isIndexModule(rel: string): boolean {
 
 function isWebTest(rel: string): boolean {
   return (
-    rel.startsWith("packages/web/") &&
+    rel.startsWith("apps/calendar-web/") &&
     (rel.endsWith(".test.ts") ||
       rel.endsWith(".test.tsx") ||
       rel.endsWith(".spec.ts") ||

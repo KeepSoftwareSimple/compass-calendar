@@ -2,20 +2,16 @@
   "extends": "./tsconfig.json",
   "include": [
     "./declaration.d.ts",
-    "./src/**/*.ts",
-    "./src/**/*.tsx",
-    "./boot-size-report.ts",
-    "./inject-module-preloads.ts",
-    "./static-dev-server.ts"
-  ],
-  "exclude": [
-    "./src/**/__tests__/**",
+    "./src/__tests__/jest-dom.d.ts",
+    "./src/**/*.d.ts",
     "./src/**/*.test.ts",
     "./src/**/*.test.tsx",
-    "./src/**/*.test-util.ts",
-    "./src/**/*.test-util.tsx",
+    "./src/**/*.test.utils.ts",
+    "./src/**/*.test.utils.tsx",
     "./src/**/*.spec.ts",
-    "./src/**/*.spec.tsx"
+    "./src/**/*.spec.tsx",
+    "./src/**/*.test-util.ts",
+    "./src/**/*.test-util.tsx"
   ],
   "compilerOptions": {
     "noEmit": true,
@@ -26,7 +22,8 @@
     "allowSyntheticDefaultImports": true,
     "paths": {
       "@web/*": ["./src/*"],
-      "@core/*": ["../core/src/*"]
+      "@core/*": ["../../packages/core/src/*"],
+      "@backend/*": ["../../packages/backend/src/*"]
     }
   }
 }

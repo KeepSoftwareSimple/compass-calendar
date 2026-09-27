@@ -3,8 +3,8 @@
   "references": [
     { "path": "./tsconfig.json" },
     { "path": "./tsconfig.tests.json" },
-    { "path": "./packages/web/tsconfig.app.json" },
-    { "path": "./packages/web/tsconfig.test.json" },
+    { "path": "./apps/calendar-web/tsconfig.app.json" },
+    { "path": "./apps/calendar-web/tsconfig.test.json" },
     { "path": "./apps/booking-web/tsconfig.app.json" },
     { "path": "./apps/booking-web/tsconfig.test.json" },
     { "path": "./e2e/tsconfig.json" }

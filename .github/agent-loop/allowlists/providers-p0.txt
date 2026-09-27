@@ -3,6 +3,6 @@
 ^packages/sync/src/providers/
 ^packages/sync/src/providers/__contract__/
 ^packages/backend/src/auth/
-^packages/web/src/auth/
-^packages/web/src/api/auth\.api\.ts$
+^apps/calendar-web/src/auth/
+^apps/calendar-web/src/api/auth\.api\.ts$
 ^\.github/agent-loop/allowlists/providers-p0\.txt$

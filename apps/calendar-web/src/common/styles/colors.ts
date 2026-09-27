@@ -1,5 +1,5 @@
 // Dark Abyss role palette. Mirrors the [data-theme="dark-abyss"] block in
-// packages/web/src/index.css (guarded by theme-css.test.ts value-parity
+// apps/calendar-web/src/index.css (guarded by theme-css.test.ts value-parity
 // assertions). These hex copies exist only where real hex is required —
 // tinycolor math, <canvas>, and third-party inline style objects
 // (react-select) — and do NOT react to a [data-theme] switch. Toasts bind

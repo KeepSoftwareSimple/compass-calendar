@@ -7,9 +7,9 @@ shrinking day window.
 
 Files:
 
-- `packages/web/src/components/AuthenticatedLayout/useResponsiveLayout.ts` (mounted once in the
+- `apps/calendar-web/src/components/AuthenticatedLayout/useResponsiveLayout.ts` (mounted once in the
   authenticated layout)
-- `packages/web/src/components/AuthenticatedLayout/responsive.constants.ts`
+- `apps/calendar-web/src/components/AuthenticatedLayout/responsive.constants.ts`
 
 Breakpoints:
 
@@ -25,15 +25,15 @@ or re-closed by unrelated re-renders.
 The week view renders a *window* of 1–7 day columns, not always the full
 week. Two pieces derive that window from the measured grid width:
 
-- `packages/web/src/views/Week/hooks/grid/useVisibleDayCount.ts` — a
+- `apps/calendar-web/src/views/Week/hooks/grid/useVisibleDayCount.ts` — a
   `ResizeObserver` on the grid track computes `visibleDayCount` via
   `computeVisibleDayCount(trackWidth, marginLeft)`
-  (`packages/web/src/views/Week/util/week-window.util.ts`). The hour-label
+  (`apps/calendar-web/src/views/Week/util/week-window.util.ts`). The hour-label
   gutter is subtracted so a second time-travel column does not change how
   many days fit. Defaults to the full week (`WEEK_DAY_COUNT = 7`) until a
   real measurement lands — jsdom never measures, so tests default to a full
   week unless they explicitly mock the observer.
-- `packages/web/src/views/Week/hooks/useWeek.ts` — holds a single **anchor
+- `apps/calendar-web/src/views/Week/hooks/useWeek.ts` — holds a single **anchor
   date** in the URL (not `useState`, so a refresh restores the same week),
   memoized on the date *string* rather than the `Dayjs` instance (`today` is a
   fresh `Dayjs` every render; memoizing on the instance would re-derive
@@ -54,8 +54,8 @@ max offset going back). Neither branch is a flat ±7-day jump —
 
 ## Memo Comparator Trap
 
-`GridTimedEventMemo` (`packages/web/src/grid/components/GridTimedEvent.tsx`) and
-`GridAllDayEventMemo` (`packages/web/src/grid/components/GridAllDayEvent.tsx`) skip re-render unless
+`GridTimedEventMemo` (`apps/calendar-web/src/grid/components/GridTimedEvent.tsx`) and
+`GridAllDayEventMemo` (`apps/calendar-web/src/grid/components/GridAllDayEvent.tsx`) skip re-render unless
 their custom comparator says something relevant changed. Both comparators
 must include `weekDays` (or `weekProps.component.weekDays`) in that
 comparison. If a future edit drops it: the day window can move (paging,

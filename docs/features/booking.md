@@ -127,7 +127,7 @@ Settings, not a broken public page.
 
 Host administration lives in Settings as Meeting. The internal name
 remains Booking page (`SettingsPage` includes `"booking"` in
-`packages/web/src/settings/settings.store.ts`). There is no dedicated
+`apps/calendar-web/src/settings/settings.store.ts`). There is no dedicated
 `/booking` host app in v1.
 
 ### Host notice
@@ -500,8 +500,8 @@ flowchart LR
   `9081`; `9082` on production) behind Caddy's `/meet/*` path matcher. Local dev: `bun run dev:booking-web` on port `9081`;
   `bun run dev:web` redirects guest `/meet` and `/book` to that origin.
 - **Web (host):** Meeting Settings and host booking funnels stay in
-  `packages/web` (calendar-web). They use the authenticated layout and
-  `packages/web/src/api/booking.api.ts`; they do not boot the guest SPA.
+  `apps/calendar-web` (calendar-web). They use the authenticated layout and
+  `apps/calendar-web/src/api/booking.api.ts`; they do not boot the guest SPA.
 - Native iOS/desktop later call the same Booking HTTP contracts. They do
   not import web views.
 - Confirm path: compute slots from availability + busy; on submit,
@@ -608,14 +608,14 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Booking operations | `packages/backend/src/booking/booking-operation.repository.ts`, `booking-operation.record.ts`, `booking-lifecycle.analytics.ts` |
 | Calendar application port | `packages/backend/src/booking/services/calendar-booking.port.ts` (`updateBookingEvent`), `services/calendar-booking.service.ts` |
 | Sync busy occupancy | `packages/sync/src/domain/occurrence-projection.ts`, `busy-query.service.ts`, `booking-occupancy-facts.ts` |
-| Host Settings UI | `packages/web/src/booking/BookingSettingsSection.tsx`, `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingMeetingLinkField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `packages/web/src/components/Switch/Switch.tsx`, `packages/web/src/components/Settings/SettingsModal.tsx` |
-| Host booking funnels | `packages/web/src/auth/posthog/booking-funnel.ts`, `packages/web/src/auth/posthog/track.ts` |
+| Host Settings UI | `apps/calendar-web/src/booking/BookingSettingsSection.tsx`, `apps/calendar-web/src/booking/setup/`, `BookingStatusHeader.tsx`, `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`, `BookingMoreOptions.tsx`, `BookingSaveBar.tsx`, `BookingAddressField.tsx`, `BookingMeetingLinkField.tsx`, `BookingBlockingCalendarsField.tsx`, `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`, `apps/calendar-web/src/components/Switch/Switch.tsx`, `apps/calendar-web/src/components/Settings/SettingsModal.tsx` |
+| Host booking funnels | `apps/calendar-web/src/auth/posthog/booking-funnel.ts`, `apps/calendar-web/src/auth/posthog/track.ts` |
 | Guest booking funnels | `apps/booking-web/src/telemetry/guest-booking-funnel.ts` |
-| Sidebar discovery | `packages/web/src/components/Sidebar/MeetingPageNudge/` |
-| Description flattening | `packages/web/src/components/DescriptionEditor/plain-text-description.ts` |
+| Sidebar discovery | `apps/calendar-web/src/components/Sidebar/MeetingPageNudge/` |
+| Description flattening | `apps/calendar-web/src/components/DescriptionEditor/plain-text-description.ts` |
 | Public guest UI | `apps/booking-web/src/booking/` (for example `PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx`) |
 | Guest web API client | `apps/booking-web/src/api/public-booking.api.ts` |
-| Host web API client | `packages/web/src/api/booking.api.ts` |
+| Host web API client | `apps/calendar-web/src/api/booking.api.ts` |
 | booking-web app | `apps/booking-web/` (`Dockerfile`, `dev.ts`, deploy workflow) |
 | E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
 
@@ -652,7 +652,7 @@ five minutes including zeros so missing telemetry is distinct from an
 idle queue. Provider connection health stays on Sync
 `sync_health_snapshot` (PostHog dashboard 1905421).
 
-Host funnel events: `packages/web/src/auth/posthog/booking-funnel.ts`.
+Host funnel events: `apps/calendar-web/src/auth/posthog/booking-funnel.ts`.
 Guest funnel events: `apps/booking-web/src/telemetry/guest-booking-funnel.ts`.
 Conversion windows: host settings_opened to link_copied, 7 days; guest
 page_viewed to reservation_created, 1 day.
@@ -769,7 +769,7 @@ browser funnels and server operations as one population.
   would send a new invitation, which v1.5 does not do.
 - **Keyboard-targeted event is not in the event-jump store.** f4 targeting
   lives as a local ref plus DOM focus in the hint hook
-  (`packages/web/src/shortcuts/shift-hint/event-jump.store.ts`). Enter has
+  (`apps/calendar-web/src/shortcuts/shift-hint/event-jump.store.ts`). Enter has
   nothing in that store to check. Recorded in WP-12; do not fold targeting
   into the store in a drive-by.
 - **Changing the booking address breaks old links.** The host may edit the

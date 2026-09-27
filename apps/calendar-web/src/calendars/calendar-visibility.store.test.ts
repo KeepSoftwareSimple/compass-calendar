@@ -14,7 +14,7 @@ const calendarId = CalendarIdSchema.parse(createObjectIdString());
 
 // Storage clearing + the hidden-ids store resync between tests are both
 // handled by the global test-lifecycle afterEach (resetBrowserState +
-// resetAllStores) - see packages/web/src/__tests__/setup/test-lifecycle.ts.
+// resetAllStores) - see apps/calendar-web/src/__tests__/setup/test-lifecycle.ts.
 
 describe("calendar-visibility.store", () => {
   it("persists a visibility change and notifies subscribers", () => {

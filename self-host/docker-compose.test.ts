@@ -152,7 +152,7 @@ describe("self-host docker compose", () => {
       "packages/core/package.json",
       "packages/scripts/package.json",
       "packages/sync/package.json",
-      "packages/web/package.json",
+      "apps/calendar-web/package.json",
       "apps/booking-web/package.json",
     ];
     for (const file of [

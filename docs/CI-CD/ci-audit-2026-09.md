@@ -181,14 +181,14 @@ resolved or out of scope:
 
 ### What ran on PR #3388 that its diff could not affect
 
-The PR touched `packages/web` and `packages/core` only. Everything that ran
+The PR touched `apps/calendar-web` and `packages/core` only. Everything that ran
 was reachable from that diff: e2e depends on web and core; every unit leg
 depends on core. The inverse case is the waste: of the 232 PR e2e runs in
 the window, 50 (22%, across 33 PRs) were on PRs whose changed files were
 entirely under `packages/backend`, `packages/sync`, or `packages/scripts`
 (plus docs). The e2e suite runs the web dev server in anonymous mode against
-stubbed routes; `packages/web` imports only `@compass/core`, and neither
-`e2e/`, `playwright.config.ts`, nor `packages/web/dev.ts` imports from those
+stubbed routes; `apps/calendar-web` imports only `@compass/core`, and neither
+`e2e/`, `playwright.config.ts`, nor `apps/calendar-web/dev.ts` imports from those
 three packages. Those 50 runs were 200 shard jobs, about 540 runner-minutes,
 and 4 minutes of PR wall clock each, for no signal. The merge queue and the
 push-to-main run still execute e2e for every event that is not

@@ -35,18 +35,22 @@ function posixRel(root: string, file: string): string {
 
 export function findTodoCopyViolations(root = repoRoot): string[] {
   const hits: string[] = [];
-  const packagesRoot = join(root, "packages");
-  if (!existsSync(packagesRoot)) {
+  const scanRoots = ["packages", "apps"]
+    .map((top) => join(root, top))
+    .filter((dir) => existsSync(dir));
+  if (scanRoots.length === 0) {
     return hits;
   }
-  for (const file of walk(packagesRoot)) {
-    const rel = posixRel(root, file);
-    if (TODO_COPY_ALLOWLIST.has(rel)) {
-      continue;
-    }
-    const source = readFileSync(file, "utf8");
-    if (source.includes(TODO_COPY)) {
-      hits.push(rel);
+  for (const scanRoot of scanRoots) {
+    for (const file of walk(scanRoot)) {
+      const rel = posixRel(root, file);
+      if (TODO_COPY_ALLOWLIST.has(rel)) {
+        continue;
+      }
+      const source = readFileSync(file, "utf8");
+      if (source.includes(TODO_COPY)) {
+        hits.push(rel);
+      }
     }
   }
   return hits;

@@ -12,7 +12,7 @@ const email = "ahab@pequod.com";
 
 // Storage clearing + the collapsed-accounts store resync between tests are
 // both handled by the global test-lifecycle afterEach (resetBrowserState +
-// resetAllStores) - see packages/web/src/__tests__/setup/test-lifecycle.ts.
+// resetAllStores) - see apps/calendar-web/src/__tests__/setup/test-lifecycle.ts.
 
 describe("collapsed-accounts.store", () => {
   it("persists a toggle and notifies subscribers", () => {

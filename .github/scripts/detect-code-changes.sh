@@ -7,7 +7,7 @@ pull_request_number=${3:-}
 
 # code: anything outside docs, so static (lint, knip, type-check) runs.
 # e2e:  anything the Playwright suite can observe. The suite boots the web
-#       dev server (packages/web, which imports only packages/core) against
+#       dev server (apps/calendar-web, which imports only packages/core) against
 #       stubbed routes; packages/backend, packages/sync, and packages/scripts
 #       are never loaded, so a PR that touches only those skips the e2e
 #       shards.
@@ -76,7 +76,7 @@ e2e=false
 
 all_units_files=$(printf '%s\n' "$code_files" |
   grep -E '^(packages/core(/|$)|package\.json$|bun\.lock$|tsconfig[^/]*\.json$)' || true)
-web_files=$(printf '%s\n' "$code_files" | grep -E '^packages/web(/|$)' || true)
+web_files=$(printf '%s\n' "$code_files" | grep -E '^apps/calendar-web(/|$)' || true)
 backend_files=$(printf '%s\n' "$code_files" | grep -E '^packages/backend(/|$)' || true)
 sync_files=$(printf '%s\n' "$code_files" | grep -E '^packages/sync(/|$)' || true)
 scripts_files=$(printf '%s\n' "$code_files" | grep -E '^packages/scripts(/|$)' || true)

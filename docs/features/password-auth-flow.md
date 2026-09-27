@@ -16,11 +16,11 @@ This flow adds first-party auth on top of the existing Google OAuth setup:
 
 Primary files:
 
-- `packages/web/src/components/AuthModal/AuthModal.tsx`
-- `packages/web/src/components/AuthModal/hooks/useAuthFormHandlers.ts`
-- `packages/web/src/auth/compass/hooks/useCompleteAuthentication.ts`
-- `packages/web/src/auth/compass/session/SessionProvider.tsx`
-- `packages/web/src/auth/compass/state/auth.state.util.ts`
+- `apps/calendar-web/src/components/AuthModal/AuthModal.tsx`
+- `apps/calendar-web/src/components/AuthModal/hooks/useAuthFormHandlers.ts`
+- `apps/calendar-web/src/auth/compass/hooks/useCompleteAuthentication.ts`
+- `apps/calendar-web/src/auth/compass/session/SessionProvider.tsx`
+- `apps/calendar-web/src/auth/compass/state/auth.state.util.ts`
 - `packages/backend/src/common/middleware/supertokens.middleware.ts`
 - `packages/backend/src/common/middleware/supertokens.middleware.util.ts`
 - `packages/backend/src/user/services/user.service.ts`
@@ -157,7 +157,7 @@ Responsibilities:
 
 Files:
 
-- `packages/web/src/auth/compass/state/auth.state.util.ts`
+- `apps/calendar-web/src/auth/compass/state/auth.state.util.ts`
 
 ## Web Runtime Flow
 

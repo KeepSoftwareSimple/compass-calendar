@@ -65,8 +65,8 @@ Timed events that cross midnight are **not** cloned into per-day timed segments.
 `isTimedMultiDayDisplay: true` (Google-style span bars).
 
 - Detection / date mapping: `isTimedEventMultiDay`, `timedMultiDayToAllDayDates`
-  in `packages/web/src/common/utils/event/event-nudge.util.ts`
-- Promotion: `packages/web/src/events/queries/event.view-model.ts`
+  in `apps/calendar-web/src/common/utils/event/event-nudge.util.ts`
+- Promotion: `apps/calendar-web/src/events/queries/event.view-model.ts`
 - Span coverage is half-open `[start, end)`: an end exactly at midnight does
   **not** include that calendar day
 - Those bars are read-only on the grid (no timed drag/resize); edit via the form

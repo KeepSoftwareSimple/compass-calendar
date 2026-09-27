@@ -46,7 +46,7 @@ export type Package = (typeof VALID_PACKAGES)[number];
 const PACKAGE_ROOTS: Record<Package, string> = {
   core: "packages/core/",
   sync: "packages/sync/",
-  web: "packages/web/",
+  web: "apps/calendar-web/",
   backend: "packages/backend/",
   scripts: "packages/scripts/",
   "booking-web": "apps/booking-web/",

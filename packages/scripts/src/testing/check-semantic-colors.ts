@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
-const webSource = join(import.meta.dir, "../../../web/src");
+const webSource = join(import.meta.dir, "../../../../apps/calendar-web/src");
 const sourceExtensions = new Set([".css", ".ts", ".tsx"]);
 const rawColorUtility =
   /(?:bg|text|border|ring|outline|placeholder|divide|from|to|via)-(?:(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|black|white)(?:-\d{2,3})?(?:\/\d{1,3})?|darkBlue-\d{2,3})/g;

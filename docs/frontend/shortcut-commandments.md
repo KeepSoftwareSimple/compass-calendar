@@ -8,7 +8,7 @@ so the keyboard calendar stays learnable.
 "Meta" for the same hold-to-reveal gesture.
 
 Acceptance walkthroughs live in [Shortcuts](../acceptance/shortcuts.md).
-The display registry is `packages/web/src/shortcuts/shortcuts.registry.ts`.
+The display registry is `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`.
 
 ---
 
@@ -52,7 +52,7 @@ jump id on a hidden 2px react-select dummy input, or the chip vanishes
 even though the shortcut still works.
 
 Form fields: `getEventFormFieldAnchor` vs `getEventFormFieldElement` in
-`packages/web/src/common/utils/form/form.util.ts`. Page areas already
+`apps/calendar-web/src/common/utils/form/form.util.ts`. Page areas already
 split `getPageJumpAnchor` / `getPageJumpFocusElement`.
 
 ## 5. Typing always types
@@ -77,7 +77,7 @@ a draft on a focused column.
 Do not run both maps at once. Do not invent a second hold key.
 
 Settings is an OverlayPanel with its own letter map while it holds app-lock
-(`packages/web/src/settings/useSettingsShortcuts.ts`). Those letters are not
+(`apps/calendar-web/src/settings/useSettingsShortcuts.ts`). Those letters are not
 page-jump digits; they activate controls already on the Settings overlay.
 Billing: `U` Update card,
 `C` Cancel subscription, `R` Resume subscription. Accounts: `A` Add account,
@@ -137,9 +137,9 @@ actually bind.
    still the way to discover the live mapping.
 
 Form field digits live in
-`packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts` (DOM
+`apps/calendar-web/src/shortcuts/edit-sequence/edit-sequence.fields.ts` (DOM
 order, 1–9, then 0 for actions and `-` for RSVP). Page-area digits live in
-`packages/web/src/shortcuts/page-jump/page-jump.targets.ts`. Day-view
+`apps/calendar-web/src/shortcuts/page-jump/page-jump.targets.ts`. Day-view
 calendar columns are built by `buildDayPageJumpTargets` in left-to-right
 order (view, columns, sidebar). Meeting save-error field anchors live in
-`packages/web/src/booking/booking-sequence.fields.ts`.
+`apps/calendar-web/src/booking/booking-sequence.fields.ts`.

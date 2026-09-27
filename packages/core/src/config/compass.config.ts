@@ -322,7 +322,7 @@ function findCompassConfigFile(
     return resolve(explicitPath);
   }
 
-  // Walk up from CWD so scripts run from a subdirectory (e.g. packages/web)
+  // Walk up from CWD so scripts run from a subdirectory (e.g. apps/calendar-web)
   // still find compass.yaml at the repo root.
   let dir = process.cwd();
   for (;;) {

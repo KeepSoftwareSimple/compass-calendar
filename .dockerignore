@@ -20,8 +20,8 @@ packages/backend/build
 packages/backend/logs
 packages/backend/node_modules
 packages/core/build
-packages/web/build
-packages/web/node_modules
+apps/calendar-web/build
+apps/calendar-web/node_modules
 playwright-report
 test-results
 tmp

@@ -36,8 +36,8 @@ const PROFILES: Record<
     label: "core",
   },
   web: {
-    preload: "packages/web/src/__tests__/web.preload.ts",
-    scan: "./packages/web/src",
+    preload: "apps/calendar-web/src/__tests__/web.preload.ts",
+    scan: "./apps/calendar-web/src",
     label: "web",
   },
   "backend-fast": {

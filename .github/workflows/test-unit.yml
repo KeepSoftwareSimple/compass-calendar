@@ -99,7 +99,7 @@ jobs:
         with:
           path: |
             **/*.tsbuildinfo
-          key: ${{ runner.os }}-tsc-${{ hashFiles('bun.lock', 'tsconfig.json', 'tsconfig.typecheck.json', 'packages/**/tsconfig*.json') }}
+          key: ${{ runner.os }}-tsc-${{ hashFiles('bun.lock', 'tsconfig.json', 'tsconfig.typecheck.json', 'packages/**/tsconfig*.json', 'apps/**/tsconfig*.json') }}
           restore-keys: |
             ${{ runner.os }}-tsc-${{ hashFiles('bun.lock') }}-
 
@@ -115,7 +115,7 @@ jobs:
         env:
           COMPASS_CONFIG_FILE: ${{ github.workspace }}/.github/perf/compass.perf.yaml
         run: |
-          cd packages/web && bun run build.ts
+          cd apps/calendar-web && bun run build.ts
 
       # Workflow files auto-merge under the same size rails as other paths,
       # so they are linted here. Pinned; the image bundles shellcheck for

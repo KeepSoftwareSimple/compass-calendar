@@ -1,4 +1,4 @@
-@import "../../../packages/web/src/index.css";
+@import "../../../apps/calendar-web/src/index.css";
 
 /*
  * booking-web builds from its own directory, so Tailwind only scans this app.
@@ -6,5 +6,5 @@
  * never generated (the timezone modal rendered inline without these). Add a
  * line when booking-web starts rendering another @web component.
  */
-@source "../../../packages/web/src/components/OverlayPanel";
-@source "../../../packages/web/src/timezone";
+@source "../../../apps/calendar-web/src/components/OverlayPanel";
+@source "../../../apps/calendar-web/src/timezone";

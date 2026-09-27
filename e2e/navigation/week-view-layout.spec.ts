@@ -3,7 +3,7 @@ import { getVisibleDayDates } from "../utils/event-test-utils";
 
 // The week view drops days instead of squishing or scrolling them. Expected
 // counts mirror computeVisibleDayCount in
-// packages/web/src/views/Week/util/week-window.util.ts:
+// apps/calendar-web/src/views/Week/util/week-window.util.ts:
 // clamp(floor((trackWidth - 50) / 140), 1, 7).
 const layoutCases = [
   // 900px: sidebar auto-collapsed (<1280), track ~868px -> 5 days

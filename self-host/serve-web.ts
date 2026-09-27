@@ -1,5 +1,5 @@
-import { COMPRESSIBLE_STATIC_TYPES } from "../packages/web/compressible-static-types";
-import { isGuestMeetStaticPath } from "../packages/web/guest-meet-static-path";
+import { COMPRESSIBLE_STATIC_TYPES } from "../apps/calendar-web/compressible-static-types";
+import { isGuestMeetStaticPath } from "../apps/calendar-web/guest-meet-static-path";
 import { type Stats } from "node:fs";
 import { realpath, stat } from "node:fs/promises";
 import path from "node:path";

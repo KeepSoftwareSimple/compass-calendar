@@ -76,7 +76,7 @@ page. Prefer code that a guest or host can feel over cleanup.
    already shipped in v1.3 so you do not duplicate it. Use
    `https://staging.compasscalendar.com/meet/...` when a known staging
    slug exists; otherwise reason from `e2e/booking/` and
-   `packages/web/src/booking/`.
+   `apps/calendar-web/src/booking/`.
 2. **Host path.** Settings Meeting page
    (`BookingSettingsSection.tsx`): first-run address, Continue, switch,
    duration, destination, blocking calendars, weekly hours rows, welcome,

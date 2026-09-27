@@ -201,7 +201,7 @@ describe("detect-code-changes", () => {
   it("runs e2e when a backend pull request also touches anything else", () => {
     for (const other of [
       "packages/core/src/types.ts",
-      "packages/web/src/app.tsx",
+      "apps/calendar-web/src/app.tsx",
       "e2e/timed/event-smoke.spec.ts",
       "playwright.config.ts",
       "bun.lock",
@@ -220,7 +220,7 @@ describe("detect-code-changes", () => {
   it("runs only the web unit legs for a web-only pull request", () => {
     const result = runDetector(
       "pull_request",
-      "docs/testing.md\npackages/web/src/app.tsx",
+      "docs/testing.md\napps/calendar-web/src/app.tsx",
     );
 
     expect(result.status, result.stderr).toBe(0);

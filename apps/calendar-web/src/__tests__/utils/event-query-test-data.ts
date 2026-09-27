@@ -13,7 +13,7 @@ import { type NormalizedEventQueryData } from "@web/events/queries/event.query.t
  * Shared by the render test harnesses so they seed the cache identically to
  * the real read pipeline (see event.query.normalize.ts). Fixtures must be
  * strict `Event` contract objects — build them with
- * packages/web/src/__tests__/utils/factories/event.factory.ts.
+ * apps/calendar-web/src/__tests__/utils/factories/event.factory.ts.
  */
 export const toNormalizedEventQueryData = (
   events: Event[],

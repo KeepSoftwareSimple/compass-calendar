@@ -38,7 +38,7 @@ bun run dev:booking-web
 
 The guest app serves at <http://localhost:9081> (override with `BOOKING_WEB_PORT`).
 It owns public `/meet` and legacy `/book` guest routes. Host Meeting Settings stay
-in `packages/web` (`bun run dev:web`).
+in `apps/calendar-web` (`bun run dev:web`).
 
 Guest Playwright specs open `http://localhost:9151` (booking-web) via
 `publicBookingAppUrl()` in `e2e/booking/booking-harness.ts`. Host settings specs
@@ -140,8 +140,8 @@ Primary files:
 
 - `packages/scripts/src/common/cli.constants.ts`
 - `packages/scripts/src/common/cli.utils.ts`
-- `packages/web/build.ts`
-- `packages/web/dev.ts`
+- `apps/calendar-web/build.ts`
+- `apps/calendar-web/dev.ts`
 
 Variables used by CLI/build flows:
 
@@ -154,7 +154,7 @@ If `web.url` points to localhost, the CLI prompts for a VM/public domain and bui
 
 Source:
 
-- `packages/web/src/common/constants/env.constants.ts`
+- `apps/calendar-web/src/common/constants/env.constants.ts`
 
 Important variables:
 
@@ -169,8 +169,8 @@ Important variables:
 
 Bun build/dev behavior:
 
-- `packages/web/build.ts` injects `backend.apiUrl` as `API_BASEURL` for production builds
-- `packages/web/dev.ts` does the same for the local web dev server
+- `apps/calendar-web/build.ts` injects `backend.apiUrl` as `API_BASEURL` for production builds
+- `apps/calendar-web/dev.ts` does the same for the local web dev server
 - `google.clientId` is injected when present
 - if `API_BASEURL` is not injected, the web app falls back to `PORT` and builds `http://localhost:<PORT>/api`
 

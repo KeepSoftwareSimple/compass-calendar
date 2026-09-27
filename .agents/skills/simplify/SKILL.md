@@ -104,7 +104,7 @@ DOM handles, or own isolated UI state. Record why they remain.
 - Use Tailwind semantic colors and canonical scale utilities.
 - Prefer existing package locations:
   - shared logic: `packages/core/src/util`
-  - web helpers: `packages/web/src/common`
+  - web helpers: `apps/calendar-web/src/common`
   - backend helpers: `packages/backend/src/common`
   - sync ownership: `packages/sync/src`
 
@@ -116,7 +116,7 @@ architecture.
 Run the smallest checks that cover touched behavior:
 
 - `packages/core` → `bun run test:core`
-- `packages/web` → `bun run test:web`
+- `apps/calendar-web` → `bun run test:web`
 - `packages/backend` → `bun run test:backend`
 - `packages/sync` → `bun run test:sync`
 - `packages/scripts` → `bun run test:scripts`

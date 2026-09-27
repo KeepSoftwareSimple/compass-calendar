@@ -8,7 +8,7 @@ import path from "node:path";
  * fallback to index.html.
  *
  * It lives beside calendar-web's build scripts rather than in a package of its
- * own because both apps already build with `packages/web/plugins`, and neither
+ * own because both apps already build with `apps/calendar-web/plugins`, and neither
  * ships this file: it runs only under `bun run dev.ts`.
  */
 export interface StaticDevServerOptions {

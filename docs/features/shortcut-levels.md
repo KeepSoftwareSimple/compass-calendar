@@ -9,7 +9,7 @@ own "used" check marks are unchanged.
 ## Level model
 
 A shortcut counts once it has been used at least once. The level is computed
-from `SHORTCUT_LEVELS` (`packages/web/src/shortcuts/level/shortcut-level.ts`)
+from `SHORTCUT_LEVELS` (`apps/calendar-web/src/shortcuts/level/shortcut-level.ts`)
 against the current `SHORTCUTS_REGISTRY` length, so a build that adds or
 removes a registry row changes the denominator automatically:
 
@@ -75,6 +75,6 @@ usage itself is still recorded as `shortcut_invoked`.
 
 ## File map
 
-`packages/web/src/shortcuts/level/` (the level model and the hidden-badge
+`apps/calendar-web/src/shortcuts/level/` (the level model and the hidden-badge
 store), `components/Sidebar/SidebarActions/ShortcutLevelBadge.tsx`. Acceptance:
 [Shortcuts](../acceptance/shortcuts.md) (Scenario 28).

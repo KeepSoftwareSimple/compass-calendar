@@ -10,7 +10,7 @@ COPY packages/backend/package.json packages/backend/package.json
 COPY packages/core/package.json packages/core/package.json
 COPY packages/scripts/package.json packages/scripts/package.json
 COPY packages/sync/package.json packages/sync/package.json
-COPY packages/web/package.json packages/web/package.json
+COPY apps/calendar-web/package.json apps/calendar-web/package.json
 RUN bun install --frozen-lockfile
 COPY . .
 
@@ -37,8 +37,8 @@ COPY --from=build --chown=compass:compass /app/build/booking-web ./build/booking
 # serve-web.ts imports this map at runtime, so the runtime stage needs the
 # file on disk; without it bun exits on an unresolved module and the container
 # restart-loops.
-COPY --from=build --chown=compass:compass /app/packages/web/compressible-static-types.ts ./packages/web/compressible-static-types.ts
-COPY --from=build --chown=compass:compass /app/packages/web/guest-meet-static-path.ts ./packages/web/guest-meet-static-path.ts
+COPY --from=build --chown=compass:compass /app/apps/calendar-web/compressible-static-types.ts ./apps/calendar-web/compressible-static-types.ts
+COPY --from=build --chown=compass:compass /app/apps/calendar-web/guest-meet-static-path.ts ./apps/calendar-web/guest-meet-static-path.ts
 COPY --from=build --chown=compass:compass /app/self-host/serve-web.ts ./self-host/serve-web.ts
 
 USER compass

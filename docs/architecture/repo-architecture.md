@@ -4,7 +4,7 @@ Compass is a TypeScript monorepo with five packages and one shared event domain.
 
 ## Package Map
 
-### `packages/web`
+### `apps/calendar-web`
 
 The React frontend. It owns:
 
@@ -16,10 +16,10 @@ The React frontend. It owns:
 
 Key entrypoints:
 
-- `packages/web/src/index.tsx`
-- `packages/web/src/components/App/App.tsx`
-- `packages/web/src/routers/index.tsx`
-- `packages/web/src/views/Root.tsx`
+- `apps/calendar-web/src/index.tsx`
+- `apps/calendar-web/src/components/App/App.tsx`
+- `apps/calendar-web/src/routers/index.tsx`
+- `apps/calendar-web/src/views/Root.tsx`
 
 ### `packages/backend`
 
@@ -117,7 +117,7 @@ contracts explicit and provider implementation details inside `packages/sync`.
 
 ### Frontend boot
 
-`packages/web/src/index.tsx` does this in order:
+`apps/calendar-web/src/index.tsx` does this in order:
 
 1. initialize storage
 2. initialize session tracking

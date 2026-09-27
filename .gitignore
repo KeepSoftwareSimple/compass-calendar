@@ -28,8 +28,8 @@ packages/backend/logs
 packages/backend/build
 packages/backend/node_modules
 packages/core/build/
-packages/web/node_modules/
-packages/web/build/
+apps/calendar-web/node_modules/
+apps/calendar-web/build/
 playwright-report/
 test-results/
 test-results.xml

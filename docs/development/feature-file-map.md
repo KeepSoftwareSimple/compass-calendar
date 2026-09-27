@@ -4,22 +4,22 @@ Use this document to find the first files to inspect for common Compass changes.
 
 ## App Boot And Routing
 
-- Frontend bootstrap: `packages/web/src/index.tsx`
-- App provider tree: `packages/web/src/components/App/App.tsx`
-- Root authenticated shell: `packages/web/src/views/Root.tsx`
-- Router config: `packages/web/src/routers/index.tsx`
-- Router loaders: `packages/web/src/routers/loaders.ts`
-- Client version polling: `packages/web/src/components/Sidebar/SidebarActions/useVersionCheck.ts`
-- Update CTA wiring: `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
+- Frontend bootstrap: `apps/calendar-web/src/index.tsx`
+- App provider tree: `apps/calendar-web/src/components/App/App.tsx`
+- Root authenticated shell: `apps/calendar-web/src/views/Root.tsx`
+- Router config: `apps/calendar-web/src/routers/index.tsx`
+- Router loaders: `apps/calendar-web/src/routers/loaders.ts`
+- Client version polling: `apps/calendar-web/src/components/Sidebar/SidebarActions/useVersionCheck.ts`
+- Update CTA wiring: `apps/calendar-web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
 
 ## Authentication And Session
 
-- Session initialization and SuperTokens wiring: `packages/web/src/auth/compass/session/SessionProvider.tsx`
-- User profile bootstrap: `packages/web/src/auth/compass/user/context/UserProvider.tsx`
-- Google authorization app flow: `packages/web/src/auth/google/authorization`
-- Google redirect callback: `packages/web/src/views/GoogleAuthCallback/GoogleAuthCallback.tsx`
-- Google authorization intent storage: `packages/web/src/auth/google/authorization/google-authorization.storage.ts`
-- Auth schemas: `packages/web/src/auth/compass/schemas/auth.schemas.ts`
+- Session initialization and SuperTokens wiring: `apps/calendar-web/src/auth/compass/session/SessionProvider.tsx`
+- User profile bootstrap: `apps/calendar-web/src/auth/compass/user/context/UserProvider.tsx`
+- Google authorization app flow: `apps/calendar-web/src/auth/google/authorization`
+- Google redirect callback: `apps/calendar-web/src/views/GoogleAuthCallback/GoogleAuthCallback.tsx`
+- Google authorization intent storage: `apps/calendar-web/src/auth/google/authorization/google-authorization.storage.ts`
+- Auth schemas: `apps/calendar-web/src/auth/compass/schemas/auth.schemas.ts`
 - Backend auth routes: `packages/backend/src/auth/auth.routes.config.ts`
 - Backend auth controllers/services: `packages/backend/src/auth/controllers`, `packages/backend/src/auth/services`
 
@@ -27,11 +27,11 @@ Use this document to find the first files to inspect for common Compass changes.
 
 - Shared event schema/types: `packages/core/src/types/event.contracts.ts`
 - Event helpers and recurrence utilities: `packages/core/src/util/event`
-- Web Event reads, cache utilities, and view models: `packages/web/src/events/queries`
-- Web Event persisted mutations and pending state: `packages/web/src/events/mutations`
-- Web Event draft/interaction Zustand state: `packages/web/src/events/stores/draft.store.ts`
-- Undo/redo history: `packages/web/src/events/stores/undo.store.ts`, `packages/web/src/events/mutations/useUndoRedo.ts`. Series-wide writes stay as a visible refusal in v1: [Undo of recurring-series writes (v1)](../features/undo-series.md).
-- Event API/repositories: `packages/web/src/events/event.api.ts`, `packages/web/src/events/repositories`
+- Web Event reads, cache utilities, and view models: `apps/calendar-web/src/events/queries`
+- Web Event persisted mutations and pending state: `apps/calendar-web/src/events/mutations`
+- Web Event draft/interaction Zustand state: `apps/calendar-web/src/events/stores/draft.store.ts`
+- Undo/redo history: `apps/calendar-web/src/events/stores/undo.store.ts`, `apps/calendar-web/src/events/mutations/useUndoRedo.ts`. Series-wide writes stay as a visible refusal in v1: [Undo of recurring-series writes (v1)](../features/undo-series.md).
+- Event API/repositories: `apps/calendar-web/src/events/event.api.ts`, `apps/calendar-web/src/events/repositories`
 - Backend event routes: `packages/backend/src/event/event.routes.config.ts`
 - Backend event controller/service: `packages/backend/src/event/controllers/event.controller.ts`, `packages/backend/src/event/services/event.service.ts`
 
@@ -40,13 +40,13 @@ Use this document to find the first files to inspect for common Compass changes.
 Product overview: [Hidden Events](../features/hidden-events.md).
 
 - Shared contracts (`HiddenEventIdsResponseSchema`, `SetEventHiddenInputSchema`): `packages/core/src/types/event-visibility.contracts.ts`
-- Web query, optimistic toggle, localStorage fallback: `packages/web/src/events/hidden/hidden-events.query.ts`, `hidden-events.api.ts`, `hidden-events.storage.ts`
-- Timed-deck layout (hidden ids out of overlap grouping): `packages/web/src/grid/layout/timed-deck.layout.ts`
-- Strip width: `packages/web/src/grid/grid.constants.ts` (`HIDDEN_EVENT_STRIP_WIDTH`)
-- Cards (8px `rounded-full` strip, `Hidden ` accessible prefix): `packages/web/src/grid/components/TimedEventCard.tsx`, `AllDayEventCard.tsx`
-- Context menu Hide / Show event: `packages/web/src/components/ContextMenu/ContextMenuItems.tsx`
-- Bare `x` shortcut: `packages/web/src/shortcuts/hide-event/useHideEventShortcut.ts`
-- Legend row `edit-hide`: `packages/web/src/shortcuts/shortcuts.registry.ts`
+- Web query, optimistic toggle, localStorage fallback: `apps/calendar-web/src/events/hidden/hidden-events.query.ts`, `hidden-events.api.ts`, `hidden-events.storage.ts`
+- Timed-deck layout (hidden ids out of overlap grouping): `apps/calendar-web/src/grid/layout/timed-deck.layout.ts`
+- Strip width: `apps/calendar-web/src/grid/grid.constants.ts` (`HIDDEN_EVENT_STRIP_WIDTH`)
+- Cards (8px `rounded-full` strip, `Hidden ` accessible prefix): `apps/calendar-web/src/grid/components/TimedEventCard.tsx`, `AllDayEventCard.tsx`
+- Context menu Hide / Show event: `apps/calendar-web/src/components/ContextMenu/ContextMenuItems.tsx`
+- Bare `x` shortcut: `apps/calendar-web/src/shortcuts/hide-event/useHideEventShortcut.ts`
+- Legend row `edit-hide`: `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`
 - Backend Mongo record, unique index, GET/PUT `/api/user/hidden-events`: `packages/backend/src/user/hidden-event.record.ts`, `packages/backend/src/user/user-indexes.ts`, `packages/backend/src/user/services/hidden-event.service.ts`, `packages/backend/src/user/user.routes.config.ts`, `packages/backend/src/user/controllers/user.controller.ts`
 - E2e: `e2e/calendars/calendar-experience.spec.ts`
 
@@ -57,11 +57,11 @@ consent flow, and named warts: [Attendees, Contacts, And
 RSVP](../features/attendees.md).
 
 - Attendee/RSVP write contracts: `packages/core/src/types/event-command.contracts.ts`, `packages/core/src/types/event-attendance.contracts.ts`
-- Guest-list editor: `packages/web/src/views/Forms/EventForm/AttendeeField/AttendeeField.tsx`
-- RSVP status badge and tally: `packages/web/src/views/Forms/EventForm/AttendeeRsvpStatus.tsx`, `packages/web/src/views/Forms/EventForm/attendee-rsvp.ts`, `packages/web/src/views/Forms/EventForm/EventDetailsSection.tsx`
-- Save-time invitation prompt: `packages/web/src/views/Forms/EventForm/SendInvitationsDialog.tsx`, `packages/web/src/views/Forms/hooks/useSaveEventForm.ts`
-- RSVP control and scope dialog: `packages/web/src/views/Forms/EventForm/RsvpControl.tsx`, `packages/web/src/views/Forms/EventForm/RsvpScopeDialog.tsx`
-- Contact suggestions hook: `packages/web/src/views/Forms/EventForm/AttendeeField/useContactSuggestions.ts`
+- Guest-list editor: `apps/calendar-web/src/views/Forms/EventForm/AttendeeField/AttendeeField.tsx`
+- RSVP status badge and tally: `apps/calendar-web/src/views/Forms/EventForm/AttendeeRsvpStatus.tsx`, `apps/calendar-web/src/views/Forms/EventForm/attendee-rsvp.ts`, `apps/calendar-web/src/views/Forms/EventForm/EventDetailsSection.tsx`
+- Save-time invitation prompt: `apps/calendar-web/src/views/Forms/EventForm/SendInvitationsDialog.tsx`, `apps/calendar-web/src/views/Forms/hooks/useSaveEventForm.ts`
+- RSVP control and scope dialog: `apps/calendar-web/src/views/Forms/EventForm/RsvpControl.tsx`, `apps/calendar-web/src/views/Forms/EventForm/RsvpScopeDialog.tsx`
+- Contact suggestions hook: `apps/calendar-web/src/views/Forms/EventForm/AttendeeField/useContactSuggestions.ts`
 - Backend translation (create/update/delete/rsvp commands, `ATTENDEES_UNSUPPORTED`): `packages/backend/src/common/services/sync-service/event-command.translation.ts`, `packages/backend/src/event/controllers/event.controller.ts`
 - Backend contacts proxy: `packages/backend/src/contacts/controllers/contacts.controller.ts`
 - Sync attendee merge and RSVP execution: `packages/sync/src/domain/merge-update-content.ts`, `packages/sync/src/domain/provider-command.service.ts`
@@ -74,11 +74,11 @@ Create-only: the browser asks the provider to mint a link with
 `createConference`; sync's update command has no conference channel.
 
 - Browser create flag and conference kind labels: `CreateEventInputSchema.createConference` in `packages/core/src/types/event-command.contracts.ts`, `CONFERENCE_KIND_LABEL` in `packages/core/src/types/calendar.contracts.ts`
-- Capability gate (`capabilities.conferenceKinds`, never a provider name): `creatableConferenceKind` in `packages/web/src/calendars/calendar.util.ts`
-- "Add <kind>" switch and the `e m` / `Mod+=` meeting-link field: `packages/web/src/views/Forms/EventForm/EventForm.tsx`, `packages/web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `packages/web/src/common/utils/form/form.util.ts`
-- Save-time belt (drops the flag when the target calendar cannot mint a link): `packages/web/src/views/Forms/hooks/useSaveEventForm.ts`
-- Post-save "Copy link" toast (`L`): `packages/web/src/common/utils/toast/conference-link-added.toast.tsx`, shown from the create path in `packages/web/src/events/mutations/useEventMutations.ts`
-- Read-only link with copy button on an existing event: `packages/web/src/views/Forms/EventForm/EventDetailsSection.tsx`
+- Capability gate (`capabilities.conferenceKinds`, never a provider name): `creatableConferenceKind` in `apps/calendar-web/src/calendars/calendar.util.ts`
+- "Add <kind>" switch and the `e m` / `Mod+=` meeting-link field: `apps/calendar-web/src/views/Forms/EventForm/EventForm.tsx`, `apps/calendar-web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `apps/calendar-web/src/common/utils/form/form.util.ts`
+- Save-time belt (drops the flag when the target calendar cannot mint a link): `apps/calendar-web/src/views/Forms/hooks/useSaveEventForm.ts`
+- Post-save "Copy link" toast (`L`): `apps/calendar-web/src/common/utils/toast/conference-link-added.toast.tsx`, shown from the create path in `apps/calendar-web/src/events/mutations/useEventMutations.ts`
+- Read-only link with copy button on an existing event: `apps/calendar-web/src/views/Forms/EventForm/EventDetailsSection.tsx`
 - Backend: flag forwarded by `toCreateSubmitRequest`, created event re-read so the response carries the minted link: `packages/backend/src/common/services/sync-service/event-command.translation.ts`, `packages/backend/src/event/controllers/event.controller.ts`
 - Sync: `createConference` on the create command, Google `conferenceData.createRequest`, Microsoft `isOnlineMeeting`: `packages/core/src/types/sync/command.contracts.ts`, `packages/sync/src/providers/google/google-event-writer.adapter.ts`, `packages/sync/src/providers/microsoft/microsoft-event-writer.adapter.ts`
 
@@ -102,21 +102,21 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
 - Occupancy: `packages/sync/src/domain/occurrence-projection.ts`,
   `packages/sync/src/domain/busy-query.service.ts`,
   `POST /internal/availability/busy`
-- Booking funnels: `packages/web/src/auth/posthog/booking-funnel.ts`,
-  `packages/web/src/auth/posthog/track.ts`
-- Host Settings: `packages/web/src/booking/BookingSettingsSection.tsx`,
-  `packages/web/src/booking/setup/`, `BookingStatusHeader.tsx`,
+- Booking funnels: `apps/calendar-web/src/auth/posthog/booking-funnel.ts`,
+  `apps/calendar-web/src/auth/posthog/track.ts`
+- Host Settings: `apps/calendar-web/src/booking/BookingSettingsSection.tsx`,
+  `apps/calendar-web/src/booking/setup/`, `BookingStatusHeader.tsx`,
   `BookingConnectionBanner.tsx`, `BookingBookabilityNotice.tsx`,
   `BookingWeeklyHoursEditor.tsx`, `weekly-hours.ts`, `useNewMeetingsNotice.ts`,
-  `packages/web/src/components/Switch/Switch.tsx`
-- Description flattening: `packages/web/src/components/DescriptionEditor/plain-text-description.ts`
-- Sidebar discovery: `packages/web/src/components/Sidebar/MeetingPageNudge/`
+  `apps/calendar-web/src/components/Switch/Switch.tsx`
+- Description flattening: `apps/calendar-web/src/components/DescriptionEditor/plain-text-description.ts`
+- Sidebar discovery: `apps/calendar-web/src/components/Sidebar/MeetingPageNudge/`
 - Public guest UI: `apps/booking-web/src/booking/` (for example
   `PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`,
   `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`,
   `PublicBookingReschedulePage.tsx`)
 - Guest web API client: `apps/booking-web/src/api/public-booking.api.ts`
-- Host web API client: `packages/web/src/api/booking.api.ts`
+- Host web API client: `apps/calendar-web/src/api/booking.api.ts`
 - booking-web deployable: `apps/booking-web/Dockerfile`, `.github/workflows/deploy-staging-booking-web.yml`
 - E2e: `e2e/booking/` (guest against booking-web), `e2e/accessibility/booking-a11y.spec.ts`,
   `e2e/booking/calendar-web-guest-meet.spec.ts`
@@ -128,56 +128,56 @@ Product spec: [Compass Calendar Booking](../features/booking.md).
 
 ## Day / Week Views
 
-- Day view route and content: `packages/web/src/views/Day/view`
-- Day view header (includes sidebar toggle control): `packages/web/src/views/Day/components/Header/Header.tsx`
-- Day keyboard shortcuts (thin key registration): `packages/web/src/views/Day/hooks/shortcuts/useDayViewShortcuts.ts`
-- Week keyboard shortcuts (thin key registration): `packages/web/src/views/Week/hooks/shortcuts/useWeekViewShortcuts.ts`
-- Week shortcut owner (draft create/nav/focus + bus): `packages/web/src/views/Week/hooks/shortcuts/useWeekShortcutOwner.ts`
-- Shared grid edit/focus shortcuts: `packages/web/src/grid/shortcuts/useGridEventEditShortcuts.ts`, `focus-adjacent-grid-event.ts`
-- Day column set when Google is connected (hides local Compass column): `packages/web/src/views/Day/components/Calendar/dayCalendarColumns.util.ts`
-- All-day event color wash on day columns: `packages/web/src/grid/utils/allDayColumnTint.util.ts`
-- Day view hooks: `packages/web/src/views/Day/hooks`
-- Week view: `packages/web/src/views/Week`
-- Responsive layout controller (auto-collapse on breakpoint crossings): `packages/web/src/components/AuthenticatedLayout/useResponsiveLayout.ts`
-- Dedication dialog implementation (native `dialog` + hotkeys): `packages/web/src/views/Week/components/Dedication/Dedication.tsx`
+- Day view route and content: `apps/calendar-web/src/views/Day/view`
+- Day view header (includes sidebar toggle control): `apps/calendar-web/src/views/Day/components/Header/Header.tsx`
+- Day keyboard shortcuts (thin key registration): `apps/calendar-web/src/views/Day/hooks/shortcuts/useDayViewShortcuts.ts`
+- Week keyboard shortcuts (thin key registration): `apps/calendar-web/src/views/Week/hooks/shortcuts/useWeekViewShortcuts.ts`
+- Week shortcut owner (draft create/nav/focus + bus): `apps/calendar-web/src/views/Week/hooks/shortcuts/useWeekShortcutOwner.ts`
+- Shared grid edit/focus shortcuts: `apps/calendar-web/src/grid/shortcuts/useGridEventEditShortcuts.ts`, `focus-adjacent-grid-event.ts`
+- Day column set when Google is connected (hides local Compass column): `apps/calendar-web/src/views/Day/components/Calendar/dayCalendarColumns.util.ts`
+- All-day event color wash on day columns: `apps/calendar-web/src/grid/utils/allDayColumnTint.util.ts`
+- Day view hooks: `apps/calendar-web/src/views/Day/hooks`
+- Week view: `apps/calendar-web/src/views/Week`
+- Responsive layout controller (auto-collapse on breakpoint crossings): `apps/calendar-web/src/components/AuthenticatedLayout/useResponsiveLayout.ts`
+- Dedication dialog implementation (native `dialog` + hotkeys): `apps/calendar-web/src/views/Week/components/Dedication/Dedication.tsx`
 - Dedication dialog mount points:
-  - week view: `packages/web/src/views/Week/WeekView.tsx`
-  - day view: `packages/web/src/views/Day/view/DayViewContent.tsx`
+  - week view: `apps/calendar-web/src/views/Week/WeekView.tsx`
+  - day view: `apps/calendar-web/src/views/Day/view/DayViewContent.tsx`
 
 ## Keyboard Shortcuts
 
 Authoritative legend data and taught bindings live under
-`packages/web/src/shortcuts`. View owners register keys; do not duplicate
+`apps/calendar-web/src/shortcuts`. View owners register keys; do not duplicate
 labels outside the registry.
 
 Product rules (hold-Mod discovery, "chip the field", typing always types):
 [Shortcut Commandments](../frontend/shortcut-commandments.md).
 
-- Registry (source of truth for `?` legend): `packages/web/src/shortcuts/shortcuts.registry.ts`
-- Taught bindings (handlers + Shortcut Showcase keycaps): `packages/web/src/shortcuts/keymap.ts`
-- Sidebar next-shortcut selector: `packages/web/src/shortcuts/tips/selectShortcutHint.ts`
-- What counts as a hint impression: `packages/web/src/shortcuts/tips/shortcut-telemetry.ts`
-- Sidebar tip progress (demonstrated primitives): `packages/web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
-- Sidebar tip mute (`compass.shortcuts.tips-muted`): `packages/web/src/shortcuts/tips/shortcut-tips-muted.store.ts`, `ShortcutTipIndicator.tsx`
-- Global shell shortcuts (sidebar `]`, palette, settings, navigation): `packages/web/src/shortcuts/useGlobalShortcuts.ts`
-- Event-jump chips (`H`): `packages/web/src/shortcuts/shift-hint/`
-- Hide/show focused event (`x`): `packages/web/src/shortcuts/hide-event/useHideEventShortcut.ts`
-- Palette pointer-hint store and grid bridge: `packages/web/src/shortcuts/keyboard-only/`
-- Escape ownership (modals/form before lower handlers): `packages/web/src/shortcuts/escape-ownership.ts`
-- App lock (suppress shortcuts while a modal owns the UI): `packages/web/src/shortcuts/app-lock.ts`
-- Event title search in the command palette: `packages/web/src/events/queries/useEventSearch.ts`, `packages/web/src/components/CommandPalette/event-search.util.ts`
-- Typed-date parser and go-to-date announcement: `parseUserDate` / `goToDateAnnouncement` in `packages/web/src/common/utils/datetime/web.date.util.ts`, `packages/web/src/shortcuts/go-to-date/useGoToDateShortcut.ts`
-- Palette-teaches hint: `packages/web/src/components/CommandPalette/palette-shortcut-telemetry.ts`, `packages/web/src/components/CommandPalette/hooks/usePaletteLegendCmdItems.ts`
-- Public printable `/shortcuts` catalog: `packages/web/src/components/ShortcutsPage/ShortcutsCatalogView.tsx` (snapshot in `packages/web/src/shortcuts/shortcuts-catalog.json`, updated by hand when the registry changes; stays off a new `import()` root)
-- Shortcut level badge (sidebar footer, `Lv N`): `packages/web/src/shortcuts/level/` (pure level model + hidden-badge store), `packages/web/src/components/Sidebar/SidebarActions/ShortcutLevelBadge.tsx`; see [Shortcut Levels](../features/shortcut-levels.md)
-- Mount point for global shortcuts and onboarding surface selection: `packages/web/src/components/RootShell/RootShell.tsx`, `onboarding-surface.ts`
+- Registry (source of truth for `?` legend): `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`
+- Taught bindings (handlers + Shortcut Showcase keycaps): `apps/calendar-web/src/shortcuts/keymap.ts`
+- Sidebar next-shortcut selector: `apps/calendar-web/src/shortcuts/tips/selectShortcutHint.ts`
+- What counts as a hint impression: `apps/calendar-web/src/shortcuts/tips/shortcut-telemetry.ts`
+- Sidebar tip progress (demonstrated primitives): `apps/calendar-web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
+- Sidebar tip mute (`compass.shortcuts.tips-muted`): `apps/calendar-web/src/shortcuts/tips/shortcut-tips-muted.store.ts`, `ShortcutTipIndicator.tsx`
+- Global shell shortcuts (sidebar `]`, palette, settings, navigation): `apps/calendar-web/src/shortcuts/useGlobalShortcuts.ts`
+- Event-jump chips (`H`): `apps/calendar-web/src/shortcuts/shift-hint/`
+- Hide/show focused event (`x`): `apps/calendar-web/src/shortcuts/hide-event/useHideEventShortcut.ts`
+- Palette pointer-hint store and grid bridge: `apps/calendar-web/src/shortcuts/keyboard-only/`
+- Escape ownership (modals/form before lower handlers): `apps/calendar-web/src/shortcuts/escape-ownership.ts`
+- App lock (suppress shortcuts while a modal owns the UI): `apps/calendar-web/src/shortcuts/app-lock.ts`
+- Event title search in the command palette: `apps/calendar-web/src/events/queries/useEventSearch.ts`, `apps/calendar-web/src/components/CommandPalette/event-search.util.ts`
+- Typed-date parser and go-to-date announcement: `parseUserDate` / `goToDateAnnouncement` in `apps/calendar-web/src/common/utils/datetime/web.date.util.ts`, `apps/calendar-web/src/shortcuts/go-to-date/useGoToDateShortcut.ts`
+- Palette-teaches hint: `apps/calendar-web/src/components/CommandPalette/palette-shortcut-telemetry.ts`, `apps/calendar-web/src/components/CommandPalette/hooks/usePaletteLegendCmdItems.ts`
+- Public printable `/shortcuts` catalog: `apps/calendar-web/src/components/ShortcutsPage/ShortcutsCatalogView.tsx` (snapshot in `apps/calendar-web/src/shortcuts/shortcuts-catalog.json`, updated by hand when the registry changes; stays off a new `import()` root)
+- Shortcut level badge (sidebar footer, `Lv N`): `apps/calendar-web/src/shortcuts/level/` (pure level model + hidden-badge store), `apps/calendar-web/src/components/Sidebar/SidebarActions/ShortcutLevelBadge.tsx`; see [Shortcut Levels](../features/shortcut-levels.md)
+- Mount point for global shortcuts and onboarding surface selection: `apps/calendar-web/src/components/RootShell/RootShell.tsx`, `onboarding-surface.ts`
 - Acceptance runbook: [Shortcuts](../acceptance/shortcuts.md), [Onboarding](../acceptance/onboarding.md)
 
 ## Welcome, Showcase, And First-Event Handoff
 
 Anonymous calendar onboarding (welcome modal with an opt-in practice link,
 the Block Party practice game, first-event prompt) lives under
-`packages/web/src/components/{WelcomeModal,ShortcutShowcase,FirstEventPrompt}`.
+`apps/calendar-web/src/components/{WelcomeModal,ShortcutShowcase,FirstEventPrompt}`.
 `WelcomeGuideModal` and `welcome.guide.store.ts` replay the guide for signed-in
 users. `ConnectCalendarPromptGate` mounts the connect prompt only when it wins
 the onboarding slot. Game pieces: `game.tasks.ts` (task queue, scoring
@@ -189,31 +189,31 @@ in [Frontend Runtime Flow](../frontend/frontend-runtime-flow.md#welcome-showcase
 
 ## Sidebar
 
-- Shared sidebar shell: `packages/web/src/components/Sidebar/Sidebar.tsx`
-- Month picker: `packages/web/src/components/Sidebar/MonthPicker/MonthPicker.tsx`
+- Shared sidebar shell: `apps/calendar-web/src/components/Sidebar/Sidebar.tsx`
+- Month picker: `apps/calendar-web/src/components/Sidebar/MonthPicker/MonthPicker.tsx`
   (week/day cursor math in `monthPickerCursor.ts` beside it)
-- Shared account sync-status + CTA labels: `packages/web/src/components/Sidebar/CalendarList/useAccountHeaderStatus.ts`
-- Account identity/sync indicator: `packages/web/src/components/Sidebar/CalendarList/CalendarListHeader.tsx`, `AccountSectionHeader.tsx`
-- Sidebar actions and shortcuts overlay: `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`, `packages/web/src/components/Sidebar/SidebarRefreshButton.tsx`, `packages/web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
-- Week mount point: `packages/web/src/views/Week/WeekView.tsx`
-- Day mount point: `packages/web/src/views/Day/view/DayViewContent.tsx`
+- Shared account sync-status + CTA labels: `apps/calendar-web/src/components/Sidebar/CalendarList/useAccountHeaderStatus.ts`
+- Account identity/sync indicator: `apps/calendar-web/src/components/Sidebar/CalendarList/CalendarListHeader.tsx`, `AccountSectionHeader.tsx`
+- Sidebar actions and shortcuts overlay: `apps/calendar-web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`, `apps/calendar-web/src/components/Sidebar/SidebarRefreshButton.tsx`, `apps/calendar-web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
+- Week mount point: `apps/calendar-web/src/views/Week/WeekView.tsx`
+- Day mount point: `apps/calendar-web/src/views/Day/view/DayViewContent.tsx`
 
 ## Offline Storage
 
-- Offline data store singleton and readiness: `packages/web/src/common/storage/offline-data/offline-data.store.registry.ts`
-- IndexedDB implementation: `packages/web/src/common/storage/offline-data/indexeddb-offline-data.store.ts`
-- Legacy schema migration: `packages/web/src/common/storage/offline-data/legacy-primary-key.migration.ts`
-- Data/external migrations: `packages/web/src/common/storage/migrations`
-- Browser key-value state: `packages/web/src/common/storage/browser-key-value.store.ts`
+- Offline data store singleton and readiness: `apps/calendar-web/src/common/storage/offline-data/offline-data.store.registry.ts`
+- IndexedDB implementation: `apps/calendar-web/src/common/storage/offline-data/indexeddb-offline-data.store.ts`
+- Legacy schema migration: `apps/calendar-web/src/common/storage/offline-data/legacy-primary-key.migration.ts`
+- Data/external migrations: `apps/calendar-web/src/common/storage/migrations`
+- Browser key-value state: `apps/calendar-web/src/common/storage/browser-key-value.store.ts`
 
 ## Sync And SSE
 
-- SSE client: `packages/web/src/sse/client/sse.client.ts`
-- SSE hooks: `packages/web/src/sse/hooks`
-- Focus refresh (silent Sync catch-up on mount / long hide): `packages/web/src/sse/hooks/useSyncFocusRefresh.ts`
-- Shared “visible after hidden” helper: `packages/web/src/common/hooks/useVisibleAfterHidden.ts`
-- Google refresh coordinator: `packages/web/src/auth/google/state/google.sync.refresh.ts`
-- SSE provider: `packages/web/src/sse/provider/SSEProvider.tsx`
+- SSE client: `apps/calendar-web/src/sse/client/sse.client.ts`
+- SSE hooks: `apps/calendar-web/src/sse/hooks`
+- Focus refresh (silent Sync catch-up on mount / long hide): `apps/calendar-web/src/sse/hooks/useSyncFocusRefresh.ts`
+- Shared “visible after hidden” helper: `apps/calendar-web/src/common/hooks/useVisibleAfterHidden.ts`
+- Google refresh coordinator: `apps/calendar-web/src/auth/google/state/google.sync.refresh.ts`
+- SSE provider: `apps/calendar-web/src/sse/provider/SSEProvider.tsx`
 - SSE transport constant + message union: `packages/core/src/constants/sse.constants.ts`, `packages/core/src/types/server-message.contracts.ts`
 - Backend SSE server: `packages/backend/src/servers/sse/sse.server.ts`
 - Events stream route: `packages/backend/src/events/events.routes.config.ts`
@@ -238,26 +238,26 @@ the full picture.
 
 - User queries/services: `packages/backend/src/user`
 - User metadata service: `packages/backend/src/user/services/user-metadata.service.ts`
-- Mobile waitlist gate (web-only external link): `packages/web/src/components/MobileGate/MobileGate.tsx`
+- Mobile waitlist gate (web-only external link): `apps/calendar-web/src/components/MobileGate/MobileGate.tsx`
 
 ## Billing And Trial
 
 - Shared plan/price copy: `packages/core/src/constants/billing.constants.ts`
-- Read-only look-around: `packages/web/src/billing/billing-preview.store.ts`, `packages/web/src/billing/BillingReadOnlyBanner.tsx`
-- Server access + paid gate: `packages/web/src/billing/useAppAccess.ts`, `packages/web/src/billing/BillingGateModal.tsx`
-- Embedded Checkout port (only `loadStripe` call) and lazy seam: `packages/web/src/billing/embedded-checkout/embedded-checkout.port.tsx`, `embedded-checkout.seam.ts`
-- Shared writable Checkout panel (gate + trial banner overlay): `packages/web/src/billing/EmbeddedCheckoutPanel.tsx`, `CheckoutOverlay.tsx`, `TrialCardBanner.tsx`
-- Gate checkout store: `packages/web/src/billing/checkout-panel.store.ts`
-- Update-card store: `packages/web/src/billing/card-update.store.ts`
-- Settings > Billing management: `packages/web/src/billing/PlanSection.tsx`
-- Trial countdown + early upgrade: `packages/web/src/billing/TrialBadge.tsx`, `packages/web/src/billing/trialDaysLeft.ts`, `packages/web/src/billing/UpgradeConfirmation/`
+- Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`, `apps/calendar-web/src/billing/BillingReadOnlyBanner.tsx`
+- Server access + paid gate: `apps/calendar-web/src/billing/useAppAccess.ts`, `apps/calendar-web/src/billing/BillingGateModal.tsx`
+- Embedded Checkout port (only `loadStripe` call) and lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`, `embedded-checkout.seam.ts`
+- Shared writable Checkout panel (gate + trial banner overlay): `apps/calendar-web/src/billing/EmbeddedCheckoutPanel.tsx`, `CheckoutOverlay.tsx`, `TrialCardBanner.tsx`
+- Gate checkout store: `apps/calendar-web/src/billing/checkout-panel.store.ts`
+- Update-card store: `apps/calendar-web/src/billing/card-update.store.ts`
+- Settings > Billing management: `apps/calendar-web/src/billing/PlanSection.tsx`
+- Trial countdown + early upgrade: `apps/calendar-web/src/billing/TrialBadge.tsx`, `apps/calendar-web/src/billing/trialDaysLeft.ts`, `apps/calendar-web/src/billing/UpgradeConfirmation/`
 - Backend billing: `packages/backend/src/billing`
 - Overview: [Billing And Trial](../features/billing.md)
 
 ## Environment And Infra
 
 - Backend config parsing: `packages/backend/src/common/constants/config.constants.ts`
-- Web env parsing: `packages/web/src/common/constants/env.constants.ts`
+- Web env parsing: `apps/calendar-web/src/common/constants/env.constants.ts`
 - Express middleware order: `packages/backend/src/servers/express/express.server.ts`
 - Health endpoint route/controller/tests: `packages/backend/src/health/health.routes.config.ts`, `packages/backend/src/health/controllers/health.controller.ts`, `packages/backend/src/health/controllers/health.controller.db.test.ts`
 - Self-host compose profile derivation (`selfhosted` / `sync` from `compass.yaml`): `self-host/config.sh` (sourced by `install.sh`, `install-manual.sh`, and `~/compass/compass`)
@@ -271,10 +271,10 @@ the full picture.
 ## Test Anchors
 
 - Per-file test launchers: `packages/scripts/src/testing/test-mongo-env.ts` (Mongo packages), `packages/scripts/src/testing/test-parallel.ts` (core + web + fast tiers)
-- Web injectable test seams (session, toast, Google auth): `packages/web/src/__tests__/helpers/web-test-seams.ts`
+- Web injectable test seams (session, toast, Google auth): `apps/calendar-web/src/__tests__/helpers/web-test-seams.ts`
 - Core test setup: `packages/core/src/__tests__`
-- Web test setup: `packages/web/src/__tests__`
-- Web mock server handlers: `packages/web/src/__tests__/__mocks__/server/mock.handlers.ts`
-- Web test router helper: `packages/web/src/__tests__/utils/providers/createTestRouter.tsx`
+- Web test setup: `apps/calendar-web/src/__tests__`
+- Web mock server handlers: `apps/calendar-web/src/__tests__/__mocks__/server/mock.handlers.ts`
+- Web test router helper: `apps/calendar-web/src/__tests__/utils/providers/createTestRouter.tsx`
 - Backend test setup: `packages/backend/src/__tests__`
 - E2E tests: `e2e`

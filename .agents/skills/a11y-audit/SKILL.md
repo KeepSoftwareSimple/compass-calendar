@@ -5,7 +5,7 @@ owner: compass-maintainers
 last_verified: 2026-08-25
 description: Audits changed Compass UI for accessibility regressions in semantics, names, keyboard and focus behavior, ARIA, contrast, motion, and testability, then proposes minimal diff-scoped fixes. Use for UI diff reviews, accessibility audits, or flaky interaction tests.
 paths:
-  - "packages/web/**/*.{ts,tsx,css}"
+  - "apps/calendar-web/**/*.{ts,tsx,css}"
   - "e2e/**/*.{ts,tsx}"
 ---
 
