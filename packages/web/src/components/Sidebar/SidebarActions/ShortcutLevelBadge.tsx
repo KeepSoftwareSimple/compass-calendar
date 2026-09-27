@@ -13,17 +13,17 @@ import {
 } from "@web/components/Tooltip/Tooltip";
 import { viewActions } from "@web/events/stores/view.store";
 import { type Shortcut } from "@web/shortcuts/global.shortcut.types";
-import { computeShortcutLevel } from "@web/shortcuts/level/shortcut-level";
+import {
+  computeShortcutLevel,
+  type ShortcutLevel,
+} from "@web/shortcuts/level/shortcut-level";
 import {
   setLevelHidden,
   useIsLevelHidden,
 } from "@web/shortcuts/level/shortcut-level-hidden.store";
 import { SHORTCUTS_REGISTRY } from "@web/shortcuts/shortcuts.registry";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
-import {
-  usedShortcutIds,
-  useShortcutUsageProfile,
-} from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { useUsedShortcutIds } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
 
 export const LEVEL_PULSE_MS = 700;
@@ -58,36 +58,14 @@ function tryNextShortcuts(
     .slice(0, TRY_NEXT_LIMIT);
 }
 
-/**
- * Sidebar footer badge showing the user's shortcut level. Additive to the
- * rotating sidebar tip and the legend's own check marks: hover or focus for
- * the level name, progress, and up to three shortcuts to try next in the
- * current context. Click opens the `?` legend. Hidden entirely when the
- * palette's "Hide shortcut level" toggle is on.
- */
-export function ShortcutLevelBadge({ sections }: Props) {
-  const profile = useShortcutUsageProfile();
-  const eventFocused = useIsAnyCalendarEventFocused();
-  const hidden = useIsLevelHidden();
-
-  // Deliberately keyed on `shortcuts` alone: a tip-impression write only
-  // touches `actions` (every ~5s dwell), and that must not recompute this.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
-  const usedIds = useMemo(() => usedShortcutIds(profile), [profile.shortcuts]);
-  const level = useMemo(
-    () => computeShortcutLevel(usedIds, REGISTRY_IDS),
-    [usedIds],
-  );
-  const tryNext = useMemo(
-    () => tryNextShortcuts(sections, usedIds, eventFocused),
-    [sections, usedIds, eventFocused],
-  );
+/** Seeds the celebrated level silently on first run, then pulses and toasts
+ * once per threshold. Skipped while hidden; re-showing celebrates the jump. */
+function useShortcutLevelCelebration(
+  level: ShortcutLevel,
+  hidden: boolean,
+): boolean {
   const [pulsing, setPulsing] = useState(false);
 
-  // Celebrates a level-up once: the last celebrated level is stored so a
-  // returning user with existing history is not congratulated for a level
-  // they already had (an absent key seeds silently on first run). Skipped
-  // entirely while hidden; re-showing celebrates the accumulated jump once.
   useEffect(() => {
     if (hidden) return;
 
@@ -121,6 +99,30 @@ export function ShortcutLevelBadge({ sections }: Props) {
     const timer = window.setTimeout(() => setPulsing(false), LEVEL_PULSE_MS);
     return () => window.clearTimeout(timer);
   }, [hidden, level.level, level.name, level.used, level.total]);
+
+  return pulsing;
+}
+
+/**
+ * Sidebar footer badge showing the user's shortcut level. Additive to the
+ * rotating sidebar tip and the legend's own check marks: hover or focus for
+ * the level name, progress, and up to three shortcuts to try next in the
+ * current context. Click opens the `?` legend. Hidden entirely when the
+ * palette's "Hide shortcut level" toggle is on.
+ */
+export function ShortcutLevelBadge({ sections }: Props) {
+  const eventFocused = useIsAnyCalendarEventFocused();
+  const hidden = useIsLevelHidden();
+  const usedIds = useUsedShortcutIds();
+  const level = useMemo(
+    () => computeShortcutLevel(usedIds, REGISTRY_IDS),
+    [usedIds],
+  );
+  const tryNext = useMemo(
+    () => tryNextShortcuts(sections, usedIds, eventFocused),
+    [sections, usedIds, eventFocused],
+  );
+  const pulsing = useShortcutLevelCelebration(level, hidden);
 
   if (hidden) return null;
 

@@ -6,6 +6,7 @@ import {
   resetShortcutUsageProfileStoreForTests,
   usedShortcutIds,
   useShortcutUsageProfile,
+  useUsedShortcutIds,
   writeShortcutUsageProfile,
 } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { afterEach, describe, expect, it, spyOn } from "bun:test";
@@ -137,5 +138,36 @@ describe("usedShortcutIds", () => {
 
     expect(ids.has("nav-today")).toBe(true);
     expect(ids.has("nav-next")).toBe(false);
+  });
+});
+
+describe("useUsedShortcutIds", () => {
+  it("keeps the same set when only action impressions change", () => {
+    const shortcuts = {
+      "nav-today": { invocations: 1, recentImpressions: 0 },
+    };
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {
+        "calendar.page_jump": { invocations: 1, recentImpressions: 1 },
+      },
+      shortcuts,
+    });
+
+    const { result } = renderHook(() => useUsedShortcutIds());
+    const first = result.current;
+
+    act(() => {
+      writeShortcutUsageProfile({
+        version: 2,
+        actions: {
+          "calendar.page_jump": { invocations: 1, recentImpressions: 2 },
+        },
+        shortcuts,
+      });
+    });
+
+    expect(result.current).toBe(first);
+    expect(result.current.has("nav-today")).toBe(true);
   });
 });

@@ -1,6 +1,6 @@
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import classNames from "classnames";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { ShortcutSection } from "@web/components/Shortcuts/ShortcutOverlay/ShortcutSection";
@@ -10,10 +10,7 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
-import {
-  usedShortcutIds,
-  useShortcutUsageProfile,
-} from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { useUsedShortcutIds } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 interface Props {
@@ -42,11 +39,7 @@ function withUsedFlags(
 export function ShortcutsOverlay({ sections, viewLabel }: Props) {
   const isOpen = useViewStore(selectIsShortcutsOpen);
   const [searchQuery, setSearchQuery] = useState("");
-  const profile = useShortcutUsageProfile();
-  // Deliberately keyed on `shortcuts` alone: a tip-impression write only
-  // touches `actions` (every ~5s dwell), and that must not recompute this.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: see above.
-  const usedIds = useMemo(() => usedShortcutIds(profile), [profile.shortcuts]);
+  const usedIds = useUsedShortcutIds();
   const overlayRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
