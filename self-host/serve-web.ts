@@ -6,7 +6,7 @@ import path from "node:path";
 
 const DEFAULT_PORT = 9080;
 const MAX_PORT = 65535;
-const MIN_PORT = 1;
+const MIN_PORT = 0; // 0 lets the OS pick a free port; the ready line reports it.
 
 const port = parsePort(process.env.WEB_PORT);
 const root =
@@ -195,12 +195,12 @@ function parsePort(portValue: string | undefined): number {
 
 function rejectPort(portValue: string): never {
   console.error(
-    `Invalid WEB_PORT "${portValue}". Expected an integer from 1 to 65535.`,
+    `Invalid WEB_PORT "${portValue}". Expected an integer from 0 to 65535.`,
   );
   process.exit(1);
 }
 
-Bun.serve({
+const server = Bun.serve({
   hostname: "0.0.0.0",
   port,
   async fetch(request) {
@@ -266,4 +266,5 @@ Bun.serve({
   },
 });
 
-console.log(`Compass web server listening on http://0.0.0.0:${port}`);
+// serve-web.test.ts waits for this exact line and reads the bound port from it.
+console.log(`Compass web server listening on http://0.0.0.0:${server.port}`);
