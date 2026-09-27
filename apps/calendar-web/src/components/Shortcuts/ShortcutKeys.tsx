@@ -40,6 +40,9 @@ interface Props {
 /**
  * Renders a keyboard shortcut as one keycap chip per key, so multi-step combos
  * read as distinct keys (`[⌘] [K]`) rather than a single `"+"`-joined string.
+ *
+ * Hidden on touch-first devices (`pointer: coarse`): a `⌘ Enter` chip on a
+ * phone is noise. The shortcut itself and `aria-keyshortcuts` stay wired.
  */
 export function ShortcutKeys({ keys, title, className }: Props) {
   const cleaned = toKeyArray(keys)
@@ -52,7 +55,10 @@ export function ShortcutKeys({ keys, title, className }: Props) {
   return (
     <span
       title={title}
-      className={classNames("inline-flex items-center gap-1", className)}
+      className={classNames(
+        "inline-flex pointer-coarse:hidden items-center gap-1",
+        className,
+      )}
     >
       {cleaned.map((key, index) => (
         // biome-ignore lint/suspicious/noArrayIndexKey: keycap sequences repeat keys; position is the identity

@@ -26,7 +26,7 @@ export function PublicBookingTimezoneControl({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`Timezone: ${label}`}
-        className="c-focus-ring rounded-md text-left text-sm text-text underline"
+        className="c-focus-ring -my-2 rounded-md py-2 text-left text-sm text-text underline"
         onClick={() => setIsOpen(true)}
       >
         {label}

@@ -103,7 +103,7 @@ export function PublicBookingConfirmationView({
             {cancelUrl ? (
               <a
                 href={cancelUrl}
-                className="c-focus-ring text-accent text-sm underline"
+                className="c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline"
               >
                 Cancel this meeting
               </a>
@@ -111,7 +111,7 @@ export function PublicBookingConfirmationView({
             {rescheduleUrl ? (
               <a
                 href={rescheduleUrl}
-                className="c-focus-ring text-accent text-sm underline"
+                className="c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline"
               >
                 Reschedule this meeting
               </a>
