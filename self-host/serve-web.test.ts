@@ -5,22 +5,85 @@ import { join } from "node:path";
 import { brotliCompressSync, gzipSync } from "node:zlib";
 
 let buildRoot: string;
-let server: ReturnType<typeof Bun.spawn>;
+let server: ServeWeb;
 let baseUrl: string;
 
 const INDEX_JS = "console.log('hello from compass');".repeat(20);
 
-async function waitForServer(url: string): Promise<void> {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    try {
-      const response = await fetch(url);
-      response.body?.cancel();
-      return;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
+// serve-web.ts prints this once Bun.serve has bound. WEB_PORT=0 asks the OS
+// for a free port, so the line is also how we learn which port to hit; the
+// trailing newline guards against parsing a port split across stdout chunks.
+const READY_LINE =
+  /Compass web server listening on http:\/\/0\.0\.0\.0:(\d+)\n/;
+// Safety net only: readiness is the ready line, not this timer. It exists so
+// a child that hangs before printing still fails instead of stalling the run.
+const READY_DEADLINE_MS = 30_000;
+
+type ServeWeb = {
+  baseUrl: string;
+  process: Bun.Subprocess<"ignore", "pipe", "pipe">;
+};
+
+async function startServeWeb(
+  env: Record<string, string> = {},
+): Promise<ServeWeb> {
+  const child = Bun.spawn(["bun", join(import.meta.dir, "serve-web.ts")], {
+    env: { ...process.env, WEB_PORT: "0", WEB_ROOT: buildRoot, ...env },
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+
+  try {
+    const port = await readReadyPort(child);
+    return { baseUrl: `http://localhost:${port}`, process: child };
+  } catch (error) {
+    child.kill();
+    throw error;
   }
-  throw new Error(`Server at ${url} never became ready`);
+}
+
+async function readReadyPort(
+  child: Bun.Subprocess<"ignore", "pipe", "pipe">,
+): Promise<number> {
+  const decoder = new TextDecoder();
+  let stdout = "";
+  let deadline: ReturnType<typeof setTimeout> | undefined;
+
+  const ready = (async () => {
+    for await (const chunk of child.stdout) {
+      stdout += decoder.decode(chunk, { stream: true });
+      const match = READY_LINE.exec(stdout);
+      if (match) {
+        return Number(match[1]);
+      }
+    }
+    // stdout only closes when the child exits, so this is the crash path.
+    const code = await child.exited;
+    const stderr = await new Response(child.stderr).text();
+    throw new Error(
+      `serve-web exited with code ${code} before printing its ready line.\nstderr:\n${stderr}stdout:\n${stdout}`,
+    );
+  })();
+  const timedOut = new Promise<never>((_, reject) => {
+    deadline = setTimeout(() => {
+      reject(
+        new Error(
+          `serve-web printed no ready line within ${READY_DEADLINE_MS}ms.\nstdout:\n${stdout}`,
+        ),
+      );
+    }, READY_DEADLINE_MS);
+  });
+  // The losing racer still settles later (the child is killed in teardown);
+  // mark both handled so bun:test does not report a stray unhandled rejection.
+  for (const racer of [ready, timedOut]) {
+    racer.catch(() => {});
+  }
+
+  try {
+    return await Promise.race([ready, timedOut]);
+  } finally {
+    clearTimeout(deadline);
+  }
 }
 
 beforeEach(async () => {
@@ -41,20 +104,12 @@ beforeEach(async () => {
   );
   writeFileSync(join(buildRoot, "favicon.ico"), Buffer.from([0, 1, 2, 3]));
 
-  const port = 20000 + Math.floor(Math.random() * 10000);
-  baseUrl = `http://localhost:${port}`;
-
-  server = Bun.spawn(["bun", join(import.meta.dir, "serve-web.ts")], {
-    env: { ...process.env, WEB_PORT: String(port), WEB_ROOT: buildRoot },
-    stderr: "pipe",
-    stdout: "pipe",
-  });
-
-  await waitForServer(`${baseUrl}/index.html`);
+  server = await startServeWeb();
+  baseUrl = server.baseUrl;
 });
 
 afterEach(() => {
-  server.kill();
+  server.process.kill();
   rmSync(buildRoot, { force: true, recursive: true });
 });
 
@@ -152,29 +207,17 @@ describe("serve-web guest /meet cutover", () => {
   });
 
   it("SPA-fallbacks guest booking paths when serving booking-web", async () => {
-    const port = 30000 + Math.floor(Math.random() * 10000);
-    const bookingServer = Bun.spawn(
-      ["bun", join(import.meta.dir, "serve-web.ts")],
-      {
-        env: {
-          ...process.env,
-          WEB_PORT: String(port),
-          WEB_ROOT: buildRoot,
-          WEB_SERVES_GUEST_MEET: "true",
-        },
-        stderr: "pipe",
-        stdout: "pipe",
-      },
-    );
+    const bookingServer = await startServeWeb({
+      WEB_SERVES_GUEST_MEET: "true",
+    });
 
     try {
-      await waitForServer(`http://localhost:${port}/index.html`);
-      const response = await fetch(`http://localhost:${port}/meet/hostuser`);
+      const response = await fetch(`${bookingServer.baseUrl}/meet/hostuser`);
 
       expect(response.status).toBe(200);
       expect(await response.text()).toContain("compass");
     } finally {
-      bookingServer.kill();
+      bookingServer.process.kill();
     }
   });
 });
