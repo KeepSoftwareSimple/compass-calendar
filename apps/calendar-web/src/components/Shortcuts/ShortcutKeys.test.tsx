@@ -45,6 +45,15 @@ describe("ShortcutKeys", () => {
     expect(keycaps(whitespace)).toHaveLength(0);
   });
 
+  it("hides the chip row on touch-first devices", () => {
+    const { container } = render(<ShortcutKeys keys={["Mod", "Enter"]} />);
+
+    // The wrapper, not each chip: hiding it also drops the caller's margin.
+    expect(container.firstElementChild?.className).toContain(
+      "pointer-coarse:hidden",
+    );
+  });
+
   it("renders duplicate tokens as separate keycaps", () => {
     const { container } = render(<ShortcutKeys keys={["Shift", "Shift"]} />);
 

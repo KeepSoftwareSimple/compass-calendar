@@ -424,6 +424,17 @@
     background-color: var(--color-background);
   }
 
+  /* iOS Safari zooms the page when a focused field is under 16px. Guest
+     booking forms and the setup wizard are the fields phones actually
+     reach; the desktop app keeps its smaller field text. */
+  @media (pointer: coarse) {
+    input,
+    select,
+    textarea {
+      font-size: max(16px, 1em);
+    }
+  }
+
   /* biome-ignore lint/style/noDescendingSpecificity: base layer root layout follows body styles. */
   #root {
     display: flex;

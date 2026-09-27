@@ -94,6 +94,61 @@ describe("PublicBookingPicker", () => {
     expect(day).toHaveFocus();
   });
 
+  describe("phone viewport", () => {
+    const originalMatchMedia = window.matchMedia;
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+    let scrolledInto: Element[] = [];
+
+    const stubViewport = (narrow: boolean) => {
+      window.matchMedia = ((query: string) =>
+        ({
+          matches: narrow && query === "(max-width: 639px)",
+        }) as MediaQueryList) as typeof window.matchMedia;
+    };
+
+    beforeEach(() => {
+      scrolledInto = [];
+      HTMLElement.prototype.scrollIntoView = function scrollIntoView() {
+        scrolledInto.push(this);
+      };
+    });
+
+    afterEach(() => {
+      window.matchMedia = originalMatchMedia;
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView;
+    });
+
+    it("brings the times into view after a day tap", async () => {
+      stubViewport(true);
+      const user = userEvent.setup({ delay: null });
+      renderPicker();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: formatBookingMonthDayLabel(selectedDateKey, timeZone),
+        }),
+      );
+
+      const heading = screen.getByRole("heading", { name: "Pick a time" });
+      expect(scrolledInto).toHaveLength(1);
+      expect(scrolledInto[0]?.contains(heading)).toBe(true);
+    });
+
+    it("leaves the two-pane layout alone on wide viewports", async () => {
+      stubViewport(false);
+      const user = userEvent.setup({ delay: null });
+      renderPicker();
+
+      await user.click(
+        screen.getByRole("button", {
+          name: formatBookingMonthDayLabel(selectedDateKey, timeZone),
+        }),
+      );
+
+      expect(scrolledInto).toHaveLength(0);
+    });
+  });
+
   it("returns focus to the selected day on Escape from a slot", async () => {
     const user = userEvent.setup({ delay: null });
     renderPicker();

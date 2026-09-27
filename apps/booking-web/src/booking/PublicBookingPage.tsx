@@ -1,10 +1,7 @@
 import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import { PublicBookingDetailsStep } from "@booking-web/booking/PublicBookingDetailsStep";
 import { PublicBookingGuestForm } from "@booking-web/booking/PublicBookingGuestForm";
-import {
-  PUBLIC_BOOKING_STICKY_STEP_CLASS,
-  PublicBookingLayout,
-} from "@booking-web/booking/PublicBookingLayout";
+import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@booking-web/booking/PublicBookingSkipLink";
 import {
@@ -127,19 +124,17 @@ export function PublicBookingPage() {
       ) : null}
 
       {flow.showDetailsStep && flow.selectedSlotStart ? (
-        <div className={PUBLIC_BOOKING_STICKY_STEP_CLASS}>
-          <PublicBookingDetailsStep
-            headingRef={flow.detailsHeadingRef}
-            slotStart={flow.selectedSlotStart}
-            durationMinutes={page.durationMinutes}
-            timeZone={flow.guestTimeZone}
-            disabled={flow.createReservation.isPending}
-            values={flow.guestDetails}
-            onChange={flow.setGuestDetails}
-            onSubmit={flow.handleSubmit}
-            onChangeTime={flow.handleChangeTime}
-          />
-        </div>
+        <PublicBookingDetailsStep
+          headingRef={flow.detailsHeadingRef}
+          slotStart={flow.selectedSlotStart}
+          durationMinutes={page.durationMinutes}
+          timeZone={flow.guestTimeZone}
+          disabled={flow.createReservation.isPending}
+          values={flow.guestDetails}
+          onChange={flow.setGuestDetails}
+          onSubmit={flow.handleSubmit}
+          onChangeTime={flow.handleChangeTime}
+        />
       ) : (
         <>
           <PublicBookingPicker
@@ -166,17 +161,15 @@ export function PublicBookingPage() {
           />
 
           {flow.showConflictForm ? (
-            <div className={PUBLIC_BOOKING_STICKY_STEP_CLASS}>
-              <PublicBookingGuestForm
-                disabled={flow.createReservation.isPending}
-                submitDisabled={!flow.selectedSlotStart}
-                durationMinutes={page.durationMinutes}
-                guestTimeZone={flow.guestTimeZone}
-                values={flow.guestDetails}
-                onChange={flow.setGuestDetails}
-                onSubmit={flow.handleSubmit}
-              />
-            </div>
+            <PublicBookingGuestForm
+              disabled={flow.createReservation.isPending}
+              submitDisabled={!flow.selectedSlotStart}
+              durationMinutes={page.durationMinutes}
+              guestTimeZone={flow.guestTimeZone}
+              values={flow.guestDetails}
+              onChange={flow.setGuestDetails}
+              onSubmit={flow.handleSubmit}
+            />
           ) : flow.selectedSlotStart ? null : (
             <p className="text-sm text-text-muted">
               Select a time to continue.

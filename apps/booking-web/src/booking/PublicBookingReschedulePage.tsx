@@ -1,6 +1,6 @@
 import { PublicBookingAlert } from "@booking-web/booking/PublicBookingAlert";
 import {
-  PUBLIC_BOOKING_STICKY_STEP_CLASS,
+  PUBLIC_BOOKING_ACTION_BAR_CLASS,
   PublicBookingLayout,
 } from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
@@ -11,6 +11,7 @@ import {
   PublicBookingStatusMessage,
 } from "@booking-web/booking/PublicBookingStatusMessage";
 import { PublicBookingTimezoneControl } from "@booking-web/booking/PublicBookingTimezoneControl";
+import { formatBookingSlotLabel } from "@booking-web/booking/public-booking.format";
 import { type usePublicBookingReservationQuery } from "@booking-web/booking/public-booking.query";
 import {
   PUBLIC_BOOKING_CANCELLED,
@@ -126,14 +127,19 @@ export function PublicBookingReschedulePage() {
       />
 
       {flow.selectedSlotStart ? (
-        <div className={PUBLIC_BOOKING_STICKY_STEP_CLASS}>
+        <div className={PUBLIC_BOOKING_ACTION_BAR_CLASS}>
+          {/* The picked slot scrolls away under the bar on a phone; name it here. */}
+          <p className="text-sm text-text">
+            New time:{" "}
+            {formatBookingSlotLabel(flow.selectedSlotStart, flow.guestTimeZone)}
+          </p>
           <button
             type="button"
             disabled={busy}
             onClick={() => {
               void flow.handleConfirm();
             }}
-            className="c-button c-button-primary"
+            className="c-button c-button-primary w-full sm:w-auto sm:self-start"
           >
             {busy ? "Confirming..." : "Confirm"}
           </button>

@@ -153,7 +153,7 @@ export function PublicBookingSlotPicker({
             <button
               type="button"
               onClick={onJumpToNextAvailable}
-              className="c-focus-ring mt-3 rounded-md bg-surface-panel px-3 py-2 font-medium text-sm text-text transition-colors hover:bg-surface-raised"
+              className="c-focus-ring mt-3 min-h-11 rounded-md bg-surface-panel px-3 py-2 font-medium text-sm text-text transition-colors hover:bg-surface-raised"
             >
               Jump to next available day
             </button>
@@ -185,7 +185,7 @@ export function PublicBookingSlotPicker({
                     tabIndex={tabStopSlotStart === slot.slotStart ? 0 : -1}
                     onClick={() => onSelectSlot(slot.slotStart)}
                     onKeyDown={(event) => handleSlotKeyDown(event, index)}
-                    className="c-focus-ring w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text transition-colors hover:border-accent hover:bg-surface-panel aria-pressed:border-accent aria-pressed:bg-surface-panel"
+                    className="c-focus-ring min-h-11 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-text transition-colors hover:border-accent hover:bg-surface-panel aria-pressed:border-accent aria-pressed:bg-surface-panel"
                   >
                     {label}
                   </button>

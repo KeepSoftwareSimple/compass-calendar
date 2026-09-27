@@ -125,6 +125,18 @@ export function PublicBookingPicker({
     pendingSlotFocusDateRef.current = dateKey;
   };
 
+  // On a phone the grid stacks above the times, so a picked day leaves
+  // "Pick a time" below the fold. Bring it up; the two-pane desktop layout
+  // already shows both. Keyboard activation moves focus to the first slot,
+  // which scrolls on its own.
+  const handleSelectDate = (dateKey: string) => {
+    onSelectDate(dateKey);
+    if (!window.matchMedia?.("(max-width: 639px)").matches) {
+      return;
+    }
+    slotPaneRef.current?.scrollIntoView?.({ block: "start" });
+  };
+
   return (
     <div className="flex w-full min-w-0 flex-col gap-3 sm:min-h-80 sm:flex-1">
       <p aria-live="polite" className="sr-only" role="status">
@@ -145,14 +157,14 @@ export function PublicBookingPicker({
               selectedDateKey={selectedDateKey}
               onMonthChange={onMonthChange}
               onPrefetchMonth={onPrefetchMonth}
-              onSelectDate={onSelectDate}
+              onSelectDate={handleSelectDate}
               onKeyboardActivateDay={handleKeyboardActivateDay}
             />
           )}
         </div>
         <div
           ref={slotPaneRef}
-          className="min-h-64 min-w-0 sm:min-h-0 sm:overflow-y-auto"
+          className="min-h-64 min-w-0 scroll-mt-4 sm:min-h-0 sm:overflow-y-auto"
         >
           {slotsPending ? (
             <PublicBookingSlotPaneSkeleton />

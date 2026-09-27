@@ -2,7 +2,10 @@ import {
   pageHandler,
   reservationGetHandler as publicReservationGetHandler,
 } from "@booking-web/__tests__/public-booking.msw";
-import { formatBookingSlotTime } from "@booking-web/booking/public-booking.format";
+import {
+  formatBookingSlotLabel,
+  formatBookingSlotTime,
+} from "@booking-web/booking/public-booking.format";
 import { routeTree } from "@booking-web/routers/router.routes";
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
 import {
@@ -104,11 +107,17 @@ describe("PublicBookingReschedulePage", () => {
     ).toHaveFocus();
     expect(posts).toHaveLength(0);
 
+    expect(screen.queryByText(/^New time:/)).not.toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", {
         name: formatBookingSlotTime(slotStart, "UTC"),
       }),
     );
+    // The bar names the picked slot: on a phone the highlighted slot
+    // scrolls away under it.
+    expect(
+      screen.getByText(`New time: ${formatBookingSlotLabel(slotStart, "UTC")}`),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => {

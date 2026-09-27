@@ -163,7 +163,7 @@ export function PublicBookingCancelPage() {
         {showRebook && bookingSlug ? (
           <a
             href={`/meet/${bookingSlug}`}
-            className="c-focus-ring mt-4 inline-block text-accent text-sm underline"
+            className="c-focus-ring mt-4 inline-flex min-h-11 items-center text-accent text-sm underline"
           >
             Meet another time
           </a>
