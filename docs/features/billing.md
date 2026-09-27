@@ -306,10 +306,10 @@ If Link is enabled, also add `https://link.com` and `https://*.link.com` to
 - Checkout and payment-method sessions: `packages/backend/src/billing/services/stripe.service.ts`
 - Webhook: `packages/backend/src/billing/services/billing.webhook.service.ts`
 - Write guard: `packages/backend/src/billing/billing.guard.ts`
-- Web access: `packages/web/src/billing/useAppAccess.ts`
-- Read-only look-around: `packages/web/src/billing/billing-preview.store.ts`
-- Embedded Checkout port (the only `loadStripe` call): `packages/web/src/billing/embedded-checkout/embedded-checkout.port.tsx`
-- Lazy seam: `packages/web/src/billing/embedded-checkout/embedded-checkout.seam.ts`
-- Gate checkout store: `packages/web/src/billing/checkout-panel.store.ts`
-- Update-card store: `packages/web/src/billing/card-update.store.ts`
-- Settings > Billing management: `packages/web/src/billing/PlanSection.tsx`
+- Web access: `apps/calendar-web/src/billing/useAppAccess.ts`
+- Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`
+- Embedded Checkout port (the only `loadStripe` call): `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`
+- Lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.seam.ts`
+- Gate checkout store: `apps/calendar-web/src/billing/checkout-panel.store.ts`
+- Update-card store: `apps/calendar-web/src/billing/card-update.store.ts`
+- Settings > Billing management: `apps/calendar-web/src/billing/PlanSection.tsx`

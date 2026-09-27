@@ -106,4 +106,4 @@ The server-side migration runner and completed Sync cutover tools were removed.
 Current releases do not ship pending database migrations. An installation that
 still needs the sub-calendar v1 cutover must use the documented historical
 `v1.0.310` stepping-stone release. Browser-local migrations remain under
-`packages/web/src/common/storage/migrations`.
+`apps/calendar-web/src/common/storage/migrations`.

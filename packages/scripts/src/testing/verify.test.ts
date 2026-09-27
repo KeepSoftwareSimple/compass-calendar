@@ -165,7 +165,7 @@ describe("planVerify", () => {
   });
 
   it("skips Playwright checks when Chromium is missing", () => {
-    const files = ["packages/web/src/App.tsx"];
+    const files = ["apps/calendar-web/src/App.tsx"];
     const plan = planVerify({
       packages: mapFilesToPackages(files),
       playwrightChromiumAvailable: false,
@@ -214,9 +214,9 @@ describe("planVerify", () => {
 
 describe("selectPackageTestCheck", () => {
   it("keeps the full suite for web because there is no fast script", () => {
-    expect(selectPackageTestCheck("web", ["packages/web/src/App.tsx"]).id).toBe(
-      "test:web",
-    );
+    expect(
+      selectPackageTestCheck("web", ["apps/calendar-web/src/App.tsx"]).id,
+    ).toBe("test:web");
   });
 
   it("keeps the full suite when a db test is in the package diff", () => {
@@ -242,7 +242,7 @@ describe("resolveMergeBase and collectChangedFiles", () => {
         "--cached": ["packages/scripts/src/testing/verify.test.ts"],
         "": ["docs/development/testing-playbook.md"],
       },
-      untracked: ["packages/web/src/App.tsx"],
+      untracked: ["apps/calendar-web/src/App.tsx"],
     });
     const mergeBase = resolveMergeBase(git);
     expect(fetched).toBe(true);
@@ -251,7 +251,7 @@ describe("resolveMergeBase and collectChangedFiles", () => {
       "packages/scripts/src/testing/verify.ts",
       "packages/scripts/src/testing/verify.test.ts",
       "docs/development/testing-playbook.md",
-      "packages/web/src/App.tsx",
+      "apps/calendar-web/src/App.tsx",
     ]);
   });
 
@@ -449,7 +449,7 @@ describe("runVerify", () => {
     const git = gitStub({
       diffs: {
         "abc123...HEAD": [
-          "packages/web/src/App.tsx",
+          "apps/calendar-web/src/App.tsx",
           "packages/backend/src/routes/events.ts",
         ],
       },

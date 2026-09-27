@@ -21,7 +21,7 @@ describe("packageNameFromInput", () => {
         bunPkg("@phosphor-icons/react", "2.1.7", "dist/index.es.js"),
       ),
     ).toBe("@phosphor-icons/react");
-    expect(packageNameFromInput("packages/web/src/index.tsx")).toBeNull();
+    expect(packageNameFromInput("apps/calendar-web/src/index.tsx")).toBeNull();
   });
 });
 

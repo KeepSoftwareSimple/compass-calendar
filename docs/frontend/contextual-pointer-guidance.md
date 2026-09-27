@@ -3,8 +3,8 @@
 After you run a command from the palette that has a shortcut, Compass shows a
 short **Next time, press …** pill at the top of the screen. The pill is driven
 by `pulsePaletteTaughtShortcut` in
-`packages/web/src/components/CommandPalette/palette-shortcut-telemetry.ts` and
-`PointerHint` in `packages/web/src/components/PointerHint/PointerHint.tsx`.
+`apps/calendar-web/src/components/CommandPalette/palette-shortcut-telemetry.ts` and
+`PointerHint` in `apps/calendar-web/src/components/PointerHint/PointerHint.tsx`.
 
 Clicks on the calendar grid and other controls no longer open this pill. The
 command palette is the only teaching surface for that copy.

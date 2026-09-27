@@ -13,10 +13,10 @@ Compass uses two intentionally separate storage abstractions:
 
 Primary files:
 
-- `packages/web/src/common/storage/offline-data/offline-data.store.registry.ts`
-- `packages/web/src/common/storage/offline-data/offline-data.store.ts`
-- `packages/web/src/common/storage/offline-data/indexeddb-offline-data.store.ts`
-- `packages/web/src/common/storage/browser-key-value.store.ts`
+- `apps/calendar-web/src/common/storage/offline-data/offline-data.store.registry.ts`
+- `apps/calendar-web/src/common/storage/offline-data/offline-data.store.ts`
+- `apps/calendar-web/src/common/storage/offline-data/indexeddb-offline-data.store.ts`
+- `apps/calendar-web/src/common/storage/browser-key-value.store.ts`
 
 Components and hooks must use feature-level storage utilities. Native
 `localStorage`, `sessionStorage`, and IndexedDB access belong only in these
@@ -58,7 +58,7 @@ The IndexedDB store keeps:
 
 File:
 
-- `packages/web/src/common/storage/offline-data/legacy-primary-key.migration.ts`
+- `apps/calendar-web/src/common/storage/offline-data/legacy-primary-key.migration.ts`
 
 Handles a Dexie `UpgradeError` when a table's primary key changes shape in-place (the schema change Dexie can't apply automatically).
 
@@ -74,7 +74,7 @@ Recovery strategy:
 
 File:
 
-- `packages/web/src/common/storage/migrations/migrations.ts`
+- `apps/calendar-web/src/common/storage/migrations/migrations.ts`
 
 Data migrations:
 
@@ -94,7 +94,7 @@ External migrations:
 
 Current example:
 
-- demo data seeding (`packages/web/src/common/storage/migrations/external/demo-data-seed.ts`)
+- demo data seeding (`apps/calendar-web/src/common/storage/migrations/external/demo-data-seed.ts`)
 
 ## Failure Model
 
@@ -102,8 +102,8 @@ Database initialization errors are surfaced to the user but do not hard-stop app
 
 Files:
 
-- `packages/web/src/common/utils/app-init.util.ts`
-- `packages/web/src/index.tsx`
+- `apps/calendar-web/src/common/utils/app-init.util.ts`
+- `apps/calendar-web/src/index.tsx`
 
 Expected behavior:
 

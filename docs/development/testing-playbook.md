@@ -99,18 +99,18 @@ Every package runs on Bun's native test runner (Bun 1.3.14+); Jest has been remo
 
 **Fast vs full mongo tiers.** Files named `*.db.test.ts(x)` connect to the shared in-memory replica set started by `test-mongo-env.ts`. Everything else is "fast" and can run without mongod via the `:fast` scripts. Full-suite commands (`test:backend`, etc.) still boot mongod because some non-db tests import backend modules that expect `MONGO_URI` to be set even when they do not connect.
 
-**Web preload modules.** Setup lives under `packages/web/src/__tests__/setup/` (jsdom env, browser polyfills, asset stubs, indexedDB, test lifecycle). The entry point is `web.preload.ts`, which loads setup side effects then dynamically imports the lifecycle module.
+**Web preload modules.** Setup lives under `apps/calendar-web/src/__tests__/setup/` (jsdom env, browser polyfills, asset stubs, indexedDB, test lifecycle). The entry point is `web.preload.ts`, which loads setup side effects then dynamically imports the lifecycle module.
 
 ### Web native parallel (future / blocked)
 
-Investigation target: enable `bun test --parallel` for `packages/web` without per-file process isolation (the old `test-isolated.ts` launcher spawned one Bun process per file).
+Investigation target: enable `bun test --parallel` for `apps/calendar-web` without per-file process isolation (the old `test-isolated.ts` launcher spawned one Bun process per file).
 
 #### Current runner
 
 `test-parallel.ts web` runs:
 
 ```bash
-bun test --preload packages/web/src/__tests__/web.preload.ts ./packages/web/src
+bun test --preload apps/calendar-web/src/__tests__/web.preload.ts ./apps/calendar-web/src
 ```
 
 No `--parallel` flag. One process, files run sequentially. Typical wall time on Bun 1.3.14: **~15–17s** for ~1,319 tests across ~203 files (see `docs/development/performance-baselines.md`).
@@ -158,7 +158,7 @@ land on the back of a green full-suite CI run.
 PR #2307 removed blockers that required the old per-file launcher and briefly enabled `bun test --parallel` for web:
 
 - **Injectable test seams** — session (`session.port`), toast (`toast.port`), Google auth (`useStartGoogleAuthorization.registry`), email/password (`emailpassword.port`), and complete-auth (`useCompleteAuthentication.registry`) replace preload `mock.module` clusters. Reset via `installDefaultWebTestSeams()` / `resetWebTestSeams()` in global hooks.
-- **Setup module split** — `packages/web/src/__tests__/setup/` (jsdom, polyfills, indexedDB, lifecycle).
+- **Setup module split** — `apps/calendar-web/src/__tests__/setup/` (jsdom, polyfills, indexedDB, lifecycle).
 - **Store reset registry** — `resetAllStores()` in global `afterEach`; `BaseApi.defaults.adapter` cleared each test.
 - **IndexedDB re-mirror** — survives one class of `--isolate` global clears.
 
@@ -269,10 +269,10 @@ Isolation rules:
 
 Primary setup files:
 
-- `packages/web/src/__tests__/web.preload.ts` (orchestrator)
-- `packages/web/src/__tests__/web.test.init.ts` (API base URL, Google client id)
-- `packages/web/src/__tests__/helpers/web-test-seams.ts` (default session/toast/Google-auth test ports; helpers for emailpassword + complete-auth registration)
-- `packages/web/src/__tests__/__mocks__/server/mock.handlers.ts`
+- `apps/calendar-web/src/__tests__/web.preload.ts` (orchestrator)
+- `apps/calendar-web/src/__tests__/web.test.init.ts` (API base URL, Google client id)
+- `apps/calendar-web/src/__tests__/helpers/web-test-seams.ts` (default session/toast/Google-auth test ports; helpers for emailpassword + complete-auth registration)
+- `apps/calendar-web/src/__tests__/__mocks__/server/mock.handlers.ts`
 
 Current defaults worth knowing:
 
@@ -336,9 +336,9 @@ await act(async () => {
 
 Files:
 
-- `packages/web/src/components/AuthenticatedLayout/useResponsiveLayout.ts`
-- `packages/web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
-- `packages/web/src/views/Day/view/DayViewContent.tsx`
+- `apps/calendar-web/src/components/AuthenticatedLayout/useResponsiveLayout.ts`
+- `apps/calendar-web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
+- `apps/calendar-web/src/views/Day/view/DayViewContent.tsx`
 
 Reliable setup pattern:
 
@@ -388,7 +388,7 @@ A gotcha that produces confusing failures far from its actual cause:
 
 For components that depend on routing context (`Outlet`, nested routes, route transitions), prefer the shared memory-router helper:
 
-- `packages/web/src/__tests__/utils/providers/createTestRouter.tsx`
+- `apps/calendar-web/src/__tests__/utils/providers/createTestRouter.tsx`
 
 Pass `initialEntries` when asserting nested or non-root routes.
 
@@ -398,7 +398,7 @@ If a test overrides globals (for example `window.location` or `window.indexedDB`
 
 ### Floating UI-dependent tests
 
-Web tests exercise `@floating-ui/react` components on production code paths in jsdom. No separate floating-ui setup file is required — the jsdom polyfills in `packages/web/src/__tests__/setup/` provide enough layout stubs. See the FloatingFocusManager note under isolation rules above when testing combobox/command-palette patterns.
+Web tests exercise `@floating-ui/react` components on production code paths in jsdom. No separate floating-ui setup file is required — the jsdom polyfills in `apps/calendar-web/src/__tests__/setup/` provide enough layout stubs. See the FloatingFocusManager note under isolation rules above when testing combobox/command-palette patterns.
 
 ### Unbound method assertions in tests
 
@@ -406,9 +406,9 @@ If you need to assert method calls on non-mock objects, spy on the method first 
 
 Useful anchors:
 
-- `packages/web/src/__tests__`
-- `packages/web/src/views/**/*.test.tsx`
-- `packages/web/src/sse/**/*.test.tsx`
+- `apps/calendar-web/src/__tests__`
+- `apps/calendar-web/src/views/**/*.test.tsx`
+- `apps/calendar-web/src/sse/**/*.test.tsx`
 
 ## Backend Test Style
 

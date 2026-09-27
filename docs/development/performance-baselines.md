@@ -9,7 +9,7 @@ performance now, with its own test suite.
 
 Web paint and script-transfer numbers come from GitHub Actions
 [`.github/workflows/perf-budget.yml`](../../.github/workflows/perf-budget.yml)
-(`lighthouse` job), not from this table. That workflow builds `packages/web`,
+(`lighthouse` job), not from this table. That workflow builds `apps/calendar-web`,
 serves the gzipped bundle the way production Caddy does, and asserts medians
 from two Lighthouse profiles (desktop is the blocking gate; mobile is
 warn-only). Budgets and the calibration rule live in
@@ -18,14 +18,14 @@ read actuals off a green `main` run, never a laptop.
 
 The job is **not** a required merge check. It runs on:
 
-- `push` to `main` when `packages/web/**`, `packages/core/**`, `bun.lock`,
+- `push` to `main` when `apps/calendar-web/**`, `packages/core/**`, `bun.lock`,
   `.github/perf/**`, or the workflow file change
 - a nightly `schedule` (`15 5 * * *` UTC)
 - `workflow_dispatch`
 - pull requests that touch `.github/perf/**` or
   `.github/workflows/perf-budget.yml`
 
-A PR that only changes `packages/web/src/**` does not start a `lighthouse`
+A PR that only changes `apps/calendar-web/src/**` does not start a `lighthouse`
 check. List recent runs with `gh run list --workflow=perf-budget.yml`.
 
 ## Native parallel test suite timings (Bun 1.3.14)
@@ -47,7 +47,7 @@ Mongo-free iteration; full suites remain the durability gate.
 
 ## Web boot-set size (`bun run build:web`)
 
-`packages/web/build.ts` prints a boot-set report from the production metafile
+`apps/calendar-web/build.ts` prints a boot-set report from the production metafile
 after each `bun run build:web`. The boot set is the same graph
 `inject-module-preloads.ts` preloads: the entry chunk, its `app.bootstrap`
 dynamic import, the `AppRoot` and `RootShell` chunks, and every static-import
@@ -65,7 +65,7 @@ Read the report as:
   `node_modules/` path segment (Bun's isolated linker layout). First-party
   sources are omitted. Zod's `v4/locales` share is noted when present.
 
-Ceilings live in `packages/web/boot-size-budget.json`: per-package minified
+Ceilings live in `apps/calendar-web/boot-size-budget.json`: per-package minified
 bytes, total gzip, and chunk count. The build exits non-zero when any of
 those is exceeded, and the message names the package (or gzip/chunks) and
 the delta. Headroom is 5% above the WP-13 measurement so later boot-weight

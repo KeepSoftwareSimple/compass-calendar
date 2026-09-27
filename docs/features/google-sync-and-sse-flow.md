@@ -17,7 +17,7 @@ session cookie.
 
 ```mermaid
 flowchart LR
-  subgraph Web["packages/web"]
+  subgraph Web["apps/calendar-web"]
     ES[EventSource]
     Prov[SSEProvider]
     Ev[useEventSSE]
@@ -103,8 +103,8 @@ named `publish*` convenience method per message type, plus a generic
 
 Primary files:
 
-- `packages/web/src/events/mutations/useEventMutations.ts`
-- `packages/web/src/events/repositories`
+- `apps/calendar-web/src/events/mutations/useEventMutations.ts`
+- `apps/calendar-web/src/events/repositories`
 - `packages/backend/src/event/controllers/event.controller.ts`
 - `packages/backend/src/common/services/sync-service/` (Sync client)
 
@@ -167,15 +167,15 @@ The SSE layer:
 
 Files:
 
-- `packages/web/src/sse/client/sse.client.ts`
-- `packages/web/src/sse/hooks/useSSEConnection.ts`
-- `packages/web/src/sse/hooks/useEventSSE.ts`
-- `packages/web/src/sse/hooks/useGcalSSE.ts` (+ `useGcalSSE.factory.ts`)
-- `packages/web/src/sse/hooks/useSyncFocusRefresh.ts`
-- `packages/web/src/common/hooks/useVisibleAfterHidden.ts`
-- `packages/web/src/sse/provider/SSEProvider.tsx`
-- `packages/web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.ts`
-- `packages/web/src/auth/google/state/google.sync.refresh.ts`
+- `apps/calendar-web/src/sse/client/sse.client.ts`
+- `apps/calendar-web/src/sse/hooks/useSSEConnection.ts`
+- `apps/calendar-web/src/sse/hooks/useEventSSE.ts`
+- `apps/calendar-web/src/sse/hooks/useGcalSSE.ts` (+ `useGcalSSE.factory.ts`)
+- `apps/calendar-web/src/sse/hooks/useSyncFocusRefresh.ts`
+- `apps/calendar-web/src/common/hooks/useVisibleAfterHidden.ts`
+- `apps/calendar-web/src/sse/provider/SSEProvider.tsx`
+- `apps/calendar-web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.ts`
+- `apps/calendar-web/src/auth/google/state/google.sync.refresh.ts`
 
 The client:
 

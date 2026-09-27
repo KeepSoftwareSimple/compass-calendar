@@ -14,7 +14,7 @@ invited users get the RSVP control only, never the guest editor. Local
 
 ```mermaid
 flowchart LR
-  subgraph Web["packages/web"]
+  subgraph Web["apps/calendar-web"]
     AF[AttendeeField]
     RC[RsvpControl]
     SF[useSaveEventForm]
@@ -59,8 +59,8 @@ over the same `eventsChanged` SSE signal).
 
 Source: `packages/core/src/types/event-command.contracts.ts`
 (`EditableContentSchema.attendees`),
-`packages/web/src/views/Forms/EventForm/AttendeeField/AttendeeField.tsx`,
-`packages/web/src/views/Forms/hooks/useSaveEventForm.ts`.
+`apps/calendar-web/src/views/Forms/EventForm/AttendeeField/AttendeeField.tsx`,
+`apps/calendar-web/src/views/Forms/hooks/useSaveEventForm.ts`.
 
 - The browser write input's `content.attendees` field is **tri-state by
   presence**: omitted means "not editing guests" (provider membership flows
@@ -71,7 +71,7 @@ Source: `packages/core/src/types/event-command.contracts.ts`
 - The editor (`AttendeeField`) renders for the organizer on a writable Google
   calendar, whether the event repeats or not — including on one occurrence of
   a series, which is the only thing the grid ever opens for a repeating event
-  (see `packages/web/src/views/Forms/EventForm/EventForm.attendees.test.tsx`).
+  (see `apps/calendar-web/src/views/Forms/EventForm/EventForm.attendees.test.tsx`).
   Guest edits still have no per-occurrence semantics, so any save that changed
   the guest set on a recurring event is applied as "All Events" automatically
   (`resolveRecurrenceScopeDecision`), and the field carries a note saying so.
@@ -104,7 +104,7 @@ Source: `packages/core/src/types/event-command.contracts.ts`
 
 Source: `packages/core/src/types/event-command.contracts.ts`
 (`InvitationIntentValueSchema`),
-`packages/web/src/views/Forms/EventForm/SendInvitationsDialog.tsx`.
+`apps/calendar-web/src/views/Forms/EventForm/SendInvitationsDialog.tsx`.
 
 When (and only when) a save actually changed the guest set,
 `useSaveEventForm` shows "Send invitation emails?" **before** submitting
@@ -173,7 +173,7 @@ Source: `packages/core/src/types/contact.contracts.ts`,
 `packages/sync/src/providers/google/google-people.adapter.ts`,
 `packages/sync/src/server/contacts.routes.ts`,
 `packages/backend/src/contacts/controllers/contacts.controller.ts`,
-`packages/web/src/views/Forms/EventForm/AttendeeField/useContactSuggestions.ts`.
+`apps/calendar-web/src/views/Forms/EventForm/AttendeeField/useContactSuggestions.ts`.
 
 Contacts (`contacts.readonly` + `contacts.other.readonly`) are Google
 *sensitive* scopes requested on the onboarding consent screen but **never
@@ -223,8 +223,8 @@ Source: `packages/core/src/types/event-command.contracts.ts`
 (`RsvpEventInputSchema`),
 `packages/sync/src/domain/provider-command.service.ts`
 (`executeProviderRsvp`),
-`packages/web/src/views/Forms/EventForm/RsvpControl.tsx`,
-`packages/web/src/views/Forms/EventForm/RsvpScopeDialog.tsx`.
+`apps/calendar-web/src/views/Forms/EventForm/RsvpControl.tsx`,
+`apps/calendar-web/src/views/Forms/EventForm/RsvpScopeDialog.tsx`.
 
 - `RsvpControl` renders a "Going? / Maybe / Decline" `radiogroup` whenever
   the connected account's email matches an attendee entry on the event

@@ -1,8 +1,9 @@
 {
-  "name": "@compass/web",
-  "description": "Compass Web App",
+  "name": "@compass/calendar-web",
+  "description": "Compass Calendar web app",
   "license": "MIT",
   "version": "1.0.0",
+  "private": true,
   "main": "src/index.tsx",
   "typings": "declaration.d.ts",
   "dependencies": {

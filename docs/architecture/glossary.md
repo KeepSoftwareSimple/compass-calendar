@@ -194,7 +194,7 @@ attendee)
 
 **Shortcut**: A keyboard combination that triggers an app action, from the
 low-level key-registration primitive (`useAppShortcut`, under
-`packages/web/src/shortcuts`) through the user-facing catalog, overlay UI, and
+`apps/calendar-web/src/shortcuts`) through the user-facing catalog, overlay UI, and
 per-view `use*Shortcuts` hooks. Use "shortcut" everywhere, including for the
 key-binding primitive itself.
 _Avoid_: hotkey — the term survives only inside the third-party

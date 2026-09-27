@@ -31,7 +31,7 @@
     "types": ["bun-types"],
     "paths": {
       "@web/*": ["./src/*"],
-      "@core/*": ["../core/src/*"]
+      "@core/*": ["../../packages/core/src/*"]
     },
     "lib": ["ES6", "dom"],
     "plugins": [

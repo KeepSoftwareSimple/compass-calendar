@@ -34,7 +34,7 @@ import {
 // update key hashes its full content (see toReplaceSubmitRequests), so ANY
 // later resubmission of the same payload collides with the original - not
 // only an undo/redo replay. A world-state guess gets this wrong in a way
-// that's NOT harmless: packages/web/src/common/utils/sync/
+// that's NOT harmless: apps/calendar-web/src/common/utils/sync/
 // local-event-sync.util.ts's offline promotion retries a create under the
 // record's own stable id whenever the client never observed the first
 // attempt's success; if the user deletes that event before the retry fires,

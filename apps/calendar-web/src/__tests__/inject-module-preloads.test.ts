@@ -114,7 +114,9 @@ describe("injectModulePreloads", () => {
         },
         "./chunk-rootshell.js": {
           // Input keys are cwd-relative in real builds; matched by suffix.
-          inputs: { "packages/web/src/components/RootShell/RootShell.tsx": {} },
+          inputs: {
+            "apps/calendar-web/src/components/RootShell/RootShell.tsx": {},
+          },
           imports: [
             staticImport("./chunk-auth.js"),
             dynamicImport("./chunk-lazy.js"),
@@ -126,7 +128,7 @@ describe("injectModulePreloads", () => {
     };
 
     const critical = await injectModulePreloads(outdir, metafile, [
-      "packages/web/src/components/RootShell/RootShell.tsx",
+      "apps/calendar-web/src/components/RootShell/RootShell.tsx",
     ]);
 
     // The entry's own graph first, the always-boot closure after it.
@@ -161,20 +163,24 @@ describe("injectModulePreloads", () => {
           ],
         },
         "./chunk-approot.js": {
-          inputs: { "packages/web/src/components/RootShell/AppRoot.tsx": {} },
+          inputs: {
+            "apps/calendar-web/src/components/RootShell/AppRoot.tsx": {},
+          },
           imports: [],
         },
         "./chunk-rootshell.js": {
-          inputs: { "packages/web/src/components/RootShell/RootShell.tsx": {} },
+          inputs: {
+            "apps/calendar-web/src/components/RootShell/RootShell.tsx": {},
+          },
           imports: [],
         },
         "./chunk-root.js": {
-          inputs: { "packages/web/src/views/Root.tsx": {} },
+          inputs: { "apps/calendar-web/src/views/Root.tsx": {} },
           imports: [staticImport("./chunk-root-only.js")],
         },
         "./chunk-root-only.js": { imports: [] },
         "./chunk-week.js": {
-          inputs: { "packages/web/src/views/Week/WeekView.tsx": {} },
+          inputs: { "apps/calendar-web/src/views/Week/WeekView.tsx": {} },
           imports: [
             staticImport("./chunk-week-only.js"),
             dynamicImport("./chunk-monthpicker.js"),
@@ -183,7 +189,7 @@ describe("injectModulePreloads", () => {
         "./chunk-week-only.js": { imports: [] },
         "./chunk-monthpicker.js": { imports: [] },
         "./chunk-life.js": {
-          inputs: { "packages/web/src/views/Life/LifeView.tsx": {} },
+          inputs: { "apps/calendar-web/src/views/Life/LifeView.tsx": {} },
           imports: [],
         },
       },
@@ -222,7 +228,9 @@ describe("injectModulePreloads", () => {
     };
 
     expect(
-      injectModulePreloads(outdir, metafile, ["packages/web/src/Gone.tsx"]),
+      injectModulePreloads(outdir, metafile, [
+        "apps/calendar-web/src/Gone.tsx",
+      ]),
     ).rejects.toThrow("Always-boot source");
   });
 

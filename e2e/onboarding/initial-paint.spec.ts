@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
-// Resolved values of --background and --accent per theme (packages/web/src/index.css).
+// Resolved values of --background and --accent per theme (apps/calendar-web/src/index.css).
 const COLORS = {
   "light-beach": {
     background: "rgb(243, 238, 226)",

@@ -62,7 +62,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "cd packages/web && bun run dev.ts",
+      command: "cd apps/calendar-web && bun run dev.ts",
       env: {
         BOOKING_WEB_PORT: String(BOOKING_WEB_PORT),
         COMPASS_CONFIG_FILE: TEST_CONFIG_PATH,

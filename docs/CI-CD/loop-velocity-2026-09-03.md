@@ -97,7 +97,7 @@ merge it.
 "Static server never came up": `npx --yes serve@14` did not start within 30 s.
 The check is not required, but it paints PR check lists red, and agents
 watching `gh pr checks` treat it as a stall (PR #3292's own summary). It also
-runs on every PR touching `packages/web`, which is most of them: 220 runner
+runs on every PR touching `apps/calendar-web`, which is most of them: 220 runner
 minutes in the window.
 
 Plan:

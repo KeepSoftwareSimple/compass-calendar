@@ -18,14 +18,16 @@ describe("findTodoCopyViolations", () => {
 
   it("flags placeholder markers in other package files", () => {
     const root = mkdtempSync(join(tmpdir(), "todo-copy-root-"));
-    mkdirSync(join(root, "packages", "web", "src"), { recursive: true });
+    mkdirSync(join(root, "apps", "calendar-web", "src"), { recursive: true });
     const marker = `TODO${"(copy)"}`;
     writeFileSync(
-      join(root, "packages", "web", "src", "Bad.tsx"),
+      join(root, "apps", "calendar-web", "src", "Bad.tsx"),
       `export const x = "${marker}";\n`,
       "utf8",
     );
 
-    expect(findTodoCopyViolations(root)).toEqual(["packages/web/src/Bad.tsx"]);
+    expect(findTodoCopyViolations(root)).toEqual([
+      "apps/calendar-web/src/Bad.tsx",
+    ]);
   });
 });

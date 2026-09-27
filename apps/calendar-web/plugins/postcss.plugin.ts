@@ -4,7 +4,7 @@ import postcss from "postcss";
 import {
   inlineBootPhosphorIcons,
   stripUnusedPhosphorWeights,
-} from "../../scripts/src/testing/check-agent-constraints";
+} from "../../../packages/scripts/src/testing/check-agent-constraints";
 
 /**
  * Bun plugin that processes CSS files through PostCSS + Tailwind 4.

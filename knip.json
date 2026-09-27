@@ -36,7 +36,7 @@
       "entry": ["src/commands/*.ts", "src/testing/*.ts"],
       "project": ["src/**/*.ts!"]
     },
-    "packages/web": {
+    "apps/calendar-web": {
       "entry": ["src/__tests__/utils/render.test.util.tsx"],
       "project": ["src/**/*.{ts,tsx}!"]
     },

@@ -63,7 +63,7 @@
       /* A series of entries which re-map imports to lookup locations relative to this config. */
       /* include all packages so cross-imports work */
       "@core/*": ["./packages/core/src/*"],
-      "@web/*": ["./packages/web/src/*"],
+      "@web/*": ["./apps/calendar-web/src/*"],
       "@backend/*": ["./packages/backend/src/*"],
       "@sync/*": ["./packages/sync/src/*"],
       "@scripts/*": ["./packages/scripts/src/*"]

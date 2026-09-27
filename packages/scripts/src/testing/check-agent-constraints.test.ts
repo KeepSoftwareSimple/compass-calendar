@@ -175,16 +175,16 @@ describe("scanConstraints", () => {
   it("fails a v3 zod import, an em-dash string, and a raw keydown listener", () => {
     const root = mkdtempSync(join(tmpdir(), "agent-constraints-new-"));
     writeTree(root, {
-      "packages/web/src/index.tsx":
+      "apps/calendar-web/src/index.tsx":
         'import { init } from "@web/auth/posthog/posthog.bootstrap";\nvoid import("./app.bootstrap");\n',
       "packages/core/src/types/new.contracts.ts": 'import { z } from "zod";\n',
-      "packages/web/src/toast.ts":
+      "apps/calendar-web/src/toast.ts":
         '// fine \u2014 in a comment\nexport const msg = "Saved \u2014 finally";\n',
-      "packages/web/src/toast.test.ts":
+      "apps/calendar-web/src/toast.test.ts":
         'expect("a \u2014 b").toBe("a \u2014 b");\n',
-      "packages/web/src/Widget.tsx":
+      "apps/calendar-web/src/Widget.tsx":
         'document.addEventListener("keydown", () => {});\n',
-      "packages/web/src/shortcuts/engine.ts":
+      "apps/calendar-web/src/shortcuts/engine.ts":
         'document.addEventListener("keydown", () => {});\n',
     });
 
@@ -194,8 +194,10 @@ describe("scanConstraints", () => {
     expect(hits).toContain(
       "zod-import:packages/core/src/types/new.contracts.ts:1",
     );
-    expect(hits).toContain("em-dash:packages/web/src/toast.ts:2");
-    expect(hits).toContain("keydown-listener:packages/web/src/Widget.tsx:1");
+    expect(hits).toContain("em-dash:apps/calendar-web/src/toast.ts:2");
+    expect(hits).toContain(
+      "keydown-listener:apps/calendar-web/src/Widget.tsx:1",
+    );
     expect(hits.some((hit) => hit.includes("toast.test.ts"))).toBe(false);
     expect(hits.some((hit) => hit.includes("shortcuts/engine.ts"))).toBe(false);
   });
@@ -203,39 +205,41 @@ describe("scanConstraints", () => {
   it("fails a new barrel, locator, mongoService import, and duplicate schema", () => {
     const root = mkdtempSync(join(tmpdir(), "agent-constraints-"));
     writeTree(root, {
-      "packages/web/src/foo/index.ts": 'export { Foo } from "./Foo";\n',
-      "packages/web/src/index.tsx":
+      "apps/calendar-web/src/foo/index.ts": 'export { Foo } from "./Foo";\n',
+      "apps/calendar-web/src/index.tsx":
         'import { init } from "@web/auth/posthog/posthog.bootstrap";\nvoid import("./app.bootstrap");\n',
-      "packages/web/src/Widget.test.tsx": 'screen.getByTestId("x");\n',
-      "packages/web/src/Widget.tsx": '<div data-state="open" />\n',
+      "apps/calendar-web/src/Widget.test.tsx": 'screen.getByTestId("x");\n',
+      "apps/calendar-web/src/Widget.tsx": '<div data-state="open" />\n',
       "packages/backend/src/new.service.test.ts":
         'import mongoService from "@backend/common/services/mongo.service";\n',
-      "packages/web/src/dup.ts":
+      "apps/calendar-web/src/dup.ts":
         "const EventSchema = z.object({ title: z.string() });\n",
-      "packages/web/src/icons.ts":
+      "apps/calendar-web/src/icons.ts":
         'import { XIcon } from "@phosphor-icons/react";\nimport { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";\n',
     });
 
     const hits = scanConstraints(root).map((hit) => `${hit.rule}:${hit.path}`);
-    expect(hits).toContain("barrel:packages/web/src/foo/index.ts");
-    expect(hits).toContain("web-locator:packages/web/src/Widget.test.tsx");
+    expect(hits).toContain("barrel:apps/calendar-web/src/foo/index.ts");
+    expect(hits).toContain("web-locator:apps/calendar-web/src/Widget.test.tsx");
     expect(hits).toContain(
       "mongoService-import:packages/backend/src/new.service.test.ts",
     );
-    expect(hits).toContain("duplicate-event-schema:packages/web/src/dup.ts");
-    expect(hits).toContain("phosphor-barrel:packages/web/src/icons.ts");
-    expect(hits.some((hit) => hit.includes("packages/web/src/index.tsx"))).toBe(
-      false,
+    expect(hits).toContain(
+      "duplicate-event-schema:apps/calendar-web/src/dup.ts",
     );
+    expect(hits).toContain("phosphor-barrel:apps/calendar-web/src/icons.ts");
     expect(
-      hits.some((hit) => hit.includes("packages/web/src/Widget.tsx")),
+      hits.some((hit) => hit.includes("apps/calendar-web/src/index.tsx")),
+    ).toBe(false);
+    expect(
+      hits.some((hit) => hit.includes("apps/calendar-web/src/Widget.tsx")),
     ).toBe(false);
   });
 
   it("rejects a phosphor barrel import and allows a deep icon path", () => {
     const root = mkdtempSync(join(tmpdir(), "phosphor-barrel-"));
     writeTree(root, {
-      "packages/web/src/icons.ts":
+      "apps/calendar-web/src/icons.ts":
         'import { XIcon } from "@phosphor-icons/react";\nimport { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";\n',
     });
 
@@ -248,7 +252,7 @@ describe("scanConstraints", () => {
   it("ignores a phosphor barrel import in a test file", () => {
     const root = mkdtempSync(join(tmpdir(), "phosphor-barrel-test-"));
     writeTree(root, {
-      "packages/web/src/icons.test.ts":
+      "apps/calendar-web/src/icons.test.ts":
         'import { PlusIcon } from "@phosphor-icons/react";\n',
     });
 
@@ -299,7 +303,7 @@ describe("scanConstraints", () => {
     const source =
       'import { XIcon } from "@phosphor-icons/react/dist/csr/X";\nexport const View = () => <XIcon size={16} />;\n';
     const inlined = inlineBootPhosphorIcons(
-      "/repo/packages/web/src/components/PointerHint/DiscardUnsavedChangesDialog.tsx",
+      "/repo/apps/calendar-web/src/components/PointerHint/DiscardUnsavedChangesDialog.tsx",
       source,
     );
     expect(inlined).not.toContain("@phosphor-icons/react");
@@ -323,11 +327,11 @@ describe("scanConstraints", () => {
   it("does not require checker edits for new provider test files", () => {
     const root = mkdtempSync(join(tmpdir(), "provider-tests-"));
     writeTree(root, {
-      "packages/web/src/index.tsx":
+      "apps/calendar-web/src/index.tsx":
         'import { init } from "@web/auth/posthog/posthog.bootstrap";\nvoid import("./app.bootstrap");\n',
       "packages/sync/src/providers/microsoft/x.test.ts":
         'describe("x", () => {\n  it("ok", () => {\n    expect(true).toBe(true);\n  });\n});\n',
-      "packages/web/src/auth/providers/y.test.tsx":
+      "apps/calendar-web/src/auth/providers/y.test.tsx":
         'it("renders a named control", () => {\n  expect("Save").toBe("Save");\n});\n',
     });
 
@@ -344,15 +348,15 @@ describe("scanConstraints", () => {
   it("still flags locators in new web tests outside documented globs", () => {
     const root = mkdtempSync(join(tmpdir(), "locator-new-"));
     writeTree(root, {
-      "packages/web/src/index.tsx":
+      "apps/calendar-web/src/index.tsx":
         'import { init } from "@web/auth/posthog/posthog.bootstrap";\nvoid import("./app.bootstrap");\n',
-      "packages/web/src/auth/providers/y.test.tsx":
+      "apps/calendar-web/src/auth/providers/y.test.tsx":
         'screen.getByTestId("provider-row");\n',
     });
 
     expect(
       scanConstraints(root).map((hit) => `${hit.rule}:${hit.path}`),
-    ).toContain("web-locator:packages/web/src/auth/providers/y.test.tsx");
+    ).toContain("web-locator:apps/calendar-web/src/auth/providers/y.test.tsx");
   });
 });
 
@@ -360,25 +364,25 @@ describe("constraint allowlist globs", () => {
   it("matches nested shortcut tests and not auth provider tests", () => {
     expect(
       matchGlob(
-        "packages/web/src/shortcuts/edit-sequence/EditSequenceMenu.test.tsx",
-        "packages/web/src/shortcuts/**/*.test.tsx",
+        "apps/calendar-web/src/shortcuts/edit-sequence/EditSequenceMenu.test.tsx",
+        "apps/calendar-web/src/shortcuts/**/*.test.tsx",
       ),
     ).toBe(true);
     expect(
       matchesConstraintAllow(
-        "packages/web/src/auth/providers/y.test.tsx",
+        "apps/calendar-web/src/auth/providers/y.test.tsx",
         WEB_LOCATOR_ALLOWLIST,
       ),
     ).toBe(false);
     expect(
       matchesConstraintAllow(
-        "packages/web/src/views/Forms/EventForm/EventForm.readOnly.test.tsx",
+        "apps/calendar-web/src/views/Forms/EventForm/EventForm.readOnly.test.tsx",
         WEB_LOCATOR_ALLOWLIST,
       ),
     ).toBe(true);
     expect(
       matchesConstraintAllow(
-        "packages/web/src/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSection.test.tsx",
+        "apps/calendar-web/src/views/Forms/EventForm/DateControlsSection/RecurrenceSection/RecurrenceSection.test.tsx",
         WEB_LOCATOR_ALLOWLIST,
       ),
     ).toBe(true);
@@ -473,15 +477,15 @@ describe("scanBunDockerfilePins", () => {
 });
 
 describe("scanRuntimeStageCopies", () => {
-  const SERVER = 'import { A } from "../packages/web/a";\n';
+  const SERVER = 'import { A } from "../apps/calendar-web/a";\n';
   const COPY =
-    "COPY --from=build /app/packages/web/a.ts ./packages/web/a.ts\n" +
+    "COPY --from=build /app/apps/calendar-web/a.ts ./apps/calendar-web/a.ts\n" +
     "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n";
 
   function webTree(runtimeBody: string): Record<string, string> {
     const dockerfile = `FROM oven/bun:1.3.14 AS build\nFROM oven/bun:1.3.14-slim AS runtime\n${runtimeBody}`;
     return {
-      "packages/web/a.ts": "export const A = 1;\n",
+      "apps/calendar-web/a.ts": "export const A = 1;\n",
       "self-host/serve-web.ts": SERVER,
       "self-host/Dockerfile.web": dockerfile,
       ".github/docker/Dockerfile.web": dockerfile,
@@ -517,7 +521,7 @@ describe("scanRuntimeStageCopies", () => {
     );
     const early =
       "FROM oven/bun:1.3.14 AS build\n" +
-      "COPY --from=x /app/packages/web/a.ts ./packages/web/a.ts\n" +
+      "COPY --from=x /app/apps/calendar-web/a.ts ./apps/calendar-web/a.ts\n" +
       "FROM oven/bun:1.3.14-slim AS runtime\n" +
       "COPY --from=build /app/self-host/serve-web.ts ./self-host/serve-web.ts\n";
     files["self-host/Dockerfile.web"] = early;

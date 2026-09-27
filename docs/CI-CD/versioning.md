@@ -12,7 +12,7 @@ Format: `v{MAJOR}.{MINOR}.{PATCH}` — e.g. `v0.5.4`
 
 ## BUILD_VERSION (frontend runtime)
 
-A string baked into the web bundle at build time by `packages/web/build.ts` and written to `build/web/version.json`. Used by `useVersionCheck` to detect when a newer deployment is available, and displayed in the command palette under **More → Version**.
+A string baked into the web bundle at build time by `apps/calendar-web/build.ts` and written to `build/web/version.json`. Used by `useVersionCheck` to detect when a newer deployment is available, and displayed in the command palette under **More → Version**.
 
 ## Backend and Sync runtime version
 

@@ -99,7 +99,7 @@ export function resolveTestTargets(
   }
 
   // Bun 1.4's directory-scan test discovery balloons memory (tens of GB,
-  // never finishing) on packages/web/src's ~200 files. Expand to an explicit
+  // never finishing) on apps/calendar-web/src's ~200 files. Expand to an explicit
   // file list instead. Not used by test-mongo-env.ts: those profiles run
   // --parallel against a shared mongod, where a huge argv of per-file paths
   // has previously hung the runner — directory passthrough stays there.

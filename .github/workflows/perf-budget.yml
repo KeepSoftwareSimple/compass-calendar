@@ -20,7 +20,7 @@ on:
     branches:
       - main
     paths:
-      - "packages/web/**"
+      - "apps/calendar-web/**"
       - "packages/core/**"
       - "bun.lock"
       - ".github/perf/**"
@@ -70,7 +70,7 @@ jobs:
         env:
           COMPASS_CONFIG_FILE: ${{ github.workspace }}/.github/perf/compass.perf.yaml
         run: |
-          cd packages/web && bun run build.ts
+          cd apps/calendar-web && bun run build.ts
 
       - name: Serve build with compression
         # `serve` gzips responses the way production Caddy does in front of

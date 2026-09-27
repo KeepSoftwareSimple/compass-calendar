@@ -1,7 +1,7 @@
 # Compass
 
 Bun monorepo. `packages/core` holds Zod contracts and shared domain code,
-`packages/web` the React app (TanStack Router and Query, Zustand),
+`apps/calendar-web` the React app (TanStack Router and Query, Zustand),
 `packages/backend` the Express API, `packages/sync` calendar providers,
 jobs, and webhooks, `packages/scripts` the CLI and test runners, and `e2e/`
 Playwright. Docs index: `docs/README.md`.
@@ -45,7 +45,7 @@ Playwright. Docs index: `docs/README.md`.
   `user-event`. Register every new Zustand store in the reset registry and
   the state seeder. Restore replaced globals, timers, and spies in teardown.
   Keep `bun test:web` sequential (documented jsdom/MSW constraint).
-- Web styles use Tailwind semantic colors from `packages/web/src/index.css`
+- Web styles use Tailwind semantic colors from `apps/calendar-web/src/index.css`
   and canonical scale utilities, with native semantic elements and visible
   focus states.
 - Never use em-dashes in user-facing copy: UI strings, toasts, errors, meta

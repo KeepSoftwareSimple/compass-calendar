@@ -15,7 +15,7 @@ The near-term shape is:
 
 ```text
 apps/
-  calendar-web/       # current packages/web, moved only when useful
+  calendar-web/       # calendar SPA (host UX, Meeting Settings)
   booking-web/        # public guest /meet SPA (host Meeting Settings stay in calendar-web)
   calendar-macos/     # native shell and macOS-only integration
   api/                # current packages/backend; one modular backend
@@ -85,7 +85,7 @@ Booking ships as:
    separate frontend image and deploy pipeline, colocated on the same Compass
    Cloud or self-host stack as calendar-web, API, MongoDB, and Sync. Edge Caddy
    routes `/meet/*` to the booking-web container; calendar-web serves the rest.
-2. **`packages/web` (calendar-web)** for host Meeting Settings and calendar UX.
+2. **`apps/calendar-web`** for host Meeting Settings and calendar UX.
 3. A **booking module** in the existing API process because auth, billing, and
    data stay shared until a measurable split trigger applies.
 
@@ -214,9 +214,10 @@ rule is maintained now.
    entrypoint backed by durable, idempotent jobs.
 4. **Contract cleanup while touching code:** create domain contract entrypoints
    and shrink `core`; do not perform a flag-day migration.
-5. **Directory rename later:** `apps/booking-web` already exists; move
-   calendar-web and other deployables under `apps/` when tooling or ownership
-   benefits. Renaming is not an architectural prerequisite.
+5. **Apps layout (calendar-web shipped):** `apps/calendar-web` and
+   `apps/booking-web` are live. Move other deployables (for example `api/`,
+   `sync/`) under `apps/` when tooling or ownership benefits. Renaming is not
+   an architectural prerequisite.
 
 ## Extraction triggers
 

@@ -32,7 +32,7 @@ only.
   canonical event record Sync persists (`SyncEventSchema` in
   `packages/core/src/types/sync/event.contracts.ts` is its wire-facing
   counterpart). Google↔record mapping lives in `packages/sync/src/providers/google/`.
-- `packages/web/src/events/event-draft.types.ts` + `event-draft.parser.ts`:
+- `apps/calendar-web/src/events/event-draft.types.ts` + `event-draft.parser.ts`:
   the only intentionally incomplete event shape and the single parser that can
   turn it into a command.
 
@@ -109,7 +109,7 @@ this with Mongo-native types (`ObjectId`, `Date`) plus a single nullable
 
 ## Display Categories
 
-`Categories_Event` (`packages/web/src/common/types/web.event.types.ts`) maps
+`Categories_Event` (`apps/calendar-web/src/common/types/web.event.types.ts`) maps
 events to visible buckets:
 
 - `allday`
@@ -124,7 +124,7 @@ for the current file list.
 ## Update Scopes
 
 Recurring edits use `RecurringEventUpdateScope` on the web side
-(`packages/web/src/common/types/web.event.types.ts`), which maps to the
+(`apps/calendar-web/src/common/types/web.event.types.ts`), which maps to the
 backend/Sync `RecurrenceScopeSchema` (`"this" | "all" | "thisAndFollowing"`,
 `packages/core/src/types/event-command.contracts.ts`):
 
@@ -149,7 +149,7 @@ persisting every future instance: see
 
 The web generates a real Mongo `ObjectId` client-side (`createObjectIdString()`) before the create mutation fires, so the optimistic event and the persisted event share the same `id`:
 
-- web optimistic flow: `packages/web/src/events/mutations/useEventMutations.ts`
+- web optimistic flow: `apps/calendar-web/src/events/mutations/useEventMutations.ts`
 - backend normalization: `packages/backend/src/event/controllers/event.controller.ts`
 
 Do not assume every incoming `id` is already a durable Mongo id.

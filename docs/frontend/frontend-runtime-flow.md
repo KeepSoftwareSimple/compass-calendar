@@ -6,7 +6,7 @@ This document describes how the web app boots and where runtime responsibilities
 
 Primary entrypoint:
 
-- `packages/web/src/index.tsx`
+- `apps/calendar-web/src/index.tsx`
 
 Boot order:
 
@@ -19,7 +19,7 @@ This order matters because storage should be ready before listeners and reposito
 
 ## App Provider Tree
 
-`packages/web/src/components/App/App.tsx` renders:
+`apps/calendar-web/src/components/App/App.tsx` renders:
 
 - keyboard and movement event setup hooks
 - optional providers
@@ -32,8 +32,8 @@ The route tree lazily loads feature views.
 
 Files:
 
-- `packages/web/src/routers/index.tsx`
-- `packages/web/src/routers/loaders.ts`
+- `apps/calendar-web/src/routers/index.tsx`
+- `apps/calendar-web/src/routers/loaders.ts`
 
 Important behavior:
 
@@ -44,7 +44,7 @@ Important behavior:
 
 ## Root View Responsibilities
 
-`packages/web/src/views/Root.tsx`:
+`apps/calendar-web/src/views/Root.tsx`:
 
 - blocks mobile-OS devices with `MobileGate` (`isMobileOS` user-agent check; narrow desktop windows get the responsive layout instead)
 - wraps authenticated layout with `UserProvider`
@@ -56,13 +56,13 @@ This is the shell for the main desktop app experience.
 
 Files:
 
-- `packages/web/src/components/RootShell/RootShell.tsx`
-- `packages/web/src/components/RootShell/onboarding-surface.ts`
-- `packages/web/src/components/WelcomeModal/WelcomeModal.tsx`
-- `packages/web/src/components/WelcomeModal/WelcomeGuideModal.tsx`
-- `packages/web/src/components/ShortcutShowcase/`
-- `packages/web/src/components/FirstEventPrompt/`
-- `packages/web/src/components/ConnectCalendarPrompt/ConnectCalendarPromptGate.tsx`
+- `apps/calendar-web/src/components/RootShell/RootShell.tsx`
+- `apps/calendar-web/src/components/RootShell/onboarding-surface.ts`
+- `apps/calendar-web/src/components/WelcomeModal/WelcomeModal.tsx`
+- `apps/calendar-web/src/components/WelcomeModal/WelcomeGuideModal.tsx`
+- `apps/calendar-web/src/components/ShortcutShowcase/`
+- `apps/calendar-web/src/components/FirstEventPrompt/`
+- `apps/calendar-web/src/components/ConnectCalendarPrompt/ConnectCalendarPromptGate.tsx`
 
 `RootShell` builds onboarding flags and mounts at most one onboarding card or
 modal at a time via `selectActiveSurface` (billing gate and checkout
@@ -144,7 +144,7 @@ file pointers.
 
 File:
 
-- `packages/web/src/auth/compass/session/SessionProvider.tsx`
+- `apps/calendar-web/src/auth/compass/session/SessionProvider.tsx`
 
 Responsibilities:
 
@@ -172,7 +172,7 @@ The old blocking overlay is not used for Google authorization.
 
 File:
 
-- `packages/web/src/auth/compass/user/context/UserProvider.tsx`
+- `apps/calendar-web/src/auth/compass/user/context/UserProvider.tsx`
 
 Responsibilities:
 
@@ -185,11 +185,11 @@ Responsibilities:
 
 Files:
 
-- `packages/web/src/auth/posthog/posthog.bootstrap.ts`
-- `packages/web/src/auth/posthog/posthog-exception-filter.util.ts`
-- `packages/web/src/auth/posthog/posthog-dead-click-filter.util.ts`
-- `packages/web/src/auth/posthog/posthog-web-vitals-filter.util.ts`
-- `packages/web/src/auth/posthog/posthog-booking-filter.util.ts`
+- `apps/calendar-web/src/auth/posthog/posthog.bootstrap.ts`
+- `apps/calendar-web/src/auth/posthog/posthog-exception-filter.util.ts`
+- `apps/calendar-web/src/auth/posthog/posthog-dead-click-filter.util.ts`
+- `apps/calendar-web/src/auth/posthog/posthog-web-vitals-filter.util.ts`
+- `apps/calendar-web/src/auth/posthog/posthog-booking-filter.util.ts`
 - `packages/core/src/booking/booking-telemetry.ts`
 
 PostHog's `before_send` runs four filters, in order:
@@ -213,7 +213,7 @@ booking pages are still dropped by the booking filter.
 `calendar_connected` has two sources, distinguished by a `source` property:
 `signup_google` from `GoogleAuthCallback` (a new user whose Google grant
 included the calendar scopes) and `connect_redirect` from
-`packages/web/src/auth/providers/connect-status.util.ts` (the sync service's
+`apps/calendar-web/src/auth/providers/connect-status.util.ts` (the sync service's
 add-account round trip).
 Only the second used to fire, so the activation metric missed the path most new
 users actually take.
@@ -222,9 +222,9 @@ users actually take.
 
 Files:
 
-- `packages/web/src/components/Sidebar/SidebarActions/useVersionCheck.ts`
-- `packages/web/src/components/Sidebar/SidebarRefreshButton.tsx`
-- `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
+- `apps/calendar-web/src/components/Sidebar/SidebarActions/useVersionCheck.ts`
+- `apps/calendar-web/src/components/Sidebar/SidebarRefreshButton.tsx`
+- `apps/calendar-web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
 
 Runtime behavior:
 
@@ -240,11 +240,11 @@ When the server version differs from `BUILD_VERSION`, `isUpdateAvailable` become
 
 Files:
 
-- `packages/web/src/components/Sidebar/Sidebar.tsx`
-- `packages/web/src/components/Sidebar/MonthPicker/MonthPicker.tsx`
-- `packages/web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
-- `packages/web/src/components/Sidebar/SidebarRefreshButton.tsx`
-- `packages/web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
+- `apps/calendar-web/src/components/Sidebar/Sidebar.tsx`
+- `apps/calendar-web/src/components/Sidebar/MonthPicker/MonthPicker.tsx`
+- `apps/calendar-web/src/components/Sidebar/SidebarActions/SidebarActions.tsx`
+- `apps/calendar-web/src/components/Sidebar/SidebarRefreshButton.tsx`
+- `apps/calendar-web/src/components/Sidebar/ShortcutsOverlay/ShortcutsOverlay.tsx`
 
 Layout contract:
 
@@ -256,7 +256,7 @@ Layout contract:
 Control mapping:
 
 - Open shortcuts opens an in-sidebar keyboard shortcuts overlay.
-- Command palette toggle (`modifier + K`) calls open/close palette actions from the settings Zustand store (`packages/web/src/settings/settings.store.ts`).
+- Command palette toggle (`modifier + K`) calls open/close palette actions from the settings Zustand store (`apps/calendar-web/src/settings/settings.store.ts`).
 - Refresh appears in the footer when `useVersionCheck()` reports an available
   update, or when the live-update stream has been down for 30 seconds.
 - The account row shows temporary-account or signed-in account context.
@@ -271,9 +271,9 @@ Icon state constraints:
 
 Files:
 
-- `packages/web/src/views/Week/components/Dedication/Dedication.tsx`
-- `packages/web/src/views/Week/WeekView.tsx`
-- `packages/web/src/views/Day/view/DayViewContent.tsx`
+- `apps/calendar-web/src/views/Week/components/Dedication/Dedication.tsx`
+- `apps/calendar-web/src/views/Week/WeekView.tsx`
+- `apps/calendar-web/src/views/Day/view/DayViewContent.tsx`
 
 Runtime behavior:
 
@@ -299,12 +299,12 @@ The web app uses multiple state layers:
 
 | Concern | Use | Key files |
 | --- | --- | --- |
-| Event loading, fetching, read errors, and persisted entities | TanStack Query range caches | `packages/web/src/events/queries/` |
-| Event create/edit/delete/convert/reorder state | TanStack Query mutations | `packages/web/src/events/mutations/` |
-| Draft Event and calendar interaction state | Zustand draft store | `packages/web/src/events/stores/draft.store.ts` |
-| View dates/sidebar, cmd palette, user metadata | Zustand stores | `packages/web/src/events/stores/view.store.ts`, `packages/web/src/settings/settings.store.ts`, `packages/web/src/auth/state/user-metadata.store.ts` |
-| Offline persistence | IndexedDB offline data store | `packages/web/src/common/storage/offline-data/indexeddb-offline-data.store.ts` |
-| Local vs remote persistence choice | Repository factory | `packages/web/src/events/repositories/event.repository.util.ts` |
+| Event loading, fetching, read errors, and persisted entities | TanStack Query range caches | `apps/calendar-web/src/events/queries/` |
+| Event create/edit/delete/convert/reorder state | TanStack Query mutations | `apps/calendar-web/src/events/mutations/` |
+| Draft Event and calendar interaction state | Zustand draft store | `apps/calendar-web/src/events/stores/draft.store.ts` |
+| View dates/sidebar, cmd palette, user metadata | Zustand stores | `apps/calendar-web/src/events/stores/view.store.ts`, `apps/calendar-web/src/settings/settings.store.ts`, `apps/calendar-web/src/auth/state/user-metadata.store.ts` |
+| Offline persistence | IndexedDB offline data store | `apps/calendar-web/src/common/storage/offline-data/indexeddb-offline-data.store.ts` |
+| Local vs remote persistence choice | Repository factory | `apps/calendar-web/src/events/repositories/event.repository.util.ts` |
 
 These layers are intentional. Do not mirror persisted Event entities into the
 Zustand stores or call IndexedDB directly from components.
@@ -318,9 +318,9 @@ stable references (use `useShallow` if one ever builds a new object).
 
 Read these together for event work:
 
-- `packages/web/src/events/queries` (reads, cache utilities, and view models)
-- `packages/web/src/events/mutations` (persisted writes and pending state)
-- `packages/web/src/events/stores/draft.store.ts` (transient drafts only)
+- `apps/calendar-web/src/events/queries` (reads, cache utilities, and view models)
+- `apps/calendar-web/src/events/mutations` (persisted writes and pending state)
+- `apps/calendar-web/src/events/stores/draft.store.ts` (transient drafts only)
 
 ## Event Flow
 
@@ -366,9 +366,9 @@ Important consequence:
 The web app currently uses two styling systems in parallel:
 
 - Tailwind utilities for component styling
-- Tailwind v4 utilities and semantic theme tokens from `packages/web/src/index.css` for newer or migrated surfaces
+- Tailwind v4 utilities and semantic theme tokens from `apps/calendar-web/src/index.css` for newer or migrated surfaces
 
-Use the existing `c-*` component utility convention and semantic colors from `packages/web/src/index.css`. Runtime theme values belong in `--compass-*` CSS variables so alternate themes can override values without rebuilding component styles.
+Use the existing `c-*` component utility convention and semantic colors from `apps/calendar-web/src/index.css`. Runtime theme values belong in `--compass-*` CSS variables so alternate themes can override values without rebuilding component styles.
 
 ## Week Grid Drag Interaction
 
@@ -382,7 +382,7 @@ coordinate model and why it matters once the week view can render fewer than
 
 File:
 
-- `packages/web/src/events/repositories/event.repository.util.ts`
+- `apps/calendar-web/src/events/repositories/event.repository.util.ts`
 
 Repository choice:
 
@@ -402,8 +402,8 @@ Revoked state details:
 
 Files:
 
-- `packages/web/src/common/storage/offline-data/offline-data.store.registry.ts`
-- `packages/web/src/common/storage/migrations/migrations.ts`
+- `apps/calendar-web/src/common/storage/offline-data/offline-data.store.registry.ts`
+- `apps/calendar-web/src/common/storage/migrations/migrations.ts`
 
 Startup storage flow:
 
@@ -418,12 +418,12 @@ Database init failure is non-fatal; the app falls back to remote-only behavior w
 
 Files:
 
-- `packages/web/src/sse/provider/SSEProvider.tsx`
-- `packages/web/src/sse/hooks/useSSEConnection.ts`
-- `packages/web/src/sse/hooks/useEventSSE.ts`
-- `packages/web/src/sse/hooks/useGcalSSE.ts`
-- `packages/web/src/sse/hooks/useSyncFocusRefresh.ts`
-- `packages/web/src/common/hooks/useVisibleAfterHidden.ts`
+- `apps/calendar-web/src/sse/provider/SSEProvider.tsx`
+- `apps/calendar-web/src/sse/hooks/useSSEConnection.ts`
+- `apps/calendar-web/src/sse/hooks/useEventSSE.ts`
+- `apps/calendar-web/src/sse/hooks/useGcalSSE.ts`
+- `apps/calendar-web/src/sse/hooks/useSyncFocusRefresh.ts`
+- `apps/calendar-web/src/common/hooks/useVisibleAfterHidden.ts`
 
 Responsibilities:
 
@@ -458,9 +458,9 @@ Runtime nuances:
 
 Files:
 
-- `packages/web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.ts`
-- `packages/web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.util.ts`
-- `packages/web/src/components/Sidebar/CalendarList/CalendarListHeader.tsx`
+- `apps/calendar-web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.ts`
+- `apps/calendar-web/src/auth/google/hooks/useConnectGoogle/useConnectGoogle.util.ts`
+- `apps/calendar-web/src/components/Sidebar/CalendarList/CalendarListHeader.tsx`
 
 UI state comes from a server-enriched metadata field (`google.connectionState`)
 plus optional Sync connection summary (`google.syncConnection`) and one
