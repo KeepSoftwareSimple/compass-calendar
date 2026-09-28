@@ -86,12 +86,16 @@ production.
   sample events and the whole app with no clock and no gate. There is no
   browser-local trial: a trial is only ever asked for at the moment of
   commitment (sign up, sign in, connect an account).
-- **Signed up, no card yet (new accounts):** a local 7-day trial starts at
-  signup. `GET /api/billing/status` returns `trialing`, `needsPaymentMethod:
-  true`, `isReadOnly: false`, and `trialEndsAt` seven days out. There is no
-  Stripe subscription until they add a card. Checkout while at least 48 hours
-  remain on that local trial passes `subscription_data.trial_end` equal to
-  `trialEndsAt` (Stripe's minimum remaining trial) and keeps
+- **Signed up, no card yet (new accounts):** read-only
+  `awaiting_checkout` until the trial step in the signup flow completes.
+  Checkout grants the 7-day Stripe trial and the webhook writes `trialing`
+  with a `stripeSubscriptionId`. **Legacy local trial (2026-09-14 through
+  WP-01 deploy):** rows inserted with `billing.subscriptionStatus: "trialing"`,
+  `trialStartedAt`, and `trialEndsAt` and no Stripe subscription id still
+  derive as writable `trialing` with `needsPaymentMethod: true` until WP-06.
+  Checkout while at least 48 hours remain on that local trial passes
+  `subscription_data.trial_end` equal to `trialEndsAt` (Stripe's minimum
+  remaining trial) and keeps
   `trial_settings.end_behavior.missing_payment_method: "cancel"`. Checkout in
   the last 48 hours, or after expiry, charges immediately with no trial. After
   `trialEndsAt` the same account reports `expired` and is read-only until they
@@ -130,9 +134,10 @@ production.
 - **Expired / canceled:** read-only until they subscribe again. A later
   Checkout does not grant another trial.
 
-There is no `POST /api/billing/trial/start`. New accounts begin a local trial
-at signup. Legacy `awaiting_checkout` accounts still begin a Stripe trial only
-through Checkout (`trial_period_days` on the first subscription). Sessions
+There is no `POST /api/billing/trial/start`. New accounts are
+`awaiting_checkout` until Checkout completes; Checkout grants the 7-day trial.
+Legacy local-trial rows (2026-09-14 through WP-01 deploy) behave as in the
+local-trial paragraph above until WP-06. Sessions
 use `ui_mode: "embedded"` and `redirect_on_completion: "never"`, so
 Checkout stays inside Compass. Redirect-based payment methods are therefore
 unavailable by design.
@@ -206,9 +211,8 @@ newer signups.
 rows get *stamped*, and `deriveBillingStatus` already gates a missing
 `billing` object through the same `awaiting_checkout` branch — so stamped and
 unstamped rows are equally read-only. Running the backfill makes the state
-explicit for reporting; it grants nobody access. New signups begin a local
-trial at insert. Legacy accounts still begin a Stripe trial only through
-Checkout.
+explicit for reporting; it grants nobody access. New signups have no billing
+object at insert and derive `awaiting_checkout` until Checkout completes.
 
 ## Staging
 

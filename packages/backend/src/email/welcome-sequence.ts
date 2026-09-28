@@ -30,8 +30,10 @@ export const WELCOME_SEQUENCE: EmailStep[] = [
   { key: "booking", delayDays: 9 },
   {
     key: "trial-ending",
-    delayDays: 12,
-    skipIf: (user) => user.billing?.subscriptionStatus === "active",
+    delayDays: 5,
+    skipIf: (user) =>
+      user.billing?.subscriptionStatus === "active" ||
+      !user.billing?.stripeSubscriptionId,
   },
 ];
 

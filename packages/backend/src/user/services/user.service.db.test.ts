@@ -14,6 +14,7 @@ import {
 } from "@backend/__tests__/helpers/mock.db.setup";
 import compassAuthService from "@backend/auth/services/compass/compass.auth.service";
 import supertokensUserCleanupService from "@backend/auth/services/supertokens/supertokens.user-cleanup.service";
+import { deriveBillingStatus } from "@backend/billing/services/billing.service";
 import stripeService from "@backend/billing/services/stripe.service";
 import calendarService from "@backend/calendar/services/calendar.service";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -211,9 +212,8 @@ describe("UserService", () => {
       expect(storedUser?.google).toBeUndefined();
     });
 
-    it("starts a fresh signup on a local trial", async () => {
+    it("starts a fresh signup with no billing object", async () => {
       const userId = mongoService.objectId().toString();
-      const before = Date.now();
 
       await userService.upsertUserFromAuth({
         userId,
@@ -224,16 +224,14 @@ describe("UserService", () => {
       const storedUser = await mongoService.user.findOne({
         _id: mongoService.objectId(userId),
       });
-      expect(storedUser?.billing?.subscriptionStatus).toBe("trialing");
-      expect(storedUser?.billing?.trialStartedAt).toBeInstanceOf(Date);
-      expect(storedUser?.billing?.trialEndsAt).toBeInstanceOf(Date);
-      const trialMs =
-        storedUser!.billing!.trialEndsAt!.getTime() -
-        storedUser!.billing!.trialStartedAt!.getTime();
-      expect(trialMs).toBe(7 * 24 * 60 * 60 * 1000);
-      expect(
-        storedUser!.billing!.trialStartedAt!.getTime(),
-      ).toBeGreaterThanOrEqual(before);
+      expect(storedUser?.billing).toBeUndefined();
+      expect(deriveBillingStatus(storedUser?.billing)).toEqual({
+        subscriptionStatus: "awaiting_checkout",
+        trialEndsAt: null,
+        isReadOnly: true,
+        cancelAtPeriodEnd: false,
+        needsPaymentMethod: false,
+      });
     });
 
     it("does not overwrite billing on a returning user", async () => {

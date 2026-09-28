@@ -8,7 +8,10 @@ import { getBackendPostHogClient } from "@backend/common/helpers/backend-posthog
  * closes the tab is invisible there. These come from the Stripe webhook and
  * are the source of truth for the PostHog billing funnel.
  */
-export type BillingServerEvent = "checkout_completed" | "checkout_expired";
+export type BillingServerEvent =
+  | "checkout_completed"
+  | "checkout_expired"
+  | "trial_will_end";
 
 export const billingAnalytics = {
   /**

@@ -649,6 +649,57 @@ describe("Stripe webhook", () => {
     expect(await mongoService.billingEvent.countDocuments()).toBe(1);
   });
 
+  it("applies trial_will_end, captures trial_will_end, and dedupes duplicate event ids", async () => {
+    using _env = mockEnv(stripeConfigured);
+    const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "trial-end@example.com",
+      name: "Trial",
+      firstName: "Trial",
+      lastName: "End",
+      locale: "en",
+      billing: {
+        subscriptionStatus: "trialing",
+        stripeSubscriptionId: "sub_1",
+        stripeCustomerId: "cus_1",
+      },
+    });
+
+    const sub = subscription({
+      metadata: { compassUserId: userId.toString() },
+      trial_end: 1_775_604_800,
+    });
+    const retrieve = mock(() => Promise.resolve(sub));
+    const stripe = stubBillingGateway({ retrieveSubscription: retrieve });
+
+    const event = {
+      id: "evt_trial_will_end_1",
+      type: "customer.subscription.trial_will_end",
+      created: 1_775_500_000,
+      data: { object: { id: "sub_1", customer: "cus_1" } },
+    } as unknown as Stripe.Event;
+
+    await processStripeEvent(event, stripe);
+    await processStripeEvent(event, stripe);
+
+    expect(retrieve).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith({
+      event: "trial_will_end",
+      userId: userId.toString(),
+      properties: {
+        trial_end: 1_775_604_800,
+        subscription_status: "trialing",
+      },
+    });
+    const stored = await mongoService.user.findOne({ _id: userId });
+    expect(stored?.billing?.subscriptionStatus).toBe("trialing");
+    expect(stored?.billing?.stripeSubscriptionId).toBe("sub_1");
+    expect(await mongoService.billingEvent.countDocuments()).toBe(1);
+  });
+
   it("ignores a stale event whose created time is older than lastStripeEventAt", async () => {
     using _env = mockEnv(stripeConfigured);
     const userId = mongoService.objectId();
