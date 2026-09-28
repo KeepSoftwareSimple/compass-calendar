@@ -81,6 +81,7 @@ import {
 } from "@web/booking/booking-settings-form.util";
 import {
   clearGuestMeetingSetupDraft,
+  prepareGuestMeetingSetupResume,
   readGuestMeetingSetupDraft,
   writeGuestMeetingSetupDraft,
 } from "@web/booking/guest-meeting-setup.util";
@@ -224,6 +225,8 @@ export function BookingSettingsSection({
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [setupStep, setSetupStep] = useState<SetupStepId | null>(null);
   const setupContinueRef = useRef<HTMLButtonElement>(null);
+  const signupHandoffInFlightRef = useRef(false);
+  const guestResumeAppliedRef = useRef(false);
   const focusSwitchAfterSetupRef = useRef(false);
   // The settings fieldset is disabled while a save is in flight, so focusing
   // from onError is a no-op. Wait until the mutation settles and the field
@@ -255,6 +258,7 @@ export function BookingSettingsSection({
   );
   useEffect(() => {
     if (guestPreview) return;
+    if (readGuestMeetingSetupDraft() != null) return;
     if (!serverPage || seededPageRef.current === serverPage) return;
     if (setupStep != null) return;
     // The week-view cache can still be the anonymous local calendar after
@@ -308,6 +312,39 @@ export function BookingSettingsSection({
     writeGuestMeetingSetupDraft(form);
   }, [form, guestPreview]);
 
+  useEffect(() => {
+    if (!authenticated || guestPreview) return;
+    if (guestResumeAppliedRef.current) return;
+    const draft = readGuestMeetingSetupDraft();
+    if (draft == null) return;
+    if (calendarsPending || waitingForHostCalendars) return;
+    guestResumeAppliedRef.current = true;
+    const resumed = prepareGuestMeetingSetupResume(
+      draft,
+      writableCalendars,
+      availabilityCalendars,
+    );
+    optedOutBlockingRef.current = new Set(
+      nextOptedOutBlockingCalendarIds({
+        previousOptedOut: [],
+        eligible: availabilityCalendars.map((calendar) => calendar.id),
+        submitted: resumed.blockingCalendarIds,
+      }),
+    );
+    setForm(resumed);
+    setMinNoticeText(String(resumed.minNoticeHours));
+    setHorizonText(String(resumed.maxHorizonDays));
+    baselineFormRef.current = resumed;
+    setSetupStep("live");
+  }, [
+    authenticated,
+    availabilityCalendars,
+    calendarsPending,
+    guestPreview,
+    waitingForHostCalendars,
+    writableCalendars,
+  ]);
+
   // Not ready until the calendars settle and the effect above has consumed
   // this server page. The analytics effect and the render guard must read the
   // same value, or "settings opened" fires against a form the host cannot see.
@@ -338,6 +375,7 @@ export function BookingSettingsSection({
 
   useEffect(() => {
     if (guestPreview || isSeedingForm) return;
+    if (readGuestMeetingSetupDraft() != null) return;
     if (serverPage == null || !isUnconfiguredBookingPage(serverPage)) return;
     setSetupStep((current) => current ?? "address");
   }, [guestPreview, isSeedingForm, serverPage]);
@@ -415,11 +453,6 @@ export function BookingSettingsSection({
     });
   }, [setupStep]);
 
-  useEffect(() => {
-    if (!authenticated || !guestMeetingSetupActive) return;
-    settingsActions.clearGuestMeetingSetup();
-  }, [authenticated, guestMeetingSetupActive]);
-
   const showFirstRunConnectPrompt =
     !guestPreview &&
     !hasHealthyConnection &&
@@ -428,7 +461,10 @@ export function BookingSettingsSection({
 
   const promptSignupBeforeSave = (): boolean => {
     if (!guestPreview) return false;
+    if (signupHandoffInFlightRef.current) return true;
+    signupHandoffInFlightRef.current = true;
     trackSignupStarted("meeting_page_setup");
+    settingsActions.closeSettingsPreservingGuestSetup();
     void importOrReload(() => import("@web/routers")).then(({ router }) => {
       void router.navigate({
         to: ".",
@@ -691,6 +727,7 @@ export function BookingSettingsSection({
           updateForm({ weeklyAvailability })
         }
         setupError={addressSetupError ?? wizardSetupError}
+        guestGoLive={guestPreview}
         setupStep={setupStep}
         syncConnections={connections}
         writableCalendarCount={writableCalendars.length}

@@ -128,7 +128,9 @@ export const SettingsModal: FC = () => {
   const connections = useUserMetadataStore(selectSyncConnections);
   const showBookingNav =
     (authenticated && IS_BOOKING_ENABLED) || guestMeetingPreview;
-  const { data: bookingPage } = useBookingPageQuery(isOpen && showBookingNav);
+  const { data: bookingPage } = useBookingPageQuery(
+    isOpen && authenticated && IS_BOOKING_ENABLED,
+  );
   const meetingPageLive = isLiveBookingPage(bookingPage);
   const { data: bookingStatus } = useBookingStatusQuery(
     isOpen && showBookingNav && meetingPageLive,

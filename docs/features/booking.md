@@ -121,9 +121,20 @@ appointment types are a later collection, not a v1 field.
 ### Host
 
 The host must be an authenticated Compass user with a healthy,
-writable calendar connection. Anonymous IndexedDB users do not get a
-booking link. Password-only users see a connect-Google prompt in
-Settings, not a broken public page.
+writable calendar connection. Password-only users see a connect-Google
+prompt in Settings, not a broken public page.
+
+#### Guest setup
+
+A signed-out visitor can start the same guided meeting setup from a
+public `/meet/:slug` page via **Set up your own meeting page**
+(`/?meetingSetup=1`). The wizard runs locally in Settings: each step
+writes a draft to local storage (`compass.booking.guest-meeting-setup-draft`).
+On the go-live step, **Sign up to go live** closes Settings and opens
+sign-up while keeping the draft. After sign-up (email or OAuth), Compass
+reopens Settings on Meeting at the go-live step with the draft restored
+and a writable destination calendar when one exists. The draft clears
+only when go-live succeeds, same as a signed-in host.
 
 Host administration lives in Settings as Meeting. The internal name
 remains Booking page (`SettingsPage` includes `"booking"` in

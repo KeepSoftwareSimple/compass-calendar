@@ -44,6 +44,15 @@ describe("setupStepSentence", () => {
       "New meetings you accept are added to this calendar.",
     );
   });
+
+  it("uses guest go-live copy on the live step", () => {
+    expect(setupStepSentence("live", 1, { guestGoLive: true })).toBe(
+      "Review your settings. Your page turns on after sign-up.",
+    );
+    expect(setupStepSentence("live", 1, { guestGoLive: false })).toBe(
+      "Review your settings, then turn on your meeting page.",
+    );
+  });
 });
 
 describe("nextSetupStep", () => {

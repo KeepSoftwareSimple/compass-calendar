@@ -43,6 +43,9 @@ export const SETUP_STEPS: readonly SetupStepDefinition[] = [
   },
 ];
 
+export const GUEST_LIVE_SETUP_SENTENCE =
+  "Review your settings. Your page turns on after sign-up.";
+
 const SETUP_STEP_BY_ID = new Map(
   SETUP_STEPS.map((step) => [step.id, step] as const),
 );
@@ -58,7 +61,11 @@ export function setupStepDefinition(id: SetupStepId): SetupStepDefinition {
 export function setupStepSentence(
   id: SetupStepId,
   writableCalendarCount: number,
+  options?: { guestGoLive?: boolean },
 ): string {
+  if (id === "live" && options?.guestGoLive === true) {
+    return GUEST_LIVE_SETUP_SENTENCE;
+  }
   if (id === "destination" && writableCalendarCount === 0) {
     return DESTINATION_ZERO_WRITABLE_SENTENCE;
   }

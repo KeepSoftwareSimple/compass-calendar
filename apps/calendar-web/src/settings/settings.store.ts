@@ -65,6 +65,19 @@ export const settingsActions = {
         type: "closeSettings",
       },
     ),
+  /** Closes Settings but keeps the guest wizard intent for post sign-up resume. */
+  closeSettingsPreservingGuestSetup: () =>
+    useSettingsStore.setState(
+      {
+        isSettingsOpen: false,
+        settingsPage: "accounts",
+        overlayOpenedFromPalette: false,
+      },
+      false,
+      {
+        type: "closeSettingsPreservingGuestSetup",
+      },
+    ),
   beginGuestMeetingSetup: () =>
     useSettingsStore.setState(
       {

@@ -2,14 +2,20 @@ import {
   type AdminPutBookingPageInput,
   buildDefaultAdminPutInput,
 } from "@core/types/booking.contracts";
-import { TimeZoneSchema } from "@core/types/domain-primitives";
+import {
+  CalendarIdSchema,
+  TimeZoneSchema,
+} from "@core/types/domain-primitives";
+import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
 import {
   clearGuestMeetingSetupDraft,
+  prepareGuestMeetingSetupResume,
   readGuestMeetingSetupDraft,
   writeGuestMeetingSetupDraft,
 } from "@web/booking/guest-meeting-setup.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { beforeEach, describe, expect, it } from "bun:test";
 
 const draft = (
@@ -51,6 +57,25 @@ describe("guest meeting setup draft", () => {
     );
 
     expect(readGuestMeetingSetupDraft()).toBeNull();
+  });
+
+  it("resets destination to the first writable calendar on resume", () => {
+    const placeholderId = CalendarIdSchema.parse(createObjectIdString());
+    const writable = createMockCalendar({
+      id: CalendarIdSchema.parse(createObjectIdString()),
+      name: "Work",
+      accountEmail: "host@example.com",
+    });
+    const form = draft({ destinationCalendarId: placeholderId });
+
+    const resumed = prepareGuestMeetingSetupResume(
+      form,
+      [writable],
+      [writable],
+    );
+
+    expect(resumed.destinationCalendarId).toBe(writable.id);
+    expect(resumed.blockingCalendarIds).toContain(writable.id);
   });
 
   it("reads as no draft when the stored value is not JSON", () => {

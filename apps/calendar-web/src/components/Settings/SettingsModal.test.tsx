@@ -893,6 +893,32 @@ describe("SettingsModal", () => {
     expect(screen.queryByRole("button", { name: "Meeting" })).toBeNull();
   });
 
+  it("does not fetch the booking page for a guest meeting setup preview", async () => {
+    let bookingGetCount = 0;
+    const calendar = createMockCalendar({
+      id: CalendarIdSchema.parse(createObjectIdString()),
+      name: "Work",
+      accountEmail: "host@example.com",
+    });
+    server.use(
+      http.get(bookingPageUrl, () => {
+        bookingGetCount += 1;
+        return HttpResponse.json(unconfiguredBookingPage(calendar.id));
+      }),
+    );
+    renderSettings({
+      authenticated: false,
+      calendars: [calendar],
+      open: false,
+    });
+    settingsActions.beginGuestMeetingSetup();
+
+    expect(
+      await screen.findByRole("heading", { name: "Pick your address" }),
+    ).toBeInTheDocument();
+    expect(bookingGetCount).toBe(0);
+  });
+
   it.each(["accounts", "billing", "booking"] as const)(
     "tells the host to hold Mod on the %s screen",
     (page) => {

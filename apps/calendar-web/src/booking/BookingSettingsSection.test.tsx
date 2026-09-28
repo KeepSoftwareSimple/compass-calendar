@@ -4,11 +4,15 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import {
+  buildDefaultAdminPutInput,
   DEFAULT_WEEKLY_AVAILABILITY,
   type WeeklyAvailability,
 } from "@core/types/booking.contracts";
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
-import { CalendarIdSchema } from "@core/types/domain-primitives";
+import {
+  CalendarIdSchema,
+  TimeZoneSchema,
+} from "@core/types/domain-primitives";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -36,6 +40,10 @@ import {
   bookingFieldAttrs,
   focusBookingField,
 } from "@web/booking/booking-sequence.fields";
+import {
+  clearGuestMeetingSetupDraft,
+  writeGuestMeetingSetupDraft,
+} from "@web/booking/guest-meeting-setup.util";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -43,6 +51,12 @@ import {
   registerToastPort,
   resetToastPort,
 } from "@web/common/utils/toast/toast.port";
+import {
+  selectGuestMeetingSetupActive,
+  selectIsSettingsOpen,
+  settingsActions,
+  useSettingsStore,
+} from "@web/settings/settings.store";
 import { useSettingsShortcuts } from "@web/settings/useSettingsShortcuts";
 import { clearAppLockReasons } from "@web/shortcuts/app-lock";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
@@ -71,11 +85,28 @@ mock.module("@web/auth/posthog/track", () => ({
 const actualUseSession = (await import("@web/auth/compass/session/useSession"))
   .useSession;
 let isSessionMocked = true;
+let sessionAuthenticated = true;
 mock.module("@web/auth/compass/session/useSession", () => ({
   useSession: (...args: Parameters<typeof actualUseSession>) =>
     isSessionMocked
-      ? { authenticated: true, setAuthenticated: mock() }
+      ? { authenticated: sessionAuthenticated, setAuthenticated: mock() }
       : actualUseSession(...args),
+}));
+
+const mockTrackSignupStarted = mock();
+const actualSignupFunnel = await import("@web/auth/posthog/signup-funnel");
+mock.module("@web/auth/posthog/signup-funnel", () => ({
+  ...actualSignupFunnel,
+  trackSignupStarted: (
+    ...args: Parameters<typeof actualSignupFunnel.trackSignupStarted>
+  ) => mockTrackSignupStarted(...args),
+}));
+
+const mockRouterNavigate = mock(() => Promise.resolve());
+const realRouters = await import("@web/routers");
+mock.module("@web/routers", () => ({
+  ...realRouters,
+  router: { ...realRouters.router, navigate: mockRouterNavigate },
 }));
 
 afterAll(() => {
@@ -86,7 +117,12 @@ afterAll(() => {
 
 afterEach(() => {
   isAppAccessMocked = true;
+  sessionAuthenticated = true;
   mockTrack.mockClear();
+  mockTrackSignupStarted.mockClear();
+  mockRouterNavigate.mockClear();
+  clearGuestMeetingSetupDraft();
+  settingsActions.closeSettings();
   setPinnedTimeZone(null);
   clearAppLockReasons();
   setClipboard(originalClipboard);
@@ -3040,6 +3076,105 @@ describe("BookingSettingsSection", () => {
     const summary = screen.getByText(BOOKING_MORE_OPTIONS_LABEL);
     const details = summary.closest("details");
     expect(details).toHaveAttribute("open");
+  });
+
+  it("shows Sign up to go live for a guest on the go-live step", async () => {
+    sessionAuthenticated = false;
+    const user = userEvent.setup({ delay: null });
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    settingsActions.beginGuestMeetingSetup();
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    await user.type(
+      await screen.findByLabelText("Page address"),
+      "my-meetings",
+    );
+    await user.click(await screen.findByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    expect(
+      await screen.findByRole("button", { name: /Sign up to go live/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Review your settings. Your page turns on after sign-up.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("closes Settings and opens sign-up once when a guest goes live", async () => {
+    sessionAuthenticated = false;
+    const user = userEvent.setup({ delay: null });
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    settingsActions.beginGuestMeetingSetup();
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    await user.type(
+      await screen.findByLabelText("Page address"),
+      "my-meetings",
+    );
+    await user.click(await screen.findByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    await user.click(screen.getByRole("button", { name: /^Continue/ }));
+    const goLive = await screen.findByRole("button", {
+      name: /Sign up to go live/,
+    });
+    goLive.focus();
+    const modKey = resolveModifier("Mod") === "Meta" ? "{Meta>}" : "{Control>}";
+    await user.keyboard(`${modKey}{Enter}{/Meta}{/Control}`);
+    await waitFor(() => {
+      expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(false);
+    });
+    expect(selectGuestMeetingSetupActive(useSettingsStore.getState())).toBe(
+      true,
+    );
+    expect(mockTrackSignupStarted).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(mockRouterNavigate).toHaveBeenCalledTimes(1);
+    });
+    await user.keyboard(`${modKey}{Enter}{/Meta}{/Control}`);
+    expect(mockTrackSignupStarted).toHaveBeenCalledTimes(1);
+  });
+
+  it("resumes the guest draft at go-live after sign-up", async () => {
+    const draft = buildDefaultAdminPutInput(TimeZoneSchema.parse("UTC"));
+    draft.slug = "my-meetings";
+    draft.durationMinutes = 45;
+    writeGuestMeetingSetupDraft(draft);
+    userMetadataActions.set(healthyGoogleMetadata);
+    server.use(
+      http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
+    );
+
+    const { wrapper, queryClient } = createStoreWrapper();
+    queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+    render(
+      <HotkeysProvider>
+        <BookingSettingsSection />
+      </HotkeysProvider>,
+      { wrapper },
+    );
+
+    expect(await screen.findByText("Step 4 of 4")).toBeInTheDocument();
+    expect(screen.getByText("45 minutes")).toBeInTheDocument();
+    expect(screen.getByText(/my-meetings/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Turn on and copy link/ }),
+    ).toBeInTheDocument();
   });
 });
 
