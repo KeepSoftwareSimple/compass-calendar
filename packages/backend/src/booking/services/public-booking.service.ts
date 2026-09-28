@@ -1027,7 +1027,28 @@ export class PublicBookingService {
       reservationId,
       token,
     );
+    if (reservation.status === "cancelled") {
+      throw reservationNotFound();
+    }
     await this.finalizeCancel(reservation);
+  }
+
+  /**
+   * Booking events are single-instance only. When the host deletes that event
+   * in Compass, drop the linked reservation without a second calendar delete.
+   */
+  async cancelReservationForHostDeletedEvent(
+    calendarEventId: string,
+  ): Promise<void> {
+    const reservation =
+      await bookingReservationRepository.findConfirmedByCalendarEventId(
+        calendarEventId,
+      );
+    if (!reservation) {
+      return;
+    }
+    await bookingReservationRepository.markCancelled(reservation._id);
+    await bookingReservationRepository.clearCalendarEventId(reservation._id);
   }
 
   async recoverDueOperations(): Promise<void> {

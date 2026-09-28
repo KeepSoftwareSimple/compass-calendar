@@ -45,6 +45,17 @@ class BookingReservationRepository {
     return BookingReservationRecordSchema.parse(record);
   }
 
+  async findConfirmedByCalendarEventId(
+    calendarEventId: string,
+  ): Promise<BookingReservationRecord | null> {
+    const record = await mongoService.bookingReservation.findOne({
+      calendarEventId,
+      status: "confirmed",
+    });
+    if (!record) return null;
+    return BookingReservationRecordSchema.parse(record);
+  }
+
   async listConfirmedStartsByPageId(
     pageId: ObjectId,
     range: { from: Date; to: Date },

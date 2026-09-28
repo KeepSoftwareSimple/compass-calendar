@@ -26,6 +26,7 @@ import {
   SyncEventCalendarIdSchema,
 } from "@core/types/sync/event.contracts";
 import { assertBillingAllowsWrites } from "@backend/billing/billing.guard";
+import publicBookingService from "@backend/booking/services/public-booking.service";
 import calendarService from "@backend/calendar/services/calendar.service";
 import { parseCommaSeparatedQueryParam } from "@backend/common/helpers/query-param";
 import { assertCloudMutationsAllowed } from "@backend/common/services/sync-service/cloud-mutation-mode";
@@ -529,6 +530,14 @@ class EventController {
       });
 
       await deleteFromSync(userId, eventId, input);
+
+      // Booking reservations link to single events only; series deletes are
+      // out of scope and Google-direct deletes are never observed here.
+      if (input.scope === "this") {
+        await publicBookingService.cancelReservationForHostDeletedEvent(
+          eventId,
+        );
+      }
 
       res.status(Status.NO_CONTENT).send();
     } catch (e) {
