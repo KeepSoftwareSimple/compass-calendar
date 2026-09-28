@@ -2,7 +2,6 @@ import { CommandIcon } from "@phosphor-icons/react/dist/csr/Command";
 import { GearIcon } from "@phosphor-icons/react/dist/csr/Gear";
 import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
 import { useGoogleUiState } from "@web/auth/providers/useProviderUiState";
-import { ShortcutLevelBadge } from "@web/components/Sidebar/SidebarActions/ShortcutLevelBadge";
 import { SidebarRefreshButton } from "@web/components/Sidebar/SidebarRefreshButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import {
@@ -16,18 +15,11 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 
 const FOOTER_ICON_BUTTON_CLASS =
   "flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
-interface Props {
-  /** Current view's filtered shortcut rows, for the level badge's "try
-   * next" list. Defaults to none so existing callers need no change. */
-  sections?: ShortcutOverlaySection[];
-}
-
-export const SidebarActions = ({ sections = [] }: Props) => {
+export const SidebarActions = () => {
   const isShortcutsOpen = useViewStore(selectIsShortcutsOpen);
   const isCmdPaletteOpen = useSettingsStore(selectIsCmdPaletteOpen);
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
@@ -66,7 +58,6 @@ export const SidebarActions = ({ sections = [] }: Props) => {
             />
           </button>
         </TooltipWrapper>
-        <ShortcutLevelBadge sections={sections} />
         <SidebarRefreshButton />
       </div>
 

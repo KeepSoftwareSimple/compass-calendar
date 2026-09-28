@@ -82,20 +82,13 @@ describe("SidebarActions", () => {
     ).toBeInTheDocument();
   });
 
-  it("puts the level badge right after the shortcuts button", () => {
+  it("leaves the shortcut level badge to the sidebar header", () => {
     const { wrapper } = createStoreWrapper();
 
     render(<SidebarActions />, { wrapper });
 
-    const buttons = screen.getAllByRole("button");
-    const shortcutsIndex = buttons.findIndex(
-      (button) => button.getAttribute("aria-label") === "Open shortcuts",
-    );
-    const levelIndex = buttons.findIndex((button) =>
-      button.getAttribute("aria-label")?.startsWith("Shortcut level"),
-    );
-
-    expect(shortcutsIndex).toBeGreaterThanOrEqual(0);
-    expect(levelIndex).toBe(shortcutsIndex + 1);
+    expect(
+      screen.queryByRole("button", { name: /^Shortcut level/ }),
+    ).not.toBeInTheDocument();
   });
 });

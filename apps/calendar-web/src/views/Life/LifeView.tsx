@@ -7,7 +7,9 @@ import { useResponsiveLayout } from "@web/components/AuthenticatedLayout/useResp
 import { CalendarHeader } from "@web/components/CalendarHeader/CalendarHeader";
 import { LifeCommandPalette } from "@web/components/CommandPalette/CommandPalette";
 import { COMMAND_PALETTE_PLACEHOLDER } from "@web/components/CommandPalette/more.cmd.constants";
+import { useLockedShortcutSections } from "@web/components/Sidebar/hooks/useLockedShortcutSections";
 import { ResizableSidebarPanel } from "@web/components/Sidebar/ResizableSidebarPanel";
+import { ShortcutLevelBadge } from "@web/components/Sidebar/SidebarActions/ShortcutLevelBadge";
 import { SidebarShell } from "@web/components/Sidebar/SidebarShell";
 import { useSidebarShortcuts } from "@web/components/Sidebar/useSidebarShortcuts";
 import {
@@ -119,6 +121,7 @@ export function LifeView({ today }: LifeViewProps) {
       }),
     [isTrialing],
   );
+  const lockedSections = useLockedShortcutSections(shortcutSections);
   const onPreferencesChange = useCallback(
     (update: (current: LifePreferences) => LifePreferences) => {
       setPreferences(update);
@@ -208,6 +211,7 @@ export function LifeView({ today }: LifeViewProps) {
         >
           <LifeSidebarContent
             autoFocusBirthDate={isNewLifeUser}
+            headerEndContent={<ShortcutLevelBadge sections={lockedSections} />}
             onCycleVariation={cycleVariation}
             preferences={preferences}
             onShuffleAge={shuffleAge}

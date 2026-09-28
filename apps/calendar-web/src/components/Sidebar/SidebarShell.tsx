@@ -1,5 +1,4 @@
-import { type HTMLAttributes, type ReactNode, useMemo } from "react";
-import { useShortcutWriteLocked } from "@web/billing/useBillingWriteLock";
+import { type HTMLAttributes, type ReactNode } from "react";
 import { ID_SIDEBAR } from "@web/common/constants/web.constants";
 import {
   selectIsEventFormOpen,
@@ -11,6 +10,7 @@ import {
 } from "@web/events/stores/view.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 import { useIsNarrowSidebarLayout } from "./hooks/useIsNarrowSidebarLayout";
+import { useLockedShortcutSections } from "./hooks/useLockedShortcutSections";
 import { ShortcutsOverlay } from "./ShortcutsOverlay/ShortcutsOverlay";
 import { SidebarActions } from "./SidebarActions/SidebarActions";
 import { SidebarCloseButton } from "./SidebarCloseButton";
@@ -31,16 +31,7 @@ export function SidebarShell({
   const isNarrowLayout = useIsNarrowSidebarLayout();
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
   const isEventFormOpen = useDraftStore(selectIsEventFormOpen);
-  const writeLocked = useShortcutWriteLocked();
-  const sections = useMemo(() => {
-    if (!writeLocked) return shortcutSections;
-    return shortcutSections.map((section) => ({
-      ...section,
-      shortcuts: section.shortcuts.map((shortcut) =>
-        shortcut.requiresWrite ? { ...shortcut, locked: true } : shortcut,
-      ),
-    }));
-  }, [shortcutSections, writeLocked]);
+  const sections = useLockedShortcutSections(shortcutSections);
   // Day/Week keep the panel mounted for event details even when the sidebar
   // preference is closed; keep dismiss available for that case too.
   const showSidebarClose = isNarrowLayout && (isSidebarOpen || isEventFormOpen);
@@ -59,7 +50,7 @@ export function SidebarShell({
       ) : null}
       {children}
       <SidebarStatusBar />
-      <SidebarActions sections={sections} />
+      <SidebarActions />
       <ShortcutsOverlay sections={sections} viewLabel={shortcutsViewLabel} />
     </aside>
   );
