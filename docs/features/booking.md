@@ -431,6 +431,9 @@ decides whether a busy interval occupies a slot
   Failed create compensation is the same operation record, not log-only.
 - Expired / unknown tokens return a generic not-found page, not a
   leak of whether the booking existed.
+- When the host deletes the booked calendar event in Compass (single
+  event, scope `this`), the linked reservation is cancelled and its slot
+  is freed. Deletes made directly in Google Calendar are not observed.
 
 ## Guest reschedule (v1.3)
 

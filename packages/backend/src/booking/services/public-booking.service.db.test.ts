@@ -1,4 +1,6 @@
+import { type Response } from "express";
 import { ObjectId } from "mongodb";
+import { type SessionRequest } from "supertokens-node/framework/express";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { AdminPutBookingPageInputSchema } from "@core/types/booking.contracts";
@@ -41,6 +43,7 @@ import {
 import calendarService from "@backend/calendar/services/calendar.service";
 import { type SyncServiceClient } from "@backend/common/services/sync-service/sync-service.client";
 import * as syncServiceFactory from "@backend/common/services/sync-service/sync-service.factory";
+import eventController from "@backend/event/controllers/event.controller";
 import { eventMutationError } from "@backend/event/event.error";
 import userService from "@backend/user/services/user.service";
 import {
@@ -1297,7 +1300,9 @@ describe("PublicBookingService", () => {
 
     const reservationId = new ObjectId(created.reservationId);
     await service.cancelReservation(reservationId, { token });
-    await service.cancelReservation(reservationId, { token });
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
 
     expect(deleteBookingEvent).toHaveBeenCalledTimes(1);
     const stored = await bookingReservationRepository.findById(reservationId);
@@ -3012,6 +3017,123 @@ describe("PublicBookingService", () => {
     expect(stored?.calendarEventId).toBeNull();
     expect(deleteBookingEvent.mock.calls.length).toBeGreaterThanOrEqual(2);
     setSystemTime(new Date("2026-09-07T08:00:00.000Z"));
+  });
+
+  it("cancels a confirmed reservation when the host deletes its calendar event", async () => {
+    const { userId, slug, calendarId } = await enableBookingPage();
+    const slotStart = `${BOOKING_MONDAY}T10:00:00.000Z`;
+    const created = await service.createReservation(slug, {
+      slotStart,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+    const stored = await bookingReservationRepository.findById(reservationId);
+    const eventId = stored?.calendarEventId;
+    expect(eventId).toBeTruthy();
+
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    const connection = healthyConnection();
+    syncSpies.forEach((spy) => spy.mockRestore());
+    syncSpies = [];
+    syncSpies.push(
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        listConnections: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: { connections: [connection] },
+          }),
+        ),
+        listCalendars: mock(() =>
+          Promise.resolve({
+            ok: true as const,
+            value: {
+              calendars: [
+                {
+                  ...writableCalendar(calendarId),
+                  connectionId: connection.id,
+                },
+              ],
+            },
+          }),
+        ),
+        submitCommand,
+      } as never),
+    );
+
+    const json = mock();
+    const res = {
+      status: mock().mockReturnThis(),
+      json,
+      send: mock().mockReturnThis(),
+    } as unknown as Response;
+    await eventController.delete(
+      {
+        session: { getUserId: () => userId.toString() },
+        params: { id: eventId },
+        query: { scope: "this" },
+      } as unknown as SessionRequest,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
+    expect(submitCommand).toHaveBeenCalledTimes(1);
+    expect(deleteBookingEvent).not.toHaveBeenCalled();
+
+    const afterDelete =
+      await bookingReservationRepository.findById(reservationId);
+    expect(afterDelete?.status).toBe("cancelled");
+    expect(afterDelete?.calendarEventId).toBeNull();
+
+    const window = {
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+    };
+    const publicSlots = await service.getSlots(slug, window);
+    const booked = Date.parse(slotStart);
+    expect(
+      publicSlots.slots.map((slot) => Date.parse(slot.slotStart)),
+    ).toContain(booked);
+
+    await expect(
+      service.cancelReservation(reservationId, { token }),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
+  });
+
+  it("leaves delete unchanged when the calendar event has no booking reservation", async () => {
+    const userId = await createNamedUser("Delete Host");
+    const eventId = new ObjectId().toString();
+    const submitCommand = mock(async () => confirmedCommandSubmit());
+    syncSpies.push(
+      spyOn(syncServiceFactory, "getSyncServiceClient").mockReturnValue({
+        submitCommand,
+      } as never),
+    );
+    spyOn(billingGuard, "assertBillingAllowsWrites").mockResolvedValue(
+      undefined,
+    );
+
+    const json = mock();
+    const res = {
+      status: mock().mockReturnThis(),
+      json,
+      send: mock().mockReturnThis(),
+    } as unknown as Response;
+    await eventController.delete(
+      {
+        session: { getUserId: () => userId.toString() },
+        params: { id: eventId },
+        query: { scope: "this" },
+      } as unknown as SessionRequest,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(Status.NO_CONTENT);
+    expect(submitCommand).toHaveBeenCalledTimes(1);
   });
 });
 

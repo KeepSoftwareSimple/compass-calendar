@@ -62,6 +62,15 @@ describe("booking indexes", () => {
     ).toBe(true);
   });
 
+  it("creates a sparse calendarEventId index for host-delete lookup", async () => {
+    const indexes = await mongoService.bookingReservation.indexes();
+    const index = indexes.find(
+      (entry) => entry.name === "booking_reservation_calendar_event_id",
+    );
+    expect(index?.sparse).toBe(true);
+    expect(index?.key).toEqual({ calendarEventId: 1 });
+  });
+
   it("uses the createdAt cursor index for host-notice scans", async () => {
     const pageId = new ObjectId();
     const since = new Date("2026-09-01T00:00:00.000Z");

@@ -34,6 +34,13 @@ export async function ensureBookingIndexes(): Promise<void> {
     { pageId: 1, status: 1, createdAt: 1, _id: 1 },
     { name: "booking_reservation_page_status_created" },
   );
+  await mongoService.bookingReservation.createIndex(
+    { calendarEventId: 1 },
+    {
+      name: "booking_reservation_calendar_event_id",
+      sparse: true,
+    },
+  );
   await mongoService.bookingRateLimit.createIndex(
     { expiresAt: 1 },
     { name: "booking_rate_limit_expires", expireAfterSeconds: 0 },
