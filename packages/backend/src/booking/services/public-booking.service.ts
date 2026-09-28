@@ -1357,6 +1357,12 @@ export class PublicBookingService {
           guestTimeZone: current.guestTimeZone,
         },
         current.previousSlotStart,
+        {
+          announceGuestReschedule: {
+            previousSlotStart: current.previousSlotStart,
+            previousSlotEnd: current.previousSlotEnd,
+          },
+        },
       );
       if (!updated) {
         const stored = await bookingReservationRepository.findById(
@@ -1686,7 +1692,9 @@ export class PublicBookingService {
       }
     }
 
-    await bookingReservationRepository.markCancelled(reservation._id);
+    await bookingReservationRepository.markCancelled(reservation._id, {
+      announceGuestCancel: true,
+    });
     await bookingReservationRepository.clearCalendarEventId(reservation._id);
     await bookingOperationRepository.markStatus(operation._id, "confirmed");
   }

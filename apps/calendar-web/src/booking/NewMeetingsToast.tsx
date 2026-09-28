@@ -31,6 +31,21 @@ export function formatHostMeetingWhen(
   return inEffectiveTimeZone(slotStart, timeZone).format(MEETING_WHEN_FORMAT);
 }
 
+function latestGuestActionSentence(
+  latest: BookingNewMeetingsClaimReservation,
+  timeZone: string,
+): string {
+  const when = formatHostMeetingWhen(latest.slotStart, timeZone);
+  switch (latest.kind) {
+    case "cancelled":
+      return `${latest.guestName} cancelled: ${when}`;
+    case "rescheduled":
+      return `${latest.guestName} moved a meeting to ${when}`;
+    default:
+      return `${latest.guestName} booked a meeting: ${when}`;
+  }
+}
+
 export function newMeetingsToastCopy(
   count: number,
   latest: BookingNewMeetingsClaimReservation | null,
@@ -39,11 +54,10 @@ export function newMeetingsToastCopy(
   if (!latest || count < 1) {
     return "";
   }
-  const when = formatHostMeetingWhen(latest.slotStart, timeZone);
   if (count === 1) {
-    return `${latest.guestName} booked a meeting: ${when}`;
+    return latestGuestActionSentence(latest, timeZone);
   }
-  return `${count} meetings booked since you last looked. Latest: ${latest.guestName}, ${when}`;
+  return `${count} meeting updates since you last looked. Latest: ${latestGuestActionSentence(latest, timeZone)}`;
 }
 
 interface NewMeetingsToastProps {

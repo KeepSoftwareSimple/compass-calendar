@@ -571,11 +571,22 @@ export const allocateBookingSlug = (
   }
 };
 
+export const BookingGuestActionKindSchema = z.enum([
+  "booked",
+  "cancelled",
+  "rescheduled",
+]);
+export type BookingGuestActionKind = z.infer<
+  typeof BookingGuestActionKindSchema
+>;
+
 export const BookingNewMeetingsClaimReservationSchema = z.strictObject({
   id: BookingReservationIdSchema,
   guestName: z.string().trim().min(1).max(256),
   slotStart: DateTimeSchema,
   slotEnd: DateTimeSchema,
+  kind: BookingGuestActionKindSchema,
+  previousSlotStart: DateTimeSchema.optional(),
 });
 export type BookingNewMeetingsClaimReservation = z.infer<
   typeof BookingNewMeetingsClaimReservationSchema

@@ -14,16 +14,12 @@ export const explainWindowedConfirmedReservationScan = (
     })
     .explain("queryPlanner");
 
-/** Planner for the host-notice createdAt cursor scan. */
-export const explainConfirmedCreatedSinceScan = (
-  pageId: ObjectId,
-  since: Date,
-) =>
+/** Planner for the host-notice lastGuestActionAt cursor scan. */
+export const explainGuestActionsSinceScan = (pageId: ObjectId, since: Date) =>
   mongoService.bookingReservation
     .find({
       pageId,
-      status: "confirmed",
-      createdAt: { $gt: since },
+      lastGuestActionAt: { $exists: true, $gt: since },
     })
-    .sort({ createdAt: 1, _id: 1 })
+    .sort({ lastGuestActionAt: 1, _id: 1 })
     .explain("queryPlanner");

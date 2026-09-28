@@ -659,7 +659,7 @@ describe("BookingPageService", () => {
     return record;
   };
 
-  it("claims confirmed bookings created after hostNoticedAt and stamps", async () => {
+  it("claims guest actions after hostNoticedAt and stamps", async () => {
     const userId = await createNamedUser("Claim Host");
     const calendar = writableCalendar();
     mockHealthySync([calendar]);
@@ -724,7 +724,7 @@ describe("BookingPageService", () => {
     expect(claimed).toEqual({ count: 0, latest: null });
   });
 
-  it("never returns a cancelled reservation", async () => {
+  it("claims a guest cancel after the cursor with kind cancelled", async () => {
     const userId = await createNamedUser("Cancel Claim");
     const calendar = writableCalendar();
     mockHealthySync([calendar]);
@@ -737,20 +737,76 @@ describe("BookingPageService", () => {
     );
     const stored = await bookingPageRepository.findByUserId(userId);
     expect(stored).not.toBeNull();
-    await insertReservation(stored!._id, {
-      guestName: "Cancelled",
-      status: "cancelled",
+    const record = await insertReservation(stored!._id, {
+      guestName: "Bob",
       slotStart: new Date("2026-09-24T16:00:00.000Z"),
     });
-    await insertReservation(stored!._id, {
-      guestName: "Live",
-      slotStart: new Date("2026-09-24T17:00:00.000Z"),
+
+    const first = await bookingPageService.claimNewMeetings(userId);
+    expect(first).toMatchObject({
+      count: 1,
+      latest: { guestName: "Bob", kind: "booked" },
     });
+
+    await bookingReservationRepository.markCancelled(record._id, {
+      announceGuestCancel: true,
+    });
+
+    const second = await bookingPageService.claimNewMeetings(userId);
+    expect(second).toMatchObject({
+      count: 1,
+      latest: { guestName: "Bob", kind: "cancelled" },
+    });
+
+    const third = await bookingPageService.claimNewMeetings(userId);
+    expect(third).toEqual({ count: 0, latest: null });
+  });
+
+  it("claims a guest reschedule with kind rescheduled and previousSlotStart", async () => {
+    const userId = await createNamedUser("Reschedule Claim");
+    const calendar = writableCalendar();
+    mockHealthySync([calendar]);
+    await bookingPageService.putAdminPage(
+      userId,
+      samplePutInput({
+        destinationCalendarId: calendar.id,
+        blockingCalendarIds: [calendar.id],
+      }),
+    );
+    const stored = await bookingPageRepository.findByUserId(userId);
+    expect(stored).not.toBeNull();
+    const previousStart = new Date("2026-09-24T16:00:00.000Z");
+    const nextStart = new Date("2026-09-25T18:00:00.000Z");
+    const record = await insertReservation(stored!._id, {
+      guestName: "Bob",
+      slotStart: previousStart,
+    });
+    await bookingPageService.claimNewMeetings(userId);
+
+    await bookingReservationRepository.updateSlotTimes(
+      record._id,
+      {
+        slotStart: nextStart,
+        slotEnd: new Date(nextStart.getTime() + 30 * 60 * 1000),
+        guestTimeZone: "UTC" as TimeZone,
+      },
+      previousStart,
+      {
+        announceGuestReschedule: {
+          previousSlotStart: previousStart,
+          previousSlotEnd: new Date(previousStart.getTime() + 30 * 60 * 1000),
+        },
+      },
+    );
 
     const claimed = await bookingPageService.claimNewMeetings(userId);
     expect(claimed).toMatchObject({
       count: 1,
-      latest: { guestName: "Live" },
+      latest: {
+        guestName: "Bob",
+        kind: "rescheduled",
+        previousSlotStart: previousStart.toISOString(),
+      },
     });
   });
 
@@ -827,7 +883,7 @@ describe("BookingPageService", () => {
     );
     const summarize = spyOn(
       bookingReservationRepository,
-      "summarizeConfirmedCreatedSince",
+      "summarizeGuestActionsSince",
     ).mockRejectedValue(new Error("read failed"));
 
     await expect(bookingPageService.claimNewMeetings(userId)).rejects.toThrow(

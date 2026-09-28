@@ -48,13 +48,16 @@ const insertReservation = async (
         status: overrides.status,
         createdAt: overrides.createdAt,
         updatedAt: overrides.createdAt,
+        lastGuestActionAt: overrides.createdAt,
+        lastGuestAction:
+          overrides.status === "cancelled" ? "cancelled" : "booked",
       },
     },
   );
   return record;
 };
 
-describe("summarizeConfirmedCreatedSince", () => {
+describe("summarizeGuestActionsSince", () => {
   beforeAll(async () => {
     await setupTestDb(import.meta.url);
     await ensureBookingIndexes();
@@ -62,7 +65,7 @@ describe("summarizeConfirmedCreatedSince", () => {
   beforeEach(cleanupCollections);
   afterAll(cleanupTestDb);
 
-  it("returns only confirmed reservations created after since, with latest last", async () => {
+  it("returns guest actions after since, with latest last", async () => {
     const pageId = new ObjectId();
     const since = new Date("2026-09-02T00:00:00.000Z");
 
@@ -93,16 +96,15 @@ describe("summarizeConfirmedCreatedSince", () => {
     });
 
     const summary =
-      await bookingReservationRepository.summarizeConfirmedCreatedSince(
-        pageId,
-        { createdAt: since },
-      );
+      await bookingReservationRepository.summarizeGuestActionsSince(pageId, {
+        lastGuestActionAt: since,
+      });
 
-    expect(summary.count).toBe(2);
+    expect(summary.count).toBe(3);
     expect(summary.latest?.guestName).toBe("Later");
   });
 
-  it("uses _id to claim the rest of an identical createdAt tie", async () => {
+  it("uses _id to claim the rest of an identical lastGuestActionAt tie", async () => {
     const pageId = new ObjectId();
     const tied = new Date("2026-09-03T12:00:00.000Z");
     const first = await insertReservation(pageId, {
@@ -119,10 +121,10 @@ describe("summarizeConfirmedCreatedSince", () => {
     });
 
     const remaining =
-      await bookingReservationRepository.summarizeConfirmedCreatedSince(
-        pageId,
-        { createdAt: tied, reservationId: first._id },
-      );
+      await bookingReservationRepository.summarizeGuestActionsSince(pageId, {
+        lastGuestActionAt: tied,
+        reservationId: first._id,
+      });
 
     expect(remaining.count).toBe(1);
     expect(remaining.latest?.guestName).toBe("Second");

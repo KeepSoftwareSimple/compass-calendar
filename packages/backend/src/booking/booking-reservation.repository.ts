@@ -72,38 +72,38 @@ class BookingReservationRepository {
   }
 
   /**
-   * Confirmed rows created after the host notice cursor, oldest-first cursor
-   * order with `_id` as the createdAt tie-breaker.
+   * Reservations whose latest guest action is after the host notice cursor,
+   * oldest-first cursor order with `_id` as the lastGuestActionAt tie-breaker.
    *
    * Count and latest come from one aggregation so a truncated in-memory
    * limit cannot skip later arrivals. The compound
-   * `pageId + status + createdAt + _id` index backs this match+sort.
+   * `pageId + lastGuestActionAt + _id` index backs this match+sort.
    */
-  async summarizeConfirmedCreatedSince(
+  async summarizeGuestActionsSince(
     pageId: ObjectId,
-    cursor: { createdAt: Date; reservationId?: ObjectId },
+    cursor: { lastGuestActionAt: Date; reservationId?: ObjectId },
   ): Promise<{ count: number; latest: BookingReservationRecord | null }> {
-    const createdAfterCursor = cursor.reservationId
+    const actionAfterCursor = cursor.reservationId
       ? {
           $or: [
-            { createdAt: { $gt: cursor.createdAt } },
+            { lastGuestActionAt: { $gt: cursor.lastGuestActionAt } },
             {
-              createdAt: cursor.createdAt,
+              lastGuestActionAt: cursor.lastGuestActionAt,
               _id: { $gt: cursor.reservationId },
             },
           ],
         }
-      : { createdAt: { $gt: cursor.createdAt } };
+      : { lastGuestActionAt: { $gt: cursor.lastGuestActionAt } };
     const [summary] = await mongoService.bookingReservation
       .aggregate<{ count: number; latest: BookingReservationRecord }>([
         {
           $match: {
             pageId,
-            status: "confirmed",
-            ...createdAfterCursor,
+            lastGuestActionAt: { $exists: true },
+            ...actionAfterCursor,
           },
         },
-        { $sort: { createdAt: 1, _id: 1 } },
+        { $sort: { lastGuestActionAt: 1, _id: 1 } },
         {
           $group: {
             _id: null,
@@ -150,6 +150,8 @@ class BookingReservationRepository {
     const record: BookingReservationRecord =
       BookingReservationRecordSchema.parse({
         ...input,
+        lastGuestActionAt: now,
+        lastGuestAction: "booked",
         createdAt: now,
         updatedAt: now,
       });
@@ -168,11 +170,25 @@ class BookingReservationRepository {
     return BookingReservationRecordSchema.parse(result);
   }
 
-  async markCancelled(id: ObjectId): Promise<BookingReservationRecord | null> {
+  async markCancelled(
+    id: ObjectId,
+    options?: { announceGuestCancel?: boolean },
+  ): Promise<BookingReservationRecord | null> {
     const now = new Date();
     const result = await mongoService.bookingReservation.findOneAndUpdate(
       { _id: id, status: { $in: ["confirmed", "cancelling"] } },
-      { $set: { status: "cancelled", updatedAt: now } },
+      {
+        $set: {
+          status: "cancelled",
+          updatedAt: now,
+          ...(options?.announceGuestCancel
+            ? {
+                lastGuestActionAt: now,
+                lastGuestAction: "cancelled" as const,
+              }
+            : {}),
+        },
+      },
       { returnDocument: "after" },
     );
     if (!result) return null;
@@ -207,6 +223,12 @@ class BookingReservationRepository {
       guestTimeZone: BookingReservationRecord["guestTimeZone"];
     },
     expectedSlotStart?: Date,
+    options?: {
+      announceGuestReschedule?: {
+        previousSlotStart: Date;
+        previousSlotEnd: Date;
+      };
+    },
   ): Promise<BookingReservationRecord | null> {
     const now = new Date();
     const result = await mongoService.bookingReservation.findOneAndUpdate(
@@ -221,6 +243,16 @@ class BookingReservationRepository {
           slotEnd: slot.slotEnd,
           guestTimeZone: slot.guestTimeZone,
           updatedAt: now,
+          ...(options?.announceGuestReschedule
+            ? {
+                lastGuestActionAt: now,
+                lastGuestAction: "rescheduled" as const,
+                previousSlotStart:
+                  options.announceGuestReschedule.previousSlotStart,
+                previousSlotEnd:
+                  options.announceGuestReschedule.previousSlotEnd,
+              }
+            : {}),
         },
       },
       { returnDocument: "after" },

@@ -14,6 +14,7 @@ import {
 } from "@core/types/booking.contracts";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import { createFakeServerMessageBus } from "@web/__tests__/utils/sse-message-bus.test.util";
 import * as realBookingApi from "@web/api/booking.api";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
@@ -24,6 +25,7 @@ import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import * as realRouters from "@web/routers";
+import * as realSseClient from "@web/sse/client/sse.client";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setEffectiveTimeZoneForTests,
@@ -38,6 +40,12 @@ import {
   mock,
   setSystemTime,
 } from "bun:test";
+
+const sseBus = createFakeServerMessageBus();
+
+mockModuleForFile("@web/sse/client/sse.client", realSseClient, {
+  onServerMessage: sseBus.onServerMessage,
+});
 
 const mockClaimNewMeetings = mock(
   async (): Promise<BookingNewMeetingsClaimResponse> => ({
@@ -91,13 +99,37 @@ const anonymousSession = {
 
 const chicagoSlot = "2026-09-24T17:00:00.000Z";
 
-const oneClaim = BookingNewMeetingsClaimResponseSchema.parse({
+const oneBookedClaim = BookingNewMeetingsClaimResponseSchema.parse({
   count: 1,
   latest: {
     id: "0000000000000000000000aa",
     guestName: "Bob",
     slotStart: chicagoSlot,
     slotEnd: "2026-09-24T17:30:00.000Z",
+    kind: "booked",
+  },
+});
+
+const oneCancelledClaim = BookingNewMeetingsClaimResponseSchema.parse({
+  count: 1,
+  latest: {
+    id: "0000000000000000000000ab",
+    guestName: "Bob",
+    slotStart: chicagoSlot,
+    slotEnd: "2026-09-24T17:30:00.000Z",
+    kind: "cancelled",
+  },
+});
+
+const oneRescheduledClaim = BookingNewMeetingsClaimResponseSchema.parse({
+  count: 1,
+  latest: {
+    id: "0000000000000000000000ac",
+    guestName: "Bob",
+    slotStart: "2026-09-25T18:00:00.000Z",
+    slotEnd: "2026-09-25T18:30:00.000Z",
+    kind: "rescheduled",
+    previousSlotStart: chicagoSlot,
   },
 });
 
@@ -106,8 +138,10 @@ const threeClaim = BookingNewMeetingsClaimResponseSchema.parse({
   latest: {
     id: "0000000000000000000000a3",
     guestName: "Bob",
-    slotStart: chicagoSlot,
-    slotEnd: "2026-09-24T17:30:00.000Z",
+    slotStart: "2026-09-25T18:00:00.000Z",
+    slotEnd: "2026-09-25T18:30:00.000Z",
+    kind: "rescheduled",
+    previousSlotStart: chicagoSlot,
   },
 });
 
@@ -123,6 +157,7 @@ describe("useNewMeetingsNotice", () => {
   const { port, mocks } = createTestToastPort();
 
   beforeEach(() => {
+    sseBus.clear();
     mocks.toast.mockClear();
     mocks.dismiss.mockClear();
     mockClaimNewMeetings.mockReset();
@@ -158,7 +193,7 @@ describe("useNewMeetingsNotice", () => {
   };
 
   it("shows the single-booking sentence and Show navigates to that week", async () => {
-    mockClaimNewMeetings.mockResolvedValue(oneClaim);
+    mockClaimNewMeetings.mockResolvedValue(oneBookedClaim);
     renderNotice();
 
     await waitFor(() => {
@@ -179,7 +214,35 @@ describe("useNewMeetingsNotice", () => {
     });
   });
 
-  it("shows the count sentence for several bookings", async () => {
+  it("shows the cancelled sentence for one cancel", async () => {
+    mockClaimNewMeetings.mockResolvedValue(oneCancelledClaim);
+    renderNotice();
+
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalled();
+    });
+    renderedToast();
+
+    expect(
+      screen.getByText("Bob cancelled: Thu, Sep 24, 12:00 PM"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the rescheduled sentence for one reschedule", async () => {
+    mockClaimNewMeetings.mockResolvedValue(oneRescheduledClaim);
+    renderNotice();
+
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalled();
+    });
+    renderedToast();
+
+    expect(
+      screen.getByText("Bob moved a meeting to Fri, Sep 25, 1:00 PM"),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the count sentence for several meeting updates", async () => {
     mockClaimNewMeetings.mockResolvedValue(threeClaim);
     renderNotice();
 
@@ -190,7 +253,7 @@ describe("useNewMeetingsNotice", () => {
 
     expect(
       screen.getByText(
-        "3 meetings booked since you last looked. Latest: Bob, Thu, Sep 24, 12:00 PM",
+        "3 meeting updates since you last looked. Latest: Bob moved a meeting to Fri, Sep 25, 1:00 PM",
       ),
     ).toBeInTheDocument();
   });
@@ -221,7 +284,7 @@ describe("useNewMeetingsNotice", () => {
 
   it("defers the toast until the billing gate is released", async () => {
     setBillingGateOwnsScreen(true);
-    mockClaimNewMeetings.mockResolvedValue(oneClaim);
+    mockClaimNewMeetings.mockResolvedValue(oneBookedClaim);
     renderNotice();
 
     await waitFor(() => {
@@ -238,6 +301,41 @@ describe("useNewMeetingsNotice", () => {
     expect(
       screen.getByText("Bob booked a meeting: Thu, Sep 24, 12:00 PM"),
     ).toBeInTheDocument();
+  });
+
+  it("claims on eventsChanged and respects the ten-second floor", async () => {
+    renderNotice();
+    await waitFor(() => {
+      expect(mockClaimNewMeetings).toHaveBeenCalledTimes(1);
+    });
+
+    const eventsChanged = () =>
+      sseBus.emit({
+        type: "eventsChanged",
+        calendarId: "000000000000000000000000",
+        eventIds: [],
+        reason: "updated",
+      } as never);
+
+    act(() => {
+      eventsChanged();
+    });
+    await waitFor(() => {
+      expect(mockClaimNewMeetings).toHaveBeenCalledTimes(2);
+    });
+
+    act(() => {
+      eventsChanged();
+    });
+    expect(mockClaimNewMeetings).toHaveBeenCalledTimes(2);
+
+    setSystemTime(new Date("2026-09-09T12:00:11.000Z"));
+    act(() => {
+      eventsChanged();
+    });
+    await waitFor(() => {
+      expect(mockClaimNewMeetings).toHaveBeenCalledTimes(3);
+    });
   });
 
   it("does not claim again on a visibility change within five minutes", async () => {
