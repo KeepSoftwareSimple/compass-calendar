@@ -1527,4 +1527,22 @@ describe("SettingsModal", () => {
       screen.queryByRole("dialog", { name: "Settings" }),
     ).not.toBeInTheDocument();
   });
+
+  it("does not fetch GET /api/booking/page for guest meeting setup preview", async () => {
+    let bookingPageGets = 0;
+    const calendar = createMockCalendar({ name: "Work" });
+    const calendarId = CalendarIdSchema.parse(calendar.id);
+    server.use(
+      http.get(bookingPageUrl, () => {
+        bookingPageGets += 1;
+        return HttpResponse.json(unconfiguredBookingPage(calendarId));
+      }),
+    );
+    authenticated = false;
+    settingsActions.beginGuestMeetingSetup();
+    renderSettings({ authenticated: false, open: false });
+
+    await screen.findByRole("dialog", { name: "Settings" });
+    expect(bookingPageGets).toBe(0);
+  });
 });

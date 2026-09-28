@@ -125,6 +125,18 @@ writable calendar connection. Anonymous IndexedDB users do not get a
 booking link. Password-only users see a connect-Google prompt in
 Settings, not a broken public page.
 
+### Guest setup
+
+A signed-out visitor can start the guided meeting setup from a public
+`/meet` page footer (`/?meetingSetup=1`). The wizard runs locally in
+Settings: each step writes a draft to browser local storage. On the
+go-live step, **Sign up to go live** closes Settings and opens sign-up
+while keeping the draft. After sign-up (email or OAuth), Compass
+reopens Meeting settings on the go-live step with the draft restored
+and the destination calendar reset to the first writable calendar they
+can use. The draft clears only when go-live succeeds, same as a
+signed-in host.
+
 Host administration lives in Settings as Meeting. The internal name
 remains Booking page (`SettingsPage` includes `"booking"` in
 `apps/calendar-web/src/settings/settings.store.ts`). There is no dedicated

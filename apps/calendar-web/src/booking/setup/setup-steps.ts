@@ -43,6 +43,9 @@ export const SETUP_STEPS: readonly SetupStepDefinition[] = [
   },
 ];
 
+export const GUEST_GO_LIVE_SENTENCE =
+  "Review your settings. Your page turns on after sign-up.";
+
 const SETUP_STEP_BY_ID = new Map(
   SETUP_STEPS.map((step) => [step.id, step] as const),
 );

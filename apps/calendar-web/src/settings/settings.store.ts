@@ -65,6 +65,19 @@ export const settingsActions = {
         type: "closeSettings",
       },
     ),
+  /** Closes Settings for guest sign-up hand-off; keeps the local draft intent. */
+  closeSettingsForGuestAuthHandoff: () =>
+    useSettingsStore.setState(
+      {
+        isSettingsOpen: false,
+        settingsPage: "accounts",
+        overlayOpenedFromPalette: false,
+      },
+      false,
+      {
+        type: "closeSettingsForGuestAuthHandoff",
+      },
+    ),
   beginGuestMeetingSetup: () =>
     useSettingsStore.setState(
       {
