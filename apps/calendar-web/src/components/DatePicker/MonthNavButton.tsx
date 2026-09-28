@@ -7,8 +7,9 @@ type MonthNavButtonProps = {
   ariaLabel: string;
   children: React.ReactNode;
   color: string;
+  disabled?: boolean;
   isSidebarStyle?: boolean;
-  onClick: () => void;
+  onClick?: () => void;
   shortcut?: string | string[];
 };
 
@@ -16,6 +17,7 @@ export const MonthNavButton = ({
   ariaLabel,
   children,
   color,
+  disabled = false,
   isSidebarStyle = false,
   onClick,
   shortcut,
@@ -24,6 +26,7 @@ export const MonthNavButton = ({
     <button
       aria-label={ariaLabel}
       className="c-focus-ring"
+      disabled={disabled}
       onClick={onClick}
       onMouseEnter={(e) => {
         if (isSidebarStyle) return;
@@ -46,8 +49,9 @@ export const MonthNavButton = ({
         e.currentTarget.style.backgroundColor = "transparent";
       }}
       style={{
-        cursor: "pointer",
+        cursor: disabled ? "default" : "pointer",
         color,
+        opacity: disabled ? 0.35 : isSidebarStyle ? 0.9 : 1,
         background: "transparent",
         border: "1px solid transparent",
         display: "flex",
@@ -56,7 +60,6 @@ export const MonthNavButton = ({
         width: "24px",
         height: "24px",
         borderRadius: isSidebarStyle ? "4px" : "50%",
-        opacity: isSidebarStyle ? 0.9 : 1,
         transition: "background-color 0.2s, border-color 0.2s, opacity 0.2s",
       }}
       type="button"

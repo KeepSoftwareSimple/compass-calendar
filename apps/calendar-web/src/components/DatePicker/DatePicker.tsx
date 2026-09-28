@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import type React from "react";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import * as ReactDatePickerModule from "react-datepicker";
 import { type ReactDatePickerProps } from "react-datepicker";
 import dayjs from "@core/util/date/dayjs";
@@ -27,6 +27,8 @@ export interface Props extends Omit<ReactDatePickerProps, "autoFocus"> {
   inputColor?: string;
   isOpen?: boolean;
   monthTextClassName?: string;
+  /** Grid popovers: click the caption to jump through year then month grids. */
+  captionPicker?: boolean;
   /**
    * Sidebar-only: hover keycaps on the month chevrons, plus optional
    * overrides so the owner can move its own cursor instead of letting
@@ -56,10 +58,13 @@ const reactDatePickerExport =
   };
 const ReactDatePicker = reactDatePickerExport.default ?? reactDatePickerExport;
 
+type CaptionPickerView = "day" | "year" | "month";
+
 export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const {
     animationOnToggle = true,
     bgColor,
+    captionPicker = false,
     calendarClassName,
     headerActionsClassName,
     headerClassName,
@@ -79,6 +84,16 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const onCalendarCloseRef = useRef(datePickerProps.onCalendarClose);
   onCalendarCloseRef.current = datePickerProps.onCalendarClose;
+  const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
+  const captionViewRef = useRef<CaptionPickerView>("day");
+  captionViewRef.current = captionView;
+  const [captionFocusDate, setCaptionFocusDate] = useState<Date | undefined>();
+  useEffect(() => {
+    if (isOpen) return;
+    setCaptionView("day");
+    captionViewRef.current = "day";
+    setCaptionFocusDate(undefined);
+  }, [isOpen]);
   // Sidebar month grid stays mounted and visible; only transient grid popovers
   // own Escape (same carve-out the old DOM probe encoded via Month picker).
   useFloatingLayer(`datePicker:${layerId}`, view === "grid" && isOpen);
@@ -128,6 +143,46 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         ? "var(--text)"
         : "var(--on-accent)";
 
+  const isCaptionYearView = captionPicker && captionView === "year";
+  const isCaptionMonthView = captionPicker && captionView === "month";
+  const shouldCommitSelection = !captionPicker || captionView === "day";
+
+  const handleCalendarClose = () => {
+    setCaptionView("day");
+    setCaptionFocusDate(undefined);
+    datePickerProps.onCalendarClose?.();
+  };
+
+  const openCaptionPicker = () => {
+    const selectedDate = datePickerProps.selected;
+    setCaptionFocusDate(
+      selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime())
+        ? selectedDate
+        : new Date(),
+    );
+    captionViewRef.current = "year";
+    setCaptionView("year");
+  };
+
+  const handleChange: ReactDatePickerProps["onChange"] = (date, event) => {
+    if (captionPicker && captionViewRef.current !== "day") return;
+    datePickerProps.onChange?.(date, event);
+  };
+
+  const handleSelect: ReactDatePickerProps["onSelect"] = (date, event) => {
+    if (captionPicker && captionViewRef.current === "year" && date) {
+      captionViewRef.current = "month";
+      setCaptionView("month");
+      return;
+    }
+    if (captionPicker && captionViewRef.current === "month" && date) {
+      captionViewRef.current = "day";
+      setCaptionView("day");
+      return;
+    }
+    datePickerProps.onSelect?.(date, event);
+  };
+
   // react-datepicker paints z-index via popperClassName on the positioned
   // node (popperProps.style is ignored by react-popper). "!z-22" equals
   // Z_INDEX_FLOATING_MENU; keep the literal static so Tailwind can see it.
@@ -170,19 +225,53 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
       formatWeekDay={(day) => day[0]}
       open={isOpen}
       {...props}
+      openToDate={captionFocusDate ?? props.openToDate}
+      onCalendarClose={handleCalendarClose}
+      onChange={handleChange}
+      onSelect={handleSelect}
+      shouldCloseOnSelect={
+        shouldCommitSelection ? props.shouldCloseOnSelect : false
+      }
+      showFourColumnMonthYearPicker={isCaptionMonthView}
+      showMonthYearPicker={isCaptionMonthView}
+      showYearPicker={isCaptionYearView}
+      yearItemNumber={12}
       // Close the picker when the user clicks away (react-datepicker has no
       // onCalendarClose for outside-clicks). onCalendarOpen/onCalendarClose/
       // onSelect flow straight through {...props}. Kept as a fallback for
       // contexts where bubble-phase delivery still reaches document.
       onClickOutside={() => {
-        datePickerProps.onCalendarClose?.();
+        handleCalendarClose();
       }}
       portalId={portalId}
       showPopperArrow={false}
       renderCustomHeader={(headerProps) => {
         const { customHeaderCount, monthDate } = headerProps;
         const selectedMonth = dayjs(monthDate).format("MMM YYYY");
+        const selectedYear = dayjs(monthDate).format("YYYY");
         const currentMonth = dayjs().format("MMM YYYY");
+        const captionLabel = isCaptionYearView
+          ? "Select year"
+          : isCaptionMonthView
+            ? `Select month, ${selectedYear}`
+            : selectedMonth;
+        const useYearNavigation = isCaptionYearView || isCaptionMonthView;
+        const prevNav = useYearNavigation
+          ? () => headerProps.decreaseYear()
+          : (monthNav?.onPrev ?? (() => headerProps.decreaseMonth()));
+        const nextNav = useYearNavigation
+          ? () => headerProps.increaseYear()
+          : (monthNav?.onNext ?? (() => headerProps.increaseMonth()));
+        const prevNavDisabled = useYearNavigation
+          ? headerProps.prevYearButtonDisabled
+          : headerProps.prevMonthButtonDisabled;
+        const nextNavDisabled = useYearNavigation
+          ? headerProps.nextYearButtonDisabled
+          : headerProps.nextMonthButtonDisabled;
+        const prevNavLabel = useYearNavigation
+          ? "Previous years"
+          : "Previous month";
+        const nextNavLabel = useYearNavigation ? "Next years" : "Next month";
 
         return (
           <div
@@ -191,13 +280,28 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               headerClassName,
             )}
           >
-            <div className={classNames("w-16 items-start")}>
-              <span
-                className={classNames("relative", monthTextClassName)}
-                style={{ color: headerColor }}
-              >
-                {selectedMonth}
-              </span>
+            <div className={classNames("min-w-16 items-start")}>
+              {captionPicker && captionView === "day" ? (
+                <button
+                  type="button"
+                  aria-label="Choose month and year"
+                  className={classNames(
+                    "relative cursor-pointer rounded-xs px-0.5 text-left transition-colors hover:bg-text/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+                    monthTextClassName,
+                  )}
+                  style={{ color: headerColor }}
+                  onClick={openCaptionPicker}
+                >
+                  {selectedMonth}
+                </button>
+              ) : (
+                <span
+                  className={classNames("relative", monthTextClassName)}
+                  style={{ color: headerColor }}
+                >
+                  {captionLabel}
+                </span>
+              )}
             </div>
 
             {!customHeaderCount && (
@@ -209,23 +313,21 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               >
                 <div className="flex items-center gap-1">
                   <MonthNavButton
-                    ariaLabel="Previous month"
+                    ariaLabel={prevNavLabel}
                     color={headerColor}
+                    disabled={prevNavDisabled}
                     isSidebarStyle={view === "sidebar"}
-                    onClick={
-                      monthNav?.onPrev ?? (() => headerProps.decreaseMonth())
-                    }
+                    onClick={prevNavDisabled ? undefined : prevNav}
                     shortcut={monthNav ? [...monthNav.prevShortcut] : undefined}
                   >
                     <ChevronLeftIcon />
                   </MonthNavButton>
                   <MonthNavButton
-                    ariaLabel="Next month"
+                    ariaLabel={nextNavLabel}
                     color={headerColor}
+                    disabled={nextNavDisabled}
                     isSidebarStyle={view === "sidebar"}
-                    onClick={
-                      monthNav?.onNext ?? (() => headerProps.increaseMonth())
-                    }
+                    onClick={nextNavDisabled ? undefined : nextNav}
                     shortcut={monthNav ? [...monthNav.nextShortcut] : undefined}
                   >
                     <ChevronRightIcon />

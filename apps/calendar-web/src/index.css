@@ -1032,6 +1032,46 @@
     color: var(--text-muted);
   }
 
+  & .react-datepicker__year-text,
+  & .react-datepicker__month-text {
+    display: inline-flex;
+    width: 3rem;
+    height: 1.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    color: var(--text);
+    line-height: 1.75rem;
+  }
+
+  &[data-dark="false"] .react-datepicker__year-text,
+  &[data-dark="false"] .react-datepicker__month-text {
+    color: var(--on-accent);
+  }
+
+  & .react-datepicker__year-text:hover,
+  & .react-datepicker__month-text:hover {
+    background-color: var(--date-picker-hover-bg);
+    color: var(--date-picker-hover-text);
+  }
+
+  & .react-datepicker__year-text--selected,
+  .react-datepicker__month-text--selected {
+    background-color: var(--date-picker-selected-bg);
+    color: var(--date-picker-selected-text);
+  }
+
+  &
+    .react-datepicker__year-text--keyboard-selected:not(
+      .react-datepicker__year-text--selected
+    ),
+  .react-datepicker__month-text--keyboard-selected:not(
+      .react-datepicker__month-text--selected
+    ) {
+    background-color: var(--date-picker-hover-bg);
+    color: var(--date-picker-hover-text);
+  }
+
   &.calendar {
     width: 320px;
     height: 0;

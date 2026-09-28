@@ -131,6 +131,7 @@ export function LifeSidebarContent({
           </TooltipWrapper>
           <DatePicker
             aria-label="Date of birth"
+            captionPicker
             calendarClassName="lifeBirthDatePicker"
             dateFormat="MMM d, yyyy"
             id="life-date-of-birth"
