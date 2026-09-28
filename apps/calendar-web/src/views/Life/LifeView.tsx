@@ -184,7 +184,6 @@ export function LifeView({ today }: LifeViewProps) {
           nextLabel="Next life variation"
           onNext={() => cycleVariation(1)}
           onPrev={() => cycleVariation(-1)}
-          onToday={focusCurrentWeek}
           prevLabel="Previous life variation"
         />
         <section
