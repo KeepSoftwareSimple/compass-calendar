@@ -2,6 +2,7 @@ import {
   type FC,
   type KeyboardEvent,
   type MouseEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
@@ -28,6 +29,8 @@ import {
 } from "./useMonthPickerShortcuts";
 
 interface Props {
+  /** Extra header controls, rendered after the trial pill at the far right. */
+  headerEndContent?: ReactNode;
   monthsShown?: number;
   onSelectDate: (date: Dayjs) => void;
   selectedDate: Dayjs;
@@ -61,6 +64,7 @@ const recordPickerStep = (event: KeyboardEvent<HTMLElement>) => {
 };
 
 export const MonthPicker: FC<Props> = ({
+  headerEndContent,
   monthsShown,
   onSelectDate,
   selectedDate,
@@ -184,7 +188,12 @@ export const MonthPicker: FC<Props> = ({
           dayClassName={getDayClassName}
           headerActionsClassName={headerActionsClassName}
           headerClassName="!relative !justify-start !px-0 !pb-3"
-          headerEndContent={<TrialBadge />}
+          headerEndContent={
+            <div className="flex items-center gap-2">
+              <TrialBadge />
+              {headerEndContent}
+            </div>
+          }
           inline
           isOpen={true}
           locale={monthPickerLocale(weekStartDay)}

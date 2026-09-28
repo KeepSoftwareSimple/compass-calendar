@@ -1,5 +1,5 @@
 import { ShuffleIcon } from "@phosphor-icons/react/dist/csr/Shuffle";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
 import { NumberInput } from "@web/components/NumberInput/NumberInput";
@@ -20,6 +20,8 @@ import { type LifePreferences } from "./life-preferences.storage";
 
 interface LifeSidebarContentProps {
   autoFocusBirthDate: boolean;
+  /** Rendered at the far right of the variation title row. */
+  headerEndContent?: ReactNode;
   onCycleVariation: (direction: -1 | 1) => void;
   preferences: LifePreferences;
   onShuffleAge: () => void;
@@ -32,6 +34,7 @@ interface LifeSidebarContentProps {
 
 export function LifeSidebarContent({
   autoFocusBirthDate,
+  headerEndContent,
   onCycleVariation,
   preferences,
   onShuffleAge,
@@ -106,6 +109,9 @@ export function LifeSidebarContent({
             />
           </TooltipWrapper>
           <h2 className="font-semibold text-text">{variation.label}</h2>
+          {headerEndContent ? (
+            <div className="ml-auto flex items-center">{headerEndContent}</div>
+          ) : null}
         </div>
         <p>{getLifeVariationDescription(preferences.lifespan)}</p>
         <p>
