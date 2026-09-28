@@ -11,7 +11,15 @@ export interface ShortcutLevelDefinition {
   minUsed: number;
 }
 
-export const SHORTCUT_LEVELS: readonly ShortcutLevelDefinition[] = [
+/**
+ * The table is typed as a non-empty list whose first entry is reachable with
+ * nothing used, so `computeShortcutLevel` always finds a current level
+ * without a runtime guard for an empty or misordered table.
+ */
+export const SHORTCUT_LEVELS: readonly [
+  ShortcutLevelDefinition & { minUsed: 0 },
+  ...ShortcutLevelDefinition[],
+] = [
   { level: 1, name: "Newcomer", minUsed: 0 },
   { level: 2, name: "Explorer", minUsed: 4 },
   { level: 3, name: "Navigator", minUsed: 10 },
@@ -38,26 +46,21 @@ export interface ShortcutLevel {
  * renamed or removed); those never count. `registryIds` is the caller's
  * current `SHORTCUTS_REGISTRY` id list.
  */
-const FIRST_LEVEL = SHORTCUT_LEVELS[0];
-if (FIRST_LEVEL?.minUsed !== 0) {
-  throw new Error("SHORTCUT_LEVELS must start at minUsed: 0");
-}
-
 export function computeShortcutLevel(
   usedIds: ReadonlySet<string>,
   registryIds: readonly string[],
 ): ShortcutLevel {
   const used = registryIds.filter((id) => usedIds.has(id)).length;
 
-  // minUsed: 0 on the first level guarantees at least one match, so
-  // `currentIndex` is never -1.
-  const currentIndex = SHORTCUT_LEVELS.reduce(
-    (winner, definition, index) =>
-      definition.minUsed <= used ? index : winner,
-    0,
+  // The first level's `minUsed: 0` always matches, so the seed below is the
+  // answer for a browser that has used nothing rather than a fallback.
+  const current = SHORTCUT_LEVELS.reduce<ShortcutLevelDefinition>(
+    (winner, definition) => (definition.minUsed <= used ? definition : winner),
+    SHORTCUT_LEVELS[0],
   );
-  const current = SHORTCUT_LEVELS[currentIndex] ?? FIRST_LEVEL;
-  const next = SHORTCUT_LEVELS[currentIndex + 1];
+  // The first threshold this browser has not reached yet, which is the one
+  // after `current` for a table whose thresholds only ever increase.
+  const next = SHORTCUT_LEVELS.find((definition) => definition.minUsed > used);
 
   return {
     level: current.level,
