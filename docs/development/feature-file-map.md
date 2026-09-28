@@ -58,7 +58,7 @@ RSVP](../features/attendees.md).
 
 - Attendee/RSVP write contracts: `packages/core/src/types/event-command.contracts.ts`, `packages/core/src/types/event-attendance.contracts.ts`
 - Guest-list editor: `apps/calendar-web/src/views/Forms/EventForm/AttendeeField/AttendeeField.tsx`
-- RSVP status badge and tally: `apps/calendar-web/src/views/Forms/EventForm/AttendeeRsvpStatus.tsx`, `apps/calendar-web/src/views/Forms/EventForm/attendee-rsvp.ts`, `apps/calendar-web/src/views/Forms/EventForm/EventDetailsSection.tsx`
+- RSVP status badge and tally: `apps/calendar-web/src/views/Forms/EventForm/AttendeeRsvpStatus.tsx`, `apps/calendar-web/src/events/attendee-rsvp.ts`, `apps/calendar-web/src/views/Forms/EventForm/EventDetailsSection.tsx`
 - Save-time invitation prompt: `apps/calendar-web/src/views/Forms/EventForm/SendInvitationsDialog.tsx`, `apps/calendar-web/src/views/Forms/hooks/useSaveEventForm.ts`
 - RSVP control and scope dialog: `apps/calendar-web/src/views/Forms/EventForm/RsvpControl.tsx`, `apps/calendar-web/src/views/Forms/EventForm/RsvpScopeDialog.tsx`
 - Contact suggestions hook: `apps/calendar-web/src/views/Forms/EventForm/AttendeeField/useContactSuggestions.ts`

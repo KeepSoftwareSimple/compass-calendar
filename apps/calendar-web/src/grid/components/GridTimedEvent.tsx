@@ -2,6 +2,7 @@ import { type ForwardedRef, forwardRef, memo, useState } from "react";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent as GridEventEntity } from "@web/common/types/web.event.types";
+import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { TimedEventCard } from "@web/grid/components/TimedEventCard";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
@@ -21,6 +22,7 @@ interface Props {
   displayMode: GridEventDisplayMode;
   event: GridEventEntity;
   focusColor?: string | null;
+  guestResponse?: GridGuestResponseState | null;
   interactionAttributes?: Record<string, string | undefined>;
   isActiveDraft?: boolean;
   isHidden?: boolean;
@@ -43,6 +45,7 @@ const GridTimedEventBase = (
     displayMode,
     event,
     focusColor = null,
+    guestResponse = null,
     interactionAttributes,
     isActiveDraft = false,
     isHidden = false,
@@ -87,6 +90,7 @@ const GridTimedEventBase = (
       displayMode={displayMode}
       event={event}
       focusColor={focusColor}
+      guestResponse={guestResponse}
       onFocus={isDeck ? () => setIsFocused(true) : undefined}
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
@@ -108,6 +112,7 @@ export const GridTimedEventMemo = memo(GridTimedEvent, (prev, next) => {
     prev.deckLayout === next.deckLayout &&
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
+    prev.guestResponse === next.guestResponse &&
     prev.interactionAttributes === next.interactionAttributes &&
     prev.isActiveDraft === next.isActiveDraft &&
     prev.isHidden === next.isHidden &&

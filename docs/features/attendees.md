@@ -217,6 +217,17 @@ Flow:
    (`kind`/`status`/`correlationId`); pinned literally in
    `contacts.controller.test.ts` and proven via the safety canary (below).
 
+## Guest reply on the grid
+
+When the connected calendar account organizes an event, week and day grid
+cards roll up guest `responseStatus` values (self excluded): any guest still
+`needsAction` shows the dashed demo-style outline plus reduced opacity;
+`tentative` shows the outline only; all guests `declined` dims the card
+without an outline. The accessible name prefixes "Awaiting reply:", "Tentative:",
+or "Declined:" so the state is not conveyed by styling alone. Resolved once
+per card in `grid-event-card-chrome.ts` via `guestResponseForEvent` in
+`apps/calendar-web/src/events/attendee-rsvp.ts`.
+
 ## RSVP Semantics
 
 Source: `packages/core/src/types/event-command.contracts.ts`

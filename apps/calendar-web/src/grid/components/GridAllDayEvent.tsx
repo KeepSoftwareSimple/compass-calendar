@@ -2,6 +2,7 @@ import { type ForwardedRef, forwardRef, memo } from "react";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { AllDayEventCard } from "@web/grid/components/AllDayEventCard";
 import { applyHiddenEventStripWidth } from "@web/grid/grid.constants";
 import { getAllDayEventPosition } from "@web/grid/layout/event.position";
@@ -15,6 +16,7 @@ interface Props {
   columnIndex?: number;
   event: GridEvent;
   focusColor?: string | null;
+  guestResponse?: GridGuestResponseState | null;
   interactionAttributes?: Record<string, string | undefined>;
   isActiveDraft?: boolean;
   isDraft?: boolean;
@@ -31,6 +33,7 @@ const GridAllDayEventBase = (
     columnIndex,
     event,
     focusColor = null,
+    guestResponse = null,
     interactionAttributes,
     isActiveDraft = false,
     isDraft = false,
@@ -58,6 +61,7 @@ const GridAllDayEventBase = (
       calendarIdentity={calendarIdentity}
       event={event}
       focusColor={focusColor}
+      guestResponse={guestResponse}
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
       isPlaceholder={isPlaceholder}
@@ -76,6 +80,7 @@ export const GridAllDayEventMemo = memo(GridAllDayEvent, (prev, next) => {
     prev.columnIndex === next.columnIndex &&
     prev.event === next.event &&
     prev.focusColor === next.focusColor &&
+    prev.guestResponse === next.guestResponse &&
     prev.interactionAttributes === next.interactionAttributes &&
     prev.isActiveDraft === next.isActiveDraft &&
     prev.isDraft === next.isDraft &&

@@ -3,11 +3,11 @@ import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import { useState } from "react";
 import { type EventContent } from "@core/types/event.contracts";
 import { CopyButton } from "@web/components/CopyButton/CopyButton";
-import { AttendeeRsvpStatus } from "@web/views/Forms/EventForm/AttendeeRsvpStatus";
 import {
   ATTENDEE_RSVP_LABEL,
   formatAttendeeRsvpTally,
-} from "@web/views/Forms/EventForm/attendee-rsvp";
+} from "@web/events/attendee-rsvp";
+import { AttendeeRsvpStatus } from "@web/views/Forms/EventForm/AttendeeRsvpStatus";
 
 type EventDetails = Extract<EventContent, { kind: "details" }>;
 

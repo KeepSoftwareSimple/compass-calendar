@@ -50,3 +50,44 @@ export const formatAttendeeRsvpTally = (
 
   return `${statuses.length} ${guestWord} (${parts.join(", ")})`;
 };
+
+export type GridGuestResponseState = "awaiting" | "tentative" | "declined";
+
+/**
+ * Roll-up of guest RSVP states for grid cards when the connected calendar
+ * account organizes the event. Self is excluded from the guest list.
+ */
+export const guestResponseForEvent = (
+  event: {
+    organizer?: { email: string } | null;
+    attendees?:
+      | ReadonlyArray<{ email: string; responseStatus: AttendeeResponseStatus }>
+      | undefined;
+  },
+  accountEmail: string | undefined,
+): GridGuestResponseState | null => {
+  if (accountEmail === undefined) return null;
+
+  const organizerEmail = event.organizer?.email;
+  const hostOrganizes =
+    organizerEmail === undefined ||
+    organizerEmail.toLowerCase() === accountEmail.toLowerCase();
+  if (!hostOrganizes) return null;
+
+  const accountLower = accountEmail.toLowerCase();
+  const guests = (event.attendees ?? []).filter(
+    (attendee) => attendee.email.toLowerCase() !== accountLower,
+  );
+  if (guests.length === 0) return null;
+
+  if (guests.some((guest) => guest.responseStatus === "needsAction")) {
+    return "awaiting";
+  }
+  if (guests.some((guest) => guest.responseStatus === "tentative")) {
+    return "tentative";
+  }
+  if (guests.every((guest) => guest.responseStatus === "declined")) {
+    return "declined";
+  }
+  return null;
+};

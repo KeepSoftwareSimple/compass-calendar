@@ -49,6 +49,11 @@ import {
   INPUT_RESET_CLASSNAME,
 } from "@web/components/Focusable/Focusable";
 import { Switch } from "@web/components/Switch/Switch";
+import {
+  attendeeStatusByEmail,
+  formatAttendeeRsvpTally,
+  statusForEmail,
+} from "@web/events/attendee-rsvp";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   patchGridDraftFields,
@@ -66,11 +71,6 @@ import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 import { AttendeeField } from "@web/views/Forms/EventForm/AttendeeField/AttendeeField";
 import { EnableContactSuggestionsNudge } from "@web/views/Forms/EventForm/AttendeeField/EnableContactSuggestionsNudge";
 import { useContactSuggestions } from "@web/views/Forms/EventForm/AttendeeField/useContactSuggestions";
-import {
-  attendeeStatusByEmail,
-  formatAttendeeRsvpTally,
-  statusForEmail,
-} from "@web/views/Forms/EventForm/attendee-rsvp";
 import { CalendarSelect } from "@web/views/Forms/EventForm/CalendarSelect/CalendarSelect";
 import { DateControlsSection } from "@web/views/Forms/EventForm/DateControlsSection/DateControlsSection/DateControlsSection";
 import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
