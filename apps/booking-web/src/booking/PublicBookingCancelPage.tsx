@@ -1,6 +1,9 @@
 import { PublicBookingApi } from "@booking-web/api/public-booking.api";
 import { getErrorStatus } from "@booking-web/api/public-booking-http";
-import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
+import {
+  PUBLIC_BOOKING_TEXT_LINK_CLASS,
+  PublicBookingLayout,
+} from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@booking-web/booking/PublicBookingSlotSummary";
 import {
   PUBLIC_BOOKING_HEADING_CLASS,
@@ -163,7 +166,7 @@ export function PublicBookingCancelPage() {
         {showRebook && bookingSlug ? (
           <a
             href={`/meet/${bookingSlug}`}
-            className="c-focus-ring mt-4 inline-flex min-h-11 items-center text-accent text-sm underline"
+            className={`${PUBLIC_BOOKING_TEXT_LINK_CLASS} mt-4`}
           >
             Meet another time
           </a>

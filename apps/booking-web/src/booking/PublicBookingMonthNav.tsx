@@ -42,6 +42,8 @@ export function PublicBookingMonthNav({
       onPrefetchMonth(target);
     }
   };
+  const monthNavButtonClass =
+    "c-focus-ring min-h-11 rounded-md px-3 py-2 font-medium text-sm text-text transition-colors hover:bg-surface-panel disabled:cursor-not-allowed disabled:opacity-40";
 
   return (
     <nav
@@ -55,7 +57,7 @@ export function PublicBookingMonthNav({
         onClick={() => onMonthChange(previousMonthKey)}
         onMouseEnter={() => prefetchIfEnabled(canGoPrevious, previousMonthKey)}
         onFocus={() => prefetchIfEnabled(canGoPrevious, previousMonthKey)}
-        className="c-focus-ring min-h-11 rounded-md px-3 py-2 font-medium text-sm text-text transition-colors hover:bg-surface-panel disabled:cursor-not-allowed disabled:opacity-40"
+        className={monthNavButtonClass}
       >
         Previous
       </button>
@@ -72,7 +74,7 @@ export function PublicBookingMonthNav({
         onClick={() => onMonthChange(nextMonthKey)}
         onMouseEnter={() => prefetchIfEnabled(canGoNext, nextMonthKey)}
         onFocus={() => prefetchIfEnabled(canGoNext, nextMonthKey)}
-        className="c-focus-ring min-h-11 rounded-md px-3 py-2 font-medium text-sm text-text transition-colors hover:bg-surface-panel disabled:cursor-not-allowed disabled:opacity-40"
+        className={monthNavButtonClass}
       >
         Next
       </button>

@@ -1,4 +1,7 @@
-import { type AdminPutBookingPageInput } from "@core/types/booking.contracts";
+import {
+  type AdminGetBookingPageResult,
+  type AdminPutBookingPageInput,
+} from "@core/types/booking.contracts";
 import {
   CalendarIdSchema,
   TimeZoneSchema,
@@ -7,6 +10,9 @@ import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.fact
 import {
   defaultBlockingCalendarIdsForDestination,
   isBookingSettingsFormDirty,
+  isConfiguredBookingPage,
+  isLiveBookingPage,
+  isUnconfiguredBookingPage,
 } from "@web/booking/booking.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { describe, expect, it } from "bun:test";
@@ -130,5 +136,46 @@ describe("isBookingSettingsFormDirty", () => {
         minNoticeText: "4",
       }),
     ).toBe(true);
+  });
+});
+
+describe("booking page predicates", () => {
+  const unconfigured = {
+    ...bookingForm(),
+    isConfigured: false,
+    suggestedSlug: "hostuser",
+  };
+  const configuredSetup = {
+    ...bookingForm(),
+    isConfigured: true,
+    suggestedSlug: "hostuser",
+  };
+  const savedLive = {
+    ...bookingForm(),
+    enabled: true,
+    bookingUrl: "https://compasscalendar.com/meet/hostuser",
+    slug: "hostuser",
+  } as AdminGetBookingPageResult;
+
+  it("treats a missing page as not configured", () => {
+    expect(isConfiguredBookingPage(undefined)).toBe(false);
+    expect(isLiveBookingPage(undefined)).toBe(false);
+  });
+
+  it("treats isConfigured: false as unconfigured", () => {
+    expect(isUnconfiguredBookingPage(unconfigured)).toBe(true);
+    expect(isConfiguredBookingPage(unconfigured)).toBe(false);
+    expect(isLiveBookingPage(unconfigured)).toBe(false);
+  });
+
+  it("treats a configured setup page as configured but not live", () => {
+    expect(isUnconfiguredBookingPage(configuredSetup)).toBe(false);
+    expect(isConfiguredBookingPage(configuredSetup)).toBe(true);
+    expect(isLiveBookingPage(configuredSetup)).toBe(false);
+  });
+
+  it("treats a saved enabled page as configured and live", () => {
+    expect(isConfiguredBookingPage(savedLive)).toBe(true);
+    expect(isLiveBookingPage(savedLive)).toBe(true);
   });
 });

@@ -164,6 +164,13 @@ export function isUnconfiguredBookingPage(
   return "isConfigured" in page && page.isConfigured === false;
 }
 
+/** A page the host has already set up: saved, or configured server-side. */
+export function isConfiguredBookingPage(
+  page: AdminGetBookingPageResult | undefined,
+): page is AdminGetBookingPageResult {
+  return page != null && !isUnconfiguredBookingPage(page);
+}
+
 /** Saved page with the public link turned on. */
 export function isLiveBookingPage(
   page: AdminGetBookingPageResult | undefined,
