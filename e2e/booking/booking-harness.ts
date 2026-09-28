@@ -8,6 +8,12 @@ export function publicBookingAppUrl(path: string): string {
   return `http://localhost:${port}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+/** Mirrors production: public reservation GET requires `?token=`. */
+function publicReservationReadDenied(url: URL): boolean {
+  const token = url.searchParams.get("token");
+  return token == null || token.trim() === "";
+}
+
 /** ObjectId-shaped id for stubbed Google calendar in host settings e2e. */
 export const BOOKING_CALENDAR_ID = "64b7f0a1c2d3e4f5a6b7c8d9";
 
@@ -322,7 +328,7 @@ export interface PublicBookingStubOptions {
   reservationNotFound?: boolean;
   /** When set, GET /reservations/:id returns this status instead of 200. */
   reservationGetStatus?: number;
-  /** Confirmation permalink `?token=`. Omit for a cold load with no secret. */
+  /** Confirmation permalink `?token=`. Defaults to `abc`; pass `""` for no token. */
   token?: string;
   guestName?: string;
   notes?: string | null;
@@ -588,6 +594,9 @@ export async function preparePublicBookingPage(
       /^\/api\/booking\/reservations\/[^/]+$/.test(path) &&
       request.method() === "GET"
     ) {
+      if (publicReservationReadDenied(url)) {
+        return route.fulfill(jsonResponse({}, 404));
+      }
       if (options.reservationNotFound) {
         return route.fulfill(jsonResponse({}, 404));
       }
@@ -704,6 +713,9 @@ export async function preparePublicBookingConfirmedPage(
       /^\/api\/booking\/reservations\/[^/]+$/.test(path) &&
       request.method() === "GET"
     ) {
+      if (publicReservationReadDenied(url)) {
+        return route.fulfill(jsonResponse({}, 404));
+      }
       if (options.reservationNotFound) {
         return route.fulfill(jsonResponse({}, 404));
       }
@@ -731,9 +743,8 @@ export async function preparePublicBookingConfirmedPage(
     return route.fulfill(jsonResponse({}));
   });
 
-  const search = options.token
-    ? `?token=${encodeURIComponent(options.token)}`
-    : "";
+  const token = options.token === undefined ? "abc" : options.token;
+  const search = token.length > 0 ? `?token=${encodeURIComponent(token)}` : "";
   await page.goto(
     publicBookingAppUrl(`/meet/confirmed/${reservationId}${search}`),
     {
@@ -784,6 +795,9 @@ export async function preparePublicBookingCancelPage(
       path === `/api/booking/reservations/${reservationId}` &&
       request.method() === "GET"
     ) {
+      if (publicReservationReadDenied(url)) {
+        return route.fulfill(jsonResponse({}, 404));
+      }
       if (options.reservationNotFound) {
         return route.fulfill(jsonResponse({}, 404));
       }
@@ -900,6 +914,9 @@ export async function preparePublicBookingReschedulePage(
       path === `/api/booking/reservations/${reservationId}` &&
       request.method() === "GET"
     ) {
+      if (publicReservationReadDenied(url)) {
+        return route.fulfill(jsonResponse({}, 404));
+      }
       if (options.reservationNotFound) {
         return route.fulfill(jsonResponse({}, 404));
       }

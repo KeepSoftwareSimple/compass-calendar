@@ -345,26 +345,13 @@ test.describe("public booking page", () => {
     ).toBeVisible();
   });
 
-  test("does not promise an invite cancel link on a cold confirmation permalink", async ({
+  test("shows meeting not found on a confirmation permalink without a guest token", async ({
     page,
   }) => {
-    await preparePublicBookingConfirmedPage(page);
+    await preparePublicBookingConfirmedPage(page, { token: "" });
     await expect(
-      page.getByRole("heading", { name: "You're meeting with Tyler Dane" }),
+      page.getByRole("heading", { name: "Meeting not found" }),
     ).toBeFocused();
-    await expect(page.getByRole("button", { name: /^Copy / })).toHaveCount(0);
-    await expect(
-      page.getByRole("link", { name: "Cancel this meeting" }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Edit details" }),
-    ).toHaveCount(0);
-    await expect(
-      page.getByText("A Google Meet invite is on its way to your email."),
-    ).toBeVisible();
-    await expect(
-      page.getByText(/To cancel, use the link in that invite/),
-    ).toHaveCount(0);
   });
 
   test("shows a calm state for a cancelled confirmation permalink", async ({
