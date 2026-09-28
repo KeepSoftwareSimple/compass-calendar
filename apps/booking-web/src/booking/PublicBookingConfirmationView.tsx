@@ -1,4 +1,7 @@
-import { PublicBookingLayout } from "@booking-web/booking/PublicBookingLayout";
+import {
+  PUBLIC_BOOKING_TEXT_LINK_CLASS,
+  PublicBookingLayout,
+} from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@booking-web/booking/PublicBookingSlotSummary";
 import { PUBLIC_BOOKING_HEADING_CLASS } from "@booking-web/booking/PublicBookingStatusMessage";
 import { useBookingHeadingFocus } from "@booking-web/booking/use-booking-heading-focus";
@@ -101,17 +104,14 @@ export function PublicBookingConfirmationView({
             aria-label="Meeting actions"
           >
             {cancelUrl ? (
-              <a
-                href={cancelUrl}
-                className="c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline"
-              >
+              <a href={cancelUrl} className={PUBLIC_BOOKING_TEXT_LINK_CLASS}>
                 Cancel this meeting
               </a>
             ) : null}
             {rescheduleUrl ? (
               <a
                 href={rescheduleUrl}
-                className="c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline"
+                className={PUBLIC_BOOKING_TEXT_LINK_CLASS}
               >
                 Reschedule this meeting
               </a>

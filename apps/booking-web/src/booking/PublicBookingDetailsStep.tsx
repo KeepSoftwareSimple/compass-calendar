@@ -3,6 +3,7 @@ import {
   PublicBookingGuestForm,
   type PublicBookingGuestFormValues,
 } from "@booking-web/booking/PublicBookingGuestForm";
+import { PUBLIC_BOOKING_TEXT_LINK_CLASS } from "@booking-web/booking/PublicBookingLayout";
 import { PublicBookingSlotSummary } from "@booking-web/booking/PublicBookingSlotSummary";
 import { type Ref } from "react";
 
@@ -44,7 +45,7 @@ export function PublicBookingDetailsStep({
           type="button"
           disabled={disabled}
           onClick={onChangeTime}
-          className="c-focus-ring inline-flex min-h-11 shrink-0 items-center text-accent text-sm underline disabled:cursor-not-allowed disabled:opacity-60"
+          className={`${PUBLIC_BOOKING_TEXT_LINK_CLASS} shrink-0 disabled:cursor-not-allowed disabled:opacity-60`}
         >
           Change time
         </button>

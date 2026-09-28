@@ -10,6 +10,10 @@ import { type PropsWithChildren } from "react";
 export const PUBLIC_BOOKING_ACTION_BAR_CLASS =
   "sticky bottom-0 z-10 -mx-4 flex flex-col gap-2 border-border border-t bg-background px-4 py-3 shadow-[0_-8px_16px_-12px_var(--color-shadow-default)] sm:static sm:mx-0 sm:border-0 sm:px-0 sm:py-0 sm:shadow-none";
 
+/** Quiet text link with a 44px tap target. Accent, not the footer brand link. */
+export const PUBLIC_BOOKING_TEXT_LINK_CLASS =
+  "c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline";
+
 interface PublicBookingLayoutProps extends PropsWithChildren {
   wide?: boolean;
 }

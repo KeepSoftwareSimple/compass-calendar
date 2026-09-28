@@ -61,6 +61,7 @@ import {
   defaultBlockingCalendarIdsForDestination,
   getAvailabilityReadableCalendars,
   isBookingSettingsFormDirty,
+  isConfiguredBookingPage,
   isLiveBookingPage,
   isPlaceholderDestinationCalendar,
   isUnconfiguredBookingPage,
@@ -125,13 +126,6 @@ function savedMeetingLinkUrl(
     return `${bookingAddressPrefix(null)}${page.suggestedSlug}`;
   }
   return null;
-}
-
-/** A page the host has already set up: saved, or configured server-side. */
-function isConfiguredBookingPage(
-  page: AdminGetBookingPageResult | undefined,
-): page is AdminGetBookingPageResult {
-  return page != null && !isUnconfiguredBookingPage(page);
 }
 
 const parseBookingCount = (
@@ -460,24 +454,16 @@ export function BookingSettingsSection({
     if (settingsOpenedRef.current) return;
     if (!hasHealthyConnection) {
       if (isPending) return;
-      settingsOpenedRef.current = true;
-      configuredHostAtOpenRef.current = isConfiguredBookingPage(serverPage);
-      track("booking_settings_opened", {
-        has_connection: false,
-        is_live: false,
-        is_bookable: false,
-        configured_host: configuredHostAtOpenRef.current,
-      });
+    } else if (isSeedingForm || (isLive && !statusQuery.isFetched)) {
       return;
     }
-    if (isSeedingForm) return;
-    if (isLive && !statusQuery.isFetched) return;
     settingsOpenedRef.current = true;
     configuredHostAtOpenRef.current = isConfiguredBookingPage(serverPage);
     track("booking_settings_opened", {
-      has_connection: true,
-      is_live: isLive,
-      is_bookable: isLive && statusQuery.data?.bookable === true,
+      has_connection: hasHealthyConnection,
+      is_live: hasHealthyConnection && isLive,
+      is_bookable:
+        hasHealthyConnection && isLive && statusQuery.data?.bookable === true,
       configured_host: configuredHostAtOpenRef.current,
     });
   }, [

@@ -31,6 +31,9 @@ interface PublicBookingMonthGridProps {
   onKeyboardActivateDay?: (dateKey: string) => void;
 }
 
+const DAY_CELL_CLASS =
+  "flex h-11 w-full items-center justify-center rounded-md";
+
 export function PublicBookingMonthGrid({
   monthKey,
   timeZone,
@@ -185,7 +188,7 @@ export function PublicBookingMonthGrid({
                       key={day.dateKey}
                       aria-current={day.isToday ? "date" : undefined}
                       aria-disabled="true"
-                      className="flex h-11 w-full items-center justify-center rounded-md text-sm text-text-muted"
+                      className={`${DAY_CELL_CLASS} text-sm text-text-muted`}
                     >
                       {day.dayOfMonth}
                       <span className="sr-only"> no times available</span>
@@ -214,7 +217,7 @@ export function PublicBookingMonthGrid({
                       }
                     }}
                     onKeyDown={(event) => handleDayKeyDown(event, day.dateKey)}
-                    className={`c-focus-ring flex h-11 w-full items-center justify-center rounded-md font-medium text-sm transition-colors ${
+                    className={`c-focus-ring ${DAY_CELL_CLASS} font-medium text-sm transition-colors ${
                       isSelected
                         ? "bg-accent text-on-accent hover:bg-accent"
                         : "bg-surface-panel text-text hover:bg-surface-raised"
