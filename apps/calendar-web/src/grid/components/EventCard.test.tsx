@@ -607,6 +607,278 @@ describe("EventCard", () => {
     expect(onEventKeyDown).toHaveBeenCalledTimes(1);
   });
 
+  describe("guest reply styling", () => {
+    const hostAttendees = [
+      {
+        email: "host@example.com",
+        displayName: null,
+        responseStatus: "accepted" as const,
+      },
+      {
+        email: "guest@example.com",
+        displayName: null,
+        responseStatus: "needsAction" as const,
+      },
+    ];
+
+    it("shows awaiting outline, opacity, and label on timed cards", () => {
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: hostAttendees,
+            startDate: "2099-01-15T09:00:00.000Z",
+            endDate: "2099-01-15T10:00:00.000Z",
+          })}
+          guestResponse="awaiting"
+          motionMode="idle"
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", {
+        name: /^Awaiting reply:/,
+      });
+      expect(card.className).toContain("outline-dashed");
+      expect(card.style.opacity).toBe("0.7");
+    });
+
+    it("shows tentative outline without reduced opacity on timed cards", () => {
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "tentative",
+              },
+            ],
+            startDate: "2099-01-15T09:00:00.000Z",
+            endDate: "2099-01-15T10:00:00.000Z",
+          })}
+          guestResponse="tentative"
+          motionMode="idle"
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", { name: /^Tentative:/ });
+      expect(card.className).toContain("outline-dashed");
+      expect(card.style.opacity).toBe("");
+    });
+
+    it("dims all-declined timed cards without an outline", () => {
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "declined",
+              },
+            ],
+            startDate: "2099-01-15T09:00:00.000Z",
+            endDate: "2099-01-15T10:00:00.000Z",
+          })}
+          guestResponse="declined"
+          motionMode="idle"
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", { name: /^Declined:/ });
+      expect(card.className).not.toContain("outline-dashed");
+      expect(card.style.opacity).toBe("0.5");
+    });
+
+    it("leaves accepted-guest timed cards unchanged", () => {
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+            ],
+            startDate: "2099-01-15T09:00:00.000Z",
+            endDate: "2099-01-15T10:00:00.000Z",
+          })}
+          guestResponse={null}
+          motionMode="idle"
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", {
+        name: "Timed event: Planning block, 9 - 10 AM",
+      });
+      expect(card.className).not.toContain("outline-dashed");
+      expect(card.style.opacity).toBe("");
+    });
+
+    it("does not style timed cards when the host is an invitee", () => {
+      render(
+        <TimedEventCard
+          displayMode="saved"
+          event={createEvent({
+            organizer: { email: "other@example.com", displayName: null },
+            attendees: hostAttendees,
+            startDate: "2099-01-15T09:00:00.000Z",
+            endDate: "2099-01-15T10:00:00.000Z",
+          })}
+          guestResponse={null}
+          motionMode="idle"
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", {
+        name: "Timed event: Planning block, 9 - 10 AM",
+      });
+      expect(card.className).not.toContain("outline-dashed");
+    });
+
+    it("shows awaiting outline, opacity, and label on all-day cards", () => {
+      render(
+        <AllDayEventCard
+          event={createEvent({
+            isAllDay: true,
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: hostAttendees,
+          })}
+          guestResponse="awaiting"
+          isPlaceholder={false}
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", {
+        name: /^Awaiting reply:/,
+      });
+      expect(card.className).toContain("outline-dashed");
+      expect(card.style.opacity).toBe("0.7");
+    });
+
+    it("shows tentative outline without reduced opacity on all-day cards", () => {
+      render(
+        <AllDayEventCard
+          event={createEvent({
+            isAllDay: true,
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "tentative",
+              },
+            ],
+          })}
+          guestResponse="tentative"
+          isPlaceholder={false}
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", { name: /^Tentative:/ });
+      expect(card.className).toContain("outline-dashed");
+      expect(card.style.opacity).toBe("");
+    });
+
+    it("dims all-declined all-day cards without an outline", () => {
+      render(
+        <AllDayEventCard
+          event={createEvent({
+            isAllDay: true,
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "declined",
+              },
+            ],
+          })}
+          guestResponse="declined"
+          isPlaceholder={false}
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", { name: /^Declined:/ });
+      expect(card.className).not.toContain("outline-dashed");
+      expect(card.style.opacity).toBe("0.5");
+    });
+
+    it("leaves accepted-guest all-day cards unchanged", () => {
+      render(
+        <AllDayEventCard
+          event={createEvent({
+            isAllDay: true,
+            title: "Conference",
+            organizer: { email: "host@example.com", displayName: null },
+            attendees: [
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+            ],
+          })}
+          guestResponse={null}
+          isPlaceholder={false}
+          position={position}
+        />,
+      );
+
+      const card = screen.getByRole("button", {
+        name: "All-day event: Conference",
+      });
+      expect(card.className).not.toContain("outline-dashed");
+      expect(card.style.opacity).toBe("");
+    });
+  });
+
   it("renders a hidden all-day event as a nameless strip that still opens on Enter", () => {
     const onEventKeyDown = mock();
 

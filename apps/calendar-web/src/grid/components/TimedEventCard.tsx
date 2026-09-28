@@ -17,6 +17,7 @@ import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { getLineClamp } from "@web/common/utils/grid/grid.util";
+import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
@@ -65,6 +66,7 @@ interface TimedEventCardProps {
   event: GridEvent;
   /** Calendar backgroundColor for focus chrome; null falls back to --text. */
   focusColor?: string | null;
+  guestResponse?: GridGuestResponseState | null;
   interactionAttributes?: Record<string, string | undefined>;
   isHidden?: boolean;
   isSelected?: boolean;
@@ -84,6 +86,7 @@ const TimedEventCardBase = (
     displayMode,
     event,
     focusColor = null,
+    guestResponse = null,
     interactionAttributes,
     isHidden = false,
     isSelected = false,
@@ -191,7 +194,15 @@ const TimedEventCardBase = (
     "--event-focus-color": focusColorCss,
     height: position.height || 0,
     left: position.left,
-    opacity: isHidden ? 0.6 : isPlaceholder ? 0.5 : undefined,
+    opacity: isHidden
+      ? 0.6
+      : isPlaceholder
+        ? 0.5
+        : guestResponse === "awaiting"
+          ? 0.7
+          : guestResponse === "declined"
+            ? 0.5
+            : undefined,
     top: position.top,
     width: position.width || 0,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
@@ -236,6 +247,14 @@ const TimedEventCardBase = (
     : `${recurringPrefix}Timed event: ${eventTitle}, ${timeRange ?? "time not set"}`;
   const samplePrefix = event.isDemo ? "Sample " : "";
   const hiddenPrefix = isHidden ? "Hidden " : "";
+  const guestResponsePrefix =
+    guestResponse === "awaiting"
+      ? "Awaiting reply: "
+      : guestResponse === "tentative"
+        ? "Tentative: "
+        : guestResponse === "declined"
+          ? "Declined: "
+          : "";
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
@@ -247,8 +266,8 @@ const TimedEventCardBase = (
         : "";
   const accessibleLabel =
     (calendarIdentity
-      ? `${hiddenPrefix}${samplePrefix}${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
-      : `${hiddenPrefix}${samplePrefix}${baseAccessibleLabel}`) +
+      ? `${hiddenPrefix}${guestResponsePrefix}${samplePrefix}${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
+      : `${hiddenPrefix}${guestResponsePrefix}${samplePrefix}${baseAccessibleLabel}`) +
     edgeFocusSuffix;
 
   return (
@@ -267,7 +286,9 @@ const TimedEventCardBase = (
         "bg-(--event-bg) hover:bg-(--event-hover-bg)",
         "hover:cursor-pointer",
         eventFocusOutlineClass(focusedEdge),
-        event.isDemo &&
+        (event.isDemo ||
+          guestResponse === "awaiting" ||
+          guestResponse === "tentative") &&
           "outline outline-dashed outline-1 outline-text-muted/50",
       )}
       style={eventStyle}

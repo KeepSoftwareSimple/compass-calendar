@@ -3,7 +3,7 @@ import { MinusIcon } from "@phosphor-icons/react/dist/csr/Minus";
 import { QuestionIcon } from "@phosphor-icons/react/dist/csr/Question";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
-import { ATTENDEE_RSVP_LABEL } from "@web/views/Forms/EventForm/attendee-rsvp";
+import { ATTENDEE_RSVP_LABEL } from "@web/events/attendee-rsvp";
 
 const STATUS_ICON = {
   accepted: CheckIcon,
