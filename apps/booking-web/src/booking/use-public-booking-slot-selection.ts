@@ -51,6 +51,11 @@ interface PublicBookingSlotSelectionParams {
    * loaded (page meta, plus the guest token when rescheduling).
    */
   horizonDays: number | null;
+  /**
+   * When the URL has no `?date=`, open this day in the month grid (for example
+   * the guest's current meeting day on reschedule).
+   */
+  preferredDateKey?: string | null;
   /** True while another step owns focus, so the picker heading must not take it. */
   pickerFocusSuspended?: boolean;
   prefetchMonth: (monthKey: string, maxHorizonDays: number) => void;
@@ -75,6 +80,7 @@ export function usePublicBookingSlotSelection({
   keys,
   slotsQuery,
   horizonDays,
+  preferredDateKey = null,
   pickerFocusSuspended = false,
   prefetchMonth,
   resolveNextAvailableDate,
@@ -124,6 +130,7 @@ export function usePublicBookingSlotSelection({
   const selectedDateKey =
     (search.date?.startsWith(monthKey) ? search.date : null) ??
     (slotDateKey?.startsWith(monthKey) ? slotDateKey : null) ??
+    (preferredDateKey?.startsWith(monthKey) ? preferredDateKey : null) ??
     availableDateKeys[0] ??
     null;
 
@@ -149,6 +156,14 @@ export function usePublicBookingSlotSelection({
   /** Move focus to the picker heading once the picker next renders. */
   const requestPickerFocus = () => {
     pendingPickerFocusRef.current = true;
+  };
+
+  const clearSelectedSlot = () => {
+    if (!selectedSlotStart) {
+      return;
+    }
+    setAlertMessage(null);
+    updateSearch({ slot: undefined });
   };
 
   const handleSelectSlot = (slotStart: string) => {
@@ -250,6 +265,7 @@ export function usePublicBookingSlotSelection({
     slotsFetching,
     updateSearch,
     requestPickerFocus,
+    clearSelectedSlot,
     handleSelectSlot,
     handleSelectDay,
     handleMonthChange,

@@ -869,10 +869,13 @@ export async function preparePublicBookingReschedulePage(
   const slug = options.slug ?? "tylerdane";
   const durationMinutes = options.durationMinutes ?? 30;
   const hostDisplayName = options.hostDisplayName ?? "Tyler Dane";
-  const first = options.slots?.[0] ?? buildBookableSlot(durationMinutes);
-  const slots = options.slots ?? [first];
-  let currentSlotStart = first.slotStart;
-  let currentSlotEnd = first.slotEnd;
+  const reservationSlot =
+    options.slots?.[0] ?? buildBookableSlot(durationMinutes);
+  const alternateSlot =
+    options.slots?.[1] ?? buildSameDaySiblingSlot(reservationSlot);
+  const slots = options.slots ?? [reservationSlot, alternateSlot];
+  let currentSlotStart = reservationSlot.slotStart;
+  let currentSlotEnd = reservationSlot.slotEnd;
   let guestTimeZone = options.guestTimeZone ?? "UTC";
   const captured: CapturedRescheduleRequests = {
     reschedulePosts: [],
@@ -929,8 +932,12 @@ export async function preparePublicBookingReschedulePage(
       const windowEnd = url.searchParams.get("end");
       const startMs = windowStart ? Date.parse(windowStart) : Number.NaN;
       const endMs = windowEnd ? Date.parse(windowEnd) : Number.NaN;
+      const currentStartMs = Date.parse(currentSlotStart);
       const slotsInWindow = slots.filter((entry) => {
         const slotMs = Date.parse(entry.slotStart);
+        if (slotMs === currentStartMs) {
+          return false;
+        }
         return slotMs >= startMs && slotMs < endMs;
       });
       return route.fulfill(

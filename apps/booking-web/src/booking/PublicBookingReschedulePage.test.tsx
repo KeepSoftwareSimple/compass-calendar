@@ -3,6 +3,8 @@ import {
   reservationGetHandler as publicReservationGetHandler,
 } from "@booking-web/__tests__/public-booking.msw";
 import {
+  formatBookingDateKey,
+  formatBookingMonthDayLabel,
   formatBookingSlotLabel,
   formatBookingSlotTime,
 } from "@booking-web/booking/public-booking.format";
@@ -31,6 +33,15 @@ const slotStart = (() => {
   return start.toISOString();
 })();
 const slotEnd = new Date(Date.parse(slotStart) + 30 * 60 * 1000).toISOString();
+const alternateSlotStart = new Date(
+  Date.parse(slotStart) + 60 * 60 * 1000,
+).toISOString();
+const alternateSlotEnd = new Date(
+  Date.parse(alternateSlotStart) + 30 * 60 * 1000,
+).toISOString();
+const offeredSlots = [
+  { slotStart: alternateSlotStart, slotEnd: alternateSlotEnd },
+];
 
 function reservationGetHandler(overrides: Record<string, unknown> = {}) {
   return publicReservationGetHandler(slotStart, overrides, reservationId);
@@ -38,7 +49,7 @@ function reservationGetHandler(overrides: Record<string, unknown> = {}) {
 
 function reservationSlotsHandler(
   onRequest?: (url: URL) => void,
-  slots = [{ slotStart, slotEnd }],
+  slots = offeredSlots,
 ) {
   return http.get(
     `${ENV_WEB.API_BASEURL}/booking/reservations/${reservationId}/slots`,
@@ -108,21 +119,34 @@ describe("PublicBookingReschedulePage", () => {
     expect(posts).toHaveLength(0);
 
     expect(screen.queryByText(/^New time:/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: formatBookingSlotTime(slotStart, "UTC"),
+      }),
+    ).not.toBeInTheDocument();
+
     await user.click(
       await screen.findByRole("button", {
-        name: formatBookingSlotTime(slotStart, "UTC"),
+        name: formatBookingSlotTime(alternateSlotStart, "UTC"),
       }),
     );
     // The bar names the picked slot: on a phone the highlighted slot
     // scrolls away under it.
     expect(
-      screen.getByText(`New time: ${formatBookingSlotLabel(slotStart, "UTC")}`),
+      screen.getByText(
+        `New time: ${formatBookingSlotLabel(alternateSlotStart, "UTC")}`,
+      ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
     await waitFor(() => {
       expect(posts).toEqual([
-        { token: "abc", slotStart, guestTimeZone: "UTC", durationMinutes: 30 },
+        {
+          token: "abc",
+          slotStart: alternateSlotStart,
+          guestTimeZone: "UTC",
+          durationMinutes: 30,
+        },
       ]);
     });
     await waitFor(() => {
@@ -173,7 +197,7 @@ describe("PublicBookingReschedulePage", () => {
     renderRescheduleRoute(reschedulePath);
     await user.click(
       await screen.findByRole("button", {
-        name: formatBookingSlotTime(slotStart, "UTC"),
+        name: formatBookingSlotTime(alternateSlotStart, "UTC"),
       }),
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -224,7 +248,7 @@ describe("PublicBookingReschedulePage", () => {
     const { router } = renderRescheduleRoute(reschedulePath);
     await user.click(
       await screen.findByRole("button", {
-        name: formatBookingSlotTime(slotStart, "UTC"),
+        name: formatBookingSlotTime(alternateSlotStart, "UTC"),
       }),
     );
     await user.click(screen.getByRole("button", { name: "Confirm" }));
@@ -264,5 +288,72 @@ describe("PublicBookingReschedulePage", () => {
       screen.queryByRole("button", { name: "Confirm" }),
     ).not.toBeInTheDocument();
     expect(slotGets).toBe(0);
+  });
+
+  it("opens the picker on the meeting day when the URL has no date", async () => {
+    server.use(
+      reservationGetHandler(),
+      pageHandler(),
+      reservationSlotsHandler(),
+    );
+
+    renderRescheduleRoute(reschedulePath);
+
+    const meetingDay = formatBookingDateKey(slotStart, "UTC");
+    expect(
+      await screen.findByRole("button", {
+        name: formatBookingMonthDayLabel(meetingDay, "UTC"),
+      }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("shows the Current time card in the picker timezone after changing it", async () => {
+    const user = userEvent.setup({ delay: null });
+    server.use(
+      reservationGetHandler({ guestTimeZone: "America/Chicago" }),
+      pageHandler(),
+      reservationSlotsHandler(),
+    );
+
+    renderRescheduleRoute(reschedulePath);
+    await screen.findByRole("heading", {
+      name: "Reschedule your meeting with Tyler Dane",
+    });
+
+    const initialLabel = formatBookingSlotLabel(slotStart, "UTC");
+    expect(screen.getByText(initialLabel)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /^Timezone:/ }));
+    await user.type(screen.getByRole("combobox"), "chicago");
+    await user.keyboard("{Enter}");
+
+    const chicagoLabel = formatBookingSlotLabel(slotStart, "America/Chicago");
+    expect(screen.getByText(chicagoLabel)).toBeInTheDocument();
+    expect(screen.queryByText(initialLabel)).not.toBeInTheDocument();
+  });
+
+  it("clears a selected slot on Escape and stays on the page", async () => {
+    const user = userEvent.setup({ delay: null });
+    server.use(
+      reservationGetHandler(),
+      pageHandler(),
+      reservationSlotsHandler(),
+    );
+
+    const { router } = renderRescheduleRoute(reschedulePath);
+    await user.click(
+      await screen.findByRole("button", {
+        name: formatBookingSlotTime(alternateSlotStart, "UTC"),
+      }),
+    );
+    expect(screen.getByText(/^New time:/)).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByText(/^New time:/)).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(
+      `/meet/reschedule/${reservationId}`,
+    );
+    expect(router.state.location.search.slot).toBeUndefined();
   });
 });

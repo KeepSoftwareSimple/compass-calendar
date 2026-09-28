@@ -3,6 +3,7 @@ import {
   PUBLIC_BOOKING_ACTION_BAR_CLASS,
   PublicBookingLayout,
 } from "@booking-web/booking/PublicBookingLayout";
+import { bookingDayButtonId } from "@booking-web/booking/PublicBookingMonthGrid";
 import { PublicBookingPicker } from "@booking-web/booking/PublicBookingPicker";
 import { PublicBookingSkipLink } from "@booking-web/booking/PublicBookingSkipLink";
 import { PublicBookingSlotSummary } from "@booking-web/booking/PublicBookingSlotSummary";
@@ -27,7 +28,7 @@ import { useBookingHeadingFocus } from "@booking-web/booking/use-booking-heading
 import { usePublicBookingRescheduleFlow } from "@booking-web/booking/use-public-booking-reschedule-flow";
 
 const BOOKING_NOT_FOUND = publicBookingMeetingNotFound(
-  "This reschedule link may be invalid or already used.",
+  "This reschedule link may be invalid.",
 );
 
 export function PublicBookingReschedulePage() {
@@ -85,7 +86,7 @@ export function PublicBookingReschedulePage() {
         <PublicBookingSlotSummary
           durationMinutes={reservation.durationMinutes}
           slotStart={reservation.slotStart}
-          timeZone={reservation.guestTimeZone}
+          timeZone={flow.guestTimeZone}
         />
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-text-muted">
           <p>Times shown in your timezone</p>
@@ -123,6 +124,20 @@ export function PublicBookingReschedulePage() {
         }}
         onRetrySlots={() => {
           void slotsQuery.refetch();
+        }}
+        onEscapeFromSlot={() => {
+          if (flow.selectedSlotStart) {
+            flow.clearSelectedSlot();
+            return;
+          }
+          if (!flow.selectedDateKey) {
+            return;
+          }
+          document
+            .getElementById(
+              bookingDayButtonId(flow.monthKey, flow.selectedDateKey),
+            )
+            ?.focus();
         }}
       />
 

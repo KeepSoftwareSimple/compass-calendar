@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import {
   BOOKING_CALENDAR_ID,
   buildBookableSlot,
+  buildSameDaySiblingSlot,
   dispatchClick,
   dispatchFill,
   expectMeetingShortcutChips,
@@ -330,10 +331,16 @@ test.describe("public booking reschedule page", () => {
   test("conflict alert has no automatically detectable accessibility violations", async ({
     page,
   }) => {
-    const { slotStart } = buildBookableSlot();
-    await preparePublicBookingReschedulePage(page, { rescheduleStatus: 409 });
+    const reservationSlot = buildBookableSlot();
+    const alternateSlot = buildSameDaySiblingSlot(reservationSlot);
+    await preparePublicBookingReschedulePage(page, {
+      slots: [reservationSlot, alternateSlot],
+      rescheduleStatus: 409,
+    });
     await page
-      .getByRole("button", { name: formatSlotButtonLabel(slotStart) })
+      .getByRole("button", {
+        name: formatSlotButtonLabel(alternateSlot.slotStart),
+      })
       .click();
     await page.getByRole("button", { name: "Confirm" }).click();
     await expect(page.getByRole("alert")).toBeVisible();
