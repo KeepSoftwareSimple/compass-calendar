@@ -1,6 +1,12 @@
 import { expect, test } from "@playwright/test";
 import {
+  buildEventFixture,
+  openEventForm,
+  prepareSignedInGooglePage,
+} from "../attendees/attendee-harness";
+import {
   BOOKING_CALENDAR_ID,
+  bookedMeetingDescription,
   buildBookableSlot,
   buildSameDaySiblingSlot,
   dispatchClick,
@@ -867,5 +873,28 @@ test.describe("settings booking section", () => {
       checkpoint: "settings booking discard confirmation",
       include: "[role='dialog']",
     });
+  });
+});
+
+test("the booked meeting event form actions row has no automatically detectable accessibility violations", async ({
+  page,
+}) => {
+  const event = buildEventFixture({
+    id: "booked-meeting-a11y",
+    title: "Booked meeting a11y",
+  });
+  event.content.description = bookedMeetingDescription();
+
+  await prepareSignedInGooglePage(page, { events: [event] });
+  await openEventForm(page, "Booked meeting a11y");
+
+  await expect(
+    page
+      .getByRole("group", { name: "Event actions" })
+      .getByRole("button", { name: "Cancel meeting" }),
+  ).toBeVisible();
+  await expectNoAxeViolations(page, {
+    checkpoint: "booked meeting event form actions",
+    include: "[role='form']",
   });
 });
