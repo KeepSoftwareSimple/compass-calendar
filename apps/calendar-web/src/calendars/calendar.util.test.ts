@@ -692,6 +692,38 @@ describe("groupCalendarsByAccount", () => {
     expect(groups[0]?.calendars).toEqual([work, local]);
   });
 
+  it("groups provider calendars missing accountEmail under the sole matching connection", () => {
+    const work = makeCalendar({
+      name: "Work",
+      provider: "google",
+    });
+    const personal = makeCalendar({
+      name: "Personal",
+      provider: "google",
+      id: "507f1f77bcf86cd799439012" as Calendar["id"],
+    });
+    const local = makeCalendar({
+      name: "Compass",
+      provider: "local",
+      id: "507f1f77bcf86cd799439013" as Calendar["id"],
+    });
+
+    const { groups, ungrouped } = groupCalendarsByAccount(
+      [personal, work, local],
+      [connection("e2e@example.com")],
+      "e2e@example.com",
+    );
+
+    expect(ungrouped).toEqual([]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.accountEmail).toBe("e2e@example.com");
+    expect(groups[0]?.calendars.map((c) => c.name)).toEqual([
+      "Personal",
+      "Work",
+      "Compass",
+    ]);
+  });
+
   it("leaves the local calendar ungrouped when compassEmail matches no Google account", () => {
     const work = makeCalendar({
       name: "Work",
