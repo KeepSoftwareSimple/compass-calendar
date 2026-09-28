@@ -4,31 +4,31 @@ import {
 } from "@core/types/booking.contracts";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
+import {
+  readJsonValue,
+  writeJsonValue,
+} from "@web/common/storage/json-value.store";
 
+/**
+ * The wizard draft an anonymous visitor builds before signing up. Storage
+ * failures and a draft this build's schema no longer accepts both read back
+ * as "no draft": the section then seeds from defaults rather than throwing
+ * into the render.
+ */
 export function readGuestMeetingSetupDraft(): AdminPutBookingPageInput | null {
-  if (!persistentBrowserStore.isAvailable()) return null;
-  const raw = persistentBrowserStore.get(
+  return readJsonValue(
     STORAGE_KEYS.GUEST_MEETING_SETUP_DRAFT,
+    AdminPutBookingPageInputSchema.nullable(),
+    null,
   );
-  if (!raw) return null;
-  try {
-    return AdminPutBookingPageInputSchema.parse(JSON.parse(raw));
-  } catch {
-    return null;
-  }
 }
 
 export function writeGuestMeetingSetupDraft(
   form: AdminPutBookingPageInput,
 ): void {
-  if (!persistentBrowserStore.isAvailable()) return;
-  persistentBrowserStore.set(
-    STORAGE_KEYS.GUEST_MEETING_SETUP_DRAFT,
-    JSON.stringify(form),
-  );
+  writeJsonValue(STORAGE_KEYS.GUEST_MEETING_SETUP_DRAFT, form);
 }
 
 export function clearGuestMeetingSetupDraft(): void {
-  if (!persistentBrowserStore.isAvailable()) return;
   persistentBrowserStore.remove(STORAGE_KEYS.GUEST_MEETING_SETUP_DRAFT);
 }

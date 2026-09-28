@@ -1,9 +1,11 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { useSession } from "@web/auth/compass/session/useSession";
-import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
+import {
+  isMeetingSetupRequested,
+  MEETING_SETUP_SEARCH_PARAM,
+} from "@web/booking/meeting-setup.search";
 import { isMobileOS } from "@web/common/utils/device/device.util";
-import { isSearchFlagOn } from "@web/common/utils/parse/search-flag.util";
 import { type AuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
 import { settingsActions } from "@web/settings/settings.store";
 
@@ -32,7 +34,7 @@ export function useGuestMeetingSetupEntry({
 
   useEffect(() => {
     if (isMobile) return;
-    if (consumedRef.current || !isSearchFlagOn(search.meetingSetup)) return;
+    if (consumedRef.current || !isMeetingSetupRequested(search)) return;
     consumedRef.current = true;
     if (authenticated) {
       settingsActions.openSettings("booking");

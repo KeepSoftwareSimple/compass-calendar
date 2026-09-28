@@ -15,13 +15,10 @@ import {
   type AdminPutBookingPageInput,
   BOOKING_MAX_HORIZON_DAYS,
   BOOKING_MAX_MIN_NOTICE_HOURS,
-  BOOKING_PLACEHOLDER_CALENDAR_ID,
   type BookingDurationMinutes,
-  buildDefaultAdminPutInput,
   isSavedBookingPage,
 } from "@core/types/booking.contracts";
-import { type Calendar } from "@core/types/calendar.contracts";
-import { type CalendarId, TimeZoneSchema } from "@core/types/domain-primitives";
+import { type CalendarId } from "@core/types/domain-primitives";
 import { useSession } from "@web/auth/compass/session/useSession";
 import {
   bookingSetupSaveFailureReason,
@@ -63,10 +60,8 @@ import {
   isBookingSettingsFormDirty,
   isConfiguredBookingPage,
   isLiveBookingPage,
-  isPlaceholderDestinationCalendar,
   isUnconfiguredBookingPage,
   slugFromAdminBookingPage,
-  toBookingPageInput,
   validateBookingForm,
 } from "@web/booking/booking.util";
 import { bookingAddressPrefix } from "@web/booking/booking-address.util";
@@ -77,6 +72,13 @@ import {
   bookingFieldAttrs,
   focusBookingField,
 } from "@web/booking/booking-sequence.fields";
+import {
+  buildInitialForm,
+  HORIZON_BOUNDS,
+  MIN_NOTICE_BOUNDS,
+  parseBookingCount,
+  savedMeetingLinkUrl,
+} from "@web/booking/booking-settings-form.util";
 import {
   clearGuestMeetingSetupDraft,
   readGuestMeetingSetupDraft,
@@ -113,81 +115,6 @@ const MORE_OPTIONS_FIELDS = new Set<BookingField>([
   "notice",
   "horizon",
 ]);
-
-/** Public URL for a saved page that is currently off. Typed-but-unsaved slugs never qualify. */
-function savedMeetingLinkUrl(
-  page: AdminGetBookingPageResult | undefined,
-): string | null {
-  if (!page) return null;
-  if (isSavedBookingPage(page)) {
-    return page.enabled === true ? null : page.bookingUrl;
-  }
-  if (page.isConfigured) {
-    return `${bookingAddressPrefix(null)}${page.suggestedSlug}`;
-  }
-  return null;
-}
-
-const parseBookingCount = (
-  raw: string,
-  { min, max }: { min: number; max: number },
-): number | null => {
-  if (raw.trim() === "") {
-    return null;
-  }
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < min || value > max) {
-    return null;
-  }
-  return value;
-};
-
-const MIN_NOTICE_BOUNDS = { min: 0, max: BOOKING_MAX_MIN_NOTICE_HOURS };
-const HORIZON_BOUNDS = { min: 1, max: BOOKING_MAX_HORIZON_DAYS };
-
-const buildInitialForm = (
-  page: AdminGetBookingPageResult | undefined,
-  effectiveTimeZone: string,
-  writableCalendars: Calendar[],
-  availabilityCalendars: Calendar[],
-): AdminPutBookingPageInput => {
-  const base =
-    page ?? buildDefaultAdminPutInput(TimeZoneSchema.parse(effectiveTimeZone));
-
-  const destinationCalendarId =
-    !isPlaceholderDestinationCalendar(base.destinationCalendarId) &&
-    (writableCalendars.some(
-      (calendar) => calendar.id === base.destinationCalendarId,
-    ) ||
-      writableCalendars.length === 0)
-      ? base.destinationCalendarId
-      : (writableCalendars[0]?.id ?? BOOKING_PLACEHOLDER_CALENDAR_ID);
-
-  const blockingCalendarIds =
-    base.blockingCalendarIds.length > 0 &&
-    !base.blockingCalendarIds.every(isPlaceholderDestinationCalendar)
-      ? base.blockingCalendarIds
-      : defaultBlockingCalendarIdsForDestination(
-          destinationCalendarId,
-          availabilityCalendars,
-        );
-
-  const timeZone = isConfiguredBookingPage(page)
-    ? base.timeZone
-    : effectiveTimeZone;
-
-  const slug = page ? slugFromAdminBookingPage(page) : undefined;
-
-  return {
-    ...toBookingPageInput({
-      ...base,
-      ...(slug !== undefined ? { slug } : {}),
-    }),
-    destinationCalendarId,
-    blockingCalendarIds,
-    timeZone: TimeZoneSchema.parse(timeZone || effectiveTimeZone),
-  };
-};
 
 interface BookingSettingsSectionProps {
   /**

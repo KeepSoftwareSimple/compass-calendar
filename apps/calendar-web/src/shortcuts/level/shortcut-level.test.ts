@@ -68,3 +68,19 @@ describe("computeShortcutLevel", () => {
     expect(level.total).toBe(10);
   });
 });
+
+describe("SHORTCUT_LEVELS", () => {
+  it("keeps the thresholds increasing from zero, which is what lets the lookup seed on the first level", () => {
+    expect(SHORTCUT_LEVELS[0].minUsed).toBe(0);
+
+    const thresholds = SHORTCUT_LEVELS.map((definition) => definition.minUsed);
+    expect(thresholds).toEqual([...thresholds].sort((a, b) => a - b));
+    expect(new Set(thresholds).size).toBe(thresholds.length);
+  });
+
+  it("numbers the levels in table order so the badge reads Lv 1 upward", () => {
+    expect(SHORTCUT_LEVELS.map((definition) => definition.level)).toEqual(
+      SHORTCUT_LEVELS.map((_, index) => index + 1),
+    );
+  });
+});
