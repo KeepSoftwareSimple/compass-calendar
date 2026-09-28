@@ -516,7 +516,7 @@ test("sidebar nudge opens Meeting settings and hides once the page is live", asy
   const nudge = page.getByRole("region", { name: "Meeting page" });
   await expect(nudge).toBeVisible();
   await expect(
-    nudge.getByRole("heading", { name: "Skip back & forth" }),
+    nudge.getByRole("heading", { name: "Skip the back & forth" }),
   ).toBeVisible();
   await nudge.getByRole("button", { name: "Set up meeting page" }).click();
 
