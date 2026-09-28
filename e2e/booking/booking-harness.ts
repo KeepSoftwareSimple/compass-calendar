@@ -1444,3 +1444,20 @@ export function formatMonthDayButtonLabel(
     year: "numeric",
   }).format(new Date(slotStart));
 }
+
+/** Matches the anchors `parseBookingEventLinks` expects on booked events. */
+export const BOOKED_MEETING_RESERVATION_ID = "507f1f77bcf86cd799439011";
+export const BOOKED_MEETING_CANCEL_TOKEN = "plain-guest-token";
+
+export function bookedMeetingDescription(
+  reservationId = BOOKED_MEETING_RESERVATION_ID,
+  token = BOOKED_MEETING_CANCEL_TOKEN,
+): string {
+  const cancelUrl = publicBookingAppUrl(
+    `/meet/cancel/${reservationId}?token=${encodeURIComponent(token)}`,
+  );
+  const rescheduleUrl = publicBookingAppUrl(
+    `/meet/reschedule/${reservationId}?token=${encodeURIComponent(token)}`,
+  );
+  return `<a href="${cancelUrl}">Cancel</a> | <a href="${rescheduleUrl}">Reschedule</a>`;
+}
