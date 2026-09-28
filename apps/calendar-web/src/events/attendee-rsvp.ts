@@ -1,4 +1,5 @@
 import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
+import { type GridEvent } from "@web/common/types/web.event.types";
 
 /** Observer labels for someone else's RSVP — not the user's Going/Maybe/Decline. */
 export const ATTENDEE_RSVP_LABEL: Record<AttendeeResponseStatus, string> = {
@@ -7,6 +8,8 @@ export const ATTENDEE_RSVP_LABEL: Record<AttendeeResponseStatus, string> = {
   tentative: "maybe",
   needsAction: "awaiting",
 };
+
+export type GuestResponseRollup = "awaiting" | "tentative" | "declined";
 
 export const attendeeStatusByEmail = (
   attendees:
@@ -49,4 +52,32 @@ export const formatAttendeeRsvpTally = (
   if (counts.tentative > 0) parts.push(`${counts.tentative} maybe`);
 
   return `${statuses.length} ${guestWord} (${parts.join(", ")})`;
+};
+
+/**
+ * Grid roll-up when the connected account organizes the event: any guest
+ * awaiting → awaiting; else any tentative → tentative; else all declined →
+ * declined; otherwise null (all accepted or no guests).
+ */
+export const guestResponseForEvent = (
+  event: Pick<GridEvent, "organizer" | "attendees">,
+  accountEmail: string | undefined,
+): GuestResponseRollup | null => {
+  if (!accountEmail) return null;
+
+  const organizesEvent =
+    !event.organizer ||
+    event.organizer.email.toLowerCase() === accountEmail.toLowerCase();
+  if (!organizesEvent) return null;
+
+  const guests = (event.attendees ?? []).filter(
+    (attendee) => attendee.email.toLowerCase() !== accountEmail.toLowerCase(),
+  );
+  if (guests.length === 0) return null;
+
+  const statuses = guests.map((guest) => guest.responseStatus);
+  if (statuses.some((status) => status === "needsAction")) return "awaiting";
+  if (statuses.some((status) => status === "tentative")) return "tentative";
+  if (statuses.every((status) => status === "declined")) return "declined";
+  return null;
 };

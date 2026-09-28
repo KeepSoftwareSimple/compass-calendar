@@ -92,7 +92,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
   const timedEventItemsWithIdentity = useMemo(
     () =>
       timedEventItems.map((item) => {
-        const { calendarIdentity, focusColor, isReadOnly } =
+        const { calendarIdentity, focusColor, guestResponse, isReadOnly } =
           resolveGridEventCardChrome(
             calendarLookup,
             item.event,
@@ -102,6 +102,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
           ...item,
           calendarIdentity,
           focusColor,
+          guestResponse,
           isReadOnly,
         };
       }),
@@ -120,6 +121,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
             event,
             calendarIdentity,
             focusColor,
+            guestResponse,
             isHidden,
             isReadOnly,
           }) => {
@@ -144,6 +146,7 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
                 deckLayout={deckLayout}
                 event={eventForDisplay}
                 focusColor={displayChrome.focusColor}
+                guestResponse={guestResponse}
                 isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}

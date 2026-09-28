@@ -1,8 +1,8 @@
 import { useId, useState } from "react";
 import { type Event } from "@core/types/event.contracts";
 import { type RsvpResponseStatus } from "@core/types/event-attendance.contracts";
+import { attendeeStatusByEmail } from "@web/events/attendee-rsvp";
 import { useEventMutations } from "@web/events/mutations/useEventMutations";
-import { attendeeStatusByEmail } from "@web/views/Forms/EventForm/attendee-rsvp";
 import { RsvpScopeDialog } from "@web/views/Forms/EventForm/RsvpScopeDialog";
 
 // Going / Maybe / Decline segmented control (WP-08). Rendered only when the

@@ -6,6 +6,7 @@ import {
   resolveCalendarFocusColor,
 } from "@web/calendars/useCalendarLookup";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { guestResponseForEvent } from "@web/events/attendee-rsvp";
 import { isEventIdHidden } from "@web/events/hidden/hidden-event-id";
 
 type CalendarLookup = ReadonlyMap<CalendarId, Calendar>;
@@ -19,9 +20,11 @@ export function resolveGridEventCardChrome(
   event: GridEvent,
   hiddenEventIds: ReadonlySet<string>,
 ) {
+  const calendar = event.calendarId ? lookup.get(event.calendarId) : undefined;
   return {
     calendarIdentity: resolveCalendarCardIdentity(lookup, event),
     focusColor: resolveCalendarFocusColor(lookup, event),
+    guestResponse: guestResponseForEvent(event, calendar?.accountEmail),
     isHidden: isEventIdHidden(event._id, hiddenEventIds),
     isReadOnly: isGridEventScheduleLocked(lookup, event),
   };

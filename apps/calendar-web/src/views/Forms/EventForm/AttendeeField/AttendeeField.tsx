@@ -22,12 +22,9 @@ import {
   type AttendeeResponseStatus,
 } from "@core/types/event-attendance.contracts";
 import { CopyButton } from "@web/components/CopyButton/CopyButton";
+import { ATTENDEE_RSVP_LABEL, statusForEmail } from "@web/events/attendee-rsvp";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { AttendeeRsvpStatus } from "@web/views/Forms/EventForm/AttendeeRsvpStatus";
-import {
-  ATTENDEE_RSVP_LABEL,
-  statusForEmail,
-} from "@web/views/Forms/EventForm/attendee-rsvp";
 
 /**
  * Pluggable suggestion source for the guest combobox. WP-06 plugs the

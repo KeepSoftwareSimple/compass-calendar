@@ -96,7 +96,14 @@ export const AllDayEvents = ({
     >
       {!isLoadingWeekView &&
         visibleAllDayEventsWithIdentity.map(
-          ({ event, calendarIdentity, focusColor, isHidden, isReadOnly }) => {
+          ({
+            event,
+            calendarIdentity,
+            focusColor,
+            guestResponse,
+            isHidden,
+            isReadOnly,
+          }) => {
             const isPlaceholder = event._id === draftId;
             // Never overlay timed draft dates onto a multi-day timed display
             // bar — that would replace YYYY-MM-DD span dates with datetimes.
@@ -118,6 +125,7 @@ export const AllDayEvents = ({
                 calendarIdentity={displayChrome.calendarIdentity}
                 event={eventForDisplay}
                 focusColor={displayChrome.focusColor}
+                guestResponse={guestResponse}
                 isHidden={isHidden}
                 isPlaceholder={isPlaceholder}
                 isReadOnly={isReadOnly}

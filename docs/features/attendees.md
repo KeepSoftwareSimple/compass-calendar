@@ -217,6 +217,19 @@ Flow:
    (`kind`/`status`/`correlationId`); pinned literally in
    `contacts.controller.test.ts` and proven via the safety canary (below).
 
+## Guest reply on the grid
+
+When the connected account organizes an event (same rule as the attendee
+editor in `EventForm.tsx`), week and day grid cards roll up guest
+`responseStatus` values via `guestResponseForEvent` in
+`apps/calendar-web/src/events/attendee-rsvp.ts`, resolved once per card in
+`resolveGridEventCardChrome`. Any guest still `needsAction` paints the card
+with the existing dashed demo outline and 0.7 opacity; any `tentative`
+guest keeps the dashed outline only; when every guest has `declined`, the
+card uses 0.5 opacity with no outline. Accepted guests (or no guests) leave
+the card unchanged. Accessible names prefix `Awaiting reply:`, `Tentative:`,
+or `Declined:` before the usual event title.
+
 ## RSVP Semantics
 
 Source: `packages/core/src/types/event-command.contracts.ts`

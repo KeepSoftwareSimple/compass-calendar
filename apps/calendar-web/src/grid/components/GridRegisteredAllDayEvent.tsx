@@ -1,5 +1,6 @@
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { type GuestResponseRollup } from "@web/events/attendee-rsvp";
 import { GridAllDayEventMemo } from "@web/grid/components/GridAllDayEvent";
 import { useGridEventCardInteraction } from "@web/grid/interaction/use-grid-event-card-interaction";
 import { type CalendarGridView } from "@web/grid/interaction/view-event-registry";
@@ -13,6 +14,7 @@ interface GridRegisteredAllDayEventProps {
   columnIndex?: number;
   event: GridEvent;
   focusColor?: string | null;
+  guestResponse?: GuestResponseRollup | null;
   isActiveDraft?: boolean;
   isDraft?: boolean;
   isHidden?: boolean;
@@ -29,6 +31,7 @@ export const GridRegisteredAllDayEvent = ({
   columnIndex,
   event,
   focusColor = null,
+  guestResponse = null,
   isActiveDraft = false,
   isDraft = false,
   isHidden = false,
@@ -55,6 +58,7 @@ export const GridRegisteredAllDayEvent = ({
       columnIndex={columnIndex}
       event={event}
       focusColor={focusColor}
+      guestResponse={guestResponse}
       interactionAttributes={interactionAttributes}
       isActiveDraft={isActiveDraft}
       isDraft={isDraft}

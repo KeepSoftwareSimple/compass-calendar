@@ -14,6 +14,7 @@ import { brighten, darken, isDark } from "@web/common/styles/color.utils";
 import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { type GuestResponseRollup } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
@@ -37,6 +38,7 @@ export interface AllDayEventCardProps {
   event: GridEvent;
   /** Calendar backgroundColor for focus chrome; null falls back to --text. */
   focusColor?: string | null;
+  guestResponse?: GuestResponseRollup | null;
   interactionAttributes?: Record<string, string | undefined>;
   isHidden?: boolean;
   isPlaceholder: boolean;
@@ -51,6 +53,7 @@ const AllDayEventCardBase = (
     calendarIdentity = null,
     event,
     focusColor = null,
+    guestResponse = null,
     interactionAttributes,
     isHidden = false,
     isPlaceholder,
@@ -96,20 +99,37 @@ const AllDayEventCardBase = (
     ? eventEdgeFocusShadow(focusedEdge, "horizontal", focusColorCss)
     : undefined;
 
+  const guestOpacity =
+    guestResponse === "awaiting"
+      ? 0.7
+      : guestResponse === "declined"
+        ? 0.5
+        : undefined;
+  const showGuestDashedOutline =
+    guestResponse === "awaiting" || guestResponse === "tentative";
+
   const eventStyle = {
     "--event-bg": bgColor,
     "--event-hover-bg": hoverBgColor,
     "--event-focus-color": focusColorCss,
     height: position.height,
     left: position.left,
-    opacity: isHidden ? 0.6 : isPlaceholder ? 0.5 : undefined,
+    opacity: isHidden ? 0.6 : isPlaceholder ? 0.5 : guestOpacity,
     top: position.top,
     width: position.width,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
     boxShadow: edgeFocusShadow,
   } as CSSProperties;
 
-  const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
+  const guestResponsePrefix =
+    guestResponse === "awaiting"
+      ? "Awaiting reply: "
+      : guestResponse === "tentative"
+        ? "Tentative: "
+        : guestResponse === "declined"
+          ? "Declined: "
+          : "";
+  const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${guestResponsePrefix}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
@@ -140,7 +160,7 @@ const AllDayEventCardBase = (
         {
           "hover:cursor-pointer": !isPlaceholder,
           "outline outline-dashed outline-1 outline-text-muted/50":
-            event.isDemo,
+            event.isDemo || showGuestDashedOutline,
         },
         eventFocusOutlineClass(focusedEdge),
       )}

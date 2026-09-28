@@ -1,5 +1,6 @@
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { type GuestResponseRollup } from "@web/events/attendee-rsvp";
 import { GridTimedEventMemo } from "@web/grid/components/GridTimedEvent";
 import { useGridEventCardInteraction } from "@web/grid/interaction/use-grid-event-card-interaction";
 import { type CalendarGridView } from "@web/grid/interaction/view-event-registry";
@@ -15,6 +16,7 @@ interface GridRegisteredTimedEventProps {
   deckLayout?: TimedDeckLayout | null;
   event: GridEvent;
   focusColor?: string | null;
+  guestResponse?: GuestResponseRollup | null;
   isActiveDraft?: boolean;
   isHidden?: boolean;
   isPlaceholder: boolean;
@@ -32,6 +34,7 @@ export const GridRegisteredTimedEvent = ({
   deckLayout = null,
   event,
   focusColor = null,
+  guestResponse = null,
   isActiveDraft = false,
   isHidden = false,
   isPlaceholder,
@@ -60,6 +63,7 @@ export const GridRegisteredTimedEvent = ({
       displayMode={isPlaceholder ? "placeholder" : "saved"}
       event={event}
       focusColor={focusColor}
+      guestResponse={guestResponse}
       interactionAttributes={interactionAttributes}
       isActiveDraft={isActiveDraft}
       isHidden={isHidden}

@@ -634,4 +634,132 @@ describe("EventCard", () => {
     fireEvent.keyDown(card, { key: "Enter" });
     expect(onEventKeyDown).toHaveBeenCalledTimes(1);
   });
+
+  const futureTimed = {
+    startDate: "2099-01-15T09:00:00.000Z",
+    endDate: "2099-01-15T10:00:00.000Z",
+  };
+
+  it("shows awaiting guest reply chrome on a timed card", () => {
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent(futureTimed)}
+        guestResponse="awaiting"
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Awaiting reply: Timed event:/,
+    });
+    expect(card.className).toContain("outline-dashed");
+    expect(card.style.opacity).toBe("0.7");
+  });
+
+  it("shows tentative guest reply chrome on a timed card without extra opacity", () => {
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent(futureTimed)}
+        guestResponse="tentative"
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Tentative: Timed event:/,
+    });
+    expect(card.className).toContain("outline-dashed");
+    expect(card.style.opacity).toBe("");
+  });
+
+  it("shows declined guest reply chrome on a timed card", () => {
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent(futureTimed)}
+        guestResponse="declined"
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Declined: Timed event:/,
+    });
+    expect(card.className).not.toContain("outline-dashed");
+    expect(card.style.opacity).toBe("0.5");
+  });
+
+  it("renders no guest reply chrome when guestResponse is null", () => {
+    render(
+      <TimedEventCard
+        displayMode="saved"
+        event={createEvent(futureTimed)}
+        guestResponse={null}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Timed event: Planning block, 9 - 10 AM",
+    });
+    expect(card.className).not.toContain("outline-dashed");
+    expect(card.style.opacity).toBe("");
+  });
+
+  it("shows awaiting guest reply chrome on an all-day card", () => {
+    render(
+      <AllDayEventCard
+        event={createEvent({ isAllDay: true, title: "Offsite" })}
+        guestResponse="awaiting"
+        isPlaceholder={false}
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Awaiting reply: All-day event: Offsite/,
+    });
+    expect(card.className).toContain("outline-dashed");
+    expect(card.style.opacity).toBe("0.7");
+  });
+
+  it("shows tentative guest reply chrome on an all-day card without extra opacity", () => {
+    render(
+      <AllDayEventCard
+        event={createEvent({ isAllDay: true, title: "Offsite" })}
+        guestResponse="tentative"
+        isPlaceholder={false}
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Tentative: All-day event: Offsite/,
+    });
+    expect(card.className).toContain("outline-dashed");
+    expect(card.style.opacity).toBe("");
+  });
+
+  it("shows declined guest reply chrome on an all-day card", () => {
+    render(
+      <AllDayEventCard
+        event={createEvent({ isAllDay: true, title: "Offsite" })}
+        guestResponse="declined"
+        isPlaceholder={false}
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: /^Declined: All-day event: Offsite/,
+    });
+    expect(card.className).not.toContain("outline-dashed");
+    expect(card.style.opacity).toBe("0.5");
+  });
 });
