@@ -40,10 +40,18 @@ const makeEvent = (overrides: Partial<GridEvent> = {}): GridEvent =>
     isAllDay: false,
     user: "user-1",
     calendarId,
-    organizer: { email: "host@example.com" },
+    organizer: { email: "host@example.com", displayName: null },
     attendees: [
-      { email: "host@example.com", responseStatus: "accepted" },
-      { email: "guest@example.com", responseStatus: "needsAction" },
+      {
+        email: "host@example.com",
+        displayName: null,
+        responseStatus: "accepted",
+      },
+      {
+        email: "guest@example.com",
+        displayName: null,
+        responseStatus: "needsAction",
+      },
     ],
     ...overrides,
   });

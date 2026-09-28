@@ -609,8 +609,16 @@ describe("EventCard", () => {
 
   describe("guest reply styling", () => {
     const hostAttendees = [
-      { email: "host@example.com", responseStatus: "accepted" as const },
-      { email: "guest@example.com", responseStatus: "needsAction" as const },
+      {
+        email: "host@example.com",
+        displayName: null,
+        responseStatus: "accepted" as const,
+      },
+      {
+        email: "guest@example.com",
+        displayName: null,
+        responseStatus: "needsAction" as const,
+      },
     ];
 
     it("shows awaiting outline, opacity, and label on timed cards", () => {
@@ -618,7 +626,7 @@ describe("EventCard", () => {
         <TimedEventCard
           displayMode="saved"
           event={createEvent({
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: hostAttendees,
             startDate: "2099-01-15T09:00:00.000Z",
             endDate: "2099-01-15T10:00:00.000Z",
@@ -641,10 +649,18 @@ describe("EventCard", () => {
         <TimedEventCard
           displayMode="saved"
           event={createEvent({
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "tentative" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "tentative",
+              },
             ],
             startDate: "2099-01-15T09:00:00.000Z",
             endDate: "2099-01-15T10:00:00.000Z",
@@ -665,10 +681,18 @@ describe("EventCard", () => {
         <TimedEventCard
           displayMode="saved"
           event={createEvent({
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "declined" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "declined",
+              },
             ],
             startDate: "2099-01-15T09:00:00.000Z",
             endDate: "2099-01-15T10:00:00.000Z",
@@ -689,10 +713,18 @@ describe("EventCard", () => {
         <TimedEventCard
           displayMode="saved"
           event={createEvent({
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "accepted" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
             ],
             startDate: "2099-01-15T09:00:00.000Z",
             endDate: "2099-01-15T10:00:00.000Z",
@@ -715,7 +747,7 @@ describe("EventCard", () => {
         <TimedEventCard
           displayMode="saved"
           event={createEvent({
-            organizer: { email: "other@example.com" },
+            organizer: { email: "other@example.com", displayName: null },
             attendees: hostAttendees,
             startDate: "2099-01-15T09:00:00.000Z",
             endDate: "2099-01-15T10:00:00.000Z",
@@ -737,7 +769,7 @@ describe("EventCard", () => {
         <AllDayEventCard
           event={createEvent({
             isAllDay: true,
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: hostAttendees,
           })}
           guestResponse="awaiting"
@@ -758,10 +790,18 @@ describe("EventCard", () => {
         <AllDayEventCard
           event={createEvent({
             isAllDay: true,
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "tentative" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "tentative",
+              },
             ],
           })}
           guestResponse="tentative"
@@ -780,10 +820,18 @@ describe("EventCard", () => {
         <AllDayEventCard
           event={createEvent({
             isAllDay: true,
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "declined" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "declined",
+              },
             ],
           })}
           guestResponse="declined"
@@ -803,10 +851,18 @@ describe("EventCard", () => {
           event={createEvent({
             isAllDay: true,
             title: "Conference",
-            organizer: { email: "host@example.com" },
+            organizer: { email: "host@example.com", displayName: null },
             attendees: [
-              { email: "host@example.com", responseStatus: "accepted" },
-              { email: "guest@example.com", responseStatus: "accepted" },
+              {
+                email: "host@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
+              {
+                email: "guest@example.com",
+                displayName: null,
+                responseStatus: "accepted",
+              },
             ],
           })}
           guestResponse={null}
