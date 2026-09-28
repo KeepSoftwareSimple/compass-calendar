@@ -2,6 +2,8 @@ import {
   type AdminPutBookingPageInput,
   AdminPutBookingPageInputSchema,
 } from "@core/types/booking.contracts";
+import { type Calendar } from "@core/types/calendar.contracts";
+import { defaultBlockingCalendarIdsForDestination } from "@web/booking/booking.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import {
@@ -31,4 +33,22 @@ export function writeGuestMeetingSetupDraft(
 
 export function clearGuestMeetingSetupDraft(): void {
   persistentBrowserStore.remove(STORAGE_KEYS.GUEST_MEETING_SETUP_DRAFT);
+}
+
+/** Guest drafts may reference placeholder calendars; pick a writable destination after sign-up. */
+export function guestDraftForAuthenticatedHost(
+  draft: AdminPutBookingPageInput,
+  writableCalendars: Calendar[],
+  availabilityCalendars: Calendar[],
+): AdminPutBookingPageInput {
+  const destinationCalendarId =
+    writableCalendars[0]?.id ?? draft.destinationCalendarId;
+  return {
+    ...draft,
+    destinationCalendarId,
+    blockingCalendarIds: defaultBlockingCalendarIdsForDestination(
+      destinationCalendarId,
+      availabilityCalendars,
+    ),
+  };
 }

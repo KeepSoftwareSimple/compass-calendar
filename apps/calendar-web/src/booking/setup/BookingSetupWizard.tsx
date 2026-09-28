@@ -12,6 +12,7 @@ import { BookingSetupDurationStep } from "@web/booking/setup/BookingSetupDuratio
 import { BookingSetupGoLiveStep } from "@web/booking/setup/BookingSetupGoLiveStep";
 import { BookingSetupHoursStep } from "@web/booking/setup/BookingSetupHoursStep";
 import {
+  GUEST_GO_LIVE_SENTENCE,
   type SetupStepId,
   setupStepDefinition,
   setupStepProgress,
@@ -42,6 +43,7 @@ interface BookingSetupWizardProps {
   setupStep: SetupStepId;
   syncConnections: SyncConnectionSummary[];
   forceAddressInvalid?: boolean;
+  guestGoLive?: boolean;
   writableCalendarCount: number;
   writableCalendars: Calendar[];
 }
@@ -92,12 +94,16 @@ export function BookingSetupWizard({
   setupStep,
   syncConnections,
   forceAddressInvalid = false,
+  guestGoLive = false,
   writableCalendarCount,
   writableCalendars,
 }: BookingSetupWizardProps) {
   const stepBodyRef = useRef<HTMLDivElement>(null);
   const stepMeta = setupStepDefinition(setupStep);
-  const stepSentence = setupStepSentence(setupStep, writableCalendarCount);
+  const stepSentence =
+    setupStep === "live" && guestGoLive
+      ? GUEST_GO_LIVE_SENTENCE
+      : setupStepSentence(setupStep, writableCalendarCount);
   const { current, total } = setupStepProgress(
     setupStep,
     writableCalendarCount,
@@ -235,7 +241,11 @@ export function BookingSetupWizard({
           variant="primary"
           {...settingsShortcutAttrs("save-booking")}
         >
-          {isGoLive ? "Turn on and copy link" : "Continue"}
+          {isGoLive
+            ? guestGoLive
+              ? "Sign up to go live"
+              : "Turn on and copy link"
+            : "Continue"}
         </OverlayPanelActionButton>
       </OverlayPanelActions>
     </div>

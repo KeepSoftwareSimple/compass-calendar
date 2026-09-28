@@ -81,6 +81,7 @@ import {
 } from "@web/booking/booking-settings-form.util";
 import {
   clearGuestMeetingSetupDraft,
+  guestDraftForAuthenticatedHost,
   readGuestMeetingSetupDraft,
   writeGuestMeetingSetupDraft,
 } from "@web/booking/guest-meeting-setup.util";
@@ -376,6 +377,8 @@ export function BookingSettingsSection({
   const settingsOpenedRef = useRef(false);
   const configuredHostAtOpenRef = useRef(false);
   const lastSetupStepRef = useRef<SetupStepId | null>(null);
+  const signupPromptInFlightRef = useRef(false);
+  const guestResumeHydratedRef = useRef(false);
 
   useEffect(() => {
     if (settingsOpenedRef.current) return;
@@ -416,9 +419,34 @@ export function BookingSettingsSection({
   }, [setupStep]);
 
   useEffect(() => {
+    if (guestPreview) return;
+    signupPromptInFlightRef.current = false;
+  }, [guestPreview]);
+
+  useEffect(() => {
     if (!authenticated || !guestMeetingSetupActive) return;
-    settingsActions.clearGuestMeetingSetup();
-  }, [authenticated, guestMeetingSetupActive]);
+    const draft = readGuestMeetingSetupDraft();
+    if (!draft || guestResumeHydratedRef.current) return;
+    if (calendarsPending || waitingForHostCalendars) return;
+    guestResumeHydratedRef.current = true;
+    const hydrated = guestDraftForAuthenticatedHost(
+      draft,
+      writableCalendars,
+      availabilityCalendars,
+    );
+    setForm(hydrated);
+    setMinNoticeText(String(hydrated.minNoticeHours));
+    setHorizonText(String(hydrated.maxHorizonDays));
+    baselineFormRef.current = hydrated;
+    setSetupStep("live");
+  }, [
+    authenticated,
+    availabilityCalendars,
+    calendarsPending,
+    guestMeetingSetupActive,
+    waitingForHostCalendars,
+    writableCalendars,
+  ]);
 
   const showFirstRunConnectPrompt =
     !guestPreview &&
@@ -428,7 +456,10 @@ export function BookingSettingsSection({
 
   const promptSignupBeforeSave = (): boolean => {
     if (!guestPreview) return false;
+    if (signupPromptInFlightRef.current) return true;
+    signupPromptInFlightRef.current = true;
     trackSignupStarted("meeting_page_setup");
+    settingsActions.closeSettingsForGuestAuthHandoff();
     void importOrReload(() => import("@web/routers")).then(({ router }) => {
       void router.navigate({
         to: ".",
@@ -693,6 +724,7 @@ export function BookingSettingsSection({
         setupError={addressSetupError ?? wizardSetupError}
         setupStep={setupStep}
         syncConnections={connections}
+        guestGoLive={guestPreview}
         writableCalendarCount={writableCalendars.length}
         writableCalendars={writableCalendars}
       />

@@ -22,6 +22,7 @@ import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
 import { useGuestMeetingSetupEntry } from "@web/booking/useGuestMeetingSetupEntry";
+import { useGuestMeetingSetupResume } from "@web/booking/useGuestMeetingSetupResume";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
@@ -121,6 +122,7 @@ export function RootShell() {
   // anonymous.
   useNewMeetingsNotice();
   useGuestMeetingSetupEntry();
+  useGuestMeetingSetupResume();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

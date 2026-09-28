@@ -133,6 +133,23 @@ describe("BookingSetupWizard", () => {
     expect(screen.queryByText("Next")).not.toBeInTheDocument();
   });
 
+  it("uses guest go-live copy when guestGoLive is set", () => {
+    renderWizard({
+      setupStep: "live",
+      guestGoLive: true,
+      writableCalendarCount: 1,
+    });
+
+    expect(
+      screen.getByRole("button", { name: /Sign up to go live/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Review your settings. Your page turns on after sign-up.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("focuses the address field after a SLUG_TAKEN error", async () => {
     renderWizard({
       forceAddressInvalid: true,
