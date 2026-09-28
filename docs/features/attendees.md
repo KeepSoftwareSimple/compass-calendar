@@ -80,7 +80,10 @@ Source: `packages/core/src/types/event-command.contracts.ts`
 - Incoming RSVP from other attendees is visible to the host without
   photos: chips and the read-only guest list show a compact status badge
   (yes / no / maybe / awaiting) looked up from the live `Attendee[]` by
-  email. The write path stays `{email, displayName}` — `responseStatus`
+  email. While Compass is open, the host also gets one toast when a guest
+  replies (`useGuestRsvpNotice` in `apps/calendar-web/src/booking/`);
+  replies that land while no tab is open are not announced. The write path
+  stays `{email, displayName}` — `responseStatus`
   never rides `AttendeeInput`. The guest summary uses the same observer
   labels (`1 guest (0 yes, 1 awaiting)`), distinct from the user's own
   Going / Maybe / Decline control. Jump to the guest field with `e` then
@@ -273,7 +276,8 @@ Source: `packages/core/src/types/event-command.contracts.ts`
   immediately and rolls back on a `503`; the provider-confirmed list
   settles through the same SSE-backed invalidation path
   (`eventsChanged`) that carries in other attendees' RSVP changes
-  (`useEventMutations.rsvp.test.tsx`).
+  (`useEventMutations.rsvp.test.tsx`). That refetch also drives the host
+  guest-reply toast when Compass is open (see Guest reply on the grid).
 - **Route contract.** `POST /api/event/:id/rsvp` answers `204 No Content`
   (the sync command outcome carries no event content); `responseStatus:
   "needsAction"` is rejected `400` at the route (you cannot RSVP back to

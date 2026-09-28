@@ -53,6 +53,19 @@ export const formatAttendeeRsvpTally = (
 
 export type GridGuestResponseState = "awaiting" | "tentative" | "declined";
 
+/** True when the connected account is the event organizer (or organizer is unset). */
+export const hostOrganizesEvent = (
+  event: { organizer?: { email: string } | null },
+  accountEmail: string | undefined,
+): boolean => {
+  if (accountEmail === undefined) return false;
+  const organizerEmail = event.organizer?.email;
+  return (
+    organizerEmail === undefined ||
+    organizerEmail.toLowerCase() === accountEmail.toLowerCase()
+  );
+};
+
 /**
  * Roll-up of guest RSVP states for grid cards when the connected calendar
  * account organizes the event. Self is excluded from the guest list.
@@ -66,13 +79,9 @@ export const guestResponseForEvent = (
   },
   accountEmail: string | undefined,
 ): GridGuestResponseState | null => {
-  if (accountEmail === undefined) return null;
-
-  const organizerEmail = event.organizer?.email;
-  const hostOrganizes =
-    organizerEmail === undefined ||
-    organizerEmail.toLowerCase() === accountEmail.toLowerCase();
-  if (!hostOrganizes) return null;
+  if (accountEmail === undefined || !hostOrganizesEvent(event, accountEmail)) {
+    return null;
+  }
 
   const accountLower = accountEmail.toLowerCase();
   const guests = (event.attendees ?? []).filter(
