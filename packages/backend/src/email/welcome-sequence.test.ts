@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import {
   buildWelcomeEnrollmentRows,
   computeSendAt,
+  findWelcomeStep,
   WELCOME_SEQUENCE,
 } from "@backend/email/welcome-sequence";
 import { describe, expect, it } from "bun:test";
@@ -38,5 +39,41 @@ describe("welcome sequence scheduling", () => {
 
     expect(welcome.toISOString()).toBe("2026-01-01T12:00:00.000Z");
     expect(shortcuts.toISOString()).toBe("2026-01-01T12:02:00.000Z");
+  });
+
+  it("schedules trial-ending on day 5", () => {
+    const step = findWelcomeStep("trial-ending");
+    expect(step?.delayDays).toBe(5);
+    const sendAt = computeSendAt(signedUpAt, step!, "real");
+    expect(sendAt.toISOString()).toBe("2026-01-06T12:00:00.000Z");
+  });
+
+  it("skips trial-ending for active subscribers and accounts without a Stripe subscription", () => {
+    const step = findWelcomeStep("trial-ending");
+    expect(step?.skipIf?.({ hasConnectedCalendar: false })).toBe(true);
+    expect(
+      step?.skipIf?.({
+        hasConnectedCalendar: false,
+        billing: { subscriptionStatus: "awaiting_checkout" },
+      }),
+    ).toBe(true);
+    expect(
+      step?.skipIf?.({
+        hasConnectedCalendar: false,
+        billing: {
+          subscriptionStatus: "trialing",
+          stripeSubscriptionId: "sub_1",
+        },
+      }),
+    ).toBe(false);
+    expect(
+      step?.skipIf?.({
+        hasConnectedCalendar: false,
+        billing: {
+          subscriptionStatus: "active",
+          stripeSubscriptionId: "sub_1",
+        },
+      }),
+    ).toBe(true);
   });
 });

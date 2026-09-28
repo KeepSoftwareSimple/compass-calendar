@@ -20,6 +20,7 @@ const HANDLED_TYPES = new Set<Stripe.Event.Type>([
   "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
+  "customer.subscription.trial_will_end",
 ]);
 
 const toDate = (unixSeconds: number | null | undefined): Date | undefined =>
@@ -346,6 +347,16 @@ async function handleEvent(
     return;
   }
   await applySubscription(userId, subscription, eventCreatedAt);
+  if (event.type === "customer.subscription.trial_will_end") {
+    await billingAnalytics.capture({
+      event: "trial_will_end",
+      userId,
+      properties: {
+        trial_end: subscription.trial_end ?? 0,
+        subscription_status: subscription.status,
+      },
+    });
+  }
 }
 
 export async function processStripeEvent(

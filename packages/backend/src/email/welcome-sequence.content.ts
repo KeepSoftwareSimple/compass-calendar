@@ -73,11 +73,11 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
   },
   "trial-ending": {
     subject: "Your trial is ending soon",
-    preheader: "Keep your workspace when the trial ends.",
-    heading: "Stay on Compass",
+    preheader: "Your card will be charged when the trial ends.",
+    heading: "Your trial ends in two days",
     paragraphs: [
-      "Your trial gives you full access while you explore.",
-      "Subscribe before it ends to keep creating and syncing without interruption.",
+      "Your card on file will be charged when the trial ends so your workspace stays active.",
+      "Review your plan anytime in Settings > Billing.",
     ],
     cta: {
       label: "View billing",
