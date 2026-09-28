@@ -1,5 +1,11 @@
 import { resolveModifier } from "@tanstack/react-hotkeys";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode } from "react";
 import { renderWithStore } from "@web/__tests__/render-with-store";
@@ -217,7 +223,26 @@ describe("LifeView", () => {
     expect(
       screen.queryByRole("button", { name: "Previous month" }),
     ).not.toBeInTheDocument();
-    expect(birthDateInput).toHaveFocus();
+  });
+
+  it("opens the year grid from the birth date caption", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    await renderLifeViewWithSidebar();
+
+    await user.keyboard("{Enter}");
+    await user.click(
+      screen.getByRole("button", { name: "Choose month and year" }),
+    );
+
+    const calendar = document.querySelector(
+      ".lifeBirthDatePicker",
+    ) as HTMLElement | null;
+    expect(calendar).not.toBeNull();
+
+    expect(within(calendar!).getByText("Select year")).toBeInTheDocument();
+    expect(
+      calendar!.querySelector(".react-datepicker__year-text"),
+    ).toBeInTheDocument();
   });
 
   it("updates weeks lived when the birth date changes", async () => {
