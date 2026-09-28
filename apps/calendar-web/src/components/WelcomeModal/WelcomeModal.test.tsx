@@ -329,7 +329,9 @@ describe("WelcomeModal", () => {
       "href",
       "https://github.com/KeepSoftwareSimple/compass-calendar",
     );
-    expect(screen.getByRole("button", { name: "Sign up" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Explore without an account" }),
+    ).toHaveFocus();
 
     await user.keyboard("{Escape}");
     expect(screen.getByText("Step 2 of 3")).toBeTruthy();
@@ -601,7 +603,7 @@ describe("WelcomeModal", () => {
     expect(localStorage.getItem(STORAGE_KEYS.HAS_SEEN_WELCOME)).toBeNull();
   });
 
-  it("focuses the sign up CTA and keeps Tab inside the dialog", async () => {
+  it("focuses Explore on step 3 and keeps Tab inside the dialog", async () => {
     const user = userEvent.setup();
 
     render(
@@ -613,10 +615,10 @@ describe("WelcomeModal", () => {
 
     await goToChooseScreen(user);
 
-    // Not the panel's first focusable (Back, then Log in): the primary
-    // action is signing up, so that is where focus lands.
-    const signUp = screen.getByRole("button", { name: "Sign up" });
-    expect(signUp).toHaveFocus();
+    const explore = screen.getByRole("button", {
+      name: "Explore without an account",
+    });
+    expect(explore).toHaveFocus();
 
     const terms = screen.getByRole("link", { name: "Terms" });
     terms.focus();
@@ -659,38 +661,36 @@ describe("WelcomeModal", () => {
       resetProviderAvailabilityForTests();
     });
 
-    it("leads with the Google round trip that also connects the calendar", async () => {
+    it("leads with Explore and keeps sign-up options secondary", async () => {
       const user = userEvent.setup();
       render(<WelcomeModal />);
       await goToChooseScreen(user);
 
+      const explore = screen.getByRole("button", {
+        name: "Explore without an account",
+      });
+      expect(explore).toHaveClass("w-full", "h-10", "c-button-primary");
+      expect(explore).toHaveClass("c-button-elevated");
+      expect(
+        screen.getByText("Ready to keep it? Start your free 7-day trial."),
+      ).toBeTruthy();
       expect(
         screen.getByRole("button", { name: "Continue with Google" }),
       ).toBeTruthy();
-      expect(
-        screen.queryByText(/Signs you up and connects your Google Calendar/),
-      ).toBeNull();
       expect(
         within(
           screen.getByRole("button", { name: "Continue with Google" }),
         ).getByText("G"),
       ).toBeTruthy();
-      // Email signup steps aside to a clearly secondary label.
       expect(
         screen.getByRole("button", { name: "Sign up with email" }),
-      ).toHaveClass("w-full", "h-10", "c-button-elevated");
-      expect(
-        screen.getByRole("button", { name: "Explore without an account" }),
       ).toHaveClass("w-full", "h-10", "c-button-secondary");
       expect(
-        screen.getByRole("button", { name: "Explore without an account" }),
+        screen.getByRole("button", { name: "Sign up with email" }),
       ).not.toHaveClass("c-button-primary");
       expect(
-        screen.getByRole("button", { name: "Explore without an account" }),
+        screen.getByRole("button", { name: "Sign up with email" }),
       ).not.toHaveClass("c-button-elevated");
-      expect(
-        screen.getByRole("button", { name: "Continue with Google" }),
-      ).toHaveClass("w-full", "h-10");
     });
 
     it("starts Google auth from the button without queueing the practice", async () => {

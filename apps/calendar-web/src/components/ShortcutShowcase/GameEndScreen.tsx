@@ -119,7 +119,7 @@ export const GameEndScreen: FC<{
             disabled={closing}
             onClick={onSignUp}
           >
-            Sign up to keep your calendar
+            Start your free trial to keep your calendar
             <ShortcutHint className="shrink-0">Enter</ShortcutHint>
           </button>
         )}

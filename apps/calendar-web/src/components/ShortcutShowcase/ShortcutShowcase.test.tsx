@@ -225,7 +225,9 @@ describe("ShortcutShowcase", () => {
       screen.getByText(`${RUN_TASKS.length}/${RUN_TASKS.length} tasks cleared`),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: /Sign up to keep your calendar/ }),
+      screen.getByRole("button", {
+        name: "Start your free trial to keep your calendar",
+      }),
     ).toBeTruthy();
     // The run finished, but nothing is marked seen until the user leaves.
     expect(useShortcutShowcaseStore.getState().isActive).toBe(true);

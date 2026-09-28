@@ -13,8 +13,14 @@ import {
   selectShowcaseActive,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
+import { ANONYMOUS_SAVE_TOAST_AFTER_SAVE_COUNT } from "@web/events/mutations/event.mutation.runtime";
 
 const ANONYMOUS_SAVE_TOAST_ID: Id = "anonymous-save-toast";
+
+export const ANONYMOUS_SAVE_TOAST_MESSAGE =
+  "Nice. Start your free trial to keep this calendar on every device.";
+
+export const ANONYMOUS_SAVE_TOAST_ACTION_LABEL = "Start free trial";
 
 function isAuthModalOpen(): boolean {
   if (typeof window === "undefined") return false;
@@ -49,6 +55,20 @@ function markAnonymousSaveToastSeen(): void {
   );
 }
 
+function incrementAnonymousCalendarWriteCount(): number {
+  if (!persistentBrowserStore.isAvailable()) return 0;
+  const raw = persistentBrowserStore.get(
+    STORAGE_KEYS.ANONYMOUS_CALENDAR_WRITE_COUNT,
+  );
+  const previous = raw ? Number.parseInt(raw, 10) : 0;
+  const next = Number.isFinite(previous) ? previous + 1 : 1;
+  persistentBrowserStore.set(
+    STORAGE_KEYS.ANONYMOUS_CALENDAR_WRITE_COUNT,
+    String(next),
+  );
+  return next;
+}
+
 interface AnonymousSaveToastProps {
   toastId: Id;
 }
@@ -73,19 +93,20 @@ export const AnonymousSaveToast = ({ toastId }: AnonymousSaveToastProps) => {
 
   return (
     <ToastNotice>
-      <p className="text-sm text-text">
-        Sign up to save your calendar across browsers.
-      </p>
-      <ToastActionButton onClick={handleSignUp}>Sign up</ToastActionButton>
+      <p className="text-sm text-text">{ANONYMOUS_SAVE_TOAST_MESSAGE}</p>
+      <ToastActionButton onClick={handleSignUp}>
+        {ANONYMOUS_SAVE_TOAST_ACTION_LABEL}
+      </ToastActionButton>
     </ToastNotice>
   );
 };
 
 export function maybeShowAnonymousSaveToast(): void {
+  const writeCount = incrementAnonymousCalendarWriteCount();
+  if (writeCount < ANONYMOUS_SAVE_TOAST_AFTER_SAVE_COUNT) return;
   if (isAuthModalOpen() || hasSeenAnonymousSaveToast()) return;
   // Don't mark seen here: onboarding suppresses this toast, not removes it,
-  // so it still appears the first time a user writes an event after
-  // skipping or finishing onboarding entirely.
+  // so it still appears once the user has enough writes after onboarding.
   if (isOnboardingFlowActive()) return;
 
   markAnonymousSaveToastSeen();

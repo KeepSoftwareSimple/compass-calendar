@@ -16,7 +16,10 @@ import { useSession } from "@web/auth/compass/session/useSession";
 import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
 import { openingProviderLabel } from "@web/auth/providers/connection-provider.util";
 import { PROVIDER_LOGO } from "@web/auth/providers/ProviderMark";
-import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
+import {
+  ANONYMOUS_TRIAL_CONNECT_CALENDAR_LABEL,
+  CONNECT_CALENDAR_LABEL,
+} from "@web/auth/providers/provider-copy.util";
 import { useAvailableConnectProviders } from "@web/auth/providers/useAvailableConnectProviders";
 import { useConnectProvider } from "@web/auth/providers/useConnectProvider";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
@@ -153,7 +156,11 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
       <SignInProviderButtons
         available={kinds}
         busyLabel={openingProviderLabel}
-        labels={CONNECT_CALENDAR_LABEL}
+        labels={
+          authenticated
+            ? CONNECT_CALENDAR_LABEL
+            : ANONYMOUS_TRIAL_CONNECT_CALENDAR_LABEL
+        }
         loadingKind={connectingKind ?? null}
         onSignIn={runConnect}
         shortcutKeys={null}

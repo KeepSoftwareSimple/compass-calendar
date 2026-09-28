@@ -230,7 +230,9 @@ describe("CalendarList", () => {
       screen.queryByRole("heading", { name: "This browser" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Sign up to save this calendar" }),
+      screen.getByRole("button", {
+        name: "Start your free trial to save this calendar",
+      }),
     ).toBeInTheDocument();
   });
 

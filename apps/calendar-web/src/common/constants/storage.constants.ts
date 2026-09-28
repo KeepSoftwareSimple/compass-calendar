@@ -11,6 +11,8 @@ export const STORAGE_KEYS = {
   HAS_SEEN_WELCOME: "compass.onboarding.has-seen-welcome",
   HAS_SEEN_ANONYMOUS_SAVE_TOAST:
     "compass.onboarding.has-seen-anonymous-save-toast",
+  ANONYMOUS_CALENDAR_WRITE_COUNT:
+    "compass.onboarding.anonymous-calendar-write-count",
   HAS_DISMISSED_DEMO_EVENTS_BANNER:
     "compass.onboarding.has-dismissed-demo-events-banner",
   HAS_DISMISSED_TASKS_REMOVAL_NOTICE:

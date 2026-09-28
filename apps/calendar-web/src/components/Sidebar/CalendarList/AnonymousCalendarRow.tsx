@@ -13,7 +13,10 @@ import {
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
 
-const ANONYMOUS_SAVE_MESSAGE = "Sign up to save your changes across browsers";
+export const ANONYMOUS_CALENDAR_ROW_TRIAL_MESSAGE =
+  "Start your free trial to sync";
+
+const ANONYMOUS_ROW_ARIA_LABEL = "Start your free trial to save this calendar";
 
 const TOOLTIP_ACTION_BUTTON_CLASSNAME =
   "c-button-compact c-button-primary self-start rounded-xs px-2 py-1 text-s";
@@ -41,7 +44,7 @@ export const AnonymousCalendarRow: FC<AnonymousCalendarRowProps> = ({
       <Tooltip interactive>
         <TooltipTrigger asChild>
           <button
-            aria-label="Sign up to save this calendar"
+            aria-label={ANONYMOUS_ROW_ARIA_LABEL}
             className={classNames(
               "c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-xs",
               isDirty
@@ -63,13 +66,13 @@ export const AnonymousCalendarRow: FC<AnonymousCalendarRowProps> = ({
           </button>
         </TooltipTrigger>
         <TooltipContent className="flex max-w-55 flex-col gap-1.5">
-          <span>{ANONYMOUS_SAVE_MESSAGE}</span>
+          <span>{ANONYMOUS_CALENDAR_ROW_TRIAL_MESSAGE}</span>
           <button
             className={TOOLTIP_ACTION_BUTTON_CLASSNAME}
             onClick={handleOpenSignUp}
             type="button"
           >
-            Sign up
+            Start free trial
           </button>
         </TooltipContent>
       </Tooltip>

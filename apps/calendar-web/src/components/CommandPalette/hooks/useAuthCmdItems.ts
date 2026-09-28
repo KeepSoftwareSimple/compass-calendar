@@ -20,9 +20,9 @@ export const useAuthCmdItems = (): CommandItem[] => {
   return [
     {
       id: "sign-up",
-      label: "Sign Up",
+      label: "Start free trial",
       icon: UserPlusIcon,
-      keywords: ["register", "create account"],
+      keywords: ["register", "create account", "sign up", "trial"],
       onClick: () => {
         trackSignupStarted("command_palette");
         openModal("signUp");
