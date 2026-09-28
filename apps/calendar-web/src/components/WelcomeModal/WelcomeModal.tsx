@@ -61,8 +61,9 @@ function WelcomeSteps({ step }: { step: WelcomeStep }) {
 export function WelcomeModal() {
   const { authenticated } = useContext(SessionContext);
   const { openModal, isOpen: isAuthModalOpen } = useAuthModal();
-  const { available, isLoading, loadingKind, startSignIn } =
-    useSignInProviders();
+  const { available, isLoading, loadingKind, startSignIn } = useSignInProviders(
+    { signupFlow: true },
+  );
   const hasSignInProviders = available.length > 0;
   const isMicrosoftSignInAvailable = useIsProviderAvailable(
     "microsoft",

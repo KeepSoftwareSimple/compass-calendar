@@ -13,6 +13,10 @@ import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
+import {
+  selectIsCelebrating,
+  useCheckoutCelebrationStore,
+} from "@web/billing/checkout-celebration.store";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
   dismissErrorToast,
@@ -27,6 +31,7 @@ import { ForgotPasswordForm } from "./forms/ForgotPasswordForm";
 import { LogInForm } from "./forms/LogInForm";
 import { ResetPasswordForm } from "./forms/ResetPasswordForm";
 import { SignUpForm } from "./forms/SignUpForm";
+import { StartTrialStep } from "./forms/StartTrialStep";
 import { useAuthFormHandlers } from "./hooks/useAuthFormHandlers";
 import {
   type AuthSearch,
@@ -56,7 +61,10 @@ function getInitialAuthToken(search: AuthSearch): string | undefined {
  */
 export const AuthModal: FC = () => {
   const { isOpen, currentView, closeModal, setView } = useAuthModal();
+  const isStartTrialView = currentView === "startTrial";
   useAppLockReason("authModal", isOpen);
+  useAppLockReason("signupTrialStep", isStartTrialView);
+  const isCelebrating = useCheckoutCelebrationStore(selectIsCelebrating);
   const handleGoogleAuthStart = useCallback(() => {
     dismissErrorToast(SESSION_EXPIRED_TOAST_ID);
   }, []);
@@ -67,6 +75,7 @@ export const AuthModal: FC = () => {
   const [needsConsentRetry] = useState(consumeGoogleAuthNeedsConsentRetry);
   const { available, isLoading, loadingKind, startSignIn } = useSignInProviders(
     {
+      signupFlow: currentView === "signUp",
       google: {
         onStart: handleGoogleAuthStart,
         prompt: needsConsentRetry ? "consent" : undefined,
@@ -104,6 +113,11 @@ export const AuthModal: FC = () => {
   // OverlayPanel would otherwise seat the view-switch chip (first focusable).
   const emailInputRef = useRef<HTMLInputElement>(null);
   const pricingLinkRef = useRef<HTMLAnchorElement>(null);
+
+  useEffect(() => {
+    if (!isOpen || !isStartTrialView || !isCelebrating) return;
+    closeModal();
+  }, [closeModal, isCelebrating, isOpen, isStartTrialView]);
 
   useEffect(() => {
     if (!isOpen || currentView !== "signUp") return;
@@ -156,7 +170,8 @@ export const AuthModal: FC = () => {
     setView("forgotPassword");
   }, [setView]);
 
-  const showAuthSwitch = isLoginView || currentView === "signUp";
+  const showAuthSwitch =
+    !isStartTrialView && (isLoginView || currentView === "signUp");
 
   useEffect(() => {
     if (!isOpen) return;
@@ -205,12 +220,15 @@ export const AuthModal: FC = () => {
   }
 
   const showProviderSignIn =
-    currentView !== "resetPassword" && available.length > 0;
+    !isStartTrialView &&
+    currentView !== "resetPassword" &&
+    available.length > 0;
   const showSubmitError =
     submitError !== null && (isLoginView || currentView === "signUp");
   const trimmedName = signUpName.trim();
-  const title =
-    currentView === "forgotPassword"
+  const title = isStartTrialView
+    ? "Start your 7-day free trial"
+    : currentView === "forgotPassword"
       ? "Reset Password"
       : currentView === "resetPassword"
         ? "Set New Password"
@@ -219,6 +237,19 @@ export const AuthModal: FC = () => {
             ? `Nice to meet you, ${trimmedName}`
             : "Nice to meet you"
           : "Hey, welcome back";
+
+  if (isStartTrialView) {
+    return (
+      <OverlayPanel
+        title={title}
+        onDismiss={closeModal}
+        variant="modal"
+        widthClassName="w-[560px]"
+      >
+        <StartTrialStep onDismiss={closeModal} />
+      </OverlayPanel>
+    );
+  }
 
   return (
     <OverlayPanel

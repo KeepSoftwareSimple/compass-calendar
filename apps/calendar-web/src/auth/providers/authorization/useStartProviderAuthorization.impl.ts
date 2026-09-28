@@ -8,6 +8,7 @@ import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
+import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
 import { getMicrosoftSignInClientId } from "./provider-authorization.config";
 import { assignAuthorizationRedirect } from "./provider-authorization.redirect";
 import {
@@ -17,11 +18,14 @@ import {
 import {
   buildMicrosoftAuthorizationUrl,
   buildProviderAuthCallbackUrl,
+  buildSignupTrialReturnPath,
   getSafeProviderAuthReturnPath,
 } from "./provider-authorization.util";
 
 type StartProviderAuthorizationOptions = {
   intent: ProviderAuthorizationIntent["intent"];
+  /** Sign-up (not log-in) OAuth should return to the in-modal trial step. */
+  signupFlow?: boolean;
   onStart?: () => void;
   onError?: (error: unknown) => void;
   prompt?: "consent" | "none" | "select_account";
@@ -38,6 +42,7 @@ type ProviderAuthorizationStrategy = (
 
 const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   intent,
+  signupFlow,
   onStart,
   onError,
   prompt,
@@ -77,20 +82,25 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
     startAuthorization: useCallback(() => {
       onStart?.();
       setLoading(true);
+      if (signupFlow) {
+        rememberSignupTrialMethod("google");
+      }
       writeProviderAuthorizationIntent("google", state, {
         intent,
-        returnPath: getSafeProviderAuthReturnPath("google"),
+        returnPath: signupFlow
+          ? buildSignupTrialReturnPath()
+          : getSafeProviderAuthReturnPath("google"),
         createdAt: Date.now(),
       });
       track("oauth_redirect_started", { provider: "google", intent });
       trackSignupStep("oauth_redirect_started", { method: "google" });
       return startGoogleAuthorization();
-    }, [intent, onStart, startGoogleAuthorization, state]),
+    }, [intent, onStart, signupFlow, startGoogleAuthorization, state]),
   };
 };
 
 const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
-  ({ intent, onStart, onError, prompt }) => {
+  ({ intent, signupFlow, onStart, onError, prompt }) => {
     const [loading, setLoading] = useState(false);
     const [state] = useState(() => crypto.randomUUID());
     const [redirectUri] = useState(() =>
@@ -109,9 +119,14 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
 
         onStart?.();
         setLoading(true);
+        if (signupFlow) {
+          rememberSignupTrialMethod("microsoft");
+        }
         writeProviderAuthorizationIntent("microsoft", state, {
           intent,
-          returnPath: getSafeProviderAuthReturnPath("microsoft"),
+          returnPath: signupFlow
+            ? buildSignupTrialReturnPath()
+            : getSafeProviderAuthReturnPath("microsoft"),
           createdAt: Date.now(),
         });
         track("oauth_redirect_started", { provider: "microsoft", intent });
@@ -131,7 +146,7 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
           setLoading(false);
           onError?.(error);
         }
-      }, [intent, onError, onStart, prompt, redirectUri, state]),
+      }, [intent, onError, onStart, prompt, redirectUri, signupFlow, state]),
     };
   };
 

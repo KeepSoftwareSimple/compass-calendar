@@ -1,6 +1,6 @@
 {
   "chunkCount": 85,
-  "totalGzipBytes": 506628,
+  "totalGzipBytes": 507360,
   "packages": {
     "@phosphor-icons/react": 17995,
     "@react-oauth/google": 2043,

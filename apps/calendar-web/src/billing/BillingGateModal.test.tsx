@@ -89,25 +89,25 @@ describe("BillingGateModal", () => {
     resetBillingGateAttentionForTests();
   });
 
-  it("opens embedded Checkout inside the gate from Start trial", async () => {
+  it("opens embedded Checkout inside the gate from Add card", async () => {
     const user = userEvent.setup();
     renderGate();
 
-    await user.click(screen.getByRole("button", { name: "Start trial" }));
+    await user.click(screen.getByRole("button", { name: "Add card" }));
 
     expect(
       within(
-        screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+        screen.getByRole("dialog", { name: "Finish starting your trial" }),
       ).getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
   });
 
-  it("shows shortcut keycaps and focuses Start trial", () => {
+  it("shows shortcut keycaps and focuses Add card", () => {
     renderGate();
 
-    expect(screen.getByRole("button", { name: "Start trial" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Add card" })).toHaveFocus();
     for (const [name, key] of [
-      ["Start trial", "S"],
+      ["Add card", "S"],
       ["Look around first", "L"],
     ] as const) {
       expect(
@@ -124,7 +124,7 @@ describe("BillingGateModal", () => {
 
     expect(
       screen.getByText(
-        "Start a free 7-day trial to create and edit events, including keyboard shortcuts.",
+        "Add a card to start your 7-day free trial. You will not be charged until it ends.",
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/\$|\/month/i)).not.toBeInTheDocument();
@@ -145,7 +145,7 @@ describe("BillingGateModal", () => {
 
     await user.keyboard("{Escape}");
     expect(
-      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.getByRole("dialog", { name: "Finish starting your trial" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Complete checkout" }),
@@ -160,7 +160,7 @@ describe("BillingGateModal", () => {
     await user.click(screen.getByRole("button", { name: "Back" }));
 
     expect(
-      screen.getByRole("button", { name: "Start trial" }),
+      screen.getByRole("button", { name: "Add card" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Complete checkout" }),
@@ -253,7 +253,7 @@ describe("BillingGateModal", () => {
     const user = userEvent.setup();
     renderGate();
 
-    const start = screen.getByRole("button", { name: "Start trial" });
+    const start = screen.getByRole("button", { name: "Add card" });
     const lookAround = screen.getByRole("button", {
       name: "Look around first",
     });

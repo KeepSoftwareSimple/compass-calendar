@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Outlet, useLocation, useSearch } from "@tanstack/react-router";
 import { useContext, useEffect, useMemo } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
@@ -28,7 +28,10 @@ import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
 import { AuthModalProvider } from "@web/components/AuthModal/AuthModalProvider";
-import { useAuthModalState } from "@web/components/AuthModal/hooks/useAuthModal";
+import {
+  useAuthModalState,
+  VIEW_TO_PARAM,
+} from "@web/components/AuthModal/hooks/useAuthModal";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
 import { useConnectCalendarPromptSurfaceEligible } from "@web/components/ConnectCalendarPrompt/useConnectCalendarPromptSurfaceEligible";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
@@ -87,7 +90,10 @@ export function RootShell() {
   const isLifeView = isLifePathname(pathname);
   const deferCalendarOnboarding = isLifeView;
   const { authenticated } = useContext(SessionContext);
+  const { auth: authParam } = useSearch({ from: "__root__" });
   const { isOpen: isAuthModalOpen } = useAuthModalState();
+  const signupTrialStepActive =
+    authenticated && authParam?.toLowerCase() === VIEW_TO_PARAM.startTrial;
   // The keyboard onboarding overlays paint over MobileGate (they're fixed
   // full-screen), so a phone user would finish the whole walkthrough only to
   // land on "open this on a computer". Gate them up front instead.
@@ -139,7 +145,9 @@ export function RootShell() {
   // is a full app-lock overlay: it would take the screen at exactly the
   // moment the user has just paid.
   const gateStatus =
-    showReadOnlyBanner || isCelebrating ? null : readOnlyStatus;
+    showReadOnlyBanner || isCelebrating || signupTrialStepActive
+      ? null
+      : readOnlyStatus;
   const showCalendarOnboarding =
     gateStatus === null &&
     !isCelebrating &&

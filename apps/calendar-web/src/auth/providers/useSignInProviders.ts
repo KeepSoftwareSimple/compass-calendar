@@ -10,20 +10,26 @@ type GoogleSignInOptions = {
 
 type UseSignInProvidersOptions = {
   google?: GoogleSignInOptions;
+  /** When true, OAuth returns to the signup trial step after account creation. */
+  signupFlow?: boolean;
 };
 
 export function useSignInProviders(options: UseSignInProvidersOptions = {}) {
   const available = useAvailableSignInProviders();
+  const signupFlow = options.signupFlow === true;
   const googleAuth = useStartProviderAuthorization("google", {
     intent: "signIn",
+    signupFlow,
     onStart: options.google?.onStart,
     prompt: options.google?.prompt,
   });
   const microsoftAuth = useStartProviderAuthorization("microsoft", {
     intent: "signIn",
+    signupFlow,
   });
   const appleAuth = useStartProviderAuthorization("apple", {
     intent: "signIn",
+    signupFlow,
   });
 
   const byKind = useMemo(

@@ -126,6 +126,17 @@ describe("google-auth.util", () => {
       await expect(syncPendingLocalEvents()).resolves.toBe(true);
     });
 
+    it("keeps local rows and stays quiet when sync is refused for billing", async () => {
+      const error = Object.assign(new Error("Billing required"), {
+        response: { status: 403, data: { code: "BILLING_REQUIRED" } },
+        config: { url: "/events", method: "post" },
+      });
+      mockSyncLocalEventsToCloud.mockRejectedValue(error);
+
+      await expect(syncPendingLocalEvents()).resolves.toBe(true);
+      expect(mockToastError).not.toHaveBeenCalled();
+    });
+
     it("shows toast and returns false on sync failure", async () => {
       const error = new Error("Network failed");
       mockSyncLocalEventsToCloud.mockRejectedValue(error);

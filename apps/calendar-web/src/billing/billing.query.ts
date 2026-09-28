@@ -85,9 +85,12 @@ export function startBillingStatusPoll(
   queryClient: QueryClient,
   onWindowEnd: () => void,
   queryKey: readonly unknown[] = billingQueryKeys.status,
+  onAfterInvalidate?: () => void,
 ): () => void {
   const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey });
+    void queryClient.invalidateQueries({ queryKey }).then(() => {
+      onAfterInvalidate?.();
+    });
   };
   invalidate();
   const interval = window.setInterval(invalidate, STATUS_POLL_MS);
