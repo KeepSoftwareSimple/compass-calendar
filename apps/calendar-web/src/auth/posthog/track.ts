@@ -1,5 +1,18 @@
 import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 
+/**
+ * Product activation catalog (untyped here; funnel modules own property shapes).
+ *
+ * Signup funnel (`signup-funnel.ts`):
+ * - `signup_started`: `source`, `anon_events_created`
+ * - `signup_completed`: `method`
+ * - `signup_step_viewed`: `step_name`, optional `source`, `method` (includes
+ *   `trial_step_viewed`, `trial_step_completed`, `trial_step_abandoned`)
+ * - `signup_failed`: `reason_code`, optional `method`, `step`, `error`
+ *
+ * Billing:
+ * - `trial_converted`: `source`, optional `feature_area`, `action_id`, `trial`
+ */
 export type ProductEvent =
   | "welcome_modal_shown"
   | "welcome_modal_dismissed"

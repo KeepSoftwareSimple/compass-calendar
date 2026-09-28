@@ -54,6 +54,13 @@ const renderGate = (status = "awaiting_checkout") => {
     defaultOptions: { queries: { retry: false } },
   });
   queryClient.setQueryData(billingQueryKeys.config, GATE_CONFIG);
+  queryClient.setQueryData(billingQueryKeys.status, {
+    subscriptionStatus: status,
+    trialEndsAt: null,
+    isReadOnly: status === "awaiting_checkout",
+    cancelAtPeriodEnd: false,
+    needsPaymentMethod: false,
+  });
   const view = render(
     <QueryClientProvider client={queryClient}>
       <HotkeysProvider>
@@ -170,7 +177,10 @@ describe("BillingGateModal", () => {
     await user.click(screen.getByRole("button", { name: "Complete checkout" }));
 
     expect(useCheckoutCelebrationStore.getState().isCelebrating).toBe(true);
-    expect(track).toHaveBeenCalledWith("trial_converted", { source: "gate" });
+    expect(track).toHaveBeenCalledWith("trial_converted", {
+      source: "gate",
+      trial: true,
+    });
     expect(track).not.toHaveBeenCalledWith(
       "billing_gate_shortcut_converted",
       expect.anything(),
@@ -205,7 +215,10 @@ describe("BillingGateModal", () => {
       feature_area: "event_creation",
       action_id: "calendar.create_timed_event",
     };
-    expect(track).toHaveBeenCalledWith("trial_converted", attribution);
+    expect(track).toHaveBeenCalledWith("trial_converted", {
+      ...attribution,
+      trial: true,
+    });
     expect(track).toHaveBeenCalledWith(
       "billing_gate_shortcut_converted",
       attribution,

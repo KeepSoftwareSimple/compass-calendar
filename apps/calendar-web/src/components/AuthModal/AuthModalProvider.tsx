@@ -1,4 +1,5 @@
-import { type FC, type ReactNode } from "react";
+import { type FC, type ReactNode, useEffect } from "react";
+import { signupTrialStepViewedNoOp } from "@web/auth/posthog/signup-funnel";
 import { AuthModalContext, useAuthModalState } from "./hooks/useAuthModal";
 
 interface AuthModalProviderProps {
@@ -13,6 +14,10 @@ interface AuthModalProviderProps {
  */
 export const AuthModalProvider: FC<AuthModalProviderProps> = ({ children }) => {
   const value = useAuthModalState();
+
+  useEffect(() => {
+    signupTrialStepViewedNoOp();
+  }, []);
 
   return (
     <AuthModalContext.Provider value={value}>
