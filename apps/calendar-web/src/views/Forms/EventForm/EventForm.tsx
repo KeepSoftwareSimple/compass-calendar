@@ -18,6 +18,7 @@ import { CONFERENCE_KIND_LABEL } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type AttendeeInput } from "@core/types/event-attendance.contracts";
 import dayjs from "@core/util/date/dayjs";
+import { parseBookingEventLinks } from "@web/booking/booking-event-links";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
 import {
   canInviteOnCalendar,
@@ -81,7 +82,10 @@ import {
   EVENT_FORM_CONFERENCE_ID,
   EventDetailsSection,
 } from "@web/views/Forms/EventForm/EventDetailsSection";
-import { FormActionsRow } from "@web/views/Forms/EventForm/FormActionsRow";
+import {
+  FormActionsRow,
+  type FormActionsRowHandle,
+} from "@web/views/Forms/EventForm/FormActionsRow";
 import { RsvpControl } from "@web/views/Forms/EventForm/RsvpControl";
 import { SaveSection } from "@web/views/Forms/EventForm/SaveSection/SaveSection";
 import {
@@ -233,6 +237,17 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       draft.kind === "edit" && draft.source.content.kind === "details"
         ? draft.source.content
         : undefined;
+    const bookingLinks =
+      sourceDetails?.description != null
+        ? parseBookingEventLinks(sourceDetails.description)
+        : null;
+    const bookingGuestDisplayName = (() => {
+      const guest = sourceDetails?.attendees?.[0];
+      if (!guest) return "Guest";
+      return guest.displayName?.trim() || guest.email;
+    })();
+    const formActionsRef = useRef<FormActionsRowHandle>(null);
+    const showBookingFormActions = !isReadOnly && bookingLinks !== null;
     // Cache-backed view of the same source event (WP-08): an optimistic RSVP
     // patches the query cache, and reading it live here is what makes the
     // user's own status dot (and the segmented control's selection) update
@@ -451,6 +466,22 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         e.preventDefault();
       }
 
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        keyboardKey(e).toLowerCase() === "x"
+      ) {
+        e.preventDefault();
+      }
+
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.shiftKey &&
+        keyboardKey(e).toLowerCase() === "e"
+      ) {
+        e.preventDefault();
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
       }
@@ -660,6 +691,34 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     );
 
     useAppShortcut(
+      "Mod+Shift+X",
+      (keyboardEvent) => {
+        if (!showBookingFormActions) return;
+        keyboardEvent.preventDefault();
+        keyboardEvent.stopPropagation();
+        formActionsRef.current?.triggerCancelShortcut();
+      },
+      {
+        ...EVENT_FORM_PLAIN_HOTKEY_OPTIONS,
+        shortcutId: "edit-cancel-meeting",
+      },
+    );
+
+    useAppShortcut(
+      "Mod+Shift+E",
+      (keyboardEvent) => {
+        if (!showBookingFormActions) return;
+        keyboardEvent.preventDefault();
+        keyboardEvent.stopPropagation();
+        formActionsRef.current?.triggerRescheduleShortcut();
+      },
+      {
+        ...EVENT_FORM_PLAIN_HOTKEY_OPTIONS,
+        shortcutId: "edit-reschedule-meeting",
+      },
+    );
+
+    useAppShortcut(
       "Mod+Enter",
       (e) => {
         e.preventDefault();
@@ -669,7 +728,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
     );
 
     const { isConfirmOpen, onCancelConfirm, onDiscardConfirm, requestClose } =
-      useEscapeToCloseForm(onClose);
+      useEscapeToCloseForm(onClose, {
+        onEscapeBeforeClose: () =>
+          formActionsRef.current?.consumeEscapeForCancelConfirm() ?? false,
+      });
 
     const { areHintsVisible } = useFormDigitJumpShortcut();
 
@@ -738,6 +800,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           {/* Scrollable body; the save footer below stays pinned. */}
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-1 pb-4 [scrollbar-gutter:stable]">
             <FormActionsRow
+              ref={formActionsRef}
+              bookingLinks={bookingLinks}
+              guestDisplayName={bookingGuestDisplayName}
               isExistingEvent={isExistingEvent}
               isReadOnly={isReadOnly}
               onClose={requestClose}

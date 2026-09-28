@@ -249,11 +249,17 @@ permalink carries `?token=`. Reschedule links stay history state only
 
 **Event title:** `{Guest name} and {Host name}`.
 
-**Event description:** three blocks separated by blank lines: guest notes
-(when present), `Cancel: <url>`, and `Reschedule: <url>`. In Compass the
-description editor renders each block as its own paragraph and autolinks
-bare URLs. Guests cannot add other attendees, so those URLs are safe in
-the description every invitee sees.
+**Event description:** guest notes (when present), then HTML anchors
+`Cancel | Reschedule` pointing at `/meet/cancel/:id?token=` and
+`/meet/reschedule/:id?token=` (same format the description editor saves).
+Guests cannot add other attendees, so those links are safe in the
+description every invitee sees.
+
+**Host actions in the event form:** when the description contains both
+booking anchors, the actions row shows **Cancel meeting** (`Mod+Shift+X`,
+press twice to confirm) and **Reschedule** (`Mod+Shift+E`, opens the guest
+reschedule page in a new tab). `Mod+click` opens links inside the
+description while editing.
 
 ## Host inputs
 

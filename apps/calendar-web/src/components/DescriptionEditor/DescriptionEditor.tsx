@@ -8,7 +8,14 @@ import { EditorContent, useEditor, useEditorState } from "@tiptap/react";
 import { StarterKit } from "@tiptap/starter-kit";
 import classNames from "classnames";
 import DOMPurify from "dompurify";
-import { type KeyboardEvent, useEffect, useMemo, useState } from "react";
+import {
+  type KeyboardEvent,
+  type MouseEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { openExternalUrl } from "@web/common/utils/browser/open-external-url.util";
 import {
   looksLikeHtml,
   plainTextToDescriptionHtml,
@@ -134,6 +141,7 @@ export const DescriptionEditor = ({
             target: "_blank",
             rel: "noopener noreferrer nofollow",
             class: "text-accent underline",
+            title: "Mod+click to open",
           },
         }),
         Placeholder.configure({ placeholder }),
@@ -196,10 +204,27 @@ export const DescriptionEditor = ({
         : { bold: false, italic: false, orderedList: false, bulletList: false },
   });
 
+  const onDescriptionClickCapture = (event: MouseEvent<HTMLDivElement>) => {
+    if (!editable) return;
+    if (!(event.metaKey || event.ctrlKey) || event.button !== 0) return;
+
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const link = target.closest("a");
+    if (!link?.href) return;
+
+    event.preventDefault();
+    openExternalUrl(link.href);
+  };
+
   if (!editor) return null;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div
+      className="flex flex-col gap-1.5"
+      onClickCapture={onDescriptionClickCapture}
+    >
       {editable && (
         <div
           className="flex items-center gap-0.5"

@@ -350,6 +350,22 @@ export const SHORTCUTS_REGISTRY = [
     when: { isFormOpen: true },
     requiresWrite: true,
   },
+  {
+    id: "edit-cancel-meeting",
+    keys: [...B.editCancelMeeting.keycaps],
+    label: "Cancel booked meeting (confirm twice)",
+    section: "edit",
+    when: { isFormOpen: true },
+    requiresWrite: true,
+  },
+  {
+    id: "edit-reschedule-meeting",
+    keys: [...B.editRescheduleMeeting.keycaps],
+    label: "Reschedule booked meeting",
+    section: "edit",
+    when: { isFormOpen: true },
+    requiresWrite: true,
+  },
   // Not form-gated: the same digit pick also runs in the event context
   // menu's color swatch strip, independent of whether the form is open.
   {

@@ -7,6 +7,7 @@ import {
   BookingNewMeetingsClaimResponseSchema,
   type BookingPageStatusResponse,
   BookingPageStatusResponseSchema,
+  type CancelBookingReservationInput,
   isSavedBookingPage,
 } from "@core/types/booking.contracts";
 import { BaseApi } from "@web/api/base/base.api";
@@ -39,6 +40,16 @@ const BookingApi = {
       `/booking/page/new-meetings/claim`,
     );
     return BookingNewMeetingsClaimResponseSchema.parse(response.data);
+  },
+
+  async cancelReservation(
+    reservationId: string,
+    input: CancelBookingReservationInput,
+  ): Promise<void> {
+    await BaseApi.post<unknown>(
+      `/booking/reservations/${reservationId}/cancel`,
+      input,
+    );
   },
 };
 
