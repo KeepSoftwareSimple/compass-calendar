@@ -5,7 +5,7 @@ import {
   shouldShowAnonymousCalendarChangeSignUpPrompt,
   subscribeToAuthState,
 } from "@web/auth/compass/state/auth.state.util";
-import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
+import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
 import { useAuthModal } from "@web/components/AuthModal/hooks/useAuthModal";
 import {
   Tooltip,
@@ -32,7 +32,7 @@ export const AnonymousCalendarRow: FC<AnonymousCalendarRowProps> = ({
     shouldShowAnonymousCalendarChangeSignUpPrompt,
   );
   const handleOpenSignUp = useCallback(() => {
-    trackSignupStarted("anon_nudge");
+    void trackSignupStartedAtClick("anon_nudge");
     openModal("signUp");
   }, [openModal]);
 

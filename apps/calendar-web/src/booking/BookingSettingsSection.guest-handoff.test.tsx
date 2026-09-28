@@ -23,12 +23,12 @@ import {
 } from "@web/settings/settings.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
-const mockTrackSignupStarted = mock();
+const mockTrackSignupStartedAtClick = mock();
 const actualSignupFunnel = await import("@web/auth/posthog/signup-funnel");
 mockModuleForFile("@web/auth/posthog/signup-funnel", actualSignupFunnel, {
-  trackSignupStarted: (
-    ...args: Parameters<typeof actualSignupFunnel.trackSignupStarted>
-  ) => mockTrackSignupStarted(...args),
+  trackSignupStartedAtClick: (
+    ...args: Parameters<typeof actualSignupFunnel.trackSignupStartedAtClick>
+  ) => mockTrackSignupStartedAtClick(...args),
 });
 
 let testRouter: ReturnType<typeof createTestRouter>;
@@ -77,7 +77,7 @@ async function advanceGuestWizardToGoLive(
 
 describe("BookingSettingsSection guest sign-up hand-off", () => {
   beforeEach(() => {
-    mockTrackSignupStarted.mockClear();
+    mockTrackSignupStartedAtClick.mockClear();
     writeGuestMeetingSetupDraft({
       ...buildDefaultAdminPutInput(TimeZoneSchema.parse("UTC")),
       slug: "guest-host",
@@ -119,8 +119,10 @@ describe("BookingSettingsSection guest sign-up hand-off", () => {
     expect(
       screen.getByRole("heading", { name: /nice to meet you/i }),
     ).toBeInTheDocument();
-    expect(mockTrackSignupStarted).toHaveBeenCalledTimes(1);
-    expect(mockTrackSignupStarted).toHaveBeenCalledWith("meeting_page_setup");
+    expect(mockTrackSignupStartedAtClick).toHaveBeenCalledTimes(1);
+    expect(mockTrackSignupStartedAtClick).toHaveBeenCalledWith(
+      "meeting_page_setup",
+    );
   });
 
   it("does not fire signup analytics twice when Mod+Enter is pressed again on go-live", async () => {
@@ -145,6 +147,6 @@ describe("BookingSettingsSection guest sign-up hand-off", () => {
       expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(false);
     });
     await user.keyboard(`{${modKey}}{Enter}`);
-    expect(mockTrackSignupStarted).toHaveBeenCalledTimes(1);
+    expect(mockTrackSignupStartedAtClick).toHaveBeenCalledTimes(1);
   });
 });

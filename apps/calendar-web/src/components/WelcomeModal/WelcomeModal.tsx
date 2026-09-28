@@ -3,7 +3,7 @@ import { useContext, useEffect, useId, useRef, useState } from "react";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import {
-  trackSignupStarted,
+  trackSignupStartedAtClick,
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
@@ -211,7 +211,7 @@ export function WelcomeModal() {
     beginAuthHandoff();
     markWelcomeSeen();
     if (cta === "sign_up") {
-      trackSignupStarted("welcome_modal");
+      void trackSignupStartedAtClick("welcome_modal");
     }
     track("welcome_modal_dismissed", { cta });
     openModal(cta === "log_in" ? "login" : "signUp");
@@ -226,7 +226,7 @@ export function WelcomeModal() {
     cancelDismiss();
     markWelcomeSeen();
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
-    trackSignupStarted(`welcome_modal_${kind}`);
+    void trackSignupStartedAtClick(`welcome_modal_${kind}`);
     startSignIn(kind);
   };
 
