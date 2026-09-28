@@ -1,4 +1,5 @@
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
+import { BOOKING_TEXT_INPUT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import {
   type BookingField,
   bookingFieldAttrs,
@@ -42,7 +43,7 @@ export function BookingNumberField({
         {...bookingFieldAttrs(field)}
         aria-describedby={invalid ? errorId : undefined}
         aria-invalid={invalid || undefined}
-        className="c-focus-ring w-full rounded border border-border bg-surface-overlay px-2 py-1 text-sm text-text aria-invalid:border-error"
+        className={`${BOOKING_TEXT_INPUT_CLASS_NAME} w-full`}
         id={id}
         max={max}
         min={min}

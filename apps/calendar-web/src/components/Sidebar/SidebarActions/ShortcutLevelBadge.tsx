@@ -26,7 +26,7 @@ import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.ty
 import { useUsedShortcutIds } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
 
-export const LEVEL_PULSE_MS = 700;
+const LEVEL_PULSE_MS = 700;
 
 // This is the one place the badge imports the registry as a value: the
 // level model itself stays pure and never touches it, so it can never be
