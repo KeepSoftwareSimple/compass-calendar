@@ -15,7 +15,13 @@ import { shouldConfirmDiscardUnsavedChanges } from "@web/views/Forms/hooks/shoul
  * action button routes through it so a dirty draft prompts there too,
  * instead of re-deriving the dirty check at the call site.
  */
-export const useEscapeToCloseForm = (onClose: () => void) => {
+export const useEscapeToCloseForm = (
+  onClose: () => void,
+  options?: {
+    /** When this returns true, Escape is consumed and the form stays open. */
+    onEscapeBeforeClose?: () => boolean;
+  },
+) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const requestClose = () => {
@@ -32,6 +38,10 @@ export const useEscapeToCloseForm = (onClose: () => void) => {
     "Escape",
     (keyboardEvent) => {
       if (isFloatingLayerOpen()) return;
+      if (options?.onEscapeBeforeClose?.()) {
+        keyboardEvent.preventDefault();
+        return;
+      }
 
       keyboardEvent.preventDefault();
       requestClose();

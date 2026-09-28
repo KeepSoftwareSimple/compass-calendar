@@ -525,6 +525,26 @@
           "isFormOpen": true
         },
         "requiresWrite": true
+      },
+      {
+        "id": "edit-cancel-meeting",
+        "keys": ["Mod", "Shift", "X"],
+        "label": "Cancel booked meeting (confirm twice)",
+        "section": "edit",
+        "when": {
+          "isFormOpen": true
+        },
+        "requiresWrite": true
+      },
+      {
+        "id": "edit-reschedule-meeting",
+        "keys": ["Mod", "Shift", "E"],
+        "label": "Reschedule booked meeting",
+        "section": "edit",
+        "when": {
+          "isFormOpen": true
+        },
+        "requiresWrite": true
       }
     ]
   },

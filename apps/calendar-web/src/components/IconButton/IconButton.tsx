@@ -1,10 +1,10 @@
 import classNames from "classnames";
-import type React from "react";
+import { type ButtonHTMLAttributes, forwardRef } from "react";
 
 export type IconButtonSize = "small" | "medium" | "large";
 
 export interface IconButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: IconButtonSize;
 }
 
@@ -25,21 +25,22 @@ export function iconButtonClassName(
   );
 }
 
-const IconButton: React.FC<IconButtonProps> = ({
-  size = "medium",
-  children: icon,
-  className,
-  ...props
-}) => {
-  return (
-    <button
-      type="button"
-      className={iconButtonClassName(size, className)}
-      {...props}
-    >
-      {icon}
-    </button>
-  );
-};
+const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton(
+    { size = "medium", children: icon, className, ...props },
+    ref,
+  ) {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={iconButtonClassName(size, className)}
+        {...props}
+      >
+        {icon}
+      </button>
+    );
+  },
+);
 
 export default IconButton;

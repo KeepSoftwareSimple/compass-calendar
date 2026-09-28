@@ -789,3 +789,4 @@ If time is limited, run these checks before shipping shortcut-related changes:
 30. The `?` legend check-marks used shortcuts and counts "You've used N of M shortcuts here".
 31. `/shortcuts` is a public printable catalog with an `h1` and per-section `h2` headings.
 32. The sidebar footer's `Lv N` badge shows a level, tooltip progress, and try-next rows; a level-up pulses and toasts once; the command palette hides and shows it.
+33. With a booked meeting open in the event form (description contains both Compass cancel and reschedule anchors), `Mod+Shift+X` twice cancels via the public booking API and `Mod+Shift+E` opens the guest reschedule page in a new tab; a plain event shows neither action.

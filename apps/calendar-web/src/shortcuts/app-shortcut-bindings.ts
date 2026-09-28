@@ -75,6 +75,14 @@ export const APP_SHORTCUT_BINDINGS = {
   editMenu: { keycaps: [EVENT_MENU_LETTER] },
   editHide: { keycaps: [HIDE_EVENT_LETTER] },
   editSave: { hotkey: "Mod+Enter", keycaps: hotkeyKeycaps("Mod+Enter") },
+  editCancelMeeting: {
+    hotkey: "Mod+Shift+X",
+    keycaps: hotkeyKeycaps("Mod+Shift+X"),
+  },
+  editRescheduleMeeting: {
+    hotkey: "Mod+Shift+E",
+    keycaps: hotkeyKeycaps("Mod+Shift+E"),
+  },
   editFieldLeaderInForm: { hotkey: "Mod+E", keycaps: ["Mod+E"] },
   editFormActions: { hotkey: "Mod+0", keycaps: hotkeyKeycaps("Mod+0") },
   otherSidebar: { hotkey: "]", keycaps: ["]"] },
@@ -126,6 +134,9 @@ export const REGISTRY_RUNTIME_KEY_SOURCES: Record<string, readonly string[]> = {
   "edit-menu": APP_SHORTCUT_BINDINGS.editMenu.keycaps,
   "edit-hide": APP_SHORTCUT_BINDINGS.editHide.keycaps,
   "edit-save": APP_SHORTCUT_BINDINGS.editSave.keycaps,
+  "edit-cancel-meeting": APP_SHORTCUT_BINDINGS.editCancelMeeting.keycaps,
+  "edit-reschedule-meeting":
+    APP_SHORTCUT_BINDINGS.editRescheduleMeeting.keycaps,
   "edit-field-leader-in-form": [
     ...APP_SHORTCUT_BINDINGS.editFieldLeaderInForm.keycaps,
   ],

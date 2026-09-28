@@ -1,3 +1,4 @@
+import { resolveModifier } from "@tanstack/react-hotkeys";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DescriptionEditor } from "@web/components/DescriptionEditor/DescriptionEditor";
@@ -227,6 +228,39 @@ describe("DescriptionEditor", () => {
     expect(within(textbox).getByText("Notes")).toBeTruthy();
     expect((textbox.innerHTML.match(/<p>/g) ?? []).length).toBe(2);
     expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
+
+  it("opens an anchor on Mod+click in editable mode but not on a plain click", () => {
+    const openSpy = mock();
+    const originalOpen = window.open;
+    window.open = openSpy as typeof window.open;
+
+    const meetingUrl = "https://compass.example/meet/cancel/1?token=a";
+    render(
+      <DescriptionEditor
+        value={`<p><a href="${meetingUrl}">Cancel</a></p>`}
+        onChange={mock()}
+        editable={true}
+        resetKey="test-mod-click"
+      />,
+    );
+
+    const link = screen.getByRole("link", { name: "Cancel" });
+    fireEvent.click(link);
+    expect(openSpy).not.toHaveBeenCalled();
+
+    const modClick =
+      resolveModifier("Mod") === "Control"
+        ? { ctrlKey: true }
+        : { metaKey: true };
+    fireEvent.click(link, modClick);
+    expect(openSpy).toHaveBeenCalledWith(
+      (link as HTMLAnchorElement).href,
+      "_blank",
+      "noopener,noreferrer",
+    );
+
+    window.open = originalOpen;
   });
 
   it("re-syncs contenteditable when editable flips on the same event", () => {

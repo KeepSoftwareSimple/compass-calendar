@@ -33,7 +33,7 @@ import { useEditSequenceShortcut } from "@web/shortcuts/useEditSequenceShortcut"
 import { type Props as DateTimeSectionProps } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/DateTimeSection";
 import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
 import * as realSavesection from "@web/views/Forms/EventForm/SaveSection/SaveSection";
-import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 /**
  * The `Mod+E` leader lives in one place for the whole app (Week/Day mount it
@@ -104,6 +104,22 @@ mockModuleForFile(
     ),
   },
 );
+
+const cancelReservationMock = mock(() => Promise.resolve());
+mock.module("@web/api/booking.api", () => ({
+  BookingApi: {
+    cancelReservation: cancelReservationMock,
+    getPage: mock(),
+    getPageStatus: mock(),
+    putPage: mock(),
+    claimNewMeetings: mock(),
+  },
+}));
+
+const showStatusToastMock = mock();
+mock.module("@web/common/utils/toast/status-toast.util", () => ({
+  showStatusToast: showStatusToastMock,
+}));
 
 const { EventForm } = require("./EventForm") as typeof import("./EventForm");
 
@@ -247,6 +263,12 @@ const createEditDraft = (
   if (!draft) throw new Error("expected an edit draft");
 
   return draft;
+};
+
+const bookedMeetingDescription = () => {
+  const reservationId = "507f1f77bcf86cd799439011";
+  const token = "plain-guest-token";
+  return `<a href="https://compass.example/meet/cancel/${reservationId}?token=${token}">Cancel</a> | <a href="https://compass.example/meet/reschedule/${reservationId}?token=${token}">Reschedule</a>`;
 };
 
 // A "create" GridEventDraft for a not-yet-saved draft (no source event).
@@ -1790,6 +1812,175 @@ describe("EventForm", () => {
       expect(screen.getByRole("textbox", { name: "Location" })).toHaveValue("");
       expect(screen.queryByRole("link")).not.toBeInTheDocument();
       expect(screen.queryByText(/guest/)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("booked meeting actions", () => {
+    const originalWindowOpen = window.open;
+
+    beforeEach(() => {
+      cancelReservationMock.mockClear();
+      showStatusToastMock.mockClear();
+      window.open = mock() as typeof window.open;
+    });
+
+    afterEach(() => {
+      window.open = originalWindowOpen;
+    });
+
+    it("shows cancel and reschedule for a booked event and not for a plain event", () => {
+      const { rerender } = renderWithStore(
+        <EventForm
+          draft={createEditDraft({
+            description: bookedMeetingDescription(),
+            attendees: [
+              {
+                email: "bob@example.com",
+                displayName: "Bob",
+                responseStatus: "accepted",
+              },
+            ],
+          })}
+          isDraft={false}
+          isExistingEvent={true}
+          onClose={mock()}
+          onDelete={mock()}
+          onDuplicate={mock()}
+          onSubmit={mock()}
+          setDraft={mock()}
+        />,
+      );
+
+      const actionRow = screen.getByRole("group", { name: "Event actions" });
+      expect(
+        within(actionRow).getByRole("button", { name: "Cancel meeting" }),
+      ).toBeInTheDocument();
+      expect(
+        within(actionRow).getByRole("button", { name: "Reschedule" }),
+      ).toBeInTheDocument();
+
+      rerender(
+        <EventForm
+          draft={createEditDraft({ description: "Plain notes" })}
+          isDraft={false}
+          isExistingEvent={true}
+          onClose={mock()}
+          onDelete={mock()}
+          onDuplicate={mock()}
+          onSubmit={mock()}
+          setDraft={mock()}
+        />,
+      );
+
+      expect(
+        screen.queryByRole("button", { name: "Cancel meeting" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Reschedule" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("posts cancel once, closes the form, and toasts after Mod+Shift+X twice", async () => {
+      const onClose = mock();
+      renderWithStore(
+        <WithEditLeader>
+          <EventForm
+            draft={createEditDraft({
+              description: bookedMeetingDescription(),
+              attendees: [
+                {
+                  email: "bob@example.com",
+                  displayName: "Bob",
+                  responseStatus: "accepted",
+                },
+              ],
+            })}
+            isDraft={false}
+            isExistingEvent={true}
+            onClose={onClose}
+            onDelete={mock()}
+            onDuplicate={mock()}
+            onSubmit={mock()}
+            setDraft={mock()}
+          />
+        </WithEditLeader>,
+      );
+
+      const title = screen.getByPlaceholderText("Title");
+      act(() => {
+        dispatchModKey(title, "x", { shift: true });
+        dispatchModKey(title, "x", { shift: true });
+      });
+
+      await waitFor(() => {
+        expect(cancelReservationMock).toHaveBeenCalledTimes(1);
+      });
+      expect(cancelReservationMock).toHaveBeenCalledWith(
+        "507f1f77bcf86cd799439011",
+        { token: "plain-guest-token" },
+      );
+      expect(showStatusToastMock).toHaveBeenCalledWith(
+        "booking-cancel-meeting",
+        "Meeting cancelled. Bob was emailed.",
+      );
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("reverts cancel confirm on Escape after the first Mod+Shift+X", () => {
+      renderWithStore(
+        <WithEditLeader>
+          <EventForm
+            draft={createEditDraft({ description: bookedMeetingDescription() })}
+            isDraft={false}
+            isExistingEvent={true}
+            onClose={mock()}
+            onDelete={mock()}
+            onDuplicate={mock()}
+            onSubmit={mock()}
+            setDraft={mock()}
+          />
+        </WithEditLeader>,
+      );
+
+      const title = screen.getByPlaceholderText("Title");
+      act(() => {
+        dispatchModKey(title, "x", { shift: true });
+      });
+      expect(
+        screen.getByRole("button", { name: "Confirm cancel" }),
+      ).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: "Escape", bubbles: true });
+      expect(
+        screen.getByRole("button", { name: "Cancel meeting" }),
+      ).toBeInTheDocument();
+    });
+
+    it("opens the reschedule URL in a new tab on Mod+Shift+E", () => {
+      renderWithStore(
+        <WithEditLeader>
+          <EventForm
+            draft={createEditDraft({ description: bookedMeetingDescription() })}
+            isDraft={false}
+            isExistingEvent={true}
+            onClose={mock()}
+            onDelete={mock()}
+            onDuplicate={mock()}
+            onSubmit={mock()}
+            setDraft={mock()}
+          />
+        </WithEditLeader>,
+      );
+
+      dispatchModKey(screen.getByPlaceholderText("Title"), "e", {
+        shift: true,
+      });
+
+      expect(window.open).toHaveBeenCalledWith(
+        "https://compass.example/meet/reschedule/507f1f77bcf86cd799439011?token=plain-guest-token",
+        "_blank",
+        "noopener,noreferrer",
+      );
     });
   });
 });
