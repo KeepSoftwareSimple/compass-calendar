@@ -94,7 +94,7 @@ describe("MeetingPageNudge", () => {
     renderNudge();
 
     expect(
-      await screen.findByRole("heading", { name: "Skip back & forth" }),
+      await screen.findByRole("heading", { name: "Skip the back & forth" }),
     ).toBeTruthy();
     expect(
       screen.getByText(
