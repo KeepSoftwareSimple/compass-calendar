@@ -190,6 +190,27 @@ export const calendarAccount = (
     : undefined;
 };
 
+/**
+ * When the API omits `accountEmail` on a provider calendar (legacy rows or a
+ * list that loaded before the join), bucket under the sole connected account
+ * for that provider. Ambiguous when multiple accounts share the provider.
+ */
+const calendarAccountFromConnections = (
+  calendar: Calendar,
+  connections: SyncConnectionSummary[],
+): { account: AccountRef; connection: SyncConnectionSummary } | undefined => {
+  const provider = calendarProviderKind(calendar);
+  if (!provider) return undefined;
+
+  const matches = connections.flatMap((connection) => {
+    const account = connectionAccount(connection);
+    return account?.provider === provider ? [{ account, connection }] : [];
+  });
+  if (matches.length !== 1) return undefined;
+
+  return matches[0];
+};
+
 export interface AccountGroup extends AccountRef {
   connection: SyncConnectionSummary | undefined;
   calendars: Calendar[];
@@ -238,14 +259,15 @@ export function groupCalendarsByAccount(
   }
 
   for (const calendar of calendars) {
-    const account = calendarAccount(calendar);
+    const inferred = calendarAccountFromConnections(calendar, connections);
+    const account = calendarAccount(calendar) ?? inferred?.account;
     if (!account) {
       ungrouped.push(calendar);
       continue;
     }
     // A calendar whose account has no connection summary yet (metadata and
     // the calendar list can load a moment apart) still gets a section.
-    ensureGroup(account, undefined).calendars.push(calendar);
+    ensureGroup(account, inferred?.connection).calendars.push(calendar);
   }
 
   return nestLocalCalendarInMatchingGroup(groups, ungrouped, compassEmail);

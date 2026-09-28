@@ -37,6 +37,7 @@ const CALENDAR_B_NAME = "Design Team";
 const LOCAL_CALENDAR_NAME = "Local";
 const CALENDAR_MS_NAME = "Focus";
 const MICROSOFT_ACCOUNT_EMAIL = "user@outlook.com";
+const GOOGLE_ACCOUNT_EMAIL = "e2e@example.com";
 
 const EVENT_A_TITLE = "Team sync";
 const EVENT_B_TITLE = "Reader event";
@@ -200,6 +201,7 @@ function buildCalendars(extra: FixtureCalendar[] = []) {
       access: "owner",
       isPrimary: true,
       isVisible: true,
+      accountEmail: GOOGLE_ACCOUNT_EMAIL,
     }),
     calendar({
       id: CALENDAR_B_ID,
@@ -210,6 +212,7 @@ function buildCalendars(extra: FixtureCalendar[] = []) {
       access: "reader",
       isPrimary: false,
       isVisible: true,
+      accountEmail: GOOGLE_ACCOUNT_EMAIL,
     }),
     calendar({
       id: CALENDAR_LOCAL_ID,
@@ -475,20 +478,27 @@ test("sidebar lists calendars, toggles visibility in localStorage, and shows car
   const sidebar = page.locator("#sidebar");
   const grid = page.locator("#mainGrid");
 
-  // The list header is the account email; the primary calendar's own name
-  // (which duplicates it) is replaced by a "primary" row.
+  // One connected Google account: its section heading is the account email,
+  // and the primary calendar's own name (which duplicates it) is replaced
+  // by a "primary" row. Scope to that region so a Compass-email bucket for
+  // leftover ungrouped rows cannot collide under strict mode.
+  const googleSection = sidebar.getByRole("region", {
+    name: `Calendars for ${GOOGLE_ACCOUNT_EMAIL} (Google)`,
+  });
   await expect(
-    sidebar.getByRole("heading", { name: "e2e@example.com" }),
-  ).toBeVisible();
-  await expect(sidebar.getByText("primary", { exact: true })).toBeVisible();
-  await expect(sidebar.getByText(CALENDAR_A_NAME, { exact: true })).toHaveCount(
-    0,
-  );
-  await expect(
-    sidebar.getByText(CALENDAR_B_NAME, { exact: true }),
+    googleSection.getByRole("heading", { name: GOOGLE_ACCOUNT_EMAIL }),
   ).toBeVisible();
   await expect(
-    sidebar.getByText(LOCAL_CALENDAR_NAME, { exact: true }),
+    googleSection.getByText("primary", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    googleSection.getByText(CALENDAR_A_NAME, { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    googleSection.getByText(CALENDAR_B_NAME, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    googleSection.getByText(LOCAL_CALENDAR_NAME, { exact: true }),
   ).toBeVisible();
 
   // Identity: both cards' accessible names include their calendar's name.
