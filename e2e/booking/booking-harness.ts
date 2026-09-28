@@ -1444,3 +1444,175 @@ export function formatMonthDayButtonLabel(
     year: "numeric",
   }).format(new Date(slotStart));
 }
+
+export const BOOKED_MEETING_RESERVATION_ID = "000000000000000000000099";
+export const BOOKED_MEETING_CANCEL_TOKEN = "abc";
+export const BOOKED_MEETING_EVENT_TITLE = "Bob and Tyler Dane";
+
+export function bookedMeetingDescriptionHtml(): string {
+  const id = BOOKED_MEETING_RESERVATION_ID;
+  const token = BOOKED_MEETING_CANCEL_TOKEN;
+  return `<a href="https://compasscalendar.com/meet/cancel/${id}?token=${token}">Cancel</a> | <a href="https://compasscalendar.com/meet/reschedule/${id}?token=${token}">Reschedule</a>`;
+}
+
+export interface CapturedBookedMeetingEventFormRequests {
+  cancelPosts: Array<Record<string, unknown>>;
+}
+
+type BookedMeetingE2EWindow = Window & {
+  __COMPASS_E2E_TEST__?: boolean;
+  __COMPASS_E2E_HOOKS__?: { setAuthenticated: (value: boolean) => void };
+  __COMPASS_E2E_STORE__?: {
+    userMetadata?: { set: (metadata: unknown) => void };
+  };
+};
+
+/**
+ * Opens calendar-web on a stubbed booked meeting with cancel/reschedule anchors
+ * in the description and the event form focused on that event.
+ */
+export async function prepareBookedMeetingEventFormPage(
+  page: Page,
+): Promise<CapturedBookedMeetingEventFormRequests> {
+  const captured: CapturedBookedMeetingEventFormRequests = { cancelPosts: [] };
+  const eventId = "64b7f0a1c2d3e4f5a6b7c8d0";
+  const start = new Date();
+  start.setMinutes(0, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const hostMetadata = {
+    connections: [
+      {
+        id: "e2e-connection-1",
+        provider: "google" as const,
+        state: "healthy",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+        accountEmail: HOST_ACCOUNT_EMAIL,
+        connectionState: "HEALTHY" as const,
+        canSuggestContacts: false,
+      },
+    ],
+  };
+  const event = {
+    id: eventId,
+    calendarId: BOOKING_CALENDAR_ID,
+    content: {
+      kind: "details" as const,
+      title: BOOKED_MEETING_EVENT_TITLE,
+      description: bookedMeetingDescriptionHtml(),
+      location: null,
+      organizer: { email: HOST_ACCOUNT_EMAIL, displayName: "Tyler Dane" },
+      attendees: [
+        {
+          email: "bob@example.com",
+          displayName: "Bob",
+          responseStatus: "accepted" as const,
+        },
+      ],
+    },
+    schedule: {
+      kind: "timed" as const,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      timeZone: "America/Chicago",
+    },
+    recurrence: { kind: "single" as const },
+    createdAt: new Date(start.getTime() - 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: null,
+  };
+
+  await page.addInitScript((accountEmail) => {
+    (window as BookedMeetingE2EWindow).__COMPASS_E2E_TEST__ = true;
+    localStorage.setItem(
+      "compass.auth",
+      JSON.stringify({
+        hasAuthenticated: true,
+        lastKnownEmail: accountEmail,
+      }),
+    );
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+  }, HOST_ACCOUNT_EMAIL);
+
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const path = url.pathname;
+
+    if (path.endsWith("/api/calendars")) {
+      return route.fulfill(jsonResponse({ calendars: [googleCalendar] }));
+    }
+
+    if (path.endsWith("/api/event") && request.method() === "GET") {
+      return route.fulfill(jsonResponse({ events: [event] }));
+    }
+
+    if (
+      path ===
+        `/api/booking/reservations/${BOOKED_MEETING_RESERVATION_ID}/cancel` &&
+      request.method() === "POST"
+    ) {
+      const body = (request.postDataJSON() ?? {}) as Record<string, unknown>;
+      captured.cancelPosts.push(body);
+      return route.fulfill(jsonResponse({ ok: true }));
+    }
+
+    if (path.endsWith("/api/user/metadata")) {
+      return route.fulfill(jsonResponse(hostMetadata));
+    }
+
+    if (path.endsWith("/api/config")) {
+      return route.fulfill(
+        jsonResponse({
+          version: E2E_APP_CONFIG_VERSION,
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
+        }),
+      );
+    }
+
+    return route.fulfill(jsonResponse({}));
+  });
+
+  await page.goto("/week", { waitUntil: "domcontentloaded" });
+  await expect(
+    page.getByRole("heading", { level: 1 }).getByRole("button"),
+  ).toBeVisible({ timeout: 15000 });
+
+  await page.waitForFunction(
+    () =>
+      (window as BookedMeetingE2EWindow).__COMPASS_E2E_HOOKS__ !== undefined,
+  );
+  await page.evaluate(() => {
+    (window as BookedMeetingE2EWindow).__COMPASS_E2E_HOOKS__?.setAuthenticated(
+      true,
+    );
+  });
+  await page.waitForFunction(() => {
+    const bridge = (window as BookedMeetingE2EWindow).__COMPASS_E2E_STORE__;
+    return Boolean(bridge?.userMetadata);
+  });
+  await page.evaluate((metadata) => {
+    (window as BookedMeetingE2EWindow).__COMPASS_E2E_STORE__?.userMetadata?.set(
+      metadata,
+    );
+  }, hostMetadata);
+
+  const eventButton = page.locator("#mainGrid").getByRole("button", {
+    name: new RegExp(`Timed event: ${BOOKED_MEETING_EVENT_TITLE}`),
+  });
+  await eventButton.waitFor({ state: "visible", timeout: 15000 });
+  await eventButton.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("form")).toBeVisible({ timeout: 10000 });
+  await expect(
+    page
+      .getByRole("group", { name: "Event actions" })
+      .getByRole("button", { name: "Cancel meeting" }),
+  ).toBeVisible();
+
+  return captured;
+}

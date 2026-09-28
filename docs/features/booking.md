@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10 / v1.11)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -21,21 +21,25 @@ alignment, destination under More options, confirmation links only, host
 reconnect and bookability status, the setup wizard dead-end fixes, host
 new-meeting notice, sidebar discovery, an off page that keeps its
 link, and unavailable guest-month days that announce no times available.
+v1.11 shipped host notices for cancel and reschedule, guest RSVP toasts,
+RSVP-aware grid cards, keyboard cancel and reschedule from the booked event
+form, reschedule without the current slot, wizard sign-up hand-off, and host
+delete cancelling the reservation.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
 
 ## Status
 
-v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, and v1.10 are implemented in the Compass
+v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, v1.10, and v1.11 are implemented in the Compass
 monorepo (public `/meet/:username`, host Settings, backend APIs, guest
 cancel, guest reschedule, edit-details, one-click turn on, Essentials /
 More options, editable address, default hours, branded connect pills,
 funnel analytics, meeting copy, hold-Mod section chords, the on/off
 switch, a per-day weekly hours list that can hold several blocks, meeting
 timezone under More options, the guided first-run setup wizard, Start
-and End time menus, the v1.8 booking gate fix, and the v1.10 meeting-flow
-fixes). Booking is enabled in every runtime environment, including
+and End time menus, the v1.8 booking gate fix, the v1.10 meeting-flow
+fixes, and the v1.11 cancel/reschedule/RSVP UX milestone). Booking is enabled in every runtime environment, including
 production (`isBookingEnabled` in `packages/core/src/util/env.util.ts`).
 Guest `/meet` runs in **`apps/booking-web`**: its own frontend image and
 deploy pipeline on the same Compass Cloud host (shared VPS, MongoDB, API,
@@ -155,6 +159,16 @@ meeting updates since you last looked. Latest: Bob moved a meeting to Fri, Sep
 cancel, the slot that was freed). Times use the host's effective timezone.
 Reservations created before this cursor shipped are never announced. Compass
 does not send email.
+
+### Guest RSVP notice (host)
+
+When calendar data refetches (including after SSE `eventsChanged`), Compass
+compares guest `responseStatus` on events the connected account organizes
+(self excluded) and shows one toast: `Bob accepted: …`, `Bob declined: …`,
+`Bob replied maybe: …`, or plural `3 guests replied. Latest: …`. Show jumps
+to that event's week. Replies that land while no Compass tab is open are not
+announced; grid card styling still reflects the latest state. See
+[Attendees, Contacts, And RSVP](./attendees.md#guest-reply-on-the-grid).
 
 ### Guest
 
@@ -823,6 +837,30 @@ browser funnels and server operations as one population.
   in the wire contract or Settings UI.
 
 ## Changelog
+
+### v1.11
+
+Guest reschedule no longer lists the reservation's current start in the
+tokenized slots response; the picker still shows **Current time** in the header
+and opens on the meeting's day when the URL has no date.
+
+Host notices (pull claim on `lastGuestActionAt`) cover cancel and reschedule as
+well as new bookings, with SSE-driven claim about every ten seconds while
+Compass is open.
+
+Guest RSVP replies trigger web-side toasts for the organizing host; grid cards
+show awaiting, tentative, and all-declined states with accessible name prefixes.
+
+Booked events expose **Cancel meeting** and **Reschedule** in the event form
+when the description carries the standard cancel and reschedule anchors.
+`Mod+Shift+X` confirms cancel against the public endpoint; `Mod+Shift+E` opens
+the guest reschedule page in a new tab.
+
+Anonymous meeting setup **Sign up to go live** closes Settings before sign-up
+and resumes the go-live step with the saved draft after authentication.
+
+Deleting a booked event in Compass cancels the linked reservation and frees the
+slot.
 
 ### v1.10
 

@@ -8,6 +8,7 @@ import {
   expectMeetingShortcutChips,
   formatSlotButtonLabel,
   holdSettingsMod,
+  prepareBookedMeetingEventFormPage,
   preparePublicBookingCancelPage,
   preparePublicBookingConfirmedPage,
   preparePublicBookingPage,
@@ -346,6 +347,20 @@ test.describe("public booking reschedule page", () => {
     await expect(page.getByRole("alert")).toBeVisible();
     await expectNoAxeViolations(page, {
       checkpoint: "booking reschedule conflict",
+    });
+  });
+});
+
+test.describe("booked meeting event form", () => {
+  test.use({ viewport: { width: 1600, height: 900 } });
+
+  test("has no automatically detectable accessibility violations", async ({
+    page,
+  }) => {
+    await prepareBookedMeetingEventFormPage(page);
+    await expectNoAxeViolations(page, {
+      checkpoint: "booked meeting event form",
+      include: "[role='form']",
     });
   });
 });
