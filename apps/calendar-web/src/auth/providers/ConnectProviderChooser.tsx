@@ -13,7 +13,7 @@ import {
   providerDisplayName,
 } from "@core/types/sync/identity.contracts";
 import { useSession } from "@web/auth/compass/session/useSession";
-import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
+import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
 import { openingProviderLabel } from "@web/auth/providers/connection-provider.util";
 import { PROVIDER_LOGO } from "@web/auth/providers/ProviderMark";
 import { CONNECT_CALENDAR_LABEL } from "@web/auth/providers/provider-copy.util";
@@ -97,7 +97,7 @@ export const ConnectProviderChooser: FC<ConnectProviderChooserProps> = ({
       byKind[kind].connect();
       return;
     }
-    trackSignupStarted("connect_chooser");
+    void trackSignupStartedAtClick("connect_chooser");
     signIn.startSignIn(kind);
   };
 

@@ -1,4 +1,5 @@
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { countLocalNonDemoEvents } from "@web/auth/posthog/anon-events-created.util";
 import { track } from "@web/auth/posthog/track";
 
 /**
@@ -29,7 +30,10 @@ export type SignupStep =
   | "connect_prompt_shown"
   | "calendar_connected"
   /** Fired when the missing-permissions modal opens, replacing the old toast. */
-  | "permissions_explainer_shown";
+  | "permissions_explainer_shown"
+  | "trial_step_viewed"
+  | "trial_step_completed"
+  | "trial_step_abandoned";
 
 export type SignupMethod = "email" | ProviderKind;
 
@@ -44,7 +48,9 @@ export type SignupSource =
   | "command_palette"
   | "connect_chooser"
   | "shortcut_showcase"
-  | "meeting_page_setup";
+  | "meeting_page_setup"
+  /** Auth modal trial step (WP-02); Checkout attributes `trial_converted` with this source. */
+  | "signup_trial_step";
 
 export type SignupFailureReason =
   | "oauth_user_cancelled"
@@ -90,10 +96,50 @@ export function trackSignupFailed(
   track("signup_failed", { reason_code: reason, ...compact(properties) });
 }
 
+type TrialStepTelemetry = {
+  source: SignupSource;
+  method: SignupMethod;
+};
+
+/** Card step in the auth modal (WP-02 wires the view; helpers are ready now). */
+export function trackTrialStepViewed(properties: TrialStepTelemetry): void {
+  trackSignupStep("trial_step_viewed", properties);
+}
+
+export function trackTrialStepCompleted(properties: TrialStepTelemetry): void {
+  trackSignupStep("trial_step_completed", properties);
+}
+
+export function trackTrialStepAbandoned(properties: TrialStepTelemetry): void {
+  trackSignupStep("trial_step_abandoned", properties);
+}
+
+/**
+ * WP-02: AuthModal `startTrial` calls {@link trackTrialStepViewed} on mount.
+ * Until that view ships, this export keeps the helper referenced from product code.
+ */
+export function signupTrialStepViewedNoOp(): void {
+  // Intentionally empty. WP-02 replaces this with the real trial-step mount hook.
+}
+
 /** Legacy `signup_started` plus its funnel step, so both stay in lockstep. */
-export function trackSignupStarted(source: SignupSource): void {
-  track("signup_started", { source });
+export function trackSignupStarted(
+  source: SignupSource,
+  anon_events_created?: number,
+): void {
+  track("signup_started", {
+    source,
+    ...(anon_events_created === undefined ? {} : { anon_events_created }),
+  });
   trackSignupStep("signup_cta_clicked", { source });
+}
+
+/** Resolves local event count, then fires {@link trackSignupStarted}. */
+export async function trackSignupStartedAtClick(
+  source: SignupSource,
+): Promise<void> {
+  const anon_events_created = await countLocalNonDemoEvents().catch(() => 0);
+  trackSignupStarted(source, anon_events_created);
 }
 
 /** Legacy `signup_completed` plus its funnel step. */
