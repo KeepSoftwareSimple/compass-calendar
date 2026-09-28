@@ -220,6 +220,21 @@ describe("ConnectProviderChooser", () => {
       setProviderAvailabilityForTests("google", "available");
     });
 
+    it("uses trial connect copy on the prompt variant and starts sign-in", async () => {
+      const user = userEvent.setup();
+      renderChooser(<ConnectProviderChooser variant="prompt" />, {
+        authenticated: false,
+      });
+
+      const button = screen.getByRole("button", {
+        name: "Start your free trial to connect Google",
+      });
+      await user.click(button);
+
+      expect(startGoogleAuthorization).toHaveBeenCalledTimes(1);
+      expect(mockConnectGoogle).not.toHaveBeenCalled();
+    });
+
     it("keeps the Connect Google Calendar label and starts sign-in, not connect", async () => {
       const user = userEvent.setup();
       renderChooser(

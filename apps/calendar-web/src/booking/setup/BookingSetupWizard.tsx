@@ -243,7 +243,7 @@ export function BookingSetupWizard({
         >
           {isGoLive
             ? guestGoLive
-              ? "Sign up to go live"
+              ? "Start your free trial to publish your meeting page"
               : "Turn on and copy link"
             : "Continue"}
         </OverlayPanelActionButton>

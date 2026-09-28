@@ -104,7 +104,7 @@ function useShortcutLevelCelebration(
 }
 
 /**
- * Sidebar footer badge showing the user's shortcut level. Additive to the
+ * Sidebar header badge showing the user's shortcut level. Additive to the
  * rotating sidebar tip and the legend's own check marks: hover or focus for
  * the level name, progress, and up to three shortcuts to try next in the
  * current context. Click opens the `?` legend. Hidden entirely when the
@@ -131,7 +131,7 @@ export function ShortcutLevelBadge({ sections }: Props) {
     : `${level.used} of ${level.total} shortcuts used. You've used every shortcut here`;
 
   return (
-    <Tooltip interactive placement="top">
+    <Tooltip interactive placement="bottom">
       <TooltipTrigger asChild>
         <button
           aria-label={`Shortcut level ${level.level}, ${level.name}. ${level.used} of ${level.total} shortcuts used. Open shortcuts.`}

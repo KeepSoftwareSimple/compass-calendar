@@ -55,6 +55,16 @@ export const CONNECT_CALENDAR_LABEL: Record<ProviderKind, string> = {
   apple: "Connect Apple Calendar",
 };
 
+/** Anonymous connect chooser copy (Trial v2): trial framing before OAuth. */
+export const ANONYMOUS_TRIAL_CONNECT_CALENDAR_LABEL: Record<
+  ProviderKind,
+  string
+> = {
+  google: "Start your free trial to connect Google",
+  microsoft: "Start your free trial to connect Microsoft",
+  apple: "Start your free trial to connect Apple",
+};
+
 export const RECONNECT_CALENDAR_LABEL: Record<ProviderKind, string> = {
   google: "Reconnect Google Calendar",
   microsoft: "Reconnect Microsoft Calendar",

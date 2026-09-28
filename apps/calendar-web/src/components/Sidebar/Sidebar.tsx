@@ -7,7 +7,9 @@ import {
 } from "@web/events/stores/draft.store";
 import { type ShortcutOverlaySection } from "@web/shortcuts/shortcuts-overlay.types";
 import { CalendarList } from "./CalendarList/CalendarList";
+import { useLockedShortcutSections } from "./hooks/useLockedShortcutSections";
 import { MeetingPageNudge } from "./MeetingPageNudge/MeetingPageNudge";
+import { ShortcutLevelBadge } from "./SidebarActions/ShortcutLevelBadge";
 import { SidebarShell } from "./SidebarShell";
 import { TasksRemovalNotice } from "./TasksRemovalNotice/TasksRemovalNotice";
 import { UpNextCard } from "./UpNextCard/UpNextCard";
@@ -50,6 +52,7 @@ export function Sidebar({
 }: SidebarProps) {
   const isEventFormOpen = useDraftStore(selectIsEventFormOpen);
   const showEventDetails = Boolean(eventDetails) && isEventFormOpen;
+  const sections = useLockedShortcutSections(shortcutSections);
 
   return (
     <SidebarShell
@@ -70,6 +73,7 @@ export function Sidebar({
         <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-5 [scrollbar-gutter:stable]">
           <Suspense fallback={<div aria-hidden className="h-63" />}>
             <MonthPicker
+              headerEndContent={<ShortcutLevelBadge sections={sections} />}
               monthsShown={monthsShown}
               onSelectDate={onSelectDate}
               selectedDate={calendarDate}

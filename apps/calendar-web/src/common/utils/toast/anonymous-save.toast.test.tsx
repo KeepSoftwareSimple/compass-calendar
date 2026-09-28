@@ -4,6 +4,8 @@ import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import {
+  ANONYMOUS_SAVE_TOAST_ACTION_LABEL,
+  ANONYMOUS_SAVE_TOAST_MESSAGE,
   AnonymousSaveToast,
   maybeShowAnonymousSaveToast,
 } from "@web/common/utils/toast/anonymous-save.toast";
@@ -28,18 +30,38 @@ describe("maybeShowAnonymousSaveToast", () => {
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
   });
 
-  it("shows after an anonymous calendar write", () => {
+  it("does not show on the first two anonymous calendar writes", () => {
+    maybeShowAnonymousSaveToast();
+    maybeShowAnonymousSaveToast();
+
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(
+      localStorage.getItem(STORAGE_KEYS.HAS_SEEN_ANONYMOUS_SAVE_TOAST),
+    ).toBeNull();
+    expect(
+      localStorage.getItem(STORAGE_KEYS.ANONYMOUS_CALENDAR_WRITE_COUNT),
+    ).toBe("2");
+  });
+
+  it("shows on the third anonymous calendar write with trial copy", () => {
+    maybeShowAnonymousSaveToast();
+    maybeShowAnonymousSaveToast();
     maybeShowAnonymousSaveToast();
 
     expect(mocks.toast).toHaveBeenCalledTimes(1);
     expect(
       localStorage.getItem(STORAGE_KEYS.HAS_SEEN_ANONYMOUS_SAVE_TOAST),
     ).toBe("true");
+    expect(
+      localStorage.getItem(STORAGE_KEYS.ANONYMOUS_CALENDAR_WRITE_COUNT),
+    ).toBe("3");
   });
 
   it("does not interrupt an open sign-up flow", () => {
     window.history.replaceState({}, "", "/week?auth=signup");
 
+    maybeShowAnonymousSaveToast();
+    maybeShowAnonymousSaveToast();
     maybeShowAnonymousSaveToast();
 
     expect(mocks.toast).not.toHaveBeenCalled();
@@ -59,15 +81,18 @@ describe("AnonymousSaveToast", () => {
     registerToastPort(port);
   });
 
-  it("shows an S keycap and signs up when S is pressed", () => {
+  it("shows trial copy, an S keycap, and starts trial when S is pressed", () => {
     render(
       <HotkeysProvider>
         <AnonymousSaveToast toastId="anonymous-save-toast" />
       </HotkeysProvider>,
     );
 
+    expect(screen.getByText(ANONYMOUS_SAVE_TOAST_MESSAGE)).toBeTruthy();
     expect(
-      within(screen.getByRole("button", { name: "Sign up" })).getByText("S"),
+      within(
+        screen.getByRole("button", { name: ANONYMOUS_SAVE_TOAST_ACTION_LABEL }),
+      ).getByText("S"),
     ).toBeTruthy();
     expect(screen.getByText("Press Esc to dismiss")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();

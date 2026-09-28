@@ -37,7 +37,14 @@ mock.module("./CalendarList/CalendarList", () => ({
 }));
 mock.module("./MonthPicker/MonthPicker", () => ({
   MonthPicker: (...args: Parameters<typeof actual.MonthPicker>) =>
-    isMocked ? <div>Calendar picker</div> : actual.MonthPicker(...args),
+    isMocked ? (
+      <div>
+        Calendar picker
+        {args[0].headerEndContent}
+      </div>
+    ) : (
+      actual.MonthPicker(...args)
+    ),
 }));
 mock.module("./SidebarActions/SidebarActions", () => ({
   SidebarActions: (...args: Parameters<typeof actual.SidebarActions>) =>
@@ -90,6 +97,15 @@ describe("Sidebar", () => {
     expect(await screen.findByText("Calendar picker")).toBeTruthy();
     expect(screen.getByText("Calendar list")).toBeTruthy();
     expect(screen.getByText("Sidebar actions")).toBeTruthy();
+  });
+
+  it("puts the shortcut level badge in the month picker header", async () => {
+    const { wrapper } = createStoreWrapper();
+    render(<Sidebar {...sidebarProps} />, { wrapper });
+
+    expect(
+      await screen.findByRole("button", { name: /^Shortcut level 1, / }),
+    ).toBeInTheDocument();
   });
 
   it("shows event details only while the draft store says the form is open", async () => {
