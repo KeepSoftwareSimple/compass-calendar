@@ -141,7 +141,9 @@ describe("BookingSetupWizard", () => {
     });
 
     expect(
-      screen.getByRole("button", { name: /Sign up to go live/ }),
+      screen.getByRole("button", {
+        name: "Start your free trial to publish your meeting page",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(

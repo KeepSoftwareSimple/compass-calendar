@@ -96,8 +96,8 @@ export function WelcomeModal() {
   // clicks "Log in" three times while the auth modal is still on its way.
   const [handingOff, setHandingOff] = useState(false);
   // Each screen has one primary button, and Enter is its native activation.
-  // On the last screen that is email signup rather than Google: Enter on an
-  // OAuth redirect would fling a first-time visitor off-site.
+  // On the last screen that is Explore: Enter must not start OAuth and send a
+  // first-time visitor off-site before they try the calendar.
   const primaryRef = useRef<HTMLButtonElement>(null);
   const faqHintId = `${useId()}-faq-hint`;
   const faq = useFaqDisclosure();
@@ -393,11 +393,20 @@ export function WelcomeModal() {
                 Connect a calendar or start fresh
               </p>
             </div>
-            {/* Connecting a calendar is the moment Compass starts being
-                useful, so the Google round trip, which signs up and grants
-                calendar access at once, leads; everything else is a fallback
-                from it. */}
             <div className="flex w-full flex-col items-center gap-3">
+              <button
+                type="button"
+                ref={primaryRef}
+                onClick={explore}
+                className={PRIMARY_CTA_CLASS}
+                {...navigationBusyProps}
+              >
+                Explore without an account
+                <ShortcutHint className="ml-2">S</ShortcutHint>
+              </button>
+              <p className="text-center text-sm text-text-muted">
+                Ready to keep it? Start your free 7-day trial.
+              </p>
               {hasSignInProviders ? (
                 <SignInProviderButtons
                   available={available}
@@ -422,22 +431,12 @@ export function WelcomeModal() {
               ) : null}
               <button
                 type="button"
-                ref={primaryRef}
                 onClick={() => handOffToAuth("sign_up")}
-                className={PRIMARY_CTA_CLASS}
+                className={SECONDARY_CTA_CLASS}
                 {...authBusyProps}
               >
                 {hasSignInProviders ? "Sign up with email" : "Sign up"}
                 <ShortcutHint className="ml-2">U</ShortcutHint>
-              </button>
-              <button
-                type="button"
-                onClick={explore}
-                className={SECONDARY_CTA_CLASS}
-                {...navigationBusyProps}
-              >
-                Explore without an account
-                <ShortcutHint className="ml-2">S</ShortcutHint>
               </button>
             </div>
           </>

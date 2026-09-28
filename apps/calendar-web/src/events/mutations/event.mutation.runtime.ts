@@ -5,6 +5,10 @@ import {
   markAnonymousCalendarChangeForSignUpPrompt,
 } from "@web/auth/compass/state/auth.state.util";
 import { maybeShowAnonymousSaveToast } from "@web/common/utils/toast/anonymous-save.toast";
+
+/** Founder decision (Trial v2 WP-03): nudge after this many anonymous calendar writes. */
+export const ANONYMOUS_SAVE_TOAST_AFTER_SAVE_COUNT = 3;
+
 import { eventMutationKeys } from "./event.mutation.keys";
 
 const ifAnonymousGuest = async (action: () => void): Promise<void> => {

@@ -178,7 +178,9 @@ test("a full run clears the queue, shows the score, and graduates", async ({
   await expect(showcase).toContainText("11/11 tasks cleared");
   await expect(showcase).toContainText("Moves you learned");
   await expect(
-    showcase.getByRole("button", { name: /Sign up to keep your calendar/ }),
+    showcase.getByRole("button", {
+      name: "Start your free trial to keep your calendar",
+    }),
   ).toBeVisible();
   // The untimed run's rematch is the timed challenge; reminders are gone.
   await expect(

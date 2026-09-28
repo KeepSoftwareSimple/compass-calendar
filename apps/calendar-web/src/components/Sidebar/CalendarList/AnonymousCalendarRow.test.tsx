@@ -9,7 +9,10 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realAuthStateUtil from "@web/auth/compass/state/auth.state.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import * as realAuthModal from "@web/components/AuthModal/hooks/useAuthModal";
-import { AnonymousCalendarRow } from "./AnonymousCalendarRow";
+import {
+  ANONYMOUS_CALENDAR_ROW_TRIAL_MESSAGE,
+  AnonymousCalendarRow,
+} from "./AnonymousCalendarRow";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockOpenModal = mock();
@@ -52,10 +55,13 @@ describe("AnonymousCalendarRow", () => {
     isActive: true,
   };
 
-  it("renders the row with 'This browser' label and sign-up click handler", () => {
+  it("renders the row with 'This browser' label and trial sync copy", () => {
     render(<AnonymousCalendarRow calendar={mockCalendar} />);
 
     expect(screen.getByText("This browser")).toBeInTheDocument();
+    expect(ANONYMOUS_CALENDAR_ROW_TRIAL_MESSAGE).toBe(
+      "Start your free trial to sync",
+    );
     expect(screen.queryByText("Compass")).not.toBeInTheDocument();
     expect(screen.queryByText("primary")).not.toBeInTheDocument();
   });
@@ -65,7 +71,7 @@ describe("AnonymousCalendarRow", () => {
     render(<AnonymousCalendarRow calendar={mockCalendar} />);
 
     const button = screen.getByRole("button", {
-      name: "Sign up to save this calendar",
+      name: "Start your free trial to save this calendar",
     });
     await user.click(button);
 
@@ -77,7 +83,7 @@ describe("AnonymousCalendarRow", () => {
     render(<AnonymousCalendarRow calendar={mockCalendar} />);
 
     const button = screen.getByRole("button", {
-      name: "Sign up to save this calendar",
+      name: "Start your free trial to save this calendar",
     });
     button.focus();
     await user.keyboard("{Enter}");
@@ -90,7 +96,7 @@ describe("AnonymousCalendarRow", () => {
 
     const dot = screen
       .getByRole("button", {
-        name: "Sign up to save this calendar",
+        name: "Start your free trial to save this calendar",
       })
       .querySelector("span[aria-hidden]");
 
