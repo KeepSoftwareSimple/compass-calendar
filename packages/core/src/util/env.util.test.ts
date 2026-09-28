@@ -4,6 +4,7 @@ import {
   isBookingEnabled,
   isDev,
   isNonProduction,
+  isSupertokensDashboardEnabled,
 } from "@core/util/env.util";
 import { describe, expect, it } from "bun:test";
 
@@ -32,6 +33,19 @@ describe("isNonProduction", () => {
     expect(isNonProduction(NodeEnv.Staging)).toBe(true);
     expect(isNonProduction(NodeEnv.Test)).toBe(true);
     expect(isNonProduction(NodeEnv.Production)).toBe(false);
+  });
+});
+
+describe("isSupertokensDashboardEnabled", () => {
+  it("is on in development, staging, and tests", () => {
+    expect(isSupertokensDashboardEnabled(NodeEnv.Development)).toBe(true);
+    expect(isSupertokensDashboardEnabled(NodeEnv.Staging)).toBe(true);
+    expect(isSupertokensDashboardEnabled(NodeEnv.Test)).toBe(true);
+  });
+
+  it("is off in production", () => {
+    expect(isSupertokensDashboardEnabled(NodeEnv.Production)).toBe(false);
+    expect(isSupertokensDashboardEnabled("production")).toBe(false);
   });
 });
 

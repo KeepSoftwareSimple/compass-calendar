@@ -13,6 +13,7 @@ import { APP_NAME } from "@core/constants/core.constants";
 import { BaseError } from "@core/errors/errors.base";
 import { Status } from "@core/errors/status.codes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
+import { isSupertokensDashboardEnabled } from "@core/util/env.util";
 import { GOOGLE_AUTH_SCOPES_REQUESTED } from "@backend/auth/services/google/google.auth.scopes";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import {
@@ -194,6 +195,9 @@ const getSupertokensAllowedOrigins = () =>
     ? CONFIG.ORIGINS_ALLOWED
     : [getSupertokensWebsiteDomain()];
 
+const getDashboardRecipes = (): ReturnType<typeof Dashboard.init>[] =>
+  isSupertokensDashboardEnabled(CONFIG.NODE_ENV) ? [Dashboard.init()] : [];
+
 export const initSupertokens = () => {
   SuperTokens.init({
     appInfo: {
@@ -297,7 +301,7 @@ export const initSupertokens = () => {
           },
         },
       }),
-      Dashboard.init(),
+      ...getDashboardRecipes(),
       // No Session override: signout needs no Compass-side cleanup since the
       // legacy sync-metadata restart flags were retired with user.google.
       Session.init(),

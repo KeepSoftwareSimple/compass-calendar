@@ -17,3 +17,7 @@ export const isBookingEnabled = (_nodeEnv: NodeEnv | string) => true;
  */
 export const isAppleOffered = (nodeEnv: NodeEnv | string) =>
   isNonProduction(nodeEnv);
+
+/** SuperTokens operator dashboard UI: never on in production. */
+export const isSupertokensDashboardEnabled = (nodeEnv: NodeEnv | string) =>
+  isNonProduction(nodeEnv);

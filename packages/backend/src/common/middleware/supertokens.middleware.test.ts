@@ -5,7 +5,7 @@ import EmailPassword from "supertokens-node/recipe/emailpassword";
 import Session from "supertokens-node/recipe/session";
 import ThirdParty from "supertokens-node/recipe/thirdparty";
 import UserMetadata from "supertokens-node/recipe/usermetadata";
-import { APP_NAME } from "@core/constants/core.constants";
+import { APP_NAME, NodeEnv } from "@core/constants/core.constants";
 import { appleAuthService } from "@backend/auth/services/apple/apple.auth.service";
 import { googleAuthService } from "@backend/auth/services/google/google.auth.service";
 import { microsoftAuthService } from "@backend/auth/services/microsoft/microsoft.auth.service";
@@ -138,6 +138,29 @@ describe("supertokens.middleware", () => {
   });
 
   describe("initSupertokens", () => {
+    it("omits the SuperTokens dashboard recipe in production", () => {
+      const originalNodeEnv = CONFIG.NODE_ENV;
+      CONFIG.NODE_ENV = NodeEnv.Production;
+
+      try {
+        initSupertokens();
+      } finally {
+        CONFIG.NODE_ENV = originalNodeEnv;
+      }
+
+      expect(Dashboard.init).not.toHaveBeenCalled();
+      const initArg = getFirstCallArg<{
+        recipeList: unknown[];
+      }>(superTokensNode.init);
+
+      expect(initArg.recipeList).toEqual([
+        { recipe: "thirdparty" },
+        { recipe: "emailpassword" },
+        { recipe: "session" },
+        { recipe: "usermetadata" },
+      ]);
+    });
+
     it("calls SuperTokens.init with appInfo, credentials, and recipeList", () => {
       initSupertokens();
 
