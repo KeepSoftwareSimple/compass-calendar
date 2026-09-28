@@ -25,6 +25,9 @@ const {
   trackSignupFailed,
   trackSignupStarted,
   trackSignupStep,
+  trackTrialStepAbandoned,
+  trackTrialStepCompleted,
+  trackTrialStepViewed,
 } = await import("@web/auth/posthog/signup-funnel");
 
 describe("signup funnel", () => {
@@ -82,10 +85,11 @@ describe("signup funnel", () => {
   // The legacy events feed existing PostHog insights. Their names and
   // properties must stay byte-identical while the new steps ride alongside.
   it("keeps signup_started unchanged and adds its step", () => {
-    trackSignupStarted("welcome_modal_google");
+    trackSignupStarted("welcome_modal_google", 3);
 
     expect(capture).toHaveBeenNthCalledWith(1, "signup_started", {
       source: "welcome_modal_google",
+      anon_events_created: 3,
     });
     expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
       step_name: "signup_cta_clicked",
@@ -101,6 +105,28 @@ describe("signup funnel", () => {
     });
     expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
       step_name: "account_created",
+      method: "email",
+    });
+  });
+
+  it("tracks trial funnel steps with source and method", () => {
+    trackTrialStepViewed({ source: "signup_trial_step", method: "email" });
+    trackTrialStepCompleted({ source: "welcome_modal", method: "google" });
+    trackTrialStepAbandoned({ source: "anon_nudge", method: "email" });
+
+    expect(capture).toHaveBeenNthCalledWith(1, "signup_step_viewed", {
+      step_name: "trial_step_viewed",
+      source: "signup_trial_step",
+      method: "email",
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, "signup_step_viewed", {
+      step_name: "trial_step_completed",
+      source: "welcome_modal",
+      method: "google",
+    });
+    expect(capture).toHaveBeenNthCalledWith(3, "signup_step_viewed", {
+      step_name: "trial_step_abandoned",
+      source: "anon_nudge",
       method: "email",
     });
   });

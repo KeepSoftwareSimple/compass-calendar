@@ -27,7 +27,7 @@ import {
   trackBookingSetupStepCompleted,
   trackBookingSetupStepViewed,
 } from "@web/auth/posthog/booking-funnel";
-import { trackSignupStarted } from "@web/auth/posthog/signup-funnel";
+import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import {
   selectGoogleConnectionState,
@@ -458,7 +458,7 @@ export function BookingSettingsSection({
     if (!guestPreview) return false;
     if (signupPromptInFlightRef.current) return true;
     signupPromptInFlightRef.current = true;
-    trackSignupStarted("meeting_page_setup");
+    void trackSignupStartedAtClick("meeting_page_setup");
     settingsActions.closeSettingsForGuestAuthHandoff();
     void importOrReload(() => import("@web/routers")).then(({ router }) => {
       void router.navigate({
