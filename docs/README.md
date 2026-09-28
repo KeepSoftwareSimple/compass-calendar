@@ -76,6 +76,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 User-visible behavior runbooks for manual verification and expected outcomes:
 
 - [Auth](./acceptance/auth.md)
+- [Booking (v1.11)](./acceptance/booking.md)
 - [Events](./acceptance/events.md)
 - [Google Sync](./acceptance/google-sync.md)
 - [Recurring Events](./acceptance/recurring-events.md)

@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10 / v1.11)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -21,21 +21,26 @@ alignment, destination under More options, confirmation links only, host
 reconnect and bookability status, the setup wizard dead-end fixes, host
 new-meeting notice, sidebar discovery, an off page that keeps its
 link, and unavailable guest-month days that announce no times available.
+v1.11 shipped guest wizard sign-up hand-off, server-side removal of the
+current slot on tokenized reschedule, host toasts for cancel and reschedule
+(with SSE-triggered claim), guest RSVP reply toasts, RSVP-aware grid cards,
+keyboard cancel and reschedule in the event form, and cancelling the
+reservation when the host deletes the booked event in Compass.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
 
 ## Status
 
-v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, and v1.10 are implemented in the Compass
+v1, v1.1, v1.3, v1.5, v1.6, v1.7, v1.8, v1.9, v1.10, and v1.11 are implemented in the Compass
 monorepo (public `/meet/:username`, host Settings, backend APIs, guest
 cancel, guest reschedule, edit-details, one-click turn on, Essentials /
 More options, editable address, default hours, branded connect pills,
 funnel analytics, meeting copy, hold-Mod section chords, the on/off
 switch, a per-day weekly hours list that can hold several blocks, meeting
 timezone under More options, the guided first-run setup wizard, Start
-and End time menus, the v1.8 booking gate fix, and the v1.10 meeting-flow
-fixes). Booking is enabled in every runtime environment, including
+and End time menus, the v1.8 booking gate fix, the v1.10 meeting-flow
+fixes, and the v1.11 cancel/reschedule/RSVP UX). Booking is enabled in every runtime environment, including
 production (`isBookingEnabled` in `packages/core/src/util/env.util.ts`).
 Guest `/meet` runs in **`apps/booking-web`**: its own frontend image and
 deploy pipeline on the same Compass Cloud host (shared VPS, MongoDB, API,
@@ -146,15 +151,21 @@ remains Booking page (`SettingsPage` includes `"booking"` in
 
 When the host opens Compass, when the tab becomes visible after at least five
 minutes, and when a calendar sync push arrives (about every ten seconds at
-most), Compass claims unannounced guest actions on confirmed or cancelled
-reservations and shows one toast. One booking: `Bob booked a meeting: Thu, Sep
-24, 12:00 PM`. One cancel: `Bob cancelled: Thu, Sep 24, 12:00 PM`. One
-reschedule: `Bob moved a meeting to Fri, Sep 25, 1:00 PM`. Several: `3
-meeting updates since you last looked. Latest: Bob moved a meeting to Fri, Sep
-25, 1:00 PM`. Show moves the week view to that meeting's `slotStart` (for a
-cancel, the slot that was freed). Times use the host's effective timezone.
-Reservations created before this cursor shipped are never announced. Compass
-does not send email.
+most), Compass claims unannounced guest actions and shows one toast. One
+booking: `Bob booked a meeting: Thu, Sep 24, 12:00 PM`. One cancel:
+`Bob cancelled: Thu, Sep 24, 12:00 PM`. One reschedule: `Bob moved a meeting
+to Fri, Sep 25, 1:00 PM`. Several: `3 meeting updates since you last looked.
+Latest: Bob moved a meeting to Fri, Sep 25, 1:00 PM`. Show moves the week
+view to that meeting's `slotStart` (for a cancel, the slot that was freed).
+Times use the host's effective timezone. Claim scans `lastGuestActionAt`
+(create, cancel, and reschedule success) after `hostNoticedAt`; rows that
+predate the cursor are never announced. Compass does not send email.
+
+While Compass stays open, a separate hook watches refetched events the host
+organizes and toasts guest RSVP replies (`Bob accepted: …`, `Bob declined:
+…`, `Bob replied maybe: …`, with the same plural Latest pattern). Replies
+that land while no tab is open are not announced; grid card styling covers
+that case (see RSVP-aware grid cards below).
 
 ### Guest
 
@@ -264,6 +275,16 @@ booking anchors, the actions row shows **Cancel meeting** (`Mod+Shift+X`,
 press twice to confirm) and **Reschedule** (`Mod+Shift+E`, opens the guest
 reschedule page in a new tab). `Mod+click` opens links inside the
 description while editing.
+
+### RSVP-aware grid cards
+
+Grid cards resolve guest RSVP chrome once per event in
+`resolveGridEventCardChrome`: any guest still `needsAction` keeps the dashed
+outline and 0.7 opacity with an **Awaiting reply:** name prefix; any
+`tentative` adds a dashed outline and **Tentative:** prefix; when every guest
+declined, opacity 0.5 and **Declined:** prefix; otherwise the card looks
+unchanged. This complements the host RSVP toast above when the host was
+offline during the reply.
 
 ## Host inputs
 
@@ -645,7 +666,8 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Guest web API client | `apps/booking-web/src/api/public-booking.api.ts` |
 | Host web API client | `apps/calendar-web/src/api/booking.api.ts` |
 | booking-web app | `apps/booking-web/` (`Dockerfile`, `dev.ts`, deploy workflow) |
-| E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/public-booking-reschedule.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
+| E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/booking-reschedule-current-slot.spec.ts`, `e2e/booking/booking-event-form-actions.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
+| Acceptance | `docs/acceptance/booking.md` |
 
 ### Analytics
 
@@ -823,6 +845,32 @@ browser funnels and server operations as one population.
   in the wire contract or Settings UI.
 
 ## Changelog
+
+### v1.11
+
+Guest meeting setup from `/?meetingSetup=1` closes Settings before sign-up,
+keeps the local draft, and resumes on the go-live step after authentication.
+
+Tokenized reschedule slots from `GET /api/booking/reservations/:id/slots`
+omit the reservation's current start (server-side). The picker opens on the
+meeting day when the URL has no `date=`. A **Current time** summary stays
+visible in the guest's timezone.
+
+Host notices claim on mount, tab focus (five-minute floor), and SSE
+`eventsChanged` (ten-second floor) using a `lastGuestActionAt` cursor, so
+book, cancel, and reschedule toasts arrive within seconds while Compass is
+open.
+
+Guest RSVP replies on events the host organizes produce a web-side toast
+while a tab is open; grid cards show awaiting, tentative, and all-declined
+states via `resolveGridEventCardChrome`.
+
+The event form parses cancel and reschedule anchors from the description and
+adds **Cancel meeting** (two-step confirm, public cancel API) and
+**Reschedule** (new tab) to the actions row.
+
+Deleting a booked calendar event in Compass (single scope) cancels the linked
+reservation and frees the slot.
 
 ### v1.10
 
