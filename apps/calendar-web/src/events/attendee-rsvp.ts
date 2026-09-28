@@ -1,3 +1,4 @@
+import { type Event } from "@core/types/event.contracts";
 import { type AttendeeResponseStatus } from "@core/types/event-attendance.contracts";
 
 /** Observer labels for someone else's RSVP — not the user's Going/Maybe/Decline. */
@@ -68,36 +69,24 @@ export const hostOrganizesEvent = (
   );
 };
 
-export const hostOrganizesForAnyConnectedAccount = (
-  event: { organizer?: { email: string } | null },
-  connectedAccountEmails: readonly string[],
-): boolean =>
-  connectedAccountEmails.some((email) => hostOrganizesEvent(event, email));
-
 /**
  * Per-guest RSVP statuses for host reply toasts: organized events only, every
  * connected account email excluded from the guest set.
  */
 export const guestStatusMapForHostNotice = (
-  event: {
-    organizer?: { email: string } | null;
-    content: {
-      kind: string;
-      attendees?:
-        | ReadonlyArray<{
-            email: string;
-            responseStatus: AttendeeResponseStatus;
-          }>
-        | undefined;
-    };
-  },
+  event: Event,
   connectedAccountEmails: readonly string[],
 ): ReadonlyMap<string, AttendeeResponseStatus> | null => {
   if (connectedAccountEmails.length === 0) return null;
-  if (!hostOrganizesForAnyConnectedAccount(event, connectedAccountEmails)) {
-    return null;
-  }
   if (event.content.kind !== "details") return null;
+
+  const organizerEmail = event.content.organizer?.email;
+  const hostOrganizes = connectedAccountEmails.some(
+    (email) =>
+      organizerEmail === undefined ||
+      organizerEmail.toLowerCase() === email.toLowerCase(),
+  );
+  if (!hostOrganizes) return null;
 
   const excluded = new Set(
     connectedAccountEmails.map((email) => email.toLowerCase()),

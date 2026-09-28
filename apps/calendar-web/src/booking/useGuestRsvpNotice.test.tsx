@@ -96,11 +96,11 @@ const hostOrganizedEvent = (
 ) =>
   createMockEvent({
     schedule: meetingSchedule,
-    organizer: { email: organizerEmail },
     content: {
       kind: "details",
       title: "Planning",
       description: "",
+      organizer: { email: organizerEmail, displayName: null },
       attendees,
     },
   });
