@@ -493,6 +493,25 @@ describe("LifeView", () => {
     ).toBeInTheDocument();
   });
 
+  it("omits Today from the view switcher on Life", async () => {
+    const user = userEvent.setup();
+    await renderLifeViewWithSidebar();
+
+    await user.click(screen.getByRole("button", { name: "Life" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("view-select-dropdown")).toBeInTheDocument();
+    });
+
+    const options = within(screen.getByTestId("view-select-dropdown"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(options).toEqual(["DayD", "WeekW", "LifeL"]);
+    expect(
+      screen.queryByRole("option", { name: /^today/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("focuses the current week when the today shortcut is pressed", async () => {
     await renderLifeViewWithSidebar();
 
