@@ -25,6 +25,7 @@ import {
   initialCheckoutPanelState,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
+import { resetGuestRsvpNoticeForTests } from "@web/booking/useGuestRsvpNotice";
 import { resetNewMeetingsNoticeForTests } from "@web/booking/useNewMeetingsNotice";
 import { resetCalendarVisibilityStoreForTests } from "@web/calendars/calendar-visibility.store";
 import { resetCollapsedAccountsStoreForTests } from "@web/calendars/collapsed-accounts.store";
@@ -130,6 +131,7 @@ const storeResets: StoreReset[] = [
   () => useBillingPreviewStore.setState(initialBillingPreviewState, true),
   resetBillingGateAttentionForTests,
   resetNewMeetingsNoticeForTests,
+  resetGuestRsvpNoticeForTests,
   () => useCheckoutPanelStore.setState(initialCheckoutPanelState, true),
   () => useCardUpdateStore.setState(initialCardUpdateState, true),
   resetShortcutHintProgressStoreForTests,

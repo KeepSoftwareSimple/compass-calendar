@@ -57,6 +57,59 @@ export type GridGuestResponseState = "awaiting" | "tentative" | "declined";
  * Roll-up of guest RSVP states for grid cards when the connected calendar
  * account organizes the event. Self is excluded from the guest list.
  */
+export const hostOrganizesEvent = (
+  event: { organizer?: { email: string } | null },
+  accountEmail: string,
+): boolean => {
+  const organizerEmail = event.organizer?.email;
+  return (
+    organizerEmail === undefined ||
+    organizerEmail.toLowerCase() === accountEmail.toLowerCase()
+  );
+};
+
+export const hostOrganizesForAnyConnectedAccount = (
+  event: { organizer?: { email: string } | null },
+  connectedAccountEmails: readonly string[],
+): boolean =>
+  connectedAccountEmails.some((email) => hostOrganizesEvent(event, email));
+
+/**
+ * Per-guest RSVP statuses for host reply toasts: organized events only, every
+ * connected account email excluded from the guest set.
+ */
+export const guestStatusMapForHostNotice = (
+  event: {
+    organizer?: { email: string } | null;
+    content: {
+      kind: string;
+      attendees?:
+        | ReadonlyArray<{
+            email: string;
+            responseStatus: AttendeeResponseStatus;
+          }>
+        | undefined;
+    };
+  },
+  connectedAccountEmails: readonly string[],
+): ReadonlyMap<string, AttendeeResponseStatus> | null => {
+  if (connectedAccountEmails.length === 0) return null;
+  if (!hostOrganizesForAnyConnectedAccount(event, connectedAccountEmails)) {
+    return null;
+  }
+  if (event.content.kind !== "details") return null;
+
+  const excluded = new Set(
+    connectedAccountEmails.map((email) => email.toLowerCase()),
+  );
+  const guests = (event.content.attendees ?? []).filter(
+    (attendee) => !excluded.has(attendee.email.toLowerCase()),
+  );
+  if (guests.length === 0) return null;
+
+  return attendeeStatusByEmail(guests);
+};
+
 export const guestResponseForEvent = (
   event: {
     organizer?: { email: string } | null;
@@ -68,11 +121,7 @@ export const guestResponseForEvent = (
 ): GridGuestResponseState | null => {
   if (accountEmail === undefined) return null;
 
-  const organizerEmail = event.organizer?.email;
-  const hostOrganizes =
-    organizerEmail === undefined ||
-    organizerEmail.toLowerCase() === accountEmail.toLowerCase();
-  if (!hostOrganizes) return null;
+  if (!hostOrganizesEvent(event, accountEmail)) return null;
 
   const accountLower = accountEmail.toLowerCase();
   const guests = (event.attendees ?? []).filter(
