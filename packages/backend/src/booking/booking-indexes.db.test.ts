@@ -1,7 +1,7 @@
 import { ObjectId } from "mongodb";
 import { type TimeZone } from "@core/types/domain-primitives";
 import {
-  explainConfirmedCreatedSinceScan,
+  explainGuestActionsSinceScan,
   explainWindowedConfirmedReservationScan,
 } from "@backend/__tests__/helpers/booking-reservation.explain";
 import {
@@ -71,10 +71,21 @@ describe("booking indexes", () => {
     expect(index?.key).toEqual({ calendarEventId: 1 });
   });
 
-  it("uses the createdAt cursor index for host-notice scans", async () => {
+  it("creates the lastGuestActionAt cursor index for host-notice scans", async () => {
+    const indexes = await mongoService.bookingReservation.indexes();
+    const index = indexes.find(
+      (entry) =>
+        JSON.stringify(entry.key) ===
+        JSON.stringify({ pageId: 1, lastGuestActionAt: 1, _id: 1 }),
+    );
+    expect(index).toBeDefined();
+  });
+
+  it("uses the lastGuestActionAt cursor index for host-notice scans", async () => {
     const pageId = new ObjectId();
     const since = new Date("2026-09-01T00:00:00.000Z");
     for (let index = 0; index < 40; index += 1) {
+      const actionAt = new Date(since.getTime() + index * 1_000);
       await mongoService.bookingReservation.insertOne({
         _id: new ObjectId(),
         pageId,
@@ -87,15 +98,17 @@ describe("booking indexes", () => {
         status: "confirmed",
         calendarEventId: `evt-${index}`,
         cancelTokenHash: "e".repeat(64),
-        createdAt: new Date(since.getTime() + index * 1_000),
-        updatedAt: new Date(since.getTime() + index * 1_000),
+        lastGuestActionAt: actionAt,
+        lastGuestAction: "booked",
+        createdAt: actionAt,
+        updatedAt: actionAt,
       });
     }
-    const explained = await explainConfirmedCreatedSinceScan(pageId, since);
+    const explained = await explainGuestActionsSinceScan(pageId, since);
     const plan = (explained as { queryPlanner?: { winningPlan?: unknown } })
       .queryPlanner?.winningPlan;
     const used = indexNamesFromPlan(plan);
-    expect(used).toContain("booking_reservation_page_status_created");
+    expect(used).toContain("booking_reservation_page_guest_action");
   });
 
   it("creates a TTL index on booking rate-limit expiry", async () => {

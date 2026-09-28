@@ -265,11 +265,11 @@ class BookingPageService {
     }
 
     const cursor = {
-      createdAt: page.hostNoticedAt ?? page.createdAt,
+      lastGuestActionAt: page.hostNoticedAt ?? page.createdAt,
       reservationId: page.hostNoticedReservationId,
     };
     const summary =
-      await bookingReservationRepository.summarizeConfirmedCreatedSince(
+      await bookingReservationRepository.summarizeGuestActionsSince(
         page._id,
         cursor,
       );
@@ -284,7 +284,7 @@ class BookingPageService {
         reservationId: page.hostNoticedReservationId,
       },
       {
-        at: summary.latest.createdAt,
+        at: summary.latest.lastGuestActionAt ?? summary.latest.createdAt,
         reservationId: summary.latest._id,
       },
     );
@@ -292,6 +292,7 @@ class BookingPageService {
       return emptyNewMeetingsClaim();
     }
 
+    const kind = summary.latest.lastGuestAction ?? "booked";
     return BookingNewMeetingsClaimResponseSchema.parse({
       count: summary.count,
       latest: {
@@ -299,6 +300,12 @@ class BookingPageService {
         guestName: summary.latest.guestName,
         slotStart: summary.latest.slotStart.toISOString(),
         slotEnd: summary.latest.slotEnd.toISOString(),
+        kind,
+        ...(summary.latest.previousSlotStart
+          ? {
+              previousSlotStart: summary.latest.previousSlotStart.toISOString(),
+            }
+          : {}),
       },
     });
   }

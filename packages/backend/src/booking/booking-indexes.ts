@@ -35,6 +35,10 @@ export async function ensureBookingIndexes(): Promise<void> {
     { name: "booking_reservation_page_status_created" },
   );
   await mongoService.bookingReservation.createIndex(
+    { pageId: 1, lastGuestActionAt: 1, _id: 1 },
+    { name: "booking_reservation_page_guest_action" },
+  );
+  await mongoService.bookingReservation.createIndex(
     { calendarEventId: 1 },
     {
       name: "booking_reservation_calendar_event_id",

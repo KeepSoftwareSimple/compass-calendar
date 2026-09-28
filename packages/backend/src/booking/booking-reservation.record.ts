@@ -5,6 +5,13 @@ import { zObjectId } from "@core/types/object-id.schema";
 
 const ObjectIdSchema = zObjectId;
 
+export const BookingGuestActionSchema = z.enum([
+  "booked",
+  "cancelled",
+  "rescheduled",
+]);
+export type BookingGuestAction = z.infer<typeof BookingGuestActionSchema>;
+
 export const BookingReservationRecordSchema = z.strictObject({
   _id: ObjectIdSchema,
   pageId: ObjectIdSchema,
@@ -17,6 +24,10 @@ export const BookingReservationRecordSchema = z.strictObject({
   status: BookingReservationStatusSchema,
   calendarEventId: z.string().trim().min(1).max(256).nullable(),
   cancelTokenHash: z.string().trim().min(1).max(256),
+  lastGuestActionAt: z.date().optional(),
+  lastGuestAction: BookingGuestActionSchema.optional(),
+  previousSlotStart: z.date().optional(),
+  previousSlotEnd: z.date().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

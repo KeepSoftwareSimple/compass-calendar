@@ -144,13 +144,17 @@ remains Booking page (`SettingsPage` includes `"booking"` in
 
 ### Host notice
 
-When the host opens Compass, and again when the tab becomes visible after
-at least five minutes, Compass claims new confirmed bookings and shows one
-toast. One booking: `Bob booked a meeting: Thu, Sep 24, 12:00 PM`. Several:
-`3 meetings booked since you last looked. Latest: Bob, Thu, Sep 24, 12:00 PM`.
-Show moves the week view to that meeting. Times use the host's effective
-timezone. Cancelled reservations are never announced. Compass does not send
-email.
+When the host opens Compass, when the tab becomes visible after at least five
+minutes, and when a calendar sync push arrives (about every ten seconds at
+most), Compass claims unannounced guest actions on confirmed or cancelled
+reservations and shows one toast. One booking: `Bob booked a meeting: Thu, Sep
+24, 12:00 PM`. One cancel: `Bob cancelled: Thu, Sep 24, 12:00 PM`. One
+reschedule: `Bob moved a meeting to Fri, Sep 25, 1:00 PM`. Several: `3
+meeting updates since you last looked. Latest: Bob moved a meeting to Fri, Sep
+25, 1:00 PM`. Show moves the week view to that meeting's `slotStart` (for a
+cancel, the slot that was freed). Times use the host's effective timezone.
+Reservations created before this cursor shipped are never announced. Compass
+does not send email.
 
 ### Guest
 
@@ -584,12 +588,13 @@ Authenticated (host session + writable billing, same as event writes):
 - `PUT /api/booking/page` — replace settings. Accepts optional `slug`.
   Allocates slug on first enable when none is stored. `409` with
   `SLUG_TAKEN` when the requested address belongs to another host.
-- `POST /api/booking/page/new-meetings/claim` — read unclaimed confirmed
-  reservations, then advance `hostNoticedAt` (and the last claimed
-  reservation id) only through that set. Returns `{ count, latest }`.
-  `{ count: 0, latest: null }` when there is no page, it is off, or
-  another claim already reported the same rows. Cancelled reservations
-  are omitted. Concurrent claims do not double-report. A failed read
+- `POST /api/booking/page/new-meetings/claim` — read unclaimed guest
+  actions (`lastGuestActionAt` after the host notice cursor), then
+  advance `hostNoticedAt` (and the last claimed reservation id) only
+  through that set. Returns `{ count, latest }` where `latest.kind` is
+  `booked`, `cancelled`, or `rescheduled`. `{ count: 0, latest: null }`
+  when there is no page, it is off, or another claim already reported
+  the same rows. Concurrent claims do not double-report. A failed read
   does not move the watermark.
 - Enabling without a healthy calendar connection is a typed `403`
   (`CALENDAR_NOT_CONNECTED`; `CALENDAR_NOT_CONNECTED` remains an alias).
@@ -805,11 +810,11 @@ browser funnels and server operations as one population.
   the in-flight identity.
 - **Confirm is fail-closed.** When Sync reports `bookable: false`, slots
   disappear and confirm returns `409`.
-- **New-meetings claim uses a createdAt cursor index.**
+- **New-meetings claim uses a lastGuestActionAt cursor index.**
   `POST /api/booking/page/new-meetings/claim` counts and returns the
-  latest confirmed reservation after `hostNoticedAt`, then stamps that
-  cursor (including `_id` ties). The
-  `booking_reservation_page_status_created` index backs the scan.
+  latest guest action after `hostNoticedAt`, then stamps that cursor
+  (including `_id` ties). The
+  `booking_reservation_page_guest_action` index backs the scan.
 - **Removed host settings may linger on old Mongo documents.** Buffer,
   max meetings per day, welcome text, and guest-invite permission were
   removed in Booking v1.8. Zod strips those keys on read; they are not

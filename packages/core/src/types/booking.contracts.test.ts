@@ -692,6 +692,7 @@ describe("BookingNewMeetingsClaimResponseSchema", () => {
           guestName: "Bob",
           slotStart: dateTime(),
           slotEnd: "2026-08-30T12:30:00.000Z",
+          kind: "booked",
         },
       }).success,
     ).toBe(true);
