@@ -8,6 +8,7 @@ import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.u
 import { syncPendingLocalEvents } from "@web/auth/providers/connection-revoked.util";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import { refreshEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
+import { resolveShouldSyncPendingLocalEvents } from "./resolve-should-sync-pending-local-events";
 import { createUseCompleteAuthentication } from "./useCompleteAuthentication.factory";
 
 export const useCompleteAuthenticationImpl = createUseCompleteAuthentication({
@@ -20,6 +21,7 @@ export const useCompleteAuthenticationImpl = createUseCompleteAuthentication({
     queryClient.removeQueries({ queryKey: eventQueryKeys.all });
   },
   refreshUserMetadata,
+  resolveShouldSyncPendingLocalEvents,
   syncPendingLocalEvents,
   useSession,
 });

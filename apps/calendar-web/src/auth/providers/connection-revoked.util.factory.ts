@@ -1,6 +1,7 @@
 import { type toast } from "react-toastify";
 import { Status } from "@core/errors/status.codes";
 import { type ApiError } from "@web/api/api.types";
+import { getApiErrorCode, isApiError } from "@web/api/util/api.util";
 import { type GoogleReconnectTarget } from "@web/auth/providers/reconnect.state";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 
@@ -83,6 +84,9 @@ export function createGoogleAuthUtil({
       const syncedCount = await syncLocalEventsToCloud();
       return { syncedCount, success: true };
     } catch (error) {
+      if (isApiError(error) && getApiErrorCode(error) === "BILLING_REQUIRED") {
+        return { syncedCount: 0, success: true };
+      }
       return { syncedCount: 0, success: false, error: error as Error };
     }
   };

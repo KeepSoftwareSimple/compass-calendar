@@ -1,5 +1,6 @@
 import { type AnyRouter, useRouter, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { queryClient } from "@web/api/query-client";
 import { getEmailPasswordPort } from "@web/auth/compass/hooks/emailpassword.port";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -14,6 +15,11 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
+import { appConfigQueryOptions } from "@web/billing/billing.query";
+import {
+  rememberSignupTrialMethod,
+  shouldOfferSignupTrialStep,
+} from "@web/billing/signup-trial.util";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
 import { type AuthSearch, type AuthView } from "./useAuthModal";
 
@@ -89,13 +95,22 @@ export function useAuthFormHandlers({
         });
 
         switch (response.status) {
-          case "OK":
+          case "OK": {
             await completeAuthentication({
               email: response.user.emails[0] ?? data.email,
             });
             trackSignupCompleted("email");
-            closeModal();
+            rememberSignupTrialMethod("email");
+            const config = await queryClient.ensureQueryData(
+              appConfigQueryOptions(),
+            );
+            if (shouldOfferSignupTrialStep(config)) {
+              setView("startTrial");
+            } else {
+              closeModal();
+            }
             return;
+          }
           case "FIELD_ERROR":
             trackSignupFailed("email_field_error", { method: "email" });
             setSubmitError(response.formFields[0]?.error ?? "Sign up failed");
@@ -112,7 +127,7 @@ export function useAuthFormHandlers({
         setIsSubmitting(false);
       }
     },
-    [closeModal, completeAuthentication],
+    [closeModal, completeAuthentication, setView],
   );
 
   const handleLogin = useCallback(

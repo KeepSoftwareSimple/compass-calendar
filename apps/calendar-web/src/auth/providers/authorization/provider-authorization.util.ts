@@ -24,6 +24,16 @@ export function buildProviderAuthCallbackUrl(
   return `${origin}${providerAuthCallbackPath(provider)}`;
 }
 
+export function buildSignupTrialReturnPath(
+  href = window.location.href,
+  origin = window.location.origin,
+): string {
+  const base = getSafeProviderAuthReturnPath("google", href, origin);
+  const url = new URL(base, origin);
+  url.searchParams.set("auth", "trial");
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function getSafeProviderAuthReturnPath(
   provider: ProviderKind,
   href = window.location.href,

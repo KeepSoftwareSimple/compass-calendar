@@ -16,6 +16,7 @@ export type AuthView =
   | "login"
   | "loginAfterReset"
   | "signUp"
+  | "startTrial"
   | "forgotPassword"
   | "resetPassword";
 
@@ -30,6 +31,7 @@ export const VIEW_TO_PARAM: Record<AuthView, string> = {
   login: "login",
   loginAfterReset: "login-after-reset",
   signUp: "signup",
+  startTrial: "trial",
   forgotPassword: "forgot",
   resetPassword: "reset",
 };
@@ -120,16 +122,17 @@ export function useAuthModalState(): AuthModalContextValue {
 
   useEffect(() => {
     if (!authenticated || !auth) return;
+    if (view === "startTrial") return;
     navigate({
       to: ".",
       replace: true,
       search: (prev) => ({ ...prev, auth: undefined }),
     });
-  }, [authenticated, auth, navigate]);
+  }, [authenticated, auth, navigate, view]);
 
   return useMemo(
     () => ({
-      isOpen: view !== null && !authenticated,
+      isOpen: view !== null && (!authenticated || view === "startTrial"),
       currentView: view ?? "login",
       openModal: (nextView: AuthView = "login") => setAuthView(nextView),
       closeModal: () => setAuthView(null),

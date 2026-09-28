@@ -114,14 +114,6 @@ export function trackTrialStepAbandoned(properties: TrialStepTelemetry): void {
   trackSignupStep("trial_step_abandoned", properties);
 }
 
-/**
- * WP-02: AuthModal `startTrial` calls {@link trackTrialStepViewed} on mount.
- * Until that view ships, this export keeps the helper referenced from product code.
- */
-export function signupTrialStepViewedNoOp(): void {
-  // Intentionally empty. WP-02 replaces this with the real trial-step mount hook.
-}
-
 /** Legacy `signup_started` plus its funnel step, so both stay in lockstep. */
 export function trackSignupStarted(
   source: SignupSource,

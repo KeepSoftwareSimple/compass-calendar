@@ -28,6 +28,10 @@ export const checkoutPanelActions = {
   open: (source: CheckoutPanelSource | null = null) => {
     useCheckoutPanelStore.setState({ isOpen: true, source });
   },
+  /** Attribute embedded Checkout hosted outside CheckoutOverlay (signup trial step). */
+  holdSource: (source: CheckoutPanelSource) => {
+    useCheckoutPanelStore.setState({ source });
+  },
   close: () => {
     useCheckoutPanelStore.setState({ isOpen: false, source: null });
   },

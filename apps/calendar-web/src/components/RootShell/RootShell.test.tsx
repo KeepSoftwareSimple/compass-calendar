@@ -115,7 +115,7 @@ describe("RootShell billing gates", () => {
     await renderShell("/", { anonymous: true });
 
     expect(
-      screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
@@ -125,7 +125,7 @@ describe("RootShell billing gates", () => {
     await renderShell();
 
     expect(
-      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.getByRole("dialog", { name: "Finish starting your trial" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Manage billing" }),
@@ -144,7 +144,7 @@ describe("RootShell billing gates", () => {
     );
 
     expect(
-      screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
     ).not.toBeInTheDocument();
     // The click also pulses the keyboard hint (another status), so find the
     // banner by its copy rather than by role alone.
@@ -180,7 +180,7 @@ describe("RootShell billing gates", () => {
     });
 
     expect(
-      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.getByRole("dialog", { name: "Finish starting your trial" }),
     ).toBeInTheDocument();
   });
 
@@ -192,7 +192,7 @@ describe("RootShell billing gates", () => {
     await user.keyboard("l");
 
     expect(
-      screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
     ).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(
       "You're looking around in read-only mode.",
@@ -226,7 +226,7 @@ describe("RootShell billing gates", () => {
       screen.getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.getByRole("dialog", { name: "Finish starting your trial" }),
     ).toBeInTheDocument();
   });
 
@@ -289,7 +289,7 @@ describe("RootShell billing gates", () => {
     await renderShell("/week");
 
     expect(
-      screen.queryByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole("dialog", {
@@ -371,7 +371,7 @@ describe("RootShell billing gates", () => {
     });
 
     expect(
-      screen.getByRole("dialog", { name: "Start your 7-day trial" }),
+      screen.getByRole("dialog", { name: "Finish starting your trial" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText(/Compass works from the keyboard/i),

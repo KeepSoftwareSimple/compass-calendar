@@ -3,6 +3,7 @@ type CompleteAuthenticationDependencies = {
   markUserAsAuthenticated: (email?: string) => void;
   onEventSourceChanged: () => void;
   refreshUserMetadata: () => Promise<unknown> | unknown;
+  resolveShouldSyncPendingLocalEvents: () => Promise<boolean>;
   syncPendingLocalEvents: () => Promise<unknown>;
   useSession: () => {
     setAuthenticated: (isAuthenticated: boolean) => void;
@@ -28,7 +29,9 @@ export function createUseCompleteAuthentication(
 
       void dependencies.refreshUserMetadata();
 
-      await dependencies.syncPendingLocalEvents();
+      if (await dependencies.resolveShouldSyncPendingLocalEvents()) {
+        await dependencies.syncPendingLocalEvents();
+      }
 
       dependencies.onEventSourceChanged();
       onComplete?.();

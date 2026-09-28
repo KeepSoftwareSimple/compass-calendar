@@ -7,6 +7,7 @@ const dependencies = {
   markUserAsAuthenticated: mock(),
   onEventSourceChanged: mock(),
   refreshUserMetadata: mock(),
+  resolveShouldSyncPendingLocalEvents: mock(),
   syncPendingLocalEvents: mock(),
   useSession: mock(),
 };
@@ -22,6 +23,7 @@ describe("useCompleteAuthentication", () => {
     dependencies.onEventSourceChanged.mockClear();
     dependencies.refreshUserMetadata.mockClear();
     dependencies.syncPendingLocalEvents.mockClear();
+    dependencies.resolveShouldSyncPendingLocalEvents.mockClear();
     dependencies.useSession.mockClear();
 
     dependencies.useSession.mockReturnValue({
@@ -29,7 +31,21 @@ describe("useCompleteAuthentication", () => {
       setAuthenticated,
     });
     dependencies.refreshUserMetadata.mockResolvedValue(true);
+    dependencies.resolveShouldSyncPendingLocalEvents.mockResolvedValue(true);
     dependencies.syncPendingLocalEvents.mockResolvedValue(true);
+  });
+
+  it("skips local event sync when billing is read-only", async () => {
+    dependencies.resolveShouldSyncPendingLocalEvents.mockResolvedValue(false);
+    const useCompleteAuthentication =
+      createUseCompleteAuthentication(dependencies);
+    const onComplete = mock();
+    const { result } = renderHook(() => useCompleteAuthentication());
+
+    await result.current({ email: "test@example.com", onComplete });
+
+    expect(dependencies.syncPendingLocalEvents).not.toHaveBeenCalled();
+    expect(onComplete).toHaveBeenCalled();
   });
 
   it("marks the user authenticated and triggers an event fetch", async () => {

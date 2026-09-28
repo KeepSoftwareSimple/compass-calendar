@@ -98,7 +98,7 @@ test("hides welcome, practice, and first-event prompts while the billing gate is
   });
 
   await expect(
-    page.getByRole("dialog", { name: "Start your 7-day trial" }),
+    page.getByRole("dialog", { name: "Finish starting your trial" }),
   ).toBeVisible({ timeout: 15000 });
 
   await expect(
