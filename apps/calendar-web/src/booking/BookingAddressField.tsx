@@ -2,6 +2,7 @@ import { type RefCallback } from "react";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingSlugFieldMessages } from "@web/booking/BookingSlugFieldMessages";
 import { bookingAddressPrefix } from "@web/booking/booking-address.util";
+import { BOOKING_TEXT_INPUT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { useBookingSlugField } from "@web/booking/useBookingSlugField";
 
@@ -42,9 +43,7 @@ export function BookingAddressField({
         aria-describedby={field.describedBy}
         aria-invalid={field.showError || undefined}
         autoCapitalize="none"
-        className={`c-focus-ring w-full min-w-0 rounded border bg-surface-overlay px-2 py-1 text-sm text-text ${
-          field.showError ? "border-error" : "border-border"
-        }`}
+        className={`${BOOKING_TEXT_INPUT_CLASS_NAME} w-full min-w-0`}
         id="booking-address"
         onBlur={field.markBlurred}
         ref={inputRef}

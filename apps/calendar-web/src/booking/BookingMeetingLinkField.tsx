@@ -5,6 +5,7 @@ import { type RefCallback } from "react";
 import { BookingFieldLabel } from "@web/booking/BookingFieldLabel";
 import { BookingSlugFieldMessages } from "@web/booking/BookingSlugFieldMessages";
 import { bookingAddressPrefix } from "@web/booking/booking-address.util";
+import { BOOKING_TEXT_INPUT_CLASS_NAME } from "@web/booking/booking-form.styles";
 import { reportBookingLinkCopied } from "@web/booking/booking-link-copy";
 import { bookingFieldAttrs } from "@web/booking/booking-sequence.fields";
 import { useCopiedFlag } from "@web/booking/use-copied-flag";
@@ -69,9 +70,7 @@ export function BookingMeetingLinkField({
           aria-invalid={field.showError || undefined}
           aria-label="Meeting link"
           autoCapitalize="none"
-          className={`c-focus-ring min-w-0 flex-1 rounded border bg-surface-overlay px-2 py-1 text-sm text-text ${
-            field.showError ? "border-error" : "border-border"
-          }`}
+          className={`${BOOKING_TEXT_INPUT_CLASS_NAME} min-w-0 flex-1`}
           id="booking-meeting-link"
           onBlur={field.markBlurred}
           onChange={(event) => handleInputChange(event.target.value)}
