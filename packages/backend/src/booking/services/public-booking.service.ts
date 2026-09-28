@@ -650,11 +650,18 @@ export class PublicBookingService {
       end: query.end,
       timeZone: query.timeZone,
     });
-    return this.computeSlotsForPage(page, query, {
+    const response = await this.computeSlotsForPage(page, query, {
       excludeEventIds: reservation.calendarEventId
         ? [reservation.calendarEventId as EventId]
         : undefined,
       omitReservationStart: reservation.slotStart,
+    });
+    const currentStartMs = reservation.slotStart.getTime();
+    return BookingSlotsResponseSchema.parse({
+      ...response,
+      slots: response.slots.filter(
+        (slot) => Date.parse(slot.slotStart) !== currentStartMs,
+      ),
     });
   }
 

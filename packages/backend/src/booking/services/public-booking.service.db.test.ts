@@ -2712,7 +2712,7 @@ describe("PublicBookingService", () => {
     );
   });
 
-  it("includes the current start on tokenized slots and hides it on public slots", async () => {
+  it("excludes the current start on tokenized slots and hides it on public slots", async () => {
     const { slug } = await enableBookingPage();
     const created = await service.createReservation(slug, {
       slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
@@ -2739,15 +2739,39 @@ describe("PublicBookingService", () => {
     expect(
       publicSlots.slots.map((slot) => Date.parse(slot.slotStart)),
     ).not.toContain(booked);
-    expect(tokenized.slots.map((slot) => Date.parse(slot.slotStart))).toContain(
-      booked,
-    );
+    expect(
+      tokenized.slots.map((slot) => Date.parse(slot.slotStart)),
+    ).not.toContain(booked);
     const createdEventId = await createBookingEvent.mock.results[0]?.value;
     expect(
       (getAvailability.mock.calls as unknown[][]).at(-1)?.[1],
     ).toMatchObject({
       excludeEventIds: [createdEventId],
     });
+  });
+
+  it("returns no tokenized slots on a day when the current start is the only slot", async () => {
+    const { slug } = await enableBookingPage("Single Slot Host", {
+      weeklyAvailability: [{ weekday: 1, start: "10:00", end: "10:30" }],
+    });
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const token = new URL(created.cancelUrl).searchParams.get("token");
+    const reservationId = new ObjectId(created.reservationId);
+
+    const tokenized = await service.getReservationSlots(reservationId, {
+      token,
+      start: `${BOOKING_MONDAY}T00:00:00.000Z`,
+      end: `${BOOKING_TUESDAY}T00:00:00.000Z`,
+      timeZone: "UTC",
+    });
+
+    expect(tokenized.slots).toHaveLength(0);
   });
 
   it("keeps overlapping host busy after self-exclusion", async () => {

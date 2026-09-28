@@ -86,8 +86,12 @@ test.describe("public booking reschedule", () => {
   });
 
   test("reaches Confirm with the keyboard", async ({ page }) => {
-    const { slotStart } = buildBookableSlot();
-    const captured = await preparePublicBookingReschedulePage(page);
+    const reservationSlot = buildBookableSlot();
+    const alternateSlot = buildSameDaySiblingSlot(reservationSlot);
+    const captured = await preparePublicBookingReschedulePage(page, {
+      slots: [reservationSlot, alternateSlot],
+    });
+    const slotStart = alternateSlot.slotStart;
 
     await expect(
       page.getByRole("heading", {

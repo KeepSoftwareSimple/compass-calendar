@@ -1,5 +1,6 @@
 import { PublicBookingNotFoundError } from "@booking-web/api/public-booking.api";
 import { getErrorStatus } from "@booking-web/api/public-booking-http";
+import { formatBookingDateKey } from "@booking-web/booking/public-booking.format";
 import {
   isPublicBookingConflictError,
   prefetchPublicBookingReservationMonth,
@@ -54,7 +55,20 @@ export function usePublicBookingRescheduleFlow() {
   const pageQuery = usePublicBookingPageQuery(bookingSlug);
 
   const keys = usePublicBookingSelectionKeys(search);
-  const { guestTimeZone, monthKey, selectedSlotStart } = keys;
+  const { guestTimeZone, selectedSlotStart } = keys;
+  const meetingDateKey =
+    reservationQuery.data?.status === "confirmed"
+      ? formatBookingDateKey(
+          reservationQuery.data.slotStart,
+          keys.guestTimeZone,
+        )
+      : null;
+  const monthKey =
+    search.month ??
+    keys.slotDateKey?.slice(0, 7) ??
+    meetingDateKey?.slice(0, 7) ??
+    keys.monthKey;
+  const selectionKeys = { ...keys, monthKey };
 
   const slotsQuery = usePublicBookingReservationSlotsQuery(
     canLoad && reservationQuery.data?.status === "confirmed"
@@ -72,7 +86,8 @@ export function usePublicBookingRescheduleFlow() {
 
   const selection = usePublicBookingSlotSelection({
     search,
-    keys,
+    keys: selectionKeys,
+    preferredDateKey: search.date ? null : meetingDateKey,
     slotsQuery,
     // Every month walk here is token-authenticated, so no token means no walk.
     horizonDays: token ? (pageQuery.data?.maxHorizonDays ?? null) : null,
@@ -116,6 +131,11 @@ export function usePublicBookingRescheduleFlow() {
     "Escape",
     (event) => {
       if (submitInFlightRef.current || !reservationId) {
+        return;
+      }
+      if (selectedSlotStart) {
+        event.preventDefault();
+        selection.clearSelectedSlot();
         return;
       }
       event.preventDefault();
@@ -215,5 +235,7 @@ export function usePublicBookingRescheduleFlow() {
     handlePrefetchMonth: selection.handlePrefetchMonth,
     handleJumpToNextAvailable: selection.handleJumpToNextAvailable,
     handleConfirm,
+    clearSelectedSlot: selection.clearSelectedSlot,
+    meetingDateKey,
   };
 }

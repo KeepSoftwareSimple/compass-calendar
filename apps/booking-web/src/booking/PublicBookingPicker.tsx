@@ -25,6 +25,7 @@ interface PublicBookingPickerProps {
   onSelectSlot: (slotStart: string) => void;
   onJumpToNextAvailable: () => void;
   onRetrySlots: () => void;
+  onEscapeFromSlot?: () => void;
 }
 
 function useSlotsLiveMessage(pending: boolean, error: boolean): string {
@@ -68,6 +69,7 @@ export function PublicBookingPicker({
   onSelectSlot,
   onJumpToNextAvailable,
   onRetrySlots,
+  onEscapeFromSlot,
 }: PublicBookingPickerProps) {
   const [hasRenderedGrid, setHasRenderedGrid] = useState(false);
   const liveMessage = useSlotsLiveMessage(
@@ -190,6 +192,10 @@ export function PublicBookingPicker({
               headingRef={slotsHeadingRef}
               onSelectSlot={onSelectSlot}
               onEscapeToSelectedDay={() => {
+                if (onEscapeFromSlot) {
+                  onEscapeFromSlot();
+                  return;
+                }
                 if (!selectedDateKey) {
                   return;
                 }

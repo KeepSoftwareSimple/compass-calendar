@@ -476,8 +476,9 @@ There is no host reservation inbox.
   same Meet URL, same attendees. `invitation: "all"`,
   `attendeesEdit: "preserve"`. Compass still sends no email.
 - While choosing a new time, this reservation must not occupy slots.
-  Other overlapping host events still occupy.
-  Tokenized slots: `GET /api/booking/reservations/:id/slots`.
+  Other overlapping host events still occupy. The tokenized slots list
+  excludes the reservation's current start (same-slot POST reschedule stays
+  idempotent). Tokenized slots: `GET /api/booking/reservations/:id/slots`.
 - Status stays `confirmed`; mutate `slotStart` / `slotEnd`. Same slot is
   an idempotent success (no second Google write). Cancelled or bad token
   → same generic not-found as cancel. New slot re-check uses
@@ -572,7 +573,8 @@ Unauthenticated:
   the token is invalid.
 - `POST /api/booking/reservations/:id/cancel` — `{token}`.
 - `GET /api/booking/reservations/:id/slots?token=&start=&end=&timeZone=`
-  — bookable instants excluding this reservation from occupancy.
+  — bookable instants excluding this reservation from occupancy and
+  omitting its current start from the returned list.
   Same window rules as the public page slots endpoint.
 - `POST /api/booking/reservations/:id/reschedule` — `{token, slotStart,
   guestTimeZone, durationMinutes}`. `durationMinutes` must match the page
