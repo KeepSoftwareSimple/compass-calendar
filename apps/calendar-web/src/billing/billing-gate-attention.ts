@@ -1,5 +1,6 @@
 import { type BookingNewMeetingsClaimResponse } from "@core/types/booking.contracts";
 import { useCheckoutCelebrationStore } from "@web/billing/checkout-celebration.store";
+import { type GuestRsvpToastPayload } from "@web/booking/GuestRsvpToast";
 
 /**
  * The billing gate is the only thing on screen until the user starts a trial
@@ -14,6 +15,7 @@ let pendingReconnect: {
 } | null = null;
 let pendingDelayed = false;
 let pendingNewMeetings: BookingNewMeetingsClaimResponse | null = null;
+let pendingGuestRsvp: GuestRsvpToastPayload | null = null;
 
 export function setBillingGateOwnsScreen(owns: boolean): void {
   ownsScreen = owns;
@@ -65,9 +67,20 @@ export function takePendingNewMeetings(): BookingNewMeetingsClaimResponse | null
   return next;
 }
 
+export function rememberPendingGuestRsvp(payload: GuestRsvpToastPayload): void {
+  pendingGuestRsvp = payload;
+}
+
+export function takePendingGuestRsvp(): GuestRsvpToastPayload | null {
+  const next = pendingGuestRsvp;
+  pendingGuestRsvp = null;
+  return next;
+}
+
 export function resetBillingGateAttentionForTests(): void {
   ownsScreen = false;
   pendingReconnect = null;
   pendingDelayed = false;
   pendingNewMeetings = null;
+  pendingGuestRsvp = null;
 }

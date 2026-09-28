@@ -80,7 +80,11 @@ Source: `packages/core/src/types/event-command.contracts.ts`
 - Incoming RSVP from other attendees is visible to the host without
   photos: chips and the read-only guest list show a compact status badge
   (yes / no / maybe / awaiting) looked up from the live `Attendee[]` by
-  email. The write path stays `{email, displayName}` — `responseStatus`
+  email. While Compass stays open, the host also gets one toast when a guest
+  replies (accepted, declined, or maybe), derived from the same SSE-backed
+  event refetch as the badges; a reply that lands while no tab is open is
+  not announced (grid styling from booking v1.11 covers that at a glance).
+  The write path stays `{email, displayName}` — `responseStatus`
   never rides `AttendeeInput`. The guest summary uses the same observer
   labels (`1 guest (0 yes, 1 awaiting)`), distinct from the user's own
   Going / Maybe / Decline control. Jump to the guest field with `e` then
@@ -273,7 +277,9 @@ Source: `packages/core/src/types/event-command.contracts.ts`
   immediately and rolls back on a `503`; the provider-confirmed list
   settles through the same SSE-backed invalidation path
   (`eventsChanged`) that carries in other attendees' RSVP changes
-  (`useEventMutations.rsvp.test.tsx`).
+  (`useEventMutations.rsvp.test.tsx`). For events the host organizes,
+  that refetch also drives a one-shot host toast when a guest moves to
+  accepted, declined, or maybe (`useGuestRsvpNotice.ts`).
 - **Route contract.** `POST /api/event/:id/rsvp` answers `204 No Content`
   (the sync command outcome carries no event content); `responseStatus:
   "needsAction"` is rejected `400` at the route (you cannot RSVP back to

@@ -23,6 +23,7 @@ import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
 import { useGuestMeetingSetupEntry } from "@web/booking/useGuestMeetingSetupEntry";
 import { useGuestMeetingSetupResume } from "@web/booking/useGuestMeetingSetupResume";
+import { useGuestRsvpNotice } from "@web/booking/useGuestRsvpNotice";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import { AuthModal } from "@web/components/AuthModal/AuthModal";
@@ -121,6 +122,7 @@ export function RootShell() {
   // after five minutes). No-ops when booking is off or the session is
   // anonymous.
   useNewMeetingsNotice();
+  useGuestRsvpNotice();
   useGuestMeetingSetupEntry();
   useGuestMeetingSetupResume();
 
