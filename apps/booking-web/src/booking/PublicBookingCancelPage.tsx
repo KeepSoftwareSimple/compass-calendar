@@ -77,6 +77,7 @@ export function PublicBookingCancelPage() {
   const canLoad = Boolean(reservationId && token);
   const reservationQuery = usePublicBookingReservationQuery(
     canLoad ? reservationId : "",
+    canLoad ? token : "",
   );
   const [action, setAction] = useState<CancelActionState>("idle");
   const headingRef = useBookingHeadingFocus(

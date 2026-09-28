@@ -101,7 +101,10 @@ export function PublicBookingConfirmedPage() {
           window.location.origin,
         )
       : undefined);
-  const reservationQuery = usePublicBookingReservationQuery(reservationId);
+  const reservationQuery = usePublicBookingReservationQuery(
+    reservationId,
+    token,
+  );
   const patchReservation =
     usePatchPublicBookingReservationMutation(reservationId);
   const [isEditing, setIsEditing] = useState(false);

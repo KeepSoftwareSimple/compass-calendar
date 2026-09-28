@@ -87,10 +87,12 @@ const PublicBookingApi = {
 
   async getReservation(
     reservationId: string,
+    token: string,
   ): Promise<PublicGetBookingReservationResponse> {
+    const params = new URLSearchParams({ token });
     const data = await rejectNotFound(
       publicBookingHttp.get<unknown>(
-        `/booking/reservations/${encodeURIComponent(reservationId)}`,
+        `/booking/reservations/${encodeURIComponent(reservationId)}?${params.toString()}`,
       ),
     );
     return PublicGetBookingReservationResponseSchema.parse(data);

@@ -24,25 +24,41 @@ export function pageHandler(
   );
 }
 
+const DEFAULT_RESERVATION_SLOT_START = "2026-09-15T15:00:00.000Z";
+
 export function reservationGetHandler(
-  slotStart: string,
+  slotStartOrOverrides:
+    | string
+    | Record<string, unknown> = DEFAULT_RESERVATION_SLOT_START,
   overrides: Record<string, unknown> = {},
   id = DEFAULT_PUBLIC_RESERVATION_ID,
 ) {
-  return http.get(`${ENV_WEB.API_BASEURL}/booking/reservations/${id}`, () =>
-    HttpResponse.json(
-      {
-        slotStart,
-        guestTimeZone: "UTC",
-        durationMinutes: 30,
-        hostDisplayName: "Tyler Dane",
-        status: "confirmed",
-        bookingSlug: "tylerdane",
-        guestName: "Guest User",
-        notes: null,
-        ...overrides,
-      },
-      { status: Status.OK },
-    ),
+  const slotStart =
+    typeof slotStartOrOverrides === "string"
+      ? slotStartOrOverrides
+      : DEFAULT_RESERVATION_SLOT_START;
+  const mergedOverrides =
+    typeof slotStartOrOverrides === "string" ? overrides : slotStartOrOverrides;
+
+  return http.get(
+    ({ request }) => {
+      const url = new URL(request.url);
+      return url.pathname.endsWith(`/booking/reservations/${id}`);
+    },
+    () =>
+      HttpResponse.json(
+        {
+          slotStart,
+          guestTimeZone: "UTC",
+          durationMinutes: 30,
+          hostDisplayName: "Tyler Dane",
+          status: "confirmed",
+          bookingSlug: "tylerdane",
+          guestName: "Guest User",
+          notes: null,
+          ...mergedOverrides,
+        },
+        { status: Status.OK },
+      ),
   );
 }
