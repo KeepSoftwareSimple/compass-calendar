@@ -89,22 +89,33 @@ export function shouldOfferSignupTrialStep(
 const STATUS_POLL_MS = 1500;
 const STATUS_POLL_WINDOW_MS = 15_000;
 
+type BillingStatusPollOptions = {
+  /** Defaults to the billing status query. */
+  queryKey?: readonly unknown[];
+  /** Runs after every refetch in the window, including the first. */
+  onRefetched?: () => void;
+  /** Runs once when the polling window closes. */
+  onWindowEnd?: () => void;
+};
+
 export function startBillingStatusPoll(
   queryClient: QueryClient,
-  onWindowEnd: () => void,
-  queryKey: readonly unknown[] = billingQueryKeys.status,
-  onAfterInvalidate?: () => void,
+  {
+    queryKey = billingQueryKeys.status,
+    onRefetched,
+    onWindowEnd,
+  }: BillingStatusPollOptions = {},
 ): () => void {
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey }).then(() => {
-      onAfterInvalidate?.();
+      onRefetched?.();
     });
   };
   invalidate();
   const interval = window.setInterval(invalidate, STATUS_POLL_MS);
   const timeout = window.setTimeout(() => {
     window.clearInterval(interval);
-    onWindowEnd();
+    onWindowEnd?.();
   }, STATUS_POLL_WINDOW_MS);
   return () => {
     window.clearInterval(interval);

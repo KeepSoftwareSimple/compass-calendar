@@ -18,6 +18,15 @@ export function formatBillingMoney(
   }).format(amountMinor / 100);
 }
 
+/** The plan price line: "$12.00 per month". Shared by Settings and signup. */
+export function formatBillingPriceLine(price: {
+  amount: number;
+  currency: string;
+  interval: string;
+}): string {
+  return `${formatBillingMoney(price.amount, price.currency)} per ${price.interval}`;
+}
+
 export function formatBillingDate(iso: string): string {
   return dayjs(iso).format("MMM D, YYYY");
 }

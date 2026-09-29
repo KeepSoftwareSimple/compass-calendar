@@ -37,6 +37,21 @@ export type SignupStep =
 
 export type SignupMethod = "email" | ProviderKind;
 
+const SIGNUP_METHODS: readonly SignupMethod[] = [
+  "email",
+  "google",
+  "microsoft",
+  "apple",
+];
+
+/** Narrows stored or otherwise untyped values back into the funnel vocabulary. */
+export function isSignupMethod(value: unknown): value is SignupMethod {
+  return (
+    typeof value === "string" &&
+    (SIGNUP_METHODS as readonly string[]).includes(value)
+  );
+}
+
 /**
  * Exactly the `source` values already in the wild, typed rather than changed,
  * so existing `signup_started` insights stay byte-identical.

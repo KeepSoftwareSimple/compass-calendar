@@ -11,6 +11,7 @@ import {
   useBillingSubscriptionQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
+import { formatBillingPriceLine } from "@web/billing/billing-display";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import {
   EMBEDDED_CHECKOUT_PANEL_CLASSNAME,
@@ -28,16 +29,11 @@ export function formatTrialChargeDate(
   return now.add(trialLengthDays, "day").format("dddd, MMMM D");
 }
 
-/** Same shape as Settings > Billing plan price line. */
+/** Same line as Settings > Billing, with no price to show before it loads. */
 export function formatSignupTrialPlanPrice(
   price: BillingPrice | null | undefined,
 ): string | null {
-  if (!price) return null;
-  const amount = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: price.currency.toUpperCase(),
-  }).format(price.amount / 100);
-  return `${amount} per ${price.interval}`;
+  return price ? formatBillingPriceLine(price) : null;
 }
 
 type StartTrialStepProps = {

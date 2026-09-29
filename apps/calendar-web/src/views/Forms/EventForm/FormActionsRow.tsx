@@ -73,15 +73,21 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
     },
     ref,
   ) {
+    // Two Mod+Shift+X presses can land in one React batch, so the second has
+    // to see the confirm state before a re-render: the ref is that read path,
+    // and `commitCancelConfirm` is the only writer of the pair.
     const [isCancelConfirm, setIsCancelConfirm] = useState(false);
     const isCancelConfirmRef = useRef(false);
+    const commitCancelConfirm = useCallback((next: boolean) => {
+      isCancelConfirmRef.current = next;
+      setIsCancelConfirm(next);
+    }, []);
     const cancelButtonRef = useRef<HTMLButtonElement>(null);
     const showBookingActions = !isReadOnly && bookingLinks !== null;
 
     const revertCancelConfirm = useCallback(() => {
-      isCancelConfirmRef.current = false;
-      setIsCancelConfirm(false);
-    }, []);
+      commitCancelConfirm(false);
+    }, [commitCancelConfirm]);
 
     const executeCancel = useCallback(async () => {
       if (!bookingLinks) return;
@@ -109,23 +115,17 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
         }
         throw error;
       } finally {
-        isCancelConfirmRef.current = false;
-        setIsCancelConfirm(false);
+        commitCancelConfirm(false);
       }
-    }, [bookingLinks, guestDisplayName, onClose]);
-
-    const enterCancelConfirm = useCallback(() => {
-      isCancelConfirmRef.current = true;
-      setIsCancelConfirm(true);
-    }, []);
+    }, [bookingLinks, commitCancelConfirm, guestDisplayName, onClose]);
 
     const onCancelClick = useCallback(() => {
       if (!isCancelConfirmRef.current) {
-        enterCancelConfirm();
+        commitCancelConfirm(true);
         return;
       }
       void executeCancel();
-    }, [enterCancelConfirm, executeCancel]);
+    }, [commitCancelConfirm, executeCancel]);
 
     const triggerCancelShortcut = useCallback(() => {
       if (!showBookingActions) return;
@@ -165,10 +165,9 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
 
     useEffect(() => {
       if (!showBookingActions) {
-        isCancelConfirmRef.current = false;
-        setIsCancelConfirm(false);
+        commitCancelConfirm(false);
       }
-    }, [showBookingActions]);
+    }, [commitCancelConfirm, showBookingActions]);
 
     const items: ActionItem[] = [];
     if (isExistingEvent) {
@@ -179,7 +178,7 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
         shortcut: ["Mod", "D"],
       });
     }
-    if (showBookingActions && bookingLinks) {
+    if (showBookingActions) {
       items.push({
         icon: <CalendarX size={18} />,
         label: isCancelConfirm ? "Confirm cancel" : "Cancel meeting",

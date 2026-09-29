@@ -12,6 +12,7 @@ import {
 import {
   formatBillingDate,
   formatBillingMoney,
+  formatBillingPriceLine,
   formatCardOnFile,
   formatInvoiceStatus,
 } from "@web/billing/billing-display";
@@ -169,13 +170,12 @@ export const PlanSection: FC<PlanSectionProps> = ({
     track("billing_card_update_completed");
     showStatusToast(BILLING_CARD_UPDATED_TOAST_ID, "Card updated");
     stopCardPollRef.current?.();
-    stopCardPollRef.current = startBillingStatusPoll(
-      queryClient,
-      () => {
+    stopCardPollRef.current = startBillingStatusPoll(queryClient, {
+      queryKey: billingQueryKeys.subscription,
+      onWindowEnd: () => {
         stopCardPollRef.current = null;
       },
-      billingQueryKeys.subscription,
-    );
+    });
   };
 
   return (
@@ -191,11 +191,7 @@ export const PlanSection: FC<PlanSectionProps> = ({
             </span>
             {summary?.price ? (
               <p className="mt-1 text-sm text-text">
-                {formatBillingMoney(
-                  summary.price.amount,
-                  summary.price.currency,
-                )}{" "}
-                per {summary.price.interval}
+                {formatBillingPriceLine(summary.price)}
               </p>
             ) : null}
             {summary?.currentPeriodEnd ? (
