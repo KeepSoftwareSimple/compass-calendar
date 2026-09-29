@@ -243,6 +243,9 @@ the full picture.
 ## Billing And Trial
 
 - Shared plan/price copy: `packages/core/src/constants/billing.constants.ts`
+- Signup trial step gating and charge-date copy: `apps/calendar-web/src/billing/signup-trial.util.ts`
+- Post-checkout celebration and one-time anonymous event migration: `apps/calendar-web/src/billing/complete-checkout-session.ts`
+- Signup trial step UI: `apps/calendar-web/src/components/AuthModal/forms/StartTrialStep.tsx`, `apps/calendar-web/src/components/AuthModal/hooks/useAuthFormHandlers.ts`
 - Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`, `apps/calendar-web/src/billing/BillingReadOnlyBanner.tsx`
 - Server access + paid gate: `apps/calendar-web/src/billing/useAppAccess.ts`, `apps/calendar-web/src/billing/BillingGateModal.tsx`
 - Embedded Checkout port (only `loadStripe` call) and lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`, `embedded-checkout.seam.ts`
@@ -252,6 +255,7 @@ the full picture.
 - Settings > Billing management: `apps/calendar-web/src/billing/PlanSection.tsx`
 - Trial countdown + early upgrade: `apps/calendar-web/src/billing/TrialBadge.tsx`, `apps/calendar-web/src/billing/trialDaysLeft.ts`, `apps/calendar-web/src/billing/UpgradeConfirmation/`
 - Backend billing: `packages/backend/src/billing`
+- E2E trial step: `e2e/billing/signup-trial-step.spec.ts`
 - Overview: [Billing And Trial](../features/billing.md)
 
 ## Environment And Infra

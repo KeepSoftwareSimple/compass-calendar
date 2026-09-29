@@ -44,8 +44,9 @@ Helpful storage keys:
   (`STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR`)
 
 Automated coverage: `e2e/onboarding/welcome-mouse.spec.ts`,
-`e2e/onboarding/shortcut-showcase.spec.ts`, and
-`e2e/onboarding/billing-gate-hides-prompts.spec.ts`.
+`e2e/onboarding/shortcut-showcase.spec.ts`,
+`e2e/onboarding/billing-gate-hides-prompts.spec.ts`, and
+`e2e/billing/signup-trial-step.spec.ts`.
 
 ---
 
@@ -58,7 +59,9 @@ surface that wants the screen is mounted. Lower surfaces wait their turn.
 
 Priority (highest first): billing gate, checkout celebration, welcome modal,
 Shortcut Showcase, welcome guide, connect-calendar prompt, first-event prompt,
-palette `PointerHint`.
+palette `PointerHint`. While `?auth=trial` keeps the signup trial step open,
+`RootShell` suppresses the billing gate and calendar onboarding so Checkout
+owns the screen (same app-lock behavior as the gate).
 
 ### Steps
 
@@ -96,7 +99,8 @@ not appear above or beside the gate.
 
 ### Expected Results
 
-- The **Start your 7-day trial** (or subscribe) billing dialog is visible.
+- The **Finish starting your trial** billing dialog is visible (or the
+  subscribe variant for expired/canceled accounts).
 - No welcome dialog, Block Party region, connect-calendar prompt, or
   first-event card is present.
 - `?play=1` does not open Block Party while the gate is up.
@@ -179,26 +183,35 @@ tips** / **Show shortcut tips**.
 
 ---
 
-## Scenario 6: Trial Card Banner Dismissal Persists
+## Scenario 6: Trial Step After Signup
 
 ### UX
 
-When a trialing account needs a payment method and three or fewer days remain,
-a non-blocking trial banner appears. **Dismiss** hides it for the current
-`trialEndsAt` value in local storage.
+On hosted billing, email or OAuth signup finishes with a read-only account in
+`awaiting_checkout`, then the auth modal shows the **Start your 7-day free
+trial** step: charge-date copy and embedded Checkout (`trial_period_days: 7`).
+Closing the step without paying opens **Finish starting your trial**
+(`BillingGateModal`) with **Add card** and **Look around first**. Completing
+Checkout runs anonymous event migration once billing becomes writable.
 
 ### Steps
 
-1. Sign in on an account with `subscriptionStatus: trialing`,
-   `needsPaymentMethod: true`, and `trialEndsAt` within three days (see
-   `e2e/billing/trial-card-banner.spec.ts` for mock shape).
-2. Load `/week` and confirm the trial banner status line.
-3. Click **Dismiss**.
-4. Reload `/week`.
+1. On staging (or `e2e/billing/signup-trial-step.spec.ts` mocks), sign up a
+   fresh hosted account with billing enforcement on, or open `/week?auth=trial`
+   while signed in with `awaiting_checkout`.
+2. Confirm the trial step dialog title and the sentence that the card will not
+   be charged until a date seven days out.
+3. Press Escape (or **Back**) to leave Checkout without paying.
+4. Confirm the billing gate dialog **Finish starting your trial** is visible.
+5. Optional on staging: complete Checkout with a test card, wait for the
+   celebration, and confirm writes succeed and local-only events synced.
 
 ### Expected Results
 
-- Step 2: banner visible; billing gate dialog is not open.
-- Step 3: banner hides immediately.
-- Step 4: banner stays hidden for the same `trialEndsAt`; changing the trial
-  end date in billing status may show it again.
+- Step 2: only the trial step auth dialog is a full-screen lock; calendar
+  onboarding cards stay hidden.
+- Step 4: gate copy matches **Finish starting your trial**; **Look around
+  first** returns to read-only calendar preview.
+- Step 5: status becomes `trialing` with a Stripe subscription id; anonymous
+  IndexedDB events migrate once (see `complete-checkout-session.ts`).
+- Covered by `e2e/billing/signup-trial-step.spec.ts` for steps 1 to 4.

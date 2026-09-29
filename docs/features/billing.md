@@ -82,63 +82,58 @@ production.
 
 ## What users see
 
-- **Never signed up:** fully open, forever. Anonymous visitors get the seeded
-  sample events and the whole app with no clock and no gate. There is no
-  browser-local trial: a trial is only ever asked for at the moment of
-  commitment (sign up, sign in, connect an account).
-- **Signed up, no card yet (new accounts):** read-only
-  `awaiting_checkout` until the trial step in the signup flow completes.
-  Checkout grants the 7-day Stripe trial and the webhook writes `trialing`
-  with a `stripeSubscriptionId`. **Legacy local trial (2026-09-14 through
-  WP-01 deploy):** rows inserted with `billing.subscriptionStatus: "trialing"`,
-  `trialStartedAt`, and `trialEndsAt` and no Stripe subscription id still
-  derive as writable `trialing` with `needsPaymentMethod: true` until WP-06.
-  Checkout while at least 48 hours remain on that local trial passes
-  `subscription_data.trial_end` equal to `trialEndsAt` (Stripe's minimum
-  remaining trial) and keeps
-  `trial_settings.end_behavior.missing_payment_method: "cancel"`. Checkout in
-  the last 48 hours, or after expiry, charges immediately with no trial. After
-  `trialEndsAt` the same account reports `expired` and is read-only until they
-  subscribe.
-- **Signed up, no card yet (legacy `awaiting_checkout`):** unchanged.
-  Read-only, `BillingGateModal` with Start trial. Checkout happens inside the
-  gate: Start trial (`S`) mounts Stripe embedded Checkout in the same overlay.
-  Completion raises the celebration through `onComplete`; the webhook remains
-  the source of truth and a short poll of `GET /api/billing/status` waits for
-  it. The gate also offers "Look around first" (`L`), which unmounts it and
-  drops the user onto the real calendar behind `BillingReadOnlyBanner`. That
-  preview lives in `billing-preview.store.ts` and is deliberately in-memory, so
-  a reload puts the trial ask back. Writes still fail server-side, and the
-  `BILLING_REQUIRED` branch in `useEventMutations` exits the preview, so the
-  first refused save brings the gate straight back. That refusal does not
-  show the catch-all "something went wrong" toast — the gate is the feedback.
-  Google reconnect and delayed-sync toasts also wait until Look around (or a
-  write): they must not sit on top of Start trial. These accounts have no
-  `trialStartedAt`, so Checkout still grants `trial_period_days: 7`.
-- **Trialing:** writable, with a days-left badge in the sidebar month picker
-  header (`TrialBadge.tsx`, via `DatePicker`'s `headerEndContent` slot). The
-  badge carries no `tabindex`: `getPageJumpFocusElement` seats Mod+2 on the
-  first `[tabindex="0"]` inside the picker, and a tab stop here would steal
-  that jump. Press `B` (keycap-styled in the badge tooltip and on Settings →
-  Billing) to subscribe early. That shortcut is registered by
-  `UpgradeConfirmationProvider` and keeps working while Settings is open.
-  Local (card-less) trials use Checkout rather than `POST /api/billing/trial/end`;
-  Stripe-backed trials still end via that endpoint. When a local trial has
-  three or fewer days left, `TrialCardBanner` asks the user to add a card
-  (`S`, same letter as Start trial) without locking the calendar. Dismiss
-  lasts for the tab session only. Checkout for that prompt, the trial badge,
-  and "Subscribe now" mounts in `CheckoutOverlay` so it is reachable while
-  the calendar is still writable.
+- **Anonymous (never signed up):** fully open, forever. Visitors get the seeded
+  sample events and the whole calendar with no trial clock and no billing gate.
+  There is no browser-local trial.
+- **Signup step one (account, no card):** hosted signup creates a signed-in
+  account that derives as read-only `awaiting_checkout` until Stripe Checkout
+  completes. Event writes fail server-side until then.
+- **Signup step two (trial step):** when billing is configured and enforced,
+  signup continues in the auth modal on **Start your 7-day free trial**
+  (`StartTrialStep.tsx`, `?auth=trial`). Copy states when the card will be
+  charged (seven days out). Embedded Checkout runs in the modal with
+  `trial_period_days: 7`. On `onComplete`, Compass polls
+  `GET /api/billing/status`, celebrates, and migrates anonymous IndexedDB
+  events once billing is writable (`complete-checkout-session.ts`). The
+  webhook writes `trialing` with a `stripeSubscriptionId`.
+- **Abandoned trial step:** closing the trial step without paying leaves
+  `awaiting_checkout`. `BillingGateModal` opens with **Finish starting your
+  trial**, **Add card** (`S`), and **Look around first** (`L`). Checkout in
+  the gate uses the same embedded panel. **Look around first** drops the user
+  onto the read-only calendar behind `BillingReadOnlyBanner`
+  (`billing-preview.store.ts`, in-memory). A reload or the first refused write
+  brings the gate back. Google reconnect and delayed-sync toasts wait until
+  Look around or a write so they do not cover the ask.
+- **Legacy `awaiting_checkout` (signed up before the trial step shipped):**
+  same read-only gate and Checkout behavior as abandoning the trial step; no
+  in-signup trial step on return.
+- **Trialing (Stripe subscription):** writable, with a days-left badge in the
+  sidebar month picker header (`TrialBadge.tsx`, via `DatePicker`'s
+  `headerEndContent` slot). The badge carries no `tabindex`: `getPageJumpFocusElement`
+  seats Mod+2 on the first `[tabindex="0"]` inside the picker, and a tab stop
+  here would steal that jump. Press `B` (keycap-styled in the badge tooltip
+  and on Settings → Billing) to subscribe early. That shortcut is registered
+  by `UpgradeConfirmationProvider` and keeps working while Settings is open.
+  End the trial early with `POST /api/billing/trial/end`. Checkout for the
+  badge and "Subscribe now" mounts in `CheckoutOverlay` so it stays reachable
+  while the calendar is writable.
 - **Active / past_due:** writable. `past_due` also shows a banner whose CTA
   opens Settings on Billing with Update card already mounted.
 - **Expired / canceled:** read-only until they subscribe again. A later
   Checkout does not grant another trial.
 
+**Legacy local trials (2026-09-14 to WP-01 deploy):** until WP-06 removes the
+code, rows with `billing.subscriptionStatus: "trialing"`, `trialStartedAt`, and
+`trialEndsAt` but no Stripe subscription id still derive as writable
+`trialing` with `needsPaymentMethod: true`. Checkout honors remaining local
+time via `subscription_data.trial_end` when at least 48 hours remain; inside
+the last 48 hours or after expiry, Checkout charges immediately. After
+`trialEndsAt` the account is read-only `expired`. `TrialCardBanner` still
+nudges those accounts when three or fewer days remain.
+
 There is no `POST /api/billing/trial/start`. New accounts are
 `awaiting_checkout` until Checkout completes; Checkout grants the 7-day trial.
-Legacy local-trial rows (2026-09-14 through WP-01 deploy) behave as in the
-local-trial paragraph above until WP-06. Sessions
-use `ui_mode: "embedded"` and `redirect_on_completion: "never"`, so
+Sessions use `ui_mode: "embedded"` and `redirect_on_completion: "never"`, so
 Checkout stays inside Compass. Redirect-based payment methods are therefore
 unavailable by design.
 
@@ -198,10 +193,9 @@ expire automatically. They contain only the Stripe event id and receipt time.
 Existing accounts are not grandfathered. Hosted users without a Stripe
 subscription id and without a local trial (including missing billing, `none`,
 and `trialing` rows with no `trialEndsAt`) derive as `awaiting_checkout` and
-see the Start-trial gate. A `trialing` row with a future `trialEndsAt` and no
-Stripe id is the card-less local trial: writable, `needsPaymentMethod: true`,
-then `expired` after that date. Legacy `awaiting_checkout` accounts stay
-read-only; granting them a local trial is out of scope.
+see **Finish starting your trial**. Legacy local-trial rows (see above) stay
+writable until WP-06. Legacy `awaiting_checkout` accounts stay read-only;
+granting them a local trial is out of scope.
 `bun run cli backfill-billing` stamps `awaiting_checkout` on rows that still
 lack `billing.subscriptionStatus`. The default `BACKFILL_CUTOFF` is far in
 the future so every such row is included; set it to a past instant to skip
@@ -246,8 +240,8 @@ that self-host stays writable.
 The webhook also emits server-side PostHog events keyed by the Compass user id
 (the same distinct id the web app identifies with): `checkout_completed` when
 a user completes their first subscription Checkout (from `awaiting_checkout`
-or from a card-less signup trial that is still `trialing` without a Stripe
-subscription id; on `checkout.session.completed`, retrieving the Session when
+or from a legacy local trial still `trialing` without a Stripe subscription
+id; on `checkout.session.completed`, retrieving the Session when
 Stripe omits `subscription` on the webhook payload, or on
 `customer.subscription.created` when the Checkout event never ran), and
 `checkout_expired` when one lapses
@@ -268,20 +262,25 @@ calculates zero tax rather than erroring, so a missing one is silent.
 Do this after every prior embedded-billing package is deployed. Use a real
 signed-in hosted account that is not on the bypass list.
 
-1. **Happy path:** Start trial with `4242 4242 4242 4242` (any future expiry,
-   any CVC). Checkout stays inside the gate. Celebration appears. Status
-   becomes `trialing`.
-2. **3DS:** Start trial with `4000 0025 0000 3155`. Complete 3DS inside the
-   Stripe iframe (do not leave Compass). Celebration still fires through
-   `onComplete`.
-3. **Decline:** `4000 0000 0000 9995` is rejected inside the iframe. The gate
+1. **Signup trial step:** create a fresh account. Confirm **Start your 7-day
+   free trial**, charge-date copy, and embedded Checkout in the auth modal.
+   Pay with `4242 4242 4242 4242`. Celebration appears; status becomes
+   `trialing`; anonymous events migrate.
+2. **Abandoned trial step:** sign up again (or close the trial step with
+   Escape). Confirm **Finish starting your trial**, **Add card**, and **Look
+   around first**. Complete Checkout from the gate; celebration and
+   `trialing` as in step 1.
+3. **3DS:** from the gate or trial step, use `4000 0025 0000 3155`. Complete
+   3DS inside the Stripe iframe (do not leave Compass). Celebration still
+   fires through `onComplete`.
+4. **Decline:** `4000 0000 0000 9995` is rejected inside the iframe. The ask
    stays up; no celebration; status stays `awaiting_checkout`.
-4. **Update card:** Settings > Billing, Update card (`U`). Complete a
+5. **Update card:** Settings > Billing, Update card (`U`). Complete a
    setup-mode session. Toast "Card updated". The card row shows the new last4.
-5. **Cancel then Resume:** Cancel (`C`) schedules end at period end. Resume
+6. **Cancel then Resume:** Cancel (`C`) schedules end at period end. Resume
    (`R`) restores renewal. Toasts match the dates shown on the plan row.
-6. **Receipt:** open a Receipt link. It loads a Stripe-hosted PDF in a new tab.
-7. **Setup-mode webhook:** Stripe Dashboard (or Compass `app:billing.webhook`
+7. **Receipt:** open a Receipt link. It loads a Stripe-hosted PDF in a new tab.
+8. **Setup-mode webhook:** Stripe Dashboard (or Compass `app:billing.webhook`
    logs) shows a successful `checkout.session.completed` delivery for the
    setup-mode session (`mode: "setup"`), HTTP 200, and no
    `No Compass user for setup checkout session` / `No Stripe customer for
@@ -311,9 +310,15 @@ If Link is enabled, also add `https://link.com` and `https://*.link.com` to
 - Webhook: `packages/backend/src/billing/services/billing.webhook.service.ts`
 - Write guard: `packages/backend/src/billing/billing.guard.ts`
 - Web access: `apps/calendar-web/src/billing/useAppAccess.ts`
+- Signup trial step copy and gating: `apps/calendar-web/src/billing/signup-trial.util.ts`
+- Post-checkout migration: `apps/calendar-web/src/billing/complete-checkout-session.ts`
+- Signup trial UI: `apps/calendar-web/src/components/AuthModal/forms/StartTrialStep.tsx`
+- Auth modal routing (`?auth=trial`): `apps/calendar-web/src/components/AuthModal/hooks/useAuthModal.ts`
 - Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`
+- Billing gate: `apps/calendar-web/src/billing/BillingGateModal.tsx`
 - Embedded Checkout port (the only `loadStripe` call): `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`
 - Lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.seam.ts`
 - Gate checkout store: `apps/calendar-web/src/billing/checkout-panel.store.ts`
 - Update-card store: `apps/calendar-web/src/billing/card-update.store.ts`
 - Settings > Billing management: `apps/calendar-web/src/billing/PlanSection.tsx`
+- E2E: `e2e/billing/signup-trial-step.spec.ts`
