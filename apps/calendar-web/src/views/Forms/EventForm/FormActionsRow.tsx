@@ -129,12 +129,8 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
 
     const triggerCancelShortcut = useCallback(() => {
       if (!showBookingActions) return;
-      if (!isCancelConfirmRef.current) {
-        enterCancelConfirm();
-        return;
-      }
-      void executeCancel();
-    }, [enterCancelConfirm, executeCancel, showBookingActions]);
+      onCancelClick();
+    }, [onCancelClick, showBookingActions]);
 
     const triggerRescheduleShortcut = useCallback(() => {
       if (!showBookingActions || !bookingLinks) return;
@@ -195,7 +191,7 @@ export const FormActionsRow = forwardRef<FormActionsRowHandle, Props>(
       items.push({
         icon: <ArrowsClockwise size={18} />,
         label: "Reschedule",
-        onClick: () => openExternalUrl(bookingLinks.rescheduleUrl),
+        onClick: triggerRescheduleShortcut,
         shortcut: ["Mod", "Shift", "E"],
       });
     }

@@ -23,6 +23,10 @@ import {
   eventFocusOutlineClass,
 } from "@web/grid/components/calendar-accent.util";
 import {
+  gridEventCardOpacity,
+  guestResponseAccessiblePrefix,
+} from "@web/grid/grid-event-card-chrome";
+import {
   selectEdgeForEvent,
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
@@ -105,29 +109,18 @@ const AllDayEventCardBase = (
     "--event-focus-color": focusColorCss,
     height: position.height,
     left: position.left,
-    opacity: isHidden
-      ? 0.6
-      : isPlaceholder
-        ? 0.5
-        : guestResponse === "awaiting"
-          ? 0.7
-          : guestResponse === "declined"
-            ? 0.5
-            : undefined,
+    opacity: gridEventCardOpacity({
+      isHidden,
+      isPlaceholder,
+      guestResponse,
+    }),
     top: position.top,
     width: position.width,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
     boxShadow: edgeFocusShadow,
   } as CSSProperties;
 
-  const guestResponsePrefix =
-    guestResponse === "awaiting"
-      ? "Awaiting reply: "
-      : guestResponse === "tentative"
-        ? "Tentative: "
-        : guestResponse === "declined"
-          ? "Declined: "
-          : "";
+  const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
   const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${guestResponsePrefix}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it

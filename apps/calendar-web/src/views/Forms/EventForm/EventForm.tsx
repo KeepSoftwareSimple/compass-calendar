@@ -237,10 +237,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       draft.kind === "edit" && draft.source.content.kind === "details"
         ? draft.source.content
         : undefined;
-    const bookingLinks =
-      sourceDetails?.description != null
-        ? parseBookingEventLinks(sourceDetails.description)
-        : null;
+    const bookingLinks = sourceDetails
+      ? parseBookingEventLinks(sourceDetails.description)
+      : null;
     const bookingGuestDisplayName = (() => {
       const guest = sourceDetails?.attendees?.[0];
       if (!guest) return "Guest";

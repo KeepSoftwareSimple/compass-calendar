@@ -1,7 +1,9 @@
+import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import {
   attendeeStatusByEmail,
   formatAttendeeRsvpTally,
   guestResponseForEvent,
+  guestStatusMapForHostNotice,
   statusForEmail,
 } from "@web/events/attendee-rsvp";
 import { describe, expect, it } from "bun:test";
@@ -142,5 +144,51 @@ describe("guestResponseForEvent", () => {
         "host@example.com",
       ),
     ).toBe("awaiting");
+  });
+});
+
+describe("guestStatusMapForHostNotice", () => {
+  const host = "host@example.com";
+  const guest = {
+    email: "guest@example.com",
+    displayName: "Guest",
+    responseStatus: "accepted" as const,
+  };
+
+  it("returns guest statuses when a connected account organizes the event", () => {
+    const event = createMockEvent({
+      content: {
+        kind: "details",
+        title: "Planning",
+        description: "",
+        organizer: { email: host, displayName: null },
+        attendees: [
+          {
+            email: host,
+            displayName: "Host",
+            responseStatus: "accepted",
+          },
+          guest,
+        ],
+      },
+    });
+
+    expect(guestStatusMapForHostNotice(event, [host])?.get(guest.email)).toBe(
+      "accepted",
+    );
+  });
+
+  it("returns null when no connected account organizes the event", () => {
+    const event = createMockEvent({
+      content: {
+        kind: "details",
+        title: "Planning",
+        description: "",
+        organizer: { email: "other@example.com", displayName: null },
+        attendees: [guest],
+      },
+    });
+
+    expect(guestStatusMapForHostNotice(event, [host])).toBeNull();
   });
 });

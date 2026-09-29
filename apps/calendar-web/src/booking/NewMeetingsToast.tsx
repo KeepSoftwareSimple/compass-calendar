@@ -1,6 +1,5 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
-import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import {
   type BookingNewMeetingsClaimReservation,
   type BookingNewMeetingsClaimResponse,
@@ -10,26 +9,18 @@ import {
   shouldDeferAttentionToasts,
   takePendingNewMeetings,
 } from "@web/billing/billing-gate-attention";
-import { ROOT_ROUTES } from "@web/common/constants/routes";
+import {
+  dismissToastAndOpenWeekForSlot,
+  formatHostMeetingWhen,
+} from "@web/booking/booking-host-meeting.util";
 import {
   getToastDefaultOptions,
   NEW_MEETINGS_TOAST_ID,
 } from "@web/common/constants/toast.constants";
-import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { ToastActionButton } from "@web/common/utils/toast/ToastActionButton";
 import { ToastNotice } from "@web/common/utils/toast/ToastNotice";
 import { getToast } from "@web/common/utils/toast/toast.port";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
-import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
-
-const MEETING_WHEN_FORMAT = "ddd, MMM D, h:mm A";
-
-export function formatHostMeetingWhen(
-  slotStart: string,
-  timeZone: string,
-): string {
-  return inEffectiveTimeZone(slotStart, timeZone).format(MEETING_WHEN_FORMAT);
-}
 
 function latestGuestActionSentence(
   latest: BookingNewMeetingsClaimReservation,
@@ -74,16 +65,7 @@ export function NewMeetingsToast({
   const timeZone = useEffectiveTimeZone();
 
   const handleShow = () => {
-    getToast().dismiss(toastId);
-    const dateString = inEffectiveTimeZone(latest.slotStart, timeZone).format(
-      YEAR_MONTH_DAY_FORMAT,
-    );
-    void importOrReload(() => import("@web/routers")).then(({ router }) => {
-      void router.navigate({
-        to: ROOT_ROUTES.WEEK_DATE,
-        params: { dateString },
-      });
-    });
+    dismissToastAndOpenWeekForSlot(toastId, latest.slotStart, timeZone);
   };
 
   return (

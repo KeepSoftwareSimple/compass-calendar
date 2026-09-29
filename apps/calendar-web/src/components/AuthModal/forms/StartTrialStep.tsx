@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { type FC, useEffect, useRef } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type BillingSubscriptionResponse } from "@core/types/billing.types";
 import dayjs from "@core/util/date/dayjs";
 import {
@@ -7,8 +7,8 @@ import {
   trackTrialStepViewed,
 } from "@web/auth/posthog/signup-funnel";
 import {
-  billingSubscriptionQueryOptions,
   useAppConfigQuery,
+  useBillingSubscriptionQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
@@ -50,13 +50,11 @@ type StartTrialStepProps = {
 export const StartTrialStep: FC<StartTrialStepProps> = ({ onDismiss }) => {
   const signupMethod = readSignupTrialMethod();
   const configQuery = useAppConfigQuery();
-  const trialLengthDays = configQuery.data?.billing.trialLengthDays ?? 7;
+  const trialLengthDays =
+    configQuery.data?.billing.trialLengthDays ?? BILLING_PLAN.TRIAL_LENGTH_DAYS;
   const chargeDateLabel = formatTrialChargeDate(trialLengthDays);
   const publishableKey = useStripePublishableKey();
-  const subscriptionQuery = useQuery({
-    ...billingSubscriptionQueryOptions(),
-    enabled: true,
-  });
+  const subscriptionQuery = useBillingSubscriptionQuery(true);
   const planPriceLine = formatSignupTrialPlanPrice(
     subscriptionQuery.data?.price,
   );
