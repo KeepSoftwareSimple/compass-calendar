@@ -1,7 +1,6 @@
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import {
   getDayjsByTimeValue,
-  getTimeOptionByValue,
   parseUserTime,
 } from "@web/common/utils/datetime/web.date.util";
 import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
@@ -15,63 +14,39 @@ const DIGITS_ONLY = /^\d{1,4}$/;
 export const canQuickTimeBufferGrow = (digits: string) =>
   digits.length < QUICK_TIME_MAX_DIGITS;
 
-/** True when the typed digits name 12 o'clock, not 00 (midnight). */
-const isTwelveOClockDigits = (digits: string) => {
-  const hour =
-    digits.length <= 2
-      ? Number.parseInt(digits, 10)
-      : Number.parseInt(digits.slice(0, -2), 10);
-  return hour === 12;
-};
-
 /**
  * Resolve a typed digit sequence to a start time on `targetDay`.
  *
- * The 12-hour ambiguity ("1130" at 9am vs 9pm) is settled by `parseUserTime`'s
- * meridiem inheritance: passing `now` as its current value shifts an hour in
- * 1-11 into PM when now is PM, and leaves 13-23 ("1700") and leading-zero
- * hours ("0500") alone. "12" / "1200"
- * is the exception: parseUserTime would pull those to midnight while the
- * current time is AM, but the shortcut always lands them at noon. Midnight
- * has no advertised sequence.
+ * Digits are 24-hour clock time, the notation the slot chips advertise:
+ * "1100" is 11:00, "2300" is 23:00, "12" and "1200" are noon, "0000" is
+ * midnight. Nothing is inherited from the current time, so the same keys
+ * land on the same hour whatever the clock says and whichever day is
+ * focused. (parseUserTime only infers AM/PM when handed a current value,
+ * which the event form's time field does and this shortcut does not.)
  */
 export function resolveQuickTimeStart(
   digits: string,
-  now: Dayjs,
   targetDay: Dayjs,
 ): Dayjs | null {
   if (!DIGITS_ONLY.test(digits)) return null;
 
-  const parsed = parseUserTime(digits, getTimeOptionByValue(now).value);
+  const parsed = parseUserTime(digits);
   if (!parsed) return null;
 
   const time = getDayjsByTimeValue(parsed.value);
   if (!time.isValid()) return null;
 
-  const hour =
-    time.hour() === 0 && isTwelveOClockDigits(digits) ? 12 : time.hour();
-
-  return targetDay.startOf("day").hour(hour).minute(time.minute());
+  return targetDay.startOf("day").hour(time.hour()).minute(time.minute());
 }
 
 /**
- * The sequence a slot chip advertises for `hour`, or null when no digits-only
- * sequence reaches that hour from `now`.
- *
- * Round-tripping the 24-hour form through `resolveQuickTimeStart` is what makes
- * that guarantee: an advertised chip never lands somewhere else.
+ * The sequence a slot chip advertises for `hour`. Midnight has no chip: a
+ * typed "0000" still works, but there is no useful shortcut to teach.
  */
-export function quickTimeSequenceForHour(
-  hour: number,
-  now: Dayjs,
-  targetDay: Dayjs,
-): string | null {
+export function quickTimeSequenceForHour(hour: number): string | null {
   if (hour === 0) return null;
 
-  const sequence = `${String(hour).padStart(2, "0")}00`;
-  const resolved = resolveQuickTimeStart(sequence, now, targetDay);
-
-  return resolved?.hour() === hour ? sequence : null;
+  return `${String(hour).padStart(2, "0")}00`;
 }
 
 const dayIsInView = (day: Dayjs, startOfView: Dayjs, endOfView: Dayjs) =>
@@ -148,23 +123,20 @@ export type QuickTimeSlot = {
 /**
  * One placeholder per open hour of `targetDay` except midnight, which has no
  * useful shortcut: hours already covered by an event are dropped so chips
- * never pile onto a card, and hours with no reachable sequence are dropped
- * by quickTimeSequenceForHour.
+ * never pile onto a card.
  */
 export function buildQuickTimeSlots({
   busy,
-  now,
   targetDay,
 }: {
   busy: readonly QuickTimeBusyInterval[];
-  now: Dayjs;
   targetDay: Dayjs;
 }): QuickTimeSlot[] {
   const day = targetDay.startOf("day");
   const slots: QuickTimeSlot[] = [];
 
   for (let hour = 1; hour < 24; hour += 1) {
-    const sequence = quickTimeSequenceForHour(hour, now, day);
+    const sequence = quickTimeSequenceForHour(hour);
     if (!sequence) continue;
 
     const start = day.hour(hour);

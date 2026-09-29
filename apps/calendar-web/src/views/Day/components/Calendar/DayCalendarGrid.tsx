@@ -332,14 +332,14 @@ export function DayCalendarGrid() {
   // resolveShortcutCalendarId picks. Occupancy is checked across every column,
   // so a slot busy on any calendar shows no chip; conservative, and it keeps
   // chips off cards regardless of which column they are in.
-  const quickTimeSlots = useMemo(() => {
-    const now = dayjs().tz(getEffectiveTimeZone());
-    return buildQuickTimeSlots({
-      busy: timedEventsToBusyIntervals(displayedTimedEvents),
-      now,
-      targetDay: dateInView,
-    });
-  }, [dateInView, displayedTimedEvents]);
+  const quickTimeSlots = useMemo(
+    () =>
+      buildQuickTimeSlots({
+        busy: timedEventsToBusyIntervals(displayedTimedEvents),
+        targetDay: dateInView,
+      }),
+    [dateInView, displayedTimedEvents],
+  );
 
   const quickTimeCalendarId = resolveShortcutCalendarId();
   const quickTimeColumnIndex = quickTimeCalendarId
