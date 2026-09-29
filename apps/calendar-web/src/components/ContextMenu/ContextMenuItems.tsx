@@ -130,6 +130,7 @@ export function ContextMenuItemsView({
       label: isHidden ? "Show event" : "Hide event",
       keys: [HIDE_EVENT_LETTER],
       onClick: actions.toggleHidden,
+      keyboardOnly: true,
       icon: isHidden ? (
         <Eye aria-hidden="true" size={20} />
       ) : (
@@ -234,7 +235,14 @@ export function ContextMenuItemsView({
               const index = menuActions.length + colorIndex;
               const label = eventColorLabel(slot);
               const checked = selectedColor === slot;
-              const select = () => pickColor(slot);
+              const select = (clickEvent: React.MouseEvent) => {
+                if (clickEvent.detail !== 0) {
+                  promptContextMenuKeyboardOnly("pick a color", ["E", "C"]);
+                  close();
+                  return;
+                }
+                pickColor(slot);
+              };
               const itemProps = nav
                 ? nav.getItemProps({ onClick: select })
                 : { onClick: select };
@@ -247,8 +255,8 @@ export function ContextMenuItemsView({
                     aria-label={label}
                     className={
                       slot === null
-                        ? `${colorSwatchClassName} border-border bg-bg-primary`
-                        : colorSwatchClassName
+                        ? `${colorSwatchClassName} cursor-default border-border bg-bg-primary`
+                        : `${colorSwatchClassName} cursor-default`
                     }
                     style={
                       slot === null

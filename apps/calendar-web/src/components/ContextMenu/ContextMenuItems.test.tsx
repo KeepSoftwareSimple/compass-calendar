@@ -165,7 +165,7 @@ describe("ContextMenuItems", () => {
     expect(within(deleteButton).getByTestId("delete-icon")).toBeInTheDocument();
   });
 
-  it("applies a color from the swatch strip and closes", async () => {
+  it("points a swatch click at E, C instead of changing the color", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({
       title: "Test Event",
@@ -191,8 +191,43 @@ describe("ContextMenuItems", () => {
     );
 
     await user.click(screen.getByRole("menuitemradio", { name: "Coral" }));
+    expect(setColor).not.toHaveBeenCalled();
+    expect(toastMocks.toast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        toastId: CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
+      }),
+    );
+    expect(mockClose).toHaveBeenCalled();
+  });
+
+  it("applies a color when a swatch is activated from the keyboard", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+    const setColor = mock();
+
+    const { ContextMenuItemsView } =
+      require("./ContextMenuItems") as typeof import("./ContextMenuItems");
+
+    renderWithTheme(
+      <ContextMenuItemsView
+        event={event}
+        close={mockClose}
+        actions={{
+          delete: mock(),
+          duplicate: mock(),
+          edit: mock(),
+          setColor,
+          toggleHidden: mock(),
+        }}
+      />,
+      { event },
+    );
+
+    const coral = screen.getByRole("menuitemradio", { name: "Coral" });
+    fireEvent.click(coral, { detail: 0 });
     expect(setColor).toHaveBeenCalledWith("coral");
     expect(mockClose).toHaveBeenCalled();
+    expect(toastMocks.toast).not.toHaveBeenCalled();
   });
 
   it("picks a color by digit from the swatch strip and closes", () => {
@@ -490,10 +525,13 @@ describe("ContextMenuItems read-only gate", () => {
 
 describe("ContextMenuItems hide event", () => {
   const mockToggleHidden = mock();
+  const { port: toastPort, mocks: hideToastMocks } = createTestToastPort();
 
   beforeEach(() => {
     mockClose.mockClear();
     mockToggleHidden.mockClear();
+    registerToastPort(toastPort);
+    hideToastMocks.toast.mockClear();
     useDraftStore.setState({ gridDraft: null, status: null });
   });
 
@@ -551,14 +589,31 @@ describe("ContextMenuItems hide event", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("toggles hidden state from the item click and from x, then closes", async () => {
+  it("points Hide at x on a pointer click and keeps the event visible", async () => {
     const user = userEvent.setup();
     const event = createMockGridEvent({ title: "Test Event" });
     renderView(event);
 
     await user.click(screen.getByRole("menuitem", { name: "Hide event" }));
+    expect(mockToggleHidden).not.toHaveBeenCalled();
+    expect(hideToastMocks.toast).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        toastId: CONTEXT_MENU_KEYBOARD_ONLY_TOAST_ID,
+      }),
+    );
+    expect(mockClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides from Enter on the Hide item and from x, then closes", () => {
+    const event = createMockGridEvent({ title: "Test Event" });
+    renderView(event);
+
+    const hideButton = screen.getByRole("menuitem", { name: "Hide event" });
+    fireEvent.click(hideButton, { detail: 0 });
     expect(mockToggleHidden).toHaveBeenCalledTimes(1);
     expect(mockClose).toHaveBeenCalledTimes(1);
+    expect(hideToastMocks.toast).not.toHaveBeenCalled();
 
     mockToggleHidden.mockClear();
     mockClose.mockClear();
@@ -571,8 +626,7 @@ describe("ContextMenuItems hide event", () => {
     expect(mockClose).toHaveBeenCalledTimes(1);
   });
 
-  it("discards the grid draft when hiding from the item click", async () => {
-    const user = userEvent.setup();
+  it("discards the grid draft when hiding from Enter on Hide", () => {
     const event = createMockGridEvent({ title: "Test Event" });
     seedGridDraftForEvent(event);
     expect(useDraftStore.getState().gridDraft).not.toBeNull();
@@ -581,7 +635,9 @@ describe("ContextMenuItems hide event", () => {
       event,
     });
 
-    await user.click(screen.getByRole("menuitem", { name: "Hide event" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Hide event" }), {
+      detail: 0,
+    });
     expect(useDraftStore.getState().gridDraft).toBeNull();
     expect(mockClose).toHaveBeenCalled();
   });
