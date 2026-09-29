@@ -172,7 +172,7 @@ function generateDemoData() {
     }),
     createEventRecord({
       title: "Try Compass",
-      description: `Welcome! Compass is keyboard-only: clicks won't do the work, but each one shows you the key that will. Press C to create an event, or type a time like 1130 to create one at 11:30. Press ? for every shortcut. Ready to sync your calendar? Sign up from the command palette (${KEYMAP.commandPalette.keycaps.join("+")}).`,
+      description: `Welcome! Compass is keyboard-only: press C to create an event, type a time like 1130 to create one at 11:30, hold Mod to see where you can jump, and press ? for every shortcut. Ready to sync your calendar? Sign up from the command palette (${KEYMAP.commandPalette.keycaps.join("+")}).`,
       schedule: {
         kind: "timed",
         start: todayAt(10, 0),

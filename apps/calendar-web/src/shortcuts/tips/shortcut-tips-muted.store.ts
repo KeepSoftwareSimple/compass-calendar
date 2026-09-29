@@ -18,6 +18,10 @@ export function setTipsMuted(muted: boolean): void {
   mutedStore.set(muted);
 }
 
+export function readTipsMuted(): boolean {
+  return mutedStore.get();
+}
+
 /** Test-only: resyncs the in-memory store from storage. */
 export function resetShortcutTipsMutedStoreForTests(): void {
   mutedStore.refresh();
