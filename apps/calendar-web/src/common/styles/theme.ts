@@ -39,13 +39,18 @@ export const theme = {
   // Return whichever text token actually has the higher contrast against the
   // background. A brightness threshold misfires on mid-tone fills, where the
   // "lighter" side is still too dark for light text (and vice versa).
-  getContrastText: (backgroundColor: string): string => {
+  // A gradient passes every stop; the winner is the token whose WORST stop
+  // reads best. Two stops at opposite extremes (near-white and near-black)
+  // leave no token readable on both, and that is left as is.
+  getContrastText: (backgroundColor: string | string[]): string => {
     const { light, dark } =
       CONTRAST_TEXT_CANDIDATES[useThemeStore.getState().theme];
-    return readability(dark, backgroundColor) >=
-      readability(light, backgroundColor)
-      ? dark
-      : light;
+    const stops = Array.isArray(backgroundColor)
+      ? backgroundColor
+      : [backgroundColor];
+    const worst = (text: string) =>
+      Math.min(...stops.map((stop) => readability(text, stop)));
+    return worst(dark) >= worst(light) ? dark : light;
   },
   transition: {
     default: "0.3s",

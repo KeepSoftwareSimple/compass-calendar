@@ -20,6 +20,19 @@ function correlationKey(icalUid: string): string {
 }
 
 /**
+ * Schedule part of the group key. Timed copies compare by instant: sync
+ * formats each copy's start/end in that copy's own zone, so the same meeting
+ * can arrive as `15:00+00:00` on one calendar and `17:00+02:00` on another.
+ * All-day copies compare by date string, prefixed by kind so a timed and an
+ * all-day copy never share a key.
+ */
+function scheduleKey(schedule: Event["schedule"]): string {
+  const { kind, start, end } = schedule;
+  if (kind === "allDay") return `allDay ${start} ${end}`;
+  return `timed ${Date.parse(start)} ${Date.parse(end)}`;
+}
+
+/**
  * How a dropped copy is named in the surviving card's accessible label: the
  * account it lives on when that is a different account, else its calendar
  * name. Naming the account for a same-account copy would say nothing ("also
@@ -78,8 +91,7 @@ export function mergeDuplicateCopies(
       ? calendarsById.get(event.calendarId)
       : undefined;
     if (!calendar) continue;
-    const { start, end } = event.schedule;
-    const groupKey = `${correlationKey(event.icalUid)} ${start} ${end}`;
+    const groupKey = `${correlationKey(event.icalUid)} ${scheduleKey(event.schedule)}`;
     const copy: Copy = { id, event, calendar };
     const group = groups.get(groupKey);
     if (group) group.push(copy);

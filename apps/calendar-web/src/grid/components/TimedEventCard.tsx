@@ -21,9 +21,11 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
+  calendarGradient,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  mergedCalendarStops,
 } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -141,10 +143,7 @@ const TimedEventCardBase = (
     [position.height, showTimeLabel],
   );
 
-  const { base: baseColor, hover: hoverColor } = useEventPalette(
-    event.color,
-    event.colorHex,
-  );
+  const { base: baseColor } = useEventPalette(event.color, event.colorHex);
   // Draft fills use the same base as saved cards so the Week overlay matches
   // the form/context-menu swatch (and the eventual save). Draft vs saved is
   // carried by a light drop-shadow below — enough lift to read as a draft
@@ -154,9 +153,26 @@ const TimedEventCardBase = (
   // the paper (brighten 14 keeps light text >= 4.5:1 and stays clearly apart
   // from the brighten-10 hover fill). A `brightness()` filter can't do either
   // safely — it scales the title text along with the fill.
-  const pastColor = isDark(baseColor)
-    ? brighten(baseColor, 14)
-    : darken(baseColor, 5);
+  const adjustFill = (fill: string) => {
+    if (isDraft) return fill;
+    if (isResizing || isDragging) return brighten(fill);
+    if (isInPast) return isDark(fill) ? brighten(fill, 14) : darken(fill, 5);
+    return fill;
+  };
+  // isInPast is excluded here (falls through to adjustFill, i.e. the dimmed
+  // fill) so a past event stays dimmed on hover instead of snapping to full
+  // brightness. brighten(fill) is the palette's own hover step.
+  const adjustHover = (fill: string) =>
+    !isDraft && !isPlaceholder && !isResizing && !isInPast
+      ? brighten(fill)
+      : adjustFill(fill);
+  // A merged card paints its source calendars' colors instead of the event
+  // fill: calendar identity is the point of the gradient, so the event's
+  // color slot is ignored there.
+  const mergedStops = calendarIdentity
+    ? mergedCalendarStops(calendarIdentity)
+    : null;
+  const fillStops = (mergedStops ?? [baseColor]).map(adjustFill);
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
@@ -170,31 +186,29 @@ const TimedEventCardBase = (
     ? eventEdgeFocusShadow(focusedEdge, "vertical", focusColorCss)
     : undefined;
 
-  const bgColor = (() => {
-    if (isDraft) return baseColor;
-    if (isResizing || isDragging) return brighten(baseColor);
-    if (isInPast) return pastColor;
-    return baseColor;
-  })();
+  // The flat fill, or the first gradient stop so the flat class underneath a
+  // merged card's gradient is never a stale neutral.
+  const fillBase = mergedStops?.[0] ?? baseColor;
+  const bgColor = adjustFill(fillBase);
+  const hoverBgColor = adjustHover(fillBase);
   const eventBoxShadow =
     [isSelected ? selectedBoxShadow : null, boxShadow, edgeFocusShadow]
       .filter(Boolean)
       .join(", ") || undefined;
 
-  // isInPast is excluded here (falls through to bgColor, i.e. pastColor) so
-  // a past event stays dimmed on hover instead of snapping to full brightness.
-  const hoverBgColor =
-    !isDraft && !isPlaceholder && !isResizing && !isInPast
-      ? hoverColor
-      : bgColor;
   // The fill is neutral and its lightness swings widely across states, so the
-  // text color is chosen per-state (whichever of dark/light reads better) and
-  // set on the content wrapper so the title and time label share it.
-  const contentColor = theme.getContrastText(bgColor);
+  // text color is chosen per-state (whichever of dark/light reads better
+  // across every stop) and set on the content wrapper so the title and time
+  // label share it.
+  const contentColor = theme.getContrastText(fillStops);
 
   const eventStyle = {
     "--event-bg": bgColor,
     "--event-hover-bg": hoverBgColor,
+    ...(mergedStops && {
+      "--event-bg-image": calendarGradient(fillStops),
+      "--event-hover-bg-image": calendarGradient(mergedStops.map(adjustHover)),
+    }),
     "--event-focus-color": focusColorCss,
     height: position.height || 0,
     left: position.left,
@@ -248,7 +262,8 @@ const TimedEventCardBase = (
   const samplePrefix = event.isDemo ? "Sample " : "";
   const hiddenPrefix = isHidden ? "Hidden " : "";
   const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
-  // Fill stays a flat neutral color; the accent + this suffix are the only
+  // Fill stays a flat neutral color except on a merged card, whose gradient
+  // paints its calendars; the accent or gradient + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
   const edgeFocusSuffix =
@@ -277,6 +292,8 @@ const TimedEventCardBase = (
         "absolute min-h-2.5 overflow-hidden pr-0.75 pl-1.25 transition-[background-color,filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
         isHidden ? "rounded-full" : "rounded-xs",
         "bg-(--event-bg) hover:bg-(--event-hover-bg)",
+        mergedStops &&
+          "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
         eventFocusOutlineClass(focusedEdge),
         (event.isDemo ||
           guestResponse === "awaiting" ||
@@ -303,7 +320,7 @@ const TimedEventCardBase = (
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {!isHidden && calendarIdentity && (
+      {!isHidden && calendarIdentity && !mergedStops && (
         <div
           aria-hidden="true"
           className="absolute inset-y-0 left-0 w-[3px]"

@@ -174,9 +174,12 @@ async function setupCrossProviderDuplicatesPage(page: Page) {
   ];
 
   const events = [
-    buildEvent(GOOGLE_EVENT_ID, GOOGLE_CALENDAR_ID, SHARED_ICAL_UID, 10),
-    buildEvent(MICROSOFT_EVENT_ID, MICROSOFT_CALENDAR_ID, SHARED_ICAL_UID, 10),
-    buildEvent(APPLE_EVENT_ID, APPLE_CALENDAR_ID, SHARED_ICAL_UID, 10),
+    // 23:00 so the hour-long copies end at midnight and are never in the
+    // past when the spec runs: a past card dims every gradient stop, which
+    // would move the exact colors asserted below.
+    buildEvent(GOOGLE_EVENT_ID, GOOGLE_CALENDAR_ID, SHARED_ICAL_UID, 23),
+    buildEvent(MICROSOFT_EVENT_ID, MICROSOFT_CALENDAR_ID, SHARED_ICAL_UID, 23),
+    buildEvent(APPLE_EVENT_ID, APPLE_CALENDAR_ID, SHARED_ICAL_UID, 23),
   ];
 
   await page.addInitScript(() => {
@@ -273,13 +276,12 @@ test("merges the same invite on google, microsoft, and apple into one card with 
   expect(accessibleName).toMatch(/also on user@outlook\.com/);
   expect(accessibleName).toMatch(/Work calendar/);
 
-  const gradient = await card.evaluate((node) => {
-    const accent = node.querySelector(
-      "[aria-hidden='true']",
-    ) as HTMLElement | null;
-    return accent?.style.backgroundImage ?? "";
-  });
+  // The whole card is the gradient: no separate accent strip on a merged card.
+  const gradient = await card.evaluate((node) =>
+    (node as HTMLElement).style.getPropertyValue("--event-bg-image"),
+  );
+  // A custom property keeps the raw stops, so match the hex the fixture set.
   expect(gradient).toContain("linear-gradient");
-  expect(gradient).toMatch(/66,\s*133,\s*244/);
-  expect(gradient).toMatch(/0,\s*120,\s*212/);
+  expect(gradient).toMatch(/#4285f4/i);
+  expect(gradient).toMatch(/#0078d4/i);
 });
