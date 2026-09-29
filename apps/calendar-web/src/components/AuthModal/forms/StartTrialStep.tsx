@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type FC, useEffect, useRef } from "react";
+import { type BillingSubscriptionResponse } from "@core/types/billing.types";
+import dayjs from "@core/util/date/dayjs";
 import {
   trackTrialStepAbandoned,
   trackTrialStepViewed,
@@ -9,16 +11,31 @@ import {
   useAppConfigQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
+import { formatBillingMoney } from "@web/billing/billing-display";
 import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import {
   EMBEDDED_CHECKOUT_PANEL_CLASSNAME,
   EmbeddedCheckoutPanel,
 } from "@web/billing/EmbeddedCheckoutPanel";
-import {
-  formatSignupTrialPlanPrice,
-  formatTrialChargeDate,
-  readSignupTrialMethod,
-} from "@web/billing/signup-trial.util";
+import { readSignupTrialMethod } from "@web/billing/signup-trial.util";
+
+type BillingPrice = NonNullable<BillingSubscriptionResponse["price"]>;
+
+/** Charge date copy: "Monday, September 29" from trial length and a reference instant. */
+export function formatTrialChargeDate(
+  trialLengthDays: number,
+  now: dayjs.Dayjs = dayjs(),
+): string {
+  return now.add(trialLengthDays, "day").format("dddd, MMMM D");
+}
+
+/** Same shape as Settings > Billing plan price line. */
+export function formatSignupTrialPlanPrice(
+  price: BillingPrice | null | undefined,
+): string | null {
+  if (!price) return null;
+  return `${formatBillingMoney(price.amount, price.currency)} per ${price.interval}`;
+}
 
 type StartTrialStepProps = {
   onDismiss: () => void;
@@ -77,6 +94,7 @@ export const StartTrialStep: FC<StartTrialStepProps> = ({ onDismiss }) => {
       {publishableKey ? (
         <EmbeddedCheckoutPanel
           onBack={handleDismiss}
+          onCheckoutComplete={onDismiss}
           publishableKey={publishableKey}
         />
       ) : (

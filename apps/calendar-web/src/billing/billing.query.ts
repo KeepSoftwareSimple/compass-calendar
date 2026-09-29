@@ -7,6 +7,7 @@ import {
   type BillingStatusResponse,
   type BillingSubscriptionResponse,
 } from "@core/types/billing.types";
+import { type AppConfig } from "@core/types/config.types";
 import { AppConfigApi } from "@web/api/app-config.api";
 import { BillingApi } from "@web/api/billing.api";
 
@@ -76,6 +77,13 @@ export function isBillingEnforced(
   config: { billing: { enforcement: boolean } } | undefined,
 ): boolean {
   return config?.billing.enforcement === true;
+}
+
+/** Hosted signup shows the in-modal trial step when billing is on and enforced. */
+export function shouldOfferSignupTrialStep(
+  config: AppConfig | undefined,
+): boolean {
+  return config?.billing.isConfigured === true && isBillingEnforced(config);
 }
 
 const STATUS_POLL_MS = 1500;

@@ -1,9 +1,9 @@
 import dayjs from "@core/util/date/dayjs";
+import { shouldOfferSignupTrialStep } from "@web/billing/billing.query";
 import {
   formatSignupTrialPlanPrice,
   formatTrialChargeDate,
-  shouldOfferSignupTrialStep,
-} from "@web/billing/signup-trial.util";
+} from "@web/components/AuthModal/forms/StartTrialStep";
 import { describe, expect, it } from "bun:test";
 
 describe("shouldOfferSignupTrialStep", () => {
