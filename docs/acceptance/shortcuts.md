@@ -377,34 +377,32 @@ The sidebar month picker is a keyboard cursor, not a click target. `I` (or hold 
 
 ---
 
-## Scenario 13: The Mouse Teaches the Keyboard
+## Scenario 13: Mouse and Keyboard Today
 
 ### UX
 
-Compass is the keyboard calendar. Clicks are not blocked (text selection, copy buttons, and native buttons work), but the calendar itself does not respond to the mouse: event cards and empty grid slots have no click handlers. Every click teaches instead of failing silently. A click on a dead target shows a transient top-center hint with the exact keyboard path and arms it: clicking an event turns on jump mode, focuses that event, and names its token, so the token plus Enter opens it without first pressing `H`; clicking an empty grid slot names the HHMM digits that create an event there. A click on a working control that carries a shortcut performs the action and shows "Next time, press ..." so the key is learned without a failed click. The X on the hint turns tips off for that browser; the armed paths keep working with tips off. The hint tone is never a reprimand: it names the key, not the mistake.
+Compass is the keyboard calendar. Clicks are not blocked (text selection, copy buttons, and native buttons work), but the week grid itself is inert: empty slots, the all-day row, drag, and resize do nothing. Event cards have no click handler; a click only native-focuses the card so Enter or Space can open it from the keyboard. Header, sidebar, view switcher, and other chrome controls still work with the mouse. Hover on many chrome buttons shows a bare keycap in a tooltip; that is not a teaching hint.
 
-`/life` is the exception: it is a public lead magnet, so the hint is off there. Phone sessions are also exempt: MobileGate opts out of the hint so Copy and Waitlist tap normally.
+Right-click **Edit**, **Duplicate**, and **Delete** in the event context menu refuse a real mouse click with a "Keyboard only, press …" toast. **Hide** and the color swatches in the same menu still run on click.
+
+The command palette shows a "Next time, press …" pill after a row with a shortcut is chosen, unless shortcut tips are muted (`compass.shortcuts.tips-muted`) or the user dismissed keyboard tips from the pill's X. Chrome mouse clicks do not show that pill yet.
 
 ### Steps
 
 1. Navigate to `/week` with at least one event visible.
-2. Click an event, note its contextual event token, and press Enter.
-3. Click an empty timed-grid slot, note the digits, and type them.
-4. Click the sidebar toggle in the header.
-5. Click the X on a hint, then click an event again.
-6. Tab to any native button and press Enter.
+2. Click an event card, then press Enter to open it.
+3. Right-click an event and choose **Edit** with the mouse.
+4. Open the command palette, run **Create event**, and note the pill.
+5. Mute shortcut tips from the sidebar tip or palette, run **Create event** again.
 
 ### Expected Results
 
-- Clicking an event does not open it, but jump chips appear, the event is focused, and the hint says `Press <token>, then Enter to open this event.`; Enter alone opens it.
-- Clicking an empty timed-grid slot does not open a draft; the hint shows the matching HHMM digits (`1200`, `1830`) and typing those digits creates an event at that time.
-- Clicking the all-day row teaches `Shift+C`.
-- Clicking the sidebar toggle toggles the sidebar and the hint says `Next time, press ]`.
-- Clicking the view switcher opens it and the hint says `Next time, press W, D, or L to switch views.`
-- Unannotated controls that look clickable get `Compass works from the keyboard. Press ? to see every shortcut.`; clicking whitespace shows nothing.
-- After the X, no hint appears, but clicking an event still focuses it and Enter still opens it.
-- Keyboard shortcuts and Enter/Space activation of buttons continue to work.
-- `F` focuses the newest action toast or banner; Tab moves within it, Escape dismisses.
+- Clicking an event does not open it; the card receives focus and Enter opens the event.
+- Clicking empty grid space does nothing.
+- Context-menu **Edit**, **Duplicate**, and **Delete** show the keyboard-only toast on mouse click; **Hide** and colors still work.
+- After step 4, a top-center "Next time, press C" pill appears unless tips were already muted.
+- After step 5, no palette pill appears.
+- Keyboard shortcuts and Enter/Space on focused controls continue to work.
 
 ---
 

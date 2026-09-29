@@ -378,14 +378,6 @@ The web app currently uses two styling systems in parallel:
 
 Use the existing `c-*` component utility convention and semantic colors from `apps/calendar-web/src/index.css`. Runtime theme values belong in `--compass-*` CSS variables so alternate themes can override values without rebuilding component styles.
 
-## Week Grid Drag Interaction
-
-Dragging a saved event on the week/day calendar grid resolves the target day
-from a layout cache built at drag start, not from the event's own date
-arithmetic. See [Week Drag Interaction](./week-drag-interaction.md) for the
-coordinate model and why it matters once the week view can render fewer than
-7 days.
-
 ## Repository Selection
 
 File:
