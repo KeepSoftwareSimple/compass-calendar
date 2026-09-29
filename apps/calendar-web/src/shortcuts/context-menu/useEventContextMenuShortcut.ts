@@ -1,5 +1,5 @@
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
-import { markKeyboardContextMenuDispatch } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import { markKeyboardContextMenuDispatch } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
 export const EVENT_MENU_LETTER = "m";

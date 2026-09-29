@@ -1,12 +1,8 @@
-import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
-import { track } from "@web/auth/posthog/track";
-import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   INTENT_TEACHING,
   type IntentMessageContext,
   type PointerIntent,
   type ShortcutKeysLookup,
-  shouldTeachPointerIntent,
   teachingKeysForIntent,
 } from "@web/shortcuts/pointer-intent/pointer-intent";
 import {
@@ -14,6 +10,7 @@ import {
   markPointerIntentHintShown,
   recordPointerIntentDetection,
 } from "@web/shortcuts/pointer-intent/pointer-intent.session";
+import { shouldTeachPointerIntent } from "@web/shortcuts/pointer-intent/pointer-intent.teach-policy";
 import { viewFromPathname } from "@web/shortcuts/tips/shortcut-telemetry";
 
 export type NotifyPointerIntentOptions = {
@@ -50,25 +47,45 @@ export const pointerIntentActions = {
     const keysLookup = resolveLookup(lookup);
     recordPointerIntentDetection(intent);
     const view = viewForTelemetry(pathname);
-    getPosthogClient()?.capture("pointer_intent_detected", { intent, view });
 
-    const session = getPointerIntentSessionSnapshot();
-    if (!shouldTeachPointerIntent({ intent, session })) return;
+    void import("@web/auth/posthog/posthog.bootstrap").then(
+      ({ getPosthogClient }) => {
+        getPosthogClient()?.capture("pointer_intent_detected", { intent, view });
+      },
+    );
 
-    const teaching = INTENT_TEACHING[intent];
-    const keys = teachingKeysForIntent(intent, keysLookup);
-    const shortcutKey = keys[0] ?? [];
+    void import("@web/shortcuts/keyboard-only/pointer-hint.store").then(
+      ({
+        pointerHintActions,
+        selectPointerHintVisible,
+        usePointerHintStore,
+      }) => {
+        const session = getPointerIntentSessionSnapshot();
+        const pillVisible = selectPointerHintVisible(
+          usePointerHintStore.getState(),
+        );
+        if (!shouldTeachPointerIntent({ intent, session, pillVisible })) {
+          return;
+        }
 
-    pointerHintActions.pulse({
-      source: "pointer",
-      shortcutKey,
-    });
-    markPointerIntentHintShown(intent);
-    track("pointer_hint_shown", {
-      intent,
-      shortcut_id: teaching.shortcutIds[0],
-      view,
-      source: "pointer",
-    });
+        const teaching = INTENT_TEACHING[intent];
+        const keys = teachingKeysForIntent(intent, keysLookup);
+        const shortcutKey = keys[0] ?? [];
+
+        pointerHintActions.pulse({
+          source: "pointer",
+          shortcutKey,
+        });
+        markPointerIntentHintShown(intent);
+        void import("@web/auth/posthog/track").then(({ track }) => {
+          track("pointer_hint_shown", {
+            intent,
+            shortcut_id: teaching.shortcutIds[0],
+            view,
+            source: "pointer",
+          });
+        });
+      },
+    );
   },
 };

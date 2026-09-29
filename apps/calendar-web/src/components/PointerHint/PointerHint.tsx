@@ -36,13 +36,13 @@ export const PointerHint: FC = () => {
       <IconButton
         aria-label="Turn off keyboard tips"
         className="shrink-0 opacity-70 hover:opacity-100"
-        type="button"
         onClick={() => {
           writePointerHintDismissedPermanently();
           track("pointer_hint_dismissed");
           pointerHintActions.hide();
         }}
         size="small"
+        type="button"
       >
         <X size={16} />
       </IconButton>

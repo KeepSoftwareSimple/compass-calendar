@@ -1,13 +1,4 @@
-import { isAppLocked } from "@web/shortcuts/app-lock";
-import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
-import {
-  selectPointerHintVisible,
-  usePointerHintStore,
-} from "@web/shortcuts/keyboard-only/pointer-hint.store";
-import { type PointerIntentSessionSnapshot } from "@web/shortcuts/pointer-intent/pointer-intent.session";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
-import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { readTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 
 export type PointerIntent =
   | "card-click"
@@ -63,38 +54,6 @@ export const INTENT_TEACHING: Record<PointerIntent, IntentTeaching> = {
     message: () => "Next time, press {0}.",
   },
 };
-
-export type ShouldTeachPointerIntentInput = {
-  intent: PointerIntent;
-  session: PointerIntentSessionSnapshot;
-  tipsMuted?: boolean;
-  tipsDismissedPermanently?: boolean;
-  appLocked?: boolean;
-  pillVisible?: boolean;
-  usageProfile?: ReturnType<typeof readShortcutUsageProfile>;
-};
-
-export function shouldTeachPointerIntent({
-  intent,
-  session,
-  tipsMuted = readTipsMuted(),
-  tipsDismissedPermanently = readPointerHintDismissedPermanently(),
-  appLocked = isAppLocked(),
-  pillVisible = selectPointerHintVisible(usePointerHintStore.getState()),
-  usageProfile = readShortcutUsageProfile(),
-}: ShouldTeachPointerIntentInput): boolean {
-  if (tipsMuted || tipsDismissedPermanently || appLocked || pillVisible) {
-    return false;
-  }
-  if (session.shownIntents.has(intent)) return false;
-  if (session.hintsShownThisSession >= MAX_POINTER_HINTS_PER_SESSION) {
-    return false;
-  }
-  const retirementId = INTENT_TEACHING[intent].shortcutIds[0];
-  const usage = usageProfile.shortcuts[retirementId];
-  if (usage && usage.invocations > 0) return false;
-  return true;
-}
 
 export type ShortcutKeysLookup = (
   shortcutId: ShortcutRegistryId,
