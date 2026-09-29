@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useSearch } from "@tanstack/react-router";
-import { useContext, useEffect, useMemo } from "react";
+import { useCallback, useContext, useEffect, useMemo } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
 import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
@@ -73,6 +73,11 @@ import {
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { useFocusNoticeShortcut } from "@web/shortcuts/notice-focus/useFocusNoticeShortcut";
+import { usePointerIntentTracker } from "@web/shortcuts/pointer-intent/usePointerIntentTracker";
+import {
+  SHORTCUTS_REGISTRY,
+  type ShortcutRegistryId,
+} from "@web/shortcuts/shortcuts.registry";
 import {
   useCalendarShellShortcuts,
   useNavigationShortcuts,
@@ -131,6 +136,18 @@ export function RootShell() {
   useGuestRsvpNotice();
   useGuestMeetingSetupEntry();
   useGuestMeetingSetupResume();
+
+  const pointerIntentKeysLookup = useCallback(
+    (shortcutId: ShortcutRegistryId) => {
+      const row = SHORTCUTS_REGISTRY.find((entry) => entry.id === shortcutId);
+      return row?.keys;
+    },
+    [],
+  );
+  usePointerIntentTracker({
+    enabled: !isLifeView && !isMobile,
+    lookup: pointerIntentKeysLookup,
+  });
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

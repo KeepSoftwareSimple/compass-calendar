@@ -3,6 +3,7 @@ import { type FC } from "react";
 import { track } from "@web/auth/posthog/track";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import IconButton from "@web/components/IconButton/IconButton";
+import { PointerHintMessage } from "@web/components/PointerHint/PointerHintMessage";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { writePointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
@@ -13,14 +14,23 @@ import {
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 
 /**
- * "Next time, press X" teaching after a command palette selection with a
- * shortcut. Top-center to stay clear of the Up Next banner's bottom-center spot.
+ * Keyboard teaching after a command palette selection or a pointer intent on
+ * the grid. Top-center to stay clear of the Up Next banner's bottom-center spot.
  */
 export const PointerHint: FC = () => {
   const isVisible = usePointerHintStore(selectPointerHintVisible);
   const attempt = usePointerHintStore(selectPointerHintAttempt);
 
   if (!isVisible || !attempt?.shortcutKey) return null;
+
+  const body =
+    attempt.source === "pointer" && attempt.message && attempt.keys ? (
+      <PointerHintMessage keys={attempt.keys} message={attempt.message} />
+    ) : (
+      <>
+        Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
+      </>
+    );
 
   return (
     <div
@@ -30,9 +40,7 @@ export const PointerHint: FC = () => {
       role="status"
       style={{ zIndex: Z_INDEX_TOOLTIP }}
     >
-      <span className="min-w-0 flex-1">
-        Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
-      </span>
+      <span className="min-w-0 flex-1">{body}</span>
       <IconButton
         aria-label="Turn off keyboard tips"
         className="shrink-0 opacity-70 hover:opacity-100"

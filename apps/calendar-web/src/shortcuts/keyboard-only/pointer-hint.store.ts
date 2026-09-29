@@ -10,7 +10,7 @@ let hideTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 export type PointerHintAttempt = {
   shortcutKey: string | string[];
   source: "palette" | "pointer";
-  /** Pointer-intent copy with placeholders resolved to keycaps in the UI. */
+  /** Pointer-intent copy with `{0}` placeholders resolved to keycaps in the UI. */
   message?: string;
   keys?: string[][];
 };

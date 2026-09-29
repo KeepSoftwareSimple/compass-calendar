@@ -65,6 +65,7 @@ export type ProductEvent =
   | "shortcut_unavailable_attempt"
   | "shortcut_level_up"
   | "shortcut_level_badge_toggled"
+  | "pointer_intent_detected"
   | "pointer_hint_shown"
   | "pointer_hint_dismissed"
   | "booking_settings_opened"

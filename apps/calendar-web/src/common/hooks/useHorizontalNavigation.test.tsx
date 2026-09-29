@@ -1,7 +1,13 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { type FC, useRef } from "react";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as trackModule from "@web/auth/posthog/track";
 import { useHorizontalNavigation } from "@web/common/hooks/useHorizontalNavigation";
-import { describe, expect, it, mock } from "bun:test";
+import { registerPointerIntentKeysLookup } from "@web/shortcuts/pointer-intent/pointer-intent.actions";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
+
+const track = mock();
+mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
 
 const Harness: FC<{
   onNext: () => void;
@@ -14,6 +20,21 @@ const Harness: FC<{
 };
 
 describe("useHorizontalNavigation", () => {
+  beforeEach(() => {
+    track.mockClear();
+    registerPointerIntentKeysLookup(() => ["K"]);
+  });
+
+  it("notifies the pointer intent tracker when navigation runs", () => {
+    render(<Harness onNext={mock()} onPrevious={mock()} />);
+    const calendar = screen.getByRole("region", { name: "Calendar" });
+    fireEvent.wheel(calendar, { deltaX: 70, deltaY: 0 });
+    expect(track).toHaveBeenCalledWith(
+      "pointer_intent_detected",
+      expect.objectContaining({ intent: "swipe-next" }),
+    );
+  });
+
   it("navigates once when a horizontal gesture crosses the threshold", () => {
     const onNext = mock();
     render(<Harness onNext={onNext} onPrevious={mock()} />);

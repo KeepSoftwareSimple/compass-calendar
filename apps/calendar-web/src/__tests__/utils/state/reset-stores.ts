@@ -79,6 +79,8 @@ import {
   initialPageJumpHintState,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
+import { resetPointerIntentKeysLookupForTests } from "@web/shortcuts/pointer-intent/pointer-intent.actions";
+import { resetPointerIntentSessionForTests } from "@web/shortcuts/pointer-intent/pointer-intent.session";
 import {
   initialEventJumpState,
   useEventJumpStore,
@@ -141,6 +143,8 @@ const storeResets: StoreReset[] = [
   resetShortcutTelemetryForTests,
   resetShortcutUsageProfileStoreForTests,
   resetShortcutLevelHiddenStoreForTests,
+  resetPointerIntentSessionForTests,
+  resetPointerIntentKeysLookupForTests,
 ];
 
 export function resetAllStores() {
