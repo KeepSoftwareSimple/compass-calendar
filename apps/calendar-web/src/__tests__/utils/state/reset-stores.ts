@@ -63,6 +63,7 @@ import {
   useSettingsStore,
 } from "@web/settings/settings.store";
 import { useThemeStore } from "@web/settings/theme/theme.store";
+import { resetContextMenuPointerHintForTests } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import {
   initialEditSequenceState,
   useEditSequenceStore,
@@ -123,6 +124,7 @@ const storeResets: StoreReset[] = [
     useWelcomeGuideStore.setState(useWelcomeGuideStore.getInitialState(), true),
   () => useThemeStore.setState(useThemeStore.getInitialState(), true),
   () => useEditSequenceStore.setState(initialEditSequenceState, true),
+  resetContextMenuPointerHintForTests,
   resetPointerHintPersistenceForTests,
   resetPointerHintTimerForTests,
   () => usePointerHintStore.setState(initialPointerHintState, true),

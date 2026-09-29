@@ -15,6 +15,7 @@ import {
   selectGridDraft,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import { maybePulseContextMenuOpenedByPointer } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { ContextMenu } from "./ContextMenu";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
@@ -108,6 +109,9 @@ export const ContextMenuWrapper = ({
       draftActions.startGridDraft({ activity: "eventRightClick", draft });
 
       setIsOpen(true);
+      if (!keyboardOrigin) {
+        maybePulseContextMenuOpenedByPointer();
+      }
     }
   };
 

@@ -15,6 +15,7 @@ import {
   cursorReference,
 } from "@web/components/ContextMenu/contextMenu.floating";
 import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
+import { maybePulseContextMenuOpenedByPointer } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { useDeleteEvent } from "@web/views/Forms/hooks/useDeleteEvent";
 import { useDuplicateEvent } from "@web/views/Forms/hooks/useDuplicateEvent";
 import { useSetEventColor } from "@web/views/Forms/hooks/useSetEventColor";
@@ -70,9 +71,24 @@ export const useDayCalendarContextMenu = ({
         return;
       }
 
-      refs.setReference(cursorReference(event.clientX, event.clientY));
+      const keyboardOrigin = event.clientX === 0 && event.clientY === 0;
+      if (keyboardOrigin) {
+        const card = target.closest("button") ?? target;
+        const rect = card.getBoundingClientRect();
+        refs.setReference(
+          cursorReference(
+            rect.left + rect.width / 2,
+            rect.top + Math.min(rect.height / 2, 24),
+          ),
+        );
+      } else {
+        refs.setReference(cursorReference(event.clientX, event.clientY));
+      }
       setContextMenuEvent(selectedEvent);
       setIsOpen(true);
+      if (!keyboardOrigin) {
+        maybePulseContextMenuOpenedByPointer();
+      }
     },
     [getDayEventById, refs],
   );

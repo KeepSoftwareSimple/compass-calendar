@@ -7,15 +7,21 @@ const HINT_VISIBLE_MS = 2500;
 
 let hideTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 
-export type PalettePointerHintAttempt = {
+export type PointerHintAttempt = {
   shortcutKey: string | string[];
-  source: "palette";
+  source: "palette" | "pointer";
+  /** Pointer-intent copy with placeholders resolved to keycaps in the UI. */
+  message?: string;
+  keys?: string[][];
 };
 
+/** @deprecated Use {@link PointerHintAttempt}. */
+export type PalettePointerHintAttempt = PointerHintAttempt;
+
 export type PointerHintState = {
-  /** Increments on every palette teach pulse so the hint can re-animate. */
+  /** Increments on every teach pulse so the hint can re-animate. */
   pulse: number;
-  latestAttempt: PalettePointerHintAttempt | null;
+  latestAttempt: PointerHintAttempt | null;
   /** True while the pill should paint (pulse-driven, timed hide). */
   isVisible: boolean;
 };
@@ -34,7 +40,7 @@ export const usePointerHintStore = create<PointerHintState>()(
 );
 
 export const pointerHintActions = {
-  pulse: (attempt: PalettePointerHintAttempt) => {
+  pulse: (attempt: PointerHintAttempt) => {
     if (hideTimer !== undefined) globalThis.clearTimeout(hideTimer);
     usePointerHintStore.setState(
       (state) => ({
