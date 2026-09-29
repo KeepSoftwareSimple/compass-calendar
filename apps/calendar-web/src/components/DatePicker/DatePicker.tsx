@@ -256,22 +256,23 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
             ? `Select month, ${selectedYear}`
             : selectedMonth;
         const useYearNavigation = isCaptionYearView || isCaptionMonthView;
-        const prevNav = useYearNavigation
-          ? () => headerProps.decreaseYear()
-          : (monthNav?.onPrev ?? (() => headerProps.decreaseMonth()));
-        const nextNav = useYearNavigation
-          ? () => headerProps.increaseYear()
-          : (monthNav?.onNext ?? (() => headerProps.increaseMonth()));
-        const prevNavDisabled = useYearNavigation
-          ? headerProps.prevYearButtonDisabled
-          : headerProps.prevMonthButtonDisabled;
-        const nextNavDisabled = useYearNavigation
-          ? headerProps.nextYearButtonDisabled
-          : headerProps.nextMonthButtonDisabled;
-        const prevNavLabel = useYearNavigation
-          ? "Previous years"
-          : "Previous month";
-        const nextNavLabel = useYearNavigation ? "Next years" : "Next month";
+        const headerNav = useYearNavigation
+          ? {
+              onPrev: () => headerProps.decreaseYear(),
+              onNext: () => headerProps.increaseYear(),
+              prevDisabled: headerProps.prevYearButtonDisabled,
+              nextDisabled: headerProps.nextYearButtonDisabled,
+              prevLabel: "Previous years",
+              nextLabel: "Next years",
+            }
+          : {
+              onPrev: monthNav?.onPrev ?? (() => headerProps.decreaseMonth()),
+              onNext: monthNav?.onNext ?? (() => headerProps.increaseMonth()),
+              prevDisabled: headerProps.prevMonthButtonDisabled,
+              nextDisabled: headerProps.nextMonthButtonDisabled,
+              prevLabel: "Previous month",
+              nextLabel: "Next month",
+            };
 
         return (
           <div
@@ -313,21 +314,25 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               >
                 <div className="flex items-center gap-1">
                   <MonthNavButton
-                    ariaLabel={prevNavLabel}
+                    ariaLabel={headerNav.prevLabel}
                     color={headerColor}
-                    disabled={prevNavDisabled}
+                    disabled={headerNav.prevDisabled}
                     isSidebarStyle={view === "sidebar"}
-                    onClick={prevNavDisabled ? undefined : prevNav}
+                    onClick={
+                      headerNav.prevDisabled ? undefined : headerNav.onPrev
+                    }
                     shortcut={monthNav ? [...monthNav.prevShortcut] : undefined}
                   >
                     <ChevronLeftIcon />
                   </MonthNavButton>
                   <MonthNavButton
-                    ariaLabel={nextNavLabel}
+                    ariaLabel={headerNav.nextLabel}
                     color={headerColor}
-                    disabled={nextNavDisabled}
+                    disabled={headerNav.nextDisabled}
                     isSidebarStyle={view === "sidebar"}
-                    onClick={nextNavDisabled ? undefined : nextNav}
+                    onClick={
+                      headerNav.nextDisabled ? undefined : headerNav.onNext
+                    }
                     shortcut={monthNav ? [...monthNav.nextShortcut] : undefined}
                   >
                     <ChevronRightIcon />

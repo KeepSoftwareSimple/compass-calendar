@@ -80,11 +80,9 @@ export const guestStatusMapForHostNotice = (
   if (connectedAccountEmails.length === 0) return null;
   if (event.content.kind !== "details") return null;
 
-  const organizerEmail = event.content.organizer?.email;
-  const hostOrganizes = connectedAccountEmails.some(
-    (email) =>
-      organizerEmail === undefined ||
-      organizerEmail.toLowerCase() === email.toLowerCase(),
+  const organizer = event.content.organizer ?? null;
+  const hostOrganizes = connectedAccountEmails.some((email) =>
+    hostOrganizesEvent({ organizer }, email),
   );
   if (!hostOrganizes) return null;
 

@@ -7,7 +7,11 @@ import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { assembleGridEvent } from "@web/common/utils/event/event.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
-import { resolveGridEventCardChrome } from "@web/grid/grid-event-card-chrome";
+import {
+  gridEventCardOpacity,
+  guestResponseAccessiblePrefix,
+  resolveGridEventCardChrome,
+} from "@web/grid/grid-event-card-chrome";
 import { describe, expect, it } from "bun:test";
 
 const calendarId = CalendarIdSchema.parse(createObjectIdString());
@@ -64,6 +68,51 @@ describe("resolveGridEventCardChrome", () => {
     expect(
       resolveGridEventCardChrome(lookup, event, new Set()).guestResponse,
     ).toBe("awaiting");
+  });
+
+  it("stacks hidden, placeholder, and guest-reply opacity the same way both cards do", () => {
+    expect(
+      gridEventCardOpacity({
+        isHidden: true,
+        isPlaceholder: true,
+        guestResponse: "awaiting",
+      }),
+    ).toBe(0.6);
+    expect(
+      gridEventCardOpacity({
+        isHidden: false,
+        isPlaceholder: true,
+        guestResponse: "awaiting",
+      }),
+    ).toBe(0.5);
+    expect(
+      gridEventCardOpacity({
+        isHidden: false,
+        isPlaceholder: false,
+        guestResponse: "awaiting",
+      }),
+    ).toBe(0.7);
+    expect(
+      gridEventCardOpacity({
+        isHidden: false,
+        isPlaceholder: false,
+        guestResponse: "declined",
+      }),
+    ).toBe(0.5);
+    expect(
+      gridEventCardOpacity({
+        isHidden: false,
+        isPlaceholder: false,
+        guestResponse: "tentative",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("prefixes accessible names with the guest reply state", () => {
+    expect(guestResponseAccessiblePrefix("awaiting")).toBe("Awaiting reply: ");
+    expect(guestResponseAccessiblePrefix("tentative")).toBe("Tentative: ");
+    expect(guestResponseAccessiblePrefix("declined")).toBe("Declined: ");
+    expect(guestResponseAccessiblePrefix(null)).toBe("");
   });
 
   it("returns null guestResponse when account email is absent", () => {

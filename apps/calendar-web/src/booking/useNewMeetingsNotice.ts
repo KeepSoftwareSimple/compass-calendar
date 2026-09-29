@@ -5,18 +5,22 @@ import { showNewMeetingsToast } from "@web/booking/NewMeetingsToast";
 import { IS_BOOKING_ENABLED } from "@web/common/constants/env.constants";
 import { onServerMessage } from "@web/sse/client/sse.client";
 
-const FIVE_MINUTES_MS = 5 * 60 * 1000;
-const TEN_SECONDS_MS = 10 * 1000;
+const CLAIM_FLOOR_MS = {
+  focus: 5 * 60 * 1000,
+  sse: 10 * 1000,
+} as const;
 
-let lastFocusClaimAtMs: number | null = null;
-let lastSseClaimAtMs: number | null = null;
+const lastClaimAtMs: Record<keyof typeof CLAIM_FLOOR_MS, number | null> = {
+  focus: null,
+  sse: null,
+};
 
 export function resetNewMeetingsNoticeForTests(): void {
-  lastFocusClaimAtMs = null;
-  lastSseClaimAtMs = null;
+  lastClaimAtMs.focus = null;
+  lastClaimAtMs.sse = null;
 }
 
-type ClaimTrigger = "focus" | "sse";
+type ClaimTrigger = keyof typeof CLAIM_FLOOR_MS;
 
 export function useNewMeetingsNotice(): void {
   const { authenticated } = useSession();
@@ -27,27 +31,18 @@ export function useNewMeetingsNotice(): void {
         return;
       }
       const now = Date.now();
-      const floorMs = trigger === "sse" ? TEN_SECONDS_MS : FIVE_MINUTES_MS;
-      const lastAt = trigger === "sse" ? lastSseClaimAtMs : lastFocusClaimAtMs;
-      if (lastAt !== null && now - lastAt < floorMs) {
+      const lastAt = lastClaimAtMs[trigger];
+      if (lastAt !== null && now - lastAt < CLAIM_FLOOR_MS[trigger]) {
         return;
       }
-      if (trigger === "sse") {
-        lastSseClaimAtMs = now;
-      } else {
-        lastFocusClaimAtMs = now;
-      }
+      lastClaimAtMs[trigger] = now;
       try {
         const result = await BookingApi.claimNewMeetings();
         showNewMeetingsToast(result);
       } catch {
         // The watermark is only advanced after a successful read, so clear the
         // gate and let the next pass retry.
-        if (trigger === "sse") {
-          lastSseClaimAtMs = null;
-        } else {
-          lastFocusClaimAtMs = null;
-        }
+        lastClaimAtMs[trigger] = null;
       }
     },
     [authenticated],

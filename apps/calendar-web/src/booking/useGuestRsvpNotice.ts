@@ -60,16 +60,6 @@ function guestDisplayName(event: Event, emailLower: string): string {
   return name && name.length > 0 ? name : (attendee?.email ?? emailLower);
 }
 
-function eventSlotStart(event: Event): string | null {
-  if (event.schedule.kind === "timed") {
-    return event.schedule.start;
-  }
-  if (event.schedule.kind === "allDay") {
-    return event.schedule.start;
-  }
-  return null;
-}
-
 function processEvent(
   event: Event,
   connectedAccountEmails: readonly string[],
@@ -89,14 +79,7 @@ function processEvent(
     return;
   }
 
-  const slotStart = eventSlotStart(event);
-  if (!slotStart) {
-    cachedGuestStatusByEventId.set(
-      event.id,
-      new Map([...currentMap.entries()]),
-    );
-    return;
-  }
+  const slotStart = event.schedule.start;
 
   for (const [emailLower, status] of currentMap) {
     const previousStatus = previousMap.get(emailLower) ?? "needsAction";

@@ -120,9 +120,16 @@ export const MonthPicker: FC<Props> = ({
     [unit, weekStartDay],
   );
 
+  const goPrevMonth = useCallback(() => {
+    jumpToMonth(displayedMonth.subtract(1, "month"));
+  }, [displayedMonth, jumpToMonth]);
+  const goNextMonth = useCallback(() => {
+    jumpToMonth(displayedMonth.add(1, "month"));
+  }, [displayedMonth, jumpToMonth]);
+
   useMonthPickerShortcuts({
-    onPrevMonth: () => jumpToMonth(displayedMonth.subtract(1, "month")),
-    onNextMonth: () => jumpToMonth(displayedMonth.add(1, "month")),
+    onPrevMonth: goPrevMonth,
+    onNextMonth: goNextMonth,
   });
 
   // After a remount the previously focused element is gone. Put focus back on
@@ -200,8 +207,8 @@ export const MonthPicker: FC<Props> = ({
           monthNav={{
             prevShortcut: MONTH_PICKER_PREV_KEYCAPS,
             nextShortcut: MONTH_PICKER_NEXT_KEYCAPS,
-            onPrev: () => jumpToMonth(displayedMonth.subtract(1, "month")),
-            onNext: () => jumpToMonth(displayedMonth.add(1, "month")),
+            onPrev: goPrevMonth,
+            onNext: goNextMonth,
             onToday: () => jumpToMonth(dayjs()),
           }}
           monthTextClassName="text-[14px] font-medium"

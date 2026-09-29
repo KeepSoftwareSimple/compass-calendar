@@ -38,6 +38,10 @@ import {
   MIN_EVENT_WIDTH_FOR_TIME_LABEL,
 } from "@web/grid/grid.constants";
 import {
+  gridEventCardOpacity,
+  guestResponseAccessiblePrefix,
+} from "@web/grid/grid-event-card-chrome";
+import {
   EVENT_CONTENT_ATTRIBUTE,
   EVENT_TIME_LABEL_ATTRIBUTE,
 } from "@web/grid/interaction/dom";
@@ -194,15 +198,11 @@ const TimedEventCardBase = (
     "--event-focus-color": focusColorCss,
     height: position.height || 0,
     left: position.left,
-    opacity: isHidden
-      ? 0.6
-      : isPlaceholder
-        ? 0.5
-        : guestResponse === "awaiting"
-          ? 0.7
-          : guestResponse === "declined"
-            ? 0.5
-            : undefined,
+    opacity: gridEventCardOpacity({
+      isHidden,
+      isPlaceholder,
+      guestResponse,
+    }),
     top: position.top,
     width: position.width || 0,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
@@ -247,14 +247,7 @@ const TimedEventCardBase = (
     : `${recurringPrefix}Timed event: ${eventTitle}, ${timeRange ?? "time not set"}`;
   const samplePrefix = event.isDemo ? "Sample " : "";
   const hiddenPrefix = isHidden ? "Hidden " : "";
-  const guestResponsePrefix =
-    guestResponse === "awaiting"
-      ? "Awaiting reply: "
-      : guestResponse === "tentative"
-        ? "Tentative: "
-        : guestResponse === "declined"
-          ? "Declined: "
-          : "";
+  const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
   // Fill stays a flat neutral color; the accent + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
