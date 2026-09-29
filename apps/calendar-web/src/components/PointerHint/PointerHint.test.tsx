@@ -32,6 +32,15 @@ describe("PointerHint", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Next time, press");
   });
 
+  it("renders pointer teaching with shortcutKey only", () => {
+    pointerHintActions.pulse({
+      source: "pointer",
+      shortcutKey: "m",
+    });
+    render(<PointerHint />);
+    expect(screen.getByRole("status")).toHaveTextContent("Next time, press");
+  });
+
   it("renders a pointer attempt message and keycaps", () => {
     pointerHintActions.pulse({
       source: "pointer",
