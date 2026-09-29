@@ -13,10 +13,6 @@ import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
-import {
-  selectIsCelebrating,
-  useCheckoutCelebrationStore,
-} from "@web/billing/checkout-celebration.store";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
   dismissErrorToast,
@@ -64,7 +60,6 @@ export const AuthModal: FC = () => {
   const isStartTrialView = currentView === "startTrial";
   useAppLockReason("authModal", isOpen);
   useAppLockReason("signupTrialStep", isStartTrialView);
-  const isCelebrating = useCheckoutCelebrationStore(selectIsCelebrating);
   const handleGoogleAuthStart = useCallback(() => {
     dismissErrorToast(SESSION_EXPIRED_TOAST_ID);
   }, []);
@@ -113,11 +108,6 @@ export const AuthModal: FC = () => {
   // OverlayPanel would otherwise seat the view-switch chip (first focusable).
   const emailInputRef = useRef<HTMLInputElement>(null);
   const pricingLinkRef = useRef<HTMLAnchorElement>(null);
-
-  useEffect(() => {
-    if (!isOpen || !isStartTrialView || !isCelebrating) return;
-    closeModal();
-  }, [closeModal, isCelebrating, isOpen, isStartTrialView]);
 
   useEffect(() => {
     if (!isOpen || currentView !== "signUp") return;

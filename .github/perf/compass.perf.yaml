@@ -1,7 +1,7 @@
 # Build-time config for the CI web builds: the performance budget
 # (perf-budget.yml) and the required boot-size check (test-unit.yml).
 # Only the values baked into the web bundle matter (nodeEnv, apiUrl,
-# empty PostHog key so analytics stays out of the measurement); the rest
+# PostHog placeholders sized like production deploy); the rest
 # exist to satisfy config schema validation and are never used.
 # apps/calendar-web/build.ts re-execs itself with NODE_ENV=production before
 # bundling unless runtime.nodeEnv is development. Bun's export conditions are
@@ -20,7 +20,7 @@ web:
 backend:
   # Nothing listens on 3000 in the perf job; boot-time API calls fail fast,
   # same as the e2e suite's setup.
-  apiUrl: http://localhost:3000/api
+  apiUrl: https://api.compasscalendar.com/api
   compassToken: unused-perf-build
 mongo:
   uri: mongodb://localhost:27017/unused
@@ -28,5 +28,11 @@ supertokens:
   uri: http://localhost:3567
   key: unused-perf-build
 google:
-  clientId: unused-perf-build
+  # Length matches production OAuth client IDs baked into deploy images.
+  clientId: 000000000000-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.apps.googleusercontent.com
   clientSecret: unused-perf-build
+# Production Docker builds bake PostHog env into the bundle; keep placeholders
+# here so CI boot-size matches deploy (perf-budget.yml, test-unit.yml).
+posthog:
+  key: phc_012345678901234567890123456789012345678901234567890123456789012
+  host: https://us.i.posthog.com

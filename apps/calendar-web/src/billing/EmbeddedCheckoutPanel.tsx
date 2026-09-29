@@ -16,6 +16,7 @@ const fetchCheckoutClientSecret = () =>
 type EmbeddedCheckoutPanelProps = {
   publishableKey: string;
   onBack: () => void;
+  onCheckoutComplete?: () => void;
 };
 
 /**
@@ -25,12 +26,14 @@ type EmbeddedCheckoutPanelProps = {
 export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   publishableKey,
   onBack,
+  onCheckoutComplete,
 }) => {
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
     completeCheckoutSession(queryClient);
-  }, [queryClient]);
+    onCheckoutComplete?.();
+  }, [onCheckoutComplete, queryClient]);
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
