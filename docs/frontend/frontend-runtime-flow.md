@@ -103,6 +103,14 @@ Welcome → signup → first-event contract:
 - **Practice the shortcuts** in the welcome footer (or `?play=1`, or the
   command palette replay) is the opt-in entry to Block Party
 - signing up (either route) does not start or defer the showcase
+- hosted signup with billing enforced continues to the **Start your 7-day free
+  trial** auth step (`StartTrialStep`, `?auth=trial`): charge-date copy and
+  embedded Checkout with `trial_period_days: 7`. While that step is open,
+  `RootShell` suppresses the billing gate and calendar onboarding surfaces.
+  Closing without paying returns to read-only `awaiting_checkout` and
+  **Finish starting your trial**. After Checkout completes, Compass polls
+  billing status, shows the checkout celebration, and runs anonymous IndexedDB
+  event migration once (`complete-checkout-session.ts`), not at signup time
 - the Shortcut Showcase is **Block Party**: a practice-only game whose state
   never reaches real calendar storage. A run clears a fixed queue of
   scheduling tasks (create, typed quick-times, nudge, edge resize, delete,
