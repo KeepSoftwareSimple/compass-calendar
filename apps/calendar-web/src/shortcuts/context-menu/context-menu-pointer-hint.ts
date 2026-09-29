@@ -1,5 +1,6 @@
 import { track } from "@web/auth/posthog/track";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
+import { consumeKeyboardContextMenuSkip } from "@web/shortcuts/context-menu/context-menu-keyboard-dispatch";
 import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
   pointerHintActions,
@@ -10,22 +11,9 @@ import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personali
 import { viewFromPathname } from "@web/shortcuts/tips/shortcut-telemetry";
 
 let contextMenuPointerHintShownThisSession = false;
-let skipPointerHintForNextContextMenu = false;
-
-/** Set before the `m` shortcut dispatches a synthetic contextmenu. */
-export const markKeyboardContextMenuDispatch = (): void => {
-  skipPointerHintForNextContextMenu = true;
-};
-
-const consumeKeyboardContextMenuSkip = (): boolean => {
-  if (!skipPointerHintForNextContextMenu) return false;
-  skipPointerHintForNextContextMenu = false;
-  return true;
-};
 
 export const resetContextMenuPointerHintForTests = (): void => {
   contextMenuPointerHintShownThisSession = false;
-  skipPointerHintForNextContextMenu = false;
 };
 
 /** Teach `m` once per session when the menu opens from a pointer right-click. */

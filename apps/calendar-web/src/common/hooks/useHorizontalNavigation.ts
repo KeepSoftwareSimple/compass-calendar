@@ -1,5 +1,4 @@
 import { type RefObject, useEffect, useRef } from "react";
-import { pointerIntentActions } from "@web/shortcuts/pointer-intent/pointer-intent.actions";
 
 const GESTURE_IDLE_MS = 180;
 const NAVIGATION_THRESHOLD_PX = 60;
@@ -102,7 +101,12 @@ export const useHorizontalNavigation = ({
         ? callbacksRef.current.onNext
         : callbacksRef.current.onPrevious;
       navigate();
-      pointerIntentActions.notify(swipeForward ? "swipe-next" : "swipe-prev");
+      void import("@web/shortcuts/pointer-intent/pointer-intent.actions").then(
+        ({ pointerIntentActions }) =>
+          pointerIntentActions.notify(
+            swipeForward ? "swipe-next" : "swipe-prev",
+          ),
+      );
     };
 
     container.addEventListener("wheel", handleWheel, { passive: false });

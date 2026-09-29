@@ -1,3 +1,4 @@
+import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
 import { track } from "@web/auth/posthog/track";
 import { pointerHintActions } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
@@ -50,7 +51,7 @@ export const pointerIntentActions = {
     const keysLookup = resolveLookup(lookup);
     recordPointerIntentDetection(intent);
     const view = viewForTelemetry(pathname);
-    track("pointer_intent_detected", { intent, view });
+    getPosthogClient()?.capture("pointer_intent_detected", { intent, view });
 
     const session = getPointerIntentSessionSnapshot();
     if (!shouldTeachPointerIntent({ intent, session })) return;

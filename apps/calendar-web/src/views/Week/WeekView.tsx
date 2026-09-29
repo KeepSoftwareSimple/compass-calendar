@@ -23,6 +23,7 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
+import { useCalendarPointerIntentTracker } from "@web/shortcuts/pointer-intent/useCalendarPointerIntentTracker";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { TimezoneMismatchBannerGate } from "@web/timezone/TimezoneMismatchBannerGate";
 import { Dedication } from "@web/views/Week/components/Dedication/Dedication";
@@ -49,7 +50,7 @@ export const WeekView = () => {
   // untouched and the panel collapses again when the form closes.
   const isEventDetailsOpen = useDraftStore(selectIsEventFormOpen);
   useSidebarShortcuts();
-
+  useCalendarPointerIntentTracker();
   const { today } = useToday();
 
   const { trackRef, visibleDayCount } = useVisibleDayCount();

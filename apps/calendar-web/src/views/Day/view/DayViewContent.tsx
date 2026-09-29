@@ -24,6 +24,7 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { useCalendarViewShortcuts } from "@web/grid/shortcuts/useCalendarViewShortcuts";
+import { useCalendarPointerIntentTracker } from "@web/shortcuts/pointer-intent/useCalendarPointerIntentTracker";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { TimezoneMismatchBannerGate } from "@web/timezone/TimezoneMismatchBannerGate";
 import { DayCalendarGrid } from "@web/views/Day/components/Calendar/DayCalendarGrid";
@@ -62,7 +63,7 @@ export const DayViewContent = memo(() => {
 
   useFocusSidebarShortcut();
   useSidebarShortcuts();
-
+  useCalendarPointerIntentTracker();
   const isTrialing = useIsTrialing();
   const shortcutSections = useMemo(
     () =>

@@ -2,6 +2,7 @@ import { fireEvent, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type FC } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as posthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
 import * as trackModule from "@web/auth/posthog/track";
 import {
   ID_GRID_COLUMNS_TIMED,
@@ -20,8 +21,12 @@ import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const track = mock();
+const capture = mock();
 
 mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
+mockModuleForFile("@web/auth/posthog/posthog.bootstrap", posthogBootstrap, {
+  getPosthogClient: () => ({ capture }),
+});
 
 const lookup = (id: string) => {
   const keys: Record<string, string[]> = {
@@ -61,6 +66,7 @@ function mountGridDom() {
 describe("usePointerIntentTracker", () => {
   beforeEach(() => {
     track.mockClear();
+    capture.mockClear();
     resetPointerIntentSessionForTests();
     setTipsMuted(false);
     registerPointerIntentKeysLookup(lookup);
@@ -127,12 +133,12 @@ describe("usePointerIntentTracker", () => {
     expect(attempt && "message" in attempt && attempt.message).toContain(
       "15 min",
     );
-    expect(track).toHaveBeenCalledWith(
+    expect(capture).toHaveBeenCalledWith(
       "pointer_intent_detected",
       expect.objectContaining({ intent: "card-drag" }),
     );
     expect(
-      track.mock.calls.some(
+      capture.mock.calls.some(
         ([event, props]) =>
           event === "pointer_intent_detected" &&
           (props as { intent?: string }).intent === "card-click",
@@ -182,7 +188,7 @@ describe("usePointerIntentTracker", () => {
     await wheel();
     expect(usePointerHintStore.getState().pulse).toBe(1);
     expect(
-      track.mock.calls.some(
+      capture.mock.calls.some(
         ([event, props]) =>
           event === "pointer_intent_detected" &&
           (props as { intent?: string }).intent === "grid-scroll",
@@ -202,7 +208,7 @@ describe("usePointerIntentTracker", () => {
       coords: { clientY: 720 },
     });
 
-    expect(track).toHaveBeenCalledWith(
+    expect(capture).toHaveBeenCalledWith(
       "pointer_intent_detected",
       expect.objectContaining({ intent: "slot-click" }),
     );

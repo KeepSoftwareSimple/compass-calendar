@@ -63,6 +63,7 @@ import {
   useSettingsStore,
 } from "@web/settings/settings.store";
 import { useThemeStore } from "@web/settings/theme/theme.store";
+import { resetKeyboardContextMenuDispatchForTests } from "@web/shortcuts/context-menu/context-menu-keyboard-dispatch";
 import { resetContextMenuPointerHintForTests } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import {
   initialEditSequenceState,
@@ -127,6 +128,7 @@ const storeResets: StoreReset[] = [
   () => useThemeStore.setState(useThemeStore.getInitialState(), true),
   () => useEditSequenceStore.setState(initialEditSequenceState, true),
   resetContextMenuPointerHintForTests,
+  resetKeyboardContextMenuDispatchForTests,
   resetPointerHintPersistenceForTests,
   resetPointerHintTimerForTests,
   () => usePointerHintStore.setState(initialPointerHintState, true),
