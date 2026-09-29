@@ -68,13 +68,12 @@ export function completeCheckoutSession(queryClient: QueryClient): void {
   }
   checkoutCelebrationActions.celebrate();
   checkoutPanelActions.close();
-  tryMigrateWhenWritable(queryClient);
-  startBillingStatusPoll(
-    queryClient,
-    () => tryMigrateWhenWritable(queryClient),
-    billingQueryKeys.status,
-    () => tryMigrateWhenWritable(queryClient),
-  );
+  const migrateWhenWritable = () => tryMigrateWhenWritable(queryClient);
+  migrateWhenWritable();
+  startBillingStatusPoll(queryClient, {
+    onRefetched: migrateWhenWritable,
+    onWindowEnd: migrateWhenWritable,
+  });
 }
 
 /** Test hook: allow a second migration assertion in the same file. */

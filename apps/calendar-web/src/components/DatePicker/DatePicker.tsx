@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import type React from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import * as ReactDatePickerModule from "react-datepicker";
 import { type ReactDatePickerProps } from "react-datepicker";
 import dayjs from "@core/util/date/dayjs";
@@ -60,6 +60,12 @@ const ReactDatePicker = reactDatePickerExport.default ?? reactDatePickerExport;
 
 type CaptionPickerView = "day" | "year" | "month";
 
+/** Caption picker walks year, then month, then back to the day grid. */
+const CAPTION_VIEW_AFTER_SELECT: Record<
+  CaptionPickerView,
+  CaptionPickerView | null
+> = { year: "month", month: "day", day: null };
+
 export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const {
     animationOnToggle = true,
@@ -84,16 +90,21 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const calendarRef = useRef<HTMLDivElement>(null);
   const onCalendarCloseRef = useRef(datePickerProps.onCalendarClose);
   onCalendarCloseRef.current = datePickerProps.onCalendarClose;
+  // react-datepicker fires onSelect and onChange in the same tick, so the new
+  // view has to be readable before React re-renders. The ref is that read
+  // path and `commitCaptionView` is the only writer of the pair.
   const [captionView, setCaptionView] = useState<CaptionPickerView>("day");
   const captionViewRef = useRef<CaptionPickerView>("day");
-  captionViewRef.current = captionView;
+  const commitCaptionView = useCallback((next: CaptionPickerView) => {
+    captionViewRef.current = next;
+    setCaptionView(next);
+  }, []);
   const [captionFocusDate, setCaptionFocusDate] = useState<Date | undefined>();
   useEffect(() => {
     if (isOpen) return;
-    setCaptionView("day");
-    captionViewRef.current = "day";
+    commitCaptionView("day");
     setCaptionFocusDate(undefined);
-  }, [isOpen]);
+  }, [commitCaptionView, isOpen]);
   // Sidebar month grid stays mounted and visible; only transient grid popovers
   // own Escape (same carve-out the old DOM probe encoded via Month picker).
   useFloatingLayer(`datePicker:${layerId}`, view === "grid" && isOpen);
@@ -148,7 +159,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   const shouldCommitSelection = !captionPicker || captionView === "day";
 
   const handleCalendarClose = () => {
-    setCaptionView("day");
+    commitCaptionView("day");
     setCaptionFocusDate(undefined);
     datePickerProps.onCalendarClose?.();
   };
@@ -160,8 +171,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
         ? selectedDate
         : new Date(),
     );
-    captionViewRef.current = "year";
-    setCaptionView("year");
+    commitCaptionView("year");
   };
 
   const handleChange: ReactDatePickerProps["onChange"] = (date, event) => {
@@ -170,14 +180,12 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
   };
 
   const handleSelect: ReactDatePickerProps["onSelect"] = (date, event) => {
-    if (captionPicker && captionViewRef.current === "year" && date) {
-      captionViewRef.current = "month";
-      setCaptionView("month");
-      return;
-    }
-    if (captionPicker && captionViewRef.current === "month" && date) {
-      captionViewRef.current = "day";
-      setCaptionView("day");
+    const nextCaptionView =
+      captionPicker && date
+        ? CAPTION_VIEW_AFTER_SELECT[captionViewRef.current]
+        : null;
+    if (nextCaptionView) {
+      commitCaptionView(nextCaptionView);
       return;
     }
     datePickerProps.onSelect?.(date, event);
