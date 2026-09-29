@@ -105,6 +105,27 @@ describe("mergeDuplicateCopies", () => {
     expect(merged?.ids).toHaveLength(2);
   });
 
+  it("merges copies whose start strings differ only by zone offset", () => {
+    // Sync formats each copy in its own zone, so the same instant can arrive
+    // as two different strings. Same instant is the same slot.
+    const onWork = copy(work);
+    const onPersonal = copy(personal, {
+      schedule: {
+        kind: "timed",
+        start: "2026-08-04T17:00:00+02:00",
+        end: "2026-08-04T18:00:00+02:00",
+        timeZone: "Europe/Berlin",
+      } as Event["schedule"],
+    });
+
+    const merged = mergeDuplicateCopies(dataOf(onWork, onPersonal), [
+      work,
+      personal,
+    ]);
+
+    expect(merged?.ids).toEqual([onWork.id]);
+  });
+
   it("merges two calendars on one account and names the other calendar", () => {
     // The same meeting subscribed on two of the user's own calendars is one
     // meeting, so it collapses to a single card too. Naming the account it

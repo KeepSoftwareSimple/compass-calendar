@@ -18,9 +18,11 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
+  calendarGradient,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  mergedCalendarStops,
 } from "@web/grid/components/calendar-accent.util";
 import {
   gridEventCardOpacity,
@@ -68,10 +70,7 @@ const AllDayEventCardBase = (
   }: AllDayEventCardProps,
   ref: ForwardedRef<HTMLDivElement>,
 ) => {
-  const { base: baseColor, hover: hoverColor } = useEventPalette(
-    event.color,
-    event.colorHex,
-  );
+  const { base: baseColor } = useEventPalette(event.color, event.colorHex);
   const isInPast = dayjs().isAfter(dayjs(event.endDate));
   const isRecurring = isRecurringEvent(event);
   const showRepeatIcon =
@@ -84,18 +83,29 @@ const AllDayEventCardBase = (
   // light theme's ink fill fades toward the paper. Only the fill moves — a
   // `brightness()` filter would drag the title text along with it and let
   // past events fall below the 4.5:1 contrast minimum.
-  const bgColor = isInPast
-    ? isDark(baseColor)
-      ? brighten(baseColor, 14)
-      : darken(baseColor, 5)
-    : baseColor;
-  // isInPast is excluded here (falls through to bgColor) so a past event
+  const adjustFill = (fill: string) =>
+    isInPast ? (isDark(fill) ? brighten(fill, 14) : darken(fill, 5)) : fill;
+  // isInPast is excluded here (falls through to adjustFill) so a past event
   // stays dimmed on hover instead of snapping to full brightness.
-  const hoverBgColor = !isPlaceholder && !isInPast ? hoverColor : bgColor;
-  // Chosen per-fill (whichever of dark/light reads better) rather than a fixed
-  // color, matching TimedEventCard, so a future fill/darken tweak can't quietly
-  // drop the title below 4.5:1.
-  const titleColor = theme.getContrastText(bgColor);
+  // brighten(fill) is the palette's own hover step.
+  const adjustHover = (fill: string) =>
+    !isPlaceholder && !isInPast ? brighten(fill) : adjustFill(fill);
+  // A merged card paints its source calendars' colors instead of the event
+  // fill: calendar identity is the point of the gradient, so the event's
+  // color slot is ignored there.
+  const mergedStops = calendarIdentity
+    ? mergedCalendarStops(calendarIdentity)
+    : null;
+  const fillStops = (mergedStops ?? [baseColor]).map(adjustFill);
+  // The flat fill, or the first gradient stop so the flat class underneath a
+  // merged card's gradient is never a stale neutral.
+  const fillBase = mergedStops?.[0] ?? baseColor;
+  const bgColor = adjustFill(fillBase);
+  const hoverBgColor = adjustHover(fillBase);
+  // Chosen per-fill (whichever of dark/light reads better across every stop)
+  // rather than a fixed color, matching TimedEventCard, so a future
+  // fill/darken tweak can't quietly drop the title below 4.5:1.
+  const titleColor = theme.getContrastText(fillStops);
 
   const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(event._id));
   const focusColorCss = eventFocusColor(focusColor);
@@ -106,6 +116,10 @@ const AllDayEventCardBase = (
   const eventStyle = {
     "--event-bg": bgColor,
     "--event-hover-bg": hoverBgColor,
+    ...(mergedStops && {
+      "--event-bg-image": calendarGradient(fillStops),
+      "--event-hover-bg-image": calendarGradient(mergedStops.map(adjustHover)),
+    }),
     "--event-focus-color": focusColorCss,
     height: position.height,
     left: position.left,
@@ -122,7 +136,8 @@ const AllDayEventCardBase = (
 
   const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
   const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${guestResponsePrefix}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
-  // Fill stays a flat neutral color; the accent + this suffix are the only
+  // Fill stays a flat neutral color except on a merged card, whose gradient
+  // paints its calendars; the accent or gradient + this suffix are the only
   // calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
   const edgeFocusSuffix =
@@ -149,6 +164,8 @@ const AllDayEventCardBase = (
       className={cn(
         "absolute min-h-2.5 overflow-hidden bg-(--event-bg) pr-0.75 pl-1.25 transition-[background-color,filter] duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-(--event-hover-bg)",
         isHidden ? "rounded-full" : "rounded-xs",
+        mergedStops &&
+          "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
         {
           "outline outline-dashed outline-1 outline-text-muted/50":
             event.isDemo ||
@@ -175,7 +192,7 @@ const AllDayEventCardBase = (
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {!isHidden && calendarIdentity && (
+      {!isHidden && calendarIdentity && !mergedStops && (
         <div
           aria-hidden="true"
           className="absolute inset-y-0 left-0 w-[3px]"

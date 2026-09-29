@@ -2,22 +2,36 @@ import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { readability } from "@web/common/styles/color.utils";
 
 /**
- * The accent fill for a card's identity strip: this calendar's color, or a
- * top-to-bottom gradient through the other calendars' colors when the card is
- * standing in for a merged duplicate (A5). Shared by TimedEventCard and
- * AllDayEventCard so the gradient direction/shape can't drift between the two.
+ * The accent fill for an ordinary card's identity strip: this calendar's
+ * color. A merged card renders no strip; its whole fill is the gradient from
+ * {@link calendarGradient} instead.
  */
 export function calendarAccentStyle(identity: CalendarCardIdentity): {
-  backgroundColor?: string;
-  backgroundImage?: string;
+  backgroundColor: string;
 } {
+  return { backgroundColor: identity.backgroundColor };
+}
+
+/**
+ * The calendar colors a merged card paints across, own calendar first, or
+ * null for an ordinary card (A5). Shared by TimedEventCard and
+ * AllDayEventCard so the stop order can't drift between the two.
+ */
+export function mergedCalendarStops(
+  identity: CalendarCardIdentity,
+): string[] | null {
   const otherColors =
     identity.otherCopies?.map((copy) => copy.backgroundColor) ?? [];
-  if (otherColors.length > 0) {
-    const stops = [identity.backgroundColor, ...otherColors].join(", ");
-    return { backgroundImage: `linear-gradient(to bottom, ${stops})` };
-  }
-  return { backgroundColor: identity.backgroundColor };
+  if (otherColors.length === 0) return null;
+  return [identity.backgroundColor, ...otherColors];
+}
+
+/**
+ * Whole-card fill for a merged card. Diagonal so a 15-minute card, only a
+ * few pixels tall, still shows every calendar's color side by side.
+ */
+export function calendarGradient(stops: string[]): string {
+  return `linear-gradient(135deg, ${stops.join(", ")})`;
 }
 
 /**

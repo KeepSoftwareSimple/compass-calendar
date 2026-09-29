@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import * as Track from "@web/auth/posthog/track";
+import { brighten, darken, isDark } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
@@ -202,6 +203,102 @@ describe("EventCard", () => {
     expect(card.style.filter).toBe("drop-shadow(0 1px 2px rgb(0 0 0 / 0.28))");
   });
 
+  it("paints a merged timed card with a whole-card gradient across its calendars", () => {
+    render(
+      <TimedEventCard
+        calendarIdentity={{
+          name: "Work",
+          backgroundColor: "#3b82f6",
+          otherCopies: [
+            { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+          ],
+        }}
+        displayMode="saved"
+        event={createEvent({
+          color: "blue",
+          startDate: "2099-01-15T09:00:00.000Z",
+          endDate: "2099-01-15T10:00:00.000Z",
+        })}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Timed event: Planning block, 9 - 10 AM, Work calendar, also on ahab@gmail.com",
+    });
+    expect(card.style.getPropertyValue("--event-bg-image")).toBe(
+      "linear-gradient(135deg, #3b82f6, #ef4444)",
+    );
+    expect(card).toHaveClass("bg-(image:--event-bg-image)");
+    // The gradient replaces the event's own color slot fill, and the flat
+    // fallback underneath is the first stop rather than a stale neutral.
+    expect(card.style.getPropertyValue("--event-bg")).toBe("#3b82f6");
+    // No separate accent strip: the content wrapper is the card's first child.
+    expect(card.firstElementChild).toHaveTextContent("Planning block");
+  });
+
+  it("keeps the flat accent strip on an ordinary timed card", () => {
+    render(
+      <TimedEventCard
+        calendarIdentity={{ name: "Work", backgroundColor: "#3b82f6" }}
+        displayMode="saved"
+        event={createEvent({
+          startDate: "2099-01-15T09:00:00.000Z",
+          endDate: "2099-01-15T10:00:00.000Z",
+        })}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Timed event: Planning block, 9 - 10 AM, Work calendar",
+    });
+    expect(card.style.getPropertyValue("--event-bg-image")).toBe("");
+    expect(card).not.toHaveClass("bg-(image:--event-bg-image)");
+    expect(card.style.getPropertyValue("--event-bg")).toBe(
+      getEventPalette().base,
+    );
+    const strip = card.firstElementChild as HTMLElement;
+    expect(strip).toHaveAttribute("aria-hidden", "true");
+    expect(strip.style.backgroundColor).toBe("rgb(59, 130, 246)");
+  });
+
+  it("dims every stop of a merged timed card once it is in the past", () => {
+    render(
+      <TimedEventCard
+        calendarIdentity={{
+          name: "Work",
+          backgroundColor: "#3b82f6",
+          otherCopies: [
+            { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+          ],
+        }}
+        displayMode="saved"
+        event={createEvent({
+          startDate: "2020-01-15T09:00:00.000Z",
+          endDate: "2020-01-15T10:00:00.000Z",
+        })}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Timed event: Planning block, 9 - 10 AM, Work calendar, also on ahab@gmail.com",
+    });
+    const dim = (hex: string) =>
+      isDark(hex) ? brighten(hex, 14) : darken(hex, 5);
+    expect(card.style.getPropertyValue("--event-bg-image")).toBe(
+      `linear-gradient(135deg, ${dim("#3b82f6")}, ${dim("#ef4444")})`,
+    );
+    // Past cards stay dimmed on hover instead of snapping to full brightness.
+    expect(card.style.getPropertyValue("--event-hover-bg-image")).toBe(
+      card.style.getPropertyValue("--event-bg-image"),
+    );
+  });
+
   it("keeps timed event keyboard activation from reaching parent shortcuts", () => {
     const onEventKeyDown = mock();
     const onParentKeyDown = mock();
@@ -371,6 +468,40 @@ describe("EventCard", () => {
     expect(card).toHaveAttribute("data-week-interaction-event-id", "event-2");
     expect(card).toHaveAttribute("data-week-interaction-event-type", "all-day");
     expect(screen.getByText("Conference")).toBeInTheDocument();
+  });
+
+  it("paints a merged all-day card with a whole-card gradient across its calendars", () => {
+    render(
+      <AllDayEventCard
+        calendarIdentity={{
+          name: "Work",
+          backgroundColor: "#3b82f6",
+          otherCopies: [
+            { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+          ],
+        }}
+        event={createEvent({
+          isAllDay: true,
+          startDate: "2099-01-15",
+          endDate: "2099-01-16",
+          title: "Conference",
+        })}
+        isPlaceholder={false}
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "All-day event: Conference, Work calendar, also on ahab@gmail.com",
+    });
+    expect(card.style.getPropertyValue("--event-bg-image")).toBe(
+      "linear-gradient(135deg, #3b82f6, #ef4444)",
+    );
+    expect(card.style.getPropertyValue("--event-hover-bg-image")).toBe(
+      `linear-gradient(135deg, ${brighten("#3b82f6")}, ${brighten("#ef4444")})`,
+    );
+    expect(card).toHaveClass("bg-(image:--event-bg-image)");
+    expect(card.firstElementChild).toHaveTextContent("Conference");
   });
 
   it("keeps all-day event keyboard activation from reaching parent shortcuts", () => {

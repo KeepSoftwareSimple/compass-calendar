@@ -1,9 +1,11 @@
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
+  calendarGradient,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  mergedCalendarStops,
 } from "./calendar-accent.util";
 import { describe, expect, it } from "bun:test";
 
@@ -13,23 +15,34 @@ describe("calendarAccentStyle", () => {
       calendarAccentStyle({ name: "Work", backgroundColor: "#3b82f6" }),
     ).toEqual({ backgroundColor: "#3b82f6" });
   });
+});
 
-  it("is a gradient through every other copy's color for a merged card", () => {
-    const style = calendarAccentStyle({
-      name: "Work",
-      backgroundColor: "#3b82f6",
-      otherCopies: [
-        { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
-        { label: "Miscellaneous", backgroundColor: "#22c55e" },
-      ],
-    });
+describe("mergedCalendarStops", () => {
+  it("is null for an ordinary card", () => {
+    expect(
+      mergedCalendarStops({ name: "Work", backgroundColor: "#3b82f6" }),
+    ).toBeNull();
+  });
 
-    expect(style).toEqual({
-      backgroundImage: "linear-gradient(to bottom, #3b82f6, #ef4444, #22c55e)",
-    });
-    // A flat fill and a gradient must never both apply - the gradient would
-    // render underneath an opaque solid color and never be visible.
-    expect(style).not.toHaveProperty("backgroundColor");
+  it("lists the own calendar first, then every other copy's color", () => {
+    expect(
+      mergedCalendarStops({
+        name: "Work",
+        backgroundColor: "#3b82f6",
+        otherCopies: [
+          { label: "ahab@gmail.com", backgroundColor: "#ef4444" },
+          { label: "Miscellaneous", backgroundColor: "#22c55e" },
+        ],
+      }),
+    ).toEqual(["#3b82f6", "#ef4444", "#22c55e"]);
+  });
+});
+
+describe("calendarGradient", () => {
+  it("is a diagonal gradient through every stop in order", () => {
+    expect(calendarGradient(["#3b82f6", "#ef4444", "#22c55e"])).toBe(
+      "linear-gradient(135deg, #3b82f6, #ef4444, #22c55e)",
+    );
   });
 });
 
