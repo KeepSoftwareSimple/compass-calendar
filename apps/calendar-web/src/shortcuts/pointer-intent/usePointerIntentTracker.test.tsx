@@ -95,9 +95,7 @@ describe("usePointerIntentTracker", () => {
 
     const attempt = usePointerHintStore.getState().latestAttempt;
     expect(attempt?.source).toBe("pointer");
-    expect(attempt && "message" in attempt && attempt.message).toContain(
-      "Press",
-    );
+    expect(attempt?.shortcutKey).toEqual(["Enter"]);
     expect(jumpHandler).toHaveBeenCalledTimes(1);
   });
 
@@ -130,9 +128,7 @@ describe("usePointerIntentTracker", () => {
     });
 
     const attempt = usePointerHintStore.getState().latestAttempt;
-    expect(attempt && "message" in attempt && attempt.message).toContain(
-      "15 min",
-    );
+    expect(attempt?.shortcutKey).toEqual(["Shift", "ArrowDown"]);
     expect(capture).toHaveBeenCalledWith(
       "pointer_intent_detected",
       expect.objectContaining({ intent: "card-drag" }),
@@ -158,9 +154,7 @@ describe("usePointerIntentTracker", () => {
     });
 
     const attempt = usePointerHintStore.getState().latestAttempt;
-    expect(attempt && "message" in attempt && attempt.message).toMatch(
-      /Type \d{4} to create at .+, or press/,
-    );
+    expect(attempt?.shortcutKey).toEqual(["1130"]);
   });
 
   it("pulses grid-scroll only after three wheel gestures", async () => {

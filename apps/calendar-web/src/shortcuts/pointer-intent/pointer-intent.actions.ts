@@ -45,7 +45,7 @@ function viewForTelemetry(pathname = window.location.pathname): string {
 export const pointerIntentActions = {
   notify(
     intent: PointerIntent,
-    { lookup, ctx = {}, pathname }: NotifyPointerIntentOptions = {},
+    { lookup, ctx: _ctx = {}, pathname }: NotifyPointerIntentOptions = {},
   ): void {
     const keysLookup = resolveLookup(lookup);
     recordPointerIntentDetection(intent);
