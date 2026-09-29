@@ -15,11 +15,11 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
-import { appConfigQueryOptions } from "@web/billing/billing.query";
 import {
-  rememberSignupTrialMethod,
+  appConfigQueryOptions,
   shouldOfferSignupTrialStep,
-} from "@web/billing/signup-trial.util";
+} from "@web/billing/billing.query";
+import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
 import { getAuthSubmitErrorMessage } from "./useAuthFormHandlers.util";
 import { type AuthSearch, type AuthView } from "./useAuthModal";
 
