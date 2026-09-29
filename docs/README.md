@@ -15,7 +15,6 @@ Internal documentation for engineers and agents working in the Compass repo.
 - Event shape or recurrence behavior: [Event Domain Model](./architecture/event-domain-model.md), [Common Change Recipes](./development/common-change-recipes.md#change-recurring-event-behavior)
 - Attendees, contact suggestions, or RSVP: [Attendees, Contacts, And RSVP](./features/attendees.md), [Feature File Map](./development/feature-file-map.md#attendees-contacts-and-rsvp)
 - Event caching, reads, or optimistic writes: [Event Caching](./frontend/event-caching.md)
-- Dragging/resizing events on the week grid: [Week Drag Interaction](./frontend/week-drag-interaction.md)
 - Keyboard shortcuts, event jump, or pointer hints: [Shortcut Commandments](./frontend/shortcut-commandments.md), [Shortcuts](./acceptance/shortcuts.md), [Shortcut Levels](./features/shortcut-levels.md), [Contextual Pointer Guidance](./frontend/contextual-pointer-guidance.md), [Feature File Map](./development/feature-file-map.md#keyboard-shortcuts)
 - Welcome, Shortcut Showcase, or the first-event handoff prompt: [Onboarding](./acceptance/onboarding.md), [Feature File Map](./development/feature-file-map.md#welcome-showcase-and-first-event-handoff), [Frontend Runtime Flow](./frontend/frontend-runtime-flow.md#welcome-showcase-and-first-event-handoff)
 - Breakpoints, sidebar collapse, or layout at different viewport sizes: [Responsive Layout](./frontend/responsive-layout.md)

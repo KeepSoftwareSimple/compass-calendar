@@ -71,5 +71,3 @@ Below-desktop-width behavior above is distinct from mobile-OS gating —
 `useIsMobile` (768px) is unrelated to this window-width system; it is used
 only by LifeView layout.
 
-Related: [Week Drag Interaction](./week-drag-interaction.md) — the drag
-geometry model that reads the same `weekDays` window this doc describes.

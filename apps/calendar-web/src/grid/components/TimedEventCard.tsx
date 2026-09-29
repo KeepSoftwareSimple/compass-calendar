@@ -277,7 +277,6 @@ const TimedEventCardBase = (
         "absolute min-h-2.5 overflow-hidden pr-0.75 pl-1.25 transition-[background-color,filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
         isHidden ? "rounded-full" : "rounded-xs",
         "bg-(--event-bg) hover:bg-(--event-hover-bg)",
-        "hover:cursor-pointer",
         eventFocusOutlineClass(focusedEdge),
         (event.isDemo ||
           guestResponse === "awaiting" ||

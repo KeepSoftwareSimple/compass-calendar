@@ -195,8 +195,7 @@ const CommandPaletteContent = ({
         : noResultsText
       : `${resultCount} result${resultCount === 1 ? "" : "s"}`;
 
-  // Invoke the item action directly — not via HTMLElement.click() — so
-  // the capture-phase click blocker cannot swallow Enter.
+  // Invoke onClick directly so Enter activation does not rely on synthetic clicks.
   const activateItem = (item: CommandItem) => {
     if (item.disabled) return;
     recordRecentCommand(item.id);
