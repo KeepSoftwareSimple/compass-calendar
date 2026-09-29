@@ -276,12 +276,10 @@ export function useShiftHoldEventHints({
       clearAmbiguousCommitTimer();
       if (!digits) return;
 
-      const now = dayjs().tz(getEffectiveTimeZone());
       const start =
         pointerDraftStart(digits) ??
         resolveQuickTimeStart(
           digits,
-          now,
           focusedColumnDay() ?? getQuickTimeDayRef.current(),
         );
       if (!start) return;

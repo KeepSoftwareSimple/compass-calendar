@@ -70,7 +70,6 @@ export const MainGridQuickTimeSlots = ({ measurements, weekProps }: Props) => {
     );
     return buildQuickTimeSlots({
       busy: timedEventsToBusyIntervals(timedEvents),
-      now,
       targetDay,
     });
   }, [
