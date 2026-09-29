@@ -1,7 +1,9 @@
 import { track } from "@web/auth/posthog/track";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
-import { consumeKeyboardContextMenuSkip } from "@web/shortcuts/context-menu/context-menu-keyboard-dispatch";
-import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import {
+  consumeKeyboardContextMenuSkip,
+  readPointerHintDismissedPermanently,
+} from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
   pointerHintActions,
   selectPointerHintVisible,

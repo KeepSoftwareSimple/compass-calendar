@@ -41,18 +41,6 @@ describe("PointerHint", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Next time, press");
   });
 
-  it("renders a pointer attempt message and keycaps", () => {
-    pointerHintActions.pulse({
-      source: "pointer",
-      shortcutKey: "Enter",
-      message: "Press {0} to open. Hold {1} to jump to any event.",
-      keys: [["Enter"], ["H"]],
-    });
-    render(<PointerHint />);
-    expect(screen.getByRole("status")).toHaveTextContent("Press");
-    expect(screen.getByRole("status")).toHaveTextContent("jump to any event");
-  });
-
   it("shows chord shortcuts from the palette", () => {
     pointerHintActions.pulse({
       shortcutKey: ["Mod", "K"],

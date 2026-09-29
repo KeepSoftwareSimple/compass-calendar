@@ -8,7 +8,6 @@ import {
   type ShortcutKeysLookup,
   shouldTeachPointerIntent,
   teachingKeysForIntent,
-  teachingMessageForIntent,
 } from "@web/shortcuts/pointer-intent/pointer-intent";
 import {
   getPointerIntentSessionSnapshot,
@@ -58,13 +57,10 @@ export const pointerIntentActions = {
 
     const teaching = INTENT_TEACHING[intent];
     const keys = teachingKeysForIntent(intent, keysLookup);
-    const message = teachingMessageForIntent(intent, ctx);
     const shortcutKey = keys[0] ?? [];
 
     pointerHintActions.pulse({
       source: "pointer",
-      message,
-      keys,
       shortcutKey,
     });
     markPointerIntentHintShown(intent);

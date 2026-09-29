@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useIsTrialing } from "@web/billing/useIsTrialing";
 import { ID_MAIN } from "@web/common/constants/web.constants";
 import { useHorizontalNavigation } from "@web/common/hooks/useHorizontalNavigation";
@@ -23,7 +23,6 @@ import {
   viewActions,
 } from "@web/events/stores/view.store";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
-import { useCalendarPointerIntentTracker } from "@web/shortcuts/pointer-intent/useCalendarPointerIntentTracker";
 import { getShortcutMenuSections } from "@web/shortcuts/shortcuts.registry";
 import { TimezoneMismatchBannerGate } from "@web/timezone/TimezoneMismatchBannerGate";
 import { Dedication } from "@web/views/Week/components/Dedication/Dedication";
@@ -50,7 +49,13 @@ export const WeekView = () => {
   // untouched and the panel collapses again when the form closes.
   const isEventDetailsOpen = useDraftStore(selectIsEventFormOpen);
   useSidebarShortcuts();
-  useCalendarPointerIntentTracker();
+  useEffect(() => {
+    void import(
+      "@web/shortcuts/pointer-intent/attachPointerIntentTracker"
+    ).then(({ attachPointerIntentTracker }) => {
+      attachPointerIntentTracker();
+    });
+  }, []);
   const { today } = useToday();
 
   const { trackRef, visibleDayCount } = useVisibleDayCount();

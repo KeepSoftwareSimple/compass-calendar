@@ -96,17 +96,11 @@ export const useHorizontalNavigation = ({
       if (Math.abs(accumulatedDelta) < NAVIGATION_THRESHOLD_PX) return;
 
       hasNavigated = true;
-      const swipeForward = accumulatedDelta > 0;
-      const navigate = swipeForward
-        ? callbacksRef.current.onNext
-        : callbacksRef.current.onPrevious;
+      const navigate =
+        accumulatedDelta > 0
+          ? callbacksRef.current.onNext
+          : callbacksRef.current.onPrevious;
       navigate();
-      void import("@web/shortcuts/pointer-intent/pointer-intent.actions").then(
-        ({ pointerIntentActions }) =>
-          pointerIntentActions.notify(
-            swipeForward ? "swipe-next" : "swipe-prev",
-          ),
-      );
     };
 
     container.addEventListener("wheel", handleWheel, { passive: false });

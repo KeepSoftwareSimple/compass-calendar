@@ -12,59 +12,15 @@ import {
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 
-const PLACEHOLDER_PATTERN = /\{(\d+)\}/g;
-
-function renderPointerHintMessage(message: string, keys: string[][]) {
-  const parts: Array<string | { keyIndex: number }> = [];
-  let lastIndex = 0;
-  for (const match of message.matchAll(PLACEHOLDER_PATTERN)) {
-    const index = match.index ?? 0;
-    if (index > lastIndex) {
-      parts.push(message.slice(lastIndex, index));
-    }
-    parts.push({ keyIndex: Number(match[1]) });
-    lastIndex = index + match[0].length;
-  }
-  if (lastIndex < message.length) parts.push(message.slice(lastIndex));
-
-  return (
-    <span>
-      {parts.map((part, i) =>
-        typeof part === "string" ? (
-          // biome-ignore lint/suspicious/noArrayIndexKey: template parts are order-stable
-          <span key={i}>{part}</span>
-        ) : (
-          <span
-            // biome-ignore lint/suspicious/noArrayIndexKey: template parts are order-stable
-            key={i}
-            className="inline-flex whitespace-nowrap align-middle"
-          >
-            <ShortcutKeys keys={keys[part.keyIndex] ?? []} />
-          </span>
-        ),
-      )}
-    </span>
-  );
-}
-
 /**
- * Keyboard teaching after a command palette selection or a pointer intent on
- * the grid. Top-center to stay clear of the Up Next banner's bottom-center spot.
+ * "Next time, press X" teaching after a command palette selection with a
+ * shortcut. Top-center to stay clear of the Up Next banner's bottom-center spot.
  */
 export const PointerHint: FC = () => {
   const isVisible = usePointerHintStore(selectPointerHintVisible);
   const attempt = usePointerHintStore(selectPointerHintAttempt);
 
   if (!isVisible || !attempt?.shortcutKey) return null;
-
-  const body =
-    attempt.source === "pointer" && attempt.message && attempt.keys ? (
-      renderPointerHintMessage(attempt.message, attempt.keys)
-    ) : (
-      <>
-        Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
-      </>
-    );
 
   return (
     <div
@@ -74,7 +30,9 @@ export const PointerHint: FC = () => {
       role="status"
       style={{ zIndex: Z_INDEX_TOOLTIP }}
     >
-      <span className="min-w-0 flex-1">{body}</span>
+      <span className="min-w-0 flex-1">
+        Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
+      </span>
       <IconButton
         aria-label="Turn off keyboard tips"
         className="shrink-0 opacity-70 hover:opacity-100"

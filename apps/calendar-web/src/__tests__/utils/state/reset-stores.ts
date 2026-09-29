@@ -63,13 +63,15 @@ import {
   useSettingsStore,
 } from "@web/settings/settings.store";
 import { useThemeStore } from "@web/settings/theme/theme.store";
-import { resetKeyboardContextMenuDispatchForTests } from "@web/shortcuts/context-menu/context-menu-keyboard-dispatch";
 import { resetContextMenuPointerHintForTests } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import {
   initialEditSequenceState,
   useEditSequenceStore,
 } from "@web/shortcuts/edit-sequence/edit-sequence.store";
-import { resetPointerHintPersistenceForTests } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import {
+  resetKeyboardContextMenuDispatchForTests,
+  resetPointerHintPersistenceForTests,
+} from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
   initialPointerHintState,
   resetPointerHintTimerForTests,
