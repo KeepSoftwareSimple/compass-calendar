@@ -4,14 +4,21 @@ import { diffRRuleOptions } from "@core/util/event/event.util";
 
 describe("diffRRuleOptions", () => {
   it("should return the differences between two rrule options", () => {
-    const until = dayjs("2026-01-15T12:34:56Z");
+    // rrule defaults dtstart to "now" (to the second) and derives
+    // byhour/byminute/bysecond from it, so every rule needs the same fixed
+    // dtstart or the diff depends on when the clock ticks.
+    const dtstart = dayjs.utc("2026-01-01T09:00:00Z");
+    // toRRuleDTSTARTString appends a literal Z, so it must format UTC time,
+    // and the string must be parsed back as UTC, not in the process timezone.
+    const until = dayjs.utc("2026-01-15T12:34:56Z");
     const untilRule = `UNTIL=${until.toRRuleDTSTARTString()}`;
-    const rule = `RRULE:FREQ=DAILY;COUNT=10;BYDAY=MO,WE,FR;${untilRule}`;
+    const rule = `DTSTART:${dtstart.toRRuleDTSTARTString()}\nRRULE:FREQ=DAILY;COUNT=10;BYDAY=MO,WE,FR;${untilRule}`;
     const rrule = rrulestr(rule);
     const untilFormat = dayjs.DateFormat.RFC5545;
-    const nextUntil = dayjs(until.toRRuleDTSTARTString(), untilFormat);
+    const nextUntil = dayjs.utc(until.toRRuleDTSTARTString(), untilFormat);
 
     const rruleA = new RRule({
+      dtstart: dtstart.toDate(),
       tzid: rrule.options.tzid,
       freq: RRule.DAILY, // DAILY
       count: 10,
@@ -21,6 +28,7 @@ describe("diffRRuleOptions", () => {
     });
 
     const rruleB = new RRule({
+      dtstart: dtstart.toDate(),
       tzid: rrule.options.tzid,
       freq: RRule.DAILY, // DAILY
       count: 10,
