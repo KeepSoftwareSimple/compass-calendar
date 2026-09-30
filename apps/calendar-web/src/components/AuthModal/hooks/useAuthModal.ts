@@ -11,6 +11,8 @@ import {
   type SearchFlag,
   searchFlagValue,
 } from "@web/common/utils/parse/search-flag.util";
+import { settingsPageFromSearch } from "@web/settings/settings.search";
+import { type SettingsPage } from "@web/settings/settings.store";
 
 export type AuthView =
   | "login"
@@ -47,6 +49,8 @@ export interface AuthSearch {
   play?: SearchFlag;
   /** ?meetingSetup=1 opens Meeting settings from the public /meet footer. */
   meetingSetup?: SearchFlag;
+  /** ?settings=<page> opens Settings on that page (welcome email CTAs). */
+  settings?: SettingsPage;
 }
 
 export function validateAuthSearch(
@@ -57,6 +61,7 @@ export function validateAuthSearch(
     token: typeof search.token === "string" ? search.token : undefined,
     play: searchFlagValue(search.play),
     meetingSetup: searchFlagValue(search.meetingSetup),
+    settings: settingsPageFromSearch(search.settings),
   };
 }
 

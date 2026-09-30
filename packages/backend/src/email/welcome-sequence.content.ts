@@ -14,7 +14,15 @@ export type WelcomeEmailContentEntry = {
 const appUrl = (): string => CONFIG.FRONTEND_URL.replace(/\/$/, "");
 
 // TODO(copy): replace placeholder welcome drip copy before launch.
-/** Placeholder copy for the welcome drip. Real copy replaces this file only. */
+/**
+ * Placeholder copy for the welcome drip. Real copy replaces this file only.
+ *
+ * CTA links must land on URLs calendar-web handles. Settings is a modal, not
+ * a route, so `/settings/...` paths 404. `?settings=<page>` opens the modal
+ * on that page (useSettingsSearchEntry) and `?meetingSetup=1` opens meeting
+ * setup (useGuestMeetingSetupEntry). The email layout appends utm params, so
+ * every href here must tolerate extra query params.
+ */
 export const WELCOME_SEQUENCE_CONTENT: Record<
   string,
   WelcomeEmailContentEntry
@@ -42,7 +50,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "Try shortcuts",
-      href: `${appUrl()}/?welcome=shortcuts`,
+      href: appUrl(),
     },
   },
   "connect-calendar": {
@@ -55,7 +63,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "Connect a calendar",
-      href: `${appUrl()}/settings`,
+      href: `${appUrl()}/?settings=accounts`,
     },
   },
   booking: {
@@ -68,7 +76,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "Set up booking",
-      href: `${appUrl()}/settings/booking`,
+      href: `${appUrl()}/?meetingSetup=1`,
     },
   },
   "trial-ending": {
@@ -81,7 +89,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "View billing",
-      href: `${appUrl()}/settings/billing`,
+      href: `${appUrl()}/?settings=billing`,
     },
   },
 };
