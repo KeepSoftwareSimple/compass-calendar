@@ -1517,9 +1517,20 @@ describe("PublicBookingPage", () => {
 });
 
 describe("PublicBookingConfirmedPage", () => {
+  const confirmedPermalink =
+    "/meet/confirmed/000000000000000000000099?token=abc";
+
+  it("shows meeting not found when the confirmation permalink has no token", async () => {
+    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+
+    expect(
+      await screen.findByRole("heading", { name: "Meeting not found" }),
+    ).toHaveFocus();
+  });
+
   it("shows booking details from the public GET", async () => {
     server.use(reservationGetHandler());
-    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", {
@@ -1543,13 +1554,13 @@ describe("PublicBookingConfirmedPage", () => {
       screen.queryByRole("button", { name: /^Copy / }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Edit details" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Edit details" }),
+    ).toBeInTheDocument();
   });
 
   it("offers cancel and edit on a cold permalink with a token", async () => {
     server.use(reservationGetHandler());
-    renderBookingRoute("/meet/confirmed/000000000000000000000099?token=abc");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", {
@@ -1584,7 +1595,7 @@ describe("PublicBookingConfirmedPage", () => {
 
   it("promises a calendar invite when the reservation cannot mint Meet", async () => {
     server.use(reservationGetHandler({ createsGoogleMeet: false }));
-    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", {
@@ -1609,9 +1620,7 @@ describe("PublicBookingConfirmedPage", () => {
       slotsInWindow([currentSlot]),
       reservationGetHandler(),
     );
-    const { router } = renderBookingRoute(
-      "/meet/confirmed/000000000000000000000099",
-    );
+    const { router } = renderBookingRoute(confirmedPermalink);
 
     await screen.findByRole("heading", {
       name: "You're meeting with Tyler Dane",
@@ -1630,9 +1639,7 @@ describe("PublicBookingConfirmedPage", () => {
   it("does not navigate on Escape when the confirmation has no slug", async () => {
     const user = userEvent.setup({ delay: null });
     server.use(reservationGetHandler({ status: "cancelled" }));
-    const { router } = renderBookingRoute(
-      "/meet/confirmed/000000000000000000000099",
-    );
+    const { router } = renderBookingRoute(confirmedPermalink);
 
     const heading = await screen.findByRole("heading", {
       name: "This meeting was canceled",
@@ -1653,9 +1660,7 @@ describe("PublicBookingConfirmedPage", () => {
         () => HttpResponse.json({}, { status: Status.NOT_FOUND }),
       ),
     );
-    const { router } = renderBookingRoute(
-      "/meet/confirmed/000000000000000000000099",
-    );
+    const { router } = renderBookingRoute(confirmedPermalink);
 
     const heading = await screen.findByRole("heading", {
       name: "Meeting not found",
@@ -1670,7 +1675,7 @@ describe("PublicBookingConfirmedPage", () => {
 
   it("shows a calm state for a cancelled reservation", async () => {
     server.use(reservationGetHandler({ status: "cancelled" }));
-    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", {
@@ -1692,7 +1697,7 @@ describe("PublicBookingConfirmedPage", () => {
         () => HttpResponse.json({}, { status: Status.NOT_FOUND }),
       ),
     );
-    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", { name: "Meeting not found" }),
@@ -1706,7 +1711,7 @@ describe("PublicBookingConfirmedPage", () => {
         () => HttpResponse.json({}, { status: Status.INTERNAL_SERVER }),
       ),
     );
-    renderBookingRoute("/meet/confirmed/000000000000000000000099");
+    renderBookingRoute(confirmedPermalink);
 
     expect(
       await screen.findByRole("heading", { name: "Could not load meeting" }),
@@ -1812,8 +1817,11 @@ describe("PublicBookingConfirmedPage", () => {
               hostDisplayName: "Tyler Dane",
               status: "confirmed",
               bookingSlug: "tylerdane",
-              guestName: body.name,
-              notes: body.notes,
+              guestName:
+                typeof body.name === "string" ? body.name : "Guest User",
+              notes: typeof body.notes === "string" ? body.notes : null,
+              createsGoogleMeet: true,
+              conference: "meet",
             },
             { status: Status.OK },
           );

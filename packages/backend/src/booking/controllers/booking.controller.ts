@@ -109,7 +109,9 @@ class BookingController {
   getPublicReservation = async (req: Request, res: Response) => {
     try {
       const parsedId = zObjectId.safeParse(req.params["id"]);
-      if (!parsedId.success) {
+      const token =
+        typeof req.query["token"] === "string" ? req.query["token"].trim() : "";
+      if (!parsedId.success || !token) {
         respondBookingError(
           res,
           bookingError("RESERVATION_NOT_FOUND", "Reservation not found"),
@@ -118,6 +120,7 @@ class BookingController {
       }
       const response = await publicBookingService.getPublicReservation(
         parsedId.data,
+        token,
       );
       res.status(Status.OK).json(response);
     } catch (error) {

@@ -35,3 +35,9 @@ export const guestActionTokenAuthorizes = (
   const live = guestActionTokenIsLive(slotEnd, now);
   return hashOk && live;
 };
+
+/** Read-only guest views: valid token, including after the slot ends. */
+export const guestReadTokenAuthorizes = (
+  storedHash: string,
+  rawToken: string,
+): boolean => verifyCancelToken(storedHash, rawToken);

@@ -84,6 +84,14 @@ const nextUtcMonday = (): string => {
 const BOOKING_MONDAY = nextUtcMonday();
 const BOOKING_TUESDAY = utcDatePlusDays(BOOKING_MONDAY, 1);
 
+const guestReadToken = (cancelUrl: string): string => {
+  const token = new URL(cancelUrl).searchParams.get("token");
+  if (!token) {
+    throw new Error("expected guest read token on cancel URL");
+  }
+  return token;
+};
+
 const calendarId = () => new ObjectId().toString();
 
 const writableCalendar = (id = calendarId()) => ({
@@ -1060,6 +1068,7 @@ describe("PublicBookingService", () => {
     });
     const publicReservation = await service.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
     expect(publicReservation.createsGoogleMeet).toBe(false);
     expect(publicReservation.conference).toBe("none");
@@ -1117,6 +1126,7 @@ describe("PublicBookingService", () => {
 
     const publicReservation = await bookingService.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
     expect(publicReservation.createsGoogleMeet).toBe(false);
     expect(publicReservation.conference).toBe("none");
@@ -1170,6 +1180,7 @@ describe("PublicBookingService", () => {
 
     const publicReservation = await bookingService.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
     expect(publicReservation.conference).toBe("teams");
   });
@@ -1467,6 +1478,7 @@ describe("PublicBookingService", () => {
 
     const publicReservation = await service.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
 
     expect(publicReservation).toEqual({
@@ -1511,6 +1523,7 @@ describe("PublicBookingService", () => {
 
     const publicReservation = await service.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
     expect(publicReservation.durationMinutes).toBe(30);
   });
@@ -1531,6 +1544,7 @@ describe("PublicBookingService", () => {
 
     const publicReservation = await service.getPublicReservation(
       new ObjectId(created.reservationId),
+      guestReadToken(created.cancelUrl),
     );
     expect(publicReservation.status).toBe("cancelled");
     expect(publicReservation).not.toHaveProperty("guestEmail");
@@ -1538,8 +1552,28 @@ describe("PublicBookingService", () => {
 
   it("throws not found for an unknown reservation", async () => {
     await expect(
-      service.getPublicReservation(new ObjectId()),
+      service.getPublicReservation(new ObjectId(), generateCancelToken()),
     ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
+  });
+
+  it("throws not found when the guest read token is missing or wrong", async () => {
+    const { slug } = await enableBookingPage();
+    const created = await service.createReservation(slug, {
+      slotStart: `${BOOKING_MONDAY}T10:00:00.000Z`,
+      guestName: "Ada Lovelace",
+      guestEmail: "ada@example.com",
+      guestTimeZone: "Europe/London",
+      durationMinutes: 30,
+    });
+    const reservationId = new ObjectId(created.reservationId);
+    const token = guestReadToken(created.cancelUrl);
+
+    await expect(
+      service.getPublicReservation(reservationId, generateCancelToken()),
+    ).rejects.toMatchObject({ bookingCode: "RESERVATION_NOT_FOUND" });
+    await expect(
+      service.getPublicReservation(reservationId, token),
+    ).resolves.toBeDefined();
   });
 
   it("still returns slots when the page already has a confirmed reservation", async () => {
@@ -3001,7 +3035,10 @@ describe("PublicBookingService", () => {
     await expect(
       service.cancelReservation(reservationId, { token }),
     ).rejects.toMatchObject({ result: "SYNC_UNAVAILABLE" });
-    const publicReservation = await service.getPublicReservation(reservationId);
+    const publicReservation = await service.getPublicReservation(
+      reservationId,
+      guestReadToken(created.cancelUrl),
+    );
     expect(publicReservation.status).toBe("cancelling");
     expect(publicReservation).not.toHaveProperty("cancelUrl");
   });
@@ -3261,6 +3298,14 @@ describe("Public booking routes", () => {
       .expect(Status.NOT_FOUND);
   });
 
+  it("GET public reservation returns 404 when token is missing", async () => {
+    const reservationId = new ObjectId();
+    await baseDriver
+      .getServer()
+      .get(`/api/booking/reservations/${reservationId.toString()}`)
+      .expect(Status.NOT_FOUND);
+  });
+
   it("GET public reservation returns minimal fields", async () => {
     const userId = await createNamedUser("Permalink Host");
     const calendar = writableCalendar();
@@ -3279,6 +3324,7 @@ describe("Public booking routes", () => {
       throw new Error("expected a saved booking page");
     }
     const reservationId = new ObjectId();
+    const readToken = generateCancelToken();
     await bookingReservationRepository.insert({
       _id: reservationId,
       pageId: new ObjectId(page.id),
@@ -3290,12 +3336,14 @@ describe("Public booking routes", () => {
       guestTimeZone: "Europe/London" as TimeZone,
       status: "confirmed",
       calendarEventId: "evt-1",
-      cancelTokenHash: "a".repeat(64),
+      cancelTokenHash: hashCancelToken(readToken),
     });
 
     const response = await baseDriver
       .getServer()
-      .get(`/api/booking/reservations/${reservationId.toString()}`)
+      .get(
+        `/api/booking/reservations/${reservationId.toString()}?token=${encodeURIComponent(readToken)}`,
+      )
       .expect(Status.OK);
 
     expect(response.body).toEqual({

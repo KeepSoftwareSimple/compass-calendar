@@ -47,6 +47,7 @@ export function usePublicBookingRescheduleFlow() {
 
   const reservationQuery = usePublicBookingReservationQuery(
     canLoad ? reservationId : "",
+    canLoad ? token : "",
   );
   const bookingSlug =
     reservationQuery.data?.status === "confirmed"

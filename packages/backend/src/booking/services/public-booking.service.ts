@@ -47,6 +47,7 @@ import { BookingException, bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
   guestActionTokenAuthorizes,
+  guestReadTokenAuthorizes,
   hashCancelToken,
 } from "@backend/booking/booking-cancel-token";
 import {
@@ -357,6 +358,21 @@ const loadGuestAuthorizedReservation = async (
       token,
       reservation.slotEnd,
     )
+  ) {
+    throw reservationNotFound();
+  }
+  return reservation;
+};
+
+const loadGuestReadAuthorizedReservation = async (
+  reservationId: ObjectId,
+  token: string,
+): Promise<BookingReservationRecord> => {
+  const reservation =
+    await bookingReservationRepository.findById(reservationId);
+  if (
+    !reservation ||
+    !guestReadTokenAuthorizes(reservation.cancelTokenHash, token)
   ) {
     throw reservationNotFound();
   }
@@ -875,12 +891,12 @@ export class PublicBookingService {
 
   async getPublicReservation(
     reservationId: ObjectId,
+    token: string,
   ): Promise<PublicGetBookingReservationResponse> {
-    const reservation =
-      await bookingReservationRepository.findById(reservationId);
-    if (!reservation) {
-      throw reservationNotFound();
-    }
+    const reservation = await loadGuestReadAuthorizedReservation(
+      reservationId,
+      token,
+    );
 
     const page = await resolveReservationPublicPage(reservation);
     return presentReservation(

@@ -33,8 +33,8 @@ export const publicBookingQueryKeys = {
   slotsAll: (slug: string) => ["public-booking", "slots", slug] as const,
   slots: (slug: string, monthKey: string, timeZone: string) =>
     [...publicBookingQueryKeys.slotsAll(slug), monthKey, timeZone] as const,
-  reservation: (reservationId: string) =>
-    ["public-booking", "reservation", reservationId] as const,
+  reservation: (reservationId: string, token: string) =>
+    ["public-booking", "reservation", reservationId, token] as const,
   reservationSlotsAll: (reservationId: string) =>
     ["public-booking", "reservation-slots", reservationId] as const,
   reservationSlots: (
@@ -69,18 +69,24 @@ export function usePublicBookingPageQuery(slug: string) {
   });
 }
 
-function publicBookingReservationQueryOptions(reservationId: string) {
+function publicBookingReservationQueryOptions(
+  reservationId: string,
+  token: string,
+) {
   return queryOptions({
-    queryKey: publicBookingQueryKeys.reservation(reservationId),
-    queryFn: () => PublicBookingApi.getReservation(reservationId),
+    queryKey: publicBookingQueryKeys.reservation(reservationId, token),
+    queryFn: () => PublicBookingApi.getReservation(reservationId, token),
     staleTime: PUBLIC_BOOKING_PAGE_STALE_TIME_MS,
     retry: retryUnlessNotFound,
-    enabled: Boolean(reservationId),
+    enabled: Boolean(reservationId && token),
   });
 }
 
-export function usePublicBookingReservationQuery(reservationId: string) {
-  return useQuery(publicBookingReservationQueryOptions(reservationId));
+export function usePublicBookingReservationQuery(
+  reservationId: string,
+  token: string,
+) {
+  return useQuery(publicBookingReservationQueryOptions(reservationId, token));
 }
 
 export function publicBookingReservationSlotsQueryOptions(
@@ -350,9 +356,11 @@ export function usePatchPublicBookingReservationMutation(
     mutationFn: (input: PatchBookingReservationInput) =>
       PublicBookingApi.patchReservation(reservationId, input),
     onSuccess: (data) => {
-      queryClient.setQueryData(
-        publicBookingQueryKeys.reservation(reservationId),
-        data,
+      queryClient.setQueriesData(
+        {
+          queryKey: ["public-booking", "reservation", reservationId],
+        },
+        () => data,
       );
     },
   });
@@ -368,7 +376,7 @@ export function useReschedulePublicBookingReservationMutation(
       PublicBookingApi.rescheduleReservation(reservationId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: publicBookingQueryKeys.reservation(reservationId),
+        queryKey: ["public-booking", "reservation", reservationId],
       });
       void queryClient.invalidateQueries({
         queryKey: publicBookingQueryKeys.reservationSlotsAll(reservationId),

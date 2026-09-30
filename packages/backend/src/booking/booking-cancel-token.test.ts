@@ -1,6 +1,7 @@
 import {
   guestActionTokenAuthorizes,
   guestActionTokenIsLive,
+  guestReadTokenAuthorizes,
   hashCancelToken,
   verifyCancelToken,
 } from "@backend/booking/booking-cancel-token";
@@ -52,5 +53,25 @@ describe("guestActionTokenAuthorizes", () => {
       ),
     ).toBe(false);
     expect(verifyCancelToken(hash, token)).toBe(true);
+  });
+});
+
+describe("guestReadTokenAuthorizes", () => {
+  const token = randomBytes(32).toString("base64url");
+  const hash = hashCancelToken(token);
+  const slotEnd = new Date("2026-09-07T10:30:00.000Z");
+
+  it("authorizes a matching token after slotEnd", () => {
+    expect(guestReadTokenAuthorizes(hash, token)).toBe(true);
+    expect(guestReadTokenAuthorizes(hash, token)).toBe(true);
+    expect(
+      guestActionTokenAuthorizes(
+        hash,
+        token,
+        slotEnd,
+        new Date("2026-09-07T11:00:00.000Z"),
+      ),
+    ).toBe(false);
+    expect(guestReadTokenAuthorizes(hash, `${token}x`)).toBe(false);
   });
 });
