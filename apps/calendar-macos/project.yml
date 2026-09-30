@@ -1,0 +1,68 @@
+# XcodeGen spec for Compass for macOS (docs/features/desktop-client.md).
+# `xcodegen generate` writes Compass.xcodeproj, which is not checked in.
+name: Compass
+options:
+  bundleIdPrefix: com.compasscalendar
+  deploymentTarget:
+    macOS: "13.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    MARKETING_VERSION: 0.1.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "6.0"
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    # Ad hoc signing so local and CI builds run. Developer ID signing is
+    # release-only (release-macos.yml).
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"
+    DEVELOPMENT_TEAM: ""
+packages:
+  CompassKit:
+    path: CompassKit
+targets:
+  Compass:
+    type: application
+    platform: macOS
+    sources:
+      - Compass
+    settings:
+      base:
+        PRODUCT_NAME: Compass
+        PRODUCT_BUNDLE_IDENTIFIER: com.compasscalendar.desktop
+        INFOPLIST_FILE: Resources/Info.plist
+    dependencies:
+      - package: CompassKit
+  CompassKitTests:
+    type: bundle.unit-test
+    platform: macOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        # Xcode 27's XCTest is built for macOS 14; the app still targets 13.
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    sources:
+      - CompassKitTests
+    dependencies:
+      - package: CompassKit
+  CompassUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        # Xcode 27's XCTest is built for macOS 14; the app still targets 13.
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+    sources:
+      - CompassUITests
+    dependencies:
+      - target: Compass
+schemes:
+  Compass:
+    build:
+      targets:
+        Compass: all
+    test:
+      targets:
+        - CompassKitTests
+        - CompassUITests
