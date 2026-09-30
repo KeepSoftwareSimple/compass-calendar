@@ -98,6 +98,29 @@ describe("ShortcutLevelBadge", () => {
     expect(screen.queryByText("Next")).not.toBeInTheDocument();
   });
 
+  it("shows a long try-next label in full next to a four-key row", async () => {
+    const user = userEvent.setup({ skipHover: true });
+    const label = "Move the month picker by a week (Enter opens it)";
+    renderBadge([
+      {
+        id: "navigate",
+        title: "Navigate",
+        shortcuts: [
+          {
+            id: "nav-picker-step",
+            keys: ["ArrowLeft", "ArrowUp", "ArrowDown", "ArrowRight"],
+            label,
+            section: "navigate",
+          },
+        ],
+      },
+    ]);
+
+    await user.hover(screen.getByRole("button", { name: /Shortcut level/ }));
+
+    expect(await screen.findByText(label)).not.toHaveClass("truncate");
+  });
+
   it("prefers edit rows in try-next when a calendar event is focused", async () => {
     const user = userEvent.setup({ skipHover: true });
     focusEventCard();

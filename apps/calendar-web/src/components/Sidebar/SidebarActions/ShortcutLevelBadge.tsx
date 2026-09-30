@@ -145,28 +145,37 @@ export function ShortcutLevelBadge({ sections }: Props) {
           {`Lv ${level.level}`}
         </button>
       </TooltipTrigger>
-      <TooltipContent className="flex max-w-60 flex-col gap-1.5">
-        <span className="font-medium text-text">
+      {/* font-normal overrides c-tooltip's font-medium so only the heading
+       * and section label carry weight. */}
+      <TooltipContent className="flex w-72 flex-col gap-2 px-3 py-2 font-normal">
+        <span className="font-semibold text-sm text-text">
           {`Level ${level.level}: ${level.name}`}
         </span>
         {/* text-text, not muted: c-keycap hit the same 12px-on-surface-raised
          * contrast failure (axe 3.97:1 here vs the required 4.5:1). */}
         <span className="text-text text-xs">{progressText}</span>
         {tryNext.length > 0 ? (
-          <div className="flex flex-col gap-1 border-border border-t pt-1.5">
-            <span className="text-text text-xs">Try next</span>
+          <div className="flex flex-col gap-1.5 border-border border-t pt-2">
+            <span className="font-medium text-text text-xs">Try next</span>
+            {/* flex-wrap: long key sets (the four arrows) drop under the
+             * label instead of truncating it. */}
             {tryNext.map((shortcut) => (
               <div
                 key={shortcut.id}
-                className="flex items-center justify-between gap-2 text-xs"
+                className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs"
               >
-                <span className="min-w-0 truncate">{shortcut.label}</span>
-                <ShortcutKeys keys={shortcut.keys} />
+                <span className="min-w-0 flex-1 basis-36">
+                  {shortcut.label}
+                </span>
+                <ShortcutKeys
+                  className="ml-auto shrink-0"
+                  keys={shortcut.keys}
+                />
               </div>
             ))}
           </div>
         ) : null}
-        <div className="flex items-center justify-between gap-2 border-border border-t pt-1.5">
+        <div className="flex items-center justify-between gap-2 border-border border-t pt-2">
           <button
             className="c-focus-ring rounded-xs text-accent text-xs hover:underline"
             onClick={viewActions.toggleShortcuts}
