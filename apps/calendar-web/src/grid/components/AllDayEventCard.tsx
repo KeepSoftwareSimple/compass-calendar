@@ -18,11 +18,10 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
-  calendarGradient,
+  eventCardFill,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
-  mergedCalendarStops,
 } from "@web/grid/components/calendar-accent.util";
 import {
   gridEventCardOpacity,
@@ -90,18 +89,8 @@ const AllDayEventCardBase = (
   // brighten(fill) is the palette's own hover step.
   const adjustHover = (fill: string) =>
     !isPlaceholder && !isInPast ? brighten(fill) : adjustFill(fill);
-  // A merged card paints its source calendars' colors instead of the event
-  // fill: calendar identity is the point of the gradient, so the event's
-  // color slot is ignored there.
-  const mergedStops = calendarIdentity
-    ? mergedCalendarStops(calendarIdentity)
-    : null;
-  const fillStops = (mergedStops ?? [baseColor]).map(adjustFill);
-  // The flat fill, or the first gradient stop so the flat class underneath a
-  // merged card's gradient is never a stale neutral.
-  const fillBase = mergedStops?.[0] ?? baseColor;
-  const bgColor = adjustFill(fillBase);
-  const hoverBgColor = adjustHover(fillBase);
+  const { mergedStops, fillStops, bgColor, hoverBgColor, imageVars } =
+    eventCardFill(calendarIdentity, baseColor, adjustFill, adjustHover);
   // Chosen per-fill (whichever of dark/light reads better across every stop)
   // rather than a fixed color, matching TimedEventCard, so a future
   // fill/darken tweak can't quietly drop the title below 4.5:1.
@@ -116,10 +105,7 @@ const AllDayEventCardBase = (
   const eventStyle = {
     "--event-bg": bgColor,
     "--event-hover-bg": hoverBgColor,
-    ...(mergedStops && {
-      "--event-bg-image": calendarGradient(fillStops),
-      "--event-hover-bg-image": calendarGradient(mergedStops.map(adjustHover)),
-    }),
+    ...imageVars,
     "--event-focus-color": focusColorCss,
     height: position.height,
     left: position.left,

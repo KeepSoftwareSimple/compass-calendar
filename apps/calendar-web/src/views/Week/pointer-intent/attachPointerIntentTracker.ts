@@ -10,12 +10,7 @@ import {
   type IntentMessageContext,
   type PointerIntent,
 } from "@web/views/Week/pointer-intent/pointer-intent";
-import {
-  pointerIntentActions,
-  registerPointerIntentKeysLookup,
-  resetPointerIntentKeysLookupForTests,
-} from "@web/views/Week/pointer-intent/pointer-intent.actions";
-import { pointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.keys-lookup";
+import { pointerIntentActions } from "@web/views/Week/pointer-intent/pointer-intent.actions";
 
 const CARD_DRAG_THRESHOLD_PX = 8;
 const HOVER_HUNT_SAMPLE_MS = 100;
@@ -32,10 +27,8 @@ type PendingCardPress = {
   dragHintShown: boolean;
 };
 
-/** Imperative grid tracker for dynamic import from RootShell (keeps boot set small). */
+/** Capture-phase grid tracker. WeekView mounts it after the calendar shell paints. */
 export function attachPointerIntentTracker(): () => void {
-  registerPointerIntentKeysLookup(pointerIntentKeysLookup);
-
   let pendingCard: PendingCardPress | null = null;
   let wheelGestureStarts: number[] = [];
   let lastWheelAt = 0;
@@ -51,7 +44,7 @@ export function attachPointerIntentTracker(): () => void {
   };
 
   const notify = (intent: PointerIntent, ctx?: IntentMessageContext) => {
-    pointerIntentActions.notify(intent, { ctx });
+    pointerIntentActions.notify(intent, ctx);
   };
 
   const onHoverHuntCancel = () => {
@@ -177,6 +170,5 @@ export function attachPointerIntentTracker(): () => void {
     document.removeEventListener("pointercancel", onPointerUp, true);
     document.removeEventListener("keydown", onHoverHuntCancel, true);
     document.removeEventListener("wheel", onWheel, true);
-    resetPointerIntentKeysLookupForTests();
   };
 }

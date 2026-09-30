@@ -19,8 +19,8 @@ import { maybePulseContextMenuOpenedByPointer } from "@web/shortcuts/context-men
 import { ContextMenu } from "./ContextMenu";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
+  contextMenuAnchorFromPointer,
   contextMenuStyle,
-  cursorReference,
 } from "./contextMenu.floating";
 
 export const ContextMenuWrapper = ({
@@ -88,28 +88,16 @@ export const ContextMenuWrapper = ({
       const draft = getDraftForEvent(eventId);
       if (!draft) return;
 
-      // Shift+F10 / the Menu key fire contextmenu at 0,0. Anchor on the
-      // focused card instead so the menu is not dumped in the viewport corner.
-      // `m` already dispatches with the card center, so those coordinates pass
-      // through unchanged.
-      const card = target.closest("button") ?? target;
-      const keyboardOrigin = e.clientX === 0 && e.clientY === 0;
-      if (keyboardOrigin) {
-        const rect = card.getBoundingClientRect();
-        refs.setReference(
-          cursorReference(
-            rect.left + rect.width / 2,
-            rect.top + Math.min(rect.height / 2, 24),
-          ),
-        );
-      } else {
-        refs.setReference(cursorReference(e.clientX, e.clientY));
-      }
+      const { reference, fromKeyboard } = contextMenuAnchorFromPointer(
+        e,
+        target,
+      );
+      refs.setReference(reference);
 
       draftActions.startGridDraft({ activity: "eventRightClick", draft });
 
       setIsOpen(true);
-      if (!keyboardOrigin) {
+      if (!fromKeyboard) {
         maybePulseContextMenuOpenedByPointer();
       }
     }

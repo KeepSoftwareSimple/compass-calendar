@@ -11,8 +11,8 @@ import { ContextMenu } from "@web/components/ContextMenu/ContextMenu";
 import { type ContextMenuItemsActions } from "@web/components/ContextMenu/ContextMenuItems";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
+  contextMenuAnchorFromPointer,
   contextMenuStyle,
-  cursorReference,
 } from "@web/components/ContextMenu/contextMenu.floating";
 import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
 import { maybePulseContextMenuOpenedByPointer } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
@@ -71,22 +71,14 @@ export const useDayCalendarContextMenu = ({
         return;
       }
 
-      const keyboardOrigin = event.clientX === 0 && event.clientY === 0;
-      if (keyboardOrigin) {
-        const card = target.closest("button") ?? target;
-        const rect = card.getBoundingClientRect();
-        refs.setReference(
-          cursorReference(
-            rect.left + rect.width / 2,
-            rect.top + Math.min(rect.height / 2, 24),
-          ),
-        );
-      } else {
-        refs.setReference(cursorReference(event.clientX, event.clientY));
-      }
+      const { reference, fromKeyboard } = contextMenuAnchorFromPointer(
+        event,
+        target,
+      );
+      refs.setReference(reference);
       setContextMenuEvent(selectedEvent);
       setIsOpen(true);
-      if (!keyboardOrigin) {
+      if (!fromKeyboard) {
         maybePulseContextMenuOpenedByPointer();
       }
     },

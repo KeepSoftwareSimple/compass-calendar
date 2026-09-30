@@ -34,6 +34,51 @@ export function calendarGradient(stops: string[]): string {
   return `linear-gradient(135deg, ${stops.join(", ")})`;
 }
 
+export type EventCardFill = {
+  mergedStops: string[] | null;
+  fillStops: string[];
+  bgColor: string;
+  hoverBgColor: string;
+  imageVars:
+    | {
+        "--event-bg-image": string;
+        "--event-hover-bg-image": string;
+      }
+    | undefined;
+};
+
+/**
+ * Flat or merged-card fill vars shared by TimedEventCard and AllDayEventCard.
+ * Adjusters stay at the call site: timed cards have draft/resize/drag steps
+ * that all-day cards do not.
+ */
+export function eventCardFill(
+  calendarIdentity: CalendarCardIdentity | null | undefined,
+  baseColor: string,
+  adjustFill: (fill: string) => string,
+  adjustHover: (fill: string) => string,
+): EventCardFill {
+  const mergedStops = calendarIdentity
+    ? mergedCalendarStops(calendarIdentity)
+    : null;
+  const fillStops = (mergedStops ?? [baseColor]).map(adjustFill);
+  const fillBase = mergedStops?.[0] ?? baseColor;
+  return {
+    mergedStops,
+    fillStops,
+    bgColor: adjustFill(fillBase),
+    hoverBgColor: adjustHover(fillBase),
+    imageVars: mergedStops
+      ? {
+          "--event-bg-image": calendarGradient(fillStops),
+          "--event-hover-bg-image": calendarGradient(
+            mergedStops.map(adjustHover),
+          ),
+        }
+      : undefined,
+  };
+}
+
 /**
  * The accessible-label suffix for a card's calendar identity, naming the
  * calendars or accounts the other copies came from when this card is a

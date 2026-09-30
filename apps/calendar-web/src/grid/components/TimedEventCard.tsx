@@ -21,11 +21,10 @@ import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
-  calendarGradient,
+  eventCardFill,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
-  mergedCalendarStops,
 } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -166,13 +165,8 @@ const TimedEventCardBase = (
     !isDraft && !isPlaceholder && !isResizing && !isInPast
       ? brighten(fill)
       : adjustFill(fill);
-  // A merged card paints its source calendars' colors instead of the event
-  // fill: calendar identity is the point of the gradient, so the event's
-  // color slot is ignored there.
-  const mergedStops = calendarIdentity
-    ? mergedCalendarStops(calendarIdentity)
-    : null;
-  const fillStops = (mergedStops ?? [baseColor]).map(adjustFill);
+  const { mergedStops, fillStops, bgColor, hoverBgColor, imageVars } =
+    eventCardFill(calendarIdentity, baseColor, adjustFill, adjustHover);
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
@@ -186,11 +180,6 @@ const TimedEventCardBase = (
     ? eventEdgeFocusShadow(focusedEdge, "vertical", focusColorCss)
     : undefined;
 
-  // The flat fill, or the first gradient stop so the flat class underneath a
-  // merged card's gradient is never a stale neutral.
-  const fillBase = mergedStops?.[0] ?? baseColor;
-  const bgColor = adjustFill(fillBase);
-  const hoverBgColor = adjustHover(fillBase);
   const eventBoxShadow =
     [isSelected ? selectedBoxShadow : null, boxShadow, edgeFocusShadow]
       .filter(Boolean)
@@ -205,10 +194,7 @@ const TimedEventCardBase = (
   const eventStyle = {
     "--event-bg": bgColor,
     "--event-hover-bg": hoverBgColor,
-    ...(mergedStops && {
-      "--event-bg-image": calendarGradient(fillStops),
-      "--event-hover-bg-image": calendarGradient(mergedStops.map(adjustHover)),
-    }),
+    ...imageVars,
     "--event-focus-color": focusColorCss,
     height: position.height || 0,
     left: position.left,
