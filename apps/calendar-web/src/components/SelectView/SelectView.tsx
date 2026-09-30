@@ -16,6 +16,7 @@ import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
+import { isRealMouseClick } from "@web/shortcuts/pointer-intent/real-mouse-click";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,
@@ -125,7 +126,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
     shortcutId?: ShortcutRegistryId,
   ) => {
     return (event?: MouseEvent) => {
-      if (event && event.detail > 0 && shortcutId) {
+      if (event && shortcutId && isRealMouseClick(event)) {
         pulseClickTaughtShortcut(shortcutId);
       }
       onSelect();

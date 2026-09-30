@@ -5,7 +5,7 @@ import {
   selectPointerHintVisible,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
-import { shouldTeachClickTaughtShortcut } from "@web/shortcuts/pointer-intent/click-taught-shortcut.teach-policy";
+import { shouldTeachPointerHint } from "@web/shortcuts/pointer-intent/pointer-hint.teach-policy";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { viewFromPathname } from "@web/shortcuts/tips/shortcut-telemetry";
 import {
@@ -15,6 +15,8 @@ import {
 
 export type PulseClickTaughtShortcutOptions = {
   pathname?: string;
+  /** Telemetry label for the signal that taught; chrome clicks by default. */
+  intent?: string;
   /** Overrides registry keycaps for the pill (e.g. Mod+digit for one field). */
   shortcutKey?: string | string[];
   /** Custom status copy; default pill uses "Next time, press" + shortcutKey. */
@@ -26,14 +28,21 @@ export function pulseClickTaughtShortcut(
   shortcutId: ShortcutRegistryId,
   {
     pathname = globalThis.location?.pathname ?? "/",
+    intent = "chrome-click",
     shortcutKey,
     message,
     keys,
   }: PulseClickTaughtShortcutOptions = {},
 ): void {
   const session = getPointerIntentSessionSnapshot();
-  const pillVisible = selectPointerHintVisible(usePointerHintStore.getState());
-  if (!shouldTeachClickTaughtShortcut({ shortcutId, session, pillVisible })) {
+  if (
+    !shouldTeachPointerHint({
+      shortcutId,
+      alreadyShown: session.shownClickShortcutIds.has(shortcutId),
+      hintsShownThisSession: session.hintsShownThisSession,
+      pillVisible: selectPointerHintVisible(usePointerHintStore.getState()),
+    })
+  ) {
     return;
   }
 
@@ -50,7 +59,7 @@ export function pulseClickTaughtShortcut(
   });
   markClickTaughtHintShown(shortcutId);
   track("pointer_hint_shown", {
-    intent: "chrome-click",
+    intent,
     shortcut_id: shortcutId,
     view: viewFromPathname(pathname),
     source: "pointer",

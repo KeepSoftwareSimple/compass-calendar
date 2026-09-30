@@ -8,6 +8,7 @@ import {
 } from "@web/components/Tooltip/Tooltip";
 import { type TooltipOptions } from "@web/components/Tooltip/tooltip.types";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
+import { isRealMouseClick } from "@web/shortcuts/pointer-intent/real-mouse-click";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { ShortcutHint } from "../Shortcuts/ShortcutHint";
 import { TooltipDescription } from "./Description/TooltipDescription";
@@ -45,12 +46,7 @@ export const TooltipWrapper: React.FC<Props> = (props) => {
   } = props;
 
   const handleTriggerClick = (event: MouseEvent<HTMLElement>) => {
-    if (
-      !disabled &&
-      shortcutId &&
-      event.detail > 0 &&
-      event.nativeEvent instanceof MouseEvent
-    ) {
+    if (!disabled && shortcutId && isRealMouseClick(event)) {
       pulseClickTaughtShortcut(shortcutId);
     }
     if (!disabled) {
