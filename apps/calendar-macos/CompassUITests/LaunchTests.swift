@@ -15,12 +15,12 @@ final class LaunchTests: XCTestCase {
 
         XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
 
-        // WebKit exposes the page as its own accessibility WebView; the shell
-        // mirrors bridge.version on a native host with this identifier.
-        let bridgeHost = app.descendants(matching: .any)["CompassWebView"]
-        XCTAssertTrue(bridgeHost.waitForExistence(timeout: 10))
+        // WebKit exposes the page as its own accessibility WebView. The shell
+        // mirrors bridge.version on the main window for XCUITest.
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
 
-        let version = bridgeHost.value as? String
+        let version = window.value as? String
         XCTAssertEqual(version, "0.1.0")
     }
 }

@@ -29,15 +29,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.minSize = NSSize(width: 720, height: 480)
         // Closing hides the window; the Dock icon brings the same page back.
         window.isReleasedWhenClosed = false
-        let webViewController = WebViewController(appURL: appURL)
-        window.contentViewController = webViewController
+        window.contentViewController = WebViewController(appURL: appURL)
         // Assigning the controller sizes the window to its (zero) view.
         window.setContentSize(NSSize(width: 1280, height: 820))
         window.center()
         // Saves and restores the frame in UserDefaults.
         window.setFrameAutosaveName("CompassMainWindow")
         window.makeKeyAndOrderFront(nil)
-        webViewController.installBridgeAccessibilityHost(on: window)
         self.window = window
     }
 

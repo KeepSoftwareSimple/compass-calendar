@@ -8,7 +8,6 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     private let appURL: URL
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
-    private let bridgeAccessibilityHost = CompassBridgeAccessibilityHost()
 
     init(appURL: URL) {
         self.appURL = appURL
@@ -51,25 +50,13 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         webView.load(URLRequest(url: appURL))
     }
 
-    func installBridgeAccessibilityHost(on window: NSWindow) {
-        guard bridgeAccessibilityHost.superview == nil,
-              let contentView = window.contentView
-        else { return }
-        bridgeAccessibilityHost.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(bridgeAccessibilityHost, positioned: .above, relativeTo: nil)
-        NSLayoutConstraint.activate([
-            bridgeAccessibilityHost.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-            bridgeAccessibilityHost.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            bridgeAccessibilityHost.widthAnchor.constraint(equalToConstant: 80),
-            bridgeAccessibilityHost.heightAnchor.constraint(equalToConstant: 21),
-        ])
-    }
-
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
             [weak self] result, _ in
             Task { @MainActor in
-                self?.bridgeAccessibilityHost.setBridgeVersion(result as? String)
+                CompassBridgeAccessibility.publishBridgeVersion(
+                    result as? String,
+                    on: self?.view.window)
             }
         }
     }
