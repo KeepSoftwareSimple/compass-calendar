@@ -1,7 +1,17 @@
+import { SHORTCUTS_REGISTRY } from "@web/shortcuts/shortcuts.registry";
+import { rankShortcutHints } from "@web/shortcuts/tips/rankShortcutHints";
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { type RankedShortcutHint } from "@web/shortcuts/tips/shortcut-tips.data";
-import { describe, expect, it } from "bun:test";
+import {
+  getShortcutHint,
+  type RankedShortcutHint,
+  type ShortcutHintId,
+} from "@web/shortcuts/tips/shortcut-tips.data";
+import {
+  recordPointerIntentDetection,
+  resetPointerIntentSessionForTests,
+} from "@web/views/Week/pointer-intent/pointer-intent.session";
+import { beforeEach, describe, expect, it } from "bun:test";
 
 const hintFor = (
   ...args: Parameters<typeof selectShortcutHint>
@@ -20,7 +30,19 @@ const profile = (
   actions: ShortcutUsageProfile["actions"],
 ): ShortcutUsageProfile => ({ version: 2, actions, shortcuts: {} });
 
+const IDLE_HINT_POOL = [
+  "page-jump",
+  "event-jump",
+  "command-palette",
+  "create-event",
+  "grid-scroll",
+  "week-nav",
+] as const satisfies readonly ShortcutHintId[];
+
 describe("shortcut hint personalization", () => {
+  beforeEach(() => {
+    resetPointerIntentSessionForTests();
+  });
   it("preserves the deterministic order when local history is missing", () => {
     expect(hintFor(calendarIdle).id).toBe("page-jump");
     expect(hintFor(calendarIdle, ["page-jump", "event-jump"]).id).toBe(
@@ -65,6 +87,16 @@ describe("shortcut hint personalization", () => {
         "calendar.page_jump": {
           invocations: 1,
           lastInvokedAt: NOW - 31 * DAY_MS,
+          recentImpressions: 0,
+        },
+        "calendar.grid_scroll": {
+          invocations: 2,
+          lastInvokedAt: NOW,
+          recentImpressions: 0,
+        },
+        "calendar.week_nav": {
+          invocations: 2,
+          lastInvokedAt: NOW,
           recentImpressions: 0,
         },
       }),
@@ -118,6 +150,14 @@ describe("shortcut hint personalization", () => {
           invocations: 9,
           recentImpressions: 0,
         },
+        "calendar.grid_scroll": {
+          invocations: 9,
+          recentImpressions: 0,
+        },
+        "calendar.week_nav": {
+          invocations: 9,
+          recentImpressions: 0,
+        },
       }),
       NOW,
     );
@@ -144,5 +184,22 @@ describe("shortcut hint personalization", () => {
     );
 
     expect(hint.id).toBe("event-jump");
+  });
+
+  it("ranks create-event first when slot-click was detected", () => {
+    recordPointerIntentDetection("slot-click");
+    const hint = rankShortcutHints(IDLE_HINT_POOL, [], profile({}), NOW);
+    expect(hint.id).toBe("create-event");
+  });
+
+  it("maps grid-scroll and week-nav tips to registry rows", () => {
+    for (const id of ["grid-scroll", "week-nav"] as const) {
+      const hint = getShortcutHint(id);
+      for (const registryId of hint.registryIds ?? []) {
+        expect(SHORTCUTS_REGISTRY.some((row) => row.id === registryId)).toBe(
+          true,
+        );
+      }
+    }
   });
 });

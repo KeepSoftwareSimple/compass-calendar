@@ -16,6 +16,7 @@ import {
   resetPointerIntentKeysLookupForTests,
 } from "@web/views/Week/pointer-intent/pointer-intent.actions";
 import { pointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.keys-lookup";
+import { isPointerIntentTeachingRetired } from "@web/views/Week/pointer-intent/pointer-intent-level";
 
 const CARD_DRAG_THRESHOLD_PX = 8;
 const HOVER_HUNT_SAMPLE_MS = 100;
@@ -59,6 +60,7 @@ export function attachPointerIntentTracker(): () => void {
   };
 
   const onHoverHuntPointerMove = (event: PointerEvent) => {
+    if (isPointerIntentTeachingRetired()) return;
     if (event.pointerType === "touch") return;
     const now = Date.now();
     if (now - hoverHuntLastSampleAt < HOVER_HUNT_SAMPLE_MS) return;

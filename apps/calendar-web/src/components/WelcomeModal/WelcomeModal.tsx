@@ -25,7 +25,11 @@ import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
 import { WelcomeFaqList } from "./WelcomeFaqList";
 import { WelcomeLinks } from "./WelcomeLinks";
 import { welcomeGuideActions } from "./welcome.guide.store";
-import { hasSeenWelcome, markWelcomeSeen } from "./welcome.modal.util";
+import {
+  hasSeenWelcome,
+  markWelcomeSeen,
+  recordWelcomeExit,
+} from "./welcome.modal.util";
 
 /** Commit (1) → learn (2) → choose how to start (3). */
 type WelcomeStep = 1 | 2 | 3;
@@ -193,6 +197,7 @@ export function WelcomeModal() {
     if (closing || isAuthHandoffInFlight()) return;
     skipFocusRestoreRef.current = true;
     markWelcomeSeen();
+    recordWelcomeExit("explore");
     track("welcome_modal_dismissed", { cta: "explore" });
     beginDismiss(() => {
       setIsOpen(false);
@@ -211,6 +216,7 @@ export function WelcomeModal() {
     if (hidingForAuthRef.current) return;
     beginAuthHandoff();
     markWelcomeSeen();
+    recordWelcomeExit(cta);
     if (cta === "sign_up") {
       void trackSignupStartedAtClick("welcome_modal");
     }
@@ -226,6 +232,7 @@ export function WelcomeModal() {
     setHandingOff(true);
     cancelDismiss();
     markWelcomeSeen();
+    recordWelcomeExit(`sign_up_${kind}`);
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
     void trackSignupStartedAtClick(`welcome_modal_${kind}`);
     startSignIn(kind);

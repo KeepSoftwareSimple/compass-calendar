@@ -1,9 +1,15 @@
+import {
+  APP_SHORTCUT_BINDINGS,
+  hotkeyKeycaps,
+} from "@web/shortcuts/app-shortcut-bindings";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   DAY_NAME_BY_PREFIX,
   type DayJumpPrefix,
 } from "@web/shortcuts/shift-hint/assign-shift-hint-keys";
 import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
+import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 
 export {
   DAY_JUMP_PREFIXES,
@@ -21,6 +27,8 @@ export type ShortcutHintId =
   | "create-event"
   | "page-jump"
   | "event-jump"
+  | "grid-scroll"
+  | "week-nav"
   | "week-day-focus"
   | "command-palette";
 
@@ -29,6 +37,8 @@ export type ShortcutActionId =
   | "calendar.event_jump"
   | "calendar.focus_week_day"
   | "calendar.page_jump"
+  | "calendar.grid_scroll"
+  | "calendar.week_nav"
   | "command_palette.open"
   | "event.edge_focus"
   | "event.edit_title"
@@ -66,7 +76,26 @@ export type ShortcutHint = {
   featureArea: ShortcutFeatureArea;
   parts: readonly ShortcutTipPart[];
   suggestionReason: ShortcutSuggestionReason;
+  /** Registry rows this tip names (legend check marks, level counts). */
+  registryIds?: readonly ShortcutRegistryId[];
 };
+
+/** Sidebar tips that rank first when a pointer intent was detected this session. */
+export const POINTER_INTENT_HINT_IDS: Partial<
+  Record<PointerIntent, readonly ShortcutHintId[]>
+> = {
+  "card-click": ["event-jump"],
+  "hover-hunt": ["page-jump"],
+  "slot-click": ["create-event"],
+  "card-drag": ["nudge"],
+  "grid-scroll": ["grid-scroll"],
+};
+
+export function shortcutHintIdsForPointerIntent(
+  intent: PointerIntent,
+): readonly ShortcutHintId[] {
+  return POINTER_INTENT_HINT_IDS[intent] ?? [];
+}
 
 export type RankedShortcutHint = ShortcutHint & {
   reasonCode: ShortcutSuggestionReason;
@@ -196,6 +225,39 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     actionId: "calendar.event_jump",
     featureArea: "calendar_navigation",
     parts: [{ key: eventJumpKey }, " shows event and open-time shortcuts"],
+    suggestionReason: "calendar_idle",
+  },
+  "grid-scroll": {
+    id: "grid-scroll",
+    actionId: "calendar.grid_scroll",
+    featureArea: "calendar_navigation",
+    registryIds: [
+      "nav-scroll-hour-down",
+      "nav-scroll-hour-up",
+      "nav-scroll-up",
+      "nav-scroll-down",
+    ],
+    parts: [
+      { keys: hotkeyKeycaps(APP_SHORTCUT_BINDINGS.navScrollHourDown.hotkey) },
+      " scrolls · ",
+      { keys: [...APP_SHORTCUT_BINDINGS.navScrollUp.keycaps] },
+      " scroll the grid",
+    ],
+    suggestionReason: "calendar_idle",
+  },
+  "week-nav": {
+    id: "week-nav",
+    actionId: "calendar.week_nav",
+    featureArea: "calendar_navigation",
+    registryIds: ["nav-previous", "nav-next", "nav-today"],
+    parts: [
+      { key: APP_SHORTCUT_BINDINGS.navPrevious.hotkey },
+      " and ",
+      { key: APP_SHORTCUT_BINDINGS.navNext.hotkey },
+      " change weeks · ",
+      { key: APP_SHORTCUT_BINDINGS.navToday.hotkey },
+      " jumps to today",
+    ],
     suggestionReason: "calendar_idle",
   },
   "week-day-focus": {

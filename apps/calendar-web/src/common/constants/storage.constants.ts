@@ -9,6 +9,7 @@
 export const STORAGE_KEYS = {
   AUTH: "compass.auth",
   HAS_SEEN_WELCOME: "compass.onboarding.has-seen-welcome",
+  WELCOME_EXIT: "compass.onboarding.welcome-exit",
   HAS_SEEN_ANONYMOUS_SAVE_TOAST:
     "compass.onboarding.has-seen-anonymous-save-toast",
   ANONYMOUS_CALENDAR_WRITE_COUNT:
@@ -26,6 +27,7 @@ export const STORAGE_KEYS = {
   // Set when the user finishes or skips the Shortcut Showcase, so it never
   // auto-launches twice (palette replay ignores it).
   HAS_SEEN_SHORTCUT_SHOWCASE: "compass.onboarding.has-seen-shortcut-showcase",
+  SHORTCUT_SHOWCASE_OUTCOME: "compass.onboarding.shortcut-showcase-outcome",
   // Current Shortcut Showcase step id while practice is in progress. Cleared
   // on finish or a confirmed skip so a reload can resume instead of restarting.
   SHORTCUT_SHOWCASE_STEP: "compass.onboarding.shortcut-showcase-step",

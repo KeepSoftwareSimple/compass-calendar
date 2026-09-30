@@ -26,6 +26,8 @@ const IDLE_POOL = [
   "event-jump",
   "command-palette",
   "create-event",
+  "grid-scroll",
+  "week-nav",
 ] as const satisfies readonly ShortcutHintId[];
 
 const FOCUSED_POOL = [

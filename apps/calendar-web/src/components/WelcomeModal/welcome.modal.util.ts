@@ -11,6 +11,15 @@ export function markWelcomeSeen(): void {
   persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_WELCOME, "true");
 }
 
+export function recordWelcomeExit(cta: string): void {
+  persistentBrowserStore.set(STORAGE_KEYS.WELCOME_EXIT, cta);
+}
+
+export function readWelcomeExit(): string | null {
+  if (!persistentBrowserStore.isAvailable()) return null;
+  return persistentBrowserStore.get(STORAGE_KEYS.WELCOME_EXIT);
+}
+
 /** Whether the welcome modal should claim the onboarding surface slot. */
 export function selectWelcomeModalSurfaceEligible(
   showCalendarOnboarding: boolean,

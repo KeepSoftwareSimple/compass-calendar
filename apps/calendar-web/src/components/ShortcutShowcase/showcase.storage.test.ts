@@ -3,13 +3,26 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 import {
   clearShowcaseProgress,
   hasShowcaseInProgress,
+  markShortcutShowcaseSeen,
   markShowcaseInProgress,
+  readShortcutShowcaseOutcome,
 } from "@web/components/ShortcutShowcase/showcase.storage";
 import { afterEach, describe, expect, it } from "bun:test";
 
 describe("showcase progress storage", () => {
   afterEach(() => {
     persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_STEP);
+    persistentBrowserStore.remove(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE);
+    persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_OUTCOME);
+  });
+
+  it("round-trips finished and skipped outcomes", () => {
+    markShortcutShowcaseSeen("finished");
+    expect(readShortcutShowcaseOutcome()).toBe("finished");
+
+    persistentBrowserStore.remove(STORAGE_KEYS.SHORTCUT_SHOWCASE_OUTCOME);
+    markShortcutShowcaseSeen("skipped");
+    expect(readShortcutShowcaseOutcome()).toBe("skipped");
   });
 
   it("round-trips the in-progress marker and clears it", () => {

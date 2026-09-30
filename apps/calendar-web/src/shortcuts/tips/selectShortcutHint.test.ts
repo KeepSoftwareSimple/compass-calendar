@@ -164,6 +164,8 @@ describe("selectShortcutHint", () => {
   it("rotates the idle pool after every primitive has been demonstrated", () => {
     expect(
       hintFor(afterFirstEvent, [
+        "grid-scroll",
+        "week-nav",
         "event-jump",
         "command-palette",
         "create-event",
@@ -176,6 +178,8 @@ describe("selectShortcutHint", () => {
         "event-jump",
         "command-palette",
         "create-event",
+        "grid-scroll",
+        "week-nav",
       ]).id,
     ).toBe("page-jump");
   });

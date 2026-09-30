@@ -8,6 +8,7 @@ import {
   type PointerIntent,
 } from "@web/views/Week/pointer-intent/pointer-intent";
 import { type PointerIntentSessionSnapshot } from "@web/views/Week/pointer-intent/pointer-intent.session";
+import { isPointerIntentTeachingRetired } from "@web/views/Week/pointer-intent/pointer-intent-level";
 
 export type ShouldTeachPointerIntentInput = {
   intent: PointerIntent;
@@ -28,6 +29,7 @@ export function shouldTeachPointerIntent({
   pillVisible = false,
   usageProfile = readShortcutUsageProfile(),
 }: ShouldTeachPointerIntentInput): boolean {
+  if (isPointerIntentTeachingRetired(usageProfile)) return false;
   if (tipsMuted || tipsDismissedPermanently || appLocked || pillVisible) {
     return false;
   }

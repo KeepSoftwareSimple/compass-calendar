@@ -11,20 +11,37 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import { computeShortcutLevel } from "@web/shortcuts/level/shortcut-level";
 import {
   selectJumpableDayPrefixes,
   useEventJumpStore,
 } from "@web/shortcuts/shift-hint/event-jump.store";
+import { SHORTCUTS_REGISTRY } from "@web/shortcuts/shortcuts.registry";
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
-import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import {
+  readShortcutUsageProfile,
+  usedShortcutIds,
+} from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { useShortcutHintProgress } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useIsTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalendarEventFocused";
+
+const REGISTRY_IDS = SHORTCUTS_REGISTRY.map((shortcut) => shortcut.id);
 
 /** Re-rank this often so a tip that nothing else disturbs still gives way.
  * Impressions are only recorded when the rendered tip changes, so without a
  * tick one tip can hold the bar for a whole session and never fatigue. */
 export const SHORTCUT_HINT_ROTATION_MS = 5 * 60 * 1000;
+
+export const SHORTCUT_HINT_NEWCOMER_ROTATION_MS = 60_000;
+
+function shortcutHintRotationMs(): number {
+  const profile = readShortcutUsageProfile();
+  const level = computeShortcutLevel(usedShortcutIds(profile), REGISTRY_IDS);
+  return level.level === 1
+    ? SHORTCUT_HINT_NEWCOMER_ROTATION_MS
+    : SHORTCUT_HINT_ROTATION_MS;
+}
 
 /**
  * Reads onboarding + current-doing stores and returns the sidebar's next
@@ -48,16 +65,24 @@ export function useShortcutHintContext() {
 
   useEffect(() => {
     const tick = () => setNow(Date.now());
-    const interval = setInterval(() => {
-      if (document.hidden) return;
-      tick();
-    }, SHORTCUT_HINT_ROTATION_MS);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const scheduleNext = () => {
+      const delay = shortcutHintRotationMs();
+      timeoutId = setTimeout(() => {
+        if (!document.hidden) tick();
+        scheduleNext();
+      }, delay);
+    };
+
+    scheduleNext();
+
     const onVisibility = () => {
       if (!document.hidden) tick();
     };
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      clearInterval(interval);
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);

@@ -27,6 +27,10 @@ import {
   selectPageJumpHintsVisible,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
+import {
+  resetShortcutUsageProfileStoreForTests,
+  writeShortcutUsageProfile,
+} from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/views/Week/pointer-intent/grid-pointer-target";
 import {
@@ -130,6 +134,35 @@ describe("usePointerIntentTracker", () => {
     usePointerHintStore.setState(initialPointerHintState, true);
     usePageJumpHintStore.setState(initialPageJumpHintState, true);
     useDraftStore.setState(initialDraftState, true);
+  });
+
+  it("does not pulse at Explorer but still records pointer_intent_detected", async () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    resetShortcutUsageProfileStoreForTests();
+
+    const user = userEvent.setup();
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_EVENT_ID_ATTRIBUTE, "evt-explorer");
+    document.body.appendChild(card);
+
+    render(<TrackerHarness />);
+    await user.pointer({ keys: "[MouseLeft>]", target: card });
+    await user.pointer({ keys: "[/MouseLeft]", target: card });
+
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+    expect(capture).toHaveBeenCalledWith(
+      "pointer_intent_detected",
+      expect.objectContaining({ intent: "card-click" }),
+    );
   });
 
   it("pulses the card-click hint and requests event jump on pointerup", async () => {

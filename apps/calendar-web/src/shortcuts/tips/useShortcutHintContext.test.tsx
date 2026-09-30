@@ -10,12 +10,17 @@ import {
 import { draftActions } from "@web/events/stores/draft.store";
 import { CALENDAR_VIEW_INTERACTION_ID_ATTRIBUTES } from "@web/grid/interaction/view-event-registry";
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
+import {
+  resetShortcutUsageProfileStoreForTests,
+  writeShortcutUsageProfile,
+} from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { getHintPlainText } from "@web/shortcuts/tips/shortcut-tips.data";
 import {
   resetShortcutHintProgressStoreForTests,
   shortcutHintProgressActions,
 } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {
+  SHORTCUT_HINT_NEWCOMER_ROTATION_MS,
   SHORTCUT_HINT_ROTATION_MS,
   useShortcutHintContext,
 } from "@web/shortcuts/tips/useShortcutHintContext";
@@ -129,9 +134,67 @@ describe("useShortcutHintContext", () => {
     expect(result.current!.id).toBe("command-palette");
   });
 
+  it("re-ranks on a one-minute cadence at shortcut level 1", () => {
+    jest.useFakeTimers();
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+
+    const { result } = renderHook(() => useShortcutHintContext());
+    const first = result.current;
+
+    act(() => {
+      jest.advanceTimersByTime(SHORTCUT_HINT_NEWCOMER_ROTATION_MS);
+    });
+
+    expect(result.current).not.toBe(first);
+    jest.useRealTimers();
+  });
+
+  it("re-ranks on a five-minute cadence after four shortcuts are used", () => {
+    jest.useFakeTimers();
+    useFirstEventPromptStore.setState({ isDone: true }, false);
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    resetShortcutUsageProfileStoreForTests();
+
+    const { result } = renderHook(() => useShortcutHintContext());
+    const first = result.current;
+
+    act(() => {
+      jest.advanceTimersByTime(SHORTCUT_HINT_NEWCOMER_ROTATION_MS);
+    });
+    expect(result.current).toBe(first);
+
+    act(() => {
+      jest.advanceTimersByTime(
+        SHORTCUT_HINT_ROTATION_MS - SHORTCUT_HINT_NEWCOMER_ROTATION_MS,
+      );
+    });
+    expect(result.current).not.toBe(first);
+    jest.useRealTimers();
+  });
+
   it("re-ranks on a five-minute cadence while the tab is visible", () => {
     jest.useFakeTimers();
     useFirstEventPromptStore.setState({ isDone: true }, false);
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "nav-today": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    resetShortcutUsageProfileStoreForTests();
 
     const { result } = renderHook(() => useShortcutHintContext());
     const first = result.current;
