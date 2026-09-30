@@ -20,7 +20,11 @@ final class LaunchTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 5))
 
-        let version = window.value as? String
-        XCTAssertEqual(version, "0.1.0")
+        let versionReady = NSPredicate(format: "value == %@", "0.1.0")
+        let bridgeVersionExpectation = expectation(
+            for: versionReady,
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [bridgeVersionExpectation], timeout: 30)
     }
 }

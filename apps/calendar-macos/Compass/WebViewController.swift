@@ -27,11 +27,19 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         contentController.add(bridgeHandler, name: "compass")
 
         let origin = appURL.originString
-        let script = WKUserScript(
-            source: BridgeScript.userScriptSource(appOrigin: origin),
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true)
-        contentController.addUserScript(script)
+        let bridgeSource = BridgeScript.userScriptSource(appOrigin: origin)
+        contentController.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+        // At document start `location.origin` can still be empty on the first
+        // navigation; document end matches the configured app origin reliably.
+        contentController.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true))
         configuration.userContentController = contentController
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -51,12 +59,22 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        publishBridgeVersionFromPage(webView: webView, attempt: 0)
+    }
+
+    private func publishBridgeVersionFromPage(webView: WKWebView, attempt: Int) {
         webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
             [weak self] result, _ in
             Task { @MainActor in
-                CompassBridgeAccessibility.publishBridgeVersion(
-                    result as? String,
-                    on: self?.view.window)
+                if let version = result as? String, !version.isEmpty {
+                    CompassBridgeAccessibility.publishBridgeVersion(
+                        version,
+                        on: self?.view.window)
+                    return
+                }
+                guard attempt < 8 else { return }
+                try? await Task.sleep(for: .seconds(2))
+                self?.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
             }
         }
     }
