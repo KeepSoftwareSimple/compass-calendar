@@ -6,12 +6,30 @@ import "@testing-library/jest-dom";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
+import * as trackModule from "@web/auth/posthog/track";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import {
+  initialPointerHintState,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   focusPageJumpTarget,
   PAGE_JUMP_ATTRIBUTE,
 } from "@web/shortcuts/page-jump/page-jump.targets";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
+
+const track = mock();
+mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
 
 const mockNavigate = mock();
 // Snapshotted into a plain object (not just holding the namespace
@@ -55,6 +73,15 @@ describe("SelectView", () => {
   beforeEach(() => {
     mockNavigate.mockClear();
     onToday = mock();
+    track.mockClear();
+    resetPointerIntentSessionForTests();
+    writeShortcutUsageProfile({ version: 2, actions: {}, shortcuts: {} });
+    usePointerHintStore.setState(initialPointerHintState, true);
+  });
+
+  afterEach(() => {
+    resetPointerIntentSessionForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
   });
 
   const renderWithRouter = async (
@@ -292,6 +319,20 @@ describe("SelectView", () => {
 
       expect(mockNavigate).toHaveBeenCalledWith({ to: ROOT_ROUTES.DAY });
       expect(mockNavigate).toHaveBeenCalledTimes(1);
+    });
+
+    it("pulses nav-day-view when Day is selected with the pointer", async () => {
+      await renderWithRouter("July 2026");
+
+      const { user } = await openDropdown();
+
+      const dropdown = screen.getByTestId("view-select-dropdown");
+      await user.click(within(dropdown).getByRole("option", { name: /^day/i }));
+
+      expect(track).toHaveBeenCalledWith(
+        "pointer_hint_shown",
+        expect.objectContaining({ shortcut_id: "nav-day-view" }),
+      );
     });
 
     it("navigates to Week route when Week option is clicked", async () => {

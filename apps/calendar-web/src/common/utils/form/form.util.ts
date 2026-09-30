@@ -1,3 +1,4 @@
+import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { ID_EVENT_FORM } from "../../constants/web.constants";
 
 const EVENT_FORM_SELECTOR = `form[name="${ID_EVENT_FORM}"]`;
@@ -89,6 +90,18 @@ const FOCUSABLE_SELECTOR = [
 export const getEventFormFieldAnchor = (
   field: EventFormFocusField,
 ): HTMLElement | null => findFirstMatch(FIELD_SELECTORS[field]);
+
+/** Which form field owns this focus target, if any. */
+export const eventFormFieldFromTarget = (
+  target: EventTarget | null,
+): EventFormFocusField | null => {
+  if (!(target instanceof HTMLElement)) return null;
+  for (const entry of FORM_FIELD_DIGITS) {
+    const anchor = getEventFormFieldAnchor(entry.field);
+    if (anchor?.contains(target)) return entry.field;
+  }
+  return null;
+};
 
 const resolveFocusElement = (
   field: EventFormFocusField,

@@ -1,5 +1,6 @@
 import type React from "react";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 const MONTH_NAV_BUTTON_HOVER_COLOR = "rgba(255,255,255,0.2)";
 
@@ -11,6 +12,7 @@ type MonthNavButtonProps = {
   isSidebarStyle?: boolean;
   onClick?: () => void;
   shortcut?: string | string[];
+  shortcutId?: ShortcutRegistryId;
 };
 
 export const MonthNavButton = ({
@@ -21,6 +23,7 @@ export const MonthNavButton = ({
   isSidebarStyle = false,
   onClick,
   shortcut,
+  shortcutId,
 }: MonthNavButtonProps) => {
   const button = (
     <button
@@ -70,5 +73,13 @@ export const MonthNavButton = ({
 
   if (!shortcut) return button;
 
-  return <TooltipWrapper shortcut={shortcut}>{button}</TooltipWrapper>;
+  return (
+    <TooltipWrapper
+      description={ariaLabel}
+      shortcut={shortcut}
+      shortcutId={shortcutId}
+    >
+      {button}
+    </TooltipWrapper>
+  );
 };

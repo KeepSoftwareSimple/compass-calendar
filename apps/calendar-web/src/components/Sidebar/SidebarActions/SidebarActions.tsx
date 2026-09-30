@@ -44,6 +44,7 @@ export const SidebarActions = () => {
         <TooltipWrapper
           description={shortcutsActionLabel}
           shortcut="?"
+          shortcutId="other-shortcuts"
           onClick={viewActions.toggleShortcuts}
         >
           <button
@@ -65,6 +66,7 @@ export const SidebarActions = () => {
         <TooltipWrapper
           description="Open settings"
           shortcut={["Mod", ","]}
+          shortcutId="other-settings"
           onClick={() => settingsActions.openSettings()}
         >
           <button
@@ -82,6 +84,7 @@ export const SidebarActions = () => {
         <TooltipWrapper
           description="Open command palette"
           shortcut={["Mod", "K"]}
+          shortcutId="other-palette"
           onClick={toggleCmdPalette}
         >
           <button
