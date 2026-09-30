@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
 import { expectNoAxeViolations } from "../utils/axe-assertion";
+import {
+  createEventTitle,
+  fillTitleAndSaveEventForm,
+  openTimedEventFormWithKeyboard,
+  prepareCalendarPage,
+} from "../utils/event-test-utils";
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1600, height: 900 } });
@@ -67,6 +73,39 @@ test("the sidebar Hide tips control is keyboard reachable", async ({
   await expect(hideTips).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(hideTips).toHaveCount(0);
+});
+
+test("a pointer-sourced teaching pill exposes status semantics without axe violations", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem(
+      "compass.onboarding.has-seen-shortcut-showcase",
+      "true",
+    );
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+  });
+
+  await prepareCalendarPage(page);
+
+  const title = createEventTitle("Pointer A11y");
+  await openTimedEventFormWithKeyboard(page);
+  await fillTitleAndSaveEventForm(page, title);
+
+  const eventButton = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: title });
+  await eventButton.click({ force: true });
+
+  const pill = page.locator("[data-pointer-hint]");
+  await expect(pill).toBeVisible();
+  await expect(pill).toContainText("Press");
+
+  await expectNoAxeViolations(page, {
+    checkpoint: "pointer intent pill",
+    include: "[data-pointer-hint]",
+  });
 });
 
 test("the shortcut level badge's open tooltip has no automatically detectable accessibility violations", async ({
