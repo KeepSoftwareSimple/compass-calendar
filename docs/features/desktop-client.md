@@ -1,12 +1,13 @@
 # Compass Desktop (macOS)
 
-**Status:** Planned, drafted 2026-09-30
+**Status:** Planned, drafted 2026-09-30. Work is tracked on GitHub:
+[milestone Desktop v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/44)
+and the tracking issue
+[#4149](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4149).
+This doc holds the decisions and the reference material only.
 
 **Owner:** Tyler (credentials, production deploys, QA). Agents build the rest
 through the agent loop.
-
-**Dates:** internal test build in Tyler's hands by **Oct 10**. Dogfood and
-iterate through October. Public download in the **Nov 1** email.
 
 ## Goal
 
@@ -19,8 +20,8 @@ macOS only. Windows and Linux are out of scope and may never ship.
 
 ## Decisions
 
-Each of these is a judgment call. Tyler can veto any of them in the PR that
-adds this doc. After that they are settled.
+Each of these is a judgment call. Tyler can veto any of them on #4149 or in
+the PR that adds this doc. After that they are settled.
 
 1. **Electron shell that loads the hosted web app.** The renderer loads
    `https://compasscalendar.com` (or staging) over the network, exactly like a
@@ -55,12 +56,11 @@ adds this doc. After that they are settled.
    (item 5 in the setup list).
 6. **Native features are tiered.** Tier 1 ships before internal testing
    starts. Tier 2 lands during October. Everything else waits until after
-   Nov 1. See **Work packages**.
+   Nov 1. The issues on the milestone carry the tier in their title.
 
-## Tyler's one-hour setup
+## Owner setup reference
 
-Do these once, in order. Nothing in the loop needs a human after this list
-is done, except production deploys and QA.
+The checklist lives on #4149. This table is the how-to for each item.
 
 If the Apple Developer Program enrollment from
 [Sign in with Apple](../self-hosting/apple-calendar.md) is already active,
@@ -77,7 +77,7 @@ so start it today.
 | 6 | Agent loop config | Add milestone **Desktop v1** to the front of repo var `AGENT_LOOP_MILESTONES`. Confirm `AGENT_LOOP_ENABLED` is `true`. Nothing else in [Agent loop Routine](../CI-CD/agent-loop-routine.md) changes. | Repo variables | 2 min |
 | 7 | A Mac to test on | macOS 13 or newer. Both Intel and Apple Silicon are covered by the universal build, so one machine is enough. | Nowhere | 0 |
 
-Confirm or change these defaults by editing this doc in the plan PR:
+Defaults chosen in this plan, listed on #4149 for confirmation:
 
 - App name **Compass**, bundle id `com.compasscalendar.desktop`, URL scheme
   `compass://`.
@@ -91,47 +91,6 @@ Confirm or change these defaults by editing this doc in the plan PR:
 Nothing else is needed. PostHog, Discord, Google, Microsoft, Apple sign-in,
 and SuperTokens keep their current configuration. There is no new backend
 service and no new secret on the backend.
-
-## Timeline
-
-| Week | Dates | Outcome |
-| --- | --- | --- |
-| 0 | Sep 30 to Oct 3 | Plan merged. Setup list done. WP-01 and WP-02 open. An unsigned dev build runs locally. |
-| 1 | Oct 6 to 10 | Signed, notarized DMG from CI. OAuth relay and deep links work. Auto-update works between two internal tags. **Internal build in Tyler's hands.** |
-| 2 | Oct 13 to 17 | Tier 1 native features: notifications in background, Dock badge, menu bar agenda, native menus, external links, window state, hide-on-close. |
-| 3 | Oct 20 to 24 | Tier 2: global quick-add hotkey, launch at login, sleep and resume resilience, offline page, appearance sync. Playwright Electron smoke gates the release workflow. |
-| 4 | Oct 27 to 31 | Feature freeze Oct 27. QA fixes only. `desktop-v1.0.0` tagged Oct 30. Download page live. Email goes Nov 1. |
-
-QA feedback from Tyler enters the queue as issues labeled `desktop` on the
-**Desktop v1** milestone. The loop drains them in order. Bugs outrank
-features from week 3 on.
-
-## Work packages
-
-One agent-task issue per row, created from
-`.github/ISSUE_TEMPLATE/3-agent-task.yml`, milestone **Desktop v1**,
-partition label `desktop` (WP-00 adds the label). Each WP is under the
-4000-line merge-guard rail. Each ships through the normal
-[ship](../../.agents/skills/ship/SKILL.md) path.
-
-| WP | Finish line | Scope |
-| --- | --- | --- |
-| 00 | `desktop` is a partition label in `agent-loop-next.sh`; `verify.ts` maps `apps/calendar-desktop/` to `test:desktop`; `knip.json`, `tsconfig.typecheck.json`, and `bun lint` include the new app | scripts, docs |
-| 01 | `bun dev:desktop` opens a window showing the calendar from `COMPASS_DESKTOP_APP_URL` (default staging). `contextIsolation` on, `nodeIntegration` off, `sandbox` on, navigation locked to the app origin, everything else opens externally. Window bounds persist. `bun test:desktop` runs main-process unit tests. | desktop |
-| 02 | Web knows it is in the shell: `window.compassDesktop` bridge typed in `packages/core`, an `isDesktop()` helper, PostHog `platform: desktop`, a drag region for the hidden-inset title bar, and the OAuth callback relay described in decision 3. Covered by web tests. | core, web |
-| 03 | `release-desktop.yml`: tag `desktop-v*` builds a universal DMG on `macos-latest`, signs with the Developer ID cert, notarizes with the API key, staples, uploads to a GitHub Release with `latest-mac.yml`. `spctl --assess` passes in CI. | desktop, docs |
-| 04 | Deep links: `compass://` registered, single-instance lock, `open-url` handled cold and warm, OAuth relay end to end for Google, Microsoft, and Apple sign-in. `compass://day/2026-10-15` opens that day. | desktop, web |
-| 05 | Auto-update: check on launch and every six hours, download silently, **Restart to update** in the app menu, and a toast in the web app when an update is ready. Verified between two internal tags. | desktop, web |
-| 06 | Tier 1, notifications: the app keeps running when the window closes (Dock icon stays), the existing upcoming-event notifier fires through macOS Notification Center, clicking one focuses the event. Reuses `notification.port.ts`; no second notifier. | desktop, web |
-| 07 | Tier 1, agenda surfaces: the web app pushes today's agenda to the shell on every event-cache change. The shell shows a Dock badge with the count of remaining events and a menu bar item with **Next: <title> in 12m** and a dropdown of the day. Click opens the event. | desktop, web |
-| 08 | Tier 1, native menus: an app menu with **New event**, **Command palette**, **Today**, view switching, and **Settings**, each dispatching the existing web shortcut. Native context menu for cut, copy, paste, and spellcheck in text fields. Hidden **Switch to staging** under a debug submenu. | desktop, web |
-| 09 | Tier 2, quick add: a global hotkey (default `Ctrl+Opt+Cmd+Space`, changeable in Settings) raises a small always-on-top window with the command palette in create mode; Escape returns focus to the previous app. | desktop, web |
-| 10 | Tier 2, resilience: reconnect SSE and refresh the session on wake from sleep and on network return; an offline page with a retry button when the app URL fails to load; launch at login toggle; `nativeTheme` follows the web theme setting. | desktop, web |
-| 11 | Playwright `_electron` smoke on Linux CI against a local web build (launch, anonymous calendar renders, deep link routes, menu dispatches a shortcut). A macOS runner smoke launches the notarized build once per release tag. | desktop, e2e |
-| 12 | Docs: `docs/features/desktop-client.md` becomes the feature doc, `docs/development/local-development.md` gains the desktop dev section, `docs/CI-CD/workflows.md` gains `release-desktop.yml`, and the acceptance runbook `docs/acceptance/desktop.md` lists the manual checks Tyler runs on each internal build. | docs |
-
-WP-01 through WP-05 are the internal-build gate. WP-06 through WP-08 are
-Tier 1. WP-09 through WP-11 are Tier 2. WP-12 rides along at the end.
 
 ## Architecture
 
@@ -169,34 +128,14 @@ apps/calendar-desktop/
   of the web `vX.Y.Z` tags. `useVersionCheck` keeps working for the web
   bundle inside the shell.
 
-## QA loop in October
+## Work packages and QA
 
-Agents cannot run macOS. The loop covers logic with `bun test:desktop`, the
-renderer contract with web tests, and launch behavior with the Playwright
-Electron smoke on Linux plus a notarized-build launch on the macOS runner.
-Everything visual or Notification Center related is Tyler's to check.
-
-1. A new `desktop-v0.x.y` tag lands whenever a WP merges and the smoke is
-   green. The app updates itself; nothing to download after the first DMG.
-2. Tyler runs `docs/acceptance/desktop.md` (WP-12) when a build changes
-   something on that list, and files anything wrong as a `desktop` issue with
-   the build number from **Compass → About**.
-3. Issues are triaged by label only: `desktop` plus `bug` goes to the front of
-   the milestone; `desktop` plus `enhancement` goes behind the open WPs.
-4. Anything that needs a product decision gets `agent-loop-needs-human` and a
-   one-paragraph question on the issue. Tyler answers on the issue.
-
-## Nov 1 launch checklist
-
-- [ ] `desktop-v1.0.0` tagged from `main` no later than Oct 30, notarized,
-      `spctl --assess` green, and installed from the DMG on a clean Mac.
-- [ ] Auto-update from the last internal tag to 1.0.0 verified.
-- [ ] Production carries every web-side desktop change (WP-02, 04, 05, 06,
-      07, 08, 10).
-- [ ] Download page on compasscalendar.com links the DMG and states macOS 13+.
-- [ ] `docs/acceptance/desktop.md` fully green on 1.0.0.
-- [ ] PostHog shows `platform: desktop` events from Tyler's build.
-- [ ] Email drafted, download link tested from the email itself.
+One agent-task issue per work package on the milestone, `Depends on:`
+lines for order, partition label `desktop`. Agents cannot run macOS: unit
+tests, web tests, a Playwright Electron smoke on Linux, and a notarized
+launch on a macOS runner cover what they can. Visual and Notification
+Center checks are the owner's, recorded on #4149. Dogfood bugs are new
+`desktop` issues on the milestone and outrank features from the third week.
 
 ## Later, explicitly not v1
 
