@@ -136,12 +136,12 @@ Welcome → signup → first-event contract:
 - users who already finished or skipped the retired guided tour are treated as
   having seen the showcase so it does not ambush them
 
-Palette shortcut teaching (from `RootShell`):
+Palette and pointer teaching (from `RootShell`):
 
 - after a palette row with a shortcut runs, `PointerHint` shows **Next time,
   press …** unless the user turned keyboard tips off
-- clicks on the grid and chrome no longer open that pill; see
-  [Contextual Pointer Guidance](./contextual-pointer-guidance.md)
+- pointer intent on the grid and chrome click teach use the same pill and
+  `tips-muted` flag; see [Contextual Pointer Guidance](./contextual-pointer-guidance.md)
 
 See [Onboarding](../acceptance/onboarding.md) and
 [Shortcuts](../acceptance/shortcuts.md) for acceptance coverage and

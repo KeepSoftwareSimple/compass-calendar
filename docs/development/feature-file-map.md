@@ -163,6 +163,7 @@ Product rules (hold-Mod discovery, "chip the field", typing always types):
 - Event-jump chips (`H`): `apps/calendar-web/src/shortcuts/shift-hint/`
 - Hide/show focused event (`x`): `apps/calendar-web/src/shortcuts/hide-event/useHideEventShortcut.ts`
 - Palette pointer-hint store and grid bridge: `apps/calendar-web/src/shortcuts/keyboard-only/`
+- Pointer intent (grid tracker, teach policy, chrome pulse): `apps/calendar-web/src/views/Week/pointer-intent/`, `apps/calendar-web/src/shortcuts/pointer-intent/`, `apps/calendar-web/src/shortcuts/context-menu/context-menu-pointer-hint.ts`; product rules in [Contextual Pointer Guidance](../frontend/contextual-pointer-guidance.md)
 - Escape ownership (modals/form before lower handlers): `apps/calendar-web/src/shortcuts/escape-ownership.ts`
 - App lock (suppress shortcuts while a modal owns the UI): `apps/calendar-web/src/shortcuts/app-lock.ts`
 - Event title search in the command palette: `apps/calendar-web/src/events/queries/useEventSearch.ts`, `apps/calendar-web/src/components/CommandPalette/event-search.util.ts`
