@@ -127,6 +127,19 @@ jobs:
             -clonedSourcePackagesDirPath build/SourcePackages \
             -resultBundlePath build/Compass.xcresult
 
+      # Unsigned, ad hoc signed Debug build for manual checks: unzip, then
+      # right-click Compass.app → Open. Signed releases are release-macos.yml.
+      - name: Zip the app
+        run: |
+          ditto -c -k --keepParent build/DerivedData/Build/Products/Debug/Compass.app build/Compass.zip
+
+      - name: Upload the app
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-app
+          path: apps/calendar-macos/build/Compass.zip
+          retention-days: 14
+
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v7
