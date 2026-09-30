@@ -4,6 +4,9 @@ import { publicBookingAppUrl } from "./booking-harness";
 
 const HEADING = "Let people book time with you";
 
+// A <footer> inside <main> has no contentinfo role, so the footer's one link
+// is the count that proves the page shell rendered once.
+
 test.describe("meeting landing page", () => {
   test("bare /meet renders the landing page with one page shell", async ({
     page,
@@ -20,7 +23,9 @@ test.describe("meeting landing page", () => {
       page.getByRole("link", { name: "Set up your meeting page" }),
     ).toHaveAttribute("href", "/?meetingSetup=1");
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("contentinfo")).toHaveCount(1);
+    await expect(
+      page.getByRole("link", { name: "Set up your own meeting page" }),
+    ).toHaveCount(1);
     await expectNoAxeViolations(page);
   });
 
@@ -47,7 +52,9 @@ test.describe("meeting landing page", () => {
       page.getByRole("heading", { level: 1, name: "Page not found" }),
     ).toBeVisible();
     await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("contentinfo")).toHaveCount(1);
+    await expect(
+      page.getByRole("link", { name: "Set up your own meeting page" }),
+    ).toHaveCount(1);
     await expect(
       page.getByRole("link", { name: "See how meeting pages work" }),
     ).toHaveAttribute("href", "/meet");
