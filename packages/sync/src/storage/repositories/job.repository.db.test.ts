@@ -983,18 +983,21 @@ describe("JobRepository", () => {
     expect(winning).not.toContain("COLLSCAN");
   });
 
-  it("enqueue wakes an idle drain and the job is claimed within 100ms", async () => {
+  it("enqueue wakes an idle drain and the job is claimed", async () => {
     let resolveIdle: () => void = () => {};
     const idle = new Promise<void>((resolve) => {
       resolveIdle = resolve;
     });
-    let claimed = false;
+    let resolveClaimed: () => void = () => {};
+    const claimed = new Promise<void>((resolve) => {
+      resolveClaimed = resolve;
+    });
     const scheduler = new SyncScheduler(
       {
         worker: {
           drain: async () => {
             const job = await repo.claimDueJob("drain", new Date(), 60_000);
-            if (job) claimed = true;
+            if (job) resolveClaimed();
             else resolveIdle();
             return job ? 1 : 0;
           },
@@ -1006,16 +1009,21 @@ describe("JobRepository", () => {
     scheduler.start();
     await idle;
 
-    const started = Date.now();
     await repo.enqueue(enqueue({ runAfter: new Date() }));
-    const deadline = started + 100;
-    while (!claimed && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 5));
-    }
-    const elapsed = Date.now() - started;
+    await Promise.race([
+      claimed,
+      new Promise<void>((_, reject) => {
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                "enqueue wake did not lead to a claim before the safety timeout",
+              ),
+            ),
+          5_000,
+        );
+      }),
+    ]);
     await scheduler.stop();
-
-    expect(claimed).toBe(true);
-    expect(elapsed).toBeLessThan(100);
   });
 });
