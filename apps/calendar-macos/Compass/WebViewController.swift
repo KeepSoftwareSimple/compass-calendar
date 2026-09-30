@@ -6,7 +6,7 @@ import WebKit
 /// `window.open` go to the default browser.
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
     private let appURL: URL
-    private var webView: WKWebView!
+    private var webView: CompassWebView!
     private let bridgeHandler = CompassBridgeHandler()
 
     init(appURL: URL) {
@@ -34,10 +34,9 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         contentController.addUserScript(script)
         configuration.userContentController = contentController
 
-        webView = WKWebView(frame: .zero, configuration: configuration)
+        webView = CompassWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
-        webView.setAccessibilityIdentifier("CompassWebView")
         #if DEBUG
         if #available(macOS 13.3, *) {
             webView.isInspectable = true
@@ -52,10 +51,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.evaluateJavaScript("window.compassDesktop && window.compassDesktop.version") {
-            [weak webView] result, _ in
-            if let version = result as? String {
-                webView?.setAccessibilityValue(version)
+        guard let compassWebView = webView as? CompassWebView else { return }
+        compassWebView.evaluateJavaScript("window.compassDesktop && window.compassDesktop.version") {
+            [weak compassWebView] result, _ in
+            Task { @MainActor in
+                guard let compassWebView else { return }
+                if let version = result as? String {
+                    compassWebView.bridgeVersionForUITests = version
+                }
+                compassWebView.applyUITestAccessibilityContract()
             }
         }
     }
