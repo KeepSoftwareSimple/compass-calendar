@@ -9,9 +9,9 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { getCalendarEventIdFromElement } from "@web/common/utils/event/event.util";
 import { ContextMenu } from "@web/components/ContextMenu/ContextMenu";
 import { type ContextMenuItemsActions } from "@web/components/ContextMenu/ContextMenuItems";
+import { contextMenuAnchorFromPointer } from "@web/components/ContextMenu/contextMenu.anchor";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
-  contextMenuAnchorFromPointer,
   contextMenuStyle,
 } from "@web/components/ContextMenu/contextMenu.floating";
 import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";

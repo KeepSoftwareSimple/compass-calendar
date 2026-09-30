@@ -17,9 +17,9 @@ import {
 } from "@web/events/stores/draft.store";
 import { maybePulseContextMenuOpenedByPointer } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { ContextMenu } from "./ContextMenu";
+import { contextMenuAnchorFromPointer } from "./contextMenu.anchor";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
-  contextMenuAnchorFromPointer,
   contextMenuStyle,
 } from "./contextMenu.floating";
 

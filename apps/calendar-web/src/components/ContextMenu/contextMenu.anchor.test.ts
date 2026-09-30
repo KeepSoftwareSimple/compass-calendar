@@ -1,7 +1,7 @@
 import {
   cardContextMenuPoint,
   contextMenuAnchorFromPointer,
-} from "./contextMenu.floating";
+} from "./contextMenu.anchor";
 import { describe, expect, it } from "bun:test";
 
 describe("cardContextMenuPoint", () => {

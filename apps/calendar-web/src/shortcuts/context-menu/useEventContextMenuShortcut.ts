@@ -1,5 +1,5 @@
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
-import { cardContextMenuPoint } from "@web/components/ContextMenu/contextMenu.floating";
+import { cardContextMenuPoint } from "@web/components/ContextMenu/contextMenu.anchor";
 import { markKeyboardContextMenuDispatch } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
