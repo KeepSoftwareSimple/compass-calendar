@@ -1,4 +1,5 @@
 import {
+  meetLandingRoute,
   publicBookCancelRoute,
   publicBookConfirmedRoute,
   publicBookRescheduleRoute,
@@ -37,13 +38,26 @@ describe("booking-web routeTree", () => {
     expect(publicBookCancelRoute.parentRoute).toBe(rootRoute);
   });
 
-  it("resolves bare /meet to the root not-found today", async () => {
-    const router = createRouter({
+  it("registers bare /meet as the landing route, with and without a slash", async () => {
+    expect(meetLandingRoute.fullPath).toBe("/meet");
+    expect(meetLandingRoute.parentRoute).toBe(rootRoute);
+
+    for (const path of ["/meet", "/meet/"]) {
+      const router = createRouter({
+        routeTree,
+        history: createMemoryHistory({ initialEntries: [path] }),
+      });
+      await router.load();
+      expect(router.state.statusCode).toBe(200);
+      expect(router.state.matches.at(-1)?.routeId).toBe(meetLandingRoute.id);
+    }
+
+    const slugRouter = createRouter({
       routeTree,
-      history: createMemoryHistory({ initialEntries: ["/meet"] }),
+      history: createMemoryHistory({ initialEntries: ["/meet/someone"] }),
     });
-    await router.load();
-    expect(router.state.statusCode).toBe(404);
+    await slugRouter.load();
+    expect(slugRouter.state.matches.at(-1)?.routeId).toBe(publicBookRoute.id);
   });
 
   it("redirects legacy /book paths to /meet and keeps search params", async () => {

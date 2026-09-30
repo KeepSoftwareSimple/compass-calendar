@@ -118,7 +118,7 @@ export const resolvePublicBookingReservationView = (
  * settled: a terminal status message, or the host's page.
  */
 export type PublicBookingPageView =
-  | ({ kind: "status" } & PublicBookingStatusCopy)
+  | ({ kind: "status"; notFound?: boolean } & PublicBookingStatusCopy)
   | { kind: "page"; page: PublicGetBookingPageResponse };
 
 /**
@@ -136,13 +136,13 @@ export const resolvePublicBookingPageView = (
     return { kind: "status", ...PUBLIC_BOOKING_PAGE_LOADING };
   }
   if (pageQuery.error instanceof PublicBookingNotFoundError) {
-    return { kind: "status", ...notFound };
+    return { kind: "status", notFound: true, ...notFound };
   }
   if (!pageQuery.isSuccess) {
     return { kind: "status", ...PUBLIC_BOOKING_LOAD_FAILED };
   }
   if (!pageQuery.data.enabled) {
-    return { kind: "status", ...notFound };
+    return { kind: "status", notFound: true, ...notFound };
   }
   if (slotsData && !slotsData.bookable) {
     return { kind: "status", ...PUBLIC_BOOKING_UNBOOKABLE };

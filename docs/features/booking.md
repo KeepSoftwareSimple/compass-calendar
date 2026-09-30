@@ -1,4 +1,4 @@
-# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10 / v1.11)
+# Compass Calendar Booking (v1 / v1.1 / v1.3 / v1.5 / v1.6 / v1.7 / v1.8 / v1.9 / v1.10 / v1.11 / v1.12)
 
 Locked product spec for public scheduling on Compass Cloud
 (`https://compasscalendar.com`). Approved 2026-08-30. v1.1 shipped
@@ -25,7 +25,8 @@ v1.11 shipped guest wizard sign-up hand-off, server-side removal of the
 current slot on tokenized reschedule, host toasts for cancel and reschedule
 (with SSE-triggered claim), guest RSVP reply toasts, RSVP-aware grid cards,
 keyboard cancel and reschedule in the event form, and cancelling the
-reservation when the host deletes the booked event in Compass.
+reservation when the host deletes the booked event in Compass. v1.12 made
+bare `/meet` a landing page for the Meeting feature.
 
 Compass never sends email itself. Google emails the guest when Compass
 creates the calendar event with `invitation: "all"`.
@@ -89,6 +90,24 @@ Reserved slugs (never allocated): `week`, `day`, `life`, `auth`, `api`,
 `cleanup`, `book`, `meet`, `cancel`, `confirmed`, `reschedule`, `p`,
 `settings`, `admin`, `login`, `logout`, `signup`, `invite`, `calendar`.
 
+### Landing page
+
+Bare `/meet` (and `/meet/`) is the landing page for the Meeting feature,
+rendered by `apps/booking-web/src/landing/MeetLandingPage.tsx`. It explains
+meeting pages and points every call to action at `/?meetingSetup=1`, the
+same guest setup hand-off the footer uses (see "Guest setup"), so a visitor
+who never wants the keyboard calendar can still go from search result to a
+live page without a second entry point. Signed-in hosts get Settings >
+Meeting from the same link. The page has no auth awareness and calls no
+API. Not-found states (unknown `/meet/*` paths, unknown or disabled slugs)
+link back to `/meet`. Bare `/book` stays not-found.
+
+The booking-web `index.html` is one shell for the landing page and every
+host page, so it carries a generic description, `robots index, follow`, and
+Open Graph tags, but no `canonical` and no `og:url`: a static canonical
+would tell crawlers every `/meet/:slug` page duplicates the landing page.
+Pages set their own `document.title` at runtime.
+
 ### Slug allocation
 
 Compass users have `name` and `email`, not a username
@@ -140,7 +159,9 @@ while keeping the draft. After sign-up (email or OAuth), Compass
 reopens Meeting settings on the go-live step with the draft restored
 and the destination calendar reset to the first writable calendar they
 can use. The draft clears only when go-live succeeds, same as a
-signed-in host.
+signed-in host. While guest setup is active (including the sign-up
+hand-off) the first-visit welcome modal stays out of the way: that visitor
+came for a meeting page, not the keyboard pitch.
 
 Host administration lives in Settings as Meeting. The internal name
 remains Booking page (`SettingsPage` includes `"booking"` in
@@ -662,11 +683,12 @@ Guest reschedule is **in scope for v1.3**, not v1 / v1.1.
 | Guest booking funnels | `apps/booking-web/src/telemetry/guest-booking-funnel.ts` |
 | Sidebar discovery | `apps/calendar-web/src/components/Sidebar/MeetingPageNudge/` |
 | Description flattening | `apps/calendar-web/src/components/DescriptionEditor/plain-text-description.ts` |
+| Meeting landing page | `apps/booking-web/src/landing/MeetLandingPage.tsx`, `MeetLandingLink.tsx` |
 | Public guest UI | `apps/booking-web/src/booking/` (for example `PublicBookingPage.tsx`, `PublicBookingMonthGrid.tsx`, `PublicBookingConfirmedPage.tsx`, `PublicBookingCancelPage.tsx`, `PublicBookingReschedulePage.tsx`, `PublicBookingEditDetailsForm.tsx`) |
 | Guest web API client | `apps/booking-web/src/api/public-booking.api.ts` |
 | Host web API client | `apps/calendar-web/src/api/booking.api.ts` |
 | booking-web app | `apps/booking-web/` (`Dockerfile`, `dev.ts`, deploy workflow) |
-| E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/booking-reschedule-current-slot.spec.ts`, `e2e/booking/booking-event-form-actions.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
+| E2e | `e2e/booking/` (guest specs via `publicBookingAppUrl()` → booking-web), `e2e/booking/meet-landing.spec.ts`, `e2e/booking/booking-reschedule-current-slot.spec.ts`, `e2e/booking/booking-event-form-actions.spec.ts`, `e2e/accessibility/booking-a11y.spec.ts`, `e2e/booking/calendar-web-guest-meet.spec.ts` (calendar-web must not serve guest `/meet`) |
 | Acceptance | `docs/acceptance/booking.md` |
 
 ### Analytics
@@ -678,8 +700,9 @@ capture are **dropped** on public `/meet/*` and `/book/*` routes because
 those payloads embed DOM text, hrefs, and messages that cannot be rewritten
 onto the allowlist. `$pageview` / `$pageleave` / `$web_vitals` and the
 named events below still send, after `filterPosthogBookingTelemetry`
-rewrites URLs to route categories (`meet_page`, `meet_confirmed`,
-`meet_cancel`, `meet_reschedule`, and the legacy `book_*` equivalents).
+rewrites URLs to route categories (`meet_landing`, `meet_page`,
+`meet_confirmed`, `meet_cancel`, `meet_reschedule`, and the legacy `book_*`
+equivalents).
 
 The rewrite lives in `packages/core/src/booking/booking-telemetry.ts` and
 is also applied to backend HTTP access logs, Winston messages, OTel log
@@ -706,6 +729,14 @@ Host funnel events: `apps/calendar-web/src/auth/posthog/booking-funnel.ts`.
 Guest funnel events: `apps/booking-web/src/telemetry/guest-booking-funnel.ts`.
 Conversion windows: host settings_opened to link_copied, 7 days; guest
 page_viewed to reservation_created, 1 day.
+
+Acquisition funnel (landing visitor to live page): `booking_landing_viewed`
+→ `booking_setup_cta_clicked` (`source: landing`) → `booking_settings_opened`
+(`configured_host: false`) → `signup_started` (`source: meeting_page_setup`)
+→ `booking_page_enabled`, 7 days, unique users. booking-web and calendar-web
+share one origin, so the anonymous PostHog id set on `/meet` carries into `/`
+and joins to the host on sign-up. This is a third population; do not fold it
+into the guest funnel, which stays anonymous by design.
 
 #### Counting
 
@@ -743,6 +774,8 @@ address draft save). First-time go-live vs later re-enable is
 | `booking_submit_attempted` | `duration_minutes` | Guest clicks Confirm meeting (including validation failures) | `booking_details_reached` |
 | `booking_submit_failed` | `reason` (`validation` \| `conflict` \| `unavailable` \| `rate_limited` \| `transport`), `duration_minutes` | Confirm fails client validation or the mutation errors | `booking_submit_attempted` |
 | `booking_reservation_created` | `duration_minutes` | Guest confirm mutation succeeds (browser-observed, not server completion) | `booking_submit_attempted` |
+| `booking_landing_viewed` | (none) | Bare `/meet` landing page mounts, once per page instance | Unique visitors on `/meet` |
+| `booking_setup_cta_clicked` | `source` (`landing` \| `footer`) | A "Set up" link to `/?meetingSetup=1` is clicked: the landing hero or its existing-users line (`landing`), or the shared footer on any public page (`footer`) | `booking_landing_viewed` for `landing`; `$pageview` with a `booking_route` for `footer` |
 
 Do not send scheduled timestamps, IANA zone names, slugs, or guest
 identifiers on these events. `timezone_differs` is true when the guest
@@ -845,6 +878,16 @@ browser funnels and server operations as one population.
   in the wire contract or Settings UI.
 
 ## Changelog
+
+### v1.12
+
+Bare `/meet` is a landing page for the Meeting feature instead of a
+not-found page. The not-found view rendered its page shell twice (two
+footers); it now renders one and links to `/meet`, as does an unknown or
+disabled slug. The booking-web shell gained a description, robots, and Open
+Graph tags. New events `booking_landing_viewed` and
+`booking_setup_cta_clicked`, and the `meet_landing` route category. The
+first-visit welcome modal no longer mounts under the guest setup wizard.
 
 ### v1.11
 

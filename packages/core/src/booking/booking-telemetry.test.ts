@@ -35,6 +35,16 @@ const assertNoSentinels = (value: unknown) => {
 };
 
 describe("classifyBookingPath", () => {
+  it("classifies the bare /meet landing page and leaves bare /book unknown", () => {
+    const landing = { category: "meet_landing", canonicalPath: "/meet" };
+    expect(classifyBookingPath("/meet")).toEqual(landing);
+    expect(classifyBookingPath("/meet/")).toEqual(landing);
+    expect(
+      bookingRouteCategoryFromUrl("https://compasscalendar.com/meet"),
+    ).toBe("meet_landing");
+    expect(classifyBookingPath("/book")).toBeNull();
+  });
+
   it("classifies guest web routes before treating the action as a slug", () => {
     expect(
       classifyBookingPath(`/meet/confirmed/${SENTINEL.reservationId}`),

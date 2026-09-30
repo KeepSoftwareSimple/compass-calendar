@@ -26,6 +26,15 @@ export const rootRoute = createRootRoute({
   notFoundComponent: NotFoundView,
 });
 
+export const meetLandingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROOT_ROUTES.LANDING,
+  component: lazyRouteComponent(
+    () => import("@booking-web/landing/MeetLandingPage"),
+    "MeetLandingPage",
+  ),
+});
+
 export const publicBookRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: ROOT_ROUTES.BOOK,
@@ -115,6 +124,7 @@ export const legacyBookConfirmedRoute = createRoute({
 });
 
 export const routeTree = rootRoute.addChildren([
+  meetLandingRoute,
   publicBookConfirmedRoute,
   publicBookCancelRoute,
   publicBookRescheduleRoute,

@@ -59,7 +59,7 @@ describe("resolvePublicBookingPageView", () => {
       NOT_FOUND,
     );
 
-    expect(view).toEqual({ kind: "status", ...NOT_FOUND });
+    expect(view).toEqual({ kind: "status", notFound: true, ...NOT_FOUND });
   });
 
   it("reports a load failure for any other error", () => {
@@ -79,7 +79,7 @@ describe("resolvePublicBookingPageView", () => {
       NOT_FOUND,
     );
 
-    expect(view).toEqual({ kind: "status", ...NOT_FOUND });
+    expect(view).toEqual({ kind: "status", notFound: true, ...NOT_FOUND });
   });
 
   it("ends the flow when the host calendar cannot take bookings", () => {
