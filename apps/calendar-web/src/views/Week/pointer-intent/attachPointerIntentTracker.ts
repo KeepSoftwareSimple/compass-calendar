@@ -3,6 +3,10 @@ import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-gr
 import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
 import { gridPointerTargetFromEvent } from "@web/views/Week/pointer-intent/grid-pointer-target";
 import {
+  identityForHoverTarget,
+  interactiveTargetUnderPointer,
+} from "@web/views/Week/pointer-intent/hover-hunt.util";
+import {
   type IntentMessageContext,
   type PointerIntent,
 } from "@web/views/Week/pointer-intent/pointer-intent";
@@ -14,6 +18,9 @@ import {
 import { pointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.keys-lookup";
 
 const CARD_DRAG_THRESHOLD_PX = 8;
+const HOVER_HUNT_SAMPLE_MS = 100;
+const HOVER_HUNT_WINDOW_MS = 4000;
+const HOVER_HUNT_MIN_TARGETS = 3;
 const WHEEL_GESTURE_IDLE_MS = 180;
 const WHEEL_GESTURE_WINDOW_MS = 10_000;
 const GRID_SCROLL_MIN_GESTURES = 3;
@@ -33,11 +40,50 @@ export function attachPointerIntentTracker(): () => void {
   let wheelGestureStarts: number[] = [];
   let lastWheelAt = 0;
 
+  let hoverHuntWindowStart = 0;
+  let hoverHuntLastSampleAt = 0;
+  const hoverHuntTargets = new Set<string>();
+
+  const resetHoverHunt = () => {
+    hoverHuntWindowStart = 0;
+    hoverHuntLastSampleAt = 0;
+    hoverHuntTargets.clear();
+  };
+
   const notify = (intent: PointerIntent, ctx?: IntentMessageContext) => {
     pointerIntentActions.notify(intent, { ctx });
   };
 
+  const onHoverHuntCancel = () => {
+    resetHoverHunt();
+  };
+
+  const onHoverHuntPointerMove = (event: PointerEvent) => {
+    if (event.pointerType === "touch") return;
+    const now = Date.now();
+    if (now - hoverHuntLastSampleAt < HOVER_HUNT_SAMPLE_MS) return;
+    hoverHuntLastSampleAt = now;
+
+    const target = interactiveTargetUnderPointer(event.clientX, event.clientY);
+    if (!target) return;
+
+    if (hoverHuntWindowStart === 0) {
+      hoverHuntWindowStart = now;
+    } else if (now - hoverHuntWindowStart > HOVER_HUNT_WINDOW_MS) {
+      resetHoverHunt();
+      hoverHuntWindowStart = now;
+      hoverHuntLastSampleAt = now;
+    }
+
+    hoverHuntTargets.add(identityForHoverTarget(target));
+    if (hoverHuntTargets.size < HOVER_HUNT_MIN_TARGETS) return;
+
+    resetHoverHunt();
+    notify("hover-hunt");
+  };
+
   const onPointerDown = (event: PointerEvent) => {
+    onHoverHuntCancel();
     if (event.button !== 0) return;
     const target = gridPointerTargetFromEvent(event);
     if (!target) return;
@@ -113,18 +159,23 @@ export function attachPointerIntentTracker(): () => void {
 
   document.addEventListener("pointerdown", onPointerDown, true);
   document.addEventListener("pointermove", onPointerMove, true);
+  document.addEventListener("pointermove", onHoverHuntPointerMove, true);
   document.addEventListener("pointerup", onPointerUp, true);
   document.addEventListener("pointercancel", onPointerUp, true);
+  document.addEventListener("keydown", onHoverHuntCancel, true);
   document.addEventListener("wheel", onWheel, { capture: true, passive: true });
 
   return () => {
     pendingCard = null;
     wheelGestureStarts = [];
     lastWheelAt = 0;
+    resetHoverHunt();
     document.removeEventListener("pointerdown", onPointerDown, true);
     document.removeEventListener("pointermove", onPointerMove, true);
+    document.removeEventListener("pointermove", onHoverHuntPointerMove, true);
     document.removeEventListener("pointerup", onPointerUp, true);
     document.removeEventListener("pointercancel", onPointerUp, true);
+    document.removeEventListener("keydown", onHoverHuntCancel, true);
     document.removeEventListener("wheel", onWheel, true);
     resetPointerIntentKeysLookupForTests();
   };

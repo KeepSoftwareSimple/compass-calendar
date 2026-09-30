@@ -1,3 +1,4 @@
+import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 export type PointerIntent =
@@ -7,7 +8,12 @@ export type PointerIntent =
   | "card-drag"
   | "grid-scroll"
   | "swipe-next"
-  | "swipe-prev";
+  | "swipe-prev"
+  | "hover-hunt";
+
+function modHoldLabelForHint(): string {
+  return expandModInShortcutDisplay("Mod") === "Meta" ? "Cmd" : "Ctrl";
+}
 
 export type SlotClickIntentContext = {
   timeKey: string;
@@ -52,6 +58,10 @@ export const INTENT_TEACHING: Record<PointerIntent, IntentTeaching> = {
   "swipe-prev": {
     shortcutIds: ["nav-previous"],
     message: () => "Next time, press {0}.",
+  },
+  "hover-hunt": {
+    shortcutIds: ["focus-page-jump"],
+    message: () => `Hold ${modHoldLabelForHint()} to see where you can jump.`,
   },
 };
 

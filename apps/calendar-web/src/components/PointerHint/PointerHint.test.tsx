@@ -41,6 +41,18 @@ describe("PointerHint", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Next time, press");
   });
 
+  it("renders a custom pointer message when provided", () => {
+    pointerHintActions.pulse({
+      source: "pointer",
+      shortcutKey: ["Mod"],
+      message: "Hold Cmd to see where you can jump.",
+    });
+    render(<PointerHint />);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Hold Cmd to see where you can jump.",
+    );
+  });
+
   it("shows chord shortcuts from the palette", () => {
     pointerHintActions.pulse({
       shortcutKey: ["Mod", "K"],
