@@ -26,6 +26,7 @@ import {
   selectPageJumpHintsVisible,
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
+import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
 import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/views/Week/pointer-intent/grid-pointer-target";
@@ -218,6 +219,35 @@ describe("attachPointerIntentTracker", () => {
     ).toBe(true);
   });
 
+  it("detects card clicks at Explorer without pulsing a hint", async () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    const user = userEvent.setup();
+    const card = document.createElement("div");
+    card.setAttribute(WEEK_EVENT_ID_ATTRIBUTE, "evt-explorer");
+    document.body.appendChild(card);
+
+    await user.pointer({ keys: "[MouseLeft>]", target: card });
+    await user.pointer({ keys: "[/MouseLeft]", target: card });
+
+    expect(capture).toHaveBeenCalledWith(
+      "pointer_intent_detected",
+      expect.objectContaining({ intent: "card-click" }),
+    );
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+    expect(
+      track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
+    ).toBe(false);
+  });
+
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {
     setTipsMuted(true);
     const user = userEvent.setup();
@@ -238,6 +268,38 @@ describe("attachPointerIntentTracker", () => {
       track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
     ).toBe(false);
     expect(usePointerHintStore.getState().pulse).toBe(0);
+  });
+
+  it("detects hover-hunt at Explorer without pulsing or chip demo", async () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    const { hoverOver, first, second, third } = mountHoverHuntButtons();
+
+    hoverOver(first);
+    await waitHoverSample();
+    hoverOver(second);
+    await waitHoverSample();
+    hoverOver(third);
+
+    expect(capture).toHaveBeenCalledWith(
+      "pointer_intent_detected",
+      expect.objectContaining({ intent: "hover-hunt" }),
+    );
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+    expect(selectPageJumpHintsVisible(usePageJumpHintStore.getState())).toBe(
+      false,
+    );
+    expect(
+      track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
+    ).toBe(false);
   });
 
   it("reveals page-jump hints after hovering three distinct controls", async () => {

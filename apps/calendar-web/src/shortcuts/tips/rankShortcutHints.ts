@@ -5,6 +5,22 @@ import {
   type ShortcutHintId,
   type ShortcutSuggestionReason,
 } from "@web/shortcuts/tips/shortcut-tips.data";
+import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
+import { detectedIntents } from "@web/views/Week/pointer-intent/pointer-intent.session";
+
+const HINTS_FOR_POINTER_INTENT: Record<
+  PointerIntent,
+  readonly ShortcutHintId[]
+> = {
+  "card-click": ["event-jump", "page-jump"],
+  "hover-hunt": ["event-jump", "page-jump"],
+  "slot-click": ["create-event"],
+  "allday-click": ["create-event"],
+  "card-drag": ["nudge"],
+  "grid-scroll": ["grid-scroll"],
+  "swipe-next": ["week-nav"],
+  "swipe-prev": ["week-nav"],
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const SHORTCUT_FATIGUE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -13,6 +29,8 @@ export const SHORTCUT_FATIGUE_IMPRESSIONS = 2;
  * taught, so the bar spends its one line on something the user has not
  * adopted yet. */
 export const SHORTCUT_MASTERED_INVOCATIONS = 5;
+/** Beats untried and fatigue signals when the user showed this intent. */
+export const SHORTCUT_INTENT_RANK_BOOST = 96;
 
 type RankedCandidate = {
   fatigued: boolean;
@@ -36,11 +54,24 @@ function deterministicFallbackOrder(
   return [...pool.slice(start), ...pool.slice(0, start)];
 }
 
+function intentBoostedHintIds(): ReadonlySet<ShortcutHintId> {
+  const boosted = new Set<ShortcutHintId>();
+  for (const intent of detectedIntents()) {
+    const hints = HINTS_FOR_POINTER_INTENT[intent];
+    if (!hints) continue;
+    for (const hintId of hints) {
+      boosted.add(hintId);
+    }
+  }
+  return boosted;
+}
+
 function scoreCandidate(
   id: ShortcutHintId,
   demonstratedIds: readonly ShortcutHintId[],
   profile: ShortcutUsageProfile,
   now: number,
+  intentBoosted: ReadonlySet<ShortcutHintId>,
 ): RankedCandidate {
   const hint = getShortcutHint(id);
   const usage = profile.actions[hint.actionId];
@@ -63,6 +94,7 @@ function scoreCandidate(
   else if (lastInvokedAge !== null && lastInvokedAge < 7 * DAY_MS) score -= 12;
   else if (lastInvokedAge !== null && lastInvokedAge > 30 * DAY_MS) score += 12;
   if (fatigued) score -= 64;
+  if (intentBoosted.has(id)) score += SHORTCUT_INTENT_RANK_BOOST;
 
   return { fatigued, id, score, untried };
 }
@@ -100,8 +132,9 @@ export function rankShortcutHints(
     unmastered.length > 0 ? unmastered : pool,
     demonstratedIds,
   );
+  const intentBoosted = intentBoostedHintIds();
   const candidates = fallbackOrder.map((id) =>
-    scoreCandidate(id, demonstratedIds, profile, now),
+    scoreCandidate(id, demonstratedIds, profile, now, intentBoosted),
   );
   const fallback = candidates[0];
   if (!fallback) {

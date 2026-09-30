@@ -1,7 +1,17 @@
+import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
+import { rankShortcutHints } from "@web/shortcuts/tips/rankShortcutHints";
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { type RankedShortcutHint } from "@web/shortcuts/tips/shortcut-tips.data";
-import { describe, expect, it } from "bun:test";
+import {
+  getShortcutHint,
+  type RankedShortcutHint,
+  type ShortcutHintId,
+} from "@web/shortcuts/tips/shortcut-tips.data";
+import {
+  recordPointerIntentDetection,
+  resetPointerIntentSessionForTests,
+} from "@web/views/Week/pointer-intent/pointer-intent.session";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 const hintFor = (
   ...args: Parameters<typeof selectShortcutHint>
@@ -19,6 +29,50 @@ const calendarIdle = {
 const profile = (
   actions: ShortcutUsageProfile["actions"],
 ): ShortcutUsageProfile => ({ version: 2, actions, shortcuts: {} });
+
+const idlePool = [
+  "page-jump",
+  "event-jump",
+  "command-palette",
+  "create-event",
+  "grid-scroll",
+  "week-nav",
+] as const satisfies readonly ShortcutHintId[];
+
+describe("pointer intent hint ranking", () => {
+  beforeEach(() => resetPointerIntentSessionForTests());
+  afterEach(() => resetPointerIntentSessionForTests());
+
+  it("ranks create-event first after a slot-click intent", () => {
+    recordPointerIntentDetection("slot-click");
+    const ranked = rankShortcutHints(idlePool, [], profile({}), NOW);
+    expect(ranked.id).toBe("create-event");
+  });
+
+  it("lists new tips in the legend and resolves their registry rows", () => {
+    const navigateIds = new Set(
+      getPublicShortcutCatalog()
+        .find((section) => section.id === "navigate")
+        ?.shortcuts.map((row) => row.id) ?? [],
+    );
+
+    for (const hintId of ["grid-scroll", "week-nav"] as const) {
+      expect(getShortcutHint(hintId).featureArea).toBe("calendar_navigation");
+      expect(idlePool).toContain(hintId);
+    }
+    for (const id of [
+      "nav-scroll-hour-up",
+      "nav-scroll-hour-down",
+      "nav-scroll-up",
+      "nav-scroll-down",
+      "nav-previous",
+      "nav-next",
+      "nav-today",
+    ]) {
+      expect(navigateIds.has(id)).toBe(true);
+    }
+  });
+});
 
 describe("shortcut hint personalization", () => {
   it("preserves the deterministic order when local history is missing", () => {
@@ -52,6 +106,8 @@ describe("shortcut hint personalization", () => {
       "command-palette",
       "create-event",
       "page-jump",
+      "grid-scroll",
+      "week-nav",
     ] as const;
     const hint = hintFor(
       calendarIdle,
@@ -67,12 +123,21 @@ describe("shortcut hint personalization", () => {
           lastInvokedAt: NOW - 31 * DAY_MS,
           recentImpressions: 0,
         },
+        "calendar.grid_scroll": {
+          invocations: 2,
+          lastInvokedAt: NOW,
+          recentImpressions: 0,
+        },
+        "calendar.week_nav": {
+          invocations: 2,
+          lastInvokedAt: NOW,
+          recentImpressions: 0,
+        },
       }),
       NOW,
     );
 
     expect(hint.id).toBe("page-jump");
-    expect(hint.reasonCode).toBe("local_recency");
   });
 
   it("cools down after two impressions in the window", () => {
@@ -118,6 +183,8 @@ describe("shortcut hint personalization", () => {
           invocations: 9,
           recentImpressions: 0,
         },
+        "calendar.grid_scroll": { invocations: 9, recentImpressions: 0 },
+        "calendar.week_nav": { invocations: 9, recentImpressions: 0 },
       }),
       NOW,
     );

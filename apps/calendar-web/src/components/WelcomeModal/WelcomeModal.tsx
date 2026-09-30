@@ -192,7 +192,7 @@ export function WelcomeModal() {
   const explore = () => {
     if (closing || isAuthHandoffInFlight()) return;
     skipFocusRestoreRef.current = true;
-    markWelcomeSeen();
+    markWelcomeSeen("explore");
     track("welcome_modal_dismissed", { cta: "explore" });
     beginDismiss(() => {
       setIsOpen(false);
@@ -210,7 +210,7 @@ export function WelcomeModal() {
     // A repeat click while the auth modal is on its way must not open it twice.
     if (hidingForAuthRef.current) return;
     beginAuthHandoff();
-    markWelcomeSeen();
+    markWelcomeSeen(cta);
     if (cta === "sign_up") {
       void trackSignupStartedAtClick("welcome_modal");
     }
@@ -225,7 +225,7 @@ export function WelcomeModal() {
     providerHandoffRef.current = true;
     setHandingOff(true);
     cancelDismiss();
-    markWelcomeSeen();
+    markWelcomeSeen(`sign_up_${kind}`);
     track("welcome_modal_dismissed", { cta: `sign_up_${kind}` });
     void trackSignupStartedAtClick(`welcome_modal_${kind}`);
     startSignIn(kind);

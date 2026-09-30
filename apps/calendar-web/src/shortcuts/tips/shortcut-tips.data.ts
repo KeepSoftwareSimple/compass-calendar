@@ -22,6 +22,8 @@ export type ShortcutHintId =
   | "page-jump"
   | "event-jump"
   | "week-day-focus"
+  | "grid-scroll"
+  | "week-nav"
   | "command-palette";
 
 export type ShortcutActionId =
@@ -29,6 +31,8 @@ export type ShortcutActionId =
   | "calendar.event_jump"
   | "calendar.focus_week_day"
   | "calendar.page_jump"
+  | "calendar.grid_scroll"
+  | "calendar.week_nav"
   | "command_palette.open"
   | "event.edge_focus"
   | "event.edit_title"
@@ -231,6 +235,32 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     parts: [
       { keys: KEYMAP.commandPalette.keycaps },
       " opens the command palette",
+    ],
+    suggestionReason: "calendar_idle",
+  },
+  "grid-scroll": {
+    id: "grid-scroll",
+    actionId: "calendar.grid_scroll",
+    featureArea: "calendar_navigation",
+    parts: [
+      { keys: ["Alt", "ArrowDown"] },
+      " scrolls · ",
+      { key: "PageDown" },
+      " pages",
+    ],
+    suggestionReason: "calendar_idle",
+  },
+  "week-nav": {
+    id: "week-nav",
+    actionId: "calendar.week_nav",
+    featureArea: "calendar_navigation",
+    parts: [
+      { key: "J" },
+      "/",
+      { key: "K" },
+      " move weeks · ",
+      { key: "T" },
+      " today",
     ],
     suggestionReason: "calendar_idle",
   },

@@ -1,5 +1,6 @@
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import { hasReachedExplorerShortcutLevel } from "@web/shortcuts/level/read-browser-shortcut-level";
 import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { readTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import {
@@ -8,6 +9,9 @@ import {
   type PointerIntent,
 } from "@web/views/Week/pointer-intent/pointer-intent";
 import { type PointerIntentSessionSnapshot } from "@web/views/Week/pointer-intent/pointer-intent.session";
+
+/** Hover-hunt and other pointer hints call this before arming (#4126, WP-03). */
+export { hasReachedExplorerShortcutLevel as isPointerHintTeachingRetired };
 
 export type ShouldTeachPointerIntentInput = {
   intent: PointerIntent;
@@ -28,6 +32,9 @@ export function shouldTeachPointerIntent({
   pillVisible = false,
   usageProfile = readShortcutUsageProfile(),
 }: ShouldTeachPointerIntentInput): boolean {
+  if (hasReachedExplorerShortcutLevel(usageProfile)) {
+    return false;
+  }
   if (tipsMuted || tipsDismissedPermanently || appLocked || pillVisible) {
     return false;
   }
