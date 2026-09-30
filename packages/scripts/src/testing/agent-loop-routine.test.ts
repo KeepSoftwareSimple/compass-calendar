@@ -107,8 +107,10 @@ describe("agent-loop Routine contract", () => {
   it("lets the merge queue drive the required test workflows", () => {
     const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
     const e2e = readFileSync(".github/workflows/test-e2e.yml", "utf8");
+    const macos = readFileSync(".github/workflows/test-macos.yml", "utf8");
     expect(unit).toMatch(/^ {2}merge_group:$/m);
     expect(e2e).toMatch(/^ {2}merge_group:$/m);
+    expect(macos).toMatch(/^ {2}merge_group:$/m);
   });
 
   it("requeues conflicted automerge PRs without needs-human", () => {

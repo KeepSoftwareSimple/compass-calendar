@@ -92,7 +92,8 @@ back to a pickup phrase.
    issues, and issues with an open PR with `Fixes #<n>`. Select up to
    `AGENT_LOOP_CONCURRENCY` (default 3) issues whose partition labels do
    not overlap. Partition labels are `sync-core`, `sync-microsoft`,
-   `sync-apple`, `web`, `backend`, `core`, `scripts`, `e2e`, `docs`.
+   `sync-apple`, `web`, `backend`, `core`, `scripts`, `e2e`, `docs`,
+   `desktop`.
    `fresh_count` idles only when it reaches N. Labels older than 3 hours
    are treated as abandoned and cleared across every listed milestone.
 2. **Launch** (`.github/scripts/agent-loop-launch.sh`): accepts one or

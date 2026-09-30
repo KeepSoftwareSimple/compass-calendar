@@ -114,6 +114,15 @@ describe("mapFilesToPackages", () => {
     ).toContain("test:self-host");
   });
 
+  it("selects the macos suite for apps/calendar-macos/ changes", () => {
+    expect(
+      mapFilesToPackages([
+        "apps/calendar-macos/project.yml",
+        "apps/calendar-web/src/App.tsx",
+      ]),
+    ).toEqual(["web", "macos"]);
+  });
+
   it("does not invent core/web for docs-only or empty diffs", () => {
     expect(
       mapFilesToPackages(["docs/development/testing-playbook.md"]),
@@ -209,6 +218,37 @@ describe("planVerify", () => {
       "knip",
     ]);
     expect(plan.checks[0]?.reason).toContain("/storage/");
+  });
+});
+
+describe("planVerify macos", () => {
+  it("runs test:macos where Xcode is installed", () => {
+    const plan = planVerify({
+      packages: ["macos"],
+      playwrightChromiumAvailable: false,
+      xcodeAvailable: true,
+    });
+    expect(plan.checks.map((check) => check.id)).toEqual([
+      "test:macos",
+      "type-check",
+      "lint",
+      "knip",
+    ]);
+    expect(plan.ciOnly).toEqual([]);
+  });
+
+  it("names test:macos as CI-only without Xcode instead of skipping it", () => {
+    const plan = planVerify({
+      packages: ["macos"],
+      playwrightChromiumAvailable: false,
+    });
+    expect(plan.checks.map((check) => check.id)).toEqual([
+      "type-check",
+      "lint",
+      "knip",
+    ]);
+    expect(plan.skips).toEqual([]);
+    expect(plan.ciOnly.map((note) => note.id)).toEqual(["test:macos"]);
   });
 });
 
@@ -397,6 +437,49 @@ describe("runVerify", () => {
     expect(exitCode).toBe(1);
     expect(logs.lines.at(-1)).toBe("VERDICT: INCOMPLETE");
     expect(logs.errors.join("\n")).toContain("--strict");
+  });
+
+  it("passes --strict on a macos diff without Xcode and names test:macos as CI-only", async () => {
+    const { spawn, commands } = recordingSpawn();
+    const logs = captureLogs();
+    const exitCode = await runVerify(["--strict"], {
+      git: gitStub({
+        diffs: { "abc123...HEAD": ["apps/calendar-macos/project.yml"] },
+      }),
+      spawn,
+      log: logs.log,
+      chromiumAvailable: () => false,
+      xcodeAvailable: () => false,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(commands).toEqual([
+      ["bun", "run", "type-check"],
+      ["bun", "run", "lint"],
+      ["bun", "run", "knip"],
+    ]);
+    expect(logs.lines).toContain(
+      "Checks CI-only: test:macos (Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine)",
+    );
+    expect(logs.lines.at(-1)).toBe("VERDICT: PASS");
+  });
+
+  it("runs test:macos on a macos diff when Xcode is installed", async () => {
+    const { spawn, commands } = recordingSpawn();
+    const logs = captureLogs();
+    const exitCode = await runVerify([], {
+      git: gitStub({
+        diffs: { "abc123...HEAD": ["apps/calendar-macos/project.yml"] },
+      }),
+      spawn,
+      log: logs.log,
+      chromiumAvailable: () => false,
+      xcodeAvailable: () => true,
+    });
+
+    expect(exitCode).toBe(0);
+    expect(commands[0]).toEqual(["bun", "run", "test:macos"]);
+    expect(logs.lines.join("\n")).not.toContain("CI-only");
   });
 
   it("starts Playwright only after independent checks finish", async () => {

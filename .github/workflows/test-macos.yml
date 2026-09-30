@@ -1,0 +1,157 @@
+name: macOS
+
+# Builds and tests the Swift app in apps/calendar-macos
+# (docs/features/desktop-client.md). Agents work on Linux and cannot compile
+# AppKit, so this workflow is the only place that project builds before a
+# release.
+on:
+  pull_request:
+    branches:
+      - main
+  # Merge queue re-tests the combination against current main. Without this
+  # trigger the required `macos` check never reports on merge_group and the
+  # queue stalls.
+  merge_group:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/calendar-macos/**"
+      - ".github/workflows/test-macos.yml"
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: macos-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Same job-gate pattern as test-unit.yml: the required `macos` context must
+  # report on every PR and merge group, so path filtering lives here and not
+  # in `on:`. macOS runner minutes cost ten times Linux ones, so unlike
+  # test-unit.yml the merge queue also filters: a group that touches nothing
+  # here skips the build. No project yet (apps/calendar-macos/project.yml
+  # absent) also skips.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      macos: ${{ steps.filter.outputs.macos }}
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Detect apps/calendar-macos changes
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_SHA: ${{ github.event.merge_group.base_sha }}
+          HEAD_SHA: ${{ github.event.merge_group.head_sha }}
+        run: |
+          if [ ! -f apps/calendar-macos/project.yml ]; then
+            echo "No apps/calendar-macos/project.yml; nothing to build."
+            echo "macos=false" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          case "$EVENT" in
+            pull_request)
+              files=$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/files" \
+                --jq '.[].filename') || files="" ;;
+            merge_group)
+              files=$(gh api "repos/${REPO}/compare/${BASE_SHA}...${HEAD_SHA}" \
+                --jq '.files[].filename') || files="" ;;
+            *)
+              echo "macos=true" >>"$GITHUB_OUTPUT"
+              exit 0 ;;
+          esac
+          # An unreadable or empty file list is unverified, so build.
+          if [ -z "$files" ]; then
+            echo "Could not read changed files; building."
+            echo "macos=true" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hits=$(printf '%s\n' "$files" |
+            grep -E '^(apps/calendar-macos/|\.github/workflows/test-macos\.yml$)' || true)
+          if [ -n "$hits" ]; then
+            printf 'macOS changes:\n%s\n' "$hits"
+            echo "macos=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "No apps/calendar-macos changes."
+            echo "macos=false" >>"$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.macos == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/calendar-macos
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Install XcodeGen
+        run: |
+          brew install xcodegen
+
+      - name: Cache SwiftPM and derived data
+        uses: actions/cache@v6
+        with:
+          path: |
+            apps/calendar-macos/build/DerivedData
+            apps/calendar-macos/build/SourcePackages
+          key: ${{ runner.os }}-xcode-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-xcode-
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate
+
+      # The Compass scheme runs CompassKitTests and CompassUITests.
+      - name: Build and test
+        run: |
+          xcodebuild -version
+          xcodebuild test \
+            -project Compass.xcodeproj \
+            -scheme Compass \
+            -destination platform=macOS \
+            -derivedDataPath build/DerivedData \
+            -clonedSourcePackagesDirPath build/SourcePackages \
+            -resultBundlePath build/Compass.xcresult
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-xcresult
+          path: apps/calendar-macos/build/Compass.xcresult
+          retention-days: 7
+
+  # One required context whether or not the build ran, like `unit` over
+  # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
+  # and a skipped build alone would read as a pass.
+  macos:
+    needs: [changes, build]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require the macOS build to pass
+        env:
+          CHANGES: ${{ needs.changes.result }}
+          BUILD: ${{ needs.build.result }}
+        run: |
+          echo "changes: ${CHANGES}, build: ${BUILD}"
+          [ "$CHANGES" = "success" ] || exit 1
+          case "$BUILD" in
+            success|skipped) exit 0 ;;
+            *) exit 1 ;;
+          esac
