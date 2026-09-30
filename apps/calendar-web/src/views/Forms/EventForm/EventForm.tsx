@@ -39,6 +39,7 @@ import {
 } from "@web/common/utils/datetime/web.date.util";
 import { getVisibleGridStartMinute } from "@web/common/utils/draft/draft.util";
 import {
+  type EventFormFocusField,
   isComboboxInteraction,
   isDeleteTextEditingTarget,
   shouldDeferEnterToTarget,
@@ -67,6 +68,7 @@ import { FormDigitHintOverlay } from "@web/shortcuts/form-digit-jump/FormDigitHi
 import { useFormDigitJumpShortcut } from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
 import { KEYMAP } from "@web/shortcuts/keymap";
+import { useFormPointerFieldDigitHint } from "@web/shortcuts/pointer-intent/useFormPointerFieldDigitHint";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 import { AttendeeField } from "@web/views/Forms/EventForm/AttendeeField/AttendeeField";
@@ -733,6 +735,9 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       });
 
     const { areHintsVisible } = useFormDigitJumpShortcut();
+    const [pointerFlashField, setPointerFlashField] =
+      useState<EventFormFocusField | null>(null);
+    useFormPointerFieldDigitHint(setPointerFlashField);
 
     const titleErrorField = fieldErrors?.["content.title"]
       ? "content.title"
@@ -1061,7 +1066,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           onCancel={onCancelConfirm}
           onDiscard={onDiscardConfirm}
         />
-        <FormDigitHintOverlay visible={areHintsVisible} />
+        <FormDigitHintOverlay
+          flashField={pointerFlashField}
+          visible={areHintsVisible || pointerFlashField !== null}
+        />
       </>
     );
   },

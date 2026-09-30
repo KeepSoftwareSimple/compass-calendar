@@ -29,10 +29,15 @@ import {
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { eventQueryKeys } from "@web/events/queries/event.query.keys";
+import {
+  initialPointerHintState,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { useEditSequenceShortcut } from "@web/shortcuts/useEditSequenceShortcut";
 import { type Props as DateTimeSectionProps } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/DateTimeSection";
 import { getFormDates } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/form.datetime.util";
 import * as realSavesection from "@web/views/Forms/EventForm/SaveSection/SaveSection";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 /**
@@ -119,6 +124,11 @@ mock.module("@web/api/booking.api", () => ({
 const showStatusToastMock = mock();
 mock.module("@web/common/utils/toast/status-toast.util", () => ({
   showStatusToast: showStatusToastMock,
+}));
+
+const trackPointerHintMock = mock();
+mock.module("@web/auth/posthog/track", () => ({
+  track: trackPointerHintMock,
 }));
 
 const { EventForm } = require("./EventForm") as typeof import("./EventForm");
@@ -302,6 +312,56 @@ describe("EventForm", () => {
     capturedDateControlsSectionProps = null;
     capturedRecurrenceSectionProps = null;
     document.body.removeAttribute("data-app-locked");
+    trackPointerHintMock.mockClear();
+    resetPointerIntentSessionForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
+  });
+
+  it("shows a digit chip and pointer hint when the location field is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithStore(
+      <EventForm
+        draft={createEditDraft({ location: "Room 4" })}
+        isDraft={false}
+        isExistingEvent={true}
+        onClose={mock()}
+        onDelete={mock()}
+        onDuplicate={mock()}
+        onSubmit={mock()}
+        setDraft={mock()}
+      />,
+    );
+
+    const locationField = screen.getByRole("textbox", { name: "Location" });
+    await user.click(locationField);
+
+    expect(document.querySelector("[data-form-digit-hints]")).not.toBeNull();
+    expect(trackPointerHintMock).toHaveBeenCalledWith(
+      "pointer_hint_shown",
+      expect.objectContaining({ shortcut_id: "edit-jump-field-digit" }),
+    );
+  });
+
+  it("does not flash a digit chip when tabbing into the location field", async () => {
+    const user = userEvent.setup();
+    renderWithStore(
+      <EventForm
+        draft={createEditDraft({ location: "Room 4" })}
+        isDraft={false}
+        isExistingEvent={true}
+        onClose={mock()}
+        onDelete={mock()}
+        onDuplicate={mock()}
+        onSubmit={mock()}
+        setDraft={mock()}
+      />,
+    );
+
+    await user.tab();
+    await user.tab();
+
+    expect(document.querySelector("[data-form-digit-hints]")).toBeNull();
+    expect(trackPointerHintMock).not.toHaveBeenCalled();
   });
 
   it("renders the actions toolbar above the title", () => {

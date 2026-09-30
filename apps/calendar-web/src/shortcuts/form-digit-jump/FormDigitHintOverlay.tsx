@@ -1,6 +1,9 @@
 import { createPortal } from "react-dom";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
-import { getEventFormFieldAnchor } from "@web/common/utils/form/form.util";
+import {
+  type EventFormFocusField,
+  getEventFormFieldAnchor,
+} from "@web/common/utils/form/form.util";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { getVisibleHintRect } from "@web/shortcuts/shift-hint/shift-hint-visible-rect";
@@ -11,7 +14,13 @@ import { useHintLayoutRefresh } from "@web/shortcuts/useHintLayoutRefresh";
  * (see useFormDigitJumpShortcut). Portaled like ShiftHintOverlay so the
  * scrollable form body cannot clip a chip on a field near its edge.
  */
-export function FormDigitHintOverlay({ visible }: { visible: boolean }) {
+export function FormDigitHintOverlay({
+  visible,
+  flashField = null,
+}: {
+  visible: boolean;
+  flashField?: EventFormFocusField | null;
+}) {
   useHintLayoutRefresh(visible);
 
   if (!visible || typeof document === "undefined") {
@@ -22,7 +31,10 @@ export function FormDigitHintOverlay({ visible }: { visible: boolean }) {
   // anchor is currently rendered get announced or chipped, e.g. the calendar
   // picker (digit 5) isn't rendered on an edit draft, so the shortcut
   // wouldn't do anything there.
-  const presentFields = FORM_FIELD_DIGITS.flatMap((entry) => {
+  const fieldEntries = flashField
+    ? FORM_FIELD_DIGITS.filter((entry) => entry.field === flashField)
+    : FORM_FIELD_DIGITS;
+  const presentFields = fieldEntries.flatMap((entry) => {
     const anchor = getEventFormFieldAnchor(entry.field);
     return anchor ? [{ ...entry, anchor }] : [];
   });

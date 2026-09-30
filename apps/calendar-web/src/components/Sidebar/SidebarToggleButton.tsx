@@ -24,6 +24,8 @@ export const SidebarToggleButton: FC = () => {
   return (
     <TooltipWrapper
       description={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+      shortcut="]"
+      shortcutId="other-sidebar"
       onClick={() => {
         const willOpen = !isSidebarOpen;
         viewActions.toggleSidebar();
@@ -32,7 +34,6 @@ export const SidebarToggleButton: FC = () => {
         // opens; move focus to the in-sidebar dismiss control when present.
         focusSidebarControl(SIDEBAR_DISMISS_CONTROL);
       }}
-      shortcut="]"
     >
       <button
         type="button"

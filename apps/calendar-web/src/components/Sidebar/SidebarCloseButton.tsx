@@ -27,6 +27,8 @@ export const SidebarCloseButton: FC = () => {
   return (
     <TooltipWrapper
       description="Close sidebar"
+      shortcut="]"
+      shortcutId="other-sidebar"
       onClick={() => {
         viewActions.setSidebarOpen(false);
         if (isEventFormOpen) {
@@ -36,7 +38,6 @@ export const SidebarCloseButton: FC = () => {
         // in-sidebar control unmounts.
         focusSidebarControl(SIDEBAR_TOGGLE_CONTROL);
       }}
-      shortcut="]"
     >
       <button
         type="button"

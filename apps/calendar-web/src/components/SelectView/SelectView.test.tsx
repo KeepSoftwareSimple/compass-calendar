@@ -6,14 +6,22 @@ import "@testing-library/jest-dom";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
+import * as trackModule from "@web/auth/posthog/track";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
+import {
+  initialPointerHintState,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import {
   focusPageJumpTarget,
   PAGE_JUMP_ATTRIBUTE,
 } from "@web/shortcuts/page-jump/page-jump.targets";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockNavigate = mock();
+const track = mock();
+mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
 // Snapshotted into a plain object (not just holding the namespace
 // reference) because mock.module mutates the live module object in place -
 // without the copy, `actualTanstackRouter.useNavigate` below would end up
@@ -54,6 +62,9 @@ describe("SelectView", () => {
 
   beforeEach(() => {
     mockNavigate.mockClear();
+    track.mockClear();
+    resetPointerIntentSessionForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
     onToday = mock();
   });
 
@@ -524,6 +535,19 @@ describe("SelectView", () => {
       expect(button.closest(`[${PAGE_JUMP_ATTRIBUTE}]`)).toHaveAttribute(
         PAGE_JUMP_ATTRIBUTE,
         "view-select",
+      );
+    });
+
+    it("pulses nav-day-view after a pointer picks Day from the menu", async () => {
+      const user = userEvent.setup();
+      await renderWithRouter("July 2026");
+
+      await user.click(screen.getByRole("button", { name: /july 2026/i }));
+      await user.click(screen.getByRole("option", { name: /^day/i }));
+
+      expect(track).toHaveBeenCalledWith(
+        "pointer_hint_shown",
+        expect.objectContaining({ shortcut_id: "nav-day-view" }),
       );
     });
 

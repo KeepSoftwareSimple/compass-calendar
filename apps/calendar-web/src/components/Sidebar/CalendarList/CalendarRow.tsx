@@ -1,6 +1,8 @@
 import { type FC } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulse-click-taught-shortcut";
+import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
 
 export const calendarRowDisplayName = (
   calendar: Calendar,
@@ -25,7 +27,16 @@ export const CalendarRow: FC<{
         aria-label={`${calendar.isVisible ? "Hide" : "Show"} ${displayName} calendar`}
         aria-pressed={calendar.isVisible}
         className="c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-text-muted text-xs hover:bg-surface-panel hover:text-text"
-        onClick={() => onToggle(calendar, displayName)}
+        onClick={(event) => {
+          onToggle(calendar, displayName);
+          if (event.detail > 0) {
+            const modLabel =
+              expandModInShortcutDisplay("Mod") === "Meta" ? "Cmd" : "Ctrl";
+            pulseClickTaughtShortcut("focus-calendar-digit", {
+              message: `Next time: hold ${modLabel}, press the account digit, then 1-9.`,
+            });
+          }
+        }}
         type="button"
       >
         <span

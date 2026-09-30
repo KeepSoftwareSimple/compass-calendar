@@ -330,6 +330,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
                       headerNav.prevDisabled ? undefined : headerNav.onPrev
                     }
                     shortcut={monthNav ? [...monthNav.prevShortcut] : undefined}
+                    shortcutId={monthNav ? "nav-month-prev" : undefined}
                   >
                     <ChevronLeftIcon />
                   </MonthNavButton>
@@ -342,6 +343,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
                       headerNav.nextDisabled ? undefined : headerNav.onNext
                     }
                     shortcut={monthNav ? [...monthNav.nextShortcut] : undefined}
+                    shortcutId={monthNav ? "nav-month-next" : undefined}
                   >
                     <ChevronRightIcon />
                   </MonthNavButton>

@@ -1,5 +1,5 @@
 import type React from "react";
-import { type ReactNode } from "react";
+import { type MouseEvent, type ReactNode } from "react";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   Tooltip,
@@ -7,18 +7,29 @@ import {
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
 import { type TooltipOptions } from "@web/components/Tooltip/tooltip.types";
+import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulse-click-taught-shortcut";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { ShortcutHint } from "../Shortcuts/ShortcutHint";
 import { TooltipDescription } from "./Description/TooltipDescription";
 
-export interface Props {
+type TooltipWrapperBaseProps = {
   children: ReactNode;
-  description?: string;
   disabled?: boolean;
   onClick?: () => void;
   placement?: TooltipOptions["placement"];
-  /** One key (`"?"`) or a combo as a key array (`["Mod", "K"]`); a custom node is rendered as-is. */
-  shortcut?: string | string[] | ReactNode;
-}
+};
+
+export type Props =
+  | (TooltipWrapperBaseProps & {
+      description?: string;
+      shortcut?: undefined;
+      shortcutId?: undefined;
+    })
+  | (TooltipWrapperBaseProps & {
+      description: string;
+      shortcut?: string | string[] | ReactNode;
+      shortcutId?: ShortcutRegistryId;
+    });
 
 export const TooltipWrapper: React.FC<Props> = ({
   children,
@@ -27,12 +38,21 @@ export const TooltipWrapper: React.FC<Props> = ({
   onClick,
   placement,
   shortcut,
+  shortcutId,
 }) => {
+  const handleTriggerClick = (event: MouseEvent<HTMLElement>) => {
+    if (disabled) return;
+    onClick?.();
+    if (shortcutId && event.detail > 0) {
+      pulseClickTaughtShortcut(shortcutId);
+    }
+  };
+
   return (
     <Tooltip placement={placement}>
       <TooltipTrigger
         aria-disabled={disabled || undefined}
-        onClick={disabled ? undefined : onClick}
+        onClick={disabled ? undefined : handleTriggerClick}
       >
         {children}
       </TooltipTrigger>

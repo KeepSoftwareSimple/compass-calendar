@@ -1,11 +1,32 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ButtonHTMLAttributes } from "react";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import {
+  initialPointerHintState,
+  usePointerHintStore,
+} from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import * as pulseModule from "@web/shortcuts/pointer-intent/pulse-click-taught-shortcut";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { TooltipWrapper } from "./TooltipWrapper";
 
+const pulseClickTaughtShortcut = mock(pulseModule.pulseClickTaughtShortcut);
+
+mockModuleForFile(
+  "@web/shortcuts/pointer-intent/pulse-click-taught-shortcut",
+  pulseModule,
+  { pulseClickTaughtShortcut },
+);
+
 describe("TooltipWrapper", () => {
+  beforeEach(() => {
+    pulseClickTaughtShortcut.mockClear();
+    resetPointerIntentSessionForTests();
+    usePointerHintStore.setState(initialPointerHintState, true);
+  });
+
   it("renders children", () => {
     render(
       <TooltipWrapper>
@@ -51,7 +72,7 @@ describe("TooltipWrapper", () => {
   it("shows shortcut when key array shortcut provided", async () => {
     const user = userEvent.setup();
     render(
-      <TooltipWrapper shortcut={["Shift", "S"]}>
+      <TooltipWrapper description="Save changes" shortcut={["Shift", "S"]}>
         <button type="button">Save</button>
       </TooltipWrapper>,
     );
@@ -67,7 +88,10 @@ describe("TooltipWrapper", () => {
   it("shows shortcut when ReactNode shortcut provided", async () => {
     const user = userEvent.setup();
     render(
-      <TooltipWrapper shortcut={<span data-testid="shortcut-node">ALT+A</span>}>
+      <TooltipWrapper
+        description="Alternate action"
+        shortcut={<span data-testid="shortcut-node">ALT+A</span>}
+      >
         <button type="button">Action</button>
       </TooltipWrapper>,
     );
@@ -148,6 +172,45 @@ describe("TooltipWrapper", () => {
     await user.hover(screen.getByRole("button", { name: "Duplicate" }));
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.textContent).toBe("DuplicateD");
+  });
+
+  it("pulses a taught shortcut after a pointer click when shortcutId is set", () => {
+    const onClick = mock();
+    render(
+      <TooltipWrapper
+        description="Previous week"
+        shortcut="J"
+        shortcutId="nav-previous"
+        onClick={onClick}
+      >
+        <button type="button">Prev</button>
+      </TooltipWrapper>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /prev/i }), {
+      detail: 1,
+    });
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(pulseClickTaughtShortcut).toHaveBeenCalledWith("nav-previous");
+  });
+
+  it("does not pulse when the wrapped control is keyboard-activated", () => {
+    render(
+      <TooltipWrapper
+        description="Previous week"
+        shortcut="J"
+        shortcutId="nav-previous"
+      >
+        <button type="button">Prev</button>
+      </TooltipWrapper>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /prev/i }), {
+      detail: 0,
+    });
+
+    expect(pulseClickTaughtShortcut).not.toHaveBeenCalled();
   });
 
   it("does not render tooltip content until opened", async () => {

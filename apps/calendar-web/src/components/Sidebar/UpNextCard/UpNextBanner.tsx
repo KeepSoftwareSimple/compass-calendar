@@ -6,6 +6,7 @@ import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
+import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulse-click-taught-shortcut";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
 import { useUpNextEvent } from "./useUpNextEvent";
@@ -101,15 +102,25 @@ export const UpNextBanner: FC = () => {
       </div>
       <button
         className="c-focus-ring flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
-        onClick={
-          conferenceUrl ? openConference : () => openEventDetails("gridClick")
-        }
+        onClick={(event) => {
+          if (conferenceUrl) {
+            openConference();
+            if (event.detail > 0) {
+              pulseClickTaughtShortcut("nav-join-meeting");
+            }
+            return;
+          }
+          openEventDetails("gridClick");
+          if (event.detail > 0) {
+            pulseClickTaughtShortcut("nav-up-next");
+          }
+        }}
         type="button"
       >
         {conferenceUrl ? "Join" : "Open"}
         <ShortcutHint>{conferenceUrl ? "V" : "N"}</ShortcutHint>
       </button>
-      <TooltipWrapper shortcut="Esc">
+      <TooltipWrapper description="Dismiss" shortcut="Esc">
         <button
           aria-label="Dismiss"
           className="c-focus-ring shrink-0 rounded-xs px-1 text-text-muted hover:text-text"
