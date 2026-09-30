@@ -9,11 +9,6 @@ import {
   setBillingGateOwnsScreen,
 } from "@web/billing/billing-gate-attention";
 import {
-  billingPreviewActions,
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   GoogleDelayedToast,
   showGoogleDelayedToast,
 } from "@web/common/utils/toast/google-delayed.toast";
@@ -109,27 +104,15 @@ describe("showGoogleDelayedToast", () => {
     mocks.isActive.mockReturnValue(false);
     registerToastPort(port);
     resetBillingGateAttentionForTests();
-    useBillingPreviewStore.setState(initialBillingPreviewState);
   });
 
   afterEach(() => {
     resetBillingGateAttentionForTests();
-    useBillingPreviewStore.setState(initialBillingPreviewState);
   });
 
   it("does not show while the billing gate owns the screen", () => {
     setBillingGateOwnsScreen(true);
     showGoogleDelayedToast();
     expect(mocks.error).not.toHaveBeenCalled();
-  });
-
-  it("shows the deferred toast after Look around first", () => {
-    setBillingGateOwnsScreen(true);
-    showGoogleDelayedToast();
-    expect(mocks.error).not.toHaveBeenCalled();
-
-    billingPreviewActions.enter();
-
-    expect(mocks.error).toHaveBeenCalledTimes(1);
   });
 });

@@ -74,21 +74,6 @@ describe("useUpgradeCmdItems", () => {
     expect(openUpgradeConfirmation).toHaveBeenCalledTimes(1);
   });
 
-  it("opens Checkout for a local trial that still needs a card", () => {
-    access = {
-      kind: "server",
-      status: "trialing",
-      isReadOnly: false,
-      trialEndsAt: "2026-09-03T00:00:00.000Z",
-      needsPaymentMethod: true,
-    };
-    const { result } = renderHook(() => useUpgradeCmdItems());
-
-    result.current[0]?.onClick?.();
-    expect(openUpgradeConfirmation).not.toHaveBeenCalled();
-    expect(useCheckoutPanelStore.getState().isOpen).toBe(true);
-  });
-
   it("offers nothing to a paying subscriber", () => {
     access = {
       kind: "server",

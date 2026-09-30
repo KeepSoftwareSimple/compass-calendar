@@ -226,7 +226,6 @@ describe("PlanSection", () => {
       trialEndsAt: null,
       isReadOnly: false,
       cancelAtPeriodEnd: true,
-      needsPaymentMethod: false,
     });
     const track = spyOn(Track, "track");
     const { queryClient } = await renderPlan();
@@ -289,7 +288,6 @@ describe("PlanSection", () => {
       trialEndsAt: null,
       isReadOnly: false,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
     const track = spyOn(Track, "track");
 

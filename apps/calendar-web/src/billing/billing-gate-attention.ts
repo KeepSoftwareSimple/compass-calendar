@@ -3,9 +3,9 @@ import { useCheckoutCelebrationStore } from "@web/billing/checkout-celebration.s
 import { type GuestRsvpToastPayload } from "@web/booking/GuestRsvpToast";
 
 /**
- * The billing gate is the only thing on screen until the user starts a trial
- * or looks around. Reconnect / delayed-sync toasts wait so they cannot compete
- * with Start trial.
+ * The billing gate is the only thing on screen until the user starts a trial.
+ * Reconnect, delayed-sync, and booking toasts wait so they cannot compete with
+ * Start trial.
  */
 
 let ownsScreen = false;
@@ -18,11 +18,34 @@ let pendingNewMeetings: BookingNewMeetingsClaimResponse | null = null;
 let pendingGuestRsvp: GuestRsvpToastPayload | null = null;
 
 export function setBillingGateOwnsScreen(owns: boolean): void {
+  const wasOwning = ownsScreen;
   ownsScreen = owns;
+  if (wasOwning && !owns) {
+    flushDeferredAttentionToasts();
+  }
 }
 
-export function isBillingGateOwningScreen(): boolean {
-  return ownsScreen;
+function flushDeferredAttentionToasts(): void {
+  void import("@web/common/utils/toast/google-reconnect.toast").then(
+    ({ flushDeferredGoogleReconnectToast }) => {
+      flushDeferredGoogleReconnectToast();
+    },
+  );
+  void import("@web/common/utils/toast/google-delayed.toast").then(
+    ({ flushDeferredGoogleDelayedToast }) => {
+      flushDeferredGoogleDelayedToast();
+    },
+  );
+  void import("@web/booking/NewMeetingsToast").then(
+    ({ flushDeferredNewMeetingsToast }) => {
+      flushDeferredNewMeetingsToast();
+    },
+  );
+  void import("@web/booking/GuestRsvpToast").then(
+    ({ flushDeferredGuestRsvpToast }) => {
+      flushDeferredGuestRsvpToast();
+    },
+  );
 }
 
 export function shouldDeferAttentionToasts(): boolean {

@@ -5,19 +5,12 @@ import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
 import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
 import { BillingPastDueBanner } from "@web/billing/BillingPastDueBanner";
-import { BillingReadOnlyBanner } from "@web/billing/BillingReadOnlyBanner";
-import {
-  selectBillingPreviewing,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
 import { CheckoutCelebrationModal } from "@web/billing/CheckoutCelebrationModal";
 import { CheckoutOverlay } from "@web/billing/CheckoutOverlay";
 import {
   selectIsCelebrating,
   useCheckoutCelebrationStore,
 } from "@web/billing/checkout-celebration.store";
-import { TrialCardBanner } from "@web/billing/TrialCardBanner";
-import { getTrialDaysLeft } from "@web/billing/trialDaysLeft";
 import { useAppAccess } from "@web/billing/useAppAccess";
 import { useSyncBillingWriteLock } from "@web/billing/useBillingWriteLock";
 import { usePlanChangeToasts } from "@web/billing/usePlanChangeToasts";
@@ -112,7 +105,6 @@ export function RootShell() {
     selectWelcomeFirstVisitOpen,
   );
   const access = useAppAccess();
-  const isPreviewing = useBillingPreviewStore(selectBillingPreviewing);
   const isCelebrating = useCheckoutCelebrationStore(selectIsCelebrating);
   const isShowcaseActive = useShortcutShowcaseStore(selectShowcaseActive);
   const pointerHintEligible = usePointerHintStore(
@@ -145,36 +137,18 @@ export function RootShell() {
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;
-  // The look-around is an invitation to start a trial, so it only holds while
-  // one is still on offer. If the status moves on (expired, canceled) while
-  // previewing, the gate must come back rather than strand the user behind a
-  // banner pitching a trial they can no longer take.
-  const isPreviewable = readOnlyStatus === "awaiting_checkout";
-  const showReadOnlyBanner = isPreviewable && isPreviewing;
   // The gate must yield to the celebration. Between Checkout completing and
   // the webhook landing, status can still read awaiting_checkout, and the gate
   // is a full app-lock overlay: it would take the screen at exactly the
   // moment the user has just paid.
   const gateStatus =
-    showReadOnlyBanner || isCelebrating || signupTrialStepActive
-      ? null
-      : readOnlyStatus;
+    isCelebrating || signupTrialStepActive ? null : readOnlyStatus;
   const showCalendarOnboarding =
     gateStatus === null &&
     !isCelebrating &&
     !deferCalendarOnboarding &&
     !isMobile;
   const showPastDue = access.kind === "server" && access.status === "past_due";
-  const trialEndsAt =
-    access.kind === "server" &&
-    access.status === "trialing" &&
-    access.needsPaymentMethod
-      ? access.trialEndsAt
-      : null;
-  const trialDaysLeft =
-    trialEndsAt !== null ? getTrialDaysLeft(trialEndsAt) : null;
-  const showTrialCardBanner =
-    trialDaysLeft !== null && trialDaysLeft <= 3 && !isCelebrating;
 
   useEffect(() => {
     if (!showCalendarOnboarding || hasPlayDeepLink()) return;
@@ -231,10 +205,6 @@ export function RootShell() {
   return (
     <AuthModalProvider>
       {showPastDue && <BillingPastDueBanner />}
-      {showReadOnlyBanner && <BillingReadOnlyBanner />}
-      {showTrialCardBanner && trialDaysLeft !== null && trialEndsAt && (
-        <TrialCardBanner daysLeft={trialDaysLeft} trialEndsAt={trialEndsAt} />
-      )}
       <Outlet />
       <AuthModal />
       <ConnectAppleForm />

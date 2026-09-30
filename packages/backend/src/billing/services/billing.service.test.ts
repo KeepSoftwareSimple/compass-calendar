@@ -13,7 +13,6 @@ describe("deriveBillingStatus", () => {
       trialEndsAt: null,
       isReadOnly: true,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
   });
 
@@ -23,7 +22,6 @@ describe("deriveBillingStatus", () => {
       trialEndsAt: null,
       isReadOnly: true,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
   });
 
@@ -37,64 +35,6 @@ describe("deriveBillingStatus", () => {
       trialEndsAt: null,
       isReadOnly: true,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
-    });
-  });
-
-  it("treats a local trialing record with no Stripe subscription as writable", () => {
-    const now = new Date("2026-08-13T00:00:00.000Z");
-    const trialEndsAt = new Date("2026-08-20T00:00:00.000Z");
-    const status = deriveBillingStatus(
-      {
-        subscriptionStatus: "trialing",
-        trialStartedAt: new Date("2026-08-06T00:00:00.000Z"),
-        trialEndsAt,
-      },
-      now,
-    );
-
-    expect(status).toEqual({
-      subscriptionStatus: "trialing",
-      trialEndsAt: trialEndsAt.toISOString(),
-      isReadOnly: false,
-      cancelAtPeriodEnd: false,
-      needsPaymentMethod: true,
-    });
-  });
-
-  it("treats an expired local trialing record as expired", () => {
-    const now = new Date("2026-08-13T00:00:00.000Z");
-    const trialEndsAt = new Date("2026-08-01T00:00:00.000Z");
-    const status = deriveBillingStatus(
-      {
-        subscriptionStatus: "trialing",
-        trialStartedAt: new Date("2026-07-18T00:00:00.000Z"),
-        trialEndsAt,
-      },
-      now,
-    );
-
-    expect(status).toEqual({
-      subscriptionStatus: "expired",
-      trialEndsAt: trialEndsAt.toISOString(),
-      isReadOnly: true,
-      cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
-    });
-  });
-
-  it("keeps awaiting_checkout when a local trialing record has no trialEndsAt", () => {
-    const status = deriveBillingStatus({
-      subscriptionStatus: "trialing",
-      trialStartedAt: new Date("2026-08-06T00:00:00.000Z"),
-    });
-
-    expect(status).toEqual({
-      subscriptionStatus: "awaiting_checkout",
-      trialEndsAt: null,
-      isReadOnly: true,
-      cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
   });
 
@@ -148,7 +88,6 @@ describe("deriveBillingStatus", () => {
 
       expect(derived.subscriptionStatus).toBe(status);
       expect(derived.isReadOnly).toBe(isReadOnly);
-      expect(derived.needsPaymentMethod).toBe(false);
     });
   }
 });

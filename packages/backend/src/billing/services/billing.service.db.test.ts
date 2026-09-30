@@ -59,7 +59,6 @@ describe("BillingService (db)", () => {
       trialEndsAt: null,
       isReadOnly: false,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
 
     const stored = await mongoService.user.findOne({ _id: userId });
@@ -88,7 +87,7 @@ describe("BillingService (db)", () => {
     expect(status.subscriptionStatus).toBe("awaiting_checkout");
   });
 
-  it("reports a local trial as trialing with needsPaymentMethod", async () => {
+  it("reports trialing without a Stripe subscription id from stored status", async () => {
     const userId = mongoService.objectId();
     const trialEndsAt = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
     await mongoService.user.insertOne({
@@ -112,7 +111,6 @@ describe("BillingService (db)", () => {
       trialEndsAt: trialEndsAt.toISOString(),
       isReadOnly: false,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: true,
     });
   });
 });

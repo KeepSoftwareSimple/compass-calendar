@@ -8,10 +8,6 @@ import * as Track from "@web/auth/posthog/track";
 import { billingQueryKeys } from "@web/billing/billing.query";
 import { resetBillingGateAttentionForTests } from "@web/billing/billing-gate-attention";
 import {
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   initialCheckoutCelebrationState,
   useCheckoutCelebrationStore,
 } from "@web/billing/checkout-celebration.store";
@@ -59,7 +55,6 @@ const renderGate = (status = "awaiting_checkout") => {
     trialEndsAt: null,
     isReadOnly: status === "awaiting_checkout",
     cancelAtPeriodEnd: false,
-    needsPaymentMethod: false,
   });
   const view = render(
     <QueryClientProvider client={queryClient}>
@@ -83,7 +78,6 @@ describe("BillingGateModal", () => {
   });
 
   afterEach(() => {
-    useBillingPreviewStore.setState(initialBillingPreviewState);
     useCheckoutPanelStore.setState(initialCheckoutPanelState, true);
     useCheckoutCelebrationStore.setState(initialCheckoutCelebrationState, true);
     resetBillingGateAttentionForTests();
@@ -106,14 +100,9 @@ describe("BillingGateModal", () => {
     renderGate();
 
     expect(screen.getByRole("button", { name: "Add card" })).toHaveFocus();
-    for (const [name, key] of [
-      ["Add card", "S"],
-      ["Look around first", "L"],
-    ] as const) {
-      expect(
-        within(screen.getByRole("button", { name })).getByText(key),
-      ).toBeTruthy();
-    }
+    expect(
+      within(screen.getByRole("button", { name: "Add card" })).getByText("S"),
+    ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: "Export my data" }),
     ).not.toBeInTheDocument();
@@ -227,15 +216,7 @@ describe("BillingGateModal", () => {
     track.mockRestore();
   });
 
-  it("enters the read-only look-around with L", async () => {
-    const user = userEvent.setup();
-    renderGate();
-
-    await user.keyboard("l");
-    expect(useBillingPreviewStore.getState().isPreviewing).toBe(true);
-  });
-
-  it("offers no look-around once the trial is spent", () => {
+  it("offers subscribe only once the trial is spent", () => {
     renderGate("canceled");
 
     expect(
@@ -249,18 +230,12 @@ describe("BillingGateModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("traps Tab within the dialog", async () => {
+  it("keeps focus on Add card when tabbing", async () => {
     const user = userEvent.setup();
     renderGate();
 
     const start = screen.getByRole("button", { name: "Add card" });
-    const lookAround = screen.getByRole("button", {
-      name: "Look around first",
-    });
     expect(start).toHaveFocus();
-
-    await user.tab({ shift: true });
-    expect(lookAround).toHaveFocus();
 
     await user.tab();
     expect(start).toHaveFocus();

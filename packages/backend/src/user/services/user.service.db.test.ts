@@ -230,7 +230,6 @@ describe("UserService", () => {
         trialEndsAt: null,
         isReadOnly: true,
         cancelAtPeriodEnd: false,
-        needsPaymentMethod: false,
       });
     });
 

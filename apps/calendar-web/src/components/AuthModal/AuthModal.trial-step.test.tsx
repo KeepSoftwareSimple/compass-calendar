@@ -95,7 +95,6 @@ const seedBillingQueries = (
     trialEndsAt: null,
     isReadOnly: true,
     cancelAtPeriodEnd: false,
-    needsPaymentMethod: false,
   });
   queryClient.setQueryData(billingQueryKeys.subscription, {
     subscriptionStatus: "awaiting_checkout",
@@ -275,7 +274,6 @@ describe("AuthModal signup trial step", () => {
       trialEndsAt: "2026-03-08T12:00:00.000Z",
       isReadOnly: false,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     });
 
     await user.click(screen.getByRole("button", { name: "Complete checkout" }));

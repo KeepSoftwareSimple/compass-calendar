@@ -1,6 +1,5 @@
 import { type Id } from "react-toastify";
 import { track } from "@web/auth/posthog/track";
-import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import {
   type CheckoutPanelSource,
   checkoutPanelActions,
@@ -34,7 +33,6 @@ export function ShortcutUpgradeToast({
         : {}),
     });
     getToast().dismiss(toastId);
-    billingPreviewActions.exit();
     checkoutPanelActions.open(checkoutSource);
   };
 

@@ -471,7 +471,7 @@ describe("Stripe webhook", () => {
     expect(stored?.billing?.subscriptionStatus).toBe("trialing");
   });
 
-  it("captures checkout_completed for a card-less local trial finishing Checkout", async () => {
+  it("captures checkout_completed when finishing Checkout without a subscription id yet", async () => {
     using _env = mockEnv(stripeConfigured);
     const capture = spyOn(billingAnalytics, "capture").mockResolvedValue(true);
     const userId = mongoService.objectId();

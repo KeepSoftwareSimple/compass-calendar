@@ -4,13 +4,11 @@ import { BillingApi } from "@web/api/billing.api";
 import { track } from "@web/auth/posthog/track";
 import { billingQueryKeys } from "@web/billing/billing.query";
 import { showBillingRequestError } from "@web/billing/billing-request-error";
-import { checkoutPanelActions } from "@web/billing/checkout-panel.store";
 import {
   UpgradeConfirmationContext,
   useUpgradeConfirmationState,
 } from "@web/billing/UpgradeConfirmation/hooks/useUpgradeConfirmation";
 import { UpgradeConfirmationDialog } from "@web/billing/UpgradeConfirmation/UpgradeConfirmationDialog";
-import { useAppAccess } from "@web/billing/useAppAccess";
 import { useIsTrialing } from "@web/billing/useIsTrialing";
 import { BILLING_SUBSCRIBED_TOAST_ID } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
@@ -29,9 +27,6 @@ export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const isTrialing = useIsTrialing();
-  const access = useAppAccess();
-  const needsPaymentMethod =
-    access.kind === "server" && access.needsPaymentMethod === true;
   const isSettingsOpen = useSettingsStore(selectIsSettingsOpen);
   const busy = isSubmitting;
   const handleManageBilling = () => {
@@ -49,10 +44,6 @@ export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {
   useAppShortcutUp(
     APP_SHORTCUT_BINDINGS.otherSubscribe.hotkey,
     () => {
-      if (needsPaymentMethod) {
-        checkoutPanelActions.open();
-        return;
-      }
       value.openUpgradeConfirmation();
     },
     {

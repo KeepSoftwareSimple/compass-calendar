@@ -33,11 +33,10 @@ network never flashes a gate at a user before the real value loads.
 
 **Enable-day caveat:** existing signed-in accounts are not grandfathered (see
 below) — flipping `enforcement: true` while Stripe is configured immediately
-puts any hosted user without a Stripe subscription id and without a local
-trial into `awaiting_checkout` and shows them `BillingGateModal`. Neither
+puts any hosted user without a Stripe subscription id into `awaiting_checkout` and shows them `BillingGateModal`. Neither
 `backfill-billing` nor `BACKFILL_CUTOFF` changes that — see below. Sparing a
 whole cohort would take a real code change, so treat the flip as the moment
-every hosted account without a Stripe subscription or local trial goes
+every hosted account without a Stripe subscription goes
 read-only. Individual accounts can be exempted, though — see the next
 section.
 
@@ -98,12 +97,9 @@ production.
   webhook writes `trialing` with a `stripeSubscriptionId`.
 - **Abandoned trial step:** closing the trial step without paying leaves
   `awaiting_checkout`. `BillingGateModal` opens with **Finish starting your
-  trial**, **Add card** (`S`), and **Look around first** (`L`). Checkout in
-  the gate uses the same embedded panel. **Look around first** drops the user
-  onto the read-only calendar behind `BillingReadOnlyBanner`
-  (`billing-preview.store.ts`, in-memory). A reload or the first refused write
-  brings the gate back. Google reconnect and delayed-sync toasts wait until
-  Look around or a write so they do not cover the ask.
+  trial** and **Add card** (`S`). Checkout in the gate uses the same embedded
+  panel. Google reconnect and delayed-sync toasts wait while the gate owns
+  the screen so they do not cover the ask.
 - **Legacy `awaiting_checkout` (signed up before the trial step shipped):**
   same read-only gate and Checkout behavior as abandoning the trial step; no
   in-signup trial step on return.
@@ -121,15 +117,6 @@ production.
   opens Settings on Billing with Update card already mounted.
 - **Expired / canceled:** read-only until they subscribe again. A later
   Checkout does not grant another trial.
-
-**Legacy local trials (2026-09-14 to WP-01 deploy):** until WP-06 removes the
-code, rows with `billing.subscriptionStatus: "trialing"`, `trialStartedAt`, and
-`trialEndsAt` but no Stripe subscription id still derive as writable
-`trialing` with `needsPaymentMethod: true`. Checkout honors remaining local
-time via `subscription_data.trial_end` when at least 48 hours remain; inside
-the last 48 hours or after expiry, Checkout charges immediately. After
-`trialEndsAt` the account is read-only `expired`. `TrialCardBanner` still
-nudges those accounts when three or fewer days remain.
 
 There is no `POST /api/billing/trial/start`. New accounts are
 `awaiting_checkout` until Checkout completes; Checkout grants the 7-day trial.
@@ -191,11 +178,9 @@ Stripe webhook event ids are retained for 35 days for replay protection, then
 expire automatically. They contain only the Stripe event id and receipt time.
 
 Existing accounts are not grandfathered. Hosted users without a Stripe
-subscription id and without a local trial (including missing billing, `none`,
-and `trialing` rows with no `trialEndsAt`) derive as `awaiting_checkout` and
-see **Finish starting your trial**. Legacy local-trial rows (see above) stay
-writable until WP-06. Legacy `awaiting_checkout` accounts stay read-only;
-granting them a local trial is out of scope.
+subscription id (including missing billing, `none`, and legacy `trialing` rows
+with no `trialEndsAt`) derive as `awaiting_checkout` and see **Finish starting
+your trial**. Legacy `awaiting_checkout` accounts stay read-only.
 `bun run cli backfill-billing` stamps `awaiting_checkout` on rows that still
 lack `billing.subscriptionStatus`. The default `BACKFILL_CUTOFF` is far in
 the future so every such row is included; set it to a past instant to skip
@@ -239,10 +224,9 @@ that self-host stays writable.
 
 The webhook also emits server-side PostHog events keyed by the Compass user id
 (the same distinct id the web app identifies with): `checkout_completed` when
-a user completes their first subscription Checkout (from `awaiting_checkout`
-or from a legacy local trial still `trialing` without a Stripe subscription
-id; on `checkout.session.completed`, retrieving the Session when
-Stripe omits `subscription` on the webhook payload, or on
+a user completes their first subscription Checkout when the account had no
+`stripeSubscriptionId` yet (on `checkout.session.completed`, retrieving the
+Session when Stripe omits `subscription` on the webhook payload, or on
 `customer.subscription.created` when the Checkout event never ran), and
 `checkout_expired` when one lapses
 unpaid. They are best-effort; a PostHog failure never fails the webhook. The
@@ -314,7 +298,6 @@ If Link is enabled, also add `https://link.com` and `https://*.link.com` to
 - Post-checkout migration: `apps/calendar-web/src/billing/complete-checkout-session.ts`
 - Signup trial UI: `apps/calendar-web/src/components/AuthModal/forms/StartTrialStep.tsx`
 - Auth modal routing (`?auth=trial`): `apps/calendar-web/src/components/AuthModal/hooks/useAuthModal.ts`
-- Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`
 - Billing gate: `apps/calendar-web/src/billing/BillingGateModal.tsx`
 - Embedded Checkout port (the only `loadStripe` call): `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`
 - Lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.seam.ts`

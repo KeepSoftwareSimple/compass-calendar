@@ -85,7 +85,6 @@ test("signup trial step shows charge-date copy and closing opens the billing gat
           subscriptionStatus: "awaiting_checkout",
           trialEndsAt: null,
           isReadOnly: true,
-          needsPaymentMethod: false,
         }),
       );
     }

@@ -1,10 +1,6 @@
 import { waitFor } from "@testing-library/react";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import {
-  billingPreviewActions,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   resetBillingWriteLockForTests,
   setBillingWriteLock,
 } from "@web/billing/billing-write-lock";
@@ -30,13 +26,11 @@ describe("promptShortcutUpgrade", () => {
     track.mockClear();
     resetShortcutUpgradePromptForTests();
     resetBillingWriteLockForTests();
-    billingPreviewActions.exit();
   });
 
   afterEach(() => {
     resetShortcutUpgradePromptForTests();
     resetBillingWriteLockForTests();
-    billingPreviewActions.exit();
   });
 
   it("no-ops when billing is not write-locked", () => {
@@ -71,10 +65,9 @@ describe("promptShortcutUpgrade", () => {
       status: "awaiting_checkout",
       surface: "shortcut_prompt",
     });
-    expect(useBillingPreviewStore.getState().isPreviewing).toBe(false);
   });
 
-  it("replaces the billing gate with look-around when that lock owns the screen", async () => {
+  it("no-ops while the billing gate owns the screen", () => {
     setBillingWriteLock({ locked: true, status: "awaiting_checkout" });
     setAppLockReason("billingGate", true);
 
@@ -84,10 +77,7 @@ describe("promptShortcutUpgrade", () => {
       source: "keyboard",
     });
 
-    await waitFor(() => {
-      expect(useBillingPreviewStore.getState().isPreviewing).toBe(true);
-      expect(mocks.toast).toHaveBeenCalledTimes(1);
-    });
+    expect(mocks.toast).not.toHaveBeenCalled();
     setAppLockReason("billingGate", false);
   });
 

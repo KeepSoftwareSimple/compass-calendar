@@ -82,10 +82,6 @@ export const STORAGE_KEYS = {
   // written "true" right after the browser grants permission, so a stale flag
   // can never outlive a revoked grant (the permission is re-read on load).
   NOTIFICATIONS_ENABLED: "compass.notifications.enabled",
-  // ISO trial end the user dismissed the trial card banner for. A new trial end
-  // shows the banner again.
-  TRIAL_CARD_BANNER_DISMISSED_FOR:
-    "compass.billing.trial-card-banner-dismissed-for",
   // The X on the keyboard hint turns tips off for this browser.
   POINTER_HINT_DISMISSED_PERMANENTLY:
     "compass.pointer-hint.dismissed-permanently",

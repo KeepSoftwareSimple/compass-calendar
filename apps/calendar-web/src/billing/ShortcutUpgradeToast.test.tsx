@@ -4,11 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import * as Track from "@web/auth/posthog/track";
 import {
-  billingPreviewActions,
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   initialCheckoutPanelState,
   selectCheckoutPanelOpen,
   useCheckoutPanelStore,
@@ -23,13 +18,11 @@ describe("ShortcutUpgradeToast", () => {
 
   afterEach(() => {
     HotkeyManager.resetInstance();
-    useBillingPreviewStore.setState(initialBillingPreviewState);
     useCheckoutPanelStore.setState(initialCheckoutPanelState, true);
   });
 
   it("opens embedded checkout from the CTA and dismisses the toast", async () => {
     registerToastPort(port);
-    billingPreviewActions.enter();
     const track = spyOn(Track, "track");
     const user = userEvent.setup();
     render(
@@ -65,7 +58,6 @@ describe("ShortcutUpgradeToast", () => {
     expect(selectCheckoutPanelOpen(useCheckoutPanelStore.getState())).toBe(
       true,
     );
-    expect(useBillingPreviewStore.getState().isPreviewing).toBe(false);
     expect(useCheckoutPanelStore.getState().source).toEqual({
       kind: "shortcut_prompt",
       featureArea: "event_editing",

@@ -14,10 +14,6 @@ import {
 } from "@web/auth/state/user-metadata.store";
 import { resetBillingGateAttentionForTests } from "@web/billing/billing-gate-attention";
 import {
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   initialCardUpdateState,
   useCardUpdateStore,
 } from "@web/billing/card-update.store";
@@ -131,7 +127,6 @@ const storeResets: StoreReset[] = [
   () => usePointerHintStore.setState(initialPointerHintState, true),
   () => useEventJumpStore.setState(initialEventJumpState, true),
   () => usePageJumpHintStore.setState(initialPageJumpHintState, true),
-  () => useBillingPreviewStore.setState(initialBillingPreviewState, true),
   resetBillingGateAttentionForTests,
   resetNewMeetingsNoticeForTests,
   resetGuestRsvpNoticeForTests,

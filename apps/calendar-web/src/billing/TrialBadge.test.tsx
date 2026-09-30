@@ -124,21 +124,6 @@ describe("TrialBadge", () => {
     expect(screen.getByRole("button")).not.toHaveAttribute("tabindex");
   });
 
-  it("opens Checkout when a local trial needs a payment method", async () => {
-    access = {
-      kind: "server",
-      status: "trialing",
-      isReadOnly: false,
-      trialEndsAt: trialEndingIn(3),
-      needsPaymentMethod: true,
-    };
-    render(<TrialBadge />);
-
-    await userEvent.click(screen.getByRole("button"));
-    expect(openUpgradeConfirmation).not.toHaveBeenCalled();
-    expect(useCheckoutPanelStore.getState().isOpen).toBe(true);
-  });
-
   it("opens the upgrade confirmation when activated", async () => {
     access = {
       kind: "server",

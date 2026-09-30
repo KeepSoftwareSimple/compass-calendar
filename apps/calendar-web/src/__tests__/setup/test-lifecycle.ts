@@ -27,9 +27,6 @@ expect.extend(jestDomMatchers);
 const { cleanup, configure } = await import("@testing-library/react");
 const { resetAllStores } = await import("../utils/state/reset-stores");
 const { BaseApi } = await import("@web/api/base/base.api");
-const { billingPreviewActions } = await import(
-  "@web/billing/billing-preview.store"
-);
 const { resetBillingWriteLockForTests } = await import(
   "@web/billing/billing-write-lock"
 );
@@ -82,7 +79,6 @@ afterEach(async () => {
   resetBrowserState();
   resetAllStores();
   resetWebTestSeams();
-  billingPreviewActions.exit();
   HotkeyManager.resetInstance();
   BaseApi.defaults.adapter = undefined;
   server.resetHandlers();

@@ -40,21 +40,10 @@ const stripeReferenceIdOf = (value: unknown): string | undefined => {
   return undefined;
 };
 
-/** First Stripe subscription Checkout: legacy awaiting_checkout or card-less signup trial. */
+/** First Stripe subscription Checkout: no subscription id on the row yet. */
 const shouldEmitCheckoutCompleted = (
-  billing:
-    | {
-        subscriptionStatus?: string;
-        stripeSubscriptionId?: string;
-      }
-    | undefined,
-): boolean => {
-  const status = billing?.subscriptionStatus;
-  if (!status || status === "none" || status === "awaiting_checkout") {
-    return true;
-  }
-  return status === "trialing" && !billing?.stripeSubscriptionId;
-};
+  billing: { stripeSubscriptionId?: string } | undefined,
+): boolean => !billing?.stripeSubscriptionId;
 
 async function captureCheckoutCompleted(
   userId: string,

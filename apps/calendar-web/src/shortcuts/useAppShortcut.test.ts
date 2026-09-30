@@ -236,7 +236,7 @@ describe("useAppShortcut", () => {
     });
   });
 
-  it("replaces the billing gate when a locked write shortcut fires", async () => {
+  it("does not prompt while the billing gate owns the screen", async () => {
     setBillingWriteLock({ locked: true, status: "awaiting_checkout" });
     setAppLockReason("billingGate", true);
 
@@ -251,8 +251,8 @@ describe("useAppShortcut", () => {
 
     await waitFor(() => {
       expect(mockHandler).not.toHaveBeenCalled();
-      expect(mocks.toast).toHaveBeenCalled();
     });
+    expect(mocks.toast).not.toHaveBeenCalled();
     setAppLockReason("billingGate", false);
   });
 
