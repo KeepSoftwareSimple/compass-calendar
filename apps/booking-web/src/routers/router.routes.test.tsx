@@ -37,6 +37,15 @@ describe("booking-web routeTree", () => {
     expect(publicBookCancelRoute.parentRoute).toBe(rootRoute);
   });
 
+  it("resolves bare /meet to the root not-found today", async () => {
+    const router = createRouter({
+      routeTree,
+      history: createMemoryHistory({ initialEntries: ["/meet"] }),
+    });
+    await router.load();
+    expect(router.state.statusCode).toBe(404);
+  });
+
   it("redirects legacy /book paths to /meet and keeps search params", async () => {
     const hostRouter = createRouter({
       routeTree,
