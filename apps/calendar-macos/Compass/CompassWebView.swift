@@ -1,44 +1,56 @@
 import AppKit
 import WebKit
 
-/// Hosts page content. XCUITest matches the inner WebKit web-area node as
-/// `app.webViews[...]`, not the outer `WKWebView`, so UITest hooks are
-/// applied across the subtree (see `UITestAccessibility`).
+/// Hosts page content. WebKit exposes page accessibility as a separate web-area
+/// node XCUITest types as `WebView`, so native hooks live on
+/// `CompassBridgeAccessibilityHost` (identifier `CompassWebView`).
 @MainActor
 final class CompassWebView: WKWebView {
     static let accessibilityContractIdentifier = "CompassWebView"
 
-    /// Bridge version from the loaded page, exposed as accessibilityValue.
-    var bridgeVersionForUITests: String?
+    private let bridgeAccessibilityHost = CompassBridgeAccessibilityHost()
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        installBridgeAccessibilityHostIfNeeded()
+    }
 
     override func layout() {
         super.layout()
-        applyUITestAccessibilityContract()
+        installBridgeAccessibilityHostIfNeeded()
     }
 
-    func applyUITestAccessibilityContract() {
-        UITestAccessibility.apply(to: self, version: bridgeVersionForUITests)
+    func setBridgeVersionForUITests(_ version: String?) {
+        bridgeAccessibilityHost.setBridgeVersion(version)
+    }
+
+    private func installBridgeAccessibilityHostIfNeeded() {
+        guard bridgeAccessibilityHost.superview !== self else { return }
+        bridgeAccessibilityHost.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bridgeAccessibilityHost)
+        NSLayoutConstraint.activate([
+            bridgeAccessibilityHost.leadingAnchor.constraint(equalTo: leadingAnchor),
+            bridgeAccessibilityHost.topAnchor.constraint(equalTo: topAnchor),
+            bridgeAccessibilityHost.widthAnchor.constraint(equalToConstant: 1),
+            bridgeAccessibilityHost.heightAnchor.constraint(equalToConstant: 1),
+        ])
     }
 }
 
 @MainActor
-enum UITestAccessibility {
-    private static let webAreaRoleRawValue = "AXWebArea"
-
-    static func apply(to root: NSView, version: String?) {
-        visit(root, version: version)
+final class CompassBridgeAccessibilityHost: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setAccessibilityElement(true)
+        setAccessibilityIdentifier(CompassWebView.accessibilityContractIdentifier)
     }
 
-    private static func visit(_ view: NSView, version: String?) {
-        let roleRaw = view.accessibilityRole()?.rawValue
-        if view is WKWebView || roleRaw == webAreaRoleRawValue {
-            view.setAccessibilityIdentifier(CompassWebView.accessibilityContractIdentifier)
-            if let version {
-                view.setAccessibilityValue(version)
-            }
-        }
-        for subview in view.subviews {
-            visit(subview, version: version)
-        }
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) is not supported")
+    }
+
+    func setBridgeVersion(_ version: String?) {
+        setAccessibilityValue(version)
     }
 }

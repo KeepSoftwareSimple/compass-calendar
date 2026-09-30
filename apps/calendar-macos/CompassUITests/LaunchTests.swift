@@ -13,10 +13,14 @@ final class LaunchTests: XCTestCase {
         let app = XCUIApplication()
         app.launch()
 
-        let webView = app.webViews["CompassWebView"]
-        XCTAssertTrue(webView.waitForExistence(timeout: 30))
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
 
-        let version = webView.value as? String
+        // WebKit exposes the page as its own accessibility WebView; the shell
+        // mirrors bridge.version on a native host with this identifier.
+        let bridgeHost = app.descendants(matching: .any)["CompassWebView"]
+        XCTAssertTrue(bridgeHost.waitForExistence(timeout: 10))
+
+        let version = bridgeHost.value as? String
         XCTAssertEqual(version, "0.1.0")
     }
 }

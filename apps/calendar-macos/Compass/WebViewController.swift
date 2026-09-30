@@ -32,13 +32,6 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true)
         contentController.addUserScript(script)
-        let uiTestMarkerScript = WKUserScript(
-            source: """
-                document.documentElement.id = 'CompassWebView';
-                """,
-            injectionTime: .atDocumentEnd,
-            forMainFrameOnly: true)
-        contentController.addUserScript(uiTestMarkerScript)
         configuration.userContentController = contentController
 
         webView = CompassWebView(frame: .zero, configuration: configuration)
@@ -59,14 +52,11 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard let compassWebView = webView as? CompassWebView else { return }
-        compassWebView.evaluateJavaScript(BridgeScript.syncUITestAccessibilityJavaScript) {
+        compassWebView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
             [weak compassWebView] result, _ in
             Task { @MainActor in
                 guard let compassWebView else { return }
-                if let version = result as? String {
-                    compassWebView.bridgeVersionForUITests = version
-                }
-                compassWebView.applyUITestAccessibilityContract()
+                compassWebView.setBridgeVersionForUITests(result as? String)
             }
         }
     }

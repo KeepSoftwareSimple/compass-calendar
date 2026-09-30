@@ -14,13 +14,6 @@ public enum BridgeScript {
           function post(body) {
             window.webkit.messageHandlers.compass.postMessage(body);
           }
-          function syncCompassWebViewAccessibility() {
-            document.documentElement.id = 'CompassWebView';
-            document.documentElement.setAttribute(
-              'aria-valuetext',
-              window.compassDesktop.version
-            );
-          }
           window.compassDesktop = {
             version: '\(bridgeVersion)',
             platform: 'macos',
@@ -36,22 +29,12 @@ public enum BridgeScript {
               updateReadyHandlers.forEach(function (handler) { handler(version); });
             }
           };
-          syncCompassWebViewAccessibility();
         })();
         """
     }
 
-    /// Re-applies DOM accessibility hooks XCUITest reads on the web-area node.
-    public static let syncUITestAccessibilityJavaScript = """
-        (function () {
-          if (!window.compassDesktop) { return null; }
-          document.documentElement.id = 'CompassWebView';
-          document.documentElement.setAttribute(
-            'aria-valuetext',
-            window.compassDesktop.version
-          );
-          return window.compassDesktop.version;
-        })();
+    public static let readBridgeVersionJavaScript = """
+        window.compassDesktop && window.compassDesktop.version;
         """
 
     public static func deliverDeepLinkJavaScript(url: String) -> String {
