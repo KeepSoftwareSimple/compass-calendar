@@ -1,13 +1,13 @@
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
+import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { readTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import {
   INTENT_TEACHING,
   MAX_POINTER_HINTS_PER_SESSION,
   type PointerIntent,
-} from "@web/shortcuts/pointer-intent/pointer-intent";
-import { type PointerIntentSessionSnapshot } from "@web/shortcuts/pointer-intent/pointer-intent.session";
-import { readShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { readTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
+} from "@web/views/Week/pointer-intent/pointer-intent";
+import { type PointerIntentSessionSnapshot } from "@web/views/Week/pointer-intent/pointer-intent.session";
 
 export type ShouldTeachPointerIntentInput = {
   intent: PointerIntent;

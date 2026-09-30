@@ -3,20 +3,20 @@ import {
   initialPointerHintState,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
+import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import {
   MAX_POINTER_HINTS_PER_SESSION,
   teachingMessageForIntent,
-} from "@web/shortcuts/pointer-intent/pointer-intent";
+} from "@web/views/Week/pointer-intent/pointer-intent";
 import {
   detectedIntents,
   getPointerIntentSessionSnapshot,
   markPointerIntentHintShown,
   recordPointerIntentDetection,
   resetPointerIntentSessionForTests,
-} from "@web/shortcuts/pointer-intent/pointer-intent.session";
-import { shouldTeachPointerIntent } from "@web/shortcuts/pointer-intent/pointer-intent.teach-policy";
-import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
+} from "@web/views/Week/pointer-intent/pointer-intent.session";
+import { shouldTeachPointerIntent } from "@web/views/Week/pointer-intent/pointer-intent.teach-policy";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 describe("shouldTeachPointerIntent", () => {

@@ -1,4 +1,4 @@
-import { type PointerIntent } from "@web/shortcuts/pointer-intent/pointer-intent";
+import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 
 const shownIntents = new Set<PointerIntent>();
 let hintsShownThisSession = 0;

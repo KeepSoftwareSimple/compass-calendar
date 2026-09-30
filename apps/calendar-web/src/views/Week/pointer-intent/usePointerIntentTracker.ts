@@ -1,10 +1,10 @@
 import { useEffect } from "react";
-import { attachPointerIntentTracker } from "@web/shortcuts/pointer-intent/attachPointerIntentTracker";
-import { type ShortcutKeysLookup } from "@web/shortcuts/pointer-intent/pointer-intent";
+import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
+import { type ShortcutKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent";
 import {
   registerPointerIntentKeysLookup,
   resetPointerIntentKeysLookupForTests,
-} from "@web/shortcuts/pointer-intent/pointer-intent.actions";
+} from "@web/views/Week/pointer-intent/pointer-intent.actions";
 
 type UsePointerIntentTrackerOptions = {
   enabled: boolean;

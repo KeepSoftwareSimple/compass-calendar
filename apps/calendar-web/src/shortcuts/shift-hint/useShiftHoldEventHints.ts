@@ -20,7 +20,9 @@ import {
 } from "@web/shortcuts/is-bare-letter-key";
 import {
   POINTER_EVENT_JUMP_REQUEST,
+  POINTER_GRID_CREATE_REQUEST,
   pointerEventJumpId,
+  pointerGridIntent,
 } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
@@ -740,12 +742,22 @@ export function useShiftHoldEventHints({
       focusEvent(eventId);
     };
 
+    const onPointerGridCreateRequest = (event: Event) => {
+      const intent = pointerGridIntent(event);
+      if (!intent) return;
+      eventJumpActions.setPointerDraftIntent(intent);
+    };
+
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("keyup", onKeyUp, true);
     window.addEventListener("blur", onBlur);
     document.addEventListener(
       POINTER_EVENT_JUMP_REQUEST,
       onPointerEventJumpRequest,
+    );
+    document.addEventListener(
+      POINTER_GRID_CREATE_REQUEST,
+      onPointerGridCreateRequest,
     );
 
     return () => {
@@ -758,6 +770,10 @@ export function useShiftHoldEventHints({
       document.removeEventListener(
         POINTER_EVENT_JUMP_REQUEST,
         onPointerEventJumpRequest,
+      );
+      document.removeEventListener(
+        POINTER_GRID_CREATE_REQUEST,
+        onPointerGridCreateRequest,
       );
       eventJumpActions.setPointerDraftIntent(null);
       if (isActiveRef.current) {

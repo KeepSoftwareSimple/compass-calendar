@@ -1,17 +1,17 @@
 import { ID_GRID_MAIN } from "@web/common/constants/web.constants";
 import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
-import { gridPointerTargetFromEvent } from "@web/shortcuts/pointer-intent/grid-pointer-target";
+import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
+import { gridPointerTargetFromEvent } from "@web/views/Week/pointer-intent/grid-pointer-target";
 import {
   type IntentMessageContext,
   type PointerIntent,
-} from "@web/shortcuts/pointer-intent/pointer-intent";
+} from "@web/views/Week/pointer-intent/pointer-intent";
 import {
   pointerIntentActions,
   registerPointerIntentKeysLookup,
   resetPointerIntentKeysLookupForTests,
-} from "@web/shortcuts/pointer-intent/pointer-intent.actions";
-import { pointerIntentKeysLookup } from "@web/shortcuts/pointer-intent/pointer-intent.keys-lookup";
-import { eventJumpActions } from "@web/shortcuts/shift-hint/event-jump.store";
+} from "@web/views/Week/pointer-intent/pointer-intent.actions";
+import { pointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.keys-lookup";
 
 const CARD_DRAG_THRESHOLD_PX = 8;
 const WHEEL_GESTURE_IDLE_MS = 180;

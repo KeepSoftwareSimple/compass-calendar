@@ -13,11 +13,11 @@ import {
   initialPointerHintState,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
-import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/shortcuts/pointer-intent/grid-pointer-target";
-import { registerPointerIntentKeysLookup } from "@web/shortcuts/pointer-intent/pointer-intent.actions";
-import { resetPointerIntentSessionForTests } from "@web/shortcuts/pointer-intent/pointer-intent.session";
-import { usePointerIntentTracker } from "@web/shortcuts/pointer-intent/usePointerIntentTracker";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
+import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/views/Week/pointer-intent/grid-pointer-target";
+import { registerPointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.actions";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
+import { usePointerIntentTracker } from "@web/views/Week/pointer-intent/usePointerIntentTracker";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const track = mock();
@@ -144,8 +144,9 @@ describe("usePointerIntentTracker", () => {
 
   it("pulses slot-click with digits for the timed column y", async () => {
     const user = userEvent.setup();
-    const column = document.querySelector("[data-grid-date]") as HTMLElement;
     render(<TrackerHarness />);
+    const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
+      .firstElementChild as HTMLElement;
 
     await user.pointer({
       keys: "[MouseLeft>]",
@@ -193,8 +194,9 @@ describe("usePointerIntentTracker", () => {
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {
     setTipsMuted(true);
     const user = userEvent.setup();
-    const column = document.querySelector("[data-grid-date]") as HTMLElement;
     render(<TrackerHarness />);
+    const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
+      .firstElementChild as HTMLElement;
 
     await user.pointer({
       keys: "[MouseLeft>]",
