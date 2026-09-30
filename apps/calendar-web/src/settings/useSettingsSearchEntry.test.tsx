@@ -1,5 +1,5 @@
 import { RouterProvider } from "@tanstack/react-router";
-import { render, waitFor } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { validateAuthSearch } from "@web/components/AuthModal/hooks/useAuthModal";
@@ -68,6 +68,24 @@ describe("useSettingsSearchEntry", () => {
     await waitFor(() => {
       expect(router.state.location.search).toEqual({});
     });
+  });
+
+  it("does not reopen Settings when the back button restores the param", async () => {
+    const router = await renderEntry({ authenticated: true });
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({});
+    });
+    settingsActions.closeSettings();
+
+    // Same URL the consumed entry had: the back button lands here.
+    await act(async () => {
+      await router.navigate({ to: ".", search: { settings: "billing" } });
+    });
+    await waitFor(() => {
+      expect(router.state.location.search).toEqual({ settings: "billing" });
+    });
+
+    expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(false);
   });
 
   it("survives the utm params the email layout appends", async () => {

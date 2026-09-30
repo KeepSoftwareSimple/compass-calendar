@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useSession } from "@web/auth/compass/session/useSession";
 import { isMobileOS } from "@web/common/utils/device/device.util";
 import {
@@ -20,6 +20,10 @@ interface SettingsSearchEntryOptions {
  * anonymous visitor is asked to log in first; the param stays in the URL so
  * Settings opens as soon as the session lands. Phones see MobileGate, where
  * Settings is not mounted, so the param is left alone there.
+ *
+ * Opening Settings pushes a history entry (useSettingsBrowserBack) before
+ * the param is stripped, so the back button returns to the URL that still
+ * carries it. The consumed guard keeps that entry from reopening Settings.
  */
 export function useSettingsSearchEntry({
   isMobile = isMobileOS(),
@@ -27,9 +31,10 @@ export function useSettingsSearchEntry({
   const search = useSearch({ strict: false }) as AuthSearch;
   const navigate = useNavigate();
   const { authenticated } = useSession();
+  const consumedRef = useRef(false);
 
   useEffect(() => {
-    if (isMobile) return;
+    if (isMobile || consumedRef.current) return;
     const page = search[SETTINGS_SEARCH_PARAM];
     if (!page) return;
     if (!authenticated) {
@@ -41,6 +46,7 @@ export function useSettingsSearchEntry({
       });
       return;
     }
+    consumedRef.current = true;
     settingsActions.openSettings(page);
     void navigate({
       to: ".",
