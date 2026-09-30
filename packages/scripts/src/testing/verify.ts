@@ -12,6 +12,9 @@ import { existsSync } from "node:fs";
  * `--serial` is passed. Web or e2e/ changes also select Playwright a11y and
  * e2e after that wave, unless Chromium is missing — in that case the helper
  * skips those checks and reports incomplete CI parity instead of a silent pass.
+ * `apps/calendar-macos/` selects `test:macos` (xcodegen + xcodebuild test)
+ * where Xcode is installed; elsewhere, Linux included, the summary names it
+ * as CI-only (test-macos.yml) and the verdict is unaffected.
  *
  * The last line is always machine-readable: `VERDICT: PASS`, `VERDICT:
  * INCOMPLETE` (every selected check passed but a Playwright check was
@@ -36,7 +39,10 @@ const WORKSPACE_PACKAGES = [
   "booking-web",
 ] as const;
 /** Suites with a `test:<name>` script that live outside `packages/`. */
-const STANDALONE_PREFIXES = { "self-host/": "self-host" } as const;
+const STANDALONE_PREFIXES = {
+  "self-host/": "self-host",
+  "apps/calendar-macos/": "macos",
+} as const;
 const VALID_PACKAGES = [
   ...WORKSPACE_PACKAGES,
   ...Object.values(STANDALONE_PREFIXES),
@@ -51,6 +57,7 @@ const PACKAGE_ROOTS: Record<Package, string> = {
   scripts: "packages/scripts/",
   "booking-web": "apps/booking-web/",
   "self-host": "self-host/",
+  macos: "apps/calendar-macos/",
 };
 
 const PACKAGE_PREFIXES: Record<string, Package> = Object.fromEntries(
@@ -65,6 +72,8 @@ const FAST_TEST_PACKAGES = new Set<Package>(["backend", "sync", "scripts"]);
 export const SERIAL_FLAG = "--serial";
 export const STRICT_FLAG = "--strict";
 export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
+const MACOS_CI_ONLY_REASON =
+  "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
 const FAST_TIER_REASON =
   "no *.db.test.ts and no /storage/ or /repositories/ paths";
 
@@ -110,6 +119,8 @@ export type VerifyPlan = {
   packages: Package[];
   checks: PlannedCheck[];
   skips: PlannedSkip[];
+  /** Checks only CI can run here. Reported, but they do not change the verdict. */
+  ciOnly: PlannedSkip[];
   playwrightSelected: boolean;
 };
 
@@ -118,6 +129,7 @@ export type VerifyDeps = {
   spawn: SpawnFn;
   log: Logger;
   chromiumAvailable?: (spawn: SpawnFn) => boolean | Promise<boolean>;
+  xcodeAvailable?: (spawn: SpawnFn) => boolean | Promise<boolean>;
 };
 
 function isPackage(value: string): value is Package {
@@ -167,6 +179,19 @@ async function detectChromiumAvailable(spawn: SpawnFn): Promise<boolean> {
     combinedSpawnOutput(result),
   );
   return location != null && existsSync(location);
+}
+
+async function detectXcodeAvailable(spawn: SpawnFn): Promise<boolean> {
+  if (process.platform !== "darwin") return false;
+  try {
+    const result = await Promise.resolve(
+      spawn(["xcodebuild", "-version"], { stdio: "pipe" }),
+    );
+    // Command Line Tools alone ship an xcodebuild stub that exits non-zero.
+    return result.exitCode === 0;
+  } catch {
+    return false;
+  }
 }
 
 function filesForPackage(pkg: Package, files: string[]): string[] {
@@ -223,12 +248,19 @@ export function planVerify(input: {
   packages: Package[];
   files?: string[];
   playwrightChromiumAvailable: boolean;
+  xcodeAvailable?: boolean;
 }): VerifyPlan {
   const packages = VALID_PACKAGES.filter((pkg) => input.packages.includes(pkg));
   const files = input.files ?? [];
-  const checks: PlannedCheck[] = packages.map((pkg) =>
-    selectPackageTestCheck(pkg, files),
-  );
+  const ciOnly: PlannedSkip[] = [];
+  const checks: PlannedCheck[] = [];
+  for (const pkg of packages) {
+    if (pkg === "macos" && !input.xcodeAvailable) {
+      ciOnly.push({ id: "test:macos", reason: MACOS_CI_ONLY_REASON });
+      continue;
+    }
+    checks.push(selectPackageTestCheck(pkg, files));
+  }
 
   checks.push({ id: "type-check", cmd: ["bun", "run", "type-check"] });
   checks.push({ id: "lint", cmd: ["bun", "run", "lint"] });
@@ -253,6 +285,7 @@ export function planVerify(input: {
     packages,
     checks,
     skips,
+    ciOnly,
     playwrightSelected,
   };
 }
@@ -423,6 +456,7 @@ export async function runVerify(
 ): Promise<number> {
   const { git, spawn, log } = deps;
   const chromiumAvailable = deps.chromiumAvailable ?? detectChromiumAvailable;
+  const xcodeAvailable = deps.xcodeAvailable ?? detectXcodeAvailable;
 
   const parsed = parseVerifyArgs(args);
   if (!parsed.ok) {
@@ -466,6 +500,9 @@ export async function runVerify(
     playwrightChromiumAvailable: playwrightSelected
       ? await Promise.resolve(chromiumAvailable(spawn))
       : true,
+    xcodeAvailable: packages.includes("macos")
+      ? await Promise.resolve(xcodeAvailable(spawn))
+      : false,
   });
 
   const independent = plan.checks.filter(
@@ -492,6 +529,9 @@ export async function runVerify(
     for (const skip of plan.skips) {
       log.log(`Skipping ${skip.id}: ${skip.reason}`);
     }
+  }
+  for (const note of plan.ciOnly) {
+    log.log(`CI-only ${note.id}: ${note.reason}`);
   }
 
   const failed: string[] = [];
@@ -569,6 +609,11 @@ export async function runVerify(
     );
   } else {
     log.log("Checks skipped: (none)");
+  }
+  if (plan.ciOnly.length > 0) {
+    log.log(
+      `Checks CI-only: ${plan.ciOnly.map((note) => `${note.id} (${note.reason})`).join("; ")}`,
+    );
   }
 
   if (failed.length > 0) {

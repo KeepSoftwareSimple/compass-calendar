@@ -45,6 +45,7 @@
       "project": ["src/**/*.{ts,tsx}!"]
     }
   },
+  "ignore": ["apps/calendar-macos/**"],
   "ignoreDependencies": ["@compass/core", "@compass/backend"],
   "ignoreExportsUsedInFile": true
 }

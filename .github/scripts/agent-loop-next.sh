@@ -229,6 +229,7 @@ PARTITION_LABELS = {
     "scripts",
     "e2e",
     "docs",
+    "desktop",
 }
 
 issues = json.load(open(sys.argv[1], encoding="utf-8"))
