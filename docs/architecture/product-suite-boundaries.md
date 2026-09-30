@@ -2,7 +2,7 @@
 
 **Status:** Proposed
 
-**Decision scope:** Calendar, Booking, Reminders, and the Calendar macOS app
+**Decision scope:** Calendar, Booking, Reminders, and the Calendar desktop app
 
 ## Decision
 
@@ -17,7 +17,7 @@ The near-term shape is:
 apps/
   calendar-web/       # calendar SPA (host UX, Meeting Settings)
   booking-web/        # public guest /meet SPA (host Meeting Settings stay in calendar-web)
-  calendar-macos/     # native shell and macOS-only integration
+  calendar-macos/     # native Swift shell, see docs/features/desktop-client.md
   api/                # current packages/backend; one modular backend
   sync/               # current provider-sync service
   reminders-worker/   # create when durable reminder delivery is implemented
