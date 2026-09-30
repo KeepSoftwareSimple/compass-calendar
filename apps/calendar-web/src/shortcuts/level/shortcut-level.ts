@@ -28,6 +28,19 @@ export const SHORTCUT_LEVELS: readonly [
   { level: 6, name: "Keyboard master", minUsed: 55 },
 ];
 
+/** The level named by the table for a browser with `used` distinct shortcuts. */
+export function levelForUsedCount(used: number): ShortcutLevelDefinition {
+  // The first level's `minUsed: 0` always matches, so the seed below is the
+  // answer for a browser that has used nothing rather than a fallback.
+  return SHORTCUT_LEVELS.reduce<ShortcutLevelDefinition>(
+    (winner, definition) => (definition.minUsed <= used ? definition : winner),
+    SHORTCUT_LEVELS[0],
+  );
+}
+
+/** Pointer hints and newcomer tips retire at this level (#4126). */
+export const EXPLORER_LEVEL = 2;
+
 export interface ShortcutLevel {
   level: number;
   name: string;
@@ -52,12 +65,7 @@ export function computeShortcutLevel(
 ): ShortcutLevel {
   const used = registryIds.filter((id) => usedIds.has(id)).length;
 
-  // The first level's `minUsed: 0` always matches, so the seed below is the
-  // answer for a browser that has used nothing rather than a fallback.
-  const current = SHORTCUT_LEVELS.reduce<ShortcutLevelDefinition>(
-    (winner, definition) => (definition.minUsed <= used ? definition : winner),
-    SHORTCUT_LEVELS[0],
-  );
+  const current = levelForUsedCount(used);
   // The first threshold this browser has not reached yet, which is the one
   // after `current` for a table whose thresholds only ever increase.
   const next = SHORTCUT_LEVELS.find((definition) => definition.minUsed > used);

@@ -27,8 +27,6 @@ export type IntentTeaching = {
   message: (ctx: IntentMessageContext) => string;
 };
 
-export const MAX_POINTER_HINTS_PER_SESSION = 3;
-
 export const INTENT_TEACHING: Record<PointerIntent, IntentTeaching> = {
   "card-click": {
     shortcutIds: ["edit-open", "focus-shift-hold"],

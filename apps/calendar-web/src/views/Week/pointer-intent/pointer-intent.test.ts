@@ -3,12 +3,10 @@ import {
   initialPointerHintState,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import { MAX_POINTER_HINTS_PER_SESSION } from "@web/shortcuts/pointer-intent/pointer-hint.teach-policy";
 import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
-import {
-  MAX_POINTER_HINTS_PER_SESSION,
-  teachingMessageForIntent,
-} from "@web/views/Week/pointer-intent/pointer-intent";
+import { teachingMessageForIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 import {
   detectedIntents,
   getPointerIntentSessionSnapshot,

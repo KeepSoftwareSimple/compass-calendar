@@ -5,7 +5,7 @@ import {
   selectPointerHintVisible,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
-import { shouldTeachClickTaughtShortcut } from "@web/shortcuts/pointer-intent/click-taught-shortcut.teach-policy";
+import { shouldTeachPointerHint } from "@web/shortcuts/pointer-intent/pointer-hint.teach-policy";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { viewFromPathname } from "@web/shortcuts/tips/shortcut-telemetry";
 import {
@@ -32,8 +32,14 @@ export function pulseClickTaughtShortcut(
   }: PulseClickTaughtShortcutOptions = {},
 ): void {
   const session = getPointerIntentSessionSnapshot();
-  const pillVisible = selectPointerHintVisible(usePointerHintStore.getState());
-  if (!shouldTeachClickTaughtShortcut({ shortcutId, session, pillVisible })) {
+  if (
+    !shouldTeachPointerHint({
+      shortcutId,
+      alreadyShown: session.shownClickShortcutIds.has(shortcutId),
+      hintsShownThisSession: session.hintsShownThisSession,
+      pillVisible: selectPointerHintVisible(usePointerHintStore.getState()),
+    })
+  ) {
     return;
   }
 

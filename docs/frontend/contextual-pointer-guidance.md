@@ -31,11 +31,14 @@ hint is demonstrated, not described.
 
 - **Once per intent per session.** Each named intent teaches at most once.
 - **Session cap.** At most three pointer-sourced pills per session
-  (`MAX_POINTER_HINTS_PER_SESSION`).
+  (`MAX_POINTER_HINTS_PER_SESSION`), counting grid, chrome and form-field
+  hints. The right-click `m` tip is capped separately, at once per session.
 - **Retire on use.** No hint for a registry id the per-browser usage profile
   already records as invoked.
-- **Level 2 (Explorer).** No pointer-intent hints once the browser reaches
-  Explorer (four shortcuts used).
+- **Level 2 (Explorer).** No grid, chrome or form-field hints once the browser
+  reaches Explorer (four shortcuts used). The right-click `m` tip is the one
+  exception: it teaches once per session regardless of level, because sharing
+  the gate would pull the level reader into the context menu's boot chunk.
 - **Muted and dismissed.** `compass.shortcuts.tips-muted` and
   `compass.pointer-hint.dismissed-permanently` suppress pills. Palette and
   pointer sources share the same store.
@@ -65,10 +68,11 @@ keyboard paths still run.
 - Intent model and copy: `apps/calendar-web/src/views/Week/pointer-intent/pointer-intent.ts`
 - Capture-phase grid tracker: `apps/calendar-web/src/views/Week/pointer-intent/attachPointerIntentTracker.ts`
 - Notify + PostHog: `apps/calendar-web/src/views/Week/pointer-intent/pointer-intent.actions.ts`
-- Teach policy (cap, mute, Explorer, usage): `apps/calendar-web/src/views/Week/pointer-intent/pointer-intent.teach-policy.ts`
+- Teach policy (cap, mute, lock, Explorer, usage), shared by the grid, chrome and form-field hints: `apps/calendar-web/src/shortcuts/pointer-intent/pointer-hint.teach-policy.ts`
+- Grid intent adapter for that policy: `apps/calendar-web/src/views/Week/pointer-intent/pointer-intent.teach-policy.ts`
 - Session counters: `apps/calendar-web/src/views/Week/pointer-intent/pointer-intent.session.ts`
 - Chrome click teach helper: `apps/calendar-web/src/shortcuts/pointer-intent/pulseClickTaughtShortcut.ts`
-- Chrome click teach policy: `apps/calendar-web/src/shortcuts/pointer-intent/click-taught-shortcut.teach-policy.ts`
+- Real-pointer click predicate: `apps/calendar-web/src/shortcuts/pointer-intent/real-mouse-click.ts`
 - Context menu M teach: `apps/calendar-web/src/shortcuts/context-menu/context-menu-pointer-hint.ts`
 - Pill UI + store: `apps/calendar-web/src/components/PointerHint/PointerHint.tsx`,
   `apps/calendar-web/src/shortcuts/keyboard-only/pointer-hint.store.ts`

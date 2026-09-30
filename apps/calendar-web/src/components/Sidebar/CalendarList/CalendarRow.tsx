@@ -2,6 +2,7 @@ import { type FC, type MouseEvent } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
+import { isRealMouseClick } from "@web/shortcuts/pointer-intent/real-mouse-click";
 
 export const calendarRowDisplayName = (
   calendar: Calendar,
@@ -27,7 +28,7 @@ export const CalendarRow: FC<{
         aria-pressed={calendar.isVisible}
         className="c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded px-1 py-0.5 text-left text-text-muted text-xs hover:bg-surface-panel hover:text-text"
         onClick={(event: MouseEvent<HTMLButtonElement>) => {
-          if (event.detail > 0) {
+          if (isRealMouseClick(event)) {
             pulseClickTaughtShortcut("focus-calendar-digit", {
               message:
                 "Next time: hold {0}, press the account digit, then {1}.",
