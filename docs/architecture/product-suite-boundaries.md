@@ -17,7 +17,7 @@ The near-term shape is:
 apps/
   calendar-web/       # calendar SPA (host UX, Meeting Settings)
   booking-web/        # public guest /meet SPA (host Meeting Settings stay in calendar-web)
-  calendar-desktop/   # Electron shell for macOS, see docs/features/desktop-client.md
+  calendar-macos/     # native Swift shell, see docs/features/desktop-client.md
   api/                # current packages/backend; one modular backend
   sync/               # current provider-sync service
   reminders-worker/   # create when durable reminder delivery is implemented
