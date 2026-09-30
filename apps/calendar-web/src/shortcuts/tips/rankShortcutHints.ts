@@ -1,12 +1,26 @@
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import {
   getShortcutHint,
-  HINTS_FOR_POINTER_INTENT,
   type RankedShortcutHint,
   type ShortcutHintId,
   type ShortcutSuggestionReason,
 } from "@web/shortcuts/tips/shortcut-tips.data";
+import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 import { detectedIntents } from "@web/views/Week/pointer-intent/pointer-intent.session";
+
+const HINTS_FOR_POINTER_INTENT: Record<
+  PointerIntent,
+  readonly ShortcutHintId[]
+> = {
+  "card-click": ["event-jump", "page-jump"],
+  "hover-hunt": ["event-jump", "page-jump"],
+  "slot-click": ["create-event"],
+  "allday-click": ["create-event"],
+  "card-drag": ["nudge"],
+  "grid-scroll": ["grid-scroll"],
+  "swipe-next": ["week-nav"],
+  "swipe-prev": ["week-nav"],
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const SHORTCUT_FATIGUE_COOLDOWN_MS = 6 * 60 * 60 * 1000;

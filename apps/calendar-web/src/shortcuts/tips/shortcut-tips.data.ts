@@ -1,4 +1,3 @@
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   DAY_NAME_BY_PREFIX,
@@ -6,7 +5,6 @@ import {
 } from "@web/shortcuts/shift-hint/assign-shift-hint-keys";
 import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
-import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 
 export {
   DAY_JUMP_PREFIXES,
@@ -75,20 +73,6 @@ export type ShortcutHint = {
   registryIds: readonly ShortcutRegistryId[];
   parts: readonly ShortcutTipPart[];
   suggestionReason: ShortcutSuggestionReason;
-};
-
-export const HINTS_FOR_POINTER_INTENT: Record<
-  PointerIntent,
-  readonly ShortcutHintId[]
-> = {
-  "card-click": ["event-jump", "page-jump"],
-  "hover-hunt": ["event-jump", "page-jump"],
-  "slot-click": ["create-event"],
-  "allday-click": ["create-event"],
-  "card-drag": ["nudge"],
-  "grid-scroll": ["grid-scroll"],
-  "swipe-next": ["week-nav"],
-  "swipe-prev": ["week-nav"],
 };
 
 export type RankedShortcutHint = ShortcutHint & {
@@ -280,7 +264,7 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
       "nav-scroll-down",
     ],
     parts: [
-      { keys: [...APP_SHORTCUT_BINDINGS.navScrollHourDown.keycaps] },
+      { keys: ["Alt", "ArrowDown"] },
       " scrolls · ",
       { key: "PageDown" },
       " pages",
@@ -293,11 +277,11 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     featureArea: "calendar_navigation",
     registryIds: ["nav-previous", "nav-next", "nav-today"],
     parts: [
-      { key: APP_SHORTCUT_BINDINGS.navPrevious.keycaps[0]! },
+      { key: "J" },
       "/",
-      { key: APP_SHORTCUT_BINDINGS.navNext.keycaps[0]! },
+      { key: "K" },
       " move weeks · ",
-      { key: APP_SHORTCUT_BINDINGS.navToday.keycaps[0]! },
+      { key: "T" },
       " today",
     ],
     suggestionReason: "calendar_idle",
