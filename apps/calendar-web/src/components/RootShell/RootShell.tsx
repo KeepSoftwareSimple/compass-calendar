@@ -65,6 +65,7 @@ import {
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
+import { useSettingsSearchEntry } from "@web/settings/useSettingsSearchEntry";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
 import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
 import { useHideEventShortcut } from "@web/shortcuts/hide-event/useHideEventShortcut";
@@ -131,6 +132,7 @@ export function RootShell() {
   useGuestRsvpNotice();
   useGuestMeetingSetupEntry();
   useGuestMeetingSetupResume();
+  useSettingsSearchEntry();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;
