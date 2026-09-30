@@ -20,7 +20,7 @@ export const PointerHint: FC = () => {
   const isVisible = usePointerHintStore(selectPointerHintVisible);
   const attempt = usePointerHintStore(selectPointerHintAttempt);
 
-  if (!isVisible || !attempt?.shortcutKey) return null;
+  if (!isVisible || (!attempt?.shortcutKey && !attempt?.message)) return null;
 
   return (
     <div
@@ -31,7 +31,13 @@ export const PointerHint: FC = () => {
       style={{ zIndex: Z_INDEX_TOOLTIP }}
     >
       <span className="min-w-0 flex-1">
-        Next time, press <ShortcutKeys keys={attempt.shortcutKey} />.
+        {attempt.message ? (
+          attempt.message
+        ) : (
+          <>
+            Next time, press <ShortcutKeys keys={attempt.shortcutKey!} />.
+          </>
+        )}
       </span>
       <IconButton
         aria-label="Turn off keyboard tips"
