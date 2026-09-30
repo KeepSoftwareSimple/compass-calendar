@@ -163,6 +163,9 @@ const CalendarNowLine = ({
       className="absolute h-px"
       style={{
         background: accentGradient,
+        // Paper-colored rim: invisible on the grid, keeps the line readable
+        // where it crosses an event card filled with the accent color.
+        boxShadow: "0 0 0 1px var(--background)",
         top: `${percentOfDay}%`,
         left: `calc(${columnIndex} * 100% / ${columnCount})`,
         width: `calc(100% / ${columnCount})`,
