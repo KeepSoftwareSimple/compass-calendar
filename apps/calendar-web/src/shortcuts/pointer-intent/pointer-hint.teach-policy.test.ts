@@ -22,7 +22,9 @@ const profileWith = (ids: string[]): ShortcutUsageProfile => ({
   ),
 });
 
-const gateFor = (shortcutId: "edit-menu" | "nav-today" = "edit-menu") => ({
+const gateFor = (
+  shortcutId: "nav-today" | "focus-calendar-digit" = "nav-today",
+) => ({
   shortcutId,
   alreadyShown: false,
   hintsShownThisSession: 0,
@@ -62,7 +64,7 @@ describe("shouldTeachPointerHint", () => {
   });
 
   it("retires a shortcut the profile already records as invoked", () => {
-    writeShortcutUsageProfile(profileWith(["edit-menu"]));
+    writeShortcutUsageProfile(profileWith(["nav-today"]));
     expect(shouldTeachPointerHint(gateFor())).toBe(false);
   });
 
@@ -87,11 +89,11 @@ describe("shouldTeachPointerHint", () => {
     );
   });
 
-  it("refuses every surface once the browser reaches Explorer", () => {
+  it("refuses the grid and chrome surfaces once the browser reaches Explorer", () => {
     writeShortcutUsageProfile(
       profileWith(["edit-open", "create-timed", "nav-previous", "nav-next"]),
     );
-    expect(shouldTeachPointerHint(gateFor("edit-menu"))).toBe(false);
     expect(shouldTeachPointerHint(gateFor("nav-today"))).toBe(false);
+    expect(shouldTeachPointerHint(gateFor("focus-calendar-digit"))).toBe(false);
   });
 });

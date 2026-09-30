@@ -28,11 +28,16 @@ export type ShouldTeachPointerHintInput = PointerHintGateOverrides & {
 };
 
 /**
- * The one teach gate behind every pointer hint: grid intents, chrome clicks,
- * form field clicks, and the right-click `m` tip. The rules it enforces are
- * documented in `docs/frontend/contextual-pointer-guidance.md`; keeping them in
- * a single function is what stops one surface from quietly teaching past a
- * mute, the session cap, or the Explorer retirement the others respect.
+ * The one teach gate behind grid intents, chrome clicks and form field clicks.
+ * The rules it enforces are documented in
+ * `docs/frontend/contextual-pointer-guidance.md`; keeping them in a single
+ * function is what stops one surface from quietly teaching past a mute, the
+ * session cap, or the Explorer retirement the others respect.
+ *
+ * The right-click `m` tip in `context-menu/context-menu-pointer-hint.ts` is the
+ * one holdout: it still carries its own narrower checks, because importing this
+ * gate from the context menu pulls the level reader, the app lock and the tips
+ * store into that boot chunk for about 750 B of boot gzip (measured, #4145).
  */
 export function shouldTeachPointerHint({
   shortcutId,

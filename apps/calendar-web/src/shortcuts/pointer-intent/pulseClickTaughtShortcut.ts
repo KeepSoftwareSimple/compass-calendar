@@ -15,8 +15,6 @@ import {
 
 export type PulseClickTaughtShortcutOptions = {
   pathname?: string;
-  /** Telemetry label for the signal that taught; chrome clicks by default. */
-  intent?: string;
   /** Overrides registry keycaps for the pill (e.g. Mod+digit for one field). */
   shortcutKey?: string | string[];
   /** Custom status copy; default pill uses "Next time, press" + shortcutKey. */
@@ -28,7 +26,6 @@ export function pulseClickTaughtShortcut(
   shortcutId: ShortcutRegistryId,
   {
     pathname = globalThis.location?.pathname ?? "/",
-    intent = "chrome-click",
     shortcutKey,
     message,
     keys,
@@ -59,7 +56,7 @@ export function pulseClickTaughtShortcut(
   });
   markClickTaughtHintShown(shortcutId);
   track("pointer_hint_shown", {
-    intent,
+    intent: "chrome-click",
     shortcut_id: shortcutId,
     view: viewFromPathname(pathname),
     source: "pointer",

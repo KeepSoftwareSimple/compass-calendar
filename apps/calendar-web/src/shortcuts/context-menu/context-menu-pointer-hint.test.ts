@@ -9,13 +9,11 @@ import {
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
 import { writeShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
-import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 
 describe("context-menu pointer hint", () => {
   beforeEach(() => {
     resetContextMenuPointerHintForTests();
-    resetPointerIntentSessionForTests();
     resetPointerHintPersistenceForTests();
     writeShortcutUsageProfile({ version: 2, actions: {}, shortcuts: {} });
     usePointerHintStore.setState({
@@ -27,7 +25,6 @@ describe("context-menu pointer hint", () => {
 
   afterEach(() => {
     resetContextMenuPointerHintForTests();
-    resetPointerIntentSessionForTests();
   });
 
   it("pulses once per session for edit-menu", () => {
