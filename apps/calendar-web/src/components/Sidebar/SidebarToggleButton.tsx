@@ -33,6 +33,7 @@ export const SidebarToggleButton: FC = () => {
         focusSidebarControl(SIDEBAR_DISMISS_CONTROL);
       }}
       shortcut="]"
+      shortcutId="other-sidebar"
     >
       <button
         type="button"

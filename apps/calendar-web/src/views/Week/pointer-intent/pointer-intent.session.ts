@@ -1,17 +1,21 @@
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { type PointerIntent } from "@web/views/Week/pointer-intent/pointer-intent";
 
 const shownIntents = new Set<PointerIntent>();
+const shownClickShortcutIds = new Set<ShortcutRegistryId>();
 let hintsShownThisSession = 0;
 const detectedIntentLog: PointerIntent[] = [];
 
 export type PointerIntentSessionSnapshot = {
   shownIntents: ReadonlySet<PointerIntent>;
+  shownClickShortcutIds: ReadonlySet<ShortcutRegistryId>;
   hintsShownThisSession: number;
 };
 
 export function getPointerIntentSessionSnapshot(): PointerIntentSessionSnapshot {
   return {
     shownIntents,
+    shownClickShortcutIds,
     hintsShownThisSession,
   };
 }
@@ -30,8 +34,14 @@ export function markPointerIntentHintShown(intent: PointerIntent): void {
   hintsShownThisSession += 1;
 }
 
+export function markClickTaughtHintShown(shortcutId: ShortcutRegistryId): void {
+  shownClickShortcutIds.add(shortcutId);
+  hintsShownThisSession += 1;
+}
+
 export function resetPointerIntentSessionForTests(): void {
   shownIntents.clear();
+  shownClickShortcutIds.clear();
   hintsShownThisSession = 0;
   detectedIntentLog.length = 0;
 }

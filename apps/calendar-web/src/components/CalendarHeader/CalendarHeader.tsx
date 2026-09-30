@@ -42,14 +42,22 @@ export const CalendarHeader: FC<Props> = ({
       <div className="flex min-w-0 flex-1 items-center gap-3">
         {showNavigation && onPrev && onNext && (
           <div className="flex items-center gap-3">
-            <TooltipWrapper shortcut="J">
+            <TooltipWrapper
+              description={prevLabel}
+              shortcut="J"
+              shortcutId="nav-previous"
+            >
               <ArrowButton
                 direction="left"
                 label={prevLabel}
                 onClick={onPrev}
               />
             </TooltipWrapper>
-            <TooltipWrapper shortcut="K">
+            <TooltipWrapper
+              description={nextLabel}
+              shortcut="K"
+              shortcutId="nav-next"
+            >
               <ArrowButton
                 direction="right"
                 label={nextLabel}

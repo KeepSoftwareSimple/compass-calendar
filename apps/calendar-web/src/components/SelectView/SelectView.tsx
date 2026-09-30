@@ -9,16 +9,18 @@ import {
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
-import { useRef, useState } from "react";
+import { type MouseEvent, useRef, useState } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
+import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,
 } from "@web/shortcuts/shortcuts.constants";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 interface SelectViewProps {
   /** The date heading text, e.g. "July 2026" or "Monday, July 20". */
@@ -61,6 +63,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
             view: null,
             key: "t",
             onSelect: onToday,
+            shortcutId: "nav-today" as const,
           },
         ]
       : []),
@@ -69,18 +72,21 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
       view: "Day" as const,
       key: VIEW_SHORTCUTS.day.key,
       onSelect: () => navigate({ to: VIEW_SHORTCUTS.day.route }),
+      shortcutId: "nav-day-view" as const,
     },
     {
       label: VIEW_SHORTCUTS.week.label,
       view: "Week" as const,
       key: VIEW_SHORTCUTS.week.key,
       onSelect: () => navigate({ to: VIEW_SHORTCUTS.week.route }),
+      shortcutId: "nav-week-view" as const,
     },
     {
       label: LIFE_SHORTCUT.label,
       view: "Life" as const,
       key: LIFE_SHORTCUT.key,
       onSelect: () => navigate({ to: LIFE_SHORTCUT.route }),
+      shortcutId: "nav-life-view" as const,
     },
   ];
 
@@ -114,9 +120,17 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
     [click, dismiss, role, listNavigation],
   );
 
-  const selectOption = (onSelect: () => void) => {
-    onSelect();
-    setIsOpen(false);
+  const selectOption = (
+    onSelect: () => void,
+    shortcutId?: ShortcutRegistryId,
+  ) => {
+    return (event?: MouseEvent) => {
+      if (event && event.detail > 0 && shortcutId) {
+        pulseClickTaughtShortcut(shortcutId);
+      }
+      onSelect();
+      setIsOpen(false);
+    };
   };
 
   const dropdownId = "view-select-dropdown";
@@ -142,7 +156,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
                 e.preventDefault();
                 const option = options[activeIndex];
                 if (option) {
-                  selectOption(option.onSelect);
+                  selectOption(option.onSelect, option.shortcutId)();
                 }
               }
             },
@@ -170,7 +184,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
                 e.preventDefault();
                 const option = options[activeIndex];
                 if (option) {
-                  selectOption(option.onSelect);
+                  selectOption(option.onSelect, option.shortcutId)();
                 }
               }
             },
@@ -193,7 +207,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
                   listRef.current[index] = node;
                 }}
                 {...getItemProps({
-                  onClick: () => selectOption(option.onSelect),
+                  onClick: selectOption(option.onSelect, option.shortcutId),
                   active: isActive,
                 })}
                 role="option"
