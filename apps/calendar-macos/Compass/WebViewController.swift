@@ -6,8 +6,9 @@ import WebKit
 /// `window.open` go to the default browser.
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
     private let appURL: URL
-    private var webView: CompassWebView!
+    private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
+    private let bridgeAccessibilityHost = CompassBridgeAccessibilityHost()
 
     init(appURL: URL) {
         self.appURL = appURL
@@ -34,7 +35,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         contentController.addUserScript(script)
         configuration.userContentController = contentController
 
-        webView = CompassWebView(frame: .zero, configuration: configuration)
+        webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         #if DEBUG
@@ -48,15 +49,35 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         webView.load(URLRequest(url: appURL))
+        DispatchQueue.main.async { [weak self] in
+            self?.installBridgeAccessibilityHostOnWindow()
+        }
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        installBridgeAccessibilityHostOnWindow()
+    }
+
+    private func installBridgeAccessibilityHostOnWindow() {
+        guard bridgeAccessibilityHost.superview == nil,
+              let contentView = view.window?.contentView
+        else { return }
+        bridgeAccessibilityHost.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(bridgeAccessibilityHost, positioned: .above, relativeTo: nil)
+        NSLayoutConstraint.activate([
+            bridgeAccessibilityHost.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            bridgeAccessibilityHost.topAnchor.constraint(equalTo: contentView.topAnchor),
+            bridgeAccessibilityHost.widthAnchor.constraint(equalToConstant: 16),
+            bridgeAccessibilityHost.heightAnchor.constraint(equalToConstant: 16),
+        ])
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        guard let compassWebView = webView as? CompassWebView else { return }
-        compassWebView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
-            [weak compassWebView] result, _ in
+        webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
+            [weak self] result, _ in
             Task { @MainActor in
-                guard let compassWebView else { return }
-                compassWebView.setBridgeVersionForUITests(result as? String)
+                self?.bridgeAccessibilityHost.setBridgeVersion(result as? String)
             }
         }
     }
