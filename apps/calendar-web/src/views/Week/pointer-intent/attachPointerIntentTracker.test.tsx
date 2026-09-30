@@ -235,7 +235,6 @@ describe("attachPointerIntentTracker", () => {
     card.setAttribute(WEEK_EVENT_ID_ATTRIBUTE, "evt-explorer");
     document.body.appendChild(card);
 
-    render(<TrackerHarness />);
     await user.pointer({ keys: "[MouseLeft>]", target: card });
     await user.pointer({ keys: "[/MouseLeft]", target: card });
 
@@ -282,7 +281,6 @@ describe("attachPointerIntentTracker", () => {
         "nav-next": { invocations: 1, recentImpressions: 0 },
       },
     });
-    render(<TrackerHarness />);
     const { hoverOver, first, second, third } = mountHoverHuntButtons();
 
     hoverOver(first);
