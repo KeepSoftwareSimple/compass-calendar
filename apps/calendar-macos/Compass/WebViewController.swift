@@ -49,27 +49,19 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         webView.load(URLRequest(url: appURL))
-        DispatchQueue.main.async { [weak self] in
-            self?.installBridgeAccessibilityHostOnWindow()
-        }
     }
 
-    override func viewDidAppear() {
-        super.viewDidAppear()
-        installBridgeAccessibilityHostOnWindow()
-    }
-
-    private func installBridgeAccessibilityHostOnWindow() {
+    func installBridgeAccessibilityHost(on window: NSWindow) {
         guard bridgeAccessibilityHost.superview == nil,
-              let contentView = view.window?.contentView
+              let contentView = window.contentView
         else { return }
         bridgeAccessibilityHost.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(bridgeAccessibilityHost, positioned: .above, relativeTo: nil)
         NSLayoutConstraint.activate([
-            bridgeAccessibilityHost.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            bridgeAccessibilityHost.topAnchor.constraint(equalTo: contentView.topAnchor),
-            bridgeAccessibilityHost.widthAnchor.constraint(equalToConstant: 16),
-            bridgeAccessibilityHost.heightAnchor.constraint(equalToConstant: 16),
+            bridgeAccessibilityHost.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
+            bridgeAccessibilityHost.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            bridgeAccessibilityHost.widthAnchor.constraint(equalToConstant: 80),
+            bridgeAccessibilityHost.heightAnchor.constraint(equalToConstant: 21),
         ])
     }
 
