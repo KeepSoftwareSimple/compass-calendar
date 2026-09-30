@@ -1,7 +1,8 @@
 # Compass Desktop (macOS)
 
-**Status:** Planned, drafted 2026-09-30. Work is tracked on GitHub:
-[milestone Desktop v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/44)
+**Status:** Planned, drafted 2026-09-30. Work is tracked on GitHub: the
+[Compass Desktop board](https://github.com/orgs/KeepSoftwareSimple/projects/9),
+[milestone Desktop v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/44),
 and the tracking issue
 [#4149](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4149).
 This doc holds the decisions and the reference material only.
