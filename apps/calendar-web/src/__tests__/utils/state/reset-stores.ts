@@ -90,6 +90,8 @@ import { resetShortcutTipsMutedStoreForTests } from "@web/shortcuts/tips/shortcu
 import { resetEffectiveTimeZoneStoreForTests } from "@web/timezone/effective-timezone.store";
 import { resetTimeTravelStoreForTests } from "@web/timezone/time-travel.store";
 import { useTimezoneDialogStore } from "@web/timezone/timezone-dialog.store";
+import { resetPointerIntentKeysLookupForTests } from "@web/views/Week/pointer-intent/pointer-intent.actions";
+import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 
 type StoreReset = () => void;
 
@@ -141,6 +143,8 @@ const storeResets: StoreReset[] = [
   resetShortcutTelemetryForTests,
   resetShortcutUsageProfileStoreForTests,
   resetShortcutLevelHiddenStoreForTests,
+  resetPointerIntentSessionForTests,
+  resetPointerIntentKeysLookupForTests,
 ];
 
 export function resetAllStores() {

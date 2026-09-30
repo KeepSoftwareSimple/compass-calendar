@@ -62,7 +62,6 @@ export const DayViewContent = memo(() => {
 
   useFocusSidebarShortcut();
   useSidebarShortcuts();
-
   const isTrialing = useIsTrialing();
   const shortcutSections = useMemo(
     () =>

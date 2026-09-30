@@ -1,4 +1,4 @@
-/** Event-jump and grid-create requests shared by shift-hold hints and the palette. */
+/** Event-jump and grid-create requests for shift-hold hints and palette. */
 
 export const POINTER_EVENT_JUMP_REQUEST = "compass:pointer-event-jump";
 export const POINTER_GRID_CREATE_REQUEST = "compass:pointer-grid-create";
