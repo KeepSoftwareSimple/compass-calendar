@@ -95,7 +95,7 @@ describe("WelcomeGuideBody", () => {
     );
 
     expect(
-      screen.getByText(/This welcome screen works with your mouse, too/),
+      screen.getByText(/When you click an event or an empty time slot/),
     ).toBeTruthy();
   });
 

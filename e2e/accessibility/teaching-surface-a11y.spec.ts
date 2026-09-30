@@ -69,6 +69,47 @@ test("the sidebar Hide tips control is keyboard reachable", async ({
   await expect(hideTips).toHaveCount(0);
 });
 
+test("a pointer-sourced teaching pill exposes status semantics and passes axe", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem(
+      "compass.onboarding.has-seen-shortcut-showcase",
+      "true",
+    );
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+  });
+
+  await page.goto("/week", { waitUntil: "domcontentloaded" });
+
+  const title = `A11y pill ${Date.now()}`;
+  await page.locator("#mainGrid").focus();
+  await page.keyboard.press("c");
+  const titleInput = page.getByRole("form").getByPlaceholder("Title");
+  await titleInput.fill(title);
+  await page
+    .getByRole("form")
+    .getByRole("button", { name: "Save" })
+    .evaluate((el) => (el as HTMLElement).click());
+  await titleInput.waitFor({ state: "hidden", timeout: 15000 });
+
+  const eventButton = page
+    .locator("#mainGrid")
+    .getByRole("button", { name: title });
+  await eventButton.click({ force: true });
+
+  const pill = page.locator("[data-pointer-hint]");
+  await expect(pill).toBeVisible();
+  await expect(pill).toHaveAttribute("role", "status");
+  await expect(pill).toContainText(/Press/i);
+
+  await expectNoAxeViolations(page, {
+    checkpoint: "pointer intent hint pill",
+    include: "[data-pointer-hint]",
+  });
+});
+
 test("the shortcut level badge's open tooltip has no automatically detectable accessibility violations", async ({
   page,
 }) => {

@@ -37,9 +37,13 @@ flows (see `auth.md`).
 Helpful storage keys:
 
 - `compass.onboarding.has-seen-welcome`
+- `compass.onboarding.welcome-exit` (`STORAGE_KEYS.WELCOME_EXIT`, explore vs
+  signup CTA)
 - `compass.onboarding.has-seen-shortcut-showcase`
+- `compass.onboarding.shortcut-showcase-outcome` (`finished` or `skipped`)
 - `compass.onboarding.first-event-done`
 - `compass.shortcuts.tips-muted` (`STORAGE_KEYS.SHORTCUT_TIPS_MUTED`)
+- `compass.shortcuts.personalization` (shortcut usage / Explorer retirement)
 - `compass.billing.trial-card-banner-dismissed-for`
   (`STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR`)
 
@@ -159,10 +163,12 @@ points are the welcome footer link, `?play=1`, and the command palette
 
 ### UX
 
-The sidebar status bar rotates shortcut tips every five minutes. **Hide tips**
-on the tip mutes sidebar tips and palette teaching hints via
-`compass.shortcuts.tips-muted`. The command palette exposes **Hide shortcut
-tips** / **Show shortcut tips**.
+The sidebar status bar rotates shortcut tips every five minutes for most
+browsers. **Newcomer** browsers (shortcut level 1) rotate every **60 seconds**
+and rank tips that match pointer intents detected this session first. **Hide
+tips** on the tip mutes sidebar tips, pointer-intent pills, and palette
+teaching hints via `compass.shortcuts.tips-muted`. The command palette exposes
+**Hide shortcut tips** / **Show shortcut tips**.
 
 ### Steps
 

@@ -23,7 +23,7 @@ export const FAQ_ITEMS: readonly FaqItem[] = [
   {
     question: "Why doesn't my mouse work?",
     answer:
-      "The calendar grid does not respond to clicks. Key hints beside each control and ? show the way. This welcome screen works with your mouse, too: every button and link here responds to a click.",
+      "The calendar grid does not move events on click alone. When you click an event or an empty time slot, Compass shows the key that does it. Key hints beside chrome controls and ? show the rest. This welcome screen works with your mouse, too: every button and link here responds to a click.",
   },
   {
     question: "I don't know any shortcuts yet. Will I be lost?",

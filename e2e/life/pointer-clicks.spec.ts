@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
 // `/life` is a public lead magnet: first-time visitors can click like a
-// normal page. Calendar views stay keyboard-only (see mouse-inert.spec.ts).
+// normal page. Calendar views teach keyboard shortcuts on pointer intent (see
+// mouse-teaches.spec.ts).
 test("life page allows pointer clicks without the keyboard-only hint", async ({
   page,
 }) => {

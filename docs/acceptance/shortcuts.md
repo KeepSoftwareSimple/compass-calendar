@@ -377,32 +377,62 @@ The sidebar month picker is a keyboard cursor, not a click target. `I` (or hold 
 
 ---
 
-## Scenario 13: Mouse and Keyboard Today
+## Scenario 13: The Mouse Teaches The Keyboard
 
 ### UX
 
-Compass is the keyboard calendar. Clicks are not blocked (text selection, copy buttons, and native buttons work), but the week grid itself is inert: empty slots, the all-day row, drag, and resize do nothing. Event cards have no click handler; a click only native-focuses the card so Enter or Space can open it from the keyboard. Header, sidebar, view switcher, and other chrome controls still work with the mouse. Hover on many chrome buttons shows a bare keycap in a tooltip; that is not a teaching hint.
-
-Right-click **Edit**, **Duplicate**, and **Delete** in the event context menu refuse a real mouse click with a "Keyboard only, press …" toast. **Hide** and the color swatches in the same menu still run on click.
-
-The command palette shows a "Next time, press …" pill after a row with a shortcut is chosen, unless shortcut tips are muted (`compass.shortcuts.tips-muted`) or the user dismissed keyboard tips from the pill's X. Chrome mouse clicks do not show that pill yet.
+Compass is the keyboard calendar. Clicks are not blocked, but the timed grid
+does not open or move events on click alone. A pointer gesture instead classifies
+**intent** and, for newcomers (below Explorer / level 2), shows the matching
+keys once in the shared top-center `PointerHint` pill. At most three pointer
+hints per session; each intent teaches once; `compass.shortcuts.tips-muted`
+silences pointer and palette pills; used shortcuts and Explorer level retire
+hints. See [Contextual Pointer Guidance](../frontend/contextual-pointer-guidance.md).
 
 ### Steps
 
-1. Navigate to `/week` with at least one event visible.
-2. Click an event card, then press Enter to open it.
-3. Right-click an event and choose **Edit** with the mouse.
-4. Open the command palette, run **Create event**, and note the pill.
-5. Mute shortcut tips from the sidebar tip or palette, run **Create event** again.
+1. Fresh `/week` after welcome (or onboarding flags set), with at least one
+   timed event visible.
+2. **Card click:** click an event card. Note the pill (Enter to open, hold
+   shift-hold key to jump). Press **Enter** to open the form, then close it.
+3. **Slot click:** click empty timed column space. Note the pill (typed time
+   digits and **C**). Type the shown digits to start a timed draft.
+4. **Drag:** press-drag an event card at least 8px. Note 15-minute and
+   one-hour move keys in the pill.
+5. **Wheel:** perform three separate vertical wheel gestures on the timed grid
+   (pause between gestures). Note scroll-hour and jump-to-now keys.
+6. **Swipe:** horizontal trackpad swipe to change week. Note **Next time,
+   press K** or **J** matching the direction.
+7. **Chrome:** click the **Next week** header arrow. Note **Next time, press K**
+   after navigation.
+8. **Form Save:** open an event, click **Save** with the mouse. Note the save
+   shortcut pill or field digit flash where applicable.
+9. **Context menu:** right-click an event, choose **Hide event** with the
+   mouse. Note the keyboard-only toast (**x**); the event stays visible.
+10. **Hover-hunt:** hover four distinct chrome controls within a few seconds.
+    Note hold-Mod copy and the brief page-jump chip demo.
+11. **Muted:** set `compass.shortcuts.tips-muted`, click an event card. No pill.
+12. **Retired:** clear mute; ensure `edit-open` is recorded in
+    `compass.shortcuts.personalization`; click a card. Intent is detected but
+    no pill.
+
+Palette **Next time, press …** after **Create event** still follows scenario 25
+when tips are not muted.
 
 ### Expected Results
 
-- Clicking an event does not open it; the card receives focus and Enter opens the event.
-- Clicking empty grid space does nothing.
-- Context-menu **Edit**, **Duplicate**, and **Delete** show the keyboard-only toast on mouse click; **Hide** and colors still work.
-- After step 4, a top-center "Next time, press C" pill appears unless tips were already muted.
-- After step 5, no palette pill appears.
-- Keyboard shortcuts and Enter/Space on focused controls continue to work.
+- Step 2: pill names **Enter** and the event-jump hold key; **Enter** opens the
+  event without a second click.
+- Step 3: pill shows the column time digits and **C**; typing the digits
+  creates/opens a timed draft at that time.
+- Steps 4–5: pills match the intent table in contextual pointer guidance.
+- Step 6–7: week changes and chrome/swipe pills say **Next time, press K** or
+  **J** from the registry.
+- Step 9: toast says keyboard only for hide; hide does not run on mouse click.
+- Step 11: no `[data-pointer-hint]` while muted.
+- Step 12: no pill after `edit-open` is already used; telemetry still records
+  `pointer_intent_detected`.
+- E2e: `e2e/timed/mouse-teaches.spec.ts`, context-menu hide in the same spec.
 
 ---
 
