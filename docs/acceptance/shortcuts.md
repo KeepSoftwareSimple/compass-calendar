@@ -377,32 +377,64 @@ The sidebar month picker is a keyboard cursor, not a click target. `I` (or hold 
 
 ---
 
-## Scenario 13: Mouse and Keyboard Today
+## Scenario 13: The Mouse Teaches The Keyboard
 
 ### UX
 
-Compass is the keyboard calendar. Clicks are not blocked (text selection, copy buttons, and native buttons work), but the week grid itself is inert: empty slots, the all-day row, drag, and resize do nothing. Event cards have no click handler; a click only native-focuses the card so Enter or Space can open it from the keyboard. Header, sidebar, view switcher, and other chrome controls still work with the mouse. Hover on many chrome buttons shows a bare keycap in a tooltip; that is not a teaching hint.
+Compass is the keyboard calendar. Clicks are not blocked (text selection, form
+fields, and native buttons work). The timed grid does not open or move events
+on click alone, but pointer intent watches what the mouse tries and pulses the
+existing top-center `PointerHint` pill with the keys that do the job.
 
-Right-click **Edit**, **Duplicate**, and **Delete** in the event context menu refuse a real mouse click with a "Keyboard only, press …" toast. **Hide** and the color swatches in the same menu still run on click.
-
-The command palette shows a "Next time, press …" pill after a row with a shortcut is chosen, unless shortcut tips are muted (`compass.shortcuts.tips-muted`) or the user dismissed keyboard tips from the pill's X. Chrome mouse clicks do not show that pill yet.
+Each intent teaches at most once per session, with at most three pointer pills
+per session, never while tips are muted or dismissed, never on `/life` or
+mobile, and never after the browser reaches Explorer (level 2). Invoking the
+taught shortcut retires that intent for the profile.
 
 ### Steps
 
-1. Navigate to `/week` with at least one event visible.
-2. Click an event card, then press Enter to open it.
-3. Right-click an event and choose **Edit** with the mouse.
-4. Open the command palette, run **Create event**, and note the pill.
-5. Mute shortcut tips from the sidebar tip or palette, run **Create event** again.
+1. Navigate to `/week` with welcome and showcase flags set and at least one
+   timed event visible.
+2. Click an event card once, read the pill, then press Enter to open it.
+3. Click an empty timed slot; read the digit keycaps, type that time, and
+   confirm a create form opens at that time (or press `C` after the pill).
+4. Drag an event card at least 8px and read the move shortcuts in the pill.
+5. Scroll the timed grid with the wheel three separate times (vertical
+   gestures) and read the scroll / today pill.
+6. Swipe horizontally on the week scroller (trackpad) to change weeks and read
+   the J or K pill.
+7. Click the header **Next week** arrow and read **Next time, press K**.
+8. Open an event form and click **Save** with the mouse; read the save
+   shortcut pill.
+9. Right-click an event and pointer-click **Hide**; confirm the keyboard-only
+   toast and that the event stays visible.
+10. Hover across several chrome controls for four seconds without clicking;
+    read the hold-Mod page-jump pill and the brief chip demo.
+11. Set `compass.shortcuts.tips-muted`, click an event card, and confirm no
+    pill.
+12. Clear mute, invoke Enter on a focused event once (profile records
+    `edit-open`), click another event card, and confirm no pill.
+
+Palette teaching stays in [Scenario 25](#scenario-25-the-palette-teaches-its-shortcuts).
 
 ### Expected Results
 
-- Clicking an event does not open it; the card receives focus and Enter opens the event.
-- Clicking empty grid space does nothing.
-- Context-menu **Edit**, **Duplicate**, and **Delete** show the keyboard-only toast on mouse click; **Hide** and colors still work.
-- After step 4, a top-center "Next time, press C" pill appears unless tips were already muted.
-- After step 5, no palette pill appears.
-- Keyboard shortcuts and Enter/Space on focused controls continue to work.
+- Step 2: pill names Enter to open and Shift (event jump) to jump; Enter opens
+  the event without a second click.
+- Step 3: pill shows the slot digits and `C`; typing the digits opens create
+  at that time.
+- Step 4: pill names Shift+ArrowDown and Shift+Alt+ArrowDown (15 min / hour).
+- Step 5: pill names Alt+ArrowDown (or platform scroll-hour binding) and `T`.
+- Step 6: pill says **Next time, press K** or J matching swipe direction.
+- Step 7: **Next time, press K** after navigation runs.
+- Step 8: save shortcut pill (Mod+Enter or platform binding).
+- Step 9: toast **Keyboard only, press x** (or shown keycap); hide does not
+  run; keyboard `x` or Enter on Hide still hides.
+- Step 10: hold-Mod copy plus visible page-jump chips for about two seconds.
+- Steps 11–12: no pointer pill when muted or after `edit-open` is recorded used.
+- Context-menu **Edit**, **Duplicate**, **Delete**, **Hide**, and colors all
+  show the keyboard-only toast on pointer click.
+- Automated coverage: `e2e/timed/mouse-teaches.spec.ts`.
 
 ---
 
@@ -770,7 +802,7 @@ If time is limited, run these checks before shipping shortcut-related changes:
 13. Cmd+D / Ctrl+D duplicates a focused event in Day and Week view.
 14. With a focused event, `E` then `T` opens the form with the title focused; `E` then `A` / `C` jump to guests / color; bare `E` alone does nothing.
 15. Pressing `H` shows event jump chips; a day letter + digit focuses that event; `Shift` + the day letter enters a column without a prior `H`, including an empty column, and `C` then creates there; Shift+Tab does not show chips.
-16. Grid clicks no longer open click-to-teach `PointerHint` pills; palette teaching is scenario 25. `/life` allows normal clicks. `M` opens the focused event's menu; `F` focuses the newest notice.
+16. Grid pointer intent teaches once per intent in `PointerHint` (scenario 13); palette teaching is scenario 25. `/life` allows normal clicks without intent pills. `M` opens the focused event's menu; `F` focuses the newest notice.
 17. PageUp / PageDown scroll the timed grid by one viewport in Day and Week view even when an event is focused; they do not fire in a text input.
 18. Alt+ArrowUp / Alt+ArrowDown pan the timed grid by one hour in Day and Week view even when an event is focused; they do not fire in a text input.
 19. `Z` opens time travel in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.

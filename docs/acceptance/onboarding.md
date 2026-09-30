@@ -37,9 +37,13 @@ flows (see `auth.md`).
 Helpful storage keys:
 
 - `compass.onboarding.has-seen-welcome`
+- `compass.onboarding.welcome-exit` (which welcome CTA closed the modal)
 - `compass.onboarding.has-seen-shortcut-showcase`
+- `compass.onboarding.shortcut-showcase-outcome` (`finished` or `skipped`)
 - `compass.onboarding.first-event-done`
 - `compass.shortcuts.tips-muted` (`STORAGE_KEYS.SHORTCUT_TIPS_MUTED`)
+- `compass.pointer-hint.dismissed-permanently`
+  (`STORAGE_KEYS.POINTER_HINT_DISMISSED_PERMANENTLY`)
 - `compass.billing.trial-card-banner-dismissed-for`
   (`STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR`)
 
@@ -159,10 +163,14 @@ points are the welcome footer link, `?play=1`, and the command palette
 
 ### UX
 
-The sidebar status bar rotates shortcut tips every five minutes. **Hide tips**
-on the tip mutes sidebar tips and palette teaching hints via
-`compass.shortcuts.tips-muted`. The command palette exposes **Hide shortcut
-tips** / **Show shortcut tips**.
+The sidebar status bar rotates shortcut tips every five minutes for most
+levels. **Newcomer** browsers (level 1) re-rank tips every 60 seconds and
+prefer tips that match pointer intents detected this session
+(`rankShortcutHints` + `detectedIntents()`).
+
+**Hide tips** on the tip mutes sidebar tips, palette pills, and pointer-intent
+pills via `compass.shortcuts.tips-muted`. The command palette exposes **Hide
+shortcut tips** / **Show shortcut tips**.
 
 ### Steps
 
@@ -172,14 +180,16 @@ tips** / **Show shortcut tips**.
 3. Click **Hide tips** on the tip (or Tab to it and press Enter).
 4. Open the command palette, run **Create event**, and confirm no **Next time,
    press …** pill appears.
-5. Open the palette and run **Show shortcut tips**.
-6. Run **Create event** again.
+5. Click an event card and confirm no pointer-intent pill appears either.
+6. Open the palette and run **Show shortcut tips**.
+7. Run **Create event** again and click an event card; confirm pills return.
 
 ### Expected Results
 
 - Step 3: the sidebar tip disappears and stays hidden after reload.
-- Step 4: no palette `PointerHint` pill.
-- Step 6: the pill returns after tips are shown again.
+- Steps 4–5: no palette or pointer `PointerHint` pill while muted.
+- Step 7: pills return after tips are shown again.
+- Newcomer cadence and skip keys persist in localStorage only (no server sync).
 
 ---
 

@@ -64,14 +64,14 @@ export const pointerIntentActions = {
     }
 
     const teaching = INTENT_TEACHING[intent];
-    const shortcutKey =
-      teachingKeysForIntent(intent, pointerIntentKeysLookup)[0] ?? [];
+    const keys = teachingKeysForIntent(intent, pointerIntentKeysLookup);
+    const shortcutKey = keys[0] ?? [];
     const message = teachingMessageForIntent(intent, ctx);
 
     pointerHintActions.pulse({
       source: "pointer",
       shortcutKey,
-      ...(message ? { message } : {}),
+      ...(message ? { message, keys } : {}),
     });
     if (intent === "hover-hunt" && !isEventFormOpen()) {
       revealPageJumpChipsBriefly();
