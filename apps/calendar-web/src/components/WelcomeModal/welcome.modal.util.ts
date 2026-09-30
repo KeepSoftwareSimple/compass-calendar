@@ -19,14 +19,21 @@ export function readWelcomeExit(): string | null {
   return persistentBrowserStore.get(STORAGE_KEYS.WELCOME_EXIT);
 }
 
-/** Whether the welcome modal should claim the onboarding surface slot. */
+/**
+ * Whether the welcome modal should claim the onboarding surface slot. A
+ * visitor who arrived for the meeting setup wizard (`/?meetingSetup=1`) came
+ * for a meeting page, not the keyboard pitch: keep the modal out of the way
+ * until that setup ends or hands off to sign-up.
+ */
 export function selectWelcomeModalSurfaceEligible(
   showCalendarOnboarding: boolean,
   authenticated: boolean,
   isFirstVisitOpen: boolean,
+  guestMeetingSetupActive: boolean,
 ): boolean {
   if (!showCalendarOnboarding) return false;
   if (authenticated) return false;
+  if (guestMeetingSetupActive) return false;
   if (hasPlayDeepLink()) return false;
   if (!hasSeenWelcome()) return true;
   // Explore marks welcome seen before the fade finishes; keep the slot until

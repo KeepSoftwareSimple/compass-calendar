@@ -80,7 +80,9 @@ export type ProductEvent =
   | "booking_slot_selected"
   | "booking_details_reached"
   | "booking_submit_attempted"
-  | "booking_submit_failed";
+  | "booking_submit_failed"
+  | "booking_landing_viewed"
+  | "booking_setup_cta_clicked";
 
 export type ProductEventProperties = Record<string, boolean | number | string>;
 

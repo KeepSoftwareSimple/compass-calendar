@@ -282,6 +282,9 @@ describe("PublicBookingPage", () => {
     expect(
       screen.getByText(/may be incorrect or the host stopped taking meetings/),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "See how meeting pages work" }),
+    ).toHaveAttribute("href", "/meet");
     expect(mockTrack).not.toHaveBeenCalledWith(
       "booking_page_viewed",
       expect.anything(),

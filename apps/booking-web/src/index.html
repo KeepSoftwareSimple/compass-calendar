@@ -5,7 +5,42 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f3eee2" />
-    <title>Compass Meeting</title>
+    <title>Compass Calendar</title>
+    <!--
+      One shell serves the /meet landing page and every host /meet/:slug page,
+      so keep this head generic: no canonical and no og:url, or crawlers would
+      read every host page as a duplicate of the landing page. Pages set their
+      own document.title once they know what they are.
+    -->
+    <meta
+      name="description"
+      content="Create a meeting page with Compass Calendar. Share one link and guests book a time that is free on your calendar."
+    />
+    <meta name="robots" content="index, follow" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Compass Calendar" />
+    <meta property="og:title" content="Meeting pages by Compass Calendar" />
+    <meta
+      property="og:description"
+      content="Share one link. Guests pick a time that is free on your calendar."
+    />
+    <meta
+      property="og:image"
+      content="https://www.compasscalendar.com/og-image.png"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Meeting pages by Compass Calendar" />
+    <meta
+      name="twitter:description"
+      content="Share one link. Guests pick a time that is free on your calendar."
+    />
+    <meta
+      name="twitter:image"
+      content="https://www.compasscalendar.com/og-image.png"
+    />
     <script>
       try {
         const html = document.documentElement;

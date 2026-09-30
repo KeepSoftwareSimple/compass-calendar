@@ -1,3 +1,4 @@
+import { trackBookingSetupCtaClicked } from "@booking-web/telemetry/guest-booking-funnel";
 import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
 
 /**
@@ -17,6 +18,7 @@ export function PublicBookingFooter() {
       <a
         className="c-focus-ring inline-flex min-h-11 items-center rounded-md text-text underline"
         href={setupHref}
+        onClick={() => trackBookingSetupCtaClicked("footer")}
       >
         Set up your own meeting page
       </a>

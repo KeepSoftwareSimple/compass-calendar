@@ -1,4 +1,5 @@
 export const ROOT_ROUTES = {
+  LANDING: "/meet",
   BOOK: "/meet/$username",
   BOOK_CANCEL: "/meet/cancel/$reservationId",
   BOOK_RESCHEDULE: "/meet/reschedule/$reservationId",

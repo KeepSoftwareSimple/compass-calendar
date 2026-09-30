@@ -19,6 +19,7 @@ import {
 } from "@booking-web/booking/use-booking-heading-focus";
 import { usePublicBookingFlow } from "@booking-web/booking/use-public-booking-flow";
 import { ROOT_ROUTES } from "@booking-web/common/constants/routes";
+import { MeetLandingLink } from "@booking-web/landing/MeetLandingLink";
 import { useParams } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { track } from "@web/auth/posthog/track";
@@ -76,7 +77,14 @@ export function PublicBookingPage() {
   );
 
   if (pageView.kind === "status") {
-    return <PublicBookingStatusMessage {...pageView} />;
+    return (
+      <PublicBookingStatusMessage
+        title={pageView.title}
+        description={pageView.description}
+      >
+        {pageView.notFound ? <MeetLandingLink /> : null}
+      </PublicBookingStatusMessage>
+    );
   }
 
   const { page } = pageView;

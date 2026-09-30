@@ -52,6 +52,17 @@ describe("filterPosthogBookingTelemetry", () => {
     }
   });
 
+  it("keeps the bare /meet landing pageview and tags it meet_landing", () => {
+    const result = filterPosthogBookingTelemetry(
+      capture("$pageview", {
+        $current_url: "https://compasscalendar.com/meet",
+        $pathname: "/meet",
+      }),
+    );
+    expect(result?.event).toBe("$pageview");
+    expect(result?.properties?.booking_route).toBe("meet_landing");
+  });
+
   it("keeps named booking events and strips guest fields", () => {
     for (const event of [
       "booking_reservation_created",

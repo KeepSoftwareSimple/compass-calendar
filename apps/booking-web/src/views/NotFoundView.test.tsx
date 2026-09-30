@@ -17,6 +17,9 @@ describe("NotFoundView", () => {
     expect(
       screen.getByText("This link does not match a meeting page."),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "See how meeting pages work" }),
+    ).toHaveAttribute("href", "/meet");
     expect(screen.getAllByRole("main")).toHaveLength(1);
     expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
   });

@@ -1,9 +1,9 @@
-# Booking (v1.11)
+# Booking (v1.11 / v1.12)
 
 Manual and automated checks for milestone **Booking v1.11**: guest wizard
 hand-off, reschedule picker behaviour, host notices, guest RSVP notice, grid
 RSVP styling, event-form cancel/reschedule actions, and host delete freeing
-the reservation.
+the reservation. v1.12 adds the bare `/meet` landing page.
 
 ## Scope
 
@@ -160,6 +160,28 @@ bun test:backend packages/backend/src/booking/services/public-booking.service.db
 ```
 
 Pass when that test is green.
+
+---
+
+## Scenario 8: Bare `/meet` is a landing page
+
+### UX
+
+`/meet` and `/meet/` on booking-web render the Meeting landing page with one
+page shell (one `main`, one footer), the tab title "Meeting pages - Compass",
+and a **Set up your meeting page** link to `/?meetingSetup=1`. An unknown
+`/meet/*` path still says "Page not found" with one footer and links to
+`/meet`. Clicking the CTA in a fresh browser profile opens Settings > Meeting
+on the setup wizard; signed in, it opens Settings > Meeting.
+
+### Proof
+
+```bash
+bun test:booking-web
+bunx playwright test e2e/booking/meet-landing.spec.ts
+```
+
+Pass when both are green.
 
 ---
 

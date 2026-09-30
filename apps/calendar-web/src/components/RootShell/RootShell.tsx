@@ -65,6 +65,10 @@ import {
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
+import {
+  selectGuestMeetingSetupActive,
+  useSettingsStore,
+} from "@web/settings/settings.store";
 import { useSettingsSearchEntry } from "@web/settings/useSettingsSearchEntry";
 import { useEventContextMenuShortcut } from "@web/shortcuts/context-menu/useEventContextMenuShortcut";
 import { useGoToDateShortcut } from "@web/shortcuts/go-to-date/useGoToDateShortcut";
@@ -91,6 +95,9 @@ export function RootShell() {
   const isLifeView = isLifePathname(pathname);
   const deferCalendarOnboarding = isLifeView;
   const { authenticated } = useContext(SessionContext);
+  const guestMeetingSetupActive = useSettingsStore(
+    selectGuestMeetingSetupActive,
+  );
   const { auth: authParam } = useSearch({ from: "__root__" });
   const { isOpen: isAuthModalOpen } = useAuthModalState();
   const signupTrialStepActive =
@@ -182,6 +189,7 @@ export function RootShell() {
         showCalendarOnboarding,
         authenticated,
         isWelcomeFirstVisitOpen,
+        guestMeetingSetupActive,
       ),
       shortcutShowcase: selectShortcutShowcaseSurfaceEligible(
         showCalendarOnboarding,
@@ -203,6 +211,7 @@ export function RootShell() {
     isShowcaseActive,
     isWelcomeGuideOpen,
     isWelcomeFirstVisitOpen,
+    guestMeetingSetupActive,
     connectCalendarPromptEligible,
     firstEventPromptEligible,
     isLifeView,

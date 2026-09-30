@@ -8,6 +8,7 @@
  */
 
 const BOOKING_ROUTE_CATEGORIES = [
+  "meet_landing",
   "meet_page",
   "meet_confirmed",
   "meet_cancel",
@@ -128,6 +129,10 @@ export function classifyBookingPath(
   pathname: string,
 ): ClassifiedBookingPath | null {
   const path = pathname.replace(/\/+$/, "") || "/";
+
+  if (path === "/meet") {
+    return { category: "meet_landing", canonicalPath: "/meet" };
+  }
 
   const action = WEB_ACTION.exec(path);
   if (action) {
