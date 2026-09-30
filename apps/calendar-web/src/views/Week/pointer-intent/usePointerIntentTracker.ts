@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
+import { attachHoverHuntTracker } from "@web/views/Week/pointer-intent/hover-hunt-tracker";
 import { type ShortcutKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent";
 import {
   registerPointerIntentKeysLookup,
@@ -22,6 +23,11 @@ export function usePointerIntentTracker({
 
   useEffect(() => {
     if (!enabled) return;
-    return attachPointerIntentTracker();
+    const detachGrid = attachPointerIntentTracker();
+    const detachHoverHunt = attachHoverHuntTracker();
+    return () => {
+      detachGrid();
+      detachHoverHunt();
+    };
   }, [enabled]);
 }

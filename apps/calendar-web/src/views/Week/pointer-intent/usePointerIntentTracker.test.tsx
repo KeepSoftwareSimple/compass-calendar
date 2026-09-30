@@ -8,14 +8,31 @@ import {
   ID_GRID_COLUMNS_TIMED,
   ID_GRID_MAIN,
 } from "@web/common/constants/web.constants";
+import {
+  createGridEventDraft,
+  timedGridSchedule,
+} from "@web/events/grid-event-draft.adapter";
+import {
+  draftActions,
+  initialDraftState,
+  useDraftStore,
+} from "@web/events/stores/draft.store";
 import { POINTER_EVENT_JUMP_REQUEST } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
 import {
   initialPointerHintState,
   usePointerHintStore,
 } from "@web/shortcuts/keyboard-only/pointer-hint.store";
+import {
+  pageJumpHintActions,
+  usePageJumpHintStore,
+} from "@web/shortcuts/page-jump/page-jump.store";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/views/Week/pointer-intent/grid-pointer-target";
-import { registerPointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.actions";
+import { HOVER_HUNT_SAMPLE_MS } from "@web/views/Week/pointer-intent/hover-hunt-tracker";
+import {
+  registerPointerIntentKeysLookup,
+  resetHoverHuntChipTimerForTests,
+} from "@web/views/Week/pointer-intent/pointer-intent.actions";
 import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { usePointerIntentTracker } from "@web/views/Week/pointer-intent/usePointerIntentTracker";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
@@ -32,6 +49,7 @@ const lookup = (id: string) => {
   const keys: Record<string, string[]> = {
     "edit-open": ["Enter"],
     "focus-shift-hold": ["H"],
+    "focus-page-jump": ["Mod", "1-9"],
     "edit-move-later": ["Shift", "ArrowDown"],
     "edit-move-hour-later": ["Alt", "Shift", "ArrowDown"],
     "create-typed-time": ["1130"],
@@ -63,21 +81,65 @@ function mountGridDom() {
   grid.scrollTop = 720;
 }
 
+function mountHoverHuntButtons() {
+  const positions = [
+    { id: "btn-a", left: 10, top: 10 },
+    { id: "btn-b", left: 110, top: 10 },
+    { id: "btn-c", left: 210, top: 10 },
+  ] as const;
+  for (const { id, left, top } of positions) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.id = id;
+    button.textContent = id;
+    button.style.position = "fixed";
+    button.style.left = `${left}px`;
+    button.style.top = `${top}px`;
+    button.style.width = "80px";
+    button.style.height = "32px";
+    document.body.appendChild(button);
+  }
+  return positions;
+}
+
+async function hoverButtons(
+  positions: readonly { id: string; left: number; top: number }[],
+) {
+  for (const { id, left, top } of positions) {
+    const button = document.getElementById(id)!;
+    fireEvent.pointerMove(button, {
+      clientX: left + 40,
+      clientY: top + 16,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+    await new Promise((resolve) =>
+      setTimeout(resolve, HOVER_HUNT_SAMPLE_MS + 10),
+    );
+  }
+}
+
 describe("usePointerIntentTracker", () => {
   beforeEach(() => {
     track.mockClear();
     capture.mockClear();
     resetPointerIntentSessionForTests();
+    resetHoverHuntChipTimerForTests();
     setTipsMuted(false);
     registerPointerIntentKeysLookup(lookup);
     usePointerHintStore.setState(initialPointerHintState, true);
+    pageJumpHintActions.reset();
+    useDraftStore.setState(initialDraftState, true);
     mountGridDom();
   });
 
   afterEach(() => {
     document.body.innerHTML = "";
     resetPointerIntentSessionForTests();
+    resetHoverHuntChipTimerForTests();
     usePointerHintStore.setState(initialPointerHintState, true);
+    pageJumpHintActions.reset();
+    useDraftStore.setState(initialDraftState, true);
   });
 
   it("pulses the card-click hint and requests event jump on pointerup", async () => {
@@ -189,6 +251,77 @@ describe("usePointerIntentTracker", () => {
           (props as { intent?: string }).intent === "grid-scroll",
       ),
     ).toBe(true);
+  });
+
+  it("reveals page-jump hints and pulses the pill after hovering three buttons", async () => {
+    const positions = mountHoverHuntButtons();
+    render(<TrackerHarness />);
+
+    await hoverButtons(positions);
+
+    expect(usePageJumpHintStore.getState().areHintsVisible).toBe(true);
+    expect(usePointerHintStore.getState().pulse).toBe(1);
+    expect(
+      capture.mock.calls.some(
+        ([event, props]) =>
+          event === "pointer_intent_detected" &&
+          (props as { intent?: string }).intent === "hover-hunt",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not emit hover-hunt after only two distinct buttons", async () => {
+    const positions = mountHoverHuntButtons();
+    render(<TrackerHarness />);
+
+    await hoverButtons(positions.slice(0, 2));
+
+    expect(usePageJumpHintStore.getState().areHintsVisible).toBe(false);
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+    expect(
+      capture.mock.calls.some(
+        ([event, props]) =>
+          event === "pointer_intent_detected" &&
+          (props as { intent?: string }).intent === "hover-hunt",
+      ),
+    ).toBe(false);
+  });
+
+  it("cancels hover-hunt when the user clicks inside the window", async () => {
+    const positions = mountHoverHuntButtons();
+    render(<TrackerHarness />);
+
+    await hoverButtons(positions.slice(0, 2));
+    fireEvent.pointerDown(document.getElementById("btn-b")!, {
+      button: 0,
+      clientX: 150,
+      clientY: 26,
+      pointerId: 1,
+      pointerType: "mouse",
+    });
+    await hoverButtons([positions[2]!]);
+
+    expect(usePageJumpHintStore.getState().areHintsVisible).toBe(false);
+    expect(usePointerHintStore.getState().pulse).toBe(0);
+  });
+
+  it("pulses hover-hunt without page-jump chips while the event form is open", async () => {
+    draftActions.startGridDraft({
+      activity: "gridClick",
+      draft: createGridEventDraft(
+        timedGridSchedule(
+          new Date("2026-05-20T10:00:00"),
+          new Date("2026-05-20T11:00:00"),
+        ),
+      ),
+    });
+    const positions = mountHoverHuntButtons();
+    render(<TrackerHarness />);
+
+    await hoverButtons(positions);
+
+    expect(usePageJumpHintStore.getState().areHintsVisible).toBe(false);
+    expect(usePointerHintStore.getState().pulse).toBe(1);
   });
 
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {

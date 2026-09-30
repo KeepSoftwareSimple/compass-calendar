@@ -181,6 +181,11 @@ export const KEYDOWN_LISTENER_ALLOWLIST: ConstraintAllow[] = [
     glob: "apps/calendar-web/src/components/ShortcutShowcase/ShortcutShowcase.tsx",
     reason: "the showcase game simulates the engine in capture phase",
   },
+  {
+    glob: "apps/calendar-web/src/views/Week/pointer-intent/hover-hunt-tracker.ts",
+    reason:
+      "hover-hunt resets its sampling window on any keydown, not a shortcut binding",
+  },
 ];
 
 const REEXPORT_FROM =

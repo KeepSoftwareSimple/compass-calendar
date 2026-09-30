@@ -42,6 +42,7 @@ import { useSidebarCalendarDate } from "@web/views/Week/hooks/useSidebarCalendar
 import { useToday } from "@web/views/Week/hooks/useToday";
 import { useWeek } from "@web/views/Week/hooks/useWeek";
 import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
+import { attachHoverHuntTracker } from "@web/views/Week/pointer-intent/hover-hunt-tracker";
 
 export const WeekView = () => {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
@@ -50,7 +51,14 @@ export const WeekView = () => {
   // untouched and the panel collapses again when the form closes.
   const isEventDetailsOpen = useDraftStore(selectIsEventFormOpen);
   useSidebarShortcuts();
-  useEffect(() => attachPointerIntentTracker(), []);
+  useEffect(() => {
+    const detachGrid = attachPointerIntentTracker();
+    const detachHoverHunt = attachHoverHuntTracker();
+    return () => {
+      detachGrid();
+      detachHoverHunt();
+    };
+  }, []);
   const { today } = useToday();
 
   const { trackRef, visibleDayCount } = useVisibleDayCount();

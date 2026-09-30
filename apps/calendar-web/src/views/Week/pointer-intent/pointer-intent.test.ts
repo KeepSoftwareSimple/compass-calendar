@@ -74,6 +74,22 @@ describe("shouldTeachPointerIntent", () => {
     ).toBe(false);
   });
 
+  it("refuses hover-hunt once focus-page-jump has an invocation", () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "focus-page-jump": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    expect(
+      shouldTeachPointerIntent({
+        intent: "hover-hunt",
+        session: getPointerIntentSessionSnapshot(),
+      }),
+    ).toBe(false);
+  });
+
   it("refuses teaching when tips are muted", () => {
     setTipsMuted(true);
     expect(
@@ -110,5 +126,10 @@ describe("teachingMessageForIntent", () => {
         timeLabel: "11:30 AM",
       }),
     ).toBe("Type 1130 to create at 11:30 AM, or press {1}.");
+  });
+
+  it("names the platform mod key for hover-hunt", () => {
+    const message = teachingMessageForIntent("hover-hunt");
+    expect(message).toMatch(/^Hold (Cmd|Ctrl) to see where you can jump\.$/);
   });
 });
