@@ -2,6 +2,8 @@ import { useLocation, useParams, useRouter } from "@tanstack/react-router";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { AuthApi } from "@web/api/auth.api";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
+import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
+import { shouldRelayDesktopOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -20,6 +22,7 @@ import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
+import { isDesktop } from "@web/desktop/isDesktop";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -80,8 +83,18 @@ export function ProviderAuthCallbackView() {
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
+  const searchParams = new URLSearchParams(location.searchStr);
+  const oauthState = searchParams.get("state");
+  const shouldRelay =
+    providerParam &&
+    isSignInProviderKind(providerParam) &&
+    shouldRelayDesktopOAuthCallback(oauthState, isDesktop());
 
   useOneShotAuthCallback(() => {
+    if (shouldRelay) {
+      return;
+    }
+
     if (!providerParam || !isSignInProviderKind(providerParam)) {
       showErrorToast("We couldn't finish signing you in. Please try again.");
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
@@ -105,6 +118,15 @@ export function ProviderAuthCallbackView() {
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
   });
+
+  if (shouldRelay && providerParam && isSignInProviderKind(providerParam)) {
+    return (
+      <DesktopOAuthCallbackRelay
+        provider={providerParam}
+        search={location.searchStr}
+      />
+    );
+  }
 
   return <AuthCallbackOverlay />;
 }

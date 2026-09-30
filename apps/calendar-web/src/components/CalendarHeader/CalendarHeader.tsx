@@ -1,8 +1,14 @@
+import classNames from "classnames";
 import { type FC } from "react";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { SelectView } from "@web/components/SelectView/SelectView";
 import { SidebarToggleButton } from "@web/components/Sidebar/SidebarToggleButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
+import {
+  DESKTOP_TITLE_BAR_DRAG_CLASS,
+  DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
+} from "@web/desktop/desktop-title-bar.util";
+import { isDesktop } from "@web/desktop/isDesktop";
 
 interface Props {
   /** Left-aligned heading text (e.g. "June 2026" or "Wednesday, July 1"). */
@@ -34,12 +40,24 @@ export const CalendarHeader: FC<Props> = ({
   nextLabel = "Next",
   showNavigation = true,
 }) => {
+  const desktopChrome = isDesktop();
+
   return (
-    <div className="flex h-12 w-full shrink-0 items-center gap-3 text-text-muted">
+    <div
+      className={classNames(
+        "flex h-12 w-full shrink-0 items-center gap-3 text-text-muted",
+        desktopChrome && DESKTOP_TITLE_BAR_DRAG_CLASS,
+      )}
+    >
       {/* min-w-0 lets the title cluster shrink so the sidebar toggle stays in
           layout. Avoid overflow-hidden here — SelectView's menu is absolutely
           positioned inside this cluster and must paint below the header. */}
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div
+        className={classNames(
+          "flex min-w-0 flex-1 items-center gap-3",
+          desktopChrome && DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
+        )}
+      >
         {showNavigation && onPrev && onNext && (
           <div className="flex items-center gap-3">
             <TooltipWrapper
@@ -69,7 +87,12 @@ export const CalendarHeader: FC<Props> = ({
         <SelectView label={label} onToday={onToday} />
       </div>
 
-      <div className="z-2 flex shrink-0 items-center pr-5">
+      <div
+        className={classNames(
+          "z-2 flex shrink-0 items-center pr-5",
+          desktopChrome && DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
+        )}
+      >
         <SidebarToggleButton />
       </div>
     </div>

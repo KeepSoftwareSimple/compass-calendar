@@ -25,6 +25,11 @@ mock.module("./provider-authorization.config", () => ({
   getMicrosoftSignInClientId: () => mockGetMicrosoftSignInClientId(),
 }));
 
+const mockIsDesktop = mock(() => false);
+mock.module("@web/desktop/isDesktop", () => ({
+  isDesktop: () => mockIsDesktop(),
+}));
+
 const { useStartProviderAuthorizationImpl } =
   require("./useStartProviderAuthorization.impl") as typeof import("./useStartProviderAuthorization.impl");
 
@@ -35,6 +40,8 @@ describe("useStartProviderAuthorizationImpl", () => {
     mockTrack.mockClear();
     mockAssignAuthorizationRedirect.mockClear();
     mockGetMicrosoftSignInClientId.mockClear();
+    mockIsDesktop.mockClear();
+    mockIsDesktop.mockReturnValue(false);
     mockGetMicrosoftSignInClientId.mockReturnValue("microsoft-client-id");
   });
 
@@ -96,5 +103,22 @@ describe("useStartProviderAuthorizationImpl", () => {
         intent: "signIn",
       }),
     );
+  });
+
+  it("prefixes OAuth state when running inside the desktop shell", () => {
+    mockIsDesktop.mockReturnValue(true);
+    const { result } = renderHook(() =>
+      useStartProviderAuthorizationImpl("google", { intent: "signIn" }),
+    );
+
+    act(() => {
+      result.current.startAuthorization();
+    });
+
+    const intents = Object.keys(sessionStorage).filter((key) =>
+      key.includes("googleAuthorizationIntent"),
+    );
+    const state = intents[0]?.split(".").at(-1);
+    expect(state).toMatch(/^compass-desktop:/);
   });
 });

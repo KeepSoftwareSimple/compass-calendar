@@ -7,6 +7,7 @@ import WebKit
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
     private let appURL: URL
     private var webView: WKWebView!
+    private let bridgeHandler = CompassBridgeHandler()
 
     init(appURL: URL) {
         self.appURL = appURL
@@ -20,8 +21,27 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     override func loadView() {
         let configuration = WKWebViewConfiguration()
-        // Persistent cookies, IndexedDB, and localStorage across restarts.
         configuration.websiteDataStore = .default()
+
+        let contentController = WKUserContentController()
+        contentController.add(bridgeHandler, name: "compass")
+
+        let origin = appURL.originString
+        let bridgeSource = BridgeScript.userScriptSource(appOrigin: origin)
+        contentController.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+        // At document start `location.origin` can still be empty on the first
+        // navigation; document end matches the configured app origin reliably.
+        contentController.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true))
+        configuration.userContentController = contentController
+
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -36,6 +56,27 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         webView.load(URLRequest(url: appURL))
+    }
+
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        publishBridgeVersionFromPage(webView: webView, attempt: 0)
+    }
+
+    private func publishBridgeVersionFromPage(webView: WKWebView, attempt: Int) {
+        webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
+            [weak self] result, _ in
+            Task { @MainActor in
+                if let version = result as? String, !version.isEmpty {
+                    CompassBridgeAccessibility.publishBridgeVersion(
+                        version,
+                        on: self?.view.window)
+                    return
+                }
+                guard attempt < 8 else { return }
+                try? await Task.sleep(for: .seconds(2))
+                self?.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
+            }
+        }
     }
 
     func webView(
@@ -67,5 +108,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
             NSWorkspace.shared.open(url)
         }
         return nil
+    }
+}
+
+private extension URL {
+    var originString: String {
+        guard let host else { return "" }
+        if let port {
+            return "\(scheme ?? "https")://\(host):\(port)"
+        }
+        return "\(scheme ?? "https")://\(host)"
     }
 }
