@@ -33,7 +33,11 @@ export const SaveSection: React.FC<Props> = ({
         </TooltipWrapper>
       )}
 
-      <TooltipWrapper shortcut={["Mod", "Enter"]}>
+      <TooltipWrapper
+        description={saveText}
+        shortcut={["Mod", "Enter"]}
+        shortcutId="edit-save"
+      >
         <SaveButton
           aria-keyshortcuts="Meta+Enter"
           minWidth={110}

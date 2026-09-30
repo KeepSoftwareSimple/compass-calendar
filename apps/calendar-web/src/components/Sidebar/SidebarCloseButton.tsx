@@ -37,6 +37,7 @@ export const SidebarCloseButton: FC = () => {
         focusSidebarControl(SIDEBAR_TOGGLE_CONTROL);
       }}
       shortcut="]"
+      shortcutId="other-sidebar"
     >
       <button
         type="button"

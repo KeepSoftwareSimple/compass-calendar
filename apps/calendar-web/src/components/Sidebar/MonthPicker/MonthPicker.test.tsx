@@ -526,7 +526,7 @@ describe("MonthPicker", () => {
     await user.hover(todayButton);
 
     const tooltip = await screen.findByRole("tooltip");
-    expect(tooltip).toHaveTextContent(dayjs().format("MMM YYYY"));
+    expect(tooltip).toHaveTextContent("Go to this month");
     expect(tooltip).toHaveTextContent("T");
   });
 });

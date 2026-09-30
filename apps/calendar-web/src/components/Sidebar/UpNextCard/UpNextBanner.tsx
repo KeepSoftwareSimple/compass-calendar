@@ -99,17 +99,23 @@ export const UpNextBanner: FC = () => {
           <span className="truncate font-medium">{upNext.title}</span>
         </div>
       </div>
-      <button
-        className="c-focus-ring flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
-        onClick={
-          conferenceUrl ? openConference : () => openEventDetails("gridClick")
-        }
-        type="button"
+      <TooltipWrapper
+        description={conferenceUrl ? "Join meeting" : "Open Up Next event"}
+        shortcut={conferenceUrl ? "V" : "N"}
+        shortcutId={conferenceUrl ? "nav-join-meeting" : "nav-up-next"}
       >
-        {conferenceUrl ? "Join" : "Open"}
-        <ShortcutHint>{conferenceUrl ? "V" : "N"}</ShortcutHint>
-      </button>
-      <TooltipWrapper shortcut="Esc">
+        <button
+          className="c-focus-ring flex shrink-0 items-center gap-1.5 rounded bg-accent-secondary px-2 py-1 font-medium text-on-accent"
+          onClick={
+            conferenceUrl ? openConference : () => openEventDetails("gridClick")
+          }
+          type="button"
+        >
+          {conferenceUrl ? "Join" : "Open"}
+          <ShortcutHint>{conferenceUrl ? "V" : "N"}</ShortcutHint>
+        </button>
+      </TooltipWrapper>
+      <TooltipWrapper description="Dismiss banner" shortcut="Esc">
         <button
           aria-label="Dismiss"
           className="c-focus-ring shrink-0 rounded-xs px-1 text-text-muted hover:text-text"

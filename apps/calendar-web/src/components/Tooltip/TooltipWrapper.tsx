@@ -1,5 +1,5 @@
 import type React from "react";
-import { type ReactNode } from "react";
+import { type MouseEvent, type ReactNode } from "react";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import {
   Tooltip,
@@ -7,32 +7,62 @@ import {
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
 import { type TooltipOptions } from "@web/components/Tooltip/tooltip.types";
+import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
+import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 import { ShortcutHint } from "../Shortcuts/ShortcutHint";
 import { TooltipDescription } from "./Description/TooltipDescription";
 
-export interface Props {
+type TooltipWrapperBaseProps = {
   children: ReactNode;
-  description?: string;
   disabled?: boolean;
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
   placement?: TooltipOptions["placement"];
-  /** One key (`"?"`) or a combo as a key array (`["Mod", "K"]`); a custom node is rendered as-is. */
-  shortcut?: string | string[] | ReactNode;
-}
+  shortcutId?: ShortcutRegistryId;
+};
 
-export const TooltipWrapper: React.FC<Props> = ({
-  children,
-  description,
-  disabled = false,
-  onClick,
-  placement,
-  shortcut,
-}) => {
+type TooltipWrapperWithoutShortcut = TooltipWrapperBaseProps & {
+  shortcut?: undefined;
+  description?: string;
+};
+
+type TooltipWrapperWithShortcut = TooltipWrapperBaseProps & {
+  /** One key (`"?"`) or a combo as a key array (`["Mod", "K"]`); a custom node is rendered as-is. */
+  shortcut: string | string[] | ReactNode;
+  description: string;
+};
+
+export type Props = TooltipWrapperWithoutShortcut | TooltipWrapperWithShortcut;
+
+export const TooltipWrapper: React.FC<Props> = (props) => {
+  const {
+    children,
+    description,
+    disabled = false,
+    onClick,
+    placement,
+    shortcut,
+    shortcutId,
+  } = props;
+
+  const handleTriggerClick = (event: MouseEvent<HTMLElement>) => {
+    if (
+      !disabled &&
+      shortcutId &&
+      event.detail > 0 &&
+      event.nativeEvent instanceof MouseEvent
+    ) {
+      pulseClickTaughtShortcut(shortcutId);
+    }
+    if (!disabled) {
+      onClick?.(event);
+    }
+  };
+
   return (
     <Tooltip placement={placement}>
       <TooltipTrigger
         aria-disabled={disabled || undefined}
-        onClick={disabled ? undefined : onClick}
+        onClick={disabled ? undefined : handleTriggerClick}
       >
         {children}
       </TooltipTrigger>

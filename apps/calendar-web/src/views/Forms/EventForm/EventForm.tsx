@@ -65,6 +65,7 @@ import { BUSY_EVENT_TITLE } from "@web/events/queries/event.view-model";
 import { useEventById } from "@web/events/queries/useEventById";
 import { FormDigitHintOverlay } from "@web/shortcuts/form-digit-jump/FormDigitHintOverlay";
 import { useFormDigitJumpShortcut } from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
+import { usePointerFormFieldDigitTeach } from "@web/shortcuts/form-digit-jump/usePointerFormFieldDigitTeach";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
 import { KEYMAP } from "@web/shortcuts/keymap";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
@@ -733,6 +734,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
       });
 
     const { areHintsVisible } = useFormDigitJumpShortcut();
+    const { digitFlashField, onFormFocusIn, onFormPointerDown } =
+      usePointerFormFieldDigitTeach();
 
     const titleErrorField = fieldErrors?.["content.title"]
       ? "content.title"
@@ -795,6 +798,8 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           onMouseDown={(e) => {
             e.stopPropagation();
           }}
+          onPointerDown={onFormPointerDown}
+          onFocusCapture={onFormFocusIn}
         >
           {/* Scrollable body; the save footer below stays pinned. */}
           <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-1 pb-4 [scrollbar-gutter:stable]">
@@ -1061,7 +1066,10 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
           onCancel={onCancelConfirm}
           onDiscard={onDiscardConfirm}
         />
-        <FormDigitHintOverlay visible={areHintsVisible} />
+        <FormDigitHintOverlay
+          highlightField={digitFlashField}
+          visible={areHintsVisible}
+        />
       </>
     );
   },
