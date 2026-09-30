@@ -90,6 +90,32 @@ describe("shouldTeachPointerIntent", () => {
     expect(detectedIntents()).toEqual(["swipe-next"]);
   });
 
+  it("refuses teaching once the browser reaches Explorer", () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 1, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    const session = getPointerIntentSessionSnapshot();
+    expect(
+      shouldTeachPointerIntent({
+        intent: "card-click",
+        session,
+      }),
+    ).toBe(false);
+    expect(
+      shouldTeachPointerIntent({
+        intent: "hover-hunt",
+        session,
+      }),
+    ).toBe(false);
+  });
+
   it("refuses teaching while the app lock is held", () => {
     setAppLockReason("test:lock", true);
     expect(

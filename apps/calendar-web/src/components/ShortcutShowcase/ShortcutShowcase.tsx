@@ -150,7 +150,7 @@ const ShowcaseTakeover: FC = () => {
   };
 
   const graduate = () => {
-    shortcutShowcaseActions.markSeen();
+    shortcutShowcaseActions.markSeen("finished");
     beginDismiss(() => shortcutShowcaseActions.finish());
   };
 
@@ -162,7 +162,7 @@ const ShowcaseTakeover: FC = () => {
 
   /** From the end screen the run already finished; this is a handoff, not a skip. */
   const signUpFromEndScreen = () => {
-    shortcutShowcaseActions.markSeen();
+    shortcutShowcaseActions.markSeen("finished");
     shortcutShowcaseActions.finish();
     void trackSignupStartedAtClick("shortcut_showcase");
     openModal("signUp");

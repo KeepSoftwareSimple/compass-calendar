@@ -1,10 +1,12 @@
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
 import {
   getShortcutHint,
+  HINTS_FOR_POINTER_INTENT,
   type RankedShortcutHint,
   type ShortcutHintId,
   type ShortcutSuggestionReason,
 } from "@web/shortcuts/tips/shortcut-tips.data";
+import { detectedIntents } from "@web/views/Week/pointer-intent/pointer-intent.session";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const SHORTCUT_FATIGUE_COOLDOWN_MS = 6 * 60 * 60 * 1000;
@@ -13,6 +15,8 @@ export const SHORTCUT_FATIGUE_IMPRESSIONS = 2;
  * taught, so the bar spends its one line on something the user has not
  * adopted yet. */
 export const SHORTCUT_MASTERED_INVOCATIONS = 5;
+/** Beats untried and fatigue signals when the user showed this intent. */
+export const SHORTCUT_INTENT_RANK_BOOST = 96;
 
 type RankedCandidate = {
   fatigued: boolean;
@@ -36,11 +40,24 @@ function deterministicFallbackOrder(
   return [...pool.slice(start), ...pool.slice(0, start)];
 }
 
+function intentBoostedHintIds(): ReadonlySet<ShortcutHintId> {
+  const boosted = new Set<ShortcutHintId>();
+  for (const intent of detectedIntents()) {
+    const hints = HINTS_FOR_POINTER_INTENT[intent];
+    if (!hints) continue;
+    for (const hintId of hints) {
+      boosted.add(hintId);
+    }
+  }
+  return boosted;
+}
+
 function scoreCandidate(
   id: ShortcutHintId,
   demonstratedIds: readonly ShortcutHintId[],
   profile: ShortcutUsageProfile,
   now: number,
+  intentBoosted: ReadonlySet<ShortcutHintId>,
 ): RankedCandidate {
   const hint = getShortcutHint(id);
   const usage = profile.actions[hint.actionId];
@@ -63,6 +80,7 @@ function scoreCandidate(
   else if (lastInvokedAge !== null && lastInvokedAge < 7 * DAY_MS) score -= 12;
   else if (lastInvokedAge !== null && lastInvokedAge > 30 * DAY_MS) score += 12;
   if (fatigued) score -= 64;
+  if (intentBoosted.has(id)) score += SHORTCUT_INTENT_RANK_BOOST;
 
   return { fatigued, id, score, untried };
 }
@@ -100,8 +118,9 @@ export function rankShortcutHints(
     unmastered.length > 0 ? unmastered : pool,
     demonstratedIds,
   );
+  const intentBoosted = intentBoostedHintIds();
   const candidates = fallbackOrder.map((id) =>
-    scoreCandidate(id, demonstratedIds, profile, now),
+    scoreCandidate(id, demonstratedIds, profile, now, intentBoosted),
   );
   const fallback = candidates[0];
   if (!fallback) {

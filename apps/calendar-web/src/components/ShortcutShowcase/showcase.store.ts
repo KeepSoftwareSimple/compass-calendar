@@ -6,6 +6,7 @@ import {
   hasShowcaseInProgress,
   markShortcutShowcaseSeen,
   markShowcaseInProgress,
+  type ShortcutShowcaseOutcome,
 } from "@web/components/ShortcutShowcase/showcase.storage";
 
 /** How the practice arena was opened, so the activation funnel can tell them apart. */
@@ -43,15 +44,15 @@ export const useShortcutShowcaseStore = create<ShortcutShowcaseState>()(() => ({
 }));
 
 /** Persist the seen flag and wake everyone reading it. */
-const markSeen = () => {
-  markShortcutShowcaseSeen();
+const markSeen = (outcome: ShortcutShowcaseOutcome) => {
+  markShortcutShowcaseSeen(outcome);
   clearShowcaseProgress();
   useShortcutShowcaseStore.setState({ hasSeenShowcase: true });
 };
 
 /** Shared by finish/skip: mark seen so it never auto-launches again. */
-const endShowcase = () => {
-  markSeen();
+const endShowcase = (outcome: ShortcutShowcaseOutcome) => {
+  markSeen(outcome);
   useShortcutShowcaseStore.setState({
     isActive: false,
     skipPending: false,
@@ -101,7 +102,7 @@ export const shortcutShowcaseActions = {
   },
   /** Leaving from the end screen: the finished event already fired. */
   finish: () => {
-    endShowcase();
+    endShowcase("finished");
   },
   /**
    * Arm, then confirm, a calendar leave. Skip and Esc call this so a stray
@@ -135,7 +136,7 @@ export const shortcutShowcaseActions = {
     const { isActive } = useShortcutShowcaseStore.getState();
     if (!isActive) return;
     track("shortcut_showcase_skipped", { ...context, exit });
-    endShowcase();
+    endShowcase("skipped");
   },
 };
 

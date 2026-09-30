@@ -159,25 +159,27 @@ describe("selectShortcutHint", () => {
       hintFor(afterFirstEvent, ["page-jump", "event-jump", "command-palette"])
         .id,
     ).toBe("create-event");
+    expect(
+      hintFor(afterFirstEvent, [
+        "page-jump",
+        "event-jump",
+        "command-palette",
+        "create-event",
+      ]).id,
+    ).toBe("grid-scroll");
   });
 
   it("rotates the idle pool after every primitive has been demonstrated", () => {
-    expect(
-      hintFor(afterFirstEvent, [
-        "event-jump",
-        "command-palette",
-        "create-event",
-        "page-jump",
-      ]).id,
-    ).toBe("event-jump");
-    expect(
-      hintFor(afterFirstEvent, [
-        "page-jump",
-        "event-jump",
-        "command-palette",
-        "create-event",
-      ]).id,
-    ).toBe("page-jump");
+    const fullCycle = [
+      "page-jump",
+      "event-jump",
+      "command-palette",
+      "create-event",
+      "grid-scroll",
+      "week-nav",
+    ] as const;
+    expect(hintFor(afterFirstEvent, fullCycle.slice(1)).id).toBe("page-jump");
+    expect(hintFor(afterFirstEvent, fullCycle).id).toBe("page-jump");
   });
 
   it("teaches nudge after the edit sequence once an event is focused", () => {

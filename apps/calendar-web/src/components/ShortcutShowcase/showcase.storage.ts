@@ -4,14 +4,28 @@ import { persistentBrowserStore } from "@web/common/storage/browser-key-value.st
 const isStoredTrue = (key: string) =>
   persistentBrowserStore.get(key) === "true";
 
+export type ShortcutShowcaseOutcome = "finished" | "skipped";
+
 export function hasSeenShortcutShowcase(): boolean {
   // Fail closed: never auto-launch a takeover when storage is unavailable.
   if (!persistentBrowserStore.isAvailable()) return true;
   return isStoredTrue(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE);
 }
 
-export function markShortcutShowcaseSeen(): void {
+export function markShortcutShowcaseSeen(
+  outcome: ShortcutShowcaseOutcome,
+): void {
   persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "true");
+  persistentBrowserStore.set(STORAGE_KEYS.SHORTCUT_SHOWCASE_OUTCOME, outcome);
+}
+
+export function readShortcutShowcaseOutcome(): ShortcutShowcaseOutcome | null {
+  if (!persistentBrowserStore.isAvailable()) return null;
+  const stored = persistentBrowserStore.get(
+    STORAGE_KEYS.SHORTCUT_SHOWCASE_OUTCOME,
+  );
+  if (stored === "finished" || stored === "skipped") return stored;
+  return null;
 }
 
 /**

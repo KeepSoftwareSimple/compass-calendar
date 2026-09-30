@@ -7,8 +7,16 @@ export function hasSeenWelcome(): boolean {
   return persistentBrowserStore.get(STORAGE_KEYS.HAS_SEEN_WELCOME) === "true";
 }
 
-export function markWelcomeSeen(): void {
+export function markWelcomeSeen(exitCta?: string): void {
   persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_WELCOME, "true");
+  if (exitCta) {
+    persistentBrowserStore.set(STORAGE_KEYS.WELCOME_EXIT, exitCta);
+  }
+}
+
+export function readWelcomeExit(): string | null {
+  if (!persistentBrowserStore.isAvailable()) return null;
+  return persistentBrowserStore.get(STORAGE_KEYS.WELCOME_EXIT);
 }
 
 /** Whether the welcome modal should claim the onboarding surface slot. */

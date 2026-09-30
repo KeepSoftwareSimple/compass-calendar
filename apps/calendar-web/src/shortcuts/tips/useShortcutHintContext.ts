@@ -11,6 +11,7 @@ import {
   selectIsEventFormOpen,
   useDraftStore,
 } from "@web/events/stores/draft.store";
+import { readBrowserShortcutLevel } from "@web/shortcuts/level/read-browser-shortcut-level";
 import {
   selectJumpableDayPrefixes,
   useEventJumpStore,
@@ -25,6 +26,7 @@ import { useIsAnyCalendarEventFocused } from "@web/shortcuts/tips/useIsAnyCalend
  * Impressions are only recorded when the rendered tip changes, so without a
  * tick one tip can hold the bar for a whole session and never fatigue. */
 export const SHORTCUT_HINT_ROTATION_MS = 5 * 60 * 1000;
+export const SHORTCUT_HINT_NEWCOMER_ROTATION_MS = 60 * 1000;
 
 /**
  * Reads onboarding + current-doing stores and returns the sidebar's next
@@ -48,10 +50,14 @@ export function useShortcutHintContext() {
 
   useEffect(() => {
     const tick = () => setNow(Date.now());
+    const rotationMs =
+      readBrowserShortcutLevel(readShortcutUsageProfile()) <= 1
+        ? SHORTCUT_HINT_NEWCOMER_ROTATION_MS
+        : SHORTCUT_HINT_ROTATION_MS;
     const interval = setInterval(() => {
       if (document.hidden) return;
       tick();
-    }, SHORTCUT_HINT_ROTATION_MS);
+    }, rotationMs);
     const onVisibility = () => {
       if (!document.hidden) tick();
     };
