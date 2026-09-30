@@ -22,7 +22,6 @@ import {
   resetBillingGateAttentionForTests,
   setBillingGateOwnsScreen,
 } from "@web/billing/billing-gate-attention";
-import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import {
   resetGuestRsvpNoticeForTests,
   useGuestRsvpNotice,
@@ -312,7 +311,7 @@ describe("useGuestRsvpNotice", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
 
     act(() => {
-      billingPreviewActions.enter();
+      setBillingGateOwnsScreen(false);
     });
 
     await expectToastCopy("Bob accepted: Thu, Sep 24, 12:00 PM");

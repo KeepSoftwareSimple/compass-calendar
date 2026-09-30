@@ -73,19 +73,15 @@ const promptCopy = (input: ShortcutUpgradePromptInput): ShortcutUpgradeCopy => {
 };
 
 /**
- * Replaces the full-screen billing gate for a locked write shortcut: step
- * into look-around if the gate currently owns the screen, then show a
- * focused upgrade toast that stays on the calendar.
+ * Shows a focused upgrade toast when a write shortcut is blocked by billing.
+ * While the full-screen gate is up, the gate already owns the ask.
  */
 export function promptShortcutUpgrade(
   input: ShortcutUpgradePromptInput,
   now = Date.now(),
 ): void {
   if (!isBillingWriteLocked()) return;
-
-  if (hasAppLockReason("billingGate")) {
-    enterBillingLookAround();
-  }
+  if (hasAppLockReason("billingGate")) return;
 
   const copy = promptCopy(input);
   const presentationKey = `${input.featureArea}:${input.actionId ?? ""}:${input.source}`;
@@ -116,17 +112,8 @@ export function promptShortcutUpgrade(
 /**
  * Lazy so this module can sit on the `useAppShortcut` hot path without a
  * boot-time cycle through toast CTAs (`ToastActionButton` →
- * `useNoticeActionShortcut` → `useAppShortcut`) or Google availability
- * (`billing-preview.store` → delayed/reconnect toasts → `AppConfigApi`).
+ * `useNoticeActionShortcut` → `useAppShortcut`).
  */
-function enterBillingLookAround(): void {
-  void importOrReload(() => import("@web/billing/billing-preview.store")).then(
-    ({ billingPreviewActions }) => {
-      billingPreviewActions.enter();
-    },
-  );
-}
-
 function showUpgradeToast(
   copy: ShortcutUpgradeCopy,
   checkoutSource: CheckoutPanelSource,

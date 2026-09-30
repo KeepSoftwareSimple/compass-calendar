@@ -56,7 +56,6 @@ test("hides welcome, practice, and first-event prompts while the billing gate is
           subscriptionStatus: "awaiting_checkout",
           trialEndsAt: null,
           isReadOnly: true,
-          needsPaymentMethod: false,
         }),
       );
     }

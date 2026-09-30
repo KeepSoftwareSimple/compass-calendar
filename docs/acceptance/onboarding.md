@@ -17,7 +17,6 @@ Use this guide to validate:
 - the welcome flow with the mouse (every control responds to clicks)
 - opt-in Block Party practice (`?play=1`, command palette, welcome footer)
 - sidebar tip mute and five-minute rotation
-- trial card banner dismissal persisting for the current trial end date
 - palette **Next time, press …** teaching (see [Shortcuts scenario 25](./shortcuts.md#scenario-25-the-palette-teaches-its-shortcuts))
 
 The sidebar tip and the `?` legend are not onboarding cards and may appear
@@ -44,8 +43,6 @@ Helpful storage keys:
 - `compass.shortcuts.tips-muted` (`STORAGE_KEYS.SHORTCUT_TIPS_MUTED`)
 - `compass.pointer-hint.dismissed-permanently`
   (`STORAGE_KEYS.POINTER_HINT_DISMISSED_PERMANENTLY`)
-- `compass.billing.trial-card-banner-dismissed-for`
-  (`STORAGE_KEYS.TRIAL_CARD_BANNER_DISMISSED_FOR`)
 
 Automated coverage: `e2e/onboarding/welcome-mouse.spec.ts`,
 `e2e/onboarding/shortcut-showcase.spec.ts`,
@@ -201,8 +198,7 @@ On hosted billing, email or OAuth signup finishes with a read-only account in
 `awaiting_checkout`, then the auth modal shows the **Start your 7-day free
 trial** step: charge-date copy and embedded Checkout (`trial_period_days: 7`).
 Closing the step without paying opens **Finish starting your trial**
-(`BillingGateModal`) with **Add card** and **Look around first**. Completing
-Checkout runs anonymous event migration once billing becomes writable.
+(`BillingGateModal`) with **Add card**. Completing Checkout runs anonymous event migration once billing becomes writable.
 
 ### Steps
 
@@ -220,8 +216,7 @@ Checkout runs anonymous event migration once billing becomes writable.
 
 - Step 2: only the trial step auth dialog is a full-screen lock; calendar
   onboarding cards stay hidden.
-- Step 4: gate copy matches **Finish starting your trial**; **Look around
-  first** returns to read-only calendar preview.
+- Step 4: gate copy matches **Finish starting your trial**.
 - Step 5: status becomes `trialing` with a Stripe subscription id; anonymous
   IndexedDB events migrate once (see `complete-checkout-session.ts`).
 - Covered by `e2e/billing/signup-trial-step.spec.ts` for steps 1 to 4.

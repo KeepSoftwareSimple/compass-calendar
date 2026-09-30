@@ -6,15 +6,9 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import { userMetadataActions } from "@web/auth/state/user-metadata.store";
 import {
-  isBillingGateOwningScreen,
   resetBillingGateAttentionForTests,
   setBillingGateOwnsScreen,
 } from "@web/billing/billing-gate-attention";
-import {
-  billingPreviewActions,
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
 import {
   checkoutCelebrationActions,
   initialCheckoutCelebrationState,
@@ -190,14 +184,12 @@ describe("showGoogleReconnectToast", () => {
     registerToastPort(port);
     resetGoogleReconnectToastStateForTests();
     resetBillingGateAttentionForTests();
-    useBillingPreviewStore.setState(initialBillingPreviewState);
     useCheckoutCelebrationStore.setState(initialCheckoutCelebrationState);
   });
 
   afterEach(() => {
     resetGoogleReconnectToastStateForTests();
     resetBillingGateAttentionForTests();
-    useBillingPreviewStore.setState(initialBillingPreviewState);
     useCheckoutCelebrationStore.setState(initialCheckoutCelebrationState);
   });
 
@@ -224,20 +216,6 @@ describe("showGoogleReconnectToast", () => {
     showGoogleReconnectToast({ accountEmail: "lance@example.com" });
 
     expect(mocks.error).not.toHaveBeenCalled();
-  });
-
-  it("shows the deferred toast after Look around first", () => {
-    setBillingGateOwnsScreen(true);
-    showGoogleReconnectToast({
-      accountEmail: "lance@example.com",
-      connectionId: "conn-1",
-    });
-    expect(mocks.error).not.toHaveBeenCalled();
-
-    billingPreviewActions.enter();
-
-    expect(mocks.error).toHaveBeenCalledTimes(1);
-    expect(isBillingGateOwningScreen()).toBe(false);
   });
 
   it("does not show during checkout celebration", () => {

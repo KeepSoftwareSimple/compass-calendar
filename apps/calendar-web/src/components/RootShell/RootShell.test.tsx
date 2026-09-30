@@ -9,11 +9,6 @@ import { SessionContext } from "@web/auth/compass/session/session.context";
 import { billingQueryKeys } from "@web/billing/billing.query";
 import { resetBillingGateAttentionForTests } from "@web/billing/billing-gate-attention";
 import {
-  billingPreviewActions,
-  initialBillingPreviewState,
-  useBillingPreviewStore,
-} from "@web/billing/billing-preview.store";
-import {
   checkoutCelebrationActions,
   initialCheckoutCelebrationState,
   useCheckoutCelebrationStore,
@@ -101,7 +96,6 @@ const awaitingCheckout: AppAccess = {
 describe("RootShell billing gates", () => {
   afterEach(() => {
     access = { kind: "open" };
-    useBillingPreviewStore.setState(initialBillingPreviewState);
     useCheckoutCelebrationStore.setState(initialCheckoutCelebrationState);
     useCheckoutPanelStore.setState(initialCheckoutPanelState, true);
     useSettingsStore.setState({
@@ -133,71 +127,6 @@ describe("RootShell billing gates", () => {
     expect(
       screen.queryByRole("button", { name: /Log out/ }),
     ).not.toBeInTheDocument();
-  });
-
-  it("swaps the gate for the read-only banner after Look around first", async () => {
-    access = awaitingCheckout;
-    await renderShell();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /Look around first/ }),
-    );
-
-    expect(
-      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
-    ).not.toBeInTheDocument();
-    // The click also pulses the keyboard hint (another status), so find the
-    // banner by its copy rather than by role alone.
-    expect(
-      screen
-        .getByText("You're looking around in read-only mode.")
-        .closest("[role='status']"),
-    ).not.toBeNull();
-  });
-
-  it("does not honor the look-around once the trial is spent", async () => {
-    // A status change while previewing: the banner would pitch a trial that
-    // is no longer on offer, so the gate has to reclaim the screen.
-    billingPreviewActions.enter();
-    access = { ...awaitingCheckout, status: "canceled" };
-    await renderShell();
-
-    expect(
-      screen.getByRole("dialog", { name: "Subscribe to keep using Compass" }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  });
-
-  it("brings the gate back when a write is refused", async () => {
-    access = awaitingCheckout;
-    await renderShell();
-
-    await userEvent.click(
-      screen.getByRole("button", { name: /Look around first/ }),
-    );
-    act(() => {
-      billingPreviewActions.exit();
-    });
-
-    expect(
-      screen.getByRole("dialog", { name: "Finish starting your trial" }),
-    ).toBeInTheDocument();
-  });
-
-  it("looks around with L without navigating to Life", async () => {
-    access = awaitingCheckout;
-    const router = await renderShell("/week");
-    const user = userEvent.setup();
-
-    await user.keyboard("l");
-
-    expect(
-      screen.queryByRole("dialog", { name: "Finish starting your trial" }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "You're looking around in read-only mode.",
-    );
-    expect(router.state.location.pathname).toBe("/week");
   });
 
   it("starts checkout with S from the billing gate", async () => {
@@ -278,13 +207,12 @@ describe("RootShell billing gates", () => {
     });
   });
 
-  it("does not gate or banner a local trial with more than 3 days left", async () => {
+  it("does not gate a Stripe trial with more than 3 days left", async () => {
     access = {
       kind: "server",
       status: "trialing",
       isReadOnly: false,
       trialEndsAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-      needsPaymentMethod: true,
     };
     await renderShell("/week");
 
@@ -298,67 +226,6 @@ describe("RootShell billing gates", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.queryByText(/Add a card to keep creating events/),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows the trial card banner when a local trial has 3 days left", async () => {
-    access = {
-      kind: "server",
-      status: "trialing",
-      isReadOnly: false,
-      trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      needsPaymentMethod: true,
-    };
-    await renderShell("/week");
-
-    expect(
-      screen.queryByRole("dialog", {
-        name: "Subscribe to keep using Compass",
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen
-        .getByText(
-          "Your trial ends in 3 days. Add a card to keep creating events.",
-        )
-        .closest("[role='status']"),
-    ).not.toBeNull();
-  });
-
-  it("opens Checkout from the trial card banner while the calendar stays writable", async () => {
-    setEmbeddedCheckoutForTests(FakeCheckout);
-    const queryClient = createCompassQueryClient();
-    queryClient.setQueryData(billingQueryKeys.config, {
-      providers: {
-        google: { signIn: false, connect: false },
-        microsoft: { signIn: false, connect: false },
-        apple: { signIn: false, connect: false },
-      },
-      billing: {
-        isConfigured: true,
-        enforcement: true,
-        trialLengthDays: 7,
-        publishableKey: "pk_test_trial_banner",
-      },
-    });
-    access = {
-      kind: "server",
-      status: "trialing",
-      isReadOnly: false,
-      trialEndsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-      needsPaymentMethod: true,
-    };
-    await renderShell("/week", { queryClient });
-
-    await userEvent.click(screen.getByRole("button", { name: "Add a card" }));
-
-    expect(
-      screen.getByRole("button", { name: "Complete checkout" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("dialog", {
-        name: "Subscribe to keep using Compass",
-      }),
     ).not.toBeInTheDocument();
   });
 
@@ -386,13 +253,12 @@ describe("RootShell billing gates", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the expired gate after the local trial ends", async () => {
+  it("shows the expired gate after the trial ends", async () => {
     access = {
       kind: "server",
       status: "expired",
       isReadOnly: true,
       trialEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      needsPaymentMethod: false,
     };
     await renderShell("/week");
 

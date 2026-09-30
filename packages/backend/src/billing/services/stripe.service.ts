@@ -25,9 +25,7 @@ import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
 
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
-const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v4-";
-/** Stripe rejects `trial_end` timestamps less than 48 hours from now. */
-const STRIPE_MIN_TRIAL_REMAINING_MS = 48 * 60 * 60 * 1000;
+const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v5-";
 
 const TRIAL_CANCEL_WITHOUT_CARD = {
   trial_settings: {
@@ -40,21 +38,14 @@ type CheckoutTrialFields =
       trial_period_days: number;
       trial_settings: typeof TRIAL_CANCEL_WITHOUT_CARD.trial_settings;
     }
-  | {
-      trial_end: number;
-      trial_settings: typeof TRIAL_CANCEL_WITHOUT_CARD.trial_settings;
-    }
   | Record<string, never>;
 
 /**
- * Local trials keep their remaining Compass window in Stripe when at least
- * 48 hours remain. Legacy accounts (no `trialStartedAt`) still get a
- * Checkout-granted 7-day trial. A local trial that has expired or is inside
- * that 48-hour floor charges immediately.
+ * New Checkout grants a 7-day trial when the account has never started one.
+ * Legacy rows with `trialStartedAt` but no subscription charge immediately.
  */
 const checkoutTrialFields = (
   billing: Schema_UserBilling | undefined,
-  now: Date,
 ): CheckoutTrialFields => {
   if (billing?.stripeSubscriptionId) {
     return {};
@@ -62,16 +53,6 @@ const checkoutTrialFields = (
   if (!billing?.trialStartedAt) {
     return {
       trial_period_days: BILLING_PLAN.TRIAL_LENGTH_DAYS,
-      ...TRIAL_CANCEL_WITHOUT_CARD,
-    };
-  }
-  const trialEndsAt = billing.trialEndsAt;
-  if (
-    trialEndsAt &&
-    trialEndsAt.getTime() - now.getTime() >= STRIPE_MIN_TRIAL_REMAINING_MS
-  ) {
-    return {
-      trial_end: Math.floor(trialEndsAt.getTime() / 1000),
       ...TRIAL_CANCEL_WITHOUT_CARD,
     };
   }
@@ -146,7 +127,7 @@ export class StripeService {
     }
 
     let customerId = user.billing?.stripeCustomerId;
-    const trialFields = checkoutTrialFields(user.billing, new Date());
+    const trialFields = checkoutTrialFields(user.billing);
     const sendCheckoutIdempotency = !user.billing?.stripeSubscriptionId;
 
     if (!customerId) {

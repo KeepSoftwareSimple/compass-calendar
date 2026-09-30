@@ -21,7 +21,6 @@ import {
   resetBillingGateAttentionForTests,
   setBillingGateOwnsScreen,
 } from "@web/billing/billing-gate-attention";
-import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import { useNewMeetingsNotice } from "@web/booking/useNewMeetingsNotice";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import * as realRouters from "@web/routers";
@@ -293,10 +292,12 @@ describe("useNewMeetingsNotice", () => {
     expect(mocks.toast).not.toHaveBeenCalled();
 
     act(() => {
-      billingPreviewActions.enter();
+      setBillingGateOwnsScreen(false);
     });
 
-    expect(mocks.toast).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mocks.toast).toHaveBeenCalled();
+    });
     renderedToast();
     expect(
       screen.getByText("Bob booked a meeting: Thu, Sep 24, 12:00 PM"),

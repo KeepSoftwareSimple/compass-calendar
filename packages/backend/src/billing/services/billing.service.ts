@@ -16,18 +16,12 @@ import mongoService from "@backend/common/services/mongo.service";
  * Missing billing, a billing object with no `subscriptionStatus`, and
  * `none` surface as `awaiting_checkout` so the Start-trial gate shows.
  *
- * A local (card-less) trial is `trialing` with no `stripeSubscriptionId`
- * and a future `trialEndsAt`: writable, `needsPaymentMethod: true`. Once
- * `trialEndsAt` has passed it reports `expired`. No `trialEndsAt` at all
- * keeps the `awaiting_checkout` fallback for legacy / backfill rows.
- *
  * `trialing` with a `stripeSubscriptionId` never self-expires locally —
  * Stripe's webhook is authoritative, so a late `active` event cannot lock
  * out a customer whose card just succeeded.
  */
 export const deriveBillingStatus = (
   billing: Schema_UserBilling | undefined,
-  now: Date = new Date(),
 ): BillingStatusResponse => {
   const storedStatus = billing?.subscriptionStatus;
   if (!billing || !storedStatus || storedStatus === "none") {
@@ -36,38 +30,6 @@ export const deriveBillingStatus = (
       trialEndsAt: billing?.trialEndsAt?.toISOString() ?? null,
       isReadOnly: true,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
-    };
-  }
-
-  if (
-    billing.subscriptionStatus === "trialing" &&
-    !billing.stripeSubscriptionId
-  ) {
-    if (!billing.trialEndsAt) {
-      return {
-        subscriptionStatus: "awaiting_checkout",
-        trialEndsAt: null,
-        isReadOnly: true,
-        cancelAtPeriodEnd: false,
-        needsPaymentMethod: false,
-      };
-    }
-    if (billing.trialEndsAt.getTime() > now.getTime()) {
-      return {
-        subscriptionStatus: "trialing",
-        trialEndsAt: billing.trialEndsAt.toISOString(),
-        isReadOnly: false,
-        cancelAtPeriodEnd: false,
-        needsPaymentMethod: true,
-      };
-    }
-    return {
-      subscriptionStatus: "expired",
-      trialEndsAt: billing.trialEndsAt.toISOString(),
-      isReadOnly: true,
-      cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     };
   }
 
@@ -76,7 +38,6 @@ export const deriveBillingStatus = (
     trialEndsAt: billing.trialEndsAt?.toISOString() ?? null,
     isReadOnly: !WRITE_ACCESS_BY_STATUS[billing.subscriptionStatus],
     cancelAtPeriodEnd: billing.cancelAtPeriodEnd === true,
-    needsPaymentMethod: false,
   };
 };
 
@@ -107,7 +68,6 @@ class BillingService {
         trialEndsAt: null,
         isReadOnly: false,
         cancelAtPeriodEnd: false,
-        needsPaymentMethod: false,
       };
     }
 

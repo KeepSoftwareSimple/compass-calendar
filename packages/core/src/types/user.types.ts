@@ -68,9 +68,7 @@ export interface Schema_User {
  * - `none` — legacy row, pre-backfill. Hosted derivation maps this to
  *   `awaiting_checkout` (read-only). Self-host never consults this map.
  * - `awaiting_checkout` — account exists, no Stripe subscription. read-only.
- * - `trialing` — Stripe Checkout trial in progress. writable. Local
- *   `trialing` rows without a Stripe subscription id also derive as
- *   `awaiting_checkout`.
+ * - `trialing` — Stripe Checkout trial in progress. writable.
  * - `active` — paid. writable.
  * - `past_due` — dunning window. writable + banner.
  * - `canceled` — subscription canceled. read-only.

@@ -15,7 +15,6 @@ import { BookingApi } from "@web/api/booking.api";
 import { getApiErrorCode, isApiError } from "@web/api/util/api.util";
 import { useUserMetadataStore } from "@web/auth/state/user-metadata.store";
 import { billingQueryKeys } from "@web/billing/billing.query";
-import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import { BOOKING_AVAILABILITY_REQUIRED_MESSAGE } from "@web/booking/booking.util";
 import { type BookingField } from "@web/booking/booking-sequence.fields";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
@@ -108,7 +107,6 @@ function handleBookingSaveError(
   if (isApiError(error)) {
     const code = getApiErrorCode(error);
     if (code === "BILLING_REQUIRED") {
-      billingPreviewActions.exit();
       void queryClient.invalidateQueries({
         queryKey: billingQueryKeys.status,
       });

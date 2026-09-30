@@ -2,7 +2,6 @@ import { type FC, useEffect, useRef } from "react";
 import { track } from "@web/auth/posthog/track";
 import { useStripePublishableKey } from "@web/billing/billing.query";
 import { setBillingGateOwnsScreen } from "@web/billing/billing-gate-attention";
-import { billingPreviewActions } from "@web/billing/billing-preview.store";
 import {
   checkoutPanelActions,
   selectCheckoutPanelOpen,
@@ -10,7 +9,6 @@ import {
 } from "@web/billing/checkout-panel.store";
 import {
   EMBEDDED_CHECKOUT_PANEL_CLASSNAME,
-  EMBEDDED_CHECKOUT_SECONDARY_BUTTON_CLASSNAME,
   EmbeddedCheckoutPanel,
 } from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
@@ -22,7 +20,6 @@ import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
-import { swallowNextKeyup } from "@web/shortcuts/swallow-next-keyup";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 type BillingGateModalProps = {
@@ -33,8 +30,6 @@ type BillingGateModalProps = {
  * App-lock overlay for signed-in users who cannot write (awaiting checkout,
  * expired, canceled). Escape and the backdrop do nothing while the ask is
  * showing; once Checkout is open, Back (and Escape) return to the buttons.
- * A user who has not started a trial yet can step past it into a read-only
- * look around the real calendar; the first refused write brings it back.
  */
 export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
   useAppLockReason("billingGate", true);
@@ -66,11 +61,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
     return () => setBillingGateOwnsScreen(false);
   }, []);
 
-  const lookAround = () => {
-    track("billing_gate_cta_clicked", { cta: "preview" });
-    billingPreviewActions.enter();
-  };
-
   const openCheckout = () => {
     track("billing_gate_cta_clicked", { cta: "checkout" });
     checkoutPanelActions.open();
@@ -83,16 +73,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
       openCheckout();
     },
     OVERLAY_LETTER_SHORTCUT,
-  );
-
-  useAppShortcut(
-    "L",
-    () => {
-      if (isCheckoutOpen) return;
-      swallowNextKeyup("l");
-      lookAround();
-    },
-    { ...OVERLAY_LETTER_SHORTCUT, enabled: isAwaitingCheckout },
   );
 
   return (
@@ -131,17 +111,6 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
                 {START_TRIAL_SHORTCUT_KEY}
               </ShortcutHint>
             </button>
-            {isAwaitingCheckout ? (
-              <button
-                className={EMBEDDED_CHECKOUT_SECONDARY_BUTTON_CLASSNAME}
-                onClick={lookAround}
-                onPointerEnter={focusOnPointerEnter}
-                type="button"
-              >
-                Look around first
-                <ShortcutHint className="ml-2">L</ShortcutHint>
-              </button>
-            ) : null}
           </div>
         </div>
       )}

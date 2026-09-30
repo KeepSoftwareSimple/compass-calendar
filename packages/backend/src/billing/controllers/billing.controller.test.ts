@@ -31,7 +31,6 @@ describe("BillingController", () => {
       trialEndsAt: "2026-08-20T00:00:00.000Z",
       isReadOnly: false,
       cancelAtPeriodEnd: false,
-      needsPaymentMethod: false,
     };
     spyOn(billingService, "getStatus").mockResolvedValue(status);
 

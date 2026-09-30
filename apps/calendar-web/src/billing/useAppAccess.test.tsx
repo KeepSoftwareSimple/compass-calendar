@@ -49,7 +49,6 @@ const stubBilling = (body: {
   trialEndsAt: string | null;
   isReadOnly: boolean;
   cancelAtPeriodEnd?: boolean;
-  needsPaymentMethod?: boolean;
 }) => {
   server.use(
     http.get(`${ENV_WEB.API_BASEURL}/billing/status`, () =>
@@ -94,28 +93,6 @@ describe("useAppAccess", () => {
         // The schema defaults an absent cancelAtPeriodEnd to false, so an
         // older server response still parses.
         cancelAtPeriodEnd: false,
-        needsPaymentMethod: false,
-      });
-    });
-  });
-
-  it("passes through needsPaymentMethod on a local trial", async () => {
-    stubConfig(true);
-    stubBilling({
-      subscriptionStatus: "trialing",
-      trialEndsAt: "2026-09-03T00:00:00.000Z",
-      isReadOnly: false,
-      needsPaymentMethod: true,
-    });
-
-    const { result } = renderHook(() => useAppAccess(), {
-      wrapper: createWrapper(true),
-    });
-    await waitFor(() => {
-      expect(result.current).toMatchObject({
-        kind: "server",
-        status: "trialing",
-        needsPaymentMethod: true,
       });
     });
   });
@@ -206,7 +183,6 @@ describe("useAppAccess", () => {
         isReadOnly: false,
         trialEndsAt: null,
         cancelAtPeriodEnd: false,
-        needsPaymentMethod: false,
       });
     });
   });

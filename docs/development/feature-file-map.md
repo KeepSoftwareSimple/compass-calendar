@@ -247,10 +247,9 @@ the full picture.
 - Signup trial step gating and charge-date copy: `apps/calendar-web/src/billing/signup-trial.util.ts`
 - Post-checkout celebration and one-time anonymous event migration: `apps/calendar-web/src/billing/complete-checkout-session.ts`
 - Signup trial step UI: `apps/calendar-web/src/components/AuthModal/forms/StartTrialStep.tsx`, `apps/calendar-web/src/components/AuthModal/hooks/useAuthFormHandlers.ts`
-- Read-only look-around: `apps/calendar-web/src/billing/billing-preview.store.ts`, `apps/calendar-web/src/billing/BillingReadOnlyBanner.tsx`
 - Server access + paid gate: `apps/calendar-web/src/billing/useAppAccess.ts`, `apps/calendar-web/src/billing/BillingGateModal.tsx`
 - Embedded Checkout port (only `loadStripe` call) and lazy seam: `apps/calendar-web/src/billing/embedded-checkout/embedded-checkout.port.tsx`, `embedded-checkout.seam.ts`
-- Shared writable Checkout panel (gate + trial banner overlay): `apps/calendar-web/src/billing/EmbeddedCheckoutPanel.tsx`, `CheckoutOverlay.tsx`, `TrialCardBanner.tsx`
+- Shared writable Checkout panel (gate overlay): `apps/calendar-web/src/billing/EmbeddedCheckoutPanel.tsx`, `CheckoutOverlay.tsx`
 - Gate checkout store: `apps/calendar-web/src/billing/checkout-panel.store.ts`
 - Update-card store: `apps/calendar-web/src/billing/card-update.store.ts`
 - Settings > Billing management: `apps/calendar-web/src/billing/PlanSection.tsx`
