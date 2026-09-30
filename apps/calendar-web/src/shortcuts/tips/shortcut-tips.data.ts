@@ -4,7 +4,6 @@ import {
   type DayJumpPrefix,
 } from "@web/shortcuts/shift-hint/assign-shift-hint-keys";
 import { expandModInShortcutDisplay } from "@web/shortcuts/shortcut.util";
-import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 export {
   DAY_JUMP_PREFIXES,
@@ -69,8 +68,6 @@ export type ShortcutHint = {
   id: ShortcutHintId;
   actionId: ShortcutActionId;
   featureArea: ShortcutFeatureArea;
-  /** Registry rows this tip teaches; used by the legend checkmarks and level. */
-  registryIds: readonly ShortcutRegistryId[];
   parts: readonly ShortcutTipPart[];
   suggestionReason: ShortcutSuggestionReason;
 };
@@ -133,7 +130,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "first-event-save",
     actionId: "event_form.progress",
     featureArea: "event_creation",
-    registryIds: ["create-timed"],
     parts: ["Type a title, then ", { key: saveKey }],
     suggestionReason: "first_event",
   },
@@ -141,7 +137,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "save-draft",
     actionId: "event_form.progress",
     featureArea: "event_editing",
-    registryIds: ["edit-save"],
     parts: [
       { key: saveKey },
       " saves · hold ",
@@ -154,7 +149,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "form-actions",
     actionId: "event_form.actions",
     featureArea: "event_editing",
-    registryIds: ["edit-form-actions"],
     parts: [
       "Hold ",
       { key: KEYMAP.jumpFormField.holdModifier },
@@ -168,7 +162,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "life-this-week",
     actionId: "life.focus_current_week",
     featureArea: "life_navigation",
-    registryIds: ["nav-life-current"],
     parts: [{ key: "T" }, " jumps to this week"],
     suggestionReason: "life_view",
   },
@@ -176,7 +169,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "edit-sequence",
     actionId: "event.edit_title",
     featureArea: "event_editing",
-    registryIds: ["edit-focus-title"],
     parts: [
       { key: editLeader },
       " then ",
@@ -189,7 +181,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "create-event",
     actionId: "calendar.create_timed_event",
     featureArea: "event_creation",
-    registryIds: ["create-timed", "create-typed-time"],
     parts: [{ key: createKey }, " creates an event"],
     suggestionReason: "calendar_idle",
   },
@@ -197,7 +188,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "page-jump",
     actionId: "calendar.page_jump",
     featureArea: "calendar_navigation",
-    registryIds: ["focus-page-jump"],
     parts: [
       "Hold ",
       { key: KEYMAP.jumpPageTarget.holdModifier },
@@ -209,7 +199,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "event-jump",
     actionId: "calendar.event_jump",
     featureArea: "calendar_navigation",
-    registryIds: ["focus-shift-hold", "edit-open"],
     parts: [{ key: eventJumpKey }, " shows event and open-time shortcuts"],
     suggestionReason: "calendar_idle",
   },
@@ -217,7 +206,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "week-day-focus",
     actionId: "calendar.focus_week_day",
     featureArea: "calendar_navigation",
-    registryIds: ["focus-week-day"],
     parts: weekDayFocusParts("m"),
     suggestionReason: "week_view",
   },
@@ -225,7 +213,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "nudge",
     actionId: "event.move",
     featureArea: "event_editing",
-    registryIds: ["edit-move-later", "edit-move-hour-later"],
     parts: [{ key: nudgeModifier }, " and an arrow moves the event"],
     suggestionReason: "event_focused",
   },
@@ -233,7 +220,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "edge-focus",
     actionId: "event.edge_focus",
     featureArea: "event_editing",
-    registryIds: ["edit-cycle-edge", "edit-move-edge"],
     parts: [
       { key: KEYMAP.edgeFocus.hotkey },
       " picks an edge, then ",
@@ -246,7 +232,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "command-palette",
     actionId: "command_palette.open",
     featureArea: "command_palette",
-    registryIds: ["other-palette"],
     parts: [
       { keys: KEYMAP.commandPalette.keycaps },
       " opens the command palette",
@@ -257,12 +242,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "grid-scroll",
     actionId: "calendar.grid_scroll",
     featureArea: "calendar_navigation",
-    registryIds: [
-      "nav-scroll-hour-up",
-      "nav-scroll-hour-down",
-      "nav-scroll-up",
-      "nav-scroll-down",
-    ],
     parts: [
       { keys: ["Alt", "ArrowDown"] },
       " scrolls · ",
@@ -275,7 +254,6 @@ export const SHORTCUT_HINTS: Record<ShortcutHintId, ShortcutHint> = {
     id: "week-nav",
     actionId: "calendar.week_nav",
     featureArea: "calendar_navigation",
-    registryIds: ["nav-previous", "nav-next", "nav-today"],
     parts: [
       { key: "J" },
       "/",

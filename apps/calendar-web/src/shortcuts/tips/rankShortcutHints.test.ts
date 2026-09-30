@@ -1,7 +1,4 @@
-import {
-  getPublicShortcutCatalog,
-  SHORTCUTS_REGISTRY,
-} from "@web/shortcuts/shortcuts.registry";
+import { getPublicShortcutCatalog } from "@web/shortcuts/shortcuts.registry";
 import { rankShortcutHints } from "@web/shortcuts/tips/rankShortcutHints";
 import { selectShortcutHint } from "@web/shortcuts/tips/selectShortcutHint";
 import { type ShortcutUsageProfile } from "@web/shortcuts/tips/shortcut-personalization.storage";
@@ -58,15 +55,21 @@ describe("pointer intent hint ranking", () => {
         .find((section) => section.id === "navigate")
         ?.shortcuts.map((row) => row.id) ?? [],
     );
-    const registryIds = new Set(SHORTCUTS_REGISTRY.map((row) => row.id));
 
     for (const hintId of ["grid-scroll", "week-nav"] as const) {
-      const hint = getShortcutHint(hintId);
-      expect(hint.registryIds.length).toBeGreaterThan(0);
-      for (const id of hint.registryIds) {
-        expect(registryIds.has(id)).toBe(true);
-        expect(navigateIds.has(id)).toBe(true);
-      }
+      expect(getShortcutHint(hintId).featureArea).toBe("calendar_navigation");
+      expect(idlePool).toContain(hintId);
+    }
+    for (const id of [
+      "nav-scroll-hour-up",
+      "nav-scroll-hour-down",
+      "nav-scroll-up",
+      "nav-scroll-down",
+      "nav-previous",
+      "nav-next",
+      "nav-today",
+    ]) {
+      expect(navigateIds.has(id)).toBe(true);
     }
   });
 });
