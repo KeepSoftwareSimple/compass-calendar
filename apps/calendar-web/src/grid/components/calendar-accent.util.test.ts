@@ -2,6 +2,7 @@ import {
   calendarAccentAccessibleSuffix,
   calendarAccentStyle,
   calendarGradient,
+  eventCardFill,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
@@ -43,6 +44,49 @@ describe("calendarGradient", () => {
     expect(calendarGradient(["#3b82f6", "#ef4444", "#22c55e"])).toBe(
       "linear-gradient(135deg, #3b82f6, #ef4444, #22c55e)",
     );
+  });
+});
+
+describe("eventCardFill", () => {
+  const identity = {
+    name: "Work",
+    backgroundColor: "#3b82f6",
+    otherCopies: [{ label: "Home", backgroundColor: "#ef4444" }],
+  };
+
+  it("uses the event fill for an ordinary card", () => {
+    const fill = eventCardFill(
+      { name: "Work", backgroundColor: "#3b82f6" },
+      "#111111",
+      (color) => `fill(${color})`,
+      (color) => `hover(${color})`,
+    );
+
+    expect(fill.mergedStops).toBeNull();
+    expect(fill.fillStops).toEqual(["fill(#111111)"]);
+    expect(fill.bgColor).toBe("fill(#111111)");
+    expect(fill.hoverBgColor).toBe("hover(#111111)");
+    expect(fill.imageVars).toBeUndefined();
+  });
+
+  it("paints calendar stops and hover images on a merged card", () => {
+    const fill = eventCardFill(
+      identity,
+      "#111111",
+      (color) => `fill(${color})`,
+      (color) => `hover(${color})`,
+    );
+
+    expect(fill.mergedStops).toEqual(["#3b82f6", "#ef4444"]);
+    expect(fill.fillStops).toEqual(["fill(#3b82f6)", "fill(#ef4444)"]);
+    expect(fill.bgColor).toBe("fill(#3b82f6)");
+    expect(fill.hoverBgColor).toBe("hover(#3b82f6)");
+    expect(fill.imageVars).toEqual({
+      "--event-bg-image":
+        "linear-gradient(135deg, fill(#3b82f6), fill(#ef4444))",
+      "--event-hover-bg-image":
+        "linear-gradient(135deg, hover(#3b82f6), hover(#ef4444))",
+    });
   });
 });
 

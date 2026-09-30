@@ -12,42 +12,16 @@ import {
   INTENT_TEACHING,
   type IntentMessageContext,
   type PointerIntent,
-  type ShortcutKeysLookup,
   teachingKeysForIntent,
   teachingMessageForIntent,
 } from "@web/views/Week/pointer-intent/pointer-intent";
+import { pointerIntentKeysLookup } from "@web/views/Week/pointer-intent/pointer-intent.keys-lookup";
 import {
   getPointerIntentSessionSnapshot,
   markPointerIntentHintShown,
   recordPointerIntentDetection,
 } from "@web/views/Week/pointer-intent/pointer-intent.session";
 import { shouldTeachPointerIntent } from "@web/views/Week/pointer-intent/pointer-intent.teach-policy";
-
-export type NotifyPointerIntentOptions = {
-  lookup?: ShortcutKeysLookup;
-  ctx?: IntentMessageContext;
-  pathname?: string;
-};
-
-let registeredKeysLookup: ShortcutKeysLookup = () => undefined;
-
-export function registerPointerIntentKeysLookup(
-  lookup: ShortcutKeysLookup,
-): void {
-  registeredKeysLookup = lookup;
-}
-
-export function resetPointerIntentKeysLookupForTests(): void {
-  registeredKeysLookup = () => undefined;
-}
-
-function resolveLookup(lookup?: ShortcutKeysLookup): ShortcutKeysLookup {
-  return lookup ?? registeredKeysLookup;
-}
-
-function viewForTelemetry(pathname = window.location.pathname): string {
-  return viewFromPathname(pathname);
-}
 
 const PAGE_JUMP_CHIP_DEMO_MS = 2000;
 
@@ -75,13 +49,9 @@ export function resetPageJumpChipDemoForTests(): void {
 }
 
 export const pointerIntentActions = {
-  notify(
-    intent: PointerIntent,
-    { lookup, ctx = {}, pathname }: NotifyPointerIntentOptions = {},
-  ): void {
-    const keysLookup = resolveLookup(lookup);
+  notify(intent: PointerIntent, ctx: IntentMessageContext = {}): void {
     recordPointerIntentDetection(intent);
-    const view = viewForTelemetry(pathname);
+    const view = viewFromPathname(window.location.pathname);
 
     getPosthogClient()?.capture("pointer_intent_detected", { intent, view });
 
@@ -94,8 +64,8 @@ export const pointerIntentActions = {
     }
 
     const teaching = INTENT_TEACHING[intent];
-    const keys = teachingKeysForIntent(intent, keysLookup);
-    const shortcutKey = keys[0] ?? [];
+    const shortcutKey =
+      teachingKeysForIntent(intent, pointerIntentKeysLookup)[0] ?? [];
     const message = teachingMessageForIntent(intent, ctx);
 
     pointerHintActions.pulse({

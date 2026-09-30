@@ -24,11 +24,6 @@ export const CONTEXT_MENU_FLOATING_OPTIONS: Pick<
   whileElementsMounted: autoUpdate,
 };
 
-/** A zero-size reference at the cursor, so the menu opens where they clicked. */
-export const cursorReference = (clientX: number, clientY: number) => ({
-  getBoundingClientRect: () => new DOMRect(clientX, clientY, 0, 0),
-});
-
 /**
  * Rendered inline, the menu shares a stacking context with the event cards
  * and loses to any card stacked above it, so it carries the same z-index as

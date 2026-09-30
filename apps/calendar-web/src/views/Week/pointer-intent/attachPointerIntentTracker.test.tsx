@@ -1,6 +1,5 @@
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type FC } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as posthogBootstrap from "@web/auth/posthog/posthog.bootstrap";
 import * as trackModule from "@web/auth/posthog/track";
@@ -28,13 +27,10 @@ import {
   usePageJumpHintStore,
 } from "@web/shortcuts/page-jump/page-jump.store";
 import { setTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
+import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
 import { WEEK_EVENT_ID_ATTRIBUTE } from "@web/views/Week/pointer-intent/grid-pointer-target";
-import {
-  registerPointerIntentKeysLookup,
-  resetPageJumpChipDemoForTests,
-} from "@web/views/Week/pointer-intent/pointer-intent.actions";
+import { resetPageJumpChipDemoForTests } from "@web/views/Week/pointer-intent/pointer-intent.actions";
 import { resetPointerIntentSessionForTests } from "@web/views/Week/pointer-intent/pointer-intent.session";
-import { usePointerIntentTracker } from "@web/views/Week/pointer-intent/usePointerIntentTracker";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const track = mock();
@@ -44,21 +40,6 @@ mockModuleForFile("@web/auth/posthog/track", trackModule, { track });
 mockModuleForFile("@web/auth/posthog/posthog.bootstrap", posthogBootstrap, {
   getPosthogClient: () => ({ capture }),
 });
-
-const lookup = (id: string) => {
-  const keys: Record<string, string[]> = {
-    "edit-open": ["Enter"],
-    "focus-shift-hold": ["H"],
-    "edit-move-later": ["Shift", "ArrowDown"],
-    "edit-move-hour-later": ["Alt", "Shift", "ArrowDown"],
-    "create-typed-time": ["1130"],
-    "create-timed": ["C"],
-    "nav-scroll-hour-down": ["Alt", "ArrowDown"],
-    "nav-today": ["T"],
-    "focus-page-jump": ["Mod"],
-  };
-  return keys[id];
-};
 
 function mountHoverHuntButtons() {
   const first = document.createElement("button");
@@ -88,11 +69,6 @@ function mountHoverHuntButtons() {
 
 const waitHoverSample = () => new Promise((r) => setTimeout(r, 110));
 
-const TrackerHarness: FC<{ enabled?: boolean }> = ({ enabled = true }) => {
-  usePointerIntentTracker({ enabled, lookup });
-  return null;
-};
-
 function mountGridDom() {
   document.body.innerHTML = `
     <div id="${ID_GRID_MAIN}" style="height: 1440px; overflow: auto">
@@ -109,21 +85,24 @@ function mountGridDom() {
   grid.scrollTop = 720;
 }
 
-describe("usePointerIntentTracker", () => {
+describe("attachPointerIntentTracker", () => {
+  let detach: () => void;
+
   beforeEach(() => {
     track.mockClear();
     capture.mockClear();
     resetPointerIntentSessionForTests();
     resetPageJumpChipDemoForTests();
     setTipsMuted(false);
-    registerPointerIntentKeysLookup(lookup);
     usePointerHintStore.setState(initialPointerHintState, true);
     usePageJumpHintStore.setState(initialPageJumpHintState, true);
     useDraftStore.setState(initialDraftState, true);
     mountGridDom();
+    detach = attachPointerIntentTracker();
   });
 
   afterEach(() => {
+    detach();
     document.body.innerHTML = "";
     resetPointerIntentSessionForTests();
     resetPageJumpChipDemoForTests();
@@ -141,7 +120,6 @@ describe("usePointerIntentTracker", () => {
     const jumpHandler = mock();
     document.addEventListener(POINTER_EVENT_JUMP_REQUEST, jumpHandler);
 
-    render(<TrackerHarness />);
     await user.pointer({ keys: "[MouseLeft>]", target: card });
     await user.pointer({ keys: "[/MouseLeft]", target: card });
 
@@ -156,7 +134,6 @@ describe("usePointerIntentTracker", () => {
     card.setAttribute(WEEK_EVENT_ID_ATTRIBUTE, "evt-drag");
     document.body.appendChild(card);
 
-    render(<TrackerHarness />);
     fireEvent.pointerDown(card, {
       clientX: 0,
       clientY: 0,
@@ -196,7 +173,6 @@ describe("usePointerIntentTracker", () => {
 
   it("pulses slot-click with digits for the timed column y", async () => {
     const user = userEvent.setup();
-    render(<TrackerHarness />);
     const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
       .firstElementChild as HTMLElement;
 
@@ -213,7 +189,6 @@ describe("usePointerIntentTracker", () => {
   it("pulses grid-scroll only after three wheel gestures", async () => {
     const user = userEvent.setup();
     const grid = document.getElementById(ID_GRID_MAIN)!;
-    render(<TrackerHarness />);
 
     const wheel = async () => {
       await user.pointer({ target: grid, coords: { clientY: 10 } });
@@ -246,7 +221,6 @@ describe("usePointerIntentTracker", () => {
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {
     setTipsMuted(true);
     const user = userEvent.setup();
-    render(<TrackerHarness />);
     const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
       .firstElementChild as HTMLElement;
 
@@ -267,7 +241,6 @@ describe("usePointerIntentTracker", () => {
   });
 
   it("reveals page-jump hints after hovering three distinct controls", async () => {
-    render(<TrackerHarness />);
     const { hoverOver, first, second, third } = mountHoverHuntButtons();
 
     hoverOver(first);
@@ -293,7 +266,6 @@ describe("usePointerIntentTracker", () => {
   });
 
   it("cancels hover-hunt when the user clicks inside the window", async () => {
-    render(<TrackerHarness />);
     const { hoverOver, first, second, third } = mountHoverHuntButtons();
 
     hoverOver(first);
@@ -314,7 +286,6 @@ describe("usePointerIntentTracker", () => {
   });
 
   it("does not fire hover-hunt with only two distinct targets", async () => {
-    render(<TrackerHarness />);
     const { hoverOver, first, second } = mountHoverHuntButtons();
 
     hoverOver(first);
@@ -337,7 +308,6 @@ describe("usePointerIntentTracker", () => {
       ),
     });
 
-    render(<TrackerHarness />);
     const { hoverOver, first, second, third } = mountHoverHuntButtons();
 
     hoverOver(first);

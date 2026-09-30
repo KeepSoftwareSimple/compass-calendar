@@ -1,4 +1,5 @@
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
+import { cardContextMenuPoint } from "@web/components/ContextMenu/contextMenu.anchor";
 import { markKeyboardContextMenuDispatch } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
@@ -20,16 +21,16 @@ export function useEventContextMenuShortcut() {
       const focused = getFocusedCalendarEvent();
       if (!focused) return false;
 
-      // Anchor near the card's top center so the menu reads as attached to
-      // the event, like a right-click there would.
-      const rect = focused.element.getBoundingClientRect();
+      const { clientX, clientY } = cardContextMenuPoint(
+        focused.element.getBoundingClientRect(),
+      );
       markKeyboardContextMenuDispatch();
       focused.element.dispatchEvent(
         new MouseEvent("contextmenu", {
           bubbles: true,
           cancelable: true,
-          clientX: rect.left + rect.width / 2,
-          clientY: rect.top + Math.min(rect.height / 2, 24),
+          clientX,
+          clientY,
         }),
       );
       return true;

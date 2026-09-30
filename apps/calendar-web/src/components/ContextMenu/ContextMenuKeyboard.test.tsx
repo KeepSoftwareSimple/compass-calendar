@@ -11,10 +11,10 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import { ContextMenu } from "@web/components/ContextMenu/ContextMenu";
 import { type ContextMenuItemsActions } from "@web/components/ContextMenu/ContextMenuItems";
+import { cursorReference } from "@web/components/ContextMenu/contextMenu.anchor";
 import {
   CONTEXT_MENU_FLOATING_OPTIONS,
   contextMenuStyle,
-  cursorReference,
 } from "@web/components/ContextMenu/contextMenu.floating";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
