@@ -9,6 +9,8 @@ type HorizontalNavigationOptions = {
   containerRef: RefObject<HTMLElement | null>;
   onNext: () => void;
   onPrevious: () => void;
+  /** Fires when a horizontal wheel/trackpad swipe navigates (not keyboard). */
+  onSwipeNavigate?: (direction: "next" | "previous") => void;
 };
 
 const canScrollHorizontally = (
@@ -36,12 +38,13 @@ export const useHorizontalNavigation = ({
   containerRef,
   onNext,
   onPrevious,
+  onSwipeNavigate,
 }: HorizontalNavigationOptions) => {
-  const callbacksRef = useRef({ onNext, onPrevious });
+  const callbacksRef = useRef({ onNext, onPrevious, onSwipeNavigate });
 
   useEffect(() => {
-    callbacksRef.current = { onNext, onPrevious };
-  }, [onNext, onPrevious]);
+    callbacksRef.current = { onNext, onPrevious, onSwipeNavigate };
+  }, [onNext, onPrevious, onSwipeNavigate]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -96,10 +99,11 @@ export const useHorizontalNavigation = ({
       if (Math.abs(accumulatedDelta) < NAVIGATION_THRESHOLD_PX) return;
 
       hasNavigated = true;
-      const navigate =
-        accumulatedDelta > 0
-          ? callbacksRef.current.onNext
-          : callbacksRef.current.onPrevious;
+      const swipeNext = accumulatedDelta > 0;
+      callbacksRef.current.onSwipeNavigate?.(swipeNext ? "next" : "previous");
+      const navigate = swipeNext
+        ? callbacksRef.current.onNext
+        : callbacksRef.current.onPrevious;
       navigate();
     };
 

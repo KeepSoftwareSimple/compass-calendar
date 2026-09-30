@@ -6,14 +6,38 @@ import { describe, expect, it, mock } from "bun:test";
 const Harness: FC<{
   onNext: () => void;
   onPrevious: () => void;
-}> = ({ onNext, onPrevious }) => {
+  onSwipeNavigate?: (direction: "next" | "previous") => void;
+}> = ({ onNext, onPrevious, onSwipeNavigate }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  useHorizontalNavigation({ containerRef, onNext, onPrevious });
+  useHorizontalNavigation({
+    containerRef,
+    onNext,
+    onPrevious,
+    onSwipeNavigate,
+  });
 
   return <section ref={containerRef} aria-label="Calendar" />;
 };
 
 describe("useHorizontalNavigation", () => {
+  it("calls onSwipeNavigate when a horizontal gesture navigates", () => {
+    const onSwipeNavigate = mock();
+    render(
+      <Harness
+        onNext={mock()}
+        onPrevious={mock()}
+        onSwipeNavigate={onSwipeNavigate}
+      />,
+    );
+
+    fireEvent.wheel(screen.getByRole("region", { name: "Calendar" }), {
+      deltaX: 70,
+      deltaY: 0,
+    });
+
+    expect(onSwipeNavigate).toHaveBeenCalledWith("next");
+  });
+
   it("navigates once when a horizontal gesture crosses the threshold", () => {
     const onNext = mock();
     render(<Harness onNext={onNext} onPrevious={mock()} />);

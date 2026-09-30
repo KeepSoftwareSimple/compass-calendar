@@ -42,6 +42,7 @@ import { useSidebarCalendarDate } from "@web/views/Week/hooks/useSidebarCalendar
 import { useToday } from "@web/views/Week/hooks/useToday";
 import { useWeek } from "@web/views/Week/hooks/useWeek";
 import { attachPointerIntentTracker } from "@web/views/Week/pointer-intent/attachPointerIntentTracker";
+import { pointerIntentActions } from "@web/views/Week/pointer-intent/pointer-intent.actions";
 
 export const WeekView = () => {
   const isSidebarOpen = useViewStore(selectIsSidebarOpen);
@@ -69,6 +70,11 @@ export const WeekView = () => {
     containerRef: mainRef,
     onNext: weekProps.util.incrementWeek,
     onPrevious: weekProps.util.decrementWeek,
+    onSwipeNavigate: (direction) => {
+      pointerIntentActions.notify(
+        direction === "next" ? "swipe-next" : "swipe-prev",
+      );
+    },
   });
   useDayShiftTransition(
     weekTrackElementRef,
