@@ -73,13 +73,16 @@ describe("useSettingsSearchEntry", () => {
   it("does not reopen Settings when the back button restores the param", async () => {
     const router = await renderEntry({ authenticated: true });
     await waitFor(() => {
+      expect(selectIsSettingsOpen(useSettingsStore.getState())).toBe(true);
+    });
+    await waitFor(() => {
       expect(router.state.location.search).toEqual({});
     });
     settingsActions.closeSettings();
 
     // Same URL the consumed entry had: the back button lands here.
     await act(async () => {
-      await router.navigate({ to: ".", search: { settings: "billing" } });
+      void router.navigate({ to: ".", search: { settings: "billing" } });
     });
     await waitFor(() => {
       expect(router.state.location.search).toEqual({ settings: "billing" });
