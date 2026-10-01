@@ -10,10 +10,26 @@ public struct DesktopAgendaItem: Codable, Equatable, Sendable {
     }
 }
 
+public struct DesktopShowNotificationPayload: Codable, Equatable, Sendable {
+    public var title: String
+    public var body: String?
+    public var tag: String?
+    public var eventId: String
+
+    public init(title: String, body: String?, tag: String?, eventId: String) {
+        self.title = title
+        self.body = body
+        self.tag = tag
+        self.eventId = eventId
+    }
+}
+
 public enum BridgeMessage: Equatable, Sendable {
     case openExternal(url: String)
     case setAgenda(items: [DesktopAgendaItem])
     case restartToUpdate
+    case requestNotificationPermission
+    case showNotification(DesktopShowNotificationPayload)
 }
 
 public enum BridgeMessageCodec {
@@ -46,6 +62,22 @@ public enum BridgeMessageCodec {
             return .setAgenda(items: items)
         case "restartToUpdate":
             return .restartToUpdate
+        case "requestNotificationPermission":
+            return .requestNotificationPermission
+        case "showNotification":
+            guard let title = dictionary["title"] as? String,
+                  let eventId = dictionary["eventId"] as? String
+            else {
+                throw BridgeMessageError.invalidPayload
+            }
+            let body = dictionary["body"] as? String
+            let tag = dictionary["tag"] as? String
+            return .showNotification(
+                DesktopShowNotificationPayload(
+                    title: title,
+                    body: body,
+                    tag: tag,
+                    eventId: eventId))
         default:
             throw BridgeMessageError.unknownMethod(method)
         }

@@ -6,6 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        CompassNotificationService.shared.configure()
         NSApp.mainMenu = MainMenu.make()
 
         // `-COMPASS_APP_URL <url>` on the command line lands in the

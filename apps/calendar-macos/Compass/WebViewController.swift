@@ -43,6 +43,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         configuration.userContentController = contentController
 
         webView = WKWebView(frame: .zero, configuration: configuration)
+        bridgeHandler.webView = webView
         webView.navigationDelegate = self
         webView.uiDelegate = self
         #if DEBUG
@@ -55,6 +56,11 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        CompassNotificationService.shared.deliverDeepLink = { [weak self] url in
+            guard let self else { return }
+            self.view.window?.makeKeyAndOrderFront(nil)
+            self.webView.evaluateJavaScript(BridgeScript.deliverDeepLinkJavaScript(url: url))
+        }
         webView.load(URLRequest(url: appURL))
     }
 

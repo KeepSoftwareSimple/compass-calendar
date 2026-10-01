@@ -17,6 +17,8 @@ describe("isDesktop", () => {
       openExternal: () => {},
       setAgenda: () => {},
       restartToUpdate: () => {},
+      requestNotificationPermission: async () => "granted",
+      showNotification: () => {},
       onDeepLink: () => {},
       onUpdateReady: () => {},
     };

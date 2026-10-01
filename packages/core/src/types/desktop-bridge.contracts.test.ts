@@ -26,6 +26,25 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
       DesktopBridgeOutboundMessageSchema.parse({ method: "restartToUpdate" }),
     ).toEqual({ method: "restartToUpdate" });
   });
+
+  it("accepts requestNotificationPermission messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "requestNotificationPermission",
+      }),
+    ).toEqual({ method: "requestNotificationPermission" });
+  });
+
+  it("accepts showNotification messages", () => {
+    const parsed = DesktopBridgeOutboundMessageSchema.parse({
+      method: "showNotification",
+      title: "Standup",
+      body: "Starts at 9:00 AM",
+      tag: "evt|2026-10-01T14:00:00.000Z",
+      eventId: "evt",
+    });
+    expect(parsed.method).toBe("showNotification");
+  });
 });
 
 describe("DESKTOP_BRIDGE_VERSION", () => {

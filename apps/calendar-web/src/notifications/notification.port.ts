@@ -1,3 +1,6 @@
+import { isDesktop } from "@web/desktop/isDesktop";
+import { createDesktopNotificationPort } from "@web/notifications/desktop-notification.port";
+
 /**
  * Injectable seam over the browser Notification API, mirroring toast.port.ts.
  *
@@ -11,6 +14,8 @@ export interface ShowNotificationOptions {
   body?: string;
   /** Replaces an earlier notification with the same tag instead of stacking. */
   tag?: string;
+  /** Event id for native desktop notifications (compass://event/ deep link). */
+  eventId?: string;
   onClick?: () => void;
   icon?: string;
 }
@@ -95,7 +100,15 @@ const productionNotificationPort: NotificationPort = {
   },
 };
 
-let notificationPort: NotificationPort = productionNotificationPort;
+function resolveDefaultNotificationPort(): NotificationPort {
+  if (typeof window !== "undefined" && isDesktop()) {
+    const desktopPort = createDesktopNotificationPort();
+    if (desktopPort.isSupported()) return desktopPort;
+  }
+  return productionNotificationPort;
+}
+
+let notificationPort: NotificationPort = resolveDefaultNotificationPort();
 
 export function getNotificationPort(): NotificationPort {
   return notificationPort;
@@ -106,5 +119,5 @@ export function registerNotificationPort(port: NotificationPort): void {
 }
 
 export function resetNotificationPort(): void {
-  notificationPort = productionNotificationPort;
+  notificationPort = resolveDefaultNotificationPort();
 }
