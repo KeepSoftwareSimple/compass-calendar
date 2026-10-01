@@ -7,9 +7,12 @@ export const DesktopBridgePlatformSchema = z.enum(["macos"]);
 export type DesktopBridgePlatform = z.infer<typeof DesktopBridgePlatformSchema>;
 
 export const DesktopAgendaItemSchema = z.object({
+  id: z.string().trim().min(1).max(128),
   title: z.string().trim().min(1).max(256),
   /** ISO-8601 instant for the event start. */
   startsAt: z.string().trim().min(1).max(64),
+  /** ISO-8601 instant for the event end. */
+  endsAt: z.string().trim().min(1).max(64),
 });
 export type DesktopAgendaItem = z.infer<typeof DesktopAgendaItemSchema>;
 

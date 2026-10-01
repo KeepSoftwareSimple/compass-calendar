@@ -5,7 +5,7 @@ import WebKit
 /// Hosts the web app. Navigations off the app origin and every
 /// `window.open` go to the default browser.
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate,
-    CompassNotificationDelivering
+    CompassNotificationDelivering, CompassAgendaDeepLinkDelivering
 {
     private let appURL: URL
     private var webView: WKWebView!
@@ -59,6 +59,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         CompassNotificationCenter.shared.configure(deliverer: self)
+        CompassAgendaController.shared.configure(deepLinkDeliverer: self)
         webView.load(URLRequest(url: appURL))
     }
 

@@ -31,8 +31,10 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
         case let .openExternal(url):
             guard let externalURL = URL(string: url) else { return }
             NSWorkspace.shared.open(externalURL)
-        case .setAgenda:
-            break
+        case let .setAgenda(items):
+            Task { @MainActor in
+                CompassAgendaController.shared.updateAgenda(items)
+            }
         case .restartToUpdate:
             break
         case .requestNotificationPermission, .getNotificationPermission, .showNotification:

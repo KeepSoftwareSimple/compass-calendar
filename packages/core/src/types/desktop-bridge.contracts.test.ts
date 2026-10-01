@@ -16,7 +16,14 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
   it("accepts setAgenda messages", () => {
     const parsed = DesktopBridgeOutboundMessageSchema.parse({
       method: "setAgenda",
-      items: [{ title: "Standup", startsAt: "2026-10-01T14:00:00.000Z" }],
+      items: [
+        {
+          id: "evt-1",
+          title: "Standup",
+          startsAt: "2026-10-01T14:00:00.000Z",
+          endsAt: "2026-10-01T14:30:00.000Z",
+        },
+      ],
     });
     expect(parsed.items).toHaveLength(1);
   });

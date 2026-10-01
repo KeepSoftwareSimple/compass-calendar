@@ -1,12 +1,16 @@
 import Foundation
 
 public struct DesktopAgendaItem: Codable, Equatable, Sendable {
+    public var id: String
     public var title: String
     public var startsAt: String
+    public var endsAt: String
 
-    public init(title: String, startsAt: String) {
+    public init(id: String, title: String, startsAt: String, endsAt: String) {
+        self.id = id
         self.title = title
         self.startsAt = startsAt
+        self.endsAt = endsAt
     }
 }
 
@@ -39,12 +43,18 @@ public enum BridgeMessageCodec {
                 throw BridgeMessageError.invalidPayload
             }
             let items = try rawItems.map { item -> DesktopAgendaItem in
-                guard let title = item["title"] as? String,
-                      let startsAt = item["startsAt"] as? String
+                guard let id = item["id"] as? String,
+                      let title = item["title"] as? String,
+                      let startsAt = item["startsAt"] as? String,
+                      let endsAt = item["endsAt"] as? String
                 else {
                     throw BridgeMessageError.invalidPayload
                 }
-                return DesktopAgendaItem(title: title, startsAt: startsAt)
+                return DesktopAgendaItem(
+                    id: id,
+                    title: title,
+                    startsAt: startsAt,
+                    endsAt: endsAt)
             }
             return .setAgenda(items: items)
         case "restartToUpdate":

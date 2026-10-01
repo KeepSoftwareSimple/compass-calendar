@@ -13,12 +13,16 @@ final class BridgeMessageTests: XCTestCase {
 
     func testDecodesSetAgenda() throws {
         let data = Data("""
-        {"method":"setAgenda","items":[{"title":"Standup","startsAt":"2026-10-01T14:00:00.000Z"}]}
+        {"method":"setAgenda","items":[{"id":"evt-1","title":"Standup","startsAt":"2026-10-01T14:00:00.000Z","endsAt":"2026-10-01T14:30:00.000Z"}]}
         """.utf8)
         XCTAssertEqual(
             try BridgeMessageCodec.decode(from: data),
             .setAgenda(items: [
-                DesktopAgendaItem(title: "Standup", startsAt: "2026-10-01T14:00:00.000Z"),
+                DesktopAgendaItem(
+                    id: "evt-1",
+                    title: "Standup",
+                    startsAt: "2026-10-01T14:00:00.000Z",
+                    endsAt: "2026-10-01T14:30:00.000Z"),
             ]))
     }
 
