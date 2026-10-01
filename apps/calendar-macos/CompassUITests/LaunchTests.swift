@@ -46,7 +46,7 @@ final class LaunchTests: XCTestCase {
         app.menuBars.menuBarItems["View"].click()
         app.menuBars.menuItems["Today"].click()
 
-        let shortcutReady = NSPredicate(format: "help == %@", "nav-today")
+        let shortcutReady = NSPredicate(format: "value == %@", "nav-today")
         let shortcutExpectation = expectation(
             for: shortcutReady,
             evaluatedWith: window,

@@ -5,6 +5,7 @@ import CompassKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var webViewController: WebViewController?
+    /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
     private var optionHeldAtLaunch = false
 
@@ -46,6 +47,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Closing hides the window; the Dock icon brings the same page back.
         window.isReleasedWhenClosed = false
         window.contentViewController = webViewController
+        webViewController.accessibilityHostWindow = window
         // Assigning the controller sizes the window to its (zero) view.
         window.setContentSize(NSSize(width: 1280, height: 820))
         window.center()
