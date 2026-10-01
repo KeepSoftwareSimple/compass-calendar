@@ -42,7 +42,24 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
             infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
         guard resolved != appURL else { return }
         appURL = resolved
+        reinstallBridgeUserScripts()
         webView.load(URLRequest(url: appURL))
+    }
+
+    private func reinstallBridgeUserScripts() {
+        let controller = webView.configuration.userContentController
+        controller.removeAllUserScripts()
+        let bridgeSource = BridgeScript.userScriptSource(appOrigin: appURL.originString)
+        controller.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+        controller.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true))
     }
 
     @available(*, unavailable)
