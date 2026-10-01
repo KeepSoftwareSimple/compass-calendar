@@ -48,7 +48,7 @@ describe("booking-web routeTree", () => {
         history: createMemoryHistory({ initialEntries: [path] }),
       });
       await router.load();
-      expect(router.state.statusCode).toBe(200);
+      expect(router.state.status).toBe("idle");
       expect(router.state.matches.at(-1)?.routeId).toBe(meetLandingRoute.id);
     }
 
