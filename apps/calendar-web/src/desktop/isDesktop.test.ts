@@ -17,8 +17,8 @@ describe("isDesktop", () => {
       openExternal: () => {},
       setAgenda: () => {},
       restartToUpdate: () => {},
-      onDeepLink: (_handler) => {},
-      onUpdateReady: () => {},
+      onDeepLink: () => () => {},
+      onUpdateReady: () => () => {},
     };
     expect(isDesktop()).toBe(true);
   });

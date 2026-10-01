@@ -4,6 +4,7 @@ import {
   DESKTOP_OAUTH_STATE_PREFIX,
   hasDesktopOAuthStateMarker,
   parseDesktopAuthDeepLink,
+  parseDesktopEventDeepLink,
 } from "@core/desktop/desktop-oauth-state.util";
 import { describe, expect, it } from "bun:test";
 
@@ -19,7 +20,9 @@ describe("desktop oauth state", () => {
     expect(state.startsWith(DESKTOP_OAUTH_STATE_PREFIX)).toBe(false);
     expect(hasDesktopOAuthStateMarker(state)).toBe(false);
   });
+});
 
+describe("desktop auth deep links", () => {
   it("builds compass auth callback deep links", () => {
     expect(
       buildDesktopOAuthRelayUrl(
@@ -50,5 +53,28 @@ describe("desktop oauth state", () => {
 
   it("ignores non-auth compass links", () => {
     expect(parseDesktopAuthDeepLink("compass://agenda")).toBeNull();
+  });
+
+  it("rejects a callback link for an unknown provider", () => {
+    expect(parseDesktopAuthDeepLink("compass://auth/zoom/callback")).toBeNull();
+  });
+});
+
+describe("desktop event deep links", () => {
+  it("keeps the whole event id, including its first character", () => {
+    expect(parseDesktopEventDeepLink("compass://event/abc-123")).toBe(
+      "abc-123",
+    );
+  });
+
+  it("returns null without an event id", () => {
+    expect(parseDesktopEventDeepLink("compass://event/")).toBeNull();
+    expect(parseDesktopEventDeepLink("compass://event/   ")).toBeNull();
+  });
+
+  it("returns null for other compass links", () => {
+    expect(
+      parseDesktopEventDeepLink("compass://auth/google/callback?code=abc"),
+    ).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import "@web/desktop/compass-desktop.global";
 import { type NotificationPort } from "@web/notifications/notification.port";
 
 function eventIdFromTag(tag: string | undefined): string | undefined {
@@ -7,28 +8,20 @@ function eventIdFromTag(tag: string | undefined): string | undefined {
   return pipe === -1 ? trimmed : trimmed.slice(0, pipe);
 }
 
-const bridge = () =>
-  (window as Window & { compassDesktop?: Record<string, unknown> })
-    .compassDesktop as
-    | {
-        notificationPermission?: NotificationPermission;
-        showNotification?: (payload: {
-          title: string;
-          body?: string;
-          tag?: string;
-          eventId: string;
-        }) => void;
-        requestNotificationPermission?: () => Promise<NotificationPermission>;
-        onNotificationPermissionChange?: (handler: () => void) => () => void;
-      }
-    | undefined;
+const bridge = () => window.compassDesktop;
 
-const permission = (): NotificationPermission => {
-  const value = bridge()?.notificationPermission;
+/** The shell can only report the three browser permission states. */
+function normalizePermission(
+  value: unknown,
+  fallback: NotificationPermission = "default",
+): NotificationPermission {
   return value === "granted" || value === "denied" || value === "default"
     ? value
-    : "default";
-};
+    : fallback;
+}
+
+const permission = (): NotificationPermission =>
+  normalizePermission(bridge()?.notificationPermission);
 
 export const desktopNotificationPort: NotificationPort = {
   isSupported: () => typeof bridge()?.showNotification === "function",
@@ -36,10 +29,7 @@ export const desktopNotificationPort: NotificationPort = {
   requestPermission: async () => {
     const request = bridge()?.requestNotificationPermission;
     if (!request) return "denied";
-    const value = await request();
-    return value === "granted" || value === "denied" || value === "default"
-      ? value
-      : permission();
+    return normalizePermission(await request(), permission());
   },
   show: (title, options = {}) => {
     const show = bridge()?.showNotification;

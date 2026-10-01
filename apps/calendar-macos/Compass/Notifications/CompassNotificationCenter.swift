@@ -109,6 +109,7 @@ final class CompassNotificationCenter {
         try? await center.add(request)
     }
 
+    /// Parsed by `parseDesktopEventDeepLink` in packages/core/src/desktop.
     private func deliverEventTap(eventId: String) {
         NSApp.activate(ignoringOtherApps: true)
         deliverer?.deliverDeepLink("compass://event/\(eventId)")
