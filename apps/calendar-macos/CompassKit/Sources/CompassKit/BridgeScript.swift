@@ -59,6 +59,14 @@ public enum BridgeScript {
                 });
               };
             },
+            dispatchShortcut: function (name) {
+              window.__compassDesktopDispatchProbe = undefined;
+              window.dispatchEvent(new CustomEvent('compass:dispatch-shortcut', {
+                detail: { name: name },
+                bubbles: true
+              }));
+              return window.__compassDesktopDispatchProbe === name;
+            },
             onDeepLink: function (handler) { deepLinkHandlers.push(handler); },
             onUpdateReady: function (handler) { updateReadyHandlers.push(handler); },
             __deliverNotificationPermission: function (permission) {
@@ -97,5 +105,10 @@ public enum BridgeScript {
     public static func deliverUpdateReadyJavaScript(version: String) -> String {
         let encoded = version.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
         return "window.compassDesktop && window.compassDesktop.__deliverUpdateReady('\(encoded)');"
+    }
+
+    public static func dispatchShortcutJavaScript(name: String) -> String {
+        let encoded = name.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
+        return "window.compassDesktop && window.compassDesktop.dispatchShortcut('\(encoded)');"
     }
 }

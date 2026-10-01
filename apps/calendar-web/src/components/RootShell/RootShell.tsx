@@ -58,6 +58,7 @@ import {
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
 import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
+import { useDesktopMenuShortcutBridge } from "@web/desktop/useDesktopMenuShortcutBridge";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import {
   selectGuestMeetingSetupActive,
@@ -134,6 +135,7 @@ export function RootShell() {
   useGuestMeetingSetupResume();
   useSettingsSearchEntry();
   useDesktopDeepLink();
+  useDesktopMenuShortcutBridge();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;
