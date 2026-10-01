@@ -40,6 +40,10 @@ export type CompassDesktopBridge = {
   onNotificationPermissionChange?: (
     handler: () => void,
   ) => CompassDesktopUnsubscribe;
+  /** Global quick-add hotkey string (macOS shell). */
+  getQuickAddHotkey?: () => string;
+  setQuickAddHotkey?: (shortcut: string) => void;
+  dismissQuickAddPanel?: () => void;
 };
 
 declare global {

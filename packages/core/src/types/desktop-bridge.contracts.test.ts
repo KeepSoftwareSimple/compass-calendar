@@ -34,6 +34,20 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
     ).toEqual({ method: "restartToUpdate" });
   });
 
+  it("accepts quick-add bridge messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "setQuickAddHotkey",
+        shortcut: "Ctrl+Option+Cmd+Space",
+      }).method,
+    ).toBe("setQuickAddHotkey");
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "dismissQuickAddPanel",
+      }).method,
+    ).toBe("dismissQuickAddPanel");
+  });
+
   it("accepts showNotification messages", () => {
     const parsed = DesktopBridgeOutboundMessageSchema.parse({
       method: "showNotification",

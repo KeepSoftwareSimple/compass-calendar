@@ -32,6 +32,9 @@ export function getSettingsCommandItem(): CommandItem {
 export const COMMAND_PALETTE_PLACEHOLDER =
   "Search commands, events, or type a date";
 
+export const DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER =
+  "Add an event, or type a time like 1130";
+
 export function getMoreCommandPaletteSections(
   currentView: ViewName,
   feedbackEnabled = isPosthogEnabled(),

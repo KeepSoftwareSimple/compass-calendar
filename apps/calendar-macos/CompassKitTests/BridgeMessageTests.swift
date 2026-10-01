@@ -52,6 +52,20 @@ final class BridgeMessageTests: XCTestCase {
                     eventId: "evt-1")))
     }
 
+    func testDecodesSetQuickAddHotkey() throws {
+        let data = Data("""
+        {"method":"setQuickAddHotkey","shortcut":"Ctrl+Option+Cmd+Space"}
+        """.utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: data),
+            .setQuickAddHotkey(shortcut: "Ctrl+Option+Cmd+Space"))
+    }
+
+    func testDecodesDismissQuickAddPanel() throws {
+        let data = Data("{\"method\":\"dismissQuickAddPanel\"}".utf8)
+        XCTAssertEqual(try BridgeMessageCodec.decode(from: data), .dismissQuickAddPanel)
+    }
+
     func testRejectsUnknownMethods() {
         let data = Data("{\"method\":\"unknown\"}".utf8)
         XCTAssertThrowsError(try BridgeMessageCodec.decode(from: data)) { error in

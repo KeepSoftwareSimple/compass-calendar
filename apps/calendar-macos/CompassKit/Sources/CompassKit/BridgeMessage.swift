@@ -21,6 +21,8 @@ public enum BridgeMessage: Equatable, Sendable {
     case requestNotificationPermission
     case getNotificationPermission
     case showNotification(payload: DesktopNotificationPayload)
+    case setQuickAddHotkey(shortcut: String)
+    case dismissQuickAddPanel
 }
 
 public enum BridgeMessageCodec {
@@ -77,6 +79,13 @@ public enum BridgeMessageCodec {
                     body: body,
                     tag: tag,
                     eventId: eventId))
+        case "setQuickAddHotkey":
+            guard let shortcut = dictionary["shortcut"] as? String else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .setQuickAddHotkey(shortcut: shortcut)
+        case "dismissQuickAddPanel":
+            return .dismissQuickAddPanel
         default:
             throw BridgeMessageError.unknownMethod(method)
         }

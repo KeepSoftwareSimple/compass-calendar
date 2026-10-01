@@ -8,13 +8,19 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     CompassNotificationDelivering, CompassAgendaDeepLinkDelivering
 {
     private(set) var appURL: URL
+    private let injectQuickAddBridge: Bool
     /// Host window for accessibility probes (matches AppDelegate.window).
     weak var accessibilityHostWindow: NSWindow?
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
 
-    init(appURL: URL) {
+    func configureQuickAddRouter(_ router: DesktopQuickAddRouting) {
+        bridgeHandler.quickAddRouter = router
+    }
+
+    init(appURL: URL, injectQuickAddBridge: Bool = false) {
         self.appURL = appURL
+        self.injectQuickAddBridge = injectQuickAddBridge
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -58,7 +64,11 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         contentController.add(bridgeHandler, name: "compass")
 
         let origin = appURL.originString
-        let bridgeSource = BridgeScript.userScriptSource(appOrigin: origin)
+        let quickAddHotkey = QuickAddHotKeyStorage.load().displayString
+        let bridgeSource = BridgeScript.userScriptSource(
+            appOrigin: origin,
+            quickAddHotkeyDisplay: quickAddHotkey,
+            includeQuickAddControls: injectQuickAddBridge)
         contentController.addUserScript(
             WKUserScript(
                 source: bridgeSource,
