@@ -4,6 +4,8 @@ import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbrev
 export interface TimeZoneListItem {
   id: string;
   city: string;
+  /** Generic zone name such as "Central Time"; empty when Intl only knows an offset. */
+  name: string;
   region: string;
   abbreviation: string;
   offset: string;
@@ -22,14 +24,50 @@ function regionFromIanaId(id: string): string {
   return slash === -1 ? id : id.slice(0, slash);
 }
 
+function timeZoneNamePart(
+  timeZone: string,
+  at: Date,
+  timeZoneName: "long" | "longGeneric" | "shortOffset",
+): string {
+  return (
+    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName })
+      .formatToParts(at)
+      .find((part) => part.type === "timeZoneName")?.value ?? ""
+  );
+}
+
+/** Travelers search "central" or "eastern", not the zone's canonical city. */
+function genericZoneName(timeZone: string, at: Date): string {
+  const name = timeZoneNamePart(timeZone, at, "longGeneric");
+  return name.startsWith("GMT") ? "" : name;
+}
+
+/**
+ * The best-known city for common zone names. Dozens of zones share
+ * "Central Time", so a search for "central" lists Chicago before Knox.
+ */
+const PRIMARY_ZONES = new Set([
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Phoenix",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "America/Halifax",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Athens",
+  "Asia/Kolkata",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+]);
+
 function offsetAt(
   timeZone: string,
   at: Date,
 ): { minutes: number; label: string } {
-  const raw =
-    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortOffset" })
-      .formatToParts(at)
-      .find((part) => part.type === "timeZoneName")?.value ?? "";
+  const raw = timeZoneNamePart(timeZone, at, "shortOffset");
   const match = raw.match(/([+-])(\d{1,2})(?::?(\d{2}))?/);
   if (!match) {
     return { minutes: 0, label: raw };
@@ -59,15 +97,25 @@ export function buildTimeZoneList(at: Date = new Date()): TimeZoneListItem[] {
     const region = regionFromIanaId(id);
     const abbreviation = formatTimeZoneAbbreviation(id, at);
     const offset = offsetAt(id, at);
+    const name = genericZoneName(id, at);
     return {
       id,
       city,
+      name,
       region,
       abbreviation,
       offset: offset.label,
       offsetMinutes: offset.minutes,
-      secondary: [abbreviation, offset.label].filter(Boolean).join(", "),
-      keywords: [id, region, abbreviation, offset.label],
+      secondary: [...new Set([name, abbreviation, offset.label])]
+        .filter(Boolean)
+        .join(", "),
+      keywords: [
+        id,
+        name,
+        timeZoneNamePart(id, at, "long"),
+        abbreviation,
+        offset.label,
+      ],
     };
   });
   cachedList = { minute, items };
@@ -106,12 +154,25 @@ export function filterTimeZones(
   return zones
     .map((zone) => ({
       zone,
-      score: scoreCommandItem(
-        { label: zone.city, keywords: zone.keywords },
-        trimmed,
+      // The zone name counts as a label so "pacific" ranks Los Angeles
+      // ("Pacific Time") above ids that merely start with "Pacific/".
+      score: Math.max(
+        scoreCommandItem(
+          { label: zone.city, keywords: zone.keywords },
+          trimmed,
+        ),
+        scoreCommandItem(
+          { label: zone.name, keywords: zone.keywords },
+          trimmed,
+        ),
       ),
     }))
     .filter((entry) => entry.score > 0)
+    .map((entry) =>
+      PRIMARY_ZONES.has(entry.zone.id)
+        ? { ...entry, score: entry.score + 0.5 }
+        : entry,
+    )
     .sort((left, right) => right.score - left.score)
     .map((entry) => entry.zone);
 }
