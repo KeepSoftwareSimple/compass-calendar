@@ -38,6 +38,7 @@ import {
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { AccountsSection } from "@web/components/Settings/AccountsSection";
 import { DefaultCalendarPicker } from "@web/components/Settings/DefaultCalendarPicker";
+import { DesktopQuickAddHotkeySection } from "@web/components/Settings/DesktopQuickAddHotkeySection";
 import { SettingsNavButton } from "@web/components/Settings/SettingsNavButton";
 import {
   selectGuestMeetingSetupActive,
@@ -272,6 +273,7 @@ export const SettingsModal: FC = () => {
                 connections={connections}
                 resolvedDefault={resolvedDefault}
               />
+              <DesktopQuickAddHotkeySection />
               <AccountsSection
                 confirmingId={confirmingId}
                 connections={connections}

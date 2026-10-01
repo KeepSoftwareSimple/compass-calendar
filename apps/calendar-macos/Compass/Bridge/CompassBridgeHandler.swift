@@ -5,6 +5,7 @@ import WebKit
 /// Decodes bridge messages from the web view and dispatches them to native handlers.
 final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
+    weak var quickAddRouter: DesktopQuickAddRouting?
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -41,6 +42,14 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
             guard let webView else { return }
             Task { @MainActor in
                 CompassNotificationCenter.shared.handle(bridgeMessage, webView: webView)
+            }
+        case let .setQuickAddHotkey(shortcut):
+            Task { @MainActor in
+                self.quickAddRouter?.setQuickAddHotkey(shortcut)
+            }
+        case .dismissQuickAddPanel:
+            Task { @MainActor in
+                self.quickAddRouter?.dismissQuickAddPanel()
             }
         }
     }

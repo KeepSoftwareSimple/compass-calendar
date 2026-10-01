@@ -60,6 +60,7 @@ import {
 import { useDesktopAgendaSync } from "@web/desktop/useDesktopAgendaSync";
 import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
 import { useDesktopMenuShortcutBridge } from "@web/desktop/useDesktopMenuShortcutBridge";
+import { useDesktopQuickAddEntry } from "@web/desktop/useDesktopQuickAddEntry";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import {
   selectGuestMeetingSetupActive,
@@ -136,6 +137,7 @@ export function RootShell() {
   useGuestMeetingSetupResume();
   useSettingsSearchEntry();
   useDesktopDeepLink();
+  useDesktopQuickAddEntry();
   useDesktopAgendaSync();
   useDesktopMenuShortcutBridge();
 

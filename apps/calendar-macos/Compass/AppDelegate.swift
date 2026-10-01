@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var webViewController: WebViewController?
     /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
+    private var quickAddCoordinator: DesktopQuickAddCoordinator?
     private var optionHeldAtLaunch = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -21,8 +22,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),
             infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
 
+        let quickAddCoordinator = DesktopQuickAddCoordinator(appURL: appURL)
+        self.quickAddCoordinator = quickAddCoordinator
+        quickAddCoordinator.start()
+
         let webViewController = WebViewController(appURL: appURL)
         self.webViewController = webViewController
+        webViewController.configureQuickAddRouter(quickAddCoordinator)
 
         let showDebugMenu = DebugMenuPolicy.shouldShow(
             optionHeldAtLaunch: optionHeldAtLaunch)

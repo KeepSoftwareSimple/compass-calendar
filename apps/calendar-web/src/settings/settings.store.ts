@@ -10,6 +10,8 @@ export type OpenFromPaletteOptions = {
 
 interface SettingsState {
   isCmdPaletteOpen: boolean;
+  /** Quick-add panel opens the palette focused on creating events. */
+  cmdPaletteCreateMode: boolean;
   isSettingsOpen: boolean;
   isAboutOpen: boolean;
   settingsPage: SettingsPage;
@@ -21,6 +23,7 @@ interface SettingsState {
 
 export const initialSettingsState: SettingsState = {
   isCmdPaletteOpen: false,
+  cmdPaletteCreateMode: false,
   isSettingsOpen: false,
   isAboutOpen: false,
   settingsPage: "accounts",
@@ -39,13 +42,27 @@ export const useSettingsStore = create<SettingsState>()(
 
 export const settingsActions = {
   closeCmdPalette: () =>
-    useSettingsStore.setState({ isCmdPaletteOpen: false }, false, {
-      type: "closeCmdPalette",
-    }),
+    useSettingsStore.setState(
+      { isCmdPaletteOpen: false, cmdPaletteCreateMode: false },
+      false,
+      {
+        type: "closeCmdPalette",
+      },
+    ),
   openCmdPalette: () =>
-    useSettingsStore.setState({ isCmdPaletteOpen: true }, false, {
-      type: "openCmdPalette",
-    }),
+    useSettingsStore.setState(
+      { isCmdPaletteOpen: true, cmdPaletteCreateMode: false },
+      false,
+      {
+        type: "openCmdPalette",
+      },
+    ),
+  openCmdPaletteCreateMode: () =>
+    useSettingsStore.setState(
+      { isCmdPaletteOpen: true, cmdPaletteCreateMode: true },
+      false,
+      { type: "openCmdPaletteCreateMode" },
+    ),
   toggleCmdPalette: () =>
     useSettingsStore.setState(
       (state) => ({ isCmdPaletteOpen: !state.isCmdPaletteOpen }),
@@ -166,6 +183,9 @@ export const reopenCommandPaletteIfNeeded = (close: () => void) => {
 
 export const selectIsCmdPaletteOpen = (state: SettingsState) =>
   state.isCmdPaletteOpen;
+
+export const selectIsCmdPaletteCreateMode = (state: SettingsState) =>
+  state.cmdPaletteCreateMode;
 
 export const selectIsSettingsOpen = (state: SettingsState) =>
   state.isSettingsOpen;

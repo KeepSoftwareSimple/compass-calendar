@@ -54,6 +54,15 @@ export const DesktopBridgeShowNotificationMessageSchema = z.strictObject({
   eventId: z.string().trim().min(1).max(128),
 });
 
+export const DesktopBridgeSetQuickAddHotkeyMessageSchema = z.strictObject({
+  method: z.literal("setQuickAddHotkey"),
+  shortcut: z.string().trim().min(3).max(64),
+});
+
+export const DesktopBridgeDismissQuickAddPanelMessageSchema = z.strictObject({
+  method: z.literal("dismissQuickAddPanel"),
+});
+
 export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
   "method",
   [
@@ -63,6 +72,8 @@ export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
     DesktopBridgeRequestNotificationPermissionMessageSchema,
     DesktopBridgeGetNotificationPermissionMessageSchema,
     DesktopBridgeShowNotificationMessageSchema,
+    DesktopBridgeSetQuickAddHotkeyMessageSchema,
+    DesktopBridgeDismissQuickAddPanelMessageSchema,
   ],
 );
 export type DesktopBridgeOutboundMessage = z.infer<

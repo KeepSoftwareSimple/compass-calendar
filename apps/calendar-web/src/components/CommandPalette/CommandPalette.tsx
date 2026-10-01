@@ -35,7 +35,10 @@ import { useShowBillingCmdItems } from "@web/components/CommandPalette/hooks/use
 import { useShowBookingCmdItems } from "@web/components/CommandPalette/hooks/useShowBookingCmdItems";
 import { useThemeCmdItems } from "@web/components/CommandPalette/hooks/useThemeCmdItems";
 import { useUpgradeCmdItems } from "@web/components/CommandPalette/hooks/useUpgradeCmdItems";
-import { getMoreCommandPaletteSections } from "@web/components/CommandPalette/more.cmd.constants";
+import {
+  DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER,
+  getMoreCommandPaletteSections,
+} from "@web/components/CommandPalette/more.cmd.constants";
 import {
   GO_TO_DATE_ITEM_ID,
   getGoToDateCommandItem,
@@ -54,6 +57,7 @@ import { useUndoRedo } from "@web/events/mutations/useUndoRedo";
 import { useEventSearch } from "@web/events/queries/useEventSearch";
 import { useNotificationCmdItems } from "@web/notifications/useNotificationCmdItems";
 import {
+  selectIsCmdPaletteCreateMode,
   selectIsCmdPaletteOpen,
   settingsActions,
   useSettingsStore,
@@ -386,6 +390,10 @@ export const CommandPalette = ({
   mutationDependencies,
 }: CommandPaletteProps) => {
   const open = useSettingsStore(selectIsCmdPaletteOpen);
+  const createMode = useSettingsStore(selectIsCmdPaletteCreateMode);
+  const palettePlaceholder = createMode
+    ? DESKTOP_QUICK_ADD_PALETTE_PLACEHOLDER
+    : placeholder;
   useAppLockReason("commandPalette", open);
   const writeLocked = useShortcutWriteLocked();
   const eventItems = writeLocked
@@ -516,7 +524,7 @@ export const CommandPalette = ({
   return (
     <CommandPaletteContent
       currentView={currentView}
-      placeholder={placeholder}
+      placeholder={palettePlaceholder}
       sections={sectionsWithRecent}
     />
   );

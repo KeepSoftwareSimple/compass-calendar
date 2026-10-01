@@ -4,8 +4,34 @@ public enum BridgeScript {
     public static let bridgeVersion = "0.1.0"
 
     /// Injects `window.compassDesktop` only when `location.origin` matches the app origin.
-    public static func userScriptSource(appOrigin: String) -> String {
-        """
+    public static func userScriptSource(
+        appOrigin: String,
+        quickAddHotkeyDisplay: String = QuickAddHotKeyStorage.defaultDisplayString,
+        includeQuickAddControls: Bool = false
+    ) -> String {
+        let escapedHotkey = quickAddHotkeyDisplay
+            .replacing("\\", with: "\\\\")
+            .replacing("'", with: "\\'")
+        let quickAddBridge = includeQuickAddControls
+            ? """
+            getQuickAddHotkey: function () { return '\(escapedHotkey)'; },
+            setQuickAddHotkey: function (shortcut) {
+              window.__compassQuickAddHotkey = shortcut;
+              post({ method: 'setQuickAddHotkey', shortcut: shortcut });
+            },
+            dismissQuickAddPanel: function () {
+              post({ method: 'dismissQuickAddPanel' });
+            },
+            """
+            : """
+            getQuickAddHotkey: function () { return '\(escapedHotkey)'; },
+            setQuickAddHotkey: function (shortcut) {
+              window.__compassQuickAddHotkey = shortcut;
+              post({ method: 'setQuickAddHotkey', shortcut: shortcut });
+            },
+            dismissQuickAddPanel: function () { return; },
+            """
+        return """
         (function () {
           if (window.compassDesktop) { return; }
           function normalizeOrigin(origin) {
@@ -154,6 +180,7 @@ public enum BridgeScript {
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
             onUpdateReady: function (handler) { return updateReady.add(handler); },
+            \(quickAddBridge)
             __deliverNotificationPermission: function (permission) {
               var normalized = normalizePermission(permission);
               window.compassDesktop.notificationPermission = normalized;

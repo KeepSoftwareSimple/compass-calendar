@@ -6,6 +6,7 @@ import {
   useEffect,
   useMemo,
 } from "react";
+import { DESKTOP_QUICK_ADD_SEARCH_PARAM } from "@core/desktop/desktop-quick-add.contract";
 import { useSession } from "@web/auth/compass/session/useSession";
 import {
   type SearchFlag,
@@ -51,6 +52,8 @@ export interface AuthSearch {
   meetingSetup?: SearchFlag;
   /** ?settings=<page> opens Settings on that page (welcome email CTAs). */
   settings?: SettingsPage;
+  /** ?quickAdd=1 opens the command palette in create mode (macOS panel). */
+  quickAdd?: SearchFlag;
 }
 
 export function validateAuthSearch(
@@ -62,6 +65,7 @@ export function validateAuthSearch(
     play: searchFlagValue(search.play),
     meetingSetup: searchFlagValue(search.meetingSetup),
     settings: settingsPageFromSearch(search.settings),
+    quickAdd: searchFlagValue(search[DESKTOP_QUICK_ADD_SEARCH_PARAM]),
   };
 }
 
