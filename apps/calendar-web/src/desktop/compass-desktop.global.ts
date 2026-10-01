@@ -26,6 +26,7 @@ export type CompassDesktopBridge = {
   openExternal: (url: string) => void;
   setAgenda: (items: DesktopAgenda) => void;
   restartToUpdate: () => void;
+  dispatchShortcut?: (name: string) => boolean;
   onDeepLink: (
     handler: CompassDesktopDeepLinkHandler,
   ) => CompassDesktopUnsubscribe;

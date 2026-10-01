@@ -2,25 +2,32 @@ import CompassKit
 import XCTest
 
 final class AppOriginTests: XCTestCase {
-    private let app = URL(string: "https://staging.compasscalendar.com")!
+    private let app = URL(string: "https://compasscalendar.com")!
 
     func testAllowsTheAppOrigin() {
-        let url = URL(string: "https://staging.compasscalendar.com/week?date=2026-10-01")!
+        let url = URL(string: "https://compasscalendar.com/week?date=2026-10-01")!
         XCTAssertEqual(AppOrigin.decide(url, isMainFrame: true, appURL: app), .allow)
     }
 
+    func testTreatsWwwAsTheSameOriginAsApex() {
+        let www = URL(string: "https://www.compasscalendar.com/week")!
+        let apex = URL(string: "https://compasscalendar.com")!
+        XCTAssertEqual(AppOrigin.decide(www, isMainFrame: true, appURL: apex), .allow)
+        XCTAssertEqual(AppOrigin.decide(www, isMainFrame: true, appURL: app), .allow)
+    }
+
     func testTreatsDefaultPortAsTheSameOrigin() {
-        let url = URL(string: "https://staging.compasscalendar.com:443/day")!
+        let url = URL(string: "https://compasscalendar.com:443/day")!
         XCTAssertEqual(AppOrigin.decide(url, isMainFrame: true, appURL: app), .allow)
     }
 
     func testOpensOtherHostsExternally() {
         for raw in [
-            "https://compasscalendar.com/",
+            "https://staging.compasscalendar.com/",
             "https://accounts.google.com/o/oauth2/v2/auth",
-            "https://evil.staging.compasscalendar.com.example/",
-            "http://staging.compasscalendar.com/",
-            "https://staging.compasscalendar.com:8443/",
+            "https://evil.compasscalendar.com.example/",
+            "http://compasscalendar.com/",
+            "https://compasscalendar.com:8443/",
             "mailto:hello@compasscalendar.com",
         ] {
             let url = URL(string: raw)!
@@ -46,7 +53,10 @@ final class AppOriginTests: XCTestCase {
         XCTAssertEqual(
             AppOrigin.resolve(override: nil, infoValue: "https://compasscalendar.com"),
             URL(string: "https://compasscalendar.com")!)
-        XCTAssertEqual(AppOrigin.resolve(override: nil, infoValue: nil), AppOrigin.defaultURL)
+        XCTAssertEqual(
+            AppOrigin.resolve(override: nil, infoValue: nil),
+            AppHostPreference.productionURL)
+        XCTAssertEqual(AppHostPreference.productionURL.host, "www.compasscalendar.com")
     }
 
     func testResolveIgnoresValuesThatAreNotWebURLs() {

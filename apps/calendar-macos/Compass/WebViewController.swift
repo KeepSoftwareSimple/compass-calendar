@@ -7,13 +7,54 @@ import WebKit
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate,
     CompassNotificationDelivering, CompassAgendaDeepLinkDelivering
 {
-    private let appURL: URL
+    private(set) var appURL: URL
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
 
     init(appURL: URL) {
         self.appURL = appURL
         super.init(nibName: nil, bundle: nil)
+    }
+
+    func dispatchShortcut(_ shortcut: MainMenuShortcutName) {
+        CompassBridgeAccessibility.publishLastDispatchedShortcut(
+            shortcut.rawValue,
+            on: view.window)
+        webView?.evaluateJavaScript(BridgeScript.dispatchShortcutJavaScript(name: shortcut.rawValue)) {
+            [weak self] result, _ in
+            Task { @MainActor in
+                guard (result as? Bool) == true else { return }
+                CompassBridgeAccessibility.publishLastDispatchedShortcut(
+                    shortcut.rawValue,
+                    on: self?.view.window)
+            }
+        }
+    }
+
+    func reloadAppHost() {
+        let resolved = AppOrigin.resolve(
+            override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),
+            infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
+        guard resolved != appURL else { return }
+        appURL = resolved
+        reinstallBridgeUserScripts()
+        webView.load(URLRequest(url: appURL))
+    }
+
+    private func reinstallBridgeUserScripts() {
+        let controller = webView.configuration.userContentController
+        controller.removeAllUserScripts()
+        let bridgeSource = BridgeScript.userScriptSource(appOrigin: appURL.originString)
+        controller.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true))
+        controller.addUserScript(
+            WKUserScript(
+                source: bridgeSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true))
     }
 
     @available(*, unavailable)
@@ -82,15 +123,18 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
             [weak self] result, _ in
             Task { @MainActor in
-                if let version = result as? String, !version.isEmpty {
-                    CompassBridgeAccessibility.publishBridgeVersion(
-                        version,
-                        on: self?.view.window)
+                guard let self else { return }
+                if let version = result as? String,
+                   !version.isEmpty,
+                   let window = self.view.window
+                {
+                    CompassBridgeAccessibility.publishBridgeVersion(version, on: window)
                     return
                 }
-                guard attempt < 8 else { return }
-                try? await Task.sleep(for: .seconds(2))
-                self?.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
+                guard attempt < 12 else { return }
+                let delaySeconds = attempt < 4 ? 0.05 : 2.0
+                try? await Task.sleep(for: .seconds(delaySeconds))
+                self.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
             }
         }
     }
