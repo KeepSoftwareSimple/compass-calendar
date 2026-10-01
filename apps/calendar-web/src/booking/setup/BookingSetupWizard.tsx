@@ -206,6 +206,7 @@ export function BookingSetupWizard({
             bookingUrl={bookingUrl}
             destinationCalendar={destinationCalendar}
             durationMinutes={form.durationMinutes}
+            guest={guestGoLive}
             slug={form.slug ?? ""}
             timeZone={form.timeZone}
             weeklyAvailability={form.weeklyAvailability}

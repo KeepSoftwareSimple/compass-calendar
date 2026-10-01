@@ -6,11 +6,13 @@ import { type ComponentProps, createRef } from "react";
 import { buildDefaultAdminPutInput } from "@core/types/booking.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import * as realAvailableProviders from "@web/auth/providers/useAvailableConnectProviders";
 import * as realConnectProvider from "@web/auth/providers/useConnectProvider";
 import { BOOKING_SAVE_ERROR_COPY } from "@web/booking/booking.query";
+import { GUEST_DESTINATION_LABEL } from "@web/booking/setup/BookingSetupGoLiveStep";
 import { BookingSetupWizard } from "@web/booking/setup/BookingSetupWizard";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -150,6 +152,20 @@ describe("BookingSetupWizard", () => {
         "Review your settings. Your page turns on after sign-up.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("does not name the guest's local calendar as the go-live destination", () => {
+    const localCalendar = createMockCalendar({ name: "Compass" });
+    renderWizard({
+      destinationCalendar: localCalendar,
+      setupStep: "live",
+      guestGoLive: true,
+      writableCalendarCount: 1,
+      writableCalendars: [localCalendar],
+    });
+
+    expect(screen.getByText(GUEST_DESTINATION_LABEL)).toBeInTheDocument();
+    expect(screen.queryByText("Compass")).not.toBeInTheDocument();
   });
 
   it("focuses the address field after a SLUG_TAKEN error", async () => {
