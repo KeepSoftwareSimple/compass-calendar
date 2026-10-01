@@ -28,6 +28,8 @@ targets:
       - Compass
     resources:
       - Resources/offline.html
+      - path: Resources/icon.icns
+        optional: true
     settings:
       base:
         PRODUCT_NAME: Compass

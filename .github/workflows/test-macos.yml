@@ -101,6 +101,9 @@ jobs:
         run: |
           brew install xcodegen
 
+      - name: Render app icon
+        run: bash ../../.github/scripts/render-macos-icon.sh
+
       - name: Cache SwiftPM and derived data
         uses: actions/cache@v6
         with:

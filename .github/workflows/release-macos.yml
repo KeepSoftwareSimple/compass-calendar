@@ -1,0 +1,196 @@
+name: Release macOS
+
+# Signed, notarized universal DMG for Compass Desktop (docs/features/desktop-client.md).
+# Trigger with tag macos-vX.Y.Z matching MARKETING_VERSION in project.yml.
+on:
+  push:
+    tags:
+      - "macos-v[0-9]+.[0-9]+.[0-9]+"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build, notarize, and publish DMG
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: apps/calendar-macos
+    env:
+      KEYCHAIN_PASSWORD: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out tag
+        uses: actions/checkout@v7
+
+      - name: Require release secrets
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          missing=()
+          [ -z "${CSC_LINK:-}" ] && missing+=("CSC_LINK")
+          [ -z "${CSC_KEY_PASSWORD:-}" ] && missing+=("CSC_KEY_PASSWORD")
+          [ -z "${APPLE_API_KEY_P8:-}" ] && missing+=("APPLE_API_KEY_P8")
+          [ -z "${APPLE_API_KEY_ID:-}" ] && missing+=("APPLE_API_KEY_ID")
+          [ -z "${APPLE_API_ISSUER:-}" ] && missing+=("APPLE_API_ISSUER")
+          [ -z "${APPLE_TEAM_ID:-}" ] && missing+=("APPLE_TEAM_ID")
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Missing required repository secrets: ${missing[*]}"
+            exit 1
+          fi
+          echo "All required Apple signing secrets are present."
+
+      - name: Match tag to MARKETING_VERSION
+        id: version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "$tag" =~ ^macos-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Tag must be macos-vX.Y.Z, got ${tag}"
+            exit 1
+          fi
+          tag_version="${BASH_REMATCH[1]}"
+          yaml_version=$(grep -E '^\s+MARKETING_VERSION:' project.yml | head -1 | awk '{print $2}')
+          if [ "$tag_version" != "$yaml_version" ]; then
+            echo "::error::Tag version ${tag_version} does not match MARKETING_VERSION ${yaml_version} in project.yml"
+            exit 1
+          fi
+          echo "release_tag=${tag}" >>"$GITHUB_OUTPUT"
+          echo "marketing_version=${tag_version}" >>"$GITHUB_OUTPUT"
+          echo "Tag ${tag} matches MARKETING_VERSION ${yaml_version}."
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Render app icon
+        run: bash ../../.github/scripts/render-macos-icon.sh
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import Developer ID certificate
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="${RUNNER_TEMP}/compass-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          echo "$CSC_LINK" | base64 --decode >"${RUNNER_TEMP}/certificate.p12"
+          security import "${RUNNER_TEMP}/certificate.p12" -k "$KEYCHAIN" \
+            -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain
+          SIGNING_IDENTITY=$(security find-identity -v -p codesigning "$KEYCHAIN" |
+            sed -n 's/.*"\(Developer ID Application:.*\)".*/\1/p' | head -1)
+          if [ -z "$SIGNING_IDENTITY" ]; then
+            echo "::error::No Developer ID Application identity found in imported certificate."
+            exit 1
+          fi
+          echo "SIGNING_IDENTITY=${SIGNING_IDENTITY}" >>"$GITHUB_ENV"
+          echo "SIGNING_KEYCHAIN=${KEYCHAIN}" >>"$GITHUB_ENV"
+
+      - name: Archive universal Release build
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project Compass.xcodeproj \
+            -scheme Compass \
+            -configuration Release \
+            -archivePath build/Compass.xcarchive \
+            -destination "generic/platform=macOS" \
+            -derivedDataPath build/DerivedData \
+            -clonedSourcePackagesDirPath build/SourcePackages \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_ENTITLEMENTS=Resources/Compass.entitlements \
+            OTHER_CODE_SIGN_FLAGS="--options runtime --timestamp"
+
+      - name: Export signed app
+        id: app
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Compass.xcarchive/Products/Applications/Compass.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::Archive did not produce ${APP_PATH}"
+            exit 1
+          fi
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          echo "app_path=${APP_PATH}" >>"$GITHUB_OUTPUT"
+
+      - name: Notarize app bundle
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set -euo pipefail
+          APP_PATH="${{ steps.app.outputs.app_path }}"
+          KEY_PATH="${RUNNER_TEMP}/AuthKey.p8"
+          printf '%s' "$APPLE_API_KEY_P8" >"$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          ZIP_PATH="build/Compass-notarize.zip"
+          ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
+          xcrun notarytool submit "$ZIP_PATH" \
+            --key "$KEY_PATH" \
+            --key-id "$APPLE_API_KEY_ID" \
+            --issuer "$APPLE_API_ISSUER" \
+            --wait
+          xcrun stapler staple "$APP_PATH"
+          echo "Notarization accepted and app stapled."
+
+      - name: Assess with Gatekeeper
+        run: |
+          set -euo pipefail
+          spctl --assess --verbose=4 --type execute "${{ steps.app.outputs.app_path }}"
+
+      - name: Build DMG
+        id: dmg
+        run: |
+          set -euo pipefail
+          APP_PATH="${{ steps.app.outputs.app_path }}"
+          DMG_PATH="build/Compass-${{ steps.version.outputs.marketing_version }}.dmg"
+          rm -f "$DMG_PATH"
+          hdiutil create \
+            -volname "Compass" \
+            -srcfolder "$APP_PATH" \
+            -ov \
+            -format UDZO \
+            "$DMG_PATH"
+          echo "dmg_path=${DMG_PATH}" >>"$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.release_tag }}"
+          dmg="${{ steps.dmg.outputs.dmg_path }}"
+          gh release create "$tag" "$dmg" \
+            --title "Compass for macOS ${{ steps.version.outputs.marketing_version }}" \
+            --notes "Signed, notarized universal build. Install by opening the DMG and dragging Compass to Applications."
+
+      - name: Delete signing keychain
+        if: always()
+        run: |
+          if [ -n "${SIGNING_KEYCHAIN:-}" ] && [ -f "$SIGNING_KEYCHAIN" ]; then
+            security delete-keychain "$SIGNING_KEYCHAIN" || true
+          fi
