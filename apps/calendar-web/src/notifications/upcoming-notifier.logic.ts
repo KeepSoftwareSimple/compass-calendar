@@ -127,7 +127,6 @@ export function showUpcomingEventNotification(
   return port.show(event.title?.trim() || "Untitled event", {
     body: `Starts at ${inEffectiveTimeZone(event.startDate).format("h:mm A")}`,
     tag: notificationKey(event),
-    eventId: event._id,
     onClick: () => window.focus(),
   });
 }

@@ -22,7 +22,7 @@ describe("getNotificationPort", () => {
     expect(port.isSupported()).toBe(typeof Notification !== "undefined");
   });
 
-  it("uses the desktop port when the bridge is injected", () => {
+  it("uses the desktop port when the bridge is injected", async () => {
     const showNotification = mock(() => {});
     window.compassDesktop = {
       version: "0.1.0",
@@ -32,17 +32,18 @@ describe("getNotificationPort", () => {
       setAgenda: () => {},
       restartToUpdate: () => {},
       showNotification,
-      onDeepLink: () => () => {},
+      onDeepLink: () => {},
       onUpdateReady: () => {},
-    };
+    } as NonNullable<Window["compassDesktop"]>;
 
+    getNotificationPort();
+    await import("@web/notifications/notification.desktop.port");
     const port = getNotificationPort();
     expect(port.isSupported()).toBe(true);
     expect(
       port.show("Team sync", {
         body: "Starts at 9:00 AM",
         tag: "evt-1|2026-10-01T14:00:00.000Z",
-        eventId: "evt-1",
       }),
     ).toBe(true);
     expect(showNotification).toHaveBeenCalledWith({

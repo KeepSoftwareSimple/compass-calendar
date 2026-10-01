@@ -1,9 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { parseDesktopAuthDeepLink } from "@core/desktop/desktop-oauth-state.util";
 import { isDesktop } from "@web/desktop/isDesktop";
-
-const EVENT_DEEP_LINK = /^compass:\/\/event\/(?<eventId>.+)$/;
 
 /**
  * Forwards compass:// OAuth callbacks into the existing provider callback route
@@ -22,23 +19,14 @@ export function useDesktopDeepLink(): void {
       return;
     }
 
-    return bridge.onDeepLink((url) => {
-      const parsed = parseDesktopAuthDeepLink(url);
-      if (parsed) {
-        router.history.replace(
-          `/auth/${parsed.provider}/callback${parsed.query}`,
-        );
-        return;
-      }
-
-      const eventMatch = EVENT_DEEP_LINK.exec(url);
-      const eventId = eventMatch?.groups?.eventId?.trim();
-      if (eventId) {
-        window.focus();
-        void import("@web/components/CommandPalette/event-search.util").then(
-          (module) => module.startFocusEventCard(eventId),
-        );
-      }
+    let cancelled = false;
+    void import("./desktop-deep-link").then((module) => {
+      if (cancelled) return;
+      module.attachDesktopDeepLink(router, bridge);
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 }
