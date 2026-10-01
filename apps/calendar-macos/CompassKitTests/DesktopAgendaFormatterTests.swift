@@ -8,9 +8,21 @@ final class DesktopAgendaFormatterTests: XCTestCase {
         return calendar
     }
 
+    private func instant(
+        _ value: String,
+        file: StaticString = #file,
+        line: UInt = #line
+    ) -> Date {
+        guard let date = DesktopAgendaFormatter.parseInstant(value) else {
+            XCTFail("invalid instant: \(value)", file: file, line: line)
+            return Date(timeIntervalSince1970: 0)
+        }
+        return date
+    }
+
     func testRelativeLeadMinutes() {
-        let now = ISO8601DateFormatter().date(from: "2026-10-01T14:00:00.000Z")!
-        let start = ISO8601DateFormatter().date(from: "2026-10-01T14:12:00.000Z")!
+        let now = instant("2026-10-01T14:00:00.000Z")
+        let start = instant("2026-10-01T14:12:00.000Z")
         XCTAssertEqual(DesktopAgendaFormatter.relativeLeadMinutes(from: now, to: start), "in 12m")
     }
 
@@ -22,7 +34,7 @@ final class DesktopAgendaFormatterTests: XCTestCase {
     }
 
     func testEmptyAgendaShowsNothingElseToday() {
-        let now = ISO8601DateFormatter().date(from: "2026-10-01T14:00:00.000Z")!
+        let now = instant("2026-10-01T14:00:00.000Z")
         let presentation = DesktopAgendaFormatter.presentation(
             items: [],
             now: now,
@@ -34,7 +46,7 @@ final class DesktopAgendaFormatterTests: XCTestCase {
     }
 
     func testDockBadgeCountsUpcomingEventsToday() {
-        let now = ISO8601DateFormatter().date(from: "2026-10-01T14:00:00.000Z")!
+        let now = instant("2026-10-01T14:00:00.000Z")
         let items = [
             DesktopAgendaItem(
                 id: "past",
@@ -61,7 +73,7 @@ final class DesktopAgendaFormatterTests: XCTestCase {
     }
 
     func testPastEventsMarkedInMenu() {
-        let now = ISO8601DateFormatter().date(from: "2026-10-01T15:00:00.000Z")!
+        let now = instant("2026-10-01T15:00:00.000Z")
         let items = [
             DesktopAgendaItem(
                 id: "past",
@@ -81,7 +93,7 @@ final class DesktopAgendaFormatterTests: XCTestCase {
     }
 
     func testMidnightRolloverDropsYesterday() {
-        let now = ISO8601DateFormatter().date(from: "2026-10-02T00:30:00.000Z")!
+        let now = instant("2026-10-02T00:30:00.000Z")
         let items = [
             DesktopAgendaItem(
                 id: "yesterday",
