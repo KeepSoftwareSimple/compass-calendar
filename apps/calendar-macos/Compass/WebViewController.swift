@@ -103,15 +103,18 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         webView.evaluateJavaScript(BridgeScript.readBridgeVersionJavaScript) {
             [weak self] result, _ in
             Task { @MainActor in
-                if let version = result as? String, !version.isEmpty {
-                    CompassBridgeAccessibility.publishBridgeVersion(
-                        version,
-                        on: self?.view.window)
+                guard let self else { return }
+                if let version = result as? String,
+                   !version.isEmpty,
+                   let window = self.view.window
+                {
+                    CompassBridgeAccessibility.publishBridgeVersion(version, on: window)
                     return
                 }
-                guard attempt < 8 else { return }
-                try? await Task.sleep(for: .seconds(2))
-                self?.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
+                guard attempt < 12 else { return }
+                let delaySeconds = attempt < 4 ? 0.05 : 2.0
+                try? await Task.sleep(for: .seconds(delaySeconds))
+                self.publishBridgeVersionFromPage(webView: webView, attempt: attempt + 1)
             }
         }
     }

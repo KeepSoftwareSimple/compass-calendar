@@ -39,6 +39,66 @@ public enum BridgeScript {
             }
             return 'default';
           }
+          var desktopMenuShortcutBindings = {
+            'create-timed': { hotkey: 'C', eventType: 'keyup' },
+            'nav-today': { hotkey: 'T', eventType: 'keyup' },
+            'nav-day-view': { hotkey: 'D', eventType: 'keyup' },
+            'nav-week-view': { hotkey: 'W', eventType: 'keyup' },
+            'other-palette': { hotkey: 'Mod+K', eventType: 'keydown' },
+            'other-settings': { hotkey: 'Mod+,', eventType: 'keydown' },
+            'other-shortcuts': { hotkey: 'Shift+/', eventType: 'keyup' }
+          };
+          function modifierFlags(part) {
+            if (part === 'Mod') { return { metaKey: true }; }
+            if (part === 'Shift') { return { shiftKey: true }; }
+            if (part === 'Alt') { return { altKey: true }; }
+            if (part === 'Ctrl') { return { ctrlKey: true }; }
+            return {};
+          }
+          function keyInitForHotkey(hotkey) {
+            var parts = hotkey.split('+');
+            var keyToken = parts[parts.length - 1] || hotkey;
+            var init = { bubbles: true, cancelable: true };
+            for (var i = 0; i < parts.length - 1; i += 1) {
+              Object.assign(init, modifierFlags(parts[i]));
+            }
+            if (keyToken === 'ArrowUp') {
+              init.key = 'ArrowUp';
+              init.code = 'ArrowUp';
+            } else if (keyToken === 'ArrowDown') {
+              init.key = 'ArrowDown';
+              init.code = 'ArrowDown';
+            } else if (keyToken === 'ArrowLeft') {
+              init.key = 'ArrowLeft';
+              init.code = 'ArrowLeft';
+            } else if (keyToken === 'ArrowRight') {
+              init.key = 'ArrowRight';
+              init.code = 'ArrowRight';
+            } else if (keyToken === ',') {
+              init.key = ',';
+              init.code = 'Comma';
+            } else if (keyToken === '/') {
+              init.key = '/';
+              init.code = 'Slash';
+            } else if (keyToken.length === 1) {
+              init.key = keyToken;
+              init.code = 'Key' + keyToken.toUpperCase();
+            } else {
+              init.key = keyToken;
+              init.code = keyToken;
+            }
+            return init;
+          }
+          function replayDesktopMenuShortcut(name) {
+            var binding = desktopMenuShortcutBindings[name];
+            if (!binding) { return false; }
+            var target = document.body || document.documentElement;
+            if (!target) { return false; }
+            target.dispatchEvent(
+              new KeyboardEvent(binding.eventType, keyInitForHotkey(binding.hotkey)));
+            window.__compassDesktopDispatchProbe = name;
+            return true;
+          }
           window.compassDesktop = {
             version: '\(bridgeVersion)',
             platform: 'macos',
@@ -76,6 +136,9 @@ public enum BridgeScript {
                 detail: { name: name },
                 bubbles: true
               }));
+              if (window.__compassDesktopDispatchProbe !== name) {
+                replayDesktopMenuShortcut(name);
+              }
               return window.__compassDesktopDispatchProbe === name;
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
