@@ -8,6 +8,8 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     CompassNotificationDelivering, CompassAgendaDeepLinkDelivering
 {
     private(set) var appURL: URL
+    /// Host window for accessibility probes (matches AppDelegate.window).
+    weak var accessibilityHostWindow: NSWindow?
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
 
@@ -16,17 +18,20 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         super.init(nibName: nil, bundle: nil)
     }
 
+    @MainActor
     func dispatchShortcut(_ shortcut: MainMenuShortcutName) {
+        let probeWindow = accessibilityHostWindow ?? view.window
         CompassBridgeAccessibility.publishLastDispatchedShortcut(
             shortcut.rawValue,
-            on: view.window)
+            on: probeWindow)
         webView?.evaluateJavaScript(BridgeScript.dispatchShortcutJavaScript(name: shortcut.rawValue)) {
             [weak self] result, _ in
             Task { @MainActor in
                 guard (result as? Bool) == true else { return }
+                let window = self?.accessibilityHostWindow ?? self?.view.window
                 CompassBridgeAccessibility.publishLastDispatchedShortcut(
                     shortcut.rawValue,
-                    on: self?.view.window)
+                    on: window)
             }
         }
     }
@@ -109,7 +114,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
                 guard let self else { return }
                 if let version = result as? String,
                    !version.isEmpty,
-                   let window = self.view.window
+                   let window = self.accessibilityHostWindow ?? self.view.window
                 {
                     CompassBridgeAccessibility.publishBridgeVersion(version, on: window)
                     return
