@@ -38,6 +38,7 @@ import {
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { AccountsSection } from "@web/components/Settings/AccountsSection";
 import { DefaultCalendarPicker } from "@web/components/Settings/DefaultCalendarPicker";
+import { DesktopLaunchAtLoginSection } from "@web/components/Settings/DesktopLaunchAtLoginSection";
 import { DesktopQuickAddHotkeySection } from "@web/components/Settings/DesktopQuickAddHotkeySection";
 import { SettingsNavButton } from "@web/components/Settings/SettingsNavButton";
 import {
@@ -274,6 +275,7 @@ export const SettingsModal: FC = () => {
                 resolvedDefault={resolvedDefault}
               />
               <DesktopQuickAddHotkeySection />
+              <DesktopLaunchAtLoginSection />
               <AccountsSection
                 confirmingId={confirmingId}
                 connections={connections}

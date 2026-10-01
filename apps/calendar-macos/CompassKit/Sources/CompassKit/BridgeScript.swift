@@ -64,9 +64,11 @@ public enum BridgeScript {
           }
           var deepLink = handlerRegistry();
           var updateReady = handlerRegistry();
+          var resume = handlerRegistry();
           var permissionChange = handlerRegistry();
           var pendingPermissionRequest = null;
           var pendingPermissionQuery = null;
+          var pendingLaunchAtLoginQuery = null;
           function post(body) {
             window.webkit.messageHandlers.compass.postMessage(body);
           }
@@ -180,6 +182,19 @@ public enum BridgeScript {
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
             onUpdateReady: function (handler) { return updateReady.add(handler); },
+            onResume: function (handler) { return resume.add(handler); },
+            setAppearance: function (theme) {
+              post({ method: 'setAppearance', theme: theme });
+            },
+            getLaunchAtLogin: function () {
+              return new Promise(function (resolve) {
+                pendingLaunchAtLoginQuery = resolve;
+                post({ method: 'getLaunchAtLogin' });
+              });
+            },
+            setLaunchAtLogin: function (enabled) {
+              post({ method: 'setLaunchAtLogin', enabled: !!enabled });
+            },
             \(quickAddBridge)
             __deliverNotificationPermission: function (permission) {
               var normalized = normalizePermission(permission);
@@ -195,7 +210,14 @@ public enum BridgeScript {
               }
             },
             __deliverDeepLink: function (url) { deepLink.emit(url); },
-            __deliverUpdateReady: function (version) { updateReady.emit(version); }
+            __deliverUpdateReady: function (version) { updateReady.emit(version); },
+            __deliverResume: function () { resume.emit(); },
+            __deliverLaunchAtLogin: function (enabled) {
+              if (pendingLaunchAtLoginQuery) {
+                pendingLaunchAtLoginQuery(!!enabled);
+                pendingLaunchAtLoginQuery = null;
+              }
+            }
           };
         })();
         """
@@ -218,5 +240,13 @@ public enum BridgeScript {
     public static func dispatchShortcutJavaScript(name: String) -> String {
         let encoded = name.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
         return "window.compassDesktop && window.compassDesktop.dispatchShortcut('\(encoded)');"
+    }
+
+    public static let deliverResumeJavaScript = """
+        window.compassDesktop && window.compassDesktop.__deliverResume();
+        """
+
+    public static func deliverLaunchAtLoginJavaScript(enabled: Bool) -> String {
+        return "window.compassDesktop && window.compassDesktop.__deliverLaunchAtLogin(\(enabled));"
     }
 }

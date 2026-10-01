@@ -23,6 +23,9 @@ public enum BridgeMessage: Equatable, Sendable {
     case showNotification(payload: DesktopNotificationPayload)
     case setQuickAddHotkey(shortcut: String)
     case dismissQuickAddPanel
+    case setAppearance(theme: String)
+    case setLaunchAtLogin(enabled: Bool)
+    case getLaunchAtLogin
 }
 
 public enum BridgeMessageCodec {
@@ -86,6 +89,18 @@ public enum BridgeMessageCodec {
             return .setQuickAddHotkey(shortcut: shortcut)
         case "dismissQuickAddPanel":
             return .dismissQuickAddPanel
+        case "setAppearance":
+            guard let theme = dictionary["theme"] as? String else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .setAppearance(theme: theme)
+        case "setLaunchAtLogin":
+            guard let enabled = dictionary["enabled"] as? Bool else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .setLaunchAtLogin(enabled: enabled)
+        case "getLaunchAtLogin":
+            return .getLaunchAtLogin
         default:
             throw BridgeMessageError.unknownMethod(method)
         }
