@@ -2,16 +2,24 @@ import Foundation
 
 /// The web app the window hosts, and which navigations stay inside it.
 public enum AppOrigin {
-    public static let defaultURL = URL(string: "https://staging.compasscalendar.com")!
+    public static let defaultURL = AppHostPreference.productionURL
 
     /// The URL to load: a launch argument override wins over the
     /// `COMPASS_APP_URL` Info.plist value, which wins over the default.
     /// Values that are not absolute http(s) URLs are ignored.
-    public static func resolve(override: String?, infoValue: String?) -> URL {
-        for candidate in [override, infoValue] {
-            if let candidate, let url = URL(string: candidate), isWeb(url), url.host != nil {
-                return url
-            }
+    public static func resolve(
+        override: String?,
+        infoValue: String?,
+        defaults: UserDefaults = .standard
+    ) -> URL {
+        if let override, let url = URL(string: override), isWeb(url), url.host != nil {
+            return url
+        }
+        if defaults.string(forKey: AppHostPreference.userDefaultsKey) != nil {
+            return AppHostPreference.load(from: defaults).url
+        }
+        if let infoValue, let url = URL(string: infoValue), isWeb(url), url.host != nil {
+            return url
         }
         return defaultURL
     }
@@ -32,12 +40,22 @@ public enum AppOrigin {
 
     public static func isSameOrigin(_ a: URL, _ b: URL) -> Bool {
         guard let schemeA = a.scheme?.lowercased(), let schemeB = b.scheme?.lowercased(),
-              let hostA = a.host?.lowercased(), let hostB = b.host?.lowercased()
+              let hostA = normalizedHost(a), let hostB = normalizedHost(b)
         else { return false }
         return schemeA == schemeB && hostA == hostB && port(a) == port(b)
     }
 
-    private static func isWeb(_ url: URL) -> Bool {
+    /// Host comparison that treats apex and `www` as the same site (production
+    /// redirects apex to www; the bridge user script uses the same rule).
+    private static func normalizedHost(_ url: URL) -> String? {
+        guard var host = url.host?.lowercased() else { return nil }
+        if host.hasPrefix("www.") {
+            host = String(host.dropFirst(4))
+        }
+        return host
+    }
+
+    public static func isWeb(_ url: URL) -> Bool {
         let scheme = url.scheme?.lowercased()
         return scheme == "https" || scheme == "http"
     }

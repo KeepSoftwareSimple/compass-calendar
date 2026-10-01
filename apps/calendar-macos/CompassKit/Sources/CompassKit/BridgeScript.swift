@@ -8,7 +8,18 @@ public enum BridgeScript {
         """
         (function () {
           if (window.compassDesktop) { return; }
-          if (location.origin !== '\(appOrigin)') { return; }
+          function normalizeOrigin(origin) {
+            try {
+              var parsed = new URL(origin);
+              var host = parsed.hostname.toLowerCase();
+              if (host.indexOf('www.') === 0) { host = host.slice(4); }
+              var port = parsed.port ? ':' + parsed.port : '';
+              return parsed.protocol + '//' + host + port;
+            } catch (e) {
+              return origin;
+            }
+          }
+          if (normalizeOrigin(location.origin) !== normalizeOrigin('\(appOrigin)')) { return; }
           function handlerRegistry() {
             var handlers = [];
             return {
@@ -38,6 +49,66 @@ public enum BridgeScript {
               return value;
             }
             return 'default';
+          }
+          var desktopMenuShortcutBindings = {
+            'create-timed': { hotkey: 'C', eventType: 'keyup' },
+            'nav-today': { hotkey: 'T', eventType: 'keyup' },
+            'nav-day-view': { hotkey: 'D', eventType: 'keyup' },
+            'nav-week-view': { hotkey: 'W', eventType: 'keyup' },
+            'other-palette': { hotkey: 'Mod+K', eventType: 'keydown' },
+            'other-settings': { hotkey: 'Mod+,', eventType: 'keydown' },
+            'other-shortcuts': { hotkey: 'Shift+/', eventType: 'keyup' }
+          };
+          function modifierFlags(part) {
+            if (part === 'Mod') { return { metaKey: true }; }
+            if (part === 'Shift') { return { shiftKey: true }; }
+            if (part === 'Alt') { return { altKey: true }; }
+            if (part === 'Ctrl') { return { ctrlKey: true }; }
+            return {};
+          }
+          function keyInitForHotkey(hotkey) {
+            var parts = hotkey.split('+');
+            var keyToken = parts[parts.length - 1] || hotkey;
+            var init = { bubbles: true, cancelable: true };
+            for (var i = 0; i < parts.length - 1; i += 1) {
+              Object.assign(init, modifierFlags(parts[i]));
+            }
+            if (keyToken === 'ArrowUp') {
+              init.key = 'ArrowUp';
+              init.code = 'ArrowUp';
+            } else if (keyToken === 'ArrowDown') {
+              init.key = 'ArrowDown';
+              init.code = 'ArrowDown';
+            } else if (keyToken === 'ArrowLeft') {
+              init.key = 'ArrowLeft';
+              init.code = 'ArrowLeft';
+            } else if (keyToken === 'ArrowRight') {
+              init.key = 'ArrowRight';
+              init.code = 'ArrowRight';
+            } else if (keyToken === ',') {
+              init.key = ',';
+              init.code = 'Comma';
+            } else if (keyToken === '/') {
+              init.key = '/';
+              init.code = 'Slash';
+            } else if (keyToken.length === 1) {
+              init.key = keyToken;
+              init.code = 'Key' + keyToken.toUpperCase();
+            } else {
+              init.key = keyToken;
+              init.code = keyToken;
+            }
+            return init;
+          }
+          function replayDesktopMenuShortcut(name) {
+            var binding = desktopMenuShortcutBindings[name];
+            if (!binding) { return false; }
+            var target = document.body || document.documentElement;
+            if (!target) { return false; }
+            target.dispatchEvent(
+              new KeyboardEvent(binding.eventType, keyInitForHotkey(binding.hotkey)));
+            window.__compassDesktopDispatchProbe = name;
+            return true;
           }
           window.compassDesktop = {
             version: '\(bridgeVersion)',
@@ -69,6 +140,17 @@ public enum BridgeScript {
             },
             onNotificationPermissionChange: function (handler) {
               return permissionChange.add(handler);
+            },
+            dispatchShortcut: function (name) {
+              window.__compassDesktopDispatchProbe = undefined;
+              window.dispatchEvent(new CustomEvent('compass:dispatch-shortcut', {
+                detail: { name: name },
+                bubbles: true
+              }));
+              if (window.__compassDesktopDispatchProbe !== name) {
+                replayDesktopMenuShortcut(name);
+              }
+              return window.__compassDesktopDispatchProbe === name;
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
             onUpdateReady: function (handler) { return updateReady.add(handler); },
@@ -104,5 +186,10 @@ public enum BridgeScript {
     public static func deliverUpdateReadyJavaScript(version: String) -> String {
         let encoded = version.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
         return "window.compassDesktop && window.compassDesktop.__deliverUpdateReady('\(encoded)');"
+    }
+
+    public static func dispatchShortcutJavaScript(name: String) -> String {
+        let encoded = name.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
+        return "window.compassDesktop && window.compassDesktop.dispatchShortcut('\(encoded)');"
     }
 }
