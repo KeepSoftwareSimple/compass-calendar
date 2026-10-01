@@ -5,12 +5,12 @@ import { isEditSequenceArmed } from "@web/shortcuts/useEditSequenceShortcut";
 
 /** Action-toast CTA (Sign up / Sign in). Letter keys only: digits belong to
  * quick-time create (`1` = 1:00), except the series-scope toast which owns
- * 1/2 while it is visible. Same letter as the start-trial banner. Google
+ * 1/2 while it is visible. Same letter as the billing gate. Google
  * connection toasts use `CONNECTION_BANNER_SHORTCUT_KEY` instead so Refresh
  * and Reconnect never advertise two different letters. */
 export const TOAST_PRIMARY_ACTION_KEY = "S" as const;
 
-/** Start-trial banner CTA. Same letter as the billing gate overlay. */
+/** Billing gate CTA. Same letter as toast primary actions. */
 export const START_TRIAL_SHORTCUT_KEY = "S" as const;
 
 /** Google connection notice CTA (banner and toast: Reconnect / Retry /

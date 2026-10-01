@@ -1,9 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { parseDesktopAuthDeepLink } from "@core/desktop/desktop-oauth-state.util";
 import { isDesktop } from "@web/desktop/isDesktop";
-
-const AUTH_DEEP_LINK =
-  /^compass:\/\/auth\/(?<provider>google|microsoft|apple)\/callback(?<query>\?.*)?$/;
 
 /**
  * Forwards compass:// OAuth callbacks into the existing provider callback route
@@ -23,13 +21,14 @@ export function useDesktopDeepLink(): void {
     }
 
     return bridge.onDeepLink((url) => {
-      const match = AUTH_DEEP_LINK.exec(url);
-      if (!match?.groups?.provider) {
+      const parsed = parseDesktopAuthDeepLink(url);
+      if (!parsed) {
         return;
       }
 
-      const query = match.groups.query ?? "";
-      router.history.replace(`/auth/${match.groups.provider}/callback${query}`);
+      router.history.replace(
+        `/auth/${parsed.provider}/callback${parsed.query}`,
+      );
     });
   }, [router]);
 }

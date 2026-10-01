@@ -6,7 +6,7 @@ import {
   trackBookingSetupCtaClicked,
 } from "@booking-web/telemetry/guest-booking-funnel";
 import { useEffect, useRef } from "react";
-import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
+import { meetingSetupRootHref } from "@web/booking/meeting-setup.search";
 
 /**
  * Bare `/meet` is the landing page for the Meeting feature. It explains the
@@ -15,7 +15,7 @@ import { MEETING_SETUP_SEARCH_PARAM } from "@web/booking/meeting-setup.search";
  * signed-in hosts get Settings > Meeting. No auth awareness lives here.
  */
 export function MeetLandingPage() {
-  const setupHref = `/?${MEETING_SETUP_SEARCH_PARAM}=1`;
+  const setupHref = meetingSetupRootHref();
   const viewedRef = useRef(false);
 
   useBookingDocumentTitle("Meeting pages");

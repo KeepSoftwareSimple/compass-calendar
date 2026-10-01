@@ -661,12 +661,12 @@ export class PublicBookingService {
       throw reservationNotFound();
     }
     const page = await resolveReservationPublicPage(reservation);
-    parseSlotsQuery({
+    const slotsQuery = parseSlotsQuery({
       start: query.start,
       end: query.end,
       timeZone: query.timeZone,
     });
-    const response = await this.computeSlotsForPage(page, query, {
+    const response = await this.computeSlotsForPage(page, slotsQuery, {
       excludeEventIds: reservation.calendarEventId
         ? [reservation.calendarEventId as EventId]
         : undefined,

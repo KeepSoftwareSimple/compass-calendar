@@ -33,8 +33,14 @@ export const publicBookingQueryKeys = {
   slotsAll: (slug: string) => ["public-booking", "slots", slug] as const,
   slots: (slug: string, monthKey: string, timeZone: string) =>
     [...publicBookingQueryKeys.slotsAll(slug), monthKey, timeZone] as const,
+  /** Prefix covering every token of one reservation. */
+  reservationPrefix: (reservationId: string) =>
+    ["public-booking", "reservation", reservationId] as const,
   reservation: (reservationId: string, token: string) =>
-    ["public-booking", "reservation", reservationId, token] as const,
+    [
+      ...publicBookingQueryKeys.reservationPrefix(reservationId),
+      token,
+    ] as const,
   reservationSlotsAll: (reservationId: string) =>
     ["public-booking", "reservation-slots", reservationId] as const,
   reservationSlots: (
@@ -358,7 +364,7 @@ export function usePatchPublicBookingReservationMutation(
     onSuccess: (data) => {
       queryClient.setQueriesData(
         {
-          queryKey: ["public-booking", "reservation", reservationId],
+          queryKey: publicBookingQueryKeys.reservationPrefix(reservationId),
         },
         () => data,
       );
@@ -376,7 +382,7 @@ export function useReschedulePublicBookingReservationMutation(
       PublicBookingApi.rescheduleReservation(reservationId, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({
-        queryKey: ["public-booking", "reservation", reservationId],
+        queryKey: publicBookingQueryKeys.reservationPrefix(reservationId),
       });
       void queryClient.invalidateQueries({
         queryKey: publicBookingQueryKeys.reservationSlotsAll(reservationId),
