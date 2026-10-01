@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import CompassKit
 import XCTest
 
