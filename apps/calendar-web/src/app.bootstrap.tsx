@@ -13,11 +13,13 @@ import {
   showDbInitErrorToast,
 } from "@web/common/utils/app-init.util";
 import { App } from "@web/components/App/App";
+import { installDesktopMenuShortcutBridge } from "@web/desktop/installDesktopMenuShortcutBridge";
 import { router } from "@web/routers";
 import { preloadEventFormOnFirstInput } from "@web/views/Forms/EventForm/EventForm.lazy";
 import "./index.css";
 
 export async function bootstrapApp(): Promise<void> {
+  installDesktopMenuShortcutBridge();
   configureGoogleRevocationApiHandler();
 
   // Read before the router mounts: validateAuthSearch strips unrecognized

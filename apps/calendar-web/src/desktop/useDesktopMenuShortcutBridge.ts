@@ -1,30 +1,12 @@
 import { useEffect } from "react";
-import { dispatchDesktopMenuShortcut } from "@web/desktop/dispatchDesktopMenuShortcut";
-import { isDesktop } from "@web/desktop/isDesktop";
-
-const DISPATCH_EVENT = "compass:dispatch-shortcut";
+import { installDesktopMenuShortcutBridge } from "@web/desktop/installDesktopMenuShortcutBridge";
 
 /**
- * Handles native menu `dispatchShortcut` calls injected by the macOS shell.
+ * Ensures the native menu shortcut listener is registered (also installed from
+ * app bootstrap before the first paint).
  */
 export function useDesktopMenuShortcutBridge(): void {
   useEffect(() => {
-    if (!isDesktop()) {
-      return;
-    }
-
-    const onCustomEvent = (event: Event) => {
-      const name = (event as CustomEvent<{ name?: string }>).detail?.name;
-      if (typeof name === "string") {
-        dispatchDesktopMenuShortcut(name);
-      }
-    };
-
-    window.addEventListener(DISPATCH_EVENT, onCustomEvent);
-    return () => {
-      window.removeEventListener(DISPATCH_EVENT, onCustomEvent);
-    };
+    installDesktopMenuShortcutBridge();
   }, []);
 }
-
-export { DISPATCH_EVENT };
