@@ -5,6 +5,8 @@ import { refreshUserMetadata } from "@web/auth/compass/user/util/user-metadata.u
 
 type Listener = () => void;
 
+type TimeoutHandle = ReturnType<typeof setTimeout> | number;
+
 export type GoogleSyncRefreshSnapshot = {
   // True from the moment Refresh is requested until the connection leaves a
   // degraded state, or the catch-up timeout fires. Covers the HTTP round trip
@@ -20,11 +22,8 @@ export type GoogleSyncRefreshSnapshot = {
 export type GoogleSyncRefreshCoordinatorOptions = {
   now?: () => number;
   timeoutMs?: number;
-  schedule?: (
-    callback: () => void,
-    ms: number,
-  ) => ReturnType<typeof setTimeout>;
-  cancel?: (handle: ReturnType<typeof setTimeout>) => void;
+  schedule?: (callback: () => void, ms: number) => TimeoutHandle;
+  cancel?: (handle: TimeoutHandle) => void;
 };
 
 // How long "Catching up…" waits for metadata to leave delayed/ATTENTION before
@@ -53,7 +52,7 @@ export const createGoogleSyncRefreshCoordinator = (
   const listeners = new Set<Listener>();
   let inFlight: Promise<ConnectionRefreshResponse> | null = null;
   let snapshot = IDLE_SNAPSHOT;
-  let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+  let timeoutHandle: TimeoutHandle | null = null;
 
   const emit = () => {
     listeners.forEach((listener) => listener());
