@@ -1,7 +1,5 @@
-import {
-  buildDesktopOAuthRelayUrl,
-  hasDesktopOAuthStateMarker,
-} from "@core/desktop/desktop-oauth-state.util";
+import { buildDesktopOAuthRelayUrl } from "@core/desktop/desktop-deep-link.util";
+import { hasDesktopOAuthStateMarker } from "@core/desktop/desktop-oauth-state.util";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 
 export function shouldRelayDesktopOAuthCallback(

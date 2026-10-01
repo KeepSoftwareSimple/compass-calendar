@@ -1,3 +1,5 @@
+import { isDesktop } from "@web/desktop/isDesktop";
+
 /**
  * Injectable seam over the browser Notification API, mirroring toast.port.ts.
  *
@@ -96,7 +98,7 @@ let desktopPortRequested = false;
 
 export function getNotificationPort(): NotificationPort {
   if (notificationPort) return notificationPort;
-  if (window.compassDesktop?.version) {
+  if (isDesktop()) {
     if (!desktopPortRequested) {
       desktopPortRequested = true;
       void import("./notification.desktop.port").then((m) => {

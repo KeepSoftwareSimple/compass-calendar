@@ -1,11 +1,15 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { parseDesktopAuthDeepLink } from "@core/desktop/desktop-oauth-state.util";
+import {
+  parseDesktopAuthDeepLink,
+  parseDesktopEventDeepLink,
+} from "@core/desktop/desktop-deep-link.util";
 import { isDesktop } from "@web/desktop/isDesktop";
 
 /**
  * Forwards compass:// OAuth callbacks into the existing provider callback route
- * so `complete-provider-authorization` runs inside the app web view.
+ * so `complete-provider-authorization` runs inside the app web view, and focuses
+ * the event behind a tapped native notification.
  */
 export function useDesktopDeepLink(): void {
   const router = useRouter();
@@ -21,22 +25,18 @@ export function useDesktopDeepLink(): void {
     }
 
     return bridge.onDeepLink((url) => {
-      const parsed = parseDesktopAuthDeepLink(url);
-      if (parsed) {
-        router.history.replace(
-          `/auth/${parsed.provider}/callback${parsed.query}`,
-        );
+      const auth = parseDesktopAuthDeepLink(url);
+      if (auth) {
+        router.history.replace(`/auth/${auth.provider}/callback${auth.query}`);
         return;
       }
 
-      if (url.startsWith("compass://event/")) {
-        const eventId = url.slice(17).trim();
-        if (eventId) {
-          window.focus();
-          void import("@web/components/CommandPalette/event-search.util").then(
-            (m) => m.startFocusEventCard(eventId),
-          );
-        }
+      const eventId = parseDesktopEventDeepLink(url);
+      if (eventId) {
+        window.focus();
+        void import("@web/components/CommandPalette/event-search.util").then(
+          (m) => m.startFocusEventCard(eventId),
+        );
       }
     });
   }, [router]);

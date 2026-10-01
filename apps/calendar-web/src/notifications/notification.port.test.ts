@@ -32,9 +32,9 @@ describe("getNotificationPort", () => {
       setAgenda: () => {},
       restartToUpdate: () => {},
       showNotification,
-      onDeepLink: () => {},
-      onUpdateReady: () => {},
-    } as NonNullable<Window["compassDesktop"]>;
+      onDeepLink: () => () => {},
+      onUpdateReady: () => () => {},
+    };
 
     getNotificationPort();
     await import("@web/notifications/notification.desktop.port");

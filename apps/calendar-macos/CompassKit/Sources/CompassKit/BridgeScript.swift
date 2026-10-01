@@ -9,9 +9,25 @@ public enum BridgeScript {
         (function () {
           if (window.compassDesktop) { return; }
           if (location.origin !== '\(appOrigin)') { return; }
-          var deepLinkHandlers = [];
-          var updateReadyHandlers = [];
-          var permissionChangeHandlers = [];
+          function handlerRegistry() {
+            var handlers = [];
+            return {
+              add: function (handler) {
+                handlers.push(handler);
+                return function () {
+                  handlers = handlers.filter(function (entry) {
+                    return entry !== handler;
+                  });
+                };
+              },
+              emit: function (argument) {
+                handlers.slice().forEach(function (handler) { handler(argument); });
+              }
+            };
+          }
+          var deepLink = handlerRegistry();
+          var updateReady = handlerRegistry();
+          var permissionChange = handlerRegistry();
           var pendingPermissionRequest = null;
           var pendingPermissionQuery = null;
           function post(body) {
@@ -52,19 +68,14 @@ public enum BridgeScript {
               });
             },
             onNotificationPermissionChange: function (handler) {
-              permissionChangeHandlers.push(handler);
-              return function () {
-                permissionChangeHandlers = permissionChangeHandlers.filter(function (entry) {
-                  return entry !== handler;
-                });
-              };
+              return permissionChange.add(handler);
             },
-            onDeepLink: function (handler) { deepLinkHandlers.push(handler); },
-            onUpdateReady: function (handler) { updateReadyHandlers.push(handler); },
+            onDeepLink: function (handler) { return deepLink.add(handler); },
+            onUpdateReady: function (handler) { return updateReady.add(handler); },
             __deliverNotificationPermission: function (permission) {
               var normalized = normalizePermission(permission);
               window.compassDesktop.notificationPermission = normalized;
-              permissionChangeHandlers.forEach(function (handler) { handler(); });
+              permissionChange.emit();
               if (pendingPermissionRequest) {
                 pendingPermissionRequest(normalized);
                 pendingPermissionRequest = null;
@@ -74,12 +85,8 @@ public enum BridgeScript {
                 pendingPermissionQuery = null;
               }
             },
-            __deliverDeepLink: function (url) {
-              deepLinkHandlers.forEach(function (handler) { handler(url); });
-            },
-            __deliverUpdateReady: function (version) {
-              updateReadyHandlers.forEach(function (handler) { handler(version); });
-            }
+            __deliverDeepLink: function (url) { deepLink.emit(url); },
+            __deliverUpdateReady: function (version) { updateReady.emit(version); }
           };
         })();
         """
