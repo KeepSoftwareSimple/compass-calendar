@@ -13,7 +13,7 @@
     "fast-xml-parser": "^5.11.1",
     "google-auth-library": "^11.1.0",
     "ical.js": "^2.2.1",
-    "jose": "^5.9.6",
+    "jose": "^6.2.12",
     "mongodb": "^7.6.0",
     "rrule": "^2.7.2",
     "tslib": "^2.4.0",
