@@ -9,6 +9,13 @@ final class AppOriginTests: XCTestCase {
         XCTAssertEqual(AppOrigin.decide(url, isMainFrame: true, appURL: app), .allow)
     }
 
+    func testTreatsWwwAsTheSameOriginAsApex() {
+        let www = URL(string: "https://www.compasscalendar.com/week")!
+        let apex = URL(string: "https://compasscalendar.com")!
+        XCTAssertEqual(AppOrigin.decide(www, isMainFrame: true, appURL: apex), .allow)
+        XCTAssertEqual(AppOrigin.decide(www, isMainFrame: true, appURL: app), .allow)
+    }
+
     func testTreatsDefaultPortAsTheSameOrigin() {
         let url = URL(string: "https://compasscalendar.com:443/day")!
         XCTAssertEqual(AppOrigin.decide(url, isMainFrame: true, appURL: app), .allow)
@@ -49,6 +56,7 @@ final class AppOriginTests: XCTestCase {
         XCTAssertEqual(
             AppOrigin.resolve(override: nil, infoValue: nil),
             AppHostPreference.productionURL)
+        XCTAssertEqual(AppHostPreference.productionURL.host, "www.compasscalendar.com")
     }
 
     func testResolveIgnoresValuesThatAreNotWebURLs() {

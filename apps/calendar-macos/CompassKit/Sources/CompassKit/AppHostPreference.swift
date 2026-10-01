@@ -8,7 +8,7 @@ public enum AppHostPreference: String, Equatable, Sendable {
 
     public static let userDefaultsKey = "compassAppHostPreference"
 
-    public static let productionURL = URL(string: "https://compasscalendar.com")!
+    public static let productionURL = URL(string: "https://www.compasscalendar.com")!
     public static let stagingURL = URL(string: "https://staging.compasscalendar.com")!
 
     public var url: URL {

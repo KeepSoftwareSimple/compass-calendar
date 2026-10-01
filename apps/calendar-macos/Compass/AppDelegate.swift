@@ -50,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Saves and restores the frame in UserDefaults.
         window.setFrameAutosaveName("CompassMainWindow")
         window.makeKeyAndOrderFront(nil)
+        CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
         self.window = window
     }
 

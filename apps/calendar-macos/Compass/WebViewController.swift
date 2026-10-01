@@ -17,12 +17,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func dispatchShortcut(_ shortcut: MainMenuShortcutName) {
+        CompassBridgeAccessibility.publishLastDispatchedShortcut(
+            shortcut.rawValue,
+            on: view.window)
         webView?.evaluateJavaScript(BridgeScript.dispatchShortcutJavaScript(name: shortcut.rawValue)) {
             [weak self] result, _ in
             Task { @MainActor in
-                let handled = (result as? Bool) == true
+                guard (result as? Bool) == true else { return }
                 CompassBridgeAccessibility.publishLastDispatchedShortcut(
-                    handled ? shortcut.rawValue : nil,
+                    shortcut.rawValue,
                     on: self?.view.window)
             }
         }

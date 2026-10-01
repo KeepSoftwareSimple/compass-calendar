@@ -8,7 +8,18 @@ public enum BridgeScript {
         """
         (function () {
           if (window.compassDesktop) { return; }
-          if (location.origin !== '\(appOrigin)') { return; }
+          function normalizeOrigin(origin) {
+            try {
+              var parsed = new URL(origin);
+              var host = parsed.hostname.toLowerCase();
+              if (host.indexOf('www.') === 0) { host = host.slice(4); }
+              var port = parsed.port ? ':' + parsed.port : '';
+              return parsed.protocol + '//' + host + port;
+            } catch (e) {
+              return origin;
+            }
+          }
+          if (normalizeOrigin(location.origin) !== normalizeOrigin('\(appOrigin)')) { return; }
           function handlerRegistry() {
             var handlers = [];
             return {

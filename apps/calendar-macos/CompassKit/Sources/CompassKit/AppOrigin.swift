@@ -40,9 +40,19 @@ public enum AppOrigin {
 
     public static func isSameOrigin(_ a: URL, _ b: URL) -> Bool {
         guard let schemeA = a.scheme?.lowercased(), let schemeB = b.scheme?.lowercased(),
-              let hostA = a.host?.lowercased(), let hostB = b.host?.lowercased()
+              let hostA = normalizedHost(a), let hostB = normalizedHost(b)
         else { return false }
         return schemeA == schemeB && hostA == hostB && port(a) == port(b)
+    }
+
+    /// Host comparison that treats apex and `www` as the same site (production
+    /// redirects apex to www; the bridge user script uses the same rule).
+    private static func normalizedHost(_ url: URL) -> String? {
+        guard var host = url.host?.lowercased() else { return nil }
+        if host.hasPrefix("www.") {
+            host = String(host.dropFirst(4))
+        }
+        return host
     }
 
     public static func isWeb(_ url: URL) -> Bool {
