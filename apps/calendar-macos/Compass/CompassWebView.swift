@@ -12,8 +12,8 @@ enum CompassBridgeAccessibility {
 
     @MainActor
     static func publishLastDispatchedShortcut(_ shortcut: String?, on window: NSWindow?) {
-        // Keep the bridge-version identifier stable so XCUITest can read help on
-        // the same window element it already resolved as "Compass".
-        window?.setAccessibilityHelp(shortcut)
+        // Mirror on `value` like bridge.version: NSWindow does not reliably expose
+        // `help` to XCUITest, but value updates on the stable identifier do.
+        window?.setAccessibilityValue(shortcut)
     }
 }
