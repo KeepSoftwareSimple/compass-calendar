@@ -70,7 +70,7 @@ final class LaunchTests: XCTestCase {
             for: [expectation(for: versionReady, evaluatedWith: window, handler: nil)],
             timeout: 30)
 
-        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
+        let pathReady = NSPredicate(format: "value == %@", "/day/2026-10-15")
         let pathExpectation = expectation(
             for: pathReady,
             evaluatedWith: window,
