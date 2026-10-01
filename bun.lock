@@ -38,7 +38,7 @@
       },
       "devDependencies": {
         "@testing-library/jest-dom": "^5.16.5",
-        "@testing-library/react": "^14.0.0",
+        "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.7",
         "@types/react": "^19.2.18",
         "@types/react-dom": "^18.0.3",
@@ -92,7 +92,7 @@
         "@tanstack/react-query-devtools": "^5",
         "@testing-library/dom": "^9.3.0",
         "@testing-library/jest-dom": "^5.16.5",
-        "@testing-library/react": "^14.0.0",
+        "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.7",
         "@types/react": "^19.2.18",
         "@types/react-datepicker": "^4.1.7",
@@ -663,7 +663,7 @@
 
     "@testing-library/jest-dom": ["@testing-library/jest-dom@5.17.0", "", { "dependencies": { "@adobe/css-tools": "^4.0.1", "@babel/runtime": "^7.9.2", "@types/testing-library__jest-dom": "^5.9.1", "aria-query": "^5.0.0", "chalk": "^3.0.0", "css.escape": "^1.5.1", "dom-accessibility-api": "^0.5.6", "lodash": "^4.17.15", "redent": "^3.0.0" } }, "sha512-ynmNeT7asXyH3aSVv4vvX4Rb+0qjOhdNHnO/3vuZNqPmhDpV/+rCSGwQ7bLcmU2cJ4dvoheIO85LQj0IbJHEtg=="],
 
-    "@testing-library/react": ["@testing-library/react@14.3.1", "", { "dependencies": { "@babel/runtime": "^7.12.5", "@testing-library/dom": "^9.0.0", "@types/react-dom": "^18.0.0" }, "peerDependencies": { "react": "^18.0.0", "react-dom": "^18.0.0" } }, "sha512-H99XjUhWQw0lTgyMN05W3xQG1Nh4lq574D8keFf1dDoNTJgp66VbJozRaczoF+wsiaPJNt/TcnfpLGufGxSrZQ=="],
+    "@testing-library/react": ["@testing-library/react@16.3.3", "", { "dependencies": { "@babel/runtime": "^7.12.5" }, "peerDependencies": { "@testing-library/dom": "^10.0.0", "@types/react": "^18.0.0 || ^19.0.0", "@types/react-dom": "^18.0.0 || ^19.0.0", "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-Uo193NgQbPMz6lrrhtRQQFcMC6Re/ELLFbbuVL30WDlZxlpZf9/lMHTAVxPRLw1q1iu9OJmR1c2BLiENRstdBg=="],
 
     "@testing-library/user-event": ["@testing-library/user-event@14.6.7", "", { "peerDependencies": { "@testing-library/dom": ">=7.21.4" } }, "sha512-MPCpX8bxe8zS+JmmTwLp8jd0dy1rAm60Te/SL8JrQM3qvQJcBOs1d7IefJMyZzqM3EWBrDn/LWDt1BCGu4ASfg=="],
 
