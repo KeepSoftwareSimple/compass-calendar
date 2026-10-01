@@ -13,6 +13,11 @@ export type WelcomeEmailContentEntry = {
 
 const appUrl = (): string => CONFIG.FRONTEND_URL.replace(/\/$/, "");
 
+const settingsHref = (page: "accounts" | "billing"): string =>
+  `${appUrl()}/?settings=${page}`;
+
+const meetingSetupHref = (): string => `${appUrl()}/?meetingSetup=1`;
+
 // TODO(copy): replace placeholder welcome drip copy before launch.
 /**
  * Placeholder copy for the welcome drip. Real copy replaces this file only.
@@ -63,7 +68,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "Connect a calendar",
-      href: `${appUrl()}/?settings=accounts`,
+      href: settingsHref("accounts"),
     },
   },
   booking: {
@@ -76,7 +81,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "Set up booking",
-      href: `${appUrl()}/?meetingSetup=1`,
+      href: meetingSetupHref(),
     },
   },
   "trial-ending": {
@@ -89,7 +94,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
     ],
     cta: {
       label: "View billing",
-      href: `${appUrl()}/?settings=billing`,
+      href: settingsHref("billing"),
     },
   },
 };

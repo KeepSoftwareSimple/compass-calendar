@@ -12,9 +12,9 @@ import {
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 
 /**
- * Embedded Checkout for writable sessions (local trial banner, Subscribe now).
- * The billing gate keeps its own overlay; this one mounts only when that gate
- * is not on screen.
+ * Embedded Checkout when the full-screen gate is not on screen: shortcut
+ * upgrade toast, and any other writable-session Subscribe now path.
+ * The billing gate hosts its own overlay.
  */
 export const CheckoutOverlay: FC = () => {
   const isOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);

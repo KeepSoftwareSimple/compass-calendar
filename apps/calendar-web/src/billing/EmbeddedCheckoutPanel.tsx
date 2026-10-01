@@ -20,8 +20,8 @@ type EmbeddedCheckoutPanelProps = {
 };
 
 /**
- * Writable-session Checkout plus Back. The billing gate and the trial-banner
- * overlay both host this same panel; only the surrounding OverlayPanel differs.
+ * Checkout plus Back. The billing gate and CheckoutOverlay both host this
+ * same panel; only the surrounding OverlayPanel differs.
  */
 export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   publishableKey,
