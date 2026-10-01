@@ -7,13 +7,34 @@ import WebKit
 final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate,
     CompassNotificationDelivering, CompassAgendaDeepLinkDelivering
 {
-    private let appURL: URL
+    private(set) var appURL: URL
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
 
     init(appURL: URL) {
         self.appURL = appURL
         super.init(nibName: nil, bundle: nil)
+    }
+
+    func dispatchShortcut(_ shortcut: MainMenuShortcutName) {
+        webView?.evaluateJavaScript(BridgeScript.dispatchShortcutJavaScript(name: shortcut.rawValue)) {
+            [weak self] result, _ in
+            Task { @MainActor in
+                let handled = (result as? Bool) == true
+                CompassBridgeAccessibility.publishLastDispatchedShortcut(
+                    handled ? shortcut.rawValue : nil,
+                    on: self?.view.window)
+            }
+        }
+    }
+
+    func reloadAppHost() {
+        let resolved = AppOrigin.resolve(
+            override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),
+            infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
+        guard resolved != appURL else { return }
+        appURL = resolved
+        webView.load(URLRequest(url: appURL))
     }
 
     @available(*, unavailable)
