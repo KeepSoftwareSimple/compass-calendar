@@ -74,8 +74,8 @@ public enum QuickAddHotKeyParser {
     }
 
     private static func keyCode(for token: String) -> UInt32? {
-        if token.count == 1, let letter = token.uppercased().unicodeScalars.first?.value,
-           letter >= UnicodeScalar("A").value, letter <= UnicodeScalar("Z").value
+        if token.count == 1, let letter = token.uppercased().first,
+           letter >= "A", letter <= "Z"
         {
             return ansiLetterKeyCode(letter)
         }
@@ -92,8 +92,8 @@ public enum QuickAddHotKeyParser {
     }
 
     /// Physical ANSI key positions from `Events.h` (not contiguous in A–Z order).
-    private static func ansiLetterKeyCode(_ letter: UnicodeScalar.UTF32View.Element) -> UInt32 {
-        switch UnicodeScalar(letter)! {
+    private static func ansiLetterKeyCode(_ letter: Character) -> UInt32 {
+        switch letter {
         case "A": return UInt32(kVK_ANSI_A)
         case "B": return UInt32(kVK_ANSI_B)
         case "C": return UInt32(kVK_ANSI_C)
