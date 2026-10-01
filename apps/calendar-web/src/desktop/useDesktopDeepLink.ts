@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import {
   parseDesktopAuthDeepLink,
   parseDesktopEventDeepLink,
-} from "@core/desktop/desktop-deep-link.util";
+} from "@core/desktop/desktop-oauth-state.util";
 import { isDesktop } from "@web/desktop/isDesktop";
 
 /**
