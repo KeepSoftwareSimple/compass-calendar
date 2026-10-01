@@ -66,6 +66,26 @@ final class BridgeMessageTests: XCTestCase {
         XCTAssertEqual(try BridgeMessageCodec.decode(from: data), .dismissQuickAddPanel)
     }
 
+    func testDecodesSetAppearance() throws {
+        let data = Data("""
+        {"method":"setAppearance","theme":"dark-abyss"}
+        """.utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: data),
+            .setAppearance(theme: "dark-abyss"))
+    }
+
+    func testDecodesLaunchAtLoginMessages() throws {
+        let setData = Data("""
+        {"method":"setLaunchAtLogin","enabled":true}
+        """.utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: setData),
+            .setLaunchAtLogin(enabled: true))
+        let getData = Data("{\"method\":\"getLaunchAtLogin\"}".utf8)
+        XCTAssertEqual(try BridgeMessageCodec.decode(from: getData), .getLaunchAtLogin)
+    }
+
     func testRejectsUnknownMethods() {
         let data = Data("{\"method\":\"unknown\"}".utf8)
         XCTAssertThrowsError(try BridgeMessageCodec.decode(from: data)) { error in

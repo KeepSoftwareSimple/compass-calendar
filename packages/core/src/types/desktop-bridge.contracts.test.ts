@@ -34,6 +34,26 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
     ).toEqual({ method: "restartToUpdate" });
   });
 
+  it("accepts appearance and launch-at-login messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "setAppearance",
+        theme: "dark-abyss",
+      }).method,
+    ).toBe("setAppearance");
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "setLaunchAtLogin",
+        enabled: true,
+      }).method,
+    ).toBe("setLaunchAtLogin");
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "getLaunchAtLogin",
+      }).method,
+    ).toBe("getLaunchAtLogin");
+  });
+
   it("accepts quick-add bridge messages", () => {
     expect(
       DesktopBridgeOutboundMessageSchema.parse({

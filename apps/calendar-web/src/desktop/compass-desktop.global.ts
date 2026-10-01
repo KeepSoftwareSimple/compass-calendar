@@ -1,10 +1,12 @@
 import {
   type DesktopAgenda,
   type DesktopBridgePlatform,
+  type DesktopBridgeThemeName,
 } from "@core/types/desktop-bridge.contracts";
 
 export type CompassDesktopDeepLinkHandler = (url: string) => void;
 export type CompassDesktopUpdateReadyHandler = (version: string) => void;
+export type CompassDesktopResumeHandler = () => void;
 /** Every `on*` registration hands back the matching unsubscribe. */
 export type CompassDesktopUnsubscribe = () => void;
 
@@ -33,6 +35,12 @@ export type CompassDesktopBridge = {
   onUpdateReady: (
     handler: CompassDesktopUpdateReadyHandler,
   ) => CompassDesktopUnsubscribe;
+  onResume?: (
+    handler: CompassDesktopResumeHandler,
+  ) => CompassDesktopUnsubscribe;
+  setAppearance?: (theme: DesktopBridgeThemeName) => void;
+  getLaunchAtLogin?: () => Promise<boolean>;
+  setLaunchAtLogin?: (enabled: boolean) => void;
   notificationPermission?: NotificationPermission;
   showNotification?: (payload: CompassDesktopNotificationPayload) => void;
   requestNotificationPermission?: () => Promise<NotificationPermission>;

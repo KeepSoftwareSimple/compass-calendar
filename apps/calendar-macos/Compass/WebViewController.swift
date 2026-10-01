@@ -1,5 +1,6 @@
 import AppKit
 import CompassKit
+import Network
 import WebKit
 
 /// Hosts the web app. Navigations off the app origin and every
@@ -13,6 +14,12 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     weak var accessibilityHostWindow: NSWindow?
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
+    private let offlineRetryHandler = OfflineRetryMessageHandler()
+    private var loadState = WebLoadStateMachine()
+    private var pathMonitor: NWPathMonitor?
+    private var offlinePageURL: URL? {
+        Bundle.main.url(forResource: "offline", withExtension: "html")
+    }
 
     func configureQuickAddRouter(_ router: DesktopQuickAddRouting) {
         bridgeHandler.quickAddRouter = router
@@ -49,7 +56,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         guard resolved != appURL else { return }
         appURL = resolved
         reinstallBridgeUserScripts()
-        webView.load(URLRequest(url: appURL))
+        loadAppURL()
     }
 
     private func reinstallBridgeUserScripts() {
@@ -79,6 +86,12 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
         let contentController = WKUserContentController()
         contentController.add(bridgeHandler, name: "compass")
+        contentController.add(offlineRetryHandler, name: "offlineRetry")
+        offlineRetryHandler.onRetry = { [weak self] in
+            Task { @MainActor in
+                self?.retryAppLoadFromOffline()
+            }
+        }
 
         let origin = appURL.originString
         let quickAddHotkey = QuickAddHotKeyStorage.load().displayString
@@ -102,6 +115,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         bridgeHandler.webView = webView
+        bridgeHandler.onAppearanceChange = { theme in
+            DesktopNativeServices.applyAppearance(theme: theme)
+        }
+        bridgeHandler.onLaunchAtLoginChange = { enabled in
+            try? DesktopNativeServices.setLaunchAtLogin(enabled)
+        }
+        bridgeHandler.launchAtLoginStatus = {
+            DesktopNativeServices.launchAtLoginEnabled()
+        }
         webView.navigationDelegate = self
         webView.uiDelegate = self
         #if DEBUG
@@ -116,7 +138,68 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         super.viewDidLoad()
         CompassNotificationCenter.shared.configure(deliverer: self)
         CompassAgendaController.shared.configure(deepLinkDeliverer: self)
+        startNetworkAndWakeMonitoring()
+        loadAppURL()
+    }
+
+    deinit {
+        pathMonitor?.cancel()
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+    }
+
+    private func startNetworkAndWakeMonitoring() {
+        let monitor = NWPathMonitor()
+        pathMonitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.handleNetworkPathUpdate(path.status == .satisfied)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "com.compasscalendar.desktop.network"))
+
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleSystemWake),
+            name: NSWorkspace.didWakeNotification,
+            object: nil)
+    }
+
+    @objc private func handleSystemWake() {
+        deliverResumeToWebApp()
+        if loadState.phase == .showingOffline, loadState.networkSatisfied {
+            loadAppURL()
+        }
+    }
+
+    private func handleNetworkPathUpdate(_ satisfied: Bool) {
+        let wasSatisfied = loadState.networkSatisfied
+        loadState.setNetworkSatisfied(satisfied)
+        guard satisfied, !wasSatisfied else { return }
+        deliverResumeToWebApp()
+        if loadState.phase == .showingOffline {
+            loadAppURL()
+        }
+    }
+
+    func deliverResumeToWebApp() {
+        webView?.evaluateJavaScript(BridgeScript.deliverResumeJavaScript)
+    }
+
+    private func loadAppURL() {
+        loadState.appLoadStarted()
         webView.load(URLRequest(url: appURL))
+    }
+
+    private func showOfflinePage() {
+        guard let offlinePageURL else { return }
+        loadState.appLoadFailed()
+        webView.loadFileURL(offlinePageURL, allowingReadAccessTo: offlinePageURL.deletingLastPathComponent())
+    }
+
+    private func retryAppLoadFromOffline() {
+        loadState.retryRequested()
+        guard loadState.phase == .loadingApp else { return }
+        loadAppURL()
     }
 
     func deliverDeepLink(_ url: String) {
@@ -130,8 +213,36 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        publishBridgeVersionFromPage(webView: webView, attempt: 0)
-        syncNotificationPermission()
+        guard let url = webView.url else { return }
+        if url.isFileURL, url.lastPathComponent == "offline.html" {
+            return
+        }
+        if AppOrigin.decide(url, isMainFrame: true, appURL: appURL) == .allow {
+            loadState.appLoadSucceeded()
+            publishBridgeVersionFromPage(webView: webView, attempt: 0)
+            syncNotificationPermission()
+        }
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleMainFrameLoadFailure(webView: webView, error: error)
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        handleMainFrameLoadFailure(webView: webView, error: error)
+    }
+
+    private func handleMainFrameLoadFailure(webView: WKWebView, error: Error) {
+        guard webView.url == nil || webView.url?.isFileURL != true else { return }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorCancelled {
+            return
+        }
+        showOfflinePage()
     }
 
     private func publishBridgeVersionFromPage(webView: WKWebView, attempt: Int) {
