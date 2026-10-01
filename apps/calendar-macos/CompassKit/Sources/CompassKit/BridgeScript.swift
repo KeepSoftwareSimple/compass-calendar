@@ -181,6 +181,9 @@ public enum BridgeScript {
               return window.__compassDesktopDispatchProbe === name;
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
+            reportDeepLinkNavigation: function (path) {
+              post({ method: 'reportDeepLinkNavigation', path: path });
+            },
             onUpdateReady: function (handler) { return updateReady.add(handler); },
             onResume: function (handler) { return resume.add(handler); },
             setAppearance: function (theme) {

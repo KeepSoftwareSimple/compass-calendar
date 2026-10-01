@@ -53,4 +53,28 @@ final class LaunchTests: XCTestCase {
             handler: nil)
         wait(for: [shortcutExpectation], timeout: 30)
     }
+
+    @MainActor
+    func testLaunchDeepLinkNavigatesToDayView() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_LAUNCH_DEEP_LINK", "compass://day/2026-10-15"]
+        app.launch()
+
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 5))
+
+        let versionReady = NSPredicate(format: "value == %@", "0.1.0")
+        wait(
+            for: [expectation(for: versionReady, evaluatedWith: window, handler: nil)],
+            timeout: 30)
+
+        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
+        let pathExpectation = expectation(
+            for: pathReady,
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [pathExpectation], timeout: 45)
+    }
 }

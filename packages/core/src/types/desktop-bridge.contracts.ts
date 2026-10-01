@@ -85,6 +85,12 @@ export const DesktopBridgeGetLaunchAtLoginMessageSchema = z.strictObject({
   method: z.literal("getLaunchAtLogin"),
 });
 
+export const DesktopBridgeReportDeepLinkNavigationMessageSchema =
+  z.strictObject({
+    method: z.literal("reportDeepLinkNavigation"),
+    path: z.string().trim().min(1).max(512),
+  });
+
 export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
   "method",
   [
@@ -99,6 +105,7 @@ export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
     DesktopBridgeSetAppearanceMessageSchema,
     DesktopBridgeSetLaunchAtLoginMessageSchema,
     DesktopBridgeGetLaunchAtLoginMessageSchema,
+    DesktopBridgeReportDeepLinkNavigationMessageSchema,
   ],
 );
 export type DesktopBridgeOutboundMessage = z.infer<

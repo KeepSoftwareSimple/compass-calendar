@@ -68,6 +68,15 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
     ).toBe("dismissQuickAddPanel");
   });
 
+  it("accepts reportDeepLinkNavigation messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "reportDeepLinkNavigation",
+        path: "/day/2026-10-15",
+      }).method,
+    ).toBe("reportDeepLinkNavigation");
+  });
+
   it("accepts showNotification messages", () => {
     const parsed = DesktopBridgeOutboundMessageSchema.parse({
       method: "showNotification",

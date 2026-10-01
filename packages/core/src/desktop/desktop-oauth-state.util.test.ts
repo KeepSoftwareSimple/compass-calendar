@@ -4,6 +4,7 @@ import {
   DESKTOP_OAUTH_STATE_PREFIX,
   hasDesktopOAuthStateMarker,
   parseDesktopAuthDeepLink,
+  parseDesktopDayDeepLink,
   parseDesktopEventDeepLink,
 } from "@core/desktop/desktop-oauth-state.util";
 import { describe, expect, it } from "bun:test";
@@ -57,6 +58,25 @@ describe("desktop auth deep links", () => {
 
   it("rejects a callback link for an unknown provider", () => {
     expect(parseDesktopAuthDeepLink("compass://auth/zoom/callback")).toBeNull();
+  });
+});
+
+describe("desktop day deep links", () => {
+  it("parses a calendar day link", () => {
+    expect(parseDesktopDayDeepLink("compass://day/2026-10-15")).toBe(
+      "2026-10-15",
+    );
+  });
+
+  it("rejects invalid calendar dates", () => {
+    expect(parseDesktopDayDeepLink("compass://day/2026-13-01")).toBeNull();
+    expect(parseDesktopDayDeepLink("compass://day/not-a-date")).toBeNull();
+  });
+
+  it("returns null for other compass links", () => {
+    expect(
+      parseDesktopDayDeepLink("compass://auth/google/callback"),
+    ).toBeNull();
   });
 });
 

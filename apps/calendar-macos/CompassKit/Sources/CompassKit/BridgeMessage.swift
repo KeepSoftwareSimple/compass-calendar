@@ -26,6 +26,7 @@ public enum BridgeMessage: Equatable, Sendable {
     case setAppearance(theme: String)
     case setLaunchAtLogin(enabled: Bool)
     case getLaunchAtLogin
+    case reportDeepLinkNavigation(path: String)
 }
 
 public enum BridgeMessageCodec {
@@ -101,6 +102,11 @@ public enum BridgeMessageCodec {
             return .setLaunchAtLogin(enabled: enabled)
         case "getLaunchAtLogin":
             return .getLaunchAtLogin
+        case "reportDeepLinkNavigation":
+            guard let path = dictionary["path"] as? String else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .reportDeepLinkNavigation(path: path)
         default:
             throw BridgeMessageError.unknownMethod(method)
         }
