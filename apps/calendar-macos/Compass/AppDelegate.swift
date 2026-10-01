@@ -5,6 +5,7 @@ import CompassKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var webViewController: WebViewController?
+    private var mainMenuController: MainMenuController?
     private var optionHeldAtLaunch = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -27,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menuController = MainMenuController(
             webViewController: webViewController,
             showDebugMenu: showDebugMenu)
+        mainMenuController = menuController
         NSApp.mainMenu = MainMenu.make(controller: menuController)
 
         let window = NSWindow(
