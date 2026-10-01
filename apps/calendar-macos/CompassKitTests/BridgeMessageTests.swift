@@ -27,6 +27,27 @@ final class BridgeMessageTests: XCTestCase {
         XCTAssertEqual(try BridgeMessageCodec.decode(from: data), .restartToUpdate)
     }
 
+    func testDecodesRequestNotificationPermission() throws {
+        let data = Data("{\"method\":\"requestNotificationPermission\"}".utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: data),
+            .requestNotificationPermission)
+    }
+
+    func testDecodesShowNotification() throws {
+        let data = Data("""
+        {"method":"showNotification","title":"Standup","body":"Starts at 9:00 AM","tag":"evt-1|2026-10-01T14:00:00.000Z","eventId":"evt-1"}
+        """.utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: data),
+            .showNotification(
+                payload: DesktopNotificationPayload(
+                    title: "Standup",
+                    body: "Starts at 9:00 AM",
+                    tag: "evt-1|2026-10-01T14:00:00.000Z",
+                    eventId: "evt-1")))
+    }
+
     func testRejectsUnknownMethods() {
         let data = Data("{\"method\":\"unknown\"}".utf8)
         XCTAssertThrowsError(try BridgeMessageCodec.decode(from: data)) { error in

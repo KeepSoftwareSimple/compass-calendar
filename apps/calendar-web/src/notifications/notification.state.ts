@@ -33,6 +33,7 @@ function showSampleNotification(port: NotificationPort): boolean {
   return port.show(SAMPLE_NOTIFICATION_TITLE, {
     body: SAMPLE_NOTIFICATION_BODY,
     tag: "compass-notifications-enabled",
+    eventId: "compass-notifications-enabled",
     onClick: () => window.focus(),
   });
 }

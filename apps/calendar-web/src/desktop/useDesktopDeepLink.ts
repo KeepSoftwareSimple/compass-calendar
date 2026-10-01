@@ -1,6 +1,10 @@
 import { useRouter } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { isDesktop } from "@web/desktop/isDesktop";
+import {
+  openDesktopEventDeepLink,
+  parseDesktopEventDeepLink,
+} from "@web/desktop/open-desktop-event-deep-link";
 
 const AUTH_DEEP_LINK =
   /^compass:\/\/auth\/(?<provider>google|microsoft|apple)\/callback(?<query>\?.*)?$/;
@@ -23,13 +27,19 @@ export function useDesktopDeepLink(): void {
     }
 
     return bridge.onDeepLink((url) => {
-      const match = AUTH_DEEP_LINK.exec(url);
-      if (!match?.groups?.provider) {
+      const authMatch = AUTH_DEEP_LINK.exec(url);
+      if (authMatch?.groups?.provider) {
+        const query = authMatch.groups.query ?? "";
+        router.history.replace(
+          `/auth/${authMatch.groups.provider}/callback${query}`,
+        );
         return;
       }
 
-      const query = match.groups.query ?? "";
-      router.history.replace(`/auth/${match.groups.provider}/callback${query}`);
+      const eventLink = parseDesktopEventDeepLink(url);
+      if (eventLink) {
+        void openDesktopEventDeepLink(router, eventLink.eventId);
+      }
     });
   }, [router]);
 }

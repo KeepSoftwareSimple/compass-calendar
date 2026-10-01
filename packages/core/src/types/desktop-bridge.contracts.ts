@@ -33,12 +33,33 @@ export const DesktopBridgeRestartToUpdateMessageSchema = z.strictObject({
   method: z.literal("restartToUpdate"),
 });
 
+export const DesktopBridgeRequestNotificationPermissionMessageSchema =
+  z.strictObject({
+    method: z.literal("requestNotificationPermission"),
+  });
+
+export const DesktopBridgeGetNotificationPermissionMessageSchema =
+  z.strictObject({
+    method: z.literal("getNotificationPermission"),
+  });
+
+export const DesktopBridgeShowNotificationMessageSchema = z.strictObject({
+  method: z.literal("showNotification"),
+  title: z.string().trim().min(1).max(256),
+  body: z.string().trim().max(512).optional(),
+  tag: z.string().trim().max(128).optional(),
+  eventId: z.string().trim().min(1).max(128),
+});
+
 export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
   "method",
   [
     DesktopBridgeOpenExternalMessageSchema,
     DesktopBridgeSetAgendaMessageSchema,
     DesktopBridgeRestartToUpdateMessageSchema,
+    DesktopBridgeRequestNotificationPermissionMessageSchema,
+    DesktopBridgeGetNotificationPermissionMessageSchema,
+    DesktopBridgeShowNotificationMessageSchema,
   ],
 );
 export type DesktopBridgeOutboundMessage = z.infer<

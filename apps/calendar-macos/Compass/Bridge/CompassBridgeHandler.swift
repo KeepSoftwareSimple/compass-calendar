@@ -4,6 +4,8 @@ import WebKit
 
 /// Decodes bridge messages from the web view and dispatches them to native handlers.
 final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
+    weak var webView: WKWebView?
+
     func userContentController(
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
@@ -33,6 +35,11 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
             break
         case .restartToUpdate:
             break
+        case .requestNotificationPermission, .getNotificationPermission, .showNotification:
+            guard let webView else { return }
+            Task { @MainActor in
+                CompassNotificationCenter.shared.handle(bridgeMessage, webView: webView)
+            }
         }
     }
 }
