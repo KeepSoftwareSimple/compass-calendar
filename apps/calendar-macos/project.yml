@@ -26,6 +26,8 @@ targets:
     platform: macOS
     sources:
       - Compass
+    resources:
+      - Resources/offline.html
     settings:
       base:
         PRODUCT_NAME: Compass

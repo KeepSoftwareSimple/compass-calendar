@@ -63,6 +63,28 @@ export const DesktopBridgeDismissQuickAddPanelMessageSchema = z.strictObject({
   method: z.literal("dismissQuickAddPanel"),
 });
 
+export const DesktopBridgeThemeNameSchema = z.enum([
+  "light-beach",
+  "dark-abyss",
+]);
+export type DesktopBridgeThemeName = z.infer<
+  typeof DesktopBridgeThemeNameSchema
+>;
+
+export const DesktopBridgeSetAppearanceMessageSchema = z.strictObject({
+  method: z.literal("setAppearance"),
+  theme: DesktopBridgeThemeNameSchema,
+});
+
+export const DesktopBridgeSetLaunchAtLoginMessageSchema = z.strictObject({
+  method: z.literal("setLaunchAtLogin"),
+  enabled: z.boolean(),
+});
+
+export const DesktopBridgeGetLaunchAtLoginMessageSchema = z.strictObject({
+  method: z.literal("getLaunchAtLogin"),
+});
+
 export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
   "method",
   [
@@ -74,6 +96,9 @@ export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
     DesktopBridgeShowNotificationMessageSchema,
     DesktopBridgeSetQuickAddHotkeyMessageSchema,
     DesktopBridgeDismissQuickAddPanelMessageSchema,
+    DesktopBridgeSetAppearanceMessageSchema,
+    DesktopBridgeSetLaunchAtLoginMessageSchema,
+    DesktopBridgeGetLaunchAtLoginMessageSchema,
   ],
 );
 export type DesktopBridgeOutboundMessage = z.infer<

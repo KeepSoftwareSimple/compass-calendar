@@ -6,6 +6,9 @@ import WebKit
 final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
     weak var quickAddRouter: DesktopQuickAddRouting?
+    var onAppearanceChange: ((String) -> Void)?
+    var onLaunchAtLoginChange: ((Bool) -> Void)?
+    var launchAtLoginStatus: (() -> Bool)?
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -51,6 +54,19 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
             Task { @MainActor in
                 self.quickAddRouter?.dismissQuickAddPanel()
             }
+        case let .setAppearance(theme):
+            Task { @MainActor in
+                self.onAppearanceChange?(theme)
+            }
+        case let .setLaunchAtLogin(enabled):
+            Task { @MainActor in
+                self.onLaunchAtLoginChange?(enabled)
+            }
+        case .getLaunchAtLogin:
+            guard let webView else { return }
+            let enabled = launchAtLoginStatus?() ?? false
+            webView.evaluateJavaScript(
+                BridgeScript.deliverLaunchAtLoginJavaScript(enabled: enabled))
         }
     }
 }
