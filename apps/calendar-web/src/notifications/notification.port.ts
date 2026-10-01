@@ -1,5 +1,4 @@
-import { isDesktop } from "@web/desktop/isDesktop";
-import { createDesktopNotificationPort } from "@web/notifications/desktop-notification.port";
+import "@web/desktop/compass-desktop.global";
 
 /**
  * Injectable seam over the browser Notification API, mirroring toast.port.ts.
@@ -102,12 +101,87 @@ const productionNotificationPort: NotificationPort = {
 
 let notificationPort: NotificationPort | undefined;
 
+function shellHasDesktopBridge(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof window.compassDesktop?.version === "string"
+  );
+}
+
+const readDesktopBridgePermission = (): NotificationPermission => {
+  const permission = window.compassDesktop?.notificationPermission;
+  if (
+    permission === "granted" ||
+    permission === "denied" ||
+    permission === "default"
+  ) {
+    return permission;
+  }
+  return "default";
+};
+
+const desktopNotificationPort: NotificationPort = {
+  isSupported: () =>
+    shellHasDesktopBridge() && !!window.compassDesktop?.showNotification,
+
+  getPermission: readDesktopBridgePermission,
+
+  requestPermission: async () => {
+    const bridge = window.compassDesktop;
+    if (!bridge?.requestNotificationPermission) {
+      return "denied";
+    }
+    const permission = await bridge.requestNotificationPermission();
+    if (
+      permission === "granted" ||
+      permission === "denied" ||
+      permission === "default"
+    ) {
+      return permission;
+    }
+    return readDesktopBridgePermission();
+  },
+
+  show: (title, options: ShowNotificationOptions = {}) => {
+    const bridge = window.compassDesktop;
+    if (
+      !bridge?.showNotification ||
+      readDesktopBridgePermission() !== "granted"
+    ) {
+      return false;
+    }
+    const eventId = options.eventId?.trim();
+    if (!eventId) {
+      return false;
+    }
+    try {
+      bridge.showNotification({
+        title,
+        body: options.body,
+        tag: options.tag,
+        eventId,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  observePermission: (onChange) => {
+    const bridge = window.compassDesktop;
+    if (!bridge?.onNotificationPermissionChange) {
+      return () => {};
+    }
+    return bridge.onNotificationPermissionChange(onChange);
+  },
+};
+
 export function getNotificationPort(): NotificationPort {
   if (notificationPort) {
     return notificationPort;
   }
-  if (isDesktop()) {
-    notificationPort = createDesktopNotificationPort();
+  if (shellHasDesktopBridge()) {
+    notificationPort = desktopNotificationPort;
     return notificationPort;
   }
   notificationPort = productionNotificationPort;
