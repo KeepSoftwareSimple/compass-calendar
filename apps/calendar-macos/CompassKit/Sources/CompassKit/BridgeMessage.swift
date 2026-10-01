@@ -14,6 +14,9 @@ public enum BridgeMessage: Equatable, Sendable {
     case openExternal(url: String)
     case setAgenda(items: [DesktopAgendaItem])
     case restartToUpdate
+    case requestNotificationPermission
+    case getNotificationPermission
+    case showNotification(payload: DesktopNotificationPayload)
 }
 
 public enum BridgeMessageCodec {
@@ -46,6 +49,24 @@ public enum BridgeMessageCodec {
             return .setAgenda(items: items)
         case "restartToUpdate":
             return .restartToUpdate
+        case "requestNotificationPermission":
+            return .requestNotificationPermission
+        case "getNotificationPermission":
+            return .getNotificationPermission
+        case "showNotification":
+            guard let title = dictionary["title"] as? String,
+                  let eventId = dictionary["eventId"] as? String
+            else {
+                throw BridgeMessageError.invalidPayload
+            }
+            let body = dictionary["body"] as? String
+            let tag = dictionary["tag"] as? String
+            return .showNotification(
+                payload: DesktopNotificationPayload(
+                    title: title,
+                    body: body,
+                    tag: tag,
+                    eventId: eventId))
         default:
             throw BridgeMessageError.unknownMethod(method)
         }

@@ -28,11 +28,6 @@ export interface NotificationPort {
 const isSupported = (): boolean =>
   typeof window !== "undefined" && "Notification" in window;
 
-const defaultNotificationIcon = (): string | undefined => {
-  if (typeof window === "undefined") return undefined;
-  return new URL("/favicon.ico", window.location.origin).href;
-};
-
 const productionNotificationPort: NotificationPort = {
   isSupported,
 
@@ -55,7 +50,8 @@ const productionNotificationPort: NotificationPort = {
       const notification = new Notification(title, {
         body: options.body,
         tag: options.tag,
-        icon: options.icon ?? defaultNotificationIcon(),
+        icon:
+          options.icon ?? new URL("/favicon.ico", window.location.origin).href,
       });
       notification.onclick = () => {
         options.onClick?.();
@@ -95,10 +91,22 @@ const productionNotificationPort: NotificationPort = {
   },
 };
 
-let notificationPort: NotificationPort = productionNotificationPort;
+let notificationPort: NotificationPort | undefined;
+let desktopPortRequested = false;
 
 export function getNotificationPort(): NotificationPort {
-  return notificationPort;
+  if (notificationPort) return notificationPort;
+  if (window.compassDesktop?.version) {
+    if (!desktopPortRequested) {
+      desktopPortRequested = true;
+      void import("./notification.desktop.port").then((m) => {
+        notificationPort = m.desktopNotificationPort;
+      });
+    }
+  } else {
+    notificationPort = productionNotificationPort;
+  }
+  return productionNotificationPort;
 }
 
 export function registerNotificationPort(port: NotificationPort): void {
@@ -106,5 +114,6 @@ export function registerNotificationPort(port: NotificationPort): void {
 }
 
 export function resetNotificationPort(): void {
-  notificationPort = productionNotificationPort;
+  notificationPort = undefined;
+  desktopPortRequested = false;
 }

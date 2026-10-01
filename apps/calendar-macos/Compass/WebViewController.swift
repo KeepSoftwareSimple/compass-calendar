@@ -4,7 +4,9 @@ import WebKit
 
 /// Hosts the web app. Navigations off the app origin and every
 /// `window.open` go to the default browser.
-final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate {
+final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDelegate,
+    CompassNotificationDelivering
+{
     private let appURL: URL
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
@@ -43,6 +45,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         configuration.userContentController = contentController
 
         webView = WKWebView(frame: .zero, configuration: configuration)
+        bridgeHandler.webView = webView
         webView.navigationDelegate = self
         webView.uiDelegate = self
         #if DEBUG
@@ -55,11 +58,23 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        CompassNotificationCenter.shared.configure(deliverer: self)
         webView.load(URLRequest(url: appURL))
+    }
+
+    func deliverDeepLink(_ url: String) {
+        view.window?.makeKeyAndOrderFront(nil)
+        webView.evaluateJavaScript(BridgeScript.deliverDeepLinkJavaScript(url: url))
+    }
+
+    func syncNotificationPermission() {
+        guard let webView else { return }
+        CompassNotificationCenter.shared.handle(.getNotificationPermission, webView: webView)
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         publishBridgeVersionFromPage(webView: webView, attempt: 0)
+        syncNotificationPermission()
     }
 
     private func publishBridgeVersionFromPage(webView: WKWebView, attempt: Int) {

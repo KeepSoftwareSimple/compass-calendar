@@ -22,13 +22,22 @@ export function useDesktopDeepLink(): void {
 
     return bridge.onDeepLink((url) => {
       const parsed = parseDesktopAuthDeepLink(url);
-      if (!parsed) {
+      if (parsed) {
+        router.history.replace(
+          `/auth/${parsed.provider}/callback${parsed.query}`,
+        );
         return;
       }
 
-      router.history.replace(
-        `/auth/${parsed.provider}/callback${parsed.query}`,
-      );
+      if (url.startsWith("compass://event/")) {
+        const eventId = url.slice(17).trim();
+        if (eventId) {
+          window.focus();
+          void import("@web/components/CommandPalette/event-search.util").then(
+            (m) => m.startFocusEventCard(eventId),
+          );
+        }
+      }
     });
   }, [router]);
 }
