@@ -83,6 +83,7 @@ export function TimezoneCombobox({
       const alias: TimeZoneListItem = {
         id: value,
         city: timeZoneCityName(value),
+        name: "",
         region: value,
         abbreviation,
         offset: "",

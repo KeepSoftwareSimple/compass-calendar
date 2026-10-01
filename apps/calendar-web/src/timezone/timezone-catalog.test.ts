@@ -19,7 +19,32 @@ describe("timezone-catalog", () => {
 
     const america = filterTimeZones(zones, "America");
     expect(america.length).toBeGreaterThan(10);
-    expect(america.every((zone) => zone.id.includes("America"))).toBe(true);
+    expect(
+      america.every(
+        (zone) => zone.id.includes("America") || zone.name.includes("America"),
+      ),
+    ).toBe(true);
+  });
+
+  it("finds zones by generic name, best-known city first", () => {
+    const sorted = sortTimeZonesByOffsetDistance(zones, "America/Denver");
+    const firstMatch = (query: string) => filterTimeZones(sorted, query)[0]?.id;
+
+    expect(firstMatch("central")).toBe("America/Chicago");
+    expect(firstMatch("eastern")).toBe("America/New_York");
+    expect(firstMatch("pacific")).toBe("America/Los_Angeles");
+    expect(firstMatch("mountain")).toBe("America/Denver");
+    expect(firstMatch("central european")).toBe("Europe/Paris");
+  });
+
+  it("labels each zone with its generic name", () => {
+    const chicago = zones.find((zone) => zone.id === "America/Chicago");
+    expect(chicago?.secondary).toBe("Central Time, CDT, GMT-5");
+
+    const rioGallegos = zones.find(
+      (zone) => zone.id === "America/Argentina/Rio_Gallegos",
+    );
+    expect(rioGallegos?.secondary).toBe("Argentina Standard Time, GMT-3");
   });
 
   it("formats offset labels as strings, not objects", () => {
