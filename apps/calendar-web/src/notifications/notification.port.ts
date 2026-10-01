@@ -103,9 +103,10 @@ export function getNotificationPort(): NotificationPort {
         notificationPort = m.desktopNotificationPort;
       });
     }
-    return productionNotificationPort;
+  } else {
+    notificationPort = productionNotificationPort;
   }
-  return (notificationPort = productionNotificationPort);
+  return productionNotificationPort;
 }
 
 export function registerNotificationPort(port: NotificationPort): void {
