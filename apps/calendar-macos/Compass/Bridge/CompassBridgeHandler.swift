@@ -5,6 +5,7 @@ import WebKit
 /// Decodes bridge messages from the web view and dispatches them to native handlers.
 final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
     weak var webView: WKWebView?
+    weak var webViewController: WebViewController?
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -40,6 +41,19 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
             Task { @MainActor in
                 CompassNotificationCenter.shared.handle(bridgeMessage, webView: webView)
             }
+        case let .setAppearance(theme):
+            CompassAppearance.apply(theme: theme)
+        case .getLaunchAtLogin:
+            guard let webViewController else { return }
+            webViewController.deliverLaunchAtLogin(CompassLaunchAtLogin.isEnabled())
+        case let .setLaunchAtLogin(enabled):
+            guard let webViewController else { return }
+            do {
+                try CompassLaunchAtLogin.setEnabled(enabled)
+            } catch {
+                // Still report the effective status to the web settings toggle.
+            }
+            webViewController.deliverLaunchAtLogin(CompassLaunchAtLogin.isEnabled())
         }
     }
 }

@@ -10,6 +10,11 @@ public struct DesktopAgendaItem: Codable, Equatable, Sendable {
     }
 }
 
+public enum DesktopAppearanceTheme: String, Equatable, Sendable {
+    case darkAbyss = "dark-abyss"
+    case lightBeach = "light-beach"
+}
+
 public enum BridgeMessage: Equatable, Sendable {
     case openExternal(url: String)
     case setAgenda(items: [DesktopAgendaItem])
@@ -17,6 +22,9 @@ public enum BridgeMessage: Equatable, Sendable {
     case requestNotificationPermission
     case getNotificationPermission
     case showNotification(payload: DesktopNotificationPayload)
+    case setAppearance(theme: DesktopAppearanceTheme)
+    case getLaunchAtLogin
+    case setLaunchAtLogin(enabled: Bool)
 }
 
 public enum BridgeMessageCodec {
@@ -67,6 +75,20 @@ public enum BridgeMessageCodec {
                     body: body,
                     tag: tag,
                     eventId: eventId))
+        case "setAppearance":
+            guard let rawTheme = dictionary["theme"] as? String,
+                  let theme = DesktopAppearanceTheme(rawValue: rawTheme)
+            else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .setAppearance(theme: theme)
+        case "getLaunchAtLogin":
+            return .getLaunchAtLogin
+        case "setLaunchAtLogin":
+            guard let enabled = dictionary["enabled"] as? Bool else {
+                throw BridgeMessageError.invalidPayload
+            }
+            return .setLaunchAtLogin(enabled: enabled)
         default:
             throw BridgeMessageError.unknownMethod(method)
         }

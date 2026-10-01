@@ -38,6 +38,7 @@ import {
 } from "@web/components/OverlayPanel/OverlayPanel";
 import { AccountsSection } from "@web/components/Settings/AccountsSection";
 import { DefaultCalendarPicker } from "@web/components/Settings/DefaultCalendarPicker";
+import { DesktopLaunchAtLoginSetting } from "@web/components/Settings/DesktopLaunchAtLoginSetting";
 import { SettingsNavButton } from "@web/components/Settings/SettingsNavButton";
 import {
   selectGuestMeetingSetupActive,
@@ -267,6 +268,7 @@ export const SettingsModal: FC = () => {
           ) : (
             <>
               <DefaultTimezonePicker />
+              <DesktopLaunchAtLoginSetting />
               <DefaultCalendarPicker
                 calendars={writableCalendars}
                 connections={connections}

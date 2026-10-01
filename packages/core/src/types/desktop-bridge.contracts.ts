@@ -51,6 +51,23 @@ export const DesktopBridgeShowNotificationMessageSchema = z.strictObject({
   eventId: z.string().trim().min(1).max(128),
 });
 
+export const DesktopBridgeThemeSchema = z.enum(["dark-abyss", "light-beach"]);
+export type DesktopBridgeTheme = z.infer<typeof DesktopBridgeThemeSchema>;
+
+export const DesktopBridgeSetAppearanceMessageSchema = z.strictObject({
+  method: z.literal("setAppearance"),
+  theme: DesktopBridgeThemeSchema,
+});
+
+export const DesktopBridgeGetLaunchAtLoginMessageSchema = z.strictObject({
+  method: z.literal("getLaunchAtLogin"),
+});
+
+export const DesktopBridgeSetLaunchAtLoginMessageSchema = z.strictObject({
+  method: z.literal("setLaunchAtLogin"),
+  enabled: z.boolean(),
+});
+
 export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
   "method",
   [
@@ -60,6 +77,9 @@ export const DesktopBridgeOutboundMessageSchema = z.discriminatedUnion(
     DesktopBridgeRequestNotificationPermissionMessageSchema,
     DesktopBridgeGetNotificationPermissionMessageSchema,
     DesktopBridgeShowNotificationMessageSchema,
+    DesktopBridgeSetAppearanceMessageSchema,
+    DesktopBridgeGetLaunchAtLoginMessageSchema,
+    DesktopBridgeSetLaunchAtLoginMessageSchema,
   ],
 );
 export type DesktopBridgeOutboundMessage = z.infer<

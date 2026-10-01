@@ -11,9 +11,12 @@ public enum BridgeScript {
           if (location.origin !== '\(appOrigin)') { return; }
           var deepLinkHandlers = [];
           var updateReadyHandlers = [];
+          var resumeHandlers = [];
           var permissionChangeHandlers = [];
           var pendingPermissionRequest = null;
           var pendingPermissionQuery = null;
+          var pendingLaunchAtLoginQuery = null;
+          var pendingLaunchAtLoginSet = null;
           function post(body) {
             window.webkit.messageHandlers.compass.postMessage(body);
           }
@@ -61,6 +64,29 @@ public enum BridgeScript {
             },
             onDeepLink: function (handler) { deepLinkHandlers.push(handler); },
             onUpdateReady: function (handler) { updateReadyHandlers.push(handler); },
+            onResume: function (handler) {
+              resumeHandlers.push(handler);
+              return function () {
+                resumeHandlers = resumeHandlers.filter(function (entry) {
+                  return entry !== handler;
+                });
+              };
+            },
+            getLaunchAtLogin: function () {
+              return new Promise(function (resolve) {
+                pendingLaunchAtLoginQuery = resolve;
+                post({ method: 'getLaunchAtLogin' });
+              });
+            },
+            setLaunchAtLogin: function (enabled) {
+              return new Promise(function (resolve) {
+                pendingLaunchAtLoginSet = resolve;
+                post({ method: 'setLaunchAtLogin', enabled: !!enabled });
+              });
+            },
+            setAppearance: function (theme) {
+              post({ method: 'setAppearance', theme: theme });
+            },
             __deliverNotificationPermission: function (permission) {
               var normalized = normalizePermission(permission);
               window.compassDesktop.notificationPermission = normalized;
@@ -79,6 +105,20 @@ public enum BridgeScript {
             },
             __deliverUpdateReady: function (version) {
               updateReadyHandlers.forEach(function (handler) { handler(version); });
+            },
+            __deliverResume: function () {
+              resumeHandlers.forEach(function (handler) { handler(); });
+            },
+            __deliverLaunchAtLogin: function (enabled) {
+              var value = !!enabled;
+              if (pendingLaunchAtLoginQuery) {
+                pendingLaunchAtLoginQuery(value);
+                pendingLaunchAtLoginQuery = null;
+              }
+              if (pendingLaunchAtLoginSet) {
+                pendingLaunchAtLoginSet(value);
+                pendingLaunchAtLoginSet = null;
+              }
             }
           };
         })();
@@ -97,5 +137,13 @@ public enum BridgeScript {
     public static func deliverUpdateReadyJavaScript(version: String) -> String {
         let encoded = version.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
         return "window.compassDesktop && window.compassDesktop.__deliverUpdateReady('\(encoded)');"
+    }
+
+    public static let deliverResumeJavaScript = """
+        window.compassDesktop && window.compassDesktop.__deliverResume();
+        """
+
+    public static func deliverLaunchAtLoginJavaScript(enabled: Bool) -> String {
+        "window.compassDesktop && window.compassDesktop.__deliverLaunchAtLogin(\(enabled));"
     }
 }

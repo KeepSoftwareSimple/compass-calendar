@@ -10,15 +10,22 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     private let appURL: URL
     private var webView: WKWebView!
     private let bridgeHandler = CompassBridgeHandler()
+    private var loadState = WebLoadStateMachine()
+    private var resilience: WebViewResilience?
 
     init(appURL: URL) {
         self.appURL = appURL
         super.init(nibName: nil, bundle: nil)
+        bridgeHandler.webViewController = self
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) {
         fatalError("init(coder:) is not supported")
+    }
+
+    deinit {
+        resilience?.stop()
     }
 
     override func loadView() {
@@ -35,8 +42,6 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
                 source: bridgeSource,
                 injectionTime: .atDocumentStart,
                 forMainFrameOnly: true))
-        // At document start `location.origin` can still be empty on the first
-        // navigation; document end matches the configured app origin reliably.
         contentController.addUserScript(
             WKUserScript(
                 source: bridgeSource,
@@ -59,7 +64,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     override func viewDidLoad() {
         super.viewDidLoad()
         CompassNotificationCenter.shared.configure(deliverer: self)
-        webView.load(URLRequest(url: appURL))
+        loadAppURL()
+        resilience = WebViewResilience(
+            onNetworkReachable: { [weak self] in
+                self?.handleNetworkBecameReachable()
+            },
+            onSystemResume: { [weak self] in
+                self?.handleSystemResume()
+            })
+        resilience?.start()
     }
 
     func deliverDeepLink(_ url: String) {
@@ -68,13 +81,97 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func syncNotificationPermission() {
-        guard let webView else { return }
+        guard webView != nil else { return }
         CompassNotificationCenter.shared.handle(.getNotificationPermission, webView: webView)
     }
 
+    func loadAppURL() {
+        webView.load(URLRequest(url: appURL))
+    }
+
+    func deliverLaunchAtLogin(_ enabled: Bool) {
+        webView.evaluateJavaScript(
+            BridgeScript.deliverLaunchAtLoginJavaScript(enabled: enabled),
+            completionHandler: nil)
+    }
+
+    func deliverResumeToWebApp() {
+        webView.evaluateJavaScript(BridgeScript.deliverResumeJavaScript, completionHandler: nil)
+    }
+
+    private func showOfflinePage() {
+        guard let offlineURL = Bundle.main.url(forResource: "offline", withExtension: "html") else {
+            return
+        }
+        webView.loadFileURL(offlineURL, allowingReadAccessTo: offlineURL.deletingLastPathComponent())
+    }
+
+    private func applyLoadActions(_ actions: [WebLoadAction]) {
+        for action in actions {
+            switch action {
+            case .showOfflinePage:
+                showOfflinePage()
+            case .loadAppURL:
+                loadAppURL()
+            }
+        }
+    }
+
+    private func handleMainFrameLoadFailure() {
+        applyLoadActions(loadState.handle(.appLoadFailed))
+    }
+
+    private func handleMainFrameLoadSuccess(for url: URL?) {
+        guard let url else { return }
+        if url.isFileURL {
+            return
+        }
+        guard AppOrigin.isSameOrigin(url, appURL) else { return }
+        let wasOffline = loadState.presentation == .offline
+        applyLoadActions(loadState.handle(.appLoadSucceeded))
+        if wasOffline {
+            deliverResumeToWebApp()
+        }
+    }
+
+    private func handleOfflineRetryRequest() {
+        applyLoadActions(loadState.handle(.userRequestedRetry))
+    }
+
+    private func handleNetworkBecameReachable() {
+        if loadState.presentation == .offline {
+            applyLoadActions(loadState.handle(.networkBecameReachable))
+            return
+        }
+        if loadState.presentation == .app {
+            deliverResumeToWebApp()
+        }
+    }
+
+    private func handleSystemResume() {
+        if loadState.presentation == .offline {
+            applyLoadActions(loadState.handle(.networkBecameReachable))
+            return
+        }
+        deliverResumeToWebApp()
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        handleMainFrameLoadSuccess(for: webView.url)
         publishBridgeVersionFromPage(webView: webView, attempt: 0)
         syncNotificationPermission()
+    }
+
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleMainFrameLoadFailure()
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        handleMainFrameLoadFailure()
     }
 
     private func publishBridgeVersionFromPage(webView: WKWebView, attempt: Int) {
@@ -100,6 +197,11 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
     ) {
         guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+        if url == OfflineRetryLink.url {
+            handleOfflineRetryRequest()
             decisionHandler(.cancel)
             return
         }

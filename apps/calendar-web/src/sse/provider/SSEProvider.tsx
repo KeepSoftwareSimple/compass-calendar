@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { useDesktopResume } from "@web/desktop/useDesktopResume";
 import { useEventSSE } from "../hooks/useEventSSE";
 import { useSSEConnection } from "../hooks/useSSEConnection";
 import { useSyncFocusRefresh } from "../hooks/useSyncFocusRefresh";
@@ -12,6 +13,7 @@ const SSEProvider = ({ children }: { children: ReactNode }) => {
   useEventSSE();
   useSyncSSE();
   useSyncFocusRefresh();
+  useDesktopResume();
   useTransientSyncPolling();
 
   return children;

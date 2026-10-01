@@ -27,6 +27,27 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
     ).toEqual({ method: "restartToUpdate" });
   });
 
+  it("accepts launch at login messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({ method: "getLaunchAtLogin" }),
+    ).toEqual({ method: "getLaunchAtLogin" });
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "setLaunchAtLogin",
+        enabled: true,
+      }),
+    ).toEqual({ method: "setLaunchAtLogin", enabled: true });
+  });
+
+  it("accepts setAppearance messages", () => {
+    expect(
+      DesktopBridgeOutboundMessageSchema.parse({
+        method: "setAppearance",
+        theme: "light-beach",
+      }),
+    ).toEqual({ method: "setAppearance", theme: "light-beach" });
+  });
+
   it("accepts showNotification messages", () => {
     const parsed = DesktopBridgeOutboundMessageSchema.parse({
       method: "showNotification",

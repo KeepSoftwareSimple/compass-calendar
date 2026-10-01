@@ -19,6 +19,10 @@ describe("isDesktop", () => {
       restartToUpdate: () => {},
       onDeepLink: (_handler) => {},
       onUpdateReady: () => {},
+      onResume: () => () => {},
+      getLaunchAtLogin: async () => false,
+      setLaunchAtLogin: async () => false,
+      setAppearance: () => {},
     };
     expect(isDesktop()).toBe(true);
   });

@@ -34,6 +34,10 @@ describe("getNotificationPort", () => {
       showNotification,
       onDeepLink: () => {},
       onUpdateReady: () => {},
+      onResume: () => () => {},
+      getLaunchAtLogin: async () => false,
+      setLaunchAtLogin: async () => false,
+      setAppearance: () => {},
     } as NonNullable<Window["compassDesktop"]>;
 
     getNotificationPort();
