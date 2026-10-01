@@ -96,7 +96,10 @@ import {
   compareCalendars,
   getWritableCalendars,
 } from "@web/calendars/calendar.util";
-import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentinel";
+import {
+  getLocalCalendarSentinelId,
+  isSentinelCalendarList,
+} from "@web/calendars/local-calendar.sentinel";
 import { useConnectedAccountEmails } from "@web/calendars/useDefaultTargetCalendar";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
@@ -428,6 +431,9 @@ export function BookingSettingsSection({
     const draft = readGuestMeetingSetupDraft();
     if (!draft || guestResumeHydratedRef.current) return;
     if (calendarsPending || waitingForHostCalendars) return;
+    // Just after sign-up the cache still holds the anonymous local calendar
+    // until useCalendarsQuery refetches. Picking a destination from it sticks.
+    if (isSentinelCalendarList(calendars)) return;
     guestResumeHydratedRef.current = true;
     const hydrated = guestDraftForAuthenticatedHost(
       draft,
@@ -442,6 +448,7 @@ export function BookingSettingsSection({
   }, [
     authenticated,
     availabilityCalendars,
+    calendars,
     calendarsPending,
     guestMeetingSetupActive,
     waitingForHostCalendars,
@@ -559,6 +566,14 @@ export function BookingSettingsSection({
           }
           const inline = bookingSaveErrorInline(mutationError);
           if (inline) setSaveError(inline);
+          // A guest picks the address before sign-up, so go-live is the first
+          // PUT that can report it taken. Fix it where it was chosen.
+          if (
+            options?.fromSetupGoLive === true &&
+            inline?.field === "address"
+          ) {
+            setSetupStep("address");
+          }
         },
         onSuccess: (page) => {
           if (options?.fromSetupGoLive === true) {

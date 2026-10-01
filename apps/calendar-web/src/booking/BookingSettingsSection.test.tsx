@@ -4,11 +4,15 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http } from "msw";
 import {
+  buildDefaultAdminPutInput,
   DEFAULT_WEEKLY_AVAILABILITY,
   type WeeklyAvailability,
 } from "@core/types/booking.contracts";
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
-import { CalendarIdSchema } from "@core/types/domain-primitives";
+import {
+  CalendarIdSchema,
+  TimeZoneSchema,
+} from "@core/types/domain-primitives";
 import { server } from "@web/__tests__/__mocks__/server/mock.server";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
@@ -36,6 +40,10 @@ import {
   bookingFieldAttrs,
   focusBookingField,
 } from "@web/booking/booking-sequence.fields";
+import {
+  clearGuestMeetingSetupDraft,
+  writeGuestMeetingSetupDraft,
+} from "@web/booking/guest-meeting-setup.util";
 import { calendarQueryKeys } from "@web/calendars/calendar.query";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
@@ -43,6 +51,7 @@ import {
   registerToastPort,
   resetToastPort,
 } from "@web/common/utils/toast/toast.port";
+import { settingsActions } from "@web/settings/settings.store";
 import { useSettingsShortcuts } from "@web/settings/useSettingsShortcuts";
 import { clearAppLockReasons } from "@web/shortcuts/app-lock";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
@@ -1266,6 +1275,73 @@ describe("BookingSettingsSection", () => {
     expect(screen.getByText("Step 4 of 4")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Back" }));
     expect(await screen.findByText("Step 3 of 4")).toBeInTheDocument();
+  });
+
+  it("returns a resumed guest to the address step when go-live finds it taken", async () => {
+    const user = userEvent.setup({ delay: null });
+    userMetadataActions.set(healthyGoogleMetadata);
+    writeGuestMeetingSetupDraft({
+      ...buildDefaultAdminPutInput(TimeZoneSchema.parse("UTC")),
+      slug: "taken-name",
+    });
+    const savedBodies: { enabled?: boolean; slug?: string }[] = [];
+
+    server.use(
+      http.get(bookingPageUrl, () => HttpResponse.json(unconfiguredPage())),
+      http.put(bookingPageUrl, async ({ request }) => {
+        const body = (await request.json()) as {
+          enabled?: boolean;
+          slug?: string;
+        };
+        savedBodies.push(body);
+        if (body.slug === "taken-name") {
+          return HttpResponse.json(
+            { code: "SLUG_TAKEN", message: "taken" },
+            { status: 409 },
+          );
+        }
+        return HttpResponse.json(putSavedPage(body as Record<string, unknown>));
+      }),
+    );
+
+    try {
+      const { wrapper, queryClient } = createStoreWrapper();
+      queryClient.setQueryData(calendarQueryKeys.all, [writableCalendar]);
+      // After createStoreWrapper, which resets the settings store.
+      settingsActions.beginGuestMeetingSetup();
+      render(
+        <HotkeysProvider>
+          <BookingSettingsSection />
+        </HotkeysProvider>,
+        { wrapper },
+      );
+
+      expect(await screen.findByText("Step 4 of 4")).toBeInTheDocument();
+      await user.click(
+        screen.getByRole("button", { name: /Turn on and copy link/ }),
+      );
+
+      expect(await screen.findByText("Step 1 of 4")).toBeInTheDocument();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        BOOKING_SAVE_ERROR_COPY.SLUG_TAKEN,
+      );
+      const address = screen.getByLabelText("Page address");
+      await waitFor(() => {
+        expect(address).toHaveFocus();
+      });
+
+      await user.clear(address);
+      await user.type(address, "free-name");
+      await user.click(screen.getByRole("button", { name: /^Continue/ }));
+      expect(await screen.findByText("Step 2 of 4")).toBeInTheDocument();
+      expect(savedBodies.at(-1)).toMatchObject({
+        enabled: false,
+        slug: "free-name",
+      });
+    } finally {
+      settingsActions.closeSettings();
+      clearGuestMeetingSetupDraft();
+    }
   });
 
   it("PUTs slug when the host edits the page address", async () => {

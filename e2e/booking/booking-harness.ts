@@ -1340,6 +1340,163 @@ export async function prepareSignedInBookingSettingsPage(
   return captured;
 }
 
+export interface GuestMeetingSetupHarness {
+  putBodies: Array<Record<string, unknown>>;
+  /**
+   * Stands in for a finished email sign-up (no reload): flips the session,
+   * then loads the new host's connection, in the order the app sees them.
+   * The sign-up form itself needs the real backend, so it is not driven here.
+   */
+  completeSignUp: () => Promise<void>;
+}
+
+/**
+ * Signed-out visitor on `/?meetingSetup=1`, the link the `/meet` landing page
+ * and every public page footer point at. The API is stubbed for the host the
+ * visitor becomes after sign-up; PUTs with `takenSlug` answer SLUG_TAKEN.
+ */
+export async function prepareGuestMeetingSetup(
+  page: Page,
+  options: { takenSlug?: string } = {},
+): Promise<GuestMeetingSetupHarness> {
+  const putBodies: Array<Record<string, unknown>> = [];
+  // Until sign-up every authed route answers 401, as the real API does for a
+  // visitor without a session. A blanket 200 reads as a live session.
+  let signedIn = false;
+  const hostMetadata = {
+    connections: [
+      {
+        id: "e2e-connection-1",
+        provider: "google" as const,
+        state: "healthy",
+        stateReason: null,
+        lastSyncedAt: null,
+        lastHealthyAt: null,
+        accountEmail: HOST_ACCOUNT_EMAIL,
+        connectionState: "HEALTHY" as const,
+        canSuggestContacts: false,
+      },
+    ],
+  };
+
+  await page.addInitScript(() => {
+    (
+      window as Window & { __COMPASS_E2E_TEST__?: boolean }
+    ).__COMPASS_E2E_TEST__ = true;
+  });
+
+  await page.route("**/api/**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+
+    if (path.endsWith("/api/config")) {
+      return route.fulfill(
+        jsonResponse({
+          version: E2E_APP_CONFIG_VERSION,
+          providers: {
+            google: { signIn: true, connect: true },
+            microsoft: { signIn: false, connect: false },
+            apple: { signIn: false, connect: false },
+          },
+        }),
+      );
+    }
+    if (!signedIn) {
+      return route.fulfill(jsonResponse({ message: "unauthorised" }, 401));
+    }
+    if (path.endsWith("/api/calendars")) {
+      return route.fulfill(
+        jsonResponse({ calendars: [googleCalendar, compassCalendar] }),
+      );
+    }
+    if (path.endsWith("/api/event") && request.method() === "GET") {
+      return route.fulfill(jsonResponse({ events: [] }));
+    }
+    if (path.endsWith("/api/booking/page") && request.method() === "GET") {
+      return route.fulfill(
+        jsonResponse({
+          enabled: false,
+          durationMinutes: 30,
+          destinationCalendarId: BOOKING_CALENDAR_ID,
+          blockingCalendarIds: [BOOKING_CALENDAR_ID],
+          timeZone: "UTC",
+          weeklyAvailability: DEFAULT_WEEKLY_AVAILABILITY,
+          minNoticeHours: 4,
+          maxHorizonDays: 60,
+          isConfigured: false,
+          suggestedSlug: "hostuser",
+        }),
+      );
+    }
+    if (path.endsWith("/api/booking/page") && request.method() === "PUT") {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      putBodies.push(body);
+      if (options.takenSlug != null && body.slug === options.takenSlug) {
+        return route.fulfill(
+          jsonResponse({ code: "SLUG_TAKEN", message: "taken" }, 409),
+        );
+      }
+      return route.fulfill(
+        jsonResponse({
+          ...body,
+          id: "000000000000000000000001",
+          hostUserId: "000000000000000000000002",
+          createdAt: new Date(0).toISOString(),
+          updatedAt: new Date(0).toISOString(),
+          bookingUrl: `https://compasscalendar.com/meet/${String(body.slug)}`,
+        }),
+      );
+    }
+    if (path.endsWith("/api/booking/page/status")) {
+      return route.fulfill(jsonResponse({ bookable: true, reasons: [] }));
+    }
+    if (path.endsWith("/api/user/metadata")) {
+      return route.fulfill(jsonResponse(hostMetadata));
+    }
+    return route.fulfill(jsonResponse({}));
+  });
+
+  await page.goto("/?meetingSetup=1", { waitUntil: "domcontentloaded" });
+
+  const completeSignUp = async () => {
+    signedIn = true;
+    await page.waitForFunction(
+      () =>
+        (
+          window as Window & {
+            __COMPASS_E2E_HOOKS__?: { setAuthenticated: (v: boolean) => void };
+          }
+        ).__COMPASS_E2E_HOOKS__ !== undefined,
+    );
+    await page.evaluate(() => {
+      (
+        window as Window & {
+          __COMPASS_E2E_HOOKS__?: { setAuthenticated: (v: boolean) => void };
+        }
+      ).__COMPASS_E2E_HOOKS__?.setAuthenticated(true);
+    });
+    await page.waitForFunction(() => {
+      const bridge = (
+        window as Window & {
+          __COMPASS_E2E_STORE__?: { userMetadata?: unknown };
+        }
+      ).__COMPASS_E2E_STORE__;
+      return Boolean(bridge?.userMetadata);
+    });
+    await page.evaluate((metadata) => {
+      (
+        window as Window & {
+          __COMPASS_E2E_STORE__?: {
+            userMetadata?: { set: (metadata: unknown) => void };
+          };
+        }
+      ).__COMPASS_E2E_STORE__?.userMetadata?.set(metadata);
+    }, hostMetadata);
+  };
+
+  return { putBodies, completeSignUp };
+}
+
 /** Dispatches a DOM click for OverlayPanel buttons that re-render during Playwright clicks. */
 export const dispatchClick = async (
   locator: import("@playwright/test").Locator,
