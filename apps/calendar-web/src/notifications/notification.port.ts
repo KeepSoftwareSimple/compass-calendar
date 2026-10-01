@@ -28,11 +28,6 @@ export interface NotificationPort {
 const isSupported = (): boolean =>
   typeof window !== "undefined" && "Notification" in window;
 
-const defaultNotificationIcon = (): string | undefined => {
-  if (typeof window === "undefined") return undefined;
-  return new URL("/favicon.ico", window.location.origin).href;
-};
-
 const productionNotificationPort: NotificationPort = {
   isSupported,
 
@@ -55,7 +50,8 @@ const productionNotificationPort: NotificationPort = {
       const notification = new Notification(title, {
         body: options.body,
         tag: options.tag,
-        icon: options.icon ?? defaultNotificationIcon(),
+        icon:
+          options.icon ?? new URL("/favicon.ico", window.location.origin).href,
       });
       notification.onclick = () => {
         options.onClick?.();
@@ -96,29 +92,20 @@ const productionNotificationPort: NotificationPort = {
 };
 
 let notificationPort: NotificationPort | undefined;
-let desktopPortLoadStarted = false;
-
-function startDesktopPortLoad(): void {
-  if (desktopPortLoadStarted) return;
-  desktopPortLoadStarted = true;
-  void import("./notification.desktop.port").then((module) => {
-    notificationPort = module.desktopNotificationPort;
-  });
-}
+let desktopPortRequested = false;
 
 export function getNotificationPort(): NotificationPort {
-  if (notificationPort) {
-    return notificationPort;
-  }
-  if (
-    typeof window !== "undefined" &&
-    typeof window.compassDesktop?.version === "string"
-  ) {
-    startDesktopPortLoad();
+  if (notificationPort) return notificationPort;
+  if (window.compassDesktop?.version) {
+    if (!desktopPortRequested) {
+      desktopPortRequested = true;
+      void import("./notification.desktop.port").then((m) => {
+        notificationPort = m.desktopNotificationPort;
+      });
+    }
     return productionNotificationPort;
   }
-  notificationPort = productionNotificationPort;
-  return notificationPort;
+  return (notificationPort = productionNotificationPort);
 }
 
 export function registerNotificationPort(port: NotificationPort): void {
@@ -127,5 +114,5 @@ export function registerNotificationPort(port: NotificationPort): void {
 
 export function resetNotificationPort(): void {
   notificationPort = undefined;
-  desktopPortLoadStarted = false;
+  desktopPortRequested = false;
 }
