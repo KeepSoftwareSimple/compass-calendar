@@ -6,7 +6,7 @@
   "private": true,
   "main": "",
   "dependencies": {
-    "@googleapis/calendar": "^16.0.0",
+    "@googleapis/calendar": "^20.0.1",
     "@mongodb-js/zstd": "^7.0.0",
     "@opentelemetry/api-logs": "^0.222.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
