@@ -10,19 +10,14 @@ export function useDesktopDeepLink(): void {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isDesktop()) {
-      return;
-    }
+    if (!isDesktop()) return;
 
     const bridge = window.compassDesktop;
-    if (!bridge) {
-      return;
-    }
+    if (!bridge) return;
 
     let cancelled = false;
-    void import("./desktop-deep-link").then((module) => {
-      if (cancelled) return;
-      module.attachDesktopDeepLink(router, bridge);
+    void import("./desktop-deep-link").then((m) => {
+      if (!cancelled) m.attachDesktopDeepLink(router, bridge);
     });
 
     return () => {
