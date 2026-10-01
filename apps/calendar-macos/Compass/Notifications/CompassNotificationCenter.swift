@@ -9,23 +9,22 @@ protocol CompassNotificationDelivering: AnyObject {
     func syncNotificationPermission()
 }
 
-final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegate {
+@MainActor
+final class CompassNotificationCenter {
     static let shared = CompassNotificationCenter()
 
-    @MainActor private weak var deliverer: CompassNotificationDelivering?
-    @MainActor private var didRequestAuthorization = false
+    private weak var deliverer: CompassNotificationDelivering?
+    private var didRequestAuthorization = false
+    private let userNotificationDelegate = CompassUserNotificationDelegate()
 
-    private override init() {
-        super.init()
-        UNUserNotificationCenter.current().delegate = self
+    private init() {
+        UNUserNotificationCenter.current().delegate = userNotificationDelegate
     }
 
-    @MainActor
     func configure(deliverer: CompassNotificationDelivering) {
         self.deliverer = deliverer
     }
 
-    @MainActor
     func handle(_ message: BridgeMessage, webView: WKWebView) {
         switch message {
         case .requestNotificationPermission:
@@ -39,7 +38,10 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         }
     }
 
-    @MainActor
+    fileprivate func deliverEventTapFromNotification(eventId: String) {
+        deliverEventTap(eventId: eventId)
+    }
+
     private func permissionString(for settings: UNNotificationSettings) -> String {
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
@@ -53,7 +55,6 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         }
     }
 
-    @MainActor
     private func deliverPermission(_ permission: String, to webView: WKWebView) {
         let encoded = permission.replacing("\\", with: "\\\\").replacing("'", with: "\\'")
         let script =
@@ -61,7 +62,6 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         webView.evaluateJavaScript(script, completionHandler: nil)
     }
 
-    @MainActor
     private func requestAuthorization(webView: WKWebView, promptIfNeeded: Bool) async {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
@@ -80,7 +80,6 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         deliverPermission(permission, to: webView)
     }
 
-    @MainActor
     private func post(_ payload: DesktopNotificationPayload, webView: WKWebView) async {
         let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
@@ -110,16 +109,19 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         try? await center.add(request)
     }
 
-    @MainActor
     private func deliverEventTap(eventId: String) {
         NSApp.activate(ignoringOtherApps: true)
         deliverer?.deliverDeepLink("compass://event/\(eventId)")
     }
+}
 
+final class CompassUserNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        defer { completionHandler() }
         guard response.actionIdentifier == UNNotificationDefaultActionIdentifier,
               let payload = try? DesktopNotificationPayloadCodec.decode(
                   from: response.notification.request.content.userInfo)
@@ -128,15 +130,16 @@ final class CompassNotificationCenter: NSObject, UNUserNotificationCenterDelegat
         }
 
         let eventId = payload.eventId
-        await MainActor.run {
-            CompassNotificationCenter.shared.deliverEventTap(eventId: eventId)
+        Task { @MainActor in
+            CompassNotificationCenter.shared.deliverEventTapFromNotification(eventId: eventId)
         }
     }
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound]
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
