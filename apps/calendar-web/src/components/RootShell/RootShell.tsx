@@ -57,6 +57,7 @@ import {
   hasSeenWelcome,
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
+import { useDesktopAgendaSync } from "@web/desktop/useDesktopAgendaSync";
 import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
 import { useDesktopMenuShortcutBridge } from "@web/desktop/useDesktopMenuShortcutBridge";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
@@ -135,6 +136,7 @@ export function RootShell() {
   useGuestMeetingSetupResume();
   useSettingsSearchEntry();
   useDesktopDeepLink();
+  useDesktopAgendaSync();
   useDesktopMenuShortcutBridge();
 
   const readOnlyStatus =
