@@ -3,7 +3,7 @@ import CompassKit
 import CompassUI
 import SwiftUI
 
-private struct ThemedRootView: View {
+struct ThemedRootView: View {
     let webTheme: NativeWebTheme
 
     var body: some View {
