@@ -1,14 +1,4 @@
 import { CliValidator } from "@scripts/cli.validator";
-import { runApplePollThrottleCommand } from "@scripts/commands/apple-poll-throttle";
-import { runAuditConnectionIdentity } from "@scripts/commands/audit-connection-identity";
-import { runBackfillBilling } from "@scripts/commands/backfill-billing";
-import { runBackfillIdentities } from "@scripts/commands/backfill-identities";
-import { runConnectionReport } from "@scripts/commands/connection-report";
-import { runEmailPreviewCommand } from "@scripts/commands/email-preview";
-import { runEncryptCredentials } from "@scripts/commands/encrypt-credentials";
-import { runManageFailedJobs } from "@scripts/commands/manage-failed-jobs";
-import { runPurgeUser } from "@scripts/commands/purge-user";
-import { runRecordAppleContractCommand } from "@scripts/commands/record-apple-contract";
 import { Command } from "commander";
 
 export default class CompassCLI {
@@ -25,36 +15,81 @@ export default class CompassCLI {
     const cmd = this.program.args[0];
 
     switch (true) {
-      case cmd === "manage-failed-jobs":
+      case cmd === "manage-failed-jobs": {
+        const { runManageFailedJobs } = await import(
+          "@scripts/commands/manage-failed-jobs"
+        );
         await runManageFailedJobs();
         break;
-      case cmd === "purge-user":
+      }
+      case cmd === "purge-user": {
+        const { runPurgeUser } = await import("@scripts/commands/purge-user");
         await runPurgeUser();
         break;
-      case cmd === "backfill-billing":
+      }
+      case cmd === "backfill-billing": {
+        const { runBackfillBilling } = await import(
+          "@scripts/commands/backfill-billing"
+        );
         await runBackfillBilling();
         break;
-      case cmd === "backfill-identities":
+      }
+      case cmd === "backfill-identities": {
+        const { runBackfillIdentities } = await import(
+          "@scripts/commands/backfill-identities"
+        );
         await runBackfillIdentities();
         break;
-      case cmd === "audit-connection-identity":
+      }
+      case cmd === "audit-connection-identity": {
+        const { runAuditConnectionIdentity } = await import(
+          "@scripts/commands/audit-connection-identity"
+        );
         await runAuditConnectionIdentity();
         break;
-      case cmd === "encrypt-credentials":
+      }
+      case cmd === "encrypt-credentials": {
+        const { runEncryptCredentials } = await import(
+          "@scripts/commands/encrypt-credentials"
+        );
         await runEncryptCredentials();
         break;
-      case cmd === "connection-report":
+      }
+      case cmd === "connection-report": {
+        const { runConnectionReport } = await import(
+          "@scripts/commands/connection-report"
+        );
         await runConnectionReport();
         break;
-      case cmd === "apple-poll-throttle":
+      }
+      case cmd === "apple-poll-throttle": {
+        const { runApplePollThrottleCommand } = await import(
+          "@scripts/commands/apple-poll-throttle"
+        );
         await runApplePollThrottleCommand();
         break;
-      case cmd === "record-apple-contract":
+      }
+      case cmd === "record-apple-contract": {
+        const { runRecordAppleContractCommand } = await import(
+          "@scripts/commands/record-apple-contract"
+        );
         await runRecordAppleContractCommand();
         break;
-      case cmd === "email-preview":
+      }
+      case cmd === "email-preview": {
+        const { runEmailPreviewCommand } = await import(
+          "@scripts/commands/email-preview"
+        );
         await runEmailPreviewCommand(process.argv.slice(3));
         break;
+      }
+      case cmd === "contracts:swift": {
+        const { runContractsSwiftCommand } = await import(
+          "@scripts/commands/contracts-swift"
+        );
+        runContractsSwiftCommand(process.argv.slice(3));
+        break;
+      }
       default:
         this.validator.exitHelpfully(`${cmd as string} is not a supported cmd`);
     }
@@ -143,6 +178,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "List/clear/requeue Sync jobs that exhausted the self-heal budget (list | clear | requeue)",
+      );
+
+    program
+      .command("contracts:swift")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Emit CompassKit Generated/Contracts.swift from core Zod schemas (--check to fail on drift)",
       );
 
     return program;
