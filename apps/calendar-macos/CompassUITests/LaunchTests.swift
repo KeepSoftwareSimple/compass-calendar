@@ -1,16 +1,26 @@
 import XCTest
 
 final class LaunchTests: XCTestCase {
+    /// CI sets `COMPASS_APP_URL` (staging smoke). Forward as a launch argument
+    /// so the hosted web view loads the same origin as production dogfood rules.
+    private func makeApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        if let appURL = ProcessInfo.processInfo.environment["COMPASS_APP_URL"], !appURL.isEmpty {
+            app.launchArguments += ["-COMPASS_APP_URL", appURL]
+        }
+        return app
+    }
+
     @MainActor
     func testLaunchShowsTheMainWindow() {
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
         XCTAssertTrue(app.windows["Compass"].waitForExistence(timeout: 15))
     }
 
     @MainActor
     func testBridgeVersionIsInjectedIntoTheLoadedPage() {
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
 
         XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
@@ -30,7 +40,7 @@ final class LaunchTests: XCTestCase {
 
     @MainActor
     func testTodayMenuDispatchesNavTodayShortcut() {
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launch()
 
         XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
@@ -56,7 +66,7 @@ final class LaunchTests: XCTestCase {
 
     @MainActor
     func testLaunchDeepLinkNavigatesToDayView() {
-        let app = XCUIApplication()
+        let app = makeApp()
         app.launchArguments += ["-COMPASS_LAUNCH_DEEP_LINK", "compass://day/2026-10-15"]
         app.launch()
 
