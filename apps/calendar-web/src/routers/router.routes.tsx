@@ -143,6 +143,19 @@ export const appleAuthCallbackRoute = createRoute({
   ),
 });
 
+export const desktopBillingReturnRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: ROOT_ROUTES.BILLING_DESKTOP_RETURN,
+  validateSearch: (search: Record<string, unknown>) => ({
+    outcome: typeof search.outcome === "string" ? search.outcome : "",
+    session_id: typeof search.session_id === "string" ? search.session_id : "",
+  }),
+  component: lazyRouteComponent(
+    () => import("@web/views/DesktopBillingReturn/DesktopBillingReturn"),
+    "DesktopBillingReturn",
+  ),
+});
+
 const authenticatedRoute = authenticatedLayoutRoute.addChildren([
   dayRoute.addChildren([dayDateRoute, dayIndexRoute]),
   weekRoute.addChildren([weekDateRoute, weekIndexRoute]),
@@ -160,4 +173,5 @@ export const routeTree = rootRoute.addChildren([
   publicShortcutsRoute,
   appleAuthCallbackRoute,
   providerAuthCallbackRoute,
+  desktopBillingReturnRoute,
 ]);

@@ -11,7 +11,12 @@ export const EMBEDDED_CHECKOUT_SECONDARY_BUTTON_CLASSNAME =
   "c-button c-button-secondary inline-flex items-center justify-center rounded-full px-6 py-2";
 
 const fetchCheckoutClientSecret = () =>
-  BillingApi.createCheckoutSession().then((response) => response.clientSecret);
+  BillingApi.createCheckoutSession().then((response) => {
+    if (!response.clientSecret) {
+      throw new Error("Checkout did not return a client secret");
+    }
+    return response.clientSecret;
+  });
 
 type EmbeddedCheckoutPanelProps = {
   publishableKey: string;

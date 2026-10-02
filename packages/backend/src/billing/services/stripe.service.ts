@@ -1,6 +1,8 @@
 import type Stripe from "stripe";
+import { buildDesktopBillingReturnUrl } from "@core/desktop/desktop-billing-return.util";
 import { Status } from "@core/errors/status.codes";
 import {
+  type BillingCheckoutRequest,
   type BillingCheckoutResponse,
   type BillingStatusResponse,
   type BillingSubscriptionResponse,
@@ -102,6 +104,7 @@ export class StripeService {
 
   createCheckoutSession = async (
     userId: string,
+    options: BillingCheckoutRequest = {},
   ): Promise<BillingCheckoutResponse> => {
     if (!isStripeConfigured(CONFIG)) {
       throw new Error("Stripe is not configured");
@@ -155,6 +158,12 @@ export class StripeService {
       );
     }
 
+    const returnToDesktop = options.returnTo === "desktop";
+    const frontendUrl = CONFIG.FRONTEND_URL;
+    if (returnToDesktop && !frontendUrl) {
+      throw new Error("FRONTEND_URL is required for desktop billing return");
+    }
+
     const session = await this.stripe
       .createCheckoutSession(
         {
@@ -172,18 +181,40 @@ export class StripeService {
           automatic_tax: { enabled: true },
           customer_update: { address: "auto" },
           billing_address_collection: "required",
-          ui_mode: "embedded_page",
-          redirect_on_completion: "never",
+          ...(returnToDesktop
+            ? {
+                success_url: buildDesktopBillingReturnUrl(
+                  frontendUrl!,
+                  "success",
+                ),
+                cancel_url: buildDesktopBillingReturnUrl(
+                  frontendUrl!,
+                  "cancel",
+                ),
+              }
+            : {
+                ui_mode: "embedded_page" as const,
+                redirect_on_completion: "never" as const,
+              }),
           subscription_data: {
             ...trialFields,
             metadata: { compassUserId: userId },
           },
         },
         sendCheckoutIdempotency
-          ? { idempotencyKey: `${CHECKOUT_IDEMPOTENCY_PREFIX}${userId}` }
+          ? {
+              idempotencyKey: `${CHECKOUT_IDEMPOTENCY_PREFIX}${returnToDesktop ? "desktop-" : ""}${userId}`,
+            }
           : undefined,
       )
       .catch(wrapStripeFailure);
+
+    if (returnToDesktop) {
+      if (!session.url) {
+        throw new Error("Stripe Checkout did not return a hosted URL");
+      }
+      return { url: session.url };
+    }
 
     if (!session.client_secret) {
       throw new Error("Stripe Checkout did not return a client secret");
@@ -351,6 +382,7 @@ export class StripeService {
 
   createPaymentMethodSession = async (
     userId: string,
+    options: BillingCheckoutRequest = {},
   ): Promise<BillingCheckoutResponse> => {
     if (!isStripeConfigured(CONFIG)) {
       throw new Error("Stripe is not configured");
@@ -367,17 +399,40 @@ export class StripeService {
       throw new BillingHttpError(Status.CONFLICT, "No billing account yet.");
     }
 
+    const returnToDesktop = options.returnTo === "desktop";
+    const frontendUrl = CONFIG.FRONTEND_URL;
+    if (returnToDesktop && !frontendUrl) {
+      throw new Error("FRONTEND_URL is required for desktop billing return");
+    }
+
     const session = await this.stripe
       .createCheckoutSession({
         mode: "setup",
         customer: customerId,
         payment_method_types: ["card"],
-        ui_mode: "embedded_page",
-        redirect_on_completion: "never",
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },
+        ...(returnToDesktop
+          ? {
+              success_url: buildDesktopBillingReturnUrl(
+                frontendUrl!,
+                "success",
+              ),
+              cancel_url: buildDesktopBillingReturnUrl(frontendUrl!, "cancel"),
+            }
+          : {
+              ui_mode: "embedded_page" as const,
+              redirect_on_completion: "never" as const,
+            }),
       })
       .catch(wrapStripeFailure);
+
+    if (returnToDesktop) {
+      if (!session.url) {
+        throw new Error("Stripe Checkout did not return a hosted URL");
+      }
+      return { url: session.url };
+    }
 
     if (!session.client_secret) {
       throw new Error("Stripe Checkout did not return a client secret");
