@@ -1,11 +1,11 @@
-import { type DesktopAgenda } from "@core/types/desktop-bridge.contracts";
+import {
+  DESKTOP_AGENDA_MAX_ITEMS,
+  type DesktopAgenda,
+} from "@core/types/desktop-bridge.contracts";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 
 /** Debounce window for pushing agenda updates to the macOS shell. */
 export const DESKTOP_AGENDA_DEBOUNCE_MS = 250;
-
-/** Maximum events the menu bar can show (matches the bridge contract). */
-export const DESKTOP_AGENDA_MAX_ITEMS = 20;
 
 export type DesktopAgendaCandidate = {
   _id?: string;

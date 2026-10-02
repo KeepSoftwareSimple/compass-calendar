@@ -12,24 +12,16 @@ public enum BridgeScript {
         let escapedHotkey = quickAddHotkeyDisplay
             .replacing("\\", with: "\\\\")
             .replacing("'", with: "\\'")
-        let quickAddBridge = includeQuickAddControls
-            ? """
+        let dismissQuickAddPanel = includeQuickAddControls
+            ? "dismissQuickAddPanel: function () { post({ method: 'dismissQuickAddPanel' }); },"
+            : "dismissQuickAddPanel: function () { return; },"
+        let quickAddBridge = """
             getQuickAddHotkey: function () { return '\(escapedHotkey)'; },
             setQuickAddHotkey: function (shortcut) {
               window.__compassQuickAddHotkey = shortcut;
               post({ method: 'setQuickAddHotkey', shortcut: shortcut });
             },
-            dismissQuickAddPanel: function () {
-              post({ method: 'dismissQuickAddPanel' });
-            },
-            """
-            : """
-            getQuickAddHotkey: function () { return '\(escapedHotkey)'; },
-            setQuickAddHotkey: function (shortcut) {
-              window.__compassQuickAddHotkey = shortcut;
-              post({ method: 'setQuickAddHotkey', shortcut: shortcut });
-            },
-            dismissQuickAddPanel: function () { return; },
+            \(dismissQuickAddPanel)
             """
         return """
         (function () {

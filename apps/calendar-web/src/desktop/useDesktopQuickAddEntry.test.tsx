@@ -1,7 +1,7 @@
 import { RouterProvider } from "@tanstack/react-router";
 import { render, waitFor } from "@testing-library/react";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
-import { endDesktopQuickAddSession } from "@web/desktop/desktop-quick-add.session";
+import { endDesktopQuickAddSession } from "@web/desktop/dismissDesktopQuickAddPanel";
 import { useDesktopQuickAddEntry } from "@web/desktop/useDesktopQuickAddEntry";
 import {
   selectIsCmdPaletteCreateMode,

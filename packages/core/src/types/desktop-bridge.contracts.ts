@@ -1,7 +1,14 @@
 import { z } from "zod/v4";
+import {
+  DesktopBridgeDismissQuickAddPanelMessageSchema,
+  DesktopBridgeSetQuickAddHotkeyMessageSchema,
+} from "@core/desktop/desktop-quick-add.contract";
 
 /** Must stay in sync with MARKETING_VERSION in apps/calendar-macos/project.yml. */
 export const DESKTOP_BRIDGE_VERSION = "0.1.0";
+
+/** Maximum events the menu bar can show. */
+export const DESKTOP_AGENDA_MAX_ITEMS = 20;
 
 export const DesktopBridgePlatformSchema = z.enum(["macos"]);
 export type DesktopBridgePlatform = z.infer<typeof DesktopBridgePlatformSchema>;
@@ -18,7 +25,7 @@ export type DesktopAgendaItem = z.infer<typeof DesktopAgendaItemSchema>;
 
 export const DesktopAgendaSchema = z
   .array(DesktopAgendaItemSchema)
-  .max(20)
+  .max(DESKTOP_AGENDA_MAX_ITEMS)
   .readonly();
 export type DesktopAgenda = z.infer<typeof DesktopAgendaSchema>;
 
@@ -52,15 +59,6 @@ export const DesktopBridgeShowNotificationMessageSchema = z.strictObject({
   body: z.string().trim().max(512).optional(),
   tag: z.string().trim().max(128).optional(),
   eventId: z.string().trim().min(1).max(128),
-});
-
-export const DesktopBridgeSetQuickAddHotkeyMessageSchema = z.strictObject({
-  method: z.literal("setQuickAddHotkey"),
-  shortcut: z.string().trim().min(3).max(64),
-});
-
-export const DesktopBridgeDismissQuickAddPanelMessageSchema = z.strictObject({
-  method: z.literal("dismissQuickAddPanel"),
 });
 
 export const DesktopBridgeThemeNameSchema = z.enum([

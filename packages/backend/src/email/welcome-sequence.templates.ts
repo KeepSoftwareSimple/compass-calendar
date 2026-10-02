@@ -1,11 +1,4 @@
-import { CONFIG } from "@backend/common/constants/config.constants";
-
-const appUrl = (): string => CONFIG.FRONTEND_URL.replace(/\/$/, "");
-
-const settingsHref = (page: "accounts" | "billing"): string =>
-  `${appUrl()}/?settings=${page}`;
-
-const meetingSetupHref = (): string => `${appUrl()}/?meetingSetup=1`;
+import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 
 /** Resend published template alias per welcome drip step. */
 export const WELCOME_STEP_TEMPLATE_ALIAS: Record<string, string> = {
@@ -22,7 +15,6 @@ export function getWelcomeStepTemplateAlias(
   return WELCOME_STEP_TEMPLATE_ALIAS[stepKey];
 }
 
-/** Base CTA href before UTM params (same destinations as legacy in-code content). */
 export function buildWelcomeResendTemplateVariables(input: {
   ctaUrl: string;
   unsubscribeUrl: string;
@@ -39,18 +31,7 @@ export function buildWelcomeResendTemplateVariables(input: {
   return variables;
 }
 
+/** Base CTA href before UTM params. Same destinations as the preview content. */
 export function getWelcomeStepCtaBaseHref(stepKey: string): string | undefined {
-  switch (stepKey) {
-    case "welcome":
-    case "shortcuts":
-      return appUrl();
-    case "connect-calendar":
-      return settingsHref("accounts");
-    case "booking":
-      return meetingSetupHref();
-    case "trial-ending":
-      return settingsHref("billing");
-    default:
-      return undefined;
-  }
+  return getWelcomeEmailContent(stepKey)?.cta.href;
 }
