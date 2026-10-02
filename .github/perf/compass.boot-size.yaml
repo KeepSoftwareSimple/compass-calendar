@@ -1,0 +1,27 @@
+# Build-time config for the required boot-size check (test-unit.yml).
+# Mirrors .github/docker/Dockerfile.web for staging-cloud deploy: same fields
+# baked into compass.yaml and the same placeholder lengths for values that
+# end up in the bundle (OAuth client IDs, PostHog, BUILD_VERSION via
+# COMPASS_BUILD_REF when git is unavailable in the image).
+#
+# Lighthouse perf-budget.yml keeps compass.perf.yaml (production runtime.nodeEnv).
+runtime:
+  nodeEnv: staging
+  timezone: Etc/UTC
+web:
+  url: http://localhost:9080
+backend:
+  apiUrl: https://api.compasscalendar.com/api
+  compassToken: unused-web-build
+mongo:
+  uri: mongodb://localhost:27017/unused
+supertokens:
+  uri: http://localhost:3567
+  key: unused-web-build
+google:
+  # Match longest production-shaped Google OAuth client IDs (deploy build-arg).
+  clientId: 000000000000-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.apps.googleusercontent.com
+posthog:
+  # staging-cloud and production bake PostHog into the bundle when both are set.
+  key: phc_012345678901234567890123456789012345678901234567890123456789012
+  host: https://us.i.posthog.com

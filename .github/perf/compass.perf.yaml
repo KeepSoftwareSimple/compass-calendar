@@ -1,17 +1,13 @@
-# Build-time config for the CI web builds: the performance budget
-# (perf-budget.yml) and the required boot-size check (test-unit.yml).
+# Build-time config for the Lighthouse performance budget (perf-budget.yml).
+# The required boot-size check in test-unit.yml uses compass.boot-size.yaml
+# and .github/perf/run-boot-size-check.sh so it matches
+# .github/docker/Dockerfile.web for cloud deploy.
 # Only the values baked into the web bundle matter (nodeEnv, apiUrl,
 # PostHog placeholders sized like production deploy); the rest
 # exist to satisfy config schema validation and are never used.
 # apps/calendar-web/build.ts re-execs itself with NODE_ENV=production before
 # bundling unless runtime.nodeEnv is development. Bun's export conditions are
 # fixed at process start.
-#
-# self-host/Dockerfile.web generates the config that actually ships and is
-# canonical for the boot-size budget. It differs from this file only in
-# google.clientId ("" vs a placeholder), a plain define constant, and both
-# measured chunkCount 85 on 2026-09-15. If they ever diverge in a field that
-# changes the chunk graph, update this file to match the Dockerfile.
 runtime:
   nodeEnv: production
   timezone: Etc/UTC
