@@ -277,11 +277,9 @@ jobs:
           POSTGRESQL_CONNECTION_URI: postgresql://supertokens:supertokens@supertokens-db:5432/supertokens
         ports:
           - 3567:3567
-        options: >-
-          --health-cmd "wget -q -O- http://127.0.0.1:3567/hello | grep Hello || exit 1"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
+        # No health check: first boot runs long Postgres migrations and GHA
+        # marks the job failed after ~90s while /hello is still unavailable.
+        # header-session.test.ts waits on /hello via waitForSupertokensCore().
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7

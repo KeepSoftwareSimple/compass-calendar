@@ -1,7 +1,7 @@
 /** Polls the SuperTokens core `/hello` endpoint until it responds or times out. */
 export async function waitForSupertokensCore(
   uri = process.env["SUPERTOKENS_URI"] ?? "http://127.0.0.1:3567",
-  timeoutMs = 60_000,
+  timeoutMs = 120_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const helloUrl = `${uri.replace(/\/$/, "")}/hello`;
