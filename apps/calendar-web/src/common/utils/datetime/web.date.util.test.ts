@@ -244,6 +244,25 @@ describe("computeCurrentEventDateRange", () => {
       expect(label).toBe(expectedlabel);
     });
 
+    it("labels a week that straddles two months by the month of today", () => {
+      const weekInViewStart = dayjs("2026-09-27");
+      const weekInViewEnd = dayjs("2026-10-03");
+      expect(
+        getCalendarHeadingLabel(
+          weekInViewStart,
+          weekInViewEnd,
+          dayjs("2026-10-01"),
+        ),
+      ).toBe("October 2026");
+      expect(
+        getCalendarHeadingLabel(
+          weekInViewStart,
+          weekInViewEnd,
+          dayjs("2026-09-29"),
+        ),
+      ).toBe("September 2026");
+    });
+
     it("should return 'MMM yy - MMM yy' format when week covers two months", () => {
       const today = dayjs("2024-12-30");
       const weekInViewStart = dayjs("2024-12-29");

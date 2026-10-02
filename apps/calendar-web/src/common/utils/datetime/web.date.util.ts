@@ -333,14 +333,19 @@ export const getCalendarHeadingLabel = (
   const startsThisYear = now.year() === start.year();
   const endsThisYear = now.year() === end.year();
 
+  // A week that straddles two months is labeled by the month of today when
+  // today is in view, so the label flips on the 1st instead of at week end.
+  const todayInView = !now.isBefore(start, "day") && !now.isAfter(end, "day");
+  const anchor = todayInView ? now : start;
+
   if (startsThisYear && endsThisYear) {
-    return start.format("MMMM YYYY");
+    return anchor.format("MMMM YYYY");
   } else if (startsThisYear || endsThisYear) {
     const startLabel = start.format("MMM YY");
     const endLabel = end.format("MMM YY");
     return `${startLabel} - ${endLabel}`;
   } else {
-    return start.format("MMMM YYYY");
+    return anchor.format("MMMM YYYY");
   }
 };
 
