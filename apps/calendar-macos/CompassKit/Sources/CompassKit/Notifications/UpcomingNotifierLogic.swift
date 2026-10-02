@@ -91,6 +91,7 @@ public enum UpcomingNotifierLogic {
             eventId: event.id)
     }
 
+    @MainActor
     public static func announceUpcomingEvents(
         now: Date,
         events: [NotifiableEvent],
