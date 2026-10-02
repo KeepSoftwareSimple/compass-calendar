@@ -77,7 +77,7 @@ public struct AuthAPI {
         guard (200 ..< 300).contains(payload.statusCode) else {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
-        try storeSession(from: payload)
+        try await storeSession(from: payload)
     }
 
     public func refresh() async throws {
@@ -85,8 +85,8 @@ public struct AuthAPI {
     }
 
     public func signOut() async throws {
-        guard let tokens = try client.currentSession() else {
-            try client.signOutLocally()
+        guard let tokens = try await client.currentSession() else {
+            try await client.signOutLocally()
             return
         }
         let payload = try await client.sendRaw(
@@ -99,7 +99,7 @@ public struct AuthAPI {
         if !(200 ..< 300).contains(payload.statusCode) {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
-        try client.signOutLocally()
+        try await client.signOutLocally()
     }
 
     public func forgotPassword(email: String) async throws {
@@ -128,11 +128,11 @@ public struct AuthAPI {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
         if path == "signup" || path == "signin" {
-            try storeSession(from: payload)
+            try await storeSession(from: payload)
         }
     }
 
-    private func storeSession(from payload: HTTPResponsePayload) throws {
+    private func storeSession(from payload: HTTPResponsePayload) async throws {
         var headers = [String: String]()
         for (key, value) in payload.headers {
             headers[key] = value
@@ -143,6 +143,6 @@ public struct AuthAPI {
             httpVersion: nil,
             headerFields: headers
         )!
-        try client.storeSessionHeaders(from: response)
+        try await client.storeSessionHeaders(from: response)
     }
 }
