@@ -1,0 +1,166 @@
+name: Release macOS dev
+
+# Unsigned dev channel for Compass Desktop QA (docs/features/desktop-client.md).
+# Every merge to main that touches the Swift app builds an ad-hoc signed
+# universal DMG, signs it for Sparkle only, and replaces the rolling `macos-dev`
+# release. Builds stamped COMPASS_UPDATE_CHANNEL=dev follow that feed, so a
+# laptop running one updates itself. Never shipped to customers: no Developer
+# ID, no notarization. The stable path is release-macos.yml.
+#
+# Needs only SPARKLE_PRIVATE_KEY and a non-empty SUPublicEDKey in Info.plist.
+# Without them the job exits green with a notice, so main stays quiet until
+# the owner adds the key.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/calendar-macos/**"
+      - ".github/workflows/release-macos-dev.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Serialize so two builds never race on the appcast upload.
+concurrency:
+  group: release-macos-dev
+  cancel-in-progress: false
+
+jobs:
+  dev:
+    name: Build and publish unsigned dev DMG
+    runs-on: macos-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: apps/calendar-macos
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v7
+
+      - name: Check for Sparkle keys
+        id: gate
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          public_key=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Resources/Info.plist)
+          if [ -z "${SPARKLE_PRIVATE_KEY:-}" ] || [ -z "$public_key" ]; then
+            echo "::notice::Dev channel skipped: set SPARKLE_PRIVATE_KEY and SUPublicEDKey in Resources/Info.plist to enable it."
+            echo "enabled=false" >>"$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Compute dev version
+        if: steps.gate.outputs.enabled == 'true'
+        id: version
+        run: |
+          set -euo pipefail
+          base=$(grep -E '^\s+MARKETING_VERSION:' project.yml | head -1 | awk '{print $2}')
+          echo "marketing_version=${base}-dev.${{ github.run_number }}" >>"$GITHUB_OUTPUT"
+
+      - name: Install XcodeGen
+        if: steps.gate.outputs.enabled == 'true'
+        run: brew install xcodegen
+
+      - name: Render app icon
+        if: steps.gate.outputs.enabled == 'true'
+        run: bash ../../.github/scripts/render-macos-icon.sh
+
+      - name: Generate Xcode project
+        if: steps.gate.outputs.enabled == 'true'
+        run: xcodegen generate
+
+      # Sparkle compares CFBundleVersion, so the run number is the build number.
+      - name: Build universal ad-hoc Release app
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          set -euo pipefail
+          xcodebuild build \
+            -project Compass.xcodeproj \
+            -scheme Compass \
+            -configuration Release \
+            -destination "generic/platform=macOS" \
+            -derivedDataPath build/DerivedData \
+            -clonedSourcePackagesDirPath build/SourcePackages \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="-" \
+            COMPASS_UPDATE_CHANNEL=dev \
+            MARKETING_VERSION="${{ steps.version.outputs.marketing_version }}" \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+          app="build/DerivedData/Build/Products/Release/Compass.app"
+          codesign --verify --deep --strict "$app"
+          channel=$(/usr/libexec/PlistBuddy -c 'Print :COMPASS_UPDATE_CHANNEL' "$app/Contents/Info.plist")
+          if [ "$channel" != "dev" ]; then
+            echo "::error::Built app has COMPASS_UPDATE_CHANNEL='${channel}', expected 'dev'."
+            exit 1
+          fi
+
+      - name: Build DMG
+        if: steps.gate.outputs.enabled == 'true'
+        id: dmg
+        run: |
+          set -euo pipefail
+          dmg="build/Compass-${{ steps.version.outputs.marketing_version }}.dmg"
+          rm -f "$dmg"
+          hdiutil create \
+            -volname "Compass Dev" \
+            -srcfolder build/DerivedData/Build/Products/Release/Compass.app \
+            -ov \
+            -format UDZO \
+            "$dmg"
+          echo "dmg_path=${dmg}" >>"$GITHUB_OUTPUT"
+
+      - name: Generate Sparkle appcast
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          bin="build/SourcePackages/artifacts/sparkle/Sparkle/bin"
+          key_path="${RUNNER_TEMP}/sparkle_ed_key"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" >"$key_path"
+          chmod 600 "$key_path"
+          rm -rf build/appcast && mkdir -p build/appcast
+          cp "${{ steps.dmg.outputs.dmg_path }}" build/appcast/
+          "$bin/generate_appcast" \
+            --ed-key-file "$key_path" \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/macos-dev/" \
+            build/appcast
+          rm -f "$key_path"
+          test -s build/appcast/appcast.xml
+          # generate_appcast silently omits the signature when SUPublicEDKey in
+          # Info.plist does not match SPARKLE_PRIVATE_KEY; clients reject that item.
+          if ! grep -q 'sparkle:edSignature' build/appcast/appcast.xml; then
+            echo "::error::appcast.xml has no sparkle:edSignature. SUPublicEDKey in Resources/Info.plist must be the public half of SPARKLE_PRIVATE_KEY."
+            exit 1
+          fi
+
+      # The rolling release holds only the newest DMG. Upload it first, swap the
+      # appcast, then prune, so the feed never points at a missing file.
+      - name: Publish dev release and appcast
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          dmg="${{ steps.dmg.outputs.dmg_path }}"
+          if ! gh release view macos-dev >/dev/null 2>&1; then
+            gh release create macos-dev \
+              --prerelease \
+              --latest=false \
+              --title "macOS dev channel (unsigned)" \
+              --notes "Unsigned QA builds for the Sparkle dev channel. Replaced on every merge to main that touches the macOS app. Not for customers; use the macos-v releases."
+          fi
+          gh release upload macos-dev "$dmg" --clobber
+          gh release upload macos-dev build/appcast/appcast.xml --clobber
+          keep=$(basename "$dmg")
+          # grep exits 1 when nothing matches (the first run), which pipefail
+          # would turn into a failed job.
+          gh release view macos-dev --json assets -q '.assets[].name' |
+            { grep '\.dmg$' || true; } | { grep -vxF "$keep" || true; } |
+            while read -r old; do gh release delete-asset macos-dev "$old" --yes; done

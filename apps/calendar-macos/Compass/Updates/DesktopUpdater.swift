@@ -40,7 +40,16 @@ final class DesktopUpdater: NSObject, SPUUpdaterDelegate {
         installNow?()
     }
 
+    /// `COMPASS_UPDATE_CHANNEL`, stamped into Info.plist by the dev workflow.
+    nonisolated static var channel: String? {
+        Bundle.main.object(forInfoDictionaryKey: "COMPASS_UPDATE_CHANNEL") as? String
+    }
+
     // MARK: SPUUpdaterDelegate
+
+    func feedURLString(for updater: SPUUpdater) -> String? {
+        UpdatePolicy.feedURLOverride(channel: Self.channel)
+    }
 
     /// Returning true takes over the restart prompt: Sparkle stays quiet and
     /// the web toast (or the menu item) calls the stored block.

@@ -26,6 +26,8 @@
 	<string>https://www.compasscalendar.com</string>
 	<key>SUFeedURL</key>
 	<string>https://github.com/KeepSoftwareSimple/compass-calendar/releases/download/macos-appcast/appcast.xml</string>
+	<key>COMPASS_UPDATE_CHANNEL</key>
+	<string>$(COMPASS_UPDATE_CHANNEL)</string>
 	<key>SUPublicEDKey</key>
 	<string></string>
 	<key>SUEnableAutomaticChecks</key>
