@@ -250,6 +250,9 @@ public enum GridLayoutSnapshotBuilder {
     ) -> Int? {
         switch scenario.layoutMode {
         case .day:
+            guard let calendarId else {
+                return visibleDates.isEmpty ? nil : 0
+            }
             return columnIndexForCalendarId(calendarId, scenario: scenario, visibleDates: visibleDates)
         case .week:
             guard let start = CompassDateParsing.parseInEffectiveTimeZone(startDate) else {
