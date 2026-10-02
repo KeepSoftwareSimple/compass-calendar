@@ -2,6 +2,21 @@ import Foundation
 import XCTest
 @testable import CompassKit
 
+private final class LockedBox<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: T
+
+    init(_ value: T) {
+        self.value = value
+    }
+
+    func withLock<R>(_ body: (inout T) -> R) -> R {
+        lock.lock()
+        defer { lock.unlock() }
+        return body(&value)
+    }
+}
+
 final class KeyboardEngineTests: XCTestCase {
     private var registry: ShortcutRegistry!
 
@@ -74,17 +89,17 @@ final class KeyboardEngineTests: XCTestCase {
     }
 
     func testScopePrecedence() throws {
-        var fired: ShortcutId?
+        let fired = LockedBox<ShortcutId?>(nil)
         let gridHandler = ShortcutHandler(
             id: .navNext,
             scope: .grid,
             chords: [KeyChord(token: .character("k"))],
-            handler: { fired = $0 })
+            handler: { id in fired.withLock { $0 = id } })
         let modalHandler = ShortcutHandler(
             id: .editOpen,
             scope: .modal,
             chords: [KeyChord(token: .character("k"))],
-            handler: { fired = $0 })
+            handler: { id in fired.withLock { $0 = id } })
 
         let leader = LeaderSequenceEngine(leaderKey: "e", fieldRows: registry.editSequenceFields)
         let dispatcher = ShortcutDispatcher(
@@ -94,12 +109,12 @@ final class KeyboardEngineTests: XCTestCase {
 
         dispatcher.pushScope(.grid)
         _ = dispatcher.dispatch(KeyEvent(character: "k"))
-        XCTAssertEqual(fired, .navNext)
+        XCTAssertEqual(fired.withLock { $0 }, .navNext)
 
-        fired = nil
+        fired.withLock { $0 = nil }
         dispatcher.pushScope(.modal)
         _ = dispatcher.dispatch(KeyEvent(character: "k"))
-        XCTAssertEqual(fired, .editOpen)
+        XCTAssertEqual(fired.withLock { $0 }, .editOpen)
     }
 
     func testTextInputGatingTable() {
