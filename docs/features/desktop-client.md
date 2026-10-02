@@ -1,191 +1,259 @@
 # Compass Desktop (macOS)
 
-**Status:** Planned, drafted 2026-09-30. Work is tracked on GitHub: the
-[Compass Desktop board](https://github.com/orgs/KeepSoftwareSimple/projects/9),
-[milestone Desktop v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/44),
+**Status:** Native rewrite planned 2026-10-01. Work is tracked on GitHub: the
+[Compass Desktop board](https://github.com/orgs/KeepSoftwareSimple/projects/9)
+[milestone Desktop native v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/45),
 and the tracking issue
-[#4149](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4149).
-This doc holds the decisions and the reference material only.
+[#4215](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4215),
+which holds status, owner confirmations, and QA notes. This doc holds the
+decisions and the reference material only.
 
 **Owner:** Tyler (credentials, production deploys, QA). Agents build the rest
 through the agent loop.
 
 ## Goal
 
-A native Mac app, built in Swift with Xcode, with everything the web client
-does plus the things only a Mac app can do: a menu bar agenda, native notifications that fire with the
-window closed, a Dock badge, a global quick-add hotkey, native menus and
-shortcuts, deep links, launch at login, and silent auto-updates.
+The best native calendar app on the Mac: a Swift app with a native window,
+sidebar, header, time grid, event form, command palette, and shortcuts
+legend, talking to the Compass backend directly over HTTP and server-sent
+events. Plus the things only a Mac app can do: menu bar agenda, Dock badge,
+notifications that fire with the window closed, a global quick-add hotkey,
+native menus, deep links, launch at login, and silent auto-updates.
 
 macOS only. Windows and Linux are out of scope and may never ship.
 
+## History
+
+Desktop v1 (milestone 44, September 2026) shipped a Swift shell that hosted
+the web app in a WKWebView. It proved the native services (notifications,
+agenda, hotkey, deep links, Sparkle, signing, release pipeline) and it
+proved the shell approach was not good enough: the web header fought the
+traffic lights, and every chrome detail was a web page pretending to be a
+window. The shell never launched publicly. It stays an internal dogfood
+build until the native app passes acceptance, then it is deleted.
+
 ## Decisions
 
-Each of these is a judgment call. Tyler can veto any of them on #4149 or in
-the PR that adds this doc. After that they are settled.
+Each of these is a judgment call. Tyler can veto any of them on the tracking
+issue. After that they are settled; the loop treats the tracking issue's
+Locked decisions and Deferred sections as binding.
 
-1. **A Swift app whose window hosts the web app in WKWebView.** The shell
-   is native: AppKit window, menus, menu bar item, notifications, Dock, deep
-   links, hotkeys, and updates are all Swift. The calendar surface inside the
-   window is the hosted web app at `https://compasscalendar.com` (or
-   staging), loaded over the network like a Safari tab. Zero web build
-   changes, zero auth changes, one web deploy updates every Mac user the
-   same minute. Not Electron: no Chromium, no Node, a real `.app` that is
-   not App Store bound (see decision 4). Not a native rewrite of the calendar UI for v1:
-   a month is not enough to rebuild the grid, recurrence, forms, palette,
-   and shortcuts in SwiftUI with parity, so that is a post-launch track if
-   wanted. Not a bundled offline copy of the web bundle (that needs header
-   sessions, cookieless SSE, and a new CORS origin for no October value).
-2. **One new app, `apps/calendar-macos`.** An XcodeGen `project.yml` (text,
-   diffable, no checked-in `.xcodeproj`), Swift sources, XCTest and XCUITest
-   targets. The web app stays the only calendar UI. It learns it is inside
-   the Mac app by feature-detecting `window.compassDesktop`, injected by a
-   `WKUserScript`, never by user agent.
-3. **OAuth runs in the default browser and relays back with a deep link.**
-   Google refuses sign-in inside embedded web views, and WKWebView is one.
-   The shell opens any navigation off the app origin with `NSWorkspace`. The
-   existing web callback page, when the OAuth `state` carries a desktop
-   marker, redirects to `compass://auth/<provider>/callback?...` instead of
-   finishing the exchange itself. The app receives the deep link and hands
-   it to the web view, which finishes the exchange, so the session cookie
-   lands in the app's persistent `WKWebsiteDataStore`. No new OAuth clients,
-   no new redirect URIs in Google, Microsoft, or Apple consoles. Email and
-   password login works in-window as is.
-4. **Distribution is a signed, notarized, universal DMG on GitHub Releases,
-   with Sparkle for silent updates.** The repo is public, so release assets
-   and the Sparkle appcast download without auth. Tags `macos-v0.x.y` build
-   internal releases in October; `macos-v1.0.0` is the public one. No Mac
-   App Store, ever (decided 2026-10-01): it would force In-App Purchase for
-   subscriptions, the sandbox, and review of a web-wrapper app, and it
-   conflicts with Sparkle. No Homebrew cask for v1. The updater stays off until
-   `SUPublicEDKey` in `Resources/Info.plist` holds the public key, so unsigned
-   local builds never self-update. The appcast lives on the rolling
-   `macos-appcast` release because `releases/latest` belongs to the web tags.
-   Owner QA runs an unsigned **dev channel** (`release-macos-dev.yml`): every
-   merge that touches the app publishes an ad-hoc signed build to the rolling
-   `macos-dev` prerelease, and builds stamped `COMPASS_UPDATE_CHANNEL=dev`
-   follow that feed, so a laptop stays current without tags. It needs only the
-   Sparkle keys, not Apple enrollment. Install one dev DMG by hand once
-   (right-click, Open); after that it updates itself.
-5. **Internal builds default to production.** Dogfooding staging data is not
-   dogfooding. A hidden **Switch to staging** menu item exists for QA. This
-   requires one production web deploy that carries the web-side changes
-   (item 5 in the setup list).
-6. **Native features are tiered.** Tier 1 ships before internal testing
-   starts. Tier 2 lands during October. Everything else waits until after
-   Nov 1. The issues on the milestone carry the tier in their title.
-7. **Every build and test runs on GitHub's macOS runners.** Agents work on
-   Linux and cannot compile AppKit, so the loop is: push, CI builds and runs
-   XCTest and XCUITest on `macos-latest`, fix, push. One CI round per change
-   instead of a local run. Pure Swift logic is kept in a separate SwiftPM
-   target so most tests are fast and do not need a window.
-
-## Owner setup reference
-
-The checklist lives on #4149. This table is the how-to for each item.
-
-If the Apple Developer Program enrollment from
-[Sign in with Apple](../self-hosting/apple-calendar.md) is already active,
-budget 45 minutes. If not, enrollment takes 24 to 48 hours of Apple review,
-so start it today.
-
-| # | What | Where to get it | Where to put it | Time |
-| --- | --- | --- | --- | --- |
-| 1 | Apple Developer Program membership (Team ID) | [developer.apple.com](https://developer.apple.com/programs/enroll/). Also accept the latest agreements at the same site; notarization fails silently on a pending agreement. | Repo secret `APPLE_TEAM_ID` | 2 min if enrolled |
-| 2 | Developer ID Application certificate as `.p12` | Keychain Access → Certificate Assistant → Request a Certificate from a CA (save to disk). Then developer.apple.com → Certificates → **+** → **Developer ID Application** → upload the request → download the `.cer` → double-click to install. Keychain Access → My Certificates → right-click the `Developer ID Application:` entry → Export as `.p12` with a password. Run `base64 -i cert.p12 \| pbcopy`. | Repo secrets `CSC_LINK` (the base64) and `CSC_KEY_PASSWORD` | 15 min |
-| 3 | App Store Connect API key for notarization (`notarytool`) | [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users and Access → Integrations → App Store Connect API → Team Keys → **+**. Name `compass-notary`, role Developer. Download the `.p8` once (it cannot be downloaded again). Note the Key ID and the Issuer ID shown above the table. | Repo secrets `APPLE_API_KEY_P8` (file contents), `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` | 5 min |
-| 4 | App icon | A 1024x1024 PNG of the Compass mark on a solid or squircle background. If none exists, the loop derives one from the favicon and flags it as placeholder. | Commit to `apps/calendar-macos/Resources/icon.png`, or attach it to the tracking issue | 5 min |
-| 5 | One production deploy after WP-02 merges | `deploy-production.yml` → Run workflow with the release tag that contains the web callback relay and desktop bridge. Until this runs, internal builds only work against staging. | GitHub Actions | 5 min plus the deploy |
-| 6 | Agent loop config | Add milestone **Desktop v1** to the front of repo var `AGENT_LOOP_MILESTONES`. Confirm `AGENT_LOOP_ENABLED` is `true`. Nothing else in [Agent loop Routine](../CI-CD/agent-loop-routine.md) changes. | Repo variables | 2 min |
-| 7 | Sparkle update-signing key | On any Mac: download the [Sparkle](https://sparkle-project.org) release, run `bin/generate_keys` from it. It stores the private key in the login keychain and prints the public key. Export the private key with `bin/generate_keys -x sparkle.key`. | Repo secret `SPARKLE_PRIVATE_KEY` (file contents). The public key goes in `Info.plist` via the WP-05 PR; paste it on the tracking issue. | 5 min |
-| 8 | A Mac to test on | macOS 13 or newer. Both Intel and Apple Silicon are covered by the universal build, so one machine is enough. | Nowhere | 0 |
-
-Defaults chosen in this plan, listed on #4149 for confirmation:
-
-- App name **Compass**, bundle id `com.compasscalendar.desktop`, URL scheme
-  `compass://`.
-- Minimum macOS **13 Ventura**.
-- Internal builds default to **production**; the staging switch is a hidden
-  menu item.
-- Releases live on this repo's GitHub Releases page under `macos-v*` tags.
-- The Nov 1 email and the download page copy are Tyler's. The loop provides
-  the download URL and a screenshot set.
-
-Nothing else is needed. PostHog, Discord, Google, Microsoft, Apple sign-in,
-and SuperTokens keep their current configuration. There is no new backend
-service and no new secret on the backend.
+1. **Fully native Swift. The WKWebView shell is replaced, not wrapped.**
+   Not Electron, not a hybrid with web sheets. The calendar surface, forms,
+   palette, legend, settings, billing, onboarding, and Life view are all
+   Swift. One named wart: the card-entry step of billing stays on Stripe's
+   hosted Checkout page because Stripe has no native macOS checkout;
+   everything around it is native.
+2. **Keyboard-only, like the web.** The mouse is inert for editing and
+   navigation. Clicking the grid shows the shortcut hint for that intent and
+   does nothing else. Right-click opens the event menu, the one mouse
+   affordance the web keeps. No drag, no resize, no click-to-create.
+3. **Minimum macOS 14 Sonoma.** Universal binary. Swift 6 with strict
+   concurrency. The Observation framework and modern SwiftUI are the floor.
+4. **One app, `apps/calendar-macos`, three local SwiftPM packages.**
+   `CompassKit` (pure Swift, Foundation only: generated contracts, keyboard
+   engine, calendar math, deck layout, recurrence, HTML fragment, SSE
+   parser), `CompassData` (URLSession client, Keychain session, bearer
+   interceptor, SSE stream, GRDB cache, repositories, `@Observable` stores),
+   and `CompassUI` (SwiftUI chrome and forms, an AppKit time grid). The app
+   target stays AppKit for the window, menus, status item, panels, hotkey,
+   notifications, and deep-link routing. XcodeGen `project.yml`, no
+   checked-in `.xcodeproj`.
+5. **Swift never hand-copies a contract.** `bun cli contracts:swift` emits
+   Codable types from a manifest of `packages/core` Zod schemas, and
+   `bun cli desktop:export` emits the shortcut registry, theme tokens,
+   product event names, and parity fixtures from the TypeScript
+   implementations. Both have `--check` modes that run on Linux CI, so drift
+   fails before a Mac build runs. Swift parity tests replay the fixtures.
+6. **Header sessions, same backend.** SuperTokens accepts
+   `Authorization: Bearer` once a client signs in with `st-auth-mode:
+   header`; `/api/events/stream` runs the same `verifySession()`. The native
+   client uses that. No new backend service, no cookie jar, no CORS origin.
+7. **OAuth through `ASWebAuthenticationSession` and the existing relay.**
+   Google refuses sign-in inside embedded web views; the system
+   authentication session is allowed. The native app builds the desktop
+   `state` marker, opens the provider URL, the existing web callback page
+   redirects to `compass://auth/<provider>/callback?...`, and the native
+   app finishes the exchange with `POST /api/signinup`. No new OAuth
+   clients, no new redirect URIs. Apple keeps the web form-post path through
+   the same session.
+8. **GRDB (SQLite) for the local cache.** Generated Codable structs fit
+   `FetchableRecord` directly, GRDB 7 is Sendable-clean under Swift 6, FTS5
+   gives palette event search, and migrations are reviewable diffs.
+   SwiftData's `@Model` classes and `ModelActor` story on macOS 14 are
+   fragile for this shape of data.
+9. **Theme stays explicit.** `light-beach` and `dark-abyss` are chosen in
+   the app, not followed from the system appearance, for parity with the
+   web. Tokens come from `apps/calendar-web/src/index.css` via the export.
+10. **Distribution is unchanged.** Signed, notarized, universal DMG on
+    GitHub Releases under `macos-v*` tags with a Sparkle appcast. No Mac
+    App Store, no Homebrew cask for v1.
+    Owner QA runs an unsigned **dev channel** (`release-macos-dev.yml`):
+    every merge that touches the app publishes an ad-hoc signed build to the
+    rolling `macos-dev` prerelease, and builds stamped
+    `COMPASS_UPDATE_CHANNEL=dev` follow that feed, so a laptop stays current
+    without tags. It needs only the Sparkle keys, not Apple enrollment.
+    Install one dev DMG by hand once (right-click, Open); after that it
+    updates itself. The native app keeps this channel from its first
+    skeleton build, so weekly founder acceptance never waits on a tag.
+11. **Every build and test runs on GitHub's macOS runners.** Agents in the
+    loop cannot compile AppKit. Pure packages run `swift test` without
+    XcodeGen in a separate job; `CompassUI` and XCUITest go through
+    `xcodebuild test`.
+12. **Three loop partitions for Swift.** `desktop` (app target,
+    `project.yml`, Resources, CompassUITests), `desktop-kit` (CompassKit,
+    CompassData), `desktop-ui` (CompassUI). Issues sharing a partition never
+    run together, so three Swift work packages can run at once.
 
 ## Architecture
 
 ```text
 apps/calendar-macos/
-  project.yml            XcodeGen spec: app target, CompassKit package, test targets
-  Compass/               AppKit app: AppDelegate, window, WKWebView host, menus, status item
-  Compass/Bridge/        WKUserScript that injects window.compassDesktop; WKScriptMessageHandler
-  CompassKit/            pure Swift package: agenda formatting, deep link parsing, menu model, bridge message codec
-  CompassKitTests/       XCTest for CompassKit, no AppKit
-  CompassUITests/        XCUITest smoke: launch, web loads, deep link, one menu item
-  Resources/             icon, entitlements, Info.plist values, offline.html
+  project.yml          XcodeGen; min macOS 14; three local packages; Swift 6 strict
+  Compass/             AppKit app: AppDelegate, window, menus, status item, panels,
+                       notifications, hotkey, DeepLinkRouter, PostHogCapture,
+                       ASWebAuthenticationSession host
+  CompassKit/          pure Swift. Generated/ (Contracts.swift, ShortcutIds.swift,
+                       ThemeTokens.swift, ProductEvent.swift), Keyboard/, Calendar/,
+                       Layout/, Recurrence/, HTMLFragment/, SSEParser.swift,
+                       Resources/ (shortcuts.json, Fixtures/*.json)
+  CompassData/         CompassAPIClient, KeychainSessionStore, AuthInterceptor,
+                       ServerEventStream, AppDatabase (GRDB), repositories,
+                       Stores/ (@Observable)
+  CompassUI/           RootView, Sidebar, Header, TimeGridView (NSView), EventForm,
+                       dialogs, CommandPalette, ShortcutsLegend, WhichKeyPanel,
+                       Settings, Billing, Onboarding, BlockParty, LifeView (Canvas)
+  CompassKitTests/     XCTest, no AppKit
+  CompassUITests/      XCUITest: launch, demo-mode flows, deep link, menu dispatch
+  Resources/           icon, entitlements, Info.plist values
 ```
 
-- **App** is AppKit with SwiftUI where it is simpler (the quick-add panel,
-  settings). One window, `.fullSizeContentView` with a transparent title bar
-  so the calendar runs edge to edge under the traffic lights. Persistent
-  state (window frame, staging switch, hotkey) lives in `UserDefaults`.
-- **Bridge**: a `WKUserScript` at document start defines
-  `window.compassDesktop` with a version and the methods `openExternal`,
-  `setAgenda`, `restartToUpdate`, and `platform`; calls post to
-  `window.webkit.messageHandlers.compass`. The shell calls back into the page
-  with `evaluateJavaScript` for `onDeepLink` and `onUpdateReady`. The script
-  is injected only for the configured app origin. Messages are JSON, decoded
-  with `Codable` on the Swift side and a Zod schema from `packages/core` on
-  the web side.
-- **Web view** uses the default persistent `WKWebsiteDataStore`, so cookies,
-  IndexedDB, and localStorage survive restarts. `decidePolicyFor` allows the
-  app origin and hands everything else to `NSWorkspace.shared.open`.
-- **Notifications** go through `UNUserNotificationCenter`. The existing
-  `notification.port.ts` gets a desktop implementation that posts through
-  the bridge, so `useUpcomingEventNotifier` is unchanged and fires while the
-  window is closed (`applicationShouldTerminateAfterLastWindowClosed` is
-  false).
-- **Signing**: Developer ID, hardened runtime, entitlements limited to
-  network client and notifications; notarized with `notarytool`, stapled.
-- **Versioning**: `MARKETING_VERSION` in `project.yml`, tagged
-  `macos-vX.Y.Z`, independent of the web `vX.Y.Z` tags. Sparkle reads the
-  appcast published with each GitHub Release. `useVersionCheck` keeps
-  working for the web bundle inside the window.
+### Per-surface choice
+
+| Surface | Choice | Why |
+| --- | --- | --- |
+| Window, menus, status item, Dock, panels, hotkey | AppKit | Already native from Desktop v1. |
+| Sidebar, header, month picker, forms, dialogs, settings, billing, onboarding, palette, legend, which-key, chips | SwiftUI as in-window overlays | One keyboard dispatcher owns every key; no NSWindow sheets fighting first responder. |
+| Time grid (week and day) | `TimeGridView: NSView`, layer-backed, reused `EventCardView` per event, hosted by `NSViewRepresentable` | Hundreds of positioned cards, pixel-exact overlap deck, custom focus ring, accessibility identifiers for XCUITest. |
+| Description editor | `NSTextView` behind a controlled HTML subset (p, strong, em, a, ul, ol, li, br) | Rich text with round-trip fidelity to the web's TipTap output. |
+| Life view | SwiftUI `Canvas` | Thousands of cells drawn once per state change. |
+| Quick-add panel | `NSPanel` hosting SwiftUI | Reuses the existing panel controller; drops the second WKWebView. |
+
+### State
+
+`@MainActor @Observable` stores mirror the web's Zustand stores one to one so
+an agent ports by reading the TypeScript file: `ViewStore`, `EventsStore`
+(range loads keyed like TanStack Query, optimistic create/replace/delete/rsvp
+with no rollback and invalidate on settle, SSE hookup), `DraftStore`
+(activities, nudges, quick-time), `FocusStore` (event registry, Tab edges,
+page-jump targets), `UndoStore` (series undo refused), `ClipboardStore`,
+`HiddenEventsStore`, `AuthStore`, `BillingStore`, `ConfigStore`,
+`SettingsStore`, `LevelsStore`, `OnboardingStore`, `NotificationsStore`.
+
+### Keyboard
+
+One `NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged])`
+feeds `ShortcutDispatcher` in CompassKit. It holds a scope stack
+(`modal > form > grid > global`), gates bare letters when a text field is
+first responder, runs the `e` leader state machine (armed with a timeout,
+drives the which-key panel), and a hold-modifier detector (Mod held shows
+page-jump chips, hold-H shows event-jump chips). Bindings come only from the
+generated `shortcuts.json`; a test asserts that the set of handler ids equals
+the registry ids. Rules: `docs/frontend/shortcut-commandments.md`.
+
+### Data
+
+GRDB tables mirror the web's query keys: `event`, `calendar`,
+`hidden_event`, `loaded_range(source, start, end, fetchedAt)`,
+`user_metadata`, `local_event` (anonymous mode), `event_fts`. SSE messages
+map to invalidations with the same table the web uses in
+`apps/calendar-web/src/sse/client/sse.client.ts`. The stream honors the
+server's `retry:` hint and the 20-minute stream lifetime.
+
+### Contract sharing
+
+- `packages/core/src/desktop/swift-contracts.manifest.ts` lists the Zod
+  schemas to export.
+- `bun cli contracts:swift [--check]`: `z.toJSONSchema` then a small emitter
+  for the subset Compass uses (object to `struct: Codable, Hashable,
+  Sendable`; string enum to `enum: String`; discriminated `anyOf` to an enum
+  with a custom `init(from:)`; branded ids to `RawRepresentable` structs).
+  Unknown constructs fail with the schema path so a new Zod feature forces
+  an emitter update instead of a silent `Any`.
+- `bun cli desktop:export [--check]`: `shortcuts.json` and
+  `ShortcutIds.swift` from the registry data in `packages/core/src/shortcuts`,
+  `ThemeTokens.swift` from `index.css`, `ProductEvent.swift` from the
+  analytics event union, and fixtures produced by running the TypeScript
+  implementations: timed deck layout, event positions, nudges, rrule
+  expansion and summaries, go-to-date parsing, HTML fragments, booking
+  slots, Block Party tasks, and the demo seed.
+
+### Backend and web changes
+
+| Area | Change |
+| --- | --- |
+| Header sessions and SSE | No code expected. One backend integration test proves sign-in with `st-auth-mode: header`, Bearer profile, refresh rotation, SSE with Bearer, and sign-out. |
+| OAuth | Reuse the relay page. Native Sign in with Apple is deferred. |
+| Stripe | `returnTo: "desktop"` on checkout and payment-method sessions; success and cancel URLs land on a web route that redirects to `compass://billing/checkout?outcome=...`. |
+| PostHog | Plain HTTP capture from Swift with `platform: desktop` and the same distinct id after sign-in; the key and host are served by `/api/config` if they are web-build-time only today. |
+| Cutover | Delete `apps/calendar-web/src/desktop/*`, the bridge contracts, desktop settings sections, and the desktop notification port. Keep the OAuth relay and the billing return page. |
+
+## Owner setup reference
+
+The Desktop v1 secrets and credentials carry over unchanged: `APPLE_TEAM_ID`,
+`CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`,
+`APPLE_API_ISSUER`, `SPARKLE_PRIVATE_KEY`, the app icon. Two new items:
+
+| # | What | Where | Time |
+| --- | --- | --- | --- |
+| 1 | Add milestone **Desktop native v1** to the front of repo var `AGENT_LOOP_MILESTONES`, replacing `Desktop v1`. | Repo variables | 2 min |
+| 2 | Change the board's auto-add filter from `label:desktop` to the new milestone, since `desktop` is now one of three partition labels and most work packages do not carry it. | Project settings | 2 min |
+| 3 | A staging test account (email and password) as repo secrets `COMPASS_SMOKE_EMAIL` and `COMPASS_SMOKE_PASSWORD` for the scheduled staging smoke. | Repo secrets | 5 min |
+
+Defaults that stay: app name **Compass**, bundle id
+`com.compasscalendar.desktop`, URL scheme `compass://`, internal builds
+default to production with a hidden staging switch, releases under
+`macos-v*` tags.
 
 ## QA and acceptance
 
-XCTest on `CompassKit`, web tests for the bridge contract, and XCUITest
-smoke on the macOS runner cover what CI can. Visual checks, Notification
-Center behavior, OAuth in the default browser, and Sparkle updates are
-manual: use [Desktop acceptance](../acceptance/desktop.md) on an internal
-build and record results on
-[#4149](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4149).
-Dogfood bugs are new `desktop` issues on the milestone and outrank features
-from the third week of October.
+- `swift test` on CompassKit and CompassData replays the exported parity
+  fixtures. The Linux `--check` steps fail when TypeScript changes without a
+  re-export, so parity drift is caught before any Swift builds.
+- Grid rendering is asserted through a `GridLayoutSnapshot` JSON dump
+  (frames, labels, z-order) at fixed metrics, which agents can record
+  without a Mac. Image snapshots are recorded by a `workflow_dispatch` job.
+- XCUITest runs in anonymous demo mode on every PR, so it needs no server.
+  Signed-in flows use a fixture transport in CompassData.
+- A scheduled staging smoke signs in with the seeded account through
+  CompassData, lists events, and opens the SSE stream.
+- Visual checks, Notification Center behavior, OAuth per provider, Stripe
+  test checkout, and Sparkle updates are manual: use
+  [Desktop acceptance](../acceptance/desktop.md) on a signed build and
+  record results on the tracking issue with the build number from About.
 
 ## Later, explicitly not v1
 
-- A native SwiftUI calendar UI replacing the web view, screen by screen.
-- Bundled offline web assets and an offline-first start.
-- WidgetKit today widget, Shortcuts.app actions, Spotlight indexing.
-- EventKit integration for local macOS calendars (iCloud already works over
-  CalDAV).
-- Homebrew cask distribution. The Mac App Store is ruled out.
-- Multiple windows and Handoff.
+- Mouse editing of any kind: drag, resize, click-to-create, multi-select.
+- iOS, iPadOS, Catalyst.
+- EventKit integration for local macOS calendars (iCloud works over CalDAV).
+- WidgetKit, Shortcuts.app intents, Spotlight indexing.
+- Mac App Store, sandboxing, Homebrew cask.
+- Multiple windows, tabs, Handoff, iCloud sync of device preferences.
+- Native Sign in with Apple through `AuthenticationServices`.
+- Bundled offline web assets. The shell is deleted, not kept as a fallback.
+- An offline write queue for signed-in users (the web has none either).
+- System-following appearance.
 - Windows and Linux builds.
 
 ## Risks
 
 | Risk | Mitigation |
 | --- | --- |
-| Apple enrollment or agreement acceptance delays signing | Start today. Unsigned dev builds still run locally with a right-click Open. |
-| Google rejects the desktop OAuth relay flow | The relay uses the existing web redirect URI; Google only sees the default browser. Verified first in WP-04 against staging. |
-| Notifications do not appear for an unsigned or non-Applications build | Internal builds are signed from WP-03 on. The acceptance doc says to install to /Applications. |
-| WebKit renders the calendar differently from Chromium | The web app is already tested in Safari by users; WKWebView is the same engine. Any gap found in dogfooding is a web bug fixed for Safari users too. |
-| Every change costs a macOS CI round | Logic lives in `CompassKit` with fast XCTest; the app target is thin. The build job caches SwiftPM and derived data. |
-| Web deploy and shell drift | The bridge is versioned and the web feature-detects every method. An old shell against a new web keeps working. |
-| XCUITest smoke is flaky on the runner | Smoke asserts launch, web load, deep link, and one menu dispatch only. Visual checks stay manual. |
-| Tyler's QA time in October | Acceptance doc is under 15 checks and only re-run for builds that touch them. |
+| SwiftUI focus and AppKit first responder fight over Enter and Escape | One dispatcher, overlays rendered in-window, a text-input gating table with tests. |
+| Rich text fidelity between TipTap HTML and `NSAttributedString` | Constrained subset with round-trip fixtures; untouched HTML outside the subset is preserved verbatim. |
+| SuperTokens overrides assume cookies somewhere | The header-session test is a week-one work package. |
+| Apple sign-in through the relay misbehaves | Verified in the OAuth work package before release notes rely on it. |
+| macOS CI minutes with three Swift lanes | `swift test` split off from `xcodebuild`, path filtering, SwiftPM and DerivedData caches. This is a budget line Tyler owns. |
+| Generator rigidity blocks a TypeScript change | By design; the emitter lives in `packages/scripts` so the same agent extends it in the same PR. |
+| Parity drifts after cutover | The export checks stay in CI forever; a web shortcut or token change without a re-export is a red build. |

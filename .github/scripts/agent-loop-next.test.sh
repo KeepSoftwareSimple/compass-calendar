@@ -229,6 +229,32 @@ else
   PASS=$((PASS + 1))
 fi
 
+L_DESKTOP_LANES=$(python3 - <<'PY'
+import json
+allow = "### Approval boundary\n\nallow\n\nDepends on: none"
+issues = [
+  {"number": 20, "title": "app", "url": "https://example.test/issues/20",
+   "labels": [{"name": "agent-ready"}, {"name": "desktop"}], "body": allow},
+  {"number": 21, "title": "kit", "url": "https://example.test/issues/21",
+   "labels": [{"name": "agent-ready"}, {"name": "desktop-kit"}], "body": allow},
+  {"number": 22, "title": "ui", "url": "https://example.test/issues/22",
+   "labels": [{"name": "agent-ready"}, {"name": "desktop-ui"}], "body": allow},
+  {"number": 23, "title": "kit-b", "url": "https://example.test/issues/23",
+   "labels": [{"name": "agent-ready"}, {"name": "desktop-kit"}], "body": allow},
+]
+print(json.dumps(issues))
+PY
+)
+out=$(AGENT_LOOP_CONCURRENCY=3 STUB_L_OPEN="$L_DESKTOP_LANES" run_next)
+assert_contains "$out" "ISSUE_NUMBERS=20 21 22" "desktop, desktop-kit, and desktop-ui are separate partitions"
+if printf '%s' "$out" | grep -Eq 'ISSUE_NUMBERS=.*23'; then
+  echo "FAIL second desktop-kit issue must not share the lane: ${out}" >&2
+  FAIL=$((FAIL + 1))
+else
+  echo "ok second desktop-kit issue omitted"
+  PASS=$((PASS + 1))
+fi
+
 L_RUNNING_CORE='[{"number":10,"updatedAt":"2099-01-01T00:00:00Z","labels":[{"name":"agent-loop-running"},{"name":"sync-core"}]}]'
 L_WEB_AND_CORE=$(python3 - <<'PY'
 import json
