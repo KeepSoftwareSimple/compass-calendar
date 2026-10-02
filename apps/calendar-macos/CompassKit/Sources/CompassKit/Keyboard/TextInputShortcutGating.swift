@@ -15,6 +15,6 @@ public enum TextInputShortcutGating {
     private static func isLeaderRoute(_ event: KeyEvent, leaderKey: Character) -> Bool {
         guard event.modifiers.isEmpty else { return false }
         guard case .character(let character) = event.key else { return false }
-        return character.lowercased() == Character(String(leaderKey).lowercased())
+        return character.lowercased() == leaderKey.lowercased()
     }
 }
