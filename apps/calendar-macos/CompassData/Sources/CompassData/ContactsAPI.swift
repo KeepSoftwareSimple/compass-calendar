@@ -1,7 +1,7 @@
 import CompassKit
 import Foundation
 
-public struct ContactsAPI {
+public struct ContactsAPI: Sendable {
     private let client: CompassAPIClient
 
     init(client: CompassAPIClient) {

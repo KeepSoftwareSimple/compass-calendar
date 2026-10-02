@@ -13,7 +13,7 @@ public struct AvailabilityQuery: Sendable {
     }
 }
 
-public struct CalendarsAPI {
+public struct CalendarsAPI: Sendable {
     private let client: CompassAPIClient
 
     init(client: CompassAPIClient) {

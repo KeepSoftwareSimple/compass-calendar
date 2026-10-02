@@ -43,7 +43,7 @@ public struct SignInUpRequest: Encodable, Sendable {
     }
 }
 
-public struct AuthAPI {
+public struct AuthAPI: Sendable {
     private let client: CompassAPIClient
 
     init(client: CompassAPIClient) {

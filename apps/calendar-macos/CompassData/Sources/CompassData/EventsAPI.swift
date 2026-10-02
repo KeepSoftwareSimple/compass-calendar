@@ -29,7 +29,7 @@ public enum EventDeleteScope: String, Sendable {
     case all
 }
 
-public struct EventsAPI {
+public struct EventsAPI: Sendable {
     private let client: CompassAPIClient
 
     init(client: CompassAPIClient) {
