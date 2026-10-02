@@ -1,7 +1,8 @@
 import Foundation
 
 enum CompassDateParsing {
-    private static let wallTimeFormatters: [DateFormatter] = {
+    // Cached formatters are configured once; reads are concurrent, writes never happen after init.
+    private nonisolated(unsafe) static let wallTimeFormatters: [DateFormatter] = {
         let formats = [
             "yyyy-MM-dd'T'HH:mm:ss.SSS",
             "yyyy-MM-dd'T'HH:mm:ss",
@@ -17,7 +18,7 @@ enum CompassDateParsing {
         }
     }()
 
-    private static let iso8601WithFractional: ISO8601DateFormatter = {
+    private nonisolated(unsafe) static let iso8601WithFractional: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [
             .withInternetDateTime,
@@ -26,7 +27,7 @@ enum CompassDateParsing {
         return formatter
     }()
 
-    private static let iso8601Internet: ISO8601DateFormatter = {
+    private nonisolated(unsafe) static let iso8601Internet: ISO8601DateFormatter = {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
