@@ -6,21 +6,30 @@ public struct RootView: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable public var model: NativeCalendarRootModel
     @State private var titleBarLeadingInset: CGFloat = 72
-
     public init(model: NativeCalendarRootModel) {
         self.model = model
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
-            sidebar
-            VStack(spacing: 0) {
-                header
-                content
+        ZStack(alignment: .top) {
+            HStack(spacing: 0) {
+                sidebar
+                VStack(spacing: 0) {
+                    header
+                    content
+                }
             }
+            pointerHintLayer
         }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
+        .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in
+            ModHoldChipsOverlay(
+                targets: model.focusStore.pageJumpTargets,
+                anchors: anchors,
+                visible: model.focusStore.pageJumpHintsVisible
+            )
+        }
         .overlay(alignment: .bottom) {
             UpNextBanner(
                 model: model,
@@ -66,10 +75,12 @@ public struct RootView: View {
                 selectedDate: model.viewStore.anchorDate,
                 onSelectDate: { model.goToDate($0) }
             )
+            .pageJumpChipAnchor(id: "month-picker")
             Spacer()
             ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }
         .padding(16)
+        .pageJumpChipAnchor(id: "calendars")
         .frame(width: 260)
         .background(theme.surfacePanelColor)
         .overlay(alignment: .trailing) {
@@ -124,10 +135,33 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        TimeGridRepresentable(state: model.timeGridState)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(theme.backgroundColor)
-            .accessibilityIdentifier("compass-native-content")
+        let focusedEventId = model.timeGridState.focusedEventId
+        return ZStack(alignment: .topLeading) {
+            TimeGridRepresentable(model: model, focusedEventId: focusedEventId)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .contain)
+            EventJumpChipsOverlay(
+                hints: model.timeGridState.eventJumpHints,
+                gridYOffset: gridChipYOffset,
+                visible: !model.timeGridState.eventJumpHints.isEmpty
+            )
+        }
+        .background(theme.backgroundColor)
+        .accessibilityIdentifier("compass-native-content")
+    }
+
+    private var gridChipYOffset: CGFloat {
+        let colWidths = model.timeGridState.resolvedColumnWidths()
+        let metrics = model.timeGridState.snapshot(colWidths: colWidths).metrics
+        return 28 + metrics.allDayRowHeight
+    }
+
+    private var pointerHintLayer: some View {
+        VStack {
+            PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
+                .padding(.top, 16)
+            Spacer()
+        }
     }
 
     @ViewBuilder

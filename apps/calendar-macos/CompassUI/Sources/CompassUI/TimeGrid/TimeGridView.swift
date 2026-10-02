@@ -4,6 +4,7 @@ import CompassKit
 @MainActor
 public protocol TimeGridViewDelegate: AnyObject {
     func timeGridViewDidRequestShortcutHint(_ view: TimeGridView)
+    func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
 }
 
 @MainActor
@@ -58,6 +59,27 @@ public final class TimeGridView: NSView {
 
     public override func mouseDown(with event: NSEvent) {
         delegate?.timeGridViewDidRequestShortcutHint(self)
+    }
+
+    public func applyScroll(_ request: TimeGridScrollRequest) {
+        guard let snapshot else { return }
+        let hourHeight = snapshot.metrics.hourHeight
+        let pageDelta = scrollView.contentView.bounds.height
+        var origin = scrollView.contentView.bounds.origin
+        switch request {
+        case .revealDocumentY(let documentY):
+            origin.y = max(0, documentY)
+        case .pageUp:
+            origin.y = max(0, origin.y - pageDelta)
+        case .hourUp:
+            origin.y = max(0, origin.y - hourHeight)
+        case .pageDown:
+            origin.y += pageDelta
+        case .hourDown:
+            origin.y += hourHeight
+        }
+        scrollView.contentView.scroll(to: origin)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     public override func rightMouseDown(with event: NSEvent) {
@@ -231,7 +253,10 @@ public final class TimeGridView: NSView {
 
             var adjusted = card
             adjusted.frame = frame
-            view.apply(card: adjusted, theme: theme, surfaceColor: surface)
+            let isFocused = state.focusedEventId == card.eventId
+            view.apply(card: adjusted, theme: theme, surfaceColor: surface, isFocused: isFocused)
+            view.cardDelegate = self
+            view.layoutSubtreeIfNeeded()
 
             let parent = card.kind == .allDay ? allDayRowView : timedContentView
             if view.superview !== parent {
@@ -315,6 +340,12 @@ public final class TimeGridView: NSView {
         formatter.timeZone = EffectiveTimeZone.timeZone
         formatter.dateFormat = "h a"
         return formatter.string(from: date)
+    }
+}
+
+extension TimeGridView: EventCardViewDelegate {
+    func eventCardViewDidClick(_ view: EventCardView, eventId: String) {
+        delegate?.timeGridView(self, didClickEvent: eventId)
     }
 }
 

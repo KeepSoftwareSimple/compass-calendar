@@ -1,21 +1,61 @@
+import CompassData
 import CompassKit
 import SwiftUI
 
 public struct TimeGridRepresentable: NSViewRepresentable {
     @Environment(\.nativeWebTheme) private var theme
+    @Bindable private var model: NativeCalendarRootModel
+    private let focusedEventId: String?
 
-    private let state: TimeGridState
+    public init(model: NativeCalendarRootModel, focusedEventId: String?) {
+        self.model = model
+        self.focusedEventId = focusedEventId
+    }
 
-    public init(state: TimeGridState) {
-        self.state = state
+    public func makeCoordinator() -> Coordinator {
+        Coordinator(model: model)
     }
 
     public func makeNSView(context: Context) -> TimeGridView {
-        TimeGridView(state: state, theme: theme)
+        let view = TimeGridView(state: model.timeGridState, theme: theme)
+        view.delegate = context.coordinator
+        return view
     }
 
     public func updateNSView(_ nsView: TimeGridView, context: Context) {
-        nsView.update(state: state, theme: theme)
+        context.coordinator.theme = theme
+        syncGrid(nsView, theme: theme)
+        if let scroll = model.consumePendingScroll() {
+            nsView.applyScroll(scroll)
+        }
+    }
+
+    private func syncGrid(_ nsView: TimeGridView, theme: NativeWebTheme) {
+        nsView.update(state: model.timeGridState, theme: theme)
+        nsView.layoutSubtreeIfNeeded()
+    }
+
+    @MainActor
+    public final class Coordinator: NSObject, TimeGridViewDelegate {
+        private let model: NativeCalendarRootModel
+        fileprivate var theme: NativeWebTheme = .lightBeach
+
+        init(model: NativeCalendarRootModel) {
+            self.model = model
+            super.init()
+        }
+
+        public func timeGridViewDidRequestShortcutHint(_ view: TimeGridView) {
+            guard let registry = model.shortcutRegistry else { return }
+            model.handleGridPointerDown(registry: registry)
+        }
+
+        public func timeGridView(_ view: TimeGridView, didClickEvent eventId: String) {
+            guard let registry = model.shortcutRegistry else { return }
+            model.handleEventCardPointerDown(eventId: eventId, registry: registry)
+            view.update(state: model.timeGridState, theme: theme)
+            view.layoutSubtreeIfNeeded()
+        }
     }
 }
 

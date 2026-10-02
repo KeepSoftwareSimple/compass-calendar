@@ -22,9 +22,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
-    private var keyboardMonitor: NativeKeyboardMonitor?
+    private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
-    private var shortcutDispatcher: ShortcutDispatcher?
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
@@ -112,51 +111,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     private func configureKeyboard() {
-        let calendarModel = model
         do {
             let registry = try ShortcutRegistry()
-            let navigationIds: Set<ShortcutId> = [
-                .navPrevious,
-                .navNext,
-                .navToday,
-                .navShiftLeft,
-                .navShiftRight,
-                .navDayView,
-                .navWeekView,
-                .navMonthPrev,
-                .navMonthNext,
-                .navUpNext,
-                .navJoinMeeting,
-            ]
-            let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
-                guard navigationIds.contains(entry.id) else { return nil }
-                return ShortcutHandler(
-                    id: entry.id,
-                    scope: .grid,
-                    chords: entry.bindingChords,
-                    handler: { id in
-                        Task { @MainActor in
-                            switch id {
-                            case .navUpNext:
-                                calendarModel.openUpNextEvent()
-                            case .navJoinMeeting:
-                                calendarModel.joinUpNextMeeting()
-                            default:
-                                calendarModel.handleShortcut(id)
-                            }
-                        }
-                    })
-            }
-            let leader = LeaderSequenceEngine(
-                leaderKey: registry.editSequenceLeader,
-                fieldRows: registry.editSequenceFields)
-            let dispatcher = ShortcutDispatcher(
-                registry: registry,
-                handlers: handlers,
-                leaderEngine: leader)
-            shortcutDispatcher = dispatcher
-            keyboardMonitor = NativeKeyboardMonitor(dispatcher: dispatcher)
-            keyboardMonitor?.start()
+            let router = NativeGridKeyboardRouter(model: model, registry: registry)
+            let monitor = NativeKeyboardMonitor(router: router)
+            keyboardMonitor = monitor
+            monitor.start()
+            (NSApp as? CompassApplication)?.keyboardMonitor = monitor
         } catch {
             // Native grid remains usable via header buttons if shortcuts fail to load.
         }

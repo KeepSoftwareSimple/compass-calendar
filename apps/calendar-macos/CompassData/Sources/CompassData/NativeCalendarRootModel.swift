@@ -8,6 +8,8 @@ public final class NativeCalendarRootModel {
     public let viewStore: ViewStore
     public let configStore: ConfigStore
     public let levelsStore: LevelsStore
+    public let focusStore: FocusStore
+    public let pointerHintStore: PointerHintStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     public private(set) var calendars: [CompassCalendar] = []
@@ -18,6 +20,8 @@ public final class NativeCalendarRootModel {
     public var openConferenceURLHandler: ((URL) -> Void)?
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     public var monthPickerMonth: Date
+    public var pendingScroll: TimeGridScrollRequest?
+    public var shortcutRegistry: ShortcutRegistry?
 
     private let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -28,6 +32,9 @@ public final class NativeCalendarRootModel {
     private var eventStream: ServerEventStream?
     var loadedEvents: [Event] = []
     private var refreshTask: Task<Void, Never>?
+    private var focusLayoutCards: [FocusLayoutCard] = []
+    private var eventJumpHintLabels: [EventJumpChipHint] = []
+    private var didApplyDemoFixtureScroll = false
 
     public var referenceNow: Date {
         demoSeed?.referenceNow ?? Date()
@@ -63,6 +70,8 @@ public final class NativeCalendarRootModel {
             pinnedTimeZone: demoSeed?.timeZone
         )
         monthPickerMonth = anchor
+        focusStore = FocusStore(view: .week)
+        pointerHintStore = PointerHintStore()
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -171,9 +180,154 @@ public final class NativeCalendarRootModel {
             shiftMonth(by: -1)
         case .navMonthNext:
             shiftMonth(by: 1)
+        case .navScrollUp:
+            pendingScroll = .pageUp
+        case .navScrollDown:
+            pendingScroll = .pageDown
+        case .navScrollHourUp:
+            pendingScroll = .hourUp
+        case .navScrollHourDown:
+            pendingScroll = .hourDown
+        case .editFocusPrev:
+            moveFocus(.up)
+        case .editFocusNext:
+            moveFocus(.down)
+        case .editFocusLeft:
+            moveFocus(.left)
+        case .editFocusRight:
+            moveFocus(.right)
+        case .editCycleEdge:
+            cycleFocusedEdge(forward: true)
         default:
             break
         }
+    }
+
+    public func handleShiftTabCycleEdge() {
+        cycleFocusedEdge(forward: false)
+    }
+
+    public func setPageJumpHintsVisible(_ visible: Bool) {
+        focusStore.setPageJumpHintsVisible(visible)
+    }
+
+    public func setEventJumpHintsVisible(_ visible: Bool) {
+        if visible {
+            eventJumpHintLabels = buildEventJumpHints()
+        } else {
+            eventJumpHintLabels = []
+        }
+        applyFocusPresentation()
+    }
+
+    public func showPointerHint(for target: PointerClickTarget, registry: ShortcutRegistry) {
+        pointerHintStore.pulse(target: target, registry: registry)
+    }
+
+    public func handleEventCardPointerDown(eventId: String, registry: ShortcutRegistry) {
+        showPointerHint(for: .eventCard, registry: registry)
+        focusEvent(eventId: eventId)
+    }
+
+    public func handleGridPointerDown(registry: ShortcutRegistry) {
+        showPointerHint(for: .gridScroll, registry: registry)
+    }
+
+    public func focusPageJump(digit: Character) {
+        guard let target = focusStore.pageJumpTargets.first(where: { $0.digit == String(digit) }) else {
+            return
+        }
+        switch target.id {
+        case "month-picker":
+            monthPickerMonth = viewStore.anchorDate
+        default:
+            break
+        }
+    }
+
+    public func focusEventJump(digit: Character) {
+        guard let hint = eventJumpHintLabels.first(where: { $0.label == String(digit) }) else { return }
+        focusEvent(eventId: hint.eventId)
+    }
+
+    public func consumePendingScroll() -> TimeGridScrollRequest? {
+        defer { pendingScroll = nil }
+        return pendingScroll
+    }
+
+    private func moveFocus(_ direction: FocusMoveDirection) {
+        guard !focusLayoutCards.isEmpty else { return }
+
+        if let focusedId = focusStore.focusedEventId?.rawValue,
+            let focused = focusLayoutCards.first(where: { $0.eventId == focusedId }),
+            let next = GridFocusNavigator.adjacent(
+                focused: focused,
+                direction: direction,
+                candidates: focusLayoutCards,
+                layoutMode: layoutMode()
+            )
+        {
+            focusEvent(eventId: next.eventId)
+            return
+        }
+
+        if let seeded = seedFocusEventId() {
+            focusEvent(eventId: seeded)
+        }
+    }
+
+    private func cycleFocusedEdge(forward: Bool) {
+        guard let eventId = focusStore.focusedEventId else { return }
+        focusStore.cycleEdge(
+            for: eventId,
+            direction: forward ? .forward : .backward
+        )
+        applyFocusPresentation()
+    }
+
+    private func focusEvent(eventId: String) {
+        let type: ViewInteractionEventType =
+            focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
+                ? .allDay
+                : .timed
+        focusStore.setFocused(
+            eventId: EventId(rawValue: eventId),
+            eventType: type
+        )
+        applyFocusPresentation()
+    }
+
+    private func seedFocusEventId() -> String? {
+        let reference = demoSeed?.referenceNow ?? Date()
+        if !loadedEvents.isEmpty {
+            if let nearest = loadedEvents.min(by: { lhs, rhs in
+                abs(eventStart(lhs).timeIntervalSince(reference))
+                    < abs(eventStart(rhs).timeIntervalSince(reference))
+            }) {
+                return nearest.id.rawValue
+            }
+        }
+        return focusLayoutCards.sorted { $0.frame.top < $1.frame.top }.first?.eventId
+    }
+
+    private func eventStart(_ event: Event) -> Date {
+        switch event.schedule {
+        case .timed(let timed):
+            CompassDateParsing.parseInEffectiveTimeZone(timed.start.rawValue) ?? .distantPast
+        case .allDay(let allDay):
+            CompassDateParsing.parseInEffectiveTimeZone(allDay.start) ?? .distantPast
+        }
+    }
+
+    private func applyFocusPresentation() {
+        timeGridState = TimeGridState(
+            layoutMode: timeGridState.layoutMode,
+            referenceNow: timeGridState.referenceNow,
+            scenario: timeGridState.scenario,
+            trackWidth: timeGridState.trackWidth,
+            focusedEventId: focusStore.focusedEventId?.rawValue,
+            eventJumpHints: eventJumpHintLabels
+        )
     }
 
     public func goToDate(_ date: Date) {
@@ -263,12 +417,86 @@ public final class NativeCalendarRootModel {
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
-        timeGridState = TimeGridState(
+        syncFocusRegistry(from: scenario)
+        let colWidths = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: demoSeed?.referenceNow ?? Date(),
             scenario: scenario,
             trackWidth: contentTrackWidth
+        ).resolvedColumnWidths()
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: colWidths)
+        focusLayoutCards = snapshot.cards.map { card in
+            FocusLayoutCard(
+                eventId: card.eventId,
+                frame: card.frame,
+                isAllDay: card.kind == .allDay
+            )
+        }
+        focusStore.setPageJumpTargets(nativePageJumpTargets())
+        timeGridState = TimeGridState(
+            layoutMode: layoutMode(),
+            referenceNow: demoSeed?.referenceNow ?? Date(),
+            scenario: scenario,
+            trackWidth: contentTrackWidth,
+            focusedEventId: focusStore.focusedEventId?.rawValue,
+            eventJumpHints: eventJumpHintLabels
         )
+        if demoSeed != nil, !loadedEvents.isEmpty, !didApplyDemoFixtureScroll {
+            let allDayOffset = 28 + snapshot.metrics.allDayRowHeight
+            if let standup = snapshot.cards.first(where: {
+                $0.eventId == "demo-morning-standup" && $0.kind == .timed
+            }) {
+                pendingScroll = .revealDocumentY(max(0, standup.frame.top + allDayOffset - 40))
+            } else {
+                pendingScroll = .revealDocumentY(0)
+            }
+            didApplyDemoFixtureScroll = true
+        }
+    }
+
+    private func syncFocusRegistry(from scenario: GridLayoutScenario) {
+        focusStore.view = viewStore.view
+        focusStore.clearRegistry()
+        let colWidths = TimeGridState(
+            layoutMode: layoutMode(),
+            referenceNow: scenario.referenceNow,
+            scenario: scenario,
+            trackWidth: contentTrackWidth
+        ).resolvedColumnWidths()
+        let cards = GridLayoutSnapshotBuilder.build(
+            scenario: scenario,
+            colWidths: colWidths
+        ).cards
+        let sorted = cards.sorted { lhs, rhs in
+            if lhs.frame.top != rhs.frame.top { return lhs.frame.top < rhs.frame.top }
+            return lhs.frame.left < rhs.frame.left
+        }
+        for card in sorted {
+            let type: ViewInteractionEventType = card.kind == .allDay ? .allDay : .timed
+            focusStore.register(
+                eventId: EventId(rawValue: card.eventId),
+                eventType: type
+            )
+        }
+    }
+
+    private func nativePageJumpTargets() -> [PageJumpTarget] {
+        [
+            PageJumpTarget(id: "month-picker", digit: "1", label: "Month picker"),
+            PageJumpTarget(id: "calendars", digit: "2", label: "Calendars"),
+        ]
+    }
+
+    private func buildEventJumpHints() -> [EventJumpChipHint] {
+        let digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+        let timed = focusLayoutCards.filter { !$0.isAllDay }.sorted { $0.frame.top < $1.frame.top }
+        return timed.prefix(digits.count).enumerated().map { index, card in
+            EventJumpChipHint(
+                eventId: card.eventId,
+                label: digits[index],
+                frame: card.frame
+            )
+        }
     }
 
     private func visibleCalendars() -> [CompassCalendar] {

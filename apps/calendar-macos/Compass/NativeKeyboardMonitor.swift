@@ -3,29 +3,28 @@ import CompassKit
 
 @MainActor
 final class NativeKeyboardMonitor {
-    private let dispatcher: ShortcutDispatcher
-    private var monitor: Any?
-
-    init(dispatcher: ShortcutDispatcher) {
-        self.dispatcher = dispatcher
+    private let router: NativeGridKeyboardRouter
+    init(router: NativeGridKeyboardRouter) {
+        self.router = router
     }
 
     func start() {
-        dispatcher.pushScope(.grid)
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return event }
-            guard let keyEvent = KeyEvent(nsEvent: event) else { return event }
-            if dispatcher.dispatch(keyEvent) != nil {
-                return nil
-            }
-            return event
-        }
+        router.dispatcher.pushScope(.grid)
     }
 
     func stop() {
-        if let monitor {
-            NSEvent.removeMonitor(monitor)
-        }
-        monitor = nil
+        router.dispatcher.popScope(.grid)
+    }
+
+    func handleKeyDown(_ event: NSEvent) -> Bool {
+        router.handleKeyDown(event)
+    }
+
+    func handleFlagsChanged(_ event: NSEvent) {
+        router.handleFlagsChanged(event)
+    }
+
+    func handleKeyUp(_ event: NSEvent) {
+        router.handleKeyUp(event)
     }
 }

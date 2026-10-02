@@ -5,17 +5,23 @@ public struct TimeGridState: Sendable {
     public var referenceNow: Date
     public var scenario: GridLayoutScenario
     public var trackWidth: CGFloat
+    public var focusedEventId: String?
+    public var eventJumpHints: [EventJumpChipHint]
 
     public init(
         layoutMode: GridLayoutMode = .week,
         referenceNow: Date = GridLayoutSnapshotFixtures.referenceNow,
         scenario: GridLayoutScenario,
-        trackWidth: CGFloat = 1010
+        trackWidth: CGFloat = 1010,
+        focusedEventId: String? = nil,
+        eventJumpHints: [EventJumpChipHint] = []
     ) {
         self.layoutMode = layoutMode
         self.referenceNow = referenceNow
         self.scenario = scenario
         self.trackWidth = trackWidth
+        self.focusedEventId = focusedEventId
+        self.eventJumpHints = eventJumpHints
     }
 
     public func snapshot(colWidths: [Double]) -> GridLayoutSnapshot {

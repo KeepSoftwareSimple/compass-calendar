@@ -110,6 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func installRootContent(on window: NSWindow) {
+        nativeRootController?.keyboardMonitor?.stop()
+        (NSApp as? CompassApplication)?.keyboardMonitor = nil
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
             guard let model = try? NativeRootFactory.makeModel() else { return }
