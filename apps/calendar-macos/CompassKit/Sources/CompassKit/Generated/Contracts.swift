@@ -119,10 +119,10 @@ public enum JSONValue: Codable, Hashable, Sendable {
     }
 }
 public enum AccessEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case owner = "owner"
-    case writer = "writer"
-    case reader = "reader"
     case freeBusyReader = "freeBusyReader"
+    case owner = "owner"
+    case reader = "reader"
+    case writer = "writer"
 }
 
 public struct AppConfig: Codable, Hashable, Sendable {
@@ -267,36 +267,36 @@ public enum CloudMutationModeEnum: String, Codable, Hashable, Sendable, CaseIter
 }
 
 public enum CodeEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case eVENT_NOT_FOUND = "EVENT_NOT_FOUND"
-    case cALENDAR_NOT_FOUND = "CALENDAR_NOT_FOUND"
-    case cALENDAR_READ_ONLY = "CALENDAR_READ_ONLY"
-    case rECURRENCE_CONFLICT = "RECURRENCE_CONFLICT"
-    case dUPLICATE_EVENT_ID = "DUPLICATE_EVENT_ID"
-    case iNVALID_SCHEDULE = "INVALID_SCHEDULE"
-    case iNVALID_OCCURRENCE_ID = "INVALID_OCCURRENCE_ID"
-    case pROVIDER_FAILURE = "PROVIDER_FAILURE"
-    case sYNC_UNAVAILABLE = "SYNC_UNAVAILABLE"
-    case cONNECTION_REVOKED = "CONNECTION_REVOKED"
-    case mAINTENANCE = "MAINTENANCE"
-    case mOVE_UNSUPPORTED = "MOVE_UNSUPPORTED"
-    case uNSUPPORTED_OPERATION = "UNSUPPORTED_OPERATION"
-    case iNVALID_INPUT = "INVALID_INPUT"
     case aTTENDEES_UNSUPPORTED = "ATTENDEES_UNSUPPORTED"
     case bILLING_REQUIRED = "BILLING_REQUIRED"
+    case cALENDAR_NOT_FOUND = "CALENDAR_NOT_FOUND"
+    case cALENDAR_READ_ONLY = "CALENDAR_READ_ONLY"
+    case cONNECTION_REVOKED = "CONNECTION_REVOKED"
+    case dUPLICATE_EVENT_ID = "DUPLICATE_EVENT_ID"
+    case eVENT_NOT_FOUND = "EVENT_NOT_FOUND"
+    case iNVALID_INPUT = "INVALID_INPUT"
+    case iNVALID_OCCURRENCE_ID = "INVALID_OCCURRENCE_ID"
+    case iNVALID_SCHEDULE = "INVALID_SCHEDULE"
+    case mAINTENANCE = "MAINTENANCE"
+    case mOVE_UNSUPPORTED = "MOVE_UNSUPPORTED"
+    case pROVIDER_FAILURE = "PROVIDER_FAILURE"
+    case rECURRENCE_CONFLICT = "RECURRENCE_CONFLICT"
+    case sYNC_UNAVAILABLE = "SYNC_UNAVAILABLE"
+    case uNSUPPORTED_OPERATION = "UNSUPPORTED_OPERATION"
 }
 
 public enum ColorEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case lavender = "lavender"
-    case mint = "mint"
-    case plum = "plum"
+    case blue = "blue"
     case coral = "coral"
     case gold = "gold"
-    case orange = "orange"
-    case blue = "blue"
-    case slate = "slate"
-    case indigo = "indigo"
     case green = "green"
+    case indigo = "indigo"
+    case lavender = "lavender"
+    case mint = "mint"
+    case orange = "orange"
+    case plum = "plum"
     case red = "red"
+    case slate = "slate"
 }
 
 public struct CompassCalendar: Codable, Hashable, Sendable {
@@ -351,8 +351,8 @@ public struct Conference: Codable, Hashable, Sendable {
 
 public enum ConferenceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case meet = "meet"
-    case teams = "teams"
     case none = "none"
+    case teams = "teams"
 }
 
 public enum ConferenceKindsEnum: String, Codable, Hashable, Sendable, CaseIterable {
@@ -361,11 +361,11 @@ public enum ConferenceKindsEnum: String, Codable, Hashable, Sendable, CaseIterab
 }
 
 public enum ConnectionStateEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case aTTENTION = "ATTENTION"
+    case hEALTHY = "HEALTHY"
+    case iMPORTING = "IMPORTING"
     case nOT_CONNECTED = "NOT_CONNECTED"
     case rECONNECT_REQUIRED = "RECONNECT_REQUIRED"
-    case iMPORTING = "IMPORTING"
-    case hEALTHY = "HEALTHY"
-    case aTTENTION = "ATTENTION"
 }
 
 public struct ContactSuggestion: Codable, Hashable, Sendable {
@@ -447,31 +447,31 @@ public struct Event: Codable, Hashable, Sendable {
     public let updatedAt: DateTime?}
 
 public enum EventColorSlot: String, Codable, Hashable, Sendable, CaseIterable {
-    case lavender = "lavender"
-    case mint = "mint"
-    case plum = "plum"
+    case blue = "blue"
     case coral = "coral"
     case gold = "gold"
-    case orange = "orange"
-    case blue = "blue"
-    case slate = "slate"
-    case indigo = "indigo"
     case green = "green"
+    case indigo = "indigo"
+    case lavender = "lavender"
+    case mint = "mint"
+    case orange = "orange"
+    case plum = "plum"
     case red = "red"
+    case slate = "slate"
 }
 
 public enum EventColorSlotEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case lavender = "lavender"
-    case mint = "mint"
-    case plum = "plum"
+    case blue = "blue"
     case coral = "coral"
     case gold = "gold"
-    case orange = "orange"
-    case blue = "blue"
-    case slate = "slate"
-    case indigo = "indigo"
     case green = "green"
+    case indigo = "indigo"
+    case lavender = "lavender"
+    case mint = "mint"
+    case orange = "orange"
+    case plum = "plum"
     case red = "red"
+    case slate = "slate"
 }
 
 public enum EventContent: Codable, Hashable, Sendable {
@@ -645,8 +645,8 @@ public struct EventSchedule_TimedPayload: Codable, Hashable, Sendable {
     public let timeZone: IANATimeZone}
 
 public enum ExecutionEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case passive = "passive"
     case active = "active"
+    case passive = "passive"
 }
 
 public struct HiddenEventIdsResponse: Codable, Hashable, Sendable {
@@ -654,8 +654,8 @@ public struct HiddenEventIdsResponse: Codable, Hashable, Sendable {
 
 public enum IntervalEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case day = "day"
-    case week = "week"
     case month = "month"
+    case week = "week"
     case year = "year"
 }
 
@@ -683,29 +683,29 @@ public enum OriginEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public enum OutcomeEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case success = "success"
     case conflict = "conflict"
-    case validation = "validation"
-    case rateLimited = "rate_limited"
-    case provider = "provider"
-    case transport = "transport"
-    case storage = "storage"
     case exhausted = "exhausted"
+    case provider = "provider"
+    case rateLimited = "rate_limited"
+    case storage = "storage"
+    case success = "success"
+    case transport = "transport"
+    case validation = "validation"
 }
 
 public enum PhaseEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case accepted = "accepted"
-    case pending = "pending"
+    case compensation = "compensation"
     case confirmed = "confirmed"
     case failed = "failed"
+    case pending = "pending"
     case recovered = "recovered"
-    case compensation = "compensation"
 }
 
 public enum ProviderEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case apple = "apple"
     case google = "google"
     case microsoft = "microsoft"
-    case apple = "apple"
 }
 
 public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
@@ -719,9 +719,9 @@ public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
 
 public enum ReasonEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case created = "created"
-    case updated = "updated"
     case deleted = "deleted"
     case reconciled = "reconciled"
+    case updated = "updated"
 }
 
 public struct ReplaceEventInput: Codable, Hashable, Sendable {
@@ -773,9 +773,9 @@ public struct ReplaceEventInputRecurrence_PreservePayload: Codable, Hashable, Se
     public let kind: String}
 
 public enum ResponseStatusEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case needsAction = "needsAction"
     case accepted = "accepted"
     case declined = "declined"
+    case needsAction = "needsAction"
     case tentative = "tentative"
 }
 
@@ -784,9 +784,9 @@ public struct RsvpEventInput: Codable, Hashable, Sendable {
     public let scope: ScopeEnum}
 
 public enum ScopeEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case all = "all"
     case this = "this"
     case thisAndFollowing = "thisAndFollowing"
-    case all = "all"
 }
 
 public enum ServerMessage: Codable, Hashable, Sendable {
@@ -917,13 +917,13 @@ public enum SourceEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public enum SubscriptionStatusEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case none = "none"
-    case awaitingCheckout = "awaiting_checkout"
-    case trialing = "trialing"
     case active = "active"
-    case pastDue = "past_due"
+    case awaitingCheckout = "awaiting_checkout"
     case canceled = "canceled"
     case expired = "expired"
+    case none = "none"
+    case pastDue = "past_due"
+    case trialing = "trialing"
 }
 
 public struct UserMetadata: Codable, Hashable, Sendable {
