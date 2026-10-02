@@ -31,6 +31,7 @@ const WEB_FIXTURE_FILES = [
   "nudge.vectors.json",
   "go-to-date.vectors.json",
   "demo-seed.json",
+  "grid-layout.snapshots.json",
 ] as const;
 
 const buildWebFixtureFiles = async (): Promise<GeneratedFile[]> => {

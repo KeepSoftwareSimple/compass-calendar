@@ -1,5 +1,6 @@
 import { emitDemoSeedFixturesJson } from "@web/desktop/export-fixtures/demo-seed.fixtures";
 import { emitGoToDateFixturesJson } from "@web/desktop/export-fixtures/go-to-date.fixtures";
+import { emitGridLayoutSnapshotFixturesJson } from "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures";
 import { emitNudgeFixturesJson } from "@web/desktop/export-fixtures/nudge.fixtures";
 import { emitTimedDeckFixturesJson } from "@web/desktop/export-fixtures/timed-deck.fixtures";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -17,6 +18,7 @@ const files: Record<string, string> = {
   "nudge.vectors.json": emitNudgeFixturesJson(),
   "go-to-date.vectors.json": emitGoToDateFixturesJson(),
   "demo-seed.json": emitDemoSeedFixturesJson(),
+  "grid-layout.snapshots.json": emitGridLayoutSnapshotFixturesJson(),
 };
 
 mkdirSync(outputDir, { recursive: true });

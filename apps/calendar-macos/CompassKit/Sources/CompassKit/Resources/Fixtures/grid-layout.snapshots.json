@@ -1,0 +1,548 @@
+{
+  "scenarios": [
+    {
+      "id": "grid-layout-1day",
+      "input": {
+        "colWidths": [
+          320
+        ],
+        "layoutMode": "week",
+        "visibleDateKeys": [
+          "2026-05-20"
+        ]
+      },
+      "output": {
+        "cards": [
+          {
+            "accessibilityIdentifier": "compass-grid-event-507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "eventId": "507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 60,
+              "left": 55,
+              "top": 630,
+              "width": 310
+            },
+            "isHiddenStrip": false,
+            "kind": "busy",
+            "label": "Busy",
+            "zIndex": 0
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-all-day-span",
+            "eventId": "all-day-span",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 20,
+              "left": 0,
+              "top": 3,
+              "width": 310
+            },
+            "isHiddenStrip": false,
+            "kind": "allDay",
+            "label": "All-day span",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-hidden-strip",
+            "eventId": "hidden-strip",
+            "fillColorHex": "#22c55e",
+            "frame": {
+              "height": 57,
+              "left": 55,
+              "top": 660,
+              "width": 8
+            },
+            "isHiddenStrip": true,
+            "kind": "timed",
+            "label": "Hidden",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-a",
+            "eventId": "overlap-a",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 55,
+              "top": 540,
+              "width": 212,
+              "zIndex": 1
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap A",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-b",
+            "eventId": "overlap-b",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 99,
+              "top": 570,
+              "width": 212,
+              "zIndex": 2
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap B",
+            "zIndex": 2
+          }
+        ],
+        "columns": [
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-20",
+            "key": "2026-05-20",
+            "left": 50,
+            "width": 320
+          }
+        ],
+        "layoutMode": "week",
+        "metrics": {
+          "allDayRowHeight": 29,
+          "colWidths": [
+            320
+          ],
+          "hourHeight": 60,
+          "marginLeft": 50,
+          "timedGridHeight": 780
+        },
+        "nowLine": {
+          "columnIndex": 0,
+          "top": 900
+        },
+        "visibleDayCount": 1
+      }
+    },
+    {
+      "id": "grid-layout-3day",
+      "input": {
+        "colWidths": [
+          320,
+          320,
+          320
+        ],
+        "layoutMode": "week",
+        "visibleDateKeys": [
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21"
+        ]
+      },
+      "output": {
+        "cards": [
+          {
+            "accessibilityIdentifier": "compass-grid-event-507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "eventId": "507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 60,
+              "left": 375,
+              "top": 630,
+              "width": 310
+            },
+            "isHiddenStrip": false,
+            "kind": "busy",
+            "label": "Busy",
+            "zIndex": 0
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-all-day-span",
+            "eventId": "all-day-span",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 20,
+              "left": 0,
+              "top": 3,
+              "width": 950
+            },
+            "isHiddenStrip": false,
+            "kind": "allDay",
+            "label": "All-day span",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-hidden-strip",
+            "eventId": "hidden-strip",
+            "fillColorHex": "#22c55e",
+            "frame": {
+              "height": 57,
+              "left": 375,
+              "top": 660,
+              "width": 8
+            },
+            "isHiddenStrip": true,
+            "kind": "timed",
+            "label": "Hidden",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-a",
+            "eventId": "overlap-a",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 375,
+              "top": 540,
+              "width": 212,
+              "zIndex": 1
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap A",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-b",
+            "eventId": "overlap-b",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 419,
+              "top": 570,
+              "width": 212,
+              "zIndex": 2
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap B",
+            "zIndex": 2
+          }
+        ],
+        "columns": [
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-19",
+            "key": "2026-05-19",
+            "left": 50,
+            "width": 320
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-20",
+            "key": "2026-05-20",
+            "left": 370,
+            "width": 320
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-21",
+            "key": "2026-05-21",
+            "left": 690,
+            "width": 320
+          }
+        ],
+        "layoutMode": "week",
+        "metrics": {
+          "allDayRowHeight": 29,
+          "colWidths": [
+            320,
+            320,
+            320
+          ],
+          "hourHeight": 60,
+          "marginLeft": 50,
+          "timedGridHeight": 780
+        },
+        "nowLine": {
+          "columnIndex": 1,
+          "top": 900
+        },
+        "visibleDayCount": 3
+      }
+    },
+    {
+      "id": "grid-layout-7day",
+      "input": {
+        "colWidths": [
+          100,
+          110,
+          120,
+          130,
+          140,
+          150,
+          160
+        ],
+        "layoutMode": "week",
+        "visibleDateKeys": [
+          "2026-05-17",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-23"
+        ]
+      },
+      "output": {
+        "cards": [
+          {
+            "accessibilityIdentifier": "compass-grid-event-507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "eventId": "507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 60,
+              "left": 385,
+              "top": 630,
+              "width": 120
+            },
+            "isHiddenStrip": false,
+            "kind": "busy",
+            "label": "Busy",
+            "zIndex": 0
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-all-day-span",
+            "eventId": "all-day-span",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 20,
+              "left": 210,
+              "top": 3,
+              "width": 380
+            },
+            "isHiddenStrip": false,
+            "kind": "allDay",
+            "label": "All-day span",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-hidden-strip",
+            "eventId": "hidden-strip",
+            "fillColorHex": "#22c55e",
+            "frame": {
+              "height": 57,
+              "left": 385,
+              "top": 660,
+              "width": 8
+            },
+            "isHiddenStrip": true,
+            "kind": "timed",
+            "label": "Hidden",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-a",
+            "eventId": "overlap-a",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 385,
+              "top": 540,
+              "width": 72,
+              "zIndex": 1
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap A",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-b",
+            "eventId": "overlap-b",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 429,
+              "top": 570,
+              "width": 72,
+              "zIndex": 2
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap B",
+            "zIndex": 2
+          }
+        ],
+        "columns": [
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-17",
+            "key": "2026-05-17",
+            "left": 50,
+            "width": 100
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-18",
+            "key": "2026-05-18",
+            "left": 150,
+            "width": 110
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-19",
+            "key": "2026-05-19",
+            "left": 260,
+            "width": 120
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-20",
+            "key": "2026-05-20",
+            "left": 380,
+            "width": 130
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-21",
+            "key": "2026-05-21",
+            "left": 510,
+            "width": 140
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-22",
+            "key": "2026-05-22",
+            "left": 650,
+            "width": 150
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-2026-05-23",
+            "key": "2026-05-23",
+            "left": 800,
+            "width": 160
+          }
+        ],
+        "layoutMode": "week",
+        "metrics": {
+          "allDayRowHeight": 29,
+          "colWidths": [
+            100,
+            110,
+            120,
+            130,
+            140,
+            150,
+            160
+          ],
+          "hourHeight": 60,
+          "marginLeft": 50,
+          "timedGridHeight": 780
+        },
+        "nowLine": {
+          "columnIndex": 3,
+          "top": 900
+        },
+        "visibleDayCount": 7
+      }
+    },
+    {
+      "id": "grid-layout-day-mode",
+      "input": {
+        "colWidths": [
+          320,
+          320
+        ],
+        "layoutMode": "day",
+        "visibleDateKeys": [
+          "2026-05-20"
+        ]
+      },
+      "output": {
+        "cards": [
+          {
+            "accessibilityIdentifier": "compass-grid-event-507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "eventId": "507f1f77bcf86cd799439011-2026-05-20T10:30:00.000Z-2026-05-20T11:30:00.000Z-2026-05-20",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 60,
+              "left": 55,
+              "top": 630,
+              "width": 310
+            },
+            "isHiddenStrip": false,
+            "kind": "busy",
+            "label": "Busy",
+            "zIndex": 0
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-all-day-span",
+            "eventId": "all-day-span",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 20,
+              "left": 0,
+              "top": 3,
+              "width": 310
+            },
+            "isHiddenStrip": false,
+            "kind": "allDay",
+            "label": "All-day span",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-hidden-strip",
+            "eventId": "hidden-strip",
+            "fillColorHex": "#22c55e",
+            "frame": {
+              "height": 57,
+              "left": 375,
+              "top": 660,
+              "width": 8
+            },
+            "isHiddenStrip": true,
+            "kind": "timed",
+            "label": "Hidden",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-a",
+            "eventId": "overlap-a",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 55,
+              "top": 540,
+              "width": 212,
+              "zIndex": 1
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap A",
+            "zIndex": 1
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-event-overlap-b",
+            "eventId": "overlap-b",
+            "fillColorHex": "#3b82f6",
+            "frame": {
+              "height": 57,
+              "left": 99,
+              "top": 570,
+              "width": 212,
+              "zIndex": 2
+            },
+            "isHiddenStrip": false,
+            "kind": "timed",
+            "label": "Overlap B",
+            "zIndex": 2
+          }
+        ],
+        "columns": [
+          {
+            "accessibilityIdentifier": "compass-grid-column-507f1f77bcf86cd799439011",
+            "key": "507f1f77bcf86cd799439011",
+            "left": 50,
+            "width": 320
+          },
+          {
+            "accessibilityIdentifier": "compass-grid-column-507f1f77bcf86cd799439012",
+            "key": "507f1f77bcf86cd799439012",
+            "left": 370,
+            "width": 320
+          }
+        ],
+        "layoutMode": "day",
+        "metrics": {
+          "allDayRowHeight": 29,
+          "colWidths": [
+            320,
+            320
+          ],
+          "hourHeight": 60,
+          "marginLeft": 50,
+          "timedGridHeight": 780
+        },
+        "nowLine": {
+          "columnIndex": 0,
+          "top": 900
+        },
+        "visibleDayCount": 1
+      }
+    }
+  ]
+}
