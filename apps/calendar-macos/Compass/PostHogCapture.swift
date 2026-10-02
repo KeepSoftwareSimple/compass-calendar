@@ -34,7 +34,7 @@ actor PostHogCapture {
             client = PostHogBatchClient(configuration: nil)
             return
         }
-        configure(posthog: AppConfigPosthog(key: key, host: host))
+        configure(posthog: AppConfigPosthog(host: host, key: key))
     }
 
     func identify(distinctId: String) {
@@ -57,7 +57,7 @@ actor PostHogCapture {
     func flushNow() async {
         flushTask?.cancel()
         flushTask = nil
-        try? await client.flush()
+        await flushQueuedEvents()
     }
 
     private func scheduleFlush() {
@@ -65,8 +65,14 @@ actor PostHogCapture {
         flushTask = Task {
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
-            try? await client.flush()
+            await PostHogCapture.shared.flushQueuedEvents()
         }
+    }
+
+    private func flushQueuedEvents() async {
+        var batchClient = client
+        try? await batchClient.flush()
+        client = batchClient
     }
 }
 
