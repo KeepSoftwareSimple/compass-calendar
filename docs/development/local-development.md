@@ -288,13 +288,14 @@ Stop the tunnel when testing is complete. Do not use personal calendars with sen
 Source: [`apps/calendar-macos`](../../apps/calendar-macos). Feature decisions and
 architecture: [Compass Desktop (macOS)](../features/desktop-client.md).
 
-The Mac app is a native Swift shell around WKWebView. Linux agents and Cursor
-Cloud VMs cannot compile AppKit; macOS builds and tests run on GitHub
+The Mac app is moving to a fully native Swift UI (see
+[Compass Desktop (macOS)](../features/desktop-client.md)). Linux agents and
+Cursor Cloud VMs cannot compile AppKit; macOS builds and tests run on GitHub
 `macos-latest` ([macOS workflow](../CI-CD/workflows.md#macos-workflows)).
 
 ### Prerequisites
 
-- macOS 13 Ventura or newer
+- macOS 14 Sonoma or newer (matches the native app floor in the desktop spec)
 - Xcode from the Mac App Store or [developer.apple.com](https://developer.apple.com/xcode/)
 - XcodeGen: `brew install xcodegen`
 
@@ -339,16 +340,28 @@ from a `macos-v*` tag for acceptance runs.
 
 ### Command-line tests
 
+Pure SwiftPM packages (`CompassKit`, `CompassData`) run without XcodeGen:
+
+```bash
+swift test --package-path apps/calendar-macos/CompassKit
+swift test --package-path apps/calendar-macos/CompassData
+```
+
+Or from the repo root: `bun run test:macos:packages`.
+
+The app target, `CompassUI`, and XCUITest still go through XcodeGen and
+`xcodebuild test`:
+
 ```bash
 cd apps/calendar-macos
 xcodegen generate
 xcodebuild test -project Compass.xcodeproj -scheme Compass \
-  -destination 'platform=macOS' \
-  -only-testing:CompassKitTests
+  -destination 'platform=macOS'
 ```
 
 `CompassUITests` load the configured app URL over the network (CI sets
-`COMPASS_APP_URL` to staging). Run the full test action in Xcode or match
+`COMPASS_APP_URL` to staging). CI runs pure packages in the `swift-packages`
+job and the app in the `build` job; see
 [test-macos.yml](../../.github/workflows/test-macos.yml).
 
 ## Common Failure Modes

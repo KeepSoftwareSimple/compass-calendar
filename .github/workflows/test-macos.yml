@@ -85,6 +85,29 @@ jobs:
             echo "macos=false" >>"$GITHUB_OUTPUT"
           fi
 
+  swift-packages:
+    needs: changes
+    if: needs.changes.outputs.macos == 'true'
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Cache SwiftPM build directories
+        uses: actions/cache@v6
+        with:
+          path: |
+            apps/calendar-macos/CompassKit/.build
+            apps/calendar-macos/CompassData/.build
+          key: ${{ runner.os }}-swift-pkgs-v1-${{ hashFiles('apps/calendar-macos/CompassKit/**', 'apps/calendar-macos/CompassData/**') }}
+          restore-keys: |
+            ${{ runner.os }}-swift-pkgs-v1-
+            ${{ runner.os }}-swift-pkgs-
+
+      - name: Test CompassKit and CompassData
+        run: bash .github/scripts/test-macos-swift-packages.sh
+
   build:
     needs: changes
     if: needs.changes.outputs.macos == 'true'
@@ -160,7 +183,7 @@ jobs:
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
   macos:
-    needs: [changes, build]
+    needs: [changes, build, swift-packages]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -169,10 +192,13 @@ jobs:
         env:
           CHANGES: ${{ needs.changes.result }}
           BUILD: ${{ needs.build.result }}
+          SWIFT_PACKAGES: ${{ needs.swift-packages.result }}
         run: |
-          echo "changes: ${CHANGES}, build: ${BUILD}"
+          echo "changes: ${CHANGES}, build: ${BUILD}, swift-packages: ${SWIFT_PACKAGES}"
           [ "$CHANGES" = "success" ] || exit 1
-          case "$BUILD" in
-            success|skipped) exit 0 ;;
-            *) exit 1 ;;
-          esac
+          for leg in "$BUILD" "$SWIFT_PACKAGES"; do
+            case "$leg" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done
