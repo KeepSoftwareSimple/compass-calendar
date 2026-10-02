@@ -34,7 +34,7 @@ export function buildWelcomeResendTemplateVariables(input: {
   };
   const trimmedFirstName = input.firstName?.trim();
   if (trimmedFirstName) {
-    variables.USER_FIRST_NAME = trimmedFirstName;
+    variables["USER_FIRST_NAME"] = trimmedFirstName;
   }
   return variables;
 }
