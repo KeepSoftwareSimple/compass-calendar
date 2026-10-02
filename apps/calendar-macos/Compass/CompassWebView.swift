@@ -19,8 +19,8 @@ enum CompassBridgeAccessibility {
 
     @MainActor
     static func publishDeepLinkNavigationPath(_ path: String?, on window: NSWindow?) {
-        // Mirror on `value` like bridge.version and menu shortcuts: NSWindow does
-        // not reliably expose `label` to XCUITest, but value updates do.
-        window?.setAccessibilityValue(path)
+        // Keep path on `label` so bridge.version polling can keep using `value`
+        // without clobbering the deep-link probe (see publishBridgeVersion).
+        window?.setAccessibilityLabel(path)
     }
 }
