@@ -176,11 +176,14 @@ public struct RootView: View {
         return 28 + metrics.allDayRowHeight
     }
 
+    @ViewBuilder
     private var pointerHintLayer: some View {
-        VStack {
+        // Only mount the hint while visible. A full-screen VStack + Spacer here
+        // intercepts XCUITest coordinate clicks before they reach the AppKit grid.
+        if model.pointerHintStore.isVisible {
             PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
                 .padding(.top, 16)
-            Spacer()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 

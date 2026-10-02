@@ -38,7 +38,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        standup.click()
 
         let focused = window.buttons.matching(
             NSPredicate(format: "identifier == %@ AND label == %@", "compass-grid-event-focused", "Morning standup")
@@ -62,7 +62,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        standup.click()
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))
