@@ -93,7 +93,9 @@ back to a pickup phrase.
    `AGENT_LOOP_CONCURRENCY` (default 3) issues whose partition labels do
    not overlap. Partition labels are `sync-core`, `sync-microsoft`,
    `sync-apple`, `web`, `backend`, `core`, `scripts`, `e2e`, `docs`,
-   `desktop`.
+   `desktop`, `desktop-kit`, `desktop-ui`. The three desktop labels map to
+   the app target, the pure Swift packages, and the UI package so three
+   Swift work packages can run at once.
    `fresh_count` idles only when it reaches N. Labels older than 3 hours
    are treated as abandoned and cleared across every listed milestone.
 2. **Launch** (`.github/scripts/agent-loop-launch.sh`): accepts one or

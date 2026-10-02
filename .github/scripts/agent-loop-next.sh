@@ -230,6 +230,8 @@ PARTITION_LABELS = {
     "e2e",
     "docs",
     "desktop",
+    "desktop-kit",
+    "desktop-ui",
 }
 
 issues = json.load(open(sys.argv[1], encoding="utf-8"))
