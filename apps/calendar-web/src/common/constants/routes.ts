@@ -4,6 +4,7 @@ export const ROOT_ROUTES = {
   GOOGLE_AUTH_CALLBACK: "/auth/google/callback",
   PROVIDER_AUTH_CALLBACK: "/auth/$provider/callback",
   APPLE_AUTH_CALLBACK: "/auth/apple/callback",
+  BILLING_DESKTOP_RETURN: "/billing/desktop-return",
   LIFE: "/life",
   ROOT: "/",
   SHORTCUTS: "/shortcuts",

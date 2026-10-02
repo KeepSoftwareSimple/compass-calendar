@@ -182,8 +182,6 @@ jobs:
           - name: web, 2
             project: web
             shard: "4,5,6"
-          - name: backend
-            project: backend
           - name: scripts
             project: scripts
 
@@ -250,22 +248,94 @@ jobs:
         run: |
           bun run test:${{ matrix.project }}
 
+  # header-session.test.ts needs a live SuperTokens core. Service containers
+  # are job-scoped, so this leg is split out: putting services on the shared
+  # unit-leg matrix started six cores per run and the parallel :latest images
+  # raced tenant bootstrap (tenants_pkey duplicate). Only start ST when backend
+  # tests actually run.
+  unit-leg-backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    name: unit-leg (backend)
+    services:
+      supertokens-db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: supertokens
+          POSTGRES_PASSWORD: supertokens
+          POSTGRES_DB: supertokens
+        options: >-
+          --health-cmd "pg_isready -U supertokens -d supertokens"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      supertokens:
+        # supertokens-node@24 requires CDI 5.4; self-host compose still pins 11.0.2.
+        image: supertokens/supertokens-postgresql:12.2.0
+        env:
+          API_KEYS: local-dev-supertokens-key
+          POSTGRESQL_CONNECTION_URI: postgresql://supertokens:supertokens@supertokens-db:5432/supertokens
+        ports:
+          - 3567:3567
+        # No health check: first boot runs long Postgres migrations and GHA
+        # marks the job failed after ~90s while /hello is still unavailable.
+        # header-session.test.ts waits on /hello via waitForSupertokensCore().
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v7
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install Dependencies
+        run: |
+          bun install --frozen-lockfile
+
+      - name: Cache MongoDB binaries
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: ${{ runner.os }}-mongodb-memory-server
+
+      - name: Run backend tests
+        timeout-minutes: 5
+        env:
+          TZ: Etc/UTC
+        run: |
+          bun run test:backend
+
   # One required context for every leg, like `e2e` over `e2e-shard`. Legs can
   # be added, split, or renamed without touching the ruleset: on 2026-09-04
   # the ruleset was updated to new leg names before the workflow that
   # produced them merged, and every PR sat BLOCKED with no bypass actor.
   unit:
-    needs: [changes, unit-leg]
+    needs: [changes, unit-leg, unit-leg-backend]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Require every unit leg to pass
         env:
-          RESULT: ${{ needs.unit-leg.result }}
+          MATRIX_RESULT: ${{ needs.unit-leg.result }}
+          BACKEND_RESULT: ${{ needs.unit-leg-backend.result }}
         run: |
-          echo "unit legs: ${RESULT}"
-          case "$RESULT" in
-            success|skipped) exit 0 ;;
-            *) exit 1 ;;
-          esac
+          echo "unit matrix legs: ${MATRIX_RESULT}"
+          echo "unit backend leg: ${BACKEND_RESULT}"
+          for result in "${MATRIX_RESULT}" "${BACKEND_RESULT}"; do
+            case "$result" in
+              success|skipped) ;;
+              *) exit 1 ;;
+            esac
+          done

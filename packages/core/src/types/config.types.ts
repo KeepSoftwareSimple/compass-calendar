@@ -50,6 +50,16 @@ export const AppConfigSchema = z.object({
       trialLengthDays: BILLING_PLAN.TRIAL_LENGTH_DAYS,
       publishableKey: null,
     }),
+  /**
+   * PostHog project credentials for clients that cannot read build-time env
+   * (native desktop). Omitted when POSTHOG_KEY is unset on the server.
+   */
+  posthog: z
+    .object({
+      key: z.string().min(1),
+      host: z.string().url(),
+    })
+    .optional(),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;

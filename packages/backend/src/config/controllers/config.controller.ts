@@ -38,6 +38,14 @@ export const buildAppConfig = (config: typeof CONFIG): AppConfig => {
       trialLengthDays: BILLING_PLAN.TRIAL_LENGTH_DAYS,
       publishableKey: stripe ? (config.STRIPE_PUBLISHABLE_KEY ?? null) : null,
     },
+    ...(config.POSTHOG_KEY
+      ? {
+          posthog: {
+            key: config.POSTHOG_KEY,
+            host: config.POSTHOG_HOST ?? "https://us.i.posthog.com",
+          },
+        }
+      : {}),
   });
 };
 

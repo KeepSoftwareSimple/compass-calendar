@@ -2,6 +2,8 @@ import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
+  type BillingCheckoutRequest,
+  BillingCheckoutRequestSchema,
   type BillingCheckoutResponse,
   BillingCheckoutResponseSchema,
   type BillingStatusResponse,
@@ -33,6 +35,26 @@ const sendBillingError = (res: Response, e: unknown) => {
   res.status(Status.INTERNAL_SERVER).json({ error: "Internal server error" });
 };
 
+const sessionUserId = (req: Request): string =>
+  zObjectId.parse(req.session?.getUserId()).toString();
+
+const respondWithCheckoutSession = async (
+  req: Request<never, BillingCheckoutResponse, BillingCheckoutRequest, never>,
+  res: Response<BillingCheckoutResponse | { error: string }>,
+  createSession: (
+    userId: string,
+    options: BillingCheckoutRequest,
+  ) => Promise<BillingCheckoutResponse>,
+) => {
+  try {
+    const body = BillingCheckoutRequestSchema.parse(req.body ?? {});
+    const result = await createSession(sessionUserId(req), body);
+    res.status(Status.OK).json(BillingCheckoutResponseSchema.parse(result));
+  } catch (e) {
+    sendBillingError(res, e);
+  }
+};
+
 class BillingController {
   getStatus = async (
     req: Request<never, BillingStatusResponse, never, never>,
@@ -48,19 +70,10 @@ class BillingController {
   };
 
   createCheckoutSession = async (
-    req: Request<never, BillingCheckoutResponse, never, never>,
+    req: Request<never, BillingCheckoutResponse, BillingCheckoutRequest, never>,
     res: Response<BillingCheckoutResponse | { error: string }>,
-  ) => {
-    try {
-      const userId = zObjectId.parse(req.session?.getUserId());
-      const result = await stripeService.createCheckoutSession(
-        userId.toString(),
-      );
-      res.status(Status.OK).json(result);
-    } catch (e) {
-      sendBillingError(res, e);
-    }
-  };
+  ) =>
+    respondWithCheckoutSession(req, res, stripeService.createCheckoutSession);
 
   endTrial = async (
     req: Request<never, BillingStatusResponse, never, never>,
@@ -76,19 +89,14 @@ class BillingController {
   };
 
   createPaymentMethodSession = async (
-    req: Request<never, BillingCheckoutResponse, never, never>,
+    req: Request<never, BillingCheckoutResponse, BillingCheckoutRequest, never>,
     res: Response<BillingCheckoutResponse | { error: string }>,
-  ) => {
-    try {
-      const userId = zObjectId.parse(req.session?.getUserId());
-      const result = await stripeService.createPaymentMethodSession(
-        userId.toString(),
-      );
-      res.status(Status.OK).json(BillingCheckoutResponseSchema.parse(result));
-    } catch (e) {
-      sendBillingError(res, e);
-    }
-  };
+  ) =>
+    respondWithCheckoutSession(
+      req,
+      res,
+      stripeService.createPaymentMethodSession,
+    );
 
   getSubscription = async (
     req: Request<never, BillingSubscriptionResponse, never, never>,
@@ -110,28 +118,22 @@ class BillingController {
   cancelSubscription = async (
     req: Request<never, BillingStatusResponse, never, never>,
     res: Response<BillingStatusResponse | { error: string }>,
-  ) => {
-    try {
-      const userId = zObjectId.parse(req.session?.getUserId());
-      const status = await stripeService.setCancelAtPeriodEnd(
-        userId.toString(),
-        true,
-      );
-      res.status(Status.OK).json(status);
-    } catch (e) {
-      sendBillingError(res, e);
-    }
-  };
+  ) => this.setCancelAtPeriodEnd(req, res, true);
 
   resumeSubscription = async (
     req: Request<never, BillingStatusResponse, never, never>,
     res: Response<BillingStatusResponse | { error: string }>,
+  ) => this.setCancelAtPeriodEnd(req, res, false);
+
+  private setCancelAtPeriodEnd = async (
+    req: Request<never, BillingStatusResponse, never, never>,
+    res: Response<BillingStatusResponse | { error: string }>,
+    cancel: boolean,
   ) => {
     try {
-      const userId = zObjectId.parse(req.session?.getUserId());
       const status = await stripeService.setCancelAtPeriodEnd(
-        userId.toString(),
-        false,
+        sessionUserId(req),
+        cancel,
       );
       res.status(Status.OK).json(status);
     } catch (e) {

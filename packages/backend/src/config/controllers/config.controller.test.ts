@@ -70,6 +70,33 @@ describe("ConfigController.get billing enforcement", () => {
   });
 });
 
+describe("ConfigController.get posthog", () => {
+  const originals = {
+    posthogKey: CONFIG.POSTHOG_KEY,
+    posthogHost: CONFIG.POSTHOG_HOST,
+  };
+
+  afterEach(() => {
+    CONFIG.POSTHOG_KEY = originals.posthogKey;
+    CONFIG.POSTHOG_HOST = originals.posthogHost;
+  });
+
+  it("omits posthog when POSTHOG_KEY is unset", () => {
+    CONFIG.POSTHOG_KEY = undefined;
+    CONFIG.POSTHOG_HOST = undefined;
+    expect(buildAppConfig(CONFIG).posthog).toBeUndefined();
+  });
+
+  it("returns key and host when PostHog is configured", () => {
+    CONFIG.POSTHOG_KEY = "phc_test";
+    CONFIG.POSTHOG_HOST = "https://ph.example.test";
+    expect(buildAppConfig(CONFIG).posthog).toEqual({
+      key: "phc_test",
+      host: "https://ph.example.test",
+    });
+  });
+});
+
 describe("ConfigController.get billing publishableKey", () => {
   const originals = {
     secretKey: CONFIG.STRIPE_SECRET_KEY,

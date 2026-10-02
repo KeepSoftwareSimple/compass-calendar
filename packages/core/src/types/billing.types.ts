@@ -25,9 +25,23 @@ export const BillingStatusResponseSchema = z.object({
 });
 export type BillingStatusResponse = z.infer<typeof BillingStatusResponseSchema>;
 
-export const BillingCheckoutResponseSchema = z.object({
-  clientSecret: z.string().min(1),
+export const BillingCheckoutRequestSchema = z.object({
+  returnTo: z.literal("desktop").optional(),
 });
+export type BillingCheckoutRequest = z.infer<
+  typeof BillingCheckoutRequestSchema
+>;
+
+export const BillingCheckoutResponseSchema = z
+  .object({
+    clientSecret: z.string().min(1).optional(),
+    /** Hosted Checkout URL when `returnTo` is `desktop`. */
+    url: z.string().url().optional(),
+  })
+  .refine(
+    (value) => (value.clientSecret ? 1 : 0) + (value.url ? 1 : 0) === 1,
+    "Provide either clientSecret or url",
+  );
 export type BillingCheckoutResponse = z.infer<
   typeof BillingCheckoutResponseSchema
 >;

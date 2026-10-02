@@ -38,7 +38,7 @@ export interface StripeBillingGateway {
   createCheckoutSession(
     params: Stripe.Checkout.SessionCreateParams,
     options?: Stripe.RequestOptions,
-  ): Promise<{ client_secret?: string | null }>;
+  ): Promise<{ client_secret?: string | null; url?: string | null }>;
   retrieveCheckoutSession(
     id: string,
     params?: Stripe.Checkout.SessionRetrieveParams,
