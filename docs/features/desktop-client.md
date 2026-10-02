@@ -61,6 +61,12 @@ the PR that adds this doc. After that they are settled.
    `SUPublicEDKey` in `Resources/Info.plist` holds the public key, so unsigned
    local builds never self-update. The appcast lives on the rolling
    `macos-appcast` release because `releases/latest` belongs to the web tags.
+   Owner QA runs an unsigned **dev channel** (`release-macos-dev.yml`): every
+   merge that touches the app publishes an ad-hoc signed build to the rolling
+   `macos-dev` prerelease, and builds stamped `COMPASS_UPDATE_CHANNEL=dev`
+   follow that feed, so a laptop stays current without tags. It needs only the
+   Sparkle keys, not Apple enrollment. Install one dev DMG by hand once
+   (right-click, Open); after that it updates itself.
 5. **Internal builds default to production.** Dogfooding staging data is not
    dogfooding. A hidden **Switch to staging** menu item exists for QA. This
    requires one production web deploy that carries the web-side changes

@@ -10,6 +10,8 @@ settings:
   base:
     MARKETING_VERSION: 0.1.0
     CURRENT_PROJECT_VERSION: 1
+    # Empty is stable. release-macos-dev.yml passes COMPASS_UPDATE_CHANNEL=dev.
+    COMPASS_UPDATE_CHANNEL: ""
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "13.0"
     # Ad hoc signing so local and CI builds run. Developer ID signing is
