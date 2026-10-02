@@ -25,6 +25,49 @@ final class CompassNotificationCenter {
         self.deliverer = deliverer
     }
 
+    func requestAuthorizationIfNeeded() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        if permissionString(for: settings) == "default", !didRequestAuthorization {
+            didRequestAuthorization = true
+            _ = try? await center.requestAuthorization(options: [.alert, .sound])
+        }
+    }
+
+    @discardableResult
+    func showNative(_ payload: DesktopNotificationPayload) async -> Bool {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard permissionString(for: settings) == "granted" else {
+            return false
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = payload.title
+        if let body = payload.body, !body.isEmpty {
+            content.body = body
+        }
+        if let tag = payload.tag, !tag.isEmpty {
+            content.threadIdentifier = tag
+        }
+        do {
+            content.userInfo = try DesktopNotificationPayloadCodec.userInfo(for: payload)
+        } catch {
+            return false
+        }
+
+        let request = UNNotificationRequest(
+            identifier: payload.tag ?? payload.eventId,
+            content: content,
+            trigger: nil)
+        do {
+            try await center.add(request)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     func handle(_ message: BridgeMessage, webView: WKWebView) {
         switch message {
         case .requestNotificationPermission:

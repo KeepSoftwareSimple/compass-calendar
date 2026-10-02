@@ -67,7 +67,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        guard !usingNativeUI else { return }
+        if usingNativeUI {
+            for url in urls {
+                nativeRootController?.receiveDeepLink(url)
+            }
+            return
+        }
         for url in urls {
             webViewController?.receiveDeepLink(url)
         }

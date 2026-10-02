@@ -13,17 +13,29 @@ public final class NativeCalendarRootModel {
     public private(set) var calendars: [CompassCalendar] = []
     public private(set) var isSignedIn = false
     public private(set) var contentTrackWidth: CGFloat = 1010
+    public internal(set) var sidebandEvents: [Event] = []
+    public var onSidebandDidChange: (() -> Void)?
+    public var openConferenceURLHandler: ((URL) -> Void)?
+    public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     public var monthPickerMonth: Date
 
     private let environment: NativeCalendarEnvironment
-    private let eventsStore: EventsStore
+    let eventsStore: EventsStore
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
     private let demoSeed: DemoSeedFixture?
     private let analyticsIdentity: AnalyticsIdentityCoordinator
     private var eventStream: ServerEventStream?
-    private var loadedEvents: [Event] = []
+    var loadedEvents: [Event] = []
     private var refreshTask: Task<Void, Never>?
+
+    public var referenceNow: Date {
+        demoSeed?.referenceNow ?? Date()
+    }
+
+    var demoEventIds: Set<String> {
+        demoSeed?.demoEventIds ?? []
+    }
 
     public init(environment: NativeCalendarEnvironment, demoSeed: DemoSeedFixture? = nil) {
         self.environment = environment
@@ -77,6 +89,7 @@ public final class NativeCalendarRootModel {
         try? await hiddenEventsStore.load()
         await reloadCalendars()
         await refreshVisibleRange()
+        await refreshSideband()
         if isSignedIn {
             startEventStream()
         }
@@ -91,6 +104,7 @@ public final class NativeCalendarRootModel {
         }
         try? eventsStore.handleStreamReopen()
         await refreshVisibleRange()
+        await refreshSideband()
         await reloadCalendars()
     }
 
@@ -102,6 +116,7 @@ public final class NativeCalendarRootModel {
         await reloadCalendars()
         try? await hiddenEventsStore.load()
         await refreshVisibleRange()
+        await refreshSideband()
     }
 
     public func signOut() async throws {
@@ -112,6 +127,7 @@ public final class NativeCalendarRootModel {
         await resetAnalyticsIdentity()
         isSignedIn = false
         loadedEvents = []
+        sidebandEvents = []
         calendars = []
         rebuildPresentation()
     }
@@ -281,6 +297,7 @@ public final class NativeCalendarRootModel {
             _ = try await eventsStore.loadRange(key: key)
             loadedEvents = try eventsStore.fetchAllEvents()
             rebuildPresentation()
+            await refreshSideband()
         } catch {}
     }
 
@@ -343,12 +360,14 @@ public final class NativeCalendarRootModel {
                     Task { @MainActor in
                         try? self?.eventsStore.handleServerMessage(message)
                         await self?.refreshVisibleRange()
+                        await self?.refreshSideband()
                     }
                 },
                 onReopen: { [weak self] in
                     Task { @MainActor in
                         try? self?.eventsStore.handleStreamReopen()
                         await self?.refreshVisibleRange()
+                        await self?.refreshSideband()
                     }
                 }
             )

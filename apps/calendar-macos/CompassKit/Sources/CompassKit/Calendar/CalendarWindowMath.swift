@@ -28,6 +28,20 @@ public enum CalendarWindowMath {
         )
     }
 
+    /// Today's local day plus the five-minute lead into tomorrow (notifier and Up Next range).
+    public static func notifiableEventQueryRange(now: Date) -> (startDate: String, endDate: String) {
+        let calendar = EffectiveTimeZone.calendar
+        let startOfDay = calendar.startOfDay(for: now)
+        let endExclusive =
+            calendar.date(byAdding: .minute, value: UpcomingNotifierLogic.notifyLeadMinutes, to:
+                calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay)
+            ?? startOfDay
+        return (
+            CompassDateParsing.formatLikeDayjs(startOfDay),
+            CompassDateParsing.formatLikeDayjs(endExclusive)
+        )
+    }
+
     /// How many day columns fit in the week grid track (see `useVisibleDayCount`).
     public static func computeVisibleDayCount(
         trackWidth: Double,

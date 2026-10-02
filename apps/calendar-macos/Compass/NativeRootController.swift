@@ -25,12 +25,16 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     private var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
     private var shortcutDispatcher: ShortcutDispatcher?
+    private var notificationScheduler: NotificationScheduler?
+    private var agendaSync: NativeAgendaSync?
+    private var sidebandTimer: Timer?
 
     init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel) {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
         applyTheme()
+        configureNativeServices()
         configureKeyboard()
         configureResume()
         Task { await model.start() }
@@ -43,6 +47,17 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     func setWebTheme(_ theme: NativeWebTheme) {
         webTheme = theme
+    }
+
+    func receiveDeepLink(_ url: URL) {
+        receiveDeepLink(urlString: url.absoluteString)
+    }
+
+    func receiveDeepLink(urlString: String) {
+        guard DesktopDeepLinkParser.recognizedURLString(urlString) != nil else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        view.window?.makeKeyAndOrderFront(nil)
+        model.handleDeepLink(urlString)
     }
 
     func presentDebugSignIn(from window: NSWindow?) async {
@@ -63,6 +78,39 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         DesktopNativeServices.applyAppearance(theme: webTheme.rawValue)
     }
 
+    private func configureNativeServices() {
+        CompassNotificationCenter.shared.configure(deliverer: self)
+
+        let scheduler = NotificationScheduler()
+        notificationScheduler = scheduler
+        scheduler.start(model: model)
+
+        let sync = NativeAgendaSync()
+        agendaSync = sync
+        sync.start(model: model, deepLinkDeliverer: self)
+
+        model.openConferenceURLHandler = { url in
+            NSWorkspace.shared.open(url)
+        }
+        model.onUpNextBannerShown = { [weak scheduler] event in
+            Task { await scheduler?.retryBannerNotification(for: event) }
+        }
+        model.onSidebandDidChange = {
+            sync.schedulePush()
+            Task { @MainActor in
+                await scheduler.notifySidebandDidRefresh()
+            }
+        }
+
+        sidebandTimer?.invalidate()
+        let calendarModel = model
+        sidebandTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
+            Task { @MainActor in
+                await calendarModel.refreshSideband()
+            }
+        }
+    }
+
     private func configureKeyboard() {
         let calendarModel = model
         do {
@@ -77,6 +125,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                 .navWeekView,
                 .navMonthPrev,
                 .navMonthNext,
+                .navUpNext,
+                .navJoinMeeting,
             ]
             let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
                 guard navigationIds.contains(entry.id) else { return nil }
@@ -86,7 +136,14 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                     chords: entry.bindingChords,
                     handler: { id in
                         Task { @MainActor in
-                            calendarModel.handleShortcut(id)
+                            switch id {
+                            case .navUpNext:
+                                calendarModel.openUpNextEvent()
+                            case .navJoinMeeting:
+                                calendarModel.joinUpNextMeeting()
+                            default:
+                                calendarModel.handleShortcut(id)
+                            }
                         }
                     })
             }
@@ -107,12 +164,21 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     private func configureResume() {
         let monitor = NativeDesktopResumeMonitor()
-        monitor.onResume = { [weak self] in
+        let calendarModel = model
+        monitor.onResume = {
             Task { @MainActor in
-                await self?.model.handleResume()
+                await calendarModel.handleResume()
             }
         }
         monitor.start()
         resumeMonitor = monitor
     }
+}
+
+extension NativeRootController: CompassNotificationDelivering, CompassAgendaDeepLinkDelivering {
+    func deliverDeepLink(_ url: String) {
+        receiveDeepLink(urlString: url)
+    }
+
+    func syncNotificationPermission() {}
 }
