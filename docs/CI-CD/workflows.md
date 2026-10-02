@@ -35,6 +35,48 @@ hourly/`workflow_dispatch` kick, and `launch-next` on automerge merge.
 
 ---
 
+## macOS workflows
+
+Compass Desktop lives in `apps/calendar-macos`. Product context:
+[Compass Desktop (macOS)](../features/desktop-client.md). Local setup:
+[Compass for macOS](../development/local-development.md#compass-for-macos).
+
+### macOS CI (`test-macos.yml`)
+
+Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.yml)
+
+- **Triggers:** pull requests and merge groups to `main`; pushes to `main`
+  that touch `apps/calendar-macos/**` or the workflow file.
+- **Runner:** `macos-latest`.
+- **Steps:** `brew install xcodegen`, `xcodegen generate`, `xcodebuild test`
+  for `CompassKitTests` and `CompassUITests`.
+- **Required check:** rollup job `macos` (path-filtered on PRs; merge queue
+  skips when the combined diff does not touch the Mac app).
+- **App URL:** `COMPASS_APP_URL` defaults to staging for unauthenticated
+  XCUITest smoke (`LaunchTests` forwards it as `-COMPASS_APP_URL`).
+- **Local:** `bun run verify` runs `test:macos` only when Xcode is present;
+  otherwise the verify script reports the macOS leg as CI-only.
+
+### Release macOS (`release-macos.yml`)
+
+Source: [`.github/workflows/release-macos.yml`](../../.github/workflows/release-macos.yml)
+
+- **Trigger:** push tag `macos-vX.Y.Z` where `X.Y.Z` matches
+  `MARKETING_VERSION` in `apps/calendar-macos/project.yml`.
+- **Runner:** `macos-latest` (90-minute job timeout).
+- **Secrets (required):** `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`,
+  `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`.
+- **Pipeline:** render `icon.icns`, XcodeGen, universal Release archive with
+  Developer ID signing and hardened runtime, `notarytool` submit and staple,
+  `spctl --assess`, launch smoke (main window title), UDZO DMG attached to
+  the GitHub Release for the tag.
+- **Optional:** `SPARKLE_PRIVATE_KEY` when Sparkle appcast signing is enabled
+  in the app (see tracking issue #4149).
+
+Manual acceptance on a release DMG: [Desktop acceptance](../acceptance/desktop.md).
+
+---
+
 ## Unit workflow
 
 Source: [`.github/workflows/test-unit.yml`](../../.github/workflows/test-unit.yml)
