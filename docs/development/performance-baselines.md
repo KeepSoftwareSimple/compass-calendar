@@ -66,10 +66,13 @@ Read the report as:
   sources are omitted. Zod's `v4/locales` share is noted when present.
 
 Ceilings live in `apps/calendar-web/boot-size-budget.json`: per-package minified
-bytes, total gzip, and chunk count. The build exits non-zero when any of
-those is exceeded, and the message names the package (or gzip/chunks) and
-the delta. Headroom is 5% above the WP-13 measurement so later boot-weight
-work can land without the gate failing first.
+bytes, total gzip, optional `totalGzipSlackBytes` (cross-platform gzip variance
+only), and chunk count. The build exits non-zero when any of those is exceeded,
+and the message names the package (or gzip/chunks) and the delta. Required CI
+runs `.github/perf/run-boot-size-check.sh`, which matches
+`.github/docker/Dockerfile.web` for cloud deploy (not `compass.perf.yaml`,
+which is for Lighthouse). Headroom is 5% above the WP-13 measurement so later
+boot-weight work can land without the gate failing first.
 
 **Lower a ceiling when you remove that weight from the boot path** (the
 acceptance for WP-14, WP-15, and WP-16). Run `bun run build:web`, copy the
