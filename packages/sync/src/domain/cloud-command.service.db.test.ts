@@ -1940,9 +1940,9 @@ describe("submitCloudCommand provider dispatch", () => {
       const first = await submitCloudCommand(deps(), submit, now);
       expect(first.command.outcome.state).toBe("confirmed");
 
-      // Without restore, this exact resubmission is the existing no-op
-      // (pinned above). With it (redo-of-edit / undo replaying the same
-      // snapshot again), it must actually re-apply.
+      // A redo-of-edit / undo replaying the same snapshot again must
+      // actually re-apply; restore is the explicit flag, and an update is
+      // re-executed on resubmission even without it (pinned below).
       const second = await submitCloudCommand(
         deps(),
         { ...submit, restore: true },
@@ -1977,7 +1977,14 @@ describe("submitCloudCommand provider dispatch", () => {
       ).not.toBeNull();
     });
 
-    it("still short-circuits an identical update replay against a re-created event (no guard for update/move)", async () => {
+    // Regression for the 2026-10-02 edit-all that never reached the provider:
+    // the same scope-"all" color edit had confirmed a week earlier, so its
+    // payload-hashed key matched and submit returned that old command as a
+    // "replay" (200 to the backend, "Updated all events" toast) while the
+    // master had since drifted back at the provider. An update's key names
+    // the edit, not the request, so a terminal update is always re-executed
+    // on resubmission - see terminalReplayIsStale's docblock.
+    it("re-executes an identical update replay after the stored event drifted away from it", async () => {
       const tenantId = objectId() as TenantId;
       const principalId = objectId() as PrincipalId;
       const eventId = objectId() as EventId;
@@ -1986,33 +1993,32 @@ describe("submitCloudCommand provider dispatch", () => {
         tenantId,
         principalId,
         eventId,
-        "First title",
+        "Series title",
       );
 
       const first = await submitCloudCommand(deps(), submit, now);
       expect(first.command.outcome.state).toBe("confirmed");
+      expect(
+        (await events.findById(tenantId, principalId, eventId))?.content,
+      ).toMatchObject({ title: "Series title" });
 
-      await events.deleteById(tenantId, principalId, eventId);
-      await seedEvent(tenantId, principalId, eventId, {
-        content: {
-          title: "Re-created title",
-          description: "",
-          location: null,
-          organizer: null,
-          attendees: [],
-          conference: null,
-        } as never,
-        createdAt: new Date(now().getTime() + 1000),
+      // A provider pull (or any later write) moves the stored event away
+      // from what the command once confirmed.
+      const stored = await events.findById(tenantId, principalId, eventId);
+      if (!stored) throw new Error("expected the event to exist");
+      await events.put({
+        ...stored,
+        content: { ...stored.content, title: "Drifted by a pull" },
         updatedAt: new Date(now().getTime() + 1000),
       });
 
       const second = await submitCloudCommand(deps(), submit, now);
 
-      expect(second.changed).toBe(false);
-      const stored = await events.findById(tenantId, principalId, eventId);
-      // The re-created event's own (seeded) title survives — the stale
-      // update command was NOT reapplied on top of it.
-      expect(stored?.content).not.toMatchObject({ title: "First title" });
+      expect(second.changed).toBe(true);
+      expect(second.command.outcome.state).toBe("confirmed");
+      expect(
+        (await events.findById(tenantId, principalId, eventId))?.content,
+      ).toMatchObject({ title: "Series title" });
     });
   });
 });

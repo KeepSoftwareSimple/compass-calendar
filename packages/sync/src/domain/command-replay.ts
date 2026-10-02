@@ -29,21 +29,36 @@ import {
 // own, since a delete's only failure mode from checking too eagerly is
 // re-deleting an already-deleted event, which is harmless.
 //
-// create and update are different: the create idempotency key
-// (`create:${eventId}`) is stable for that event id's whole lifetime, and the
-// update key hashes its full content (see toReplaceSubmitRequests), so ANY
-// later resubmission of the same payload collides with the original - not
-// only an undo/redo replay. A world-state guess gets this wrong in a way
-// that's NOT harmless: apps/calendar-web/src/common/utils/sync/
-// local-event-sync.util.ts's offline promotion retries a create under the
-// record's own stable id whenever the client never observed the first
-// attempt's success; if the user deletes that event before the retry fires,
-// "existing === null ⇒ stale" would silently resurrect an event the user
-// deliberately removed. Nothing in the command history can tell "the delete
-// this replay's undo is reversing" apart from "an unrelated delete that
-// happened since" - so create/update are guarded only when the client
-// explicitly marks the submission `restore: true` (set by useUndoRedo's
-// replays, never by offline promotion) rather than guessing from world state.
+// create is different: its idempotency key (`create:${eventId}`) is stable
+// for that event id's whole lifetime, so ANY later resubmission of the same
+// payload collides with the original - not only an undo/redo replay. A
+// world-state guess gets this wrong in a way that's NOT harmless:
+// apps/calendar-web/src/common/utils/sync/local-event-sync.util.ts's offline
+// promotion retries a create under the record's own stable id whenever the
+// client never observed the first attempt's success; if the user deletes
+// that event before the retry fires, "existing === null ⇒ stale" would
+// silently resurrect an event the user deliberately removed. Nothing in the
+// command history can tell "the delete this replay's undo is reversing"
+// apart from "an unrelated delete that happened since" - so a create is
+// guarded only when the client explicitly marks the submission
+// `restore: true` (set by useUndoRedo's replays, never by offline promotion)
+// rather than guessing from world state.
+//
+// update is always stale. Its key hashes the edit itself (target, content,
+// schedule, recurrence - see toReplaceSubmitRequests), so the same edit made
+// again later collides with a command that confirmed long ago, and the world
+// may have moved on since: a provider pull dropped the color, a later
+// scope-"this" command overrode one instance. Short-circuiting there made
+// the backend answer 200 and the browser toast "Updated all events" while
+// nothing was written (an edit-all re-colored a week after the identical
+// one landed, 2026-10-02). No accidental identical update replay exists to
+// protect against: offline promotion only retries creates, undo/redo marks
+// `restore`, and the "Try again" toast resubmits seconds after a request
+// that timed out, where re-execution is idempotent (the provider path
+// confirms at the current version when the provider already carries the
+// edit, see matchesIntendedEdit; the cloud path rewrites identical content).
+// Named wart: an edit-all re-executed after a later per-instance override
+// discards that override, which is edit-all's own semantics.
 export async function terminalReplayIsStale(
   deps: Pick<CloudCommandDeps, "events">,
   command: CommandRecord,
@@ -52,7 +67,7 @@ export async function terminalReplayIsStale(
   // An explicit cancellation is not re-litigated by a resubmit.
   if (command.outcome.state === "cancelled") return false;
 
-  if (command.input.kind === "update") return submit.restore === true;
+  if (command.input.kind === "update") return true;
 
   if (command.input.kind === "create") {
     if (submit.restore !== true) return false;
