@@ -16,4 +16,11 @@ enum CompassBridgeAccessibility {
         // `help` to XCUITest, but value updates on the stable identifier do.
         window?.setAccessibilityValue(shortcut)
     }
+
+    @MainActor
+    static func publishDeepLinkNavigationPath(_ path: String?, on window: NSWindow?) {
+        // Keep path on `label` so bridge.version polling can keep using `value`
+        // without clobbering the deep-link probe (see publishBridgeVersion).
+        window?.setAccessibilityLabel(path)
+    }
 }

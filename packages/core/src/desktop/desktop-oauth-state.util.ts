@@ -23,6 +23,9 @@ const DESKTOP_AUTH_CALLBACK_PATTERN =
 
 const DESKTOP_EVENT_LINK_PREFIX = `${DESKTOP_DEEP_LINK_SCHEME}event/`;
 
+const DESKTOP_DAY_LINK_PATTERN =
+  /^compass:\/\/day\/(?<date>\d{4}-\d{2}-\d{2})\/?$/;
+
 export function buildOAuthStateForClient(isDesktopClient: boolean): string {
   const id = crypto.randomUUID();
   return isDesktopClient ? `${DESKTOP_OAUTH_STATE_PREFIX}${id}` : id;
@@ -67,4 +70,23 @@ export function parseDesktopEventDeepLink(url: string): string | null {
   if (!url.startsWith(DESKTOP_EVENT_LINK_PREFIX)) return null;
   const eventId = url.slice(DESKTOP_EVENT_LINK_PREFIX.length).trim();
   return eventId.length > 0 ? eventId : null;
+}
+
+/** Calendar day view deep link from the macOS shell (`compass://day/YYYY-MM-DD`). */
+export function parseDesktopDayDeepLink(url: string): string | null {
+  const match = DESKTOP_DAY_LINK_PATTERN.exec(url);
+  const dateString = match?.groups?.["date"];
+  if (!dateString || !isValidCalendarDayString(dateString)) return null;
+  return dateString;
+}
+
+function isValidCalendarDayString(value: string): boolean {
+  const [year, month, day] = value.split("-").map((part) => Number(part));
+  if (!year || !month || !day) return false;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }

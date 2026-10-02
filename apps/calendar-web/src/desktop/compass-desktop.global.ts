@@ -52,6 +52,8 @@ export type CompassDesktopBridge = {
   getQuickAddHotkey?: () => string;
   setQuickAddHotkey?: (shortcut: string) => void;
   dismissQuickAddPanel?: () => void;
+  /** Lets XCUITest observe router navigation after a deep link. */
+  reportDeepLinkNavigation?: (path: string) => void;
 };
 
 declare global {

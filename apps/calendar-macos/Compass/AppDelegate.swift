@@ -62,6 +62,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.makeKeyAndOrderFront(nil)
         CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
         self.window = window
+
+        if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
+            webViewController.receiveDeepLink(urlString: launchDeepLink)
+        }
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls {
+            webViewController?.receiveDeepLink(url)
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
