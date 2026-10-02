@@ -3,8 +3,16 @@ import CompassKit
 import CompassUI
 import SwiftUI
 
+private struct ThemedRootView: View {
+    let webTheme: NativeWebTheme
+
+    var body: some View {
+        RootView().environment(\.nativeWebTheme, webTheme)
+    }
+}
+
 @MainActor
-final class NativeRootController: NSHostingController<RootView> {
+final class NativeRootController: NSHostingController<ThemedRootView> {
     private(set) var webTheme: NativeWebTheme {
         didSet {
             applyTheme()
@@ -13,7 +21,7 @@ final class NativeRootController: NSHostingController<RootView> {
 
     init(webTheme: NativeWebTheme = .lightBeach) {
         self.webTheme = webTheme
-        super.init(rootView: RootView())
+        super.init(rootView: ThemedRootView(webTheme: webTheme))
         applyTheme()
     }
 
@@ -27,7 +35,7 @@ final class NativeRootController: NSHostingController<RootView> {
     }
 
     private func applyTheme() {
-        rootView = RootView().environment(\.nativeWebTheme, webTheme)
+        rootView = ThemedRootView(webTheme: webTheme)
         DesktopNativeServices.applyAppearance(theme: webTheme.rawValue)
     }
 }
