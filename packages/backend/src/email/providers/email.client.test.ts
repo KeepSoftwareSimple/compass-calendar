@@ -46,4 +46,19 @@ describe("log email provider", () => {
 
     expect(result.messageId).toMatch(/^log-/);
   });
+
+  it("returns a message id for template sends without network access", async () => {
+    const provider = createLogEmailProvider();
+    const result = await provider.send({
+      idempotencyKey: "user-1:welcome-1",
+      to: "guest@example.com",
+      headers: {},
+      template: {
+        id: "compass-welcome",
+        variables: { CTA_URL: "https://app.example.com", UNSUBSCRIBE_URL: "" },
+      },
+    });
+
+    expect(result.messageId).toMatch(/^log-/);
+  });
 });

@@ -111,9 +111,16 @@ describe("EmailDispatchService", () => {
     await new EmailDispatchService().dispatchDue();
 
     expect(markSent).toHaveBeenCalledWith(row._id, "provider-123");
-    expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
-      "mailto:",
+    const sendInput = send.mock.calls[0]?.[0];
+    expect(sendInput?.template?.id).toBe("compass-welcome");
+    expect(sendInput?.template?.variables.CTA_URL).toContain(
+      "utm_source=email",
     );
+    expect(sendInput?.template?.variables.CTA_URL).toContain(
+      "utm_content=welcome",
+    );
+    expect(sendInput?.template?.variables.UNSUBSCRIBE_URL).toContain("token=");
+    expect(sendInput?.headers["List-Unsubscribe"]).toContain("mailto:");
     expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
       "https://",
     );

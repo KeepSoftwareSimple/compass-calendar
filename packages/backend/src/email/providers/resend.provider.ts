@@ -70,6 +70,36 @@ export function createResendEmailProvider(options: {
 }): EmailProvider {
   return {
     async send(input) {
+      type ResendSendBody = {
+        from: string;
+        to: string;
+        headers: Record<string, string>;
+        subject?: string;
+        html?: string;
+        text?: string;
+        template?: { id: string; variables: Record<string, string> };
+      };
+
+      const body: ResendSendBody = {
+        from: options.from,
+        to: input.to,
+        headers: input.headers,
+      };
+
+      if (input.template) {
+        body.template = {
+          id: input.template.id,
+          variables: input.template.variables,
+        };
+        if (input.subject) {
+          body.subject = input.subject;
+        }
+      } else {
+        body.subject = input.subject;
+        body.html = input.html;
+        body.text = input.text;
+      }
+
       const response = await fetch(RESEND_API_URL, {
         method: "POST",
         headers: {
@@ -77,28 +107,21 @@ export function createResendEmailProvider(options: {
           "Content-Type": "application/json",
           "Idempotency-Key": input.idempotencyKey,
         },
-        body: JSON.stringify({
-          from: options.from,
-          to: input.to,
-          subject: input.subject,
-          html: input.html,
-          text: input.text,
-          headers: input.headers,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
-        const body = await response.text();
+        const errorBody = await response.text();
         throw new Error(
-          `Resend send failed (${response.status}): ${body.slice(0, 500)}`,
+          `Resend send failed (${response.status}): ${errorBody.slice(0, 500)}`,
         );
       }
 
-      const payload = (await response.json()) as { id?: string };
-      if (!payload.id) {
+      const sent = (await response.json()) as { id?: string };
+      if (!sent.id) {
         throw new Error("Resend send response did not include an id");
       }
-      return { messageId: payload.id };
+      return { messageId: sent.id };
     },
     verifyWebhook(rawBody, headers) {
       verifySvixSignature(rawBody, headers, options.webhookSecret);
