@@ -30,7 +30,7 @@ import {
   EventIdSchema,
   TimeZoneSchema,
 } from "@core/types/domain-primitives";
-import { EventSchema } from "@core/types/event.contracts";
+import { BusyPeriodSchema, EventSchema } from "@core/types/event.contracts";
 import {
   AttendeeSchema,
   ConferenceSchema,
@@ -38,6 +38,7 @@ import {
 } from "@core/types/event-attendance.contracts";
 import { EventColorSlotSchema } from "@core/types/event-color.contracts";
 import {
+  AvailabilityResponseSchema,
   CreateEventInputSchema,
   DeleteEventInputSchema,
   EventListResponseSchema,
@@ -82,6 +83,8 @@ export const SWIFT_CONTRACT_MANIFEST: SwiftContractManifestEntry[] = [
   { swiftName: "Event", schema: EventSchema },
   { swiftName: "EventResponse", schema: EventResponseSchema },
   { swiftName: "EventListResponse", schema: EventListResponseSchema },
+  { swiftName: "BusyPeriod", schema: BusyPeriodSchema },
+  { swiftName: "AvailabilityResponse", schema: AvailabilityResponseSchema },
   { swiftName: "CreateEventInput", schema: CreateEventInputSchema },
   { swiftName: "ReplaceEventInput", schema: ReplaceEventInputSchema },
   { swiftName: "DeleteEventInput", schema: DeleteEventInputSchema },

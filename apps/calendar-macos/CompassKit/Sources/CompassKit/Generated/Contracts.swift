@@ -160,6 +160,14 @@ public struct Attendee: Codable, Hashable, Sendable {
     public let email: String
     public let responseStatus: ResponseStatusEnum}
 
+public struct AvailabilityResponse: Codable, Hashable, Sendable {
+    public let busyPeriods: [AvailabilityResponseBusyPeriods]}
+
+public struct AvailabilityResponseBusyPeriods: Codable, Hashable, Sendable {
+    public let calendarId: CalendarId
+    public let end: DateTime
+    public let start: DateTime}
+
 public struct BillingCheckoutResponse: Codable, Hashable, Sendable {
     public let clientSecret: String?
     public let url: String?}
@@ -246,6 +254,11 @@ public struct BookingSlotsResponse: Codable, Hashable, Sendable {
 public struct BookingSlotsResponseSlots: Codable, Hashable, Sendable {
     public let slotEnd: String
     public let slotStart: String}
+
+public struct BusyPeriod: Codable, Hashable, Sendable {
+    public let calendarId: CalendarId
+    public let end: DateTime
+    public let start: DateTime}
 
 public struct CalendarListResponse: Codable, Hashable, Sendable {
     public let calendars: [CalendarListResponseCalendars]}
