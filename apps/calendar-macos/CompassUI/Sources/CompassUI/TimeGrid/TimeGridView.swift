@@ -62,7 +62,7 @@ public final class TimeGridView: NSView {
         delegate?.timeGridViewDidRequestShortcutHint(self)
     }
 
-    override func accessibilityChildren() -> [Any]? {
+    public override func accessibilityChildren() -> [Any]? {
         var children = super.accessibilityChildren() ?? []
         if !focusedEventAccessibilityProxy.isHidden,
             focusedEventAccessibilityProxy.superview === self
