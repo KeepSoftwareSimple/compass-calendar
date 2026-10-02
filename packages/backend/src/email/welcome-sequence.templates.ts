@@ -23,6 +23,22 @@ export function getWelcomeStepTemplateAlias(
 }
 
 /** Base CTA href before UTM params (same destinations as legacy in-code content). */
+export function buildWelcomeResendTemplateVariables(input: {
+  ctaUrl: string;
+  unsubscribeUrl: string;
+  firstName?: string;
+}): Record<string, string> {
+  const variables: Record<string, string> = {
+    CTA_URL: input.ctaUrl,
+    UNSUBSCRIBE_URL: input.unsubscribeUrl,
+  };
+  const trimmedFirstName = input.firstName?.trim();
+  if (trimmedFirstName) {
+    variables["USER_FIRST_NAME"] = trimmedFirstName;
+  }
+  return variables;
+}
+
 export function getWelcomeStepCtaBaseHref(stepKey: string): string | undefined {
   switch (stepKey) {
     case "welcome":
