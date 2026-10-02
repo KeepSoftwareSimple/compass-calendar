@@ -24,7 +24,7 @@ Internal documentation for engineers and agents working in the Compass repo.
 - Trial, pricing, or Stripe: [Billing And Trial](./features/billing.md)
 - Public booking pages or availability rules: [Compass Calendar Booking (v1)](./features/booking.md)
 - Hiding or showing an event on the grid: [Hidden Events](./features/hidden-events.md), [Feature File Map](./development/feature-file-map.md#hidden-events)
-- Mac app shell, deep links, or native menus: [Compass Desktop (macOS)](./features/desktop-client.md)
+- Mac app shell, deep links, or native menus: [Compass Desktop (macOS)](./features/desktop-client.md), [Desktop acceptance](./acceptance/desktop.md)
 - A new calendar integration or Google-sync behavior: [Calendar providers](./features/calendar-providers.md), [Google Sync And SSE Flow](./features/google-sync-and-sse-flow.md), the `packages/sync` domain code directly
 
 ## Features
@@ -83,4 +83,5 @@ User-visible behavior runbooks for manual verification and expected outcomes:
 - [Google Sync](./acceptance/google-sync.md)
 - [Recurring Events](./acceptance/recurring-events.md)
 - [Onboarding](./acceptance/onboarding.md)
+- [Compass Desktop (macOS)](./acceptance/desktop.md)
 - [Shortcuts](./acceptance/shortcuts.md)

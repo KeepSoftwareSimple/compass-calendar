@@ -4,6 +4,7 @@ import {
   dispatchDocumentKey,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
+  getTimedColumnClickPoint,
   openTimedEventFormWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
@@ -80,11 +81,8 @@ test("a slot click teaches typed time digits and typing opens create", async ({
 }) => {
   await prepareTeachingWeek(page);
 
-  const column = page.locator("#timedColumns").locator(":scope > *").first();
-  await column.scrollIntoViewIfNeeded();
-  const box = await column.boundingBox();
-  if (!box) throw new Error("timed column is not visible");
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.45);
+  const clickPoint = await getTimedColumnClickPoint(page);
+  await page.mouse.click(clickPoint.x, clickPoint.y);
 
   const hint = pointerHint(page);
   await expect(hint).toBeVisible();

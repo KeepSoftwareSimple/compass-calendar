@@ -283,6 +283,74 @@ Keep `backend.apiUrl` local so the browser and Server-Sent Events continue using
 
 Stop the tunnel when testing is complete. Do not use personal calendars with sensitive data for manual tunnel tests.
 
+## Compass for macOS
+
+Source: [`apps/calendar-macos`](../../apps/calendar-macos). Feature decisions and
+architecture: [Compass Desktop (macOS)](../features/desktop-client.md).
+
+The Mac app is a native Swift shell around WKWebView. Linux agents and Cursor
+Cloud VMs cannot compile AppKit; macOS builds and tests run on GitHub
+`macos-latest` ([macOS workflow](../CI-CD/workflows.md#macos-workflows)).
+
+### Prerequisites
+
+- macOS 13 Ventura or newer
+- Xcode from the Mac App Store or [developer.apple.com](https://developer.apple.com/xcode/)
+- XcodeGen: `brew install xcodegen`
+
+### Generate and open the project
+
+```bash
+cd apps/calendar-macos
+xcodegen generate
+open Compass.xcodeproj
+```
+
+Select the **Compass** scheme in Xcode and run (⌘R). The web view loads
+`COMPASS_APP_URL` from `Resources/Info.plist` (default
+`https://www.compasscalendar.com`).
+
+### Override `COMPASS_APP_URL`
+
+Point the shell at local web dev or staging without rebuilding the web app:
+
+1. **Xcode scheme:** Product → Scheme → Edit Scheme → Run → Arguments.
+   Add `-COMPASS_APP_URL` with value `http://localhost:9080` (match
+   `web.port` in your `compass.yaml`) or `https://staging.compasscalendar.com`.
+2. **Launch argument from Terminal:**
+   `open -a Compass --args -COMPASS_APP_URL https://staging.compasscalendar.com`
+   (path depends on where the `.app` lives).
+3. **Signed internal builds:** Compass menu → **Switch to Staging** or
+   **Switch to Production** (persists in `UserDefaults`; see
+   [Desktop acceptance](../acceptance/desktop.md)).
+
+Do not commit a localhost URL in `Info.plist` unless the team explicitly
+wants that default for everyone.
+
+### Unsigned local builds
+
+`project.yml` uses ad hoc signing (`CODE_SIGN_IDENTITY: "-"`). Xcode builds
+are not notarized. Gatekeeper may refuse the first launch from Finder;
+right-click the app → **Open**, or run from Xcode (DerivedData).
+
+Notifications, OAuth relay edge cases, and auto-update flows are validated
+on signed CI DMGs installed to `/Applications`. Use a GitHub Release asset
+from a `macos-v*` tag for acceptance runs.
+
+### Command-line tests
+
+```bash
+cd apps/calendar-macos
+xcodegen generate
+xcodebuild test -project Compass.xcodeproj -scheme Compass \
+  -destination 'platform=macOS' \
+  -only-testing:CompassKitTests
+```
+
+`CompassUITests` load the configured app URL over the network (CI sets
+`COMPASS_APP_URL` to staging). Run the full test action in Xcode or match
+[test-macos.yml](../../.github/workflows/test-macos.yml).
+
 ## Common Failure Modes
 
 - backend exits immediately because required YAML config is missing

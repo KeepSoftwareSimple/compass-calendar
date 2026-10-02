@@ -10,6 +10,7 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
     var onLaunchAtLoginChange: ((Bool) -> Void)?
     var launchAtLoginStatus: (() -> Bool)?
     var onRestartToUpdate: (() -> Void)?
+    var onDeepLinkNavigationReport: ((String) -> Void)?
 
     func userContentController(
         _ userContentController: WKUserContentController,
@@ -70,6 +71,10 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
             let enabled = launchAtLoginStatus?() ?? false
             webView.evaluateJavaScript(
                 BridgeScript.deliverLaunchAtLoginJavaScript(enabled: enabled))
+        case let .reportDeepLinkNavigation(path):
+            Task { @MainActor in
+                self.onDeepLinkNavigationReport?(path)
+            }
         }
     }
 }

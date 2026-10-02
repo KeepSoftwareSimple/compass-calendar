@@ -171,6 +171,11 @@ jobs:
           set -euo pipefail
           spctl --assess --verbose=4 --type execute "${{ steps.app.outputs.app_path }}"
 
+      - name: Launch smoke (window title)
+        run: |
+          set -euo pipefail
+          bash ../../.github/scripts/macos-release-launch-smoke.sh "${{ steps.app.outputs.app_path }}"
+
       - name: Build DMG
         id: dmg
         run: |

@@ -88,6 +88,57 @@ describe("EmailDispatchService", () => {
     );
   });
 
+  it("passes USER_FIRST_NAME when the user has a first name", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "unsub-secret";
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "guest@example.com",
+      firstName: "Ada",
+      hasConnectedCalendar: false,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "provider-123" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "markSent").mockResolvedValue(row);
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(send.mock.calls[0]?.[0].template?.variables.USER_FIRST_NAME).toBe(
+      "Ada",
+    );
+  });
+
+  it("omits USER_FIRST_NAME when first name is missing or blank", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "unsub-secret";
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "guest@example.com",
+      hasConnectedCalendar: false,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "provider-123" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "markSent").mockResolvedValue(row);
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(send.mock.calls[0]?.[0].template?.variables).not.toHaveProperty(
+      "USER_FIRST_NAME",
+    );
+  });
+
   it("marks sent rows with the provider message id", async () => {
     CONFIG.EMAIL_PROVIDER = "log";
     CONFIG.EMAIL_ALLOWLIST = [];
@@ -111,9 +162,16 @@ describe("EmailDispatchService", () => {
     await new EmailDispatchService().dispatchDue();
 
     expect(markSent).toHaveBeenCalledWith(row._id, "provider-123");
-    expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
-      "mailto:",
+    const sendInput = send.mock.calls[0]?.[0];
+    expect(sendInput?.template?.id).toBe("compass-welcome");
+    expect(sendInput?.template?.variables.CTA_URL).toContain(
+      "utm_source=email",
     );
+    expect(sendInput?.template?.variables.CTA_URL).toContain(
+      "utm_content=welcome",
+    );
+    expect(sendInput?.template?.variables.UNSUBSCRIBE_URL).toContain("token=");
+    expect(sendInput?.headers["List-Unsubscribe"]).toContain("mailto:");
     expect(send.mock.calls[0]?.[0].headers["List-Unsubscribe"]).toContain(
       "https://",
     );

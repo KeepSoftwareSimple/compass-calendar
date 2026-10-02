@@ -101,7 +101,7 @@ Defaults chosen in this plan, listed on #4149 for confirmation:
 - Minimum macOS **13 Ventura**.
 - Internal builds default to **production**; the staging switch is a hidden
   menu item.
-- Releases live on this repo's GitHub Releases page under `desktop-v*` tags.
+- Releases live on this repo's GitHub Releases page under `macos-v*` tags.
 - The Nov 1 email and the download page copy are Tyler's. The loop provides
   the download URL and a screenshot set.
 
@@ -149,15 +149,16 @@ apps/calendar-macos/
   appcast published with each GitHub Release. `useVersionCheck` keeps
   working for the web bundle inside the window.
 
-## Work packages and QA
+## QA and acceptance
 
-One agent-task issue per work package on the milestone, `Depends on:`
-lines for order, partition label `desktop`. Agents cannot run macOS
-locally: XCTest on `CompassKit`, web tests for the bridge contract, and an
-XCUITest smoke plus a notarized launch on the macOS runner cover what they
-can. Visual and Notification Center checks are the owner's, recorded on
-#4149. Dogfood bugs are new
-`desktop` issues on the milestone and outrank features from the third week.
+XCTest on `CompassKit`, web tests for the bridge contract, and XCUITest
+smoke on the macOS runner cover what CI can. Visual checks, Notification
+Center behavior, OAuth in the default browser, and Sparkle updates are
+manual: use [Desktop acceptance](../acceptance/desktop.md) on an internal
+build and record results on
+[#4149](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4149).
+Dogfood bugs are new `desktop` issues on the milestone and outrank features
+from the third week of October.
 
 ## Later, explicitly not v1
 

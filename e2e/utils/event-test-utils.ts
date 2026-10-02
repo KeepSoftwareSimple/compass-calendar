@@ -318,6 +318,37 @@ export const getMainGridPoint = async (
 };
 
 /**
+ * Waits for a painted timed column and returns a click point in grid space.
+ * #timedColumns > * is not a column: the now line is 1px and the table uses
+ * display:contents, so both can yield a null bounding box while the th cells
+ * are already interactive.
+ */
+export const getTimedColumnClickPoint = async (
+  page: Page,
+  { columnIndex = 0, yRatio = 0.45 } = {},
+) => {
+  const column = page
+    .locator("#timedColumns th[data-grid-date]")
+    .nth(columnIndex);
+  await expect(column).toBeVisible({ timeout: 15000 });
+  await column.scrollIntoViewIfNeeded();
+
+  await expect
+    .poll(async () => (await column.boundingBox())?.height ?? 0)
+    .toBeGreaterThan(8);
+
+  const box = await column.boundingBox();
+  if (!box) {
+    throw new Error("Expected the timed column to have a bounding box.");
+  }
+
+  return {
+    x: box.x + box.width / 2,
+    y: box.y + box.height * yRatio,
+  };
+};
+
+/**
  * Fills the event form title and submits via the Save control (role=button, name Save).
  * Keyboard shortcuts for submit (Enter / Mod+Enter) are not driven here: Playwright’s
  * synthesized keyboard events are unreliable in headless Chromium on Linux CI; the Save

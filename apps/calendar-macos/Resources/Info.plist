@@ -42,5 +42,16 @@
 	<string>Copyright Keep Software Simple</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>Compass Deep Link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>compass</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

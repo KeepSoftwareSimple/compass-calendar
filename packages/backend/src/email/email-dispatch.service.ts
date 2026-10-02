@@ -13,7 +13,7 @@ import {
   startEmailSendHeartbeat,
   stopEmailSendHeartbeat,
 } from "@backend/email/email.heartbeat";
-import { renderWelcomeEmail } from "@backend/email/email-layout";
+import { appendWelcomeEmailUtm } from "@backend/email/email-layout";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import {
@@ -24,9 +24,13 @@ import {
 import { buildEmailProvider } from "@backend/email/providers/email.client";
 import { type EmailProvider } from "@backend/email/providers/email.port";
 import { findWelcomeStep } from "@backend/email/welcome-sequence";
-import { getWelcomeEmailContent } from "@backend/email/welcome-sequence.content";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
+import {
+  buildWelcomeResendTemplateVariables,
+  getWelcomeStepCtaBaseHref,
+  getWelcomeStepTemplateAlias,
+} from "@backend/email/welcome-sequence.templates";
 
 const logger = Logger("app:email.dispatch");
 
@@ -170,9 +174,10 @@ export class EmailDispatchService {
       return;
     }
 
-    const content = getWelcomeEmailContent(row.stepKey);
-    if (!content) {
-      await skip("Missing email content");
+    const templateAlias = getWelcomeStepTemplateAlias(row.stepKey);
+    const ctaBaseHref = getWelcomeStepCtaBaseHref(row.stepKey);
+    if (!templateAlias || !ctaBaseHref) {
+      await skip("Missing email template");
       return;
     }
 
@@ -181,16 +186,13 @@ export class EmailDispatchService {
       unsubscribeToken !== null
         ? buildUnsubscribeUrls(unsubscribeToken)
         : undefined;
-    const rendered = renderWelcomeEmail(
-      row.stepKey,
-      content,
-      unsubscribe
-        ? {
-            httpsUrl: unsubscribe.httpsUrl,
-            listUnsubscribeHeader: unsubscribe.listUnsubscribeHeader,
-          }
-        : undefined,
-    );
+
+    const ctaUrl = appendWelcomeEmailUtm(ctaBaseHref, row.stepKey);
+    const templateVariables = buildWelcomeResendTemplateVariables({
+      ctaUrl,
+      unsubscribeUrl: unsubscribe?.httpsUrl ?? "",
+      firstName: user.firstName,
+    });
 
     const headers: Record<string, string> = {};
     if (unsubscribe) {
@@ -202,9 +204,10 @@ export class EmailDispatchService {
       const result = await this.getProvider().send({
         idempotencyKey: row._id,
         to: user.email,
-        subject: rendered.subject,
-        html: rendered.html,
-        text: rendered.text,
+        template: {
+          id: templateAlias,
+          variables: templateVariables,
+        },
         headers,
       });
       await emailSendRepository.markSent(row._id, result.messageId);

@@ -16,6 +16,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     private let bridgeHandler = CompassBridgeHandler()
     private let offlineRetryHandler = OfflineRetryMessageHandler()
     private var loadState = WebLoadStateMachine()
+    private var deepLinkInbox = DeepLinkInbox()
     private var pathMonitor: NWPathMonitor?
     private var offlinePageURL: URL? {
         Bundle.main.url(forResource: "offline", withExtension: "html")
@@ -133,6 +134,12 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         bridgeHandler.launchAtLoginStatus = {
             DesktopNativeServices.launchAtLoginEnabled()
         }
+        bridgeHandler.onDeepLinkNavigationReport = { [weak self] path in
+            Task { @MainActor in
+                let window = self?.accessibilityHostWindow ?? self?.view.window
+                CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: window)
+            }
+        }
         webView.navigationDelegate = self
         webView.uiDelegate = self
         #if DEBUG
@@ -211,9 +218,32 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         loadAppURL()
     }
 
+    func receiveDeepLink(_ url: URL) {
+        receiveDeepLink(urlString: url.absoluteString)
+    }
+
+    func receiveDeepLink(urlString: String) {
+        switch deepLinkInbox.receive(urlString: urlString) {
+        case .ignored, .queued:
+            break
+        case let .deliverNow(url):
+            deliverDeepLink(url)
+        }
+    }
+
     func deliverDeepLink(_ url: String) {
         view.window?.makeKeyAndOrderFront(nil)
+        let probeWindow = accessibilityHostWindow ?? view.window
+        if let path = DesktopDeepLinkParser.navigationPath(for: url) {
+            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: probeWindow)
+        }
         webView.evaluateJavaScript(BridgeScript.deliverDeepLinkJavaScript(url: url))
+    }
+
+    private func flushQueuedDeepLinks() {
+        for url in deepLinkInbox.markWebViewReady() {
+            deliverDeepLink(url)
+        }
     }
 
     func syncNotificationPermission() {
@@ -228,6 +258,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         }
         if AppOrigin.decide(url, isMainFrame: true, appURL: appURL) == .allow {
             loadState.appLoadSucceeded()
+            flushQueuedDeepLinks()
             publishBridgeVersionFromPage(webView: webView, attempt: 0)
             syncNotificationPermission()
         }

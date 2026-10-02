@@ -46,11 +46,22 @@ public enum BridgeScript {
             }
           }
           if (normalizeOrigin(location.origin) !== normalizeOrigin('\(appOrigin)')) { return; }
-          function handlerRegistry() {
+          function handlerRegistry(options) {
             var handlers = [];
+            var queueWhenEmpty = options && options.queueWhenEmpty;
+            var pending = queueWhenEmpty ? [] : null;
+            function flushPending() {
+              if (!pending || pending.length === 0) { return; }
+              var queue = pending.slice();
+              pending.length = 0;
+              queue.forEach(function (argument) {
+                handlers.slice().forEach(function (handler) { handler(argument); });
+              });
+            }
             return {
               add: function (handler) {
                 handlers.push(handler);
+                flushPending();
                 return function () {
                   handlers = handlers.filter(function (entry) {
                     return entry !== handler;
@@ -58,11 +69,15 @@ public enum BridgeScript {
                 };
               },
               emit: function (argument) {
+                if (handlers.length === 0 && pending) {
+                  pending.push(argument);
+                  return;
+                }
                 handlers.slice().forEach(function (handler) { handler(argument); });
               }
             };
           }
-          var deepLink = handlerRegistry();
+          var deepLink = handlerRegistry({ queueWhenEmpty: true });
           var updateReady = handlerRegistry();
           var resume = handlerRegistry();
           var permissionChange = handlerRegistry();
@@ -181,6 +196,9 @@ public enum BridgeScript {
               return window.__compassDesktopDispatchProbe === name;
             },
             onDeepLink: function (handler) { return deepLink.add(handler); },
+            reportDeepLinkNavigation: function (path) {
+              post({ method: 'reportDeepLinkNavigation', path: path });
+            },
             onUpdateReady: function (handler) { return updateReady.add(handler); },
             onResume: function (handler) { return resume.add(handler); },
             setAppearance: function (theme) {

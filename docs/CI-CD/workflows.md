@@ -6,8 +6,8 @@ Compass uses GitHub Actions for continuous integration, Docker Hub for image dis
 |---|---|---|
 | Unit (`test-unit.yml`) | Push / PR / merge_group to `main` | Runs `static` (lint, knip, type-check) and unit tests. PRs run only the packages they touched (`packages/core`, root `package.json` / `bun.lock` / `tsconfig*` still turn every leg on). Merge queue and `main` always run every leg. |
 | E2E (`test-e2e.yml`) | Push / PR / merge_group to `main` | Playwright e2e in four shards behind one required `e2e` gate (PRs that touch only docs, or only `packages/backend`, `packages/sync`, `packages/scripts`, skip the shards; merge queue and `main` always run them) |
-| macOS (`test-macos.yml`) | PR / merge_group to `main`; push to `main` touching `apps/calendar-macos/**` | XcodeGen + `xcodebuild test` (CompassKitTests, CompassUITests) for the Swift app on `macos-latest` behind one required `macos` gate. PRs and merge groups that do not touch `apps/calendar-macos/` skip the build. Locally, `bun run verify` runs `test:macos` only where Xcode is installed and otherwise names it CI-only. |
-| Release macOS (`release-macos.yml`) | Push tag `macos-vX.Y.Z` matching `MARKETING_VERSION` in `apps/calendar-macos/project.yml` | On `macos-latest`: render `icon.icns`, XcodeGen, universal Release archive with Developer ID signing and hardened runtime, `notarytool` + staple, `spctl --assess`, DMG on the GitHub Release for the tag (not marked Latest, so web `releases/latest` is untouched). Signs the DMG with Sparkle and replaces `appcast.xml` on the rolling `macos-appcast` release, which is the in-app update feed. The archive build number is the run number so every tag outranks the last. Fails immediately if any of `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`, or `SPARKLE_PRIVATE_KEY` is missing, or if `SUPublicEDKey` in `Info.plist` is empty. |
+| macOS (`test-macos.yml`) | PR / merge_group to `main`; push to `main` touching `apps/calendar-macos/**` | XcodeGen + `xcodebuild test` (CompassKitTests, CompassUITests) for the Swift app on `macos-latest` behind one required `macos` gate. `CompassUITests` load `https://staging.compasscalendar.com` via `COMPASS_APP_URL` (unauthenticated smoke). PRs and merge groups that do not touch `apps/calendar-macos/` skip the build. Locally, `bun run verify` runs `test:macos` only where Xcode is installed and otherwise names it CI-only. |
+| Release macOS (`release-macos.yml`) | Push tag `macos-vX.Y.Z` matching `MARKETING_VERSION` in `apps/calendar-macos/project.yml` | On `macos-latest`: render `icon.icns`, XcodeGen, universal Release archive with Developer ID signing and hardened runtime, `notarytool` + staple, `spctl --assess`, one launch smoke (main window title), DMG on the GitHub Release for the tag (not marked Latest, so web `releases/latest` is untouched). Signs the DMG with Sparkle and replaces `appcast.xml` on the rolling `macos-appcast` release, which is the in-app update feed. The archive build number is the run number so every tag outranks the last. Fails immediately if any of `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`, or `SPARKLE_PRIVATE_KEY` is missing, or if `SUPublicEDKey` in `Info.plist` is empty. |
 | CodeQL | Push / PR to `main` | Static security analysis |
 | Performance budget | Push to `main` (web/core/lock/budget), nightly schedule, `workflow_dispatch`; PR only when `.github/perf/**` or the workflow file changes | Lighthouse budget (not a required merge check). Desktop script transfer is calibrated to 1,060 KB as of 2026-09-07 (main measured 1,034,338 bytes). |
 | Error autofix (`error-autofix.yml`) | `posthog[bot]` issue opened/reopened, hourly sweep, `workflow_dispatch` | Governed Routine: triage or fix PostHog error issues; sweep re-enters missed recurrences |
@@ -32,6 +32,48 @@ Kill switch (`AGENT_LOOP_ENABLED`) stays a repo variable (default off).
 Ordered queue: `AGENT_LOOP_MILESTONES` (empty idles). Two launch paths:
 hourly/`workflow_dispatch` kick, and `launch-next` on automerge merge.
 `post-deploy` smokes only.
+
+---
+
+## macOS workflows
+
+Compass Desktop lives in `apps/calendar-macos`. Product context:
+[Compass Desktop (macOS)](../features/desktop-client.md). Local setup:
+[Compass for macOS](../development/local-development.md#compass-for-macos).
+
+### macOS CI (`test-macos.yml`)
+
+Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.yml)
+
+- **Triggers:** pull requests and merge groups to `main`; pushes to `main`
+  that touch `apps/calendar-macos/**` or the workflow file.
+- **Runner:** `macos-latest`.
+- **Steps:** `brew install xcodegen`, `xcodegen generate`, `xcodebuild test`
+  for `CompassKitTests` and `CompassUITests`.
+- **Required check:** rollup job `macos` (path-filtered on PRs; merge queue
+  skips when the combined diff does not touch the Mac app).
+- **App URL:** `COMPASS_APP_URL` defaults to staging for unauthenticated
+  XCUITest smoke (`LaunchTests` forwards it as `-COMPASS_APP_URL`).
+- **Local:** `bun run verify` runs `test:macos` only when Xcode is present;
+  otherwise the verify script reports the macOS leg as CI-only.
+
+### Release macOS (`release-macos.yml`)
+
+Source: [`.github/workflows/release-macos.yml`](../../.github/workflows/release-macos.yml)
+
+- **Trigger:** push tag `macos-vX.Y.Z` where `X.Y.Z` matches
+  `MARKETING_VERSION` in `apps/calendar-macos/project.yml`.
+- **Runner:** `macos-latest` (90-minute job timeout).
+- **Secrets (required):** `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`,
+  `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`.
+- **Pipeline:** render `icon.icns`, XcodeGen, universal Release archive with
+  Developer ID signing and hardened runtime, `notarytool` submit and staple,
+  `spctl --assess`, launch smoke (main window title), UDZO DMG attached to
+  the GitHub Release for the tag.
+- **Optional:** `SPARKLE_PRIVATE_KEY` when Sparkle appcast signing is enabled
+  in the app (see tracking issue #4149).
+
+Manual acceptance on a release DMG: [Desktop acceptance](../acceptance/desktop.md).
 
 ---
 

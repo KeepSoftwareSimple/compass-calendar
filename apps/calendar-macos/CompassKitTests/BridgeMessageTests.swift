@@ -86,6 +86,15 @@ final class BridgeMessageTests: XCTestCase {
         XCTAssertEqual(try BridgeMessageCodec.decode(from: getData), .getLaunchAtLogin)
     }
 
+    func testDecodesReportDeepLinkNavigation() throws {
+        let data = Data("""
+        {"method":"reportDeepLinkNavigation","path":"/day/2026-10-15"}
+        """.utf8)
+        XCTAssertEqual(
+            try BridgeMessageCodec.decode(from: data),
+            .reportDeepLinkNavigation(path: "/day/2026-10-15"))
+    }
+
     func testRejectsUnknownMethods() {
         let data = Data("{\"method\":\"unknown\"}".utf8)
         XCTAssertThrowsError(try BridgeMessageCodec.decode(from: data)) { error in
