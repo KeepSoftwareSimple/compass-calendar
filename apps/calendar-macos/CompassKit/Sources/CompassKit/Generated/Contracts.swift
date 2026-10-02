@@ -505,6 +505,19 @@ public enum EventContent: Codable, Hashable, Sendable {
     }
 }
 
+public struct EventContentDetailsAttendees: Codable, Hashable, Sendable {
+    public let displayName: String?
+    public let email: String
+    public let responseStatus: ResponseStatusEnum}
+
+public struct EventContentDetailsConference: Codable, Hashable, Sendable {
+    public let label: String?
+    public let url: String}
+
+public struct EventContentDetailsOrganizer: Codable, Hashable, Sendable {
+    public let displayName: String?
+    public let email: String}
+
 public struct EventContent_BusyPayload: Codable, Hashable, Sendable {
     public let kind: String}
 
@@ -518,19 +531,6 @@ public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
     public let location: String?
     public let organizer: EventContentDetailsOrganizer?
     public let title: String}
-
-public struct EventContentDetailsAttendees: Codable, Hashable, Sendable {
-    public let displayName: String?
-    public let email: String
-    public let responseStatus: ResponseStatusEnum}
-
-public struct EventContentDetailsConference: Codable, Hashable, Sendable {
-    public let label: String?
-    public let url: String}
-
-public struct EventContentDetailsOrganizer: Codable, Hashable, Sendable {
-    public let displayName: String?
-    public let email: String}
 
 public struct EventListResponse: Codable, Hashable, Sendable {
     public let events: [EventResponseEvent]}
@@ -835,30 +835,6 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     }
 }
 
-public struct ServerMessage_CalendarsChangedPayload: Codable, Hashable, Sendable {
-    public let calendarIds: [String]
-    public let type: String}
-
-public struct ServerMessage_EventsChangedPayload: Codable, Hashable, Sendable {
-    public let calendarId: CalendarId
-    public let eventIds: [String]
-    public let reason: ReasonEnum
-    public let type: String}
-
-public struct ServerMessage_ImportCompletedPayload: Codable, Hashable, Sendable {
-    public let calendarsCount: Int
-    public let eventsCount: Int
-    public let operation: OperationEnum
-    public let type: String}
-
-public struct ServerMessage_SyncStatusChangedPayload: Codable, Hashable, Sendable {
-    public let sync: ServerMessageSyncStatusChangedSync
-    public let type: String}
-
-public struct ServerMessage_UserMetadataChangedPayload: Codable, Hashable, Sendable {
-    public let metadata: [String: JSONValue]
-    public let type: String}
-
 public enum ServerMessageSyncStatusChangedSync: Codable, Hashable, Sendable {
     case attention(ServerMessageSyncStatusChangedSync_AttentionPayload)
     case healthy(ServerMessageSyncStatusChangedSync_HealthyPayload)
@@ -906,6 +882,30 @@ public struct ServerMessageSyncStatusChangedSync_HealthyPayload: Codable, Hashab
 
 public struct ServerMessageSyncStatusChangedSync_SyncingPayload: Codable, Hashable, Sendable {
     public let status: String}
+
+public struct ServerMessage_CalendarsChangedPayload: Codable, Hashable, Sendable {
+    public let calendarIds: [String]
+    public let type: String}
+
+public struct ServerMessage_EventsChangedPayload: Codable, Hashable, Sendable {
+    public let calendarId: CalendarId
+    public let eventIds: [String]
+    public let reason: ReasonEnum
+    public let type: String}
+
+public struct ServerMessage_ImportCompletedPayload: Codable, Hashable, Sendable {
+    public let calendarsCount: Int
+    public let eventsCount: Int
+    public let operation: OperationEnum
+    public let type: String}
+
+public struct ServerMessage_SyncStatusChangedPayload: Codable, Hashable, Sendable {
+    public let sync: ServerMessageSyncStatusChangedSync
+    public let type: String}
+
+public struct ServerMessage_UserMetadataChangedPayload: Codable, Hashable, Sendable {
+    public let metadata: [String: JSONValue]
+    public let type: String}
 
 public struct SetEventHiddenInput: Codable, Hashable, Sendable {
     public let eventId: EventId

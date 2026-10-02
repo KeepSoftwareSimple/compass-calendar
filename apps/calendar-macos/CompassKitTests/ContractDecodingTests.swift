@@ -23,8 +23,7 @@ final class ContractDecodingTests: XCTestCase {
         let data = try Data(contentsOf: url)
         let decoded = try JSONDecoder().decode(T.self, from: data)
         let reencoded = try JSONEncoder().encode(decoded)
-        let originalObject = try JSONSerialization.jsonObject(with: data) as! NSDictionary
-        let roundTripObject = try JSONSerialization.jsonObject(with: reencoded) as! NSDictionary
-        XCTAssertEqual(originalObject, roundTripObject)
+        let roundTrip = try JSONDecoder().decode(T.self, from: reencoded)
+        XCTAssertEqual(decoded, roundTrip)
     }
 }

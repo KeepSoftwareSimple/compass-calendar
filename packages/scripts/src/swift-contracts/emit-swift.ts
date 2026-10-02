@@ -7,7 +7,10 @@ import {
   isSchemaObject,
   type JsonSchema,
 } from "@scripts/swift-contracts/json-schema.types";
-import { stableJsonStringify } from "@scripts/swift-contracts/stable-json";
+import {
+  compareAscii,
+  stableJsonStringify,
+} from "@scripts/swift-contracts/stable-json";
 import { assertSwiftPublicTypeName } from "@scripts/swift-contracts/swift-reserved-types";
 import { z } from "zod/v4";
 import {
@@ -313,7 +316,7 @@ function ensureIntEnum(name: string, values: number[], ctx: EmitContext): void {
   }
   assertSwiftPublicTypeName(name, "generated enum");
   const cases = [...values]
-    .sort((left, right) => left - right)
+    .sort((left, right) => left - right) // numeric
     .map((value) => `    case v${value} = ${value}`)
     .join("\n");
   ctx.emitted.set(
@@ -335,7 +338,7 @@ function ensureStringEnum(
   }
   assertSwiftPublicTypeName(name, "generated enum");
   const cases = [...values]
-    .sort((left, right) => left.localeCompare(right))
+    .sort(compareAscii)
     .map((value) => `    case ${swiftEnumCaseName(value)} = "${value}"`)
     .join("\n");
   ctx.emitted.set(
@@ -378,7 +381,7 @@ function ensureStruct(
   assertSwiftPublicTypeName(name, `struct at ${path}`);
   ctx.pending.add(name);
   const properties = schema.properties ?? {};
-  const propertyNames = Object.keys(properties).sort();
+  const propertyNames = Object.keys(properties).sort(compareAscii);
   const required = new Set(schema.required ?? []);
   const fields: string[] = [];
   for (const propName of propertyNames) {
@@ -443,7 +446,7 @@ function ensureDiscriminatedUnion(
       typeof right.properties[discriminator].const === "string"
         ? right.properties[discriminator].const
         : "";
-    return String(leftTag).localeCompare(String(rightTag));
+    return compareAscii(String(leftTag), String(rightTag));
   });
   for (const variant of orderedVariants) {
     if (!isSchemaObject(variant) || variant.type !== "object") {
@@ -601,7 +604,7 @@ export function emitContractsSwiftFile(): string {
   const branded = emitBrandedIdStructs(SWIFT_BRANDED_ID_ENTRIES);
   const helpers = JSON_VALUE_HELPER;
   const types = [...ctx.emitted.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareAscii(left, right))
     .map(([, body]) => body)
     .join("\n");
   return header + branded + helpers + types;

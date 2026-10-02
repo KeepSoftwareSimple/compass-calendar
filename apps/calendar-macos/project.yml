@@ -54,7 +54,8 @@ targets:
     sources:
       - CompassKitTests
     resources:
-      - CompassKitTests/Fixtures
+      - path: CompassKitTests/Fixtures
+        type: folder
     dependencies:
       - package: CompassKit
   CompassUITests:
