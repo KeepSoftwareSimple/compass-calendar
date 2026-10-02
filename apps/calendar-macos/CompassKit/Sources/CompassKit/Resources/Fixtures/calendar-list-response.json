@@ -1,0 +1,30 @@
+{
+  "calendars": [
+    {
+      "id": "507f1f77bcf86cd799439011",
+      "name": "Work",
+      "description": "",
+      "timeZone": "America/Los_Angeles",
+      "foregroundColor": "#000000",
+      "backgroundColor": "#4285F4",
+      "provider": "google",
+      "access": "owner",
+      "capabilities": {
+        "canReadAvailability": true,
+        "canReadDetails": true,
+        "canWrite": true,
+        "canManage": true,
+        "canWatchEvents": true,
+        "canInviteAttendees": true,
+        "conferenceKinds": [
+          "meet"
+        ]
+      },
+      "isPrimary": true,
+      "isVisible": true,
+      "isActive": true,
+      "conference": "meet",
+      "accountEmail": "user@example.com"
+    }
+  ]
+}
