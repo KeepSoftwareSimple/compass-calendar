@@ -114,7 +114,8 @@ describe("header sessions for native clients", () => {
         ],
       }),
     });
-    expect(signUpResponse.status).toBe(200);
+    const signUpBody = await signUpResponse.text();
+    expect(signUpResponse.status, signUpBody).toBe(200);
 
     const signInResponse = await fetch(`${serverUri}/api/signin`, {
       method: "POST",
