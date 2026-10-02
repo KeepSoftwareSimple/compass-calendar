@@ -44,8 +44,8 @@ public enum CalendarEventViewModel {
     ) -> [GridLayoutTimedEventInput] {
         events.compactMap { event in
             guard case .timed(let payload) = event.schedule else { return nil }
-            guard let start = CompassDateParsing.parseInEffectiveTimeZone(payload.start),
-                  let end = CompassDateParsing.parseInEffectiveTimeZone(payload.end)
+            guard let start = CompassDateParsing.parseInEffectiveTimeZone(payload.start.rawValue),
+                  let end = CompassDateParsing.parseInEffectiveTimeZone(payload.end.rawValue)
             else {
                 return nil
             }
@@ -82,8 +82,8 @@ public enum CalendarEventViewModel {
                     )
                 )
             case .timed(let payload):
-                guard let start = CompassDateParsing.parseInEffectiveTimeZone(payload.start),
-                      let end = CompassDateParsing.parseInEffectiveTimeZone(payload.end),
+                guard let start = CompassDateParsing.parseInEffectiveTimeZone(payload.start.rawValue),
+                      let end = CompassDateParsing.parseInEffectiveTimeZone(payload.end.rawValue),
                       DraftNudge.shouldRenderTimedInAllDayRow(start: start, end: end)
                 else {
                     continue
