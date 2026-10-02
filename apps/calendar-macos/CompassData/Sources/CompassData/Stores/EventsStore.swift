@@ -50,6 +50,10 @@ public final class EventsStore {
         try rangeCache.coverage(for: key)
     }
 
+    public func fetchAllEvents() throws -> [Event] {
+        try repository.fetchAll()
+    }
+
     public func loadRange(key: EventRangeQueryKey) async throws -> [Event] {
         let coverage = try rangeCache.coverage(for: key)
         if case .fresh = coverage {

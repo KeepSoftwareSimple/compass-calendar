@@ -9,4 +9,9 @@ enum EventMapping {
         let data = try encoder.encode(response)
         return try decoder.decode(Event.self, from: data)
     }
+
+    static func response(from event: Event) throws -> EventResponseEvent {
+        let data = try encoder.encode(event)
+        return try decoder.decode(EventResponseEvent.self, from: data)
+    }
 }
