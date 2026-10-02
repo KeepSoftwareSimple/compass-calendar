@@ -83,6 +83,12 @@ final class EventCardView: NSView {
         syncAccessibilityFrame()
     }
 
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        layoutSubtreeIfNeeded()
+        syncAccessibilityFrame()
+    }
+
     override func layout() {
         super.layout()
         titleField.frame = bounds.insetBy(dx: 6, dy: 4)

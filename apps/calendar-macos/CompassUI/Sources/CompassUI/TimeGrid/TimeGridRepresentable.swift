@@ -51,8 +51,10 @@ public struct TimeGridRepresentable: NSViewRepresentable {
         }
 
         public func timeGridView(_ view: TimeGridView, didClickEvent eventId: String) {
-            guard let registry = model.shortcutRegistry else { return }
-            model.handleEventCardPointerDown(eventId: eventId, registry: registry)
+            model.focusGridEvent(eventId: eventId)
+            if let registry = model.shortcutRegistry {
+                model.showPointerHint(for: .eventCard, registry: registry)
+            }
             view.update(state: model.timeGridState, theme: theme)
             view.layoutSubtreeIfNeeded()
         }

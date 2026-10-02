@@ -62,6 +62,16 @@ public final class TimeGridView: NSView {
         delegate?.timeGridViewDidRequestShortcutHint(self)
     }
 
+    override func accessibilityChildren() -> [Any]? {
+        var children = super.accessibilityChildren() ?? []
+        if !focusedEventAccessibilityProxy.isHidden,
+            focusedEventAccessibilityProxy.superview === self
+        {
+            children.append(focusedEventAccessibilityProxy)
+        }
+        return children
+    }
+
     public func applyScroll(_ request: TimeGridScrollRequest) {
         guard let snapshot else { return }
         let hourHeight = snapshot.metrics.hourHeight

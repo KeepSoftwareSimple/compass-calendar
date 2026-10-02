@@ -225,7 +225,11 @@ public final class NativeCalendarRootModel {
     }
 
     public func handleEventCardPointerDown(eventId: String, registry: ShortcutRegistry) {
+        focusEvent(eventId: eventId)
         showPointerHint(for: .eventCard, registry: registry)
+    }
+
+    public func focusGridEvent(eventId: String) {
         focusEvent(eventId: eventId)
     }
 
