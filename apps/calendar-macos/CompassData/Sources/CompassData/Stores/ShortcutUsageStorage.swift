@@ -29,7 +29,17 @@ public protocol ShortcutUsageDefaults: Sendable {
     func set(_ value: String?, forKey key: String)
 }
 
-extension UserDefaults: ShortcutUsageDefaults {}
+extension UserDefaults: @unchecked Sendable {}
+
+extension UserDefaults: ShortcutUsageDefaults {
+    public func set(_ data: Data?, forKey key: String) {
+        set(data as Any?, forKey: key)
+    }
+
+    public func set(_ value: String?, forKey key: String) {
+        set(value as Any?, forKey: key)
+    }
+}
 
 enum ShortcutUsagePersistence {
     static func readProfile(from defaults: ShortcutUsageDefaults) -> ShortcutUsageProfile {
