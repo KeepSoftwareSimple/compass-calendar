@@ -6,8 +6,9 @@ export const DISPATCH_EVENT = "compass:dispatch-shortcut";
 let installed = false;
 
 /**
- * Registers the native menu shortcut listener as early as possible. The macOS
- * shell can dispatch before React mounts RootShell.
+ * Registers the native menu shortcut listener as early as possible: the macOS
+ * shell can dispatch before React mounts. Called once from `bootstrapApp`,
+ * before `root.render`, and idempotent so a second call is harmless.
  */
 export function installDesktopMenuShortcutBridge(): void {
   if (installed || !isDesktop()) {

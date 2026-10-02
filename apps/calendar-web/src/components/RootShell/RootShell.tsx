@@ -60,7 +60,6 @@ import {
 import { useDesktopAgendaSync } from "@web/desktop/useDesktopAgendaSync";
 import { useDesktopAppearanceSync } from "@web/desktop/useDesktopAppearanceSync";
 import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
-import { useDesktopMenuShortcutBridge } from "@web/desktop/useDesktopMenuShortcutBridge";
 import { useDesktopQuickAddEntry } from "@web/desktop/useDesktopQuickAddEntry";
 import { useDesktopUpdateReady } from "@web/desktop/useDesktopUpdateReady";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
@@ -142,7 +141,6 @@ export function RootShell() {
   useDesktopQuickAddEntry();
   useDesktopAgendaSync();
   useDesktopAppearanceSync();
-  useDesktopMenuShortcutBridge();
   useDesktopUpdateReady();
 
   const readOnlyStatus =
