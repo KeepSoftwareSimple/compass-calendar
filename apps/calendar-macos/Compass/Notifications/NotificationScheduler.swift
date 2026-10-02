@@ -50,7 +50,7 @@ final class NotificationScheduler {
             now: now,
             events: notifiable,
             firedKeys: firedKeys,
-            show: { payload in
+            show: { @Sendable payload in
                 await CompassNotificationCenter.shared.showNative(payload)
             })
     }

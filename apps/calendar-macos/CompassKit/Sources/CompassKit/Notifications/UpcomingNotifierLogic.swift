@@ -95,7 +95,7 @@ public enum UpcomingNotifierLogic {
         now: Date,
         events: [NotifiableEvent],
         firedKeys: Set<String>,
-        show: (DesktopNotificationPayload) async -> Bool
+        show: @escaping @Sendable (DesktopNotificationPayload) async -> Bool
     ) async -> Set<String> {
         let due = selectEventsToNotify(now: now, events: events, firedKeys: firedKeys)
         if due.isEmpty { return firedKeys }
