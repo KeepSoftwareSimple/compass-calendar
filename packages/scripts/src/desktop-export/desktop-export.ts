@@ -1,5 +1,7 @@
 import {
+  emitProductEventNativeCoverageSwift,
   emitProductEventSwift,
+  PRODUCT_EVENT_COVERAGE_SWIFT_PATH,
   PRODUCT_EVENT_SWIFT_PATH,
 } from "@scripts/desktop-export/emit-product-event";
 import {
@@ -65,6 +67,10 @@ const buildScriptGeneratedFiles = (): GeneratedFile[] => {
     {
       path: PRODUCT_EVENT_SWIFT_PATH,
       contents: emitProductEventSwift(),
+    },
+    {
+      path: PRODUCT_EVENT_COVERAGE_SWIFT_PATH,
+      contents: emitProductEventNativeCoverageSwift(),
     },
     {
       path: join(COMPASS_KIT_FIXTURES_DIR, "rrule.vectors.json"),

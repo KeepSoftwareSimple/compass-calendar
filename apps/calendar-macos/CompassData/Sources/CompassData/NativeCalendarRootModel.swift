@@ -6,6 +6,8 @@ import Observation
 @Observable
 public final class NativeCalendarRootModel {
     public let viewStore: ViewStore
+    public let configStore: ConfigStore
+    public let levelsStore: LevelsStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     public private(set) var calendars: [CompassCalendar] = []
@@ -18,6 +20,7 @@ public final class NativeCalendarRootModel {
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
     private let demoSeed: DemoSeedFixture?
+    private let analyticsIdentity: AnalyticsIdentityCoordinator
     private var eventStream: ServerEventStream?
     private var loadedEvents: [Event] = []
     private var refreshTask: Task<Void, Never>?
@@ -31,6 +34,9 @@ public final class NativeCalendarRootModel {
         eventsStore = environment.eventsStore
         hiddenEventsStore = environment.hiddenEventsStore
         calendarRepository = environment.calendarRepository
+        configStore = environment.configStore
+        levelsStore = environment.levelsStore
+        analyticsIdentity = environment.analyticsIdentity
 
         let anchor: Date = {
             guard let demoSeed else { return Date() }
@@ -61,6 +67,8 @@ public final class NativeCalendarRootModel {
     }
 
     public func start() async {
+        await configStore.load()
+        await configureAnalyticsFromConfig()
         if demoSeed != nil {
             await bootstrapFixtureSession()
         } else {
@@ -89,6 +97,7 @@ public final class NativeCalendarRootModel {
     public func signIn(email: String, password: String) async throws {
         try await environment.apiClient.auth.signIn(email: email, password: password)
         isSignedIn = true
+        await identifyAnalyticsUser()
         startEventStream()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
@@ -100,6 +109,7 @@ public final class NativeCalendarRootModel {
             await eventStream.stop()
         }
         try await environment.apiClient.auth.signOut()
+        await resetAnalyticsIdentity()
         isSignedIn = false
         loadedEvents = []
         calendars = []
@@ -118,6 +128,9 @@ public final class NativeCalendarRootModel {
     }
 
     public func handleShortcut(_ id: ShortcutId) {
+        if let section = ShortcutTelemetrySection.section(for: id) {
+            levelsStore.recordShortcutInvocation(id, section: section)
+        }
         switch id {
         case .navNext:
             pageWindow(direction: 1)
@@ -299,6 +312,26 @@ public final class NativeCalendarRootModel {
 
     private func refreshSignedInState() async {
         isSignedIn = (try? await environment.apiClient.currentSession()) != nil
+        if isSignedIn {
+            await identifyAnalyticsUser()
+        }
+    }
+
+    private func configureAnalyticsFromConfig() async {
+        await analyticsIdentity.applyPostHogConfig(configStore.config?.posthog)
+    }
+
+    private func identifyAnalyticsUser() async {
+        guard isSignedIn else { return }
+        do {
+            let profile = try await UserAPI(client: environment.apiClient).profile()
+            await analyticsIdentity.identify(userId: profile.userId)
+            await analyticsIdentity.trackLoginCompleted()
+        } catch {}
+    }
+
+    private func resetAnalyticsIdentity() async {
+        await analyticsIdentity.resetIdentity()
     }
 
     private func startEventStream() {

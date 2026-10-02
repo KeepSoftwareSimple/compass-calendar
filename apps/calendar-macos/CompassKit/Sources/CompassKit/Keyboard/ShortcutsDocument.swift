@@ -15,8 +15,15 @@ struct ShortcutsDocument: Decodable, Sendable {
         let digit: String
     }
 
+    struct LevelRow: Decodable, Sendable {
+        let level: Int
+        let name: String
+        let minUsed: Int
+    }
+
     let registry: [RegistryRow]
     let bindings: [String: [String]]
     let editSequenceLeader: String
     let editSequenceFields: [EditSequenceField]
+    let shortcutLevels: [LevelRow]
 }
