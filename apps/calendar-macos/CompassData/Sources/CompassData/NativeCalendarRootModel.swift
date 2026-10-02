@@ -75,7 +75,9 @@ public final class NativeCalendarRootModel {
     }
 
     public func handleResume() async {
-        eventStream?.stop()
+        if let eventStream {
+            await eventStream.stop()
+        }
         if isSignedIn {
             startEventStream()
         }
@@ -94,7 +96,9 @@ public final class NativeCalendarRootModel {
     }
 
     public func signOut() async throws {
-        eventStream?.stop()
+        if let eventStream {
+            await eventStream.stop()
+        }
         try await environment.apiClient.auth.signOut()
         isSignedIn = false
         loadedEvents = []

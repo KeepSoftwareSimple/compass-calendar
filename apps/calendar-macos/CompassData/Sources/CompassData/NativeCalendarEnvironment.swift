@@ -9,6 +9,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let calendarRepository: CalendarRepository
     public let usesFixtureTransport: Bool
 
+    @MainActor
     public init(
         appURL: URL = AppHostPreference.productionURL,
         fixture: DemoSeedFixture? = nil
