@@ -1,4 +1,8 @@
-import { DateTimeSchema, EventIdSchema } from "@core/types/domain-primitives";
+import {
+  type CalendarId,
+  DateTimeSchema,
+  EventIdSchema,
+} from "@core/types/domain-primitives";
 import {
   type Event,
   type EventContent,
@@ -20,30 +24,53 @@ import { VIEW_SHORTCUTS } from "@web/shortcuts/shortcuts.constants";
 import { type OfflineDataStore } from "../../offline-data/offline-data.store";
 import { type ExternalMigration } from "../migration.types";
 
+interface DemoSeedContext {
+  calendarId: CalendarId;
+  createdAt: string;
+  deterministicIds: boolean;
+  timeZone: string;
+}
+
+const deterministicDemoEventId = (title: string): string => {
+  let hash = 0;
+  for (const char of `demo-seed:${title}`) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  return hash.toString(16).padStart(24, "0").slice(0, 24);
+};
+
 /**
  * Creates a demo LocalEventRecord (B13/D) with sensible defaults, marked
  * `isDemo` so it's excluded from `syncLocalEventsToCloud`.
  */
-function createEventRecord(overrides: {
-  title: string;
-  description?: string;
-  schedule:
-    | { kind: "timed"; start: string; end: string; timeZone: string }
-    | { kind: "allDay"; start: string; end: string };
-  // Read-only, provider-sourced fields on a real synced event - only
-  // showcased here so first-time users (who never connect a calendar before
-  // seeing the calendar) discover the meeting-link/location/attendees UI at
-  // all, since it otherwise only ever renders for synced events.
-  location?: string;
-  organizer?: Organizer;
-  attendees?: Attendee[];
-  conference?: Conference;
-  /** Stable id override for events onboarding references by id. */
-  id?: string;
-  /** Color tag, so the seed doubles as a tour of the color system. */
-  color?: EventColorSlot;
-}): LocalEventRecord {
-  const id = EventIdSchema.parse(overrides.id ?? createObjectIdString());
+function createEventRecord(
+  overrides: {
+    title: string;
+    description?: string;
+    schedule:
+      | { kind: "timed"; start: string; end: string; timeZone: string }
+      | { kind: "allDay"; start: string; end: string };
+    // Read-only, provider-sourced fields on a real synced event - only
+    // showcased here so first-time users (who never connect a calendar before
+    // seeing the calendar) discover the meeting-link/location/attendees UI at
+    // all, since it otherwise only ever renders for synced events.
+    location?: string;
+    organizer?: Organizer;
+    attendees?: Attendee[];
+    conference?: Conference;
+    /** Stable id override for events onboarding references by id. */
+    id?: string;
+    /** Color tag, so the seed doubles as a tour of the color system. */
+    color?: EventColorSlot;
+  },
+  context: DemoSeedContext,
+): LocalEventRecord {
+  const id = EventIdSchema.parse(
+    overrides.id ??
+      (context.deterministicIds
+        ? deterministicDemoEventId(overrides.title)
+        : createObjectIdString()),
+  );
   const content: EventContent = {
     kind: "details",
     title: overrides.title,
@@ -54,15 +81,15 @@ function createEventRecord(overrides: {
     conference: overrides.conference,
     color: overrides.color,
   };
-  const now = DateTimeSchema.parse(new Date().toISOString());
+  const createdAt = DateTimeSchema.parse(context.createdAt);
 
   const event: Event = {
     id,
-    calendarId: getLocalCalendarSentinelId(),
+    calendarId: context.calendarId,
     content,
     schedule: EventScheduleSchema.parse(overrides.schedule),
     recurrence: { kind: "single" },
-    createdAt: now,
+    createdAt,
     updatedAt: null,
   };
 
@@ -83,14 +110,33 @@ export const DEMO_EVENT_IDS = {
   teamSync: "demo-team-sync",
 } as const;
 
+export interface GenerateDemoDataOptions {
+  calendarId?: CalendarId;
+  createdAt?: string;
+  deterministicIds?: boolean;
+  timeZone?: string;
+}
+
 /**
  * Generate demo data relative to a reference date (defaults to now).
  * Exported for native parity fixtures via `bun cli desktop:export`.
  */
-export function generateDemoData(referenceNow = dayjs()) {
+export function generateDemoData(
+  referenceNow = dayjs(),
+  options?: GenerateDemoDataOptions,
+) {
   const now = referenceNow;
   const today = now.toYearMonthDayString();
-  const timeZone = getBrowserTimeZone();
+  const timeZone = options?.timeZone ?? getBrowserTimeZone();
+  const seedContext: DemoSeedContext = {
+    calendarId: options?.calendarId ?? getLocalCalendarSentinelId(),
+    createdAt: options?.createdAt ?? new Date().toISOString(),
+    deterministicIds: options?.deterministicIds ?? false,
+    timeZone,
+  };
+  const record = (
+    overrides: Parameters<typeof createEventRecord>[0],
+  ): LocalEventRecord => createEventRecord(overrides, seedContext);
 
   // Helper for creating timed events on today +/- offsetDays (clone to avoid
   // mutating now). 15-minute-aligned, consistent with event creation in the app.
@@ -115,7 +161,7 @@ export function generateDemoData(referenceNow = dayjs()) {
     endMinute: number,
     options?: { id?: string; color?: EventColorSlot },
   ) =>
-    createEventRecord({
+    record({
       id: options?.id,
       color: options?.color,
       title,
@@ -129,7 +175,7 @@ export function generateDemoData(referenceNow = dayjs()) {
 
   // ─── Regular Events (Today) ─────────────────────────────────────────────────
   const todayEvents: LocalEventRecord[] = [
-    createEventRecord({
+    record({
       id: DEMO_EVENT_IDS.morningStandup,
       title: "Morning standup",
       description:
@@ -171,7 +217,7 @@ export function generateDemoData(referenceNow = dayjs()) {
         },
       ],
     }),
-    createEventRecord({
+    record({
       title: "Try Compass",
       description: `Welcome! Compass is keyboard-only: press C to create an event, type a time like 1130 to create one at 11:30, hold Mod to see where you can jump, and press ? for every shortcut. Ready to sync your calendar? Sign up from the command palette (${KEYMAP.commandPalette.keycaps.join("+")}).`,
       schedule: {
@@ -181,7 +227,7 @@ export function generateDemoData(referenceNow = dayjs()) {
         timeZone,
       },
     }),
-    createEventRecord({
+    record({
       title: "Exercise",
       description: "I'm sorry for what I said during burpees.",
       color: "green",
@@ -194,7 +240,7 @@ export function generateDemoData(referenceNow = dayjs()) {
         timeZone,
       },
     }),
-    createEventRecord({
+    record({
       title: "Call a friend",
       description:
         "Your calendar, your data. Sign up whenever you're ready to save across browsers.",
@@ -205,7 +251,7 @@ export function generateDemoData(referenceNow = dayjs()) {
         timeZone,
       },
     }),
-    createEventRecord({
+    record({
       title: "Deep work day",
       description:
         "The ability to perform deep work is becoming increasingly rare at exactly the same time it is becoming increasingly valuable in our economy. As a consequence, the few who cultivate this skill, and then make it the core of their working life, will thrive.",
@@ -216,7 +262,7 @@ export function generateDemoData(referenceNow = dayjs()) {
       },
     }),
     // Onboarding hints (previously seeded as tasks, now calendar events).
-    createEventRecord({
+    record({
       title: "Peek at your week",
       description: `Press '${VIEW_SHORTCUTS.week.key}' to switch to Week view and see the whole week at a glance. Press '?' anytime for all keyboard shortcuts.`,
       schedule: {
@@ -226,7 +272,7 @@ export function generateDemoData(referenceNow = dayjs()) {
         timeZone,
       },
     }),
-    createEventRecord({
+    record({
       title: "Create your daily plan",
       description:
         "Press C to create an event, then hold Shift and use the arrow keys to move it. Block time for what matters most.",

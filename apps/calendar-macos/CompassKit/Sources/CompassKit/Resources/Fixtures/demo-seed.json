@@ -1,12 +1,13 @@
 {
   "referenceNow": "2026-06-10T15:00:00.000Z",
   "timeZone": "UTC",
+  "calendarId": "507f1f77bcf86cd799439011",
   "events": [
     {
       "id": "demo-morning-standup",
       "event": {
         "id": "demo-morning-standup",
-        "calendarId": "6abfb949988bb818f136b7a6",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Morning standup",
@@ -51,17 +52,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.739Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949c72f0dad2d36b7a7",
+      "id": "000000000000000067653e8e",
       "event": {
-        "id": "6abfb949c72f0dad2d36b7a7",
-        "calendarId": "6abfb9497130bbcf9f36b7a8",
+        "id": "000000000000000067653e8e",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Try Compass",
@@ -76,17 +77,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.740Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949ee6c8ca5d336b7a9",
+      "id": "0000000000000000c0055277",
       "event": {
-        "id": "6abfb949ee6c8ca5d336b7a9",
-        "calendarId": "6abfb9494a1c5f8aa236b7aa",
+        "id": "0000000000000000c0055277",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Exercise",
@@ -103,17 +104,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.740Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949e483227bd236b7ab",
+      "id": "0000000000000000d2afdd80",
       "event": {
-        "id": "6abfb949e483227bd236b7ab",
-        "calendarId": "6abfb94913f2b5c9b336b7ac",
+        "id": "0000000000000000d2afdd80",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Call a friend",
@@ -128,17 +129,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.740Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949c6978df84736b7ad",
+      "id": "0000000000000000f33acd82",
       "event": {
-        "id": "6abfb949c6978df84736b7ad",
-        "calendarId": "6abfb94983bd8ace9e36b7ae",
+        "id": "0000000000000000f33acd82",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Deep work day",
@@ -152,17 +153,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.740Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb9490fb9e56a4e36b7af",
+      "id": "00000000000000003a5b70fa",
       "event": {
-        "id": "6abfb9490fb9e56a4e36b7af",
-        "calendarId": "6abfb949785a98c45236b7b0",
+        "id": "00000000000000003a5b70fa",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Peek at your week",
@@ -177,17 +178,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.741Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949d5fdbbbb6536b7b1",
+      "id": "0000000000000000df875218",
       "event": {
-        "id": "6abfb949d5fdbbbb6536b7b1",
-        "calendarId": "6abfb949e6b5ad7d9836b7b2",
+        "id": "0000000000000000df875218",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Create your daily plan",
@@ -202,17 +203,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.741Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb94925e5f7ee2536b7b3",
+      "id": "00000000000000008e9106bb",
       "event": {
-        "id": "6abfb94925e5f7ee2536b7b3",
-        "calendarId": "6abfb949f46220fec236b7b4",
+        "id": "00000000000000008e9106bb",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Design review",
@@ -228,17 +229,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.741Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb9490c9ecc6e9836b7b5",
+      "id": "0000000000000000ea961e54",
       "event": {
-        "id": "6abfb9490c9ecc6e9836b7b5",
-        "calendarId": "6abfb949e0d7a8329e36b7b6",
+        "id": "0000000000000000ea961e54",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "1:1 with Avery",
@@ -254,17 +255,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.741Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949e3af3a191336b7b7",
+      "id": "0000000000000000d07719bc",
       "event": {
-        "id": "6abfb949e3af3a191336b7b7",
-        "calendarId": "6abfb9492d115aa1d336b7b8",
+        "id": "0000000000000000d07719bc",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Gym",
@@ -280,17 +281,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.741Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949574ef6766b36b7b9",
+      "id": "0000000000000000e869d6fa",
       "event": {
-        "id": "6abfb949574ef6766b36b7b9",
-        "calendarId": "6abfb949d8334ca43436b7ba",
+        "id": "0000000000000000e869d6fa",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Lunch with Sam",
@@ -305,17 +306,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb9499614678ee036b7bb",
+      "id": "000000000000000089a92246",
       "event": {
-        "id": "6abfb9499614678ee036b7bb",
-        "calendarId": "6abfb94939d41e32b536b7bc",
+        "id": "000000000000000089a92246",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Focus block",
@@ -331,17 +332,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949c7f4221ac136b7bd",
+      "id": "00000000000000008e9106bb",
       "event": {
-        "id": "6abfb949c7f4221ac136b7bd",
-        "calendarId": "6abfb94983bd1d1cca36b7be",
+        "id": "00000000000000008e9106bb",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Design review",
@@ -357,7 +358,7 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
@@ -367,7 +368,7 @@
       "id": "demo-team-sync",
       "event": {
         "id": "demo-team-sync",
-        "calendarId": "6abfb9496ffd69573136b7bf",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Team sync",
@@ -383,7 +384,7 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
@@ -393,7 +394,7 @@
       "id": "demo-dentist",
       "event": {
         "id": "demo-dentist",
-        "calendarId": "6abfb949d30db113ce36b7c0",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Dentist",
@@ -408,17 +409,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb9492b280740dd36b7c1",
+      "id": "0000000000000000ea961e54",
       "event": {
-        "id": "6abfb9492b280740dd36b7c1",
-        "calendarId": "6abfb949b7c344b8e536b7c2",
+        "id": "0000000000000000ea961e54",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "1:1 with Avery",
@@ -434,17 +435,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949f183789cb236b7c3",
+      "id": "000000000000000089a92246",
       "event": {
-        "id": "6abfb949f183789cb236b7c3",
-        "calendarId": "6abfb949bf4e77ccc536b7c4",
+        "id": "000000000000000089a92246",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Focus block",
@@ -460,17 +461,17 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,
       "version": 2
     },
     {
-      "id": "6abfb949a4244d5c9236b7c5",
+      "id": "0000000000000000d07719bc",
       "event": {
-        "id": "6abfb949a4244d5c9236b7c5",
-        "calendarId": "6abfb949a9d9484c1536b7c6",
+        "id": "0000000000000000d07719bc",
+        "calendarId": "507f1f77bcf86cd799439011",
         "content": {
           "kind": "details",
           "title": "Gym",
@@ -486,7 +487,7 @@
         "recurrence": {
           "kind": "single"
         },
-        "createdAt": "2026-10-02T14:01:45.742Z",
+        "createdAt": "2026-06-10T15:00:00.000Z",
         "updatedAt": null
       },
       "isDemo": true,

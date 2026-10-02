@@ -1,17 +1,18 @@
 import { ObjectId } from "bson";
-import dayjs from "@core/util/date/dayjs";
 import { CompassEventRRule } from "@core/util/event/compass.event.rrule";
 import { createMockBaseEvent } from "@core/util/test/ccal.event.factory";
 
 const FIRST_N = 5;
 const FIXED_EVENT_ID = new ObjectId("507f1f77bcf86cd799439011");
+const DAILY_START = "2026-01-01T10:00:00.000Z";
+const DAILY_END = "2026-01-01T11:00:00.000Z";
 
 export const buildRruleFixtures = () => {
   const dailyRule = "RRULE:FREQ=DAILY;COUNT=3";
   const dailyBase = createMockBaseEvent(
     {
       _id: FIXED_EVENT_ID.toString(),
-      startDate: "2026-01-01T10:00:00.000Z",
+      startDate: DAILY_START,
       recurrence: { rule: [dailyRule] },
     },
     false,
@@ -25,12 +26,13 @@ export const buildRruleFixtures = () => {
     { tzid: "UTC" },
   );
 
-  const startDateOnMonday = dayjs("2026-01-05T12:00:00.000Z");
+  const weeklyStart = "2026-01-05T12:00:00.000Z";
+  const weeklyEnd = "2026-01-05T13:00:00.000Z";
   const weeklyRule = "RRULE:FREQ=WEEKLY;COUNT=0;BYDAY=FR";
   const weeklyBase = createMockBaseEvent(
     {
       _id: FIXED_EVENT_ID.toString(),
-      startDate: startDateOnMonday.toISOString(),
+      startDate: weeklyStart,
       recurrence: { rule: [weeklyRule] },
     },
     false,
@@ -51,8 +53,8 @@ export const buildRruleFixtures = () => {
       {
         id: "daily-count-3",
         input: {
-          startDate: dailyBase.startDate,
-          endDate: dailyBase.endDate,
+          startDate: DAILY_START,
+          endDate: DAILY_END,
           recurrenceRule: dailyRule,
           timeZone: "UTC",
           firstN: FIRST_N,
@@ -67,8 +69,8 @@ export const buildRruleFixtures = () => {
       {
         id: "weekly-byday-fr-with-dtstart",
         input: {
-          startDate: weeklyBase.startDate,
-          endDate: weeklyBase.endDate,
+          startDate: weeklyStart,
+          endDate: weeklyEnd,
           recurrenceRule: weeklyRule,
           timeZone: "UTC",
           firstN: FIRST_N,
