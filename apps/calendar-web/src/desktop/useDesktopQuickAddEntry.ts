@@ -5,7 +5,7 @@ import {
   type DesktopQuickAddSearch,
   isDesktopQuickAddRequested,
 } from "@web/desktop/desktop-quick-add.search";
-import { beginDesktopQuickAddSession } from "@web/desktop/desktop-quick-add.session";
+import { beginDesktopQuickAddSession } from "@web/desktop/dismissDesktopQuickAddPanel";
 import { isDesktop } from "@web/desktop/isDesktop";
 import { settingsActions } from "@web/settings/settings.store";
 
