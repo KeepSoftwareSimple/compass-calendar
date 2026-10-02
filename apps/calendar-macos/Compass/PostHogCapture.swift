@@ -70,8 +70,7 @@ actor PostHogCapture {
     }
 }
 
-@MainActor
-final class PostHogAnalyticsClient: ProductAnalyticsClient {
+final class PostHogAnalyticsClient: ProductAnalyticsClient, @unchecked Sendable {
     func track(_ event: ProductEvent, properties: ProductEventProperties) {
         Task {
             await PostHogCapture.shared.capture(event, properties: properties)
