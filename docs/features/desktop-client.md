@@ -208,7 +208,6 @@ The Desktop v1 secrets and credentials carry over unchanged: `APPLE_TEAM_ID`,
 | --- | --- | --- | --- |
 | 1 | Add milestone **Desktop native v1** to the front of repo var `AGENT_LOOP_MILESTONES`, replacing `Desktop v1`. | Repo variables | 2 min |
 | 2 | Change the board's auto-add filter from `label:desktop` to the new milestone, since `desktop` is now one of three partition labels and most work packages do not carry it. | Project settings | 2 min |
-| 3 | A staging test account (email and password) as repo secrets `COMPASS_SMOKE_EMAIL` and `COMPASS_SMOKE_PASSWORD` for the scheduled staging smoke. | Repo secrets | 5 min |
 
 Defaults that stay: app name **Compass**, bundle id
 `com.compasscalendar.desktop`, URL scheme `compass://`, internal builds
@@ -225,8 +224,8 @@ default to production with a hidden staging switch, releases under
   without a Mac. Image snapshots are recorded by a `workflow_dispatch` job.
 - XCUITest runs in anonymous demo mode on every PR, so it needs no server.
   Signed-in flows use a fixture transport in CompassData.
-- A scheduled staging smoke signs in with the seeded account through
-  CompassData, lists events, and opens the SSE stream.
+- No scheduled staging smoke. The header-session backend test and weekly
+  founder acceptance on a real build cover the authenticated path.
 - Visual checks, Notification Center behavior, OAuth per provider, Stripe
   test checkout, and Sparkle updates are manual: use
   [Desktop acceptance](../acceptance/desktop.md) on a signed build and
