@@ -1,0 +1,323 @@
+import AppKit
+import CompassKit
+
+@MainActor
+public protocol TimeGridViewDelegate: AnyObject {
+    func timeGridViewDidRequestShortcutHint(_ view: TimeGridView)
+}
+
+@MainActor
+public final class TimeGridView: NSView {
+    public weak var delegate: TimeGridViewDelegate?
+
+    private let scrollView = NSScrollView()
+    private let documentView = FlippedView()
+    private let allDayRowView = FlippedView()
+    private let timedContentView = FlippedView()
+    private let hourGutterView = FlippedView()
+    private let headerRowView = FlippedView()
+    private let nowLineLayer = CALayer()
+
+    private var cardPool: [String: EventCardView] = [:]
+    private var minuteTimer: Timer?
+    private var state: TimeGridState
+    private var theme: NativeWebTheme
+    private var snapshot: GridLayoutSnapshot?
+
+    public init(state: TimeGridState, theme: NativeWebTheme) {
+        self.state = state
+        self.theme = theme
+        super.init(frame: .zero)
+        wantsLayer = true
+        configureScrollView()
+        configureNowLine()
+        startMinuteTimer()
+        relayout()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    deinit {
+        minuteTimer?.invalidate()
+    }
+
+    public func update(state: TimeGridState, theme: NativeWebTheme) {
+        self.state = state
+        self.theme = theme
+        relayout()
+    }
+
+    public override func layout() {
+        super.layout()
+        scrollView.frame = bounds
+        relayout()
+    }
+
+    public override func mouseDown(with event: NSEvent) {
+        delegate?.timeGridViewDidRequestShortcutHint(self)
+    }
+
+    public override func rightMouseDown(with event: NSEvent) {
+        // Right-click is reserved for the event menu in a later WP.
+    }
+
+    private func configureScrollView() {
+        scrollView.drawsBackground = false
+        scrollView.hasVerticalScroller = true
+        scrollView.hasHorizontalScroller = false
+        scrollView.autohidesScrollers = true
+        scrollView.borderType = .noBorder
+        scrollView.documentView = documentView
+        addSubview(scrollView)
+
+        documentView.addSubview(headerRowView)
+        documentView.addSubview(allDayRowView)
+        documentView.addSubview(hourGutterView)
+        documentView.addSubview(timedContentView)
+
+        timedContentView.layer?.addSublayer(nowLineLayer)
+        timedContentView.wantsLayer = true
+        timedContentView.accessibilityIdentifier = "compass-grid-timed"
+        allDayRowView.accessibilityIdentifier = "compass-grid-allday"
+    }
+
+    private func configureNowLine() {
+        nowLineLayer.backgroundColor = themeAccentColor.cgColor
+        nowLineLayer.zPosition = 1000
+    }
+
+    private func startMinuteTimer() {
+        minuteTimer?.invalidate()
+        minuteTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.updateNowLine()
+            }
+        }
+    }
+
+    private func relayout() {
+        let colWidths = state.resolvedColumnWidths()
+        let snapshot = state.snapshot(colWidths: colWidths)
+        self.snapshot = snapshot
+
+        let marginLeft = snapshot.metrics.marginLeft
+        let hourHeight = snapshot.metrics.hourHeight
+        let gridHeight = snapshot.metrics.timedGridHeight
+        let allDayHeight = snapshot.metrics.allDayRowHeight
+        let headerHeight = 28.0
+        let totalHeight = headerHeight + allDayHeight + gridHeight + GridTimeConstants.gridPaddingBottom
+
+        documentView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: totalHeight)
+        headerRowView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: headerHeight)
+        allDayRowView.frame = NSRect(x: 0, y: headerHeight, width: bounds.width, height: allDayHeight)
+        hourGutterView.frame = NSRect(
+            x: 0,
+            y: headerHeight + allDayHeight,
+            width: marginLeft,
+            height: gridHeight
+        )
+        timedContentView.frame = NSRect(
+            x: 0,
+            y: headerHeight + allDayHeight,
+            width: bounds.width,
+            height: gridHeight
+        )
+
+        renderHourGutter(hourHeight: hourHeight, gridHeight: gridHeight)
+        renderHeaders(snapshot: snapshot, headerHeight: headerHeight)
+        renderAllDayColumns(snapshot: snapshot, allDayHeight: allDayHeight, headerHeight: headerHeight)
+        renderTimedGrid(snapshot: snapshot, hourHeight: hourHeight, gridHeight: gridHeight)
+        renderCards(snapshot: snapshot)
+        updateNowLine()
+    }
+
+    private func renderHourGutter(hourHeight: Double, gridHeight: Double) {
+        hourGutterView.subviews.forEach { $0.removeFromSuperview() }
+        let palette = themePalette
+        hourGutterView.layer?.backgroundColor = palette.background.cgColor
+
+        for hour in 0 ..< GridTimeConstants.timedVisibleHours {
+            let label = NSTextField(labelWithString: formattedHour(hour))
+            label.font = NSFont(name: "Rubik", size: 11) ?? .systemFont(ofSize: 11)
+            label.textColor = palette.textMuted
+            label.alignment = .right
+            label.frame = NSRect(x: 4, y: Double(hour) * hourHeight + 2, width: marginWidth - 8, height: 14)
+            hourGutterView.addSubview(label)
+
+            if hour > 0 {
+                let line = NSView(frame: NSRect(x: 0, y: Double(hour) * hourHeight, width: marginWidth, height: 1))
+                line.wantsLayer = true
+                line.layer?.backgroundColor = palette.border.withAlphaComponent(0.35).cgColor
+                hourGutterView.addSubview(line)
+            }
+        }
+        _ = gridHeight
+    }
+
+    private func renderHeaders(snapshot: GridLayoutSnapshot, headerHeight: Double) {
+        headerRowView.subviews.forEach { $0.removeFromSuperview() }
+        let palette = themePalette
+        headerRowView.layer?.backgroundColor = palette.surface.cgColor
+
+        for column in snapshot.columns {
+            let header = NSTextField(labelWithString: column.key)
+            header.font = NSFont(name: "Rubik", size: 12) ?? .systemFont(ofSize: 12)
+            header.textColor = palette.text
+            header.frame = NSRect(x: column.left, y: 6, width: column.width, height: headerHeight - 8)
+            header.alignment = .center
+            header.accessibilityIdentifier = column.accessibilityIdentifier
+            headerRowView.addSubview(header)
+        }
+    }
+
+    private func renderAllDayColumns(
+        snapshot: GridLayoutSnapshot,
+        allDayHeight: Double,
+        headerHeight: Double
+    ) {
+        allDayRowView.subviews.filter { !($0 is EventCardView) }.forEach { $0.removeFromSuperview() }
+        let palette = themePalette
+        allDayRowView.layer?.backgroundColor = palette.background.cgColor
+
+        for column in snapshot.columns {
+            let divider = NSView(
+                frame: NSRect(x: column.left, y: 0, width: 1, height: allDayHeight + headerHeight)
+            )
+            divider.wantsLayer = true
+            divider.layer?.backgroundColor = palette.border.withAlphaComponent(0.5).cgColor
+            allDayRowView.addSubview(divider)
+        }
+    }
+
+    private func renderTimedGrid(snapshot: GridLayoutSnapshot, hourHeight: Double, gridHeight: Double) {
+        timedContentView.subviews.filter { !($0 is EventCardView) }.forEach { $0.removeFromSuperview() }
+        let palette = themePalette
+        timedContentView.layer?.backgroundColor = palette.background.cgColor
+
+        for column in snapshot.columns {
+            let divider = NSView(frame: NSRect(x: column.left, y: 0, width: 1, height: gridHeight))
+            divider.wantsLayer = true
+            divider.layer?.backgroundColor = palette.border.withAlphaComponent(0.35).cgColor
+            timedContentView.addSubview(divider)
+        }
+
+        for hour in 1 ..< GridTimeConstants.timedVisibleHours {
+            let line = NSView(frame: NSRect(x: snapshot.metrics.marginLeft, y: Double(hour) * hourHeight, width: bounds.width, height: 1))
+            line.wantsLayer = true
+            line.layer?.backgroundColor = palette.border.withAlphaComponent(0.25).cgColor
+            timedContentView.addSubview(line)
+        }
+    }
+
+    private func renderCards(snapshot: GridLayoutSnapshot) {
+        var seen: Set<String> = []
+        let surface = themePalette.surfaceRaised
+        let allDayOffset = 28.0 + snapshot.metrics.allDayRowHeight
+
+        for card in snapshot.cards {
+            seen.insert(card.eventId)
+            let view = cardPool[card.eventId] ?? EventCardView(frame: .zero)
+            cardPool[card.eventId] = view
+
+            var frame = card.frame
+            if card.kind == .allDay {
+                frame.top += 28
+            } else {
+                frame.top += allDayOffset
+            }
+
+            var adjusted = card
+            adjusted.frame = frame
+            view.apply(card: adjusted, theme: theme, surfaceColor: surface)
+
+            let parent = card.kind == .allDay ? allDayRowView : timedContentView
+            if view.superview !== parent {
+                view.removeFromSuperview()
+                parent.addSubview(view)
+            }
+        }
+
+        for (eventId, view) in cardPool where !seen.contains(eventId) {
+            view.removeFromSuperview()
+            cardPool.removeValue(forKey: eventId)
+        }
+    }
+
+    private func updateNowLine() {
+        guard let snapshot, let nowLine = snapshot.nowLine else {
+            nowLineLayer.isHidden = true
+            return
+        }
+        guard let column = snapshot.columns.indices.contains(nowLine.columnIndex)
+            ? snapshot.columns[nowLine.columnIndex]
+            : nil
+        else {
+            nowLineLayer.isHidden = true
+            return
+        }
+
+        let allDayOffset = 28.0 + snapshot.metrics.allDayRowHeight
+        nowLineLayer.isHidden = false
+        nowLineLayer.frame = CGRect(
+            x: column.left,
+            y: nowLine.top + allDayOffset,
+            width: column.width,
+            height: 2
+        )
+    }
+
+    private var marginWidth: CGFloat {
+        CGFloat(GridMetrics.gridMarginLeft)
+    }
+
+    private var themePalette: (background: NSColor, surface: NSColor, surfaceRaised: NSColor, border: NSColor, text: NSColor, textMuted: NSColor) {
+        switch theme {
+        case .lightBeach:
+            (
+                ThemeTokens.lightBeach.background.nsColor,
+                ThemeTokens.lightBeach.surface.nsColor,
+                ThemeTokens.lightBeach.surfaceRaised.nsColor,
+                ThemeTokens.lightBeach.border.nsColor,
+                ThemeTokens.lightBeach.text.nsColor,
+                ThemeTokens.lightBeach.textMuted.nsColor
+            )
+        case .darkAbyss:
+            (
+                ThemeTokens.darkAbyss.background.nsColor,
+                ThemeTokens.darkAbyss.surface.nsColor,
+                ThemeTokens.darkAbyss.surfaceRaised.nsColor,
+                ThemeTokens.darkAbyss.border.nsColor,
+                ThemeTokens.darkAbyss.text.nsColor,
+                ThemeTokens.darkAbyss.textMuted.nsColor
+            )
+        }
+    }
+
+    private var themeAccentColor: NSColor {
+        switch theme {
+        case .lightBeach:
+            ThemeTokens.lightBeach.accent.nsColor
+        case .darkAbyss:
+            ThemeTokens.darkAbyss.accent.nsColor
+        }
+    }
+
+    private func formattedHour(_ hour: Int) -> String {
+        let calendar = EffectiveTimeZone.calendar
+        var components = calendar.dateComponents([.year, .month, .day], from: state.referenceNow)
+        components.hour = hour
+        components.minute = 0
+        guard let date = calendar.date(from: components) else { return "\(hour)" }
+        let formatter = DateFormatter()
+        formatter.timeZone = EffectiveTimeZone.timeZone
+        formatter.dateFormat = "h a"
+        return formatter.string(from: date)
+    }
+}
+
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
+}

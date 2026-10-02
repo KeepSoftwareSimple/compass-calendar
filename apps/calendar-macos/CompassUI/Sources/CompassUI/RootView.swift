@@ -92,7 +92,7 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        Color.clear
+        TimeGridRepresentable(state: TimeGridPreviewFactory.weekPreviewState())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.backgroundColor)
             .accessibilityIdentifier("compass-native-content")
