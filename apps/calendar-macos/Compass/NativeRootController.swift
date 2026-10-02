@@ -164,9 +164,10 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     private func configureResume() {
         let monitor = NativeDesktopResumeMonitor()
-        monitor.onResume = { [weak self] in
+        let calendarModel = model
+        monitor.onResume = {
             Task { @MainActor in
-                await self?.model.handleResume()
+                await calendarModel.handleResume()
             }
         }
         monitor.start()
