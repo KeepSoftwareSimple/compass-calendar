@@ -110,7 +110,9 @@ jobs:
           path: |
             apps/calendar-macos/build/DerivedData
             apps/calendar-macos/build/SourcePackages
-          key: ${{ runner.os }}-xcode-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
+          # Bump when SPM binary artifacts (Sparkle) change; stale DerivedData can
+          # skip ProcessXCFramework and break the embed copy step.
+          key: ${{ runner.os }}-xcode-sparkle-v1-${{ hashFiles('apps/calendar-macos/project.yml', 'apps/calendar-macos/**/Package.swift', 'apps/calendar-macos/**/Package.resolved') }}
           restore-keys: |
             ${{ runner.os }}-xcode-
 
