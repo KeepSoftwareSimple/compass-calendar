@@ -27,6 +27,7 @@ import { findWelcomeStep } from "@backend/email/welcome-sequence";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
 import {
+  buildWelcomeResendTemplateVariables,
   getWelcomeStepCtaBaseHref,
   getWelcomeStepTemplateAlias,
 } from "@backend/email/welcome-sequence.templates";
@@ -187,10 +188,11 @@ export class EmailDispatchService {
         : undefined;
 
     const ctaUrl = appendWelcomeEmailUtm(ctaBaseHref, row.stepKey);
-    const templateVariables: Record<string, string> = {
-      CTA_URL: ctaUrl,
-      UNSUBSCRIBE_URL: unsubscribe?.httpsUrl ?? "",
-    };
+    const templateVariables = buildWelcomeResendTemplateVariables({
+      ctaUrl,
+      unsubscribeUrl: unsubscribe?.httpsUrl ?? "",
+      firstName: user.firstName,
+    });
 
     const headers: Record<string, string> = {};
     if (unsubscribe) {

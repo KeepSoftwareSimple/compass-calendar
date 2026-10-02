@@ -21,6 +21,7 @@ export async function loadWelcomeSequenceUser(
 
   return {
     email: typed.email,
+    firstName: typed.firstName,
     hasConnectedCalendar: connectedCalendar !== null,
     billing: typed.billing,
     emailPreferences: typed.emailPreferences,
