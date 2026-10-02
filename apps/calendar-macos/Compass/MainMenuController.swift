@@ -5,9 +5,11 @@ import CompassKit
 final class MainMenuController: NSObject {
     private weak var webViewController: WebViewController?
     private let showDebugMenu: Bool
+    private let updater: DesktopUpdater
 
-    init(webViewController: WebViewController, showDebugMenu: Bool) {
+    init(webViewController: WebViewController, updater: DesktopUpdater, showDebugMenu: Bool) {
         self.webViewController = webViewController
+        self.updater = updater
         self.showDebugMenu = showDebugMenu
         super.init()
     }
@@ -77,6 +79,10 @@ final class MainMenuController: NSObject {
             case .otherSettings: return #selector(openSettings(_:))
             case .otherShortcuts: return #selector(openHelp(_:))
             }
+        case .checkForUpdates:
+            return #selector(checkForUpdates(_:))
+        case .restartToUpdate:
+            return #selector(restartToUpdate(_:))
         case .switchToStaging:
             return #selector(switchToStaging(_:))
         case .switchToProduction:
@@ -127,6 +133,14 @@ final class MainMenuController: NSObject {
         webViewController?.dispatchShortcut(.otherPalette)
     }
 
+    @objc private func checkForUpdates(_ sender: Any?) {
+        updater.checkForUpdates()
+    }
+
+    @objc private func restartToUpdate(_ sender: Any?) {
+        updater.restartToUpdate()
+    }
+
     @objc private func switchToStaging(_ sender: Any?) {
         AppHostPreference.staging.save()
         webViewController?.reloadAppHost()
@@ -135,5 +149,18 @@ final class MainMenuController: NSObject {
     @objc private func switchToProduction(_ sender: Any?) {
         AppHostPreference.production.save()
         webViewController?.reloadAppHost()
+    }
+}
+
+extension MainMenuController: NSMenuItemValidation {
+    func validateMenuItem(_ item: NSMenuItem) -> Bool {
+        switch item.action {
+        case #selector(checkForUpdates(_:)):
+            return updater.canCheckForUpdates
+        case #selector(restartToUpdate(_:)):
+            return updater.isUpdateStaged
+        default:
+            return true
+        }
     }
 }

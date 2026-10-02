@@ -31,7 +31,7 @@ the PR that adds this doc. After that they are settled.
    staging), loaded over the network like a Safari tab. Zero web build
    changes, zero auth changes, one web deploy updates every Mac user the
    same minute. Not Electron: no Chromium, no Node, a real `.app` that is
-   App Store eligible later. Not a native rewrite of the calendar UI for v1:
+   not App Store bound (see decision 4). Not a native rewrite of the calendar UI for v1:
    a month is not enough to rebuild the grid, recurrence, forms, palette,
    and shortcuts in SwiftUI with parity, so that is a post-launch track if
    wanted. Not a bundled offline copy of the web bundle (that needs header
@@ -55,7 +55,12 @@ the PR that adds this doc. After that they are settled.
    with Sparkle for silent updates.** The repo is public, so release assets
    and the Sparkle appcast download without auth. Tags `macos-v0.x.y` build
    internal releases in October; `macos-v1.0.0` is the public one. No Mac
-   App Store for v1 (sandbox and review add weeks). No Homebrew cask for v1.
+   App Store, ever (decided 2026-10-01): it would force In-App Purchase for
+   subscriptions, the sandbox, and review of a web-wrapper app, and it
+   conflicts with Sparkle. No Homebrew cask for v1. The updater stays off until
+   `SUPublicEDKey` in `Resources/Info.plist` holds the public key, so unsigned
+   local builds never self-update. The appcast lives on the rolling
+   `macos-appcast` release because `releases/latest` belongs to the web tags.
 5. **Internal builds default to production.** Dogfooding staging data is not
    dogfooding. A hidden **Switch to staging** menu item exists for QA. This
    requires one production web deploy that carries the web-side changes
@@ -161,7 +166,7 @@ can. Visual and Notification Center checks are the owner's, recorded on
 - WidgetKit today widget, Shortcuts.app actions, Spotlight indexing.
 - EventKit integration for local macOS calendars (iCloud already works over
   CalDAV).
-- Mac App Store and Homebrew cask distribution.
+- Homebrew cask distribution. The Mac App Store is ruled out.
 - Multiple windows and Handoff.
 - Windows and Linux builds.
 

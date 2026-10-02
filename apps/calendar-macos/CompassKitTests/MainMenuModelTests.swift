@@ -41,6 +41,14 @@ final class MainMenuModelTests: XCTestCase {
         XCTAssertEqual(today?.keyEquivalent, MacKeyEquivalent(key: "t"))
     }
 
+    func testCompassMenuHasUpdateRows() {
+        let compass = MainMenuModel.sections(showDebugMenu: false).first { $0.title == "Compass" }
+        XCTAssertEqual(
+            compass?.rows.first { $0.title == "Check for Updates…" }?.action, .checkForUpdates)
+        XCTAssertEqual(
+            compass?.rows.first { $0.title == "Restart to update" }?.action, .restartToUpdate)
+    }
+
     func testDebugSectionIsOptional() {
         XCTAssertFalse(
             MainMenuModel.sections(showDebugMenu: false).contains { $0.title == "Debug" })

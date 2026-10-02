@@ -36,6 +36,7 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
           missing=()
@@ -45,6 +46,7 @@ jobs:
           [ -z "${APPLE_API_KEY_ID:-}" ] && missing+=("APPLE_API_KEY_ID")
           [ -z "${APPLE_API_ISSUER:-}" ] && missing+=("APPLE_API_ISSUER")
           [ -z "${APPLE_TEAM_ID:-}" ] && missing+=("APPLE_TEAM_ID")
+          [ -z "${SPARKLE_PRIVATE_KEY:-}" ] && missing+=("SPARKLE_PRIVATE_KEY")
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::error::Missing required repository secrets: ${missing[*]}"
             exit 1
@@ -64,6 +66,12 @@ jobs:
           yaml_version=$(grep -E '^\s+MARKETING_VERSION:' project.yml | head -1 | awk '{print $2}')
           if [ "$tag_version" != "$yaml_version" ]; then
             echo "::error::Tag version ${tag_version} does not match MARKETING_VERSION ${yaml_version} in project.yml"
+            exit 1
+          fi
+          # Sparkle cannot verify updates without the public half of the signing key.
+          sparkle_key=$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' Resources/Info.plist)
+          if [ -z "$sparkle_key" ]; then
+            echo "::error::SUPublicEDKey is empty in Resources/Info.plist; paste the public key from generate_keys."
             exit 1
           fi
           echo "release_tag=${tag}" >>"$GITHUB_OUTPUT"
@@ -116,6 +124,7 @@ jobs:
             -destination "generic/platform=macOS" \
             -derivedDataPath build/DerivedData \
             -clonedSourcePackagesDirPath build/SourcePackages \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}" \
             ARCHS="arm64 x86_64" \
             ONLY_ACTIVE_ARCH=NO \
             CODE_SIGN_STYLE=Manual \
@@ -177,6 +186,28 @@ jobs:
             "$DMG_PATH"
           echo "dmg_path=${DMG_PATH}" >>"$GITHUB_OUTPUT"
 
+      # Sparkle compares CFBundleVersion, which the archive step stamps with the
+      # run number so each tag outranks the last. The feed is a rolling release
+      # (macos-appcast) because /releases/latest belongs to the web v* tags.
+      - name: Generate Sparkle appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.version.outputs.release_tag }}"
+          bin="build/SourcePackages/artifacts/sparkle/Sparkle/bin"
+          key_path="${RUNNER_TEMP}/sparkle_ed_key"
+          printf '%s' "$SPARKLE_PRIVATE_KEY" >"$key_path"
+          chmod 600 "$key_path"
+          rm -rf build/appcast && mkdir -p build/appcast
+          cp "${{ steps.dmg.outputs.dmg_path }}" build/appcast/
+          "$bin/generate_appcast" \
+            --ed-key-file "$key_path" \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/${tag}/" \
+            build/appcast
+          rm -f "$key_path"
+          test -s build/appcast/appcast.xml
+
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -185,8 +216,22 @@ jobs:
           tag="${{ steps.version.outputs.release_tag }}"
           dmg="${{ steps.dmg.outputs.dmg_path }}"
           gh release create "$tag" "$dmg" \
+            --latest=false \
             --title "Compass for macOS ${{ steps.version.outputs.marketing_version }}" \
             --notes "Signed, notarized universal build. Install by opening the DMG and dragging Compass to Applications."
+
+      - name: Publish Sparkle appcast
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if ! gh release view macos-appcast >/dev/null 2>&1; then
+            gh release create macos-appcast \
+              --latest=false \
+              --title "macOS update feed" \
+              --notes "Sparkle appcast for Compass for macOS. Replaced by release-macos.yml on every macos-v tag; do not edit."
+          fi
+          gh release upload macos-appcast build/appcast/appcast.xml --clobber
 
       - name: Delete signing keychain
         if: always()
