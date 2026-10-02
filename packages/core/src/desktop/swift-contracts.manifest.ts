@@ -73,7 +73,7 @@ export const SWIFT_BRANDED_ID_ENTRIES: SwiftBrandedIdEntry[] = [
   { swiftName: "CalendarId", schema: CalendarIdSchema },
   { swiftName: "DateTime", schema: DateTimeSchema },
   { swiftName: "DateOnly", schema: DateOnlySchema },
-  { swiftName: "TimeZone", schema: TimeZoneSchema },
+  { swiftName: "IANATimeZone", schema: TimeZoneSchema },
   { swiftName: "ConnectionId", schema: ConnectionIdSchema },
 ];
 
@@ -88,7 +88,7 @@ export const SWIFT_CONTRACT_MANIFEST: SwiftContractManifestEntry[] = [
   { swiftName: "RsvpEventInput", schema: RsvpEventInputSchema },
   { swiftName: "EventMutationError", schema: EventMutationErrorSchema },
   { swiftName: "CompassEvent", schema: CompassEventSchema },
-  { swiftName: "Calendar", schema: CalendarSchema },
+  { swiftName: "CompassCalendar", schema: CalendarSchema },
   { swiftName: "CalendarListResponse", schema: CalendarListResponseSchema },
   { swiftName: "ServerMessage", schema: ServerMessageSchema },
   { swiftName: "ContactSuggestion", schema: ContactSuggestionSchema },

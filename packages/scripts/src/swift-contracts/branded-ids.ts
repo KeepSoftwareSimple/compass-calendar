@@ -2,6 +2,7 @@ import {
   isSchemaObject,
   type JsonSchema,
 } from "@scripts/swift-contracts/json-schema.types";
+import { assertSwiftPublicTypeName } from "@scripts/swift-contracts/swift-reserved-types";
 import { z } from "zod/v4";
 import {
   SWIFT_BRANDED_ID_ENTRIES,
@@ -13,6 +14,7 @@ const OBJECT_ID_PATTERN = "^[0-9a-f]{24}$";
 export function emitBrandedIdStructs(entries: SwiftBrandedIdEntry[]): string {
   return entries
     .map(({ swiftName }) => {
+      assertSwiftPublicTypeName(swiftName, "branded id struct");
       return `public struct ${swiftName}: RawRepresentable, Codable, Hashable, Sendable, ExpressibleByStringLiteral {
     public let rawValue: String
 
@@ -60,7 +62,7 @@ const PROPERTY_BRAND_OVERRIDES: Record<string, string> = {
   createdAt: "DateTime",
   updatedAt: "DateTime",
   computedAt: "DateTime",
-  timeZone: "TimeZone",
+  timeZone: "IANATimeZone",
   trialEndsAt: "DateTime",
   currentPeriodEnd: "DateTime",
 };
@@ -117,7 +119,7 @@ function stringMatchesBrandedShape(
       );
     case "DateOnly":
       return schema.format === "date";
-    case "TimeZone":
+    case "IANATimeZone":
       return schema.type === "string";
     case "EventId":
       return isEventIdShape(schema);

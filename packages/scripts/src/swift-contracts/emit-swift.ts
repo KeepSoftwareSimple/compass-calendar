@@ -7,6 +7,7 @@ import {
   isSchemaObject,
   type JsonSchema,
 } from "@scripts/swift-contracts/json-schema.types";
+import { assertSwiftPublicTypeName } from "@scripts/swift-contracts/swift-reserved-types";
 import { z } from "zod/v4";
 import {
   SWIFT_BRANDED_ID_ENTRIES,
@@ -309,6 +310,7 @@ function ensureIntEnum(name: string, values: number[], ctx: EmitContext): void {
   if (ctx.emitted.has(name)) {
     return;
   }
+  assertSwiftPublicTypeName(name, "generated enum");
   const cases = values
     .map((value) => `    case v${value} = ${value}`)
     .join("\n");
@@ -329,6 +331,7 @@ function ensureStringEnum(
   if (ctx.emitted.has(name)) {
     return;
   }
+  assertSwiftPublicTypeName(name, "generated enum");
   const cases = values
     .map((value) => `    case ${swiftEnumCaseName(value)} = "${value}"`)
     .join("\n");
@@ -369,6 +372,7 @@ function ensureStruct(
   if (ctx.emitted.has(name) || ctx.pending.has(name)) {
     return name;
   }
+  assertSwiftPublicTypeName(name, `struct at ${path}`);
   ctx.pending.add(name);
   const properties = schema.properties ?? {};
   const required = new Set(schema.required ?? []);
@@ -417,6 +421,7 @@ function ensureDiscriminatedUnion(
   if (ctx.emitted.has(name)) {
     return name;
   }
+  assertSwiftPublicTypeName(name, `discriminated union at ${path}`);
   const cases: string[] = [];
   const decodeCases: string[] = [];
   const encodeCases: string[] = [];
@@ -537,6 +542,13 @@ export function emitSwiftForSchema(
 }
 
 export function emitContractsSwiftFile(): string {
+  for (const { swiftName } of SWIFT_BRANDED_ID_ENTRIES) {
+    assertSwiftPublicTypeName(swiftName, "swift branded id manifest");
+  }
+  for (const { swiftName } of SWIFT_CONTRACT_MANIFEST) {
+    assertSwiftPublicTypeName(swiftName, "swift contract manifest");
+  }
+
   const ctx: EmitContext = {
     lookup: buildBrandedIdLookup(SWIFT_BRANDED_ID_ENTRIES),
     emitted: new Map(),

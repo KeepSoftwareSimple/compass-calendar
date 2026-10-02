@@ -50,7 +50,7 @@ public struct DateOnly: RawRepresentable, Codable, Hashable, Sendable, Expressib
     }
 }
 
-public struct TimeZone: RawRepresentable, Codable, Hashable, Sendable, ExpressibleByStringLiteral {
+public struct IANATimeZone: RawRepresentable, Codable, Hashable, Sendable, ExpressibleByStringLiteral {
     public let rawValue: String
 
     public init(rawValue: String) {
@@ -201,7 +201,7 @@ public struct EventSchedule_TimedPayload: Codable, Hashable, Sendable {
     public let kind: String
     public let start: DateTime
     public let end: DateTime
-    public let timeZone: TimeZone}
+    public let timeZone: IANATimeZone}
 
 public struct EventSchedule_AllDayPayload: Codable, Hashable, Sendable {
     public let kind: String
@@ -495,7 +495,7 @@ public enum ConferenceKindsEnum: String, Codable, Hashable, Sendable, CaseIterab
     case teams = "teams"
 }
 
-public struct CalendarCapabilities: Codable, Hashable, Sendable {
+public struct CompassCalendarCapabilities: Codable, Hashable, Sendable {
     public let canReadAvailability: Bool
     public let canReadDetails: Bool
     public let canWrite: Bool
@@ -510,16 +510,16 @@ public enum ConferenceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case none = "none"
 }
 
-public struct Calendar: Codable, Hashable, Sendable {
+public struct CompassCalendar: Codable, Hashable, Sendable {
     public let id: String
     public let name: String
     public let description: String
-    public let timeZone: TimeZone?
+    public let timeZone: IANATimeZone?
     public let foregroundColor: String
     public let backgroundColor: String
     public let provider: String
     public let access: AccessEnum
-    public let capabilities: CalendarCapabilities
+    public let capabilities: CompassCalendarCapabilities
     public let isPrimary: Bool
     public let isVisible: Bool
     public let isActive: Bool
@@ -531,12 +531,12 @@ public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
     public let id: String
     public let name: String
     public let description: String
-    public let timeZone: TimeZone?
+    public let timeZone: IANATimeZone?
     public let foregroundColor: String
     public let backgroundColor: String
     public let provider: String
     public let access: AccessEnum
-    public let capabilities: CalendarCapabilities
+    public let capabilities: CompassCalendarCapabilities
     public let isPrimary: Bool
     public let isVisible: Bool
     public let isActive: Bool
@@ -763,7 +763,7 @@ public struct BookingPage: Codable, Hashable, Sendable {
     public let durationMinutes: DurationMinutesEnum
     public let destinationCalendarId: String
     public let blockingCalendarIds: [String]
-    public let timeZone: TimeZone
+    public let timeZone: IANATimeZone
     public let weeklyAvailability: [BookingPageWeeklyAvailability]
     public let minNoticeHours: Int
     public let maxHorizonDays: Int
@@ -773,7 +773,7 @@ public struct BookingPage: Codable, Hashable, Sendable {
 public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
     public let hostDisplayName: String
     public let durationMinutes: DurationMinutesEnum
-    public let timeZone: TimeZone
+    public let timeZone: IANATimeZone
     public let enabled: Bool
     public let maxHorizonDays: Int
     public let createsGoogleMeet: Bool
