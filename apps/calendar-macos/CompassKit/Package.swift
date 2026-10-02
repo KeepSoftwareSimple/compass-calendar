@@ -13,7 +13,7 @@ let package = Package(
         .target(
             name: "CompassKit",
             resources: [
-                .process("Resources"),
+                .copy("Resources/Fixtures"),
             ]
         ),
         .testTarget(
