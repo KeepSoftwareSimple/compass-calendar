@@ -107,6 +107,46 @@ describe("bootSizeBudgetViolations", () => {
     expect(violations).toEqual(["zod: 700 B exceeds ceiling 100 B by 600 B"]);
   });
 
+  it("allows total gzip within declared slack", () => {
+    const violations = bootSizeBudgetViolations(
+      {
+        chunkCount: 3,
+        totalRawBytes: 1000,
+        totalGzipBytes: 516_545,
+        packages: [],
+      },
+      {
+        chunkCount: 3,
+        totalGzipBytes: 516_500,
+        totalGzipSlackBytes: 1024,
+        packages: {},
+      },
+    );
+
+    expect(violations).toEqual([]);
+  });
+
+  it("fails total gzip beyond budget plus slack", () => {
+    const violations = bootSizeBudgetViolations(
+      {
+        chunkCount: 3,
+        totalRawBytes: 1000,
+        totalGzipBytes: 517_600,
+        packages: [],
+      },
+      {
+        chunkCount: 3,
+        totalGzipBytes: 516_500,
+        totalGzipSlackBytes: 1024,
+        packages: {},
+      },
+    );
+
+    expect(violations).toEqual([
+      "gzip: 517600 B exceeds ceiling 517524 B (516500 B budget + 1024 B slack) by 76 B",
+    ]);
+  });
+
   it("fails packages that have no declared ceiling", () => {
     const violations = bootSizeBudgetViolations(
       {

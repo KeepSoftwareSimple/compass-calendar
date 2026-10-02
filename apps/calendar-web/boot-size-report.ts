@@ -9,6 +9,8 @@ import { gzipSync } from "node:zlib";
 export interface BootSizeBudget {
   chunkCount: number;
   totalGzipBytes: number;
+  /** Optional slack on total gzip only (cross-platform gzip variance). */
+  totalGzipSlackBytes?: number;
   packages: Record<string, number>;
 }
 
@@ -180,9 +182,22 @@ export function parseBootSizeBudget(raw: unknown): BootSizeBudget {
     }
     packages[name] = ceiling;
   }
+  const totalGzipSlackBytes = record["totalGzipSlackBytes"];
+  if (
+    totalGzipSlackBytes !== undefined &&
+    (typeof totalGzipSlackBytes !== "number" ||
+      !Number.isFinite(totalGzipSlackBytes) ||
+      totalGzipSlackBytes < 0)
+  ) {
+    throw new Error(
+      "boot-size-budget.json totalGzipSlackBytes must be a non-negative number when set",
+    );
+  }
+
   return {
     chunkCount: record["chunkCount"],
     totalGzipBytes: record["totalGzipBytes"],
+    totalGzipSlackBytes,
     packages,
   };
 }
@@ -206,9 +221,16 @@ export function bootSizeBudgetViolations(
     }
   }
 
-  if (report.totalGzipBytes > budget.totalGzipBytes) {
+  const gzipSlack = budget.totalGzipSlackBytes ?? 0;
+  const gzipCeiling = budget.totalGzipBytes + gzipSlack;
+  if (report.totalGzipBytes > gzipCeiling) {
+    const over = report.totalGzipBytes - gzipCeiling;
+    const slackNote =
+      gzipSlack > 0
+        ? ` (${budget.totalGzipBytes} B budget + ${gzipSlack} B slack)`
+        : "";
     violations.push(
-      `gzip: ${report.totalGzipBytes} B exceeds ceiling ${budget.totalGzipBytes} B by ${report.totalGzipBytes - budget.totalGzipBytes} B`,
+      `gzip: ${report.totalGzipBytes} B exceeds ceiling ${gzipCeiling} B${slackNote} by ${over} B`,
     );
   }
 
@@ -221,9 +243,10 @@ export function bootSizeBudgetViolations(
   return violations;
 }
 
-// The budget is measured against self-host/Dockerfile.web's generated config
-// (what ships) and enforced on PRs with .github/perf/compass.perf.yaml; see
-// that file's header for why the two are interchangeable.
+// The budget is measured against .github/docker/Dockerfile.web's generated
+// config (what cloud deploy ships). PR CI runs the same shape via
+// .github/perf/run-boot-size-check.sh (not compass.perf.yaml, which is for
+// Lighthouse only).
 export async function loadBootSizeBudget(
   budgetPath = path.resolve(import.meta.dir, "boot-size-budget.json"),
 ): Promise<BootSizeBudget> {
