@@ -9,8 +9,9 @@ final class CalendarWindowMathTests: XCTestCase {
 
     func testComputeVisibleDayCount() {
         XCTAssertEqual(CalendarWindowMath.computeVisibleDayCount(trackWidth: 320), 1)
-        XCTAssertEqual(CalendarWindowMath.computeVisibleDayCount(trackWidth: 1020), 7)
         XCTAssertEqual(CalendarWindowMath.computeVisibleDayCount(trackWidth: 500), 3)
+        XCTAssertEqual(CalendarWindowMath.computeVisibleDayCount(trackWidth: 1020), 6)
+        XCTAssertEqual(CalendarWindowMath.computeVisibleDayCount(trackWidth: 1030), 7)
     }
 
     func testComputeVisibleWindowOffset() {
