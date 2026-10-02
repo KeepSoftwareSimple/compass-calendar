@@ -91,7 +91,7 @@ describe("getMoreCommandPaletteSections", () => {
     );
   });
 
-  it("opens the personal onboarding Calendly link in a new tab", () => {
+  it("opens the personal onboarding meeting link in a new tab", () => {
     const [section] = getMoreCommandPaletteSections("week", false);
     const bookOnboarding = section.items.find(
       (item) => item.id === "book-personal-onboarding",

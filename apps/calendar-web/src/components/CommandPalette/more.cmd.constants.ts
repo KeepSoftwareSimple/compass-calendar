@@ -14,7 +14,7 @@ import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 
 export const PERSONAL_ONBOARDING_URL =
-  "https://calendly.com/switchback-tech/compass-onboarding";
+  "https://www.compasscalendar.com/meet/tyler";
 
 export function getSettingsCommandItem(): CommandItem {
   return {
