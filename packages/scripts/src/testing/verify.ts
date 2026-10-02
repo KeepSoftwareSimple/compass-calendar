@@ -210,6 +210,7 @@ function filesForPackage(pkg: Package, files: string[]): string[] {
 function fileForcesFullPackageSuite(file: string): boolean {
   return (
     file.endsWith(".db.test.ts") ||
+    file.endsWith("header-session.test.ts") ||
     file.includes("/storage/") ||
     file.includes("/repositories/")
   );

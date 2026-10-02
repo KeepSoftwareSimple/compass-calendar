@@ -210,6 +210,24 @@ Constraints:
 Without this, a user can stare at a stale “Updated …” label until they
 remember to click **Refresh calendar**.
 
+## Native clients
+
+The macOS app uses SuperTokens **header** sessions instead of browser cookies.
+Sign-in and refresh requests send `st-auth-mode: header`. The backend returns
+`st-access-token`, `st-refresh-token`, and `front-token` on the response
+headers. Protected API calls, including `GET /api/events/stream`, send
+`Authorization: Bearer <access-token>`. The same `verifySession()` middleware
+guards SSE as cookie-based web tabs.
+
+On connect, the stream writes a `retry:` hint (currently 5000 ms) so native
+clients can reconnect with the same backoff semantics as `EventSource`. Each
+stream closes after a planned lifetime of 20 minutes; the client opens a new
+one with a fresh Bearer token.
+
+While at least one stream is open for a user, `SyncChangeFeedBridge` polls
+Sync's change feed on the same ~2 s cadence as the web client. When every
+stream for that user closes, polling stops until another stream opens.
+
 ## Connect funnel observability
 
 Every Google or Microsoft calendar connect round-trip emits two PostHog events

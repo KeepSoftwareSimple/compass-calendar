@@ -48,6 +48,9 @@ const PACKAGES: Record<
   },
 };
 
+const BACKEND_HEADER_SESSION =
+  "./packages/backend/src/auth/__tests__/header-session.test.ts";
+
 const pkg = process.argv[2] as PackageName;
 const separatorIndex = process.argv.indexOf("--");
 const extraArgs =
@@ -74,19 +77,61 @@ const server = await MongoMemoryReplSet.create({
 const mongoUri = server.getUri();
 const env = backendTestSpawnEnv(mongoUri);
 
-const testTargets = [
-  "bun",
-  "test",
-  "--parallel",
-  // Db-heavy suites connect many workers to one shared mongod; the default 5s
-  // hook budget is too tight under parallel index installs.
-  "--timeout",
-  "60000",
-  "--preload",
-  preloadPath,
-  ...bunFlags,
-  ...targets,
+function isHeaderSessionTarget(target: string): boolean {
+  return target.includes("header-session.test.ts");
+}
+
+function extraArgsIgnoreHeaderSession(): boolean {
+  for (let i = 0; i < extraArgs.length; i++) {
+    if (
+      extraArgs[i] === "--path-ignore-patterns" &&
+      extraArgs[i + 1]?.includes("header-session")
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const isFullBackendSuite =
+  pkg === "backend" &&
+  targets.length === 1 &&
+  targets[0] === scan &&
+  !extraArgsIgnoreHeaderSession();
+
+const mainBunFlags = [...bunFlags];
+if (isFullBackendSuite) {
+  mainBunFlags.push("--path-ignore-patterns", "**/header-session.test.ts");
+}
+
+const mainParallel = !(
+  targets.length === 1 && isHeaderSessionTarget(targets[0] ?? "")
+);
+
+type TestInvocation = {
+  runLabel: string;
+  bunFlags: string[];
+  targets: string[];
+  parallel: boolean;
+};
+
+const invocations: TestInvocation[] = [
+  {
+    runLabel: label,
+    bunFlags: mainBunFlags,
+    targets,
+    parallel: mainParallel,
+  },
 ];
+
+if (isFullBackendSuite) {
+  invocations.push({
+    runLabel: "backend SuperTokens integration (header-session)",
+    bunFlags: [],
+    targets: [BACKEND_HEADER_SESSION],
+    parallel: false,
+  });
+}
 
 console.log(`Running ${label} (${pkg})...`);
 
@@ -123,7 +168,21 @@ function watchStream(
   void pump();
 }
 
-try {
+async function runTestInvocation(invocation: TestInvocation): Promise<number> {
+  const testTargets = [
+    "bun",
+    "test",
+    ...(invocation.parallel ? (["--parallel"] as const) : []),
+    "--timeout",
+    "60000",
+    "--preload",
+    preloadPath,
+    ...invocation.bunFlags,
+    ...invocation.targets,
+  ];
+
+  console.log(`\nRunning ${invocation.runLabel} (${pkg})...`);
+
   const proc = Bun.spawn(testTargets, {
     env,
     stdout: "pipe",
@@ -135,14 +194,14 @@ try {
   let quiet: ReturnType<typeof setTimeout> | undefined;
   let settled = false;
 
-  const code = await new Promise<number>((resolve) => {
+  return await new Promise<number>((resolvePromise) => {
     const settle = (exitCode: number, kill: boolean) => {
       if (settled) return;
       settled = true;
       clearTimeout(wedged);
       clearTimeout(quiet);
       if (kill) proc.kill();
-      resolve(exitCode);
+      resolvePromise(exitCode);
     };
 
     const armQuiet = () => {
@@ -191,12 +250,17 @@ try {
       settle(1, true);
     }, EXIT_TIMEOUT_MS);
   });
+}
+
+try {
+  for (const invocation of invocations) {
+    const code = await runTestInvocation(invocation);
+    if (code !== 0) {
+      process.exit(code);
+    }
+  }
 
   console.log(`\n${pkg}: finished in ${formatDuration(started)}s`);
-
-  if (code !== 0) {
-    process.exit(code);
-  }
 } finally {
   await server.stop();
 }
