@@ -6,6 +6,7 @@ import * as Track from "@web/auth/posthog/track";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { recurrenceScopeOpportunityActions } from "@web/events/recurrence/recurrence-scope-opportunity.store";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
+import { DIGIT_PICK_OWNER_ATTRIBUTE } from "@web/shortcuts/digit-pick.util";
 import {
   clearFloatingLayerReasons,
   setFloatingLayerReason,
@@ -220,6 +221,42 @@ describe("typed-time ownership", () => {
 
     expect(event.defaultPrevented).toBe(false);
     expect(useEventJumpStore.getState().quickTimeDigits).toBe("");
+  });
+
+  it("leaves a digit pressed inside a digit-pick list to that list", () => {
+    const { createAt } = mountOwner();
+    const list = document.createElement("section");
+    list.setAttribute(DIGIT_PICK_OWNER_ATTRIBUTE, "");
+    const row = document.createElement("button");
+    list.appendChild(row);
+    document.body.appendChild(list);
+    row.focus();
+
+    const event = digit("1");
+    act(() => {
+      row.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(false);
+    expect(useEventJumpStore.getState().quickTimeDigits).toBe("");
+    expect(createAt).not.toHaveBeenCalled();
+    list.remove();
+  });
+
+  it("still claims a digit pressed on a focused button outside any list", () => {
+    mountOwner();
+    const button = document.createElement("button");
+    document.body.appendChild(button);
+    button.focus();
+
+    const event = digit("1");
+    act(() => {
+      button.dispatchEvent(event);
+    });
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(useEventJumpStore.getState().quickTimeDigits).toBe("1");
+    button.remove();
   });
 
   it("ignores a Mod chord, which belongs to page jump", () => {

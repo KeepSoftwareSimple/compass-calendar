@@ -9,6 +9,7 @@ import { isEventFormOpen } from "@web/events/stores/draft.store";
 import { isAppLocked } from "@web/shortcuts/app-lock";
 import {
   digitPickIndex,
+  isDigitPickOwnerTarget,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
@@ -529,6 +530,15 @@ export function useShiftHoldEventHints({
       // keys unclaimed so RecurrenceScopeOpportunityHost can promote, including
       // while jump-mode column digits would otherwise seed a 1:00/2:00 draft.
       if (isRecurrenceScopeAskReady() && recurrenceScopeForToastDigit(event)) {
+        return;
+      }
+
+      // A focused digit-pick list (the sidebar calendars after Mod+digit lands
+      // on an account) owns bare digits: 1-9 toggle its rows there. Neither
+      // typed-time creation nor jump-mode indexing may claim them, in either
+      // mode, or the list's own handler never runs and a draft appears at
+      // 01:00 instead. Letters and Mod chords keep their global meaning.
+      if (isDigitPickOwnerTarget(event) && digitPickIndex(event) !== null) {
         return;
       }
 

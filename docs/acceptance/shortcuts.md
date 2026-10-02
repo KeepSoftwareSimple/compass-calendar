@@ -688,8 +688,8 @@ Once a calendar-account list has focus, digits `1`–`9`, then `0`, `-`, and `=`
 ### Expected Results
 
 - While the list is focused, rows show digit chips and `aria-keyshortcuts` matching their index.
-- Pressing that digit toggles the matching calendar. A status line announces Hidden or Shown.
-- After focus leaves the list, chips and `aria-keyshortcuts` hide. Digits no longer toggle.
+- Pressing that digit toggles the matching calendar. A status line announces Hidden or Shown. No draft appears: typed-time creation stands down while the list owns digits.
+- After focus leaves the list, chips and `aria-keyshortcuts` hide. Digits no longer toggle; `1400` on the grid creates a draft again.
 
 ---
 
