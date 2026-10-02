@@ -67,6 +67,8 @@ final class EventCardView: NSView {
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
         setAccessibilityIdentifier(card.accessibilityIdentifier)
+        // Focus is published via SwiftUI probe (compass-grid-event-focused).
+        setAccessibilityElement(!isFocused)
 
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? surfaceColor
         layer?.backgroundColor = fill.withAlphaComponent(card.isHiddenStrip ? 0.6 : 0.92).cgColor
@@ -78,6 +80,8 @@ final class EventCardView: NSView {
         focusRingLayer.borderColor = ringColor.cgColor
         focusRingLayer.isHidden = !isFocused
         needsLayout = true
+        layoutSubtreeIfNeeded()
+        syncAccessibilityFrame()
     }
 
     override func layout() {
@@ -85,9 +89,12 @@ final class EventCardView: NSView {
         titleField.frame = bounds.insetBy(dx: 6, dy: 4)
         accentLayer.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
         focusRingLayer.frame = bounds.insetBy(dx: -2, dy: -2)
-        if bounds.width > 1, bounds.height > 1, let window {
-            setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
-        }
+        syncAccessibilityFrame()
+    }
+
+    private func syncAccessibilityFrame() {
+        guard bounds.width > 1, bounds.height > 1, let window else { return }
+        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
     }
 
     override func accessibilityFrame() -> NSRect {

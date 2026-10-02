@@ -38,17 +38,23 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.click()
+        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
-        let focused = window.buttons.matching(
-            NSPredicate(format: "identifier == %@ AND label == %@", "compass-grid-event-focused", "Morning standup")
-        ).firstMatch
+        let focusedPredicate = NSPredicate(
+            format: "identifier == %@ AND label == %@",
+            "compass-grid-event-focused",
+            "Morning standup"
+        )
+        let focused = window.descendants(matching: .any).matching(focusedPredicate).firstMatch
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompass = window.buttons.matching(
-            NSPredicate(format: "identifier == %@ AND label == %@", "compass-grid-event-focused", "Try Compass")
-        ).firstMatch
+        let tryCompassPredicate = NSPredicate(
+            format: "identifier == %@ AND label == %@",
+            "compass-grid-event-focused",
+            "Try Compass"
+        )
+        let tryCompass = window.descendants(matching: .any).matching(tryCompassPredicate).firstMatch
         XCTAssertTrue(tryCompass.waitForExistence(timeout: 5))
     }
 
@@ -62,7 +68,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.click()
+        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))
