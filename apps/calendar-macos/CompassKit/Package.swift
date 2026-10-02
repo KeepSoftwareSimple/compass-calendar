@@ -13,8 +13,7 @@ let package = Package(
         .target(name: "CompassKit"),
         .testTarget(
             name: "CompassKitTests",
-            dependencies: ["CompassKit"],
-            path: "../CompassKitTests"
+            dependencies: ["CompassKit"]
         ),
     ]
 )
