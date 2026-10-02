@@ -64,6 +64,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     private func configureKeyboard() {
+        let calendarModel = model
         do {
             let registry = try ShortcutRegistry()
             let navigationIds: Set<ShortcutId> = [
@@ -83,9 +84,9 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                     id: entry.id,
                     scope: .grid,
                     chords: entry.bindingChords,
-                    handler: { [weak self] id in
+                    handler: { id in
                         Task { @MainActor in
-                            self?.model.handleShortcut(id)
+                            calendarModel.handleShortcut(id)
                         }
                     })
             }
