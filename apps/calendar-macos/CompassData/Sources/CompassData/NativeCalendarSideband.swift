@@ -64,8 +64,6 @@ extension NativeCalendarRootModel {
         onSidebandDidChange?()
     }
 
-    public var onSidebandDidChange: (() -> Void)?
-
     public func handleDeepLink(_ urlString: String) {
         if let eventId = DesktopDeepLinkParser.parseEventId(from: urlString) {
             focusEventDeepLink(eventId: eventId)
@@ -80,9 +78,6 @@ extension NativeCalendarRootModel {
             }
         }
     }
-
-    public var openConferenceURLHandler: ((URL) -> Void)?
-    public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
 
     public func openUpNextEvent() {
         guard let upNext = upNextState.snapshot.upNext else { return }

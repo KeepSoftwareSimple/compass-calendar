@@ -89,10 +89,14 @@ final class UpcomingNotifierLogicTests: XCTestCase {
     }
 
     private func isoDate(_ value: String) -> Date {
-        ISO8601DateFormatter().date(from: value)!
+        guard let date = CompassDateParsing.parseInEffectiveTimeZone(value) else {
+            XCTFail("unparseable date: \(value)")
+            return Date()
+        }
+        return date
     }
 
     private func isoString(_ date: Date) -> String {
-        ISO8601DateFormatter().string(from: date)
+        CompassDateParsing.formatISO8601UTC(date)
     }
 }

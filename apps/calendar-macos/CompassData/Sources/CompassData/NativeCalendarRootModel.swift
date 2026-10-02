@@ -14,6 +14,9 @@ public final class NativeCalendarRootModel {
     public private(set) var isSignedIn = false
     public private(set) var contentTrackWidth: CGFloat = 1010
     public private(set) var sidebandEvents: [Event] = []
+    public var onSidebandDidChange: (() -> Void)?
+    public var openConferenceURLHandler: ((URL) -> Void)?
+    public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     public var monthPickerMonth: Date
 
     private let environment: NativeCalendarEnvironment
