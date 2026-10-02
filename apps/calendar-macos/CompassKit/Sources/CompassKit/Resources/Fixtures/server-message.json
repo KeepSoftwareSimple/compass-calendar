@@ -1,0 +1,8 @@
+{
+  "type": "eventsChanged",
+  "calendarId": "507f1f77bcf86cd799439011",
+  "eventIds": [
+    "evt-local-1"
+  ],
+  "reason": "updated"
+}

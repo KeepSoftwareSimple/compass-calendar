@@ -1,0 +1,21 @@
+{
+  "id": "evt-local-1",
+  "calendarId": "507f1f77bcf86cd799439011",
+  "content": {
+    "kind": "details",
+    "title": "Standup",
+    "description": "",
+    "color": "mint"
+  },
+  "schedule": {
+    "kind": "timed",
+    "start": "2026-10-02T15:00:00+00:00",
+    "end": "2026-10-02T15:30:00+00:00",
+    "timeZone": "UTC"
+  },
+  "recurrence": {
+    "kind": "single"
+  },
+  "createdAt": "2026-10-01T12:00:00+00:00",
+  "updatedAt": null
+}

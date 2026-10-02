@@ -1,6 +1,25 @@
 import type SupertokensUserMetadata from "supertokens-node/recipe/usermetadata";
+import { type z } from "zod/v4";
+import {
+  type GoogleConnectionState,
+  GoogleConnectionStateSchema,
+  type SyncConnectionSummary,
+  SyncConnectionSummarySchema,
+  UserMetadataSchema,
+  type UserProfile,
+  UserProfileSchema,
+} from "@core/types/user.profile.contracts";
 import { type ProviderKind } from "./sync/identity.contracts";
-import { type WithId } from "./type.utils";
+
+export {
+  type GoogleConnectionState,
+  GoogleConnectionStateSchema,
+  type SyncConnectionSummary,
+  SyncConnectionSummarySchema,
+  UserMetadataSchema,
+  type UserProfile,
+  UserProfileSchema,
+};
 
 /**
  * One login method on a Compass user. Identity is `(provider, subjectId)`;
@@ -96,60 +115,8 @@ export interface Schema_UserBilling {
   backfilledAt?: Date;
 }
 
-/**
- * Unified connection state computed by the server.
- * Clients read this value directly instead of deriving state from multiple sources.
- * The Google-named alias stays until WP-08b reads `connections[]` per provider.
- */
-export type GoogleConnectionState =
-  | "NOT_CONNECTED"
-  | "RECONNECT_REQUIRED"
-  | "IMPORTING"
-  | "HEALTHY"
-  | "ATTENTION";
-
-// Sync-backed connection summary for the browser (S41). Present only when
-// connection routing is delegated to Sync. IDs/timestamps/state only — never
-// credentials or event content. Plain strings so the payload stays a
-// SuperTokens JSONObject (no Zod brands on the metadata wire).
-// A type alias, not an interface: only aliases get the implicit index
-// signature that lets these values sit inside SuperTokens' JSONObject
-// metadata payload without a cast at every call site.
-export type SyncConnectionSummary = {
-  id: string;
-  provider?: "google" | "microsoft" | "apple";
-  state: string;
-  stateReason: string | null;
-  lastSyncedAt: string | null;
-  lastHealthyAt: string | null;
-  accountEmail: string | null;
-  // This one connection's own product state, translated server-side from its
-  // sync state/reason. The browser renders per-account status and reconnect
-  // from it directly, so sync's state vocabulary stays on the server.
-  connectionState: GoogleConnectionState;
-  // True when this connection granted a contacts scope (sync's
-  // `suggestContacts` capability), so the attendee field can offer live
-  // contact suggestions. False is an ordinary state — contacts are an
-  // OPTIONAL grant — and gates the "enable contact suggestions" nudge,
-  // never an error surface.
-  canSuggestContacts: boolean;
-};
-
 // Intersection (not extends): SuperTokens JSONObject's string index signature
 // rejects a nested `google.connection` object on an interface extends clause,
 // even though every field is JSON-safe.
-export type UserMetadata = SupertokensUserMetadata.JSONObject & {
-  sync?: {
-    importGCal?: string | null;
-  };
-  connections?: SyncConnectionSummary[];
-};
-
-export interface UserProfile
-  extends Pick<
-    WithId<Schema_User>,
-    "firstName" | "lastName" | "name" | "email" | "locale"
-  > {
-  picture: string;
-  userId: string;
-}
+export type UserMetadata = SupertokensUserMetadata.JSONObject &
+  z.infer<typeof UserMetadataSchema>;

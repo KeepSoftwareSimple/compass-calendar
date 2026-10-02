@@ -10,7 +10,12 @@ let package = Package(
         .library(name: "CompassKit", targets: ["CompassKit"]),
     ],
     targets: [
-        .target(name: "CompassKit"),
+        .target(
+            name: "CompassKit",
+            resources: [
+                .process("Resources"),
+            ]
+        ),
         .testTarget(
             name: "CompassKitTests",
             dependencies: ["CompassKit"]

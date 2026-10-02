@@ -1,0 +1,32 @@
+import Foundation
+import XCTest
+@testable import CompassKit
+
+final class ContractDecodingTests: XCTestCase {
+    func testEventFixtureRoundTrip() throws {
+        try assertFixtureRoundTrip("event", Event.self)
+    }
+
+    func testServerMessageFixtureRoundTrip() throws {
+        try assertFixtureRoundTrip("server-message", ServerMessage.self)
+    }
+
+    func testCalendarListResponseFixtureRoundTrip() throws {
+        try assertFixtureRoundTrip("calendar-list-response", CalendarListResponse.self)
+    }
+
+    private func assertFixtureRoundTrip<T: Codable & Equatable>(
+        _ name: String,
+        _ type: T.Type
+    ) throws {
+        let url = try XCTUnwrap(
+            Bundle.module.url(forResource: name, withExtension: "json", subdirectory: "Fixtures")
+        )
+        let data = try Data(contentsOf: url)
+        let decoded = try JSONDecoder().decode(T.self, from: data)
+        let reencoded = try JSONEncoder().encode(decoded)
+        let originalObject = try JSONSerialization.jsonObject(with: data) as! NSDictionary
+        let roundTripObject = try JSONSerialization.jsonObject(with: reencoded) as! NSDictionary
+        XCTAssertEqual(originalObject, roundTripObject)
+    }
+}
