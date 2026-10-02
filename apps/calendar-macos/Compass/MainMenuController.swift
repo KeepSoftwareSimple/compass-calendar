@@ -1,17 +1,32 @@
 import AppKit
 import CompassKit
+import CompassUI
 
 @MainActor
 final class MainMenuController: NSObject {
     private weak var webViewController: WebViewController?
     private let showDebugMenu: Bool
     private let updater: DesktopUpdater
+    private var nativeUIState: MainMenuNativeUIState
 
-    init(webViewController: WebViewController, updater: DesktopUpdater, showDebugMenu: Bool) {
+    var onToggleNativeUI: (() -> Void)?
+    var onSelectNativeTheme: ((NativeWebTheme) -> Void)?
+
+    init(
+        webViewController: WebViewController,
+        updater: DesktopUpdater,
+        showDebugMenu: Bool,
+        nativeUIState: MainMenuNativeUIState
+    ) {
         self.webViewController = webViewController
         self.updater = updater
         self.showDebugMenu = showDebugMenu
+        self.nativeUIState = nativeUIState
         super.init()
+    }
+
+    func refreshNativeUIState(_ state: MainMenuNativeUIState) {
+        nativeUIState = state
     }
 
     func makeMenu() -> NSMenu {
@@ -87,6 +102,12 @@ final class MainMenuController: NSObject {
             return #selector(switchToStaging(_:))
         case .switchToProduction:
             return #selector(switchToProduction(_:))
+        case .toggleNativeUI:
+            return #selector(toggleNativeUI(_:))
+        case .nativeThemeLightBeach:
+            return #selector(useNativeThemeLightBeach(_:))
+        case .nativeThemeDarkAbyss:
+            return #selector(useNativeThemeDarkAbyss(_:))
         case let .standardEdit(selectorName):
             return Selector(selectorName)
         }
@@ -150,6 +171,18 @@ final class MainMenuController: NSObject {
         AppHostPreference.production.save()
         webViewController?.reloadAppHost()
     }
+
+    @objc private func toggleNativeUI(_ sender: Any?) {
+        onToggleNativeUI?()
+    }
+
+    @objc private func useNativeThemeLightBeach(_ sender: Any?) {
+        onSelectNativeTheme?(.lightBeach)
+    }
+
+    @objc private func useNativeThemeDarkAbyss(_ sender: Any?) {
+        onSelectNativeTheme?(.darkAbyss)
+    }
 }
 
 extension MainMenuController: NSMenuItemValidation {
@@ -159,6 +192,15 @@ extension MainMenuController: NSMenuItemValidation {
             return updater.canCheckForUpdates
         case #selector(restartToUpdate(_:)):
             return updater.isUpdateStaged
+        case #selector(toggleNativeUI(_:)):
+            item.state = nativeUIState.isNativeUIEnabled ? .on : .off
+            return true
+        case #selector(useNativeThemeLightBeach(_:)):
+            item.state = nativeUIState.theme == .lightBeach ? .on : .off
+            return true
+        case #selector(useNativeThemeDarkAbyss(_:)):
+            item.state = nativeUIState.theme == .darkAbyss ? .on : .off
+            return true
         default:
             return true
         }

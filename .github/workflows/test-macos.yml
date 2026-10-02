@@ -100,7 +100,8 @@ jobs:
           path: |
             apps/calendar-macos/CompassKit/.build
             apps/calendar-macos/CompassData/.build
-          key: ${{ runner.os }}-swift-pkgs-v1-${{ hashFiles('apps/calendar-macos/CompassKit/**', 'apps/calendar-macos/CompassData/**') }}
+            apps/calendar-macos/CompassUI/.build
+          key: ${{ runner.os }}-swift-pkgs-v1-${{ hashFiles('apps/calendar-macos/CompassKit/**', 'apps/calendar-macos/CompassData/**', 'apps/calendar-macos/CompassUI/**') }}
           restore-keys: |
             ${{ runner.os }}-swift-pkgs-v1-
             ${{ runner.os }}-swift-pkgs-
