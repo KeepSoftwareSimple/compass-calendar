@@ -67,8 +67,7 @@ final class EventCardView: NSView {
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
         setAccessibilityIdentifier(card.accessibilityIdentifier)
-        // Focus is published via SwiftUI probe (compass-grid-event-focused).
-        setAccessibilityElement(!isFocused)
+        setAccessibilityElement(true)
 
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? surfaceColor
         layer?.backgroundColor = fill.withAlphaComponent(card.isHiddenStrip ? 0.6 : 0.92).cgColor

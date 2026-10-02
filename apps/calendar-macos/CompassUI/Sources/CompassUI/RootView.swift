@@ -40,6 +40,9 @@ public struct RootView: View {
                 })
             .padding(.bottom, 24)
         }
+        .overlay(alignment: .topLeading) {
+            focusedGridEventAccessibilityProbe
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear
@@ -154,6 +157,29 @@ public struct RootView: View {
         let colWidths = model.timeGridState.resolvedColumnWidths()
         let metrics = model.timeGridState.snapshot(colWidths: colWidths).metrics
         return 28 + metrics.allDayRowHeight
+    }
+
+    @ViewBuilder
+    private var focusedGridEventAccessibilityProbe: some View {
+        if let eventId = model.timeGridState.focusedEventId,
+            let label = focusedGridEventLabel(for: eventId)
+        {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .accessibilityElement()
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("compass-grid-event-focused")
+                .accessibilityLabel(label)
+                .allowsHitTesting(false)
+                .id("compass-grid-event-focused-\(eventId)")
+        }
+    }
+
+    private func focusedGridEventLabel(for eventId: String) -> String? {
+        let colWidths = model.timeGridState.resolvedColumnWidths()
+        return model.timeGridState.snapshot(colWidths: colWidths).cards
+            .first(where: { $0.eventId == eventId })?
+            .label
     }
 
     @ViewBuilder
