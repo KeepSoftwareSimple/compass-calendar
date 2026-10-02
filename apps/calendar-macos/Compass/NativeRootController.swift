@@ -95,15 +95,18 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         model.onUpNextBannerShown = { [weak scheduler] event in
             Task { await scheduler?.retryBannerNotification(for: event) }
         }
-        model.onSidebandDidChange = { [weak self] in
-            self?.agendaSync?.schedulePush()
-            Task { await self?.notificationScheduler?.notifySidebandDidRefresh() }
+        model.onSidebandDidChange = {
+            sync.schedulePush()
+            Task { @MainActor in
+                await scheduler.notifySidebandDidRefresh()
+            }
         }
 
         sidebandTimer?.invalidate()
-        sidebandTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+        let calendarModel = model
+        sidebandTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { _ in
             Task { @MainActor in
-                await self?.model.refreshSideband()
+                await calendarModel.refreshSideband()
             }
         }
     }
