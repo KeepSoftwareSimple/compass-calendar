@@ -7,6 +7,7 @@ import {
   isSchemaObject,
   type JsonSchema,
 } from "@scripts/swift-contracts/json-schema.types";
+import { stableJsonStringify } from "@scripts/swift-contracts/stable-json";
 import { assertSwiftPublicTypeName } from "@scripts/swift-contracts/swift-reserved-types";
 import { z } from "zod/v4";
 import {
@@ -32,7 +33,7 @@ type EmitContext = {
 };
 
 function schemaFingerprint(schema: JsonSchema): string {
-  return JSON.stringify(schema);
+  return stableJsonStringify(schema);
 }
 
 function toPascalCase(segment: string): string {
