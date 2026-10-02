@@ -384,17 +384,31 @@ function ensureStruct(
   const propertyNames = Object.keys(properties).sort(compareAscii);
   const required = new Set(schema.required ?? []);
   const fields: string[] = [];
+  const initParams: string[] = [];
+  const initAssignments: string[] = [];
   for (const propName of propertyNames) {
     const propSchema = properties[propName]!;
     const fieldPath = `${path}.${propName}`;
     let swiftType = emitType(propSchema, fieldPath, ctx, propName);
-    if (!required.has(propName)) {
+    const isOptional = !required.has(propName);
+    if (isOptional) {
       if (!swiftType.endsWith("?")) {
         swiftType = `${swiftType}?`;
       }
     }
-    fields.push(`    public let ${swiftPropertyName(propName)}: ${swiftType}`);
+    const swiftProp = swiftPropertyName(propName);
+    fields.push(`    public let ${swiftProp}: ${swiftType}`);
+    initParams.push(
+      isOptional
+        ? `${swiftProp}: ${swiftType} = nil`
+        : `${swiftProp}: ${swiftType}`,
+    );
+    initAssignments.push(`        self.${swiftProp} = ${swiftProp}`);
   }
+  const memberwiseInit =
+    initParams.length > 0
+      ? `\n\n    public init(${initParams.join(", ")}) {\n${initAssignments.join("\n")}\n    }\n`
+      : "";
   const codingKeys = propertyNames.some((key) => key === "default")
     ? `\n    enum CodingKeys: String, CodingKey {\n${propertyNames
         .map((key) => `        case ${swiftPropertyName(key)} = "${key}"`)
@@ -403,7 +417,7 @@ function ensureStruct(
   ctx.emitted.set(
     name,
     `public struct ${name}: Codable, Hashable, Sendable {
-${fields.join("\n")}${codingKeys}}
+${fields.join("\n")}${memberwiseInit}${codingKeys}}
 `,
   );
   ctx.fingerprintToName.set(fingerprint, name);

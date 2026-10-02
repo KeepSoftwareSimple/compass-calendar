@@ -130,53 +130,128 @@ public struct AppConfig: Codable, Hashable, Sendable {
     public let posthog: AppConfigPosthog?
     public let providers: AppConfigProviders
     public let sync: AppConfigSync
-    public let version: String}
+    public let version: String
+
+    public init(billing: AppConfigBilling, posthog: AppConfigPosthog? = nil, providers: AppConfigProviders, sync: AppConfigSync, version: String) {
+        self.billing = billing
+        self.posthog = posthog
+        self.providers = providers
+        self.sync = sync
+        self.version = version
+    }
+}
 
 public struct AppConfigBilling: Codable, Hashable, Sendable {
     public let enforcement: Bool
     public let isConfigured: Bool
     public let publishableKey: String?
-    public let trialLengthDays: Double}
+    public let trialLengthDays: Double
+
+    public init(enforcement: Bool, isConfigured: Bool, publishableKey: String?, trialLengthDays: Double) {
+        self.enforcement = enforcement
+        self.isConfigured = isConfigured
+        self.publishableKey = publishableKey
+        self.trialLengthDays = trialLengthDays
+    }
+}
 
 public struct AppConfigPosthog: Codable, Hashable, Sendable {
     public let host: String
-    public let key: String}
+    public let key: String
+
+    public init(host: String, key: String) {
+        self.host = host
+        self.key = key
+    }
+}
 
 public struct AppConfigProviders: Codable, Hashable, Sendable {
     public let apple: AppConfigProvidersApple
     public let google: AppConfigProvidersApple
-    public let microsoft: AppConfigProvidersApple}
+    public let microsoft: AppConfigProvidersApple
+
+    public init(apple: AppConfigProvidersApple, google: AppConfigProvidersApple, microsoft: AppConfigProvidersApple) {
+        self.apple = apple
+        self.google = google
+        self.microsoft = microsoft
+    }
+}
 
 public struct AppConfigProvidersApple: Codable, Hashable, Sendable {
     public let connect: Bool
-    public let signIn: Bool}
+    public let signIn: Bool
+
+    public init(connect: Bool, signIn: Bool) {
+        self.connect = connect
+        self.signIn = signIn
+    }
+}
 
 public struct AppConfigSync: Codable, Hashable, Sendable {
     public let cloudMutationMode: CloudMutationModeEnum
-    public let execution: ExecutionEnum}
+    public let execution: ExecutionEnum
+
+    public init(cloudMutationMode: CloudMutationModeEnum, execution: ExecutionEnum) {
+        self.cloudMutationMode = cloudMutationMode
+        self.execution = execution
+    }
+}
 
 public struct Attendee: Codable, Hashable, Sendable {
     public let displayName: String?
     public let email: String
-    public let responseStatus: ResponseStatusEnum}
+    public let responseStatus: ResponseStatusEnum
+
+    public init(displayName: String?, email: String, responseStatus: ResponseStatusEnum) {
+        self.displayName = displayName
+        self.email = email
+        self.responseStatus = responseStatus
+    }
+}
 
 public struct AvailabilityResponse: Codable, Hashable, Sendable {
-    public let busyPeriods: [AvailabilityResponseBusyPeriods]}
+    public let busyPeriods: [AvailabilityResponseBusyPeriods]
+
+    public init(busyPeriods: [AvailabilityResponseBusyPeriods]) {
+        self.busyPeriods = busyPeriods
+    }
+}
 
 public struct AvailabilityResponseBusyPeriods: Codable, Hashable, Sendable {
     public let calendarId: CalendarId
     public let end: DateTime
-    public let start: DateTime}
+    public let start: DateTime
+
+    public init(calendarId: CalendarId, end: DateTime, start: DateTime) {
+        self.calendarId = calendarId
+        self.end = end
+        self.start = start
+    }
+}
 
 public struct BillingCheckoutResponse: Codable, Hashable, Sendable {
     public let clientSecret: String?
-    public let url: String?}
+    public let url: String?
+
+    public init(clientSecret: String? = nil, url: String? = nil) {
+        self.clientSecret = clientSecret
+        self.url = url
+    }
+}
 
 public struct BillingStatusResponse: Codable, Hashable, Sendable {
     public let cancelAtPeriodEnd: Bool
     public let isReadOnly: Bool
     public let subscriptionStatus: SubscriptionStatusEnum
-    public let trialEndsAt: String?}
+    public let trialEndsAt: String?
+
+    public init(cancelAtPeriodEnd: Bool, isReadOnly: Bool, subscriptionStatus: SubscriptionStatusEnum, trialEndsAt: String?) {
+        self.cancelAtPeriodEnd = cancelAtPeriodEnd
+        self.isReadOnly = isReadOnly
+        self.subscriptionStatus = subscriptionStatus
+        self.trialEndsAt = trialEndsAt
+    }
+}
 
 public struct BillingSubscriptionResponse: Codable, Hashable, Sendable {
     public let cancelAtPeriodEnd: Bool
@@ -185,7 +260,18 @@ public struct BillingSubscriptionResponse: Codable, Hashable, Sendable {
     public let paymentMethod: BillingSubscriptionResponsePaymentMethod?
     public let price: BillingSubscriptionResponsePrice?
     public let subscriptionStatus: SubscriptionStatusEnum
-    public let trialEndsAt: String?}
+    public let trialEndsAt: String?
+
+    public init(cancelAtPeriodEnd: Bool, currentPeriodEnd: String?, invoices: [BillingSubscriptionResponseInvoices], paymentMethod: BillingSubscriptionResponsePaymentMethod?, price: BillingSubscriptionResponsePrice?, subscriptionStatus: SubscriptionStatusEnum, trialEndsAt: String?) {
+        self.cancelAtPeriodEnd = cancelAtPeriodEnd
+        self.currentPeriodEnd = currentPeriodEnd
+        self.invoices = invoices
+        self.paymentMethod = paymentMethod
+        self.price = price
+        self.subscriptionStatus = subscriptionStatus
+        self.trialEndsAt = trialEndsAt
+    }
+}
 
 public struct BillingSubscriptionResponseInvoices: Codable, Hashable, Sendable {
     public let amountPaid: Double
@@ -193,18 +279,43 @@ public struct BillingSubscriptionResponseInvoices: Codable, Hashable, Sendable {
     public let currency: String
     public let hostedInvoiceUrl: String?
     public let id: String
-    public let status: String}
+    public let status: String
+
+    public init(amountPaid: Double, createdAt: String, currency: String, hostedInvoiceUrl: String?, id: String, status: String) {
+        self.amountPaid = amountPaid
+        self.createdAt = createdAt
+        self.currency = currency
+        self.hostedInvoiceUrl = hostedInvoiceUrl
+        self.id = id
+        self.status = status
+    }
+}
 
 public struct BillingSubscriptionResponsePaymentMethod: Codable, Hashable, Sendable {
     public let brand: String
     public let expMonth: Double
     public let expYear: Double
-    public let last4: String}
+    public let last4: String
+
+    public init(brand: String, expMonth: Double, expYear: Double, last4: String) {
+        self.brand = brand
+        self.expMonth = expMonth
+        self.expYear = expYear
+        self.last4 = last4
+    }
+}
 
 public struct BillingSubscriptionResponsePrice: Codable, Hashable, Sendable {
     public let amount: Double
     public let currency: String
-    public let interval: IntervalEnum}
+    public let interval: IntervalEnum
+
+    public init(amount: Double, currency: String, interval: IntervalEnum) {
+        self.amount = amount
+        self.currency = currency
+        self.interval = interval
+    }
+}
 
 public struct BookingOperationEvent: Codable, Hashable, Sendable {
     public let duration_minutes: DurationMinutesEnum?
@@ -216,7 +327,21 @@ public struct BookingOperationEvent: Codable, Hashable, Sendable {
     public let reason: ReasonEnum?
     public let service: String
     public let source: SourceEnum
-    public let version: String}
+    public let version: String
+
+    public init(duration_minutes: DurationMinutesEnum? = nil, environment: String, latency_ms: Int? = nil, operation: OperationEnum, outcome: OutcomeEnum, phase: PhaseEnum, reason: ReasonEnum? = nil, service: String, source: SourceEnum, version: String) {
+        self.duration_minutes = duration_minutes
+        self.environment = environment
+        self.latency_ms = latency_ms
+        self.operation = operation
+        self.outcome = outcome
+        self.phase = phase
+        self.reason = reason
+        self.service = service
+        self.source = source
+        self.version = version
+    }
+}
 
 public struct BookingOperationHeartbeat: Codable, Hashable, Sendable {
     public let computedAt: DateTime
@@ -225,7 +350,18 @@ public struct BookingOperationHeartbeat: Codable, Hashable, Sendable {
     public let pending_count: Int
     public let retry_exhausted_count: Int
     public let service: String
-    public let version: String}
+    public let version: String
+
+    public init(computedAt: DateTime, environment: String, oldest_pending_age_ms: Int?, pending_count: Int, retry_exhausted_count: Int, service: String, version: String) {
+        self.computedAt = computedAt
+        self.environment = environment
+        self.oldest_pending_age_ms = oldest_pending_age_ms
+        self.pending_count = pending_count
+        self.retry_exhausted_count = retry_exhausted_count
+        self.service = service
+        self.version = version
+    }
+}
 
 public struct BookingPage: Codable, Hashable, Sendable {
     public let blockingCalendarIds: [String]
@@ -240,28 +376,76 @@ public struct BookingPage: Codable, Hashable, Sendable {
     public let slug: String
     public let timeZone: IANATimeZone
     public let updatedAt: DateTime
-    public let weeklyAvailability: [BookingPageWeeklyAvailability]}
+    public let weeklyAvailability: [BookingPageWeeklyAvailability]
+
+    public init(blockingCalendarIds: [String], createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+        self.blockingCalendarIds = blockingCalendarIds
+        self.createdAt = createdAt
+        self.destinationCalendarId = destinationCalendarId
+        self.durationMinutes = durationMinutes
+        self.enabled = enabled
+        self.hostUserId = hostUserId
+        self.id = id
+        self.maxHorizonDays = maxHorizonDays
+        self.minNoticeHours = minNoticeHours
+        self.slug = slug
+        self.timeZone = timeZone
+        self.updatedAt = updatedAt
+        self.weeklyAvailability = weeklyAvailability
+    }
+}
 
 public struct BookingPageWeeklyAvailability: Codable, Hashable, Sendable {
     public let end: String
     public let start: String
-    public let weekday: WeekdayEnum}
+    public let weekday: WeekdayEnum
+
+    public init(end: String, start: String, weekday: WeekdayEnum) {
+        self.end = end
+        self.start = start
+        self.weekday = weekday
+    }
+}
 
 public struct BookingSlotsResponse: Codable, Hashable, Sendable {
     public let bookable: Bool
-    public let slots: [BookingSlotsResponseSlots]}
+    public let slots: [BookingSlotsResponseSlots]
+
+    public init(bookable: Bool, slots: [BookingSlotsResponseSlots]) {
+        self.bookable = bookable
+        self.slots = slots
+    }
+}
 
 public struct BookingSlotsResponseSlots: Codable, Hashable, Sendable {
     public let slotEnd: String
-    public let slotStart: String}
+    public let slotStart: String
+
+    public init(slotEnd: String, slotStart: String) {
+        self.slotEnd = slotEnd
+        self.slotStart = slotStart
+    }
+}
 
 public struct BusyPeriod: Codable, Hashable, Sendable {
     public let calendarId: CalendarId
     public let end: DateTime
-    public let start: DateTime}
+    public let start: DateTime
+
+    public init(calendarId: CalendarId, end: DateTime, start: DateTime) {
+        self.calendarId = calendarId
+        self.end = end
+        self.start = start
+    }
+}
 
 public struct CalendarListResponse: Codable, Hashable, Sendable {
-    public let calendars: [CalendarListResponseCalendars]}
+    public let calendars: [CalendarListResponseCalendars]
+
+    public init(calendars: [CalendarListResponseCalendars]) {
+        self.calendars = calendars
+    }
+}
 
 public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
     public let access: AccessEnum
@@ -278,7 +462,26 @@ public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
     public let isVisible: Bool
     public let name: String
     public let provider: String
-    public let timeZone: IANATimeZone?}
+    public let timeZone: IANATimeZone?
+
+    public init(access: AccessEnum, accountEmail: String? = nil, backgroundColor: String, capabilities: CompassCalendarCapabilities, conference: ConferenceEnum? = nil, createsGoogleMeet: Bool? = nil, description: String, foregroundColor: String, id: String, isActive: Bool, isPrimary: Bool, isVisible: Bool, name: String, provider: String, timeZone: IANATimeZone?) {
+        self.access = access
+        self.accountEmail = accountEmail
+        self.backgroundColor = backgroundColor
+        self.capabilities = capabilities
+        self.conference = conference
+        self.createsGoogleMeet = createsGoogleMeet
+        self.description = description
+        self.foregroundColor = foregroundColor
+        self.id = id
+        self.isActive = isActive
+        self.isPrimary = isPrimary
+        self.isVisible = isVisible
+        self.name = name
+        self.provider = provider
+        self.timeZone = timeZone
+    }
+}
 
 public enum CloudMutationModeEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case enabled = "enabled"
@@ -333,7 +536,26 @@ public struct CompassCalendar: Codable, Hashable, Sendable {
     public let isVisible: Bool
     public let name: String
     public let provider: String
-    public let timeZone: IANATimeZone?}
+    public let timeZone: IANATimeZone?
+
+    public init(access: AccessEnum, accountEmail: String? = nil, backgroundColor: String, capabilities: CompassCalendarCapabilities, conference: ConferenceEnum? = nil, createsGoogleMeet: Bool? = nil, description: String, foregroundColor: String, id: String, isActive: Bool, isPrimary: Bool, isVisible: Bool, name: String, provider: String, timeZone: IANATimeZone?) {
+        self.access = access
+        self.accountEmail = accountEmail
+        self.backgroundColor = backgroundColor
+        self.capabilities = capabilities
+        self.conference = conference
+        self.createsGoogleMeet = createsGoogleMeet
+        self.description = description
+        self.foregroundColor = foregroundColor
+        self.id = id
+        self.isActive = isActive
+        self.isPrimary = isPrimary
+        self.isVisible = isVisible
+        self.name = name
+        self.provider = provider
+        self.timeZone = timeZone
+    }
+}
 
 public struct CompassCalendarCapabilities: Codable, Hashable, Sendable {
     public let canInviteAttendees: Bool
@@ -342,7 +564,18 @@ public struct CompassCalendarCapabilities: Codable, Hashable, Sendable {
     public let canReadDetails: Bool
     public let canWatchEvents: Bool
     public let canWrite: Bool
-    public let conferenceKinds: [ConferenceKindsEnum]}
+    public let conferenceKinds: [ConferenceKindsEnum]
+
+    public init(canInviteAttendees: Bool, canManage: Bool, canReadAvailability: Bool, canReadDetails: Bool, canWatchEvents: Bool, canWrite: Bool, conferenceKinds: [ConferenceKindsEnum]) {
+        self.canInviteAttendees = canInviteAttendees
+        self.canManage = canManage
+        self.canReadAvailability = canReadAvailability
+        self.canReadDetails = canReadDetails
+        self.canWatchEvents = canWatchEvents
+        self.canWrite = canWrite
+        self.conferenceKinds = conferenceKinds
+    }
+}
 
 public struct CompassEvent: Codable, Hashable, Sendable {
     public let _id: String?
@@ -358,15 +591,45 @@ public struct CompassEvent: Codable, Hashable, Sendable {
     public let startDate: String?
     public let title: String?
     public let updatedAt: String?
-    public let user: String?}
+    public let user: String?
+
+    public init(_id: String? = nil, allDayOrder: Double? = nil, description: String? = nil, endDate: String? = nil, gEventId: String? = nil, gRecurringEventId: String? = nil, isAllDay: Bool? = nil, order: Double? = nil, origin: OriginEnum? = nil, recurrence: CompassEventRecurrence? = nil, startDate: String? = nil, title: String? = nil, updatedAt: String? = nil, user: String? = nil) {
+        self._id = _id
+        self.allDayOrder = allDayOrder
+        self.description = description
+        self.endDate = endDate
+        self.gEventId = gEventId
+        self.gRecurringEventId = gRecurringEventId
+        self.isAllDay = isAllDay
+        self.order = order
+        self.origin = origin
+        self.recurrence = recurrence
+        self.startDate = startDate
+        self.title = title
+        self.updatedAt = updatedAt
+        self.user = user
+    }
+}
 
 public struct CompassEventRecurrence: Codable, Hashable, Sendable {
     public let eventId: String?
-    public let rule: [String]?}
+    public let rule: [String]?
+
+    public init(eventId: String? = nil, rule: [String]? = nil) {
+        self.eventId = eventId
+        self.rule = rule
+    }
+}
 
 public struct Conference: Codable, Hashable, Sendable {
     public let label: String?
-    public let url: String}
+    public let url: String
+
+    public init(label: String?, url: String) {
+        self.label = label
+        self.url = url
+    }
+}
 
 public enum ConferenceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case meet = "meet"
@@ -389,10 +652,21 @@ public enum ConnectionStateEnum: String, Codable, Hashable, Sendable, CaseIterab
 
 public struct ContactSuggestion: Codable, Hashable, Sendable {
     public let displayName: String?
-    public let email: String}
+    public let email: String
+
+    public init(displayName: String?, email: String) {
+        self.displayName = displayName
+        self.email = email
+    }
+}
 
 public struct ContactSuggestionsResponse: Codable, Hashable, Sendable {
-    public let suggestions: [EventContentDetailsOrganizer]}
+    public let suggestions: [EventContentDetailsOrganizer]
+
+    public init(suggestions: [EventContentDetailsOrganizer]) {
+        self.suggestions = suggestions
+    }
+}
 
 public struct CreateEventInput: Codable, Hashable, Sendable {
     public let calendarId: CalendarId
@@ -402,7 +676,19 @@ public struct CreateEventInput: Codable, Hashable, Sendable {
     public let invitation: InvitationEnum?
     public let recurrence: CreateEventInputRecurrence
     public let restore: Bool?
-    public let schedule: EventSchedule}
+    public let schedule: EventSchedule
+
+    public init(calendarId: CalendarId, content: CreateEventInputContent, createConference: Bool? = nil, id: EventId? = nil, invitation: InvitationEnum? = nil, recurrence: CreateEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule) {
+        self.calendarId = calendarId
+        self.content = content
+        self.createConference = createConference
+        self.id = id
+        self.invitation = invitation
+        self.recurrence = recurrence
+        self.restore = restore
+        self.schedule = schedule
+    }
+}
 
 public struct CreateEventInputContent: Codable, Hashable, Sendable {
     public let attendees: [EventContentDetailsOrganizer]?
@@ -410,7 +696,17 @@ public struct CreateEventInputContent: Codable, Hashable, Sendable {
     public let description: String
     public let kind: String
     public let location: String
-    public let title: String}
+    public let title: String
+
+    public init(attendees: [EventContentDetailsOrganizer]? = nil, color: ColorEnum? = nil, description: String, kind: String, location: String, title: String) {
+        self.attendees = attendees
+        self.color = color
+        self.description = description
+        self.kind = kind
+        self.location = location
+        self.title = title
+    }
+}
 
 public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
     case series(EventRecurrence_SeriesPayload)
@@ -445,7 +741,13 @@ public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
 
 public struct DeleteEventInput: Codable, Hashable, Sendable {
     public let invitation: InvitationEnum?
-    public let scope: ScopeEnum}
+    public let scope: ScopeEnum
+
+    public init(invitation: InvitationEnum? = nil, scope: ScopeEnum) {
+        self.invitation = invitation
+        self.scope = scope
+    }
+}
 
 public enum DurationMinutesEnum: Int, Codable, Hashable, Sendable, CaseIterable {
     case v15 = 15
@@ -463,7 +765,20 @@ public struct Event: Codable, Hashable, Sendable {
     public let providerManaged: Bool?
     public let recurrence: EventRecurrence
     public let schedule: EventSchedule
-    public let updatedAt: DateTime?}
+    public let updatedAt: DateTime?
+
+    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
+        self.calendarId = calendarId
+        self.content = content
+        self.createdAt = createdAt
+        self.icalUid = icalUid
+        self.id = id
+        self.providerManaged = providerManaged
+        self.recurrence = recurrence
+        self.schedule = schedule
+        self.updatedAt = updatedAt
+    }
+}
 
 public enum EventColorSlot: String, Codable, Hashable, Sendable, CaseIterable {
     case blue = "blue"
@@ -527,18 +842,42 @@ public enum EventContent: Codable, Hashable, Sendable {
 public struct EventContentDetailsAttendees: Codable, Hashable, Sendable {
     public let displayName: String?
     public let email: String
-    public let responseStatus: ResponseStatusEnum}
+    public let responseStatus: ResponseStatusEnum
+
+    public init(displayName: String?, email: String, responseStatus: ResponseStatusEnum) {
+        self.displayName = displayName
+        self.email = email
+        self.responseStatus = responseStatus
+    }
+}
 
 public struct EventContentDetailsConference: Codable, Hashable, Sendable {
     public let label: String?
-    public let url: String}
+    public let url: String
+
+    public init(label: String?, url: String) {
+        self.label = label
+        self.url = url
+    }
+}
 
 public struct EventContentDetailsOrganizer: Codable, Hashable, Sendable {
     public let displayName: String?
-    public let email: String}
+    public let email: String
+
+    public init(displayName: String?, email: String) {
+        self.displayName = displayName
+        self.email = email
+    }
+}
 
 public struct EventContent_BusyPayload: Codable, Hashable, Sendable {
-    public let kind: String}
+    public let kind: String
+
+    public init(kind: String) {
+        self.kind = kind
+    }
+}
 
 public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
     public let attendees: [EventContentDetailsAttendees]?
@@ -549,16 +888,42 @@ public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
     public let kind: String
     public let location: String?
     public let organizer: EventContentDetailsOrganizer?
-    public let title: String}
+    public let title: String
+
+    public init(attendees: [EventContentDetailsAttendees]? = nil, color: ColorEnum? = nil, colorHex: String? = nil, conference: EventContentDetailsConference? = nil, description: String, kind: String, location: String? = nil, organizer: EventContentDetailsOrganizer? = nil, title: String) {
+        self.attendees = attendees
+        self.color = color
+        self.colorHex = colorHex
+        self.conference = conference
+        self.description = description
+        self.kind = kind
+        self.location = location
+        self.organizer = organizer
+        self.title = title
+    }
+}
 
 public struct EventListResponse: Codable, Hashable, Sendable {
-    public let events: [EventResponseEvent]}
+    public let events: [EventResponseEvent]
+
+    public init(events: [EventResponseEvent]) {
+        self.events = events
+    }
+}
 
 public struct EventMutationError: Codable, Hashable, Sendable {
     public let code: CodeEnum
     public let connectionId: String?
     public let message: String
-    public let retryable: Bool}
+    public let retryable: Bool
+
+    public init(code: CodeEnum, connectionId: String? = nil, message: String, retryable: Bool) {
+        self.code = code
+        self.connectionId = connectionId
+        self.message = message
+        self.retryable = retryable
+    }
+}
 
 public enum EventRecurrence: Codable, Hashable, Sendable {
     case occurrence(EventRecurrence_OccurrencePayload)
@@ -598,17 +963,39 @@ public enum EventRecurrence: Codable, Hashable, Sendable {
 
 public struct EventRecurrence_OccurrencePayload: Codable, Hashable, Sendable {
     public let kind: String
-    public let seriesId: EventId}
+    public let seriesId: EventId
+
+    public init(kind: String, seriesId: EventId) {
+        self.kind = kind
+        self.seriesId = seriesId
+    }
+}
 
 public struct EventRecurrence_SeriesPayload: Codable, Hashable, Sendable {
     public let kind: String
-    public let rules: [String]}
+    public let rules: [String]
+
+    public init(kind: String, rules: [String]) {
+        self.kind = kind
+        self.rules = rules
+    }
+}
 
 public struct EventRecurrence_SinglePayload: Codable, Hashable, Sendable {
-    public let kind: String}
+    public let kind: String
+
+    public init(kind: String) {
+        self.kind = kind
+    }
+}
 
 public struct EventResponse: Codable, Hashable, Sendable {
-    public let event: EventResponseEvent}
+    public let event: EventResponseEvent
+
+    public init(event: EventResponseEvent) {
+        self.event = event
+    }
+}
 
 public struct EventResponseEvent: Codable, Hashable, Sendable {
     public let calendarId: CalendarId
@@ -619,7 +1006,20 @@ public struct EventResponseEvent: Codable, Hashable, Sendable {
     public let providerManaged: Bool?
     public let recurrence: EventRecurrence
     public let schedule: EventSchedule
-    public let updatedAt: DateTime?}
+    public let updatedAt: DateTime?
+
+    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
+        self.calendarId = calendarId
+        self.content = content
+        self.createdAt = createdAt
+        self.icalUid = icalUid
+        self.id = id
+        self.providerManaged = providerManaged
+        self.recurrence = recurrence
+        self.schedule = schedule
+        self.updatedAt = updatedAt
+    }
+}
 
 public enum EventSchedule: Codable, Hashable, Sendable {
     case allDay(EventSchedule_AllDayPayload)
@@ -655,13 +1055,28 @@ public enum EventSchedule: Codable, Hashable, Sendable {
 public struct EventSchedule_AllDayPayload: Codable, Hashable, Sendable {
     public let end: String
     public let kind: String
-    public let start: String}
+    public let start: String
+
+    public init(end: String, kind: String, start: String) {
+        self.end = end
+        self.kind = kind
+        self.start = start
+    }
+}
 
 public struct EventSchedule_TimedPayload: Codable, Hashable, Sendable {
     public let end: DateTime
     public let kind: String
     public let start: DateTime
-    public let timeZone: IANATimeZone}
+    public let timeZone: IANATimeZone
+
+    public init(end: DateTime, kind: String, start: DateTime, timeZone: IANATimeZone) {
+        self.end = end
+        self.kind = kind
+        self.start = start
+        self.timeZone = timeZone
+    }
+}
 
 public enum ExecutionEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case active = "active"
@@ -669,7 +1084,12 @@ public enum ExecutionEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public struct HiddenEventIdsResponse: Codable, Hashable, Sendable {
-    public let hiddenEventIds: [String]}
+    public let hiddenEventIds: [String]
+
+    public init(hiddenEventIds: [String]) {
+        self.hiddenEventIds = hiddenEventIds
+    }
+}
 
 public enum IntervalEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case day = "day"
@@ -692,7 +1112,13 @@ public enum OperationEnum: String, Codable, Hashable, Sendable, CaseIterable {
 
 public struct Organizer: Codable, Hashable, Sendable {
     public let displayName: String?
-    public let email: String}
+    public let email: String
+
+    public init(displayName: String?, email: String) {
+        self.displayName = displayName
+        self.email = email
+    }
+}
 
 public enum OriginEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case compass = "compass"
@@ -734,7 +1160,18 @@ public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
     public let enabled: Bool
     public let hostDisplayName: String
     public let maxHorizonDays: Int
-    public let timeZone: IANATimeZone}
+    public let timeZone: IANATimeZone
+
+    public init(conference: ConferenceEnum? = nil, createsGoogleMeet: Bool, durationMinutes: DurationMinutesEnum, enabled: Bool, hostDisplayName: String, maxHorizonDays: Int, timeZone: IANATimeZone) {
+        self.conference = conference
+        self.createsGoogleMeet = createsGoogleMeet
+        self.durationMinutes = durationMinutes
+        self.enabled = enabled
+        self.hostDisplayName = hostDisplayName
+        self.maxHorizonDays = maxHorizonDays
+        self.timeZone = timeZone
+    }
+}
 
 public enum ReasonEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case created = "created"
@@ -750,7 +1187,18 @@ public struct ReplaceEventInput: Codable, Hashable, Sendable {
     public let recurrence: ReplaceEventInputRecurrence
     public let restore: Bool?
     public let schedule: EventSchedule
-    public let scope: ScopeEnum}
+    public let scope: ScopeEnum
+
+    public init(calendarId: CalendarId? = nil, content: CreateEventInputContent, invitation: InvitationEnum? = nil, recurrence: ReplaceEventInputRecurrence, restore: Bool? = nil, schedule: EventSchedule, scope: ScopeEnum) {
+        self.calendarId = calendarId
+        self.content = content
+        self.invitation = invitation
+        self.recurrence = recurrence
+        self.restore = restore
+        self.schedule = schedule
+        self.scope = scope
+    }
+}
 
 public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
     case preserve(ReplaceEventInputRecurrence_PreservePayload)
@@ -789,7 +1237,12 @@ public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
 }
 
 public struct ReplaceEventInputRecurrence_PreservePayload: Codable, Hashable, Sendable {
-    public let kind: String}
+    public let kind: String
+
+    public init(kind: String) {
+        self.kind = kind
+    }
+}
 
 public enum ResponseStatusEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case accepted = "accepted"
@@ -800,7 +1253,13 @@ public enum ResponseStatusEnum: String, Codable, Hashable, Sendable, CaseIterabl
 
 public struct RsvpEventInput: Codable, Hashable, Sendable {
     public let responseStatus: ResponseStatusEnum
-    public let scope: ScopeEnum}
+    public let scope: ScopeEnum
+
+    public init(responseStatus: ResponseStatusEnum, scope: ScopeEnum) {
+        self.responseStatus = responseStatus
+        self.scope = scope
+    }
+}
 
 public enum ScopeEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case all = "all"
@@ -894,41 +1353,99 @@ public struct ServerMessageSyncStatusChangedSync_AttentionPayload: Codable, Hash
     public let code: CodeEnum
     public let connectionId: ConnectionId?
     public let retryable: Bool
-    public let status: String}
+    public let status: String
+
+    public init(code: CodeEnum, connectionId: ConnectionId? = nil, retryable: Bool, status: String) {
+        self.code = code
+        self.connectionId = connectionId
+        self.retryable = retryable
+        self.status = status
+    }
+}
 
 public struct ServerMessageSyncStatusChangedSync_HealthyPayload: Codable, Hashable, Sendable {
-    public let status: String}
+    public let status: String
+
+    public init(status: String) {
+        self.status = status
+    }
+}
 
 public struct ServerMessageSyncStatusChangedSync_SyncingPayload: Codable, Hashable, Sendable {
-    public let status: String}
+    public let status: String
+
+    public init(status: String) {
+        self.status = status
+    }
+}
 
 public struct ServerMessage_CalendarsChangedPayload: Codable, Hashable, Sendable {
     public let calendarIds: [String]
-    public let type: String}
+    public let type: String
+
+    public init(calendarIds: [String], type: String) {
+        self.calendarIds = calendarIds
+        self.type = type
+    }
+}
 
 public struct ServerMessage_EventsChangedPayload: Codable, Hashable, Sendable {
     public let calendarId: CalendarId
     public let eventIds: [String]
     public let reason: ReasonEnum
-    public let type: String}
+    public let type: String
+
+    public init(calendarId: CalendarId, eventIds: [String], reason: ReasonEnum, type: String) {
+        self.calendarId = calendarId
+        self.eventIds = eventIds
+        self.reason = reason
+        self.type = type
+    }
+}
 
 public struct ServerMessage_ImportCompletedPayload: Codable, Hashable, Sendable {
     public let calendarsCount: Int
     public let eventsCount: Int
     public let operation: OperationEnum
-    public let type: String}
+    public let type: String
+
+    public init(calendarsCount: Int, eventsCount: Int, operation: OperationEnum, type: String) {
+        self.calendarsCount = calendarsCount
+        self.eventsCount = eventsCount
+        self.operation = operation
+        self.type = type
+    }
+}
 
 public struct ServerMessage_SyncStatusChangedPayload: Codable, Hashable, Sendable {
     public let sync: ServerMessageSyncStatusChangedSync
-    public let type: String}
+    public let type: String
+
+    public init(sync: ServerMessageSyncStatusChangedSync, type: String) {
+        self.sync = sync
+        self.type = type
+    }
+}
 
 public struct ServerMessage_UserMetadataChangedPayload: Codable, Hashable, Sendable {
     public let metadata: [String: JSONValue]
-    public let type: String}
+    public let type: String
+
+    public init(metadata: [String: JSONValue], type: String) {
+        self.metadata = metadata
+        self.type = type
+    }
+}
 
 public struct SetEventHiddenInput: Codable, Hashable, Sendable {
     public let eventId: EventId
-    public let hidden: Bool}
+    public let hidden: Bool
+
+    public init(eventId: EventId, hidden: Bool) {
+        self.eventId = eventId
+        self.hidden = hidden
+    }
+}
 
 public enum SourceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case operation = "operation"
@@ -947,7 +1464,13 @@ public enum SubscriptionStatusEnum: String, Codable, Hashable, Sendable, CaseIte
 
 public struct UserMetadata: Codable, Hashable, Sendable {
     public let connections: [UserMetadataConnections]?
-    public let sync: UserMetadataSync?}
+    public let sync: UserMetadataSync?
+
+    public init(connections: [UserMetadataConnections]? = nil, sync: UserMetadataSync? = nil) {
+        self.connections = connections
+        self.sync = sync
+    }
+}
 
 public struct UserMetadataConnections: Codable, Hashable, Sendable {
     public let accountEmail: String?
@@ -958,10 +1481,28 @@ public struct UserMetadataConnections: Codable, Hashable, Sendable {
     public let lastSyncedAt: String?
     public let provider: ProviderEnum?
     public let state: String
-    public let stateReason: String?}
+    public let stateReason: String?
+
+    public init(accountEmail: String?, canSuggestContacts: Bool, connectionState: ConnectionStateEnum, id: String, lastHealthyAt: String?, lastSyncedAt: String?, provider: ProviderEnum? = nil, state: String, stateReason: String?) {
+        self.accountEmail = accountEmail
+        self.canSuggestContacts = canSuggestContacts
+        self.connectionState = connectionState
+        self.id = id
+        self.lastHealthyAt = lastHealthyAt
+        self.lastSyncedAt = lastSyncedAt
+        self.provider = provider
+        self.state = state
+        self.stateReason = stateReason
+    }
+}
 
 public struct UserMetadataSync: Codable, Hashable, Sendable {
-    public let importGCal: String?}
+    public let importGCal: String?
+
+    public init(importGCal: String? = nil) {
+        self.importGCal = importGCal
+    }
+}
 
 public struct UserProfile: Codable, Hashable, Sendable {
     public let email: String
@@ -970,7 +1511,18 @@ public struct UserProfile: Codable, Hashable, Sendable {
     public let locale: String
     public let name: String
     public let picture: String
-    public let userId: String}
+    public let userId: String
+
+    public init(email: String, firstName: String, lastName: String, locale: String, name: String, picture: String, userId: String) {
+        self.email = email
+        self.firstName = firstName
+        self.lastName = lastName
+        self.locale = locale
+        self.name = name
+        self.picture = picture
+        self.userId = userId
+    }
+}
 
 public enum WeekdayEnum: Int, Codable, Hashable, Sendable, CaseIterable {
     case v1 = 1

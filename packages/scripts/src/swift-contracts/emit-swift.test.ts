@@ -26,6 +26,17 @@ describe("swift contract emitter", () => {
     );
     expect(swift).toContain("name: String");
     expect(swift).toContain("note: String?");
+    expect(swift).toContain("public init(name: String, note: String? = nil)");
+  });
+
+  it("emits public memberwise inits for cross-module construction", () => {
+    const schema = z.object({
+      eventId: z.string(),
+      hidden: z.boolean(),
+    });
+    const swift = emitSwiftForSchema(schema, "SetEventHiddenInput");
+    expect(swift).toContain("public init(eventId: String, hidden: Bool)");
+    expect(swift).toContain("self.hidden = hidden");
   });
 
   it("reuses deduped payload structs across discriminated unions", () => {
