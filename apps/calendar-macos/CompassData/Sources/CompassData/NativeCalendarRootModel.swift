@@ -29,7 +29,7 @@ public final class NativeCalendarRootModel {
     var loadedEvents: [Event] = []
     private var refreshTask: Task<Void, Never>?
 
-    var referenceNow: Date {
+    public var referenceNow: Date {
         demoSeed?.referenceNow ?? Date()
     }
 
