@@ -69,7 +69,7 @@ public struct DemoSeedFixture: Sendable {
             isVisible: true,
             name: "Work",
             provider: "local",
-            timeZone: timeZone
+            timeZone: IANATimeZone(rawValue: timeZone)
         )
     }
 }
