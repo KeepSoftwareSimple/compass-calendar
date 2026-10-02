@@ -178,6 +178,7 @@
       "version": "1.0.0",
       "dependencies": {
         "@compass/core": "1.0.0",
+        "bson": "^7.3.3",
         "commander": "^10.0.0",
         "yaml": "^2.9.0",
       },

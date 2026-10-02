@@ -1,0 +1,72 @@
+{
+  "referenceNow": "2026-09-15T12:00:00.000Z",
+  "cases": [
+    {
+      "id": "parse-2026-10-03",
+      "input": {
+        "text": "2026-10-03",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-10/3",
+      "input": {
+        "text": "10/3",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-oct-3",
+      "input": {
+        "text": "oct 3",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2026-10-03",
+        "parsed": "2026-10-03"
+      }
+    },
+    {
+      "id": "parse-jan-3",
+      "input": {
+        "text": "jan 3",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": "2027-01-03",
+        "parsed": "2027-01-03"
+      }
+    },
+    {
+      "id": "parse-hello",
+      "input": {
+        "text": "hello",
+        "now": "2026-09-15T12:00:00.000Z"
+      },
+      "output": {
+        "expected": null,
+        "parsed": null
+      }
+    },
+    {
+      "id": "announcements",
+      "input": {
+        "date": "2026-10-03"
+      },
+      "output": {
+        "paletteLabel": "Go to Sat, Oct 3, 2026",
+        "day": "Showing Saturday, October 3, 2026",
+        "week": "Showing week of Saturday, October 3, 2026",
+        "life": "Showing week of Saturday, October 3, 2026"
+      }
+    }
+  ]
+}

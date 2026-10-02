@@ -37,7 +37,10 @@
       "project": ["src/**/*.ts!"]
     },
     "apps/calendar-web": {
-      "entry": ["src/__tests__/utils/render.test.util.tsx"],
+      "entry": [
+        "src/__tests__/utils/render.test.util.tsx",
+        "src/desktop/export-fixtures/write-fixture-files.ts"
+      ],
       "project": ["src/**/*.{ts,tsx}!"]
     },
     "apps/booking-web": {

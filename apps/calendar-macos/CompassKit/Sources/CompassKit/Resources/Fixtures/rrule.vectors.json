@@ -1,0 +1,38 @@
+{
+  "cases": [
+    {
+      "id": "daily-count-3",
+      "input": {
+        "startDate": "2026-01-01T10:00:00.000Z",
+        "endDate": "2026-01-01T11:00:00.000Z",
+        "recurrenceRule": "RRULE:FREQ=DAILY;COUNT=3",
+        "timeZone": "UTC",
+        "firstN": 5
+      },
+      "output": {
+        "summary": "RRULE:FREQ=DAILY;COUNT=3",
+        "instances": [
+          "2026-01-01T10:00:00.000Z",
+          "2026-01-02T10:00:00.000Z",
+          "2026-01-03T10:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "weekly-byday-fr-with-dtstart",
+      "input": {
+        "startDate": "2026-01-05T12:00:00.000Z",
+        "endDate": "2026-01-05T13:00:00.000Z",
+        "recurrenceRule": "RRULE:FREQ=WEEKLY;COUNT=0;BYDAY=FR",
+        "timeZone": "UTC",
+        "firstN": 5
+      },
+      "output": {
+        "summary": "RRULE:FREQ=WEEKLY;COUNT=0;BYDAY=FR",
+        "instances": [
+          "2026-01-05T12:00:00.000Z"
+        ]
+      }
+    }
+  ]
+}

@@ -90,6 +90,13 @@ export default class CompassCLI {
         runContractsSwiftCommand(process.argv.slice(3));
         break;
       }
+      case cmd === "desktop:export": {
+        const { runDesktopExportCommand } = await import(
+          "@scripts/commands/desktop-export"
+        );
+        await runDesktopExportCommand(process.argv.slice(3));
+        break;
+      }
       default:
         this.validator.exitHelpfully(`${cmd as string} is not a supported cmd`);
     }
@@ -186,6 +193,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "Emit CompassKit Generated/Contracts.swift from core Zod schemas (--check to fail on drift)",
+      );
+
+    program
+      .command("desktop:export")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Emit CompassKit shortcuts, theme tokens, product events, and parity fixtures (--check to fail on drift)",
       );
 
     return program;
