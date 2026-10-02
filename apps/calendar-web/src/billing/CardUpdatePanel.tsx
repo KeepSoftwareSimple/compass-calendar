@@ -1,12 +1,13 @@
 import { type FC, Suspense } from "react";
 import { BillingApi } from "@web/api/billing.api";
-import { requireCheckoutClientSecret } from "@web/billing/checkout-client-secret";
+import { fetchEmbeddedCheckoutSecret } from "@web/billing/checkout-client-secret";
 import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { OverlayPanelActionButton } from "@web/components/OverlayPanel/OverlayPanel";
 
-const fetchCardUpdateClientSecret = () =>
-  BillingApi.createPaymentMethodSession().then(requireCheckoutClientSecret);
+const fetchCardUpdateClientSecret = fetchEmbeddedCheckoutSecret(
+  BillingApi.createPaymentMethodSession,
+);
 
 interface CardUpdatePanelProps {
   publishableKey: string;
