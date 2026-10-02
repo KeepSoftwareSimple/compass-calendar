@@ -33,6 +33,146 @@
           "2026-01-05T12:00:00.000Z"
         ]
       }
+    },
+    {
+      "id": "weekly-dst-spring-denver",
+      "input": {
+        "startDate": "2026-03-01T09:00:00-07:00",
+        "endDate": "2026-03-01T10:00:00-07:00",
+        "recurrenceRule": "RRULE:FREQ=WEEKLY;COUNT=3",
+        "timeZone": "America/Denver",
+        "firstN": 5
+      },
+      "output": {
+        "summary": "RRULE:FREQ=WEEKLY;COUNT=3",
+        "instances": [
+          "2026-03-01T16:00:00.000Z",
+          "2026-03-08T15:00:00.000Z",
+          "2026-03-15T15:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "until-daily-denver-phantom",
+      "input": {
+        "startDate": "2026-06-01T03:00:00-06:00",
+        "endDate": "2026-06-01T03:15:00-06:00",
+        "recurrenceRule": "RRULE:FREQ=DAILY;UNTIL=20260610T055959Z",
+        "timeZone": "America/Denver",
+        "firstN": 20
+      },
+      "output": {
+        "summary": "RRULE:FREQ=DAILY;UNTIL=20260610T055959Z",
+        "instances": [
+          "2026-06-01T09:00:00.000Z",
+          "2026-06-02T09:00:00.000Z",
+          "2026-06-03T09:00:00.000Z",
+          "2026-06-04T09:00:00.000Z",
+          "2026-06-05T09:00:00.000Z",
+          "2026-06-06T09:00:00.000Z",
+          "2026-06-07T09:00:00.000Z",
+          "2026-06-08T09:00:00.000Z",
+          "2026-06-09T09:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "until-daily-kolkata",
+      "input": {
+        "startDate": "2026-06-01T20:00:00+05:30",
+        "endDate": "2026-06-01T20:30:00+05:30",
+        "recurrenceRule": "RRULE:FREQ=DAILY;UNTIL=20260605T182959Z",
+        "timeZone": "Asia/Kolkata",
+        "firstN": 20
+      },
+      "output": {
+        "summary": "RRULE:FREQ=DAILY;UNTIL=20260605T182959Z",
+        "instances": [
+          "2026-06-01T14:30:00.000Z",
+          "2026-06-02T14:30:00.000Z",
+          "2026-06-03T14:30:00.000Z",
+          "2026-06-04T14:30:00.000Z",
+          "2026-06-05T14:30:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "weekly-byday-sa-denver",
+      "input": {
+        "startDate": "2026-07-23T19:00:00-06:00",
+        "endDate": "2026-07-23T20:00:00-06:00",
+        "recurrenceRule": "RRULE:FREQ=WEEKLY;BYDAY=SA",
+        "timeZone": "America/Denver",
+        "firstN": 3
+      },
+      "output": {
+        "summary": "RRULE:FREQ=WEEKLY;BYDAY=SA",
+        "instances": [
+          "2026-07-24T01:00:00.000Z",
+          "2026-07-26T01:00:00.000Z",
+          "2026-08-02T01:00:00.000Z",
+          "2026-08-09T01:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "monthly-bymonthday",
+      "input": {
+        "startDate": "2026-01-15T10:00:00.000Z",
+        "endDate": "2026-01-15T11:00:00.000Z",
+        "recurrenceRule": "RRULE:FREQ=MONTHLY;COUNT=3;BYMONTHDAY=15",
+        "timeZone": "UTC",
+        "firstN": 5
+      },
+      "output": {
+        "summary": "RRULE:FREQ=MONTHLY;COUNT=3;BYMONTHDAY=15",
+        "instances": [
+          "2026-01-15T10:00:00.000Z",
+          "2026-02-15T10:00:00.000Z",
+          "2026-03-15T10:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "weekly-interval-byday",
+      "input": {
+        "startDate": "2026-01-01T10:00:00.000Z",
+        "endDate": "2026-01-01T11:00:00.000Z",
+        "recurrenceRule": "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=MO,WE",
+        "timeZone": "UTC",
+        "firstN": 10
+      },
+      "output": {
+        "summary": "RRULE:FREQ=WEEKLY;INTERVAL=2;COUNT=4;BYDAY=MO,WE",
+        "instances": [
+          "2026-01-01T10:00:00.000Z",
+          "2026-01-12T10:00:00.000Z",
+          "2026-01-14T10:00:00.000Z",
+          "2026-01-26T10:00:00.000Z",
+          "2026-01-28T10:00:00.000Z"
+        ]
+      }
+    },
+    {
+      "id": "until-roundtrip-denver",
+      "input": {
+        "startDate": "2026-07-23T19:00:00-06:00",
+        "endDate": "2026-07-23T20:00:00-06:00",
+        "recurrenceRule": "RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=20270601T010000Z",
+        "timeZone": "America/Denver",
+        "firstN": 5
+      },
+      "output": {
+        "summary": "RRULE:FREQ=WEEKLY;BYDAY=SA;UNTIL=20270601T010000Z",
+        "instances": [
+          "2026-07-24T01:00:00.000Z",
+          "2026-07-26T01:00:00.000Z",
+          "2026-08-02T01:00:00.000Z",
+          "2026-08-09T01:00:00.000Z",
+          "2026-08-16T01:00:00.000Z",
+          "2026-08-23T01:00:00.000Z"
+        ]
+      }
     }
   ]
 }
