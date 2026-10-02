@@ -351,9 +351,10 @@ private func normalizeJSON(_ value: Any?) -> Any? {
 }
 
 private func jsonEquals(_ lhs: Any?, _ rhs: Any?) -> Bool {
-    switch (lhs, rhs) {
-    case (NSNull(), NSNull()):
+    if lhs is NSNull, rhs is NSNull {
         return true
+    }
+    switch (lhs, rhs) {
     case let (left as Double, right as Double):
         return abs(left - right) < 0.000_1
     case let (left as Bool, right as Bool):
