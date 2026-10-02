@@ -29,6 +29,18 @@ import mongoService from "@backend/common/services/mongo.service";
 /** Bump when Checkout Session create params change so Stripe does not replay a failed create. */
 const CHECKOUT_IDEMPOTENCY_PREFIX = "compass-checkout-v5-";
 
+/**
+ * Desktop and web send different create params for the same user, so they need
+ * separate keys or Stripe replays whichever session was created first.
+ */
+const checkoutIdempotencyKey = (
+  userId: string,
+  options: BillingCheckoutRequest,
+): string => {
+  const surface = options.returnTo === "desktop" ? "desktop-" : "";
+  return `${CHECKOUT_IDEMPOTENCY_PREFIX}${surface}${userId}`;
+};
+
 const TRIAL_CANCEL_WITHOUT_CARD = {
   trial_settings: {
     end_behavior: { missing_payment_method: "cancel" as const },
@@ -59,6 +71,52 @@ const checkoutTrialFields = (
     };
   }
   return {};
+};
+
+type CheckoutSessionResult = Awaited<
+  ReturnType<StripeBillingGateway["createCheckoutSession"]>
+>;
+
+type CheckoutReturnParams =
+  | { success_url: string; cancel_url: string }
+  | { ui_mode: "embedded_page"; redirect_on_completion: "never" };
+
+/**
+ * The desktop shell leaves the app for Stripe's hosted page, so it needs real
+ * return URLs; the web app keeps the embedded form in place. Both the
+ * subscription and the card-update session make this same choice.
+ */
+const checkoutReturnParams = (
+  options: BillingCheckoutRequest,
+): CheckoutReturnParams => {
+  if (options.returnTo !== "desktop") {
+    return { ui_mode: "embedded_page", redirect_on_completion: "never" };
+  }
+  const frontendUrl = CONFIG.FRONTEND_URL;
+  if (!frontendUrl) {
+    throw new Error("FRONTEND_URL is required for desktop billing return");
+  }
+  return {
+    success_url: buildDesktopBillingReturnUrl(frontendUrl, "success"),
+    cancel_url: buildDesktopBillingReturnUrl(frontendUrl, "cancel"),
+  };
+};
+
+/** Hosted Checkout answers with a URL, the embedded form with a client secret. */
+const checkoutResponse = (
+  session: CheckoutSessionResult,
+  options: BillingCheckoutRequest,
+): BillingCheckoutResponse => {
+  if (options.returnTo === "desktop") {
+    if (!session.url) {
+      throw new Error("Stripe Checkout did not return a hosted URL");
+    }
+    return { url: session.url };
+  }
+  if (!session.client_secret) {
+    throw new Error("Stripe Checkout did not return a client secret");
+  }
+  return { clientSecret: session.client_secret };
 };
 
 export class StripeService {
@@ -158,12 +216,6 @@ export class StripeService {
       );
     }
 
-    const returnToDesktop = options.returnTo === "desktop";
-    const frontendUrl = CONFIG.FRONTEND_URL;
-    if (returnToDesktop && !frontendUrl) {
-      throw new Error("FRONTEND_URL is required for desktop billing return");
-    }
-
     const session = await this.stripe
       .createCheckoutSession(
         {
@@ -181,46 +233,19 @@ export class StripeService {
           automatic_tax: { enabled: true },
           customer_update: { address: "auto" },
           billing_address_collection: "required",
-          ...(returnToDesktop
-            ? {
-                success_url: buildDesktopBillingReturnUrl(
-                  frontendUrl!,
-                  "success",
-                ),
-                cancel_url: buildDesktopBillingReturnUrl(
-                  frontendUrl!,
-                  "cancel",
-                ),
-              }
-            : {
-                ui_mode: "embedded_page" as const,
-                redirect_on_completion: "never" as const,
-              }),
+          ...checkoutReturnParams(options),
           subscription_data: {
             ...trialFields,
             metadata: { compassUserId: userId },
           },
         },
         sendCheckoutIdempotency
-          ? {
-              idempotencyKey: `${CHECKOUT_IDEMPOTENCY_PREFIX}${returnToDesktop ? "desktop-" : ""}${userId}`,
-            }
+          ? { idempotencyKey: checkoutIdempotencyKey(userId, options) }
           : undefined,
       )
       .catch(wrapStripeFailure);
 
-    if (returnToDesktop) {
-      if (!session.url) {
-        throw new Error("Stripe Checkout did not return a hosted URL");
-      }
-      return { url: session.url };
-    }
-
-    if (!session.client_secret) {
-      throw new Error("Stripe Checkout did not return a client secret");
-    }
-
-    return { clientSecret: session.client_secret };
+    return checkoutResponse(session, options);
   };
 
   /**
@@ -399,12 +424,6 @@ export class StripeService {
       throw new BillingHttpError(Status.CONFLICT, "No billing account yet.");
     }
 
-    const returnToDesktop = options.returnTo === "desktop";
-    const frontendUrl = CONFIG.FRONTEND_URL;
-    if (returnToDesktop && !frontendUrl) {
-      throw new Error("FRONTEND_URL is required for desktop billing return");
-    }
-
     const session = await this.stripe
       .createCheckoutSession({
         mode: "setup",
@@ -412,33 +431,11 @@ export class StripeService {
         payment_method_types: ["card"],
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },
-        ...(returnToDesktop
-          ? {
-              success_url: buildDesktopBillingReturnUrl(
-                frontendUrl!,
-                "success",
-              ),
-              cancel_url: buildDesktopBillingReturnUrl(frontendUrl!, "cancel"),
-            }
-          : {
-              ui_mode: "embedded_page" as const,
-              redirect_on_completion: "never" as const,
-            }),
+        ...checkoutReturnParams(options),
       })
       .catch(wrapStripeFailure);
 
-    if (returnToDesktop) {
-      if (!session.url) {
-        throw new Error("Stripe Checkout did not return a hosted URL");
-      }
-      return { url: session.url };
-    }
-
-    if (!session.client_secret) {
-      throw new Error("Stripe Checkout did not return a client secret");
-    }
-
-    return { clientSecret: session.client_secret };
+    return checkoutResponse(session, options);
   };
 }
 
