@@ -72,7 +72,11 @@ public struct RangeCache: Sendable {
         try db.read { db in
             guard let row = try LoadedRangeRecord.fetchOne(
                 db,
-                key: [key.loadedRangeSource, key.start, key.end]
+                key: [
+                    "source": key.loadedRangeSource,
+                    "start": key.start,
+                    "end": key.end,
+                ]
             ) else {
                 return .missing
             }
