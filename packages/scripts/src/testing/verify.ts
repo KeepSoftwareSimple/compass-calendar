@@ -12,9 +12,11 @@ import { existsSync } from "node:fs";
  * `--serial` is passed. Web or e2e/ changes also select Playwright a11y and
  * e2e after that wave, unless Chromium is missing — in that case the helper
  * skips those checks and reports incomplete CI parity instead of a silent pass.
- * `apps/calendar-macos/` selects `test:macos` (xcodegen + xcodebuild test)
- * where Xcode is installed; elsewhere, Linux included, the summary names it
- * as CI-only (test-macos.yml) and the verdict is unaffected.
+ * `apps/calendar-macos/` selects `test:macos:packages` (`swift test` on
+ * CompassKit and CompassData) and `test:macos` (xcodegen + xcodebuild for
+ * the app and CompassUI) where Xcode is installed; elsewhere, Linux included,
+ * the summary names both as CI-only (test-macos.yml) and the verdict is
+ * unaffected.
  *
  * The last line is always machine-readable: `VERDICT: PASS`, `VERDICT:
  * INCOMPLETE` (every selected check passed but a Playwright check was
@@ -74,6 +76,12 @@ export const STRICT_FLAG = "--strict";
 export type Verdict = "PASS" | "INCOMPLETE" | "FAIL";
 const MACOS_CI_ONLY_REASON =
   "Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine";
+const MACOS_PACKAGES_CI_ONLY_REASON =
+  "swift test on CompassKit and CompassData runs in CI only (test-macos.yml swift-packages job); no Xcode on this machine";
+const MACOS_PACKAGE_CHECKS: Array<{ id: string; cmd: string[] }> = [
+  { id: "test:macos:packages", cmd: ["bun", "run", "test:macos:packages"] },
+  { id: "test:macos", cmd: ["bun", "run", "test:macos"] },
+];
 const FAST_TIER_REASON =
   "no *.db.test.ts and no /storage/ or /repositories/ paths";
 
@@ -255,8 +263,17 @@ export function planVerify(input: {
   const ciOnly: PlannedSkip[] = [];
   const checks: PlannedCheck[] = [];
   for (const pkg of packages) {
-    if (pkg === "macos" && !input.xcodeAvailable) {
-      ciOnly.push({ id: "test:macos", reason: MACOS_CI_ONLY_REASON });
+    if (pkg === "macos") {
+      if (!input.xcodeAvailable) {
+        ciOnly.push(
+          { id: "test:macos:packages", reason: MACOS_PACKAGES_CI_ONLY_REASON },
+          { id: "test:macos", reason: MACOS_CI_ONLY_REASON },
+        );
+        continue;
+      }
+      for (const macosCheck of MACOS_PACKAGE_CHECKS) {
+        checks.push({ id: macosCheck.id, cmd: macosCheck.cmd });
+      }
       continue;
     }
     checks.push(selectPackageTestCheck(pkg, files));

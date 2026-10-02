@@ -222,13 +222,14 @@ describe("planVerify", () => {
 });
 
 describe("planVerify macos", () => {
-  it("runs test:macos where Xcode is installed", () => {
+  it("runs macOS package and app tests where Xcode is installed", () => {
     const plan = planVerify({
       packages: ["macos"],
       playwrightChromiumAvailable: false,
       xcodeAvailable: true,
     });
     expect(plan.checks.map((check) => check.id)).toEqual([
+      "test:macos:packages",
       "test:macos",
       "type-check",
       "lint",
@@ -237,7 +238,7 @@ describe("planVerify macos", () => {
     expect(plan.ciOnly).toEqual([]);
   });
 
-  it("names test:macos as CI-only without Xcode instead of skipping it", () => {
+  it("names macOS checks as CI-only without Xcode instead of skipping them", () => {
     const plan = planVerify({
       packages: ["macos"],
       playwrightChromiumAvailable: false,
@@ -248,7 +249,10 @@ describe("planVerify macos", () => {
       "knip",
     ]);
     expect(plan.skips).toEqual([]);
-    expect(plan.ciOnly.map((note) => note.id)).toEqual(["test:macos"]);
+    expect(plan.ciOnly.map((note) => note.id)).toEqual([
+      "test:macos:packages",
+      "test:macos",
+    ]);
   });
 });
 
@@ -439,7 +443,7 @@ describe("runVerify", () => {
     expect(logs.errors.join("\n")).toContain("--strict");
   });
 
-  it("passes --strict on a macos diff without Xcode and names test:macos as CI-only", async () => {
+  it("passes --strict on a macos diff without Xcode and names macOS checks as CI-only", async () => {
     const { spawn, commands } = recordingSpawn();
     const logs = captureLogs();
     const exitCode = await runVerify(["--strict"], {
@@ -458,13 +462,14 @@ describe("runVerify", () => {
       ["bun", "run", "lint"],
       ["bun", "run", "knip"],
     ]);
-    expect(logs.lines).toContain(
-      "Checks CI-only: test:macos (Swift/AppKit builds run in CI only (test-macos.yml); no Xcode on this machine)",
+    expect(logs.lines.join("\n")).toContain(
+      "Checks CI-only: test:macos:packages",
     );
+    expect(logs.lines.join("\n")).toContain("test:macos (Swift/AppKit");
     expect(logs.lines.at(-1)).toBe("VERDICT: PASS");
   });
 
-  it("runs test:macos on a macos diff when Xcode is installed", async () => {
+  it("runs macOS checks on a macos diff when Xcode is installed", async () => {
     const { spawn, commands } = recordingSpawn();
     const logs = captureLogs();
     const exitCode = await runVerify([], {
@@ -478,7 +483,8 @@ describe("runVerify", () => {
     });
 
     expect(exitCode).toBe(0);
-    expect(commands[0]).toEqual(["bun", "run", "test:macos"]);
+    expect(commands[0]).toEqual(["bun", "run", "test:macos:packages"]);
+    expect(commands[1]).toEqual(["bun", "run", "test:macos"]);
     expect(logs.lines.join("\n")).not.toContain("CI-only");
   });
 

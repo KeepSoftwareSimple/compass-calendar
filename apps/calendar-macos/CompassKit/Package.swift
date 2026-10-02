@@ -11,5 +11,10 @@ let package = Package(
     ],
     targets: [
         .target(name: "CompassKit"),
+        .testTarget(
+            name: "CompassKitTests",
+            dependencies: ["CompassKit"],
+            path: "../CompassKitTests"
+        ),
     ]
 )
