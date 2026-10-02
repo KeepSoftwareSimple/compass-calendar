@@ -78,6 +78,16 @@ a draft on a focused column.
 
 Do not run both maps at once. Do not invent a second hold key.
 
+Bare digits follow the same rule with focus as the context. On the grid
+they type a start time (`1400`). Once Mod+digit has landed on a calendar
+account, that list owns them: `1`–`9` toggle its rows, chips say so, and
+the grid's typed-time listener stands down for keys that originate inside
+the list (`isDigitPickOwnerTarget`), exactly as it does for an editable
+field. Letters (`c`, `h`, `t`) and Mod chords keep their global meaning
+there. A widget that wants bare digits while focused spreads
+`digitPickOwnerAttrs()` on its container; do not add a second global
+digit listener and race for them.
+
 Settings is an OverlayPanel with its own letter map while it holds app-lock
 (`apps/calendar-web/src/settings/useSettingsShortcuts.ts`). Those letters are not
 page-jump digits; they activate controls already on the Settings overlay.

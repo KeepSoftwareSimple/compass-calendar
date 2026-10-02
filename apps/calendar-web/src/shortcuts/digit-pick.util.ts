@@ -60,3 +60,26 @@ export function digitPickIndex(
 
   return physicalDigitIndex(event);
 }
+
+/**
+ * Bare digits have one owner at a time. A widget that picks rows by digit
+ * while it has focus (the sidebar calendar lists) marks its container with
+ * this attribute; global digit consumers such as the grid's typed-time
+ * creation check `isDigitPickOwnerTarget` and stand down for keys that
+ * originate inside it, the same way they stand down for an editable field.
+ * Without this, the grid's capture-phase document listener would claim the
+ * digit before the widget's own React handler ever saw it and commit a draft
+ * at 01:00 instead of toggling the first calendar.
+ */
+export const DIGIT_PICK_OWNER_ATTRIBUTE = "data-digit-pick-owner";
+
+export const digitPickOwnerAttrs = (): Record<
+  typeof DIGIT_PICK_OWNER_ATTRIBUTE,
+  ""
+> => ({ [DIGIT_PICK_OWNER_ATTRIBUTE]: "" });
+
+export const isDigitPickOwnerTarget = (
+  event: Pick<KeyboardEvent, "target">,
+): boolean =>
+  event.target instanceof Element &&
+  event.target.closest(`[${DIGIT_PICK_OWNER_ATTRIBUTE}]`) !== null;

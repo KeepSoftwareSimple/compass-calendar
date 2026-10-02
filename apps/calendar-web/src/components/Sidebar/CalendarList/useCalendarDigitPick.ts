@@ -2,6 +2,7 @@ import { type FocusEvent, type KeyboardEvent, useState } from "react";
 import { type Calendar } from "@core/types/calendar.contracts";
 import {
   digitPickIndex,
+  digitPickOwnerAttrs,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
@@ -9,6 +10,11 @@ import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-te
 /**
  * Digit-pick for a focused calendar-account section: 1-9, 0, -, = map to
  * the first 12 rows. Chips and aria-keyshortcuts follow `focusedWithin`.
+ *
+ * The section is marked as the bare-digit owner so the grid's typed-time
+ * creation (a capture-phase document listener that would otherwise win)
+ * leaves digits pressed inside it alone. Everything else stays global:
+ * `c` still creates, `h` still enters jump mode, Mod+digit still page-jumps.
  */
 export function useCalendarDigitPick({
   calendars,
@@ -20,6 +26,7 @@ export function useCalendarDigitPick({
   const [focusedWithin, setFocusedWithin] = useState(false);
 
   const sectionProps = {
+    ...digitPickOwnerAttrs(),
     onFocus: () => setFocusedWithin(true),
     onBlur: (event: FocusEvent<HTMLElement>) => {
       const next = event.relatedTarget;
