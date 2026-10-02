@@ -80,8 +80,8 @@ public final class TimeGridView: NSView {
 
         timedContentView.layer?.addSublayer(nowLineLayer)
         timedContentView.wantsLayer = true
-        timedContentView.accessibilityIdentifier = "compass-grid-timed"
-        allDayRowView.accessibilityIdentifier = "compass-grid-allday"
+        timedContentView.setAccessibilityIdentifier("compass-grid-timed")
+        allDayRowView.setAccessibilityIdentifier("compass-grid-allday")
     }
 
     private func configureNowLine() {
@@ -168,7 +168,7 @@ public final class TimeGridView: NSView {
             header.textColor = palette.text
             header.frame = NSRect(x: column.left, y: 6, width: column.width, height: headerHeight - 8)
             header.alignment = .center
-            header.accessibilityIdentifier = column.accessibilityIdentifier
+            header.setAccessibilityIdentifier(column.accessibilityIdentifier)
             headerRowView.addSubview(header)
         }
     }
