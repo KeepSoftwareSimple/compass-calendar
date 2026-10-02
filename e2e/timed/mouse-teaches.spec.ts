@@ -4,6 +4,7 @@ import {
   dispatchDocumentKey,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
+  getMainGridPoint,
   openTimedEventFormWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
@@ -80,11 +81,9 @@ test("a slot click teaches typed time digits and typing opens create", async ({
 }) => {
   await prepareTeachingWeek(page);
 
-  const column = page.locator("#timedColumns").locator(":scope > *").first();
-  await column.scrollIntoViewIfNeeded();
-  const box = await column.boundingBox();
-  if (!box) throw new Error("timed column is not visible");
-  await page.mouse.click(box.x + box.width / 2, box.y + box.height * 0.45);
+  await page.locator("#timedColumns th").first().waitFor({ state: "visible" });
+  const { x, y } = await getMainGridPoint(page, { xRatio: 0.2, yRatio: 0.45 });
+  await page.mouse.click(x, y);
 
   const hint = pointerHint(page);
   await expect(hint).toBeVisible();
