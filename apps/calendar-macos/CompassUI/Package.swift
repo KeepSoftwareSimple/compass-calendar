@@ -9,11 +9,12 @@ let package = Package(
     ],
     dependencies: [
         .package(path: "../CompassKit"),
+        .package(path: "../CompassData"),
     ],
     targets: [
         .target(
             name: "CompassUI",
-            dependencies: ["CompassKit"],
+            dependencies: ["CompassKit", "CompassData"],
             swiftSettings: [
                 .swiftLanguageMode(.v6),
             ]

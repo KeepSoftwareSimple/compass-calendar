@@ -1,4 +1,3 @@
-import CompassKit
 import Foundation
 
 public struct TimeGridState: Sendable {

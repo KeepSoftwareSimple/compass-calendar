@@ -107,9 +107,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installRootContent(on window: NSWindow) {
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
-            let nativeController = NativeRootController(webTheme: theme)
+            guard let model = try? NativeRootFactory.makeModel() else { return }
+            let nativeController = NativeRootController(webTheme: theme, model: model)
             nativeRootController = nativeController
             window.contentViewController = nativeController
+            mainMenuController?.nativeRootController = nativeController
         } else {
             nativeRootController = nil
             guard let webViewController else { return }

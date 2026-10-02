@@ -1,6 +1,6 @@
 import Foundation
 
-enum CompassDateParsing {
+public enum CompassDateParsing {
     // Cached formatters are configured once; reads are concurrent, writes never happen after init.
     private nonisolated(unsafe) static let wallTimeFormatters: [DateFormatter] = {
         let formats = [
@@ -33,7 +33,7 @@ enum CompassDateParsing {
         return formatter
     }()
 
-    static func parseInEffectiveTimeZone(_ value: String) -> Date? {
+    public static func parseInEffectiveTimeZone(_ value: String) -> Date? {
         if value.contains("Z") || hasExplicitOffset(value) {
             if let date = iso8601WithFractional.date(from: value) {
                 return date
@@ -95,7 +95,7 @@ enum CompassDateParsing {
         return formatter.string(from: date)
     }
 
-    static func formatCalendarDay(_ date: Date) -> String {
+    public static func formatCalendarDay(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = EffectiveTimeZone.calendar

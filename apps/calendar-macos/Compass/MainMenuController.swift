@@ -11,6 +11,7 @@ final class MainMenuController: NSObject {
 
     var onToggleNativeUI: (() -> Void)?
     var onSelectNativeTheme: ((NativeWebTheme) -> Void)?
+    weak var nativeRootController: NativeRootController?
 
     init(
         webViewController: WebViewController,
@@ -108,6 +109,8 @@ final class MainMenuController: NSObject {
             return #selector(useNativeThemeLightBeach(_:))
         case .nativeThemeDarkAbyss:
             return #selector(useNativeThemeDarkAbyss(_:))
+        case .nativeDebugSignIn:
+            return #selector(nativeDebugSignIn(_:))
         case let .standardEdit(selectorName):
             return Selector(selectorName)
         }
@@ -182,6 +185,12 @@ final class MainMenuController: NSObject {
 
     @objc private func useNativeThemeDarkAbyss(_ sender: Any?) {
         onSelectNativeTheme?(.darkAbyss)
+    }
+
+    @objc private func nativeDebugSignIn(_ sender: Any?) {
+        Task { @MainActor in
+            await nativeRootController?.presentDebugSignIn(from: NSApp.keyWindow)
+        }
     }
 }
 

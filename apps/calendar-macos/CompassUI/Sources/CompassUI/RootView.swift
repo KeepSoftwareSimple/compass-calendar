@@ -1,11 +1,15 @@
+import CompassData
+import CompassKit
 import SwiftUI
 
 public struct RootView: View {
     @Environment(\.nativeWebTheme) private var theme
-    @State private var monthTitle = "October 2026"
+    @Bindable public var model: NativeCalendarRootModel
     @State private var titleBarLeadingInset: CGFloat = 72
 
-    public init() {}
+    public init(model: NativeCalendarRootModel) {
+        self.model = model
+    }
 
     public var body: some View {
         HStack(spacing: 0) {
@@ -22,9 +26,13 @@ public struct RootView: View {
                 Color.clear
                     .onAppear {
                         applyTitleBarInset(geometry.safeAreaInsets.leading)
+                        model.updateContentTrackWidth(geometry.size.width - 260)
                     }
                     .onChange(of: geometry.safeAreaInsets.leading) { _, leading in
                         applyTitleBarInset(leading)
+                    }
+                    .onChange(of: geometry.size.width) { _, width in
+                        model.updateContentTrackWidth(width - 260)
                     }
             }
         }
@@ -38,10 +46,15 @@ public struct RootView: View {
     }
 
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Calendars")
                 .font(.custom("Rubik", size: 13, relativeTo: .headline))
                 .foregroundStyle(theme.textMutedColor)
+            SidebarMonthPicker(
+                displayedMonth: $model.monthPickerMonth,
+                selectedDate: model.viewStore.anchorDate,
+                onSelectDate: { model.goToDate($0) }
+            )
             Spacer()
         }
         .padding(16)
@@ -63,13 +76,20 @@ public struct RootView: View {
     private var header: some View {
         HStack(spacing: 12) {
             HStack(spacing: 12) {
-                headerButton(label: "Previous", systemImage: "chevron.left")
-                headerButton(label: "Next", systemImage: "chevron.right")
-                Text(monthTitle)
+                headerButton(label: "Previous", systemImage: "chevron.left") {
+                    model.handleShortcut(.navPrevious)
+                }
+                headerButton(label: "Next", systemImage: "chevron.right") {
+                    model.handleShortcut(.navNext)
+                }
+                Text(model.headerTitle)
                     .font(.custom("Rubik", size: 15, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
-                headerButton(label: "Today", systemImage: nil, title: "Today")
+                    .accessibilityIdentifier("compass-native-header-title")
+                headerButton(label: "Today", systemImage: nil, title: "Today") {
+                    model.handleShortcut(.navToday)
+                }
             }
             .padding(.leading, titleBarLeadingInset)
 
@@ -92,7 +112,7 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        TimeGridRepresentable(state: TimeGridPreviewFactory.weekPreviewState())
+        TimeGridRepresentable(state: model.timeGridState)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.backgroundColor)
             .accessibilityIdentifier("compass-native-content")
@@ -102,9 +122,10 @@ public struct RootView: View {
     private func headerButton(
         label: String,
         systemImage: String?,
-        title: String? = nil
+        title: String? = nil,
+        action: @escaping () -> Void
     ) -> some View {
-        Button(action: {}) {
+        Button(action: action) {
             Group {
                 if let systemImage {
                     Image(systemName: systemImage)
