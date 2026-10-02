@@ -51,7 +51,8 @@ final class EventsStoreTests: XCTestCase {
           "content": {
             "kind": "details",
             "title": "New",
-            "description": ""
+            "description": "",
+            "location": ""
           },
           "id": "evt-new",
           "recurrence": { "kind": "single" },
