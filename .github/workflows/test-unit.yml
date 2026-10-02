@@ -40,6 +40,8 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       sync: ${{ steps.filter.outputs.sync }}
       scripts: ${{ steps.filter.outputs.scripts }}
+      static_web: ${{ steps.filter.outputs.static_web }}
+      contracts: ${{ steps.filter.outputs.contracts }}
     steps:
       - name: Check out Git repository
         uses: actions/checkout@v7
@@ -108,6 +110,7 @@ jobs:
           bun run type-check
 
       - name: Check generated Swift contracts
+        if: needs.changes.outputs.contracts == 'true'
         run: |
           bun cli contracts:swift --check
 
@@ -115,6 +118,7 @@ jobs:
       # .github/docker/Dockerfile.web (staging-cloud deploy) so PRs fail here
       # instead of on Release → staging-cloud (#3814-#3816, #4200-#4201).
       - name: Build web bundle (boot-size budget)
+        if: needs.changes.outputs.static_web == 'true'
         run: |
           .github/perf/run-boot-size-check.sh
 
