@@ -4,7 +4,7 @@ import Foundation
 public enum DesktopDeepLinkParser {
     private static let scheme = "compass"
     private static let authCallbackRegex: NSRegularExpression = {
-        try! NSRegularExpression(pattern: "^compass://auth/[^/?#]+/callback(\\?.*)?$")
+        try! NSRegularExpression(pattern: "^compass://auth/([^/?#]+)/callback(\\?.*)?$")
     }()
     private static let dayRegex: NSRegularExpression = {
         try! NSRegularExpression(pattern: "^compass://day/(\\d{4}-\\d{2}-\\d{2})/?$")
@@ -29,6 +29,29 @@ public enum DesktopDeepLinkParser {
         }
         if let eventId = parseEventId(from: urlString) {
             return "compass://event/\(eventId)"
+        }
+        return nil
+    }
+
+    /// Router path the hosted web app should open for a recognized deep link.
+    public static func navigationPath(for urlString: String) -> String? {
+        guard recognizedURLString(urlString) != nil else { return nil }
+        let fullRange = NSRange(urlString.startIndex..., in: urlString)
+        if let match = authCallbackRegex.firstMatch(in: urlString, range: fullRange),
+           match.numberOfRanges > 1,
+           let providerRange = Range(match.range(at: 1), in: urlString)
+        {
+            let provider = String(urlString[providerRange])
+            var query = ""
+            if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound,
+               let queryRange = Range(match.range(at: 2), in: urlString)
+            {
+                query = String(urlString[queryRange])
+            }
+            return "/auth/\(provider)/callback\(query)"
+        }
+        if let day = parseDayDateString(from: urlString, range: fullRange) {
+            return "/day/\(day)"
         }
         return nil
     }

@@ -14,6 +14,19 @@ final class DesktopDeepLinkTests: XCTestCase {
             "compass://day/2026-10-15")
     }
 
+    func testDayLinkNavigationPath() {
+        XCTAssertEqual(
+            DesktopDeepLinkParser.navigationPath(for: "compass://day/2026-10-15"),
+            "/day/2026-10-15")
+    }
+
+    func testAuthCallbackNavigationPath() {
+        XCTAssertEqual(
+            DesktopDeepLinkParser.navigationPath(
+                for: "compass://auth/google/callback?code=abc&state=x"),
+            "/auth/google/callback?code=abc&state=x")
+    }
+
     func testInvalidDayLinkIsIgnored() {
         XCTAssertNil(DesktopDeepLinkParser.recognizedURLString("compass://day/2026-13-40"))
         XCTAssertNil(DesktopDeepLinkParser.recognizedURLString("compass://day/not-a-date"))

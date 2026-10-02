@@ -224,6 +224,10 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     func deliverDeepLink(_ url: String) {
         view.window?.makeKeyAndOrderFront(nil)
+        let probeWindow = accessibilityHostWindow ?? view.window
+        if let path = DesktopDeepLinkParser.navigationPath(for: url) {
+            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: probeWindow)
+        }
         webView.evaluateJavaScript(BridgeScript.deliverDeepLinkJavaScript(url: url))
     }
 
