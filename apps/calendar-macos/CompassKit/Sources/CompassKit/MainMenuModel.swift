@@ -41,6 +41,8 @@ public enum MainMenuActionKind: Equatable, Sendable {
     case quit
     case openSettings
     case openHelp
+    case checkForUpdates
+    case restartToUpdate
     case switchToStaging
     case switchToProduction
     case standardEdit(String)
@@ -104,6 +106,8 @@ public enum MainMenuModel {
             title: "Compass",
             rows: [
                 MainMenuRow(title: "About Compass", action: .showAbout),
+                MainMenuRow(title: "Check for Updates…", action: .checkForUpdates),
+                MainMenuRow(title: "Restart to update", action: .restartToUpdate),
                 MainMenuRow(title: "", action: .separator),
                 MainMenuRow(
                     title: "Settings…",

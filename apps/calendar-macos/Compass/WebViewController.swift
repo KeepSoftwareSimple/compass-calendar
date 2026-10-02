@@ -50,6 +50,15 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
         }
     }
 
+    var onRestartToUpdate: (() -> Void)? {
+        get { bridgeHandler.onRestartToUpdate }
+        set { bridgeHandler.onRestartToUpdate = newValue }
+    }
+
+    func deliverUpdateReady(version: String) {
+        webView?.evaluateJavaScript(BridgeScript.deliverUpdateReadyJavaScript(version: version))
+    }
+
     func reloadAppHost() {
         let resolved = AppOrigin.resolve(
             override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),

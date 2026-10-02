@@ -9,6 +9,7 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
     var onAppearanceChange: ((String) -> Void)?
     var onLaunchAtLoginChange: ((Bool) -> Void)?
     var launchAtLoginStatus: (() -> Bool)?
+    var onRestartToUpdate: (() -> Void)?
     var onDeepLinkNavigationReport: ((String) -> Void)?
 
     func userContentController(
@@ -41,7 +42,9 @@ final class CompassBridgeHandler: NSObject, WKScriptMessageHandler {
                 CompassAgendaController.shared.updateAgenda(items)
             }
         case .restartToUpdate:
-            break
+            Task { @MainActor in
+                self.onRestartToUpdate?()
+            }
         case .requestNotificationPermission, .getNotificationPermission, .showNotification:
             guard let webView else { return }
             Task { @MainActor in

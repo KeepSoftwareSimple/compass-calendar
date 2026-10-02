@@ -62,6 +62,7 @@ import { useDesktopAppearanceSync } from "@web/desktop/useDesktopAppearanceSync"
 import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
 import { useDesktopMenuShortcutBridge } from "@web/desktop/useDesktopMenuShortcutBridge";
 import { useDesktopQuickAddEntry } from "@web/desktop/useDesktopQuickAddEntry";
+import { useDesktopUpdateReady } from "@web/desktop/useDesktopUpdateReady";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import {
   selectGuestMeetingSetupActive,
@@ -142,6 +143,7 @@ export function RootShell() {
   useDesktopAgendaSync();
   useDesktopAppearanceSync();
   useDesktopMenuShortcutBridge();
+  useDesktopUpdateReady();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

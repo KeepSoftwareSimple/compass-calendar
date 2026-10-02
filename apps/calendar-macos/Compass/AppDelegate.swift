@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
     private var quickAddCoordinator: DesktopQuickAddCoordinator?
+    private let updater = DesktopUpdater()
     private var optionHeldAtLaunch = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
@@ -34,9 +35,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             optionHeldAtLaunch: optionHeldAtLaunch)
         let menuController = MainMenuController(
             webViewController: webViewController,
+            updater: updater,
             showDebugMenu: showDebugMenu)
         mainMenuController = menuController
         NSApp.mainMenu = MainMenu.make(controller: menuController)
+
+        updater.onUpdateReady = { [weak webViewController] version in
+            webViewController?.deliverUpdateReady(version: version)
+        }
+        webViewController.onRestartToUpdate = { [updater] in
+            updater.restartToUpdate()
+        }
+        updater.start()
 
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
