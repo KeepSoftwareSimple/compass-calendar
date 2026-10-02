@@ -88,6 +88,14 @@ Locked decisions and Deferred sections as binding.
 10. **Distribution is unchanged.** Signed, notarized, universal DMG on
     GitHub Releases under `macos-v*` tags with a Sparkle appcast. No Mac
     App Store, no Homebrew cask for v1.
+    Owner QA runs an unsigned **dev channel** (`release-macos-dev.yml`):
+    every merge that touches the app publishes an ad-hoc signed build to the
+    rolling `macos-dev` prerelease, and builds stamped
+    `COMPASS_UPDATE_CHANNEL=dev` follow that feed, so a laptop stays current
+    without tags. It needs only the Sparkle keys, not Apple enrollment.
+    Install one dev DMG by hand once (right-click, Open); after that it
+    updates itself. The native app keeps this channel from its first
+    skeleton build, so weekly founder acceptance never waits on a tag.
 11. **Every build and test runs on GitHub's macOS runners.** Agents in the
     loop cannot compile AppKit. Pure packages run `swift test` without
     XcodeGen in a separate job; `CompassUI` and XCUITest go through

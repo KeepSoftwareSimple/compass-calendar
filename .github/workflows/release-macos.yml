@@ -212,6 +212,12 @@ jobs:
             build/appcast
           rm -f "$key_path"
           test -s build/appcast/appcast.xml
+          # generate_appcast silently omits the signature when SUPublicEDKey in
+          # Info.plist does not match SPARKLE_PRIVATE_KEY; clients reject that item.
+          if ! grep -q 'sparkle:edSignature' build/appcast/appcast.xml; then
+            echo "::error::appcast.xml has no sparkle:edSignature. SUPublicEDKey in Resources/Info.plist must be the public half of SPARKLE_PRIVATE_KEY."
+            exit 1
+          fi
 
       - name: Publish GitHub Release
         env:
