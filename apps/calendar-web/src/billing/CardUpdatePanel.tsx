@@ -31,7 +31,12 @@ export const CardUpdatePanel: FC<CardUpdatePanelProps> = ({
         <EmbeddedCheckout
           className="w-full"
           fetchClientSecret={() =>
-            BillingApi.createPaymentMethodSession().then((r) => r.clientSecret)
+            BillingApi.createPaymentMethodSession().then((response) => {
+              if (!response.clientSecret) {
+                throw new Error("Checkout did not return a client secret");
+              }
+              return response.clientSecret;
+            })
           }
           onComplete={onComplete}
           publishableKey={publishableKey}

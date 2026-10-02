@@ -2,6 +2,8 @@ import { type Request, type Response } from "express";
 import { Status } from "@core/errors/status.codes";
 import { Logger } from "@core/logger/winston.logger";
 import {
+  type BillingCheckoutRequest,
+  BillingCheckoutRequestSchema,
   type BillingCheckoutResponse,
   BillingCheckoutResponseSchema,
   type BillingStatusResponse,
@@ -48,15 +50,17 @@ class BillingController {
   };
 
   createCheckoutSession = async (
-    req: Request<never, BillingCheckoutResponse, never, never>,
+    req: Request<never, BillingCheckoutResponse, BillingCheckoutRequest, never>,
     res: Response<BillingCheckoutResponse | { error: string }>,
   ) => {
     try {
       const userId = zObjectId.parse(req.session?.getUserId());
+      const body = BillingCheckoutRequestSchema.parse(req.body ?? {});
       const result = await stripeService.createCheckoutSession(
         userId.toString(),
+        body,
       );
-      res.status(Status.OK).json(result);
+      res.status(Status.OK).json(BillingCheckoutResponseSchema.parse(result));
     } catch (e) {
       sendBillingError(res, e);
     }
@@ -76,13 +80,15 @@ class BillingController {
   };
 
   createPaymentMethodSession = async (
-    req: Request<never, BillingCheckoutResponse, never, never>,
+    req: Request<never, BillingCheckoutResponse, BillingCheckoutRequest, never>,
     res: Response<BillingCheckoutResponse | { error: string }>,
   ) => {
     try {
       const userId = zObjectId.parse(req.session?.getUserId());
+      const body = BillingCheckoutRequestSchema.parse(req.body ?? {});
       const result = await stripeService.createPaymentMethodSession(
         userId.toString(),
+        body,
       );
       res.status(Status.OK).json(BillingCheckoutResponseSchema.parse(result));
     } catch (e) {

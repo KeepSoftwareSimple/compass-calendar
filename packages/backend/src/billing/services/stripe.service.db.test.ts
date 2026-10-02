@@ -1,4 +1,5 @@
 import Stripe from "stripe";
+import { STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER } from "@core/desktop/desktop-billing-return.util";
 import { type Schema_UserBilling } from "@core/types/user.types";
 import {
   cleanupCollections,
@@ -912,6 +913,118 @@ describe("StripeService", () => {
         status: 409,
         clientMessage: "No active subscription to update.",
       });
+    });
+  });
+
+  describe("desktop returnTo checkout URLs", () => {
+    it("builds hosted subscription checkout return URLs for desktop", async () => {
+      using _env = mockEnv(stripeConfigured);
+      const userId = mongoService.objectId();
+      await mongoService.user.insertOne({
+        _id: userId,
+        email: "desktop@example.com",
+        name: "Desktop User",
+        firstName: "Desktop",
+        lastName: "User",
+        locale: "en",
+        billing: {
+          subscriptionStatus: "awaiting_checkout",
+          stripeCustomerId: "cus_desktop",
+        },
+      });
+
+      const sessionsCreate = mock(() =>
+        Promise.resolve({
+          url: "https://checkout.stripe.com/c/pay/cs_desktop",
+        }),
+      );
+      const stripeService = new StripeService(
+        stubBillingGateway({
+          createCheckoutSession: sessionsCreate,
+        }),
+      );
+
+      const result = await stripeService.createCheckoutSession(
+        userId.toString(),
+        { returnTo: "desktop" },
+      );
+
+      expect(result).toEqual({
+        url: "https://checkout.stripe.com/c/pay/cs_desktop",
+      });
+      const sessionArgs = (
+        sessionsCreate.mock.calls as unknown[][]
+      )[0]?.[0] as {
+        success_url?: string;
+        cancel_url?: string;
+        ui_mode?: string;
+        redirect_on_completion?: string;
+      };
+      expect(sessionArgs.success_url).toBe(
+        `http://localhost:9080/billing/desktop-return?outcome=success&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
+      );
+      expect(sessionArgs.cancel_url).toBe(
+        `http://localhost:9080/billing/desktop-return?outcome=cancel&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
+      );
+      expect(sessionArgs.ui_mode).toBeUndefined();
+      expect(sessionArgs.redirect_on_completion).toBeUndefined();
+      expect((sessionsCreate.mock.calls as unknown[][])[0]?.[1]).toEqual({
+        idempotencyKey: `compass-checkout-v5-desktop-${userId.toString()}`,
+      });
+    });
+
+    it("builds hosted setup checkout return URLs for desktop", async () => {
+      using _env = mockEnv(stripeConfigured);
+      const userId = mongoService.objectId();
+      await mongoService.user.insertOne({
+        _id: userId,
+        email: "desktop-card@example.com",
+        name: "Desktop Card",
+        firstName: "Desktop",
+        lastName: "Card",
+        locale: "en",
+        billing: {
+          subscriptionStatus: "active",
+          stripeCustomerId: "cus_desktop_card",
+          stripeSubscriptionId: "sub_desktop_card",
+        },
+      });
+
+      const sessionsCreate = mock(() =>
+        Promise.resolve({
+          url: "https://checkout.stripe.com/c/pay/cs_setup_desktop",
+        }),
+      );
+      const stripeService = new StripeService(
+        stubBillingGateway({
+          createCheckoutSession: sessionsCreate,
+        }),
+      );
+
+      const result = await stripeService.createPaymentMethodSession(
+        userId.toString(),
+        { returnTo: "desktop" },
+      );
+
+      expect(result).toEqual({
+        url: "https://checkout.stripe.com/c/pay/cs_setup_desktop",
+      });
+      const sessionArgs = (
+        sessionsCreate.mock.calls as unknown[][]
+      )[0]?.[0] as {
+        success_url?: string;
+        cancel_url?: string;
+        ui_mode?: string;
+        redirect_on_completion?: string;
+      };
+      expect(sessionArgs.success_url).toBe(
+        `http://localhost:9080/billing/desktop-return?outcome=success&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
+      );
+      expect(sessionArgs.cancel_url).toBe(
+        `http://localhost:9080/billing/desktop-return?outcome=cancel&session_id=${STRIPE_CHECKOUT_SESSION_ID_PLACEHOLDER}`,
+      );
+      expect(sessionArgs.ui_mode).toBeUndefined();
+      expect(sessionArgs.redirect_on_completion).toBeUndefined();
     });
   });
 
