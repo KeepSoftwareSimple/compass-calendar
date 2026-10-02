@@ -53,6 +53,8 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
     sources:
       - CompassKitTests
+    resources:
+      - CompassKitTests/Fixtures
     dependencies:
       - package: CompassKit
   CompassUITests:

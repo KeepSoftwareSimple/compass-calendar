@@ -19,7 +19,13 @@ final class ContractDecodingTests: XCTestCase {
         _ name: String,
         _ type: T.Type
     ) throws {
-        let url = try XCTUnwrap(ContractFixture.url(named: name))
+        let url = try XCTUnwrap(
+            Bundle.module.url(
+                forResource: name,
+                withExtension: "json",
+                subdirectory: "Fixtures"
+            )
+        )
         let data = try Data(contentsOf: url)
         let decoded = try JSONDecoder().decode(T.self, from: data)
         let reencoded = try JSONEncoder().encode(decoded)
