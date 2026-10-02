@@ -127,6 +127,7 @@ public enum AccessEnum: String, Codable, Hashable, Sendable, CaseIterable {
 
 public struct AppConfig: Codable, Hashable, Sendable {
     public let billing: AppConfigBilling
+    public let posthog: AppConfigPosthog?
     public let providers: AppConfigProviders
     public let sync: AppConfigSync
     public let version: String}
@@ -136,6 +137,10 @@ public struct AppConfigBilling: Codable, Hashable, Sendable {
     public let isConfigured: Bool
     public let publishableKey: String?
     public let trialLengthDays: Double}
+
+public struct AppConfigPosthog: Codable, Hashable, Sendable {
+    public let host: String
+    public let key: String}
 
 public struct AppConfigProviders: Codable, Hashable, Sendable {
     public let apple: AppConfigProvidersApple
@@ -156,7 +161,8 @@ public struct Attendee: Codable, Hashable, Sendable {
     public let responseStatus: ResponseStatusEnum}
 
 public struct BillingCheckoutResponse: Codable, Hashable, Sendable {
-    public let clientSecret: String}
+    public let clientSecret: String?
+    public let url: String?}
 
 public struct BillingStatusResponse: Codable, Hashable, Sendable {
     public let cancelAtPeriodEnd: Bool
