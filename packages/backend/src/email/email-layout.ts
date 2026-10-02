@@ -3,7 +3,7 @@ import { type WelcomeEmailContentEntry } from "@backend/email/welcome-sequence.c
 
 const UTM_PARAMS = "utm_source=email&utm_campaign=welcome";
 
-function appendUtm(href: string, stepKey: string): string {
+export function appendWelcomeEmailUtm(href: string, stepKey: string): string {
   const separator = href.includes("?") ? "&" : "?";
   return `${href}${separator}${UTM_PARAMS}&utm_content=${encodeURIComponent(stepKey)}`;
 }
@@ -18,7 +18,7 @@ export function renderWelcomeEmail(
   content: WelcomeEmailContentEntry,
   unsubscribe?: WelcomeEmailUnsubscribe,
 ): { subject: string; html: string; text: string } {
-  const ctaHref = appendUtm(content.cta.href, stepKey);
+  const ctaHref = appendWelcomeEmailUtm(content.cta.href, stepKey);
   const paragraphHtml = content.paragraphs
     .map(
       (paragraph) =>
