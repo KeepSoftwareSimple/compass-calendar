@@ -19,7 +19,7 @@ public final class TimeGridView: NSView {
     private let nowLineLayer = CALayer()
 
     private var cardPool: [String: EventCardView] = [:]
-    private var minuteTimer: Timer?
+    private nonisolated(unsafe) var minuteTimer: Timer?
     private var state: TimeGridState
     private var theme: NativeWebTheme
     private var snapshot: GridLayoutSnapshot?
