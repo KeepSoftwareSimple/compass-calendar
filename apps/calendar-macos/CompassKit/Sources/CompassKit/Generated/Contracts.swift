@@ -323,17 +323,17 @@ public struct CreateEventInputContent: Codable, Hashable, Sendable {
     public let attendees: [EventContentDetailsOrganizer]?}
 
 public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
-    case single(CreateEventInputRecurrence_SinglePayload)
-    case series(CreateEventInputRecurrence_SeriesPayload)
+    case single(EventRecurrence_SinglePayload)
+    case series(EventRecurrence_SeriesPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .kind)
         switch kind {
         case "single":
-            self = .single(try CreateEventInputRecurrence_SinglePayload(from: decoder))
+            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         case "series":
-            self = .series(try CreateEventInputRecurrence_SeriesPayload(from: decoder))
+            self = .series(try EventRecurrence_SeriesPayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -374,8 +374,8 @@ public struct ReplaceEventInputRecurrence_PreservePayload: Codable, Hashable, Se
 
 public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
     case preserve(ReplaceEventInputRecurrence_PreservePayload)
-    case single(ReplaceEventInputRecurrence_SinglePayload)
-    case series(ReplaceEventInputRecurrence_SeriesPayload)
+    case single(EventRecurrence_SinglePayload)
+    case series(EventRecurrence_SeriesPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
@@ -384,9 +384,9 @@ public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
         case "preserve":
             self = .preserve(try ReplaceEventInputRecurrence_PreservePayload(from: decoder))
         case "single":
-            self = .single(try ReplaceEventInputRecurrence_SinglePayload(from: decoder))
+            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         case "series":
-            self = .series(try ReplaceEventInputRecurrence_SeriesPayload(from: decoder))
+            self = .series(try EventRecurrence_SeriesPayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }

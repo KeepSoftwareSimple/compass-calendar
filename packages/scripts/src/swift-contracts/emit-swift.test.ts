@@ -28,6 +28,29 @@ describe("swift contract emitter", () => {
     expect(swift).toContain("note: String?");
   });
 
+  it("reuses deduped payload structs across discriminated unions", () => {
+    const singleVariant = z.object({ kind: z.literal("single") });
+    const seriesVariant = z.object({
+      kind: z.literal("series"),
+      rrule: z.array(z.string()),
+    });
+    const preserveVariant = z.object({ kind: z.literal("preserve") });
+    const first = z.discriminatedUnion("kind", [singleVariant, seriesVariant]);
+    const second = z.discriminatedUnion("kind", [
+      preserveVariant,
+      singleVariant,
+      seriesVariant,
+    ]);
+    const schema = z.object({ first, second });
+    const swift = emitSwiftForSchema(schema, "Sample");
+    expect(swift).toContain("case single(SampleFirst_SinglePayload)");
+    expect(swift).toContain("case single(SampleFirst_SinglePayload)");
+    expect(swift).not.toMatch(/SampleSecond_SinglePayload: Codable/);
+    expect(swift).toContain(
+      "self = .single(try SampleFirst_SinglePayload(from: decoder))",
+    );
+  });
+
   it("emits discriminated unions with custom init(from:)", () => {
     const schema = z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("a"), value: z.number() }),

@@ -436,10 +436,15 @@ function ensureDiscriminatedUnion(
     const tag = tagProp.const;
     const caseName = swiftEnumCaseName(tag);
     const payloadName = `${name}_${toPascalCase(tag)}Payload`;
-    ensureStruct(payloadName, variant, `${path}.${tag}`, ctx);
-    cases.push(`    case ${caseName}(${payloadName})`);
+    const resolvedPayloadName = ensureStruct(
+      payloadName,
+      variant,
+      `${path}.${tag}`,
+      ctx,
+    );
+    cases.push(`    case ${caseName}(${resolvedPayloadName})`);
     decodeCases.push(
-      `        case "${tag}":\n            self = .${caseName}(try ${payloadName}(from: decoder))`,
+      `        case "${tag}":\n            self = .${caseName}(try ${resolvedPayloadName}(from: decoder))`,
     );
     encodeCases.push(
       `        case .${caseName}(let payload):\n            try payload.encode(to: encoder)`,
