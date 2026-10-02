@@ -27,7 +27,7 @@ public enum DesktopDeepLinkParser {
         if let day = parseDayDateString(from: urlString, range: fullRange) {
             return "compass://day/\(day)"
         }
-        if let eventId = parseEventId(from: urlString) {
+        if let eventId = Self.parseEventId(from: urlString) {
             return "compass://event/\(eventId)"
         }
         return nil
@@ -67,7 +67,7 @@ public enum DesktopDeepLinkParser {
         return isValidCalendarDay(dateString) ? dateString : nil
     }
 
-    private static func parseEventId(from urlString: String) -> String? {
+    public static func parseEventId(from urlString: String) -> String? {
         guard urlString.hasPrefix(eventPrefix) else { return nil }
         let eventId = urlString.dropFirst(eventPrefix.count).trimmingCharacters(in: .whitespaces)
         return eventId.isEmpty ? nil : String(eventId)

@@ -21,6 +21,16 @@ public struct RootView: View {
         }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
+        .overlay(alignment: .bottom) {
+            UpNextBanner(
+                model: model,
+                onOpen: { model.openUpNextEvent() },
+                onJoin: { model.joinUpNextMeeting() },
+                onBannerShown: { event in
+                    model.upNextBannerShown(event)
+                })
+            .padding(.bottom, 24)
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear
@@ -47,6 +57,7 @@ public struct RootView: View {
 
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 16) {
+            UpNextCard(model: model, onOpen: { model.openUpNextEvent() })
             Text("Calendars")
                 .font(.custom("Rubik", size: 13, relativeTo: .headline))
                 .foregroundStyle(theme.textMutedColor)
