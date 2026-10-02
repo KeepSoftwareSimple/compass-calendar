@@ -51,7 +51,7 @@ public final class UndoStore {
             if case .unrecorded? = past.last { return }
         }
 
-        if case let .edit(id, before, after) = entry,
+        if case let .edit(_, before, after) = entry,
            !Self.isUndoableRecurrence(before) || !Self.isUndoableRecurrence(after)
         {
             return
