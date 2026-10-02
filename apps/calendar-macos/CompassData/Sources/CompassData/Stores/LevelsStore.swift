@@ -60,11 +60,12 @@ public final class LevelsStore {
         self.defaults = defaults
         self.analytics = analytics
         let profile = ShortcutUsagePersistence.readProfile(from: defaults)
-        usedIds = ShortcutUsagePersistence.usedShortcutIds(from: profile)
+        let initialUsedIds = ShortcutUsagePersistence.usedShortcutIds(from: profile)
+        usedIds = initialUsedIds
         badgeHidden = defaults.bool(forKey: ShortcutUsageStorageKeys.levelHidden)
         tipRotationIndex = defaults.integer(forKey: ShortcutUsageStorageKeys.tipRotationIndex)
         levelSnapshot = ShortcutLevelMath.compute(
-            usedIds: usedIds,
+            usedIds: initialUsedIds,
             registryIds: registryIds,
             levels: levelDefinitions)
         currentTip = nil
