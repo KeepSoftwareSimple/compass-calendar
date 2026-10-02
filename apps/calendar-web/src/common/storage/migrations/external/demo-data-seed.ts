@@ -84,10 +84,11 @@ export const DEMO_EVENT_IDS = {
 } as const;
 
 /**
- * Generate demo data relative to the current date.
+ * Generate demo data relative to a reference date (defaults to now).
+ * Exported for native parity fixtures via `bun cli desktop:export`.
  */
-function generateDemoData() {
-  const now = dayjs();
+export function generateDemoData(referenceNow = dayjs()) {
+  const now = referenceNow;
   const today = now.toYearMonthDayString();
   const timeZone = getBrowserTimeZone();
 

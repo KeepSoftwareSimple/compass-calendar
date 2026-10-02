@@ -1,0 +1,201 @@
+{
+  "cases": [
+    {
+      "id": "createTimedEventLayout-overlap",
+      "input": {
+        "events": [
+          {
+            "_id": "first",
+            "startDate": "2026-05-20T09:00:00",
+            "endDate": "2026-05-20T10:00:00"
+          },
+          {
+            "_id": "second",
+            "startDate": "2026-05-20T09:30:00",
+            "endDate": "2026-05-20T10:30:00"
+          }
+        ],
+        "hiddenEventIds": []
+      },
+      "output": [
+        {
+          "eventId": "first",
+          "deckLayout": {
+            "order": 0,
+            "groupSize": 2
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "second",
+          "deckLayout": {
+            "order": 1,
+            "groupSize": 2
+          },
+          "isHidden": false
+        }
+      ]
+    },
+    {
+      "id": "applyTimedDeckPosition",
+      "input": {
+        "position": {
+          "height": 60,
+          "left": 20,
+          "top": 30,
+          "width": 180
+        },
+        "deckLayout": {
+          "order": 1,
+          "groupSize": 2
+        }
+      },
+      "output": {
+        "height": 60,
+        "left": 36,
+        "top": 30,
+        "width": 140,
+        "zIndex": 2
+      }
+    },
+    {
+      "id": "getTimedEventPosition",
+      "input": {
+        "startDate": "2026-05-20T09:00:00.000",
+        "endDate": "2026-05-20T10:00:00.000",
+        "measurements": {
+          "allDayRow": null,
+          "colWidths": [
+            320
+          ],
+          "hourHeight": 60,
+          "mainGrid": {
+            "bottom": 780,
+            "height": 780,
+            "left": 0,
+            "right": 320,
+            "top": 0,
+            "width": 320,
+            "x": 0,
+            "y": 0
+          }
+        },
+        "visibleDates": [
+          "2026-05-20"
+        ]
+      },
+      "output": {
+        "height": 57,
+        "left": 55,
+        "top": 540,
+        "width": 310
+      }
+    },
+    {
+      "id": "getAllDayEventPosition",
+      "input": {
+        "startDate": "2026-05-19",
+        "endDate": "2026-05-22",
+        "row": 1,
+        "measurements": {
+          "allDayRow": null,
+          "colWidths": [
+            320
+          ],
+          "hourHeight": 60,
+          "mainGrid": {
+            "bottom": 780,
+            "height": 780,
+            "left": 0,
+            "right": 320,
+            "top": 0,
+            "width": 320,
+            "x": 0,
+            "y": 0
+          }
+        },
+        "visibleDates": [
+          "2026-05-20"
+        ]
+      },
+      "output": {
+        "height": 20,
+        "left": 0,
+        "top": 3,
+        "width": 310
+      }
+    },
+    {
+      "id": "getBusyPeriodPosition",
+      "input": {
+        "segment": {
+          "calendarId": "507f1f77bcf86cd799439011",
+          "end": "2026-05-20T10:30:00+00:00",
+          "key": "507f1f77bcf86cd799439011-2026-05-20T09:00:00.000Z-2026-05-20T10:30:00.000Z-2026-05-20",
+          "start": "2026-05-20T09:00:00+00:00"
+        },
+        "measurements": {
+          "allDayRow": null,
+          "colWidths": [
+            100,
+            110,
+            120,
+            130,
+            140,
+            150,
+            160
+          ],
+          "hourHeight": 60,
+          "mainGrid": {
+            "bottom": 780,
+            "height": 780,
+            "left": 0,
+            "right": 320,
+            "top": 0,
+            "width": 320,
+            "x": 0,
+            "y": 0
+          }
+        },
+        "visibleDates": [
+          "2026-05-17",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-23"
+        ]
+      },
+      "output": {
+        "height": 90,
+        "left": 385,
+        "top": 540,
+        "width": 120
+      }
+    },
+    {
+      "id": "applyTimedEventDisplayPosition",
+      "input": {
+        "position": {
+          "height": 57,
+          "left": 55,
+          "top": 540,
+          "width": 310
+        },
+        "deckLayout": {
+          "order": 0,
+          "groupSize": 2
+        },
+        "isHidden": false
+      },
+      "output": {
+        "height": 57,
+        "left": 55,
+        "top": 540,
+        "width": 212,
+        "zIndex": 1
+      }
+    }
+  ]
+}

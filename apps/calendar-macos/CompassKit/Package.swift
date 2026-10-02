@@ -11,7 +11,10 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "CompassKit"
+            name: "CompassKit",
+            resources: [
+                .copy("Resources"),
+            ]
         ),
         .testTarget(
             name: "CompassKitTests",

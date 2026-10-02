@@ -1,0 +1,496 @@
+{
+  "referenceNow": "2026-06-10T15:00:00.000Z",
+  "timeZone": "UTC",
+  "events": [
+    {
+      "id": "demo-morning-standup",
+      "event": {
+        "id": "demo-morning-standup",
+        "calendarId": "6abfb949988bb818f136b7a6",
+        "content": {
+          "kind": "details",
+          "title": "Morning standup",
+          "description": "Let's be honest. No one here has actually done anything. You are just making things up as you go. And yet, all of you sit here, pretending as if we are making progress. It seems, my dear team, that the only thing we do efficiently is exceed the stand up time.",
+          "organizer": {
+            "email": "avery@example.com",
+            "displayName": "Avery"
+          },
+          "attendees": [
+            {
+              "email": "avery@example.com",
+              "displayName": "Avery",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "sam@example.com",
+              "displayName": "Sam",
+              "responseStatus": "accepted"
+            },
+            {
+              "email": "jordan@example.com",
+              "displayName": "Jordan",
+              "responseStatus": "tentative"
+            },
+            {
+              "email": "riley@example.com",
+              "displayName": "Riley",
+              "responseStatus": "needsAction"
+            }
+          ],
+          "conference": {
+            "url": "https://meet.google.com/abc-defg-hij",
+            "label": "Google Meet"
+          }
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T09:00:00+00:00",
+          "end": "2026-06-10T09:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.739Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949c72f0dad2d36b7a7",
+      "event": {
+        "id": "6abfb949c72f0dad2d36b7a7",
+        "calendarId": "6abfb9497130bbcf9f36b7a8",
+        "content": {
+          "kind": "details",
+          "title": "Try Compass",
+          "description": "Welcome! Compass is keyboard-only: press C to create an event, type a time like 1130 to create one at 11:30, hold Mod to see where you can jump, and press ? for every shortcut. Ready to sync your calendar? Sign up from the command palette (Mod+K)."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T10:00:00+00:00",
+          "end": "2026-06-10T11:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.740Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949ee6c8ca5d336b7a9",
+      "event": {
+        "id": "6abfb949ee6c8ca5d336b7a9",
+        "calendarId": "6abfb9494a1c5f8aa236b7aa",
+        "content": {
+          "kind": "details",
+          "title": "Exercise",
+          "description": "I'm sorry for what I said during burpees.",
+          "location": "Fitness First Gym, 123 Main St",
+          "color": "green"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T12:00:00+00:00",
+          "end": "2026-06-10T13:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.740Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949e483227bd236b7ab",
+      "event": {
+        "id": "6abfb949e483227bd236b7ab",
+        "calendarId": "6abfb94913f2b5c9b336b7ac",
+        "content": {
+          "kind": "details",
+          "title": "Call a friend",
+          "description": "Your calendar, your data. Sign up whenever you're ready to save across browsers."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T17:00:00+00:00",
+          "end": "2026-06-10T18:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.740Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949c6978df84736b7ad",
+      "event": {
+        "id": "6abfb949c6978df84736b7ad",
+        "calendarId": "6abfb94983bd8ace9e36b7ae",
+        "content": {
+          "kind": "details",
+          "title": "Deep work day",
+          "description": "The ability to perform deep work is becoming increasingly rare at exactly the same time it is becoming increasingly valuable in our economy. As a consequence, the few who cultivate this skill, and then make it the core of their working life, will thrive."
+        },
+        "schedule": {
+          "kind": "allDay",
+          "start": "2026-06-10",
+          "end": "2026-06-11"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.740Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb9490fb9e56a4e36b7af",
+      "event": {
+        "id": "6abfb9490fb9e56a4e36b7af",
+        "calendarId": "6abfb949785a98c45236b7b0",
+        "content": {
+          "kind": "details",
+          "title": "Peek at your week",
+          "description": "Press 'w' to switch to Week view and see the whole week at a glance. Press '?' anytime for all keyboard shortcuts."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T14:00:00+00:00",
+          "end": "2026-06-10T14:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.741Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949d5fdbbbb6536b7b1",
+      "event": {
+        "id": "6abfb949d5fdbbbb6536b7b1",
+        "calendarId": "6abfb949e6b5ad7d9836b7b2",
+        "content": {
+          "kind": "details",
+          "title": "Create your daily plan",
+          "description": "Press C to create an event, then hold Shift and use the arrow keys to move it. Block time for what matters most."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T15:00:00+00:00",
+          "end": "2026-06-10T15:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.741Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb94925e5f7ee2536b7b3",
+      "event": {
+        "id": "6abfb94925e5f7ee2536b7b3",
+        "calendarId": "6abfb949f46220fec236b7b4",
+        "content": {
+          "kind": "details",
+          "title": "Design review",
+          "description": "",
+          "color": "blue"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-08T10:00:00+00:00",
+          "end": "2026-06-08T11:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.741Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb9490c9ecc6e9836b7b5",
+      "event": {
+        "id": "6abfb9490c9ecc6e9836b7b5",
+        "calendarId": "6abfb949e0d7a8329e36b7b6",
+        "content": {
+          "kind": "details",
+          "title": "1:1 with Avery",
+          "description": "",
+          "color": "blue"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-08T15:00:00+00:00",
+          "end": "2026-06-08T15:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.741Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949e3af3a191336b7b7",
+      "event": {
+        "id": "6abfb949e3af3a191336b7b7",
+        "calendarId": "6abfb9492d115aa1d336b7b8",
+        "content": {
+          "kind": "details",
+          "title": "Gym",
+          "description": "",
+          "color": "green"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-09T07:00:00+00:00",
+          "end": "2026-06-09T07:45:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.741Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949574ef6766b36b7b9",
+      "event": {
+        "id": "6abfb949574ef6766b36b7b9",
+        "calendarId": "6abfb949d8334ca43436b7ba",
+        "content": {
+          "kind": "details",
+          "title": "Lunch with Sam",
+          "description": ""
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-09T12:00:00+00:00",
+          "end": "2026-06-09T13:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb9499614678ee036b7bb",
+      "event": {
+        "id": "6abfb9499614678ee036b7bb",
+        "calendarId": "6abfb94939d41e32b536b7bc",
+        "content": {
+          "kind": "details",
+          "title": "Focus block",
+          "description": "",
+          "color": "slate"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-09T14:00:00+00:00",
+          "end": "2026-06-09T16:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949c7f4221ac136b7bd",
+      "event": {
+        "id": "6abfb949c7f4221ac136b7bd",
+        "calendarId": "6abfb94983bd1d1cca36b7be",
+        "content": {
+          "kind": "details",
+          "title": "Design review",
+          "description": "",
+          "color": "blue"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-11T10:00:00+00:00",
+          "end": "2026-06-11T11:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "demo-team-sync",
+      "event": {
+        "id": "demo-team-sync",
+        "calendarId": "6abfb9496ffd69573136b7bf",
+        "content": {
+          "kind": "details",
+          "title": "Team sync",
+          "description": "",
+          "color": "blue"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-11T14:00:00+00:00",
+          "end": "2026-06-11T15:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "demo-dentist",
+      "event": {
+        "id": "demo-dentist",
+        "calendarId": "6abfb949d30db113ce36b7c0",
+        "content": {
+          "kind": "details",
+          "title": "Dentist",
+          "description": ""
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-11T14:30:00+00:00",
+          "end": "2026-06-11T15:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb9492b280740dd36b7c1",
+      "event": {
+        "id": "6abfb9492b280740dd36b7c1",
+        "calendarId": "6abfb949b7c344b8e536b7c2",
+        "content": {
+          "kind": "details",
+          "title": "1:1 with Avery",
+          "description": "",
+          "color": "blue"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-12T11:00:00+00:00",
+          "end": "2026-06-12T11:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949f183789cb236b7c3",
+      "event": {
+        "id": "6abfb949f183789cb236b7c3",
+        "calendarId": "6abfb949bf4e77ccc536b7c4",
+        "content": {
+          "kind": "details",
+          "title": "Focus block",
+          "description": "",
+          "color": "slate"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-12T13:00:00+00:00",
+          "end": "2026-06-12T15:00:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "6abfb949a4244d5c9236b7c5",
+      "event": {
+        "id": "6abfb949a4244d5c9236b7c5",
+        "calendarId": "6abfb949a9d9484c1536b7c6",
+        "content": {
+          "kind": "details",
+          "title": "Gym",
+          "description": "",
+          "color": "green"
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-12T17:00:00+00:00",
+          "end": "2026-06-12T17:45:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "single"
+        },
+        "createdAt": "2026-10-02T14:01:45.742Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    }
+  ]
+}
