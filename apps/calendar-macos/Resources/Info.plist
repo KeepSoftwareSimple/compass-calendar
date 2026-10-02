@@ -29,7 +29,7 @@
 	<key>COMPASS_UPDATE_CHANNEL</key>
 	<string>$(COMPASS_UPDATE_CHANNEL)</string>
 	<key>SUPublicEDKey</key>
-	<string></string>
+	<string>h4saAPDkg2j8kptF5za8vzgT0eC3ZmZoOuE6LSeQIhA=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUAutomaticallyUpdate</key>
