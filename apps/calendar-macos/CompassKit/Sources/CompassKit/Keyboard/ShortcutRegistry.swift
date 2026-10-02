@@ -20,6 +20,7 @@ public struct ShortcutRegistry: Sendable {
     public let bindingsById: [ShortcutId: [KeyChord]]
     public let editSequenceLeader: Character
     public let editSequenceFields: [EditSequenceFieldRow]
+    public let levelDefinitions: [ShortcutLevelDefinition]
 
     public struct EditSequenceFieldRow: Hashable, Sendable {
         public let secondKey: Character?
@@ -76,6 +77,9 @@ public struct ShortcutRegistry: Sendable {
                 field: field.field,
                 label: field.label,
                 digit: field.digit)
+        }
+        levelDefinitions = document.shortcutLevels.map {
+            ShortcutLevelDefinition(level: $0.level, name: $0.name, minUsed: $0.minUsed)
         }
     }
 

@@ -56,6 +56,7 @@ public struct RootView: View {
                 onSelectDate: { model.goToDate($0) }
             )
             Spacer()
+            ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }
         .padding(16)
         .frame(width: 260)
