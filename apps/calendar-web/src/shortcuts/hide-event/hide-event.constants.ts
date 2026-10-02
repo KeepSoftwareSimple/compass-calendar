@@ -1,1 +1,1 @@
-export const HIDE_EVENT_LETTER = "x";
+export { HIDE_EVENT_LETTER } from "@core/shortcuts/binding-keycaps.constants";

@@ -19,20 +19,9 @@ const PICK_CODES = [
   "Equal",
 ];
 
-export const PICK_KEY_LABELS = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "0",
-  "-",
-  "=",
-];
+import { PICK_KEY_LABELS as CORE_PICK_KEY_LABELS } from "@core/shortcuts/digit-pick.constants";
+
+export const PICK_KEY_LABELS = [...CORE_PICK_KEY_LABELS];
 
 /**
  * Numpad and other codes report a plain digit `key` with no `code` match.
