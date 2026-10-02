@@ -13,3 +13,10 @@ export function requireCheckoutClientSecret(
   }
   return response.clientSecret;
 }
+
+/** Stable callback for Stripe embedded Checkout `fetchClientSecret`. */
+export function fetchEmbeddedCheckoutSecret(
+  createSession: () => Promise<BillingCheckoutResponse>,
+): () => Promise<string> {
+  return () => createSession().then(requireCheckoutClientSecret);
+}
