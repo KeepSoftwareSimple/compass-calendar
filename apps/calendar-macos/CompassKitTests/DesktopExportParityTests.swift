@@ -46,16 +46,12 @@ final class DesktopExportParityTests: XCTestCase {
 }
 
 enum DesktopExportFixtures {
+    /// Exported JSON lives in the CompassKit target resources, not the test bundle.
+    private static let resourceBundle = Bundle(for: ShortcutId.self)
+
     static func url(named name: String) -> URL? {
-        let bundle: Bundle = {
-            #if SWIFT_PACKAGE
-            return Bundle.module
-            #else
-            return Bundle(for: BundleLocator.self)
-            #endif
-        }()
         for subdirectory in ["Fixtures", "Resources/Fixtures", "Resources", ""] {
-            if let url = bundle.url(
+            if let url = resourceBundle.url(
                 forResource: name,
                 withExtension: "json",
                 subdirectory: subdirectory.isEmpty ? nil : subdirectory
@@ -65,6 +61,4 @@ enum DesktopExportFixtures {
         }
         return nil
     }
-
-    private final class BundleLocator: NSObject {}
 }
