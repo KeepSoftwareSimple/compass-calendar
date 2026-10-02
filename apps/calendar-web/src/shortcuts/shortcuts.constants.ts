@@ -1,3 +1,4 @@
+import { VIEW_SHORTCUT_KEYS } from "@core/shortcuts/binding-keycaps.constants";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 
 /**
@@ -5,12 +6,16 @@ import { ROOT_ROUTES } from "@web/common/constants/routes";
  * Single source of truth for keyboard shortcuts used to navigate between views.
  */
 export const VIEW_SHORTCUTS = {
-  day: { key: "d", label: "Day", route: ROOT_ROUTES.DAY },
-  week: { key: "w", label: "Week", route: ROOT_ROUTES.WEEK },
+  day: { key: VIEW_SHORTCUT_KEYS.day, label: "Day", route: ROOT_ROUTES.DAY },
+  week: {
+    key: VIEW_SHORTCUT_KEYS.week,
+    label: "Week",
+    route: ROOT_ROUTES.WEEK,
+  },
 } as const;
 
 export const LIFE_SHORTCUT = {
-  key: "l",
+  key: VIEW_SHORTCUT_KEYS.life,
   label: "Life",
   route: ROOT_ROUTES.LIFE,
 } as const;

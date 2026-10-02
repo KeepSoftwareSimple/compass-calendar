@@ -8,7 +8,9 @@ so the keyboard calendar stays learnable.
 "Meta" for the same hold-to-reveal gesture.
 
 Acceptance walkthroughs live in [Shortcuts](../acceptance/shortcuts.md).
-The display registry is `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`.
+The display registry lives in `packages/core/src/shortcuts/shortcuts.registry.ts`
+(the web app re-exports it). The macOS app consumes the same data through
+`bun cli desktop:export`.
 
 ---
 

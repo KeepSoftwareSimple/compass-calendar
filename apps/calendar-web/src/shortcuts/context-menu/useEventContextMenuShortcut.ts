@@ -1,9 +1,10 @@
+import { EVENT_MENU_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
 import { cardContextMenuPoint } from "@web/components/ContextMenu/contextMenu.anchor";
 import { markKeyboardContextMenuDispatch } from "@web/shortcuts/context-menu/context-menu-pointer-hint";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
-export const EVENT_MENU_LETTER = "m";
+export { EVENT_MENU_LETTER };
 
 /**
  * Bare `m` opens the focused event's context menu: it dispatches a synthetic

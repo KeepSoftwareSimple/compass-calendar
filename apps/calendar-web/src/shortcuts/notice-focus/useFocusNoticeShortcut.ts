@@ -1,10 +1,11 @@
+import { FOCUS_NOTICE_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import {
   findNextNoticeTarget,
   getVisibleNotices,
 } from "@web/shortcuts/notice-focus/notice-focus";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
-export const FOCUS_NOTICE_LETTER = "f";
+export { FOCUS_NOTICE_LETTER };
 
 /**
  * Bare `f` focuses the latest notice - an action toast or banner marked with

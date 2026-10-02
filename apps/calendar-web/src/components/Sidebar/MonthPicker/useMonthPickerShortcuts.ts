@@ -1,7 +1,10 @@
+import {
+  MONTH_PICKER_NEXT_KEYCAPS,
+  MONTH_PICKER_PREV_KEYCAPS,
+} from "@core/shortcuts/binding-keycaps.constants";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
-export const MONTH_PICKER_PREV_KEYCAPS = ["Mod", "Shift", ","] as const;
-export const MONTH_PICKER_NEXT_KEYCAPS = ["Mod", "Shift", "."] as const;
+export { MONTH_PICKER_NEXT_KEYCAPS, MONTH_PICKER_PREV_KEYCAPS };
 
 const MONTH_PICKER_SHORTCUT_OPTIONS = {
   ignoreInputs: true,

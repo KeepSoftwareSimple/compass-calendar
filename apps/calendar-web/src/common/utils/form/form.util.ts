@@ -1,21 +1,10 @@
+import { type EventFormFocusField } from "@core/shortcuts/event-form-focus-field";
 import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { ID_EVENT_FORM } from "../../constants/web.constants";
 
-const EVENT_FORM_SELECTOR = `form[name="${ID_EVENT_FORM}"]`;
+export type { EventFormFocusField };
 
-export type EventFormFocusField =
-  | "actions"
-  | "title"
-  | "location"
-  | "description"
-  | "start"
-  | "end"
-  | "recurrence"
-  | "calendar"
-  | "color"
-  | "attendees"
-  | "rsvp"
-  | "conference";
+const EVENT_FORM_SELECTOR = `form[name="${ID_EVENT_FORM}"]`;
 
 const queryEventFormElement = <T extends Element>(selector: string): T | null =>
   document.querySelector<T>(selector);
