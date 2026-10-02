@@ -97,6 +97,9 @@ final class UpcomingNotifierLogicTests: XCTestCase {
     }
 
     private func isoString(_ date: Date) -> String {
-        CompassDateParsing.formatISO8601UTC(date)
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.string(from: date)
     }
 }
