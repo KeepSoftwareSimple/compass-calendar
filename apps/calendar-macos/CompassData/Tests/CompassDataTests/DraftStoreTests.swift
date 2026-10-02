@@ -21,7 +21,7 @@ final class DraftStoreTests: XCTestCase {
         let moved = store.nudgeByKeyboard(key: "ArrowRight")
         XCTAssertNotNil(moved)
         XCTAssertEqual(
-            CompassDateParsing.formatISO8601UTC(moved!.start),
+            formatISO8601UTC(moved!.start),
             "2026-01-02T10:00:00.000Z"
         )
     }
@@ -33,5 +33,12 @@ final class DraftStoreTests: XCTestCase {
             throw NSError(domain: "test", code: 0)
         }
         return date
+    }
+
+    private func formatISO8601UTC(_ date: Date) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter.string(from: date)
     }
 }
