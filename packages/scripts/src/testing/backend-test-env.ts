@@ -8,8 +8,8 @@ export function applyBackendTestEnv(mongoUri: string): void {
   process.env["DB"] = "test-db";
   process.env["GOOGLE_CLIENT_ID"] = "googleClientId";
   process.env["GOOGLE_CLIENT_SECRET"] = "googleSecret";
-  process.env["SUPERTOKENS_URI"] = "http://localhost:3000";
-  process.env["SUPERTOKENS_KEY"] = "sTKey";
+  process.env["SUPERTOKENS_URI"] = "http://127.0.0.1:3567";
+  process.env["SUPERTOKENS_KEY"] = "local-dev-supertokens-key";
   process.env["TOKEN_COMPASS_SYNC"] = "secretToken2";
   process.env["SYNC_SERVICE_URL"] = "http://localhost:3010";
   process.env["SYNC_INTERNAL_AUTH_TOKEN"] = "syncInternalAuthToken";

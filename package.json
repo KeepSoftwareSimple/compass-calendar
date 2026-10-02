@@ -34,7 +34,7 @@
     "test:a11y": "bunx playwright test e2e/accessibility",
     "test:e2e": "bunx playwright test",
     "test:backend": "bun packages/scripts/src/testing/test-mongo-env.ts backend --",
-    "test:backend:fast": "bun packages/scripts/src/testing/test-parallel.ts backend-fast -- --path-ignore-patterns '**/*.db.test.ts'",
+    "test:backend:fast": "bun packages/scripts/src/testing/test-parallel.ts backend-fast -- --path-ignore-patterns '**/*.db.test.ts' --path-ignore-patterns '**/header-session.test.ts'",
     "test:backend:db": "bun packages/scripts/src/testing/test-mongo-env.ts backend -- './packages/backend/src/**/*.db.test.ts'",
     "test:core": "bun packages/scripts/src/testing/test-parallel.ts core --",
     "test:sync": "bun packages/scripts/src/testing/test-mongo-env.ts sync --",

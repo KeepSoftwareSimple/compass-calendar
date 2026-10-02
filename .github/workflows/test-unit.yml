@@ -167,6 +167,31 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     name: unit-leg (${{ matrix.name }})
+    # Header-session integration tests talk to a real SuperTokens core on 3567.
+    services:
+      supertokens-db:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: supertokens
+          POSTGRES_PASSWORD: supertokens
+          POSTGRES_DB: supertokens
+        options: >-
+          --health-cmd "pg_isready -U supertokens -d supertokens"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      supertokens:
+        image: supertokens/supertokens-postgresql:latest
+        env:
+          API_KEYS: local-dev-supertokens-key
+          POSTGRESQL_CONNECTION_URI: postgresql://supertokens:supertokens@supertokens-db:5432/supertokens
+        ports:
+          - 3567:3567
+        options: >-
+          --health-cmd "wget -q -O- http://127.0.0.1:3567/hello | grep Hello || exit 1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     strategy:
       fail-fast: false
       matrix:
