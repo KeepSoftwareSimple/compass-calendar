@@ -52,7 +52,12 @@ public struct RootView: View {
                 .fill(theme.borderColor)
                 .frame(width: 1)
         }
-        .accessibilityIdentifier("compass-native-sidebar")
+        .overlay {
+            Color.clear
+                .accessibilityElement()
+                .accessibilityIdentifier("compass-native-sidebar")
+                .allowsHitTesting(false)
+        }
     }
 
     private var header: some View {
@@ -78,7 +83,12 @@ public struct RootView: View {
                 .fill(theme.borderColor)
                 .frame(height: 1)
         }
-        .accessibilityIdentifier("compass-native-header")
+        .overlay {
+            Color.clear
+                .accessibilityElement()
+                .accessibilityIdentifier("compass-native-header")
+                .allowsHitTesting(false)
+        }
     }
 
     private var content: some View {

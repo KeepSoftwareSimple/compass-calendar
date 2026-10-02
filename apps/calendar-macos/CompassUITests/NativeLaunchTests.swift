@@ -7,8 +7,11 @@ final class NativeLaunchTests: XCTestCase {
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
         app.launch()
 
-        XCTAssertTrue(app.windows["Compass"].waitForExistence(timeout: 15))
-        XCTAssertTrue(app.otherElements["compass-native-header"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.otherElements["compass-native-sidebar"].waitForExistence(timeout: 5))
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        XCTAssertTrue(
+            window.descendants(matching: .any)["compass-native-header"].waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            window.descendants(matching: .any)["compass-native-sidebar"].waitForExistence(timeout: 5))
     }
 }
