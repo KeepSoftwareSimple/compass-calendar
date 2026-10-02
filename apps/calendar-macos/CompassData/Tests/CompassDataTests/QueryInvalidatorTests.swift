@@ -3,87 +3,48 @@ import CompassData
 import XCTest
 
 final class QueryInvalidatorTests: XCTestCase {
-    func testEveryServerMessageCaseIsMapped() {
-        let samples: [ServerMessage] = [
-            .calendarsChanged(
-                ServerMessage_CalendarsChangedPayload(calendarIds: ["c1"], type: "calendarsChanged")
-            ),
-            .eventsChanged(
-                ServerMessage_EventsChangedPayload(
-                    calendarId: CalendarId(rawValue: "c1"),
-                    eventIds: ["e1"],
-                    reason: .created,
-                    type: "eventsChanged"
-                )
-            ),
-            .importCompleted(
-                ServerMessage_ImportCompletedPayload(
-                    calendarsCount: 1,
-                    eventsCount: 2,
-                    operation: .incremental,
-                    type: "importCompleted"
-                )
-            ),
-            .syncStatusChanged(
-                ServerMessage_SyncStatusChangedPayload(
-                    sync: .syncing(ServerMessageSyncStatusChangedSync_SyncingPayload(status: "syncing")),
-                    type: "syncStatusChanged"
-                )
-            ),
-            .syncStatusChanged(
-                ServerMessage_SyncStatusChangedPayload(
-                    sync: .healthy(ServerMessageSyncStatusChangedSync_HealthyPayload(status: "healthy")),
-                    type: "syncStatusChanged"
-                )
-            ),
-            .syncStatusChanged(
-                ServerMessage_SyncStatusChangedPayload(
-                    sync: .attention(
-                        ServerMessageSyncStatusChangedSync_AttentionPayload(
-                            code: .cONNECTION_REVOKED,
-                            connectionId: nil,
-                            retryable: false,
-                            status: "attention"
-                        )
-                    ),
-                    type: "syncStatusChanged"
-                )
-            ),
-            .syncStatusChanged(
-                ServerMessage_SyncStatusChangedPayload(
-                    sync: .attention(
-                        ServerMessageSyncStatusChangedSync_AttentionPayload(
-                            code: .pROVIDER_FAILURE,
-                            connectionId: nil,
-                            retryable: true,
-                            status: "attention"
-                        )
-                    ),
-                    type: "syncStatusChanged"
-                )
-            ),
-            .userMetadataChanged(
-                ServerMessage_UserMetadataChangedPayload(metadata: [:], type: "userMetadataChanged")
-            ),
+    func testEveryServerMessageCaseIsMapped() throws {
+        let jsonSamples = [
+            """
+            {"type":"calendarsChanged","calendarIds":["c1"]}
+            """,
+            """
+            {"type":"eventsChanged","calendarId":"c1","eventIds":["e1"],"reason":"created"}
+            """,
+            """
+            {"type":"importCompleted","operation":"incremental","eventsCount":2,"calendarsCount":1}
+            """,
+            """
+            {"type":"syncStatusChanged","sync":{"status":"syncing"}}
+            """,
+            """
+            {"type":"syncStatusChanged","sync":{"status":"healthy"}}
+            """,
+            """
+            {"type":"syncStatusChanged","sync":{"status":"attention","code":"CONNECTION_REVOKED","retryable":false}}
+            """,
+            """
+            {"type":"syncStatusChanged","sync":{"status":"attention","code":"PROVIDER_FAILURE","retryable":true}}
+            """,
+            """
+            {"type":"userMetadataChanged","metadata":{}}
+            """,
         ]
 
-        for message in samples {
+        for json in jsonSamples {
+            let message = try ContractTestDecoding.decodeJSON(json, as: ServerMessage.self)
             _ = QueryInvalidator.invalidations(for: message)
         }
     }
 
-    func testInvalidationTargetsMatchWebHooks() {
-        XCTAssertEqual(
-            QueryInvalidator.invalidations(for: .eventsChanged(
-                ServerMessage_EventsChangedPayload(
-                    calendarId: CalendarId(rawValue: "c1"),
-                    eventIds: [],
-                    reason: .updated,
-                    type: "eventsChanged"
-                )
-            )),
-            [.events]
+    func testInvalidationTargetsMatchWebHooks() throws {
+        let eventsChanged = try ContractTestDecoding.decodeJSON(
+            """
+            {"type":"eventsChanged","calendarId":"c1","eventIds":[],"reason":"updated"}
+            """,
+            as: ServerMessage.self
         )
+        XCTAssertEqual(QueryInvalidator.invalidations(for: eventsChanged), [.events])
 
         XCTAssertEqual(
             QueryInvalidator.streamReopenInvalidations(),
