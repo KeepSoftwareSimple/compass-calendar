@@ -61,49 +61,28 @@ printf '%s' "$DETECT_CODE_CHANGES_TEST_FILES"
   return details;
 }
 
-const ALL_ON = [
-  "code=true",
-  "e2e=true",
-  "core=true",
-  "web=true",
-  "backend=true",
-  "sync=true",
-  "scripts=true",
-  "",
-].join("\n");
+const OUTPUT_KEYS = [
+  "code",
+  "e2e",
+  "core",
+  "web",
+  "backend",
+  "sync",
+  "scripts",
+  "static_web",
+  "contracts",
+] as const;
 
-const ALL_OFF = [
-  "code=false",
-  "e2e=false",
-  "core=false",
-  "web=false",
-  "backend=false",
-  "sync=false",
-  "scripts=false",
-  "",
-].join("\n");
+const ALL_ON = [...OUTPUT_KEYS.map((key) => `${key}=true`), ""].join("\n");
 
-function flags(values: {
-  code?: boolean;
-  e2e?: boolean;
-  core?: boolean;
-  web?: boolean;
-  backend?: boolean;
-  sync?: boolean;
-  scripts?: boolean;
-}) {
-  const resolved = {
-    code: false,
-    e2e: false,
-    core: false,
-    web: false,
-    backend: false,
-    sync: false,
-    scripts: false,
-    ...values,
-  };
-  return (["code", "e2e", "core", "web", "backend", "sync", "scripts"] as const)
-    .map((key) => `${key}=${resolved[key]}`)
+const ALL_OFF = [...OUTPUT_KEYS.map((key) => `${key}=false`), ""].join("\n");
+
+function flags(values: Partial<Record<(typeof OUTPUT_KEYS)[number], boolean>>) {
+  const resolved = Object.fromEntries(
+    OUTPUT_KEYS.map((key) => [key, false]),
+  ) as Record<(typeof OUTPUT_KEYS)[number], boolean>;
+  Object.assign(resolved, values);
+  return OUTPUT_KEYS.map((key) => `${key}=${resolved[key]}`)
     .concat("")
     .join("\n");
 }
@@ -198,6 +177,39 @@ describe("detect-code-changes", () => {
     );
   });
 
+  it("skips unit and e2e for macos-only pull requests", () => {
+    const result = runDetector(
+      "pull_request",
+      "apps/calendar-macos/Compass/Sources/App.swift",
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.output).toBe(ALL_OFF);
+  });
+
+  it("runs web and e2e when a pull request mixes macos and calendar-web changes", () => {
+    const result = runDetector(
+      "pull_request",
+      "apps/calendar-macos/Foo.swift\napps/calendar-web/src/app.tsx",
+    );
+
+    expect(result.status, result.stderr).toBe(0);
+    expect(result.output).toBe(
+      flags({ code: true, e2e: true, web: true, static_web: true }),
+    );
+  });
+
+  it("gates boot-size and contracts checks on static_web and contracts outputs", () => {
+    const unit = readFileSync(".github/workflows/test-unit.yml", "utf8");
+
+    expect(unit).toContain(
+      "static_web: ${{ steps.filter.outputs.static_web }}",
+    );
+    expect(unit).toContain("contracts: ${{ steps.filter.outputs.contracts }}");
+    expect(unit).toContain("if: needs.changes.outputs.static_web == 'true'");
+    expect(unit).toContain("if: needs.changes.outputs.contracts == 'true'");
+  });
+
   it("runs e2e when a backend pull request also touches anything else", () => {
     for (const other of [
       "packages/core/src/types.ts",
@@ -224,7 +236,9 @@ describe("detect-code-changes", () => {
     );
 
     expect(result.status, result.stderr).toBe(0);
-    expect(result.output).toBe(flags({ code: true, e2e: true, web: true }));
+    expect(result.output).toBe(
+      flags({ code: true, e2e: true, web: true, static_web: true }),
+    );
     expect(result.command).toContain(
       "api --paginate repos/example/compass/pulls/42/files --jq .[].filename",
     );
