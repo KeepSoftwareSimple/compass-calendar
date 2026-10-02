@@ -42,9 +42,19 @@ export function runContractsSwiftCommand(args: string[]): void {
   const tempDir = mkdtempSync(join(tmpdir(), "contracts-swift-"));
   const tempFile = join(tempDir, "Contracts.swift");
   writeFileSync(tempFile, generated, "utf8");
+  let firstDiff = "";
+  const max = Math.max(existing.length, generated.length);
+  for (let index = 0; index < max; index += 1) {
+    if (existing[index] !== generated[index]) {
+      firstDiff = `first difference at byte ${index}`;
+      break;
+    }
+  }
   console.error(
-    `contracts:swift drift: regenerate with \`bun cli contracts:swift\` (temp at ${tempFile})`,
+    `contracts:swift drift: regenerate with \`bun cli contracts:swift\` (${firstDiff}; temp at ${tempFile})`,
   );
-  rmSync(tempDir, { recursive: true, force: true });
+  if (process.env["CI"] !== "true") {
+    rmSync(tempDir, { recursive: true, force: true });
+  }
   process.exit(1);
 }

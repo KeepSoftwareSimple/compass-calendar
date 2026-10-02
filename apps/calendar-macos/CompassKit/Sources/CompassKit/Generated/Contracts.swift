@@ -126,66 +126,66 @@ public enum AccessEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public struct AppConfig: Codable, Hashable, Sendable {
-    public let version: String
+    public let billing: AppConfigBilling
     public let providers: AppConfigProviders
     public let sync: AppConfigSync
-    public let billing: AppConfigBilling}
+    public let version: String}
 
 public struct AppConfigBilling: Codable, Hashable, Sendable {
-    public let isConfigured: Bool
     public let enforcement: Bool
-    public let trialLengthDays: Double
-    public let publishableKey: String?}
+    public let isConfigured: Bool
+    public let publishableKey: String?
+    public let trialLengthDays: Double}
 
 public struct AppConfigProviders: Codable, Hashable, Sendable {
-    public let google: AppConfigProvidersGoogle
-    public let microsoft: AppConfigProvidersGoogle
-    public let apple: AppConfigProvidersGoogle}
+    public let apple: AppConfigProvidersApple
+    public let google: AppConfigProvidersApple
+    public let microsoft: AppConfigProvidersApple}
 
-public struct AppConfigProvidersGoogle: Codable, Hashable, Sendable {
-    public let signIn: Bool
-    public let connect: Bool}
+public struct AppConfigProvidersApple: Codable, Hashable, Sendable {
+    public let connect: Bool
+    public let signIn: Bool}
 
 public struct AppConfigSync: Codable, Hashable, Sendable {
     public let cloudMutationMode: CloudMutationModeEnum
     public let execution: ExecutionEnum}
 
 public struct Attendee: Codable, Hashable, Sendable {
-    public let email: String
     public let displayName: String?
+    public let email: String
     public let responseStatus: ResponseStatusEnum}
 
 public struct BillingCheckoutResponse: Codable, Hashable, Sendable {
     public let clientSecret: String}
 
 public struct BillingStatusResponse: Codable, Hashable, Sendable {
-    public let subscriptionStatus: SubscriptionStatusEnum
-    public let trialEndsAt: String?
+    public let cancelAtPeriodEnd: Bool
     public let isReadOnly: Bool
-    public let cancelAtPeriodEnd: Bool}
+    public let subscriptionStatus: SubscriptionStatusEnum
+    public let trialEndsAt: String?}
 
 public struct BillingSubscriptionResponse: Codable, Hashable, Sendable {
-    public let subscriptionStatus: SubscriptionStatusEnum
-    public let currentPeriodEnd: String?
     public let cancelAtPeriodEnd: Bool
-    public let trialEndsAt: String?
-    public let price: BillingSubscriptionResponsePrice?
+    public let currentPeriodEnd: String?
+    public let invoices: [BillingSubscriptionResponseInvoices]
     public let paymentMethod: BillingSubscriptionResponsePaymentMethod?
-    public let invoices: [BillingSubscriptionResponseInvoices]}
+    public let price: BillingSubscriptionResponsePrice?
+    public let subscriptionStatus: SubscriptionStatusEnum
+    public let trialEndsAt: String?}
 
 public struct BillingSubscriptionResponseInvoices: Codable, Hashable, Sendable {
-    public let id: String
-    public let createdAt: String
     public let amountPaid: Double
+    public let createdAt: String
     public let currency: String
-    public let status: String
-    public let hostedInvoiceUrl: String?}
+    public let hostedInvoiceUrl: String?
+    public let id: String
+    public let status: String}
 
 public struct BillingSubscriptionResponsePaymentMethod: Codable, Hashable, Sendable {
     public let brand: String
-    public let last4: String
     public let expMonth: Double
-    public let expYear: Double}
+    public let expYear: Double
+    public let last4: String}
 
 public struct BillingSubscriptionResponsePrice: Codable, Hashable, Sendable {
     public let amount: Double
@@ -193,73 +193,73 @@ public struct BillingSubscriptionResponsePrice: Codable, Hashable, Sendable {
     public let interval: IntervalEnum}
 
 public struct BookingOperationEvent: Codable, Hashable, Sendable {
+    public let duration_minutes: DurationMinutesEnum?
     public let environment: String
-    public let version: String
+    public let latency_ms: Int?
+    public let operation: OperationEnum
+    public let outcome: OutcomeEnum
+    public let phase: PhaseEnum
+    public let reason: ReasonEnum?
     public let service: String
     public let source: SourceEnum
-    public let operation: OperationEnum
-    public let phase: PhaseEnum
-    public let outcome: OutcomeEnum
-    public let reason: ReasonEnum?
-    public let duration_minutes: DurationMinutesEnum?
-    public let latency_ms: Int?}
+    public let version: String}
 
 public struct BookingOperationHeartbeat: Codable, Hashable, Sendable {
+    public let computedAt: DateTime
     public let environment: String
-    public let version: String
-    public let service: String
-    public let pending_count: Int
     public let oldest_pending_age_ms: Int?
+    public let pending_count: Int
     public let retry_exhausted_count: Int
-    public let computedAt: DateTime}
+    public let service: String
+    public let version: String}
 
 public struct BookingPage: Codable, Hashable, Sendable {
-    public let id: String
-    public let slug: String
-    public let hostUserId: String
-    public let enabled: Bool
-    public let durationMinutes: DurationMinutesEnum
-    public let destinationCalendarId: String
     public let blockingCalendarIds: [String]
-    public let timeZone: IANATimeZone
-    public let weeklyAvailability: [BookingPageWeeklyAvailability]
-    public let minNoticeHours: Int
-    public let maxHorizonDays: Int
     public let createdAt: DateTime
-    public let updatedAt: DateTime}
+    public let destinationCalendarId: String
+    public let durationMinutes: DurationMinutesEnum
+    public let enabled: Bool
+    public let hostUserId: String
+    public let id: String
+    public let maxHorizonDays: Int
+    public let minNoticeHours: Int
+    public let slug: String
+    public let timeZone: IANATimeZone
+    public let updatedAt: DateTime
+    public let weeklyAvailability: [BookingPageWeeklyAvailability]}
 
 public struct BookingPageWeeklyAvailability: Codable, Hashable, Sendable {
-    public let weekday: WeekdayEnum
+    public let end: String
     public let start: String
-    public let end: String}
+    public let weekday: WeekdayEnum}
 
 public struct BookingSlotsResponse: Codable, Hashable, Sendable {
-    public let slots: [BookingSlotsResponseSlots]
-    public let bookable: Bool}
+    public let bookable: Bool
+    public let slots: [BookingSlotsResponseSlots]}
 
 public struct BookingSlotsResponseSlots: Codable, Hashable, Sendable {
-    public let slotStart: String
-    public let slotEnd: String}
+    public let slotEnd: String
+    public let slotStart: String}
 
 public struct CalendarListResponse: Codable, Hashable, Sendable {
     public let calendars: [CalendarListResponseCalendars]}
 
 public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
-    public let id: String
-    public let name: String
-    public let description: String
-    public let timeZone: IANATimeZone?
-    public let foregroundColor: String
-    public let backgroundColor: String
-    public let provider: String
     public let access: AccessEnum
+    public let accountEmail: String?
+    public let backgroundColor: String
     public let capabilities: CompassCalendarCapabilities
+    public let conference: ConferenceEnum?
+    public let createsGoogleMeet: Bool?
+    public let description: String
+    public let foregroundColor: String
+    public let id: String
+    public let isActive: Bool
     public let isPrimary: Bool
     public let isVisible: Bool
-    public let isActive: Bool
-    public let createsGoogleMeet: Bool?
-    public let conference: ConferenceEnum?
-    public let accountEmail: String?}
+    public let name: String
+    public let provider: String
+    public let timeZone: IANATimeZone?}
 
 public enum CloudMutationModeEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case enabled = "enabled"
@@ -300,29 +300,29 @@ public enum ColorEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public struct CompassCalendar: Codable, Hashable, Sendable {
-    public let id: String
-    public let name: String
-    public let description: String
-    public let timeZone: IANATimeZone?
-    public let foregroundColor: String
-    public let backgroundColor: String
-    public let provider: String
     public let access: AccessEnum
+    public let accountEmail: String?
+    public let backgroundColor: String
     public let capabilities: CompassCalendarCapabilities
+    public let conference: ConferenceEnum?
+    public let createsGoogleMeet: Bool?
+    public let description: String
+    public let foregroundColor: String
+    public let id: String
+    public let isActive: Bool
     public let isPrimary: Bool
     public let isVisible: Bool
-    public let isActive: Bool
-    public let createsGoogleMeet: Bool?
-    public let conference: ConferenceEnum?
-    public let accountEmail: String?}
+    public let name: String
+    public let provider: String
+    public let timeZone: IANATimeZone?}
 
 public struct CompassCalendarCapabilities: Codable, Hashable, Sendable {
+    public let canInviteAttendees: Bool
+    public let canManage: Bool
     public let canReadAvailability: Bool
     public let canReadDetails: Bool
-    public let canWrite: Bool
-    public let canManage: Bool
     public let canWatchEvents: Bool
-    public let canInviteAttendees: Bool
+    public let canWrite: Bool
     public let conferenceKinds: [ConferenceKindsEnum]}
 
 public struct CompassEvent: Codable, Hashable, Sendable {
@@ -330,9 +330,9 @@ public struct CompassEvent: Codable, Hashable, Sendable {
     public let allDayOrder: Double?
     public let description: String?
     public let endDate: String?
-    public let isAllDay: Bool?
     public let gEventId: String?
     public let gRecurringEventId: String?
+    public let isAllDay: Bool?
     public let order: Double?
     public let origin: OriginEnum?
     public let recurrence: CompassEventRecurrence?
@@ -342,12 +342,12 @@ public struct CompassEvent: Codable, Hashable, Sendable {
     public let user: String?}
 
 public struct CompassEventRecurrence: Codable, Hashable, Sendable {
-    public let rule: [String]?
-    public let eventId: String?}
+    public let eventId: String?
+    public let rule: [String]?}
 
 public struct Conference: Codable, Hashable, Sendable {
-    public let url: String
-    public let label: String?}
+    public let label: String?
+    public let url: String}
 
 public enum ConferenceEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case meet = "meet"
@@ -369,42 +369,42 @@ public enum ConnectionStateEnum: String, Codable, Hashable, Sendable, CaseIterab
 }
 
 public struct ContactSuggestion: Codable, Hashable, Sendable {
-    public let email: String
-    public let displayName: String?}
+    public let displayName: String?
+    public let email: String}
 
 public struct ContactSuggestionsResponse: Codable, Hashable, Sendable {
     public let suggestions: [EventContentDetailsOrganizer]}
 
 public struct CreateEventInput: Codable, Hashable, Sendable {
-    public let id: EventId?
     public let calendarId: CalendarId
     public let content: CreateEventInputContent
-    public let schedule: EventSchedule
+    public let createConference: Bool?
+    public let id: EventId?
+    public let invitation: InvitationEnum?
     public let recurrence: CreateEventInputRecurrence
     public let restore: Bool?
-    public let invitation: InvitationEnum?
-    public let createConference: Bool?}
+    public let schedule: EventSchedule}
 
 public struct CreateEventInputContent: Codable, Hashable, Sendable {
-    public let kind: String
-    public let title: String
-    public let description: String
-    public let location: String
+    public let attendees: [EventContentDetailsOrganizer]?
     public let color: ColorEnum?
-    public let attendees: [EventContentDetailsOrganizer]?}
+    public let description: String
+    public let kind: String
+    public let location: String
+    public let title: String}
 
 public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
-    case single(EventRecurrence_SinglePayload)
     case series(EventRecurrence_SeriesPayload)
+    case single(EventRecurrence_SinglePayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .kind)
         switch kind {
-        case "single":
-            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         case "series":
             self = .series(try EventRecurrence_SeriesPayload(from: decoder))
+        case "single":
+            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -412,9 +412,9 @@ public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .single(let payload):
-            try payload.encode(to: encoder)
         case .series(let payload):
+            try payload.encode(to: encoder)
+        case .single(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -425,8 +425,8 @@ public enum CreateEventInputRecurrence: Codable, Hashable, Sendable {
 }
 
 public struct DeleteEventInput: Codable, Hashable, Sendable {
-    public let scope: ScopeEnum
-    public let invitation: InvitationEnum?}
+    public let invitation: InvitationEnum?
+    public let scope: ScopeEnum}
 
 public enum DurationMinutesEnum: Int, Codable, Hashable, Sendable, CaseIterable {
     case v15 = 15
@@ -436,15 +436,15 @@ public enum DurationMinutesEnum: Int, Codable, Hashable, Sendable, CaseIterable 
 }
 
 public struct Event: Codable, Hashable, Sendable {
-    public let id: EventId
     public let calendarId: CalendarId
     public let content: EventContent
-    public let schedule: EventSchedule
-    public let recurrence: EventRecurrence
     public let createdAt: DateTime
-    public let updatedAt: DateTime?
     public let icalUid: String?
-    public let providerManaged: Bool?}
+    public let id: EventId
+    public let providerManaged: Bool?
+    public let recurrence: EventRecurrence
+    public let schedule: EventSchedule
+    public let updatedAt: DateTime?}
 
 public enum EventColorSlot: String, Codable, Hashable, Sendable, CaseIterable {
     case lavender = "lavender"
@@ -475,17 +475,17 @@ public enum EventColorSlotEnum: String, Codable, Hashable, Sendable, CaseIterabl
 }
 
 public enum EventContent: Codable, Hashable, Sendable {
-    case details(EventContent_DetailsPayload)
     case busy(EventContent_BusyPayload)
+    case details(EventContent_DetailsPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .kind)
         switch kind {
-        case "details":
-            self = .details(try EventContent_DetailsPayload(from: decoder))
         case "busy":
             self = .busy(try EventContent_BusyPayload(from: decoder))
+        case "details":
+            self = .details(try EventContent_DetailsPayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -493,9 +493,9 @@ public enum EventContent: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .details(let payload):
-            try payload.encode(to: encoder)
         case .busy(let payload):
+            try payload.encode(to: encoder)
+        case .details(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -509,53 +509,53 @@ public struct EventContent_BusyPayload: Codable, Hashable, Sendable {
     public let kind: String}
 
 public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
-    public let kind: String
-    public let title: String
+    public let attendees: [EventContentDetailsAttendees]?
+    public let color: ColorEnum?
+    public let colorHex: String?
+    public let conference: EventContentDetailsConference?
     public let description: String
+    public let kind: String
     public let location: String?
     public let organizer: EventContentDetailsOrganizer?
-    public let attendees: [EventContentDetailsAttendees]?
-    public let conference: EventContentDetailsConference?
-    public let color: ColorEnum?
-    public let colorHex: String?}
+    public let title: String}
 
 public struct EventContentDetailsAttendees: Codable, Hashable, Sendable {
-    public let email: String
     public let displayName: String?
+    public let email: String
     public let responseStatus: ResponseStatusEnum}
 
 public struct EventContentDetailsConference: Codable, Hashable, Sendable {
-    public let url: String
-    public let label: String?}
+    public let label: String?
+    public let url: String}
 
 public struct EventContentDetailsOrganizer: Codable, Hashable, Sendable {
-    public let email: String
-    public let displayName: String?}
+    public let displayName: String?
+    public let email: String}
 
 public struct EventListResponse: Codable, Hashable, Sendable {
     public let events: [EventResponseEvent]}
 
 public struct EventMutationError: Codable, Hashable, Sendable {
     public let code: CodeEnum
+    public let connectionId: String?
     public let message: String
-    public let retryable: Bool
-    public let connectionId: String?}
+    public let retryable: Bool}
 
 public enum EventRecurrence: Codable, Hashable, Sendable {
-    case single(EventRecurrence_SinglePayload)
-    case series(EventRecurrence_SeriesPayload)
     case occurrence(EventRecurrence_OccurrencePayload)
+    case series(EventRecurrence_SeriesPayload)
+    case single(EventRecurrence_SinglePayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .kind)
         switch kind {
-        case "single":
-            self = .single(try EventRecurrence_SinglePayload(from: decoder))
-        case "series":
-            self = .series(try EventRecurrence_SeriesPayload(from: decoder))
         case "occurrence":
             self = .occurrence(try EventRecurrence_OccurrencePayload(from: decoder))
+        case "series":
+            self = .series(try EventRecurrence_SeriesPayload(from: decoder))
+        case "single":
+            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -563,11 +563,11 @@ public enum EventRecurrence: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .single(let payload):
+        case .occurrence(let payload):
             try payload.encode(to: encoder)
         case .series(let payload):
             try payload.encode(to: encoder)
-        case .occurrence(let payload):
+        case .single(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -592,28 +592,28 @@ public struct EventResponse: Codable, Hashable, Sendable {
     public let event: EventResponseEvent}
 
 public struct EventResponseEvent: Codable, Hashable, Sendable {
-    public let id: EventId
     public let calendarId: CalendarId
     public let content: EventContent
-    public let schedule: EventSchedule
-    public let recurrence: EventRecurrence
     public let createdAt: DateTime
-    public let updatedAt: DateTime?
     public let icalUid: String?
-    public let providerManaged: Bool?}
+    public let id: EventId
+    public let providerManaged: Bool?
+    public let recurrence: EventRecurrence
+    public let schedule: EventSchedule
+    public let updatedAt: DateTime?}
 
 public enum EventSchedule: Codable, Hashable, Sendable {
-    case timed(EventSchedule_TimedPayload)
     case allDay(EventSchedule_AllDayPayload)
+    case timed(EventSchedule_TimedPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .kind)
         switch kind {
-        case "timed":
-            self = .timed(try EventSchedule_TimedPayload(from: decoder))
         case "allDay":
             self = .allDay(try EventSchedule_AllDayPayload(from: decoder))
+        case "timed":
+            self = .timed(try EventSchedule_TimedPayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -621,9 +621,9 @@ public enum EventSchedule: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .timed(let payload):
-            try payload.encode(to: encoder)
         case .allDay(let payload):
+            try payload.encode(to: encoder)
+        case .timed(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -634,14 +634,14 @@ public enum EventSchedule: Codable, Hashable, Sendable {
 }
 
 public struct EventSchedule_AllDayPayload: Codable, Hashable, Sendable {
+    public let end: String
     public let kind: String
-    public let start: String
-    public let end: String}
+    public let start: String}
 
 public struct EventSchedule_TimedPayload: Codable, Hashable, Sendable {
+    public let end: DateTime
     public let kind: String
     public let start: DateTime
-    public let end: DateTime
     public let timeZone: IANATimeZone}
 
 public enum ExecutionEnum: String, Codable, Hashable, Sendable, CaseIterable {
@@ -672,8 +672,8 @@ public enum OperationEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public struct Organizer: Codable, Hashable, Sendable {
-    public let email: String
-    public let displayName: String?}
+    public let displayName: String?
+    public let email: String}
 
 public enum OriginEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case compass = "compass"
@@ -709,13 +709,13 @@ public enum ProviderEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public struct PublicGetBookingPageResponse: Codable, Hashable, Sendable {
-    public let hostDisplayName: String
-    public let durationMinutes: DurationMinutesEnum
-    public let timeZone: IANATimeZone
-    public let enabled: Bool
-    public let maxHorizonDays: Int
+    public let conference: ConferenceEnum?
     public let createsGoogleMeet: Bool
-    public let conference: ConferenceEnum?}
+    public let durationMinutes: DurationMinutesEnum
+    public let enabled: Bool
+    public let hostDisplayName: String
+    public let maxHorizonDays: Int
+    public let timeZone: IANATimeZone}
 
 public enum ReasonEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case created = "created"
@@ -727,16 +727,16 @@ public enum ReasonEnum: String, Codable, Hashable, Sendable, CaseIterable {
 public struct ReplaceEventInput: Codable, Hashable, Sendable {
     public let calendarId: CalendarId?
     public let content: CreateEventInputContent
-    public let schedule: EventSchedule
+    public let invitation: InvitationEnum?
     public let recurrence: ReplaceEventInputRecurrence
-    public let scope: ScopeEnum
     public let restore: Bool?
-    public let invitation: InvitationEnum?}
+    public let schedule: EventSchedule
+    public let scope: ScopeEnum}
 
 public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
     case preserve(ReplaceEventInputRecurrence_PreservePayload)
-    case single(EventRecurrence_SinglePayload)
     case series(EventRecurrence_SeriesPayload)
+    case single(EventRecurrence_SinglePayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
@@ -744,10 +744,10 @@ public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
         switch kind {
         case "preserve":
             self = .preserve(try ReplaceEventInputRecurrence_PreservePayload(from: decoder))
-        case "single":
-            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         case "series":
             self = .series(try EventRecurrence_SeriesPayload(from: decoder))
+        case "single":
+            self = .single(try EventRecurrence_SinglePayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .kind, in: container, debugDescription: "Unknown kind \(kind)")
         }
@@ -757,9 +757,9 @@ public enum ReplaceEventInputRecurrence: Codable, Hashable, Sendable {
         switch self {
         case .preserve(let payload):
             try payload.encode(to: encoder)
-        case .single(let payload):
-            try payload.encode(to: encoder)
         case .series(let payload):
+            try payload.encode(to: encoder)
+        case .single(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -790,24 +790,24 @@ public enum ScopeEnum: String, Codable, Hashable, Sendable, CaseIterable {
 }
 
 public enum ServerMessage: Codable, Hashable, Sendable {
-    case eventsChanged(ServerMessage_EventsChangedPayload)
     case calendarsChanged(ServerMessage_CalendarsChangedPayload)
-    case syncStatusChanged(ServerMessage_SyncStatusChangedPayload)
+    case eventsChanged(ServerMessage_EventsChangedPayload)
     case importCompleted(ServerMessage_ImportCompletedPayload)
+    case syncStatusChanged(ServerMessage_SyncStatusChangedPayload)
     case userMetadataChanged(ServerMessage_UserMetadataChangedPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .type)
         switch kind {
-        case "eventsChanged":
-            self = .eventsChanged(try ServerMessage_EventsChangedPayload(from: decoder))
         case "calendarsChanged":
             self = .calendarsChanged(try ServerMessage_CalendarsChangedPayload(from: decoder))
-        case "syncStatusChanged":
-            self = .syncStatusChanged(try ServerMessage_SyncStatusChangedPayload(from: decoder))
+        case "eventsChanged":
+            self = .eventsChanged(try ServerMessage_EventsChangedPayload(from: decoder))
         case "importCompleted":
             self = .importCompleted(try ServerMessage_ImportCompletedPayload(from: decoder))
+        case "syncStatusChanged":
+            self = .syncStatusChanged(try ServerMessage_SyncStatusChangedPayload(from: decoder))
         case "userMetadataChanged":
             self = .userMetadataChanged(try ServerMessage_UserMetadataChangedPayload(from: decoder))
         default:
@@ -817,13 +817,13 @@ public enum ServerMessage: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .eventsChanged(let payload):
-            try payload.encode(to: encoder)
         case .calendarsChanged(let payload):
             try payload.encode(to: encoder)
-        case .syncStatusChanged(let payload):
+        case .eventsChanged(let payload):
             try payload.encode(to: encoder)
         case .importCompleted(let payload):
+            try payload.encode(to: encoder)
+        case .syncStatusChanged(let payload):
             try payload.encode(to: encoder)
         case .userMetadataChanged(let payload):
             try payload.encode(to: encoder)
@@ -836,44 +836,44 @@ public enum ServerMessage: Codable, Hashable, Sendable {
 }
 
 public struct ServerMessage_CalendarsChangedPayload: Codable, Hashable, Sendable {
-    public let type: String
-    public let calendarIds: [String]}
+    public let calendarIds: [String]
+    public let type: String}
 
 public struct ServerMessage_EventsChangedPayload: Codable, Hashable, Sendable {
-    public let type: String
     public let calendarId: CalendarId
     public let eventIds: [String]
-    public let reason: ReasonEnum}
+    public let reason: ReasonEnum
+    public let type: String}
 
 public struct ServerMessage_ImportCompletedPayload: Codable, Hashable, Sendable {
-    public let type: String
-    public let operation: OperationEnum
+    public let calendarsCount: Int
     public let eventsCount: Int
-    public let calendarsCount: Int}
+    public let operation: OperationEnum
+    public let type: String}
 
 public struct ServerMessage_SyncStatusChangedPayload: Codable, Hashable, Sendable {
-    public let type: String
-    public let sync: ServerMessageSyncStatusChangedSync}
+    public let sync: ServerMessageSyncStatusChangedSync
+    public let type: String}
 
 public struct ServerMessage_UserMetadataChangedPayload: Codable, Hashable, Sendable {
-    public let type: String
-    public let metadata: [String: JSONValue]}
+    public let metadata: [String: JSONValue]
+    public let type: String}
 
 public enum ServerMessageSyncStatusChangedSync: Codable, Hashable, Sendable {
-    case syncing(ServerMessageSyncStatusChangedSync_SyncingPayload)
-    case healthy(ServerMessageSyncStatusChangedSync_HealthyPayload)
     case attention(ServerMessageSyncStatusChangedSync_AttentionPayload)
+    case healthy(ServerMessageSyncStatusChangedSync_HealthyPayload)
+    case syncing(ServerMessageSyncStatusChangedSync_SyncingPayload)
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: DiscriminatorKey.self)
         let kind = try container.decode(String.self, forKey: .status)
         switch kind {
-        case "syncing":
-            self = .syncing(try ServerMessageSyncStatusChangedSync_SyncingPayload(from: decoder))
-        case "healthy":
-            self = .healthy(try ServerMessageSyncStatusChangedSync_HealthyPayload(from: decoder))
         case "attention":
             self = .attention(try ServerMessageSyncStatusChangedSync_AttentionPayload(from: decoder))
+        case "healthy":
+            self = .healthy(try ServerMessageSyncStatusChangedSync_HealthyPayload(from: decoder))
+        case "syncing":
+            self = .syncing(try ServerMessageSyncStatusChangedSync_SyncingPayload(from: decoder))
         default:
             throw DecodingError.dataCorruptedError(forKey: .status, in: container, debugDescription: "Unknown status \(kind)")
         }
@@ -881,11 +881,11 @@ public enum ServerMessageSyncStatusChangedSync: Codable, Hashable, Sendable {
 
     public func encode(to encoder: Encoder) throws {
         switch self {
-        case .syncing(let payload):
+        case .attention(let payload):
             try payload.encode(to: encoder)
         case .healthy(let payload):
             try payload.encode(to: encoder)
-        case .attention(let payload):
+        case .syncing(let payload):
             try payload.encode(to: encoder)
         }
     }
@@ -896,10 +896,10 @@ public enum ServerMessageSyncStatusChangedSync: Codable, Hashable, Sendable {
 }
 
 public struct ServerMessageSyncStatusChangedSync_AttentionPayload: Codable, Hashable, Sendable {
-    public let status: String
     public let code: CodeEnum
     public let connectionId: ConnectionId?
-    public let retryable: Bool}
+    public let retryable: Bool
+    public let status: String}
 
 public struct ServerMessageSyncStatusChangedSync_HealthyPayload: Codable, Hashable, Sendable {
     public let status: String}
@@ -927,31 +927,31 @@ public enum SubscriptionStatusEnum: String, Codable, Hashable, Sendable, CaseIte
 }
 
 public struct UserMetadata: Codable, Hashable, Sendable {
-    public let sync: UserMetadataSync?
-    public let connections: [UserMetadataConnections]?}
+    public let connections: [UserMetadataConnections]?
+    public let sync: UserMetadataSync?}
 
 public struct UserMetadataConnections: Codable, Hashable, Sendable {
+    public let accountEmail: String?
+    public let canSuggestContacts: Bool
+    public let connectionState: ConnectionStateEnum
     public let id: String
+    public let lastHealthyAt: String?
+    public let lastSyncedAt: String?
     public let provider: ProviderEnum?
     public let state: String
-    public let stateReason: String?
-    public let lastSyncedAt: String?
-    public let lastHealthyAt: String?
-    public let accountEmail: String?
-    public let connectionState: ConnectionStateEnum
-    public let canSuggestContacts: Bool}
+    public let stateReason: String?}
 
 public struct UserMetadataSync: Codable, Hashable, Sendable {
     public let importGCal: String?}
 
 public struct UserProfile: Codable, Hashable, Sendable {
-    public let userId: String
+    public let email: String
     public let firstName: String
     public let lastName: String
-    public let name: String
-    public let email: String
     public let locale: String
-    public let picture: String}
+    public let name: String
+    public let picture: String
+    public let userId: String}
 
 public enum WeekdayEnum: Int, Codable, Hashable, Sendable, CaseIterable {
     case v1 = 1

@@ -312,7 +312,8 @@ function ensureIntEnum(name: string, values: number[], ctx: EmitContext): void {
     return;
   }
   assertSwiftPublicTypeName(name, "generated enum");
-  const cases = values
+  const cases = [...values]
+    .sort((left, right) => left - right)
     .map((value) => `    case v${value} = ${value}`)
     .join("\n");
   ctx.emitted.set(
@@ -333,7 +334,8 @@ function ensureStringEnum(
     return;
   }
   assertSwiftPublicTypeName(name, "generated enum");
-  const cases = values
+  const cases = [...values]
+    .sort((left, right) => left.localeCompare(right))
     .map((value) => `    case ${swiftEnumCaseName(value)} = "${value}"`)
     .join("\n");
   ctx.emitted.set(
@@ -376,9 +378,11 @@ function ensureStruct(
   assertSwiftPublicTypeName(name, `struct at ${path}`);
   ctx.pending.add(name);
   const properties = schema.properties ?? {};
+  const propertyNames = Object.keys(properties).sort();
   const required = new Set(schema.required ?? []);
   const fields: string[] = [];
-  for (const [propName, propSchema] of Object.entries(properties)) {
+  for (const propName of propertyNames) {
+    const propSchema = properties[propName]!;
     const fieldPath = `${path}.${propName}`;
     let swiftType = emitType(propSchema, fieldPath, ctx, propName);
     if (!required.has(propName)) {
@@ -388,8 +392,8 @@ function ensureStruct(
     }
     fields.push(`    public let ${swiftPropertyName(propName)}: ${swiftType}`);
   }
-  const codingKeys = Object.keys(properties).some((key) => key === "default")
-    ? `\n    enum CodingKeys: String, CodingKey {\n${Object.keys(properties)
+  const codingKeys = propertyNames.some((key) => key === "default")
+    ? `\n    enum CodingKeys: String, CodingKey {\n${propertyNames
         .map((key) => `        case ${swiftPropertyName(key)} = "${key}"`)
         .join("\n")}\n    }\n`
     : "";
@@ -426,7 +430,22 @@ function ensureDiscriminatedUnion(
   const cases: string[] = [];
   const decodeCases: string[] = [];
   const encodeCases: string[] = [];
-  for (const variant of variants) {
+  const orderedVariants = [...variants].sort((left, right) => {
+    const leftTag =
+      isSchemaObject(left) &&
+      isSchemaObject(left.properties?.[discriminator]) &&
+      typeof left.properties[discriminator].const === "string"
+        ? left.properties[discriminator].const
+        : "";
+    const rightTag =
+      isSchemaObject(right) &&
+      isSchemaObject(right.properties?.[discriminator]) &&
+      typeof right.properties[discriminator].const === "string"
+        ? right.properties[discriminator].const
+        : "";
+    return String(leftTag).localeCompare(String(rightTag));
+  });
+  for (const variant of orderedVariants) {
     if (!isSchemaObject(variant) || variant.type !== "object") {
       throw new SwiftEmitError(path, "discriminated variant is not an object");
     }
