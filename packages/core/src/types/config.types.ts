@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 
 const ProviderFlagsSchema = z.object({

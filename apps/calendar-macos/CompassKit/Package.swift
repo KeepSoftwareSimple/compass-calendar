@@ -10,10 +10,15 @@ let package = Package(
         .library(name: "CompassKit", targets: ["CompassKit"]),
     ],
     targets: [
-        .target(name: "CompassKit"),
+        .target(
+            name: "CompassKit"
+        ),
         .testTarget(
             name: "CompassKitTests",
-            dependencies: ["CompassKit"]
+            dependencies: ["CompassKit"],
+            resources: [
+                .copy("Fixtures"),
+            ]
         ),
     ]
 )
