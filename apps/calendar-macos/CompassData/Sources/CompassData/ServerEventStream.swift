@@ -65,7 +65,9 @@ public enum ServerEventStreamBackoff {
 
     private static func durationMilliseconds(_ duration: Duration) -> Int {
         let components = duration.components
-        return components.seconds * 1000 + components.attoseconds / 1_000_000_000_000_000
+        let msFromSeconds = Int(components.seconds) * 1000
+        let msFromAttoseconds = Int(components.attoseconds / 1_000_000_000_000_000)
+        return msFromSeconds + msFromAttoseconds
     }
 }
 
