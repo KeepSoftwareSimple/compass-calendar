@@ -146,28 +146,8 @@ public struct RootView: View {
                 visible: !model.timeGridState.eventJumpHints.isEmpty
             )
         }
-        .overlay(alignment: .topLeading) {
-            if let eventId = model.timeGridState.focusedEventId,
-                let label = focusedGridEventLabel(for: eventId)
-            {
-                Color.clear
-                    .frame(width: 1, height: 1)
-                    .accessibilityElement()
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("compass-grid-event-focused")
-                    .accessibilityLabel(label)
-                    .allowsHitTesting(false)
-            }
-        }
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-content")
-    }
-
-    private func focusedGridEventLabel(for eventId: String) -> String? {
-        let colWidths = model.timeGridState.resolvedColumnWidths()
-        return model.timeGridState.snapshot(colWidths: colWidths).cards
-            .first(where: { $0.eventId == eventId })?
-            .label
     }
 
     private var gridChipYOffset: CGFloat {

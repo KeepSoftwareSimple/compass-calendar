@@ -20,6 +20,7 @@ public final class TimeGridView: NSView {
     private let nowLineLayer = CALayer()
 
     private var cardPool: [String: EventCardView] = [:]
+    private let focusedEventAccessibilityProxy = FocusedGridEventAccessibilityProxy(frame: .zero)
     private nonisolated(unsafe) var minuteTimer: Timer?
     private var state: TimeGridState
     private var theme: NativeWebTheme
@@ -268,6 +269,48 @@ public final class TimeGridView: NSView {
         for (eventId, view) in cardPool where !seen.contains(eventId) {
             view.removeFromSuperview()
             cardPool.removeValue(forKey: eventId)
+        }
+
+        syncFocusedEventAccessibilityProxy(snapshot: snapshot, allDayOffset: allDayOffset)
+    }
+
+    private func syncFocusedEventAccessibilityProxy(
+        snapshot: GridLayoutSnapshot,
+        allDayOffset: Double
+    ) {
+        guard let focusedId = state.focusedEventId,
+            let card = snapshot.cards.first(where: { $0.eventId == focusedId })
+        else {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
+
+        var frame = card.frame
+        let cardParent: NSView
+        if card.kind == .allDay {
+            frame.top += 28
+            cardParent = allDayRowView
+        } else {
+            frame.top += allDayOffset
+            cardParent = timedContentView
+        }
+
+        let frameInGrid = cardParent.convert(
+            NSRect(x: frame.left, y: frame.top, width: frame.width, height: frame.height),
+            to: self
+        )
+
+        if focusedEventAccessibilityProxy.superview !== self {
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            addSubview(focusedEventAccessibilityProxy, positioned: .above, relativeTo: scrollView)
+        }
+        focusedEventAccessibilityProxy.isHidden = false
+        focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
+
+        if let window {
+            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+            NSAccessibility.post(element: window, notification: .layoutChanged)
         }
     }
 
