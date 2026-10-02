@@ -318,10 +318,12 @@ export const getMainGridPoint = async (
 };
 
 /**
- * Waits for a painted timed column and returns a click point in grid space.
- * #timedColumns > * is not a column: the now line is 1px and the table uses
- * display:contents, so both can yield a null bounding box while the th cells
- * are already interactive.
+ * Waits for a painted timed column and returns a click point in the visible
+ * timed grid. Column x comes from `#timedColumns th[data-grid-date]` (direct
+ * children of `#timedColumns` can be the 1px now line or display:contents
+ * table chrome with unreliable boxes). Y must use `#mainGrid`'s viewport box:
+ * each th is `h-full` over the scrollable 24h layer, so a yRatio on the th
+ * rect can land in the all-day row above the scrollport.
  */
 export const getTimedColumnClickPoint = async (
   page: Page,
@@ -331,20 +333,25 @@ export const getTimedColumnClickPoint = async (
     .locator("#timedColumns th[data-grid-date]")
     .nth(columnIndex);
   await expect(column).toBeVisible({ timeout: 15000 });
-  await column.scrollIntoViewIfNeeded();
+
+  const mainGrid = page.locator("#mainGrid");
+  await mainGrid.scrollIntoViewIfNeeded();
 
   await expect
-    .poll(async () => (await column.boundingBox())?.height ?? 0)
+    .poll(async () => (await column.boundingBox())?.width ?? 0)
     .toBeGreaterThan(8);
 
-  const box = await column.boundingBox();
-  if (!box) {
-    throw new Error("Expected the timed column to have a bounding box.");
+  const columnBox = await column.boundingBox();
+  const gridBox = await mainGrid.boundingBox();
+  if (!columnBox || !gridBox) {
+    throw new Error(
+      "Expected the timed column and main grid to have bounding boxes.",
+    );
   }
 
   return {
-    x: box.x + box.width / 2,
-    y: box.y + box.height * yRatio,
+    x: columnBox.x + columnBox.width / 2,
+    y: gridBox.y + gridBox.height * yRatio,
   };
 };
 
