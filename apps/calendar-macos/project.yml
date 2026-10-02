@@ -4,7 +4,7 @@ name: Compass
 options:
   bundleIdPrefix: com.compasscalendar
   deploymentTarget:
-    macOS: "13.0"
+    macOS: "14.0"
   createIntermediateGroups: true
 settings:
   base:
@@ -13,7 +13,8 @@ settings:
     # Empty is stable. release-macos-dev.yml passes COMPASS_UPDATE_CHANNEL=dev.
     COMPASS_UPDATE_CHANNEL: ""
     SWIFT_VERSION: "6.0"
-    MACOSX_DEPLOYMENT_TARGET: "13.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_STRICT_CONCURRENCY: complete
     # Ad hoc signing so local and CI builds run. Developer ID signing is
     # release-only (release-macos.yml).
     CODE_SIGN_STYLE: Manual
@@ -22,6 +23,10 @@ settings:
 packages:
   CompassKit:
     path: CompassKit
+  CompassData:
+    path: CompassData
+  CompassUI:
+    path: CompassUI
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle
     from: 2.6.4
@@ -35,6 +40,8 @@ targets:
       - Resources/offline.html
       - path: Resources/icon.icns
         optional: true
+      - path: Resources/Fonts
+        type: folder
     settings:
       base:
         PRODUCT_NAME: Compass
@@ -42,6 +49,8 @@ targets:
         INFOPLIST_FILE: Resources/Info.plist
     dependencies:
       - package: CompassKit
+      - package: CompassData
+      - package: CompassUI
       - package: Sparkle
   CompassKitTests:
     type: bundle.unit-test
@@ -49,7 +58,6 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        # Xcode 27's XCTest is built for macOS 14; the app still targets 13.
         MACOSX_DEPLOYMENT_TARGET: "14.0"
     sources:
       - CompassKitTests
@@ -64,7 +72,6 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
-        # Xcode 27's XCTest is built for macOS 14; the app still targets 13.
         MACOSX_DEPLOYMENT_TARGET: "14.0"
     sources:
       - CompassUITests

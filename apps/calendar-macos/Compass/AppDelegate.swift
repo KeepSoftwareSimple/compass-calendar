@@ -1,24 +1,28 @@
 import AppKit
 import CompassKit
+import CompassUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var webViewController: WebViewController?
+    private var nativeRootController: NativeRootController?
     /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
     private var quickAddCoordinator: DesktopQuickAddCoordinator?
     private let updater = DesktopUpdater()
     private var optionHeldAtLaunch = false
+    private var showDebugMenu = false
+    private var usingNativeUI = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         optionHeldAtLaunch = NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // `-COMPASS_APP_URL <url>` on the command line lands in the
-        // UserDefaults argument domain, so tests and local runs can point
-        // the window at another origin.
+        showDebugMenu = DebugMenuPolicy.shouldShow(optionHeldAtLaunch: optionHeldAtLaunch)
+        usingNativeUI = NativeUILaunchPolicy.shouldUseNativeUI(showDebugMenu: showDebugMenu)
+
         let appURL = AppOrigin.resolve(
             override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),
             infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
@@ -31,12 +35,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.webViewController = webViewController
         webViewController.configureQuickAddRouter(quickAddCoordinator)
 
-        let showDebugMenu = DebugMenuPolicy.shouldShow(
-            optionHeldAtLaunch: optionHeldAtLaunch)
         let menuController = MainMenuController(
             webViewController: webViewController,
             updater: updater,
-            showDebugMenu: showDebugMenu)
+            showDebugMenu: showDebugMenu,
+            nativeUIState: nativeUIStateProvider())
+        menuController.onToggleNativeUI = { [weak self] in
+            self?.toggleNativeUI()
+        }
+        menuController.onSelectNativeTheme = { [weak self] theme in
+            self?.setNativeTheme(theme)
+        }
         mainMenuController = menuController
         NSApp.mainMenu = MainMenu.make(controller: menuController)
 
@@ -48,37 +57,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         updater.start()
 
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false)
-        window.title = "Compass"
-        window.titleVisibility = .hidden
-        window.titlebarAppearsTransparent = true
-        // An empty unified toolbar insets the traffic lights from the corner.
-        window.toolbar = NSToolbar()
-        window.toolbarStyle = .unified
-        window.minSize = NSSize(width: 720, height: 480)
-        // Closing hides the window; the Dock icon brings the same page back.
-        window.isReleasedWhenClosed = false
-        window.contentViewController = webViewController
-        webViewController.accessibilityHostWindow = window
-        // Assigning the controller sizes the window to its (zero) view.
-        window.setContentSize(NSSize(width: 1280, height: 820))
-        window.center()
-        // Saves and restores the frame in UserDefaults.
-        window.setFrameAutosaveName("CompassMainWindow")
-        window.makeKeyAndOrderFront(nil)
-        CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
+        let window = makeMainWindow()
         self.window = window
+        installRootContent(on: window)
 
-        if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
+        if !usingNativeUI, let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
             webViewController.receiveDeepLink(urlString: launchDeepLink)
         }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        guard !usingNativeUI else { return }
         for url in urls {
             webViewController?.receiveDeepLink(url)
         }
@@ -93,5 +82,72 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window?.makeKeyAndOrderFront(nil)
         }
         return true
+    }
+
+    private func makeMainWindow() -> NSWindow {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1280, height: 820),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false)
+        window.title = "Compass"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.toolbar = NSToolbar()
+        window.toolbarStyle = .unified
+        window.minSize = NSSize(width: 720, height: 480)
+        window.isReleasedWhenClosed = false
+        window.setContentSize(NSSize(width: 1280, height: 820))
+        window.center()
+        window.setFrameAutosaveName("CompassMainWindow")
+        window.makeKeyAndOrderFront(nil)
+        return window
+    }
+
+    private func installRootContent(on window: NSWindow) {
+        if usingNativeUI {
+            let theme = NativeUIThemePreference.load()
+            let nativeController = NativeRootController(webTheme: theme)
+            nativeRootController = nativeController
+            window.contentViewController = nativeController
+        } else {
+            nativeRootController = nil
+            guard let webViewController else { return }
+            window.contentViewController = webViewController
+            webViewController.accessibilityHostWindow = window
+            CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
+        }
+    }
+
+    private func toggleNativeUI() {
+        if NativeUILaunchPolicy.launchArgumentEnabled == true {
+            return
+        }
+        let next = !NativeUILaunchPolicy.isDebugPreferenceEnabled
+        NativeUILaunchPolicy.setDebugPreferenceEnabled(next)
+        usingNativeUI = NativeUILaunchPolicy.shouldUseNativeUI(showDebugMenu: showDebugMenu)
+        guard let window else { return }
+        nativeRootController = nil
+        installRootContent(on: window)
+        mainMenuController?.refreshNativeUIState(nativeUIStateProvider())
+    }
+
+    private func setNativeTheme(_ theme: NativeWebTheme) {
+        NativeUIThemePreference.save(theme)
+        if !usingNativeUI {
+            NativeUILaunchPolicy.setDebugPreferenceEnabled(true)
+            usingNativeUI = true
+            guard let window else { return }
+            nativeRootController = nil
+            installRootContent(on: window)
+        }
+        nativeRootController?.setWebTheme(theme)
+        mainMenuController?.refreshNativeUIState(nativeUIStateProvider())
+    }
+
+    private func nativeUIStateProvider() -> MainMenuNativeUIState {
+        MainMenuNativeUIState(
+            isNativeUIEnabled: usingNativeUI,
+            theme: NativeUIThemePreference.load())
     }
 }
