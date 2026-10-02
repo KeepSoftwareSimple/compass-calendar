@@ -39,6 +39,7 @@ final class EventCardView: NSView {
         titleField.drawsBackground = false
         addSubview(titleField)
         titleField.setAccessibilityElement(false)
+        titleField.refusesFirstResponder = true
 
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -97,6 +98,17 @@ final class EventCardView: NSView {
             return super.accessibilityFrame()
         }
         return window.convertToScreen(convert(bounds, to: nil))
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard bounds.contains(point) else { return nil }
+        // Route clicks to the card so pointer-down focuses the event (not the title label).
+        return self
+    }
+
+    override func accessibilityPerformPress() -> Bool {
+        cardDelegate?.eventCardViewDidClick(self, eventId: eventId)
+        return true
     }
 
     override func mouseDown(with event: NSEvent) {
