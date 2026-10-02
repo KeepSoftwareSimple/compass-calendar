@@ -119,9 +119,10 @@ export interface CloudCommandDeps {
 // update's key hashes its full content, so a delete/undo/delete-again (or an
 // edit replayed by undo/redo) can collide with an earlier terminal command on
 // the same key. terminalReplayIsStale checks whether that collision is a
-// genuine no-op or a fresh intent (a delete is checked against world state;
-// a create/update only when the client marks the submission `restore: true`
-// — see its docblock in command-replay.ts for why they differ). When stale,
+// genuine no-op or a fresh intent (a delete is checked against world state,
+// an update is always fresh, a create only when the client marks the
+// submission `restore: true` — see its docblock in command-replay.ts for why
+// they differ). When stale,
 // the command is reopened to pending and re-executed below rather than
 // replayed as a no-op. Without this, a delete that once confirmed without
 // truly deleting (or was undone and redone) becomes permanently unreachable —
