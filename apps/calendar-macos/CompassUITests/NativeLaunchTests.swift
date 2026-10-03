@@ -1,7 +1,7 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
-    /// AppKit event cards often report 0×0 accessibility frames in CI; coordinate clicks still hit layout bounds.
+    /// AppKit event cards often report 0-size accessibility frames in CI; coordinate clicks still hit layout bounds.
     @MainActor
     private func clickGridEvent(_ element: XCUIElement) {
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
