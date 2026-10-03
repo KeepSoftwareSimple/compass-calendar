@@ -9,6 +9,7 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
@@ -79,8 +80,15 @@ public final class NativeCalendarRootModel {
             view: .week,
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
-            pinnedTimeZone: demoSeed?.timeZone
+            pinnedTimeZone: demoSeed?.timeZone ?? CompassDevicePreferences.readPinnedTimeZone()
         )
+        if demoSeed == nil {
+            viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
+        }
+        settingsStore = SettingsStore(viewStore: viewStore)
+        settingsStore.onDevicePreferencesChanged = { [weak self] in
+            self?.rebuildPresentation()
+        }
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
         pointerHintStore = PointerHintStore()
@@ -100,6 +108,7 @@ public final class NativeCalendarRootModel {
             await self?.handleSignedOut()
         }
         billingStore.setAuthenticated(authStore.authenticated)
+        billingStore.attach(settingsStore: settingsStore)
         rebuildPresentation()
     }
 
@@ -154,7 +163,7 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
-        billingStore.closeSettings()
+        settingsStore.close()
         if let eventStream {
             await eventStream.stop()
         }
@@ -243,7 +252,9 @@ public final class NativeCalendarRootModel {
         case .editCycleEdge:
             cycleFocusedEdge(forward: true)
         case .otherSettings:
-            billingStore.openSettings()
+            settingsStore.open(page: .accounts)
+        case .otherTimeTravel:
+            settingsStore.openTimezoneDialog(.timeTravel)
         default:
             break
         }
@@ -420,7 +431,10 @@ public final class NativeCalendarRootModel {
             scenario: timeGridState.scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
+            eventJumpHints: eventJumpHintLabels,
+            hasSecondaryTimeZone: timeGridState.hasSecondaryTimeZone,
+            effectiveTimeZone: timeGridState.effectiveTimeZone,
+            timeTravelTimeZone: timeGridState.timeTravelTimeZone
         )
         let colWidths = timeGridState.resolvedColumnWidths()
         let cards = timeGridState.snapshot(colWidths: colWidths).cards
@@ -553,13 +567,20 @@ public final class NativeCalendarRootModel {
             demoEventIds: demoIds
         )
         syncFocusRegistry(from: scenario)
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         let colWidths = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: demoSeed?.referenceNow ?? Date(),
             scenario: scenario,
-            trackWidth: contentTrackWidth
+            trackWidth: contentTrackWidth,
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         ).resolvedColumnWidths()
-        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: colWidths)
+        let snapshot = GridLayoutSnapshotBuilder.build(
+            scenario: scenario,
+            colWidths: colWidths,
+            hasSecondaryTimeZone: hasSecondaryTimeZone)
         focusLayoutCards = snapshot.cards.map { card in
             FocusLayoutCard(
                 eventId: card.eventId,
@@ -574,7 +595,10 @@ public final class NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
+            eventJumpHints: eventJumpHintLabels,
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
         if demoSeed != nil, !loadedEvents.isEmpty, !didApplyDemoFixtureScroll {
             let allDayOffset = 28 + snapshot.metrics.allDayRowHeight
@@ -604,15 +628,20 @@ public final class NativeCalendarRootModel {
     private func syncFocusRegistry(from scenario: GridLayoutScenario) {
         focusStore.view = viewStore.view
         focusStore.clearRegistry()
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         let colWidths = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: scenario.referenceNow,
             scenario: scenario,
-            trackWidth: contentTrackWidth
+            trackWidth: contentTrackWidth,
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         ).resolvedColumnWidths()
         let cards = GridLayoutSnapshotBuilder.build(
             scenario: scenario,
-            colWidths: colWidths
+            colWidths: colWidths,
+            hasSecondaryTimeZone: hasSecondaryTimeZone
         ).cards
         let sorted = cards.sorted { lhs, rhs in
             if lhs.frame.top != rhs.frame.top { return lhs.frame.top < rhs.frame.top }
