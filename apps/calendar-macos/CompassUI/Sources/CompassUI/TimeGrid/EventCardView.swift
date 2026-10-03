@@ -10,10 +10,11 @@ final class EventCardView: NSView {
     private let titleField = NSTextField(labelWithString: "")
     private let accentLayer = CALayer()
     private let focusRingLayer = CALayer()
+    private let focusAccessibilityAnchor = FocusedEventAccessibilityAnchorView()
 
     weak var cardDelegate: EventCardViewDelegate?
     private(set) var eventId: String = ""
-    private var exposesFocusedAccessibilityIdentifier = false
+    private var showsFocusAccessibilityAnchor = false
 
     override var isFlipped: Bool { true }
 
@@ -67,20 +68,8 @@ final class EventCardView: NSView {
         titleField.stringValue = card.label
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
-        let focusedIdentifier = FocusedGridEventAccessibilityProxy.identifier
-        if isFocused {
-            setAccessibilityIdentifier(focusedIdentifier)
-        } else {
-            setAccessibilityIdentifier(card.accessibilityIdentifier)
-        }
-        setAccessibilityElement(true)
-        if isFocused != exposesFocusedAccessibilityIdentifier {
-            exposesFocusedAccessibilityIdentifier = isFocused
-            if isFocused, let window {
-                NSAccessibility.post(element: self, notification: .layoutChanged)
-                NSAccessibility.post(element: window, notification: .layoutChanged)
-            }
-        }
+        setAccessibilityIdentifier(card.accessibilityIdentifier)
+        syncFocusAccessibilityAnchor(isFocused: isFocused, label: card.label)
 
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? surfaceColor
         layer?.backgroundColor = fill.withAlphaComponent(card.isHiddenStrip ? 0.6 : 0.92).cgColor
@@ -107,7 +96,31 @@ final class EventCardView: NSView {
         titleField.frame = bounds.insetBy(dx: 6, dy: 4)
         accentLayer.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
         focusRingLayer.frame = bounds.insetBy(dx: -2, dy: -2)
+        focusAccessibilityAnchor.frame = bounds
         syncAccessibilityFrame()
+    }
+
+    private func syncFocusAccessibilityAnchor(isFocused: Bool, label: String) {
+        if isFocused {
+            setAccessibilityElement(true)
+            if focusAccessibilityAnchor.superview == nil {
+                addSubview(focusAccessibilityAnchor)
+            }
+            focusAccessibilityAnchor.sync(label: label, frameInCard: bounds)
+            if !showsFocusAccessibilityAnchor {
+                showsFocusAccessibilityAnchor = true
+                NSAccessibility.post(element: focusAccessibilityAnchor, notification: .created)
+                if let window {
+                    NSAccessibility.post(element: window, notification: .layoutChanged)
+                }
+            }
+        } else {
+            setAccessibilityElement(true)
+            if showsFocusAccessibilityAnchor {
+                showsFocusAccessibilityAnchor = false
+                focusAccessibilityAnchor.removeFromSuperview()
+            }
+        }
     }
 
     private func syncAccessibilityFrame() {
@@ -141,6 +154,50 @@ final class EventCardView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         cardDelegate?.eventCardViewDidClick(self, eventId: eventId)
+    }
+}
+
+/// Separate accessibility element so XCUITest sees focus without mutating the card identifier.
+private final class FocusedEventAccessibilityAnchorView: NSView {
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+        setAccessibilityIdentifier(FocusedGridEventAccessibilityProxy.identifier)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func sync(label: String, frameInCard: NSRect) {
+        frame = frameInCard
+        setAccessibilityLabel(label)
+        syncAccessibilityFrame()
+    }
+
+    override func layout() {
+        super.layout()
+        syncAccessibilityFrame()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        guard bounds.width > 0.5, bounds.height > 0.5, let window, let superview else {
+            return super.accessibilityFrame()
+        }
+        let rectInWindow = superview.convert(bounds, to: nil)
+        return window.convertToScreen(rectInWindow)
+    }
+
+    private func syncAccessibilityFrame() {
+        guard bounds.width > 0.5, bounds.height > 0.5, let window, let superview else { return }
+        let rectInWindow = superview.convert(bounds, to: nil)
+        setAccessibilityFrame(window.convertToScreen(rectInWindow))
     }
 }
 
