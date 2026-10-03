@@ -8,6 +8,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let hiddenEventsStore: HiddenEventsStore
     public let calendarRepository: CalendarRepository
     public let configStore: ConfigStore
+    public let authStore: AuthStore
     public let levelsStore: LevelsStore
     public let analyticsIdentity: AnalyticsIdentityCoordinator
     public let usesFixtureTransport: Bool
@@ -16,18 +17,22 @@ public struct NativeCalendarEnvironment: Sendable {
     public init(
         appURL: URL = AppHostPreference.productionURL,
         fixture: DemoSeedFixture? = nil,
+        sessionStore: (any SessionStore)? = nil,
         analytics: ProductAnalyticsClient = NoOpProductAnalyticsClient(),
         analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator()
     ) throws {
-        let sessionStore: any SessionStore = MemorySessionStore(
-            tokens: fixture == nil
-                ? nil
-                : SessionTokens(
-                    accessToken: "fixture-access",
-                    refreshToken: "fixture-refresh",
-                    frontToken: "fixture-front"
+        let sessionStore: any SessionStore = sessionStore ?? {
+            if let fixture {
+                return MemorySessionStore(
+                    tokens: SessionTokens(
+                        accessToken: "fixture-access",
+                        refreshToken: "fixture-refresh",
+                        frontToken: "fixture-front"
+                    )
                 )
-        )
+            }
+            return KeychainSessionStore()
+        }()
         let urlSession: URLSession
         if let fixture {
             urlSession = FixtureTransport.install(.demo(fixture))
@@ -57,6 +62,12 @@ public struct NativeCalendarEnvironment: Sendable {
             remoteClient: UserAPI(client: apiClient)
         )
         configStore = ConfigStore(apiClient: apiClient)
+        authStore = AuthStore(
+            apiClient: apiClient,
+            configStore: configStore,
+            analyticsIdentity: analyticsIdentity,
+            usesFixtureTransport: fixture != nil
+        )
         let registry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: registry, analytics: analytics)
         self.analyticsIdentity = analyticsIdentity

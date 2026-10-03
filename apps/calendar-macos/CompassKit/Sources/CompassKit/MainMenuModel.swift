@@ -48,7 +48,6 @@ public enum MainMenuActionKind: Equatable, Sendable {
     case toggleNativeUI
     case nativeThemeLightBeach
     case nativeThemeDarkAbyss
-    case nativeDebugSignIn
     case standardEdit(String)
 }
 
@@ -206,8 +205,6 @@ public enum MainMenuModel {
                 MainMenuRow(title: "Use Native UI", action: .toggleNativeUI),
                 MainMenuRow(title: "Native Theme: Light Beach", action: .nativeThemeLightBeach),
                 MainMenuRow(title: "Native Theme: Dark Abyss", action: .nativeThemeDarkAbyss),
-                MainMenuRow(title: "", action: .separator),
-                MainMenuRow(title: "Native Sign In…", action: .nativeDebugSignIn),
                 MainMenuRow(title: "", action: .separator),
                 MainMenuRow(title: "Switch to Staging", action: .switchToStaging),
                 MainMenuRow(title: "Switch to Production", action: .switchToProduction),

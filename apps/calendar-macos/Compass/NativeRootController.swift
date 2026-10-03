@@ -60,19 +60,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         model.handleDeepLink(urlString)
     }
 
-    func presentDebugSignIn(from window: NSWindow?) async {
-        guard let credentials = await DebugSignInController.prompt(parentWindow: window) else {
-            return
-        }
-        do {
-            try await model.signIn(email: credentials.email, password: credentials.password)
-        } catch {
-            let alert = NSAlert(error: error)
-            alert.messageText = "Sign in failed"
-            alert.runModal()
-        }
-    }
-
     private func applyTheme() {
         rootView = ThemedRootView(webTheme: webTheme, model: model)
         DesktopNativeServices.applyAppearance(theme: webTheme.rawValue)

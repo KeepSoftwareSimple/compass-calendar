@@ -86,4 +86,31 @@ public enum NativeWebTheme: String, Sendable, CaseIterable {
             ThemeTokens.darkAbyss.accentSecondary.swiftUIColor
         }
     }
+
+    public var errorColor: Color {
+        switch self {
+        case .lightBeach:
+            ThemeTokens.lightBeach.error.swiftUIColor
+        case .darkAbyss:
+            ThemeTokens.darkAbyss.error.swiftUIColor
+        }
+    }
+
+    public var successColor: Color {
+        switch self {
+        case .lightBeach:
+            ThemeTokens.lightBeach.success.swiftUIColor
+        case .darkAbyss:
+            ThemeTokens.darkAbyss.success.swiftUIColor
+        }
+    }
+
+    public var overlayBackdropColor: Color {
+        switch self {
+        case .lightBeach:
+            ThemeTokens.lightBeach.overlayBackdrop.swiftUIColor
+        case .darkAbyss:
+            ThemeTokens.darkAbyss.overlayBackdrop.swiftUIColor
+        }
+    }
 }
