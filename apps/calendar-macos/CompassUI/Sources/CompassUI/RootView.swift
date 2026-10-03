@@ -21,6 +21,17 @@ public struct RootView: View {
             }
             pointerHintLayer
         }
+        .overlay {
+            if let label = model.gridFocusAccessibilityLabel {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityIdentifier("compass-grid-event-focused")
+                    .accessibilityLabel(label)
+                    .allowsHitTesting(false)
+            }
+        }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
         .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in

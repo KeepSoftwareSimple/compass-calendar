@@ -303,9 +303,40 @@ public final class TimeGridView: NSView {
         snapshot: GridLayoutSnapshot,
         allDayOffset: Double
     ) {
-        // Focus is exposed on the focused `EventCardView` accessibility identifier.
-        focusedEventAccessibilityProxy.isHidden = true
-        focusedEventAccessibilityProxy.removeFromSuperview()
+        guard let focusedId = state.focusedEventId,
+            let card = snapshot.cards.first(where: { $0.eventId == focusedId })
+        else {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
+
+        var frame = card.frame
+        let cardParent: NSView
+        if card.kind == .allDay {
+            frame.top += 28
+            cardParent = allDayRowView
+        } else {
+            frame.top += allDayOffset
+            cardParent = timedContentView
+        }
+
+        let frameInGrid = cardParent.convert(
+            NSRect(x: frame.left, y: frame.top, width: frame.width, height: frame.height),
+            to: self
+        )
+
+        if focusedEventAccessibilityProxy.superview !== self {
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            addSubview(focusedEventAccessibilityProxy, positioned: .above, relativeTo: scrollView)
+        }
+        focusedEventAccessibilityProxy.isHidden = false
+        focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
+
+        if let window {
+            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+            NSAccessibility.post(element: window, notification: .layoutChanged)
+        }
     }
 
     private func updateNowLine() {
