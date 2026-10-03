@@ -1,4 +1,4 @@
-import { KEYMAP } from "@web/shortcuts/keymap";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
 
 export type FaqItem = {

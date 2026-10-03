@@ -149,7 +149,7 @@ actually bind.
    still the way to discover the live mapping.
 
 Form field digits live in
-`apps/calendar-web/src/shortcuts/edit-sequence/edit-sequence.fields.ts` (DOM
+`packages/core/src/shortcuts/edit-sequence.fields.ts` (DOM
 order, 1–9, then 0 for actions and `-` for RSVP). Page-area digits live in
 `apps/calendar-web/src/shortcuts/page-jump/page-jump.targets.ts`. Day-view
 calendar columns are built by `buildDayPageJumpTargets` in left-to-right

@@ -9,7 +9,7 @@ own "used" check marks are unchanged.
 ## Level model
 
 A shortcut counts once it has been used at least once. The level is computed
-from `SHORTCUT_LEVELS` (`apps/calendar-web/src/shortcuts/level/shortcut-level.ts`)
+from `SHORTCUT_LEVELS` (`packages/core/src/shortcuts/shortcut-level.ts`)
 against the current `SHORTCUTS_REGISTRY` length, so a build that adds or
 removes a registry row changes the denominator automatically:
 

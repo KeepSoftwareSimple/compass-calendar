@@ -1,6 +1,7 @@
 import { type RegisterableHotkey } from "@tanstack/react-hotkeys";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { type Event } from "@core/types/event.contracts";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { useCalendarsQuery } from "@web/calendars/calendar.query";
@@ -77,7 +78,6 @@ import {
   getSpatiallyAdjacentTarget,
 } from "@web/grid/shortcuts/focus-adjacent-grid-event";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   eventJumpActions,
   isEventJumpActive,

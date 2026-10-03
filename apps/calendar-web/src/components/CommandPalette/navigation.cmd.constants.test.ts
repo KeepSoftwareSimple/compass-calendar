@@ -1,3 +1,4 @@
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import * as Track from "@web/auth/posthog/track";
 import {
@@ -5,7 +6,6 @@ import {
   getLegendNavigationCommandItems,
   getNavigationCommandItems,
 } from "@web/components/CommandPalette/navigation.cmd.constants";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 import { describe, expect, it, spyOn } from "bun:test";
 

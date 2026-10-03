@@ -1,5 +1,5 @@
+import { REGISTRY_RUNTIME_KEY_SOURCES } from "@core/shortcuts/app-shortcut-bindings";
 import { track } from "@web/auth/posthog/track";
-import { REGISTRY_RUNTIME_KEY_SOURCES } from "@web/shortcuts/app-shortcut-bindings";
 import {
   pointerHintActions,
   selectPointerHintVisible,

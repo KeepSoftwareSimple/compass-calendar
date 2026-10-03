@@ -1,5 +1,10 @@
 import classNames from "classnames";
 import { useEffect, useMemo, useState } from "react";
+import { type Shortcut } from "@core/shortcuts/shortcut.types";
+import {
+  computeShortcutLevel,
+  type ShortcutLevel,
+} from "@core/shortcuts/shortcut-level";
 import { track } from "@web/auth/posthog/track";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { SHORTCUT_LEVEL_UP_TOAST_ID } from "@web/common/constants/toast.constants";
@@ -12,11 +17,6 @@ import {
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
 import { viewActions } from "@web/events/stores/view.store";
-import { type Shortcut } from "@web/shortcuts/global.shortcut.types";
-import {
-  computeShortcutLevel,
-  type ShortcutLevel,
-} from "@web/shortcuts/level/shortcut-level";
 import {
   setLevelHidden,
   useIsLevelHidden,

@@ -7,6 +7,7 @@ import { KeyboardIcon } from "@phosphor-icons/react/dist/csr/Keyboard";
 import { SidebarSimpleIcon } from "@phosphor-icons/react/dist/csr/SidebarSimple";
 import { VideoCameraIcon } from "@phosphor-icons/react/dist/csr/VideoCamera";
 import { type Icon } from "@phosphor-icons/react/dist/lib/types";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { type Dayjs } from "@core/util/date/dayjs";
 import {
   goToDatePaletteLabel,
@@ -14,7 +15,6 @@ import {
 } from "@web/common/utils/datetime/web.date.util";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,

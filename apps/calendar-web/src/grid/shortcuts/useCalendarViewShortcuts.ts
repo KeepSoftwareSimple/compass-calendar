@@ -1,9 +1,9 @@
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { useDraftStore } from "@web/events/stores/draft.store";
 import { useEdgeFocusStore } from "@web/grid/shortcuts/edge-focus.store";
 import { useGridScrollShortcuts } from "@web/grid/shortcuts/useGridScrollShortcuts";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { isHigherEscapeOwner } from "@web/shortcuts/escape-ownership";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import { isEventJumpActive } from "@web/shortcuts/shift-hint/event-jump.store";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import {

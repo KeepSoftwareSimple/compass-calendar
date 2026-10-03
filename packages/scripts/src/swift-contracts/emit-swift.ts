@@ -11,7 +11,10 @@ import {
   compareAscii,
   stableJsonStringify,
 } from "@scripts/swift-contracts/stable-json";
-import { assertSwiftPublicTypeName } from "@scripts/swift-contracts/swift-reserved-types";
+import {
+  assertSwiftPublicTypeName,
+  escapeSwiftKeyword,
+} from "@scripts/swift-contracts/swift-reserved-types";
 import { z } from "zod/v4";
 import {
   SWIFT_BRANDED_ID_ENTRIES,
@@ -355,13 +358,10 @@ function swiftEnumCaseName(value: string): string {
   if (/^[0-9]/.test(cleaned)) {
     return `_${cleaned}`;
   }
-  if (cleaned === "default") {
-    return "`default`";
-  }
   const camel =
     cleaned.charAt(0).toLowerCase() +
     cleaned.slice(1).replace(/_([a-z])/g, (_, c) => c.toUpperCase());
-  return camel.replace(/__/g, "_");
+  return escapeSwiftKeyword(camel.replace(/__/g, "_"));
 }
 
 function ensureStruct(

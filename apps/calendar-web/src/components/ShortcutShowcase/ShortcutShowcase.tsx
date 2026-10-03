@@ -1,4 +1,5 @@
 import { type FC, useContext, useEffect, useRef, useState } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
@@ -53,7 +54,6 @@ import {
   isBareLetterKey,
   keyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
-import { KEYMAP } from "@web/shortcuts/keymap";
 
 /** `?` is Shift+/ on common layouts; some browsers report the physical slash. */
 const isLegendToggleKey = (event: KeyboardEvent) =>

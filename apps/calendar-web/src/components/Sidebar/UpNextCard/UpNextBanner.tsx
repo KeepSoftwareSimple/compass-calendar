@@ -1,11 +1,11 @@
 import { type FC, useState } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import dayjs from "@core/util/date/dayjs";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 import { formatEventStatus } from "./UpNextCard";
 import { useUpNextEvent } from "./useUpNextEvent";

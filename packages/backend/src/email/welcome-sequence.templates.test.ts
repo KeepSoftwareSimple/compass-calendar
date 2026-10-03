@@ -1,4 +1,5 @@
 import { appendWelcomeEmailUtm } from "@backend/email/email-layout";
+import { WELCOME_SEQUENCE } from "@backend/email/welcome-sequence";
 import {
   buildWelcomeResendTemplateVariables,
   getWelcomeStepCtaBaseHref,
@@ -9,19 +10,20 @@ import { describe, expect, it } from "bun:test";
 
 describe("welcome sequence Resend templates", () => {
   it("maps every welcome step to a template alias", () => {
-    const stepKeys = [
-      "welcome",
-      "shortcuts",
-      "connect-calendar",
-      "booking",
-      "trial-ending",
-    ] as const;
-    for (const stepKey of stepKeys) {
-      expect(getWelcomeStepTemplateAlias(stepKey)).toBe(
-        WELCOME_STEP_TEMPLATE_ALIAS[stepKey],
+    // Driven off WELCOME_SEQUENCE, not a copy of it: a step added to the drip
+    // without an alias or content has to fail here, not in production.
+    expect(WELCOME_SEQUENCE.length).toBeGreaterThan(0);
+    for (const step of WELCOME_SEQUENCE) {
+      expect(getWelcomeStepTemplateAlias(step.key)).toBe(
+        WELCOME_STEP_TEMPLATE_ALIAS[step.key],
       );
-      expect(getWelcomeStepCtaBaseHref(stepKey)).toBeTruthy();
+      expect(getWelcomeStepCtaBaseHref(step.key)).toBeTruthy();
     }
+  });
+
+  it("returns nothing for a step key that is no longer in the drip", () => {
+    expect(getWelcomeStepTemplateAlias("retired-step")).toBeUndefined();
+    expect(getWelcomeStepCtaBaseHref("retired-step")).toBeUndefined();
   });
 
   it("includes USER_FIRST_NAME when first name is present", () => {

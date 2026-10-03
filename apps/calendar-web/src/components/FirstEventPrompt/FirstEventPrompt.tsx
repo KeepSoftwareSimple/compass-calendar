@@ -1,4 +1,5 @@
 import { type FC, useContext, useEffect } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
@@ -10,7 +11,6 @@ import {
 } from "@web/components/FirstEventPrompt/first-event.store";
 import { useFirstEventPromptSurfaceEligible } from "@web/components/FirstEventPrompt/useFirstEventPromptSurfaceEligible";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { KEYMAP } from "@web/shortcuts/keymap";
 
 /** How long the celebration copy holds before it fades out for good. */
 const CELEBRATE_HOLD_MS = 4_000;

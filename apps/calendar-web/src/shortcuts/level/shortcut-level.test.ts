@@ -1,7 +1,7 @@
 import {
   computeShortcutLevel,
   SHORTCUT_LEVELS,
-} from "@web/shortcuts/level/shortcut-level";
+} from "@core/shortcuts/shortcut-level";
 import { describe, expect, it } from "bun:test";
 
 const REGISTRY_IDS = Array.from(
