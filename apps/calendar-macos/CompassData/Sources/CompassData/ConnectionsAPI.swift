@@ -24,15 +24,16 @@ public struct ConnectionsAPI: Sendable {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
         let decoder = JSONDecoder()
+        let bodyData = Data(payload.body.utf8)
         if let connected = try? decoder.decode(
             ConnectionBeginConnectedResponse.self,
-            from: payload.body)
+            from: bodyData)
         {
             return .connected(connected.connectionId)
         }
         if let redirect = try? decoder.decode(
             ConnectionBeginRedirectResponse.self,
-            from: payload.body)
+            from: bodyData)
         {
             guard let url = URL(string: redirect.authorizationUrl) else {
                 throw CompassAPIError.httpStatus(502, body: payload.body)
@@ -42,7 +43,7 @@ public struct ConnectionsAPI: Sendable {
         struct LegacyRedirect: Decodable {
             let authorizationUrl: String
         }
-        if let legacy = try? decoder.decode(LegacyRedirect.self, from: payload.body),
+        if let legacy = try? decoder.decode(LegacyRedirect.self, from: bodyData),
            let url = URL(string: legacy.authorizationUrl)
         {
             return .redirect(url)
