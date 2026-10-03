@@ -125,13 +125,13 @@ public enum DesktopDeepLinkParser {
     }
 }
 
-/// Queues deep links until the hosted web app has finished its first load.
+/// Queues deep links until the native stores or hosted web app are ready.
 public struct DeepLinkInbox: Equatable, Sendable {
-    public private(set) var webViewReady: Bool
+    public private(set) var consumerReady: Bool
     public private(set) var pending: [String]
 
-    public init(webViewReady: Bool = false, pending: [String] = []) {
-        self.webViewReady = webViewReady
+    public init(consumerReady: Bool = false, pending: [String] = []) {
+        self.consumerReady = consumerReady
         self.pending = pending
     }
 
@@ -145,16 +145,16 @@ public struct DeepLinkInbox: Equatable, Sendable {
         guard DesktopDeepLinkParser.recognizedURLString(urlString) != nil else {
             return .ignored
         }
-        if webViewReady {
+        if consumerReady {
             return .deliverNow(urlString)
         }
         pending.append(urlString)
         return .queued
     }
 
-    /// Marks the web view ready and returns any URLs queued while cold.
-    public mutating func markWebViewReady() -> [String] {
-        webViewReady = true
+    /// Marks the consumer ready and returns any URLs queued while cold.
+    public mutating func markConsumerReady() -> [String] {
+        consumerReady = true
         let queued = pending
         pending = []
         return queued
