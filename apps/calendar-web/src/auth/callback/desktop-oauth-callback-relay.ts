@@ -15,6 +15,20 @@ export function shouldRelayDesktopOAuthCallback(
   return hasDesktopOAuthStateMarker(state);
 }
 
+/** Apple Sign in uses a base64 state blob; native marks the SPA callback with `desktop=1`. */
+export function shouldRelayDesktopAppleOAuthCallback(
+  search: string,
+  inDesktopShell: boolean,
+): boolean {
+  if (inDesktopShell) {
+    return false;
+  }
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+  return params.get("desktop") === "1";
+}
+
 export function relayDesktopOAuthCallback(
   provider: ProviderKind,
   search: string,

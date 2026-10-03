@@ -21,6 +21,9 @@ const DESKTOP_DEEP_LINK_SCHEME = "compass://";
 const DESKTOP_AUTH_CALLBACK_PATTERN =
   /^compass:\/\/auth\/(?<provider>[^/?#]+)\/callback(?<query>\?.*)?$/;
 
+const DESKTOP_CONNECT_CALLBACK_PATTERN =
+  /^compass:\/\/connect\/(?<provider>[^/?#]+)\/callback(?<query>\?.*)?$/;
+
 const DESKTOP_EVENT_LINK_PREFIX = `${DESKTOP_DEEP_LINK_SCHEME}event/`;
 
 const DESKTOP_DAY_LINK_PATTERN =
@@ -49,6 +52,28 @@ export function buildDesktopOAuthRelayUrl(
  * loosely and validated by {@link ProviderKindSchema}, so adding a provider to
  * the schema is the only edit a new callback link needs.
  */
+export function buildDesktopConnectRelayUrl(
+  provider: ProviderKind,
+  search: string,
+): string {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  const base = `${DESKTOP_DEEP_LINK_SCHEME}connect/${provider}/callback`;
+  return query.length > 0 ? `${base}?${query}` : base;
+}
+
+export function parseDesktopConnectDeepLink(
+  url: string,
+): { provider: ProviderKind; query: string } | null {
+  const match = DESKTOP_CONNECT_CALLBACK_PATTERN.exec(url);
+  if (!match) return null;
+  const provider = ProviderKindSchema.safeParse(match.groups?.["provider"]);
+  if (!provider.success) return null;
+  return {
+    provider: provider.data,
+    query: match.groups?.["query"] ?? "",
+  };
+}
+
 export function parseDesktopAuthDeepLink(
   url: string,
 ): { provider: ProviderKind; query: string } | null {

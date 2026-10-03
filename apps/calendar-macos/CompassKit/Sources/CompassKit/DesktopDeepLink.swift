@@ -6,6 +6,9 @@ public enum DesktopDeepLinkParser {
     private static let authCallbackRegex: NSRegularExpression = {
         try! NSRegularExpression(pattern: "^compass://auth/([^/?#]+)/callback(\\?.*)?$")
     }()
+    private static let connectCallbackRegex: NSRegularExpression = {
+        try! NSRegularExpression(pattern: "^compass://connect/([^/?#]+)/callback(\\?.*)?$")
+    }()
     private static let dayRegex: NSRegularExpression = {
         try! NSRegularExpression(pattern: "^compass://day/(\\d{4}-\\d{2}-\\d{2})/?$")
     }()
@@ -22,6 +25,9 @@ public enum DesktopDeepLinkParser {
         }
         let fullRange = NSRange(urlString.startIndex..., in: urlString)
         if authCallbackRegex.firstMatch(in: urlString, range: fullRange) != nil {
+            return urlString
+        }
+        if connectCallbackRegex.firstMatch(in: urlString, range: fullRange) != nil {
             return urlString
         }
         if let day = parseDayDateString(from: urlString, range: fullRange) {

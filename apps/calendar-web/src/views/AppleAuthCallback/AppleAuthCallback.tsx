@@ -7,6 +7,8 @@ import {
 } from "@web/auth/apple/authorization/apple-authorization.storage";
 import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-authorization.util";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
+import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
+import { shouldRelayDesktopAppleOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -17,6 +19,7 @@ import {
 import { track } from "@web/auth/posthog/track";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
+import { isDesktop } from "@web/desktop/isDesktop";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -89,8 +92,15 @@ export function AppleAuthCallbackView() {
   const location = useLocation();
   const router = useRouter();
   const completeAuthentication = useCompleteAuthentication();
+  const shouldRelay = shouldRelayDesktopAppleOAuthCallback(
+    location.searchStr,
+    isDesktop(),
+  );
 
   useOneShotAuthCallback(() => {
+    if (shouldRelay) {
+      return;
+    }
     completeAppleAuthCallback({
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
@@ -104,6 +114,12 @@ export function AppleAuthCallbackView() {
       router.history.replace(DEFAULT_CALENDAR_ROUTE);
     });
   });
+
+  if (shouldRelay) {
+    return (
+      <DesktopOAuthCallbackRelay provider="apple" search={location.searchStr} />
+    );
+  }
 
   return <AuthCallbackOverlay />;
 }

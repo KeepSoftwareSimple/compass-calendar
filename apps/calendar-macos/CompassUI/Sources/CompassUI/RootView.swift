@@ -69,6 +69,9 @@ public struct RootView: View {
                 selectedDate: model.viewStore.anchorDate,
                 onSelectDate: { model.goToDate($0) }
             )
+            if model.isSignedIn {
+                SyncAccountsListView(store: model.syncConnectionsStore)
+            }
             Spacer()
             ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }

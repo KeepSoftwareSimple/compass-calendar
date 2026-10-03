@@ -65,6 +65,20 @@ extension NativeCalendarRootModel {
     }
 
     public func handleDeepLink(_ urlString: String) {
+        if urlString.contains("compass://auth/") {
+            Task {
+                _ = await authStore.handleOAuthDeepLink(urlString)
+            }
+            return
+        }
+        if urlString.contains("compass://connect/") {
+            Task {
+                _ = await environment.syncConnectionsStore.handleConnectDeepLink(urlString)
+                await reloadCalendars()
+                await refreshVisibleRange()
+            }
+            return
+        }
         if let eventId = DesktopDeepLinkParser.parseEventId(from: urlString) {
             focusEventDeepLink(eventId: eventId)
             return
