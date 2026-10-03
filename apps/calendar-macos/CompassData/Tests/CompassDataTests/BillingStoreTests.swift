@@ -18,30 +18,37 @@ private enum BillingStoreTestFixtures {
             "microsoft": { "signIn": false, "connect": false },
             "apple": { "signIn": false, "connect": false }
           },
-          "sync": { "enabled": true }
+          "sync": {
+            "cloudMutationMode": "enabled",
+            "execution": "passive"
+          }
         }
         """.utf8)
 }
 
 @MainActor
 final class BillingStoreTests: XCTestCase {
-    private func makeStore(
-        handler: @escaping @Sendable (URLRequest) throws -> StubURLProtocol.Response
-    ) throws -> (BillingStore, ConfigStore) {
+    override func tearDown() {
+        StubURLProtocol.Handler.requestHandler = nil
+        super.tearDown()
+    }
+
+    private func makeStore() throws -> (BillingStore, ConfigStore) {
         let client = CompassAPIClient(
             appURL: URL(string: "https://www.compasscalendar.com")!,
             sessionStore: MemorySessionStore(tokens: SessionTokens(
                 accessToken: "access",
                 refreshToken: "refresh",
                 frontToken: "front")),
-            urlSession: StubURLProtocol.makeSession(handler: handler))
+            urlSession: StubURLProtocol.makeSession())
         let configStore = ConfigStore(apiClient: client)
         let store = BillingStore(apiClient: client, configStore: configStore)
         return (store, configStore)
     }
 
     func testGateStatusTracksReadOnlyAwaitingCheckout() async throws {
-        let (store, configStore) = try makeStore { request in
+        let (store, configStore) = try makeStore()
+        StubURLProtocol.Handler.requestHandler = { request in
             if request.url?.path.hasSuffix("/config") == true {
                 return StubURLProtocol.Response(
                     statusCode: 200,
@@ -64,7 +71,8 @@ final class BillingStoreTests: XCTestCase {
     }
 
     func testTrialingHasNoGate() async throws {
-        let (store, configStore) = try makeStore { request in
+        let (store, configStore) = try makeStore()
+        StubURLProtocol.Handler.requestHandler = { request in
             if request.url?.path.hasSuffix("/config") == true {
                 return StubURLProtocol.Response(
                     statusCode: 200,
