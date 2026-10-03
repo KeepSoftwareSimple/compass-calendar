@@ -115,6 +115,7 @@ public final class NativeCalendarRootModel {
         await refreshVisibleRange()
         await refreshSideband()
         await reloadCalendars()
+        await syncConnectionsStore.reloadFromMetadata()
     }
 
     public func signOut() async throws {
