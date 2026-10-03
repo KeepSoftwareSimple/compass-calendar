@@ -32,7 +32,10 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
-        model.onGridFocusAccessibilityLabelChanged = { label in
+        model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
+            if let window = self?.view.window ?? NSApp.keyWindow ?? NSApp.mainWindow {
+                GridFocusAccessibilityProbe.attach(to: window)
+            }
             GridFocusAccessibilityProbe.publish(label: label)
         }
         applyTheme()
@@ -44,10 +47,10 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        if let host = view.window?.contentViewController?.view ?? view.window?.contentView {
-            GridFocusAccessibilityProbe.attach(to: host)
+        if let window = view.window {
+            GridFocusAccessibilityProbe.attach(to: window)
+            GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
         }
-        GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
     }
 
     @available(*, unavailable)

@@ -62,12 +62,16 @@ final class NativeLaunchTests: XCTestCase {
 
         let focused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
-        XCTAssertEqual(focused.label, "Morning standup")
+        wait(
+            for: [expectation(for: NSPredicate(format: "label == %@", "Morning standup"), evaluatedWith: focused, handler: nil)],
+            timeout: 10)
 
         window.typeKey(.downArrow, modifierFlags: [])
         let tryCompassFocused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
-        XCTAssertEqual(tryCompassFocused.label, "Try Compass")
+        wait(
+            for: [expectation(for: NSPredicate(format: "label == %@", "Try Compass"), evaluatedWith: tryCompassFocused, handler: nil)],
+            timeout: 10)
     }
 
     @MainActor

@@ -21,6 +21,9 @@ public struct RootView: View {
             }
             pointerHintLayer
         }
+        .overlay(alignment: .topLeading) {
+            gridFocusAccessibilityOverlay
+        }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
         .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in
@@ -185,41 +188,36 @@ public struct RootView: View {
 
     @ViewBuilder
     private var pointerHintLayer: some View {
-        if gridFocusProbeLabel != nil || model.pointerHintStore.isVisible {
-            VStack(alignment: .leading, spacing: 8) {
-                if let label = gridFocusProbeLabel {
-                    gridFocusAccessibilityProbe(label: label)
-                }
-                if model.pointerHintStore.isVisible {
-                    PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
-                }
-            }
-            .padding(.top, 16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .allowsHitTesting(model.pointerHintStore.isVisible)
+        if model.pointerHintStore.isVisible {
+            PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
+                .padding(.top, 16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .allowsHitTesting(true)
         }
     }
 
-    private func gridFocusAccessibilityProbe(label: String) -> some View {
-        Text(label)
-            .font(.custom("Rubik", size: 14, relativeTo: .body))
-            .foregroundStyle(theme.textColor)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .frame(maxWidth: 520, alignment: .leading)
-            .accessibilityElement()
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("compass-grid-event-focused")
-            .accessibilityLabel(label)
-            .allowsHitTesting(false)
-            .id(model.timeGridState.focusedEventId ?? "grid-focus-probe-hidden")
+    @ViewBuilder
+    private var gridFocusAccessibilityOverlay: some View {
+        if let label = gridFocusProbeLabel {
+            Color.clear
+                .frame(width: 1, height: 1)
+                .padding(.top, 16)
+                .padding(.leading, 12)
+                .accessibilityElement()
+                .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("compass-grid-event-focused")
+                .accessibilityLabel(label)
+                .allowsHitTesting(false)
+                .id("\(model.gridFocusAccessibilityRevision)-\(model.timeGridState.focusedEventId ?? "")-\(label)")
+        }
     }
 
     private var gridFocusProbeLabel: String? {
-        guard let focusedId = model.focusStore.focusedEventId?.rawValue else { return nil }
+        guard model.timeGridState.focusedEventId != nil else { return nil }
         if let label = model.gridFocusAccessibilityLabel {
             return label
         }
+        guard let focusedId = model.timeGridState.focusedEventId else { return nil }
         let colWidths = model.timeGridState.resolvedColumnWidths()
         return model.timeGridState.snapshot(colWidths: colWidths).cards
             .first(where: { $0.eventId == focusedId })?

@@ -7,8 +7,10 @@ final class GridFocusAccessibilityProbeView: NSView {
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
-        alphaValue = 0
-        setAccessibilityHidden(true)
+        wantsLayer = true
+        layer?.backgroundColor = NSColor.clear.cgColor
+        alphaValue = 1
+        isHidden = true
         setAccessibilityElement(false)
     }
 
@@ -19,27 +21,46 @@ final class GridFocusAccessibilityProbeView: NSView {
 
     func update(label: String?) {
         if let label {
-            alphaValue = 0.01
-            setAccessibilityHidden(false)
+            isHidden = false
             setAccessibilityElement(true)
+            setAccessibilityHidden(false)
             setAccessibilityRole(.button)
             setAccessibilityIdentifier(Self.identifier)
             setAccessibilityLabel(label)
             frame = NSRect(x: 8, y: 8, width: 160, height: 36)
-            if let window, let superview {
-                let rectInWindow = convert(bounds, to: nil)
-                setAccessibilityFrame(window.convertToScreen(rectInWindow))
-            }
+            syncAccessibilityFrame()
         } else {
-            alphaValue = 0
-            setAccessibilityHidden(true)
+            isHidden = true
             setAccessibilityElement(false)
             setAccessibilityLabel(nil)
+            setAccessibilityIdentifier(nil)
         }
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         nil
+    }
+
+    override func layout() {
+        super.layout()
+        syncAccessibilityFrame()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        syncAccessibilityFrame()
+    }
+
+    override func accessibilityFrame() -> NSRect {
+        guard let window, bounds.width > 0, bounds.height > 0 else {
+            return super.accessibilityFrame()
+        }
+        return window.convertToScreen(convert(bounds, to: nil))
+    }
+
+    private func syncAccessibilityFrame() {
+        guard let window, bounds.width > 0, bounds.height > 0 else { return }
+        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
     }
 }
 
@@ -47,29 +68,30 @@ final class GridFocusAccessibilityProbeView: NSView {
 enum GridFocusAccessibilityProbe {
     private static weak var probe: GridFocusAccessibilityProbeView?
 
+    static func attach(to window: NSWindow) {
+        guard let host = window.contentView else { return }
+        attach(to: host)
+    }
+
     static func attach(to hostView: NSView) {
-        let view: GridFocusAccessibilityProbeView
         if let existing = probe, existing.superview === hostView {
             return
         }
         probe?.removeFromSuperview()
-        view = GridFocusAccessibilityProbeView(frame: .zero)
+        let view = GridFocusAccessibilityProbeView(frame: .zero)
         probe = view
         hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
     static func publish(label: String?) {
         if probe == nil, let window = NSApp.keyWindow ?? NSApp.mainWindow {
-            let host = window.contentViewController?.view ?? window.contentView
-            if let host {
-                attach(to: host)
-            }
+            attach(to: window)
         }
         guard let probe else { return }
-        let wasHidden = !probe.isAccessibilityElement()
+        let wasInactive = probe.isHidden
         probe.update(label: label)
         if label != nil {
-            if wasHidden {
+            if wasInactive {
                 NSAccessibility.post(element: probe, notification: .created)
             }
             NSAccessibility.post(element: probe, notification: .focusedUIElementChanged)

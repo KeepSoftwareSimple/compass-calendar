@@ -51,6 +51,8 @@ public struct TimeGridRepresentable: NSViewRepresentable {
 
         public func timeGridView(_ view: TimeGridView, didClickEvent eventId: String) {
             model.focusGridEvent(eventId: eventId)
+            view.update(state: model.timeGridState, theme: theme)
+            view.layoutSubtreeIfNeeded()
             model.publishGridFocusAccessibilityProbe()
             let focusedLabel =
                 model.gridFocusAccessibilityLabel
@@ -60,8 +62,6 @@ public struct TimeGridRepresentable: NSViewRepresentable {
                 registry: model.shortcutRegistry,
                 focusedGridEventLabel: focusedLabel
             )
-            view.update(state: model.timeGridState, theme: theme)
-            view.layoutSubtreeIfNeeded()
         }
 
         private func focusedEventLabel(for eventId: String) -> String? {
