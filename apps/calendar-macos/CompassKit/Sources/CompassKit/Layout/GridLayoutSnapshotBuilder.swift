@@ -5,10 +5,11 @@ public enum GridLayoutSnapshotBuilder {
         scenario: GridLayoutScenario,
         colWidths: [Double],
         hourHeight: Double = 60,
-        allDayRowsCount: Int? = nil
+        allDayRowsCount: Int? = nil,
+        hasSecondaryTimeZone: Bool = false
     ) -> GridLayoutSnapshot {
         let visibleDates = GridVisibleDate.fromKeys(scenario.visibleDateKeys)
-        let marginLeft = GridMetrics.gridMarginLeftPx()
+        let marginLeft = GridMetrics.gridMarginLeftPx(hasSecondaryTimeZone: hasSecondaryTimeZone)
         let timedGridHeight = Double(GridTimeConstants.timedVisibleHours) * hourHeight
         let lookup = CalendarLookupBuilder.build(scenario.calendars)
 

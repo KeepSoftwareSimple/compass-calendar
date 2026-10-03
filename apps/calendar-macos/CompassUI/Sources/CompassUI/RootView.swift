@@ -60,7 +60,7 @@ public struct RootView: View {
             }
         }
         .overlay {
-            BillingSettingsOverlay(billingStore: model.billingStore)
+            SettingsWindowOverlay(model: model)
         }
         .overlay {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)

@@ -27,6 +27,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
+    private var settingsBridge: NativeAppSettingsBridge?
+    private let quickAddHotKeyController = QuickAddHotKeyController()
 
     init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel) {
         self.webTheme = webTheme
@@ -41,9 +43,11 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
         }
         applyTheme()
+        configureSettingsBridge()
         configureNativeServices()
         configureKeyboard()
         configureResume()
+        quickAddHotKeyController.start()
         Task { await model.start() }
     }
 
@@ -74,7 +78,17 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     func setWebTheme(_ theme: NativeWebTheme) {
+        NativeUIThemePreference.save(theme)
         webTheme = theme
+    }
+
+    private func configureSettingsBridge() {
+        let bridge = NativeAppSettingsBridge(
+            rootController: self,
+            hotKeyController: quickAddHotKeyController)
+        settingsBridge = bridge
+        model.settingsStore.setBridge(bridge)
+        webTheme = NativeWebTheme(themeName: model.settingsStore.theme)
     }
 
     func receiveDeepLink(_ url: URL) {
