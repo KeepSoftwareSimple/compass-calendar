@@ -1,16 +1,10 @@
 import { ensureDesktopExportEnv } from "@scripts/desktop-export/ensure-export-env";
 import { runWebDesktopFixtures } from "@scripts/desktop-export/run-web-fixtures";
+import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-files";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
-const FIXTURE_NAMES = [
-  "timed-deck.vectors.json",
-  "nudge.vectors.json",
-  "go-to-date.vectors.json",
-  "demo-seed.json",
-] as const;
 
 describe("run-web-fixtures", () => {
   let tempDir: string;
@@ -26,7 +20,7 @@ describe("run-web-fixtures", () => {
     tempDir = mkdtempSync(join(tmpdir(), "desktop-web-fixtures-test-"));
     await runWebDesktopFixtures(tempDir);
 
-    for (const name of FIXTURE_NAMES) {
+    for (const name of DESKTOP_WEB_FIXTURE_FILES) {
       const raw = readFileSync(join(tempDir, name), "utf8");
       const parsed = JSON.parse(raw) as unknown;
       expect(raw.length).toBeGreaterThan(10);

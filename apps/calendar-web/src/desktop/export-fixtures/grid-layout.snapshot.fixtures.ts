@@ -349,6 +349,19 @@ const buildSnapshot = ({
   };
 };
 
+const snapshotScenario = (
+  id: string,
+  input: {
+    colWidths: number[];
+    layoutMode: "week" | "day";
+    visibleDateKeys: string[];
+  },
+) => ({
+  id,
+  input,
+  output: buildSnapshot(input),
+});
+
 export const buildGridLayoutSnapshotFixtures = () => {
   ensureDesktopExportEnv();
   setPinnedTimeZone("UTC");
@@ -356,74 +369,34 @@ export const buildGridLayoutSnapshotFixtures = () => {
 
   return {
     scenarios: [
-      {
-        id: "grid-layout-1day",
-        input: {
-          colWidths: [320],
-          layoutMode: "week" as const,
-          visibleDateKeys: ["2026-05-20"],
-        },
-        output: buildSnapshot({
-          colWidths: [320],
-          layoutMode: "week",
-          visibleDateKeys: ["2026-05-20"],
-        }),
-      },
-      {
-        id: "grid-layout-3day",
-        input: {
-          colWidths: [320, 320, 320],
-          layoutMode: "week" as const,
-          visibleDateKeys: ["2026-05-19", "2026-05-20", "2026-05-21"],
-        },
-        output: buildSnapshot({
-          colWidths: [320, 320, 320],
-          layoutMode: "week",
-          visibleDateKeys: ["2026-05-19", "2026-05-20", "2026-05-21"],
-        }),
-      },
-      {
-        id: "grid-layout-7day",
-        input: {
-          colWidths: [100, 110, 120, 130, 140, 150, 160],
-          layoutMode: "week" as const,
-          visibleDateKeys: [
-            "2026-05-17",
-            "2026-05-18",
-            "2026-05-19",
-            "2026-05-20",
-            "2026-05-21",
-            "2026-05-22",
-            "2026-05-23",
-          ],
-        },
-        output: buildSnapshot({
-          colWidths: [100, 110, 120, 130, 140, 150, 160],
-          layoutMode: "week",
-          visibleDateKeys: [
-            "2026-05-17",
-            "2026-05-18",
-            "2026-05-19",
-            "2026-05-20",
-            "2026-05-21",
-            "2026-05-22",
-            "2026-05-23",
-          ],
-        }),
-      },
-      {
-        id: "grid-layout-day-mode",
-        input: {
-          colWidths: [320, 320],
-          layoutMode: "day" as const,
-          visibleDateKeys: ["2026-05-20"],
-        },
-        output: buildSnapshot({
-          colWidths: [320, 320],
-          layoutMode: "day",
-          visibleDateKeys: ["2026-05-20"],
-        }),
-      },
+      snapshotScenario("grid-layout-1day", {
+        colWidths: [320],
+        layoutMode: "week",
+        visibleDateKeys: ["2026-05-20"],
+      }),
+      snapshotScenario("grid-layout-3day", {
+        colWidths: [320, 320, 320],
+        layoutMode: "week",
+        visibleDateKeys: ["2026-05-19", "2026-05-20", "2026-05-21"],
+      }),
+      snapshotScenario("grid-layout-7day", {
+        colWidths: [100, 110, 120, 130, 140, 150, 160],
+        layoutMode: "week",
+        visibleDateKeys: [
+          "2026-05-17",
+          "2026-05-18",
+          "2026-05-19",
+          "2026-05-20",
+          "2026-05-21",
+          "2026-05-22",
+          "2026-05-23",
+        ],
+      }),
+      snapshotScenario("grid-layout-day-mode", {
+        colWidths: [320, 320],
+        layoutMode: "day",
+        visibleDateKeys: ["2026-05-20"],
+      }),
     ],
   };
 };

@@ -61,8 +61,7 @@ class BillingController {
     res: Response<BillingStatusResponse | { error: string }>,
   ) => {
     try {
-      const userId = zObjectId.parse(req.session?.getUserId());
-      const status = await billingService.getStatus(userId.toString());
+      const status = await billingService.getStatus(sessionUserId(req));
       res.status(Status.OK).json(status);
     } catch (e) {
       sendBillingError(res, e);
@@ -80,8 +79,7 @@ class BillingController {
     res: Response<BillingStatusResponse | { error: string }>,
   ) => {
     try {
-      const userId = zObjectId.parse(req.session?.getUserId());
-      const status = await stripeService.endTrialNow(userId.toString());
+      const status = await stripeService.endTrialNow(sessionUserId(req));
       res.status(Status.OK).json(status);
     } catch (e) {
       sendBillingError(res, e);
@@ -103,9 +101,8 @@ class BillingController {
     res: Response<BillingSubscriptionResponse | { error: string }>,
   ) => {
     try {
-      const userId = zObjectId.parse(req.session?.getUserId());
       const summary = await stripeService.getSubscriptionSummary(
-        userId.toString(),
+        sessionUserId(req),
       );
       res
         .status(Status.OK)

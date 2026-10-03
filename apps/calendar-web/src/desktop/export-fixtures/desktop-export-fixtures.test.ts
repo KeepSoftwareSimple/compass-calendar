@@ -38,6 +38,27 @@ describe("desktop export fixtures", () => {
     expect(buildGoToDateFixtures().cases.length).toBeGreaterThan(3);
   });
 
+  it("builds grid-layout snapshots without duplicating input", async () => {
+    const { ensureDesktopExportEnv } = await import(
+      "@web/desktop/export-fixtures/ensure-export-env"
+    );
+    ensureDesktopExportEnv();
+    const { buildGridLayoutSnapshotFixtures } = await import(
+      "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures"
+    );
+    const { scenarios } = buildGridLayoutSnapshotFixtures();
+    expect(scenarios.map((scenario) => scenario.id)).toEqual([
+      "grid-layout-1day",
+      "grid-layout-3day",
+      "grid-layout-7day",
+      "grid-layout-day-mode",
+    ]);
+    expect(scenarios[0]?.output.visibleDayCount).toBe(1);
+    expect(scenarios[1]?.output.visibleDayCount).toBe(3);
+    expect(scenarios[2]?.output.visibleDayCount).toBe(7);
+    expect(scenarios[3]?.output.layoutMode).toBe("day");
+  });
+
   it("builds demo seed snapshot", async () => {
     await bootExportFixtures();
     const { buildDemoSeedFixtures, DEMO_EXPORT_CALENDAR_ID } = await import(

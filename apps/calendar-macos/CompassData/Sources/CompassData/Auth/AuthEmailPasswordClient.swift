@@ -73,7 +73,7 @@ public struct AuthEmailPasswordClient: Sendable {
             if (200 ..< 300).contains(payload.statusCode) {
                 if expectsSession {
                     do {
-                        try await storeSession(from: payload)
+                        try await client.storeSession(from: payload)
                         return .success
                     } catch {
                         return parsedOutcome(from: payload.body) ?? .missingSession
@@ -97,20 +97,6 @@ public struct AuthEmailPasswordClient: Sendable {
         } catch {
             return .transport(error.localizedDescription)
         }
-    }
-
-    private func storeSession(from payload: HTTPResponsePayload) async throws {
-        var headers = [String: String]()
-        for (key, value) in payload.headers {
-            headers[key] = value
-        }
-        let response = HTTPURLResponse(
-            url: URL(string: "https://compasscalendar.com")!,
-            statusCode: payload.statusCode,
-            httpVersion: nil,
-            headerFields: headers
-        )!
-        try await client.storeSessionHeaders(from: response)
     }
 
     private func parsedOutcome(from body: String) -> AuthEmailPasswordOutcome? {
