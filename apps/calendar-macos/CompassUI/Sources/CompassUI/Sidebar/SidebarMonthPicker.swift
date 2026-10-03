@@ -6,15 +6,22 @@ public struct SidebarMonthPicker: View {
     @Binding public var displayedMonth: Date
     public let selectedDate: Date
     public let onSelectDate: (Date) -> Void
+    private let trailingHeader: AnyView?
 
     public init(
         displayedMonth: Binding<Date>,
         selectedDate: Date,
-        onSelectDate: @escaping (Date) -> Void
+        onSelectDate: @escaping (Date) -> Void,
+        trailingHeader: (() -> some View)? = nil
     ) {
         _displayedMonth = displayedMonth
         self.selectedDate = selectedDate
         self.onSelectDate = onSelectDate
+        if let trailingHeader {
+            self.trailingHeader = AnyView(trailingHeader())
+        } else {
+            self.trailingHeader = nil
+        }
     }
 
     public var body: some View {
@@ -24,6 +31,9 @@ public struct SidebarMonthPicker: View {
                     .font(.custom("Rubik", size: 13, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                 Spacer()
+                if let trailingHeader {
+                    trailingHeader
+                }
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
                 ForEach(dayCells, id: \.self) { day in

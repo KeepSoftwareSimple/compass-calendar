@@ -18,6 +18,7 @@ private protocol NativeThemePalette {
     var accentSecondary: ThemeTokenColor { get }
     var error: ThemeTokenColor { get }
     var success: ThemeTokenColor { get }
+    var warning: ThemeTokenColor { get }
     var overlayBackdrop: ThemeTokenColor { get }
 }
 
@@ -51,5 +52,6 @@ public enum NativeWebTheme: String, Sendable, CaseIterable {
     public var accentSecondaryColor: Color { palette.accentSecondary.swiftUIColor }
     public var errorColor: Color { palette.error.swiftUIColor }
     public var successColor: Color { palette.success.swiftUIColor }
+    public var warningColor: Color { palette.warning.swiftUIColor }
     public var overlayBackdropColor: Color { palette.overlayBackdrop.swiftUIColor }
 }

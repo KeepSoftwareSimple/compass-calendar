@@ -31,8 +31,26 @@ public struct RootView: View {
                 })
             .padding(.bottom, 24)
         }
+        .overlay(alignment: .top) {
+            if case let .server(server) = model.billingStore.appAccess,
+               server.status == .pastDue
+            {
+                BillingPastDueBannerView(billingStore: model.billingStore)
+            }
+        }
         .overlay {
-            AuthModalOverlay(authStore: model.authStore)
+            AuthModalOverlay(authStore: model.authStore, billingStore: model.billingStore)
+        }
+        .overlay {
+            if model.authStore.authenticated, model.billingStore.gateStatus != nil {
+                BillingGateOverlay(billingStore: model.billingStore)
+            }
+        }
+        .overlay {
+            BillingSettingsOverlay(billingStore: model.billingStore)
+        }
+        .overlay {
+            BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
         }
         .background {
             GeometryReader { geometry in
@@ -67,7 +85,10 @@ public struct RootView: View {
             SidebarMonthPicker(
                 displayedMonth: $model.monthPickerMonth,
                 selectedDate: model.viewStore.anchorDate,
-                onSelectDate: { model.goToDate($0) }
+                onSelectDate: { model.goToDate($0) },
+                trailingHeader: {
+                    TrialBadgeView(billingStore: model.billingStore)
+                }
             )
             if model.isSignedIn {
                 SyncAccountsListView(store: model.syncConnectionsStore)

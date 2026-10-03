@@ -65,6 +65,10 @@ extension NativeCalendarRootModel {
     }
 
     public func handleDeepLink(_ urlString: String) {
+        if DesktopDeepLinkParser.isBillingCheckoutDeepLink(urlString) {
+            billingStore.handleBillingCheckoutDeepLink(urlString)
+            return
+        }
         if urlString.contains("compass://auth/") {
             Task {
                 _ = await authStore.handleOAuthDeepLink(urlString)
