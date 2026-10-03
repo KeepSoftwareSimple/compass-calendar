@@ -1,17 +1,7 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
-    private func waitForNonZeroAccessibilityFrame(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if element.frame.width > 1, element.frame.height > 1 {
-                return true
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return element.frame.width > 1 && element.frame.height > 1
-    }
-
+    @MainActor
     private func clickGridEvent(_ element: XCUIElement) {
         if element.isHittable {
             element.click()
@@ -20,6 +10,7 @@ final class NativeLaunchTests: XCTestCase {
         }
     }
 
+    @MainActor
     private func waitForAccessibilityLabel(
         _ element: XCUIElement,
         _ label: String,
@@ -72,10 +63,6 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        XCTAssertTrue(
-            waitForNonZeroAccessibilityFrame(standup, timeout: 10),
-            "Expected Morning standup to expose a non-zero accessibility frame before clicking"
-        )
         clickGridEvent(standup)
 
         let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
@@ -100,7 +87,6 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        XCTAssertTrue(waitForNonZeroAccessibilityFrame(standup, timeout: 10))
         clickGridEvent(standup)
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]

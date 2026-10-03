@@ -40,9 +40,6 @@ public struct RootView: View {
                 })
             .padding(.bottom, 24)
         }
-        .overlay(alignment: .topLeading) {
-            focusedGridEventAccessibilityProbe
-        }
         .background {
             GeometryReader { geometry in
                 Color.clear
@@ -148,6 +145,7 @@ public struct RootView: View {
                 gridYOffset: gridChipYOffset,
                 visible: !model.timeGridState.eventJumpHints.isEmpty
             )
+            focusedGridEventAccessibilityProbe
         }
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-content")
