@@ -136,21 +136,21 @@ public final class AuthStore {
         let outcome = await emailPassword.sendPasswordResetEmail(
             email: AuthFormValidation.normalizedEmail(email))
         if case let .fieldError(message) = outcome {
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         }
         if case let .notAllowed(message) = outcome {
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         }
         if case let .httpError(_, body) = outcome {
-            throw AuthStoreError.message(
+            throw AuthStoreError(message: 
                 AuthStore.userFacingMessage(from: body, fallback: "Unable to send reset email"))
         }
         if case let .transport(message) = outcome {
-            throw AuthStoreError.message(
+            throw AuthStoreError(message: 
                 AuthStore.connectionMessage(fallback: "Unable to send reset email", detail: message))
         }
         guard case .success = outcome else {
-            throw AuthStoreError.message("Unable to send reset email")
+            throw AuthStoreError(message: "Unable to send reset email")
         }
     }
 
@@ -236,20 +236,20 @@ public final class AuthStore {
         case .success:
             try await completeAuthentication(closeAfter: true)
         case .wrongCredentials:
-            throw AuthStoreError.message("Incorrect email or password.")
+            throw AuthStoreError(message: "Incorrect email or password.")
         case let .fieldError(message):
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         case let .notAllowed(message):
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         case let .httpError(_, body):
-            throw AuthStoreError.message(AuthStore.userFacingMessage(from: body, fallback: fallback))
+            throw AuthStoreError(message: AuthStore.userFacingMessage(from: body, fallback: fallback))
         case let .transport(message):
-            throw AuthStoreError.message(
+            throw AuthStoreError(message: 
                 AuthStore.connectionMessage(fallback: fallback, detail: message))
         case .missingSession:
-            throw AuthStoreError.message(fallback)
+            throw AuthStoreError(message: fallback)
         default:
-            throw AuthStoreError.message(fallback)
+            throw AuthStoreError(message: fallback)
         }
     }
 
@@ -263,17 +263,17 @@ public final class AuthStore {
                 try await completeAuthentication(closeAfter: true)
             }
         case let .fieldError(message):
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         case let .notAllowed(message):
-            throw AuthStoreError.message(message)
+            throw AuthStoreError(message: message)
         case let .httpError(_, body):
-            throw AuthStoreError.message(
+            throw AuthStoreError(message: 
                 AuthStore.userFacingMessage(from: body, fallback: "Unable to sign up"))
         case let .transport(message):
-            throw AuthStoreError.message(
+            throw AuthStoreError(message: 
                 AuthStore.connectionMessage(fallback: "Unable to sign up", detail: message))
         default:
-            throw AuthStoreError.message("Unable to sign up")
+            throw AuthStoreError(message: "Unable to sign up")
         }
     }
 
