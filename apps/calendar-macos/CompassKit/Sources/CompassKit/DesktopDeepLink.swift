@@ -50,8 +50,8 @@ public enum DesktopDeepLinkParser {
     public static func parseBillingCheckout(from urlString: String) -> BillingCheckoutDeepLink? {
         guard urlString.hasPrefix(billingCheckoutPrefix) else { return nil }
         guard let components = URLComponents(string: urlString) else { return nil }
-        let query = Dictionary(
-            uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+        let query = Dictionary<String, String>(
+            uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item -> (String, String)? in
                 guard let value = item.value else { return nil }
                 return (item.name, value)
             })
