@@ -20,7 +20,13 @@ export type EmailStep = {
   skipIf?: (user: WelcomeSequenceUser) => boolean;
 };
 
-export const WELCOME_SEQUENCE: EmailStep[] = [
+/**
+ * The drip, and the single source of its step keys. `as const` is what lets
+ * `WelcomeStepKey` fall out of this list, so the content map and the Resend
+ * alias map are checked against it at compile time instead of being three
+ * hand-maintained copies of the same five strings.
+ */
+export const WELCOME_SEQUENCE = [
   { key: "welcome", delayDays: 0 },
   { key: "shortcuts", delayDays: 2 },
   {
@@ -36,7 +42,17 @@ export const WELCOME_SEQUENCE: EmailStep[] = [
       user.billing?.subscriptionStatus === "active" ||
       !user.billing?.stripeSubscriptionId,
   },
-];
+] as const satisfies readonly EmailStep[];
+
+export type WelcomeStepKey = (typeof WELCOME_SEQUENCE)[number]["key"];
+
+/**
+ * Narrows a `stepKey` read back from an `email_sends` row. Rows outlive the
+ * sequence: a step dropped from the list leaves queued rows behind, so every
+ * lookup keyed by step goes through this rather than asserting the cast.
+ */
+export const isWelcomeStepKey = (value: string): value is WelcomeStepKey =>
+  WELCOME_SEQUENCE.some((step) => step.key === value);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MINUTE_MS = 60 * 1000;

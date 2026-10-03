@@ -1,4 +1,8 @@
 import { CONFIG } from "@backend/common/constants/config.constants";
+import {
+  isWelcomeStepKey,
+  type WelcomeStepKey,
+} from "@backend/email/welcome-sequence";
 
 export type WelcomeEmailContentEntry = {
   subject: string;
@@ -29,7 +33,7 @@ const meetingSetupHref = (): string => `${appUrl()}/?meetingSetup=1`;
  * every href here must tolerate extra query params.
  */
 export const WELCOME_SEQUENCE_CONTENT: Record<
-  string,
+  WelcomeStepKey,
   WelcomeEmailContentEntry
 > = {
   welcome: {
@@ -102,5 +106,7 @@ export const WELCOME_SEQUENCE_CONTENT: Record<
 export function getWelcomeEmailContent(
   stepKey: string,
 ): WelcomeEmailContentEntry | undefined {
-  return WELCOME_SEQUENCE_CONTENT[stepKey];
+  return isWelcomeStepKey(stepKey)
+    ? WELCOME_SEQUENCE_CONTENT[stepKey]
+    : undefined;
 }
