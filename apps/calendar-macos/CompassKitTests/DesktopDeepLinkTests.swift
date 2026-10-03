@@ -66,6 +66,7 @@ final class DesktopDeepLinkTests: XCTestCase {
         XCTAssertTrue(inbox.pending.isEmpty)
     }
 
+    @MainActor
     func testDeepLinkRouterQueuesUntilConsumerReady() {
         var delivered: [String] = []
         var router = DeepLinkRouter()
@@ -80,6 +81,7 @@ final class DesktopDeepLinkTests: XCTestCase {
         XCTAssertEqual(delivered, ["compass://day/2026-10-15"])
     }
 
+    @MainActor
     func testDeepLinkRouterDeliversBillingAuthAndEventLinks() {
         var delivered: [String] = []
         var router = DeepLinkRouter(inbox: DeepLinkInbox(consumerReady: true))
