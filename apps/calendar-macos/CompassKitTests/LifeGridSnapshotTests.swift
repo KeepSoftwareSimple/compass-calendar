@@ -9,11 +9,7 @@ final class LifeGridSnapshotTests: XCTestCase {
     }
 
     func testLifeGridSnapshotsMatchExportedFixtures() throws {
-        let url = try XCTUnwrap(
-            CompassKitResourceBundle.resources.url(
-                forResource: "life-grid.snapshots",
-                withExtension: "json",
-                subdirectory: "Fixtures"))
+        let url = try XCTUnwrap(DesktopExportFixtures.url(named: "life-grid.snapshots"))
         let data = try Data(contentsOf: url)
         let document = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let scenarios = try XCTUnwrap(document?["scenarios"] as? [[String: Any]])

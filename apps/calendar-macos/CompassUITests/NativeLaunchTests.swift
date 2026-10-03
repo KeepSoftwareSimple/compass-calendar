@@ -35,7 +35,8 @@ final class NativeLaunchTests: XCTestCase {
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         XCTAssertTrue(
-            window.descendants(matching: .any)["compass-native-content"].waitForExistence(timeout: 10))
+            window.staticTexts["Morning standup"].waitForExistence(timeout: 10),
+            "Expected demo fixture week grid before switching to Life view")
 
         window.typeKey("l", modifierFlags: [])
         XCTAssertTrue(
@@ -44,7 +45,8 @@ final class NativeLaunchTests: XCTestCase {
 
         window.typeKey("w", modifierFlags: [])
         XCTAssertTrue(
-            window.descendants(matching: .any)["compass-native-content"].waitForExistence(timeout: 5))
+            window.staticTexts["Morning standup"].waitForExistence(timeout: 10),
+            "Expected demo fixture week grid after leaving Life view")
         XCTAssertFalse(
             window.descendants(matching: .any)["compass-native-life-grid"].exists)
     }
