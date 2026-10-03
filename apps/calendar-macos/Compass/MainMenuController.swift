@@ -128,6 +128,10 @@ final class MainMenuController: NSObject {
     }
 
     @objc private func openSettings(_ sender: Any?) {
+        if nativeUIState.isNativeUIEnabled, let nativeRootController {
+            nativeRootController.model.handleShortcut(.otherSettings)
+            return
+        }
         webViewController?.dispatchShortcut(.otherSettings)
     }
 

@@ -9,6 +9,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let calendarRepository: CalendarRepository
     public let configStore: ConfigStore
     public let authStore: AuthStore
+    public let billingStore: BillingStore
     public let levelsStore: LevelsStore
     public let shortcutRegistry: ShortcutRegistry
     public let analyticsIdentity: AnalyticsIdentityCoordinator
@@ -19,7 +20,8 @@ public struct NativeCalendarEnvironment: Sendable {
         fixture: DemoSeedFixture? = nil,
         sessionStore: (any SessionStore)? = nil,
         analytics: ProductAnalyticsClient = NoOpProductAnalyticsClient(),
-        analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator()
+        analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator(),
+        sessionPresenter: any HostedBillingSessionPresenting = UnavailableHostedBillingSessionPresenter()
     ) throws {
         let sessionStore: any SessionStore = sessionStore ?? {
             if let fixture {
@@ -64,6 +66,12 @@ public struct NativeCalendarEnvironment: Sendable {
             apiClient: apiClient,
             configStore: configStore,
             analyticsIdentity: analyticsIdentity
+        )
+        billingStore = BillingStore(
+            apiClient: apiClient,
+            configStore: configStore,
+            analytics: analytics,
+            sessionPresenter: sessionPresenter
         )
         shortcutRegistry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)

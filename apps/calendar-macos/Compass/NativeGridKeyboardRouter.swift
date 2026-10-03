@@ -47,6 +47,7 @@ final class NativeGridKeyboardRouter {
             .navMonthNext,
             .navUpNext,
             .navJoinMeeting,
+            .otherSettings,
         ]
         let handlerIds = focusIds.union(navigationIds)
 
