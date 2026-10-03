@@ -11,7 +11,7 @@ public protocol TimeGridViewDelegate: AnyObject {
 public final class TimeGridView: NSView {
     public weak var delegate: TimeGridViewDelegate?
 
-    private let scrollView = NSScrollView()
+    private let scrollView = GridScrollView()
     private let documentView = FlippedView()
     private let allDayRowView = FlippedView()
     private let timedContentView = CardRoutingFlippedView()
@@ -31,6 +31,7 @@ public final class TimeGridView: NSView {
         self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
+        scrollView.timeGridView = self
         configureScrollView()
         configureNowLine()
         startMinuteTimer()
@@ -59,7 +60,21 @@ public final class TimeGridView: NSView {
     }
 
     public override func mouseDown(with event: NSEvent) {
+        if let card = eventCardView(at: event.locationInWindow) {
+            card.mouseDown(with: event)
+            return
+        }
         delegate?.timeGridViewDidRequestShortcutHint(self)
+    }
+
+    func eventCardView(at locationInWindow: NSPoint) -> EventCardView? {
+        for view in cardPool.values {
+            let pointInCard = view.convert(locationInWindow, from: nil)
+            if view.bounds.contains(pointInCard) {
+                return view
+            }
+        }
+        return nil
     }
 
     public override func accessibilityChildren() -> [Any]? {
@@ -417,6 +432,18 @@ private final class CardRoutingFlippedView: FlippedView {
                 card.mouseDown(with: event)
                 return
             }
+        }
+        super.mouseDown(with: event)
+    }
+}
+
+private final class GridScrollView: NSScrollView {
+    weak var timeGridView: TimeGridView?
+
+    override func mouseDown(with event: NSEvent) {
+        if let grid = timeGridView, let card = grid.eventCardView(at: event.locationInWindow) {
+            card.mouseDown(with: event)
+            return
         }
         super.mouseDown(with: event)
     }

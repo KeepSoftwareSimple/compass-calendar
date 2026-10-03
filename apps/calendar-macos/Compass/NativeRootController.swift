@@ -44,8 +44,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     override func viewDidAppear() {
         super.viewDidAppear()
-        if let contentView = view.window?.contentView {
-            GridFocusAccessibilityProbe.attach(to: contentView)
+        if let window = view.window {
+            GridFocusAccessibilityProbe.attach(to: window.contentView ?? view)
         } else {
             GridFocusAccessibilityProbe.attach(to: view)
         }

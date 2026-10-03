@@ -1,6 +1,11 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
+    /// AppKit event cards often report 0×0 accessibility frames in CI; coordinate clicks still hit layout bounds.
+    private func clickGridEvent(_ element: XCUIElement) {
+        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+    }
+
     @MainActor
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
@@ -36,9 +41,9 @@ final class NativeLaunchTests: XCTestCase {
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
-        let standup = window.buttons["Morning standup"]
+        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        clickGridEvent(standup)
 
         let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
@@ -58,9 +63,9 @@ final class NativeLaunchTests: XCTestCase {
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
-        let standup = window.buttons["Morning standup"]
+        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.press(forDuration: 0)
+        clickGridEvent(standup)
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))

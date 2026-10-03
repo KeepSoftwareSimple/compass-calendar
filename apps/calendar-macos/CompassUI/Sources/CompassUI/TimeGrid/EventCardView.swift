@@ -98,15 +98,21 @@ final class EventCardView: NSView {
     }
 
     private func syncAccessibilityFrame() {
-        guard bounds.width > 1, bounds.height > 1, let window else { return }
-        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
+        guard bounds.width > 0.5, bounds.height > 0.5, let window else { return }
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return }
+        setAccessibilityFrame(screenFrame)
     }
 
     override func accessibilityFrame() -> NSRect {
-        guard bounds.width > 1, bounds.height > 1, let window else {
+        guard bounds.width > 0.5, bounds.height > 0.5, let window else {
             return super.accessibilityFrame()
         }
-        return window.convertToScreen(convert(bounds, to: nil))
+        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
+        if screenFrame.width > 0.5, screenFrame.height > 0.5 {
+            return screenFrame
+        }
+        return super.accessibilityFrame()
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
