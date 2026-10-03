@@ -44,15 +44,24 @@ enum GridFocusAccessibilityProbe {
     private static weak var probe: GridFocusAccessibilityProbeView?
 
     static func attach(to hostView: NSView) {
-        guard probe == nil else { return }
-        let view = GridFocusAccessibilityProbeView(frame: .zero)
+        let view: GridFocusAccessibilityProbeView
+        if let existing = probe, existing.superview === hostView {
+            return
+        }
+        probe?.removeFromSuperview()
+        view = GridFocusAccessibilityProbeView(frame: .zero)
         probe = view
         hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
     static func publish(label: String?) {
-        probe?.update(label: label)
-        if let probe, let window = probe.window {
+        guard let probe else { return }
+        let wasHidden = probe.isHidden
+        probe.update(label: label)
+        if label != nil, wasHidden {
+            NSAccessibility.post(element: probe, notification: .created)
+        }
+        if let window = probe.window {
             NSAccessibility.post(element: window, notification: .layoutChanged)
         }
     }

@@ -49,6 +49,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         } else {
             GridFocusAccessibilityProbe.attach(to: view)
         }
+        GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
     }
 
     @available(*, unavailable)

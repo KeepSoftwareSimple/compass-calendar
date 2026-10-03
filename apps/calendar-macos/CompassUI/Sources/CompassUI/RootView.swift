@@ -161,25 +161,15 @@ public struct RootView: View {
 
     @ViewBuilder
     private var focusedGridEventAccessibilityProbe: some View {
-        if let eventId = model.timeGridState.focusedEventId,
-            let label = focusedGridEventLabel(for: eventId)
-        {
-            Color.clear
+        if let label = model.gridFocusAccessibilityLabel {
+            Text(label)
                 .frame(width: 1, height: 1)
                 .accessibilityElement()
                 .accessibilityAddTraits(.isButton)
                 .accessibilityIdentifier("compass-grid-event-focused")
                 .accessibilityLabel(label)
                 .allowsHitTesting(false)
-                .id("compass-grid-event-focused-\(eventId)")
         }
-    }
-
-    private func focusedGridEventLabel(for eventId: String) -> String? {
-        let colWidths = model.timeGridState.resolvedColumnWidths()
-        return model.timeGridState.snapshot(colWidths: colWidths).cards
-            .first(where: { $0.eventId == eventId })?
-            .label
     }
 
     @ViewBuilder

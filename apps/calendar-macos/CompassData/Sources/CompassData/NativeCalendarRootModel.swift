@@ -12,6 +12,8 @@ public final class NativeCalendarRootModel {
     public let pointerHintStore: PointerHintStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
+    /// Title of the focused grid event for native UI tests and accessibility probes.
+    public private(set) var gridFocusAccessibilityLabel: String?
     public private(set) var calendars: [CompassCalendar] = []
     public private(set) var isSignedIn = false
     public private(set) var contentTrackWidth: CGFloat = 1010
@@ -338,7 +340,8 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             eventJumpHints: eventJumpHintLabels
         )
-        onGridFocusAccessibilityLabelChanged?(focusedGridEventAccessibilityLabel())
+        gridFocusAccessibilityLabel = focusedGridEventAccessibilityLabel()
+        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
     }
 
     private func focusedGridEventAccessibilityLabel() -> String? {

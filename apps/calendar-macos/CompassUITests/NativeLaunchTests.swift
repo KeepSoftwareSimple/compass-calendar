@@ -1,6 +1,40 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
+    private func waitForNonZeroAccessibilityFrame(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.frame.width > 1, element.frame.height > 1 {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.frame.width > 1 && element.frame.height > 1
+    }
+
+    private func clickGridEvent(_ element: XCUIElement) {
+        if element.isHittable {
+            element.click()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        }
+    }
+
+    private func waitForAccessibilityLabel(
+        _ element: XCUIElement,
+        _ label: String,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if element.exists, element.label == label {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
+        return element.exists && element.label == label
+    }
+
     @MainActor
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
@@ -38,24 +72,22 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.press(forDuration: 0)
-
-        let focusedPredicate = NSPredicate(
-            format: "identifier == %@ AND label == %@",
-            "compass-grid-event-focused",
-            "Morning standup"
+        XCTAssertTrue(
+            waitForNonZeroAccessibilityFrame(standup, timeout: 10),
+            "Expected Morning standup to expose a non-zero accessibility frame before clicking"
         )
-        let focused = app.descendants(matching: .any).matching(focusedPredicate).firstMatch
+        clickGridEvent(standup)
+
+        let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
+        XCTAssertEqual(focused.label, "Morning standup")
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompassPredicate = NSPredicate(
-            format: "identifier == %@ AND label == %@",
-            "compass-grid-event-focused",
-            "Try Compass"
+        let tryCompassFocused = app.descendants(matching: .any)["compass-grid-event-focused"]
+        XCTAssertTrue(
+            waitForAccessibilityLabel(tryCompassFocused, "Try Compass", timeout: 5),
+            "Expected Down arrow to move grid focus to Try Compass"
         )
-        let tryCompass = app.descendants(matching: .any).matching(tryCompassPredicate).firstMatch
-        XCTAssertTrue(tryCompass.waitForExistence(timeout: 5))
     }
 
     @MainActor
@@ -68,7 +100,8 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.press(forDuration: 0)
+        XCTAssertTrue(waitForNonZeroAccessibilityFrame(standup, timeout: 10))
+        clickGridEvent(standup)
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))
