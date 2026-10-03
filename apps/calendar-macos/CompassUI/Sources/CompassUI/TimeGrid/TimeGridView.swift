@@ -67,7 +67,25 @@ public final class TimeGridView: NSView {
         delegate?.timeGridViewDidRequestShortcutHint(self)
     }
 
+    private func pointInDocumentView(_ locationInWindow: NSPoint) -> NSPoint {
+        let pointInScrollView = scrollView.convert(locationInWindow, from: nil)
+        return documentView.convert(pointInScrollView, from: scrollView)
+    }
+
     func eventCardView(at locationInWindow: NSPoint) -> EventCardView? {
+        let documentPoint = pointInDocumentView(locationInWindow)
+        var smallestHit: (view: EventCardView, area: Double)?
+        for view in cardPool.values {
+            guard view.containsPointInDocument(documentPoint, documentView: documentView) else { continue }
+            let area = view.layoutRectInParent.width * view.layoutRectInParent.height
+            if smallestHit == nil || area < smallestHit!.area {
+                smallestHit = (view, area)
+            }
+        }
+        if let smallestHit {
+            return smallestHit.view
+        }
+
         for view in cardPool.values {
             if view.containsPointInWindow(locationInWindow) {
                 return view

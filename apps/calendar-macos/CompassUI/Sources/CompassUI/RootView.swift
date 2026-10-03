@@ -172,6 +172,7 @@ public struct RootView: View {
                 gridYOffset: gridChipYOffset,
                 visible: !model.timeGridState.eventJumpHints.isEmpty
             )
+            GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
         }
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-content")

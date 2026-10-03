@@ -140,6 +140,15 @@ final class EventCardView: NSView {
         return rectInWindow.insetBy(dx: -4, dy: -4).contains(locationInWindow)
     }
 
+    func containsPointInDocument(_ locationInDocument: NSPoint, documentView: NSView) -> Bool {
+        guard layoutRectInParent.width > 0.5, layoutRectInParent.height > 0.5,
+            let superview
+        else { return false }
+        let rectInDocument = superview.convert(layoutRectInParent, to: documentView)
+        guard rectInDocument.width > 0.5, rectInDocument.height > 0.5 else { return false }
+        return rectInDocument.insetBy(dx: -6, dy: -6).contains(locationInDocument)
+    }
+
     private func screenAccessibilityFrame() -> NSRect? {
         if let layoutFrame = screenFrameFromLayoutRect() {
             return layoutFrame

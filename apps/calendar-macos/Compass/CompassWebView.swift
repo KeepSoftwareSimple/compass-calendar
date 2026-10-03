@@ -43,5 +43,6 @@ enum CompassBridgeAccessibility {
             window.setAccessibilityValue("")
             window.setAccessibilityLabel("Compass")
         }
+        NSAccessibility.post(element: window, notification: .valueChanged)
     }
 }

@@ -1,10 +1,13 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
-    /// AppKit event cards often report 0-size accessibility frames in CI; coordinate clicks still hit layout bounds.
+    /// AppKit cards report 0×0 frames in CI. Normalized center clicks the origin (often the content edge),
+    /// which misses the card and only shows the grid scroll hint. Nudge into the timed column interior.
     @MainActor
     private func clickGridEvent(_ element: XCUIElement) {
-        element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
+        element.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 90, dy: 28))
+            .click()
     }
 
     @MainActor
@@ -70,7 +73,6 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["compass-grid-event-demo-morning-standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        // Accessibility frames are 0×0 in CI; `.click()` is not hittable. Coordinate taps still land on the card origin.
         clickGridEvent(standup)
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
