@@ -16,6 +16,19 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
         XCTAssertEqual(model.gridFocusAccessibilityLabel, "Morning standup")
     }
 
+    func testEditFocusNextDoesNotSeedWhenFocusNotInLayoutCards() async throws {
+        let fixture = try DemoSeedFixture.load()
+        let environment = try NativeCalendarEnvironment(fixture: fixture)
+        let model = NativeCalendarRootModel(environment: environment, demoSeed: fixture)
+        await model.start()
+
+        model.updateContentTrackWidth(400)
+        model.focusGridEvent(eventId: "demo-morning-standup")
+        model.handleShortcut(.editFocusNext)
+
+        XCTAssertEqual(model.gridFocusAccessibilityLabel, "Morning standup")
+    }
+
     func testEditFocusNextMovesFromStandupToTryCompass() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(fixture: fixture)

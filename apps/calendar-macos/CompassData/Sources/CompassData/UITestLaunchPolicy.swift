@@ -11,4 +11,9 @@ public enum UITestLaunchPolicy {
         let value = args[index + 1]
         return value.isEmpty ? nil : value
     }
+
+    /// Full week column count so demo fixture events stay in the focus layout during XCUITest.
+    public static var pinnedWeekGridTrackWidth: CGFloat? {
+        gridClickFocusEventId != nil ? 1030 : nil
+    }
 }

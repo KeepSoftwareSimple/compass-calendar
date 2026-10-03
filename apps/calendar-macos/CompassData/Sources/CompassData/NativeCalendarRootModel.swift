@@ -164,7 +164,7 @@ public final class NativeCalendarRootModel {
     }
 
     public func updateContentTrackWidth(_ width: CGFloat) {
-        let resolved = max(width, 320)
+        let resolved = max(UITestLaunchPolicy.pinnedWeekGridTrackWidth ?? width, 320)
         if abs(resolved - contentTrackWidth) > 0.5 {
             contentTrackWidth = resolved
             let count = CalendarWindowMath.computeVisibleDayCount(trackWidth: Double(resolved))
@@ -333,7 +333,7 @@ public final class NativeCalendarRootModel {
         guard !focusLayoutCards.isEmpty else { return }
 
         if let focusedId = focusStore.focusedEventId?.rawValue,
-            let focused = focusLayoutCards.first(where: { $0.eventId == focusedId }),
+            let focused = focusLayoutCard(for: focusedId),
             let next = GridFocusNavigator.adjacent(
                 focused: focused,
                 direction: direction,
@@ -345,9 +345,28 @@ public final class NativeCalendarRootModel {
             return
         }
 
+        // Match web `moveDraftOrFocusAdjacent`: seed nearest-to-now only when nothing is focused.
+        guard focusStore.focusedEventId == nil else { return }
+
         if let seeded = seedFocusEventId() {
             focusEvent(eventId: seeded)
         }
+    }
+
+    private func focusLayoutCard(for eventId: String) -> FocusLayoutCard? {
+        if let card = focusLayoutCards.first(where: { $0.eventId == eventId }) {
+            return card
+        }
+        let colWidths = timeGridState.resolvedColumnWidths()
+        guard
+            let card = timeGridState.snapshot(colWidths: colWidths).cards
+                .first(where: { $0.eventId == eventId })
+        else { return nil }
+        return FocusLayoutCard(
+            eventId: card.eventId,
+            frame: card.frame,
+            isAllDay: card.kind == .allDay
+        )
     }
 
     private func cycleFocusedEdge(forward: Bool) {
