@@ -17,8 +17,7 @@ final class AuthStoreTests: XCTestCase {
         let authStore = AuthStore(
             apiClient: client,
             configStore: configStore,
-            analyticsIdentity: NoOpAnalyticsIdentityCoordinator(),
-            usesFixtureTransport: false)
+            analyticsIdentity: NoOpAnalyticsIdentityCoordinator())
 
         await authStore.bootstrap(forceDemoSignedIn: false)
 
@@ -44,8 +43,7 @@ final class AuthStoreTests: XCTestCase {
         let authStore = AuthStore(
             apiClient: client,
             configStore: ConfigStore(apiClient: client),
-            analyticsIdentity: NoOpAnalyticsIdentityCoordinator(),
-            usesFixtureTransport: false)
+            analyticsIdentity: NoOpAnalyticsIdentityCoordinator())
 
         await authStore.signIn(email: "a@example.com", password: "password123")
 

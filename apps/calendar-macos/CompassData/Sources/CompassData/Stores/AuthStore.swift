@@ -38,23 +38,18 @@ public final class AuthStore {
 
     private let apiClient: CompassAPIClient
     private let emailPassword: AuthEmailPasswordClient
-    private let userAPI: UserAPI
     private let configStore: ConfigStore
     private let analyticsIdentity: AnalyticsIdentityCoordinator
-    private let usesFixtureTransport: Bool
 
     public init(
         apiClient: CompassAPIClient,
         configStore: ConfigStore,
-        analyticsIdentity: AnalyticsIdentityCoordinator,
-        usesFixtureTransport: Bool
+        analyticsIdentity: AnalyticsIdentityCoordinator
     ) {
         self.apiClient = apiClient
         emailPassword = AuthEmailPasswordClient(client: apiClient)
-        userAPI = UserAPI(client: apiClient)
         self.configStore = configStore
         self.analyticsIdentity = analyticsIdentity
-        self.usesFixtureTransport = usesFixtureTransport
     }
 
     public func bootstrap(forceDemoSignedIn: Bool) async {
@@ -289,7 +284,7 @@ public final class AuthStore {
     private func identifyAnalyticsUser() async {
         guard authenticated else { return }
         do {
-            let profile = try await userAPI.profile()
+            let profile = try await apiClient.user.profile()
             await analyticsIdentity.identify(userId: profile.userId)
             await analyticsIdentity.trackLoginCompleted()
         } catch {}

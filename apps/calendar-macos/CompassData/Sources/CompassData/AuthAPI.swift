@@ -10,10 +10,6 @@ public struct AuthFormField: Encodable, Sendable {
     }
 }
 
-private struct AuthFormBody: Encodable, Sendable {
-    let formFields: [AuthFormField]
-}
-
 public struct SignInUpRequest: Encodable, Sendable {
     public let thirdPartyId: String
     public let clientType: String
@@ -50,21 +46,6 @@ public struct AuthAPI: Sendable {
         self.client = client
     }
 
-    public func signUp(name: String, email: String, password: String) async throws {
-        try await postAuthForm(path: "signup", fields: [
-            AuthFormField(id: "name", value: name),
-            AuthFormField(id: "email", value: email),
-            AuthFormField(id: "password", value: password),
-        ])
-    }
-
-    public func signIn(email: String, password: String) async throws {
-        try await postAuthForm(path: "signin", fields: [
-            AuthFormField(id: "email", value: email),
-            AuthFormField(id: "password", value: password),
-        ])
-    }
-
     public func signInUp(_ request: SignInUpRequest) async throws {
         let payload = try await client.sendRaw(
             method: "POST",
@@ -77,7 +58,7 @@ public struct AuthAPI: Sendable {
         guard (200 ..< 300).contains(payload.statusCode) else {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
-        try await storeSession(from: payload)
+        try await client.storeSession(from: payload)
     }
 
     public func refresh() async throws {
@@ -100,49 +81,5 @@ public struct AuthAPI: Sendable {
             throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
         }
         try await client.signOutLocally()
-    }
-
-    public func forgotPassword(email: String) async throws {
-        try await postAuthForm(path: "user/password/reset/token", fields: [
-            AuthFormField(id: "email", value: email),
-        ])
-    }
-
-    public func resetPassword(token: String, password: String) async throws {
-        try await postAuthForm(path: "user/password/reset", fields: [
-            AuthFormField(id: "password", value: password),
-            AuthFormField(id: "token", value: token),
-        ])
-    }
-
-    private func postAuthForm(path: String, fields: [AuthFormField]) async throws {
-        let body = AuthFormBody(formFields: fields)
-        let payload = try await client.sendRaw(
-            method: "POST",
-            path: path,
-            bodyData: try JSONEncoder().encode(body),
-            auth: .headerSession,
-            allowRefresh: false
-        )
-        guard (200 ..< 300).contains(payload.statusCode) else {
-            throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
-        }
-        if path == "signup" || path == "signin" {
-            try await storeSession(from: payload)
-        }
-    }
-
-    private func storeSession(from payload: HTTPResponsePayload) async throws {
-        var headers = [String: String]()
-        for (key, value) in payload.headers {
-            headers[key] = value
-        }
-        let response = HTTPURLResponse(
-            url: URL(string: "https://compasscalendar.com")!,
-            statusCode: payload.statusCode,
-            httpVersion: nil,
-            headerFields: headers
-        )!
-        try await client.storeSessionHeaders(from: response)
     }
 }

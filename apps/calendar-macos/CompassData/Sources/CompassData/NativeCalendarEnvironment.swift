@@ -10,8 +10,8 @@ public struct NativeCalendarEnvironment: Sendable {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let levelsStore: LevelsStore
+    public let shortcutRegistry: ShortcutRegistry
     public let analyticsIdentity: AnalyticsIdentityCoordinator
-    public let usesFixtureTransport: Bool
 
     @MainActor
     public init(
@@ -36,10 +36,8 @@ public struct NativeCalendarEnvironment: Sendable {
         let urlSession: URLSession
         if let fixture {
             urlSession = FixtureTransport.install(.demo(fixture))
-            usesFixtureTransport = true
         } else {
             urlSession = .shared
-            usesFixtureTransport = false
         }
         let database = try AppDatabase.inMemory()
         let eventRepository = EventRepository(database: database)
@@ -65,11 +63,10 @@ public struct NativeCalendarEnvironment: Sendable {
         authStore = AuthStore(
             apiClient: apiClient,
             configStore: configStore,
-            analyticsIdentity: analyticsIdentity,
-            usesFixtureTransport: fixture != nil
+            analyticsIdentity: analyticsIdentity
         )
-        let registry = try ShortcutRegistry()
-        levelsStore = LevelsStore(registry: registry, analytics: analytics)
+        shortcutRegistry = try ShortcutRegistry()
+        levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)
         self.analyticsIdentity = analyticsIdentity
     }
 }

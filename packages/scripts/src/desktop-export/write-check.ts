@@ -24,13 +24,14 @@ export function assertGeneratedFilesMatch(
   files: GeneratedFile[],
   label: string,
 ): void {
+  const tempPrefix = `${label.replaceAll(/[:/]/g, "-")}-`;
   for (const file of files) {
     const existing = readFileSync(file.path, "utf8");
     if (existing === file.contents) {
       continue;
     }
 
-    const tempDir = mkdtempSync(join(tmpdir(), "desktop-export-"));
+    const tempDir = mkdtempSync(join(tmpdir(), tempPrefix));
     const tempFile = join(tempDir, file.path.split("/").pop() ?? "output");
     writeFileSync(tempFile, file.contents, "utf8");
     let firstDiff = "";
@@ -42,7 +43,7 @@ export function assertGeneratedFilesMatch(
       }
     }
     console.error(
-      `${label} drift: regenerate with \`bun cli desktop:export\` (${firstDiff}; temp at ${tempFile})`,
+      `${label} drift: regenerate with \`bun cli ${label}\` (${firstDiff}; temp at ${tempFile})`,
     );
     if (process.env["CI"] !== "true") {
       rmSync(tempDir, { recursive: true, force: true });
