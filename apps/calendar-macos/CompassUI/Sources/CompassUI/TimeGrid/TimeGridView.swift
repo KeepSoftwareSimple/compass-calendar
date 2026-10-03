@@ -3,7 +3,7 @@ import CompassKit
 
 @MainActor
 public protocol TimeGridViewDelegate: AnyObject {
-    func timeGridViewDidRequestShortcutHint(_ view: TimeGridView)
+    func timeGridViewDidRequestShortcutHint(_ view: TimeGridView, at locationInWindow: NSPoint)
     func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
 }
 
@@ -64,26 +64,17 @@ public final class TimeGridView: NSView {
             card.mouseDown(with: event)
             return
         }
-        delegate?.timeGridViewDidRequestShortcutHint(self)
+        delegate?.timeGridViewDidRequestShortcutHint(self, at: event.locationInWindow)
     }
 
     private func pointInDocumentView(_ locationInWindow: NSPoint) -> NSPoint {
-        let pointInScrollView = scrollView.convert(locationInWindow, from: nil)
-        return documentView.convert(pointInScrollView, from: scrollView)
+        let pointInContentView = scrollView.contentView.convert(locationInWindow, from: nil)
+        return documentView.convert(pointInContentView, from: scrollView.contentView)
     }
 
     func eventCardView(at locationInWindow: NSPoint) -> EventCardView? {
-        let documentPoint = pointInDocumentView(locationInWindow)
-        var smallestHit: (view: EventCardView, area: Double)?
-        for view in cardPool.values {
-            guard view.containsPointInDocument(documentPoint, documentView: documentView) else { continue }
-            let area = Double(view.layoutRectInParent.width * view.layoutRectInParent.height)
-            if smallestHit == nil || area < smallestHit!.area {
-                smallestHit = (view: view, area: area)
-            }
-        }
-        if let smallestHit {
-            return smallestHit.view
+        if let hit = eventCardViewMatchingDocumentPoint(pointInDocumentView(locationInWindow)) {
+            return hit
         }
 
         for view in cardPool.values {
@@ -98,6 +89,58 @@ public final class TimeGridView: NSView {
             }
         }
         return nil
+    }
+
+    func nearestEventCard(at locationInWindow: NSPoint, maxDistance: Double) -> EventCardView? {
+        let documentPoint = pointInDocumentView(locationInWindow)
+        var nearest: (view: EventCardView, distance: Double)?
+        for view in cardPool.values {
+            guard view.layoutRectInParent.width > 0.5, view.layoutRectInParent.height > 0.5,
+                let superview = view.superview
+            else { continue }
+            let rectInDocument = superview.convert(view.layoutRectInParent, to: documentView)
+            let distance = Self.distance(from: documentPoint, to: rectInDocument)
+            guard distance <= maxDistance else { continue }
+            if nearest == nil || distance < nearest!.distance {
+                nearest = (view, distance)
+            }
+        }
+        return nearest?.view
+    }
+
+    private func eventCardViewMatchingDocumentPoint(_ documentPoint: NSPoint) -> EventCardView? {
+        var smallestHit: (view: EventCardView, area: Double)?
+        for view in cardPool.values {
+            guard view.containsPointInDocument(documentPoint, documentView: documentView) else { continue }
+            let area = Double(view.layoutRectInParent.width * view.layoutRectInParent.height)
+            if smallestHit == nil || area < smallestHit!.area {
+                smallestHit = (view: view, area: area)
+            }
+        }
+        return smallestHit?.view
+    }
+
+    private static func distance(from point: NSPoint, to rect: NSRect) -> Double {
+        if rect.contains(point) {
+            return 0
+        }
+        let dx: Double
+        if point.x < rect.minX {
+            dx = rect.minX - point.x
+        } else if point.x > rect.maxX {
+            dx = point.x - rect.maxX
+        } else {
+            dx = 0
+        }
+        let dy: Double
+        if point.y < rect.minY {
+            dy = rect.minY - point.y
+        } else if point.y > rect.maxY {
+            dy = point.y - rect.maxY
+        } else {
+            dy = 0
+        }
+        return hypot(dx, dy)
     }
 
     public override func accessibilityChildren() -> [Any]? {
@@ -471,9 +514,12 @@ private final class GridScrollView: NSScrollView {
     weak var timeGridView: TimeGridView?
 
     override func mouseDown(with event: NSEvent) {
-        if let grid = timeGridView, let card = grid.eventCardView(at: event.locationInWindow) {
-            card.mouseDown(with: event)
-            return
+        if let grid = timeGridView {
+            if let card = grid.eventCardView(at: event.locationInWindow) {
+                card.mouseDown(with: event)
+                return
+            }
+            grid.delegate?.timeGridViewDidRequestShortcutHint(grid, at: event.locationInWindow)
         }
         super.mouseDown(with: event)
     }

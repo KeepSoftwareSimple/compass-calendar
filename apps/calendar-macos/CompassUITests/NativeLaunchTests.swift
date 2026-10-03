@@ -80,6 +80,8 @@ final class NativeLaunchTests: XCTestCase {
 
         waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
+        app.activate()
+        window.click()
         window.typeKey(.downArrow, modifierFlags: [])
         waitForFocusedGridEvent(title: "Try Compass", in: window, timeout: 10)
     }

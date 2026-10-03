@@ -33,7 +33,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
         model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
-            let window = self?.view.window ?? NSApp.keyWindow ?? NSApp.mainWindow
+            let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
             if let window {
                 GridFocusAccessibilityProbe.attach(to: window)
             }
@@ -56,6 +56,15 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                 model.gridFocusAccessibilityLabel,
                 on: window
             )
+        }
+    }
+
+    private static func compassHostWindow(hostingView: NSView?) -> NSWindow? {
+        if let hostingView, let window = hostingView.window {
+            return window
+        }
+        return NSApp.windows.first { window in
+            window.accessibilityIdentifier() as? String == "Compass"
         }
     }
 

@@ -45,7 +45,14 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             super.init()
         }
 
-        public func timeGridViewDidRequestShortcutHint(_ view: TimeGridView) {
+        public func timeGridViewDidRequestShortcutHint(
+            _ view: TimeGridView,
+            at locationInWindow: NSPoint
+        ) {
+            if let card = view.nearestEventCard(at: locationInWindow, maxDistance: 160) {
+                timeGridView(view, didClickEvent: card.eventId)
+                return
+            }
             model.handleGridPointerDown(registry: model.shortcutRegistry)
         }
 

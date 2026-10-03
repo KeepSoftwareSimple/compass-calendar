@@ -20,6 +20,10 @@ public struct RootView: View {
                 }
             }
             pointerHintLayer
+            GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(.top, 52)
+                .padding(.leading, 268)
         }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
@@ -172,7 +176,6 @@ public struct RootView: View {
                 gridYOffset: gridChipYOffset,
                 visible: !model.timeGridState.eventJumpHints.isEmpty
             )
-            GridFocusAccessibilityOverlay(focusedLabel: model.gridFocusAccessibilityLabel)
         }
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-content")
