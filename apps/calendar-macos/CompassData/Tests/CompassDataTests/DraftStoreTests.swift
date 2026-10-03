@@ -13,10 +13,11 @@ final class DraftStoreTests: XCTestCase {
         let store = DraftStore()
         let start = try parseISO("2026-01-01T10:00:00.000Z")
         let end = try parseISO("2026-01-01T11:00:00.000Z")
-        store.startGridDraft(
-            activity: .keyboardPlace,
+        let draft = GridEventDraft(
+            clientId: EventId(rawValue: "draft1234567890123456789012"),
             schedule: DraftSchedule(start: start, end: end, kind: .timed)
         )
+        store.startGridDraft(activity: .keyboardPlace, draft: draft)
 
         let moved = store.nudgeByKeyboard(key: "ArrowRight")
         XCTAssertNotNil(moved)
@@ -24,6 +25,21 @@ final class DraftStoreTests: XCTestCase {
             formatISO8601UTC(moved!.start),
             "2026-01-02T10:00:00.000Z"
         )
+    }
+
+    func testSetTitleUpdatesGridDraft() {
+        let store = DraftStore()
+        let draft = GridEventDraft(
+            clientId: EventId(rawValue: "draft1234567890123456789012"),
+            schedule: DraftSchedule(
+                start: Date(),
+                end: Date().addingTimeInterval(3600),
+                kind: .timed
+            )
+        )
+        store.startGridDraft(activity: .keyboardPlace, draft: draft)
+        store.setTitle("Standup")
+        XCTAssertEqual(store.gridDraft?.title, "Standup")
     }
 
     private func parseISO(_ value: String) throws -> Date {
