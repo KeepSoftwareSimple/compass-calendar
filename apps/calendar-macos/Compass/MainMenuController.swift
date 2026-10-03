@@ -136,6 +136,10 @@ final class MainMenuController: NSObject {
     }
 
     @objc private func openHelp(_ sender: Any?) {
+        if nativeUIState.isNativeUIEnabled, let nativeRootController {
+            nativeRootController.model.openShortcutsCatalogWindow()
+            return
+        }
         webViewController?.dispatchShortcut(.otherShortcuts)
     }
 
@@ -156,6 +160,10 @@ final class MainMenuController: NSObject {
     }
 
     @objc private func openCommandPalette(_ sender: Any?) {
+        if nativeUIState.isNativeUIEnabled, let nativeRootController {
+            nativeRootController.model.toggleCommandPalette()
+            return
+        }
         webViewController?.dispatchShortcut(.otherPalette)
     }
 

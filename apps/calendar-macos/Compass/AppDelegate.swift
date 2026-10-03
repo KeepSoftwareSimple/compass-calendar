@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
     private var webViewController: WebViewController?
     private var nativeRootController: NativeRootController?
+    private var shortcutsCatalogController: ShortcutsCatalogWindowController?
     /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
     private var quickAddCoordinator: DesktopQuickAddCoordinator?
@@ -115,10 +116,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
             let presenter = WebAuthSessionPresenter()
-            guard let model = try? NativeRootFactory.makeModel(webAuthPresenter: presenter) else {
+            let catalog = shortcutsCatalogController ?? ShortcutsCatalogWindowController()
+            shortcutsCatalogController = catalog
+            guard let model = try? NativeRootFactory.makeModel(
+                webAuthPresenter: presenter,
+                catalogController: catalog
+            ) else {
                 return
             }
-            let nativeController = NativeRootController(webTheme: theme, model: model)
+            let nativeController = NativeRootController(
+                webTheme: theme,
+                model: model,
+                catalogController: catalog)
             nativeRootController = nativeController
             window.contentViewController = nativeController
             CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
