@@ -1,4 +1,4 @@
-import { REGISTRY_RUNTIME_KEY_SOURCES } from "@web/shortcuts/app-shortcut-bindings";
+import { REGISTRY_RUNTIME_KEY_SOURCES } from "@core/shortcuts/app-shortcut-bindings";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
 
 /** Example digits row in the legend; slot hints use the real timeKey in copy. */

@@ -7,9 +7,9 @@ import {
 } from "@floating-ui/react";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { EDIT_SEQUENCE_LETTER_FIELDS } from "@core/shortcuts/edit-sequence.fields";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { EDIT_SEQUENCE_LETTER_FIELDS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import {
   selectEditSequenceMenuVisible,
   useEditSequenceStore,

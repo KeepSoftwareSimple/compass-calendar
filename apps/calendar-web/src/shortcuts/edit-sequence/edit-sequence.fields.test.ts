@@ -1,8 +1,8 @@
-import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 import {
   EDIT_SEQUENCE_FIELDS,
   FORM_FIELD_DIGITS,
-} from "@web/shortcuts/edit-sequence/edit-sequence.fields";
+} from "@core/shortcuts/edit-sequence.fields";
+import { PICK_KEY_LABELS } from "@web/shortcuts/digit-pick.util";
 import { describe, expect, it } from "bun:test";
 
 describe("edit-sequence.fields", () => {

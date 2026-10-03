@@ -1,8 +1,8 @@
 import { renderHook } from "@testing-library/react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { usePaletteLegendCmdItems } from "@web/components/CommandPalette/hooks/usePaletteLegendCmdItems";
 import { upNextAvailabilityActions } from "@web/components/Sidebar/UpNextCard/up-next.availability.store";
 import { useViewStore } from "@web/events/stores/view.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { describe, expect, it, mock } from "bun:test";
 
 const itemsById = () => {

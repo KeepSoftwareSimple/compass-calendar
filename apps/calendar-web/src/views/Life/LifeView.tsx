@@ -1,5 +1,6 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { useIsTrialing } from "@web/billing/useIsTrialing";
 import { ROOT_ROUTES, ROUTE_IDS } from "@web/common/constants/routes";
 import { ID_MAIN } from "@web/common/constants/web.constants";
@@ -16,7 +17,6 @@ import {
   selectIsSidebarOpen,
   useViewStore,
 } from "@web/events/stores/view.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
   LIFE_PAGE_JUMP_TARGETS,

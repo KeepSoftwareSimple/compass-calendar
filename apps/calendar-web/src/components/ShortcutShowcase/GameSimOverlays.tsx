@@ -1,7 +1,7 @@
 import { type FC } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { type GameSimOverlay } from "@web/components/ShortcutShowcase/game.state";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { KEYMAP } from "@web/shortcuts/keymap";
 
 const LEGEND_ROWS: readonly { label: string; keys: readonly string[] }[] = [
   { label: "Create event", keys: KEYMAP.createEvent.keycaps },

@@ -1,6 +1,6 @@
+import { HIDE_EVENT_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import { getFocusedCalendarEvent } from "@web/common/utils/event/event.util";
 import { useToggleEventHidden } from "@web/events/hidden/hidden-events.query";
-import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
 import { useBareLetterShortcut } from "@web/shortcuts/useBareLetterShortcut";
 
 /**

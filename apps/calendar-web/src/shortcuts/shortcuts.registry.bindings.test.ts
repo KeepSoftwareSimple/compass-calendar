@@ -1,8 +1,8 @@
 import {
   editSequenceRegistryKeys,
   REGISTRY_RUNTIME_KEY_SOURCES,
-} from "@web/shortcuts/app-shortcut-bindings";
-import { EDIT_SEQUENCE_LETTER_FIELDS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
+} from "@core/shortcuts/app-shortcut-bindings";
+import { EDIT_SEQUENCE_LETTER_FIELDS } from "@core/shortcuts/edit-sequence.fields";
 import { SHORTCUTS_REGISTRY } from "@web/shortcuts/shortcuts.registry";
 
 /** Display-only rows: gestures without a single runtime hotkey string. */

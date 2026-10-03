@@ -2,6 +2,7 @@ import { CalendarCheckIcon } from "@phosphor-icons/react/dist/csr/CalendarCheck"
 import { ChatsIcon } from "@phosphor-icons/react/dist/csr/Chats";
 import { GearIcon } from "@phosphor-icons/react/dist/csr/Gear";
 import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { isPosthogEnabled } from "@web/auth/posthog/posthog.util";
 import {
   type CommandItem,
@@ -10,7 +11,6 @@ import {
 import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { feedbackActions } from "@web/components/Feedback/feedback.store";
 import { settingsActions } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { type ViewName } from "@web/shortcuts/shortcuts.constants";
 
 export const PERSONAL_ONBOARDING_URL =

@@ -1,3 +1,4 @@
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import {
   COMMAND_PALETTE_PLACEHOLDER,
   getMoreCommandPaletteSections,
@@ -16,7 +17,6 @@ import {
   selectSettingsPage,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 describe("getMoreCommandPaletteSections", () => {

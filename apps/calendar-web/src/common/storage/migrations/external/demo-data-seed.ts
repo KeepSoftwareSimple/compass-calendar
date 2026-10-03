@@ -1,3 +1,4 @@
+import { KEYMAP } from "@core/shortcuts/keymap";
 import {
   type CalendarId,
   DateTimeSchema,
@@ -19,7 +20,6 @@ import { getLocalCalendarSentinelId } from "@web/calendars/local-calendar.sentin
 import { getBrowserTimeZone } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import { type LocalEventRecord } from "@web/events/types/local-event.record";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import { VIEW_SHORTCUTS } from "@web/shortcuts/shortcuts.constants";
 import { type OfflineDataStore } from "../../offline-data/offline-data.store";
 import { type ExternalMigration } from "../migration.types";

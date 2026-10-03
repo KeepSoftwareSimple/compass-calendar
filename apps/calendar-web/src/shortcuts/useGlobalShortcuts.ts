@@ -1,6 +1,8 @@
 import { type RegisterableHotkey } from "@tanstack/react-hotkeys";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useRef } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { isOverlayEscapeArmed } from "@web/components/OverlayPanel/overlay-escape";
 import { useWelcomeGuideStore } from "@web/components/WelcomeModal/welcome.guide.store";
 import { viewActions } from "@web/events/stores/view.store";
@@ -9,8 +11,6 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   LIFE_SHORTCUT,
   VIEW_SHORTCUTS,

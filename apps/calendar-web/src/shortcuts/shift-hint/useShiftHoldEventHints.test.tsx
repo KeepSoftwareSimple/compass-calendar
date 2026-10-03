@@ -1,4 +1,5 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { EventIdSchema } from "@core/types/domain-primitives";
 import dayjs from "@core/util/date/dayjs";
 import { dispatchMissingKey } from "@web/__tests__/utils/keyboard.test.util";
@@ -6,7 +7,6 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { WEEK_INTERACTION_EVENT_ID_ATTRIBUTE } from "@web/grid/interaction/view-event-registry";
 import { clearAppLockReasons, setAppLockReason } from "@web/shortcuts/app-lock";
 import { requestPointerEventJump } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   eventJumpActions,
   useEventJumpStore,

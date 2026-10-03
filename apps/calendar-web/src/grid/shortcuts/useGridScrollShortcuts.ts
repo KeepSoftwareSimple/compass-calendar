@@ -1,8 +1,8 @@
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import {
   scrollTimedGrid,
   type TimedGridScrollUnit,
 } from "@web/grid/shortcuts/scroll-timed-grid";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 const scrollGridFromShortcut = (

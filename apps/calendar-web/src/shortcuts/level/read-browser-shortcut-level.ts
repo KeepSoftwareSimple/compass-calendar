@@ -1,7 +1,7 @@
 import {
   EXPLORER_LEVEL,
   levelForUsedCount,
-} from "@web/shortcuts/level/shortcut-level";
+} from "@core/shortcuts/shortcut-level";
 import {
   readShortcutUsageProfile,
   type ShortcutUsageProfile,

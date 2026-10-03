@@ -1,4 +1,5 @@
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
+import { type Shortcut } from "@core/shortcuts/shortcut.types";
 import {
   SHORTCUT_PRO_TOOLTIP,
   ShortcutProBadge,
@@ -10,7 +11,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@web/components/Tooltip/Tooltip";
-import { type Shortcut } from "@web/shortcuts/global.shortcut.types";
 
 const ROW_CLASSNAME =
   "flex min-h-9 items-center justify-between gap-4 rounded-default py-1.5 text-[13px] text-text leading-tight";
