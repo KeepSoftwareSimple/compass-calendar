@@ -1,7 +1,7 @@
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 import { CalendarIdSchema } from "@core/types/domain-primitives";
 import dayjs from "@core/util/date/dayjs";
 import { generateDemoData } from "@web/common/storage/migrations/external/demo-data-seed";
-import { ensureDesktopExportEnv } from "@web/desktop/export-fixtures/ensure-export-env";
 import { setPinnedTimeZone } from "@web/timezone/effective-timezone.store";
 
 export const DEMO_SEED_REFERENCE_NOW = "2026-06-10T15:00:00.000Z";

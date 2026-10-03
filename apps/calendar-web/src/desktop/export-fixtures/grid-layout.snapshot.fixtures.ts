@@ -1,3 +1,4 @@
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 import {
   type Calendar,
   getCalendarCapabilities,
@@ -10,7 +11,6 @@ import {
   resolveCalendarFocusColor,
 } from "@web/calendars/useCalendarLookup";
 import { assignEventsToRow } from "@web/common/utils/grid/assign.row";
-import { ensureDesktopExportEnv } from "@web/desktop/export-fixtures/ensure-export-env";
 import {
   EVENT_ALLDAY_GAP,
   EVENT_ALLDAY_ROW_HEIGHT,
