@@ -1,5 +1,4 @@
 import AppKit
-import CompassData
 import CompassKit
 
 @MainActor
@@ -476,10 +475,6 @@ private final class GridScrollView: NSScrollView {
 
     override func mouseDown(with event: NSEvent) {
         if let grid = timeGridView {
-            if let eventId = UITestLaunchPolicy.gridClickFocusEventId {
-                grid.delegate?.timeGridView(grid, didClickEvent: eventId)
-                return
-            }
             if let card = grid.eventCardView(at: event.locationInWindow) {
                 card.mouseDown(with: event)
                 return

@@ -43,6 +43,7 @@ public final class NativeCalendarRootModel {
     private var focusLayoutCards: [FocusLayoutCard] = []
     private var eventJumpHintLabels: [EventJumpChipHint] = []
     private var didApplyDemoFixtureScroll = false
+    private var didApplyInitialUIFocus = false
 
     public var referenceNow: Date {
         demoSeed?.referenceNow ?? Date()
@@ -586,6 +587,18 @@ public final class NativeCalendarRootModel {
             }
             didApplyDemoFixtureScroll = true
         }
+        applyInitialUIFocusIfNeeded()
+    }
+
+    private func applyInitialUIFocusIfNeeded() {
+        guard !didApplyInitialUIFocus,
+            let eventId = UITestLaunchPolicy.initialGridFocusEventId,
+            !loadedEvents.isEmpty,
+            focusLayoutCards.contains(where: { $0.eventId == eventId })
+        else { return }
+        didApplyInitialUIFocus = true
+        focusGridEvent(eventId: eventId)
+        publishGridFocusAccessibilityProbe(eventId: eventId)
     }
 
     private func syncFocusRegistry(from scenario: GridLayoutScenario) {
