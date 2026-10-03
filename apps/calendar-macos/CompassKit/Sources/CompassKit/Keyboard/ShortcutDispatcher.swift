@@ -4,17 +4,20 @@ public struct ShortcutHandler: Sendable {
     public let id: ShortcutId
     public let scope: ShortcutScope
     public let chords: [KeyChord]
+    public let when: ShortcutContextWhen?
     public let handler: @Sendable (ShortcutId) -> Void
 
     public init(
         id: ShortcutId,
         scope: ShortcutScope,
         chords: [KeyChord],
+        when: ShortcutContextWhen? = nil,
         handler: @escaping @Sendable (ShortcutId) -> Void
     ) {
         self.id = id
         self.scope = scope
         self.chords = chords
+        self.when = when
         self.handler = handler
     }
 }
@@ -26,6 +29,7 @@ public final class ShortcutDispatcher: @unchecked Sendable {
 
     public let registry: ShortcutRegistry
     public let leaderEngine: LeaderSequenceEngine
+    public var shortcutContext: ShortcutContext = ShortcutContext()
 
     private var handlers: [ShortcutHandler] = []
     private var dispatched: [ShortcutId] = []
@@ -97,6 +101,16 @@ public final class ShortcutDispatcher: @unchecked Sendable {
             .sorted { $0.scope > $1.scope }
 
         for candidate in candidates {
+            guard ShortcutWhen.matches(candidate.when, context: shortcutContext) else { continue }
+            if shortcutContext.lifeView {
+                if candidate.id == .navPrevious || candidate.id == .navNext || candidate.id == .navToday {
+                    continue
+                }
+            } else if candidate.id == .navLifePrev || candidate.id == .navLifeNext
+                || candidate.id == .navLifeCurrent
+            {
+                continue
+            }
             if candidate.chords.contains(where: { event.matches($0) }) {
                 candidate.handler(candidate.id)
                 dispatched.append(candidate.id)

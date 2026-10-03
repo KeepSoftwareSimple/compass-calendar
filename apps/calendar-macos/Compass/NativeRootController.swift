@@ -101,7 +101,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     private func configureKeyboard() {
         let calendarModel = model
         let registry = calendarModel.shortcutRegistry
-        let navigationIds: Set<ShortcutId> = [
+        let gridNavigationIds: Set<ShortcutId> = [
             .navPrevious,
             .navNext,
             .navToday,
@@ -109,6 +109,10 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             .navShiftRight,
             .navDayView,
             .navWeekView,
+            .navLifeView,
+            .navLifePrev,
+            .navLifeNext,
+            .navLifeCurrent,
             .navMonthPrev,
             .navMonthNext,
             .navUpNext,
@@ -116,11 +120,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             .otherSettings,
         ]
         let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
-            guard navigationIds.contains(entry.id) else { return nil }
+            guard gridNavigationIds.contains(entry.id) else { return nil }
             return ShortcutHandler(
                 id: entry.id,
                 scope: .grid,
                 chords: entry.bindingChords,
+                when: entry.when,
                 handler: { id in
                     Task { @MainActor in
                         switch id {
@@ -142,7 +147,10 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             handlers: handlers,
             leaderEngine: leader)
         shortcutDispatcher = dispatcher
-        keyboardMonitor = NativeKeyboardMonitor(dispatcher: dispatcher)
+        keyboardMonitor = NativeKeyboardMonitor(
+            dispatcher: dispatcher,
+            contextProvider: { calendarModel.shortcutContext },
+            viewSwitchIds: [.navDayView, .navWeekView, .navLifeView])
         keyboardMonitor?.start()
     }
 
