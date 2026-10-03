@@ -21,17 +21,6 @@ public struct RootView: View {
             }
             pointerHintLayer
         }
-        .overlay {
-            if let label = model.gridFocusAccessibilityLabel {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityElement()
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("compass-grid-event-focused")
-                    .accessibilityLabel(label)
-                    .allowsHitTesting(false)
-            }
-        }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
         .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in
@@ -169,13 +158,39 @@ public struct RootView: View {
 
     @ViewBuilder
     private var pointerHintLayer: some View {
-        // Only mount the hint while visible. A full-screen VStack + Spacer here
-        // intercepts XCUITest coordinate clicks before they reach the AppKit grid.
-        if model.pointerHintStore.isVisible {
-            PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
-                .padding(.top, 16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        let showPointerHint = model.pointerHintStore.isVisible
+        let focusProbeLabel = gridFocusProbeLabel
+        if focusProbeLabel != nil || showPointerHint {
+            VStack(alignment: .leading, spacing: 8) {
+                if let label = focusProbeLabel {
+                    HStack {
+                        Text(label)
+                            .font(.custom("Rubik", size: 14, relativeTo: .body))
+                            .foregroundStyle(theme.textColor)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: 520, alignment: .leading)
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityIdentifier("compass-grid-event-focused")
+                    .accessibilityLabel(label)
+                    .allowsHitTesting(false)
+                }
+                if showPointerHint {
+                    PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
+                }
+            }
+            .padding(.top, 16)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .allowsHitTesting(showPointerHint)
+            .id(model.timeGridState.focusedEventId ?? "grid-focus-probe-hidden")
         }
+    }
+
+    private var gridFocusProbeLabel: String? {
+        guard model.timeGridState.focusedEventId != nil else { return nil }
+        return model.gridFocusAccessibilityLabel
     }
 
     @ViewBuilder
