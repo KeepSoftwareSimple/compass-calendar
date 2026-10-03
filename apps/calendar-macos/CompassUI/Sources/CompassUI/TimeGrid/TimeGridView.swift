@@ -5,6 +5,7 @@ import CompassKit
 public protocol TimeGridViewDelegate: AnyObject {
     func timeGridViewDidRequestShortcutHint(_ view: TimeGridView, at locationInWindow: NSPoint)
     func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
+    func timeGridView(_ view: TimeGridView, didEditDraftTitle title: String, eventId: String)
 }
 
 @MainActor
@@ -440,6 +441,10 @@ public final class TimeGridView: NSView {
 extension TimeGridView: EventCardViewDelegate {
     func eventCardViewDidClick(_ view: EventCardView, eventId: String) {
         delegate?.timeGridView(self, didClickEvent: eventId)
+    }
+
+    func eventCardView(_ view: EventCardView, didEditDraftTitle title: String, eventId: String) {
+        delegate?.timeGridView(self, didEditDraftTitle: title, eventId: eventId)
     }
 }
 
