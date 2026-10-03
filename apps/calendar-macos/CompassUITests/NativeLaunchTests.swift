@@ -60,12 +60,12 @@ final class NativeLaunchTests: XCTestCase {
             window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
             "Expected event-card pointer hint after clicking the demo standup card")
 
-        let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
+        let focused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
         XCTAssertEqual(focused.label, "Morning standup")
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompassFocused = app.descendants(matching: .any)["compass-grid-event-focused"]
+        let tryCompassFocused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
         XCTAssertEqual(tryCompassFocused.label, "Try Compass")
     }

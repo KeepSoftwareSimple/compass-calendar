@@ -9,18 +9,6 @@ struct PointerHintView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if let focusedEventLabel = store.focusedGridEventLabel {
-                Text(focusedEventLabel)
-                    .font(.custom("Rubik", size: 14, relativeTo: .body))
-                    .foregroundStyle(theme.textColor)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: 520, alignment: .leading)
-                    .accessibilityElement()
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("compass-grid-event-focused")
-                    .accessibilityLabel(focusedEventLabel)
-            }
             if store.isVisible, let attempt = store.attempt {
                 HStack(alignment: .top, spacing: 8) {
                     Text(attributedMessage(attempt))

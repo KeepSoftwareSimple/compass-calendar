@@ -240,10 +240,14 @@ public final class NativeCalendarRootModel {
         registry: ShortcutRegistry,
         focusedGridEventLabel: String? = nil
     ) {
+        var resolvedFocusLabel = focusedGridEventLabel
+        if target == .eventCard, resolvedFocusLabel == nil {
+            resolvedFocusLabel = gridFocusAccessibilityLabel ?? focusedGridEventAccessibilityLabel()
+        }
         pointerHintStore.pulse(
             target: target,
             registry: registry,
-            focusedGridEventLabel: focusedGridEventLabel
+            focusedGridEventLabel: resolvedFocusLabel
         )
     }
 
@@ -364,7 +368,7 @@ public final class NativeCalendarRootModel {
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
             cards.first(where: { $0.eventId == focusedId.rawValue })?.label
         }
-        if pointerHintStore.isVisible, pointerHintStore.focusedGridEventLabel != nil {
+        if pointerHintStore.isVisible {
             pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
         }
         onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
