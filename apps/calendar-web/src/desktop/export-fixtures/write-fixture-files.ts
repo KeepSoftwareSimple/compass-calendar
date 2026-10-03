@@ -1,3 +1,4 @@
+import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-files";
 import { emitDemoSeedFixturesJson } from "@web/desktop/export-fixtures/demo-seed.fixtures";
 import { emitGoToDateFixturesJson } from "@web/desktop/export-fixtures/go-to-date.fixtures";
 import { emitGridLayoutSnapshotFixturesJson } from "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures";
@@ -13,13 +14,20 @@ const outputDir =
     "apps/calendar-macos/CompassKit/Sources/CompassKit/Resources/Fixtures",
   );
 
-const files: Record<string, string> = {
-  "timed-deck.vectors.json": emitTimedDeckFixturesJson(),
-  "nudge.vectors.json": emitNudgeFixturesJson(),
-  "go-to-date.vectors.json": emitGoToDateFixturesJson(),
-  "demo-seed.json": emitDemoSeedFixturesJson(),
-  "grid-layout.snapshots.json": emitGridLayoutSnapshotFixturesJson(),
+const emitters: Record<
+  (typeof DESKTOP_WEB_FIXTURE_FILES)[number],
+  () => string
+> = {
+  "timed-deck.vectors.json": emitTimedDeckFixturesJson,
+  "nudge.vectors.json": emitNudgeFixturesJson,
+  "go-to-date.vectors.json": emitGoToDateFixturesJson,
+  "demo-seed.json": emitDemoSeedFixturesJson,
+  "grid-layout.snapshots.json": emitGridLayoutSnapshotFixturesJson,
 };
+
+const files: Record<string, string> = Object.fromEntries(
+  DESKTOP_WEB_FIXTURE_FILES.map((name) => [name, emitters[name]()]),
+);
 
 mkdirSync(outputDir, { recursive: true });
 for (const [name, contents] of Object.entries(files)) {

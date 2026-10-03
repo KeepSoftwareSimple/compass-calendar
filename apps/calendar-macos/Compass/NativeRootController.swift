@@ -100,53 +100,49 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
     private func configureKeyboard() {
         let calendarModel = model
-        do {
-            let registry = try ShortcutRegistry()
-            let navigationIds: Set<ShortcutId> = [
-                .navPrevious,
-                .navNext,
-                .navToday,
-                .navShiftLeft,
-                .navShiftRight,
-                .navDayView,
-                .navWeekView,
-                .navMonthPrev,
-                .navMonthNext,
-                .navUpNext,
-                .navJoinMeeting,
-            ]
-            let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
-                guard navigationIds.contains(entry.id) else { return nil }
-                return ShortcutHandler(
-                    id: entry.id,
-                    scope: .grid,
-                    chords: entry.bindingChords,
-                    handler: { id in
-                        Task { @MainActor in
-                            switch id {
-                            case .navUpNext:
-                                calendarModel.openUpNextEvent()
-                            case .navJoinMeeting:
-                                calendarModel.joinUpNextMeeting()
-                            default:
-                                calendarModel.handleShortcut(id)
-                            }
+        let registry = calendarModel.shortcutRegistry
+        let navigationIds: Set<ShortcutId> = [
+            .navPrevious,
+            .navNext,
+            .navToday,
+            .navShiftLeft,
+            .navShiftRight,
+            .navDayView,
+            .navWeekView,
+            .navMonthPrev,
+            .navMonthNext,
+            .navUpNext,
+            .navJoinMeeting,
+        ]
+        let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
+            guard navigationIds.contains(entry.id) else { return nil }
+            return ShortcutHandler(
+                id: entry.id,
+                scope: .grid,
+                chords: entry.bindingChords,
+                handler: { id in
+                    Task { @MainActor in
+                        switch id {
+                        case .navUpNext:
+                            calendarModel.openUpNextEvent()
+                        case .navJoinMeeting:
+                            calendarModel.joinUpNextMeeting()
+                        default:
+                            calendarModel.handleShortcut(id)
                         }
-                    })
-            }
-            let leader = LeaderSequenceEngine(
-                leaderKey: registry.editSequenceLeader,
-                fieldRows: registry.editSequenceFields)
-            let dispatcher = ShortcutDispatcher(
-                registry: registry,
-                handlers: handlers,
-                leaderEngine: leader)
-            shortcutDispatcher = dispatcher
-            keyboardMonitor = NativeKeyboardMonitor(dispatcher: dispatcher)
-            keyboardMonitor?.start()
-        } catch {
-            // Native grid remains usable via header buttons if shortcuts fail to load.
+                    }
+                })
         }
+        let leader = LeaderSequenceEngine(
+            leaderKey: registry.editSequenceLeader,
+            fieldRows: registry.editSequenceFields)
+        let dispatcher = ShortcutDispatcher(
+            registry: registry,
+            handlers: handlers,
+            leaderEngine: leader)
+        shortcutDispatcher = dispatcher
+        keyboardMonitor = NativeKeyboardMonitor(dispatcher: dispatcher)
+        keyboardMonitor?.start()
     }
 
     private func configureResume() {

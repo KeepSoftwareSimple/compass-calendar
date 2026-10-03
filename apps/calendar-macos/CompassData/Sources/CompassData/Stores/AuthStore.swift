@@ -38,7 +38,6 @@ public final class AuthStore {
 
     private let apiClient: CompassAPIClient
     private let emailPassword: AuthEmailPasswordClient
-    private let userAPI: UserAPI
     private let configStore: ConfigStore
     private let oauthService: OAuthAuthorizationService
     private let analyticsIdentity: AnalyticsIdentityCoordinator
@@ -53,7 +52,6 @@ public final class AuthStore {
     ) {
         self.apiClient = apiClient
         emailPassword = AuthEmailPasswordClient(client: apiClient)
-        userAPI = UserAPI(client: apiClient)
         self.configStore = configStore
         self.oauthService = oauthService
         self.analyticsIdentity = analyticsIdentity
@@ -326,7 +324,7 @@ public final class AuthStore {
     private func identifyAnalyticsUser() async {
         guard authenticated else { return }
         do {
-            let profile = try await userAPI.profile()
+            let profile = try await apiClient.user.profile()
             await analyticsIdentity.identify(userId: profile.userId)
             await analyticsIdentity.trackLoginCompleted()
         } catch {}

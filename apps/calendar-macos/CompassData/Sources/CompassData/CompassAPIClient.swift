@@ -180,6 +180,20 @@ public actor CompassAPIClient {
         try sessionStore.save(tokens)
     }
 
+    func storeSession(from payload: HTTPResponsePayload) throws {
+        var headers = [String: String]()
+        for (key, value) in payload.headers {
+            headers[key] = value
+        }
+        let response = HTTPURLResponse(
+            url: URL(string: "https://compasscalendar.com")!,
+            statusCode: payload.statusCode,
+            httpVersion: nil,
+            headerFields: headers
+        )!
+        try storeSessionHeaders(from: response)
+    }
+
     func refreshSessionSingleFlight() async throws {
         if let refreshTask {
             try await refreshTask.value

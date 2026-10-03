@@ -14,6 +14,7 @@ public final class NativeCalendarRootModel {
     public private(set) var timeGridState: TimeGridState
     public private(set) var calendars: [CompassCalendar] = []
     public var isSignedIn: Bool { authStore.authenticated }
+    public var shortcutRegistry: ShortcutRegistry { environment.shortcutRegistry }
     public private(set) var contentTrackWidth: CGFloat = 1010
     public internal(set) var sidebandEvents: [Event] = []
     public var onSidebandDidChange: (() -> Void)?
@@ -314,7 +315,7 @@ public final class NativeCalendarRootModel {
 
     private func reloadCalendars() async {
         do {
-            let remote = try await CalendarsAPI(client: environment.apiClient).list()
+            let remote = try await environment.apiClient.calendars.list()
             let mapped = remote.map(CompassCalendar.init(listItem:))
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
@@ -334,6 +335,11 @@ public final class NativeCalendarRootModel {
         await analyticsIdentity.applyPostHogConfig(configStore.config?.posthog)
     }
 
+    private func refreshAfterStreamChange() async {
+        await refreshVisibleRange()
+        await refreshSideband()
+    }
+
     private func startEventStream() {
         let stream = ServerEventStream(client: environment.apiClient)
         eventStream = stream
@@ -342,15 +348,13 @@ public final class NativeCalendarRootModel {
                 onMessage: { [weak self] message in
                     Task { @MainActor in
                         try? self?.eventsStore.handleServerMessage(message)
-                        await self?.refreshVisibleRange()
-                        await self?.refreshSideband()
+                        await self?.refreshAfterStreamChange()
                     }
                 },
                 onReopen: { [weak self] in
                     Task { @MainActor in
                         try? self?.eventsStore.handleStreamReopen()
-                        await self?.refreshVisibleRange()
-                        await self?.refreshSideband()
+                        await self?.refreshAfterStreamChange()
                     }
                 }
             )

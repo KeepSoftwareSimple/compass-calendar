@@ -34,20 +34,35 @@ export function resolveTestFiles(
   };
 }
 
+export function pathMatchesIgnore(path: string, patterns: string[]): boolean {
+  const candidates = [
+    path,
+    path.replace(/^\.\//, ""),
+    `./${path.replace(/^\.\//, "")}`,
+  ];
+  return patterns.some((pattern) => {
+    const glob = new Glob(pattern);
+    return candidates.some((candidate) => glob.match(candidate));
+  });
+}
+
 export function parseExtraArgs(extraArgs: string[]): {
   bunFlags: string[];
-  ignorePattern?: string;
+  ignorePatterns: string[];
   explicitPaths: string[];
 } {
   const bunFlags: string[] = [];
   const explicitPaths: string[] = [];
-  let ignorePattern: string | undefined;
+  const ignorePatterns: string[] = [];
 
   for (let i = 0; i < extraArgs.length; i++) {
     const arg = extraArgs[i]!;
 
     if (arg === "--path-ignore-patterns") {
-      ignorePattern = extraArgs[i + 1];
+      const pattern = extraArgs[i + 1];
+      if (pattern) {
+        ignorePatterns.push(pattern);
+      }
       i++;
       continue;
     }
@@ -75,7 +90,7 @@ export function parseExtraArgs(extraArgs: string[]): {
     }
   }
 
-  return { bunFlags, ignorePattern, explicitPaths };
+  return { bunFlags, ignorePatterns, explicitPaths };
 }
 
 export function resolveTestTargets(
@@ -83,7 +98,7 @@ export function resolveTestTargets(
   extraArgs: string[],
   options: { expandDirectory?: boolean } = {},
 ): { targets: string[]; bunFlags: string[]; label: string } {
-  const { bunFlags, ignorePattern, explicitPaths } = parseExtraArgs(extraArgs);
+  const { bunFlags, ignorePatterns, explicitPaths } = parseExtraArgs(extraArgs);
 
   if (explicitPaths.length > 0) {
     return {
@@ -94,8 +109,8 @@ export function resolveTestTargets(
   }
 
   const flags = [...bunFlags];
-  if (ignorePattern) {
-    flags.push("--path-ignore-patterns", ignorePattern);
+  for (const pattern of ignorePatterns) {
+    flags.push("--path-ignore-patterns", pattern);
   }
 
   // Bun 1.4's directory-scan test discovery balloons memory (tens of GB,
@@ -105,7 +120,9 @@ export function resolveTestTargets(
   // has previously hung the runner — directory passthrough stays there.
   if (options.expandDirectory) {
     const glob = `${scan.replace(/\/$/, "")}/**/*.{test,spec}.{ts,tsx}`;
-    const files = resolveTestFiles(glob, []).files;
+    const files = resolveTestFiles(glob, []).files.filter(
+      (file) => !pathMatchesIgnore(file, ignorePatterns),
+    );
     // A zero-match glob (a typo'd scan path, a package with no matching test
     // files) would otherwise silently fall through to spawning `bun test`
     // with no path args at all - which reverts to the exact directory-scan

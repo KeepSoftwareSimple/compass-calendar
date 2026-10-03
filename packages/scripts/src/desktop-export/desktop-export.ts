@@ -24,22 +24,15 @@ import {
   type GeneratedFile,
   writeGeneratedFiles,
 } from "@scripts/desktop-export/write-check";
+import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-files";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const WEB_FIXTURE_FILES = [
-  "timed-deck.vectors.json",
-  "nudge.vectors.json",
-  "go-to-date.vectors.json",
-  "demo-seed.json",
-  "grid-layout.snapshots.json",
-] as const;
-
 const buildWebFixtureFiles = async (): Promise<GeneratedFile[]> => {
   const tempDir = mkdtempSync(join(tmpdir(), "desktop-web-fixtures-"));
   await runWebDesktopFixtures(tempDir);
-  const files = WEB_FIXTURE_FILES.map((name) => ({
+  const files = DESKTOP_WEB_FIXTURE_FILES.map((name) => ({
     path: join(COMPASS_KIT_FIXTURES_DIR, name),
     contents: readFileSync(join(tempDir, name), "utf8"),
   }));
