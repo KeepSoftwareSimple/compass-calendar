@@ -63,29 +63,14 @@ final class NativeGridKeyboardRouter {
                 scope: .grid,
                 chords: entry.bindingChords,
                 when: entry.when,
-                handler: { [weak model] id in
-                    Task { @MainActor in
-                        switch id {
-                        case .navUpNext:
-                            model?.openUpNextEvent()
-                        case .navJoinMeeting:
-                            model?.joinUpNextMeeting()
-                        default:
-                            model?.handleShortcut(id)
-                        }
-                    }
-                })
+                handler: { _ in })
         }
         handlers.append(
             ShortcutHandler(
                 id: .editCycleEdge,
                 scope: .grid,
                 chords: [KeyChord(modifiers: [.shift], token: .named(.tab))],
-                handler: { [weak model] _ in
-                    Task { @MainActor in
-                        model?.handleShiftTabCycleEdge()
-                    }
-                })
+                handler: { _ in })
         )
 
         let leader = LeaderSequenceEngine(
@@ -128,12 +113,26 @@ final class NativeGridKeyboardRouter {
 
         dispatcher.shortcutContext = model.shortcutContext
         if let id = dispatcher.dispatch(keyEvent) {
+            performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
             }
             return true
         }
         return false
+    }
+
+    private func performShortcut(_ id: ShortcutId) {
+        switch id {
+        case .navUpNext:
+            model.openUpNextEvent()
+        case .navJoinMeeting:
+            model.joinUpNextMeeting()
+        case .editCycleEdge:
+            model.handleShiftTabCycleEdge()
+        default:
+            model.handleShortcut(id)
+        }
     }
 
     func handleKeyUp(_ event: NSEvent) {

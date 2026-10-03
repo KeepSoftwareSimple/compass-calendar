@@ -15,15 +15,21 @@ final class NativeLaunchTests: XCTestCase {
         let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if probe.exists, probe.label == title {
-                return
+            if probe.exists {
+                if probe.label == title { return }
+                if probe.value as? String == title { return }
             }
             if window.value as? String == title {
                 return
             }
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
-        XCTFail("Expected focused grid event \"\(title)\"")
+        let probeLabel = probe.exists ? probe.label : "(missing)"
+        let probeValue = probe.exists ? String(describing: probe.value) : "(missing)"
+        let windowValue = String(describing: window.value)
+        XCTFail(
+            "Expected focused grid event \"\(title)\"; "
+                + "probe label=\(probeLabel), probe value=\(probeValue), window value=\(windowValue)")
     }
 
     @MainActor
