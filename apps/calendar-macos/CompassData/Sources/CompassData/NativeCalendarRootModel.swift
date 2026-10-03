@@ -12,6 +12,7 @@ public final class NativeCalendarRootModel {
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
+    public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
     public let lifeStore: LifeStore
     public private(set) var headerTitle = ""
@@ -30,6 +31,8 @@ public final class NativeCalendarRootModel {
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
+    public var dedicationDialogVisible = false
+    public var pendingDiscardDraftConfirmation = false
 
     private let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -83,6 +86,7 @@ public final class NativeCalendarRootModel {
         )
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
+        draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
         timeGridState = TimeGridState(
             layoutMode: .week,
@@ -331,6 +335,18 @@ public final class NativeCalendarRootModel {
     }
 
     private func moveFocus(_ direction: FocusMoveDirection) {
+        let arrowKey: String = {
+            switch direction {
+            case .up: return "ArrowUp"
+            case .down: return "ArrowDown"
+            case .left: return "ArrowLeft"
+            case .right: return "ArrowRight"
+            }
+        }()
+        if nudgeDraftOrPlace(key: arrowKey, shiftKey: false, altKey: false) {
+            return
+        }
+
         guard !focusLayoutCards.isEmpty else { return }
 
         if let focusedId = focusStore.focusedEventId?.rawValue,
@@ -379,7 +395,7 @@ public final class NativeCalendarRootModel {
         applyFocusPresentation()
     }
 
-    private func focusEvent(eventId: String) {
+    func focusEvent(eventId: String) {
         let type: ViewInteractionEventType =
             focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
                 ? .allDay
@@ -500,11 +516,11 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private var startOfView: Date {
+    var startOfView: Date {
         EffectiveTimeZone.calendar.startOfDay(for: viewStore.anchorDate)
     }
 
-    private var endOfView: Date {
+    var endOfView: Date {
         let calendar = EffectiveTimeZone.calendar
         return calendar.date(
             byAdding: .day,
@@ -527,7 +543,7 @@ public final class NativeCalendarRootModel {
         ShortcutContext(
             lifeView: viewStore.view == .life,
             weekView: viewStore.view == .week,
-            isFormOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
             isTrialing: billingStore.status?.subscriptionStatus == .trialing)
     }
 
@@ -535,7 +551,7 @@ public final class NativeCalendarRootModel {
         viewStore.view == .day ? .day : .week
     }
 
-    private func rebuildPresentation() {
+    func rebuildPresentation() {
         if viewStore.view == .life {
             headerTitle = "Life"
             return
@@ -543,7 +559,7 @@ public final class NativeCalendarRootModel {
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: Date())
         let hiddenIds = Set(hiddenEventsStore.hiddenEventIds.map(\.rawValue))
         let demoIds = demoSeed?.demoEventIds ?? []
-        let scenario = GridLayoutScenarioBuilder.build(
+        var scenario = GridLayoutScenarioBuilder.build(
             layoutMode: layoutMode(),
             visibleDateKeys: visibleDateKeys(),
             referenceNow: demoSeed?.referenceNow ?? Date(),
@@ -552,6 +568,7 @@ public final class NativeCalendarRootModel {
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
+        scenario.draftOverlay = draftOverlayForPresentation()
         syncFocusRegistry(from: scenario)
         let colWidths = TimeGridState(
             layoutMode: layoutMode(),
@@ -646,7 +663,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func visibleCalendars() -> [CompassCalendar] {
+    func visibleCalendars() -> [CompassCalendar] {
         calendars.filter { $0.isVisible && $0.isActive }
     }
 
