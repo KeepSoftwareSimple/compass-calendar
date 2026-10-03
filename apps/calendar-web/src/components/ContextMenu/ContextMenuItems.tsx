@@ -5,6 +5,7 @@ import { PenNib } from "@phosphor-icons/react/dist/csr/PenNib";
 import { Trash } from "@phosphor-icons/react/dist/csr/Trash";
 import type React from "react";
 import { createContext, useContext } from "react";
+import { HIDE_EVENT_LETTER } from "@core/shortcuts/binding-keycaps.constants";
 import {
   type EventColorSlot,
   EventColorSlotSchema,
@@ -30,7 +31,6 @@ import {
   digitPickIndex,
   PICK_KEY_LABELS,
 } from "@web/shortcuts/digit-pick.util";
-import { HIDE_EVENT_LETTER } from "@web/shortcuts/hide-event/hide-event.constants";
 import { isBareLetterKey } from "@web/shortcuts/is-bare-letter-key";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { useDeleteEvent } from "@web/views/Forms/hooks/useDeleteEvent";

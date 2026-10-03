@@ -4,4 +4,5 @@ export const DESKTOP_WEB_FIXTURE_FILES = [
   "go-to-date.vectors.json",
   "demo-seed.json",
   "grid-layout.snapshots.json",
+  "life-grid.snapshots.json",
 ] as const;

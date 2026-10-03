@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
@@ -25,7 +26,6 @@ import {
   pointerEventJumpId,
   pointerGridIntent,
 } from "@web/shortcuts/keyboard-only/pointer-grid-bridge";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   canQuickTimeBufferGrow,
   quickTimeFocusedColumnDay,

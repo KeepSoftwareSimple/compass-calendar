@@ -14,6 +14,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { CONFERENCE_KIND_LABEL } from "@core/types/calendar.contracts";
 import { type CalendarId } from "@core/types/domain-primitives";
 import { type AttendeeInput } from "@core/types/event-attendance.contracts";
@@ -67,7 +68,6 @@ import { FormDigitHintOverlay } from "@web/shortcuts/form-digit-jump/FormDigitHi
 import { useFormDigitJumpShortcut } from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
 import { usePointerFormFieldDigitTeach } from "@web/shortcuts/form-digit-jump/usePointerFormFieldDigitTeach";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 import { AttendeeField } from "@web/views/Forms/EventForm/AttendeeField/AttendeeField";

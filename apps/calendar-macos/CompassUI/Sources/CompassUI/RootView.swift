@@ -130,19 +130,29 @@ public struct RootView: View {
     private var header: some View {
         HStack(spacing: 12) {
             HStack(spacing: 12) {
-                headerButton(label: "Previous", systemImage: "chevron.left") {
-                    model.handleShortcut(.navPrevious)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Previous life variation" : "Previous",
+                    systemImage: "chevron.left"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifePrev : .navPrevious)
                 }
-                headerButton(label: "Next", systemImage: "chevron.right") {
-                    model.handleShortcut(.navNext)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Next life variation" : "Next",
+                    systemImage: "chevron.right"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifeNext : .navNext)
                 }
                 Text(model.headerTitle)
                     .font(.custom("Rubik", size: 15, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
                     .accessibilityIdentifier("compass-native-header-title")
-                headerButton(label: "Today", systemImage: nil, title: "Today") {
-                    model.handleShortcut(.navToday)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Focus current week" : "Today",
+                    systemImage: nil,
+                    title: model.viewStore.view == .life ? "This week" : "Today"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifeCurrent : .navToday)
                 }
             }
             .padding(.leading, titleBarLeadingInset)
@@ -166,19 +176,25 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        let focusedEventId = model.timeGridState.focusedEventId
-        return ZStack(alignment: .topLeading) {
-            TimeGridRepresentable(model: model, focusedEventId: focusedEventId)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .accessibilityElement(children: .contain)
-            EventJumpChipsOverlay(
-                hints: model.timeGridState.eventJumpHints,
-                gridYOffset: gridChipYOffset,
-                visible: !model.timeGridState.eventJumpHints.isEmpty
-            )
+        Group {
+            if model.viewStore.view == .life {
+                LifeContentView(model: model)
+            } else {
+                let focusedEventId = model.timeGridState.focusedEventId
+                ZStack(alignment: .topLeading) {
+                    TimeGridRepresentable(model: model, focusedEventId: focusedEventId)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityElement(children: .contain)
+                    EventJumpChipsOverlay(
+                        hints: model.timeGridState.eventJumpHints,
+                        gridYOffset: gridChipYOffset,
+                        visible: !model.timeGridState.eventJumpHints.isEmpty
+                    )
+                }
+                .background(theme.backgroundColor)
+                .accessibilityIdentifier("compass-native-content")
+            }
         }
-        .background(theme.backgroundColor)
-        .accessibilityIdentifier("compass-native-content")
     }
 
     private var gridChipYOffset: CGFloat {

@@ -1,6 +1,6 @@
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { type EventColorSlot } from "@core/types/event-color.contracts";
 import { type PracticeEventBlock } from "@web/components/ShortcutShowcase/practice.state";
-import { KEYMAP } from "@web/shortcuts/keymap";
 
 /**
  * Block Party: one run against a fixed, authored queue of scheduling tasks.

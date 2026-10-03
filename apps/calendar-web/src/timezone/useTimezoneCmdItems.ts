@@ -1,8 +1,8 @@
 import { GlobeIcon } from "@phosphor-icons/react/dist/csr/Globe";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { type CommandItem } from "@web/components/CommandPalette/command-palette.types";
 import { withPaletteShortcut } from "@web/components/CommandPalette/palette-shortcut-telemetry";
 import { settingsActions } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";

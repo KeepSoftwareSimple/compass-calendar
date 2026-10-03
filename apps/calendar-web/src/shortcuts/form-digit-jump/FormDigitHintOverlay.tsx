@@ -1,11 +1,11 @@
 import { createPortal } from "react-dom";
+import { FORM_FIELD_DIGITS } from "@core/shortcuts/edit-sequence.fields";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import {
   type EventFormFocusField,
   getEventFormFieldAnchor,
 } from "@web/common/utils/form/form.util";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
-import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { getVisibleHintRect } from "@web/shortcuts/shift-hint/shift-hint-visible-rect";
 import { useHintLayoutRefresh } from "@web/shortcuts/useHintLayoutRefresh";
 

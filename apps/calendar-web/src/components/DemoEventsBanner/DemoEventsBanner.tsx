@@ -1,8 +1,8 @@
 import { type FC } from "react";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   DEMO_EVENTS_BANNER_SHORTCUT_KEY,
   useNoticeActionShortcut,

@@ -9,6 +9,7 @@ final class NativeGridKeyboardRouter {
     private let model: NativeCalendarRootModel
     private let modHold: ModHoldDetector
     private let eventJumpHold: HoldModifierDetector
+    private let viewSwitchIds: Set<ShortcutId> = [.navDayView, .navWeekView, .navLifeView]
 
     init(model: NativeCalendarRootModel, registry: ShortcutRegistry) {
         self.model = model
@@ -43,6 +44,10 @@ final class NativeGridKeyboardRouter {
             .navShiftRight,
             .navDayView,
             .navWeekView,
+            .navLifeView,
+            .navLifePrev,
+            .navLifeNext,
+            .navLifeCurrent,
             .navMonthPrev,
             .navMonthNext,
             .navUpNext,
@@ -57,6 +62,7 @@ final class NativeGridKeyboardRouter {
                 id: entry.id,
                 scope: .grid,
                 chords: entry.bindingChords,
+                when: entry.when,
                 handler: { [weak model] id in
                     Task { @MainActor in
                         switch id {
@@ -120,7 +126,11 @@ final class NativeGridKeyboardRouter {
 
         syncEventJumpHints()
 
-        if dispatcher.dispatch(keyEvent) != nil {
+        dispatcher.shortcutContext = model.shortcutContext
+        if let id = dispatcher.dispatch(keyEvent) {
+            if viewSwitchIds.contains(id) {
+                return false
+            }
             return true
         }
         return false

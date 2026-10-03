@@ -5,11 +5,11 @@ import {
   useRef,
   useState,
 } from "react";
+import { FORM_FIELD_DIGITS } from "@core/shortcuts/edit-sequence.fields";
 import {
   type EventFormFocusField,
   eventFormFieldFromTarget,
 } from "@web/common/utils/form/form.util";
-import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
 
 const POINTER_FOCUS_MS = 300;

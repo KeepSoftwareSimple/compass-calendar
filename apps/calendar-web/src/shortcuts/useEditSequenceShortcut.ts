@@ -1,5 +1,7 @@
 import { resolveModifier } from "@tanstack/react-hotkeys";
 import { useEffect, useRef } from "react";
+import { EDIT_SEQUENCE_FIELD_BY_KEY } from "@core/shortcuts/edit-sequence.fields";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { isBillingWriteLocked } from "@web/billing/billing-write-lock";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import {
@@ -7,7 +9,6 @@ import {
   isEditableKeyboardTarget,
 } from "@web/common/utils/form/form.util";
 import { isAppLocked } from "@web/shortcuts/app-lock";
-import { EDIT_SEQUENCE_FIELD_BY_KEY } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import {
   type EditSequenceScope,
   editSequenceActions,
@@ -18,7 +19,6 @@ import {
   keyboardKey,
   normalizedKeyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import {
   eventJumpActions,
   isEventJumpActive,

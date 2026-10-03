@@ -1,6 +1,6 @@
+import { FORM_FIELD_DIGITS } from "@core/shortcuts/edit-sequence.fields";
 import { focusEventFormField } from "@web/common/utils/form/form.util";
 import { physicalDigitIndex } from "@web/shortcuts/digit-pick.util";
-import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { useModHoldHintShortcut } from "@web/shortcuts/mod-hold/useModHoldHintShortcut";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";

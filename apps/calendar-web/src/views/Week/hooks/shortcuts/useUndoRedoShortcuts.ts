@@ -1,6 +1,6 @@
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { type EventMutationDependencies } from "@web/events/mutations/useEventMutations";
 import { useUndoRedo } from "@web/events/mutations/useUndoRedo";
-import { KEYMAP } from "@web/shortcuts/keymap";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 /**

@@ -1,5 +1,5 @@
-import { ensureDesktopExportEnv } from "@scripts/desktop-export/ensure-export-env";
 import { runWebDesktopFixtures } from "@scripts/desktop-export/run-web-fixtures";
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-files";
 import { afterEach, describe, expect, it } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";

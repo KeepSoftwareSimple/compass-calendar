@@ -1,10 +1,10 @@
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import {
   selectOverlayOpenedFromPalette,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setPinnedTimeZone,

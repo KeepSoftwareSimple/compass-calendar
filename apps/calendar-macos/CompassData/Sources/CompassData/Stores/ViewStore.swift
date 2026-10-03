@@ -8,6 +8,7 @@ import Foundation
 public enum CalendarGridView: String, Sendable, Hashable, CaseIterable {
     case day
     case week
+    case life
 }
 
 @MainActor

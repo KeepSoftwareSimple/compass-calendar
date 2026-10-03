@@ -1,4 +1,4 @@
-import { ensureDesktopExportEnv } from "@scripts/desktop-export/ensure-export-env";
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 
 export async function runDesktopExportCommand(args: string[]): Promise<void> {
   ensureDesktopExportEnv();

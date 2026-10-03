@@ -1,5 +1,5 @@
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 import { repositionDraftByKeyboard } from "@web/common/utils/draft/reposition-draft-by-keyboard.util";
-import { ensureDesktopExportEnv } from "@web/desktop/export-fixtures/ensure-export-env";
 import {
   createGridEventDraft,
   timedGridSchedule,

@@ -1,4 +1,4 @@
-import { KEYMAP } from "@web/shortcuts/keymap";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import {
   DAY_NAME_BY_PREFIX,
   type DayJumpPrefix,

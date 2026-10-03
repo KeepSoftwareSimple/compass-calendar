@@ -15,6 +15,15 @@ describe("swift contract emitter", () => {
     expect(swift).toContain("CaseIterable");
   });
 
+  it("backticks enum cases that collide with Swift keywords", () => {
+    const schema = z.enum(["default", "repeat", "class", "in"]);
+    const swift = emitSwiftForSchema(schema, "Sample");
+    expect(swift).toContain('case `default` = "default"');
+    expect(swift).toContain('case `repeat` = "repeat"');
+    expect(swift).toContain('case `class` = "class"');
+    expect(swift).toContain('case `in` = "in"');
+  });
+
   it("emits objects as Codable structs with optional fields", () => {
     const schema = z.object({
       name: z.string(),

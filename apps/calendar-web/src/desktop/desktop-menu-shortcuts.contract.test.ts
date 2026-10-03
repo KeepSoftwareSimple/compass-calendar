@@ -2,8 +2,8 @@ import {
   DESKTOP_MENU_MAC_KEY_EQUIVALENTS,
   DESKTOP_MENU_SHORTCUT_BINDINGS,
 } from "@core/desktop/desktop-menu-shortcuts.contract";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
-import { KEYMAP } from "@web/shortcuts/keymap";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import { describe, expect, it } from "bun:test";
 
 describe("desktop menu shortcut bindings vs web keymap", () => {

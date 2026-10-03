@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 const bootExportFixtures = async () => {
   const { ensureDesktopExportEnv } = await import(
-    "@web/desktop/export-fixtures/ensure-export-env"
+    "@core/desktop/desktop-export-env"
   );
   ensureDesktopExportEnv();
   return import("@web/desktop/export-fixtures/demo-seed.fixtures");
@@ -11,7 +11,7 @@ const bootExportFixtures = async () => {
 describe("desktop export fixtures", () => {
   it("builds timed-deck vectors", async () => {
     const { ensureDesktopExportEnv } = await import(
-      "@web/desktop/export-fixtures/ensure-export-env"
+      "@core/desktop/desktop-export-env"
     );
     ensureDesktopExportEnv();
     const { buildTimedDeckFixtures } = await import(
@@ -22,7 +22,7 @@ describe("desktop export fixtures", () => {
 
   it("builds nudge vectors", async () => {
     const { ensureDesktopExportEnv } = await import(
-      "@web/desktop/export-fixtures/ensure-export-env"
+      "@core/desktop/desktop-export-env"
     );
     ensureDesktopExportEnv();
     const { buildNudgeFixtures } = await import(
@@ -40,7 +40,7 @@ describe("desktop export fixtures", () => {
 
   it("builds grid-layout snapshots without duplicating input", async () => {
     const { ensureDesktopExportEnv } = await import(
-      "@web/desktop/export-fixtures/ensure-export-env"
+      "@core/desktop/desktop-export-env"
     );
     ensureDesktopExportEnv();
     const { buildGridLayoutSnapshotFixtures } = await import(

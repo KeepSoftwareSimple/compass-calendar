@@ -1,4 +1,5 @@
 import { Origin } from "@core/constants/core.constants";
+import { ensureDesktopExportEnv } from "@core/desktop/desktop-export-env";
 import {
   CalendarIdSchema,
   DateTimeSchema,
@@ -7,7 +8,6 @@ import { BusyPeriodSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
-import { ensureDesktopExportEnv } from "@web/desktop/export-fixtures/ensure-export-env";
 import { splitBusyPeriodsByDay } from "@web/grid/layout/busy-period.layout";
 import {
   getAllDayEventPosition,

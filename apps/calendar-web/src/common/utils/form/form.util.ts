@@ -1,5 +1,5 @@
+import { FORM_FIELD_DIGITS } from "@core/shortcuts/edit-sequence.fields";
 import { type EventFormFocusField } from "@core/shortcuts/event-form-focus-field";
-import { FORM_FIELD_DIGITS } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
 import { ID_EVENT_FORM } from "../../constants/web.constants";
 
 export type { EventFormFocusField };

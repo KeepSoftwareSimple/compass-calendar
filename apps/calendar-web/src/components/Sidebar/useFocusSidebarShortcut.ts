@@ -1,10 +1,10 @@
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { focusFirstSidebarItem } from "@web/components/Sidebar/util/sidebarFocus.util";
 import {
   selectIsSidebarOpen,
   useViewStore,
   viewActions,
 } from "@web/events/stores/view.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 
 /** Mount once per view: registers the "i" hotkey, which opens the sidebar

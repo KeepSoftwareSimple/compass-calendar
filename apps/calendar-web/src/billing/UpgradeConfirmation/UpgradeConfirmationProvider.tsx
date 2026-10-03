@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type PropsWithChildren, useCallback, useState } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { BillingApi } from "@web/api/billing.api";
 import { track } from "@web/auth/posthog/track";
 import { billingQueryKeys } from "@web/billing/billing.query";
@@ -18,7 +19,6 @@ import {
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { APP_SHORTCUT_BINDINGS } from "@web/shortcuts/app-shortcut-bindings";
 import { useAppShortcutUp } from "@web/shortcuts/useAppShortcut";
 
 export function UpgradeConfirmationProvider({ children }: PropsWithChildren) {

@@ -1,5 +1,5 @@
-import { EDIT_SEQUENCE_FIELD_BY_KEY } from "@web/shortcuts/edit-sequence/edit-sequence.fields";
-import { KEYMAP } from "@web/shortcuts/keymap";
+import { EDIT_SEQUENCE_FIELD_BY_KEY } from "@core/shortcuts/edit-sequence.fields";
+import { KEYMAP } from "@core/shortcuts/keymap";
 import {
   filterShortcutsByContext,
   getShortcutsBySection,
