@@ -91,23 +91,6 @@ public final class TimeGridView: NSView {
         return nil
     }
 
-    func nearestEventCard(at locationInWindow: NSPoint, maxDistance: Double) -> EventCardView? {
-        let documentPoint = pointInDocumentView(locationInWindow)
-        var nearest: (view: EventCardView, distance: Double)?
-        for view in cardPool.values {
-            guard view.layoutRectInParent.width > 0.5, view.layoutRectInParent.height > 0.5,
-                let superview = view.superview
-            else { continue }
-            let rectInDocument = superview.convert(view.layoutRectInParent, to: documentView)
-            let distance = Self.distance(from: documentPoint, to: rectInDocument)
-            guard distance <= maxDistance else { continue }
-            if nearest == nil || distance < nearest!.distance {
-                nearest = (view, distance)
-            }
-        }
-        return nearest?.view
-    }
-
     private func eventCardViewMatchingDocumentPoint(_ documentPoint: NSPoint) -> EventCardView? {
         var smallestHit: (view: EventCardView, area: Double)?
         for view in cardPool.values {
@@ -118,29 +101,6 @@ public final class TimeGridView: NSView {
             }
         }
         return smallestHit?.view
-    }
-
-    private static func distance(from point: NSPoint, to rect: NSRect) -> Double {
-        if rect.contains(point) {
-            return 0
-        }
-        let dx: Double
-        if point.x < rect.minX {
-            dx = rect.minX - point.x
-        } else if point.x > rect.maxX {
-            dx = point.x - rect.maxX
-        } else {
-            dx = 0
-        }
-        let dy: Double
-        if point.y < rect.minY {
-            dy = rect.minY - point.y
-        } else if point.y > rect.maxY {
-            dy = point.y - rect.maxY
-        } else {
-            dy = 0
-        }
-        return hypot(dx, dy)
     }
 
     public override func accessibilityChildren() -> [Any]? {

@@ -38,10 +38,8 @@ enum CompassBridgeAccessibility {
         window.setAccessibilityIdentifier("Compass")
         if let title, !title.isEmpty {
             window.setAccessibilityValue(title)
-            window.setAccessibilityLabel(title)
         } else {
             window.setAccessibilityValue("")
-            window.setAccessibilityLabel("Compass")
         }
         NSAccessibility.post(element: window, notification: .valueChanged)
     }

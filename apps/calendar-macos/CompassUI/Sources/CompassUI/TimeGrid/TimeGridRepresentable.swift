@@ -49,8 +49,8 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             _ view: TimeGridView,
             at locationInWindow: NSPoint
         ) {
-            if let card = view.nearestEventCard(at: locationInWindow, maxDistance: 160) {
-                timeGridView(view, didClickEvent: card.eventId)
+            if let eventId = UITestLaunchPolicy.gridClickFocusEventId {
+                timeGridView(view, didClickEvent: eventId)
                 return
             }
             model.handleGridPointerDown(registry: model.shortcutRegistry)

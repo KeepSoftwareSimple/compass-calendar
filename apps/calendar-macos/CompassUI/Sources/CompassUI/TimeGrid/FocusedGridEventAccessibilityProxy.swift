@@ -7,7 +7,6 @@ final class FocusedGridEventAccessibilityProxy: NSView {
         super.init(frame: frameRect)
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityIdentifier("compass-grid-event-focused")
     }
 
     @available(*, unavailable)

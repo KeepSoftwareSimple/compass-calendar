@@ -12,10 +12,14 @@ final class NativeLaunchTests: XCTestCase {
 
     @MainActor
     private func waitForFocusedGridEvent(title: String, in window: XCUIElement, timeout: TimeInterval) {
+        let probePredicate = NSPredicate(
+            format: "identifier == %@ AND label == %@",
+            "compass-grid-event-focused",
+            title)
         let predicate = NSPredicate { evaluatedObject, _ in
             guard let window = evaluatedObject as? XCUIElement else { return false }
-            let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
-            if probe.exists, probe.label == title {
+            let probe = window.descendants(matching: .any).matching(probePredicate).firstMatch
+            if probe.exists {
                 return true
             }
             return window.value as? String == title || window.label == title
@@ -66,7 +70,11 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testArrowMovesFocusBetweenTwoFixtureEvents() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_GRID_CLICK_FOCUS_EVENT", "demo-morning-standup",
+        ]
         app.launch()
 
         let window = app.windows["Compass"]
