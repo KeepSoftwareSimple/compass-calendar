@@ -22,6 +22,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
+    private var deepLinkRouter = DeepLinkRouter()
     private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
     private var notificationScheduler: NotificationScheduler?
@@ -41,10 +42,16 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
         }
         applyTheme()
+        deepLinkRouter.onDeliver = { [weak self] url in
+            self?.deliverDeepLink(url)
+        }
         configureNativeServices()
         configureKeyboard()
         configureResume()
-        Task { await model.start() }
+        Task {
+            await model.start()
+            deepLinkRouter.markConsumerReady()
+        }
     }
 
     override func viewDidAppear() {
@@ -85,7 +92,14 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         guard DesktopDeepLinkParser.recognizedURLString(urlString) != nil else { return }
         NSApp.activate(ignoringOtherApps: true)
         view.window?.makeKeyAndOrderFront(nil)
+        _ = deepLinkRouter.receive(urlString: urlString)
+    }
+
+    private func deliverDeepLink(_ urlString: String) {
         model.handleDeepLink(urlString)
+        if let path = DesktopDeepLinkParser.navigationPath(for: urlString) {
+            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
+        }
     }
 
     private func applyTheme() {

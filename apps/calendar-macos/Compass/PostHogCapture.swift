@@ -6,6 +6,7 @@ actor PostHogCapture {
     static let shared = PostHogCapture()
 
     private var client = PostHogBatchClient(configuration: nil)
+    private var activeDistinctId: String?
     private var flushTask: Task<Void, Never>?
     private let lib = "compass-macos"
 
@@ -38,10 +39,12 @@ actor PostHogCapture {
     }
 
     func identify(distinctId: String) {
+        activeDistinctId = distinctId
         client.setDistinctId(distinctId)
     }
 
     func resetIdentity() {
+        activeDistinctId = nil
         client.setDistinctId(nil)
     }
 
@@ -52,6 +55,41 @@ actor PostHogCapture {
         } catch {
             // Analytics must never interrupt product actions.
         }
+    }
+
+    func submitFeedback(details: String, appView: String) async throws {
+        guard client.isConfigured else {
+            throw PostHogBatchClientError.notConfigured
+        }
+        _ = ensureDistinctId()
+        let properties: ProductEventProperties = [
+            "$survey_id": .string(DesktopFeedbackSurvey.surveyId),
+            "$survey_name": .string(DesktopFeedbackSurvey.surveyName),
+            "$survey_response": .string(details),
+            "$survey_response_\(DesktopFeedbackSurvey.questionId)": .string(details),
+            "$survey_completed": .bool(true),
+            "app_version": .string(AppBuildInfo.marketingVersion),
+            "app_view": .string(appView),
+            "feedback_source": .string("help_menu"),
+            "feedback_type": .string("feedback"),
+        ]
+        try client.enqueue(event: "survey sent", properties: properties)
+        await flushQueuedEvents()
+    }
+
+    private func ensureDistinctId() -> String {
+        if let activeDistinctId {
+            return activeDistinctId
+        }
+        let key = "COMPASS_POSTHOG_ANON_DISTINCT_ID"
+        if let stored = UserDefaults.standard.string(forKey: key), !stored.isEmpty {
+            identify(distinctId: stored)
+            return stored
+        }
+        let generated = UUID().uuidString
+        UserDefaults.standard.set(generated, forKey: key)
+        identify(distinctId: generated)
+        return generated
     }
 
     func flushNow() async {

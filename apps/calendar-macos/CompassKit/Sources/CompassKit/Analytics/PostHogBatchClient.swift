@@ -73,6 +73,10 @@ public struct PostHogBatchClient: Sendable {
         queue.count
     }
 
+    public var isConfigured: Bool {
+        configuration != nil
+    }
+
     public mutating func enqueue(
         event: String,
         properties: ProductEventProperties = [:]
