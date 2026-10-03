@@ -1,59 +1,4 @@
-const SWIFT_KEYWORDS = new Set([
-  "associatedtype",
-  "class",
-  "deinit",
-  "enum",
-  "extension",
-  "fileprivate",
-  "func",
-  "import",
-  "init",
-  "inout",
-  "internal",
-  "let",
-  "open",
-  "operator",
-  "private",
-  "precedencegroup",
-  "protocol",
-  "public",
-  "rethrows",
-  "static",
-  "struct",
-  "subscript",
-  "typealias",
-  "var",
-  "break",
-  "case",
-  "continue",
-  "default",
-  "defer",
-  "do",
-  "else",
-  "fallthrough",
-  "for",
-  "guard",
-  "if",
-  "in",
-  "repeat",
-  "return",
-  "switch",
-  "where",
-  "while",
-  "as",
-  "catch",
-  "dynamicType",
-  "false",
-  "is",
-  "nil",
-  "super",
-  "self",
-  "Self",
-  "throw",
-  "throws",
-  "true",
-  "try",
-]);
+import { escapeSwiftKeyword } from "@scripts/swift-contracts/swift-reserved-types";
 
 export const kebabToCamelCase = (value: string): string => {
   const parts = value.split("-");
@@ -74,13 +19,8 @@ export const snakeToCamelCase = (value: string): string =>
     )
     .join("");
 
-export const swiftEnumCaseName = (rawId: string): string => {
-  const camel = kebabToCamelCase(rawId);
-  if (SWIFT_KEYWORDS.has(camel)) {
-    return `\`${camel}\``;
-  }
-  return camel;
-};
+export const swiftEnumCaseName = (rawId: string): string =>
+  escapeSwiftKeyword(kebabToCamelCase(rawId));
 
 export const formatSwiftDouble = (value: number): string => {
   const rounded = Math.round(value * 1_000_000) / 1_000_000;
