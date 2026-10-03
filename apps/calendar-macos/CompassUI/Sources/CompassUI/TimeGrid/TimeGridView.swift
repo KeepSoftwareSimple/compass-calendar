@@ -402,7 +402,7 @@ extension TimeGridView: EventCardViewDelegate {
     }
 }
 
-private final class FlippedView: NSView {
+private class FlippedView: NSView {
     override var isFlipped: Bool { true }
 }
 
