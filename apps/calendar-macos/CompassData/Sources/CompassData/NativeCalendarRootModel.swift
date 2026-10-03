@@ -348,7 +348,11 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             eventJumpHints: eventJumpHintLabels
         )
-        gridFocusAccessibilityLabel = focusedGridEventAccessibilityLabel()
+        let colWidths = timeGridState.resolvedColumnWidths()
+        let cards = timeGridState.snapshot(colWidths: colWidths).cards
+        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
+            cards.first(where: { $0.eventId == focusedId.rawValue })?.label
+        }
         if pointerHintStore.isVisible, pointerHintStore.focusedGridEventLabel != nil {
             pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
         }

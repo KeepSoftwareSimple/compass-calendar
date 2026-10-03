@@ -25,9 +25,10 @@ final class GridFocusAccessibilityProbeView: NSView {
             setAccessibilityRole(.button)
             setAccessibilityIdentifier(Self.identifier)
             setAccessibilityLabel(label)
-            frame = NSRect(x: 0, y: 0, width: 4, height: 4)
-            if let window {
-                setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
+            frame = NSRect(x: 8, y: 8, width: 160, height: 36)
+            if let window, let superview {
+                let rectInWindow = convert(bounds, to: nil)
+                setAccessibilityFrame(window.convertToScreen(rectInWindow))
             }
         } else {
             alphaValue = 0
@@ -58,8 +59,11 @@ enum GridFocusAccessibilityProbe {
     }
 
     static func publish(label: String?) {
-        if probe == nil, let contentView = NSApp.mainWindow?.contentView {
-            attach(to: contentView)
+        if probe == nil, let window = NSApp.keyWindow ?? NSApp.mainWindow {
+            let host = window.contentViewController?.view ?? window.contentView
+            if let host {
+                attach(to: host)
+            }
         }
         guard let probe else { return }
         let wasHidden = !probe.isAccessibilityElement()

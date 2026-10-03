@@ -32,13 +32,22 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
-        // Grid focus for UI tests is exposed on the focused event card (see EventCardView).
-        model.onGridFocusAccessibilityLabelChanged = nil
+        model.onGridFocusAccessibilityLabelChanged = { label in
+            GridFocusAccessibilityProbe.publish(label: label)
+        }
         applyTheme()
         configureNativeServices()
         configureKeyboard()
         configureResume()
         Task { await model.start() }
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        if let host = view.window?.contentViewController?.view ?? view.window?.contentView {
+            GridFocusAccessibilityProbe.attach(to: host)
+        }
+        GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
     }
 
     @available(*, unavailable)
