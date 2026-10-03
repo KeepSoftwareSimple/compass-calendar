@@ -224,8 +224,16 @@ public final class NativeCalendarRootModel {
         applyFocusPresentation()
     }
 
-    public func showPointerHint(for target: PointerClickTarget, registry: ShortcutRegistry) {
-        pointerHintStore.pulse(target: target, registry: registry)
+    public func showPointerHint(
+        for target: PointerClickTarget,
+        registry: ShortcutRegistry,
+        focusedGridEventLabel: String? = nil
+    ) {
+        pointerHintStore.pulse(
+            target: target,
+            registry: registry,
+            focusedGridEventLabel: focusedGridEventLabel
+        )
     }
 
     public func handleEventCardPointerDown(eventId: String, registry: ShortcutRegistry) {
@@ -341,6 +349,9 @@ public final class NativeCalendarRootModel {
             eventJumpHints: eventJumpHintLabels
         )
         gridFocusAccessibilityLabel = focusedGridEventAccessibilityLabel()
+        if pointerHintStore.isVisible, pointerHintStore.focusedGridEventLabel != nil {
+            pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
+        }
         onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
     }
 

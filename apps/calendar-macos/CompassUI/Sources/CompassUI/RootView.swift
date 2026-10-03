@@ -159,11 +159,7 @@ public struct RootView: View {
     @ViewBuilder
     private var pointerHintLayer: some View {
         if model.pointerHintStore.isVisible {
-            PointerHintView(
-                store: model.pointerHintStore,
-                registry: model.shortcutRegistry,
-                focusedEventLabel: gridFocusProbeLabel
-            )
+            PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
             .padding(.top, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         } else if let label = gridFocusProbeLabel {

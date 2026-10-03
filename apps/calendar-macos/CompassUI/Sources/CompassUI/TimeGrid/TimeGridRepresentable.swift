@@ -54,7 +54,11 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             model.focusGridEvent(eventId: eventId)
             model.publishGridFocusAccessibilityProbe()
             if let registry = model.shortcutRegistry {
-                model.showPointerHint(for: .eventCard, registry: registry)
+                model.showPointerHint(
+                    for: .eventCard,
+                    registry: registry,
+                    focusedGridEventLabel: model.gridFocusAccessibilityLabel
+                )
             }
             view.update(state: model.timeGridState, theme: theme)
             view.layoutSubtreeIfNeeded()
