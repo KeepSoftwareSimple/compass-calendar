@@ -77,9 +77,9 @@ public final class TimeGridView: NSView {
         var smallestHit: (view: EventCardView, area: Double)?
         for view in cardPool.values {
             guard view.containsPointInDocument(documentPoint, documentView: documentView) else { continue }
-            let area = view.layoutRectInParent.width * view.layoutRectInParent.height
+            let area = Double(view.layoutRectInParent.width * view.layoutRectInParent.height)
             if smallestHit == nil || area < smallestHit!.area {
-                smallestHit = (view, area)
+                smallestHit = (view: view, area: area)
             }
         }
         if let smallestHit {
