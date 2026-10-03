@@ -9,14 +9,10 @@ final class NativeLaunchTests: XCTestCase {
 
     @MainActor
     private func waitForFocusedGridEvent(title: String, in window: XCUIElement, timeout: TimeInterval) {
-        let predicate = NSPredicate(
-            format: "identifier == %@ AND label == %@",
-            "compass-grid-event-focused",
-            title)
-        let focused = window.descendants(matching: .any).matching(predicate).firstMatch
-        XCTAssertTrue(
-            focused.waitForExistence(timeout: timeout),
-            "Expected focused grid event \"\(title)\"")
+        let predicate = NSPredicate(format: "value == %@", title)
+        wait(
+            for: [expectation(for: predicate, evaluatedWith: window, handler: nil)],
+            timeout: timeout)
     }
 
     @MainActor

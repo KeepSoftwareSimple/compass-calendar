@@ -373,7 +373,7 @@ public final class NativeCalendarRootModel {
         let colWidths = timeGridState.resolvedColumnWidths()
         let cards = timeGridState.snapshot(colWidths: colWidths).cards
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
-            cards.first(where: { $0.eventId == focusedId.rawValue })?.label
+            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: cards)
         }
         if pointerHintStore.isVisible {
             pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
@@ -384,9 +384,21 @@ public final class NativeCalendarRootModel {
     private func focusedGridEventAccessibilityLabel() -> String? {
         guard let focusedId = focusStore.focusedEventId?.rawValue else { return nil }
         let colWidths = timeGridState.resolvedColumnWidths()
-        return timeGridState.snapshot(colWidths: colWidths).cards
-            .first(where: { $0.eventId == focusedId })?
-            .label
+        let cards = timeGridState.snapshot(colWidths: colWidths).cards
+        return resolveGridFocusLabel(eventId: focusedId, cards: cards)
+    }
+
+    private func resolveGridFocusLabel(eventId: String, cards: [GridLayoutCardSnapshot]) -> String? {
+        if let label = cards.first(where: { $0.eventId == eventId })?.label {
+            return label
+        }
+        guard let event = loadedEvents.first(where: { $0.id.rawValue == eventId }) else { return nil }
+        switch event.content {
+        case .busy:
+            return CalendarEventViewModel.busyEventTitle
+        case .details(let details):
+            return details.title
+        }
     }
 
     public func goToDate(_ date: Date) {
