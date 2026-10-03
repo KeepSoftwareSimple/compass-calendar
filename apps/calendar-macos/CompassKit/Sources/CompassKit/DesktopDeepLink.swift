@@ -10,6 +10,7 @@ public enum DesktopDeepLinkParser {
         try! NSRegularExpression(pattern: "^compass://day/(\\d{4}-\\d{2}-\\d{2})/?$")
     }()
     private static let eventPrefix = "compass://event/"
+    private static let billingCheckoutPrefix = "compass://billing/checkout"
 
     /// Returns the full URL string when the link is recognized; otherwise `nil` (ignore).
     public static func recognizedURLString(_ url: URL) -> String? {
@@ -30,7 +31,38 @@ public enum DesktopDeepLinkParser {
         if let eventId = Self.parseEventId(from: urlString) {
             return "compass://event/\(eventId)"
         }
+        if parseBillingCheckout(from: urlString) != nil {
+            return urlString
+        }
         return nil
+    }
+
+    public struct BillingCheckoutDeepLink: Equatable, Sendable {
+        public let outcome: String
+        public let sessionId: String
+
+        public init(outcome: String, sessionId: String) {
+            self.outcome = outcome
+            self.sessionId = sessionId
+        }
+    }
+
+    public static func parseBillingCheckout(from urlString: String) -> BillingCheckoutDeepLink? {
+        guard urlString.hasPrefix(billingCheckoutPrefix) else { return nil }
+        guard let components = URLComponents(string: urlString) else { return nil }
+        let query = Dictionary(
+            uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+                guard let value = item.value else { return nil }
+                return (item.name, value)
+            })
+        guard let outcome = query["outcome"], let sessionId = query["session_id"], !sessionId.isEmpty else {
+            return nil
+        }
+        return BillingCheckoutDeepLink(outcome: outcome, sessionId: sessionId)
+    }
+
+    public static func isBillingCheckoutDeepLink(_ urlString: String) -> Bool {
+        parseBillingCheckout(from: urlString) != nil
     }
 
     /// Router path the hosted web app should open for a recognized deep link.
@@ -52,6 +84,9 @@ public enum DesktopDeepLinkParser {
         }
         if let day = parseDayDateString(from: urlString, range: fullRange) {
             return "/day/\(day)"
+        }
+        if isBillingCheckoutDeepLink(urlString) {
+            return nil
         }
         return nil
     }

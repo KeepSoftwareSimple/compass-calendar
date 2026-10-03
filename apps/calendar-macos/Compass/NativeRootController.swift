@@ -113,6 +113,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             .navMonthNext,
             .navUpNext,
             .navJoinMeeting,
+            .otherSettings,
         ]
         let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard navigationIds.contains(entry.id) else { return nil }
