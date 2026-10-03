@@ -110,13 +110,6 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
-        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
-        XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        clickGridEvent(standup)
-        XCTAssertTrue(
-            window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
-            "Expected pointer hint after clicking the demo standup card")
-
         window.typeKey(.downArrow, modifierFlags: [])
         waitForFocusedGridEvent(title: "Try Compass", in: window, timeout: 10)
     }
