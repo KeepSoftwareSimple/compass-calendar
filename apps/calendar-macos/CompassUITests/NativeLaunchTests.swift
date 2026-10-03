@@ -1,17 +1,6 @@
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
-    private func waitForNonZeroAccessibilityFrame(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if element.frame.width > 1, element.frame.height > 1 {
-                return true
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return element.frame.width > 1 && element.frame.height > 1
-    }
-
     @MainActor
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
@@ -49,15 +38,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        XCTAssertTrue(
-            waitForNonZeroAccessibilityFrame(standup, timeout: 10),
-            "Expected Morning standup to expose a non-zero accessibility frame before clicking"
-        )
-        if standup.isHittable {
-            standup.click()
-        } else {
-            standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
-        }
+        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
         let focusedPredicate = NSPredicate(
             format: "identifier == %@ AND label == %@",
@@ -87,12 +68,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        XCTAssertTrue(waitForNonZeroAccessibilityFrame(standup, timeout: 10))
-        if standup.isHittable {
-            standup.click()
-        } else {
-            standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
-        }
+        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))

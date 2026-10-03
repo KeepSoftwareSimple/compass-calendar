@@ -19,6 +19,8 @@ public final class NativeCalendarRootModel {
     public var onSidebandDidChange: (() -> Void)?
     public var openConferenceURLHandler: ((URL) -> Void)?
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
+    /// Window-level accessibility probe for native UI tests (see Compass app).
+    public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public var shortcutRegistry: ShortcutRegistry?
@@ -332,6 +334,15 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             eventJumpHints: eventJumpHintLabels
         )
+        onGridFocusAccessibilityLabelChanged?(focusedGridEventAccessibilityLabel())
+    }
+
+    private func focusedGridEventAccessibilityLabel() -> String? {
+        guard let focusedId = focusStore.focusedEventId?.rawValue else { return nil }
+        let colWidths = timeGridState.resolvedColumnWidths()
+        return timeGridState.snapshot(colWidths: colWidths).cards
+            .first(where: { $0.eventId == focusedId })?
+            .label
     }
 
     public func goToDate(_ date: Date) {

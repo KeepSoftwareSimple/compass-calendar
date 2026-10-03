@@ -32,11 +32,19 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
+        model.onGridFocusAccessibilityLabelChanged = { label in
+            GridFocusAccessibilityProbe.publish(label: label)
+        }
         applyTheme()
         configureNativeServices()
         configureKeyboard()
         configureResume()
         Task { await model.start() }
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        GridFocusAccessibilityProbe.attach(to: view)
     }
 
     @available(*, unavailable)
