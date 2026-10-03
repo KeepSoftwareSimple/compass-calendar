@@ -69,19 +69,13 @@ public final class TimeGridView: NSView {
 
     func eventCardView(at locationInWindow: NSPoint) -> EventCardView? {
         for view in cardPool.values {
-            let pointInCard = view.convert(locationInWindow, from: nil)
-            if view.bounds.width > 0.5, view.bounds.height > 0.5, view.bounds.contains(pointInCard) {
+            if view.containsPointInWindow(locationInWindow) {
                 return view
             }
         }
-        guard let window else { return nil }
-        let screenPoint = window.convertToScreen(
-            NSRect(x: locationInWindow.x, y: locationInWindow.y, width: 1, height: 1)
-        )
         for view in cardPool.values {
-            let axFrame = view.accessibilityFrame()
-            guard axFrame.width > 0.5, axFrame.height > 0.5 else { continue }
-            if axFrame.insetBy(dx: -2, dy: -2).intersects(screenPoint) {
+            let pointInCard = view.convert(locationInWindow, from: nil)
+            if view.bounds.width > 0.5, view.bounds.height > 0.5, view.bounds.contains(pointInCard) {
                 return view
             }
         }
@@ -436,6 +430,13 @@ private class FlippedView: NSView {
 /// frame but the synthesized click lands on the grid container (zero-size frames).
 private final class CardRoutingFlippedView: FlippedView {
     override func mouseDown(with event: NSEvent) {
+        for subview in subviews.reversed() {
+            guard let card = subview as? EventCardView else { continue }
+            if card.containsPointInWindow(event.locationInWindow) {
+                card.mouseDown(with: event)
+                return
+            }
+        }
         let point = convert(event.locationInWindow, from: nil)
         for subview in subviews.reversed() {
             guard let card = subview as? EventCardView else { continue }

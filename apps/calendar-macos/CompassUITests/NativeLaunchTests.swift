@@ -70,8 +70,8 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["compass-grid-event-demo-morning-standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        // Use the button press action so focus runs even when layout bounds are empty in CI.
-        standup.click()
+        // Accessibility frames are 0×0 in CI; `.click()` is not hittable. Coordinate taps still land on the card origin.
+        clickGridEvent(standup)
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
             "Expected event-card pointer hint after clicking the demo standup card")

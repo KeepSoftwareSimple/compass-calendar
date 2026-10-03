@@ -14,6 +14,9 @@ final class EventCardView: NSView {
 
     weak var cardDelegate: EventCardViewDelegate?
     private(set) var eventId: String = ""
+    /// Card frame in `timedContentView` / all-day row coordinates. Used when AppKit
+    /// bounds or XCTest accessibility frames are empty in CI but layout is valid.
+    private(set) var layoutRectInParent: NSRect = .zero
     private var showsFocusAccessibilityAnchor = false
 
     override var isFlipped: Bool { true }
@@ -59,12 +62,13 @@ final class EventCardView: NSView {
         isFocused: Bool
     ) {
         eventId = card.eventId
-        frame = NSRect(
+        layoutRectInParent = NSRect(
             x: card.frame.left,
             y: card.frame.top,
             width: card.frame.width,
             height: card.frame.height
         )
+        frame = layoutRectInParent
         titleField.stringValue = card.label
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
@@ -83,6 +87,10 @@ final class EventCardView: NSView {
         needsLayout = true
         layoutSubtreeIfNeeded()
         syncAccessibilityFrame()
+        if let window {
+            NSAccessibility.post(element: self, notification: .layoutChanged)
+            NSAccessibility.post(element: window, notification: .layoutChanged)
+        }
     }
 
     override func viewDidMoveToWindow() {
@@ -123,19 +131,43 @@ final class EventCardView: NSView {
         }
     }
 
-    private func syncAccessibilityFrame() {
-        guard bounds.width > 0.5, bounds.height > 0.5, let window else { return }
+    func containsPointInWindow(_ locationInWindow: NSPoint) -> Bool {
+        guard layoutRectInParent.width > 0.5, layoutRectInParent.height > 0.5,
+            let superview
+        else { return false }
+        let rectInWindow = superview.convert(layoutRectInParent, to: nil)
+        guard rectInWindow.width > 0.5, rectInWindow.height > 0.5 else { return false }
+        return rectInWindow.insetBy(dx: -4, dy: -4).contains(locationInWindow)
+    }
+
+    private func screenAccessibilityFrame() -> NSRect? {
+        if let layoutFrame = screenFrameFromLayoutRect() {
+            return layoutFrame
+        }
+        guard bounds.width > 0.5, bounds.height > 0.5, let window else { return nil }
         let screenFrame = window.convertToScreen(convert(bounds, to: nil))
-        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return }
+        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return nil }
+        return screenFrame
+    }
+
+    private func screenFrameFromLayoutRect() -> NSRect? {
+        guard layoutRectInParent.width > 0.5, layoutRectInParent.height > 0.5,
+            let superview, let window
+        else { return nil }
+        let rectInWindow = superview.convert(layoutRectInParent, to: nil)
+        guard rectInWindow.width > 0.5, rectInWindow.height > 0.5 else { return nil }
+        let screenFrame = window.convertToScreen(rectInWindow)
+        guard screenFrame.width > 0.5, screenFrame.height > 0.5 else { return nil }
+        return screenFrame
+    }
+
+    private func syncAccessibilityFrame() {
+        guard let screenFrame = screenAccessibilityFrame() else { return }
         setAccessibilityFrame(screenFrame)
     }
 
     override func accessibilityFrame() -> NSRect {
-        guard bounds.width > 0.5, bounds.height > 0.5, let window else {
-            return super.accessibilityFrame()
-        }
-        let screenFrame = window.convertToScreen(convert(bounds, to: nil))
-        if screenFrame.width > 0.5, screenFrame.height > 0.5 {
+        if let screenFrame = screenAccessibilityFrame() {
             return screenFrame
         }
         return super.accessibilityFrame()
