@@ -11,6 +11,7 @@ public final class NativeCalendarRootModel {
     public let billingStore: BillingStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
+    public let lifeStore: LifeStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     public private(set) var calendars: [CompassCalendar] = []
@@ -54,6 +55,7 @@ public final class NativeCalendarRootModel {
         authStore = environment.authStore
         billingStore = environment.billingStore
         levelsStore = environment.levelsStore
+        lifeStore = LifeStore(today: { [weak self] in self?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
 
         let anchor: Date = {
@@ -166,15 +168,32 @@ public final class NativeCalendarRootModel {
         }
         switch id {
         case .navNext:
-            pageWindow(direction: 1)
+            if viewStore.view == .life {
+                lifeStore.cycleVariation(direction: 1)
+            } else {
+                pageWindow(direction: 1)
+            }
         case .navPrevious:
-            pageWindow(direction: -1)
+            if viewStore.view == .life {
+                lifeStore.cycleVariation(direction: -1)
+            } else {
+                pageWindow(direction: -1)
+            }
         case .navToday:
-            goToToday()
-        case .navShiftLeft:
-            shiftViewByDay(-1)
-        case .navShiftRight:
-            shiftViewByDay(1)
+            if viewStore.view == .life {
+                lifeStore.focusCurrentWeek()
+            } else {
+                goToToday()
+            }
+        case .navLifePrev:
+            lifeStore.cycleVariation(direction: -1)
+        case .navLifeNext:
+            lifeStore.cycleVariation(direction: 1)
+        case .navLifeCurrent:
+            lifeStore.focusCurrentWeek()
+        case .navLifeView:
+            viewStore.view = .life
+            rebuildPresentation()
         case .navDayView:
             viewStore.view = .day
             viewStore.setVisibleDayCount(1)
@@ -184,6 +203,10 @@ public final class NativeCalendarRootModel {
             viewStore.view = .week
             rebuildPresentation()
             scheduleRefreshVisibleRange()
+        case .navShiftLeft:
+            shiftViewByDay(-1)
+        case .navShiftRight:
+            shiftViewByDay(1)
         case .navMonthPrev:
             shiftMonth(by: -1)
         case .navMonthNext:
@@ -265,11 +288,23 @@ public final class NativeCalendarRootModel {
         }
     }
 
+    public var shortcutContext: ShortcutContext {
+        ShortcutContext(
+            lifeView: viewStore.view == .life,
+            weekView: viewStore.view == .week,
+            isFormOpen: false,
+            isTrialing: billingStore.status?.subscriptionStatus == .trialing)
+    }
+
     private func layoutMode() -> GridLayoutMode {
         viewStore.view == .day ? .day : .week
     }
 
     private func rebuildPresentation() {
+        if viewStore.view == .life {
+            headerTitle = "Life"
+            return
+        }
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: Date())
         let hiddenIds = Set(hiddenEventsStore.hiddenEventIds.map(\.rawValue))
         let demoIds = demoSeed?.demoEventIds ?? []
@@ -304,7 +339,7 @@ public final class NativeCalendarRootModel {
     }
 
     private func refreshVisibleRange() async {
-        guard isSignedIn else { return }
+        guard isSignedIn, viewStore.view != .life else { return }
         let range = queryRange()
         let key = EventRangeQueryKey(
             scope: viewStore.view == .day ? .day : .week,

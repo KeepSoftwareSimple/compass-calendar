@@ -6,6 +6,7 @@ public struct ShortcutRegistryEntry: Hashable, Sendable {
     public let section: String
     public let displayKeycaps: [String]
     public let bindingChords: [KeyChord]
+    public let when: ShortcutContextWhen?
 }
 
 public enum ShortcutRegistryLoadError: Error, Sendable {
@@ -61,7 +62,8 @@ public struct ShortcutRegistry: Sendable {
                     label: row.label,
                     section: row.section,
                     displayKeycaps: row.keys,
-                    bindingChords: chords))
+                    bindingChords: chords,
+                    when: row.when))
         }
 
         self.entries = entries

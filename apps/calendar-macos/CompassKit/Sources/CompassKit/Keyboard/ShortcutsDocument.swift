@@ -6,6 +6,7 @@ struct ShortcutsDocument: Decodable, Sendable {
         let keys: [String]
         let label: String
         let section: String
+        let when: ShortcutContextWhen?
     }
 
     struct EditSequenceField: Decodable, Sendable {

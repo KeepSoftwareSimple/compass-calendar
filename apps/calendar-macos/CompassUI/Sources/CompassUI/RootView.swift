@@ -115,19 +115,29 @@ public struct RootView: View {
     private var header: some View {
         HStack(spacing: 12) {
             HStack(spacing: 12) {
-                headerButton(label: "Previous", systemImage: "chevron.left") {
-                    model.handleShortcut(.navPrevious)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Previous life variation" : "Previous",
+                    systemImage: "chevron.left"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifePrev : .navPrevious)
                 }
-                headerButton(label: "Next", systemImage: "chevron.right") {
-                    model.handleShortcut(.navNext)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Next life variation" : "Next",
+                    systemImage: "chevron.right"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifeNext : .navNext)
                 }
                 Text(model.headerTitle)
                     .font(.custom("Rubik", size: 15, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
                     .accessibilityIdentifier("compass-native-header-title")
-                headerButton(label: "Today", systemImage: nil, title: "Today") {
-                    model.handleShortcut(.navToday)
+                headerButton(
+                    label: model.viewStore.view == .life ? "Focus current week" : "Today",
+                    systemImage: nil,
+                    title: model.viewStore.view == .life ? "This week" : "Today"
+                ) {
+                    model.handleShortcut(model.viewStore.view == .life ? .navLifeCurrent : .navToday)
                 }
             }
             .padding(.leading, titleBarLeadingInset)
@@ -151,10 +161,16 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        TimeGridRepresentable(state: model.timeGridState)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(theme.backgroundColor)
-            .accessibilityIdentifier("compass-native-content")
+        Group {
+            if model.viewStore.view == .life {
+                LifeContentView(model: model)
+            } else {
+                TimeGridRepresentable(state: model.timeGridState)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(theme.backgroundColor)
+                    .accessibilityIdentifier("compass-native-content")
+            }
+        }
     }
 
     @ViewBuilder
