@@ -8,6 +8,18 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    private func waitForFocusedGridEvent(title: String, in window: XCUIElement, timeout: TimeInterval) {
+        let predicate = NSPredicate(
+            format: "identifier == %@ AND label == %@",
+            "compass-grid-event-focused",
+            title)
+        let focused = window.descendants(matching: .any).matching(predicate).firstMatch
+        XCTAssertTrue(
+            focused.waitForExistence(timeout: timeout),
+            "Expected focused grid event \"\(title)\"")
+    }
+
+    @MainActor
     func testAnonymousLaunchShowsAuthModal() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
@@ -60,18 +72,10 @@ final class NativeLaunchTests: XCTestCase {
             window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
             "Expected event-card pointer hint after clicking the demo standup card")
 
-        let focused = window.descendants(matching: .any)["compass-grid-event-focused"]
-        XCTAssertTrue(focused.waitForExistence(timeout: 10))
-        wait(
-            for: [expectation(for: NSPredicate(format: "label == %@", "Morning standup"), evaluatedWith: focused, handler: nil)],
-            timeout: 10)
+        waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompassFocused = window.descendants(matching: .any)["compass-grid-event-focused"]
-        XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
-        wait(
-            for: [expectation(for: NSPredicate(format: "label == %@", "Try Compass"), evaluatedWith: tryCompassFocused, handler: nil)],
-            timeout: 10)
+        waitForFocusedGridEvent(title: "Try Compass", in: window, timeout: 10)
     }
 
     @MainActor

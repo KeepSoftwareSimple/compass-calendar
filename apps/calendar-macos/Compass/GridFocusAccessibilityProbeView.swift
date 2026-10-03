@@ -89,12 +89,16 @@ enum GridFocusAccessibilityProbe {
         }
         guard let probe else { return }
         let wasInactive = probe.isHidden
+        let previousLabel = probe.accessibilityLabel() as String?
         probe.update(label: label)
         if label != nil {
             if wasInactive {
                 NSAccessibility.post(element: probe, notification: .created)
             }
             NSAccessibility.post(element: probe, notification: .focusedUIElementChanged)
+            if previousLabel != label {
+                NSAccessibility.post(element: probe, notification: .titleChanged)
+            }
         }
         if let window = probe.window {
             NSAccessibility.post(element: probe, notification: .layoutChanged)

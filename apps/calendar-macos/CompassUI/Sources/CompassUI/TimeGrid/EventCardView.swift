@@ -163,7 +163,6 @@ private final class FocusedEventAccessibilityAnchorView: NSView {
         super.init(frame: frameRect)
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityIdentifier(FocusedGridEventAccessibilityProxy.identifier)
     }
 
     @available(*, unavailable)

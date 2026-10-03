@@ -17,8 +17,6 @@ public final class NativeCalendarRootModel {
     public private(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
     public private(set) var gridFocusAccessibilityLabel: String?
-    /// Bumps when grid focus presentation changes so SwiftUI re-reads focus probes.
-    public private(set) var gridFocusAccessibilityRevision = 0
     public private(set) var calendars: [CompassCalendar] = []
     public var isSignedIn: Bool { authStore.authenticated }
     public var shortcutRegistry: ShortcutRegistry { environment.shortcutRegistry }
@@ -377,7 +375,6 @@ public final class NativeCalendarRootModel {
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
             cards.first(where: { $0.eventId == focusedId.rawValue })?.label
         }
-        gridFocusAccessibilityRevision &+= 1
         if pointerHintStore.isVisible {
             pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
         }

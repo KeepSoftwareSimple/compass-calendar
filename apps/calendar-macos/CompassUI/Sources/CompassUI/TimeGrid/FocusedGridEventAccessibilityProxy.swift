@@ -1,15 +1,12 @@
 import AppKit
 
-/// XCUITest reads stable accessibility elements more reliably than mutating
-/// `accessibilityIdentifier` on the event card itself (see CompassBridgeAccessibility).
+/// VoiceOver frame for the focused card. UI tests read `compass-grid-event-focused`
+/// from the window-level probe in the Compass app target.
 final class FocusedGridEventAccessibilityProxy: NSView {
-    static let identifier = "compass-grid-event-focused"
-
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
-        setAccessibilityIdentifier(Self.identifier)
     }
 
     @available(*, unavailable)
