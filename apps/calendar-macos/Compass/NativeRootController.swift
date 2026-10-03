@@ -22,9 +22,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
-    private var keyboardMonitor: NativeKeyboardMonitor?
+    private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
-    private var shortcutDispatcher: ShortcutDispatcher?
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
@@ -33,11 +32,40 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
+        model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
+            let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
+            if let window {
+                GridFocusAccessibilityProbe.attach(to: window)
+            }
+            GridFocusAccessibilityProbe.publish(label: label)
+            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
+        }
         applyTheme()
         configureNativeServices()
         configureKeyboard()
         configureResume()
         Task { await model.start() }
+    }
+
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        if let window = view.window {
+            GridFocusAccessibilityProbe.attach(to: window)
+            GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
+            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(
+                model.gridFocusAccessibilityLabel,
+                on: window
+            )
+        }
+    }
+
+    private static func compassHostWindow(hostingView: NSView?) -> NSWindow? {
+        if let hostingView, let window = hostingView.window {
+            return window
+        }
+        return NSApp.windows.first { window in
+            window.accessibilityIdentifier() as? String == "Compass"
+        }
     }
 
     @available(*, unavailable)
@@ -99,59 +127,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     private func configureKeyboard() {
-        let calendarModel = model
-        let registry = calendarModel.shortcutRegistry
-        let gridNavigationIds: Set<ShortcutId> = [
-            .navPrevious,
-            .navNext,
-            .navToday,
-            .navShiftLeft,
-            .navShiftRight,
-            .navDayView,
-            .navWeekView,
-            .navLifeView,
-            .navLifePrev,
-            .navLifeNext,
-            .navLifeCurrent,
-            .navMonthPrev,
-            .navMonthNext,
-            .navUpNext,
-            .navJoinMeeting,
-            .otherSettings,
-        ]
-        let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
-            guard gridNavigationIds.contains(entry.id) else { return nil }
-            return ShortcutHandler(
-                id: entry.id,
-                scope: .grid,
-                chords: entry.bindingChords,
-                when: entry.when,
-                handler: { id in
-                    Task { @MainActor in
-                        switch id {
-                        case .navUpNext:
-                            calendarModel.openUpNextEvent()
-                        case .navJoinMeeting:
-                            calendarModel.joinUpNextMeeting()
-                        default:
-                            calendarModel.handleShortcut(id)
-                        }
-                    }
-                })
-        }
-        let leader = LeaderSequenceEngine(
-            leaderKey: registry.editSequenceLeader,
-            fieldRows: registry.editSequenceFields)
-        let dispatcher = ShortcutDispatcher(
-            registry: registry,
-            handlers: handlers,
-            leaderEngine: leader)
-        shortcutDispatcher = dispatcher
-        keyboardMonitor = NativeKeyboardMonitor(
-            dispatcher: dispatcher,
-            contextProvider: { calendarModel.shortcutContext },
-            viewSwitchIds: [.navDayView, .navWeekView, .navLifeView])
-        keyboardMonitor?.start()
+        let registry = model.shortcutRegistry
+        let router = NativeGridKeyboardRouter(model: model, registry: registry)
+        let monitor = NativeKeyboardMonitor(router: router)
+        keyboardMonitor = monitor
+        monitor.start()
+        (NSApp as? CompassApplication)?.keyboardMonitor = monitor
     }
 
     private func configureResume() {

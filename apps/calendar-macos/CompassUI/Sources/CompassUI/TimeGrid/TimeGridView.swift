@@ -3,22 +3,24 @@ import CompassKit
 
 @MainActor
 public protocol TimeGridViewDelegate: AnyObject {
-    func timeGridViewDidRequestShortcutHint(_ view: TimeGridView)
+    func timeGridViewDidRequestShortcutHint(_ view: TimeGridView, at locationInWindow: NSPoint)
+    func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
 }
 
 @MainActor
 public final class TimeGridView: NSView {
     public weak var delegate: TimeGridViewDelegate?
 
-    private let scrollView = NSScrollView()
+    private let scrollView = GridScrollView()
     private let documentView = FlippedView()
     private let allDayRowView = FlippedView()
-    private let timedContentView = FlippedView()
+    private let timedContentView = CardRoutingFlippedView()
     private let hourGutterView = FlippedView()
     private let headerRowView = FlippedView()
     private let nowLineLayer = CALayer()
 
     private var cardPool: [String: EventCardView] = [:]
+    private let focusedEventAccessibilityProxy = FocusedGridEventAccessibilityProxy(frame: .zero)
     private nonisolated(unsafe) var minuteTimer: Timer?
     private var state: TimeGridState
     private var theme: NativeWebTheme
@@ -29,6 +31,7 @@ public final class TimeGridView: NSView {
         self.theme = theme
         super.init(frame: .zero)
         wantsLayer = true
+        scrollView.timeGridView = self
         configureScrollView()
         configureNowLine()
         startMinuteTimer()
@@ -57,7 +60,78 @@ public final class TimeGridView: NSView {
     }
 
     public override func mouseDown(with event: NSEvent) {
-        delegate?.timeGridViewDidRequestShortcutHint(self)
+        if let card = eventCardView(at: event.locationInWindow) {
+            card.mouseDown(with: event)
+            return
+        }
+        delegate?.timeGridViewDidRequestShortcutHint(self, at: event.locationInWindow)
+    }
+
+    private func pointInDocumentView(_ locationInWindow: NSPoint) -> NSPoint {
+        let pointInContentView = scrollView.contentView.convert(locationInWindow, from: nil)
+        return documentView.convert(pointInContentView, from: scrollView.contentView)
+    }
+
+    func eventCardView(at locationInWindow: NSPoint) -> EventCardView? {
+        if let hit = eventCardViewMatchingDocumentPoint(pointInDocumentView(locationInWindow)) {
+            return hit
+        }
+
+        for view in cardPool.values {
+            if view.containsPointInWindow(locationInWindow) {
+                return view
+            }
+        }
+        for view in cardPool.values {
+            let pointInCard = view.convert(locationInWindow, from: nil)
+            if view.bounds.width > 0.5, view.bounds.height > 0.5, view.bounds.contains(pointInCard) {
+                return view
+            }
+        }
+        return nil
+    }
+
+    private func eventCardViewMatchingDocumentPoint(_ documentPoint: NSPoint) -> EventCardView? {
+        var smallestHit: (view: EventCardView, area: Double)?
+        for view in cardPool.values {
+            guard view.containsPointInDocument(documentPoint, documentView: documentView) else { continue }
+            let area = Double(view.layoutRectInParent.width * view.layoutRectInParent.height)
+            if smallestHit == nil || area < smallestHit!.area {
+                smallestHit = (view: view, area: area)
+            }
+        }
+        return smallestHit?.view
+    }
+
+    public override func accessibilityChildren() -> [Any]? {
+        var children = super.accessibilityChildren() ?? []
+        if !focusedEventAccessibilityProxy.isHidden,
+            focusedEventAccessibilityProxy.superview === self
+        {
+            children.append(focusedEventAccessibilityProxy)
+        }
+        return children
+    }
+
+    public func applyScroll(_ request: TimeGridScrollRequest) {
+        guard let snapshot else { return }
+        let hourHeight = snapshot.metrics.hourHeight
+        let pageDelta = scrollView.contentView.bounds.height
+        var origin = scrollView.contentView.bounds.origin
+        switch request {
+        case .revealDocumentY(let documentY):
+            origin.y = max(0, documentY)
+        case .pageUp:
+            origin.y = max(0, origin.y - pageDelta)
+        case .hourUp:
+            origin.y = max(0, origin.y - hourHeight)
+        case .pageDown:
+            origin.y += pageDelta
+        case .hourDown:
+            origin.y += hourHeight
+        }
+        scrollView.contentView.scroll(to: origin)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
     public override func rightMouseDown(with event: NSEvent) {
@@ -231,7 +305,10 @@ public final class TimeGridView: NSView {
 
             var adjusted = card
             adjusted.frame = frame
-            view.apply(card: adjusted, theme: theme, surfaceColor: surface)
+            let isFocused = state.focusedEventId == card.eventId
+            view.apply(card: adjusted, theme: theme, surfaceColor: surface, isFocused: isFocused)
+            view.cardDelegate = self
+            view.layoutSubtreeIfNeeded()
 
             let parent = card.kind == .allDay ? allDayRowView : timedContentView
             if view.superview !== parent {
@@ -243,6 +320,48 @@ public final class TimeGridView: NSView {
         for (eventId, view) in cardPool where !seen.contains(eventId) {
             view.removeFromSuperview()
             cardPool.removeValue(forKey: eventId)
+        }
+
+        syncFocusedEventAccessibilityProxy(snapshot: snapshot, allDayOffset: allDayOffset)
+    }
+
+    private func syncFocusedEventAccessibilityProxy(
+        snapshot: GridLayoutSnapshot,
+        allDayOffset: Double
+    ) {
+        guard let focusedId = state.focusedEventId,
+            let card = snapshot.cards.first(where: { $0.eventId == focusedId })
+        else {
+            focusedEventAccessibilityProxy.isHidden = true
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            return
+        }
+
+        var frame = card.frame
+        let cardParent: NSView
+        if card.kind == .allDay {
+            frame.top += 28
+            cardParent = allDayRowView
+        } else {
+            frame.top += allDayOffset
+            cardParent = timedContentView
+        }
+
+        let frameInGrid = cardParent.convert(
+            NSRect(x: frame.left, y: frame.top, width: frame.width, height: frame.height),
+            to: self
+        )
+
+        if focusedEventAccessibilityProxy.superview !== self {
+            focusedEventAccessibilityProxy.removeFromSuperview()
+            addSubview(focusedEventAccessibilityProxy, positioned: .above, relativeTo: scrollView)
+        }
+        focusedEventAccessibilityProxy.isHidden = false
+        focusedEventAccessibilityProxy.sync(label: card.label, frameInParent: frameInGrid)
+
+        if let window {
+            NSAccessibility.post(element: focusedEventAccessibilityProxy, notification: .layoutChanged)
+            NSAccessibility.post(element: window, notification: .layoutChanged)
         }
     }
 
@@ -318,6 +437,50 @@ public final class TimeGridView: NSView {
     }
 }
 
-private final class FlippedView: NSView {
+extension TimeGridView: EventCardViewDelegate {
+    func eventCardViewDidClick(_ view: EventCardView, eventId: String) {
+        delegate?.timeGridView(self, didClickEvent: eventId)
+    }
+}
+
+private class FlippedView: NSView {
     override var isFlipped: Bool { true }
+}
+
+/// Routes mouse clicks to event cards when XCUITest hits the card's accessibility
+/// frame but the synthesized click lands on the grid container (zero-size frames).
+private final class CardRoutingFlippedView: FlippedView {
+    override func mouseDown(with event: NSEvent) {
+        for subview in subviews.reversed() {
+            guard let card = subview as? EventCardView else { continue }
+            if card.containsPointInWindow(event.locationInWindow) {
+                card.mouseDown(with: event)
+                return
+            }
+        }
+        let point = convert(event.locationInWindow, from: nil)
+        for subview in subviews.reversed() {
+            guard let card = subview as? EventCardView else { continue }
+            if card.frame.contains(point) {
+                card.mouseDown(with: event)
+                return
+            }
+        }
+        super.mouseDown(with: event)
+    }
+}
+
+private final class GridScrollView: NSScrollView {
+    weak var timeGridView: TimeGridView?
+
+    override func mouseDown(with event: NSEvent) {
+        if let grid = timeGridView {
+            if let card = grid.eventCardView(at: event.locationInWindow) {
+                card.mouseDown(with: event)
+                return
+            }
+            grid.delegate?.timeGridViewDidRequestShortcutHint(grid, at: event.locationInWindow)
+        }
+        super.mouseDown(with: event)
+    }
 }

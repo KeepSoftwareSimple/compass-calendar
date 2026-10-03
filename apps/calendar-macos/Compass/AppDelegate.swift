@@ -110,6 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func installRootContent(on window: NSWindow) {
+        nativeRootController?.keyboardMonitor?.stop()
+        (NSApp as? CompassApplication)?.keyboardMonitor = nil
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
             let presenter = WebAuthSessionPresenter()
@@ -119,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let nativeController = NativeRootController(webTheme: theme, model: model)
             nativeRootController = nativeController
             window.contentViewController = nativeController
+            CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
             mainMenuController?.nativeRootController = nativeController
         } else {
             nativeRootController = nil
