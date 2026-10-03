@@ -88,7 +88,6 @@ final class NativeGridKeyboardRouter {
             registry: registry,
             handlers: handlers,
             leaderEngine: leader)
-        model.shortcutRegistry = registry
     }
 
     func handleFlagsChanged(_ event: NSEvent) {

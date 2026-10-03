@@ -61,7 +61,7 @@ public final class EventsStore {
         }
 
         let query = EventListQuery(
-            kind: key.scope == .day ? "timed" : "timed",
+            kind: "timed",
             start: key.start,
             end: key.end
         )

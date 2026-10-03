@@ -18,21 +18,17 @@ public struct AuthInterceptor: Sendable {
         switch mode {
         case .none:
             break
-        case .headerSession:
-            request.setValue(SessionHeader.headerModeValue, forHTTPHeaderField: SessionHeader.authMode)
-            if let tokens {
-                request.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
-            }
-        case .bearerAccess:
-            request.setValue(SessionHeader.headerModeValue, forHTTPHeaderField: SessionHeader.authMode)
-            if let tokens {
-                request.setValue("Bearer \(tokens.accessToken)", forHTTPHeaderField: "Authorization")
-            }
+        case .headerSession, .bearerAccess:
+            applyBearer(to: &request, token: tokens?.accessToken)
         case .bearerRefresh:
-            request.setValue(SessionHeader.headerModeValue, forHTTPHeaderField: SessionHeader.authMode)
-            if let tokens {
-                request.setValue("Bearer \(tokens.refreshToken)", forHTTPHeaderField: "Authorization")
-            }
+            applyBearer(to: &request, token: tokens?.refreshToken)
+        }
+    }
+
+    private func applyBearer(to request: inout URLRequest, token: String?) {
+        request.setValue(SessionHeader.headerModeValue, forHTTPHeaderField: SessionHeader.authMode)
+        if let token {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
     }
 

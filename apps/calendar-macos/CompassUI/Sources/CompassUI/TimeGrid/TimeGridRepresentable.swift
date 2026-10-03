@@ -46,23 +46,20 @@ public struct TimeGridRepresentable: NSViewRepresentable {
         }
 
         public func timeGridViewDidRequestShortcutHint(_ view: TimeGridView) {
-            guard let registry = model.shortcutRegistry else { return }
-            model.handleGridPointerDown(registry: registry)
+            model.handleGridPointerDown(registry: model.shortcutRegistry)
         }
 
         public func timeGridView(_ view: TimeGridView, didClickEvent eventId: String) {
             model.focusGridEvent(eventId: eventId)
             model.publishGridFocusAccessibilityProbe()
-            if let registry = model.shortcutRegistry {
-                let focusedLabel =
-                    model.gridFocusAccessibilityLabel
-                    ?? focusedEventLabel(for: eventId)
-                model.showPointerHint(
-                    for: .eventCard,
-                    registry: registry,
-                    focusedGridEventLabel: focusedLabel
-                )
-            }
+            let focusedLabel =
+                model.gridFocusAccessibilityLabel
+                ?? focusedEventLabel(for: eventId)
+            model.showPointerHint(
+                for: .eventCard,
+                registry: model.shortcutRegistry,
+                focusedGridEventLabel: focusedLabel
+            )
             view.update(state: model.timeGridState, theme: theme)
             view.layoutSubtreeIfNeeded()
         }

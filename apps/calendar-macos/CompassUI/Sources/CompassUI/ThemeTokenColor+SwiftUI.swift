@@ -7,6 +7,23 @@ extension ThemeTokenColor {
     }
 }
 
+private protocol NativeThemePalette {
+    var background: ThemeTokenColor { get }
+    var surface: ThemeTokenColor { get }
+    var surfacePanel: ThemeTokenColor { get }
+    var text: ThemeTokenColor { get }
+    var textMuted: ThemeTokenColor { get }
+    var border: ThemeTokenColor { get }
+    var accent: ThemeTokenColor { get }
+    var accentSecondary: ThemeTokenColor { get }
+    var error: ThemeTokenColor { get }
+    var success: ThemeTokenColor { get }
+    var overlayBackdrop: ThemeTokenColor { get }
+}
+
+extension LightBeachPalette: NativeThemePalette {}
+extension DarkAbyssPalette: NativeThemePalette {}
+
 public enum NativeWebTheme: String, Sendable, CaseIterable {
     case lightBeach = "light-beach"
     case darkAbyss = "dark-abyss"
@@ -15,75 +32,24 @@ public enum NativeWebTheme: String, Sendable, CaseIterable {
         DesktopThemeAppearance(webTheme: rawValue)
     }
 
-    public var backgroundColor: Color {
+    private var palette: any NativeThemePalette {
         switch self {
         case .lightBeach:
-            ThemeTokens.lightBeach.background.swiftUIColor
+            ThemeTokens.lightBeach
         case .darkAbyss:
-            ThemeTokens.darkAbyss.background.swiftUIColor
+            ThemeTokens.darkAbyss
         }
     }
 
-    public var surfaceColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.surface.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.surface.swiftUIColor
-        }
-    }
-
-    public var surfacePanelColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.surfacePanel.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.surfacePanel.swiftUIColor
-        }
-    }
-
-    public var textColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.text.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.text.swiftUIColor
-        }
-    }
-
-    public var textMutedColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.textMuted.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.textMuted.swiftUIColor
-        }
-    }
-
-    public var borderColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.border.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.border.swiftUIColor
-        }
-    }
-
-    public var accentColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.accent.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.accent.swiftUIColor
-        }
-    }
-
-    public var accentSecondaryColor: Color {
-        switch self {
-        case .lightBeach:
-            ThemeTokens.lightBeach.accentSecondary.swiftUIColor
-        case .darkAbyss:
-            ThemeTokens.darkAbyss.accentSecondary.swiftUIColor
-        }
-    }
+    public var backgroundColor: Color { palette.background.swiftUIColor }
+    public var surfaceColor: Color { palette.surface.swiftUIColor }
+    public var surfacePanelColor: Color { palette.surfacePanel.swiftUIColor }
+    public var textColor: Color { palette.text.swiftUIColor }
+    public var textMutedColor: Color { palette.textMuted.swiftUIColor }
+    public var borderColor: Color { palette.border.swiftUIColor }
+    public var accentColor: Color { palette.accent.swiftUIColor }
+    public var accentSecondaryColor: Color { palette.accentSecondary.swiftUIColor }
+    public var errorColor: Color { palette.error.swiftUIColor }
+    public var successColor: Color { palette.success.swiftUIColor }
+    public var overlayBackdropColor: Color { palette.overlayBackdrop.swiftUIColor }
 }

@@ -70,19 +70,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         model.handleDeepLink(urlString)
     }
 
-    func presentDebugSignIn(from window: NSWindow?) async {
-        guard let credentials = await DebugSignInController.prompt(parentWindow: window) else {
-            return
-        }
-        do {
-            try await model.signIn(email: credentials.email, password: credentials.password)
-        } catch {
-            let alert = NSAlert(error: error)
-            alert.messageText = "Sign in failed"
-            alert.runModal()
-        }
-    }
-
     private func applyTheme() {
         rootView = ThemedRootView(webTheme: webTheme, model: model)
         DesktopNativeServices.applyAppearance(theme: webTheme.rawValue)
@@ -122,16 +109,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     private func configureKeyboard() {
-        do {
-            let registry = try ShortcutRegistry()
-            let router = NativeGridKeyboardRouter(model: model, registry: registry)
-            let monitor = NativeKeyboardMonitor(router: router)
-            keyboardMonitor = monitor
-            monitor.start()
-            (NSApp as? CompassApplication)?.keyboardMonitor = monitor
-        } catch {
-            // Native grid remains usable via header buttons if shortcuts fail to load.
-        }
+        let registry = model.shortcutRegistry
+        let router = NativeGridKeyboardRouter(model: model, registry: registry)
+        let monitor = NativeKeyboardMonitor(router: router)
+        keyboardMonitor = monitor
+        monitor.start()
+        (NSApp as? CompassApplication)?.keyboardMonitor = monitor
     }
 
     private func configureResume() {

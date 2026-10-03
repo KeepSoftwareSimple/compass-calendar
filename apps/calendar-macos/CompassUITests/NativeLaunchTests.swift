@@ -8,6 +8,17 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testAnonymousLaunchShowsAuthModal() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        XCTAssertTrue(
+            window.descendants(matching: .any)["compass-native-auth-modal"].waitForExistence(timeout: 10))
+    }
+
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]

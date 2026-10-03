@@ -7,6 +7,7 @@ import Observation
 public final class NativeCalendarRootModel {
     public let viewStore: ViewStore
     public let configStore: ConfigStore
+    public let authStore: AuthStore
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
     public let pointerHintStore: PointerHintStore
@@ -15,7 +16,8 @@ public final class NativeCalendarRootModel {
     /// Title of the focused grid event for native UI tests and accessibility probes.
     public private(set) var gridFocusAccessibilityLabel: String?
     public private(set) var calendars: [CompassCalendar] = []
-    public private(set) var isSignedIn = false
+    public var isSignedIn: Bool { authStore.authenticated }
+    public var shortcutRegistry: ShortcutRegistry { environment.shortcutRegistry }
     public private(set) var contentTrackWidth: CGFloat = 1010
     public internal(set) var sidebandEvents: [Event] = []
     public var onSidebandDidChange: (() -> Void)?
@@ -25,7 +27,6 @@ public final class NativeCalendarRootModel {
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
-    public var shortcutRegistry: ShortcutRegistry?
 
     private let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -58,6 +59,7 @@ public final class NativeCalendarRootModel {
         hiddenEventsStore = environment.hiddenEventsStore
         calendarRepository = environment.calendarRepository
         configStore = environment.configStore
+        authStore = environment.authStore
         levelsStore = environment.levelsStore
         analyticsIdentity = environment.analyticsIdentity
 
@@ -85,8 +87,11 @@ public final class NativeCalendarRootModel {
             ),
             trackWidth: 1010
         )
-        if demoSeed != nil {
-            isSignedIn = true
+        authStore.onAuthenticated = { [weak self] in
+            await self?.handleAuthenticated()
+        }
+        authStore.onSignedOut = { [weak self] in
+            await self?.handleSignedOut()
         }
         rebuildPresentation()
     }
@@ -94,10 +99,9 @@ public final class NativeCalendarRootModel {
     public func start() async {
         await configStore.load()
         await configureAnalyticsFromConfig()
+        await authStore.bootstrap(forceDemoSignedIn: demoSeed != nil)
         if demoSeed != nil {
             await bootstrapFixtureSession()
-        } else {
-            await refreshSignedInState()
         }
         try? await hiddenEventsStore.load()
         await reloadCalendars()
@@ -121,10 +125,11 @@ public final class NativeCalendarRootModel {
         await reloadCalendars()
     }
 
-    public func signIn(email: String, password: String) async throws {
-        try await environment.apiClient.auth.signIn(email: email, password: password)
-        isSignedIn = true
-        await identifyAnalyticsUser()
+    public func signOut() async throws {
+        try await authStore.signOut()
+    }
+
+    private func handleAuthenticated() async {
         startEventStream()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
@@ -132,13 +137,10 @@ public final class NativeCalendarRootModel {
         await refreshSideband()
     }
 
-    public func signOut() async throws {
+    private func handleSignedOut() async {
         if let eventStream {
             await eventStream.stop()
         }
-        try await environment.apiClient.auth.signOut()
-        await resetAnalyticsIdentity()
-        isSignedIn = false
         loadedEvents = []
         sidebandEvents = []
         calendars = []
@@ -575,7 +577,7 @@ public final class NativeCalendarRootModel {
 
     private func reloadCalendars() async {
         do {
-            let remote = try await CalendarsAPI(client: environment.apiClient).list()
+            let remote = try await environment.apiClient.calendars.list()
             let mapped = remote.map(CompassCalendar.init(listItem:))
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
@@ -588,32 +590,16 @@ public final class NativeCalendarRootModel {
         let calendar = demoSeed.calendarListItem()
         try? calendarRepository.upsert(calendars: [CompassCalendar(listItem: calendar)])
         calendars = (try? calendarRepository.fetchAll()) ?? []
-        isSignedIn = true
         await refreshVisibleRange()
-    }
-
-    private func refreshSignedInState() async {
-        isSignedIn = (try? await environment.apiClient.currentSession()) != nil
-        if isSignedIn {
-            await identifyAnalyticsUser()
-        }
     }
 
     private func configureAnalyticsFromConfig() async {
         await analyticsIdentity.applyPostHogConfig(configStore.config?.posthog)
     }
 
-    private func identifyAnalyticsUser() async {
-        guard isSignedIn else { return }
-        do {
-            let profile = try await UserAPI(client: environment.apiClient).profile()
-            await analyticsIdentity.identify(userId: profile.userId)
-            await analyticsIdentity.trackLoginCompleted()
-        } catch {}
-    }
-
-    private func resetAnalyticsIdentity() async {
-        await analyticsIdentity.resetIdentity()
+    private func refreshAfterStreamChange() async {
+        await refreshVisibleRange()
+        await refreshSideband()
     }
 
     private func startEventStream() {
@@ -624,15 +610,13 @@ public final class NativeCalendarRootModel {
                 onMessage: { [weak self] message in
                     Task { @MainActor in
                         try? self?.eventsStore.handleServerMessage(message)
-                        await self?.refreshVisibleRange()
-                        await self?.refreshSideband()
+                        await self?.refreshAfterStreamChange()
                     }
                 },
                 onReopen: { [weak self] in
                     Task { @MainActor in
                         try? self?.eventsStore.handleStreamReopen()
-                        await self?.refreshVisibleRange()
-                        await self?.refreshSideband()
+                        await self?.refreshAfterStreamChange()
                     }
                 }
             )

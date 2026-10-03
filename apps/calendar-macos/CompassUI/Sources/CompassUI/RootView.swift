@@ -40,6 +40,9 @@ public struct RootView: View {
                 })
             .padding(.bottom, 24)
         }
+        .overlay {
+            AuthModalOverlay(authStore: model.authStore)
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear
