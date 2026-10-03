@@ -65,6 +65,10 @@ extension NativeCalendarRootModel {
     }
 
     public func handleDeepLink(_ urlString: String) {
+        if DesktopDeepLinkParser.isBillingCheckoutDeepLink(urlString) {
+            billingStore.handleBillingCheckoutDeepLink(urlString)
+            return
+        }
         if let eventId = DesktopDeepLinkParser.parseEventId(from: urlString) {
             focusEventDeepLink(eventId: eventId)
             return

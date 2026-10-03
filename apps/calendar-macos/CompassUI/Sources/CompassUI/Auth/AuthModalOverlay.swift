@@ -4,9 +4,11 @@ import SwiftUI
 public struct AuthModalOverlay: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable public var authStore: AuthStore
+    @Bindable public var billingStore: BillingStore
 
-    public init(authStore: AuthStore) {
+    public init(authStore: AuthStore, billingStore: BillingStore) {
         self.authStore = authStore
+        self.billingStore = billingStore
     }
 
     public var body: some View {
@@ -61,7 +63,7 @@ public struct AuthModalOverlay: View {
     private var content: some View {
         switch authStore.currentView {
         case .startTrial:
-            StartTrialStepView(authStore: authStore)
+            StartTrialStepView(authStore: authStore, billingStore: billingStore)
         case .signUp:
             SignUpFormView(authStore: authStore)
         case .login, .loginAfterReset:

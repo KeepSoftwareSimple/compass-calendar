@@ -37,6 +37,15 @@ final class DesktopDeepLinkTests: XCTestCase {
         XCTAssertNil(DesktopDeepLinkParser.recognizedURLString("https://example.com"))
     }
 
+    func testBillingCheckoutDeepLinkIsRecognized() {
+        let url = "compass://billing/checkout?outcome=success&session_id=cs_test_123"
+        XCTAssertEqual(DesktopDeepLinkParser.recognizedURLString(url), url)
+        XCTAssertEqual(
+            DesktopDeepLinkParser.parseBillingCheckout(from: url)?.sessionId,
+            "cs_test_123")
+        XCTAssertNil(DesktopDeepLinkParser.navigationPath(for: url))
+    }
+
     func testColdStartQueuesUntilWebViewReady() {
         var inbox = DeepLinkInbox()
         XCTAssertEqual(

@@ -8,6 +8,7 @@ public final class NativeCalendarRootModel {
     public let viewStore: ViewStore
     public let configStore: ConfigStore
     public let authStore: AuthStore
+    public let billingStore: BillingStore
     public let levelsStore: LevelsStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
@@ -50,6 +51,7 @@ public final class NativeCalendarRootModel {
         calendarRepository = environment.calendarRepository
         configStore = environment.configStore
         authStore = environment.authStore
+        billingStore = environment.billingStore
         levelsStore = environment.levelsStore
         analyticsIdentity = environment.analyticsIdentity
 
@@ -81,6 +83,7 @@ public final class NativeCalendarRootModel {
         authStore.onSignedOut = { [weak self] in
             await self?.handleSignedOut()
         }
+        billingStore.setAuthenticated(authStore.authenticated)
         rebuildPresentation()
     }
 
@@ -118,6 +121,8 @@ public final class NativeCalendarRootModel {
     }
 
     private func handleAuthenticated() async {
+        billingStore.setAuthenticated(true)
+        await billingStore.refreshAfterSignIn()
         startEventStream()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
@@ -126,6 +131,8 @@ public final class NativeCalendarRootModel {
     }
 
     private func handleSignedOut() async {
+        billingStore.setAuthenticated(false)
+        billingStore.closeSettings()
         if let eventStream {
             await eventStream.stop()
         }
@@ -174,6 +181,8 @@ public final class NativeCalendarRootModel {
             shiftMonth(by: -1)
         case .navMonthNext:
             shiftMonth(by: 1)
+        case .otherSettings:
+            billingStore.openSettings()
         default:
             break
         }
