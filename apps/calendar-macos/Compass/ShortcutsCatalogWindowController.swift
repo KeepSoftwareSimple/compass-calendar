@@ -27,7 +27,7 @@ final class ShortcutsCatalogWindowController: NSWindowController, ShortcutsCatal
 
     func presentPublicCatalog(sections: [ShortcutLegendSection]) {
         let theme = NativeUIThemePreference.load()
-        let view = ShortcutsCatalogView(sections: sections, theme: theme)
+        let view = ShortcutsCatalogView(sections: sections)
             .environment(\.nativeWebTheme, theme)
         let host = NSHostingController(rootView: AnyView(view))
         hostingController = host
