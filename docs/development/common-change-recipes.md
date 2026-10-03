@@ -71,10 +71,10 @@ consistent.
 
 ## Add Or Change A Keyboard Shortcut
 
-1. Declare the binding once in `apps/calendar-web/src/shortcuts/keymap.ts` (taught
-   flows) or `apps/calendar-web/src/shortcuts/app-shortcut-bindings.ts` (everything
+1. Declare the binding once in `packages/core/src/shortcuts/keymap.ts` (taught
+   flows) or `packages/core/src/shortcuts/app-shortcut-bindings.ts` (everything
    else the main shell registers).
-2. Add or update the row in `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`
+2. Add or update the row in `packages/core/src/shortcuts/shortcuts.registry.ts`
    (id, keys derived from those tables, label, section, optional `when`). The
    `?` legend reads from this registry — do not hard-code a second label list.
 3. Register the key in the owning hook:

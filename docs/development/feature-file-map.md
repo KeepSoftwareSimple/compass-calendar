@@ -75,7 +75,7 @@ Create-only: the browser asks the provider to mint a link with
 
 - Browser create flag and conference kind labels: `CreateEventInputSchema.createConference` in `packages/core/src/types/event-command.contracts.ts`, `CONFERENCE_KIND_LABEL` in `packages/core/src/types/calendar.contracts.ts`
 - Capability gate (`capabilities.conferenceKinds`, never a provider name): `creatableConferenceKind` in `apps/calendar-web/src/calendars/calendar.util.ts`
-- "Add <kind>" switch and the `e m` / `Mod+=` meeting-link field: `apps/calendar-web/src/views/Forms/EventForm/EventForm.tsx`, `apps/calendar-web/src/shortcuts/edit-sequence/edit-sequence.fields.ts`, `apps/calendar-web/src/common/utils/form/form.util.ts`
+- "Add <kind>" switch and the `e m` / `Mod+=` meeting-link field: `apps/calendar-web/src/views/Forms/EventForm/EventForm.tsx`, `packages/core/src/shortcuts/edit-sequence.fields.ts`, `apps/calendar-web/src/common/utils/form/form.util.ts`
 - Save-time belt (drops the flag when the target calendar cannot mint a link): `apps/calendar-web/src/views/Forms/hooks/useSaveEventForm.ts`
 - Post-save "Copy link" toast (`L`): `apps/calendar-web/src/common/utils/toast/conference-link-added.toast.tsx`, shown from the create path in `apps/calendar-web/src/events/mutations/useEventMutations.ts`
 - Read-only link with copy button on an existing event: `apps/calendar-web/src/views/Forms/EventForm/EventDetailsSection.tsx`
@@ -153,8 +153,8 @@ labels outside the registry.
 Product rules (hold-Mod discovery, "chip the field", typing always types):
 [Shortcut Commandments](../frontend/shortcut-commandments.md).
 
-- Registry (source of truth for `?` legend): `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`
-- Taught bindings (handlers + Shortcut Showcase keycaps): `apps/calendar-web/src/shortcuts/keymap.ts`
+- Registry (source of truth for `?` legend): `packages/core/src/shortcuts/shortcuts.registry.ts`, filtered per view by `apps/calendar-web/src/shortcuts/shortcuts.registry.ts`
+- Taught bindings (handlers + Shortcut Showcase keycaps): `packages/core/src/shortcuts/keymap.ts`
 - Sidebar next-shortcut selector: `apps/calendar-web/src/shortcuts/tips/selectShortcutHint.ts`
 - What counts as a hint impression: `apps/calendar-web/src/shortcuts/tips/shortcut-telemetry.ts`
 - Sidebar tip progress (demonstrated primitives): `apps/calendar-web/src/shortcuts/tips/shortcut-tips.progress.store.ts`
