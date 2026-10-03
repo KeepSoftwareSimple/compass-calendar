@@ -1,9 +1,9 @@
 import AppKit
 
-/// Window-level focus probe for XCUITest (see `CompassBridgeAccessibility`).
+/// VoiceOver helper on the window. UI tests read `compass-grid-event-focused`
+/// from `GridFocusAccessibilityOverlay` in CompassUI (SwiftUI).
 @MainActor
 final class GridFocusAccessibilityProbeView: NSView {
-    static let identifier = "compass-grid-event-focused"
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -25,7 +25,6 @@ final class GridFocusAccessibilityProbeView: NSView {
             setAccessibilityElement(true)
             setAccessibilityHidden(false)
             setAccessibilityRole(.button)
-            setAccessibilityIdentifier(Self.identifier)
             setAccessibilityLabel(label)
             frame = NSRect(x: 8, y: 8, width: 160, height: 36)
             syncAccessibilityFrame()
@@ -33,7 +32,6 @@ final class GridFocusAccessibilityProbeView: NSView {
             isHidden = true
             setAccessibilityElement(false)
             setAccessibilityLabel(nil)
-            setAccessibilityIdentifier(nil)
         }
     }
 

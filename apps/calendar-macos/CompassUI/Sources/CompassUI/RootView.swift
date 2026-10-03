@@ -21,6 +21,13 @@ public struct RootView: View {
             }
             pointerHintLayer
         }
+        .overlay(alignment: .topLeading) {
+            if let focusedId = model.timeGridState.focusedEventId,
+               let label = model.gridFocusAccessibilityLabel
+            {
+                GridFocusAccessibilityOverlay(label: label, focusEventId: focusedId)
+            }
+        }
         .background(theme.backgroundColor)
         .font(.custom("Rubik", size: 14))
         .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in
