@@ -42,9 +42,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         Task { await model.start() }
     }
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        GridFocusAccessibilityProbe.attach(to: view)
+    override func viewDidAppear() {
+        super.viewDidAppear()
+        if let contentView = view.window?.contentView {
+            GridFocusAccessibilityProbe.attach(to: contentView)
+        } else {
+            GridFocusAccessibilityProbe.attach(to: view)
+        }
     }
 
     @available(*, unavailable)

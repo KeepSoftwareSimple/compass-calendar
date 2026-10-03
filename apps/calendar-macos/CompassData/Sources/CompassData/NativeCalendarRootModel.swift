@@ -235,6 +235,10 @@ public final class NativeCalendarRootModel {
         focusEvent(eventId: eventId)
     }
 
+    public func publishGridFocusAccessibilityProbe() {
+        onGridFocusAccessibilityLabelChanged?(focusedGridEventAccessibilityLabel())
+    }
+
     public func handleGridPointerDown(registry: ShortcutRegistry) {
         showPointerHint(for: .gridScroll, registry: registry)
     }

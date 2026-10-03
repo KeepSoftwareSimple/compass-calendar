@@ -52,6 +52,7 @@ public struct TimeGridRepresentable: NSViewRepresentable {
 
         public func timeGridView(_ view: TimeGridView, didClickEvent eventId: String) {
             model.focusGridEvent(eventId: eventId)
+            model.publishGridFocusAccessibilityProbe()
             if let registry = model.shortcutRegistry {
                 model.showPointerHint(for: .eventCard, registry: registry)
             }

@@ -14,7 +14,7 @@ public final class TimeGridView: NSView {
     private let scrollView = NSScrollView()
     private let documentView = FlippedView()
     private let allDayRowView = FlippedView()
-    private let timedContentView = FlippedView()
+    private let timedContentView = CardRoutingFlippedView()
     private let hourGutterView = FlippedView()
     private let headerRowView = FlippedView()
     private let nowLineLayer = CALayer()
@@ -404,4 +404,20 @@ extension TimeGridView: EventCardViewDelegate {
 
 private final class FlippedView: NSView {
     override var isFlipped: Bool { true }
+}
+
+/// Routes mouse clicks to event cards when XCUITest hits the card's accessibility
+/// frame but the synthesized click lands on the grid container (zero-size frames).
+private final class CardRoutingFlippedView: FlippedView {
+    override func mouseDown(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        for subview in subviews.reversed() {
+            guard let card = subview as? EventCardView else { continue }
+            if card.frame.contains(point) {
+                card.mouseDown(with: event)
+                return
+            }
+        }
+        super.mouseDown(with: event)
+    }
 }
