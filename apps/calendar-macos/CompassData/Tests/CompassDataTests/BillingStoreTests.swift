@@ -25,22 +25,23 @@ private enum BillingStoreTestFixtures {
 
 @MainActor
 final class BillingStoreTests: XCTestCase {
-    private func makeStore() throws -> (BillingStore, ConfigStore, CompassAPIClient) {
+    private func makeStore(
+        handler: @escaping @Sendable (URLRequest) throws -> StubURLProtocol.Response
+    ) throws -> (BillingStore, ConfigStore) {
         let client = CompassAPIClient(
             appURL: URL(string: "https://www.compasscalendar.com")!,
             sessionStore: MemorySessionStore(tokens: SessionTokens(
                 accessToken: "access",
                 refreshToken: "refresh",
                 frontToken: "front")),
-            urlSession: StubURLProtocol.makeSession())
+            urlSession: StubURLProtocol.makeSession(handler: handler))
         let configStore = ConfigStore(apiClient: client)
         let store = BillingStore(apiClient: client, configStore: configStore)
-        return (store, configStore, client)
+        return (store, configStore)
     }
 
     func testGateStatusTracksReadOnlyAwaitingCheckout() async throws {
-        let (store, configStore, client) = try makeStore()
-        StubURLProtocol.Handler.requestHandler = { request in
+        let (store, configStore) = try makeStore { request in
             if request.url?.path.hasSuffix("/config") == true {
                 return StubURLProtocol.Response(
                     statusCode: 200,
@@ -57,12 +58,13 @@ final class BillingStoreTests: XCTestCase {
         await configStore.load()
         store.setAuthenticated(true)
         await store.refreshStatus()
+        XCTAssertNotNil(configStore.config)
+        XCTAssertEqual(store.status?.subscriptionStatus, .awaitingCheckout)
         XCTAssertEqual(store.gateStatus, .awaitingCheckout)
     }
 
     func testTrialingHasNoGate() async throws {
-        let (store, configStore, _) = try makeStore()
-        StubURLProtocol.Handler.requestHandler = { request in
+        let (store, configStore) = try makeStore { request in
             if request.url?.path.hasSuffix("/config") == true {
                 return StubURLProtocol.Response(
                     statusCode: 200,
@@ -79,6 +81,8 @@ final class BillingStoreTests: XCTestCase {
         await configStore.load()
         store.setAuthenticated(true)
         await store.refreshStatus()
+        XCTAssertNotNil(configStore.config)
+        XCTAssertEqual(store.status?.subscriptionStatus, .trialing)
         XCTAssertNil(store.gateStatus)
     }
 }
