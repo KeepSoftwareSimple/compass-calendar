@@ -6,10 +6,20 @@ struct PointerHintView: View {
     @Environment(\.nativeWebTheme) private var theme
     let store: PointerHintStore
     let registry: ShortcutRegistry?
+    let focusedEventLabel: String?
 
     var body: some View {
         if store.isVisible, let attempt = store.attempt {
             HStack(alignment: .top, spacing: 8) {
+                if let focusedEventLabel {
+                    Text(focusedEventLabel)
+                        .font(.custom("Rubik", size: 14, relativeTo: .body))
+                        .foregroundStyle(theme.textColor)
+                        .accessibilityElement()
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityIdentifier("compass-grid-event-focused")
+                        .accessibilityLabel(focusedEventLabel)
+                }
                 Text(attributedMessage(attempt))
                     .font(.custom("Rubik", size: 14, relativeTo: .body))
                     .foregroundStyle(theme.textColor)
