@@ -5,9 +5,8 @@ struct GridFocusAccessibilityOverlay: View {
     let focusedLabel: String?
 
     var body: some View {
-        Text(focusedLabel ?? "")
+        Color.clear
             .frame(width: 44, height: 44)
-            .opacity(0.01)
             .accessibilityElement()
             .accessibilityIdentifier("compass-grid-event-focused")
             .accessibilityLabel(focusedLabel ?? "")

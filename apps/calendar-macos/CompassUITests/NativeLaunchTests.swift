@@ -12,21 +12,18 @@ final class NativeLaunchTests: XCTestCase {
 
     @MainActor
     private func waitForFocusedGridEvent(title: String, in window: XCUIElement, timeout: TimeInterval) {
-        let probePredicate = NSPredicate(
-            format: "identifier == %@ AND label == %@",
-            "compass-grid-event-focused",
-            title)
-        let predicate = NSPredicate { evaluatedObject, _ in
-            guard let window = evaluatedObject as? XCUIElement else { return false }
-            let probe = window.descendants(matching: .any).matching(probePredicate).firstMatch
-            if probe.exists {
-                return true
+        let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if probe.exists, probe.label == title {
+                return
             }
-            return window.value as? String == title || window.label == title
+            if window.value as? String == title {
+                return
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
-        wait(
-            for: [expectation(for: predicate, evaluatedWith: window, handler: nil)],
-            timeout: timeout)
+        XCTFail("Expected focused grid event \"\(title)\"")
     }
 
     @MainActor
@@ -113,8 +110,6 @@ final class NativeLaunchTests: XCTestCase {
 
         waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
-        app.activate()
-        window.click()
         window.typeKey(.downArrow, modifierFlags: [])
         waitForFocusedGridEvent(title: "Try Compass", in: window, timeout: 10)
     }
