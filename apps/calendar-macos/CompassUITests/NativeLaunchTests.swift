@@ -38,7 +38,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        standup.press(forDuration: 0)
+        standup.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
 
         let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
