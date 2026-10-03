@@ -14,7 +14,6 @@ public final class BillingStore {
     public private(set) var subscriptionLoadFailed = false
     public private(set) var isSubmitting = false
     public private(set) var actionError: String?
-    public var isSettingsPresented = false
     public var isUpgradeConfirmationPresented = false
     public var isCancelConfirmationPresented = false
     public private(set) var isOpeningHostedSession = false
@@ -26,6 +25,7 @@ public final class BillingStore {
     private let sessionPresenter: any HostedBillingSessionPresenting
     private var authenticated = false
     private var statusPollTask: Task<Void, Never>?
+    private weak var settingsStore: SettingsStore?
 
     public init(
         apiClient: CompassAPIClient,
@@ -96,13 +96,17 @@ public final class BillingStore {
         }
     }
 
+    public func attach(settingsStore: SettingsStore) {
+        self.settingsStore = settingsStore
+    }
+
     public func openSettings() {
-        isSettingsPresented = true
+        settingsStore?.open(page: .billing)
         Task { await refreshSubscriptionDetails() }
     }
 
     public func closeSettings() {
-        isSettingsPresented = false
+        settingsStore?.close()
         isCancelConfirmationPresented = false
     }
 
@@ -238,7 +242,6 @@ public final class BillingStore {
         subscriptionLoadFailed = false
         isSubmitting = false
         actionError = nil
-        isSettingsPresented = false
         isUpgradeConfirmationPresented = false
         isCancelConfirmationPresented = false
         isOpeningHostedSession = false

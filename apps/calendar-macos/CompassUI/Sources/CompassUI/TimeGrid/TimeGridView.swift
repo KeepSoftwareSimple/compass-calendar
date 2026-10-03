@@ -5,6 +5,11 @@ import CompassKit
 public protocol TimeGridViewDelegate: AnyObject {
     func timeGridViewDidRequestShortcutHint(_ view: TimeGridView, at locationInWindow: NSPoint)
     func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
+    func timeGridViewDidRequestTimeTravel(_ view: TimeGridView)
+}
+
+extension TimeGridViewDelegate {
+    public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {}
 }
 
 @MainActor
@@ -200,7 +205,7 @@ public final class TimeGridView: NSView {
             height: gridHeight
         )
 
-        renderHourGutter(hourHeight: hourHeight, gridHeight: gridHeight)
+        renderHourGutter(snapshot: snapshot, hourHeight: hourHeight, gridHeight: gridHeight)
         renderHeaders(snapshot: snapshot, headerHeight: headerHeight)
         renderAllDayColumns(snapshot: snapshot, allDayHeight: allDayHeight, headerHeight: headerHeight)
         renderTimedGrid(snapshot: snapshot, hourHeight: hourHeight, gridHeight: gridHeight)
@@ -208,33 +213,83 @@ public final class TimeGridView: NSView {
         updateNowLine()
     }
 
-    private func renderHourGutter(hourHeight: Double, gridHeight: Double) {
+    private func renderHourGutter(
+        snapshot: GridLayoutSnapshot,
+        hourHeight: Double,
+        gridHeight: Double
+    ) {
         hourGutterView.subviews.forEach { $0.removeFromSuperview() }
         let palette = themePalette
         hourGutterView.layer?.backgroundColor = palette.background.cgColor
+        let margin = snapshot.metrics.marginLeft
+        let columnWidth = GridMetrics.gridTimeColumnWidth
 
+        if state.hasSecondaryTimeZone, let travelZone = state.timeTravelTimeZone {
+            let mapped = MappedHourLabels.labels(
+                effectiveTimeZone: state.effectiveTimeZone,
+                displayTimeZone: travelZone,
+                at: state.referenceNow)
+            renderHourColumn(
+                labels: mapped,
+                xOffset: 0,
+                width: columnWidth,
+                hourHeight: hourHeight,
+                palette: palette,
+                marginWidth: margin)
+        }
+
+        let primaryLabels = MappedHourLabels.labels(
+            effectiveTimeZone: state.effectiveTimeZone,
+            displayTimeZone: state.effectiveTimeZone,
+            at: state.referenceNow)
+        let primaryX = state.hasSecondaryTimeZone ? columnWidth : 0
+        renderHourColumn(
+            labels: primaryLabels,
+            xOffset: primaryX,
+            width: columnWidth,
+            hourHeight: hourHeight,
+            palette: palette,
+            marginWidth: margin)
+        _ = gridHeight
+    }
+
+    private func renderHourColumn(
+        labels: [String],
+        xOffset: Double,
+        width: Double,
+        hourHeight: Double,
+        palette: (background: NSColor, surface: NSColor, surfaceRaised: NSColor, border: NSColor, text: NSColor, textMuted: NSColor),
+        marginWidth: Double
+    ) {
         for hour in 0 ..< GridTimeConstants.timedVisibleHours {
-            let label = NSTextField(labelWithString: formattedHour(hour))
+            let text = hour == 0 ? "" : (labels.indices.contains(hour - 1) ? labels[hour - 1] : "")
+            let label = NSTextField(labelWithString: text)
             label.font = NSFont(name: "Rubik", size: 11) ?? .systemFont(ofSize: 11)
             label.textColor = palette.textMuted
             label.alignment = .right
-            label.frame = NSRect(x: 4, y: Double(hour) * hourHeight + 2, width: marginWidth - 8, height: 14)
+            label.frame = NSRect(
+                x: xOffset + 4,
+                y: Double(hour) * hourHeight + 2,
+                width: width - 8,
+                height: 14)
             hourGutterView.addSubview(label)
 
             if hour > 0 {
-                let line = NSView(frame: NSRect(x: 0, y: Double(hour) * hourHeight, width: marginWidth, height: 1))
+                let line = NSView(
+                    frame: NSRect(x: xOffset, y: Double(hour) * hourHeight, width: marginWidth, height: 1))
                 line.wantsLayer = true
                 line.layer?.backgroundColor = palette.border.withAlphaComponent(0.35).cgColor
                 hourGutterView.addSubview(line)
             }
         }
-        _ = gridHeight
     }
 
     private func renderHeaders(snapshot: GridLayoutSnapshot, headerHeight: Double) {
         headerRowView.subviews.forEach { $0.removeFromSuperview() }
         let palette = themePalette
         headerRowView.layer?.backgroundColor = palette.surface.cgColor
+
+        renderTimezoneHeader(snapshot: snapshot, headerHeight: headerHeight, palette: palette)
 
         for column in snapshot.columns {
             let header = NSTextField(labelWithString: column.key)
@@ -388,8 +443,59 @@ public final class TimeGridView: NSView {
         )
     }
 
+    private func renderTimezoneHeader(
+        snapshot: GridLayoutSnapshot,
+        headerHeight: Double,
+        palette: (background: NSColor, surface: NSColor, surfaceRaised: NSColor, border: NSColor, text: NSColor, textMuted: NSColor)
+    ) {
+        let columnWidth = GridMetrics.gridTimeColumnWidth
+        var x = 0.0
+        if state.hasSecondaryTimeZone, let travelZone = state.timeTravelTimeZone {
+            let abbrev = TimeZoneFormatting.abbreviation(for: travelZone, at: state.referenceNow)
+            addTimezoneButton(
+                title: abbrev,
+                x: x,
+                width: columnWidth,
+                headerHeight: headerHeight,
+                palette: palette,
+                accessibilityLabel: "Time travel timezone: \(abbrev)")
+            x += columnWidth
+        }
+        let effectiveAbbrev = TimeZoneFormatting.abbreviation(
+            for: state.effectiveTimeZone,
+            at: state.referenceNow)
+        addTimezoneButton(
+            title: effectiveAbbrev,
+            x: x,
+            width: state.hasSecondaryTimeZone ? columnWidth : snapshot.metrics.marginLeft,
+            headerHeight: headerHeight,
+            palette: palette,
+            accessibilityLabel: "Calendar timezone: \(effectiveAbbrev)")
+    }
+
+    private func addTimezoneButton(
+        title: String,
+        x: Double,
+        width: Double,
+        headerHeight: Double,
+        palette: (background: NSColor, surface: NSColor, surfaceRaised: NSColor, border: NSColor, text: NSColor, textMuted: NSColor),
+        accessibilityLabel: String
+    ) {
+        let button = NSButton(title: title, target: self, action: #selector(openTimeTravel(_:)))
+        button.isBordered = false
+        button.font = NSFont(name: "Rubik", size: 10) ?? .systemFont(ofSize: 10)
+        button.contentTintColor = palette.textMuted
+        button.frame = NSRect(x: x, y: 4, width: width, height: headerHeight - 8)
+        button.setAccessibilityLabel(accessibilityLabel)
+        headerRowView.addSubview(button)
+    }
+
+    @objc private func openTimeTravel(_ sender: Any?) {
+        delegate?.timeGridViewDidRequestTimeTravel(self)
+    }
+
     private var marginWidth: CGFloat {
-        CGFloat(GridMetrics.gridMarginLeft)
+        CGFloat(snapshot?.metrics.marginLeft ?? GridMetrics.gridMarginLeft)
     }
 
     private var themePalette: (background: NSColor, surface: NSColor, surfaceRaised: NSColor, border: NSColor, text: NSColor, textMuted: NSColor) {
@@ -424,17 +530,6 @@ public final class TimeGridView: NSView {
         }
     }
 
-    private func formattedHour(_ hour: Int) -> String {
-        let calendar = EffectiveTimeZone.calendar
-        var components = calendar.dateComponents([.year, .month, .day], from: state.referenceNow)
-        components.hour = hour
-        components.minute = 0
-        guard let date = calendar.date(from: components) else { return "\(hour)" }
-        let formatter = DateFormatter()
-        formatter.timeZone = EffectiveTimeZone.timeZone
-        formatter.dateFormat = "h a"
-        return formatter.string(from: date)
-    }
 }
 
 extension TimeGridView: EventCardViewDelegate {
