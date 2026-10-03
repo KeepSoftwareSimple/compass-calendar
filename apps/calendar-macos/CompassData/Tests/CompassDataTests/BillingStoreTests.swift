@@ -2,6 +2,27 @@ import CompassData
 import CompassKit
 import XCTest
 
+private enum BillingStoreTestFixtures {
+    static let enforcedConfigJSON = Data(
+        """
+        {
+          "version": "1",
+          "billing": {
+            "isConfigured": true,
+            "enforcement": true,
+            "trialLengthDays": 7,
+            "publishableKey": "pk_test"
+          },
+          "providers": {
+            "google": { "signIn": false, "connect": false },
+            "microsoft": { "signIn": false, "connect": false },
+            "apple": { "signIn": false, "connect": false }
+          },
+          "sync": { "enabled": true }
+        }
+        """.utf8)
+}
+
 @MainActor
 final class BillingStoreTests: XCTestCase {
     private func makeStore() throws -> (BillingStore, ConfigStore, CompassAPIClient) {
@@ -17,32 +38,13 @@ final class BillingStoreTests: XCTestCase {
         return (store, configStore, client)
     }
 
-    private func enforcedConfigJSON() -> Data {
-        Data(
-            """
-            {
-              "version": "1",
-              "billing": {
-                "isConfigured": true,
-                "enforcement": true,
-                "trialLengthDays": 7,
-                "publishableKey": "pk_test"
-              },
-              "providers": {
-                "google": { "signIn": false, "connect": false },
-                "microsoft": { "signIn": false, "connect": false },
-                "apple": { "signIn": false, "connect": false }
-              },
-              "sync": { "enabled": true }
-            }
-            """.utf8)
-    }
-
     func testGateStatusTracksReadOnlyAwaitingCheckout() async throws {
         let (store, configStore, client) = try makeStore()
         StubURLProtocol.Handler.requestHandler = { request in
             if request.url?.path.hasSuffix("/config") == true {
-                return StubURLProtocol.Response(statusCode: 200, body: enforcedConfigJSON())
+                return StubURLProtocol.Response(
+                    statusCode: 200,
+                    body: BillingStoreTestFixtures.enforcedConfigJSON)
             }
             if request.url?.path.hasSuffix("/billing/status") == true {
                 let body = """
@@ -62,7 +64,9 @@ final class BillingStoreTests: XCTestCase {
         let (store, configStore, _) = try makeStore()
         StubURLProtocol.Handler.requestHandler = { request in
             if request.url?.path.hasSuffix("/config") == true {
-                return StubURLProtocol.Response(statusCode: 200, body: enforcedConfigJSON())
+                return StubURLProtocol.Response(
+                    statusCode: 200,
+                    body: BillingStoreTestFixtures.enforcedConfigJSON)
             }
             if request.url?.path.hasSuffix("/billing/status") == true {
                 let body = """
