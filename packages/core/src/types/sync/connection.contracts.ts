@@ -209,6 +209,9 @@ export type ConnectionListResponse = z.infer<
 // from the authenticated context, never the body.
 export const ConnectionBeginRequestSchema = z.strictObject({
   connectionId: ConnectionIdSchema.optional(),
+  // When true, the post-connect browser redirect carries `desktop=1` so the
+  // web bootstrap can relay into `compass://` for ASWebAuthenticationSession.
+  desktopRelay: z.literal(true).optional(),
   features: ConnectionBeginFeaturesSchema.optional(),
   // Defaults to google at the route when omitted so existing callers stay
   // byte-identical. Other kinds are accepted here and resolved against the

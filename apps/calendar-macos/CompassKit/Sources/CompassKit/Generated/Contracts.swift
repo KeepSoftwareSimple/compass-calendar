@@ -678,11 +678,13 @@ public struct ConnectionBeginRedirectResponse: Codable, Hashable, Sendable {
 
 public struct ConnectionBeginRequest: Codable, Hashable, Sendable {
     public let connectionId: ConnectionId?
+    public let desktopRelay: Bool?
     public let features: [FeaturesEnum]?
     public let provider: ProviderEnum?
 
-    public init(connectionId: ConnectionId? = nil, features: [FeaturesEnum]? = nil, provider: ProviderEnum? = nil) {
+    public init(connectionId: ConnectionId? = nil, desktopRelay: Bool? = nil, features: [FeaturesEnum]? = nil, provider: ProviderEnum? = nil) {
         self.connectionId = connectionId
+        self.desktopRelay = desktopRelay
         self.features = features
         self.provider = provider
     }

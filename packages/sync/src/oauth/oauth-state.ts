@@ -28,6 +28,8 @@ export interface OAuthStatePayload {
   readonly provider: ProviderKind;
   // Milliseconds since the epoch when the state was issued.
   readonly issuedAt: number;
+  // When true, the post-connect redirect should relay into the desktop app.
+  readonly relayDesktop?: boolean;
 }
 
 // Default lifetime of a state token: long enough for a human to complete
@@ -119,6 +121,7 @@ function encodePayload(payload: OAuthStatePayload): string {
     c: payload.connectionId,
     k: payload.provider,
     i: payload.issuedAt,
+    ...(payload.relayDesktop ? { d: true } : {}),
   });
   return Buffer.from(json, "utf8").toString("base64url");
 }
@@ -154,11 +157,14 @@ function decodePayload(encoded: string): OAuthStatePayload | null {
   const providerParsed = ProviderKindSchema.safeParse(record["k"] ?? "google");
   if (!providerParsed.success) return null;
 
+  const relayDesktop = record["d"] === true ? true : undefined;
+
   return {
     tenantId: tenantId.data,
     principalId: principalId.data,
     connectionId,
     provider: providerParsed.data,
     issuedAt,
+    ...(relayDesktop ? { relayDesktop } : {}),
   };
 }

@@ -73,6 +73,7 @@ public final class OAuthAuthorizationService {
             let begin = try await connectionsAPI.begin(
                 ConnectionBeginRequest(
                     connectionId: connectionId,
+                    desktopRelay: true,
                     features: nil,
                     provider: provider))
             let redirectURL: URL
