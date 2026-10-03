@@ -1,7 +1,7 @@
 import AppKit
 
-/// VoiceOver helper on the window. UI tests read `compass-grid-event-focused`
-/// from `GridFocusAccessibilityOverlay` in CompassUI (SwiftUI).
+/// VoiceOver helper on the window. XCUITest reads grid focus from
+/// `compass-grid-event-focused` on the time grid and the window `value` mirror.
 @MainActor
 final class GridFocusAccessibilityProbeView: NSView {
 

@@ -53,7 +53,7 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             model.focusGridEvent(eventId: eventId)
             view.update(state: model.timeGridState, theme: theme)
             view.layoutSubtreeIfNeeded()
-            model.publishGridFocusAccessibilityProbe()
+            model.publishGridFocusAccessibilityProbe(eventId: eventId)
             let focusedLabel =
                 model.gridFocusAccessibilityLabel
                 ?? focusedEventLabel(for: eventId)

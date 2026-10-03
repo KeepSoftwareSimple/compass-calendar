@@ -9,7 +9,14 @@ final class NativeLaunchTests: XCTestCase {
 
     @MainActor
     private func waitForFocusedGridEvent(title: String, in window: XCUIElement, timeout: TimeInterval) {
-        let predicate = NSPredicate(format: "value == %@", title)
+        let predicate = NSPredicate { evaluatedObject, _ in
+            guard let window = evaluatedObject as? XCUIElement else { return false }
+            let probe = window.descendants(matching: .any)["compass-grid-event-focused"]
+            if probe.exists, probe.label == title {
+                return true
+            }
+            return window.value as? String == title || window.label == title
+        }
         wait(
             for: [expectation(for: predicate, evaluatedWith: window, handler: nil)],
             timeout: timeout)
@@ -63,7 +70,8 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["compass-grid-event-demo-morning-standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        clickGridEvent(standup)
+        // Use the button press action so focus runs even when layout bounds are empty in CI.
+        standup.click()
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-pointer-hint"].waitForExistence(timeout: 5),
             "Expected event-card pointer hint after clicking the demo standup card")

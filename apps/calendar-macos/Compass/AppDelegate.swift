@@ -121,6 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let nativeController = NativeRootController(webTheme: theme, model: model)
             nativeRootController = nativeController
             window.contentViewController = nativeController
+            CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
             mainMenuController?.nativeRootController = nativeController
         } else {
             nativeRootController = nil

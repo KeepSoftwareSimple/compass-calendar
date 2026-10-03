@@ -27,7 +27,21 @@ enum CompassBridgeAccessibility {
     /// Native grid focus for XCUITest (`NativeLaunchTests`). Same transport as
     /// `publishLastDispatchedShortcut`: the main window `value` is observable in CI.
     @MainActor
+    static func prepareNativeRootWindowForXCUITest(_ window: NSWindow?) {
+        window?.setAccessibilityIdentifier("Compass")
+        window?.setAccessibilityValue("")
+    }
+
+    @MainActor
     static func publishNativeGridFocusedEventTitle(_ title: String?, on window: NSWindow?) {
-        window?.setAccessibilityValue(title ?? "")
+        guard let window else { return }
+        window.setAccessibilityIdentifier("Compass")
+        if let title, !title.isEmpty {
+            window.setAccessibilityValue(title)
+            window.setAccessibilityLabel(title)
+        } else {
+            window.setAccessibilityValue("")
+            window.setAccessibilityLabel("Compass")
+        }
     }
 }

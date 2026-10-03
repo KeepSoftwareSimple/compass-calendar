@@ -267,8 +267,17 @@ public final class NativeCalendarRootModel {
         focusEvent(eventId: eventId)
     }
 
-    public func publishGridFocusAccessibilityProbe() {
-        onGridFocusAccessibilityLabelChanged?(focusedGridEventAccessibilityLabel())
+    public func publishGridFocusAccessibilityProbe(eventId: String? = nil) {
+        let colWidths = timeGridState.resolvedColumnWidths()
+        let cards = timeGridState.snapshot(colWidths: colWidths).cards
+        let resolved =
+            gridFocusAccessibilityLabel
+            ?? eventId.flatMap { resolveGridFocusLabel(eventId: $0, cards: cards) }
+            ?? focusedGridEventAccessibilityLabel()
+        if let resolved {
+            gridFocusAccessibilityLabel = resolved
+        }
+        onGridFocusAccessibilityLabelChanged?(resolved)
     }
 
     public func handleGridPointerDown(registry: ShortcutRegistry) {
