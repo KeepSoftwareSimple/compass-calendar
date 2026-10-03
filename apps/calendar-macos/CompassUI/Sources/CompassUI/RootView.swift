@@ -100,6 +100,9 @@ public struct RootView: View {
                 }
             )
             .pageJumpChipAnchor(id: "month-picker")
+            if model.isSignedIn {
+                SyncAccountsListView(store: model.syncConnectionsStore)
+            }
             Spacer()
             ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }

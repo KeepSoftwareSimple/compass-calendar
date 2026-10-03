@@ -60,6 +60,17 @@ export const AppConfigSchema = z.object({
       host: z.string().url(),
     })
     .optional(),
+  /**
+   * Public OAuth client identifiers for native desktop sign-in URL building.
+   * Omitted when no provider is configured.
+   */
+  oauth: z
+    .object({
+      googleClientId: z.string().min(1).nullable(),
+      microsoftClientId: z.string().min(1).nullable(),
+      appleServicesId: z.string().min(1).nullable(),
+    })
+    .optional(),
 });
 
 export type AppConfig = z.infer<typeof AppConfigSchema>;

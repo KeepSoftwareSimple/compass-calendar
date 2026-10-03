@@ -114,7 +114,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         (NSApp as? CompassApplication)?.keyboardMonitor = nil
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
-            guard let model = try? NativeRootFactory.makeModel() else { return }
+            let presenter = WebAuthSessionPresenter()
+            guard let model = try? NativeRootFactory.makeModel(webAuthPresenter: presenter) else {
+                return
+            }
             let nativeController = NativeRootController(webTheme: theme, model: model)
             nativeRootController = nativeController
             window.contentViewController = nativeController

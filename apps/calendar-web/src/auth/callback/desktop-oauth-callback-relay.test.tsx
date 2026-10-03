@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   relayDesktopOAuthCallback,
+  shouldRelayDesktopConnectRedirect,
   shouldRelayDesktopOAuthCallback,
 } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -21,6 +22,35 @@ mock.module("@web/auth/callback/desktop-oauth-callback-relay", () => {
 
 const { DesktopOAuthCallbackRelay } =
   require("@web/auth/callback/DesktopOAuthCallbackRelay") as typeof import("@web/auth/callback/DesktopOAuthCallbackRelay");
+
+describe("shouldRelayDesktopConnectRedirect", () => {
+  it("relays in the browser when desktop=1 is present", () => {
+    expect(
+      shouldRelayDesktopConnectRedirect(
+        "?provider=google&status=connected&desktop=1",
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it("completes normally when desktop=1 is absent", () => {
+    expect(
+      shouldRelayDesktopConnectRedirect(
+        "?provider=microsoft&status=accountMismatch",
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("does not relay inside the desktop shell", () => {
+    expect(
+      shouldRelayDesktopConnectRedirect(
+        "?provider=google&status=connected&desktop=1",
+        true,
+      ),
+    ).toBe(false);
+  });
+});
 
 describe("shouldRelayDesktopOAuthCallback", () => {
   it("relays in the browser when the desktop marker is present", () => {

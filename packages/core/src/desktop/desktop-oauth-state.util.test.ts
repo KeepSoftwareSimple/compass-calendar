@@ -1,4 +1,5 @@
 import {
+  buildDesktopConnectRelayUrl,
   buildDesktopOAuthRelayUrl,
   buildOAuthStateForClient,
   DESKTOP_OAUTH_STATE_PREFIX,
@@ -20,6 +21,19 @@ describe("desktop oauth state", () => {
     const state = buildOAuthStateForClient(false);
     expect(state.startsWith(DESKTOP_OAUTH_STATE_PREFIX)).toBe(false);
     expect(hasDesktopOAuthStateMarker(state)).toBe(false);
+  });
+});
+
+describe("desktop connect deep links", () => {
+  it("builds connect relay urls", () => {
+    expect(
+      buildDesktopConnectRelayUrl(
+        "google",
+        "?provider=google&status=connected",
+      ),
+    ).toBe(
+      "compass://connect/google/callback?provider=google&status=connected",
+    );
   });
 });
 
