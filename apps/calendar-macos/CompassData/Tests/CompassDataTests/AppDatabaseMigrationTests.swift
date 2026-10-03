@@ -12,6 +12,7 @@ final class AppDatabaseMigrationTests: XCTestCase {
             XCTAssertTrue(try db.tableExists("loaded_range"))
             XCTAssertTrue(try db.tableExists("user_metadata"))
             XCTAssertTrue(try db.tableExists("event_fts"))
+            XCTAssertTrue(try db.tableExists("local_event"))
         }
     }
 }

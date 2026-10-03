@@ -7,6 +7,8 @@ public struct NativeCalendarEnvironment: Sendable {
     public let eventsStore: EventsStore
     public let hiddenEventsStore: HiddenEventsStore
     public let calendarRepository: CalendarRepository
+    public let localEventRepository: LocalEventRepository
+    public let userMetadataRepository: UserMetadataRepository
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
@@ -19,45 +21,40 @@ public struct NativeCalendarEnvironment: Sendable {
     @MainActor
     public init(
         appURL: URL = AppHostPreference.productionURL,
-        fixture: DemoSeedFixture? = nil,
+        inMemoryDatabase: Bool = false,
         sessionStore: (any SessionStore)? = nil,
         analytics: ProductAnalyticsClient = NoOpProductAnalyticsClient(),
         analyticsIdentity: AnalyticsIdentityCoordinator = NoOpAnalyticsIdentityCoordinator(),
         sessionPresenter: any HostedBillingSessionPresenting = UnavailableHostedBillingSessionPresenter()
     ) throws {
-        let sessionStore: any SessionStore = sessionStore ?? {
-            if let fixture {
-                return MemorySessionStore(
-                    tokens: SessionTokens(
-                        accessToken: "fixture-access",
-                        refreshToken: "fixture-refresh",
-                        frontToken: "fixture-front"
-                    )
-                )
-            }
-            return KeychainSessionStore()
-        }()
-        let urlSession: URLSession
-        if let fixture {
-            urlSession = FixtureTransport.install(.demo(fixture))
-        } else {
-            urlSession = .shared
-        }
-        let database = try AppDatabase.inMemory()
+        let sessionStore: any SessionStore = sessionStore ?? KeychainSessionStore()
+        let database = try inMemoryDatabase ? AppDatabase.inMemory() : AppDatabase.openPersistent()
         let eventRepository = EventRepository(database: database)
+        let localEventRepository = LocalEventRepository(database: database)
+        let userMetadataRepository = UserMetadataRepository(database: database)
         let rangeCache = RangeCache(database: database)
         let apiClient = CompassAPIClient(
             appURL: appURL,
             sessionStore: sessionStore,
-            urlSession: urlSession
+            urlSession: .shared
         )
+        let remembered = try AuthRememberedState.hasUserEverAuthenticated(repository: userMetadataRepository)
+        let source = EventRepositorySelection.source(
+            sessionExists: false,
+            hasUserEverAuthenticated: remembered
+        )
+
         self.apiClient = apiClient
         self.database = database
+        self.localEventRepository = localEventRepository
+        self.userMetadataRepository = userMetadataRepository
         self.calendarRepository = CalendarRepository(database: database)
         eventsStore = EventsStore(
             repository: eventRepository,
+            localEvents: localEventRepository,
             rangeCache: rangeCache,
-            eventsAPI: EventsAPI(client: apiClient)
+            eventsAPI: EventsAPI(client: apiClient),
+            source: source
         )
         hiddenEventsStore = HiddenEventsStore(
             repository: HiddenEventRepository(database: database),
@@ -77,7 +74,18 @@ public struct NativeCalendarEnvironment: Sendable {
             configStore: configStore,
             oauthService: oauthService,
             analyticsIdentity: analyticsIdentity,
-            usesFixtureTransport: fixture != nil)
+            usesFixtureTransport: inMemoryDatabase,
+            userMetadataRepository: userMetadataRepository,
+            localEventSync: LocalEventSync(
+                localEvents: localEventRepository,
+                eventsAPI: EventsAPI(client: apiClient),
+                listCalendars: {
+                    let remote = try await apiClient.calendars.list()
+                    return remote.map(CompassCalendar.init(listItem:))
+                }
+            ),
+            eventsStore: eventsStore
+        )
         billingStore = BillingStore(
             apiClient: apiClient,
             configStore: configStore,

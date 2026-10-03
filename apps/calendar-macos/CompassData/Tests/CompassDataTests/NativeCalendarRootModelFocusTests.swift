@@ -7,7 +7,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
     func testFocusGridEventSetsDemoStandupAccessibilityLabel() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(fixture: fixture)
-        let model = NativeCalendarRootModel(environment: environment, demoSeed: fixture)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
         model.focusGridEvent(eventId: "demo-morning-standup")
@@ -19,7 +19,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
     func testEditFocusNextDoesNotSeedWhenFocusNotInLayoutCards() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(fixture: fixture)
-        let model = NativeCalendarRootModel(environment: environment, demoSeed: fixture)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
         model.updateContentTrackWidth(400)
@@ -32,7 +32,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
     func testEditFocusNextMovesFromStandupToTryCompass() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(fixture: fixture)
-        let model = NativeCalendarRootModel(environment: environment, demoSeed: fixture)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
         model.focusGridEvent(eventId: "demo-morning-standup")
@@ -45,7 +45,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
     func testShowPointerHintForEventCardKeepsFocusedGridEventLabel() async throws {
         let fixture = try DemoSeedFixture.load()
         let environment = try NativeCalendarEnvironment(fixture: fixture)
-        let model = NativeCalendarRootModel(environment: environment, demoSeed: fixture)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
         model.focusGridEvent(eventId: "demo-morning-standup")
