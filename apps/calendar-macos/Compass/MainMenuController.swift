@@ -109,8 +109,6 @@ final class MainMenuController: NSObject {
             return #selector(useNativeThemeLightBeach(_:))
         case .nativeThemeDarkAbyss:
             return #selector(useNativeThemeDarkAbyss(_:))
-        case .nativeDebugSignIn:
-            return #selector(nativeDebugSignIn(_:))
         case let .standardEdit(selectorName):
             return Selector(selectorName)
         }
@@ -187,11 +185,6 @@ final class MainMenuController: NSObject {
         onSelectNativeTheme?(.darkAbyss)
     }
 
-    @objc private func nativeDebugSignIn(_ sender: Any?) {
-        Task { @MainActor in
-            await nativeRootController?.presentDebugSignIn(from: NSApp.keyWindow)
-        }
-    }
 }
 
 extension MainMenuController: NSMenuItemValidation {
