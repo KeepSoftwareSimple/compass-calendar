@@ -65,6 +65,19 @@ public struct RootView: View {
         .overlay {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
         }
+        .overlay {
+            DedicationDialogView(
+                isPresented: model.dedicationDialogVisible,
+                onClose: { model.dedicationDialogVisible = false }
+            )
+        }
+        .overlay {
+            DiscardUnsavedDraftDialogView(
+                isPresented: model.pendingDiscardDraftConfirmation,
+                onCancel: { model.cancelDiscardDraftConfirmation() },
+                onDiscard: { model.discardDraftConfirmed() }
+            )
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear
