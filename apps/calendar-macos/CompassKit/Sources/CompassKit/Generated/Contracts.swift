@@ -127,13 +127,15 @@ public enum AccessEnum: String, Codable, Hashable, Sendable, CaseIterable {
 
 public struct AppConfig: Codable, Hashable, Sendable {
     public let billing: AppConfigBilling
+    public let oauth: AppConfigOauth?
     public let posthog: AppConfigPosthog?
     public let providers: AppConfigProviders
     public let sync: AppConfigSync
     public let version: String
 
-    public init(billing: AppConfigBilling, posthog: AppConfigPosthog? = nil, providers: AppConfigProviders, sync: AppConfigSync, version: String) {
+    public init(billing: AppConfigBilling, oauth: AppConfigOauth? = nil, posthog: AppConfigPosthog? = nil, providers: AppConfigProviders, sync: AppConfigSync, version: String) {
         self.billing = billing
+        self.oauth = oauth
         self.posthog = posthog
         self.providers = providers
         self.sync = sync
@@ -152,6 +154,18 @@ public struct AppConfigBilling: Codable, Hashable, Sendable {
         self.isConfigured = isConfigured
         self.publishableKey = publishableKey
         self.trialLengthDays = trialLengthDays
+    }
+}
+
+public struct AppConfigOauth: Codable, Hashable, Sendable {
+    public let appleServicesId: String?
+    public let googleClientId: String?
+    public let microsoftClientId: String?
+
+    public init(appleServicesId: String?, googleClientId: String?, microsoftClientId: String?) {
+        self.appleServicesId = appleServicesId
+        self.googleClientId = googleClientId
+        self.microsoftClientId = microsoftClientId
     }
 }
 
@@ -642,6 +656,70 @@ public enum ConferenceKindsEnum: String, Codable, Hashable, Sendable, CaseIterab
     case teams = "teams"
 }
 
+public struct ConnectionBeginConnectedResponse: Codable, Hashable, Sendable {
+    public let connectionId: ConnectionId
+    public let kind: String
+
+    public init(connectionId: ConnectionId, kind: String) {
+        self.connectionId = connectionId
+        self.kind = kind
+    }
+}
+
+public struct ConnectionBeginRedirectResponse: Codable, Hashable, Sendable {
+    public let authorizationUrl: String
+    public let kind: String
+
+    public init(authorizationUrl: String, kind: String) {
+        self.authorizationUrl = authorizationUrl
+        self.kind = kind
+    }
+}
+
+public struct ConnectionBeginRequest: Codable, Hashable, Sendable {
+    public let connectionId: ConnectionId?
+    public let features: [FeaturesEnum]?
+    public let provider: ProviderEnum?
+
+    public init(connectionId: ConnectionId? = nil, features: [FeaturesEnum]? = nil, provider: ProviderEnum? = nil) {
+        self.connectionId = connectionId
+        self.features = features
+        self.provider = provider
+    }
+}
+
+public struct ConnectionCredentialBrowserRequest: Codable, Hashable, Sendable {
+    public let provider: String
+    public let secret: String
+    public let username: String
+
+    public init(provider: String, secret: String, username: String) {
+        self.provider = provider
+        self.secret = secret
+        self.username = username
+    }
+}
+
+public struct ConnectionCredentialResponse: Codable, Hashable, Sendable {
+    public let connectionId: ConnectionId
+
+    public init(connectionId: ConnectionId) {
+        self.connectionId = connectionId
+    }
+}
+
+public struct ConnectionRefreshResponse: Codable, Hashable, Sendable {
+    public let enqueued: Int
+    public let inFlight: Int
+    public let resources: Int
+
+    public init(enqueued: Int, inFlight: Int, resources: Int) {
+        self.enqueued = enqueued
+        self.inFlight = inFlight
+        self.resources = resources
+    }
+}
+
 public enum ConnectionStateEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case aTTENTION = "ATTENTION"
     case hEALTHY = "HEALTHY"
@@ -1081,6 +1159,10 @@ public struct EventSchedule_TimedPayload: Codable, Hashable, Sendable {
 public enum ExecutionEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case active = "active"
     case passive = "passive"
+}
+
+public enum FeaturesEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case contacts = "contacts"
 }
 
 public struct HiddenEventIdsResponse: Codable, Hashable, Sendable {

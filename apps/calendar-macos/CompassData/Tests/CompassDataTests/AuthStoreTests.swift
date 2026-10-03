@@ -14,9 +14,11 @@ final class AuthStoreTests: XCTestCase {
             StubURLProtocol.Response(statusCode: 200, body: Data("{}".utf8))
         }
         let configStore = ConfigStore(apiClient: client)
+        let oauthService = OAuthAuthorizationService(apiClient: client, webAuthPresenter: nil)
         let authStore = AuthStore(
             apiClient: client,
             configStore: configStore,
+            oauthService: oauthService,
             analyticsIdentity: NoOpAnalyticsIdentityCoordinator(),
             usesFixtureTransport: false)
 
@@ -41,9 +43,11 @@ final class AuthStoreTests: XCTestCase {
             }
             return StubURLProtocol.Response(statusCode: 404)
         }
+        let oauthService = OAuthAuthorizationService(apiClient: client, webAuthPresenter: nil)
         let authStore = AuthStore(
             apiClient: client,
             configStore: ConfigStore(apiClient: client),
+            oauthService: oauthService,
             analyticsIdentity: NoOpAnalyticsIdentityCoordinator(),
             usesFixtureTransport: false)
 

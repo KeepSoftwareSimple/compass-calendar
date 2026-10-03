@@ -8,6 +8,7 @@ public final class NativeCalendarRootModel {
     public let viewStore: ViewStore
     public let configStore: ConfigStore
     public let authStore: AuthStore
+    public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
@@ -118,6 +119,7 @@ public final class NativeCalendarRootModel {
 
     private func handleAuthenticated() async {
         startEventStream()
+        await syncConnectionsStore.reloadFromMetadata()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
         await refreshVisibleRange()

@@ -40,12 +40,14 @@ public final class AuthStore {
     private let emailPassword: AuthEmailPasswordClient
     private let userAPI: UserAPI
     private let configStore: ConfigStore
+    private let oauthService: OAuthAuthorizationService
     private let analyticsIdentity: AnalyticsIdentityCoordinator
     private let usesFixtureTransport: Bool
 
     public init(
         apiClient: CompassAPIClient,
         configStore: ConfigStore,
+        oauthService: OAuthAuthorizationService,
         analyticsIdentity: AnalyticsIdentityCoordinator,
         usesFixtureTransport: Bool
     ) {
@@ -53,6 +55,7 @@ public final class AuthStore {
         emailPassword = AuthEmailPasswordClient(client: apiClient)
         userAPI = UserAPI(client: apiClient)
         self.configStore = configStore
+        self.oauthService = oauthService
         self.analyticsIdentity = analyticsIdentity
         self.usesFixtureTransport = usesFixtureTransport
     }
@@ -107,8 +110,42 @@ public final class AuthStore {
     }
 
     public func signInWithProvider(_ kind: SignInProviderKind) {
-        _ = kind
-        // OAuth work package wires ASWebAuthenticationSession.
+        guard !usesFixtureTransport else { return }
+        Task {
+            await runSubmitting {
+                let clients = OAuthPublicClients(oauth: configStore.config?.oauth)
+                let outcome = await oauthService.startSignIn(provider: kind, oauthClients: clients)
+                switch outcome {
+                case .completed:
+                    try await completeAuthentication(closeAfter: true)
+                case .userCancelled:
+                    submitError = nil
+                case let .failed(message):
+                    throw AuthStoreError(message: message)
+                }
+            }
+        }
+    }
+
+    public func handleOAuthDeepLink(_ urlString: String) async -> Bool {
+        guard let outcome = await oauthService.handleAuthDeepLink(urlString) else {
+            return false
+        }
+        switch outcome {
+        case .completed:
+            do {
+                try await completeAuthentication(closeAfter: true)
+                return true
+            } catch {
+                submitError = error.localizedDescription
+                return true
+            }
+        case .userCancelled:
+            return true
+        case let .failed(message):
+            submitError = message
+            return true
+        }
     }
 
     public func signIn(email: String, password: String) async {

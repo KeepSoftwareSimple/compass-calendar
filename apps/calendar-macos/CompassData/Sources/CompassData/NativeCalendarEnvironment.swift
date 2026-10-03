@@ -9,6 +9,8 @@ public struct NativeCalendarEnvironment: Sendable {
     public let calendarRepository: CalendarRepository
     public let configStore: ConfigStore
     public let authStore: AuthStore
+    public let oauthService: OAuthAuthorizationService
+    public let syncConnectionsStore: SyncConnectionsStore
     public let levelsStore: LevelsStore
     public let analyticsIdentity: AnalyticsIdentityCoordinator
     public let usesFixtureTransport: Bool
@@ -62,12 +64,20 @@ public struct NativeCalendarEnvironment: Sendable {
             remoteClient: UserAPI(client: apiClient)
         )
         configStore = ConfigStore(apiClient: apiClient)
+        oauthService = OAuthAuthorizationService(
+            apiClient: apiClient,
+            appURL: appURL,
+            webAuthPresenter: nil)
+        syncConnectionsStore = SyncConnectionsStore(
+            oauthService: oauthService,
+            userAPI: UserAPI(client: apiClient),
+            configStore: configStore)
         authStore = AuthStore(
             apiClient: apiClient,
             configStore: configStore,
+            oauthService: oauthService,
             analyticsIdentity: analyticsIdentity,
-            usesFixtureTransport: fixture != nil
-        )
+            usesFixtureTransport: fixture != nil)
         let registry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: registry, analytics: analytics)
         self.analyticsIdentity = analyticsIdentity
