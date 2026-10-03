@@ -14,6 +14,7 @@ public final class NativeCalendarRootModel {
     public let focusStore: FocusStore
     public let pointerHintStore: PointerHintStore
     public let lifeStore: LifeStore
+    let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
@@ -30,6 +31,7 @@ public final class NativeCalendarRootModel {
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
+    public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
 
     private let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -53,9 +55,14 @@ public final class NativeCalendarRootModel {
         demoSeed?.demoEventIds ?? []
     }
 
-    public init(environment: NativeCalendarEnvironment, demoSeed: DemoSeedFixture? = nil) {
+    public init(
+        environment: NativeCalendarEnvironment,
+        demoSeed: DemoSeedFixture? = nil,
+        overlayStores: OverlayStores = OverlayStores()
+    ) {
         self.environment = environment
         self.demoSeed = demoSeed
+        self.overlayStores = overlayStores
         if let demoSeed {
             EffectiveTimeZone.identifier = demoSeed.timeZone
         }
@@ -244,6 +251,12 @@ public final class NativeCalendarRootModel {
             cycleFocusedEdge(forward: true)
         case .otherSettings:
             billingStore.openSettings()
+        case .otherPalette:
+            toggleCommandPalette()
+        case .otherShortcuts:
+            toggleShortcutsLegend()
+        case .navGoToDate:
+            toggleCommandPalette(fromGoToDate: true)
         default:
             break
         }

@@ -115,6 +115,29 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    @MainActor
+    func testCommandPaletteGoToToday() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        window.typeKey("k", modifierFlags: [.command])
+        let palette = window.descendants(matching: .any)["compass-native-command-palette"]
+        XCTAssertTrue(palette.waitForExistence(timeout: 5))
+
+        let todayItem = window.descendants(matching: .any)["compass-native-palette-item-today"]
+        XCTAssertTrue(todayItem.waitForExistence(timeout: 5))
+        todayItem.click()
+
+        XCTAssertFalse(palette.waitForExistence(timeout: 2))
+        XCTAssertTrue(
+            window.staticTexts["Morning standup"].waitForExistence(timeout: 10),
+            "Expected demo week grid after Go to Today")
+    }
+
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

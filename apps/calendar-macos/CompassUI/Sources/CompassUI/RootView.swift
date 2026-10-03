@@ -65,6 +65,12 @@ public struct RootView: View {
         .overlay {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
         }
+        .overlay {
+            CommandPaletteOverlay(model: model)
+        }
+        .overlay {
+            ShortcutsLegendOverlay(model: model)
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear

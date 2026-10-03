@@ -22,15 +22,17 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
+    private let catalogController: ShortcutsCatalogWindowController?
     private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
 
-    init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel) {
+    init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel, catalogController: ShortcutsCatalogWindowController? = nil) {
         self.webTheme = webTheme
         self.model = model
+        self.catalogController = catalogController
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
         model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
             let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
