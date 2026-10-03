@@ -9,6 +9,7 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let lifeStore: LifeStore
@@ -68,8 +69,15 @@ public final class NativeCalendarRootModel {
             view: .week,
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
-            pinnedTimeZone: demoSeed?.timeZone
+            pinnedTimeZone: demoSeed?.timeZone ?? CompassDevicePreferences.readPinnedTimeZone()
         )
+        if demoSeed == nil {
+            viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
+        }
+        settingsStore = SettingsStore(viewStore: viewStore)
+        settingsStore.onDevicePreferencesChanged = { [weak self] in
+            self?.rebuildPresentation()
+        }
         monthPickerMonth = anchor
         timeGridState = TimeGridState(
             layoutMode: .week,
@@ -87,6 +95,7 @@ public final class NativeCalendarRootModel {
             await self?.handleSignedOut()
         }
         billingStore.setAuthenticated(authStore.authenticated)
+        billingStore.attach(settingsStore: settingsStore)
         rebuildPresentation()
     }
 
@@ -141,7 +150,7 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
-        billingStore.closeSettings()
+        settingsStore.close()
         if let eventStream {
             await eventStream.stop()
         }
@@ -212,7 +221,9 @@ public final class NativeCalendarRootModel {
         case .navMonthNext:
             shiftMonth(by: 1)
         case .otherSettings:
-            billingStore.openSettings()
+            settingsStore.open(page: .accounts)
+        case .otherTimeTravel:
+            settingsStore.openTimezoneDialog(.timeTravel)
         default:
             break
         }
@@ -321,7 +332,10 @@ public final class NativeCalendarRootModel {
             layoutMode: layoutMode(),
             referenceNow: demoSeed?.referenceNow ?? Date(),
             scenario: scenario,
-            trackWidth: contentTrackWidth
+            trackWidth: contentTrackWidth,
+            hasSecondaryTimeZone: viewStore.timeTravelTimeZone != nil,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
     }
 
