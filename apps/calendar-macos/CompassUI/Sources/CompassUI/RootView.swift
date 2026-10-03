@@ -19,6 +19,7 @@ public struct RootView: View {
                     content
                 }
             }
+            gridFocusAccessibilityLayer
             pointerHintLayer
         }
         .background(theme.backgroundColor)
@@ -145,30 +146,9 @@ public struct RootView: View {
                 gridYOffset: gridChipYOffset,
                 visible: !model.timeGridState.eventJumpHints.isEmpty
             )
-            focusedGridEventAccessibilityProbe
-        }
-        .overlay(alignment: .topLeading) {
-            if let eventId = model.timeGridState.focusedEventId,
-                let label = focusedGridEventLabel(for: eventId)
-            {
-                Color.clear
-                    .frame(width: 2, height: 2)
-                    .accessibilityElement()
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityIdentifier("compass-grid-event-focused")
-                    .accessibilityLabel(label)
-                    .allowsHitTesting(false)
-            }
         }
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-content")
-    }
-
-    private func focusedGridEventLabel(for eventId: String) -> String? {
-        let colWidths = model.timeGridState.resolvedColumnWidths()
-        return model.timeGridState.snapshot(colWidths: colWidths).cards
-            .first(where: { $0.eventId == eventId })?
-            .label
     }
 
     private var gridChipYOffset: CGFloat {
@@ -178,15 +158,19 @@ public struct RootView: View {
     }
 
     @ViewBuilder
-    private var focusedGridEventAccessibilityProbe: some View {
+    private var gridFocusAccessibilityLayer: some View {
         if let label = model.gridFocusAccessibilityLabel {
             Text(label)
-                .frame(width: 1, height: 1)
+                .font(.custom("Rubik", size: 14))
+                .frame(minWidth: 160, minHeight: 36)
+                .opacity(0.01)
                 .accessibilityElement()
                 .accessibilityAddTraits(.isButton)
                 .accessibilityIdentifier("compass-grid-event-focused")
                 .accessibilityLabel(label)
                 .allowsHitTesting(false)
+                .padding(.top, 8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 

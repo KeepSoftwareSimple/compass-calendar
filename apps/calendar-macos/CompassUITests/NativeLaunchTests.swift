@@ -2,6 +2,7 @@ import XCTest
 
 final class NativeLaunchTests: XCTestCase {
     /// AppKit event cards often report 0×0 accessibility frames in CI; coordinate clicks still hit layout bounds.
+    @MainActor
     private func clickGridEvent(_ element: XCUIElement) {
         element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
     }
@@ -45,12 +46,12 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
         clickGridEvent(standup)
 
-        let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
+        let focused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
         XCTAssertEqual(focused.label, "Morning standup")
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompassFocused = app.descendants(matching: .any)["compass-grid-event-focused"]
+        let tryCompassFocused = window.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
         XCTAssertEqual(tryCompassFocused.label, "Try Compass")
     }
