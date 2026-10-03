@@ -47,7 +47,7 @@ public struct RootView: View {
             }
         }
         .overlay {
-            BillingSettingsOverlay(billingStore: model.billingStore)
+            SettingsWindowOverlay(model: model)
         }
         .overlay {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
@@ -90,9 +90,6 @@ public struct RootView: View {
                     TrialBadgeView(billingStore: model.billingStore)
                 }
             )
-            if model.isSignedIn {
-                SyncAccountsListView(store: model.syncConnectionsStore)
-            }
             Spacer()
             ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }
@@ -151,8 +148,10 @@ public struct RootView: View {
     }
 
     private var content: some View {
-        TimeGridRepresentable(state: model.timeGridState)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        TimeGridRepresentable(state: model.timeGridState) {
+            model.settingsStore.openTimezoneDialog(.timeTravel)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(theme.backgroundColor)
             .accessibilityIdentifier("compass-native-content")
     }

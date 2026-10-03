@@ -29,6 +29,20 @@ public enum NativeWebTheme: String, Sendable, CaseIterable {
     case lightBeach = "light-beach"
     case darkAbyss = "dark-abyss"
 
+    public init(themeName: CompassThemeName) {
+        self = switch themeName {
+        case .lightBeach: .lightBeach
+        case .darkAbyss: .darkAbyss
+        }
+    }
+
+    public var compassThemeName: CompassThemeName {
+        switch self {
+        case .lightBeach: .lightBeach
+        case .darkAbyss: .darkAbyss
+        }
+    }
+
     public var desktopAppearance: DesktopThemeAppearance {
         DesktopThemeAppearance(webTheme: rawValue)
     }

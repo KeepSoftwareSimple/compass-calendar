@@ -28,15 +28,19 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
+    private var settingsBridge: NativeAppSettingsBridge?
+    private let quickAddHotKeyController = QuickAddHotKeyController()
 
     init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel) {
         self.webTheme = webTheme
         self.model = model
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
         applyTheme()
+        configureSettingsBridge()
         configureNativeServices()
         configureKeyboard()
         configureResume()
+        quickAddHotKeyController.start()
         Task { await model.start() }
     }
 
@@ -46,7 +50,17 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     func setWebTheme(_ theme: NativeWebTheme) {
+        NativeUIThemePreference.save(theme)
         webTheme = theme
+    }
+
+    private func configureSettingsBridge() {
+        let bridge = NativeAppSettingsBridge(
+            rootController: self,
+            hotKeyController: quickAddHotKeyController)
+        settingsBridge = bridge
+        model.settingsStore.setBridge(bridge)
+        webTheme = NativeWebTheme(themeName: model.settingsStore.theme)
     }
 
     func receiveDeepLink(_ url: URL) {
@@ -114,6 +128,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             .navUpNext,
             .navJoinMeeting,
             .otherSettings,
+            .otherTimeTravel,
         ]
         let handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard navigationIds.contains(entry.id) else { return nil }
