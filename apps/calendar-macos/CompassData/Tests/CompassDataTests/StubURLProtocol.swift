@@ -13,32 +13,11 @@ enum StubURLProtocol {
         }
     }
 
-    private static let sessionHandlerKey = "StubURLProtocolSessionHandlerID"
-
-    private final class SessionHandlerRegistry: @unchecked Sendable {
-        static let shared = SessionHandlerRegistry()
-        private let lock = NSLock()
-        private var handlers: [String: @Sendable (URLRequest) throws -> Response] = [:]
-
-        func register(id: String, handler: @escaping @Sendable (URLRequest) throws -> Response) {
-            lock.lock()
-            defer { lock.unlock() }
-            handlers[id] = handler
-        }
-
-        func handler(for id: String) -> (@Sendable (URLRequest) throws -> Response)? {
-            lock.lock()
-            defer { lock.unlock() }
-            return handlers[id]
-        }
-    }
-
     final class Handler: URLProtocol, @unchecked Sendable {
         nonisolated(unsafe) static var requestHandler: (@Sendable (URLRequest) throws -> Response)?
 
         override class func canInit(with request: URLRequest) -> Bool {
-            guard let scheme = request.url?.scheme?.lowercased() else { return false }
-            return scheme == "https" || scheme == "http"
+            requestHandler != nil
         }
 
         override class func canonicalRequest(for request: URLRequest) -> URLRequest {
@@ -46,13 +25,7 @@ enum StubURLProtocol {
         }
 
         override func startLoading() {
-            let handler: (@Sendable (URLRequest) throws -> Response)?
-            if let id = property(forKey: StubURLProtocol.sessionHandlerKey) as? String {
-                handler = SessionHandlerRegistry.shared.handler(for: id)
-            } else {
-                handler = Self.requestHandler
-            }
-            guard let handler else {
+            guard let handler = Self.requestHandler else {
                 client?.urlProtocolDidFinishLoading(self)
                 return
             }
@@ -77,16 +50,9 @@ enum StubURLProtocol {
         override func stopLoading() {}
     }
 
-    static func makeSession(
-        handler: (@Sendable (URLRequest) throws -> Response)? = nil
-    ) -> URLSession {
+    static func makeSession() -> URLSession {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [Handler.self]
-        if let handler {
-            let id = UUID().uuidString
-            SessionHandlerRegistry.shared.register(id: id, handler: handler)
-            config.protocolProperties = [sessionHandlerKey: id]
-        }
         return URLSession(configuration: config)
     }
 }
