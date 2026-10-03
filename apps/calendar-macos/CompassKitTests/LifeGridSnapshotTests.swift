@@ -3,6 +3,11 @@ import XCTest
 @testable import CompassKit
 
 final class LifeGridSnapshotTests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        EffectiveTimeZone.identifier = "UTC"
+    }
+
     func testLifeGridSnapshotsMatchExportedFixtures() throws {
         let url = try XCTUnwrap(
             CompassKitResourceBundle.resources.url(
@@ -20,7 +25,7 @@ final class LifeGridSnapshotTests: XCTestCase {
             let lifespan = try XCTUnwrap(scenario["lifespan"] as? Int)
             let todayString = try XCTUnwrap(scenario["today"] as? String)
             let showCurrentWeek = try XCTUnwrap(scenario["showCurrentWeek"] as? Bool)
-            let today = try XCTUnwrap(isoDate(todayString))
+            let today = try XCTUnwrap(CompassDateParsing.parseInEffectiveTimeZone(todayString))
 
             let built = LifeGridSnapshotBuilder.build(
                 birthDate: birthDate,
@@ -33,14 +38,6 @@ final class LifeGridSnapshotTests: XCTestCase {
                 expected as NSDictionary,
                 scenario["id"] as? String ?? "scenario")
         }
-    }
-
-    private func isoDate(_ value: String) throws -> Date {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = formatter.date(from: value) { return date }
-        formatter.formatOptions = [.withInternetDateTime]
-        return try XCTUnwrap(formatter.date(from: value))
     }
 
     private func snapshotDictionary(_ snapshot: LifeGridSnapshot) throws -> Any {

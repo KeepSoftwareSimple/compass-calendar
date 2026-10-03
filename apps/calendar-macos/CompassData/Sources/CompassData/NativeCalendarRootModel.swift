@@ -55,7 +55,7 @@ public final class NativeCalendarRootModel {
         authStore = environment.authStore
         billingStore = environment.billingStore
         levelsStore = environment.levelsStore
-        lifeStore = LifeStore(today: { [weak self] in self?.referenceNow ?? Date() })
+        lifeStore = LifeStore(today: { demoSeed?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
 
         let anchor: Date = {
