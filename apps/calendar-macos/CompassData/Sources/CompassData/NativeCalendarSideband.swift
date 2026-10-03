@@ -73,9 +73,8 @@ extension NativeCalendarRootModel {
         }
         if urlString.contains("compass://connect/") {
             Task {
-                _ = await environment.syncConnectionsStore.handleConnectDeepLink(urlString)
-                await reloadCalendars()
-                await refreshVisibleRange()
+                _ = await syncConnectionsStore.handleConnectDeepLink(urlString)
+                await refreshCalendarsAndVisibleRange()
             }
             return
         }

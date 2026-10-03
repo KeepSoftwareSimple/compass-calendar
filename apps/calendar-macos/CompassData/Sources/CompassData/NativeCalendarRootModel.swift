@@ -127,6 +127,11 @@ public final class NativeCalendarRootModel {
         await refreshSideband()
     }
 
+    func refreshCalendarsAndVisibleRange() async {
+        await reloadCalendars()
+        await refreshVisibleRange()
+    }
+
     private func handleSignedOut() async {
         if let eventStream {
             await eventStream.stop()
