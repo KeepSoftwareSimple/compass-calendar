@@ -11,7 +11,7 @@ struct LifeContentView: View {
             birthDate: model.lifeStore.preferences.birthDate,
             lifespan: model.lifeStore.preferences.lifespan,
             today: model.referenceNow,
-            showCurrentWeek: true)
+            showCurrentWeek: model.lifeStore.hasBirthDate)
         LifeGridCanvasView(
             snapshot: snapshot,
             currentWeekLabel: model.lifeStore.currentWeekLabel,

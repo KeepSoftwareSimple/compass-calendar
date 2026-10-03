@@ -32,8 +32,7 @@ public enum LifeGridSnapshotBuilder {
             birthDateValue: birthDate,
             totalDots: totalDots,
             today: today)
-        let hasBirthDate = LifeMath.parseLifeDate(birthDate) != nil
-        let highlightCurrent = showCurrentWeek && hasBirthDate
+        let highlightCurrent = showCurrentWeek
         var dots: [LifeDotState] = []
         dots.reserveCapacity(totalDots)
         for index in 0 ..< totalDots {

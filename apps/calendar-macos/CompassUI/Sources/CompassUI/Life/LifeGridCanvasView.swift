@@ -63,16 +63,16 @@ struct LifeGridCanvasView: View {
     }
 
     private func drawGrid(context: inout GraphicsContext, size: CGSize) {
-        let livedColor = theme.accentColor.swiftUIColor
-        let futureColor = theme.textColor.swiftUIColor.opacity(0.15)
-        let currentRing = theme.accentColor.swiftUIColor.opacity(0.6)
+        let livedColor = theme.accentColor
+        let futureColor = theme.textColor.opacity(0.15)
+        let currentRing = theme.accentColor.opacity(0.6)
 
         for row in 0 ..< snapshot.rowCount {
             let age = row + 1
             if age == 1 || age % 10 == 0 {
                 let label = Text(verbatim: "\(age)")
                     .font(.system(size: 10, weight: .regular, design: .rounded))
-                    .foregroundColor(theme.textMutedColor.swiftUIColor.opacity(0.7))
+                    .foregroundColor(theme.textMutedColor.opacity(0.7))
                 context.draw(
                     label,
                     at: CGPoint(x: ageColumnWidth - 4, y: CGFloat(row) * rowHeight + rowHeight / 2),
