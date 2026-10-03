@@ -19,7 +19,6 @@ public struct RootView: View {
                     content
                 }
             }
-            gridFocusAccessibilityLayer
             pointerHintLayer
         }
         .background(theme.backgroundColor)
@@ -155,23 +154,6 @@ public struct RootView: View {
         let colWidths = model.timeGridState.resolvedColumnWidths()
         let metrics = model.timeGridState.snapshot(colWidths: colWidths).metrics
         return 28 + metrics.allDayRowHeight
-    }
-
-    @ViewBuilder
-    private var gridFocusAccessibilityLayer: some View {
-        if let label = model.gridFocusAccessibilityLabel {
-            Text(label)
-                .font(.custom("Rubik", size: 14))
-                .frame(minWidth: 160, minHeight: 36)
-                .opacity(0.01)
-                .accessibilityElement()
-                .accessibilityAddTraits(.isButton)
-                .accessibilityIdentifier("compass-grid-event-focused")
-                .accessibilityLabel(label)
-                .allowsHitTesting(false)
-                .padding(.top, 8)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
     }
 
     @ViewBuilder

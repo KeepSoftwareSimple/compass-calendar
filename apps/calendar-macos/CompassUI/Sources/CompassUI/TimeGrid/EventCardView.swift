@@ -13,6 +13,7 @@ final class EventCardView: NSView {
 
     weak var cardDelegate: EventCardViewDelegate?
     private(set) var eventId: String = ""
+    private var exposesFocusedAccessibilityIdentifier = false
 
     override var isFlipped: Bool { true }
 
@@ -66,8 +67,20 @@ final class EventCardView: NSView {
         titleField.stringValue = card.label
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
-        setAccessibilityIdentifier(card.accessibilityIdentifier)
+        let focusedIdentifier = FocusedGridEventAccessibilityProxy.identifier
+        if isFocused {
+            setAccessibilityIdentifier(focusedIdentifier)
+        } else {
+            setAccessibilityIdentifier(card.accessibilityIdentifier)
+        }
         setAccessibilityElement(true)
+        if isFocused != exposesFocusedAccessibilityIdentifier {
+            exposesFocusedAccessibilityIdentifier = isFocused
+            if isFocused, let window {
+                NSAccessibility.post(element: self, notification: .layoutChanged)
+                NSAccessibility.post(element: window, notification: .layoutChanged)
+            }
+        }
 
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? surfaceColor
         layer?.backgroundColor = fill.withAlphaComponent(card.isHiddenStrip ? 0.6 : 0.92).cgColor

@@ -46,12 +46,12 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
         clickGridEvent(standup)
 
-        let focused = window.descendants(matching: .any)["compass-grid-event-focused"]
+        let focused = window.buttons["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
         XCTAssertEqual(focused.label, "Morning standup")
 
         window.typeKey(.downArrow, modifierFlags: [])
-        let tryCompassFocused = window.descendants(matching: .any)["compass-grid-event-focused"]
+        let tryCompassFocused = window.buttons["compass-grid-event-focused"]
         XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
         XCTAssertEqual(tryCompassFocused.label, "Try Compass")
     }
