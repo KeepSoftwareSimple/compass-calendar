@@ -207,6 +207,8 @@ export type ConnectionListResponse = z.infer<
 // suggestions); absent keeps the request — and the consent URL sync mints —
 // byte-identical to before features existed. Principal scope always comes
 // from the authenticated context, never the body.
+export const ConnectionBeginReturnChannelSchema = z.literal("desktop");
+
 export const ConnectionBeginRequestSchema = z.strictObject({
   connectionId: ConnectionIdSchema.optional(),
   features: ConnectionBeginFeaturesSchema.optional(),
@@ -214,6 +216,8 @@ export const ConnectionBeginRequestSchema = z.strictObject({
   // byte-identical. Other kinds are accepted here and resolved against the
   // provider registry.
   provider: ProviderKindSchema.optional(),
+  /** When set, the post-connect redirect includes `desktop=1` for native relay. */
+  returnChannel: ConnectionBeginReturnChannelSchema.optional(),
 });
 export type ConnectionBeginRequest = z.infer<
   typeof ConnectionBeginRequestSchema

@@ -621,6 +621,19 @@ export function registerConnectionRoutes(
       // the consent URL byte-identical to a plain connect; the user may still
       // decline any feature scope on the consent screen and the flow completes
       // (the callback derives capabilities from what was actually granted).
+      let returnChannel: "desktop" | undefined;
+      const rawReturnChannel = (req.body as { returnChannel?: unknown })
+        ?.returnChannel;
+      if (rawReturnChannel !== undefined && rawReturnChannel !== null) {
+        if (rawReturnChannel !== "desktop") {
+          res
+            .status(Status.BAD_REQUEST)
+            .json({ error: "invalid_return_channel" });
+          return;
+        }
+        returnChannel = "desktop";
+      }
+
       let extraScopes: string[] = [];
       const rawFeatures = (req.body as { features?: unknown })?.features;
       if (rawFeatures !== undefined && rawFeatures !== null) {
@@ -659,6 +672,7 @@ export function registerConnectionRoutes(
         connectionId,
         provider,
         issuedAt: (deps.now ?? Date.now)(),
+        ...(returnChannel ? { returnChannel } : {}),
       });
       const authorizationUrl = registration.adapters.auth.buildAuthorizationUrl(
         {
@@ -1057,6 +1071,7 @@ function redirectAfterConnect(
   extras: {
     correlationId?: string;
     intent?: OAuthConnectIntent;
+    desktopRelay?: boolean;
   } = {},
 ): void {
   const url = new URL(deps.postConnectRedirectUrl);
@@ -1067,6 +1082,9 @@ function redirectAfterConnect(
   }
   if (extras.intent) {
     url.searchParams.set(CONNECT_INTENT_QUERY, extras.intent);
+  }
+  if (extras.desktopRelay) {
+    url.searchParams.set("desktop", "1");
   }
   res.redirect(url.toString());
 }
@@ -1080,6 +1098,23 @@ function newConnectCorrelationId(): string {
 function oauthCallbackErrorClass(error: unknown): string {
   if (error instanceof Error && error.name.length > 0) return error.name;
   return "Error";
+}
+
+function desktopRelayFromState(
+  deps: ConnectionApiDeps,
+  state: unknown,
+  expectedProvider: ProviderKind,
+): boolean {
+  if (typeof state !== "string") return false;
+  const now = (deps.now ?? Date.now)();
+  const withProvider = verifyOAuthState(deps.stateSecret, state, now, {
+    expectedProvider,
+  });
+  if (withProvider.ok) {
+    return withProvider.payload.returnChannel === "desktop";
+  }
+  const anyProvider = verifyOAuthState(deps.stateSecret, state, now);
+  return anyProvider.ok && anyProvider.payload.returnChannel === "desktop";
 }
 
 function connectIntentFromState(
@@ -1132,6 +1167,7 @@ async function captureOAuthCallbackThenRedirect(
   redirectAfterConnect(deps, res, input.provider, input.outcome, {
     correlationId,
     intent,
+    desktopRelay: desktopRelayFromState(deps, input.state, input.provider),
   });
 }
 

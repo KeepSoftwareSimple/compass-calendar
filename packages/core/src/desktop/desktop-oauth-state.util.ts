@@ -38,6 +38,20 @@ export function hasDesktopOAuthStateMarker(state: string): boolean {
   return state.startsWith(DESKTOP_OAUTH_STATE_PREFIX);
 }
 
+/** True when a calendar connect return should relay into the native app. */
+export function shouldRelayDesktopConnectCallback(
+  search: string,
+  inDesktopShell: boolean,
+): boolean {
+  if (inDesktopShell) {
+    return false;
+  }
+  const params = new URLSearchParams(
+    search.startsWith("?") ? search.slice(1) : search,
+  );
+  return params.get("desktop") === "1";
+}
+
 export function buildDesktopOAuthRelayUrl(
   provider: ProviderKind,
   search: string,

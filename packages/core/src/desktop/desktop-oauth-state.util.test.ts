@@ -7,6 +7,7 @@ import {
   parseDesktopAuthDeepLink,
   parseDesktopDayDeepLink,
   parseDesktopEventDeepLink,
+  shouldRelayDesktopConnectCallback,
 } from "@core/desktop/desktop-oauth-state.util";
 import { describe, expect, it } from "bun:test";
 
@@ -21,6 +22,29 @@ describe("desktop oauth state", () => {
     const state = buildOAuthStateForClient(false);
     expect(state.startsWith(DESKTOP_OAUTH_STATE_PREFIX)).toBe(false);
     expect(hasDesktopOAuthStateMarker(state)).toBe(false);
+  });
+});
+
+describe("desktop connect relay", () => {
+  it("relays only when desktop=1 is present outside the shell", () => {
+    expect(
+      shouldRelayDesktopConnectCallback(
+        "?provider=google&status=connected&desktop=1",
+        false,
+      ),
+    ).toBe(true);
+    expect(
+      shouldRelayDesktopConnectCallback(
+        "?provider=google&status=connected",
+        false,
+      ),
+    ).toBe(false);
+    expect(
+      shouldRelayDesktopConnectCallback(
+        "?provider=google&status=connected&desktop=1",
+        true,
+      ),
+    ).toBe(false);
   });
 });
 

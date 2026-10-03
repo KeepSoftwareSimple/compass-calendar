@@ -17,6 +17,8 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 // server-side session store. The state is the only trust on the public
 // callback, so it is HMAC-signed and time-bounded, exactly like internal-auth.
 
+export type OAuthReturnChannel = "desktop";
+
 export interface OAuthStatePayload {
   readonly tenantId: TenantId;
   readonly principalId: PrincipalId;
@@ -28,6 +30,8 @@ export interface OAuthStatePayload {
   readonly provider: ProviderKind;
   // Milliseconds since the epoch when the state was issued.
   readonly issuedAt: number;
+  /** When set, the web post-connect page relays to `compass://connect/...`. */
+  readonly returnChannel?: OAuthReturnChannel;
 }
 
 // Default lifetime of a state token: long enough for a human to complete
@@ -119,6 +123,7 @@ function encodePayload(payload: OAuthStatePayload): string {
     c: payload.connectionId,
     k: payload.provider,
     i: payload.issuedAt,
+    ...(payload.returnChannel ? { r: payload.returnChannel } : {}),
   });
   return Buffer.from(json, "utf8").toString("base64url");
 }
@@ -154,11 +159,15 @@ function decodePayload(encoded: string): OAuthStatePayload | null {
   const providerParsed = ProviderKindSchema.safeParse(record["k"] ?? "google");
   if (!providerParsed.success) return null;
 
+  const returnChannel =
+    record["r"] === "desktop" ? ("desktop" as const) : undefined;
+
   return {
     tenantId: tenantId.data,
     principalId: principalId.data,
     connectionId,
     provider: providerParsed.data,
     issuedAt,
+    ...(returnChannel ? { returnChannel } : {}),
   };
 }

@@ -680,11 +680,13 @@ public struct ConnectionBeginRequest: Codable, Hashable, Sendable {
     public let connectionId: ConnectionId?
     public let features: [FeaturesEnum]?
     public let provider: ProviderEnum?
+    public let returnChannel: String?
 
-    public init(connectionId: ConnectionId? = nil, features: [FeaturesEnum]? = nil, provider: ProviderEnum? = nil) {
+    public init(connectionId: ConnectionId? = nil, features: [FeaturesEnum]? = nil, provider: ProviderEnum? = nil, returnChannel: String? = nil) {
         self.connectionId = connectionId
         self.features = features
         self.provider = provider
+        self.returnChannel = returnChannel
     }
 }
 

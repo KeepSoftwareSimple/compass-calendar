@@ -74,7 +74,8 @@ public final class OAuthAuthorizationService {
                 ConnectionBeginRequest(
                     connectionId: connectionId,
                     features: nil,
-                    provider: provider))
+                    provider: provider,
+                    returnChannel: "desktop"))
             let redirectURL: URL
             switch begin {
             case let .redirect(url):

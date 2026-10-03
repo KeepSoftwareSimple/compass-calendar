@@ -2,7 +2,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import { createRoot } from "react-dom/client";
 import "react-toastify/dist/ReactToastify.css";
 import "./common/styles/toastify-theme.css";
-import { buildDesktopConnectRelayUrl } from "@core/desktop/desktop-oauth-state.util";
+import {
+  buildDesktopConnectRelayUrl,
+  shouldRelayDesktopConnectCallback,
+} from "@core/desktop/desktop-oauth-state.util";
 import { sessionInit } from "@web/auth/compass/session/SessionProvider";
 import {
   applyConnectRedirect,
@@ -27,7 +30,10 @@ export async function bootstrapApp(): Promise<void> {
   // Read before the router mounts: validateAuthSearch strips unrecognized
   // query params (like these) on the first navigation.
   const connectStatus = readConnectStatus();
-  if (connectStatus && !isDesktop()) {
+  if (
+    connectStatus &&
+    shouldRelayDesktopConnectCallback(window.location.search, isDesktop())
+  ) {
     window.location.replace(
       buildDesktopConnectRelayUrl(
         connectStatus.provider,
