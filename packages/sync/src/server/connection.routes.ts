@@ -621,6 +621,9 @@ export function registerConnectionRoutes(
       // the consent URL byte-identical to a plain connect; the user may still
       // decline any feature scope on the consent screen and the flow completes
       // (the callback derives capabilities from what was actually granted).
+      const relayDesktop =
+        (req.body as { desktopRelay?: unknown })?.desktopRelay === true;
+
       let extraScopes: string[] = [];
       const rawFeatures = (req.body as { features?: unknown })?.features;
       if (rawFeatures !== undefined && rawFeatures !== null) {
@@ -659,6 +662,7 @@ export function registerConnectionRoutes(
         connectionId,
         provider,
         issuedAt: (deps.now ?? Date.now)(),
+        ...(relayDesktop ? { relayDesktop: true } : {}),
       });
       const authorizationUrl = registration.adapters.auth.buildAuthorizationUrl(
         {
@@ -1057,6 +1061,7 @@ function redirectAfterConnect(
   extras: {
     correlationId?: string;
     intent?: OAuthConnectIntent;
+    relayDesktop?: boolean;
   } = {},
 ): void {
   const url = new URL(deps.postConnectRedirectUrl);
@@ -1067,6 +1072,9 @@ function redirectAfterConnect(
   }
   if (extras.intent) {
     url.searchParams.set(CONNECT_INTENT_QUERY, extras.intent);
+  }
+  if (extras.relayDesktop) {
+    url.searchParams.set("desktop", "1");
   }
   res.redirect(url.toString());
 }
@@ -1115,6 +1123,7 @@ async function captureOAuthCallbackThenRedirect(
 ): Promise<void> {
   const correlationId = newConnectCorrelationId();
   const intent = connectIntentFromState(deps, input.state, input.provider);
+  const relayDesktop = relayDesktopConnectFromState(deps, input.state);
   const properties: Record<string, unknown> = {
     provider: input.provider,
     outcome: input.outcome,
@@ -1132,7 +1141,18 @@ async function captureOAuthCallbackThenRedirect(
   redirectAfterConnect(deps, res, input.provider, input.outcome, {
     correlationId,
     intent,
+    ...(relayDesktop ? { relayDesktop: true } : {}),
   });
+}
+
+function relayDesktopConnectFromState(
+  deps: ConnectionApiDeps,
+  state: unknown,
+): boolean {
+  if (typeof state !== "string") return false;
+  const now = (deps.now ?? Date.now)();
+  const verified = verifyOAuthState(deps.stateSecret, state, now);
+  return verified.ok && verified.payload.relayDesktop === true;
 }
 
 async function linkCredentialConnection(

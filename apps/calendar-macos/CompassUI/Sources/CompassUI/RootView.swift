@@ -90,6 +90,9 @@ public struct RootView: View {
                     TrialBadgeView(billingStore: model.billingStore)
                 }
             )
+            if model.isSignedIn {
+                SyncAccountsListView(store: model.syncConnectionsStore)
+            }
             Spacer()
             ShortcutSidebarFooter(levelsStore: model.levelsStore)
         }

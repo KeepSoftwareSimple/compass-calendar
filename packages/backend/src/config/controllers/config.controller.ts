@@ -46,6 +46,15 @@ export const buildAppConfig = (config: typeof CONFIG): AppConfig => {
           },
         }
       : {}),
+    oauth: {
+      googleClientId: google ? (config.GOOGLE_CLIENT_ID ?? null) : null,
+      microsoftClientId: microsoft
+        ? (config.MICROSOFT_CLIENT_ID ?? null)
+        : null,
+      appleServicesId: appleSignIn
+        ? (config.APPLE_SIGNIN_SERVICES_ID ?? null)
+        : null,
+    },
   });
 };
 

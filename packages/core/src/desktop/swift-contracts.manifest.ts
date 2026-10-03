@@ -52,6 +52,14 @@ import {
   SetEventHiddenInputSchema,
 } from "@core/types/event-visibility.contracts";
 import { ServerMessageSchema } from "@core/types/server-message.contracts";
+import {
+  ConnectionBeginConnectedResponseSchema,
+  ConnectionBeginRedirectResponseSchema,
+  ConnectionBeginRequestSchema,
+  ConnectionCredentialBrowserRequestSchema,
+  ConnectionCredentialResponseSchema,
+  ConnectionRefreshResponseSchema,
+} from "@core/types/sync/connection.contracts";
 import { ConnectionIdSchema } from "@core/types/sync/identity.contracts";
 import {
   UserMetadataSchema,
@@ -132,6 +140,27 @@ export const SWIFT_CONTRACT_MANIFEST: SwiftContractManifestEntry[] = [
     schema: BillingCheckoutResponseSchema,
   },
   { swiftName: "AppConfig", schema: AppConfigSchema },
+  { swiftName: "ConnectionBeginRequest", schema: ConnectionBeginRequestSchema },
+  {
+    swiftName: "ConnectionBeginRedirectResponse",
+    schema: ConnectionBeginRedirectResponseSchema,
+  },
+  {
+    swiftName: "ConnectionBeginConnectedResponse",
+    schema: ConnectionBeginConnectedResponseSchema,
+  },
+  {
+    swiftName: "ConnectionCredentialBrowserRequest",
+    schema: ConnectionCredentialBrowserRequestSchema,
+  },
+  {
+    swiftName: "ConnectionCredentialResponse",
+    schema: ConnectionCredentialResponseSchema,
+  },
+  {
+    swiftName: "ConnectionRefreshResponse",
+    schema: ConnectionRefreshResponseSchema,
+  },
   { swiftName: "UserProfile", schema: UserProfileSchema },
   { swiftName: "UserMetadata", schema: UserMetadataSchema },
 ];

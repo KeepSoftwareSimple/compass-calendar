@@ -2,6 +2,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { createRoot } from "react-dom/client";
 import "react-toastify/dist/ReactToastify.css";
 import "./common/styles/toastify-theme.css";
+import { buildDesktopConnectRelayUrl } from "@core/desktop/desktop-oauth-state.util";
+import { shouldRelayDesktopConnectRedirect } from "@web/auth/callback/desktop-oauth-callback-relay";
 import { sessionInit } from "@web/auth/compass/session/SessionProvider";
 import {
   applyConnectRedirect,
@@ -14,6 +16,7 @@ import {
 } from "@web/common/utils/app-init.util";
 import { App } from "@web/components/App/App";
 import { installDesktopMenuShortcutBridge } from "@web/desktop/installDesktopMenuShortcutBridge";
+import { isDesktop } from "@web/desktop/isDesktop";
 import { router } from "@web/routers";
 import { preloadEventFormOnFirstInput } from "@web/views/Forms/EventForm/EventForm.lazy";
 import "./index.css";
@@ -25,6 +28,18 @@ export async function bootstrapApp(): Promise<void> {
   // Read before the router mounts: validateAuthSearch strips unrecognized
   // query params (like these) on the first navigation.
   const connectStatus = readConnectStatus();
+  if (
+    connectStatus &&
+    shouldRelayDesktopConnectRedirect(window.location.search, isDesktop())
+  ) {
+    window.location.replace(
+      buildDesktopConnectRelayUrl(
+        connectStatus.provider,
+        window.location.search,
+      ),
+    );
+    return;
+  }
 
   const container = document.getElementById("root");
   if (!container) {

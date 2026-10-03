@@ -47,6 +47,15 @@ describe("oauth-state", () => {
     );
   });
 
+  it("round-trips a desktop relay flag", () => {
+    const original = payload({ relayDesktop: true });
+    const token = signOAuthState(SECRET, original);
+
+    const result = verifyOAuthState(SECRET, token, original.issuedAt);
+
+    expect(result).toEqual({ ok: true, payload: original });
+  });
+
   it("rejects a token signed with a different secret", () => {
     const token = signOAuthState("other-secret", payload());
     expect(verifyOAuthState(SECRET, token, 1_000_000)).toEqual({

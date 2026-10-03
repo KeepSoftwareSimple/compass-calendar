@@ -8,7 +8,11 @@ struct SignInProviderButtonsView: View {
     var body: some View {
         VStack(spacing: 10) {
             ForEach(authStore.availableSignInProviders(), id: \.self) { kind in
-                AuthPrimaryButton(title: label(for: kind), disabled: false, isLoading: false) {
+                AuthPrimaryButton(
+                    title: label(for: kind),
+                    disabled: authStore.isSubmitting,
+                    isLoading: authStore.isSubmitting)
+                {
                     authStore.signInWithProvider(kind)
                 }
             }

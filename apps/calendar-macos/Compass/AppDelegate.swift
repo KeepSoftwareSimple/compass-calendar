@@ -112,7 +112,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installRootContent(on window: NSWindow) {
         if usingNativeUI {
             let theme = NativeUIThemePreference.load()
-            guard let model = try? NativeRootFactory.makeModel() else { return }
+            let presenter = WebAuthSessionPresenter()
+            guard let model = try? NativeRootFactory.makeModel(webAuthPresenter: presenter) else {
+                return
+            }
             let nativeController = NativeRootController(webTheme: theme, model: model)
             nativeRootController = nativeController
             window.contentViewController = nativeController
