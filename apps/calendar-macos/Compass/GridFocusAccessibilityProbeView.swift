@@ -55,6 +55,9 @@ enum GridFocusAccessibilityProbe {
     }
 
     static func publish(label: String?) {
+        if probe == nil, let contentView = NSApp.mainWindow?.contentView {
+            attach(to: contentView)
+        }
         guard let probe else { return }
         let wasHidden = probe.isHidden
         probe.update(label: label)
@@ -62,6 +65,7 @@ enum GridFocusAccessibilityProbe {
             NSAccessibility.post(element: probe, notification: .created)
         }
         if let window = probe.window {
+            NSAccessibility.post(element: probe, notification: .layoutChanged)
             NSAccessibility.post(element: window, notification: .layoutChanged)
         }
     }

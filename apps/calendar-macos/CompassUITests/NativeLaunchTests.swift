@@ -2,31 +2,6 @@ import XCTest
 
 final class NativeLaunchTests: XCTestCase {
     @MainActor
-    private func clickGridEvent(_ element: XCUIElement) {
-        if element.isHittable {
-            element.click()
-        } else {
-            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).click()
-        }
-    }
-
-    @MainActor
-    private func waitForAccessibilityLabel(
-        _ element: XCUIElement,
-        _ label: String,
-        timeout: TimeInterval
-    ) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if element.exists, element.label == label {
-                return true
-            }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return element.exists && element.label == label
-    }
-
-    @MainActor
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
@@ -63,7 +38,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        clickGridEvent(standup)
+        standup.press(forDuration: 0)
 
         let focused = app.descendants(matching: .any)["compass-grid-event-focused"]
         XCTAssertTrue(focused.waitForExistence(timeout: 10))
@@ -71,10 +46,8 @@ final class NativeLaunchTests: XCTestCase {
 
         window.typeKey(.downArrow, modifierFlags: [])
         let tryCompassFocused = app.descendants(matching: .any)["compass-grid-event-focused"]
-        XCTAssertTrue(
-            waitForAccessibilityLabel(tryCompassFocused, "Try Compass", timeout: 5),
-            "Expected Down arrow to move grid focus to Try Compass"
-        )
+        XCTAssertTrue(tryCompassFocused.waitForExistence(timeout: 5))
+        XCTAssertEqual(tryCompassFocused.label, "Try Compass")
     }
 
     @MainActor
@@ -87,7 +60,7 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         let standup = window.buttons["Morning standup"]
         XCTAssertTrue(standup.waitForExistence(timeout: 10))
-        clickGridEvent(standup)
+        standup.press(forDuration: 0)
 
         let hint = window.descendants(matching: .any)["compass-pointer-hint"]
         XCTAssertTrue(hint.waitForExistence(timeout: 5))
