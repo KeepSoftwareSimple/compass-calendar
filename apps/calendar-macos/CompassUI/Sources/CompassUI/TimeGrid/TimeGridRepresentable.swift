@@ -54,14 +54,24 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             model.focusGridEvent(eventId: eventId)
             model.publishGridFocusAccessibilityProbe()
             if let registry = model.shortcutRegistry {
+                let focusedLabel =
+                    model.gridFocusAccessibilityLabel
+                    ?? focusedEventLabel(for: eventId)
                 model.showPointerHint(
                     for: .eventCard,
                     registry: registry,
-                    focusedGridEventLabel: model.gridFocusAccessibilityLabel
+                    focusedGridEventLabel: focusedLabel
                 )
             }
             view.update(state: model.timeGridState, theme: theme)
             view.layoutSubtreeIfNeeded()
+        }
+
+        private func focusedEventLabel(for eventId: String) -> String? {
+            let colWidths = model.timeGridState.resolvedColumnWidths()
+            return model.timeGridState.snapshot(colWidths: colWidths).cards
+                .first(where: { $0.eventId == eventId })?
+                .label
         }
     }
 }

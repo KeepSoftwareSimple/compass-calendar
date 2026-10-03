@@ -158,10 +158,11 @@ public struct RootView: View {
 
     @ViewBuilder
     private var pointerHintLayer: some View {
-        if model.pointerHintStore.isVisible {
+        if model.pointerHintStore.isVisible || model.pointerHintStore.focusedGridEventLabel != nil {
             PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
             .padding(.top, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .allowsHitTesting(model.pointerHintStore.isVisible)
         } else if let label = gridFocusProbeLabel {
             Text(label)
                 .font(.custom("Rubik", size: 14, relativeTo: .body))
