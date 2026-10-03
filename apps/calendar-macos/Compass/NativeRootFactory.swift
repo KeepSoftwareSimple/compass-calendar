@@ -7,18 +7,12 @@ enum NativeRootFactory {
         let analytics = PostHogAnalyticsClient()
         let identity = PostHogAnalyticsIdentityCoordinator(analytics: analytics)
         let sessionPresenter = WebAuthSessionPresenter()
-        if let fixture = FixtureLaunchPolicy.demoFixture {
-            let environment = try NativeCalendarEnvironment(
-                fixture: fixture,
-                analytics: analytics,
-                analyticsIdentity: identity,
-                sessionPresenter: sessionPresenter)
-            return NativeCalendarRootModel(environment: environment, demoSeed: fixture)
-        }
+        let demoPresentation = FixtureLaunchPolicy.demoFixture
         let environment = try NativeCalendarEnvironment(
+            inMemoryDatabase: demoPresentation != nil,
             analytics: analytics,
             analyticsIdentity: identity,
             sessionPresenter: sessionPresenter)
-        return NativeCalendarRootModel(environment: environment)
+        return NativeCalendarRootModel(environment: environment, demoPresentation: demoPresentation)
     }
 }

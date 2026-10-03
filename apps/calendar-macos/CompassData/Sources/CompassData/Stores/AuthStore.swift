@@ -40,26 +40,37 @@ public final class AuthStore {
     private let emailPassword: AuthEmailPasswordClient
     private let configStore: ConfigStore
     private let analyticsIdentity: AnalyticsIdentityCoordinator
+    private let userMetadataRepository: UserMetadataRepository?
+    private let localEventSync: LocalEventSync?
+    private let eventsStore: EventsStore?
 
     public init(
         apiClient: CompassAPIClient,
         configStore: ConfigStore,
-        analyticsIdentity: AnalyticsIdentityCoordinator
+        analyticsIdentity: AnalyticsIdentityCoordinator,
+        userMetadataRepository: UserMetadataRepository? = nil,
+        localEventSync: LocalEventSync? = nil,
+        eventsStore: EventsStore? = nil
     ) {
         self.apiClient = apiClient
         emailPassword = AuthEmailPasswordClient(client: apiClient)
         self.configStore = configStore
         self.analyticsIdentity = analyticsIdentity
+        self.userMetadataRepository = userMetadataRepository
+        self.localEventSync = localEventSync
+        self.eventsStore = eventsStore
     }
 
-    public func bootstrap(forceDemoSignedIn: Bool) async {
+    public func bootstrap(forceDemoSignedIn: Bool = false) async {
         submitError = nil
         if forceDemoSignedIn {
             authenticated = true
             isModalPresented = false
+            refreshRepositorySource()
             return
         }
         authenticated = (try? await apiClient.currentSession()) != nil
+        refreshRepositorySource()
         if authenticated {
             await identifyAnalyticsUser()
             isModalPresented = false
@@ -185,6 +196,7 @@ public final class AuthStore {
         try await apiClient.auth.signOut()
         authenticated = false
         submitError = nil
+        refreshRepositorySource()
         openModal(.login)
         await analyticsIdentity.resetIdentity()
         await onSignedOut?()
@@ -194,6 +206,7 @@ public final class AuthStore {
         try? await apiClient.signOutLocally()
         authenticated = false
         submitError = "Your session expired. Log in again."
+        refreshRepositorySource()
         openModal(.login)
         await analyticsIdentity.resetIdentity()
         await onSignedOut?()
@@ -274,11 +287,28 @@ public final class AuthStore {
 
     private func completeAuthentication(closeAfter: Bool) async throws {
         authenticated = true
+        if let userMetadataRepository {
+            try? AuthRememberedState.markUserHasAuthenticated(repository: userMetadataRepository)
+        }
+        if let localEventSync {
+            _ = try? await localEventSync.syncLocalEventsToCloud()
+        }
+        refreshRepositorySource()
         await identifyAnalyticsUser()
         if closeAfter {
             closeModal()
         }
         await onAuthenticated?()
+    }
+
+    private func refreshRepositorySource() {
+        guard let userMetadataRepository, let eventsStore else { return }
+        let remembered = (try? AuthRememberedState.hasUserEverAuthenticated(
+            repository: userMetadataRepository)) ?? false
+        eventsStore.setSource(
+            EventRepositorySelection.source(
+                sessionExists: authenticated,
+                hasUserEverAuthenticated: remembered))
     }
 
     private func identifyAnalyticsUser() async {
