@@ -943,6 +943,7 @@ export function useEventMutations(
                 seriesId,
                 source,
               ),
+              seriesMaster: findEventInCache(queryClient, seriesId, source),
             }),
             source,
           );

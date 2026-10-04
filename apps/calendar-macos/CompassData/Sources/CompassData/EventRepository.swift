@@ -36,6 +36,43 @@ public struct EventRepository: Sendable {
         }
     }
 
+    public func fetch(id: EventId) throws -> Event? {
+        try db.read { db in
+            guard let record = try EventRecord.fetchOne(db, key: id.rawValue) else {
+                return nil
+            }
+            return try EventRecordCodec.event(from: record)
+        }
+    }
+
+    public func occurrences(forSeriesId seriesId: EventId) throws -> [Event] {
+        try fetchAll().filter { event in
+            if case .occurrence(let payload) = event.recurrence {
+                return payload.seriesId == seriesId
+            }
+            return false
+        }
+    }
+
+    /// Drop cached remote rows in `[start, end)` that the latest list response no longer includes.
+    public func pruneRemoteEvents(
+        intersectingStart start: String,
+        end: String,
+        retaining retained: Set<EventId>
+    ) throws {
+        let staleIds = try db.read { db -> [EventId] in
+            let rows = try EventRecord.fetchAll(db)
+            return rows.compactMap { row -> EventId? in
+                guard !row.isLocal else { return nil }
+                let id = EventId(rawValue: row.id)
+                if retained.contains(id) { return nil }
+                guard row.startsAt < end, row.endsAt > start else { return nil }
+                return id
+            }
+        }
+        try delete(ids: staleIds)
+    }
+
     public func fetchAll() throws -> [Event] {
         try db.read { db in
             try EventRecord.fetchAll(db).map { try EventRecordCodec.event(from: $0) }

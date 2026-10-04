@@ -68,6 +68,11 @@ public final class EventsStore {
         let remote = try await eventsAPI.list(query)
         let events = try remote.map { try EventMapping.event(from: $0) }
         try repository.upsert(events: events, isLocal: source == .local)
+        try repository.pruneRemoteEvents(
+            intersectingStart: key.start,
+            end: key.end,
+            retaining: Set(events.map(\.id))
+        )
         try rangeCache.markLoaded(key: key)
         return try eventsInRange(key: key)
     }
@@ -95,11 +100,32 @@ public final class EventsStore {
     ) async throws {
         beginMutation()
         defer { endMutation() }
-        try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        let snapshot = try recurringReplaceSnapshot(targetId: id)
+        if let snapshot,
+           let projection = recurringReplaceProjection(
+               input: input,
+               edited: optimisticEvent,
+               snapshot: snapshot
+           )
+        {
+            try applyRecurringProjection(projection, edited: optimisticEvent)
+        } else {
+            try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        }
         do {
             let response = try await eventsAPI.replace(id: id, input: input)
             let settled = try EventMapping.event(from: response)
-            try repository.upsert(events: [settled], isLocal: source == .local)
+            if let snapshot, input.scope != .this,
+               let projection = recurringReplaceProjection(
+                   input: input,
+                   edited: settled,
+                   snapshot: snapshot
+               )
+            {
+                try applyRecurringProjection(projection, edited: settled)
+            } else {
+                try repository.upsert(events: [settled], isLocal: source == .local)
+            }
         } catch {}
     }
 
@@ -154,6 +180,91 @@ public final class EventsStore {
                 return false
             }
             return bounds.startsAt >= key.start && bounds.endsAt <= key.end
+        }
+    }
+
+    private struct RecurringReplaceSnapshot: Sendable {
+        let original: Event
+        let seriesEvents: [Event]
+        let seriesMaster: Event?
+    }
+
+    private func recurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
+        guard let original = try repository.fetch(id: targetId) else { return nil }
+        guard case .occurrence(let payload) = original.recurrence else { return nil }
+        let seriesId = payload.seriesId
+        let seriesEvents = try seriesOccurrenceSnapshot(seriesId: seriesId, target: original)
+        let seriesMaster = try repository.fetch(id: seriesId)
+        return RecurringReplaceSnapshot(
+            original: original,
+            seriesEvents: seriesEvents,
+            seriesMaster: seriesMaster
+        )
+    }
+
+    private func seriesOccurrenceSnapshot(seriesId: EventId, target: Event) throws -> [Event] {
+        var events = try repository.occurrences(forSeriesId: seriesId)
+        if events.isEmpty {
+            events = try repository.fetchAll().filter { event in
+                guard case .occurrence(let payload) = event.recurrence else { return false }
+                return payload.seriesId == seriesId
+            }
+        }
+        if !events.contains(where: { $0.id == target.id }) {
+            events.append(target)
+        }
+        return events
+    }
+
+    private func recurringReplaceProjection(
+        input: ReplaceEventInput,
+        edited: Event,
+        snapshot: RecurringReplaceSnapshot
+    ) -> RecurringEditProjection? {
+        guard input.scope != .this else { return nil }
+        return ProjectRecurringEdit.projectRecurringEdit(
+            .init(
+                scope: input.scope,
+                edited: edited,
+                original: snapshot.original,
+                seriesEvents: snapshot.seriesEvents,
+                seriesMaster: snapshot.seriesMaster
+            )
+        )
+    }
+
+    private func applyRecurringProjection(
+        _ projection: RecurringEditProjection,
+        edited: Event
+    ) throws {
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try repository.delete(ids: ids)
+        }
+        let upserts = nativeOptimisticUpserts(from: projection, edited: edited)
+        if !upserts.isEmpty {
+            try repository.upsert(events: upserts, isLocal: source == .local)
+        }
+    }
+
+    /// Native GRDB holds materialized rows only; drop superseded occurrence ids that
+    /// projection removes and let the next range read re-expand the remainder series.
+    private func nativeOptimisticUpserts(
+        from projection: RecurringEditProjection,
+        edited: Event
+    ) -> [Event] {
+        projection.upserts.filter { event in
+            switch event.recurrence {
+            case .series:
+                return true
+            case .occurrence:
+                if projection.removeIds.contains(event.id.rawValue) {
+                    return event.id == edited.id
+                }
+                return true
+            case .single:
+                return true
+            }
         }
     }
 }
