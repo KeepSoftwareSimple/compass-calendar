@@ -69,7 +69,7 @@ public actor CompassAPIClient {
         retriedAfterRefresh: Bool,
         extraHeaders: [String: String]
     ) async throws -> HTTPResponsePayload {
-        var request = try makeRequest(
+        let request = try makeRequest(
             method: method,
             path: path,
             queryItems: queryItems,
@@ -78,11 +78,7 @@ public actor CompassAPIClient {
             auth: auth,
             extraHeaders: extraHeaders
         )
-        let (data, response) = try await urlSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw CompassAPIError.transport("Missing HTTPURLResponse")
-        }
-        let body = String(data: data, encoding: .utf8) ?? ""
+        let (http, body) = try await roundTrip(request)
         let payload = HTTPResponsePayload(
             statusCode: http.statusCode,
             headers: http.allHeaderFields.reduce(into: [:]) { result, entry in
@@ -219,11 +215,7 @@ public actor CompassAPIClient {
             contentType: nil,
             auth: .bearerRefresh
         )
-        let (data, response) = try await urlSession.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw CompassAPIError.transport("Missing HTTPURLResponse")
-        }
-        let body = String(data: data, encoding: .utf8) ?? ""
+        let (http, _) = try await roundTrip(request)
         guard http.statusCode == 200 else {
             try? sessionStore.clear()
             throw CompassAPIError.sessionExpired
@@ -233,7 +225,17 @@ public actor CompassAPIClient {
             throw CompassAPIError.sessionExpired
         }
         try sessionStore.save(rotated)
-        _ = body
+    }
+
+    /// One round trip, with the two unwraps every caller repeats: the
+    /// `HTTPURLResponse` cast and the UTF-8 body (empty when the response
+    /// carries no decodable bytes).
+    private func roundTrip(_ request: URLRequest) async throws -> (HTTPURLResponse, String) {
+        let (data, response) = try await urlSession.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw CompassAPIError.transport("Missing HTTPURLResponse")
+        }
+        return (http, String(data: data, encoding: .utf8) ?? "")
     }
 
     private func makeRequest(
