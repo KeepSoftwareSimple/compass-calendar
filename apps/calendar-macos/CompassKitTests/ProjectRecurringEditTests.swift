@@ -16,9 +16,9 @@ final class ProjectRecurringEditTests: XCTestCase {
             ),
             schedule: .timed(
                 .init(
+                    end: .init(rawValue: "2026-07-06T17:00:00.000Z"),
                     kind: "timed",
                     start: .init(rawValue: "2026-07-06T16:00:00.000Z"),
-                    end: .init(rawValue: "2026-07-06T17:00:00.000Z"),
                     timeZone: "UTC"
                 )
             )
