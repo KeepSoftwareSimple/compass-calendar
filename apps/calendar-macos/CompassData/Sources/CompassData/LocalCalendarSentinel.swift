@@ -20,14 +20,9 @@ public enum LocalCalendarSentinel {
 
     public static func synthesizeCalendar(id: CalendarId) -> CompassCalendar {
         CompassCalendar(
-            id: id.rawValue,
-            name: "Compass",
-            description: "",
-            timeZone: nil,
-            foregroundColor: "#000000",
-            backgroundColor: "#ffffff",
-            provider: "local",
             access: .owner,
+            accountEmail: nil,
+            backgroundColor: "#ffffff",
             capabilities: CompassCalendarCapabilities(
                 canInviteAttendees: false,
                 canManage: false,
@@ -37,12 +32,17 @@ public enum LocalCalendarSentinel {
                 canWrite: true,
                 conferenceKinds: []
             ),
+            conference: nil,
+            createsGoogleMeet: nil,
+            description: "",
+            foregroundColor: "#000000",
+            id: id.rawValue,
+            isActive: true,
             isPrimary: true,
             isVisible: true,
-            isActive: true,
-            accountEmail: nil,
-            conference: nil,
-            createsGoogleMeet: nil
+            name: "Compass",
+            provider: "local",
+            timeZone: nil
         )
     }
 
