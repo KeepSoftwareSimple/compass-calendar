@@ -181,7 +181,7 @@ public final class TimeGridView: NSView {
         let hourHeight = snapshot.metrics.hourHeight
         let gridHeight = snapshot.metrics.timedGridHeight
         let allDayHeight = snapshot.metrics.allDayRowHeight
-        let headerHeight = 28.0
+        let headerHeight = GridTimeConstants.dayHeaderRowHeight
         let totalHeight = headerHeight + allDayHeight + gridHeight + GridTimeConstants.gridPaddingBottom
 
         documentView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: totalHeight)
@@ -289,7 +289,9 @@ public final class TimeGridView: NSView {
     private func renderCards(snapshot: GridLayoutSnapshot) {
         var seen: Set<String> = []
         let surface = themePalette.surfaceRaised
-        let allDayOffset = 28.0 + snapshot.metrics.allDayRowHeight
+        let allDayOffset = GridTimeConstants.timedContentDocumentYOffset(
+            allDayRowHeight: snapshot.metrics.allDayRowHeight
+        )
 
         for card in snapshot.cards {
             seen.insert(card.eventId)
@@ -298,7 +300,7 @@ public final class TimeGridView: NSView {
 
             var frame = card.frame
             if card.kind == .allDay {
-                frame.top += 28
+                frame.top += GridTimeConstants.dayHeaderRowHeight
             } else {
                 frame.top += allDayOffset
             }
@@ -340,7 +342,7 @@ public final class TimeGridView: NSView {
         var frame = card.frame
         let cardParent: NSView
         if card.kind == .allDay {
-            frame.top += 28
+            frame.top += GridTimeConstants.dayHeaderRowHeight
             cardParent = allDayRowView
         } else {
             frame.top += allDayOffset
@@ -378,7 +380,9 @@ public final class TimeGridView: NSView {
             return
         }
 
-        let allDayOffset = 28.0 + snapshot.metrics.allDayRowHeight
+        let allDayOffset = GridTimeConstants.timedContentDocumentYOffset(
+            allDayRowHeight: snapshot.metrics.allDayRowHeight
+        )
         nowLineLayer.isHidden = false
         nowLineLayer.frame = CGRect(
             x: column.left,

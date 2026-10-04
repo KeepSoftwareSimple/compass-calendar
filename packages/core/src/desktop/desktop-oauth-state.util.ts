@@ -42,9 +42,7 @@ export function buildDesktopOAuthRelayUrl(
   provider: ProviderKind,
   search: string,
 ): string {
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  const base = `${DESKTOP_DEEP_LINK_SCHEME}auth/${provider}/callback`;
-  return query.length > 0 ? `${base}?${query}` : base;
+  return buildDesktopCallbackRelayUrl("auth", provider, search);
 }
 
 /**
@@ -56,28 +54,36 @@ export function buildDesktopConnectRelayUrl(
   provider: ProviderKind,
   search: string,
 ): string {
-  const query = search.startsWith("?") ? search.slice(1) : search;
-  const base = `${DESKTOP_DEEP_LINK_SCHEME}connect/${provider}/callback`;
-  return query.length > 0 ? `${base}?${query}` : base;
+  return buildDesktopCallbackRelayUrl("connect", provider, search);
 }
 
 export function parseDesktopConnectDeepLink(
   url: string,
 ): { provider: ProviderKind; query: string } | null {
-  const match = DESKTOP_CONNECT_CALLBACK_PATTERN.exec(url);
-  if (!match) return null;
-  const provider = ProviderKindSchema.safeParse(match.groups?.["provider"]);
-  if (!provider.success) return null;
-  return {
-    provider: provider.data,
-    query: match.groups?.["query"] ?? "",
-  };
+  return parseDesktopCallbackDeepLink(url, DESKTOP_CONNECT_CALLBACK_PATTERN);
 }
 
 export function parseDesktopAuthDeepLink(
   url: string,
 ): { provider: ProviderKind; query: string } | null {
-  const match = DESKTOP_AUTH_CALLBACK_PATTERN.exec(url);
+  return parseDesktopCallbackDeepLink(url, DESKTOP_AUTH_CALLBACK_PATTERN);
+}
+
+function buildDesktopCallbackRelayUrl(
+  kind: "auth" | "connect",
+  provider: ProviderKind,
+  search: string,
+): string {
+  const query = search.startsWith("?") ? search.slice(1) : search;
+  const base = `${DESKTOP_DEEP_LINK_SCHEME}${kind}/${provider}/callback`;
+  return query.length > 0 ? `${base}?${query}` : base;
+}
+
+function parseDesktopCallbackDeepLink(
+  url: string,
+  pattern: RegExp,
+): { provider: ProviderKind; query: string } | null {
+  const match = pattern.exec(url);
   if (!match) return null;
   const provider = ProviderKindSchema.safeParse(match.groups?.["provider"]);
   if (!provider.success) return null;
