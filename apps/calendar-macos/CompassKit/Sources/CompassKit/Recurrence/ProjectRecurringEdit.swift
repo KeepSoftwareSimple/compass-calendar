@@ -63,8 +63,8 @@ public enum ProjectRecurringEdit {
         }
 
         let splitInstant = scheduleStartString(input.original.schedule)
-        guard let masterStart = scheduleStartString(input.seriesMaster!.schedule),
-              let splitDate = CompassDateParsing.parseInEffectiveTimeZone(splitInstant),
+        let masterStart = scheduleStartString(input.seriesMaster!.schedule)
+        guard let splitDate = CompassDateParsing.parseInEffectiveTimeZone(splitInstant),
               let masterStartDate = CompassDateParsing.parseInEffectiveTimeZone(masterStart),
               splitDate > masterStartDate
         else {
@@ -183,9 +183,9 @@ public enum ProjectRecurringEdit {
                 event,
                 schedule: .timed(
                     .init(
+                        end: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedEnd)),
                         kind: "timed",
                         start: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedStart)),
-                        end: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedEnd)),
                         timeZone: payload.timeZone
                     )
                 )
@@ -196,9 +196,9 @@ public enum ProjectRecurringEdit {
                 event,
                 schedule: .allDay(
                     .init(
+                        end: shiftDateOnly(payload.end, byDays: dayDelta),
                         kind: "allDay",
-                        start: shiftDateOnly(payload.start, byDays: dayDelta),
-                        end: shiftDateOnly(payload.end, byDays: dayDelta)
+                        start: shiftDateOnly(payload.start, byDays: dayDelta)
                     )
                 )
             )
@@ -223,9 +223,9 @@ public enum ProjectRecurringEdit {
         case .allDay(let editedPayload):
             return .allDay(
                 .init(
+                    end: shiftDateOnly(editedPayload.end, byDays: dayOffset),
                     kind: "allDay",
-                    start: shiftDateOnly(editedPayload.start, byDays: dayOffset),
-                    end: shiftDateOnly(editedPayload.end, byDays: dayOffset)
+                    start: shiftDateOnly(editedPayload.start, byDays: dayOffset)
                 )
             )
         case .timed(let editedPayload):
@@ -249,9 +249,9 @@ public enum ProjectRecurringEdit {
             let shiftedEnd = shiftedStart.addingTimeInterval(duration)
             return .timed(
                 .init(
+                    end: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedEnd)),
                     kind: "timed",
                     start: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedStart)),
-                    end: .init(rawValue: CompassDateParsing.formatLikeDayjs(shiftedEnd)),
                     timeZone: editedPayload.timeZone
                 )
             )
