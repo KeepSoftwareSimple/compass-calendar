@@ -6,7 +6,7 @@ import XCTest
 final class NativeCalendarRootModelFocusTests: XCTestCase {
     func testFocusGridEventSetsDemoStandupAccessibilityLabel() async throws {
         let fixture = try DemoSeedFixture.load()
-        let environment = try NativeCalendarEnvironment(fixture: fixture)
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
@@ -18,7 +18,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
 
     func testEditFocusNextDoesNotSeedWhenFocusNotInLayoutCards() async throws {
         let fixture = try DemoSeedFixture.load()
-        let environment = try NativeCalendarEnvironment(fixture: fixture)
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
@@ -31,7 +31,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
 
     func testEditFocusNextMovesFromStandupToTryCompass() async throws {
         let fixture = try DemoSeedFixture.load()
-        let environment = try NativeCalendarEnvironment(fixture: fixture)
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
@@ -44,7 +44,7 @@ final class NativeCalendarRootModelFocusTests: XCTestCase {
 
     func testShowPointerHintForEventCardKeepsFocusedGridEventLabel() async throws {
         let fixture = try DemoSeedFixture.load()
-        let environment = try NativeCalendarEnvironment(fixture: fixture)
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
         await model.start()
 
