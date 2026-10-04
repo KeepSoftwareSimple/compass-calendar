@@ -113,6 +113,9 @@ public final class NativeCalendarRootModel {
         await configStore.load()
         await configureAnalyticsFromConfig()
         await authStore.bootstrap()
+        if demoPresentation != nil {
+            authStore.closeModal()
+        }
         try? DemoDataSeeder.seedIfNeeded(
             localEvents: environment.localEventRepository,
             metadata: environment.userMetadataRepository,
