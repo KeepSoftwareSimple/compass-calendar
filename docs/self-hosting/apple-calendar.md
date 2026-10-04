@@ -44,6 +44,36 @@ Apple sign-in is separate from calendar access. To configure it:
 5. Set all four Compass values below and rebuild/deploy the affected services.
    Check `/api/config` reports `providers.apple.signIn: true`.
 
+In the portal, use **Identifiers > + > App IDs > App**, enter a description
+and an explicit bundle ID, select **Sign In with Apple**, and keep it enabled
+as a primary App ID. Review the details before registering it. For the web
+identifier, use **Identifiers > + > Services IDs**, then open the registered
+Services ID, enable **Sign In with Apple**, and choose **Configure** to select
+the primary App ID and enter the domains and return URLs. Save both the web
+configuration and the Services ID changes.
+
+Use **Keys > +** to create the sign-in key, select **Sign in with Apple**, and
+configure it for the same primary App ID. Download the `.p8` immediately:
+Apple only allows one download. Keep the file outside the repository and put
+its contents only in the deployment secret. The sign-in key is separate from
+an App Store Connect API key used for app distribution or notarization.
+
+For the hosted Compass environments, register:
+
+| GitHub environment | Domain | Return URL |
+| --- | --- | --- |
+| `staging-cloud` | `staging.compasscalendar.com` | `https://staging.compasscalendar.com/api/auth/apple/callback` |
+| `staging-selfhosted` | `selfhosted.compasscalendar.com` | `https://selfhosted.compasscalendar.com/api/auth/apple/callback` |
+| `production` | `www.compasscalendar.com` | `https://www.compasscalendar.com/api/auth/apple/callback` |
+
+Apple does not accept `localhost` or an IP address as the web callback host.
+Local sign-in testing needs a public HTTPS hostname routing to the local
+backend, with its return URL registered on the Services ID.
+
+After deploying staging, verify the config flag and complete an Apple login.
+Record which environments are configured in the setup issue without including
+private key contents. Repeat verification after the approved production deploy.
+
 Follow Apple's [web configuration guide](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web).
 
 These are the Compass config keys. Add the matching GitHub
