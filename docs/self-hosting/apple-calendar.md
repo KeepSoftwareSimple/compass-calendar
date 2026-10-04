@@ -74,6 +74,11 @@ After deploying staging, verify the config flag and complete an Apple login.
 Record which environments are configured in the setup issue without including
 private key contents. Repeat verification after the approved production deploy.
 
+The current production rollout gate hides both Apple sign-in and calendar
+connect, even when credentials are configured. Credential setup does not
+remove that gate. Production activation requires a separate release decision;
+verify the sign-in config flag on staging while the gate remains in place.
+
 Follow Apple's [web configuration guide](https://developer.apple.com/help/account/capabilities/configure-sign-in-with-apple-for-the-web).
 
 These are the Compass config keys. Add the matching GitHub
