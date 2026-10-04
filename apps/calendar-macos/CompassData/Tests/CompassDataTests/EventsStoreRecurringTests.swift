@@ -82,10 +82,11 @@ final class EventsStoreRecurringTests: XCTestCase {
 
         let stored = try repository.fetchAll()
         let ids = Set(stored.map(\.id.rawValue))
-        XCTAssertFalse(ids.contains(split.id.rawValue))
+        // Web parity: remainderSeriesId is edited.id (same as the split occurrence id).
         XCTAssertFalse(ids.contains(following.id.rawValue))
         XCTAssertTrue(ids.contains(seriesId.rawValue))
         XCTAssertTrue(ids.contains(edited.id.rawValue))
+        XCTAssertEqual(stored.filter { $0.id == edited.id }.count, 1)
 
         let gridInputs = CalendarEventViewModel.gridInputs(from: stored)
         let julySix = gridInputs.timedEvents.filter { $0.startDate.hasPrefix("2026-07-06T16:00:00") }
