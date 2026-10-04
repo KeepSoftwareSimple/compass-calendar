@@ -32,11 +32,10 @@ public enum LifeGridSnapshotBuilder {
             birthDateValue: birthDate,
             totalDots: totalDots,
             today: today)
-        let highlightCurrent = showCurrentWeek
         var dots: [LifeDotState] = []
         dots.reserveCapacity(totalDots)
         for index in 0 ..< totalDots {
-            if highlightCurrent, index == weeksLived {
+            if showCurrentWeek, index == weeksLived {
                 dots.append(.current)
             } else if index < weeksLived {
                 dots.append(.lived)

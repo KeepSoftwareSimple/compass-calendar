@@ -5,6 +5,7 @@ import {
   DESKTOP_OAUTH_STATE_PREFIX,
   hasDesktopOAuthStateMarker,
   parseDesktopAuthDeepLink,
+  parseDesktopConnectDeepLink,
   parseDesktopDayDeepLink,
   parseDesktopEventDeepLink,
 } from "@core/desktop/desktop-oauth-state.util";
@@ -33,6 +34,20 @@ describe("desktop connect deep links", () => {
       ),
     ).toBe(
       "compass://connect/google/callback?provider=google&status=connected",
+    );
+  });
+
+  it("parses the same connect deep-link shape the relay builds", () => {
+    const url = buildDesktopConnectRelayUrl(
+      "google",
+      "?provider=google&status=connected",
+    );
+    expect(parseDesktopConnectDeepLink(url)).toEqual({
+      provider: "google",
+      query: "?provider=google&status=connected",
+    });
+    expect(parseDesktopConnectDeepLink("compass://connect/zoom/callback")).toBe(
+      null,
     );
   });
 });

@@ -25,7 +25,26 @@ public enum DesktopOAuthState {
     }
 
     public static func parseDesktopAuthDeepLink(_ url: String) -> ParsedAuthDeepLink? {
-        let pattern = "^compass://auth/([^/?#]+)/callback(\\?.*)?$"
+        parseCallbackDeepLink(url, kind: "auth")
+    }
+
+    public static func parseDesktopConnectDeepLink(_ url: String) -> ParsedAuthDeepLink? {
+        parseCallbackDeepLink(url, kind: "connect")
+    }
+
+    public static func queryItems(fromDeepLinkQuery query: String) -> [URLQueryItem] {
+        let stripped = query.hasPrefix("?") ? String(query.dropFirst()) : query
+        var components = URLComponents()
+        components.query = stripped
+        return components.queryItems ?? []
+    }
+
+    public static func queryValue(_ name: String, fromDeepLinkQuery query: String) -> String? {
+        queryItems(fromDeepLinkQuery: query).first { $0.name == name }?.value
+    }
+
+    private static func parseCallbackDeepLink(_ url: String, kind: String) -> ParsedAuthDeepLink? {
+        let pattern = "^compass://\(kind)/([^/?#]+)/callback(\\?.*)?$"
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
         let range = NSRange(url.startIndex..., in: url)
         guard let match = regex.firstMatch(in: url, range: range),

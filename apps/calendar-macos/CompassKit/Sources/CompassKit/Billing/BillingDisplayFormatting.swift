@@ -27,14 +27,7 @@ public enum BillingDisplayFormatting {
     }
 
     public static func formatBillingDate(iso: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var date = formatter.date(from: iso)
-        if date == nil {
-            formatter.formatOptions = [.withInternetDateTime]
-            date = formatter.date(from: iso)
-        }
-        guard let date else { return iso }
+        guard let date = BillingISO8601.date(from: iso) else { return iso }
         let out = DateFormatter()
         out.locale = Locale(identifier: "en_US")
         out.dateFormat = "MMM d, yyyy"
@@ -57,5 +50,15 @@ public enum BillingDisplayFormatting {
         if let mapped = invoiceStatusLabels[status] { return mapped }
         guard let first = status.first else { return status }
         return first.uppercased() + status.dropFirst()
+    }
+}
+
+enum BillingISO8601 {
+    static func date(from iso: String) -> Date? {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: iso) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: iso)
     }
 }

@@ -7,14 +7,7 @@ public enum BillingTrialFormatting {
         now: Date = Date(),
         calendar: Calendar = .current
     ) -> Int {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var end = formatter.date(from: trialEndsAt)
-        if end == nil {
-            formatter.formatOptions = [.withInternetDateTime]
-            end = formatter.date(from: trialEndsAt)
-        }
-        guard let end else { return 0 }
+        guard let end = BillingISO8601.date(from: trialEndsAt) else { return 0 }
         let seconds = end.timeIntervalSince(now)
         let days = ceil(seconds / 86_400)
         return max(0, Int(days))
