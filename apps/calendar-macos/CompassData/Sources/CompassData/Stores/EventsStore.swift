@@ -68,6 +68,11 @@ public final class EventsStore {
         let remote = try await eventsAPI.list(query)
         let events = try remote.map { try EventMapping.event(from: $0) }
         try repository.upsert(events: events, isLocal: source == .local)
+        try repository.pruneRemoteEvents(
+            intersectingStart: key.start,
+            end: key.end,
+            retaining: Set(events.map(\.id))
+        )
         try rangeCache.markLoaded(key: key)
         return try eventsInRange(key: key)
     }
@@ -95,7 +100,15 @@ public final class EventsStore {
     ) async throws {
         beginMutation()
         defer { endMutation() }
-        try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        if let projection = recurringReplaceProjection(
+            targetId: id,
+            input: input,
+            edited: optimisticEvent
+        ) {
+            try applyRecurringProjection(projection)
+        } else {
+            try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        }
         do {
             let response = try await eventsAPI.replace(id: id, input: input)
             let settled = try EventMapping.event(from: response)
@@ -154,6 +167,38 @@ public final class EventsStore {
                 return false
             }
             return bounds.startsAt >= key.start && bounds.endsAt <= key.end
+        }
+    }
+
+    private func recurringReplaceProjection(
+        targetId: EventId,
+        input: ReplaceEventInput,
+        edited: Event
+    ) -> RecurringEditProjection? {
+        guard input.scope != .this else { return nil }
+        guard let original = try? repository.fetch(id: targetId) else { return nil }
+        guard case .occurrence(let payload) = original.recurrence else { return nil }
+        let seriesId = payload.seriesId
+        let seriesEvents = (try? repository.occurrences(forSeriesId: seriesId)) ?? []
+        let seriesMaster = try? repository.fetch(id: seriesId)
+        return ProjectRecurringEdit.projectRecurringEdit(
+            .init(
+                scope: input.scope,
+                edited: edited,
+                original: original,
+                seriesEvents: seriesEvents,
+                seriesMaster: seriesMaster
+            )
+        )
+    }
+
+    private func applyRecurringProjection(_ projection: RecurringEditProjection) throws {
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try repository.delete(ids: ids)
+        }
+        if !projection.upserts.isEmpty {
+            try repository.upsert(events: projection.upserts, isLocal: source == .local)
         }
     }
 }
