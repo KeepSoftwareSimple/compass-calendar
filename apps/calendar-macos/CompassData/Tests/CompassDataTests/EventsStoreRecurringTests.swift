@@ -136,7 +136,12 @@ final class EventsStoreRecurringTests: XCTestCase {
     private func replaceInput(scope: ScopeEnum) throws -> ReplaceEventInput {
         let json = """
         {
-          "content": { "kind": "details", "title": "Moved title", "description": "" },
+          "content": {
+            "kind": "details",
+            "title": "Moved title",
+            "description": "",
+            "location": ""
+          },
           "recurrence": { "kind": "preserve" },
           "schedule": {
             "kind": "timed",
