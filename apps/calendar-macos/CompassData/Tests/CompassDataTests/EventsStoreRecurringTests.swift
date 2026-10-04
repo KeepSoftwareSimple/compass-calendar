@@ -70,7 +70,7 @@ final class EventsStoreRecurringTests: XCTestCase {
 
         let edited = copyEvent(
             split,
-            content: .details(.init(kind: "details", title: "Moved title", description: ""))
+            content: .details(.init(description: "", kind: "details", title: "Moved title"))
         )
         let input = try replaceInput(scope: .thisAndFollowing)
 
