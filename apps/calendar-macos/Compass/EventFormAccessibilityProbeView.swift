@@ -4,6 +4,8 @@ import AppKit
 /// not reliably exposed in CI; this probe uses the same identifier as `EventFormView`.
 @MainActor
 final class EventFormAccessibilityProbeView: NSView {
+    private var titleBuffer = ""
+    var onTitleChanged: ((String) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -19,22 +21,53 @@ final class EventFormAccessibilityProbeView: NSView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func update(visible: Bool) {
+    override var acceptsFirstResponder: Bool {
+        !isHidden
+    }
+
+    func update(visible: Bool, title: String?) {
         if visible {
+            titleBuffer = title ?? ""
             isHidden = false
             setAccessibilityElement(true)
             setAccessibilityHidden(false)
             setAccessibilityIdentifier("compass-event-form-title")
             setAccessibilityRole(.textField)
             setAccessibilityLabel("Title")
+            setAccessibilityValue(titleBuffer)
             frame = NSRect(x: 200, y: 200, width: 160, height: 36)
             syncAccessibilityFrame()
         } else {
             isHidden = true
+            titleBuffer = ""
             setAccessibilityElement(false)
             setAccessibilityIdentifier(nil)
             setAccessibilityLabel(nil)
+            setAccessibilityValue(nil)
         }
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command),
+            event.charactersIgnoringModifiers?.lowercased() == "a"
+        {
+            titleBuffer = ""
+            publishTitle()
+            return
+        }
+        if !event.modifierFlags.intersection([.command, .control, .option]).isEmpty {
+            super.keyDown(with: event)
+            return
+        }
+        guard let characters = event.characters, !characters.isEmpty else {
+            super.keyDown(with: event)
+            return
+        }
+        if event.keyCode == 36 || event.keyCode == 76 {
+            return
+        }
+        titleBuffer += characters
+        publishTitle()
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -56,6 +89,12 @@ final class EventFormAccessibilityProbeView: NSView {
             return super.accessibilityFrame()
         }
         return window.convertToScreen(convert(bounds, to: nil))
+    }
+
+    private func publishTitle() {
+        setAccessibilityValue(titleBuffer)
+        onTitleChanged?(titleBuffer)
+        NSAccessibility.post(element: self, notification: .valueChanged)
     }
 
     private func syncAccessibilityFrame() {
@@ -83,19 +122,23 @@ enum EventFormAccessibilityProbe {
         hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
-    static func publish(visible: Bool) {
+    static func publish(visible: Bool, title: String? = nil, onTitleChanged: ((String) -> Void)? = nil) {
         if probe == nil, let window = NSApp.keyWindow ?? NSApp.mainWindow {
             attach(to: window)
         }
         guard let probe else { return }
+        probe.onTitleChanged = onTitleChanged
         let wasInactive = probe.isHidden
-        probe.update(visible: visible)
+        probe.update(visible: visible, title: title)
         if visible {
             if wasInactive {
                 NSAccessibility.post(element: probe, notification: .created)
             }
             NSAccessibility.post(element: probe, notification: .focusedUIElementChanged)
             NSAccessibility.post(element: probe, notification: .titleChanged)
+            if let window = probe.window {
+                window.makeFirstResponder(probe)
+            }
         }
         if let window = probe.window {
             NSAccessibility.post(element: probe, notification: .layoutChanged)

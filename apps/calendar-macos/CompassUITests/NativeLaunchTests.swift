@@ -198,8 +198,9 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        window.typeKey("a", modifierFlags: [.command])
-        window.typeText("Updated standup")
+        titleField.click()
+        titleField.typeKey("a", modifierFlags: [.command])
+        titleField.typeText("Updated standup")
 
         window.typeKey(.enter, modifierFlags: [.command])
         XCTAssertTrue(

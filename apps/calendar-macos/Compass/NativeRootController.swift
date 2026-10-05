@@ -44,11 +44,19 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
         }
         model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
-            let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
+            guard let self else { return }
+            let window = Self.compassHostWindow(hostingView: self.view) ?? NSApp.mainWindow
             if let window {
                 EventFormAccessibilityProbe.attach(to: window)
             }
-            EventFormAccessibilityProbe.publish(visible: visible)
+            let title = model.draftStore.gridDraft?.title
+            EventFormAccessibilityProbe.publish(
+                visible: visible,
+                title: title,
+                onTitleChanged: { [weak model] newTitle in
+                    model?.updateDraftFromForm(title: newTitle)
+                }
+            )
         }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
@@ -73,7 +81,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                 on: window
             )
             EventFormAccessibilityProbe.attach(to: window)
-            EventFormAccessibilityProbe.publish(visible: model.isEventFormVisible)
+            EventFormAccessibilityProbe.publish(
+                visible: model.isEventFormVisible,
+                title: model.draftStore.gridDraft?.title,
+                onTitleChanged: { [weak model] newTitle in
+                    model?.updateDraftFromForm(title: newTitle)
+                }
+            )
         }
     }
 
