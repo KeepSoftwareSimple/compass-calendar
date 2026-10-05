@@ -21,7 +21,6 @@ import {
   writeProviderAuthorizationIntent,
 } from "./provider-authorization.storage";
 import {
-  buildAppleAuthorizationState,
   buildAppleAuthorizationUrl,
   buildMicrosoftAuthorizationUrl,
   buildProviderAuthCallbackUrl,
@@ -165,7 +164,12 @@ const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
 }) => {
   const [loading, setLoading] = useState(false);
   const [state] = useState(() =>
-    buildAppleAuthorizationState(buildProviderAuthCallbackUrl("apple")),
+    btoa(
+      JSON.stringify({
+        frontendRedirectURI: buildProviderAuthCallbackUrl("apple"),
+        nonce: crypto.randomUUID(),
+      }),
+    ),
   );
 
   return {
