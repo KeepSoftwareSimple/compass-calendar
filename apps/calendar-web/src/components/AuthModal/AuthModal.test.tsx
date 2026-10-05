@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { act, type ReactElement } from "react";
 import "@testing-library/jest-dom";
+import { resolveModifier } from "@tanstack/react-hotkeys";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createTestEmailPasswordPort } from "@web/__tests__/helpers/web-test-seams";
@@ -28,6 +29,26 @@ import { AuthModal } from "./AuthModal";
 import { AuthModalProvider } from "./AuthModalProvider";
 import { useAuthModal, validateAuthSearch } from "./hooks/useAuthModal";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
+const isMacMod = resolveModifier("Mod") === "Meta";
+const MOD_KEY = isMacMod ? "Meta" : "Control";
+const MOD_INIT: KeyboardEventInit = isMacMod
+  ? { metaKey: true }
+  : { ctrlKey: true };
+
+const dispatchAuthKey = (
+  type: "keydown" | "keyup",
+  init: KeyboardEventInit,
+) => {
+  document.dispatchEvent(
+    new KeyboardEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      ...init,
+    }),
+  );
+};
 
 const mockGoogleLogin = mock();
 const mockUseStartProviderAuthorization = mock(() => ({
@@ -913,66 +934,63 @@ describe("AuthModal", () => {
   });
 
   describe("Privacy and Terms Links", () => {
-    it("renders pricing, privacy, and terms links", async () => {
-      const user = userEvent.setup();
-      await renderWithProviders(<ModalTrigger />);
-
-      await user.click(screen.getByRole("button", { name: /open modal/i }));
-
-      await waitFor(() => {
-        expect(
-          screen.getByRole("link", { name: /pricing/i }),
-        ).toBeInTheDocument();
-        expect(
-          screen.getByRole("link", { name: /terms/i }),
-        ).toBeInTheDocument();
-        expect(
-          screen.getByRole("link", { name: /privacy/i }),
-        ).toBeInTheDocument();
-      });
-    });
-
-    it("shows an Esc hint to leave the form", async () => {
+    it("renders terms and privacy on login and signup without pricing or back", async () => {
       const user = userEvent.setup();
       await renderWithProviders(<ModalTrigger />);
 
       await user.click(screen.getByRole("button", { name: /open modal/i }));
       await waitForAuthModal();
 
-      expect(screen.getByRole("button", { name: /back/i })).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /terms/i })).toBeInTheDocument();
       expect(
-        within(screen.getByRole("button", { name: /back/i })).getByText("Esc"),
+        screen.getByRole("link", { name: /privacy/i }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: /pricing/i })).toBeNull();
+      expect(screen.queryByRole("button", { name: /back/i })).toBeNull();
+    });
+
+    it("still renders pricing and back on forgot password", async () => {
+      await renderWithProviders(<div />, "/?auth=forgot");
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("heading", { name: /reset password/i }),
+        ).toBeInTheDocument();
+      });
+
+      expect(
+        screen.getByRole("link", { name: /pricing/i }),
+      ).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("button", { name: /^back$/i })).getByText(
+          "Esc",
+        ),
       ).toBeInTheDocument();
     });
 
-    it("links open in new tab", async () => {
-      const user = userEvent.setup();
-      await renderWithProviders(<ModalTrigger />);
-
-      await user.click(screen.getByRole("button", { name: /open modal/i }));
+    it("links open in new tab on forgot password", async () => {
+      await renderWithProviders(<div />, "/?auth=forgot");
 
       await waitFor(() => {
-        const pricingLink = screen.getByRole("link", {
-          name: /pricing/i,
-        });
-        const termsLink = screen.getByRole("link", {
-          name: /terms/i,
-        });
-        const privacyLink = screen.getByRole("link", {
-          name: /privacy/i,
-        });
-
-        expect(pricingLink).toHaveAttribute("target", "_blank");
-        expect(termsLink).toHaveAttribute("target", "_blank");
-        expect(privacyLink).toHaveAttribute("target", "_blank");
-        expect(pricingLink).toHaveAttribute("rel", "noopener noreferrer");
-        expect(termsLink).toHaveAttribute("rel", "noopener noreferrer");
-        expect(privacyLink).toHaveAttribute("rel", "noopener noreferrer");
-        expect(pricingLink).toHaveAttribute(
-          "href",
-          "https://compasscalendar.com/pricing",
-        );
+        expect(
+          screen.getByRole("heading", { name: /reset password/i }),
+        ).toBeInTheDocument();
       });
+
+      const pricingLink = screen.getByRole("link", { name: /pricing/i });
+      const termsLink = screen.getByRole("link", { name: /terms/i });
+      const privacyLink = screen.getByRole("link", { name: /privacy/i });
+
+      expect(pricingLink).toHaveAttribute("target", "_blank");
+      expect(termsLink).toHaveAttribute("target", "_blank");
+      expect(privacyLink).toHaveAttribute("target", "_blank");
+      expect(pricingLink).toHaveAttribute("rel", "noopener noreferrer");
+      expect(termsLink).toHaveAttribute("rel", "noopener noreferrer");
+      expect(privacyLink).toHaveAttribute("rel", "noopener noreferrer");
+      expect(pricingLink).toHaveAttribute(
+        "href",
+        "https://compasscalendar.com/pricing",
+      );
     });
   });
 });
@@ -1282,6 +1300,28 @@ describe("Shortcut hints", () => {
     await user.keyboard("g");
 
     expect(mockGoogleLogin).toHaveBeenCalled();
+  });
+
+  it("jumps between sign-up fields with Mod+digit and shows digit chips while Mod is held", async () => {
+    await renderWithProviders(<div />, "/?auth=signup");
+    await waitForAuthModal(/nice to meet you/i);
+
+    const name = screen.getByLabelText(/name/i);
+    const email = screen.getByLabelText(/email/i);
+    const password = screen.getByLabelText(/password/i);
+    expect(email).toHaveFocus();
+
+    await act(async () => {
+      dispatchAuthKey("keydown", { key: MOD_KEY, ...MOD_INIT });
+      dispatchAuthKey("keydown", { key: "1", code: "Digit1", ...MOD_INIT });
+    });
+    expect(name).toHaveFocus();
+
+    await act(async () => {
+      dispatchAuthKey("keydown", { key: MOD_KEY, ...MOD_INIT });
+      dispatchAuthKey("keydown", { key: "3", code: "Digit3", ...MOD_INIT });
+    });
+    expect(password).toHaveFocus();
   });
 });
 
