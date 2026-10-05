@@ -111,4 +111,8 @@ extension QuickAddNativePanelViewController: NSTextFieldDelegate {
     func commitQueryToModel() {
         model.syncQuickAddQuery(queryField.stringValue)
     }
+
+    func currentQueryText() -> String {
+        queryField.stringValue
+    }
 }

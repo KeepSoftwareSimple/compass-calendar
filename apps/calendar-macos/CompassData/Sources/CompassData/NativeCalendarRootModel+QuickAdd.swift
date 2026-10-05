@@ -27,12 +27,18 @@ extension NativeCalendarRootModel {
     }
 
     /// Creates a timed event on the default calendar, then clears draft state.
-    public func saveQuickAddFromPanel() async {
+    public func saveQuickAddFromPanel(submitTitle: String? = nil) async {
+        if let submitTitle {
+            syncQuickAddQuery(submitTitle)
+        }
         if !draftStore.quickTimeDigits.isEmpty {
             commitQuickTimeIfBuffered()
         }
         if draftStore.gridDraft == nil {
             createTimedDraft(activity: .keyboardPlace)
+        }
+        if let submitTitle, draftStore.gridDraft != nil {
+            setDraftTitle(submitTitle)
         }
         await saveDraft()
     }

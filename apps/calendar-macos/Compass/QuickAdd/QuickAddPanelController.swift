@@ -169,8 +169,9 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         guard !isSubmittingNativeQuickAdd, let model = nativeModel() else { return }
         isSubmittingNativeQuickAdd = true
         defer { isSubmittingNativeQuickAdd = false }
+        let submitTitle = nativePanelController?.currentQueryText()
         nativePanelController?.commitQueryToModel()
-        await model.saveQuickAddFromPanel()
+        await model.saveQuickAddFromPanel(submitTitle: submitTitle)
         quickAddRouter?.dismissQuickAddPanel()
     }
 
@@ -203,7 +204,11 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         removeReturnMonitor()
         returnMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
             [weak self] event in
-            guard event.keyCode == 36 || event.keyCode == 76 else { return event }
+            let isReturn =
+                event.keyCode == 36
+                || event.keyCode == 76
+                || event.charactersIgnoringModifiers == "\r"
+            guard isReturn else { return event }
             guard let self, self.isVisible, self.usesNativeQuickAdd() else { return event }
             Task { @MainActor in
                 await self.submitNativeQuickAdd()
