@@ -180,6 +180,20 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if keyEvent.modifiers.contains(.command),
+            !keyEvent.modifiers.contains(.option),
+            !keyEvent.modifiers.contains(.control),
+            case .character(let char) = keyEvent.key,
+            char == "z"
+        {
+            if keyEvent.modifiers.contains(.shift) {
+                model.redoLastChange()
+            } else {
+                model.undoLastChange()
+            }
+            return true
+        }
+
         if case .character(let char) = keyEvent.key, char == "h", keyEvent.modifiers.isEmpty {
             eventJumpHold.handleModifierDown(isRepeat: keyEvent.isRepeat)
             if !keyEvent.isRepeat {
