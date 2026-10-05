@@ -70,6 +70,11 @@ enum HTMLFragmentSanitizer {
             options: .regularExpression
         )
         output = output.replacingOccurrences(
+            of: #"href\s*=\s*["']javascript:[^"']*["']"#,
+            with: "",
+            options: [.regularExpression, .caseInsensitive]
+        )
+        output = output.replacingOccurrences(
             of: #"\s(on\w+|style|class|target|rel)="[^"]*""#,
             with: "",
             options: [.regularExpression, .caseInsensitive]
@@ -131,7 +136,13 @@ enum HTMLFragmentParser {
                 return HTMLFragmentDocument(blocks: [])
             }
             if sanitized == html {
-                return HTMLFragmentDocument(blocks: parseStructuredBlocks(fromSanitized: sanitized))
+                var blocks = parseStructuredBlocks(fromSanitized: sanitized)
+                if blocks.isEmpty, !DescriptionPlainText.looksLikeHtml(html) {
+                    blocks = [.paragraph([.text(html)])]
+                } else if blocks.isEmpty {
+                    blocks = [.verbatim(html)]
+                }
+                return HTMLFragmentDocument(blocks: blocks)
             }
             return HTMLFragmentDocument(blocks: [.verbatim(html)])
         }
@@ -226,7 +237,7 @@ private final class HTMLFragmentXMLDelegate: NSObject, XMLParserDelegate {
             if let href = attributeDict["href"], isSafeHttpHref(href) {
                 linkHrefStack.append(href)
             } else {
-                linkHrefStack.append(nil)
+                linkHrefStack.append("")
             }
         default:
             break
@@ -272,14 +283,8 @@ private final class HTMLFragmentXMLDelegate: NSObject, XMLParserDelegate {
             appendInline(.italic(children))
         case "a":
             guard let children = inlineStack.popLast() else { return }
-            let href = linkHrefStack.popLast() ?? nil
-            if let href {
-                appendInline(.link(href: href, children: children))
-            } else {
-                for child in children {
-                    appendInline(child)
-                }
-            }
+            let href = linkHrefStack.popLast() ?? ""
+            appendInline(.link(href: href, children: children))
         default:
             break
         }

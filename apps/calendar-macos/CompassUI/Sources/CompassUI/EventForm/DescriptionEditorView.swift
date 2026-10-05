@@ -102,7 +102,7 @@ struct DescriptionEditorView: NSViewRepresentable {
     }
 }
 
-private final class DescriptionTextView: NSTextView {
+final class DescriptionTextView: NSTextView {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         if event.modifierFlags.contains(.command) {
             switch event.charactersIgnoringModifiers?.lowercased() {

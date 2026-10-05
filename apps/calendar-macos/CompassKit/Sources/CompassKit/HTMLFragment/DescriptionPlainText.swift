@@ -8,10 +8,7 @@ public enum DescriptionPlainText {
     }
 
     public static func plainTextToDescriptionHtml(_ value: String) -> String {
-        let blocks = value.components(separatedBy: "\n\n")
-            .flatMap { chunk -> [String] in
-                chunk.components(separatedBy: "\n \n")
-            }
+        let blocks = splitPlainTextBlocks(value)
         return blocks.map { block in
             let trimmed = block.trimmingCharacters(in: .whitespacesAndNewlines)
             let lines = trimmed.components(separatedBy: "\n")
