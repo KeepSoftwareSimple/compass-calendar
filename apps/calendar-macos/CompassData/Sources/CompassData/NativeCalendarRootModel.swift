@@ -31,12 +31,17 @@ public final class NativeCalendarRootModel {
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     /// Window-level accessibility probe for native UI tests (see Compass app).
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
+    /// AppKit title-field probe for native UI tests when the event form is open.
+    public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var eventFormFocusedField: EventFormField = .title
+    public var formFieldDigitHintsVisible = false
 
     let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -52,6 +57,8 @@ public final class NativeCalendarRootModel {
     private var eventJumpHintLabels: [EventJumpChipHint] = []
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
+    private var didApplyUITestFocusedEventForm = false
+    private var eventFormTitleProbeVisible = false
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -176,7 +183,7 @@ public final class NativeCalendarRootModel {
             isAuthModalOpen: authStore.isModalPresented,
             isSettingsOpen: billingStore.isSettingsPresented,
             isAboutOpen: false,
-            isFormOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
             storageAvailable: true,
             showcaseActive: false)
@@ -416,6 +423,18 @@ public final class NativeCalendarRootModel {
             gridFocusAccessibilityLabel = resolved
         }
         onGridFocusAccessibilityLabelChanged?(resolved)
+    }
+
+    public func publishEventFormTitleAccessibilityProbe() {
+        let visible = isEventFormVisible
+        if visible != eventFormTitleProbeVisible {
+            eventFormTitleProbeVisible = visible
+            onEventFormTitleAccessibilityProbeChanged?(visible)
+            return
+        }
+        if visible {
+            onEventFormTitleAccessibilityProbeTitleSync?(draftStore.gridDraft?.title)
+        }
     }
 
     public func handleGridPointerDown(registry: ShortcutRegistry) {
@@ -707,6 +726,7 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        publishEventFormTitleAccessibilityProbe()
     }
 
     private func applyInitialUIFocusIfNeeded() {
@@ -718,6 +738,20 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
+        scheduleUITestFocusedEventFormOpenIfNeeded()
+    }
+
+    private func scheduleUITestFocusedEventFormOpenIfNeeded() {
+        guard !didApplyUITestFocusedEventForm,
+            UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
+            focusStore.focusedEventId != nil
+        else { return }
+        didApplyUITestFocusedEventForm = true
+        Task { @MainActor in
+            openKeyboardEditForFocusedEvent()
+            openEventFormForCurrentDraft()
+            publishEventFormTitleAccessibilityProbe()
+        }
     }
 
     private func currentGridCards() -> [GridLayoutCardSnapshot] {
@@ -759,7 +793,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    func visibleCalendars() -> [CompassCalendar] {
+    public func visibleCalendars() -> [CompassCalendar] {
         calendars.filter { $0.isVisible && $0.isActive }
     }
 

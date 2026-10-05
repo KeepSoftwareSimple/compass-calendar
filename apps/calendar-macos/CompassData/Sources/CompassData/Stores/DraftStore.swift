@@ -32,6 +32,8 @@ public final class DraftStore {
     public private(set) var status: DraftStatus = DraftStatus()
     public private(set) var gridDraft: GridEventDraft?
     public private(set) var quickTimeDigits: String = ""
+    /// Snapshot when the form opened, for unsaved-changes detection.
+    public private(set) var formBaseline: GridEventDraft?
 
     public init() {}
 
@@ -41,15 +43,20 @@ public final class DraftStore {
         status = DraftStatus()
         gridDraft = nil
         quickTimeDigits = ""
+        formBaseline = nil
     }
 
     public func startGridDraft(activity: DraftNudgeActivity, draft: GridEventDraft) {
         gridDraft = draft
+        let formOpen = opensFormOnStart.contains(activity)
         status = DraftStatus(
             activity: activity,
             isDrafting: true,
-            isFormOpen: opensFormOnStart.contains(activity)
+            isFormOpen: formOpen
         )
+        if formOpen {
+            formBaseline = draft
+        }
     }
 
     public func setGridDraft(_ draft: GridEventDraft?) {
@@ -84,6 +91,12 @@ public final class DraftStore {
     public func setFormOpen(_ isFormOpen: Bool) {
         guard status.isFormOpen != isFormOpen else { return }
         status.isFormOpen = isFormOpen
+        if isFormOpen, let draft = gridDraft {
+            formBaseline = draft
+        }
+        if !isFormOpen {
+            formBaseline = nil
+        }
     }
 
     public func setQuickTimeDigits(_ digits: String) {
@@ -92,6 +105,13 @@ public final class DraftStore {
 
     public func commit() {
         discard()
+    }
+
+    public var hasUnsavedFormChanges: Bool {
+        guard status.isFormOpen, let draft = gridDraft, let baseline = formBaseline else {
+            return false
+        }
+        return draft != baseline
     }
 
     /// Arrow-key nudge through the shared CompassKit draft nudge engine.

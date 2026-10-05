@@ -40,7 +40,7 @@ extension NativeCalendarRootModel {
             options: ShortcutMenuFilter.Options(
                 view: shortcutMenuView,
                 isViewingCurrentPeriod: isViewingCurrentPeriod,
-                isFormOpen: false,
+                isFormOpen: draftStore.status.isFormOpen,
                 isTrialing: billingStore.status?.subscriptionStatus == .trialing))
     }
 
