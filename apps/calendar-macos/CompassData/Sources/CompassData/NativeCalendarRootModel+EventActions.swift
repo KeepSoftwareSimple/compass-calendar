@@ -224,7 +224,9 @@ extension NativeCalendarRootModel {
             await replaceEvent(with: before)
         case .hidden(let eventId, let hidden):
             try? await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: !hidden)
-            loadedEvents = try eventsStore.fetchAllEvents()
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
             rebuildPresentation()
         case .unrecorded:
             break
@@ -241,7 +243,9 @@ extension NativeCalendarRootModel {
             await replaceEvent(with: after)
         case .hidden(let eventId, let hidden):
             try? await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: hidden)
-            loadedEvents = try eventsStore.fetchAllEvents()
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
             rebuildPresentation()
         case .unrecorded:
             break
