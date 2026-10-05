@@ -171,10 +171,10 @@ final class NativeLaunchTests: XCTestCase {
 
         let panel = app.descendants(matching: .any)["compass-native-quick-add-window"]
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
-        let field = panel.descendants(matching: .any)["compass-native-quick-add-field"]
+        let field = app.descendants(matching: .any)["compass-native-quick-add-field"]
         XCTAssertTrue(
             field.waitForExistence(timeout: 10),
-            "Expected native quick-add text field inside the panel window")
+            "Expected native quick-add text field after opening the panel")
         field.click()
         field.typeText("Quick add fixture")
 

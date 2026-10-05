@@ -14,6 +14,8 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private var previousApp: NSRunningApplication?
     private var escapeMonitor: Any?
     private var isVisible = false
+    /// Menu actions resign key to the main window right after opening the panel.
+    private var suppressResignKeyHideUntil: Date?
 
     private var usesNativeQuickAdd: () -> Bool = { false }
     private var nativeModel: () -> NativeCalendarRootModel? = { nil }
@@ -55,11 +57,16 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
             nativeModel()?.beginQuickAddPanelSession()
         }
         previousApp = NSWorkspace.shared.frontmostApplication
+        suppressResignKeyHideUntil = Date().addingTimeInterval(0.6)
         panel.center()
         panel.orderFrontRegardless()
         panel.makeKey()
         isVisible = true
         installEscapeMonitor()
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isVisible, let panel = self.panel else { return }
+            panel.makeKey()
+        }
     }
 
     func hide() {
@@ -190,6 +197,13 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, let panel = notification.object as? NSPanel, panel === self.panel
         else { return }
+        if let suppressResignKeyHideUntil, Date() < suppressResignKeyHideUntil {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isVisible else { return }
+                self.panel?.makeKey()
+            }
+            return
+        }
         hide()
     }
 }
