@@ -156,6 +156,7 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    /// Opens the native quick-add panel from the Debug menu and saves a fixture event.
     func testQuickAddPanelCreatesFixtureEvent() {
         let app = XCUIApplication()
         app.launchArguments += [
