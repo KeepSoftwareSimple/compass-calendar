@@ -49,18 +49,18 @@ extension NativeCalendarRootModel {
         case .save:
             await commitSaveDraft(scope: scope)
         case .delete:
-            await commitDeleteFormEvent(scope: EventDeleteScope(rawValue: scope.rawValue) ?? .this)
+            await commitDeleteFormEvent(scope: deleteScope(from: scope))
         }
     }
 
     public func requestSaveDraft() async {
         guard let draft = draftStore.gridDraft else { return }
         let baseline = baselineEvent(for: draft)
-        let seriesMaster = baseline.flatMap { seriesMaster(for: $0) }
+        let resolvedSeriesMaster = baseline.flatMap { seriesMaster(for: $0) }
         let decision = GridEventDraftRecurrence.resolveSaveDecision(
             draft: draft,
             baselineEvent: baseline,
-            seriesMaster: seriesMaster
+            seriesMaster: resolvedSeriesMaster
         )
         switch decision {
         case .convertToStandalone:
