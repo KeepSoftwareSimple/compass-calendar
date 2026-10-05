@@ -1,10 +1,6 @@
 import { useLocation, useRouter } from "@tanstack/react-router";
 import { AuthApi } from "@web/api/auth.api";
 import { APPLE_AUTHORIZATION_ERROR_MESSAGE } from "@web/auth/apple/authorization/apple-authorization.constants";
-import {
-  clearAppleAuthorizationIntent,
-  readAppleAuthorizationIntent,
-} from "@web/auth/apple/authorization/apple-authorization.storage";
 import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-authorization.util";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
 import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
@@ -17,6 +13,10 @@ import {
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
+import {
+  clearProviderAuthorizationIntent,
+  readProviderAuthorizationIntent,
+} from "@web/auth/providers/authorization/provider-authorization.storage";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { isDesktop } from "@web/desktop/isDesktop";
@@ -45,8 +45,8 @@ export async function completeAppleAuthCallback({
     return;
   }
 
-  const savedIntent = readAppleAuthorizationIntent(state);
-  clearAppleAuthorizationIntent(state);
+  const savedIntent = readProviderAuthorizationIntent("apple", state);
+  clearProviderAuthorizationIntent("apple", state);
   const returnPath = savedIntent?.returnPath ?? DEFAULT_CALENDAR_ROUTE;
 
   if (!savedIntent || params.get("error")) {

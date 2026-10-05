@@ -5,10 +5,14 @@ import {
 } from "@core/types/domain-primitives";
 import dayjs from "@core/util/date/dayjs";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
+import { type NormalizedEventQueryData } from "@web/events/queries/event.query.types";
+import { deriveCalendarEventViewModel } from "@web/events/queries/event.view-model";
 import {
   projectRecurringDelete,
   projectRecurringEdit,
   projectSeriesMaterialization,
+  projectSeriesRulesChange,
+  type RecurringEditProjection,
 } from "./projectRecurringEdit";
 import { describe, expect, test } from "bun:test";
 
@@ -36,6 +40,26 @@ const allDayOccurrence = (day: number) =>
     } as never,
     recurrence: { kind: "occurrence", seriesId: SERIES_ID },
   });
+
+const applyProjection = (
+  data: NormalizedEventQueryData,
+  projection: RecurringEditProjection,
+): NormalizedEventQueryData => {
+  const entities = { ...data.entities };
+  let ids = data.ids.filter((id) => !projection.removeIds.has(id));
+  for (const id of projection.removeIds) delete entities[id as EventId];
+  for (const event of projection.upserts) {
+    const id = event.id;
+    if (!ids.includes(id)) ids = [...ids, id];
+    entities[id] = entities[id] ? { ...entities[id], ...event } : event;
+  }
+  return { ids, entities };
+};
+
+const timedSlotCount = (data: NormalizedEventQueryData, startIso: string) =>
+  deriveCalendarEventViewModel(data).timedEvents.filter((event) =>
+    String(event.startDate).includes(startIso.slice(0, 10)),
+  ).length;
 
 const seriesBase = () =>
   createMockEvent({
@@ -511,6 +535,53 @@ describe("projectRecurringEdit", () => {
     ]);
   });
 
+  test("thisAndFollowing split removes stale occurrence ids before re-upserting", () => {
+    const master = seriesBase();
+    const events = [occurrence(1), occurrence(2), occurrence(3)];
+    const original = events[1];
+    const edited = {
+      ...original,
+      content: {
+        kind: "details" as const,
+        title: "Write & schedule newsletter",
+        description: "",
+      },
+      schedule: {
+        kind: "timed" as const,
+        start: "2026-07-06T16:00:00.000Z",
+        end: "2026-07-06T17:00:00.000Z",
+        timeZone: "UTC",
+      } as never,
+    };
+
+    const projection = projectRecurringEdit({
+      scope: "thisAndFollowing",
+      edited,
+      original,
+      seriesEvents: events,
+      seriesMaster: master,
+    });
+
+    expect([...projection.removeIds].sort()).toEqual(
+      [events[1].id, events[2].id].sort(),
+    );
+    expect(projection.upserts[0]?.id).toBe(SERIES_ID);
+    expect(projection.upserts[1]?.id).toBe(edited.id);
+    expect(projection.upserts[1]?.recurrence.kind).toBe("series");
+
+    const cache = applyProjection(
+      {
+        ids: [master.id, ...events.map(({ id }) => id)],
+        entities: {
+          [master.id]: master,
+          ...Object.fromEntries(events.map((event) => [event.id, event])),
+        },
+      },
+      projection,
+    );
+    expect(timedSlotCount(cache, "2026-07-06T16:00:00.000Z")).toBe(1);
+  });
+
   test("keeps an already-moved-earlier instance in a this-and-following promote", () => {
     const events = [occurrence(1), occurrence(2), occurrence(3)];
     const original = events[2];
@@ -675,6 +746,60 @@ describe("projectSeriesMaterialization", () => {
     expect([...result.removeIds].sort()).toEqual(
       stale.map(({ id }) => id).sort(),
     );
+  });
+
+  test("removes the split occurrence id before rematerializing thisAndFollowing", async () => {
+    const splitStart = "2026-07-06T16:00:00.000Z";
+    const movedStart = "2026-07-08T16:00:00.000Z";
+    const splitId = `${SERIES_ID}::${splitStart}` as EventId;
+    const original = createMockEvent({
+      id: splitId,
+      schedule: {
+        kind: "timed",
+        start: splitStart,
+        end: "2026-07-06T17:00:00.000Z",
+        timeZone: "UTC",
+      } as never,
+      recurrence: { kind: "occurrence", seriesId: SERIES_ID },
+    });
+    const following = occurrence(7);
+    const stale = [original, following];
+    const edited = createMockEvent({
+      id: splitId,
+      content: {
+        kind: "details",
+        title: "Write & schedule newsletter",
+        description: "",
+      },
+      schedule: {
+        kind: "timed",
+        start: movedStart,
+        end: "2026-07-08T17:00:00.000Z",
+        timeZone: "UTC",
+      } as never,
+      recurrence: { kind: "series", rules: ["RRULE:FREQ=DAILY;COUNT=5"] },
+    });
+
+    const result = await projectSeriesRulesChange({
+      scope: "thisAndFollowing",
+      edited,
+      original,
+      seriesId: SERIES_ID,
+      seriesEvents: stale,
+      ranges: [weekRange],
+    });
+
+    expect(result.removeIds.has(splitId)).toBe(true);
+    expect(result.removeIds.has(following.id)).toBe(true);
+
+    const cache = applyProjection(
+      {
+        ids: stale.map(({ id }) => id),
+        entities: Object.fromEntries(stale.map((event) => [event.id, event])),
+      },
+      result,
+    );
+    expect(timedSlotCount(cache, movedStart)).toBe(1);
   });
 
   test("returns only the base when there are no ranges", async () => {

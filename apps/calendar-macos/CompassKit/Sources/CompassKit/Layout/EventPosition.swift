@@ -62,36 +62,28 @@ public enum EventPositionCalculator {
         columnIndex: Int? = nil,
         hasSecondaryTimeZone: Bool = false
     ) -> EventPosition {
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(input.startDate),
-              let end = CompassDateParsing.parseInEffectiveTimeZone(input.endDate)
-        else {
+        guard let slot = resolveTimedSlot(
+            startDate: input.startDate,
+            endDate: input.endDate,
+            measurements: measurements,
+            visibleDates: visibleDates,
+            columnIndex: columnIndex,
+            hasSecondaryTimeZone: hasSecondaryTimeZone
+        ) else {
             return zeroPosition()
         }
 
-        let dateIndex = columnIndex ?? getVisibleDateIndex(for: start, visibleDates: visibleDates)
-        guard let dateIndex else {
-            return zeroPosition()
-        }
-
-        let columnLeft = GridMetrics.sumWidthsBefore(measurements.colWidths, dateIndex: dateIndex)
-        let columnWidth = measurements.colWidths.indices.contains(dateIndex)
-            ? measurements.colWidths[dateIndex]
-            : 0
-        let calendar = EffectiveTimeZone.calendar
-        let startOfDay = calendar.startOfDay(for: start)
-        let minutesFromStartOfDay = minuteDiff(from: startOfDay, to: start)
-        let durationMinutes = max(15, minuteDiff(from: start, to: end))
+        let durationMinutes = max(15, slot.durationMinutes)
         let widthMultiplier = input.isDraft ? 1 : input.widthMultiplier
 
         return EventPosition(
             height: (Double(durationMinutes) / 60) * measurements.hourHeight
                 - GridLayoutConstants.draftPaddingBottom,
-            left: GridMetrics.gridMarginLeftPx(hasSecondaryTimeZone: hasSecondaryTimeZone)
-                + columnLeft + GridLayoutConstants.timedEventColumnInset,
-            top: (Double(minutesFromStartOfDay) / 60) * measurements.hourHeight,
+            left: slot.left,
+            top: slot.top,
             width: max(
                 0,
-                columnWidth * widthMultiplier - GridLayoutConstants.timedEventColumnInset * 2
+                slot.columnWidth * widthMultiplier - GridLayoutConstants.timedEventColumnInset * 2
             )
         )
     }
@@ -104,32 +96,73 @@ public enum EventPositionCalculator {
         columnIndex: Int? = nil,
         hasSecondaryTimeZone: Bool = false
     ) -> EventPosition {
-        guard let start = CompassDateParsing.parseInEffectiveTimeZone(segmentStart),
-              let end = CompassDateParsing.parseInEffectiveTimeZone(segmentEnd)
-        else {
+        guard let slot = resolveTimedSlot(
+            startDate: segmentStart,
+            endDate: segmentEnd,
+            measurements: measurements,
+            visibleDates: visibleDates,
+            columnIndex: columnIndex,
+            hasSecondaryTimeZone: hasSecondaryTimeZone
+        ) else {
             return zeroPosition()
         }
 
-        let dateIndex = columnIndex ?? getVisibleDateIndex(for: start, visibleDates: visibleDates)
-        guard let dateIndex else {
-            return zeroPosition()
+        let durationMinutes = max(1, slot.durationMinutes)
+
+        return EventPosition(
+            height: (Double(durationMinutes) / 60) * measurements.hourHeight,
+            left: slot.left,
+            top: slot.top,
+            width: max(0, slot.columnWidth - GridLayoutConstants.timedEventColumnInset * 2)
+        )
+    }
+
+    /// Where one timed range lands in the grid: the column it occupies, the
+    /// offset from midnight, and its raw length. Events and busy periods
+    /// differ only in the minimum duration they clamp to and how they turn
+    /// `columnWidth` into a rendered width.
+    private struct TimedSlot {
+        var columnWidth: Double
+        var left: Double
+        var top: Double
+        var durationMinutes: Int
+    }
+
+    /// `nil` when either bound fails to parse or the start day is off screen,
+    /// which both callers render as `zeroPosition()`.
+    private static func resolveTimedSlot(
+        startDate: String,
+        endDate: String,
+        measurements: GridMetrics,
+        visibleDates: [GridVisibleDate],
+        columnIndex: Int?,
+        hasSecondaryTimeZone: Bool
+    ) -> TimedSlot? {
+        guard let start = CompassDateParsing.parseInEffectiveTimeZone(startDate),
+              let end = CompassDateParsing.parseInEffectiveTimeZone(endDate)
+        else {
+            return nil
+        }
+
+        guard let dateIndex = columnIndex
+            ?? getVisibleDateIndex(for: start, visibleDates: visibleDates)
+        else {
+            return nil
         }
 
         let columnLeft = GridMetrics.sumWidthsBefore(measurements.colWidths, dateIndex: dateIndex)
         let columnWidth = measurements.colWidths.indices.contains(dateIndex)
             ? measurements.colWidths[dateIndex]
             : 0
-        let calendar = EffectiveTimeZone.calendar
-        let startOfDay = calendar.startOfDay(for: start)
+        let startOfDay = EffectiveTimeZone.calendar.startOfDay(for: start)
         let minutesFromStartOfDay = minuteDiff(from: startOfDay, to: start)
-        let durationMinutes = max(1, minuteDiff(from: start, to: end))
 
-        return EventPosition(
-            height: (Double(durationMinutes) / 60) * measurements.hourHeight,
+        return TimedSlot(
+            columnWidth: columnWidth,
             left: GridMetrics.gridMarginLeftPx(hasSecondaryTimeZone: hasSecondaryTimeZone)
                 + columnLeft + GridLayoutConstants.timedEventColumnInset,
             top: (Double(minutesFromStartOfDay) / 60) * measurements.hourHeight,
-            width: max(0, columnWidth - GridLayoutConstants.timedEventColumnInset * 2)
+            durationMinutes: minuteDiff(from: start, to: end)
         )
     }
 

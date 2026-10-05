@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   relayDesktopOAuthCallback,
+  shouldRelayDesktopAppleOAuthCallback,
   shouldRelayDesktopConnectRedirect,
   shouldRelayDesktopOAuthCallback,
 } from "@web/auth/callback/desktop-oauth-callback-relay";
@@ -49,6 +50,19 @@ describe("shouldRelayDesktopConnectRedirect", () => {
         true,
       ),
     ).toBe(false);
+  });
+});
+
+describe("shouldRelayDesktopAppleOAuthCallback", () => {
+  it("matches the connect desktop=1 relay rule", () => {
+    const search = "?desktop=1&code=abc";
+    expect(shouldRelayDesktopAppleOAuthCallback(search, false)).toBe(
+      shouldRelayDesktopConnectRedirect(search, false),
+    );
+    expect(shouldRelayDesktopAppleOAuthCallback(search, true)).toBe(false);
+    expect(shouldRelayDesktopAppleOAuthCallback("?code=abc", false)).toBe(
+      false,
+    );
   });
 });
 

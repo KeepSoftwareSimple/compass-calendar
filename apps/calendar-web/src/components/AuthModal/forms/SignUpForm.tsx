@@ -1,8 +1,16 @@
-import { type ChangeEvent, type FC, type Ref, useCallback } from "react";
+import {
+  type ChangeEvent,
+  type FC,
+  type Ref,
+  useCallback,
+  useRef,
+} from "react";
 import {
   type SignUpFormData,
   SignUpSchema,
 } from "@web/auth/compass/schemas/auth.schemas";
+import { AuthSignupDigitHintOverlay } from "@web/components/AuthModal/AuthSignupDigitHintOverlay";
+import { useAuthSignupDigitJumpShortcut } from "@web/components/AuthModal/useAuthSignupDigitJumpShortcut";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { AuthButton } from "../components/AuthButton";
 import { AuthInput } from "../components/AuthInput";
@@ -36,6 +44,27 @@ export const SignUpForm: FC<SignUpFormProps> = ({
     onSubmit,
   });
 
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  const passwordInputRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
+  const setEmailRef = useCallback(
+    (node: HTMLInputElement | null) => {
+      emailRef.current = node;
+      if (typeof emailInputRef === "function") {
+        emailInputRef(node);
+      } else if (emailInputRef) {
+        emailInputRef.current = node;
+      }
+    },
+    [emailInputRef],
+  );
+  const fieldRefs = {
+    name: nameInputRef,
+    email: emailRef,
+    password: passwordInputRef,
+  } as const;
+  const { areHintsVisible } = useAuthSignupDigitJumpShortcut(fieldRefs, true);
+
   const handleNameChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       form.handleChange("name")(e);
@@ -46,7 +75,12 @@ export const SignUpForm: FC<SignUpFormProps> = ({
 
   return (
     <form onSubmit={form.handleSubmit} className="flex w-full flex-col gap-4">
+      <AuthSignupDigitHintOverlay
+        visible={areHintsVisible}
+        fieldRefs={fieldRefs}
+      />
       <AuthInput
+        ref={nameInputRef}
         type="text"
         placeholder="Name"
         ariaLabel="Name"
@@ -59,7 +93,7 @@ export const SignUpForm: FC<SignUpFormProps> = ({
       />
 
       <AuthInput
-        ref={emailInputRef}
+        ref={setEmailRef}
         type="email"
         placeholder="Email"
         ariaLabel="Email"
@@ -72,6 +106,7 @@ export const SignUpForm: FC<SignUpFormProps> = ({
       />
 
       <AuthInput
+        ref={passwordInputRef}
         type="password"
         placeholder="Password"
         ariaLabel="Password"

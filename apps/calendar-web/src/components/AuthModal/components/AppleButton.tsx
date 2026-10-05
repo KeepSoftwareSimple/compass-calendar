@@ -26,10 +26,10 @@ export const AppleButton = ({
       aria-busy={busy || undefined}
       aria-label={label}
       className={classNames(
-        "inline-flex h-10 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-[#1f1f1f] bg-[#000] px-3 font-medium text-[#fff] text-sm transition-[background-color,box-shadow,transform] duration-200",
+        "inline-flex h-10 w-full items-center justify-center gap-2.5 whitespace-nowrap rounded-full border border-[#1f1f1f] bg-[#fff] px-3 font-medium text-[#1f1f1f] text-sm transition-[background-color,box-shadow,transform] duration-200",
         disabled
           ? "cursor-not-allowed opacity-60"
-          : "c-button-elevated cursor-pointer hover:bg-[#1a1a1a]",
+          : "c-button-elevated cursor-pointer hover:bg-[#f8f8f8]",
       )}
       style={{
         fontFamily:

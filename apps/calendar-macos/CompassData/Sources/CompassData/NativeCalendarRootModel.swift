@@ -293,8 +293,7 @@ public final class NativeCalendarRootModel {
     }
 
     public func publishGridFocusAccessibilityProbe(eventId: String? = nil) {
-        let colWidths = timeGridState.resolvedColumnWidths()
-        let cards = timeGridState.snapshot(colWidths: colWidths).cards
+        let cards = currentGridCards()
         let resolved =
             gridFocusAccessibilityLabel
             ?? eventId.flatMap { resolveGridFocusLabel(eventId: $0, cards: cards) }
@@ -359,10 +358,8 @@ public final class NativeCalendarRootModel {
         if let card = focusLayoutCards.first(where: { $0.eventId == eventId }) {
             return card
         }
-        let colWidths = timeGridState.resolvedColumnWidths()
         guard
-            let card = timeGridState.snapshot(colWidths: colWidths).cards
-                .first(where: { $0.eventId == eventId })
+            let card = currentGridCards().first(where: { $0.eventId == eventId })
         else { return nil }
         return FocusLayoutCard(
             eventId: card.eventId,
@@ -423,8 +420,7 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             eventJumpHints: eventJumpHintLabels
         )
-        let colWidths = timeGridState.resolvedColumnWidths()
-        let cards = timeGridState.snapshot(colWidths: colWidths).cards
+        let cards = currentGridCards()
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
             resolveGridFocusLabel(eventId: focusedId.rawValue, cards: cards)
         }
@@ -436,9 +432,7 @@ public final class NativeCalendarRootModel {
 
     private func focusedGridEventAccessibilityLabel() -> String? {
         guard let focusedId = focusStore.focusedEventId?.rawValue else { return nil }
-        let colWidths = timeGridState.resolvedColumnWidths()
-        let cards = timeGridState.snapshot(colWidths: colWidths).cards
-        return resolveGridFocusLabel(eventId: focusedId, cards: cards)
+        return resolveGridFocusLabel(eventId: focusedId, cards: currentGridCards())
     }
 
     private func resolveGridFocusLabel(eventId: String, cards: [GridLayoutCardSnapshot]) -> String? {
@@ -544,23 +538,26 @@ public final class NativeCalendarRootModel {
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: Date())
         let hiddenIds = Set(hiddenEventsStore.hiddenEventIds.map(\.rawValue))
         let demoIds = demoSeed?.demoEventIds ?? []
+        let referenceNow = demoSeed?.referenceNow ?? Date()
         let scenario = GridLayoutScenarioBuilder.build(
             layoutMode: layoutMode(),
             visibleDateKeys: visibleDateKeys(),
-            referenceNow: demoSeed?.referenceNow ?? Date(),
+            referenceNow: referenceNow,
             calendars: visibleCalendars(),
             events: loadedEvents,
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
-        syncFocusRegistry(from: scenario)
-        let colWidths = TimeGridState(
+        timeGridState = TimeGridState(
             layoutMode: layoutMode(),
-            referenceNow: demoSeed?.referenceNow ?? Date(),
+            referenceNow: referenceNow,
             scenario: scenario,
-            trackWidth: contentTrackWidth
-        ).resolvedColumnWidths()
-        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: colWidths)
+            trackWidth: contentTrackWidth,
+            focusedEventId: focusStore.focusedEventId?.rawValue,
+            eventJumpHints: eventJumpHintLabels
+        )
+        let snapshot = timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths())
+        syncFocusRegistry(from: snapshot.cards)
         focusLayoutCards = snapshot.cards.map { card in
             FocusLayoutCard(
                 eventId: card.eventId,
@@ -569,16 +566,10 @@ public final class NativeCalendarRootModel {
             )
         }
         focusStore.setPageJumpTargets(nativePageJumpTargets())
-        timeGridState = TimeGridState(
-            layoutMode: layoutMode(),
-            referenceNow: demoSeed?.referenceNow ?? Date(),
-            scenario: scenario,
-            trackWidth: contentTrackWidth,
-            focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
-        )
         if demoSeed != nil, !loadedEvents.isEmpty, !didApplyDemoFixtureScroll {
-            let allDayOffset = 28 + snapshot.metrics.allDayRowHeight
+            let allDayOffset = GridTimeConstants.timedContentDocumentYOffset(
+                allDayRowHeight: snapshot.metrics.allDayRowHeight
+            )
             if let standup = snapshot.cards.first(where: {
                 $0.eventId == "demo-morning-standup" && $0.kind == .timed
             }) {
@@ -602,19 +593,13 @@ public final class NativeCalendarRootModel {
         publishGridFocusAccessibilityProbe(eventId: eventId)
     }
 
-    private func syncFocusRegistry(from scenario: GridLayoutScenario) {
+    private func currentGridCards() -> [GridLayoutCardSnapshot] {
+        timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths()).cards
+    }
+
+    private func syncFocusRegistry(from cards: [GridLayoutCardSnapshot]) {
         focusStore.view = viewStore.view
         focusStore.clearRegistry()
-        let colWidths = TimeGridState(
-            layoutMode: layoutMode(),
-            referenceNow: scenario.referenceNow,
-            scenario: scenario,
-            trackWidth: contentTrackWidth
-        ).resolvedColumnWidths()
-        let cards = GridLayoutSnapshotBuilder.build(
-            scenario: scenario,
-            colWidths: colWidths
-        ).cards
         let sorted = cards.sorted { lhs, rhs in
             if lhs.frame.top != rhs.frame.top { return lhs.frame.top < rhs.frame.top }
             return lhs.frame.left < rhs.frame.left

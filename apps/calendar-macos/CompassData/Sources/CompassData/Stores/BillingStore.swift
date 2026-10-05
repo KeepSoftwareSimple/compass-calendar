@@ -130,43 +130,21 @@ public final class BillingStore {
     }
 
     public func openHostedCheckout() async {
-        actionError = nil
-        isOpeningHostedSession = true
-        defer { isOpeningHostedSession = false }
-        do {
-            let response = try await billingAPI.createCheckoutSession()
-            guard let urlString = response.url, let url = URL(string: urlString) else {
-                throw HostedBillingSessionError.missingHostedURL
-            }
-            let callback = try await sessionPresenter.presentHostedSession(url: url)
-            handleBillingCheckoutDeepLink(callback.absoluteString, trackCardUpdate: false)
-        } catch HostedBillingSessionError.userCanceled {
-            return
-        } catch {
-            actionError = billingActionMessage(error, fallback: "Couldn't start billing. Please try again in a moment.")
-        }
+        await presentHostedSession(
+            url: { try await billingAPI.createCheckoutSession().url },
+            refreshSubscriptionDetails: false,
+            trackCardUpdate: false,
+            fallback: "Couldn't start billing. Please try again in a moment."
+        )
     }
 
     public func openHostedPaymentMethodUpdate() async {
-        actionError = nil
-        isOpeningHostedSession = true
-        defer { isOpeningHostedSession = false }
-        do {
-            let response = try await billingAPI.createPaymentMethodSession()
-            guard let urlString = response.url, let url = URL(string: urlString) else {
-                throw HostedBillingSessionError.missingHostedURL
-            }
-            let callback = try await sessionPresenter.presentHostedSession(url: url)
-            handleBillingCheckoutDeepLink(
-                callback.absoluteString,
-                refreshSubscriptionDetails: true,
-                trackCardUpdate: true
-            )
-        } catch HostedBillingSessionError.userCanceled {
-            return
-        } catch {
-            actionError = billingActionMessage(error, fallback: "Couldn't update your card.")
-        }
+        await presentHostedSession(
+            url: { try await billingAPI.createPaymentMethodSession().url },
+            refreshSubscriptionDetails: true,
+            trackCardUpdate: true,
+            fallback: "Couldn't update your card."
+        )
     }
 
     public func handleBillingCheckoutDeepLink(
@@ -245,6 +223,32 @@ public final class BillingStore {
         didShowGateAnalytics = false
         authenticated = false
         stopStatusPoll()
+    }
+
+    private func presentHostedSession(
+        url fetchURL: () async throws -> String?,
+        refreshSubscriptionDetails: Bool,
+        trackCardUpdate: Bool,
+        fallback: String
+    ) async {
+        actionError = nil
+        isOpeningHostedSession = true
+        defer { isOpeningHostedSession = false }
+        do {
+            guard let urlString = try await fetchURL(), let url = URL(string: urlString) else {
+                throw HostedBillingSessionError.missingHostedURL
+            }
+            let callback = try await sessionPresenter.presentHostedSession(url: url)
+            handleBillingCheckoutDeepLink(
+                callback.absoluteString,
+                refreshSubscriptionDetails: refreshSubscriptionDetails,
+                trackCardUpdate: trackCardUpdate
+            )
+        } catch HostedBillingSessionError.userCanceled {
+            return
+        } catch {
+            actionError = billingActionMessage(error, fallback: fallback)
+        }
     }
 
     private var shouldLoadBilling: Bool {
