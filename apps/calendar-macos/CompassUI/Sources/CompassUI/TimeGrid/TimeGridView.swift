@@ -6,6 +6,7 @@ public protocol TimeGridViewDelegate: AnyObject {
     func timeGridViewDidRequestShortcutHint(_ view: TimeGridView, at locationInWindow: NSPoint)
     func timeGridView(_ view: TimeGridView, didClickEvent eventId: String)
     func timeGridView(_ view: TimeGridView, didEditDraftTitle title: String, eventId: String)
+    func timeGridView(_ view: TimeGridView, didOpenEventMenu eventId: String, at locationInWindow: NSPoint)
 }
 
 @MainActor
@@ -136,7 +137,10 @@ public final class TimeGridView: NSView {
     }
 
     public override func rightMouseDown(with event: NSEvent) {
-        // Right-click is reserved for the event menu in a later WP.
+        if let card = eventCardView(at: event.locationInWindow) {
+            delegate?.timeGridView(self, didOpenEventMenu: card.eventId, at: event.locationInWindow)
+            return
+        }
     }
 
     private func configureScrollView() {

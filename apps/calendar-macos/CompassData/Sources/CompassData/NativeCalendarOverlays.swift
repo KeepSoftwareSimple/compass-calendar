@@ -7,7 +7,7 @@ extension NativeCalendarRootModel {
     public var shortcutsCatalogPresenter: ShortcutsCatalogPresenting { overlayStores.catalog }
 
     public var overlayKeyboardCaptureActive: Bool {
-        commandPaletteStore.isOpen || shortcutsLegendStore.isOpen
+        commandPaletteStore.isOpen || shortcutsLegendStore.isOpen || eventMenuStore.isOpen
     }
 
     func paletteSections() -> [CommandPaletteSection] {
@@ -279,11 +279,18 @@ public final class OverlayStores {
     public let palette: CommandPaletteStore
     public let legend: ShortcutsLegendStore
     public let catalog: ShortcutsCatalogPresenting
+    public let eventMenu: EventMenuStore
+    public let statusToast: StatusToastStore
+    public let recurrenceScope: RecurrenceScopeStore
+    public var editSequenceMenuVisible = false
 
     public init(catalog: ShortcutsCatalogPresenting = NoOpShortcutsCatalogPresenter()) {
         palette = CommandPaletteStore()
         legend = ShortcutsLegendStore()
         self.catalog = catalog
+        eventMenu = EventMenuStore()
+        statusToast = StatusToastStore()
+        recurrenceScope = RecurrenceScopeStore()
     }
 }
 
