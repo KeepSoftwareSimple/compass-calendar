@@ -121,6 +121,19 @@ final class NativeGridKeyboardRouter {
     }
 
     func handleKeyDown(_ event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command),
+            !event.modifierFlags.contains(.option),
+            !event.modifierFlags.contains(.control),
+            event.charactersIgnoringModifiers?.lowercased() == "z"
+        {
+            if event.modifierFlags.contains(.shift) {
+                model.redoLastChange()
+            } else {
+                model.undoLastChange()
+            }
+            return true
+        }
+
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
         if model.dedicationDialogVisible {
@@ -178,20 +191,6 @@ final class NativeGridKeyboardRouter {
 
         if model.isEventFormVisible {
             return false
-        }
-
-        if keyEvent.modifiers.contains(.command),
-            !keyEvent.modifiers.contains(.option),
-            !keyEvent.modifiers.contains(.control),
-            case .character(let char) = keyEvent.key,
-            char == "z"
-        {
-            if keyEvent.modifiers.contains(.shift) {
-                model.redoLastChange()
-            } else {
-                model.undoLastChange()
-            }
-            return true
         }
 
         if case .character(let char) = keyEvent.key, char == "h", keyEvent.modifiers.isEmpty {
