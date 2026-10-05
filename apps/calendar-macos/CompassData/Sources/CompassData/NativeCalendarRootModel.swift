@@ -31,6 +31,8 @@ public final class NativeCalendarRootModel {
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     /// Window-level accessibility probe for native UI tests (see Compass app).
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
+    /// AppKit title-field probe for native UI tests when the event form is open.
+    public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
@@ -420,6 +422,10 @@ public final class NativeCalendarRootModel {
         onGridFocusAccessibilityLabelChanged?(resolved)
     }
 
+    public func publishEventFormTitleAccessibilityProbe() {
+        onEventFormTitleAccessibilityProbeChanged?(isEventFormVisible)
+    }
+
     public func handleGridPointerDown(registry: ShortcutRegistry) {
         showPointerHint(for: .gridScroll, registry: registry)
     }
@@ -709,6 +715,7 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        publishEventFormTitleAccessibilityProbe()
     }
 
     private func applyInitialUIFocusIfNeeded() {
@@ -720,6 +727,10 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
+        if UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus {
+            openKeyboardEditForFocusedEvent()
+            openEventFormForCurrentDraft()
+        }
     }
 
     private func currentGridCards() -> [GridLayoutCardSnapshot] {

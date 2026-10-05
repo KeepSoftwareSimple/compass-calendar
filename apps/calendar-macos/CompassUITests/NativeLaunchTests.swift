@@ -188,6 +188,7 @@ final class NativeLaunchTests: XCTestCase {
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+            "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
         ]
         app.launch()
 
@@ -195,14 +196,10 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
-        // Enter is flaky under XCUITest; the e→t edit sequence opens the native form reliably.
-        window.typeKey("e", modifierFlags: [])
-        window.typeKey("t", modifierFlags: [])
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        titleField.click()
-        titleField.typeKey("a", modifierFlags: [.command])
-        titleField.typeText("Updated standup")
+        window.typeKey("a", modifierFlags: [.command])
+        window.typeText("Updated standup")
 
         window.typeKey(.enter, modifierFlags: [.command])
         XCTAssertTrue(
