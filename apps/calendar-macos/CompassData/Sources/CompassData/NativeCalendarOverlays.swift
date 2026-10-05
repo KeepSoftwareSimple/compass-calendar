@@ -6,7 +6,7 @@ extension NativeCalendarRootModel {
     public var shortcutsLegendStore: ShortcutsLegendStore { overlayStores.legend }
     public var shortcutsCatalogPresenter: ShortcutsCatalogPresenting { overlayStores.catalog }
 
-    var overlayKeyboardCaptureActive: Bool {
+    public var overlayKeyboardCaptureActive: Bool {
         commandPaletteStore.isOpen || shortcutsLegendStore.isOpen
     }
 
@@ -153,7 +153,7 @@ extension NativeCalendarRootModel {
         }
     }
 
-    func openShortcutsCatalogWindow() {
+    public func openShortcutsCatalogWindow() {
         overlayStores.catalog.presentPublicCatalog(
             sections: ShortcutLegendSections.publicCatalogSections(registry: shortcutRegistry))
     }
