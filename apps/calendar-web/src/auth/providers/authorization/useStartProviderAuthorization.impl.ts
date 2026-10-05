@@ -7,11 +7,6 @@ import { buildOAuthStateForClient } from "@core/desktop/desktop-oauth-state.util
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
-import { writeAppleAuthorizationIntent } from "@web/auth/apple/authorization/apple-authorization.storage";
-import {
-  buildAppleAuthorizationState,
-  buildAppleAuthorizationUrl,
-} from "@web/auth/apple/authorization/apple-authorization.util";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
@@ -26,6 +21,8 @@ import {
   writeProviderAuthorizationIntent,
 } from "./provider-authorization.storage";
 import {
+  buildAppleAuthorizationState,
+  buildAppleAuthorizationUrl,
   buildMicrosoftAuthorizationUrl,
   buildProviderAuthCallbackUrl,
   buildSignupTrialReturnPath,
@@ -184,7 +181,7 @@ const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
       if (signupFlow) {
         rememberSignupTrialMethod("apple");
       }
-      writeAppleAuthorizationIntent(state, {
+      writeProviderAuthorizationIntent("apple", state, {
         intent,
         returnPath: signupFlow
           ? buildSignupTrialReturnPath()

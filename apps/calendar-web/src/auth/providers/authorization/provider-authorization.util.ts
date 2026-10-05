@@ -1,4 +1,6 @@
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { APPLE_SIGNIN_FORM_POST_PATH } from "@web/auth/apple/authorization/apple-authorization.constants";
+import { ENV_WEB } from "@web/common/constants/env.constants";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { providerAuthCallbackPath } from "./provider-authorization.constants";
 import { thirdPartyIdForProviderKind } from "./provider-authorization.third-party";
@@ -110,4 +112,32 @@ export function buildMicrosoftAuthorizationUrl({
   }
 
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+}
+
+export function buildAppleAuthorizationUrl({
+  clientId,
+  state,
+  redirectUri = `${ENV_WEB.BACKEND_BASEURL}${APPLE_SIGNIN_FORM_POST_PATH}`,
+}: {
+  clientId: string;
+  state: string;
+  redirectUri?: string;
+}): string {
+  const params = new URLSearchParams({
+    client_id: clientId,
+    response_type: "code",
+    redirect_uri: redirectUri,
+    response_mode: "form_post",
+    scope: "name email",
+    state,
+  });
+  return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
+}
+
+export function buildAppleAuthorizationState(
+  frontendRedirectURI: string,
+): string {
+  return btoa(
+    JSON.stringify({ frontendRedirectURI, nonce: crypto.randomUUID() }),
+  );
 }

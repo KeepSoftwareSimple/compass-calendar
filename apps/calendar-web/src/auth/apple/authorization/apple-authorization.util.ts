@@ -32,31 +32,3 @@ export function buildAppleAuthCodePayload({
     },
   };
 }
-
-export function buildAppleAuthorizationUrl({
-  clientId,
-  state,
-  redirectUri = buildAppleSignInRedirectUri(),
-}: {
-  clientId: string;
-  state: string;
-  redirectUri?: string;
-}): string {
-  const params = new URLSearchParams({
-    client_id: clientId,
-    response_type: "code",
-    redirect_uri: redirectUri,
-    response_mode: "form_post",
-    scope: "name email",
-    state,
-  });
-  return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
-}
-
-export function buildAppleAuthorizationState(
-  frontendRedirectURI: string,
-): string {
-  return btoa(
-    JSON.stringify({ frontendRedirectURI, nonce: crypto.randomUUID() }),
-  );
-}
