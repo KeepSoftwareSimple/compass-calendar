@@ -21,7 +21,7 @@ extension NativeCalendarRootModel {
         }
         draftStore.setQuickTimeDigits("")
         if draftStore.gridDraft == nil {
-            createTimedDraft(activity: .createShortcut)
+            createTimedDraft(activity: .keyboardPlace)
         }
         setDraftTitle(trimmed)
     }
@@ -32,7 +32,7 @@ extension NativeCalendarRootModel {
             commitQuickTimeIfBuffered()
         }
         if draftStore.gridDraft == nil {
-            createTimedDraft(activity: .createShortcut)
+            createTimedDraft(activity: .keyboardPlace)
         }
         await saveDraft()
     }
