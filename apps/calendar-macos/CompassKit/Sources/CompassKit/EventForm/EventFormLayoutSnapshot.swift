@@ -27,7 +27,7 @@ public struct EventFormLayoutSnapshot: Codable, Hashable, Sendable {
 
 public enum EventFormLayoutSnapshotBuilder {
     private static let wp18VisibleFields: Set<EventFormField> = [
-        .actions, .title, .start, .end, .calendar, .color,
+        .actions, .title, .description, .start, .end, .calendar, .color,
     ]
 
     private static func accessibilityId(for field: EventFormField) -> String {

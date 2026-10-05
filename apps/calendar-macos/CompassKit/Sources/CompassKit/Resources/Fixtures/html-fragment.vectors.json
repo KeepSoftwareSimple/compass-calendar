@@ -1,0 +1,311 @@
+{
+  "cases": [
+    {
+      "id": "empty",
+      "input": {
+        "html": ""
+      },
+      "output": {
+        "normalized": "",
+        "roundTrip": "",
+        "plainText": "",
+        "document": {
+          "blocks": []
+        }
+      }
+    },
+    {
+      "id": "plain-paragraph",
+      "input": {
+        "html": "<p>Hello world</p>"
+      },
+      "output": {
+        "normalized": "<p>Hello world</p>",
+        "roundTrip": "<p>Hello world</p>",
+        "plainText": "Hello world",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "Hello world"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bold-italic-link",
+      "input": {
+        "html": "<p>Meet at <strong>HQ</strong> with <em>team</em>, <a href=\"https://example.com/join\">Join</a></p>"
+      },
+      "output": {
+        "normalized": "<p>Meet at <strong>HQ</strong> with <em>team</em>, <a href=\"https://example.com/join\">Join</a></p>",
+        "roundTrip": "<p>Meet at <strong>HQ</strong> with <em>team</em>, <a href=\"https://example.com/join\">Join</a></p>",
+        "plainText": "Meet at HQ with team, Join",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "Meet at "
+                },
+                {
+                  "kind": "bold",
+                  "children": [
+                    {
+                      "kind": "text",
+                      "text": "HQ"
+                    }
+                  ]
+                },
+                {
+                  "kind": "text",
+                  "text": " with "
+                },
+                {
+                  "kind": "italic",
+                  "children": [
+                    {
+                      "kind": "text",
+                      "text": "team"
+                    }
+                  ]
+                },
+                {
+                  "kind": "text",
+                  "text": ", "
+                },
+                {
+                  "kind": "link",
+                  "href": "https://example.com/join",
+                  "children": [
+                    {
+                      "kind": "text",
+                      "text": "Join"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "bullet-list",
+      "input": {
+        "html": "<ul><li><p>One</p></li><li><p>Two</p></li></ul>"
+      },
+      "output": {
+        "normalized": "<ul><li><p>One</p></li><li><p>Two</p></li></ul>",
+        "roundTrip": "<ul><li><p>One</p></li><li><p>Two</p></li></ul>",
+        "plainText": "One Two",
+        "document": {
+          "blocks": [
+            {
+              "kind": "unorderedList",
+              "items": [
+                {
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "text": "One"
+                    }
+                  ]
+                },
+                {
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "text": "Two"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ordered-list",
+      "input": {
+        "html": "<ol><li><p>First</p></li><li><p>Second</p></li></ol>"
+      },
+      "output": {
+        "normalized": "<ol><li><p>First</p></li><li><p>Second</p></li></ol>",
+        "roundTrip": "<ol><li><p>First</p></li><li><p>Second</p></li></ol>",
+        "plainText": "First Second",
+        "document": {
+          "blocks": [
+            {
+              "kind": "orderedList",
+              "items": [
+                {
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "text": "First"
+                    }
+                  ]
+                },
+                {
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "text": "Second"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "plain-text-booking",
+      "input": {
+        "html": "Recovered\n\nCancel: https://x/meet/cancel/1?token=a\n\nReschedule: https://x/meet/reschedule/1?token=b"
+      },
+      "output": {
+        "normalized": "<p>Recovered</p><p>Cancel: <a href=\"https://x/meet/cancel/1?token=a\">https://x/meet/cancel/1?token=a</a></p><p>Reschedule: <a href=\"https://x/meet/reschedule/1?token=b\">https://x/meet/reschedule/1?token=b</a></p>",
+        "roundTrip": "<p>Recovered\n\nCancel: https://x/meet/cancel/1?token=a\n\nReschedule: https://x/meet/reschedule/1?token=b</p>",
+        "plainText": "Recovered Cancel: https://x/meet/cancel/1?token=a Reschedule: https://x/meet/reschedule/1?token=b",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "Recovered\n\nCancel: https://x/meet/cancel/1?token=a\n\nReschedule: https://x/meet/reschedule/1?token=b"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "strip-script",
+      "input": {
+        "html": "<p onclick=\"alert(1)\">Safe<script>alert(1)</script></p>"
+      },
+      "output": {
+        "normalized": "<p>Safe</p>",
+        "roundTrip": "<p>Safe</p>",
+        "plainText": "Safe",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "Safe"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "unsafe-link",
+      "input": {
+        "html": "<p><a href=\"javascript:alert(1)\">click me</a></p>"
+      },
+      "output": {
+        "normalized": "<p><a>click me</a></p>",
+        "roundTrip": "<p><a href=\"\">click me</a></p>",
+        "plainText": "click me",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "link",
+                  "href": "",
+                  "children": [
+                    {
+                      "kind": "text",
+                      "text": "click me"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "verbatim-custom-tag",
+      "input": {
+        "html": "<p>Notes</p><custom data-id=\"1\">Keep me</custom>"
+      },
+      "output": {
+        "normalized": "<p>Notes</p>Keep me",
+        "roundTrip": "<p>Notes</p><custom data-id=\"1\">Keep me</custom>",
+        "plainText": "Notes Keep me",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "Notes"
+                }
+              ]
+            },
+            {
+              "kind": "verbatim",
+              "html": "<custom data-id=\"1\">Keep me</custom>"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "line-breaks",
+      "input": {
+        "html": "<p>line one<br>line two</p>"
+      },
+      "output": {
+        "normalized": "<p>line one<br>line two</p>",
+        "roundTrip": "<p>line one<br>line two</p>",
+        "plainText": "line one line two",
+        "document": {
+          "blocks": [
+            {
+              "kind": "paragraph",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "text": "line one"
+                },
+                {
+                  "kind": "br"
+                },
+                {
+                  "kind": "text",
+                  "text": "line two"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
