@@ -33,6 +33,7 @@ public final class NativeCalendarRootModel {
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     /// AppKit title-field probe for native UI tests when the event form is open.
     public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
@@ -56,6 +57,8 @@ public final class NativeCalendarRootModel {
     private var eventJumpHintLabels: [EventJumpChipHint] = []
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
+    private var didApplyUITestFocusedEventForm = false
+    private var eventFormTitleProbeVisible = false
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -423,7 +426,15 @@ public final class NativeCalendarRootModel {
     }
 
     public func publishEventFormTitleAccessibilityProbe() {
-        onEventFormTitleAccessibilityProbeChanged?(isEventFormVisible)
+        let visible = isEventFormVisible
+        if visible != eventFormTitleProbeVisible {
+            eventFormTitleProbeVisible = visible
+            onEventFormTitleAccessibilityProbeChanged?(visible)
+            return
+        }
+        if visible {
+            onEventFormTitleAccessibilityProbeTitleSync?(draftStore.gridDraft?.title)
+        }
     }
 
     public func handleGridPointerDown(registry: ShortcutRegistry) {
@@ -727,9 +738,19 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
-        if UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus {
+        scheduleUITestFocusedEventFormOpenIfNeeded()
+    }
+
+    private func scheduleUITestFocusedEventFormOpenIfNeeded() {
+        guard !didApplyUITestFocusedEventForm,
+            UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
+            focusStore.focusedEventId != nil
+        else { return }
+        didApplyUITestFocusedEventForm = true
+        Task { @MainActor in
             openKeyboardEditForFocusedEvent()
             openEventFormForCurrentDraft()
+            publishEventFormTitleAccessibilityProbe()
         }
     }
 

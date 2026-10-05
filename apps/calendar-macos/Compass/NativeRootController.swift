@@ -53,10 +53,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             EventFormAccessibilityProbe.publish(
                 visible: visible,
                 title: title,
-                onTitleChanged: { [weak model] newTitle in
-                    model?.updateDraftFromForm(title: newTitle)
-                }
+                onTitleChanged: visible
+                    ? { [weak model] newTitle in model?.updateDraftFromForm(title: newTitle) }
+                    : nil
             )
+        }
+        model.onEventFormTitleAccessibilityProbeTitleSync = { title in
+            EventFormAccessibilityProbe.syncTitle(title)
         }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in

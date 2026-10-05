@@ -47,16 +47,6 @@ final class EventFormAccessibilityProbeView: NSView {
         }
     }
 
-    override func accessibilityValue() -> Any? {
-        titleBuffer
-    }
-
-    override func setAccessibilityValue(_ accessibilityValue: Any?) {
-        guard let text = accessibilityValue as? String else { return }
-        titleBuffer = text
-        publishTitle()
-    }
-
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "a"
@@ -81,8 +71,13 @@ final class EventFormAccessibilityProbeView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard !isHidden, bounds.contains(point) else { return nil }
-        return self
+        nil
+    }
+
+    func syncTitle(_ title: String?) {
+        guard !isHidden else { return }
+        titleBuffer = title ?? ""
+        setAccessibilityValue(titleBuffer)
     }
 
     override func layout() {
@@ -131,6 +126,10 @@ enum EventFormAccessibilityProbe {
         let view = EventFormAccessibilityProbeView(frame: .zero)
         probe = view
         hostView.addSubview(view, positioned: .above, relativeTo: nil)
+    }
+
+    static func syncTitle(_ title: String?) {
+        probe?.syncTitle(title)
     }
 
     static func publish(visible: Bool, title: String? = nil, onTitleChanged: ((String) -> Void)? = nil) {
