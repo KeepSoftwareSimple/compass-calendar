@@ -19,15 +19,9 @@ struct UpNextBanner: View {
         let snapshot = state.snapshot
         let isVisible = bannerVisible(snapshot: snapshot, now: state.referenceNow)
 
-        if isVisible, let upNext = snapshot.upNext,
-           let start = CompassDateParsing.parseInEffectiveTimeZone(upNext.startDate),
-           let end = CompassDateParsing.parseInEffectiveTimeZone(upNext.endDate)
-        {
-            let countdown = UpNextFormatting.formatEventStatus(
-                start: start,
-                end: end,
-                now: state.referenceNow,
-                isCurrentEvent: snapshot.isCurrentEvent)
+        if isVisible, let presentation = UpNextFormatting.resolve(state) {
+            let upNext = presentation.upNext
+            let countdown = presentation.countdown
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(countdown)

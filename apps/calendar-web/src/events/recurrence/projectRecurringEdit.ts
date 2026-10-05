@@ -24,7 +24,45 @@ type ProjectRecurringEditInput = {
   edited: Event;
   original: Event;
   seriesEvents: readonly Event[];
+  /** Series base row; required to optimistically truncate on thisAndFollowing. */
+  seriesMaster?: Event | null;
 };
+
+// RRULE UNTIL is inclusive; end strictly before the split instant (mirrors
+// LocalEventRepository.truncateRules and sync truncateRulesBefore).
+function truncateSeriesRules(
+  rules: readonly string[],
+  beforeStart: string,
+): string[] {
+  const allDay = !beforeStart.includes("T");
+  const excludedInstant = allDay
+    ? dayjs(beforeStart, "YYYY-MM-DD").tz(dayjs.tz.guess()).local().toDate()
+    : dayjs(beforeStart).toDate();
+  const until = dayjs(excludedInstant)
+    .subtract(1, "second")
+    .utc()
+    .toRRuleDTSTARTString();
+
+  return rules.map((rule) => {
+    if (!rule.startsWith("RRULE:")) return rule;
+    const kept = rule
+      .slice("RRULE:".length)
+      .split(";")
+      .filter(
+        (part) => !part.startsWith("UNTIL=") && !part.startsWith("COUNT="),
+      );
+    return `RRULE:${[...kept, `UNTIL=${until}`].join(";")}`;
+  });
+}
+
+function stripRuleBounds(rules: readonly string[]): string[] {
+  return rules.map((rule) =>
+    rule
+      .split(";")
+      .filter((part) => !/^COUNT=/i.test(part) && !/^UNTIL=/i.test(part))
+      .join(";"),
+  );
+}
 
 // Instances keep their own `occurrence` recurrence pointer; only content
 // propagates from the edit. The series base (and a standalone "single"
@@ -134,16 +172,39 @@ const shiftEvent = (event: Event, original: Event, edited: Event): Event => {
   };
 };
 
-// Exported for projectSeriesRulesChange's "thisAndFollowing" filtering below.
-export const isAtOrAfter = (event: Event, cutoff: Event["schedule"]) => {
+const isAtOrAfter = (event: Event, cutoff: Event["schedule"]) => {
   return !dayjs(event.schedule.start).isBefore(cutoff.start);
 };
+
+const patchAffectedOccurrences = (
+  affected: readonly Event[],
+  edited: Event,
+  original: Event,
+  remainderSeriesId?: EventId,
+): Event[] =>
+  affected.map((event) => {
+    const patched = seriesPatch(event, edited);
+    const withSeries = remainderSeriesId
+      ? {
+          ...patched,
+          recurrence: {
+            kind: "occurrence" as const,
+            seriesId: remainderSeriesId,
+          },
+        }
+      : patched;
+    if (event.id === edited.id) {
+      return { ...withSeries, schedule: edited.schedule };
+    }
+    return shiftEvent(withSeries, original, edited);
+  });
 
 export function projectRecurringEdit({
   scope,
   edited,
   original,
   seriesEvents,
+  seriesMaster,
 }: ProjectRecurringEditInput): RecurringEditProjection {
   if (scope === "this") {
     return { removeIds: new Set(), upserts: [edited] };
@@ -168,15 +229,61 @@ export function projectRecurringEdit({
     };
   }
 
-  const upserts = affected.map((event) => {
-    const patched = seriesPatch(event, edited);
-    if (event.id === edited.id) {
-      return { ...patched, schedule: edited.schedule };
-    }
-    return shiftEvent(patched, original, edited);
-  });
+  const occurrenceUpserts = patchAffectedOccurrences(
+    affected,
+    edited,
+    original,
+  );
 
-  return { removeIds: new Set(), upserts };
+  if (
+    scope !== "thisAndFollowing" ||
+    seriesMaster?.recurrence.kind !== "series"
+  ) {
+    return { removeIds: new Set(), upserts: occurrenceUpserts };
+  }
+
+  const splitInstant = original.schedule.start;
+  const splits = dayjs(splitInstant).isAfter(seriesMaster.schedule.start);
+
+  if (!splits) {
+    return projectRecurringEdit({
+      scope: "all",
+      edited,
+      original,
+      seriesEvents,
+      seriesMaster,
+    });
+  }
+
+  const remainderSeriesId = edited.id;
+  const remainderRules =
+    edited.recurrence.kind === "series"
+      ? edited.recurrence.rules
+      : stripRuleBounds(seriesMaster.recurrence.rules);
+  const remainderMaster: Event = {
+    ...edited,
+    id: remainderSeriesId,
+    recurrence: { kind: "series", rules: remainderRules },
+  };
+  const truncatedMaster: Event = {
+    ...seriesMaster,
+    recurrence: {
+      kind: "series",
+      rules: truncateSeriesRules(seriesMaster.recurrence.rules, splitInstant),
+    },
+  };
+
+  // Drop every affected cached instance, then re-upsert under the remainder
+  // series so a schedule move cannot leave the pre-split occurrence id beside
+  // a freshly materialized instance at the same instant.
+  const removeIds = new Set(affected.map((event) => event.id));
+  const upserts = [
+    truncatedMaster,
+    remainderMaster,
+    ...patchAffectedOccurrences(affected, edited, original, remainderSeriesId),
+  ];
+
+  return { removeIds, upserts };
 }
 
 type ProjectRecurringDeleteInput = {
@@ -260,9 +367,7 @@ export async function projectSeriesMaterialization({
   exdates = [],
 }: ProjectSeriesMaterializationInput): Promise<RecurringEditProjection> {
   const removeIds = new Set<string>(
-    cachedSeriesEvents.flatMap((event) =>
-      event.id === base.id ? [] : [event.id],
-    ),
+    cachedSeriesEvents.map((event) => event.id),
   );
 
   if (base.recurrence.kind !== "series" || ranges.length === 0) {

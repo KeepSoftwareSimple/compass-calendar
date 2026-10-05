@@ -206,7 +206,9 @@ public struct RootView: View {
     private var gridChipYOffset: CGFloat {
         let colWidths = model.timeGridState.resolvedColumnWidths()
         let metrics = model.timeGridState.snapshot(colWidths: colWidths).metrics
-        return 28 + metrics.allDayRowHeight
+        return GridTimeConstants.timedContentDocumentYOffset(
+            allDayRowHeight: metrics.allDayRowHeight
+        )
     }
 
     @ViewBuilder

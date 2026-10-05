@@ -116,44 +116,25 @@ public final class OAuthAuthorizationService {
     }
 
     public func handleAuthDeepLink(_ urlString: String) async -> OAuthAuthorizationOutcome? {
-        guard let parsed = DesktopOAuthState.parseDesktopAuthDeepLink(urlString) else {
+        guard let parsed = DesktopOAuthState.parseDesktopAuthDeepLink(urlString),
+              let callbackURL = URL(string: urlString)
+        else {
             return nil
         }
         return await finishAuthCallback(
-            callbackURL: URL(string: urlString)!,
+            callbackURL: callbackURL,
             expectedProvider: parsed.provider)
     }
 
     public func handleConnectDeepLink(_ urlString: String) async -> OAuthAuthorizationOutcome {
-        guard let parsed = parseConnectDeepLink(urlString)
+        guard let parsed = DesktopOAuthState.parseDesktopConnectDeepLink(urlString)
         else {
             return .failed(message: "We couldn't finish connecting your calendar.")
         }
-        let query = parsed.query.hasPrefix("?") ? String(parsed.query.dropFirst()) : parsed.query
-        var components = URLComponents()
-        components.query = query
-        let status = components.queryItems?.first { $0.name == "status" }?.value
-        if status == "connected" {
+        if DesktopOAuthState.queryValue("status", fromDeepLinkQuery: parsed.query) == "connected" {
             return .completed
         }
         return .failed(message: "We couldn't finish connecting your calendar.")
-    }
-
-    private func parseConnectDeepLink(_ url: String) -> (provider: String, query: String)? {
-        let pattern = "^compass://connect/([^/?#]+)/callback(\\?.*)?$"
-        guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
-        let range = NSRange(url.startIndex..., in: url)
-        guard let match = regex.firstMatch(in: url, range: range),
-              match.numberOfRanges > 1,
-              let providerRange = Range(match.range(at: 1), in: url)
-        else { return nil }
-        var query = ""
-        if match.numberOfRanges > 2, match.range(at: 2).location != NSNotFound,
-           let queryRange = Range(match.range(at: 2), in: url)
-        {
-            query = String(url[queryRange])
-        }
-        return (String(url[providerRange]), query)
     }
 
     private func authorizationURL(
@@ -189,12 +170,8 @@ public final class OAuthAuthorizationService {
         else {
             return .failed(message: "We couldn't finish signing you in. Please try again.")
         }
-        let query = parsed.query.hasPrefix("?") ? String(parsed.query.dropFirst()) : parsed.query
-        var components = URLComponents()
-        components.query = query
-        let items = components.queryItems ?? []
         func param(_ name: String) -> String? {
-            items.first { $0.name == name }?.value
+            DesktopOAuthState.queryValue(name, fromDeepLinkQuery: parsed.query)
         }
         if param("error") == "access_denied" {
             return .userCancelled

@@ -5,6 +5,7 @@ import Foundation
 final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
     var listHandler: ((EventListQuery) async throws -> [EventResponseEvent])?
     var createHandler: ((CreateEventInput) async throws -> EventResponseEvent)?
+    var replaceHandler: ((EventId, ReplaceEventInput) async throws -> EventResponseEvent)?
 
     func list(_ query: EventListQuery) async throws -> [EventResponseEvent] {
         try await listHandler?(query) ?? []
@@ -15,7 +16,10 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
     }
 
     func replace(id: EventId, input: ReplaceEventInput) async throws -> EventResponseEvent {
-        throw NSError(domain: "MockEventsAPI", code: 0)
+        guard let replaceHandler else {
+            throw NSError(domain: "MockEventsAPI", code: 0)
+        }
+        return try await replaceHandler(id, input)
     }
 
     func delete(id: EventId, scope: EventDeleteScope) async throws {}
