@@ -156,6 +156,33 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testQuickAddPanelCreatesFixtureEvent() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        let debugMenu = app.menuBars.menuBarItems["Debug"]
+        XCTAssertTrue(debugMenu.waitForExistence(timeout: 5))
+        debugMenu.click()
+        app.menuItems["Open Quick Add Panel"].click()
+
+        let panel = app.descendants(matching: .any)["compass-native-quick-add-window"]
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let field = app.descendants(matching: .any)["compass-native-quick-add-field"]
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        field.click()
+        field.typeText("Quick add fixture")
+
+        panel.typeKey(.enter, modifierFlags: [])
+        XCTAssertTrue(
+            window.buttons["Quick add fixture"].waitForExistence(timeout: 10),
+            "Expected saved quick-add event on the native grid")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

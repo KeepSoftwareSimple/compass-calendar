@@ -1,5 +1,8 @@
 import AppKit
+import CompassData
 import CompassKit
+import CompassUI
+import SwiftUI
 
 @MainActor
 final class QuickAddPanelController: NSObject, NSWindowDelegate {
@@ -7,13 +10,28 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     weak var quickAddRouter: DesktopQuickAddRouting?
     private var panel: NSPanel?
     private var webViewController: WebViewController?
+    private var hostingController: NSHostingController<ThemedQuickAddView>?
     private var previousApp: NSRunningApplication?
     private var escapeMonitor: Any?
     private var isVisible = false
 
+    private var usesNativeQuickAdd: () -> Bool = { false }
+    private var nativeModel: () -> NativeCalendarRootModel? = { nil }
+    private var nativeTheme: () -> NativeWebTheme = { .lightBeach }
+
     init(appURL: URL) {
         self.appURL = appURL
         super.init()
+    }
+
+    func configureNativeQuickAdd(
+        usesNativeQuickAdd: @escaping () -> Bool,
+        nativeModel: @escaping () -> NativeCalendarRootModel?,
+        nativeTheme: @escaping () -> NativeWebTheme
+    ) {
+        self.usesNativeQuickAdd = usesNativeQuickAdd
+        self.nativeModel = nativeModel
+        self.nativeTheme = nativeTheme
     }
 
     func toggle() {
@@ -25,10 +43,17 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        if panel == nil {
-            buildPanel()
+        if usesNativeQuickAdd(), nativeModel() != nil {
+            if panel == nil || hostingController == nil {
+                rebuildPanelIfNeeded(force: true)
+            }
+        } else if panel == nil {
+            buildWebPanel()
         }
         guard let panel else { return }
+        if usesNativeQuickAdd() {
+            nativeModel()?.beginQuickAddPanelSession()
+        }
         previousApp = NSWorkspace.shared.frontmostApplication
         panel.center()
         panel.orderFrontRegardless()
@@ -41,6 +66,9 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         guard isVisible else { return }
         isVisible = false
         removeEscapeMonitor()
+        if usesNativeQuickAdd() {
+            nativeModel()?.cancelQuickAddPanelSession()
+        }
         panel?.orderOut(nil)
         if let previousApp {
             previousApp.activate(options: [.activateIgnoringOtherApps])
@@ -48,7 +76,60 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         previousApp = nil
     }
 
-    private func buildPanel() {
+    private func rebuildPanelIfNeeded(force: Bool) {
+        let shouldUseNative = usesNativeQuickAdd() && nativeModel() != nil
+        if shouldUseNative {
+            if force || hostingController == nil {
+                panel?.orderOut(nil)
+                panel = nil
+                webViewController = nil
+                buildNativePanel()
+            }
+            return
+        }
+        if force || webViewController == nil {
+            panel?.orderOut(nil)
+            panel = nil
+            hostingController = nil
+            buildWebPanel()
+        }
+    }
+
+    private func buildNativePanel() {
+        guard let model = nativeModel() else { return }
+        let theme = nativeTheme()
+        let rootView = ThemedQuickAddView(
+            webTheme: theme,
+            model: model,
+            onSubmit: { [weak self] in
+                Task { @MainActor in
+                    await self?.submitNativeQuickAdd()
+                }
+            })
+        let hosting = NSHostingController(rootView: rootView)
+        hostingController = hosting
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 472, height: 120),
+            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .utilityWindow],
+            backing: .buffered,
+            defer: false)
+        panel.title = "Quick add"
+        panel.titleVisibility = .hidden
+        panel.titlebarAppearsTransparent = true
+        panel.isFloatingPanel = true
+        panel.level = .floating
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.isMovableByWindowBackground = true
+        panel.hidesOnDeactivate = false
+        panel.isReleasedWhenClosed = false
+        panel.delegate = self
+        panel.contentViewController = hosting
+        panel.setAccessibilityIdentifier("compass-native-quick-add-window")
+        self.panel = panel
+    }
+
+    private func buildWebPanel() {
         let launchURL = quickAddLaunchURL(base: appURL)
         let controller = WebViewController(appURL: launchURL, injectQuickAddBridge: true)
         if let quickAddRouter {
@@ -73,6 +154,12 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         panel.delegate = self
         panel.contentViewController = controller
         self.panel = panel
+    }
+
+    private func submitNativeQuickAdd() async {
+        guard let model = nativeModel() else { return }
+        await model.saveQuickAddFromPanel()
+        quickAddRouter?.dismissQuickAddPanel()
     }
 
     private func quickAddLaunchURL(base: URL) -> URL {
@@ -104,5 +191,16 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         guard isVisible, let panel = notification.object as? NSPanel, panel === self.panel
         else { return }
         hide()
+    }
+}
+
+private struct ThemedQuickAddView: View {
+    let webTheme: NativeWebTheme
+    @Bindable var model: NativeCalendarRootModel
+    let onSubmit: () -> Void
+
+    var body: some View {
+        QuickAddView(model: model, onSubmit: onSubmit)
+            .environment(\.nativeWebTheme, webTheme)
     }
 }

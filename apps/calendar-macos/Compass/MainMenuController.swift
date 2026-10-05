@@ -12,6 +12,7 @@ final class MainMenuController: NSObject {
     var onToggleNativeUI: (() -> Void)?
     var onSelectNativeTheme: ((NativeWebTheme) -> Void)?
     weak var nativeRootController: NativeRootController?
+    weak var quickAddCoordinator: DesktopQuickAddCoordinator?
 
     init(
         webViewController: WebViewController,
@@ -111,6 +112,8 @@ final class MainMenuController: NSObject {
             return #selector(useNativeThemeLightBeach(_:))
         case .nativeThemeDarkAbyss:
             return #selector(useNativeThemeDarkAbyss(_:))
+        case .openQuickAddPanel:
+            return #selector(openQuickAddPanel(_:))
         case let .standardEdit(selectorName):
             return Selector(selectorName)
         }
@@ -195,6 +198,10 @@ final class MainMenuController: NSObject {
         onSelectNativeTheme?(.darkAbyss)
     }
 
+    @objc private func openQuickAddPanel(_ sender: Any?) {
+        quickAddCoordinator?.presentQuickAddPanel()
+    }
+
 }
 
 extension MainMenuController: NSMenuItemValidation {
@@ -213,6 +220,8 @@ extension MainMenuController: NSMenuItemValidation {
         case #selector(useNativeThemeDarkAbyss(_:)):
             item.state = nativeUIState.theme == .darkAbyss ? .on : .off
             return true
+        case #selector(openQuickAddPanel(_:)):
+            return nativeUIState.isNativeUIEnabled
         default:
             return true
         }
