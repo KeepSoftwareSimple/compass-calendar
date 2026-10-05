@@ -4,19 +4,21 @@ import SwiftUI
 
 public struct ShortcutsLegendOverlay: View {
     @Environment(\.nativeWebTheme) private var theme
-    @Bindable public var model: NativeCalendarRootModel
+    public var model: NativeCalendarRootModel
+    @Bindable private var legendStore: ShortcutsLegendStore
     @FocusState private var searchFocused: Bool
 
     public init(model: NativeCalendarRootModel) {
         self.model = model
+        _legendStore = Bindable(wrappedValue: model.overlayStores.legend)
     }
 
     public var body: some View {
-        if model.shortcutsLegendStore.isOpen {
+        if legendStore.isOpen {
             ZStack {
                 theme.overlayBackdropColor
                     .ignoresSafeArea()
-                    .onTapGesture { model.shortcutsLegendStore.close() }
+                    .onTapGesture { legendStore.close() }
 
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -24,12 +26,12 @@ public struct ShortcutsLegendOverlay: View {
                             .font(.custom("Rubik", size: 16, relativeTo: .headline))
                             .foregroundStyle(theme.textColor)
                         Spacer()
-                        Button("Close") { model.shortcutsLegendStore.close() }
+                        Button("Close") { legendStore.close() }
                             .buttonStyle(.plain)
                             .foregroundStyle(theme.textMutedColor)
                     }
 
-                    TextField("Search shortcuts", text: $model.shortcutsLegendStore.searchQuery)
+                    TextField("Search shortcuts", text: $legendStore.searchQuery)
                         .textFieldStyle(.plain)
                         .font(.custom("Rubik", size: 14, relativeTo: .body))
                         .focused($searchFocused)

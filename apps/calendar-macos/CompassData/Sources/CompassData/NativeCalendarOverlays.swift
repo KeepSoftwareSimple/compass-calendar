@@ -30,7 +30,7 @@ extension NativeCalendarRootModel {
             handlers: handlers)
     }
 
-    func filteredPaletteSections() -> [CommandPaletteSection] {
+    public func filteredPaletteSections() -> [CommandPaletteSection] {
         CommandPaletteSearch.filter(sections: paletteSections(), query: commandPaletteStore.query)
     }
 
@@ -44,7 +44,7 @@ extension NativeCalendarRootModel {
                 isTrialing: billingStore.status?.subscriptionStatus == .trialing))
     }
 
-    func filteredLegendSections() -> [ShortcutLegendSection] {
+    public func filteredLegendSections() -> [ShortcutLegendSection] {
         let query = shortcutsLegendStore.searchQuery
         guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return legendSections()
@@ -60,7 +60,7 @@ extension NativeCalendarRootModel {
         }
     }
 
-    func runPaletteCommand(id: String) {
+    public func runPaletteCommand(id: String) {
         let savedQuery = commandPaletteStore.query
         commandPaletteStore.recordSelection(commandId: id)
 
@@ -129,7 +129,7 @@ extension NativeCalendarRootModel {
         publishGridFocusAccessibilityProbe(eventId: eventId)
     }
 
-    func toggleCommandPalette(fromGoToDate: Bool = false) {
+    public func toggleCommandPalette(fromGoToDate: Bool = false) {
         if commandPaletteStore.isOpen {
             commandPaletteStore.close()
             return
@@ -141,7 +141,7 @@ extension NativeCalendarRootModel {
         }
     }
 
-    func toggleShortcutsLegend() {
+    public func toggleShortcutsLegend() {
         if shortcutsLegendStore.isOpen {
             shortcutsLegendStore.close()
         } else {

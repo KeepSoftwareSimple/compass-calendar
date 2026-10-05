@@ -3,24 +3,26 @@ import SwiftUI
 
 public struct CommandPaletteOverlay: View {
     @Environment(\.nativeWebTheme) private var theme
-    @Bindable public var model: NativeCalendarRootModel
+    public var model: NativeCalendarRootModel
+    @Bindable private var paletteStore: CommandPaletteStore
     @FocusState private var searchFocused: Bool
 
     public init(model: NativeCalendarRootModel) {
         self.model = model
+        _paletteStore = Bindable(wrappedValue: model.overlayStores.palette)
     }
 
     public var body: some View {
-        if model.commandPaletteStore.isOpen {
+        if paletteStore.isOpen {
             ZStack {
                 theme.overlayBackdropColor
                     .ignoresSafeArea()
-                    .onTapGesture { model.commandPaletteStore.close() }
+                    .onTapGesture { paletteStore.close() }
 
                 VStack(alignment: .leading, spacing: 12) {
                     TextField(
                         "Search commands, events, or type a date",
-                        text: $model.commandPaletteStore.query
+                        text: $paletteStore.query
                     )
                     .textFieldStyle(.plain)
                     .font(.custom("Rubik", size: 15, relativeTo: .body))
@@ -55,7 +57,7 @@ public struct CommandPaletteOverlay: View {
                 .accessibilityIdentifier("compass-native-command-palette")
             }
             .onAppear { searchFocused = true }
-            .onChange(of: model.commandPaletteStore.query) { _, _ in
+            .onChange(of: paletteStore.query) { _, _ in
                 model.schedulePaletteEventSearch()
             }
         }

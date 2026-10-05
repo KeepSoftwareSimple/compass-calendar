@@ -14,7 +14,7 @@ public final class NativeCalendarRootModel {
     public let focusStore: FocusStore
     public let pointerHintStore: PointerHintStore
     public let lifeStore: LifeStore
-    let overlayStores: OverlayStores
+    public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
