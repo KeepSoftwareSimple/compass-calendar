@@ -21,6 +21,7 @@ import {
   writeProviderAuthorizationIntent,
 } from "./provider-authorization.storage";
 import {
+  type AuthorizationPrompt,
   buildAppleAuthorizationUrl,
   buildMicrosoftAuthorizationUrl,
   buildProviderAuthCallbackUrl,
@@ -34,7 +35,7 @@ type StartProviderAuthorizationOptions = {
   signupFlow?: boolean;
   onStart?: () => void;
   onError?: (error: unknown) => void;
-  prompt?: "consent" | "none" | "select_account";
+  prompt?: AuthorizationPrompt;
 };
 
 type StartProviderAuthorizationResult = {
@@ -45,6 +46,34 @@ type StartProviderAuthorizationResult = {
 type ProviderAuthorizationStrategy = (
   options: StartProviderAuthorizationOptions,
 ) => StartProviderAuthorizationResult;
+
+/**
+ * The bookkeeping every provider does before handing the browser to a consent
+ * screen: remember the trial method, store the intent under the OAuth state so
+ * the callback can recover the return path, and report the funnel step. Each
+ * strategy then launches its own way, which is all they still spell out.
+ */
+function recordAuthorizationStart(
+  provider: ProviderKind,
+  state: string,
+  {
+    intent,
+    signupFlow,
+  }: Pick<StartProviderAuthorizationOptions, "intent" | "signupFlow">,
+): void {
+  if (signupFlow) {
+    rememberSignupTrialMethod(provider);
+  }
+  writeProviderAuthorizationIntent(provider, state, {
+    intent,
+    returnPath: signupFlow
+      ? buildSignupTrialReturnPath()
+      : getSafeProviderAuthReturnPath(provider),
+    createdAt: Date.now(),
+  });
+  track("oauth_redirect_started", { provider, intent });
+  trackSignupStep("oauth_redirect_started", { method: provider });
+}
 
 const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   intent,
@@ -58,9 +87,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   const [redirectUri] = useState(() => buildProviderAuthCallbackUrl("google"));
 
   const loginOptions = useMemo<
-    UseGoogleLoginOptionsAuthCodeFlow & {
-      prompt?: "consent" | "none" | "select_account";
-    }
+    UseGoogleLoginOptionsAuthCodeFlow & { prompt?: AuthorizationPrompt }
   >(
     () => ({
       flow: "auth-code",
@@ -88,18 +115,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
     startAuthorization: useCallback(() => {
       onStart?.();
       setLoading(true);
-      if (signupFlow) {
-        rememberSignupTrialMethod("google");
-      }
-      writeProviderAuthorizationIntent("google", state, {
-        intent,
-        returnPath: signupFlow
-          ? buildSignupTrialReturnPath()
-          : getSafeProviderAuthReturnPath("google"),
-        createdAt: Date.now(),
-      });
-      track("oauth_redirect_started", { provider: "google", intent });
-      trackSignupStep("oauth_redirect_started", { method: "google" });
+      recordAuthorizationStart("google", state, { intent, signupFlow });
       return startGoogleAuthorization();
     }, [intent, onStart, signupFlow, startGoogleAuthorization, state]),
   };
@@ -125,18 +141,7 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
 
         onStart?.();
         setLoading(true);
-        if (signupFlow) {
-          rememberSignupTrialMethod("microsoft");
-        }
-        writeProviderAuthorizationIntent("microsoft", state, {
-          intent,
-          returnPath: signupFlow
-            ? buildSignupTrialReturnPath()
-            : getSafeProviderAuthReturnPath("microsoft"),
-          createdAt: Date.now(),
-        });
-        track("oauth_redirect_started", { provider: "microsoft", intent });
-        trackSignupStep("oauth_redirect_started", { method: "microsoft" });
+        recordAuthorizationStart("microsoft", state, { intent, signupFlow });
 
         try {
           assignAuthorizationRedirect(
@@ -163,6 +168,8 @@ const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   onError,
 }) => {
   const [loading, setLoading] = useState(false);
+  // Apple returns to the backend form_post route, so the frontend callback it
+  // should land on afterwards rides along inside the state.
   const [state] = useState(() =>
     btoa(
       JSON.stringify({
@@ -176,24 +183,16 @@ const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
     loading,
     startAuthorization: useCallback(() => {
       const clientId = getAppleSignInClientId();
+
       if (!clientId) {
         onError?.(new Error("Apple sign-in is not configured"));
         return;
       }
+
       onStart?.();
       setLoading(true);
-      if (signupFlow) {
-        rememberSignupTrialMethod("apple");
-      }
-      writeProviderAuthorizationIntent("apple", state, {
-        intent,
-        returnPath: signupFlow
-          ? buildSignupTrialReturnPath()
-          : getSafeProviderAuthReturnPath("apple"),
-        createdAt: Date.now(),
-      });
-      track("oauth_redirect_started", { provider: "apple", intent });
-      trackSignupStep("oauth_redirect_started", { method: "apple" });
+      recordAuthorizationStart("apple", state, { intent, signupFlow });
+
       try {
         assignAuthorizationRedirect(
           buildAppleAuthorizationUrl({ clientId, state }),
