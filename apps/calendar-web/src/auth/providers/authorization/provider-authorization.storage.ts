@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { APPLE_AUTH_INTENT_STORAGE_PREFIX } from "@web/auth/apple/authorization/apple-authorization.constants";
 import { sessionBrowserStore } from "@web/common/storage/browser-key-value.store";
 import {
   GOOGLE_AUTH_INTENT_STORAGE_PREFIX,
@@ -23,7 +24,7 @@ export type ProviderAuthorizationIntent = z.infer<
 const INTENT_STORAGE_PREFIX_BY_KIND: Record<ProviderKind, string> = {
   google: GOOGLE_AUTH_INTENT_STORAGE_PREFIX,
   microsoft: `${PROVIDER_AUTH_INTENT_STORAGE_PREFIX}.microsoft`,
-  apple: `${PROVIDER_AUTH_INTENT_STORAGE_PREFIX}.apple`,
+  apple: APPLE_AUTH_INTENT_STORAGE_PREFIX,
 };
 
 const getStorageKey = (provider: ProviderKind, state: string) =>
