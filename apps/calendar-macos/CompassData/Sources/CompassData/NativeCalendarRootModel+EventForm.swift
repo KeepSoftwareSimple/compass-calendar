@@ -135,7 +135,7 @@ extension NativeCalendarRootModel {
         return !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    func baselineEvent(for draft: GridEventDraft) -> Event? {
+    public func baselineEvent(for draft: GridEventDraft) -> Event? {
         guard draft.kind == .edit, let id = draft.persistedEventId else { return nil }
         return loadedEvents.first { $0.id == id }
     }
