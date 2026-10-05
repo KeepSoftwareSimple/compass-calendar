@@ -296,7 +296,15 @@ function assertDiscoveryStatus(status: number): void {
 }
 
 function buildPropfindBody(props: readonly string[]): string {
-  const propElements = props.map((prop) => `<d:${prop}/>`).join("");
+  const namespaces: Record<string, string> = {
+    "calendar-home-set": "cal",
+    "supported-calendar-component-set": "cal",
+    "calendar-color": "ical",
+    getctag: "cs",
+  };
+  const propElements = props
+    .map((prop) => `<${namespaces[prop] ?? "d"}:${prop}/>`)
+    .join("");
   return `<?xml version="1.0" encoding="utf-8"?>
 <d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:ical="http://apple.com/ns/ical/">
   <d:prop>${propElements}</d:prop>

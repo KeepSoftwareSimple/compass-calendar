@@ -22,14 +22,14 @@ const PRINCIPAL_XML = `<?xml version="1.0" encoding="utf-8"?>
 </D:multistatus>`;
 
 const HOME_SET_XML = `<?xml version="1.0" encoding="utf-8"?>
-<D:multistatus xmlns:D="DAV:">
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:response>
     <D:href>/123456789/principal/</D:href>
     <D:propstat>
       <D:prop>
-        <D:calendar-home-set>
+        <C:calendar-home-set>
           <D:href>/123456789/calendars/</D:href>
-        </D:calendar-home-set>
+        </C:calendar-home-set>
       </D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>
@@ -120,9 +120,24 @@ function xmlResponse(body: string, status = 207): Response {
 describe("caldav-client", () => {
   it("discovers principal, home, and writable calendars", async () => {
     const fetchImpl = scriptedFetch([
-      () => xmlResponse(PRINCIPAL_XML),
-      () => xmlResponse(HOME_SET_XML),
-      () => xmlResponse(CALENDARS_XML),
+      (_url, init) => {
+        expect(init?.body).toContain("<d:current-user-principal/>");
+        return xmlResponse(PRINCIPAL_XML);
+      },
+      (_url, init) => {
+        expect(init?.body).toContain(
+          '<d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav"',
+        );
+        expect(init?.body).toContain("<cal:calendar-home-set/>");
+        return xmlResponse(HOME_SET_XML);
+      },
+      (_url, init) => {
+        expect(init?.body).toContain("<cal:supported-calendar-component-set/>");
+        expect(init?.body).toContain("<ical:calendar-color/>");
+        expect(init?.body).toContain("<cs:getctag/>");
+        expect(init?.body).toContain("<d:sync-token/>");
+        return xmlResponse(CALENDARS_XML);
+      },
     ]);
     const client = createCaldavClient(
       { username: "user@icloud.com", password: "app-specific" },
