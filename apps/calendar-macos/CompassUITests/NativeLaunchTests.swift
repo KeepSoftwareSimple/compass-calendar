@@ -173,16 +173,20 @@ final class NativeLaunchTests: XCTestCase {
         debugMenu.click()
         app.menuItems["Open Quick Add Panel"].click()
 
-        let panel = app.descendants(matching: .any)["compass-native-quick-add-window"]
+        let panel = app.windows.matching(
+            NSPredicate(format: "identifier == %@", "compass-native-quick-add-window")
+        ).firstMatch
         XCTAssertTrue(panel.waitForExistence(timeout: 5))
-        let field = app.descendants(matching: .any)["compass-native-quick-add-field"]
+        let field = panel.textFields.matching(
+            NSPredicate(format: "identifier == %@", "compass-native-quick-add-field")
+        ).firstMatch
         XCTAssertTrue(
             field.waitForExistence(timeout: 10),
             "Expected native quick-add text field after opening the panel")
         field.click()
         field.typeText("Quick add fixture")
 
-        panel.typeKey(.enter, modifierFlags: [])
+        field.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(
             window.buttons["Quick add fixture"].waitForExistence(timeout: 10),
             "Expected saved quick-add event on the native grid")

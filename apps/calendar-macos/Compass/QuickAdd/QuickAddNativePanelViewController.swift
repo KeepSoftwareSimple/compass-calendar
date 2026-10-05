@@ -66,7 +66,6 @@ final class QuickAddNativePanelViewController: NSViewController {
         super.viewDidAppear()
         queryField.stringValue = ""
         view.window?.makeFirstResponder(queryField)
-        view.setAccessibilityChildren([queryField, hintField])
     }
 
     func applyTheme() {
