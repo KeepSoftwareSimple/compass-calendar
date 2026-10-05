@@ -269,6 +269,7 @@ extension NativeCalendarRootModel {
     }
 }
 
+@MainActor
 public protocol ShortcutsCatalogPresenting: AnyObject {
     func presentPublicCatalog(sections: [ShortcutLegendSection])
 }
