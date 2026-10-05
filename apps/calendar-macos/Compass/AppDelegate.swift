@@ -61,8 +61,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.window = window
         installRootContent(on: window)
 
-        if !usingNativeUI, let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
-            webViewController.receiveDeepLink(urlString: launchDeepLink)
+        if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
+            if usingNativeUI {
+                nativeRootController?.receiveDeepLink(urlString: launchDeepLink)
+            } else {
+                webViewController.receiveDeepLink(urlString: launchDeepLink)
+            }
         }
     }
 

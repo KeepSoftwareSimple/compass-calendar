@@ -22,6 +22,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
+    private var deepLinkRouter = DeepLinkRouter()
     private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
     private var notificationScheduler: NotificationScheduler?
@@ -43,12 +44,18 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
         }
         applyTheme()
+        deepLinkRouter.onDeliver = { [weak self] url in
+            self?.deliverDeepLink(url)
+        }
         configureSettingsBridge()
         configureNativeServices()
         configureKeyboard()
         configureResume()
         quickAddHotKeyController.start()
-        Task { await model.start() }
+        Task {
+            await model.start()
+            deepLinkRouter.markConsumerReady()
+        }
     }
 
     override func viewDidAppear() {
@@ -99,7 +106,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         guard DesktopDeepLinkParser.recognizedURLString(urlString) != nil else { return }
         NSApp.activate(ignoringOtherApps: true)
         view.window?.makeKeyAndOrderFront(nil)
-        model.handleDeepLink(urlString)
+        _ = deepLinkRouter.receive(urlString: urlString)
     }
 
     private func applyTheme() {
@@ -164,7 +171,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
 extension NativeRootController: CompassNotificationDelivering, CompassAgendaDeepLinkDelivering {
     func deliverDeepLink(_ url: String) {
-        receiveDeepLink(urlString: url)
+        NSApp.activate(ignoringOtherApps: true)
+        view.window?.makeKeyAndOrderFront(nil)
+        model.handleDeepLink(url)
+        if let path = DesktopDeepLinkParser.navigationPath(for: url) {
+            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
+        }
     }
 
     func syncNotificationPermission() {}

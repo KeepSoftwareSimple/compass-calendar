@@ -16,6 +16,11 @@ public struct RootView: View {
                 sidebar
                 VStack(spacing: 0) {
                     header
+                    if model.showsDemoEventsBanner {
+                        DemoEventsBannerView {
+                            model.dismissDemoEventsBanner()
+                        }
+                    }
                     content
                 }
             }

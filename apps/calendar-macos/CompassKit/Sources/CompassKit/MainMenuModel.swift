@@ -41,6 +41,7 @@ public enum MainMenuActionKind: Equatable, Sendable {
     case quit
     case openSettings
     case openHelp
+    case shareFeedback
     case checkForUpdates
     case restartToUpdate
     case switchToStaging
@@ -195,6 +196,7 @@ public enum MainMenuModel {
                     title: "Compass Help",
                     action: .openHelp,
                     keyEquivalent: shortcutKeyEquivalents[.otherShortcuts]),
+                MainMenuRow(title: "Share Feedback…", action: .shareFeedback),
             ])
     }
 
