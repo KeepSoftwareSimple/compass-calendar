@@ -1,7 +1,6 @@
 import Foundation
 
-private let htmlTagPattern =
-    /<(p|br|a|ul|ol|b|i|strong|em|div)\b/i
+private let htmlTagPattern = #"(?i)<(p|br|a|ul|ol|b|i|strong|em|div)\b"#
 
 public enum DescriptionPlainText {
     public static func looksLikeHtml(_ value: String) -> Bool {
