@@ -4,8 +4,8 @@ import SwiftUI
 public struct QuickAddView: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable private var model: NativeCalendarRootModel
-    @FocusState private var fieldFocused: Bool
     @State private var query = ""
+    @State private var shouldFocusField = false
     private let onSubmit: () -> Void
 
     public init(model: NativeCalendarRootModel, onSubmit: @escaping () -> Void) {
@@ -15,12 +15,14 @@ public struct QuickAddView: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            TextField(
-                "Add an event, or type a time like 1130",
-                text: $query
+            QuickAddFieldRepresentable(
+                text: $query,
+                shouldFocus: shouldFocusField,
+                onSubmit: onSubmit,
+                onTextChange: { newValue in
+                    model.syncQuickAddQuery(newValue)
+                }
             )
-            .textFieldStyle(.plain)
-            .focused($fieldFocused)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(theme.surfacePanelColor)
@@ -28,11 +30,6 @@ public struct QuickAddView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(theme.borderColor, lineWidth: 1)
             )
-            .accessibilityIdentifier("compass-native-quick-add-field")
-            .onSubmit(onSubmit)
-            .onChange(of: query) { _, newValue in
-                model.syncQuickAddQuery(newValue)
-            }
 
             if !model.draftStore.quickTimeDigits.isEmpty {
                 Text(quickTimeStatus(model.draftStore.quickTimeDigits))
@@ -48,7 +45,7 @@ public struct QuickAddView: View {
         .accessibilityIdentifier("compass-native-quick-add-panel")
         .onAppear {
             query = ""
-            fieldFocused = true
+            shouldFocusField = true
         }
     }
 
