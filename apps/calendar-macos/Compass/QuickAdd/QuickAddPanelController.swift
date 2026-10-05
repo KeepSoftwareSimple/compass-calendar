@@ -14,7 +14,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private var escapeMonitor: Any?
     private var returnMonitor: Any?
     private var isVisible = false
-    /// Menu actions resign key to the main window right after opening the panel.
+    /// Menu actions resign key to the main window right after opening the panel. UI tests keep the panel key via `UITestLaunchPolicy`.
     private var suppressResignKeyHideUntil: Date?
     private var isSubmittingNativeQuickAdd = false
 
