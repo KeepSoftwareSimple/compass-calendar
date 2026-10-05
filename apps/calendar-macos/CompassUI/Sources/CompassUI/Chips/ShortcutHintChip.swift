@@ -8,7 +8,7 @@ public struct ShortcutHintChip: View {
     }
     @Environment(\.nativeWebTheme) private var theme
 
-    var body: some View {
+    public var body: some View {
         Text(label)
             .font(.custom("Rubik", size: 11, relativeTo: .caption))
             .foregroundStyle(theme.textColor)
