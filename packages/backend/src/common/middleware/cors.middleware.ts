@@ -1,5 +1,7 @@
 import cors from "cors";
-import { CONFIG } from "../constants/config.constants";
+import { type RequestHandler } from "express";
+import { APPLE_SIGNIN_FORM_POST_PATH } from "@backend/auth/services/apple/apple.auth.callback";
+import { CONFIG } from "@backend/common/constants/config.constants";
 
 const corsWhitelist = cors({
   credentials: true,
@@ -14,4 +16,19 @@ const corsWhitelist = cors({
   },
 });
 
-export default corsWhitelist;
+const corsMiddleware: RequestHandler = (req, res, next) => {
+  // Apple's form_post is a top-level navigation, not a cross-origin API read.
+  // Let the callback validate its state without granting Apple API CORS access.
+  if (
+    req.method === "POST" &&
+    req.path === APPLE_SIGNIN_FORM_POST_PATH &&
+    req.get("origin") === "https://appleid.apple.com"
+  ) {
+    next();
+    return;
+  }
+
+  corsWhitelist(req, res, next);
+};
+
+export default corsMiddleware;
