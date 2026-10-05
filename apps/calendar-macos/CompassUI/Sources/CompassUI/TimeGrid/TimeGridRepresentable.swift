@@ -71,14 +71,8 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             )
         }
 
-        public func timeGridView(
-            _ view: TimeGridView,
-            didEditDraftTitle title: String,
-            eventId: String
-        ) {
-            guard model.draftStore.gridDraft?.clientId.rawValue == eventId else { return }
-            model.setDraftTitle(title)
-            view.update(state: model.timeGridState, theme: theme)
+        public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
+            model.settingsStore.openTimezoneDialog(.timeTravel)
         }
 
         private func focusedEventLabel(for eventId: String) -> String? {
