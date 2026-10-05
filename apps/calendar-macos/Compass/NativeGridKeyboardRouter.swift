@@ -342,9 +342,8 @@ final class NativeGridKeyboardRouter {
                     return false
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
-                    Task { await model.saveDraft() }
-                    pumpMainActorUntil(timeout: 10) {
-                        self.model.draftStore.gridDraft == nil && self.model.undoStore.canUndo
+                    pumpMainActorUntilAsyncWork(timeout: 10) {
+                        await self.model.saveDraft()
                     }
                     return true
                 }
@@ -417,7 +416,9 @@ final class NativeGridKeyboardRouter {
         case .editHide:
             model.toggleFocusedEventHidden()
         case .otherUndo:
-            model.undoLastChange()
+            pumpMainActorUntilAsyncWork(timeout: 10) {
+                await self.model.undoLastChangeAndWait()
+            }
         case .otherRedo:
             model.redoLastChange()
         case .editSave:
@@ -470,11 +471,22 @@ final class NativeGridKeyboardRouter {
         model.setEventJumpHintsVisible(eventJumpHold.phase == .hintsVisible)
     }
 
-    /// XCUITest can send the next key before an unstructured `Task` runs; drain through save + undo record.
-    private func pumpMainActorUntil(timeout: TimeInterval, _ condition: @escaping () -> Bool) {
+    /// XCUITest can send the next key before an unstructured `Task` runs; drain through async grid work.
+    private func pumpMainActorUntilAsyncWork(
+        timeout: TimeInterval,
+        _ work: @escaping @MainActor () async -> Void
+    ) {
+        final class Gate: @unchecked Sendable {
+            var finished = false
+        }
+        let gate = Gate()
+        Task { @MainActor in
+            await work()
+            gate.finished = true
+        }
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
-            if condition() { return }
+            if gate.finished { return }
             RunLoop.current.run(until: Date().addingTimeInterval(0.01))
         }
     }

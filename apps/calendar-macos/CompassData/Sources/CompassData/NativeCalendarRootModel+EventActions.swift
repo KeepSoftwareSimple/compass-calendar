@@ -182,6 +182,10 @@ extension NativeCalendarRootModel {
     }
 
     public func undoLastChange() {
+        Task { await undoLastChangeAndWait() }
+    }
+
+    public func undoLastChangeAndWait() async {
         guard let entry = undoStore.peekUndo() else {
             statusToastStore.show(id: "undo-status", message: "Nothing to undo")
             return
@@ -192,10 +196,8 @@ extension NativeCalendarRootModel {
             return
         }
         undoStore.commitUndo()
-        Task {
-            await undoStore.runHistoryRestoreAsync {
-                await self.replayUndoEntry(entry)
-            }
+        await undoStore.runHistoryRestoreAsync {
+            await self.replayUndoEntry(entry)
         }
         if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
             levelsStore.recordShortcutInvocation(.otherUndo, section: section)
