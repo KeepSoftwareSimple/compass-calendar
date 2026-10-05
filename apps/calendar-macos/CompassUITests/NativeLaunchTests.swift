@@ -187,6 +187,7 @@ final class NativeLaunchTests: XCTestCase {
             "-COMPASS_NATIVE_UI", "YES",
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
         ]
         app.launch()
 
@@ -195,11 +196,8 @@ final class NativeLaunchTests: XCTestCase {
         waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
 
         window.typeKey(.enter, modifierFlags: [])
-        let form = window.descendants(matching: .any)["compass-event-form"]
-        XCTAssertTrue(form.waitForExistence(timeout: 5))
-
-        let titleField = form.textFields["Title"]
-        XCTAssertTrue(titleField.waitForExistence(timeout: 3))
+        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
         titleField.click()
         titleField.typeKey("a", modifierFlags: [.command])
         titleField.typeText("Updated standup")

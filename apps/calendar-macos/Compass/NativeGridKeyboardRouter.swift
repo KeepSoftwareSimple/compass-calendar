@@ -277,20 +277,27 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty {
-            if model.draftStore.gridDraft != nil {
-                if model.draftStore.status.isFormOpen {
-                    return false
-                }
-                Task { await model.saveDraft() }
-                return true
-            }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.commitQuickTimeIfBuffered()
                 return true
             }
+            if model.draftStore.gridDraft != nil {
+                if model.draftStore.status.isFormOpen {
+                    return false
+                }
+                if model.draftStore.status.activity == .keyboardPlace {
+                    Task { await model.saveDraft() }
+                    return true
+                }
+                model.openEventFormForCurrentDraft()
+                return true
+            }
             if model.focusStore.focusedEventId != nil {
                 model.openKeyboardEditForFocusedEvent()
-                return true
+                if model.isEventFormVisible {
+                    return true
+                }
+                return false
             }
         }
 
