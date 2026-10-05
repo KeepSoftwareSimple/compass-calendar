@@ -57,7 +57,12 @@ public struct RootView: View {
             }
         }
         .overlay {
-            AuthModalOverlay(authStore: model.authStore, billingStore: model.billingStore)
+            if model.authStore.isModalPresented, model.activeOnboardingSurface != .welcomeModal {
+                AuthModalOverlay(authStore: model.authStore, billingStore: model.billingStore)
+            }
+        }
+        .overlay {
+            OnboardingOverlay(model: model)
         }
         .overlay {
             if model.authStore.authenticated, model.billingStore.gateStatus != nil {
@@ -225,7 +230,7 @@ public struct RootView: View {
 
     @ViewBuilder
     private var pointerHintLayer: some View {
-        if model.pointerHintStore.isVisible {
+        if model.activeOnboardingSurface == .pointerHint, model.pointerHintStore.isVisible {
             PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
                 .padding(.top, 16)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

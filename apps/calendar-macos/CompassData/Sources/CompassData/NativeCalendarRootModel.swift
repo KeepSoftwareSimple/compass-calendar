@@ -14,6 +14,7 @@ public final class NativeCalendarRootModel {
     public let focusStore: FocusStore
     public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
+    public let onboardingStore: OnboardingStore
     public let lifeStore: LifeStore
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
@@ -94,6 +95,7 @@ public final class NativeCalendarRootModel {
         focusStore = FocusStore(view: .week)
         draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
+        onboardingStore = environment.onboardingStore
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -113,10 +115,80 @@ public final class NativeCalendarRootModel {
         rebuildPresentation()
     }
 
+    public var activeOnboardingSurface: OnboardingSurfaceKind? {
+        OnboardingGating.selectActiveSurface(onboardingSurfaceInput)
+    }
+
+    public var connectCalendarProviderKinds: [SignInProviderKind] {
+        guard let providers = configStore.config?.providers else { return [] }
+        var kinds: [SignInProviderKind] = []
+        if providers.google.connect { kinds.append(.google) }
+        if providers.microsoft.connect { kinds.append(.microsoft) }
+        if providers.apple.connect { kinds.append(.apple) }
+        return kinds
+    }
+
+    public func openWelcomeGuideFromMenu() {
+        onboardingStore.openWelcomeGuide()
+    }
+
+    public func connectCalendar(provider: SignInProviderKind) async {
+        let mapped: ProviderEnum = switch provider {
+        case .google: .google
+        case .microsoft: .microsoft
+        case .apple: .apple
+        }
+        await syncConnectionsStore.connect(provider: mapped)
+        await syncConnectionsStore.reloadFromMetadata()
+    }
+
+    private var onboardingSurfaceInput: OnboardingGating.ActiveSurfaceInput {
+        let gateStatus = billingStore.gateStatus
+        let showCalendarOnboarding =
+            gateStatus == nil &&
+            demoPresentation == nil &&
+            viewStore.view != .life
+        let connectEligible = OnboardingGating.selectConnectCalendarPromptSurfaceEligible(
+            authenticated: isSignedIn,
+            metadataLoaded: onboardingStore.userMetadataLoaded,
+            connectionCount: syncConnectionsStore.connections.count,
+            isSnoozed: onboardingStore.isConnectCalendarSnoozed,
+            availableProviderCount: connectCalendarProviderKinds.count,
+            storageAvailable: true,
+            isAuthModalOpen: authStore.isModalPresented,
+            isSettingsOpen: billingStore.isSettingsPresented,
+            isAboutOpen: false,
+            isAppleFormOpen: false,
+            isMissingPermissionsOpen: false)
+        let firstEventEligible = OnboardingGating.selectFirstEventPromptSurfaceEligible(
+            isAuthModalOpen: authStore.isModalPresented,
+            isSettingsOpen: billingStore.isSettingsPresented,
+            isAboutOpen: false,
+            isFormOpen: false,
+            isDone: onboardingStore.isFirstEventDone,
+            storageAvailable: true,
+            showcaseActive: false)
+        return OnboardingGating.ActiveSurfaceInput(
+            gateStatus: gateStatus,
+            isCheckoutCelebrating: false,
+            showCalendarOnboarding: showCalendarOnboarding,
+            authenticated: isSignedIn,
+            isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
+            isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
+            guestMeetingSetupActive: false,
+            shortcutShowcaseActive: false,
+            connectCalendarEligible: connectEligible,
+            firstEventEligible: firstEventEligible,
+            pointerHintVisible: pointerHintStore.isVisible,
+            pointerHintDismissedPermanently: OnboardingGating.pointerHintDismissedPermanently(),
+            isLifeView: viewStore.view == .life)
+    }
+
     public func start() async {
         await configStore.load()
         await configureAnalyticsFromConfig()
-        await authStore.bootstrap()
+        let deferAuthForWelcome = demoPresentation == nil && !onboardingStore.hasSeenWelcome
+        await authStore.bootstrap(deferModalUntilWelcomeCompletes: deferAuthForWelcome)
         if demoPresentation != nil {
             authStore.closeModal()
         }
@@ -163,6 +235,8 @@ public final class NativeCalendarRootModel {
         await billingStore.refreshAfterSignIn()
         startEventStream()
         await syncConnectionsStore.reloadFromMetadata()
+        onboardingStore.markUserMetadataLoaded()
+        onboardingStore.refreshConnectCalendarSnooze()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
         await refreshVisibleRange()
@@ -177,6 +251,7 @@ public final class NativeCalendarRootModel {
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
         billingStore.closeSettings()
+        onboardingStore.resetUserMetadataLoaded()
         if let eventStream {
             await eventStream.stop()
         }
