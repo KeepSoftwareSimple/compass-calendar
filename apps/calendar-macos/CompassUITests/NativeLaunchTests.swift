@@ -210,7 +210,10 @@ final class NativeLaunchTests: XCTestCase {
             field.waitForExistence(timeout: 10),
             "Expected native quick-add text field after opening the panel")
         field.click()
-        field.typeText("Quick add fixture")
+        for part in ["Quick ", "add ", "fixture"] {
+            field.typeText(part)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
+        }
 
         panel.typeKey(.enter, modifierFlags: [])
         waitForFocusedGridEvent(title: "Quick add fixture", in: window, timeout: 15)
