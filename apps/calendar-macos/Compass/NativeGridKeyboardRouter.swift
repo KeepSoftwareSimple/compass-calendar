@@ -180,6 +180,13 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key, char == "z" {
+            pumpMainActorUntilAsyncWork(timeout: 10) {
+                await self.model.undoLastChangeAndWait()
+            }
+            return true
+        }
+
         if case .character(let char) = keyEvent.key, char == "h", keyEvent.modifiers.isEmpty {
             eventJumpHold.handleModifierDown(isRepeat: keyEvent.isRepeat)
             if !keyEvent.isRepeat {
@@ -416,9 +423,7 @@ final class NativeGridKeyboardRouter {
         case .editHide:
             model.toggleFocusedEventHidden()
         case .otherUndo:
-            pumpMainActorUntilAsyncWork(timeout: 10) {
-                await self.model.undoLastChangeAndWait()
-            }
+            model.undoLastChange()
         case .otherRedo:
             model.redoLastChange()
         case .editSave:

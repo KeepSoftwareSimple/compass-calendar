@@ -151,25 +151,26 @@ extension NativeCalendarRootModel {
         let snapshot = event
         do {
             try await eventsStore.deleteOptimistic(id: event.id, scope: scope)
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            if focusStore.focusedEventId == event.id {
-                focusStore.setFocused(eventId: nil, eventType: nil)
-            }
-            if !undoStore.isRestoringHistory() {
-                if undoable {
-                    undoStore.record(.delete(event: snapshot))
-                } else if scope == .this {
-                    undoStore.record(.unrecorded)
-                }
-            }
-            rebuildPresentation()
-            if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
-                _ = recurrenceScopeStore.beginDeleteAsk(for: event)
-                statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
-            }
         } catch {}
+        loadedEvents.removeAll { $0.id == event.id }
+        if let events = try? eventsStore.fetchAllEvents() {
+            loadedEvents = events
+        }
+        if focusStore.focusedEventId == event.id {
+            focusStore.setFocused(eventId: nil, eventType: nil)
+        }
+        if !undoStore.isRestoringHistory() {
+            if undoable {
+                undoStore.record(.delete(event: snapshot))
+            } else if scope == .this {
+                undoStore.record(.unrecorded)
+            }
+        }
+        rebuildPresentation()
+        if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
+            _ = recurrenceScopeStore.beginDeleteAsk(for: event)
+            statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
+        }
     }
 
     public func promotePendingDelete(scope: RecurrenceScopePromotionKind) {
@@ -225,6 +226,8 @@ extension NativeCalendarRootModel {
         case .create(let event):
             let scope: EventDeleteScope = if case .series = event.recurrence { .all } else { .this }
             await deleteEvent(event, scope: scope)
+            loadedEvents.removeAll { $0.id == event.id }
+            rebuildPresentation()
         case .delete(let event):
             await commitDuplicate(from: event, recordUndo: false)
         case .edit(_, let before, _):
