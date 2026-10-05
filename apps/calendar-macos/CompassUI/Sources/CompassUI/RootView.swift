@@ -76,6 +76,12 @@ public struct RootView: View {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
         }
         .overlay {
+            CommandPaletteOverlay(model: model)
+        }
+        .overlay {
+            ShortcutsLegendOverlay(model: model)
+        }
+        .overlay {
             DedicationDialogView(
                 isPresented: model.dedicationDialogVisible,
                 onClose: { model.dedicationDialogVisible = false }

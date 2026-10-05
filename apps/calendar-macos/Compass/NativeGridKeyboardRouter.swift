@@ -60,7 +60,8 @@ final class NativeGridKeyboardRouter {
             .navJoinMeeting,
             .otherSettings,
         ]
-        let handlerIds = focusIds.union(navigationIds).union(createIds)
+        let overlayIds: Set<ShortcutId> = [.otherPalette, .otherShortcuts, .navGoToDate]
+        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds)
 
         var handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard handlerIds.contains(entry.id) else { return nil }
@@ -111,6 +112,13 @@ final class NativeGridKeyboardRouter {
                 return true
             }
             return false
+        }
+
+        dispatcher.isTextInputFocused = model.overlayKeyboardCaptureActive
+        if model.overlayKeyboardCaptureActive {
+            if handleOverlayKeyDown(keyEvent) {
+                return true
+            }
         }
 
         if handleDraftKeys(keyEvent) {
@@ -215,6 +223,12 @@ final class NativeGridKeyboardRouter {
             model.joinUpNextMeeting()
         case .editCycleEdge:
             model.handleShiftTabCycleEdge()
+        case .otherPalette:
+            model.toggleCommandPalette()
+        case .otherShortcuts:
+            model.toggleShortcutsLegend()
+        case .navGoToDate:
+            model.toggleCommandPalette(fromGoToDate: true)
         case .createTimed:
             model.createTimedDraft(activity: .createShortcut)
         case .createAllday:
@@ -228,6 +242,36 @@ final class NativeGridKeyboardRouter {
         default:
             model.handleShortcut(id)
         }
+    }
+
+    private func handleOverlayKeyDown(_ event: KeyEvent) -> Bool {
+        if event.matches(KeyChord(token: .named(.escape))) {
+            if model.commandPaletteStore.isOpen {
+                model.commandPaletteStore.close()
+            } else {
+                model.shortcutsLegendStore.close()
+            }
+            return true
+        }
+
+        if model.commandPaletteStore.isOpen {
+            if event.matches(KeyChord(token: .named(.enter))) {
+                if let first = model.filteredPaletteSections().flatMap(\.items).first {
+                    model.runPaletteCommand(id: first.id)
+                }
+                return true
+            }
+            if let id = dispatcher.dispatch(event), id == .otherPalette {
+                model.toggleCommandPalette()
+                return true
+            }
+            return false
+        }
+
+        if model.shortcutsLegendStore.isOpen {
+            return false
+        }
+        return false
     }
 
     func handleKeyUp(_ event: NSEvent) {

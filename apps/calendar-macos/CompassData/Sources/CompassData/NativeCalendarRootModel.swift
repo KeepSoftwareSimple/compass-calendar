@@ -16,6 +16,7 @@ public final class NativeCalendarRootModel {
     public let pointerHintStore: PointerHintStore
     public let onboardingStore: OnboardingStore
     public let lifeStore: LifeStore
+    public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
@@ -32,10 +33,12 @@ public final class NativeCalendarRootModel {
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
+    public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
+    var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
 
-    private let environment: NativeCalendarEnvironment
+    let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
@@ -63,9 +66,14 @@ public final class NativeCalendarRootModel {
             repository: environment.userMetadataRepository)
     }
 
-    public init(environment: NativeCalendarEnvironment, demoPresentation: DemoSeedFixture? = nil) {
+    public init(
+        environment: NativeCalendarEnvironment,
+        demoPresentation: DemoSeedFixture? = nil,
+        overlayStores: OverlayStores = OverlayStores()
+    ) {
         self.environment = environment
         self.demoPresentation = demoPresentation
+        self.overlayStores = overlayStores
         if let demoPresentation {
             EffectiveTimeZone.identifier = demoPresentation.timeZone
         }
@@ -113,6 +121,10 @@ public final class NativeCalendarRootModel {
         }
         billingStore.setAuthenticated(authStore.authenticated)
         rebuildPresentation()
+    }
+
+    func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
+        paletteEventSearchHits = hits
     }
 
     public var activeOnboardingSurface: OnboardingSurfaceKind? {
@@ -341,6 +353,12 @@ public final class NativeCalendarRootModel {
             cycleFocusedEdge(forward: true)
         case .otherSettings:
             billingStore.openSettings()
+        case .otherPalette:
+            toggleCommandPalette()
+        case .otherShortcuts:
+            toggleShortcutsLegend()
+        case .navGoToDate:
+            toggleCommandPalette(fromGoToDate: true)
         default:
             break
         }
