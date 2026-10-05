@@ -70,7 +70,7 @@ public enum GridEventDraftMapping {
 
     private static func inputContent(from draft: GridEventDraft, title: String) -> CreateEventInputContent {
         CreateEventInputContent(
-            color: draft.color.map { ColorEnum(rawValue: $0.rawValue) },
+            color: draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) },
             description: draft.description,
             kind: "details",
             location: draft.location,
@@ -80,7 +80,7 @@ public enum GridEventDraftMapping {
 
     private static func contentPayload(from draft: GridEventDraft, title: String) -> EventContent_DetailsPayload {
         EventContent_DetailsPayload(
-            color: draft.color.map { ColorEnum(rawValue: $0.rawValue) },
+            color: draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) },
             description: draft.description,
             kind: "details",
             location: draft.location.isEmpty ? nil : draft.location,
