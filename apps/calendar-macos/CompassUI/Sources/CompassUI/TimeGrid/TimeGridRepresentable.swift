@@ -81,6 +81,16 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             view.update(state: model.timeGridState, theme: theme)
         }
 
+        public func timeGridView(
+            _ view: TimeGridView,
+            didOpenEventMenu eventId: String,
+            at locationInWindow: NSPoint
+        ) {
+            model.focusGridEvent(eventId: eventId)
+            view.update(state: model.timeGridState, theme: theme)
+            model.openEventMenu(fromKeyboard: false, anchor: CGPoint(x: locationInWindow.x, y: locationInWindow.y))
+        }
+
         private func focusedEventLabel(for eventId: String) -> String? {
             let colWidths = model.timeGridState.resolvedColumnWidths()
             return model.timeGridState.snapshot(colWidths: colWidths).cards

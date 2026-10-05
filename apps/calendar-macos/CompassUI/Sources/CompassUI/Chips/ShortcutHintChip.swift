@@ -1,7 +1,11 @@
 import SwiftUI
 
-struct ShortcutHintChip: View {
-    let label: String
+public struct ShortcutHintChip: View {
+    public let label: String
+
+    public init(label: String) {
+        self.label = label
+    }
     @Environment(\.nativeWebTheme) private var theme
 
     var body: some View {

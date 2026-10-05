@@ -160,6 +160,9 @@ extension NativeCalendarRootModel {
         do {
             try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
             loadedEvents = try eventsStore.fetchAllEvents()
+            if let saved = loadedEvents.first(where: { $0.id.rawValue == savedId }) {
+                recordCreateUndo(for: saved)
+            }
             rebuildPresentation()
             focusEvent(eventId: savedId)
         } catch {}
