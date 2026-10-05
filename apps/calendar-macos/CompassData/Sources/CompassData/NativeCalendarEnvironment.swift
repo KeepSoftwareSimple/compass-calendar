@@ -6,6 +6,8 @@ public struct NativeCalendarEnvironment: Sendable {
     public let database: AppDatabase
     public let eventsStore: EventsStore
     public let hiddenEventsStore: HiddenEventsStore
+    public let clipboardStore: ClipboardStore
+    public let undoStore: UndoStore
     public let calendarRepository: CalendarRepository
     public let localEventRepository: LocalEventRepository
     public let userMetadataRepository: UserMetadataRepository
@@ -57,10 +59,14 @@ public struct NativeCalendarEnvironment: Sendable {
             eventsAPI: EventsAPI(client: apiClient),
             source: source
         )
+        let hiddenSource: HiddenEventRepositorySource = source == .local ? .local : .remote
         hiddenEventsStore = HiddenEventsStore(
             repository: HiddenEventRepository(database: database),
-            remoteClient: UserAPI(client: apiClient)
+            remoteClient: UserAPI(client: apiClient),
+            source: hiddenSource
         )
+        clipboardStore = ClipboardStore()
+        undoStore = UndoStore()
         configStore = ConfigStore(apiClient: apiClient)
         oauthService = OAuthAuthorizationService(
             apiClient: apiClient,

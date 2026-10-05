@@ -83,6 +83,7 @@ final class EventCardView: NSView {
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
         setAccessibilityIdentifier(card.accessibilityIdentifier)
+        setAccessibilityValue(card.isHiddenStrip ? "hidden" : "visible")
         syncFocusAccessibilityAnchor(isFocused: isFocused, label: card.label)
 
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? surfaceColor

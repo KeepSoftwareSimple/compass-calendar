@@ -148,6 +148,21 @@ extension NativeCalendarRootModel {
         focusDraftCard()
     }
 
+    public func saveDraftSynchronouslyForUITest() {
+        final class DoneFlag: @unchecked Sendable {
+            var value = false
+        }
+        let done = DoneFlag()
+        Task { @MainActor in
+            await self.saveDraft()
+            done.value = true
+        }
+        let deadline = Date().addingTimeInterval(10)
+        while !done.value, Date() < deadline {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+        }
+    }
+
     public func saveDraft() async {
         guard let draft = draftStore.gridDraft else { return }
         let baseline = baselineEvent(for: draft)
@@ -157,7 +172,7 @@ extension NativeCalendarRootModel {
             guard let input = GridEventDraftMapping.createInput(from: draft),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
-            await persistDraftOptimistic(savedId: optimistic.id.rawValue) {
+            await persistDraftOptimistic(savedId: optimistic.id.rawValue, undoCreate: optimistic) {
                 try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
             }
         case .edit:
@@ -175,9 +190,16 @@ extension NativeCalendarRootModel {
         }
     }
 
-    private func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {
+    private func persistDraftOptimistic(
+        savedId: String,
+        undoCreate: Event? = nil,
+        apply: () async throws -> Void
+    ) async {
         draftStore.commit()
         formFieldDigitHintsVisible = false
+        if let undoCreate {
+            recordCreateUndo(for: undoCreate)
+        }
         rebuildPresentation()
         do {
             try await apply()

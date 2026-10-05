@@ -69,7 +69,17 @@ final class NativeGridKeyboardRouter {
             .otherSettings,
         ]
         let overlayIds: Set<ShortcutId> = [.otherPalette, .otherShortcuts, .navGoToDate]
-        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds)
+        let editIds: Set<ShortcutId> = [
+            .editDelete,
+            .editDuplicate,
+            .editCopy,
+            .editPaste,
+            .editMenu,
+            .editHide,
+            .otherUndo,
+            .otherRedo,
+        ]
+        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds).union(editIds)
 
         var handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard handlerIds.contains(entry.id) else { return nil }
@@ -129,6 +139,22 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if model.eventMenuStore.isOpen {
+            if keyEvent.key == .named(.escape) {
+                model.closeEventMenu()
+                return true
+            }
+        }
+
+        if model.recurrenceScopeStore.pendingDelete != nil,
+            keyEvent.modifiers.isEmpty,
+            case .character(let digit) = keyEvent.key,
+            digit == "1" || digit == "2"
+        {
+            model.promotePendingDelete(scope: digit == "1" ? .thisAndFollowing : .all)
+            return true
+        }
+
         dispatcher.isTextInputFocused =
             model.overlayKeyboardCaptureActive || model.isEventFormVisible
         if model.overlayKeyboardCaptureActive {
@@ -176,6 +202,7 @@ final class NativeGridKeyboardRouter {
 
         dispatcher.shortcutContext = model.shortcutContext
         if let id = dispatcher.dispatch(keyEvent) {
+            model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
@@ -373,10 +400,24 @@ final class NativeGridKeyboardRouter {
             }
         case .createPlaceDiscard:
             model.requestDiscardDraft()
+        case .editDelete:
+            model.deleteFocusedEvent()
         case .editDuplicate:
             Task { await model.duplicateFocusedOrFormEvent() }
         case .editSave:
             Task { await model.saveDraft() }
+        case .editCopy:
+            model.copyFocusedEvent()
+        case .editPaste:
+            model.pasteCopiedEvent()
+        case .editMenu:
+            model.openEventMenu()
+        case .editHide:
+            model.toggleFocusedEventHidden()
+        case .otherUndo:
+            model.undoLastChange()
+        case .otherRedo:
+            model.redoLastChange()
         default:
             model.handleShortcut(id)
         }
@@ -386,6 +427,8 @@ final class NativeGridKeyboardRouter {
         if event.matches(KeyChord(token: .named(.escape))) {
             if model.commandPaletteStore.isOpen {
                 model.commandPaletteStore.close()
+            } else if model.eventMenuStore.isOpen {
+                model.closeEventMenu()
             } else {
                 model.shortcutsLegendStore.close()
             }

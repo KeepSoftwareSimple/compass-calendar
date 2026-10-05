@@ -82,6 +82,15 @@ public struct RootView: View {
             ShortcutsLegendOverlay(model: model)
         }
         .overlay {
+            WhichKeyPanelOverlay(model: model)
+        }
+        .overlay {
+            EventContextMenuOverlay(model: model)
+        }
+        .overlay {
+            StatusToastOverlay(model: model)
+        }
+        .overlay {
             DedicationDialogView(
                 isPresented: model.dedicationDialogVisible,
                 onClose: { model.dedicationDialogVisible = false }
