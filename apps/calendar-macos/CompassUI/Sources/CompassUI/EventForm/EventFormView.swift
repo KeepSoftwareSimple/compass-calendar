@@ -46,7 +46,6 @@ public struct EventFormView: View {
             .font(.custom("Rubik", size: 16))
             .foregroundStyle(theme.textColor)
             .focused($titleFocused)
-            .accessibilityIdentifier("compass-event-form-title")
             .pageJumpChipAnchor(id: "form-title")
 
             ScrollView {
