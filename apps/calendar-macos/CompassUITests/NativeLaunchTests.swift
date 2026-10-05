@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 final class NativeLaunchTests: XCTestCase {
@@ -210,10 +211,10 @@ final class NativeLaunchTests: XCTestCase {
             field.waitForExistence(timeout: 10),
             "Expected native quick-add text field after opening the panel")
         field.click()
-        for part in ["Quick ", "add ", "fixture"] {
-            field.typeText(part)
-            RunLoop.current.run(until: Date().addingTimeInterval(0.12))
-        }
+        let title = "Quick add fixture"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(title, forType: .string)
+        field.typeKey("v", modifierFlags: [.command])
 
         panel.typeKey(.enter, modifierFlags: [])
         waitForFocusedGridEvent(title: "Quick add fixture", in: window, timeout: 15)
