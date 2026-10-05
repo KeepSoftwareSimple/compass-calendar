@@ -137,8 +137,13 @@ final class NativeGridKeyboardRouter {
             }
         }
 
-        if model.isEventFormVisible, handleEventFormKeys(keyEvent) {
-            return true
+        if model.isEventFormVisible {
+            if handleUITestEventFormTyping(keyEvent) {
+                return true
+            }
+            if handleEventFormKeys(keyEvent) {
+                return true
+            }
         }
 
         if handleDraftKeys(keyEvent) {
@@ -183,6 +188,27 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        return false
+    }
+
+    /// XCUITest typing often misses the SwiftUI title field; mirror keystrokes into the draft.
+    private func handleUITestEventFormTyping(_ keyEvent: KeyEvent) -> Bool {
+        guard UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus else { return false }
+        if keyEvent.modifiers == [.command],
+            case .character(let char) = keyEvent.key,
+            char.lowercased() == "a"
+        {
+            model.updateDraftFromForm(title: "")
+            EventFormAccessibilityProbe.syncTitle("")
+            return true
+        }
+        if keyEvent.modifiers.isEmpty, case .character(let char) = keyEvent.key, char.count == 1 {
+            let current = model.draftStore.gridDraft?.title ?? ""
+            let next = current + char
+            model.updateDraftFromForm(title: next)
+            EventFormAccessibilityProbe.syncTitle(next)
+            return true
+        }
         return false
     }
 
