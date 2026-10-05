@@ -163,6 +163,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
 
     private func submitNativeQuickAdd() async {
         guard let model = nativeModel() else { return }
+        nativePanelController?.commitQueryToModel()
         await model.saveQuickAddFromPanel()
         quickAddRouter?.dismissQuickAddPanel()
     }

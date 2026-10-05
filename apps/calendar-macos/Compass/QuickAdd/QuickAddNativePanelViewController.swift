@@ -101,9 +101,14 @@ extension QuickAddNativePanelViewController: NSTextFieldDelegate {
         doCommandBy commandSelector: Selector
     ) -> Bool {
         if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+            commitQueryToModel()
             onSubmit()
             return true
         }
         return false
+    }
+
+    func commitQueryToModel() {
+        model.syncQuickAddQuery(queryField.stringValue)
     }
 }
