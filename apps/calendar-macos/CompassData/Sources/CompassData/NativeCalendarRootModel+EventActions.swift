@@ -192,10 +192,8 @@ extension NativeCalendarRootModel {
             return
         }
         undoStore.commitUndo()
-        Task {
-            await undoStore.runHistoryRestoreAsync {
-                await self.replayUndoEntry(entry)
-            }
+        flushHistoryReplay {
+            await self.replayUndoEntry(entry)
         }
         if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
             levelsStore.recordShortcutInvocation(.otherUndo, section: section)
@@ -208,10 +206,8 @@ extension NativeCalendarRootModel {
             return
         }
         undoStore.commitRedo()
-        Task {
-            await undoStore.runHistoryRestoreAsync {
-                await self.replayRedoEntry(entry)
-            }
+        flushHistoryReplay {
+            await self.replayRedoEntry(entry)
         }
         if let section = ShortcutTelemetrySection.section(for: .otherRedo) {
             levelsStore.recordShortcutInvocation(.otherRedo, section: section)
@@ -264,5 +260,22 @@ extension NativeCalendarRootModel {
     public func recordCreateUndo(for event: Event) {
         guard !undoStore.isRestoringHistory() else { return }
         undoStore.record(.create(event: event))
+    }
+
+    private func flushHistoryReplay(_ replay: @escaping () async -> Void) {
+        final class DoneFlag: @unchecked Sendable {
+            var value = false
+        }
+        let done = DoneFlag()
+        Task { @MainActor in
+            await undoStore.runHistoryRestoreAsync {
+                await replay()
+            }
+            done.value = true
+        }
+        let deadline = Date().addingTimeInterval(5)
+        while !done.value, Date() < deadline {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
+        }
     }
 }
