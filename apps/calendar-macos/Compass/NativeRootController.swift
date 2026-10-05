@@ -95,13 +95,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         _ = deepLinkRouter.receive(urlString: urlString)
     }
 
-    private func deliverDeepLink(_ urlString: String) {
-        model.handleDeepLink(urlString)
-        if let path = DesktopDeepLinkParser.navigationPath(for: urlString) {
-            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
-        }
-    }
-
     private func applyTheme() {
         rootView = ThemedRootView(webTheme: webTheme, model: model)
         DesktopNativeServices.applyAppearance(theme: webTheme.rawValue)
@@ -164,7 +157,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
 
 extension NativeRootController: CompassNotificationDelivering, CompassAgendaDeepLinkDelivering {
     func deliverDeepLink(_ url: String) {
-        receiveDeepLink(urlString: url)
+        NSApp.activate(ignoringOtherApps: true)
+        view.window?.makeKeyAndOrderFront(nil)
+        model.handleDeepLink(url)
+        if let path = DesktopDeepLinkParser.navigationPath(for: url) {
+            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
+        }
     }
 
     func syncNotificationPermission() {}
