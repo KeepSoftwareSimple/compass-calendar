@@ -176,6 +176,7 @@ public final class NativeCalendarRootModel {
             connectCalendarEligible: connectEligible,
             firstEventEligible: firstEventEligible,
             pointerHintVisible: pointerHintStore.isVisible,
+            pointerHintDismissedPermanently: OnboardingGating.pointerHintDismissedPermanently(),
             isLifeView: viewStore.view == .life)
     }
 

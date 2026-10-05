@@ -102,9 +102,18 @@ public enum OnboardingGating {
 
     public static func selectPointerHintSurfaceEligible(
         pointerHintVisible: Bool,
+        dismissedPermanently: Bool
+    ) -> Bool {
+        pointerHintVisible && !dismissedPermanently
+    }
+
+    public static func selectPointerHintSurfaceEligible(
+        pointerHintVisible: Bool,
         defaults: UserDefaults = .standard
     ) -> Bool {
-        pointerHintVisible && !pointerHintDismissedPermanently(defaults: defaults)
+        selectPointerHintSurfaceEligible(
+            pointerHintVisible: pointerHintVisible,
+            dismissedPermanently: pointerHintDismissedPermanently(defaults: defaults))
     }
 
     public struct ActiveSurfaceInput: Sendable {
@@ -119,8 +128,8 @@ public enum OnboardingGating {
         public var connectCalendarEligible: Bool
         public var firstEventEligible: Bool
         public var pointerHintVisible: Bool
+        public var pointerHintDismissedPermanently: Bool
         public var isLifeView: Bool
-        public var defaults: UserDefaults
 
         public init(
             gateStatus: SubscriptionStatusEnum?,
@@ -134,8 +143,8 @@ public enum OnboardingGating {
             connectCalendarEligible: Bool,
             firstEventEligible: Bool,
             pointerHintVisible: Bool,
-            isLifeView: Bool,
-            defaults: UserDefaults = .standard
+            pointerHintDismissedPermanently: Bool = false,
+            isLifeView: Bool
         ) {
             self.gateStatus = gateStatus
             self.isCheckoutCelebrating = isCheckoutCelebrating
@@ -148,8 +157,8 @@ public enum OnboardingGating {
             self.connectCalendarEligible = connectCalendarEligible
             self.firstEventEligible = firstEventEligible
             self.pointerHintVisible = pointerHintVisible
+            self.pointerHintDismissedPermanently = pointerHintDismissedPermanently
             self.isLifeView = isLifeView
-            self.defaults = defaults
         }
     }
 
@@ -164,7 +173,7 @@ public enum OnboardingGating {
         let firstEvent = input.showCalendarOnboarding && input.firstEventEligible
         let pointerHint = !input.isLifeView && selectPointerHintSurfaceEligible(
             pointerHintVisible: input.pointerHintVisible,
-            defaults: input.defaults)
+            dismissedPermanently: input.pointerHintDismissedPermanently)
 
         return [
             .billingGate: input.gateStatus != nil,
