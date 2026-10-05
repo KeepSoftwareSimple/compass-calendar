@@ -191,7 +191,7 @@ extension NativeCalendarRootModel {
     }
 
     public func requestDiscardDraft() {
-        guard draftStore.gridDraft != nil else { return }
+        guard let draft = draftStore.gridDraft else { return }
         if draftStore.status.isFormOpen {
             requestCloseEventForm()
             return
