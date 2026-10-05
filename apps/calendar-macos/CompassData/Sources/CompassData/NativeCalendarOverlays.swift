@@ -287,6 +287,7 @@ public final class OverlayStores {
     }
 }
 
+@MainActor
 public final class NoOpShortcutsCatalogPresenter: ShortcutsCatalogPresenting {
     public init() {}
     public func presentPublicCatalog(sections: [ShortcutLegendSection]) {}
