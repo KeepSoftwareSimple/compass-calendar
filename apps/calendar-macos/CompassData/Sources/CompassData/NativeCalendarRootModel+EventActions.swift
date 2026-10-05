@@ -151,7 +151,12 @@ extension NativeCalendarRootModel {
         let snapshot = event
         do {
             try await eventsStore.deleteOptimistic(id: event.id, scope: scope)
-            loadedEvents = try eventsStore.fetchAllEvents()
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
+            if focusStore.focusedEventId == event.id {
+                focusStore.setFocused(eventId: nil, eventType: nil)
+            }
             if !undoStore.isRestoringHistory() {
                 if undoable {
                     undoStore.record(.delete(event: snapshot))
