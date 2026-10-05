@@ -5,6 +5,9 @@ import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { providerAuthCallbackPath } from "./provider-authorization.constants";
 import { thirdPartyIdForProviderKind } from "./provider-authorization.third-party";
 
+/** The `prompt` values Compass passes through to a provider consent screen. */
+export type AuthorizationPrompt = "consent" | "none" | "select_account";
+
 export type ProviderAuthCodeRequest = {
   thirdPartyId: ReturnType<typeof thirdPartyIdForProviderKind>;
   clientType: "web";
@@ -96,7 +99,7 @@ export function buildMicrosoftAuthorizationUrl({
   redirectUri: string;
   scopes: readonly string[];
   state: string;
-  prompt?: "consent" | "none" | "select_account";
+  prompt?: AuthorizationPrompt;
 }): string {
   const params = new URLSearchParams({
     client_id: clientId,

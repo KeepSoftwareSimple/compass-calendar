@@ -1,9 +1,9 @@
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { AuthApi } from "@web/api/auth.api";
 import {
-  readAppleAuthorizationIntent,
-  writeAppleAuthorizationIntent,
-} from "@web/auth/apple/authorization/apple-authorization.storage";
+  readProviderAuthorizationIntent,
+  writeProviderAuthorizationIntent,
+} from "@web/auth/providers/authorization/provider-authorization.storage";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
 
@@ -24,7 +24,7 @@ const callbackSearch = (state: string) =>
   `?state=${encodeURIComponent(state)}&code=auth-code`;
 
 const writeIntent = (state: string, returnPath = "/week") => {
-  writeAppleAuthorizationIntent(state, {
+  writeProviderAuthorizationIntent("apple", state, {
     intent: "signIn",
     returnPath,
     createdAt: Date.now(),
@@ -76,7 +76,9 @@ describe("completeAppleAuthCallback", () => {
     });
     expect(mocks.error).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith("/week", { replace: true });
-    expect(readAppleAuthorizationIntent("sign-in-state")).toBeNull();
+    expect(
+      readProviderAuthorizationIntent("apple", "sign-in-state"),
+    ).toBeNull();
   });
 
   it("rejects an Apple callback without a saved intent", async () => {

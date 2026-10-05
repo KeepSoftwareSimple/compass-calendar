@@ -1,6 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
-import { readAppleAuthorizationIntent } from "@web/auth/apple/authorization/apple-authorization.storage";
 import { buildAppleSignInRedirectUri } from "@web/auth/apple/authorization/apple-authorization.util";
 import { readProviderAuthorizationIntent } from "./provider-authorization.storage";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -136,7 +135,7 @@ describe("useStartProviderAuthorizationImpl", () => {
       `${window.location.origin}/auth/apple/callback`,
     );
     expect(decoded.nonce).toBeTruthy();
-    const intent = readAppleAuthorizationIntent(state);
+    const intent = readProviderAuthorizationIntent("apple", state);
     expect(intent?.intent).toBe("signIn");
     expect(intent?.returnPath).toContain("auth=trial");
     expect(result.current.loading).toBe(true);
