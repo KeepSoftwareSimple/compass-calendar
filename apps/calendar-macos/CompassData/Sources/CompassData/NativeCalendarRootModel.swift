@@ -656,7 +656,10 @@ public final class NativeCalendarRootModel {
         if let demoSeed {
             return CalendarId(rawValue: demoSeed.calendarId)
         }
-        return visibleCalendars().first(where: \.capabilities.canWrite)?.id
+        guard let calendar = visibleCalendars().first(where: { $0.capabilities.canWrite }) else {
+            return nil
+        }
+        return CalendarId(rawValue: calendar.id)
     }
 
     private func scheduleRefreshVisibleRange() {
