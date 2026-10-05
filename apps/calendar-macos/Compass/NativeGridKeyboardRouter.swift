@@ -343,6 +343,9 @@ final class NativeGridKeyboardRouter {
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
                     Task { await model.saveDraft() }
+                    pumpMainActorUntil(timeout: 10) {
+                        model.draftStore.gridDraft == nil && model.undoStore.canUndo
+                    }
                     return true
                 }
                 model.openEventFormForCurrentDraft()
@@ -465,5 +468,14 @@ final class NativeGridKeyboardRouter {
 
     private func syncEventJumpHints() {
         model.setEventJumpHintsVisible(eventJumpHold.phase == .hintsVisible)
+    }
+
+    /// XCUITest can send the next key before an unstructured `Task` runs; drain through save + undo record.
+    private func pumpMainActorUntil(timeout: TimeInterval, _ condition: @escaping () -> Bool) {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if condition() { return }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+        }
     }
 }
