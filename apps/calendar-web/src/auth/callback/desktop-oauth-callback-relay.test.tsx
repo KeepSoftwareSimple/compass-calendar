@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { buildDesktopOAuthRelayUrl } from "@core/desktop/desktop-oauth-state.util";
 import {
-  relayDesktopOAuthCallback,
   shouldRelayDesktopAppleOAuthCallback,
   shouldRelayDesktopConnectRedirect,
   shouldRelayDesktopOAuthCallback,
@@ -92,7 +92,7 @@ describe("DesktopOAuthCallbackRelay", () => {
   it("redirects to the compass deep link and offers Open Compass", async () => {
     const user = userEvent.setup();
     const search = "?code=auth-code&state=compass-desktop%3Atest";
-    const relayUrl = relayDesktopOAuthCallback("google", search);
+    const relayUrl = buildDesktopOAuthRelayUrl("google", search);
 
     render(<DesktopOAuthCallbackRelay provider="google" search={search} />);
 
