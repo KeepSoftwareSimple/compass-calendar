@@ -45,6 +45,7 @@ public enum EventDuplicateCommit {
     }
 
     public static func optimisticEvent(from input: CreateEventInput) -> Event? {
+        guard let id = input.id else { return nil }
         let now = DateTime(rawValue: CompassDateParsing.formatLikeDayjs(Date()))
         let details = input.content
         return Event(
@@ -58,7 +59,7 @@ public enum EventDuplicateCommit {
                 )
             ),
             createdAt: now,
-            id: input.id,
+            id: id,
             recurrence: mapRecurrence(input.recurrence),
             schedule: input.schedule,
             updatedAt: now

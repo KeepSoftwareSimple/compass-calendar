@@ -11,6 +11,9 @@ public enum EventInteractionPolicy {
     }
 
     public static func isOccurrenceThisScopeAsk(event: Event, scope: EventDeleteScope) -> Bool {
-        event.recurrence.kind == .occurrence && scope == .this
+        if case .occurrence = event.recurrence, scope == .this {
+            return true
+        }
+        return false
     }
 }
