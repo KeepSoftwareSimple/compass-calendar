@@ -202,9 +202,11 @@ final class NativeGridKeyboardRouter {
             EventFormAccessibilityProbe.syncTitle("")
             return true
         }
-        if keyEvent.modifiers.isEmpty, case .character(let char) = keyEvent.key, char.count == 1 {
+        if keyEvent.modifiers.isEmpty, case .character(let char) = keyEvent.key {
+            let piece = String(char)
+            guard !piece.isEmpty else { return false }
             let current = model.draftStore.gridDraft?.title ?? ""
-            let next = current + char
+            let next = current + piece
             model.updateDraftFromForm(title: next)
             EventFormAccessibilityProbe.syncTitle(next)
             return true
