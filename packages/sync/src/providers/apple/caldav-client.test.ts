@@ -1,4 +1,5 @@
 import {
+  buildPropfindBody,
   CaldavClientError,
   type CaldavFetch,
   createCaldavClient,
@@ -22,14 +23,14 @@ const PRINCIPAL_XML = `<?xml version="1.0" encoding="utf-8"?>
 </D:multistatus>`;
 
 const HOME_SET_XML = `<?xml version="1.0" encoding="utf-8"?>
-<D:multistatus xmlns:D="DAV:">
+<D:multistatus xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:response>
     <D:href>/123456789/principal/</D:href>
     <D:propstat>
       <D:prop>
-        <D:calendar-home-set>
+        <C:calendar-home-set>
           <D:href>/123456789/calendars/</D:href>
-        </D:calendar-home-set>
+        </C:calendar-home-set>
       </D:prop>
       <D:status>HTTP/1.1 200 OK</D:status>
     </D:propstat>
@@ -117,12 +118,86 @@ function xmlResponse(body: string, status = 207): Response {
   });
 }
 
+describe("buildPropfindBody", () => {
+  it("requests each property in its XML namespace", () => {
+    const body = buildPropfindBody([
+      "current-user-principal",
+      "calendar-home-set",
+      "displayname",
+      "calendar-color",
+      "supported-calendar-component-set",
+      "getctag",
+      "sync-token",
+    ]);
+
+    expect(body).toContain("<d:current-user-principal/>");
+    expect(body).toContain("<cal:calendar-home-set/>");
+    expect(body).toContain("<d:displayname/>");
+    expect(body).toContain("<ical:calendar-color/>");
+    expect(body).toContain("<cal:supported-calendar-component-set/>");
+    expect(body).toContain("<cs:getctag/>");
+    expect(body).toContain("<d:sync-token/>");
+    expect(body).not.toContain("<d:calendar-home-set/>");
+    expect(body).not.toContain("<d:supported-calendar-component-set/>");
+    expect(body).not.toContain("<d:getctag/>");
+    expect(body).not.toContain("<d:calendar-color/>");
+  });
+});
+
 describe("caldav-client", () => {
+  it("requests calendar-home-set in the CalDAV namespace during discovery", async () => {
+    const bodies: string[] = [];
+    const fetchImpl = scriptedFetch([
+      (_url, init) => {
+        bodies.push(String(init?.body ?? ""));
+        return xmlResponse(PRINCIPAL_XML);
+      },
+      (_url, init) => {
+        bodies.push(String(init?.body ?? ""));
+        return xmlResponse(HOME_SET_XML);
+      },
+      (_url, init) => {
+        bodies.push(String(init?.body ?? ""));
+        return xmlResponse(CALENDARS_XML);
+      },
+    ]);
+    const client = createCaldavClient(
+      { username: "user@icloud.com", password: "app-specific" },
+      fetchImpl,
+    );
+
+    await discoverCalendars(client, {
+      username: "user@icloud.com",
+      password: "app-specific",
+    });
+
+    expect(bodies[1]).toContain("<cal:calendar-home-set/>");
+    expect(bodies[1]).not.toContain("<d:calendar-home-set/>");
+    expect(bodies[2]).toContain("<ical:calendar-color/>");
+    expect(bodies[2]).toContain("<cal:supported-calendar-component-set/>");
+    expect(bodies[2]).toContain("<cs:getctag/>");
+  });
+
   it("discovers principal, home, and writable calendars", async () => {
     const fetchImpl = scriptedFetch([
-      () => xmlResponse(PRINCIPAL_XML),
-      () => xmlResponse(HOME_SET_XML),
-      () => xmlResponse(CALENDARS_XML),
+      (_url, init) => {
+        expect(init?.body).toContain("<d:current-user-principal/>");
+        return xmlResponse(PRINCIPAL_XML);
+      },
+      (_url, init) => {
+        expect(init?.body).toContain(
+          '<d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav"',
+        );
+        expect(init?.body).toContain("<cal:calendar-home-set/>");
+        return xmlResponse(HOME_SET_XML);
+      },
+      (_url, init) => {
+        expect(init?.body).toContain("<cal:supported-calendar-component-set/>");
+        expect(init?.body).toContain("<ical:calendar-color/>");
+        expect(init?.body).toContain("<cs:getctag/>");
+        expect(init?.body).toContain("<d:sync-token/>");
+        return xmlResponse(CALENDARS_XML);
+      },
     ]);
     const client = createCaldavClient(
       { username: "user@icloud.com", password: "app-specific" },
@@ -166,6 +241,42 @@ describe("caldav-client", () => {
       username: "user@icloud.com",
       password: "secret",
     });
+  });
+
+  it("discovers home when the server only answers CalDAV-namespace calendar-home-set", async () => {
+    const emptyHomeXml = `<?xml version="1.0" encoding="utf-8"?>
+<D:multistatus xmlns:D="DAV:">
+  <D:response>
+    <D:href>/123456789/principal/</D:href>
+    <D:propstat>
+      <D:prop/>
+      <D:status>HTTP/1.1 200 OK</D:status>
+    </D:propstat>
+  </D:response>
+</D:multistatus>`;
+    const fetchImpl = scriptedFetch([
+      () => xmlResponse(PRINCIPAL_XML),
+      (_url, init) => {
+        const body = String(init?.body ?? "");
+        return xmlResponse(
+          body.includes("<cal:calendar-home-set/>")
+            ? HOME_SET_XML
+            : emptyHomeXml,
+        );
+      },
+      () => xmlResponse(CALENDARS_XML),
+    ]);
+    const client = createCaldavClient(
+      { username: "user@icloud.com", password: "secret" },
+      fetchImpl,
+    );
+
+    const calendars = await discoverCalendars(client, {
+      username: "user@icloud.com",
+      password: "secret",
+    });
+
+    expect(calendars.length).toBeGreaterThan(0);
   });
 
   it("maps 401 to authExpired", async () => {

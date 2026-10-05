@@ -108,6 +108,7 @@ export const AuthModal: FC = () => {
   // OverlayPanel would otherwise seat the view-switch chip (first focusable).
   const emailInputRef = useRef<HTMLInputElement>(null);
   const pricingLinkRef = useRef<HTMLAnchorElement>(null);
+  const isPrimaryAuthView = isLoginView || currentView === "signUp";
 
   useEffect(() => {
     if (!isOpen || currentView !== "signUp") return;
@@ -170,7 +171,7 @@ export const AuthModal: FC = () => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (isEditableKeyboardTarget(event)) return;
       const key = keyboardKey(event).toLowerCase();
-      if (key === "p") {
+      if (key === "p" && !isPrimaryAuthView) {
         event.preventDefault();
         pricingLinkRef.current?.click();
         return;
@@ -202,6 +203,7 @@ export const AuthModal: FC = () => {
     isLoginView,
     isOpen,
     setView,
+    isPrimaryAuthView,
     showAuthSwitch,
   ]);
 
@@ -327,28 +329,34 @@ export const AuthModal: FC = () => {
             anytime.
           </p>
         ) : null}
-        <div className="flex w-full justify-center">
-          <button
-            type="button"
-            onClick={closeModal}
-            className="c-focus-ring inline-flex items-center rounded-md px-2 py-1 text-text-muted text-xs hover:bg-surface-overlay hover:text-text"
-          >
-            Back
-            <ShortcutHint className="ml-2">Esc</ShortcutHint>
-          </button>
-        </div>
+        {!isPrimaryAuthView ? (
+          <div className="flex w-full justify-center">
+            <button
+              type="button"
+              onClick={closeModal}
+              className="c-focus-ring inline-flex items-center rounded-md px-2 py-1 text-text-muted text-xs hover:bg-surface-overlay hover:text-text"
+            >
+              Back
+              <ShortcutHint className="ml-2">Esc</ShortcutHint>
+            </button>
+          </div>
+        ) : null}
         <div className="flex items-center justify-center text-center text-text-muted text-xs">
-          <a
-            ref={pricingLinkRef}
-            href="https://compasscalendar.com/pricing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-text hover:underline"
-          >
-            Pricing
-            <ShortcutHint>P</ShortcutHint>
-          </a>
-          <DotIcon size={26} />
+          {!isPrimaryAuthView ? (
+            <>
+              <a
+                ref={pricingLinkRef}
+                href="https://compasscalendar.com/pricing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-text hover:underline"
+              >
+                Pricing
+                <ShortcutHint>P</ShortcutHint>
+              </a>
+              <DotIcon size={26} />
+            </>
+          ) : null}
           <a
             href="https://www.compasscalendar.com/terms"
             target="_blank"
