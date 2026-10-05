@@ -19,6 +19,29 @@ public enum DescriptionPlainText {
         }.joined()
     }
 
+    private static func splitPlainTextBlocks(_ value: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: "\n\\s*\n") else {
+            return value.isEmpty ? [] : [value]
+        }
+        let nsValue = value as NSString
+        var blocks: [String] = []
+        var cursor = 0
+        for match in regex.matches(in: value, range: NSRange(location: 0, length: nsValue.length)) {
+            if match.range.location > cursor {
+                blocks.append(
+                    nsValue.substring(
+                        with: NSRange(location: cursor, length: match.range.location - cursor)
+                    )
+                )
+            }
+            cursor = match.range.location + match.range.length
+        }
+        if cursor < nsValue.length {
+            blocks.append(nsValue.substring(from: cursor))
+        }
+        return blocks.isEmpty ? [value] : blocks
+    }
+
     private static func escapeHtml(_ text: String) -> String {
         text
             .replacingOccurrences(of: "&", with: "&amp;")
