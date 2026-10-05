@@ -37,6 +37,8 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var eventFormFocusedField: EventFormField = .title
+    public var formFieldDigitHintsVisible = false
 
     let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -176,7 +178,7 @@ public final class NativeCalendarRootModel {
             isAuthModalOpen: authStore.isModalPresented,
             isSettingsOpen: billingStore.isSettingsPresented,
             isAboutOpen: false,
-            isFormOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
             storageAvailable: true,
             showcaseActive: false)
@@ -759,7 +761,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    func visibleCalendars() -> [CompassCalendar] {
+    public func visibleCalendars() -> [CompassCalendar] {
         calendars.filter { $0.isVisible && $0.isActive }
     }
 

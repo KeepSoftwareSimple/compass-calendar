@@ -8,6 +8,7 @@ final class NativeGridKeyboardRouter {
     let registry: ShortcutRegistry
     private let model: NativeCalendarRootModel
     private let modHold: ModHoldDetector
+    private let formModHold: ModHoldDetector
     private let eventJumpHold: HoldModifierDetector
     private let viewSwitchIds: Set<ShortcutId> = [.navDayView, .navWeekView, .navLifeView]
 
@@ -17,6 +18,11 @@ final class NativeGridKeyboardRouter {
         modHold = HoldModifierDetectorFactory.modHold { [weak model] digit in
             Task { @MainActor in
                 model?.focusPageJump(digit: digit)
+            }
+        }
+        formModHold = HoldModifierDetectorFactory.modHold { [weak model] digit in
+            Task { @MainActor in
+                model?.jumpEventFormField(digit: digit)
             }
         }
         eventJumpHold = HoldModifierDetectorFactory.eventJumpHold { [weak model] digit in
@@ -41,6 +47,8 @@ final class NativeGridKeyboardRouter {
             .createAllday,
             .editOpen,
             .createPlaceDiscard,
+            .editDuplicate,
+            .editSave,
         ]
         let navigationIds: Set<ShortcutId> = [
             .navPrevious,
@@ -91,8 +99,15 @@ final class NativeGridKeyboardRouter {
 
     func handleFlagsChanged(_ event: NSEvent) {
         let commandDown = event.modifierFlags.contains(.command)
+        if model.isEventFormVisible {
+            formModHold.handleFlagsChanged(modifierDown: commandDown, isRepeat: event.isARepeat)
+            model.formFieldDigitHintsVisible = formModHold.phase == .hintsVisible
+            model.setPageJumpHintsVisible(false)
+            return
+        }
         modHold.handleFlagsChanged(modifierDown: commandDown, isRepeat: event.isARepeat)
         model.setPageJumpHintsVisible(modHold.phase == .hintsVisible)
+        model.formFieldDigitHintsVisible = false
     }
 
     func handleKeyDown(_ event: NSEvent) -> Bool {
@@ -114,15 +129,24 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
-        dispatcher.isTextInputFocused = model.overlayKeyboardCaptureActive
+        dispatcher.isTextInputFocused =
+            model.overlayKeyboardCaptureActive || model.isEventFormVisible
         if model.overlayKeyboardCaptureActive {
             if handleOverlayKeyDown(keyEvent) {
                 return true
             }
         }
 
+        if model.isEventFormVisible, handleEventFormKeys(keyEvent) {
+            return true
+        }
+
         if handleDraftKeys(keyEvent) {
             return true
+        }
+
+        if model.isEventFormVisible {
+            return false
         }
 
         if case .character(let char) = keyEvent.key, char == "h", keyEvent.modifiers.isEmpty {
@@ -153,7 +177,69 @@ final class NativeGridKeyboardRouter {
             }
             return true
         }
+
+        if let field = dispatcher.lastResolvedLeaderField {
+            handleEditSequenceField(field)
+            return true
+        }
+
         return false
+    }
+
+    private func handleEventFormKeys(_ keyEvent: KeyEvent) -> Bool {
+        if keyEvent.modifiers == [.command], keyEvent.key == .named(.enter) {
+            Task { await model.saveDraft() }
+            return true
+        }
+
+        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key, char == "d" || char == "D"
+        {
+            Task { await model.duplicateFocusedOrFormEvent() }
+            return true
+        }
+
+        if keyEvent.key == .named(.escape), keyEvent.modifiers.isEmpty {
+            model.requestCloseEventForm()
+            return true
+        }
+
+        if formModHold.handleKeyDown(keyEvent) {
+            model.formFieldDigitHintsVisible = false
+            return true
+        }
+
+        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key {
+            if char.isNumber || char == "-" || char == "=" {
+                model.jumpEventFormField(digit: char)
+                model.formFieldDigitHintsVisible = false
+                return true
+            }
+        }
+
+        dispatcher.shortcutContext = model.shortcutContext
+        if let id = dispatcher.dispatch(keyEvent) {
+            performShortcut(id)
+            return true
+        }
+
+        if let field = dispatcher.lastResolvedLeaderField {
+            handleEditSequenceField(field)
+            return true
+        }
+
+        return false
+    }
+
+    private func handleEditSequenceField(_ fieldName: String) {
+        guard let field = EventFormField(rawValue: fieldName) else { return }
+        if model.isEventFormVisible {
+            model.focusEventFormField(field)
+            return
+        }
+        if model.draftStore.gridDraft == nil {
+            model.openKeyboardEditForFocusedEvent()
+        }
+        model.focusEventFormField(field)
     }
 
     private func handleDraftKeys(_ keyEvent: KeyEvent) -> Bool {
@@ -192,11 +278,18 @@ final class NativeGridKeyboardRouter {
 
         if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty {
             if model.draftStore.gridDraft != nil {
+                if model.draftStore.status.isFormOpen {
+                    return false
+                }
                 Task { await model.saveDraft() }
                 return true
             }
             if !model.draftStore.quickTimeDigits.isEmpty {
                 model.commitQuickTimeIfBuffered()
+                return true
+            }
+            if model.focusStore.focusedEventId != nil {
+                model.openKeyboardEditForFocusedEvent()
                 return true
             }
         }
@@ -235,10 +328,20 @@ final class NativeGridKeyboardRouter {
             model.createAllDayDraft()
         case .editOpen:
             if model.draftStore.gridDraft != nil {
-                Task { await model.saveDraft() }
+                if model.draftStore.status.isFormOpen {
+                    Task { await model.saveDraft() }
+                } else {
+                    model.openEventFormForCurrentDraft()
+                }
+            } else if model.focusStore.focusedEventId != nil {
+                model.openKeyboardEditForFocusedEvent()
             }
         case .createPlaceDiscard:
             model.requestDiscardDraft()
+        case .editDuplicate:
+            Task { await model.duplicateFocusedOrFormEvent() }
+        case .editSave:
+            Task { await model.saveDraft() }
         default:
             model.handleShortcut(id)
         }

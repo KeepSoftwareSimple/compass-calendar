@@ -149,26 +149,54 @@ extension NativeCalendarRootModel {
     }
 
     public func saveDraft() async {
-        guard let draft = draftStore.gridDraft,
-            let input = GridEventDraftMapping.createInput(from: draft),
-            let optimistic = GridEventDraftMapping.optimisticEvent(from: draft)
-        else { return }
+        guard let draft = draftStore.gridDraft else { return }
+        let baseline = baselineEvent(for: draft)
+        let savedId: String
 
-        let savedId = optimistic.id.rawValue
-        draftStore.commit()
-        rebuildPresentation()
-        do {
-            try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
-            loadedEvents = try eventsStore.fetchAllEvents()
+        switch draft.kind {
+        case .create:
+            guard let input = GridEventDraftMapping.createInput(from: draft),
+                let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
+            else { return }
+            savedId = optimistic.id.rawValue
+            draftStore.commit()
+            formFieldDigitHintsVisible = false
             rebuildPresentation()
-            focusEvent(eventId: savedId)
-        } catch {}
+            do {
+                try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
+                loadedEvents = try eventsStore.fetchAllEvents()
+                rebuildPresentation()
+                focusEvent(eventId: savedId)
+            } catch {}
+        case .edit:
+            guard let eventId = draft.persistedEventId,
+                let input = GridEventDraftMapping.replaceInput(from: draft),
+                let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
+            else { return }
+            savedId = eventId.rawValue
+            draftStore.commit()
+            formFieldDigitHintsVisible = false
+            rebuildPresentation()
+            do {
+                try await eventsStore.replaceOptimistic(
+                    id: eventId,
+                    input: input,
+                    optimisticEvent: optimistic
+                )
+                loadedEvents = try eventsStore.fetchAllEvents()
+                rebuildPresentation()
+                focusEvent(eventId: savedId)
+            } catch {}
+        }
     }
 
     public func requestDiscardDraft() {
-        guard let draft = draftStore.gridDraft else { return }
+        guard draftStore.gridDraft != nil else { return }
+        if draftStore.status.isFormOpen {
+            requestCloseEventForm()
+            return
+        }
         if draftStore.status.activity == .keyboardPlace,
-            !draftStore.status.isFormOpen,
             !draft.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         {
             pendingDiscardDraftConfirmation = true
@@ -180,6 +208,7 @@ extension NativeCalendarRootModel {
     public func discardDraftConfirmed() {
         pendingDiscardDraftConfirmation = false
         draftStore.discard()
+        formFieldDigitHintsVisible = false
         rebuildPresentation()
     }
 

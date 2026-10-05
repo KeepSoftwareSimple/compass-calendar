@@ -9,8 +9,11 @@ public enum GridEventDraftMapping {
     ) -> GridLayoutDraftOverlay {
         let showsInline =
             activity == .keyboardPlace && !status.isFormOpen
+        let eventId = draft.kind == .edit
+            ? (draft.sourceEventId ?? draft.clientId).rawValue
+            : draft.clientId.rawValue
         return GridLayoutDraftOverlay(
-            eventId: draft.clientId.rawValue,
+            eventId: eventId,
             schedule: draft.schedule,
             title: draft.title,
             calendarId: draft.calendarId?.rawValue,
@@ -18,25 +21,21 @@ public enum GridEventDraftMapping {
         )
     }
 
-    public static func optimisticEvent(from draft: GridEventDraft) -> Event? {
-        guard let calendarId = draft.calendarId else { return nil }
+    public static func optimisticEvent(from draft: GridEventDraft, baseline: Event? = nil) -> Event? {
+        guard let calendarId = draft.calendarId ?? baseline?.calendarId else { return nil }
         let now = DateTime(rawValue: CompassDateParsing.formatLikeDayjs(Date()))
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = title.isEmpty ? "Untitled event" : title
+        let eventId = draft.kind == .edit ? (draft.sourceEventId ?? draft.clientId) : draft.clientId
+        let recurrence = baseline?.recurrence ?? .single(EventRecurrence_SinglePayload(kind: "single"))
+        let createdAt = baseline?.createdAt ?? now
 
         return Event(
             calendarId: calendarId,
-            content: .details(
-                EventContent_DetailsPayload(
-                    description: "",
-                    kind: "details",
-                    location: nil,
-                    title: resolvedTitle
-                )
-            ),
-            createdAt: now,
-            id: draft.clientId,
-            recurrence: .single(EventRecurrence_SinglePayload(kind: "single")),
+            content: .details(contentPayload(from: draft, title: resolvedTitle)),
+            createdAt: createdAt,
+            id: eventId,
+            recurrence: recurrence,
             schedule: schedule(from: draft.schedule),
             updatedAt: now
         )
@@ -49,15 +48,43 @@ public enum GridEventDraftMapping {
 
         return CreateEventInput(
             calendarId: calendarId,
-            content: CreateEventInputContent(
-                description: "",
-                kind: "details",
-                location: "",
-                title: resolvedTitle
-            ),
+            content: inputContent(from: draft, title: resolvedTitle),
             id: draft.clientId,
             recurrence: .single(EventRecurrence_SinglePayload(kind: "single")),
             schedule: schedule(from: draft.schedule)
+        )
+    }
+
+    public static func replaceInput(from draft: GridEventDraft) -> ReplaceEventInput? {
+        guard draft.kind == .edit, let calendarId = draft.calendarId else { return nil }
+        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTitle = title.isEmpty ? "Untitled event" : title
+        return ReplaceEventInput(
+            calendarId: calendarId,
+            content: inputContent(from: draft, title: resolvedTitle),
+            recurrence: .preserve(ReplaceEventInputRecurrence_PreservePayload(kind: "preserve")),
+            schedule: schedule(from: draft.schedule),
+            scope: .this
+        )
+    }
+
+    private static func inputContent(from draft: GridEventDraft, title: String) -> CreateEventInputContent {
+        CreateEventInputContent(
+            color: draft.color.map { ColorEnum(rawValue: $0.rawValue) },
+            description: draft.description,
+            kind: "details",
+            location: draft.location,
+            title: title
+        )
+    }
+
+    private static func contentPayload(from draft: GridEventDraft, title: String) -> EventContent_DetailsPayload {
+        EventContent_DetailsPayload(
+            color: draft.color.map { ColorEnum(rawValue: $0.rawValue) },
+            description: draft.description,
+            kind: "details",
+            location: draft.location.isEmpty ? nil : draft.location,
+            title: title
         )
     }
 

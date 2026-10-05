@@ -94,6 +94,9 @@ public struct RootView: View {
                 onDiscard: { model.discardDraftConfirmed() }
             )
         }
+        .overlay {
+            EventFormView(model: model)
+        }
         .background {
             GeometryReader { geometry in
                 Color.clear

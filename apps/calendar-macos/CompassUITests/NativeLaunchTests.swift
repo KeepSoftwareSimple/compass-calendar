@@ -181,6 +181,36 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testEventFormEditsTitleAndSaves() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
+
+        window.typeKey(.enter, modifierFlags: [])
+        let form = window.descendants(matching: .any)["compass-event-form"]
+        XCTAssertTrue(form.waitForExistence(timeout: 5))
+
+        let titleField = form.textFields["Title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 3))
+        titleField.click()
+        titleField.typeKey("a", modifierFlags: [.command])
+        titleField.typeText("Updated standup")
+
+        window.typeKey(.enter, modifierFlags: [.command])
+        XCTAssertTrue(
+            window.buttons["Updated standup"].waitForExistence(timeout: 10),
+            "Expected grid card title to update after saving the form")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
