@@ -29,17 +29,11 @@ public enum ProjectRecurringEdit {
             return RecurringEditProjection(removeIds: [], upserts: [input.edited])
         }
 
-        let affected: [Event]
-        switch input.scope {
-        case .all:
-            affected = input.seriesEvents
-        case .thisAndFollowing:
-            affected = input.seriesEvents.filter { event in
+        let affected = input.scope == .all
+            ? input.seriesEvents
+            : input.seriesEvents.filter { event in
                 event.id == input.edited.id || isAtOrAfter(event: event, cutoff: input.original.schedule)
             }
-        case .this:
-            affected = []
-        }
 
         if case .single = input.edited.recurrence {
             let removeIds = Set(
@@ -48,13 +42,11 @@ public enum ProjectRecurringEdit {
             return RecurringEditProjection(removeIds: removeIds, upserts: [input.edited])
         }
 
-        let occurrenceUpserts = affected.map { event -> Event in
-            let patched = seriesPatch(event: event, edited: input.edited)
-            if event.id == input.edited.id {
-                return copyEvent(patched, schedule: input.edited.schedule)
-            }
-            return shiftEvent(event: patched, original: input.original, edited: input.edited)
-        }
+        let occurrenceUpserts = patchAffectedOccurrences(
+            affected: affected,
+            edited: input.edited,
+            original: input.original
+        )
 
         guard input.scope == .thisAndFollowing,
               case .series(let masterPayload) = input.seriesMaster?.recurrence
@@ -115,7 +107,7 @@ public enum ProjectRecurringEdit {
         return RecurringEditProjection(removeIds: removeIds, upserts: upserts)
     }
 
-    public static func isAtOrAfter(event: Event, cutoff: EventSchedule) -> Bool {
+    private static func isAtOrAfter(event: Event, cutoff: EventSchedule) -> Bool {
         guard let eventStart = CompassDateParsing.parseInEffectiveTimeZone(scheduleStartString(event.schedule)),
               let cutoffStart = CompassDateParsing.parseInEffectiveTimeZone(scheduleStartString(cutoff))
         else {
@@ -128,18 +120,23 @@ public enum ProjectRecurringEdit {
         affected: [Event],
         edited: Event,
         original: Event,
-        remainderSeriesId: EventId
+        remainderSeriesId: EventId? = nil
     ) -> [Event] {
         affected.map { event in
             let patched = seriesPatch(event: event, edited: edited)
-            let withRemainder = copyEvent(
-                patched,
-                recurrence: .occurrence(.init(kind: "occurrence", seriesId: remainderSeriesId))
-            )
-            if event.id == edited.id {
-                return copyEvent(withRemainder, schedule: edited.schedule)
+            let withSeries: Event
+            if let remainderSeriesId {
+                withSeries = copyEvent(
+                    patched,
+                    recurrence: .occurrence(.init(kind: "occurrence", seriesId: remainderSeriesId))
+                )
+            } else {
+                withSeries = patched
             }
-            return shiftEvent(event: withRemainder, original: original, edited: edited)
+            if event.id == edited.id {
+                return copyEvent(withSeries, schedule: edited.schedule)
+            }
+            return shiftEvent(event: withSeries, original: original, edited: edited)
         }
     }
 
@@ -259,13 +256,8 @@ public enum ProjectRecurringEdit {
     }
 
     private static func truncateSeriesRules(_ rules: [String], beforeStart: String) -> [String] {
-        let allDay = !beforeStart.contains("T")
-        let excludedInstant: Date
-        if allDay {
-            excludedInstant = CompassDateParsing.parseInEffectiveTimeZone(beforeStart) ?? Date()
-        } else {
-            excludedInstant = CompassDateParsing.parseInEffectiveTimeZone(beforeStart) ?? Date()
-        }
+        let excludedInstant =
+            CompassDateParsing.parseInEffectiveTimeZone(beforeStart) ?? Date()
         let until = excludedInstant.addingTimeInterval(-1)
         let untilToken = CompassDateParsing.formatISO8601UTC(until)
             .replacingOccurrences(of: "-", with: "")

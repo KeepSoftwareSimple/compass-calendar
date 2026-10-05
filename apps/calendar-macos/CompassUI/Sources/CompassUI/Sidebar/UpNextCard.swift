@@ -15,15 +15,9 @@ struct UpNextCard: View {
                 .font(.custom("Rubik", size: 13, relativeTo: .headline))
                 .foregroundStyle(theme.textMutedColor)
                 .accessibilityIdentifier("compass-native-up-next")
-            if let upNext = snapshot.upNext,
-               let start = CompassDateParsing.parseInEffectiveTimeZone(upNext.startDate),
-               let end = CompassDateParsing.parseInEffectiveTimeZone(upNext.endDate)
-            {
-                let countdown = UpNextFormatting.formatEventStatus(
-                    start: start,
-                    end: end,
-                    now: state.referenceNow,
-                    isCurrentEvent: snapshot.isCurrentEvent)
+            if let presentation = UpNextFormatting.resolve(state) {
+                let upNext = presentation.upNext
+                let countdown = presentation.countdown
                 VStack(alignment: .leading, spacing: 4) {
                     Text(snapshot.isCurrentEvent ? "Now" : countdown)
                         .font(.custom("Rubik", size: 12, relativeTo: .caption))

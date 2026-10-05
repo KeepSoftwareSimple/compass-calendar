@@ -18,6 +18,7 @@ describe("POST /api/auth/apple/callback", () => {
     const response = await baseDriver
       .getServer()
       .post(APPLE_SIGNIN_FORM_POST_PATH)
+      .set("Origin", "https://appleid.apple.com")
       .type("form")
       .send({ code: "auth-code", state });
 
@@ -35,6 +36,7 @@ describe("POST /api/auth/apple/callback", () => {
     const missing = await baseDriver
       .getServer()
       .post(APPLE_SIGNIN_FORM_POST_PATH)
+      .set("Origin", "https://appleid.apple.com")
       .type("form")
       .send({ code: "auth-code" });
     expect(missing.status).toBe(400);
@@ -42,6 +44,7 @@ describe("POST /api/auth/apple/callback", () => {
     const mismatched = await baseDriver
       .getServer()
       .post(APPLE_SIGNIN_FORM_POST_PATH)
+      .set("Origin", "https://appleid.apple.com")
       .type("form")
       .send({ code: "auth-code", state: "garbage" });
     expect(mismatched.status).toBe(400);

@@ -101,31 +101,19 @@ public final class EventsStore {
         beginMutation()
         defer { endMutation() }
         let snapshot = try recurringReplaceSnapshot(targetId: id)
-        if let snapshot,
-           let projection = recurringReplaceProjection(
-               input: input,
-               edited: optimisticEvent,
-               snapshot: snapshot
-           )
-        {
-            try applyRecurringProjection(projection, edited: optimisticEvent)
-        } else {
-            try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
-        }
+        try applyReplaceCacheUpdate(
+            input: input,
+            edited: optimisticEvent,
+            snapshot: snapshot
+        )
         do {
             let response = try await eventsAPI.replace(id: id, input: input)
             let settled = try EventMapping.event(from: response)
-            if let snapshot, input.scope != .this,
-               let projection = recurringReplaceProjection(
-                   input: input,
-                   edited: settled,
-                   snapshot: snapshot
-               )
-            {
-                try applyRecurringProjection(projection, edited: settled)
-            } else {
-                try repository.upsert(events: [settled], isLocal: source == .local)
-            }
+            try applyReplaceCacheUpdate(
+                input: input,
+                edited: settled,
+                snapshot: snapshot
+            )
         } catch {}
     }
 
@@ -204,16 +192,28 @@ public final class EventsStore {
 
     private func seriesOccurrenceSnapshot(seriesId: EventId, target: Event) throws -> [Event] {
         var events = try repository.occurrences(forSeriesId: seriesId)
-        if events.isEmpty {
-            events = try repository.fetchAll().filter { event in
-                guard case .occurrence(let payload) = event.recurrence else { return false }
-                return payload.seriesId == seriesId
-            }
-        }
         if !events.contains(where: { $0.id == target.id }) {
             events.append(target)
         }
         return events
+    }
+
+    private func applyReplaceCacheUpdate(
+        input: ReplaceEventInput,
+        edited: Event,
+        snapshot: RecurringReplaceSnapshot?
+    ) throws {
+        if let snapshot,
+           let projection = recurringReplaceProjection(
+               input: input,
+               edited: edited,
+               snapshot: snapshot
+           )
+        {
+            try applyRecurringProjection(projection, edited: edited)
+        } else {
+            try repository.upsert(events: [edited], isLocal: source == .local)
+        }
     }
 
     private func recurringReplaceProjection(

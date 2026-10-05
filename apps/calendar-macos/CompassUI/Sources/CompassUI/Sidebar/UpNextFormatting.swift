@@ -1,6 +1,33 @@
+import CompassData
+import CompassKit
 import Foundation
 
+/// One Up Next occurrence with its countdown already formatted, so the card
+/// and the banner share the parse instead of each repeating it.
+struct UpNextPresentation {
+    let upNext: UpNextOccurrence
+    let countdown: String
+}
+
 enum UpNextFormatting {
+    /// `nil` when nothing is up next or its window does not parse, which both
+    /// surfaces treat as having nothing to show.
+    static func resolve(_ state: NativeUpNextState) -> UpNextPresentation? {
+        guard let upNext = state.snapshot.upNext,
+              let start = CompassDateParsing.parseInEffectiveTimeZone(upNext.startDate),
+              let end = CompassDateParsing.parseInEffectiveTimeZone(upNext.endDate)
+        else {
+            return nil
+        }
+        return UpNextPresentation(
+            upNext: upNext,
+            countdown: formatEventStatus(
+                start: start,
+                end: end,
+                now: state.referenceNow,
+                isCurrentEvent: state.snapshot.isCurrentEvent))
+    }
+
     static func formatStartsIn(start: Date, now: Date) -> String {
         let minutes = Int((start.timeIntervalSince(now) / 60).rounded())
         if minutes <= 0 { return "Starts now" }

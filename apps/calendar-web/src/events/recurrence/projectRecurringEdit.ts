@@ -172,8 +172,7 @@ const shiftEvent = (event: Event, original: Event, edited: Event): Event => {
   };
 };
 
-// Exported for projectSeriesRulesChange's "thisAndFollowing" filtering below.
-export const isAtOrAfter = (event: Event, cutoff: Event["schedule"]) => {
+const isAtOrAfter = (event: Event, cutoff: Event["schedule"]) => {
   return !dayjs(event.schedule.start).isBefore(cutoff.start);
 };
 
@@ -181,18 +180,23 @@ const patchAffectedOccurrences = (
   affected: readonly Event[],
   edited: Event,
   original: Event,
-  remainderSeriesId: EventId,
+  remainderSeriesId?: EventId,
 ): Event[] =>
   affected.map((event) => {
     const patched = seriesPatch(event, edited);
-    const withRemainder = {
-      ...patched,
-      recurrence: { kind: "occurrence" as const, seriesId: remainderSeriesId },
-    };
+    const withSeries = remainderSeriesId
+      ? {
+          ...patched,
+          recurrence: {
+            kind: "occurrence" as const,
+            seriesId: remainderSeriesId,
+          },
+        }
+      : patched;
     if (event.id === edited.id) {
-      return { ...withRemainder, schedule: edited.schedule };
+      return { ...withSeries, schedule: edited.schedule };
     }
-    return shiftEvent(withRemainder, original, edited);
+    return shiftEvent(withSeries, original, edited);
   });
 
 export function projectRecurringEdit({
@@ -225,13 +229,11 @@ export function projectRecurringEdit({
     };
   }
 
-  const occurrenceUpserts = affected.map((event) => {
-    const patched = seriesPatch(event, edited);
-    if (event.id === edited.id) {
-      return { ...patched, schedule: edited.schedule };
-    }
-    return shiftEvent(patched, original, edited);
-  });
+  const occurrenceUpserts = patchAffectedOccurrences(
+    affected,
+    edited,
+    original,
+  );
 
   if (
     scope !== "thisAndFollowing" ||
