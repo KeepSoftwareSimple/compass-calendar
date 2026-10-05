@@ -216,7 +216,8 @@ extension NativeCalendarRootModel {
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
         switch entry {
         case .create(let event):
-            await deleteEvent(event, scope: event.recurrence.kind == .series ? .all : .this)
+            let scope: EventDeleteScope = if case .series = event.recurrence { .all } else { .this }
+            await deleteEvent(event, scope: scope)
         case .delete(let event):
             await commitDuplicate(from: event, recordUndo: false)
         case .edit(_, let before, _):
