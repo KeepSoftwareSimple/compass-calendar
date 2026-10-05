@@ -1,5 +1,6 @@
 import CompassData
 import CompassKit
+import CompassUI
 import Foundation
 
 @MainActor
