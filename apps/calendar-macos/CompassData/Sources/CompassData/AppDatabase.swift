@@ -14,8 +14,23 @@ public struct AppDatabase: Sendable {
         self.writer = writer
     }
 
+    public static func defaultFileURL() -> URL {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        let directory = base.appendingPathComponent("Compass", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory.appendingPathComponent("compass.sqlite")
+    }
+
     public static func inMemory() throws -> AppDatabase {
         let queue = try DatabaseQueue()
+        let database = AppDatabase(queue)
+        try database.migrate()
+        return database
+    }
+
+    public static func openPersistent(fileURL: URL = AppDatabase.defaultFileURL()) throws -> AppDatabase {
+        let queue = try DatabaseQueue(path: fileURL.path)
         let database = AppDatabase(queue)
         try database.migrate()
         return database
@@ -65,6 +80,13 @@ public struct AppDatabase: Sendable {
                     description
                 );
                 """)
+        }
+
+        migrator.registerMigration("v2_local_event") { db in
+            try db.create(table: "local_event") { table in
+                table.column("id", .text).primaryKey()
+                table.column("json", .text).notNull()
+            }
         }
 
         try migrator.migrate(writer)

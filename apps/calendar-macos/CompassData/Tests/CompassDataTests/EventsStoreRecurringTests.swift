@@ -8,9 +8,11 @@ final class EventsStoreRecurringTests: XCTestCase {
         let database = try AppDatabase.inMemory()
         let repository = EventRepository(database: database)
         let rangeCache = RangeCache(database: database)
+        let localEvents = LocalEventRepository(database: database)
         let mockAPI = MockEventsAPI()
         let store = EventsStore(
             repository: repository,
+            localEvents: localEvents,
             rangeCache: rangeCache,
             eventsAPI: mockAPI
         )
@@ -41,9 +43,11 @@ final class EventsStoreRecurringTests: XCTestCase {
         let database = try AppDatabase.inMemory()
         let repository = EventRepository(database: database)
         let rangeCache = RangeCache(database: database)
+        let localEvents = LocalEventRepository(database: database)
         let mockAPI = MockEventsAPI()
         let store = EventsStore(
             repository: repository,
+            localEvents: localEvents,
             rangeCache: rangeCache,
             eventsAPI: mockAPI
         )
