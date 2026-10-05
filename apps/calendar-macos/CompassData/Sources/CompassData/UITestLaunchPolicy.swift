@@ -22,9 +22,15 @@ public enum UITestLaunchPolicy {
         return value.isEmpty ? nil : value
     }
 
+    /// Opens the native edit form for the initially focused grid event once layout is ready.
+    public static var openFocusedEventFormAfterInitialGridFocus: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM")
+    }
+
     /// Full week column count so demo fixture events stay in the focus layout during XCUITest.
     public static var pinnedWeekGridTrackWidth: CGFloat? {
         if initialGridFocusEventId != nil
+            || openFocusedEventFormAfterInitialGridFocus
             || ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK")
         {
             return 1030

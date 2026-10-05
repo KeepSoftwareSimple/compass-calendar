@@ -182,6 +182,33 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testEventFormEditsTitleAndSaves() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+            "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
+
+        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
+        window.typeKey("a", modifierFlags: [.command])
+        window.typeText("Updated standup")
+
+        window.typeKey(.enter, modifierFlags: [.command])
+        XCTAssertTrue(
+            window.buttons["Updated standup"].waitForExistence(timeout: 10),
+            "Expected grid card title to update after saving the form")
+    }
+
+    @MainActor
     /// Opens the native quick-add panel from the Debug menu and saves a fixture event.
     func testQuickAddPanelCreatesFixtureEvent() {
         let app = XCUIApplication()

@@ -33,6 +33,7 @@ public final class ShortcutDispatcher: @unchecked Sendable {
 
     private var handlers: [ShortcutHandler] = []
     private var dispatched: [ShortcutId] = []
+    public private(set) var lastResolvedLeaderField: String?
 
     public init(registry: ShortcutRegistry) throws {
         self.registry = registry
@@ -91,8 +92,11 @@ public final class ShortcutDispatcher: @unchecked Sendable {
         }
 
         _ = leaderEngine.handleKeyDown(event)
-        if case .resolved = leaderEngine.phase {
+        if case .resolved(let field) = leaderEngine.phase {
+            lastResolvedLeaderField = field
             leaderEngine.disarm()
+        } else {
+            lastResolvedLeaderField = nil
         }
 
         let scopesInPlay = Set(scopeStack)
