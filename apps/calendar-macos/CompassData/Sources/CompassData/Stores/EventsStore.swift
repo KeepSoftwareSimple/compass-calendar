@@ -21,19 +21,26 @@ public final class EventsStore {
     public private(set) var owedInvalidation = false
 
     private let repository: EventRepository
+    private let localEvents: LocalEventRepository
     private let rangeCache: RangeCache
     private let eventsAPI: EventsAPIProtocol
-    private let source: EventRepositorySource
+    public private(set) var source: EventRepositorySource
 
     public init(
         repository: EventRepository,
+        localEvents: LocalEventRepository,
         rangeCache: RangeCache,
         eventsAPI: EventsAPIProtocol,
         source: EventRepositorySource = .remote
     ) {
         self.repository = repository
+        self.localEvents = localEvents
         self.rangeCache = rangeCache
         self.eventsAPI = eventsAPI
+        self.source = source
+    }
+
+    public func setSource(_ source: EventRepositorySource) {
         self.source = source
     }
 
@@ -51,10 +58,19 @@ public final class EventsStore {
     }
 
     public func fetchAllEvents() throws -> [Event] {
-        try repository.fetchAll()
+        if source == .local {
+            return try localEvents.fetchAll().map(\.event)
+        }
+        return try repository.fetchAll()
     }
 
     public func loadRange(key: EventRangeQueryKey) async throws -> [Event] {
+        if source == .local {
+            let events = try localEvents.events(intersectingStart: key.start, end: key.end)
+            try rangeCache.markLoaded(key: key)
+            return events
+        }
+
         let coverage = try rangeCache.coverage(for: key)
         if case .fresh = coverage {
             return try eventsInRange(key: key)
@@ -67,7 +83,7 @@ public final class EventsStore {
         )
         let remote = try await eventsAPI.list(query)
         let events = try remote.map { try EventMapping.event(from: $0) }
-        try repository.upsert(events: events, isLocal: source == .local)
+        try repository.upsert(events: events, isLocal: false)
         try repository.pruneRemoteEvents(
             intersectingStart: key.start,
             end: key.end,
@@ -83,11 +99,16 @@ public final class EventsStore {
     ) async throws {
         beginMutation()
         defer { endMutation() }
-        try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        if source == .local {
+            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
+            try localEvents.put(record)
+            return
+        }
+        try repository.upsert(events: [optimisticEvent], isLocal: false)
         do {
             let response = try await eventsAPI.create(input)
             let settled = try EventMapping.event(from: response)
-            try repository.upsert(events: [settled], isLocal: source == .local)
+            try repository.upsert(events: [settled], isLocal: false)
         } catch {
             // Locked desktop decision: no rollback; settle invalidates ranges.
         }
@@ -100,6 +121,11 @@ public final class EventsStore {
     ) async throws {
         beginMutation()
         defer { endMutation() }
+        if source == .local {
+            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
+            try localEvents.put(record)
+            return
+        }
         let snapshot = try recurringReplaceSnapshot(targetId: id)
         try applyReplaceCacheUpdate(
             input: input,
@@ -120,6 +146,10 @@ public final class EventsStore {
     public func deleteOptimistic(id: EventId, scope: EventDeleteScope) async throws {
         beginMutation()
         defer { endMutation() }
+        if source == .local {
+            try localEvents.delete(id: id)
+            return
+        }
         try repository.delete(ids: [id])
         do {
             try await eventsAPI.delete(id: id, scope: scope)
@@ -133,7 +163,10 @@ public final class EventsStore {
     ) async throws {
         beginMutation()
         defer { endMutation() }
-        try repository.upsert(events: [optimisticEvent], isLocal: source == .local)
+        if source == .local {
+            return
+        }
+        try repository.upsert(events: [optimisticEvent], isLocal: false)
         do {
             try await eventsAPI.rsvp(id: id, input: input)
         } catch {}

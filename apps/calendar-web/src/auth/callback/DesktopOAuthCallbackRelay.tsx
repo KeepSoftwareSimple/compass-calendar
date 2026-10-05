@@ -1,9 +1,7 @@
 import { type FC, useEffect } from "react";
+import { buildDesktopOAuthRelayUrl } from "@core/desktop/desktop-oauth-state.util";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
-import {
-  openDesktopOAuthRelay,
-  relayDesktopOAuthCallback,
-} from "@web/auth/callback/desktop-oauth-callback-relay";
+import { openDesktopOAuthRelay } from "@web/auth/callback/desktop-oauth-callback-relay";
 import {
   OverlayPanel,
   OverlayPanelActionButton,
@@ -20,7 +18,7 @@ type Props = {
  * callback. The deep link opens Compass; the button is the manual fallback.
  */
 export const DesktopOAuthCallbackRelay: FC<Props> = ({ provider, search }) => {
-  const relayUrl = relayDesktopOAuthCallback(provider, search);
+  const relayUrl = buildDesktopOAuthRelayUrl(provider, search);
 
   useEffect(() => {
     openDesktopOAuthRelay(relayUrl);

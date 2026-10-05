@@ -16,6 +16,11 @@ public struct RootView: View {
                 sidebar
                 VStack(spacing: 0) {
                     header
+                    if model.showsDemoEventsBanner {
+                        DemoEventsBannerView {
+                            model.dismissDemoEventsBanner()
+                        }
+                    }
                     content
                 }
             }
@@ -70,6 +75,19 @@ public struct RootView: View {
         }
         .overlay {
             ShortcutsLegendOverlay(model: model)
+        }
+        .overlay {
+            DedicationDialogView(
+                isPresented: model.dedicationDialogVisible,
+                onClose: { model.dedicationDialogVisible = false }
+            )
+        }
+        .overlay {
+            DiscardUnsavedDraftDialogView(
+                isPresented: model.pendingDiscardDraftConfirmation,
+                onCancel: { model.cancelDiscardDraftConfirmation() },
+                onDiscard: { model.discardDraftConfirmed() }
+            )
         }
         .background {
             GeometryReader { geometry in

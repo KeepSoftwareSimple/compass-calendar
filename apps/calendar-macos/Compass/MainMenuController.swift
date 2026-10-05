@@ -85,6 +85,8 @@ final class MainMenuController: NSObject {
             return #selector(openSettings(_:))
         case .openHelp:
             return #selector(openHelp(_:))
+        case .shareFeedback:
+            return #selector(shareFeedback(_:))
         case let .dispatchShortcut(name):
             switch name {
             case .createTimed: return #selector(newEvent(_:))
@@ -124,7 +126,11 @@ final class MainMenuController: NSObject {
     }
 
     @objc private func showAbout(_ sender: Any?) {
-        NSApp.orderFrontStandardAboutPanel(sender)
+        CompassAboutPanel.present(from: sender)
+    }
+
+    @objc private func shareFeedback(_ sender: Any?) {
+        CompassFeedbackPanel.present()
     }
 
     @objc private func openSettings(_ sender: Any?) {

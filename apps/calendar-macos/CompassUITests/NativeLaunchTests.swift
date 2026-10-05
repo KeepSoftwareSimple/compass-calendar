@@ -115,6 +115,46 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testLaunchDeepLinkNavigatesToDayView() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_LAUNCH_DEEP_LINK", "compass://day/2026-10-15",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
+        let pathExpectation = expectation(
+            for: pathReady,
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [pathExpectation], timeout: 45)
+    }
+
+    @MainActor
+    func testKeyboardCreatesTimedDraftOnGrid() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        window.typeKey(.downArrow, modifierFlags: [.shift])
+        XCTAssertTrue(
+            window.buttons["Untitled event"].waitForExistence(timeout: 5),
+            "Expected keyboard-placed draft card on the grid")
+
+        window.typeKey(.enter, modifierFlags: [])
+        XCTAssertTrue(
+            window.buttons["Untitled event"].waitForExistence(timeout: 10),
+            "Expected saved event card after Enter")
+    }
+
     @MainActor
     func testCommandPaletteGoToToday() {
         let app = XCUIApplication()
@@ -138,6 +178,7 @@ final class NativeLaunchTests: XCTestCase {
             "Expected demo week grid after Go to Today")
     }
 
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

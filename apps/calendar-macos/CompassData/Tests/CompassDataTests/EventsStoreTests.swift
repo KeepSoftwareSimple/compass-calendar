@@ -7,10 +7,12 @@ final class EventsStoreTests: XCTestCase {
     func testOptimisticCreateThenSettleInvalidatesRange() async throws {
         let database = try AppDatabase.inMemory()
         let repository = EventRepository(database: database)
+        let localEvents = LocalEventRepository(database: database)
         let rangeCache = RangeCache(database: database)
         let mockAPI = MockEventsAPI()
         let store = EventsStore(
             repository: repository,
+            localEvents: localEvents,
             rangeCache: rangeCache,
             eventsAPI: mockAPI
         )

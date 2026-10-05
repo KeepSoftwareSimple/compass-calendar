@@ -13,23 +13,16 @@ enum NativeRootFactory {
         let oauthPresenter = webAuthPresenter ?? sessionPresenter
         let catalog = catalogController ?? ShortcutsCatalogWindowController()
         let overlays = OverlayStores(catalog: catalog)
-        if let fixture = FixtureLaunchPolicy.demoFixture {
-            let environment = try NativeCalendarEnvironment(
-                fixture: fixture,
-                analytics: analytics,
-                analyticsIdentity: identity,
-                sessionPresenter: sessionPresenter)
-            environment.oauthService.setWebAuthPresenter(oauthPresenter)
-            return NativeCalendarRootModel(
-                environment: environment,
-                demoSeed: fixture,
-                overlayStores: overlays)
-        }
+        let demoPresentation = FixtureLaunchPolicy.demoFixture
         let environment = try NativeCalendarEnvironment(
+            inMemoryDatabase: demoPresentation != nil,
             analytics: analytics,
             analyticsIdentity: identity,
             sessionPresenter: sessionPresenter)
         environment.oauthService.setWebAuthPresenter(oauthPresenter)
-        return NativeCalendarRootModel(environment: environment, overlayStores: overlays)
+        return NativeCalendarRootModel(
+            environment: environment,
+            demoPresentation: demoPresentation,
+            overlayStores: overlays)
     }
 }

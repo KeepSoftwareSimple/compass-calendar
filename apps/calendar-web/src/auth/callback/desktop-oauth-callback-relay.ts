@@ -1,8 +1,4 @@
-import {
-  buildDesktopOAuthRelayUrl,
-  hasDesktopOAuthStateMarker,
-} from "@core/desktop/desktop-oauth-state.util";
-import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { hasDesktopOAuthStateMarker } from "@core/desktop/desktop-oauth-state.util";
 
 export function shouldRelayDesktopOAuthCallback(
   state: string | null,
@@ -15,7 +11,7 @@ export function shouldRelayDesktopOAuthCallback(
   return hasDesktopOAuthStateMarker(state);
 }
 
-/** Calendar connect relay: sync adds `desktop=1` when begin used `desktopRelay`. */
+/** Browser callback should open Compass when sync or Apple marked `desktop=1`. */
 export function shouldRelayDesktopConnectRedirect(
   search: string,
   inDesktopShell: boolean,
@@ -23,13 +19,9 @@ export function shouldRelayDesktopConnectRedirect(
   return searchHasDesktopRelayFlag(search, inDesktopShell);
 }
 
-/** Apple Sign in uses a base64 state blob; native marks the SPA callback with `desktop=1`. */
-export function shouldRelayDesktopAppleOAuthCallback(
-  search: string,
-  inDesktopShell: boolean,
-): boolean {
-  return searchHasDesktopRelayFlag(search, inDesktopShell);
-}
+/** Same `desktop=1` relay rule as calendar connect; Apple uses a base64 state blob. */
+export const shouldRelayDesktopAppleOAuthCallback =
+  shouldRelayDesktopConnectRedirect;
 
 function searchHasDesktopRelayFlag(
   search: string,
@@ -42,13 +34,6 @@ function searchHasDesktopRelayFlag(
     search.startsWith("?") ? search.slice(1) : search,
   );
   return params.get("desktop") === "1";
-}
-
-export function relayDesktopOAuthCallback(
-  provider: ProviderKind,
-  search: string,
-): string {
-  return buildDesktopOAuthRelayUrl(provider, search);
 }
 
 export function openDesktopOAuthRelay(relayUrl: string): void {

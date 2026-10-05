@@ -12,6 +12,7 @@ public final class NativeCalendarRootModel {
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
+    public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
     public let lifeStore: LifeStore
     public let overlayStores: OverlayStores
@@ -33,12 +34,15 @@ public final class NativeCalendarRootModel {
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var paletteSearchTask: Task<Void, Never>?
+    public var dedicationDialogVisible = false
+    public var pendingDiscardDraftConfirmation = false
 
     let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
-    private let demoSeed: DemoSeedFixture?
+    private let demoPresentation: DemoSeedFixture?
+    private var cachedDemoEventIds: Set<String> = []
     private let analyticsIdentity: AnalyticsIdentityCoordinator
     private var eventStream: ServerEventStream?
     var loadedEvents: [Event] = []
@@ -49,23 +53,28 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
 
     public var referenceNow: Date {
-        demoSeed?.referenceNow ?? Date()
+        demoPresentation?.referenceNow ?? Date()
     }
 
     var demoEventIds: Set<String> {
-        demoSeed?.demoEventIds ?? []
+        cachedDemoEventIds.union(demoPresentation?.demoEventIds ?? [])
+    }
+
+    public var showsDemoEventsBanner: Bool {
+        !demoEventIds.isEmpty && !DemoEventsBannerState.isDismissed(
+            repository: environment.userMetadataRepository)
     }
 
     public init(
         environment: NativeCalendarEnvironment,
-        demoSeed: DemoSeedFixture? = nil,
+        demoPresentation: DemoSeedFixture? = nil,
         overlayStores: OverlayStores = OverlayStores()
     ) {
         self.environment = environment
-        self.demoSeed = demoSeed
+        self.demoPresentation = demoPresentation
         self.overlayStores = overlayStores
-        if let demoSeed {
-            EffectiveTimeZone.identifier = demoSeed.timeZone
+        if let demoPresentation {
+            EffectiveTimeZone.identifier = demoPresentation.timeZone
         }
         eventsStore = environment.eventsStore
         hiddenEventsStore = environment.hiddenEventsStore
@@ -74,23 +83,24 @@ public final class NativeCalendarRootModel {
         authStore = environment.authStore
         billingStore = environment.billingStore
         levelsStore = environment.levelsStore
-        lifeStore = LifeStore(today: { demoSeed?.referenceNow ?? Date() })
+        lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
 
         let anchor: Date = {
-            guard let demoSeed else { return Date() }
+            guard let demoPresentation else { return Date() }
             let calendar = EffectiveTimeZone.calendar
-            return calendar.dateInterval(of: .weekOfYear, for: demoSeed.referenceNow)?.start
-                ?? demoSeed.referenceNow
+            return calendar.dateInterval(of: .weekOfYear, for: demoPresentation.referenceNow)?.start
+                ?? demoPresentation.referenceNow
         }()
         viewStore = ViewStore(
             view: .week,
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
-            pinnedTimeZone: demoSeed?.timeZone
+            pinnedTimeZone: demoPresentation?.timeZone
         )
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
+        draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
         timeGridState = TimeGridState(
             layoutMode: .week,
@@ -118,10 +128,16 @@ public final class NativeCalendarRootModel {
     public func start() async {
         await configStore.load()
         await configureAnalyticsFromConfig()
-        await authStore.bootstrap(forceDemoSignedIn: demoSeed != nil)
-        if demoSeed != nil {
-            await bootstrapFixtureSession()
+        await authStore.bootstrap()
+        if demoPresentation != nil {
+            authStore.closeModal()
         }
+        try? DemoDataSeeder.seedIfNeeded(
+            localEvents: environment.localEventRepository,
+            metadata: environment.userMetadataRepository,
+            fixture: demoPresentation)
+        cachedDemoEventIds = (try? environment.localEventRepository.demoEventIds()) ?? []
+        applyDemoPresentationTimingIfNeeded()
         try? await hiddenEventsStore.load()
         await reloadCalendars()
         await refreshVisibleRange()
@@ -129,6 +145,10 @@ public final class NativeCalendarRootModel {
         if isSignedIn {
             startEventStream()
         }
+    }
+
+    public func dismissDemoEventsBanner() {
+        try? DemoEventsBannerState.dismiss(repository: environment.userMetadataRepository)
     }
 
     public func handleResume() async {
@@ -142,6 +162,7 @@ public final class NativeCalendarRootModel {
         await refreshVisibleRange()
         await refreshSideband()
         await reloadCalendars()
+        await syncConnectionsStore.reloadFromMetadata()
     }
 
     public func signOut() async throws {
@@ -150,6 +171,7 @@ public final class NativeCalendarRootModel {
 
     private func handleAuthenticated() async {
         billingStore.setAuthenticated(true)
+        cachedDemoEventIds = (try? environment.localEventRepository.demoEventIds()) ?? []
         await billingStore.refreshAfterSignIn()
         startEventStream()
         await syncConnectionsStore.reloadFromMetadata()
@@ -348,6 +370,18 @@ public final class NativeCalendarRootModel {
     }
 
     private func moveFocus(_ direction: FocusMoveDirection) {
+        let arrowKey: String = {
+            switch direction {
+            case .up: return "ArrowUp"
+            case .down: return "ArrowDown"
+            case .left: return "ArrowLeft"
+            case .right: return "ArrowRight"
+            }
+        }()
+        if nudgeDraftOrPlace(key: arrowKey, shiftKey: false, altKey: false) {
+            return
+        }
+
         guard !focusLayoutCards.isEmpty else { return }
 
         if let focusedId = focusStore.focusedEventId?.rawValue,
@@ -394,7 +428,7 @@ public final class NativeCalendarRootModel {
         applyFocusPresentation()
     }
 
-    private func focusEvent(eventId: String) {
+    func focusEvent(eventId: String) {
         let type: ViewInteractionEventType =
             focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
                 ? .allDay
@@ -407,7 +441,7 @@ public final class NativeCalendarRootModel {
     }
 
     private func seedFocusEventId() -> String? {
-        let reference = demoSeed?.referenceNow ?? Date()
+        let reference = referenceNow
         if !loadedEvents.isEmpty {
             if let nearest = loadedEvents.min(by: { lhs, rhs in
                 abs(eventStart(lhs).timeIntervalSince(reference))
@@ -539,7 +573,7 @@ public final class NativeCalendarRootModel {
         ShortcutContext(
             lifeView: viewStore.view == .life,
             weekView: viewStore.view == .week,
-            isFormOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
             isTrialing: billingStore.status?.subscriptionStatus == .trialing)
     }
 
@@ -547,16 +581,16 @@ public final class NativeCalendarRootModel {
         viewStore.view == .day ? .day : .week
     }
 
-    private func rebuildPresentation() {
+    func rebuildPresentation() {
         if viewStore.view == .life {
             headerTitle = "Life"
             return
         }
         headerTitle = CalendarHeadingLabel.format(start: startOfView, end: endOfView, now: Date())
         let hiddenIds = Set(hiddenEventsStore.hiddenEventIds.map(\.rawValue))
-        let demoIds = demoSeed?.demoEventIds ?? []
-        let referenceNow = demoSeed?.referenceNow ?? Date()
-        let scenario = GridLayoutScenarioBuilder.build(
+        let demoIds = demoEventIds
+        let referenceNow = self.referenceNow
+        var scenario = GridLayoutScenarioBuilder.build(
             layoutMode: layoutMode(),
             visibleDateKeys: visibleDateKeys(),
             referenceNow: referenceNow,
@@ -565,6 +599,7 @@ public final class NativeCalendarRootModel {
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
+        scenario.draftOverlay = draftOverlayForPresentation()
         timeGridState = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: referenceNow,
@@ -583,7 +618,7 @@ public final class NativeCalendarRootModel {
             )
         }
         focusStore.setPageJumpTargets(nativePageJumpTargets())
-        if demoSeed != nil, !loadedEvents.isEmpty, !didApplyDemoFixtureScroll {
+        if demoPresentation != nil, !loadedEvents.isEmpty, !didApplyDemoFixtureScroll {
             let allDayOffset = GridTimeConstants.timedContentDocumentYOffset(
                 allDayRowHeight: snapshot.metrics.allDayRowHeight
             )
@@ -649,8 +684,18 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func visibleCalendars() -> [CompassCalendar] {
+    func visibleCalendars() -> [CompassCalendar] {
         calendars.filter { $0.isVisible && $0.isActive }
+    }
+
+    func defaultTargetCalendarId() -> CalendarId? {
+        if let demoPresentation {
+            return CalendarId(rawValue: demoPresentation.calendarId)
+        }
+        guard let calendar = visibleCalendars().first(where: { $0.capabilities.canWrite }) else {
+            return nil
+        }
+        return CalendarId(rawValue: calendar.id)
     }
 
     private func scheduleRefreshVisibleRange() {
@@ -663,11 +708,13 @@ public final class NativeCalendarRootModel {
     }
 
     private func refreshVisibleRange() async {
-        guard isSignedIn, viewStore.view != .life else { return }
+        guard viewStore.view != .life else { return }
+        let source = eventsStore.source
+        guard isSignedIn || source == .local else { return }
         let range = queryRange()
         let key = EventRangeQueryKey(
             scope: viewStore.view == .day ? .day : .week,
-            source: .remote,
+            source: source,
             start: range.startDate,
             end: range.endDate
         )
@@ -687,6 +734,10 @@ public final class NativeCalendarRootModel {
     }
 
     private func reloadCalendars() async {
+        if eventsStore.source == .local, !isSignedIn {
+            await bootstrapAnonymousCalendarsIfNeeded()
+            return
+        }
         do {
             let remote = try await environment.apiClient.calendars.list()
             let mapped = remote.map(CompassCalendar.init(listItem:))
@@ -696,12 +747,31 @@ public final class NativeCalendarRootModel {
         } catch {}
     }
 
-    private func bootstrapFixtureSession() async {
-        guard let demoSeed else { return }
-        let calendar = demoSeed.calendarListItem()
-        try? calendarRepository.upsert(calendars: [CompassCalendar(listItem: calendar)])
-        calendars = (try? calendarRepository.fetchAll()) ?? []
-        await refreshVisibleRange()
+    private func bootstrapAnonymousCalendarsIfNeeded() async {
+        do {
+            if let demoPresentation {
+                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                try calendarRepository.upsert(calendars: [calendar])
+            } else {
+                let sentinel = try LocalCalendarSentinel.calendarId(
+                    repository: environment.userMetadataRepository)
+                let calendar = LocalCalendarSentinel.synthesizeCalendar(id: sentinel)
+                try calendarRepository.upsert(calendars: [calendar])
+            }
+            calendars = try calendarRepository.fetchAll()
+            rebuildPresentation()
+        } catch {}
+    }
+
+    private func applyDemoPresentationTimingIfNeeded() {
+        guard demoPresentation != nil || eventsStore.source == .local else { return }
+        guard let fixture = demoPresentation ?? (try? DemoSeedFixture.load()) else { return }
+        EffectiveTimeZone.identifier = fixture.timeZone
+        let calendar = EffectiveTimeZone.calendar
+        let weekStart = calendar.dateInterval(of: .weekOfYear, for: fixture.referenceNow)?.start
+            ?? fixture.referenceNow
+        viewStore.setAnchorDate(weekStart)
+        monthPickerMonth = weekStart
     }
 
     private func configureAnalyticsFromConfig() async {

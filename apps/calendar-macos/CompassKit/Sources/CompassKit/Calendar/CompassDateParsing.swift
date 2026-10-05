@@ -76,7 +76,7 @@ public enum CompassDateParsing {
         return EffectiveTimeZone.calendar.date(from: components)
     }
 
-    static func formatLikeDayjs(_ date: Date) -> String {
+    public static func formatLikeDayjs(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = EffectiveTimeZone.calendar

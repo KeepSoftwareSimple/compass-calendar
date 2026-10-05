@@ -55,4 +55,11 @@ final class MainMenuModelTests: XCTestCase {
         XCTAssertTrue(
             MainMenuModel.sections(showDebugMenu: true).contains { $0.title == "Debug" })
     }
+
+    func testHelpSectionIncludesFeedback() {
+        let help = MainMenuModel.sections(showDebugMenu: false).first { $0.title == "Help" }
+        XCTAssertEqual(
+            help?.rows.first { $0.title == "Share Feedback…" }?.action,
+            .shareFeedback)
+    }
 }

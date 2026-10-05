@@ -186,9 +186,11 @@ const buildSnapshot = ({
     eventId: string;
     fillColorHex: string | null;
     frame: ReturnType<typeof getTimedEventPosition>;
+    isDraft: boolean;
     isHiddenStrip: boolean;
     kind: "timed" | "allDay" | "busy";
     label: string;
+    showsInlineTitleEditor: boolean;
     zIndex: number;
   }> = [];
 
@@ -220,9 +222,11 @@ const buildSnapshot = ({
         resolveCalendarFocusColor(lookup, { calendarId: input?.calendarId }) ??
         null,
       frame,
+      isDraft: false,
       isHiddenStrip: false,
       kind: "allDay",
       label: event.title ?? "Untitled",
+      showsInlineTitleEditor: false,
       zIndex: 1,
     });
   }
@@ -272,9 +276,11 @@ const buildSnapshot = ({
         resolveCalendarFocusColor(lookup, { calendarId: timed.calendarId }) ??
         null,
       frame,
+      isDraft: false,
       isHiddenStrip: item.isHidden,
       kind: "timed",
       label: timed.title,
+      showsInlineTitleEditor: false,
       zIndex: frame.zIndex ?? 1,
     });
   }
@@ -307,9 +313,11 @@ const buildSnapshot = ({
         resolveCalendarFocusColor(lookup, { calendarId: segment.calendarId }) ??
         null,
       frame,
+      isDraft: false,
       isHiddenStrip: false,
       kind: "busy",
       label: "Busy",
+      showsInlineTitleEditor: false,
       zIndex: 0,
     });
   }

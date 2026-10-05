@@ -36,6 +36,12 @@ final class NativeGridKeyboardRouter {
             .navScrollHourUp,
             .navScrollHourDown,
         ]
+        let createIds: Set<ShortcutId> = [
+            .createTimed,
+            .createAllday,
+            .editOpen,
+            .createPlaceDiscard,
+        ]
         let navigationIds: Set<ShortcutId> = [
             .navPrevious,
             .navNext,
@@ -55,7 +61,7 @@ final class NativeGridKeyboardRouter {
             .otherSettings,
         ]
         let overlayIds: Set<ShortcutId> = [.otherPalette, .otherShortcuts, .navGoToDate]
-        let handlerIds = focusIds.union(navigationIds).union(overlayIds)
+        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds)
 
         var handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard handlerIds.contains(entry.id) else { return nil }
@@ -92,11 +98,31 @@ final class NativeGridKeyboardRouter {
     func handleKeyDown(_ event: NSEvent) -> Bool {
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
+        if model.dedicationDialogVisible {
+            if keyEvent.key == .named(.escape) {
+                model.dedicationDialogVisible = false
+                return true
+            }
+            return false
+        }
+
+        if model.pendingDiscardDraftConfirmation {
+            if keyEvent.key == .named(.escape) {
+                model.cancelDiscardDraftConfirmation()
+                return true
+            }
+            return false
+        }
+
         dispatcher.isTextInputFocused = model.overlayKeyboardCaptureActive
         if model.overlayKeyboardCaptureActive {
             if handleOverlayKeyDown(keyEvent) {
                 return true
             }
+        }
+
+        if handleDraftKeys(keyEvent) {
+            return true
         }
 
         if case .character(let char) = keyEvent.key, char == "h", keyEvent.modifiers.isEmpty {
@@ -130,6 +156,65 @@ final class NativeGridKeyboardRouter {
         return false
     }
 
+    private func handleDraftKeys(_ keyEvent: KeyEvent) -> Bool {
+        if keyEvent.modifiers == [.control, .shift],
+            case .character(let char) = keyEvent.key,
+            char == "0"
+        {
+            model.toggleDedicationDialog()
+            return true
+        }
+
+        if keyEvent.modifiers.isEmpty, case .character(let digit) = keyEvent.key, digit.isNumber {
+            model.handleQuickTimeDigit(digit)
+            if !model.draftStore.quickTimeDigits.isEmpty {
+                return true
+            }
+        }
+
+        let shift = keyEvent.modifiers.contains(.shift)
+        let alt = keyEvent.modifiers.contains(.option)
+        let arrow: String? = {
+            switch keyEvent.key {
+            case .named(.arrowUp): return "ArrowUp"
+            case .named(.arrowDown): return "ArrowDown"
+            case .named(.arrowLeft): return "ArrowLeft"
+            case .named(.arrowRight): return "ArrowRight"
+            default: return nil
+            }
+        }()
+
+        if let arrow, shift {
+            if model.nudgeDraftOrPlace(key: arrow, shiftKey: true, altKey: alt) {
+                return true
+            }
+        }
+
+        if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty {
+            if model.draftStore.gridDraft != nil {
+                Task { await model.saveDraft() }
+                return true
+            }
+            if !model.draftStore.quickTimeDigits.isEmpty {
+                model.commitQuickTimeIfBuffered()
+                return true
+            }
+        }
+
+        if keyEvent.key == .named(.escape), keyEvent.modifiers.isEmpty {
+            if !model.draftStore.quickTimeDigits.isEmpty {
+                model.draftStore.setQuickTimeDigits("")
+                return true
+            }
+            if model.draftStore.gridDraft != nil {
+                model.requestDiscardDraft()
+                return true
+            }
+        }
+
+        return false
+    }
+
     private func performShortcut(_ id: ShortcutId) {
         switch id {
         case .navUpNext:
@@ -144,6 +229,16 @@ final class NativeGridKeyboardRouter {
             model.toggleShortcutsLegend()
         case .navGoToDate:
             model.toggleCommandPalette(fromGoToDate: true)
+        case .createTimed:
+            model.createTimedDraft(activity: .createShortcut)
+        case .createAllday:
+            model.createAllDayDraft()
+        case .editOpen:
+            if model.draftStore.gridDraft != nil {
+                Task { await model.saveDraft() }
+            }
+        case .createPlaceDiscard:
+            model.requestDiscardDraft()
         default:
             model.handleShortcut(id)
         }
