@@ -50,9 +50,10 @@ export class BillingWebhookController {
       await processStripeEvent(event, this.stripe);
       res.status(Status.OK).json({ received: true });
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Webhook error";
-      logger.error(message, e);
-      res.status(Status.BAD_REQUEST).json({ error: message });
+      logger.error("Stripe webhook signature verification failed", e);
+      res
+        .status(Status.BAD_REQUEST)
+        .json({ error: "Invalid Stripe webhook signature" });
     }
   };
 }
