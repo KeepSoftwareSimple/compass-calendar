@@ -53,6 +53,19 @@ type ProviderAuthorizationStrategy = (
  * the callback can recover the return path, and report the funnel step. Each
  * strategy then launches its own way, which is all they still spell out.
  */
+function assignAuthorizationRedirectOrReportError(
+  url: string,
+  setLoading: (loading: boolean) => void,
+  onError?: (error: unknown) => void,
+): void {
+  try {
+    assignAuthorizationRedirect(url);
+  } catch (error) {
+    setLoading(false);
+    onError?.(error);
+  }
+}
+
 function recordAuthorizationStart(
   provider: ProviderKind,
   state: string,
@@ -143,20 +156,17 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
         setLoading(true);
         recordAuthorizationStart("microsoft", state, { intent, signupFlow });
 
-        try {
-          assignAuthorizationRedirect(
-            buildMicrosoftAuthorizationUrl({
-              clientId,
-              redirectUri,
-              scopes: MICROSOFT_SCOPES,
-              state,
-              prompt,
-            }),
-          );
-        } catch (error) {
-          setLoading(false);
-          onError?.(error);
-        }
+        assignAuthorizationRedirectOrReportError(
+          buildMicrosoftAuthorizationUrl({
+            clientId,
+            redirectUri,
+            scopes: MICROSOFT_SCOPES,
+            state,
+            prompt,
+          }),
+          setLoading,
+          onError,
+        );
       }, [intent, onError, onStart, prompt, redirectUri, signupFlow, state]),
     };
   };
@@ -193,14 +203,11 @@ const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
       setLoading(true);
       recordAuthorizationStart("apple", state, { intent, signupFlow });
 
-      try {
-        assignAuthorizationRedirect(
-          buildAppleAuthorizationUrl({ clientId, state }),
-        );
-      } catch (error) {
-        setLoading(false);
-        onError?.(error);
-      }
+      assignAuthorizationRedirectOrReportError(
+        buildAppleAuthorizationUrl({ clientId, state }),
+        setLoading,
+        onError,
+      );
     }, [intent, onError, onStart, signupFlow, state]),
   };
 };
