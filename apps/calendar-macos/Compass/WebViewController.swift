@@ -16,7 +16,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     private let bridgeHandler = CompassBridgeHandler()
     private let offlineRetryHandler = OfflineRetryMessageHandler()
     private var loadState = WebLoadStateMachine()
-    private var deepLinkInbox = DeepLinkInbox()
+    private var deepLinkRouter = DeepLinkRouter()
     private var pathMonitor: NWPathMonitor?
     private var offlinePageURL: URL? {
         Bundle.main.url(forResource: "offline", withExtension: "html")
@@ -152,6 +152,9 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        deepLinkRouter.onDeliver = { [weak self] url in
+            self?.deliverDeepLink(url)
+        }
         CompassNotificationCenter.shared.configure(deliverer: self)
         CompassAgendaController.shared.configure(deepLinkDeliverer: self)
         startNetworkAndWakeMonitoring()
@@ -223,12 +226,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     func receiveDeepLink(urlString: String) {
-        switch deepLinkInbox.receive(urlString: urlString) {
-        case .ignored, .queued:
-            break
-        case let .deliverNow(url):
-            deliverDeepLink(url)
-        }
+        _ = deepLinkRouter.receive(urlString: urlString)
     }
 
     func deliverDeepLink(_ url: String) {
@@ -241,9 +239,7 @@ final class WebViewController: NSViewController, WKNavigationDelegate, WKUIDeleg
     }
 
     private func flushQueuedDeepLinks() {
-        for url in deepLinkInbox.markWebViewReady() {
-            deliverDeepLink(url)
-        }
+        deepLinkRouter.markConsumerReady()
     }
 
     func syncNotificationPermission() {

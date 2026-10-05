@@ -115,6 +115,27 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testLaunchDeepLinkNavigatesToDayView() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_LAUNCH_DEEP_LINK", "compass://day/2026-10-15",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        let pathReady = NSPredicate(format: "label == %@", "/day/2026-10-15")
+        let pathExpectation = expectation(
+            for: pathReady,
+            evaluatedWith: window,
+            handler: nil)
+        wait(for: [pathExpectation], timeout: 45)
+    }
+
+    @MainActor
     func testKeyboardCreatesTimedDraftOnGrid() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
