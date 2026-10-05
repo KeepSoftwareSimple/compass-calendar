@@ -47,6 +47,16 @@ final class EventFormAccessibilityProbeView: NSView {
         }
     }
 
+    override func accessibilityValue() -> Any? {
+        titleBuffer
+    }
+
+    override func setAccessibilityValue(_ accessibilityValue: Any?) {
+        guard let text = accessibilityValue as? String else { return }
+        titleBuffer = text
+        publishTitle()
+    }
+
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "a"
@@ -71,7 +81,8 @@ final class EventFormAccessibilityProbeView: NSView {
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        nil
+        guard !isHidden, bounds.contains(point) else { return nil }
+        return self
     }
 
     override func layout() {
@@ -136,7 +147,7 @@ enum EventFormAccessibilityProbe {
             }
             NSAccessibility.post(element: probe, notification: .focusedUIElementChanged)
             NSAccessibility.post(element: probe, notification: .titleChanged)
-            if let window = probe.window {
+            if wasInactive, let window = probe.window {
                 window.makeFirstResponder(probe)
             }
         }
