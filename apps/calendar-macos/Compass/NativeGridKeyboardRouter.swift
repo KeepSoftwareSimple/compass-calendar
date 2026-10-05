@@ -344,7 +344,7 @@ final class NativeGridKeyboardRouter {
                 if model.draftStore.status.activity == .keyboardPlace {
                     Task { await model.saveDraft() }
                     pumpMainActorUntil(timeout: 10) {
-                        model.draftStore.gridDraft == nil && model.undoStore.canUndo
+                        self.model.draftStore.gridDraft == nil && self.model.undoStore.canUndo
                     }
                     return true
                 }
