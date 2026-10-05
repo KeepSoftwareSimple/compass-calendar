@@ -33,6 +33,11 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
         }
     }
 
+    func resetRecordedScopes() {
+        lastReplaceScope = nil
+        lastDeleteScope = nil
+    }
+
     func rsvp(id: EventId, input: RsvpEventInput) async throws {}
 }
 

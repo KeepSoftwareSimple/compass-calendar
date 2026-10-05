@@ -127,7 +127,7 @@ final class EventsStoreRecurringTests: XCTestCase {
         try await store.deleteOptimistic(id: second.id, scope: .thisAndFollowing)
         XCTAssertEqual(mockAPI.lastDeleteScope, .thisAndFollowing)
 
-        mockAPI.lastDeleteScope = nil
+        mockAPI.resetRecordedScopes()
         try await store.deleteOptimistic(id: first.id, scope: .all)
         XCTAssertEqual(mockAPI.lastDeleteScope, .all)
     }
