@@ -2,7 +2,6 @@ import AppKit
 import CompassData
 import CompassKit
 import CompassUI
-import SwiftUI
 
 @MainActor
 final class QuickAddPanelController: NSObject, NSWindowDelegate {
@@ -10,7 +9,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     weak var quickAddRouter: DesktopQuickAddRouting?
     private var panel: NSPanel?
     private var webViewController: WebViewController?
-    private var hostingController: NSHostingController<ThemedQuickAddView>?
+    private var nativePanelController: QuickAddNativePanelViewController?
     private var previousApp: NSRunningApplication?
     private var escapeMonitor: Any?
     private var isVisible = false
@@ -46,7 +45,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
 
     func show() {
         if usesNativeQuickAdd(), nativeModel() != nil {
-            if panel == nil || hostingController == nil {
+            if panel == nil || nativePanelController == nil {
                 rebuildPanelIfNeeded(force: true)
             }
         } else if panel == nil {
@@ -86,7 +85,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private func rebuildPanelIfNeeded(force: Bool) {
         let shouldUseNative = usesNativeQuickAdd() && nativeModel() != nil
         if shouldUseNative {
-            if force || hostingController == nil {
+            if force || nativePanelController == nil {
                 panel?.orderOut(nil)
                 panel = nil
                 webViewController = nil
@@ -97,7 +96,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         if force || webViewController == nil {
             panel?.orderOut(nil)
             panel = nil
-            hostingController = nil
+            nativePanelController = nil
             buildWebPanel()
         }
     }
@@ -105,16 +104,15 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private func buildNativePanel() {
         guard let model = nativeModel() else { return }
         let theme = nativeTheme()
-        let rootView = ThemedQuickAddView(
-            webTheme: theme,
+        let contentController = QuickAddNativePanelViewController(
             model: model,
+            theme: theme,
             onSubmit: { [weak self] in
                 Task { @MainActor in
                     await self?.submitNativeQuickAdd()
                 }
             })
-        let hosting = NSHostingController(rootView: rootView)
-        hostingController = hosting
+        nativePanelController = contentController
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 472, height: 120),
@@ -131,7 +129,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         panel.hidesOnDeactivate = false
         panel.isReleasedWhenClosed = false
         panel.delegate = self
-        panel.contentViewController = hosting
+        panel.contentViewController = contentController
         panel.setAccessibilityIdentifier("compass-native-quick-add-window")
         self.panel = panel
     }
@@ -197,6 +195,13 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, let panel = notification.object as? NSPanel, panel === self.panel
         else { return }
+        if UITestLaunchPolicy.stickyQuickAddPanel {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.isVisible else { return }
+                self.panel?.makeKey()
+            }
+            return
+        }
         if let suppressResignKeyHideUntil, Date() < suppressResignKeyHideUntil {
             DispatchQueue.main.async { [weak self] in
                 guard let self, self.isVisible else { return }
@@ -205,16 +210,5 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
             return
         }
         hide()
-    }
-}
-
-private struct ThemedQuickAddView: View {
-    let webTheme: NativeWebTheme
-    @Bindable var model: NativeCalendarRootModel
-    let onSubmit: () -> Void
-
-    var body: some View {
-        QuickAddView(model: model, onSubmit: onSubmit)
-            .environment(\.nativeWebTheme, webTheme)
     }
 }

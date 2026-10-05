@@ -158,7 +158,11 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testQuickAddPanelCreatesFixtureEvent() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL",
+        ]
         app.launch()
 
         let window = app.windows["Compass"]
