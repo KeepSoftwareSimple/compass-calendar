@@ -295,20 +295,29 @@ function assertDiscoveryStatus(status: number): void {
   }
 }
 
-function buildPropfindBody(props: readonly string[]): string {
-  const namespaces: Record<string, string> = {
-    "calendar-home-set": "cal",
-    "supported-calendar-component-set": "cal",
-    "calendar-color": "ical",
-    getctag: "cs",
-  };
-  const propElements = props
-    .map((prop) => `<${namespaces[prop] ?? "d"}:${prop}/>`)
-    .join("");
+type PropfindNamespacePrefix = "d" | "cal" | "cs" | "ical";
+
+/** CalDAV/WebDAV property names mapped to the XML prefix used in PROPFIND bodies. */
+const PROPFIND_NAMESPACE_BY_PROP: Readonly<
+  Record<string, PropfindNamespacePrefix>
+> = {
+  "calendar-home-set": "cal",
+  "supported-calendar-component-set": "cal",
+  "calendar-color": "ical",
+  getctag: "cs",
+};
+
+export function buildPropfindBody(props: readonly string[]): string {
+  const propElements = props.map(propfindPropElement).join("");
   return `<?xml version="1.0" encoding="utf-8"?>
 <d:propfind xmlns:d="DAV:" xmlns:cal="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:ical="http://apple.com/ns/ical/">
   <d:prop>${propElements}</d:prop>
 </d:propfind>`;
+}
+
+function propfindPropElement(prop: string): string {
+  const prefix = PROPFIND_NAMESPACE_BY_PROP[prop] ?? "d";
+  return `<${prefix}:${prop}/>`;
 }
 
 function parseMultistatus(body: string): ParsedMultistatus | null {
