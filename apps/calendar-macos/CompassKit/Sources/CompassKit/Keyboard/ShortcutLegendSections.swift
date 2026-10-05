@@ -137,13 +137,3 @@ public enum ShortcutLegendSections {
         }
     }
 }
-
-extension ShortcutMenuFilter.AppView {
-    fileprivate var rawValue: String {
-        switch self {
-        case .day: "day"
-        case .week: "week"
-        case .life: "life"
-        }
-    }
-}

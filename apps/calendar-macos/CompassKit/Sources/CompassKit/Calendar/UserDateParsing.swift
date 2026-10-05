@@ -32,17 +32,17 @@ public enum UserDateParsing {
 
         if let match = firstMatch(normalized, pattern: #"^(\d{4})-(\d{1,2})-(\d{1,2})$"#) {
             return calendarDate(
-                year: Int(match[1])!,
-                month: Int(match[2])!,
-                day: Int(match[3])!)
+                year: Int(match[0])!,
+                month: Int(match[1])!,
+                day: Int(match[2])!)
         }
 
         if let match = firstMatch(normalized, pattern: #"^(\d{1,2})/(\d{1,2})(?:/(\d{2}|\d{4}))?$"#) {
-            let month = Int(match[1])!
-            let day = Int(match[2])!
-            if match.indices.contains(3), let yearToken = match[3] {
+            let month = Int(match[0])!
+            let day = Int(match[1])!
+            if match.count > 2, !match[2].isEmpty {
                 return calendarDate(
-                    year: expandTwoDigitYear(Int(yearToken)!),
+                    year: expandTwoDigitYear(Int(match[2])!),
                     month: month,
                     day: day)
             }
@@ -51,20 +51,20 @@ public enum UserDateParsing {
 
         let monthFirst = "^(\(monthNamePattern))(?:\\s+|\\s*,\\s*)(\\d{1,2})(?:(?:\\s+|\\s*,\\s*)(\\d{4}))?$"
         if let match = firstMatch(normalized, pattern: monthFirst) {
-            guard let month = monthNameToIndex[match[1]] else { return nil }
-            let day = Int(match[2])!
-            if match.indices.contains(3), let yearToken = match[3] {
-                return calendarDate(year: Int(yearToken)!, month: month, day: day)
+            guard let month = monthNameToIndex[match[0]] else { return nil }
+            let day = Int(match[1])!
+            if match.count > 2, !match[2].isEmpty {
+                return calendarDate(year: Int(match[2])!, month: month, day: day)
             }
             return dateWithInferredYear(month: month, day: day, now: now)
         }
 
         let dayFirst = "^(\\d{1,2})(?:\\s+|\\s*,\\s*)(\(monthNamePattern))(?:(?:\\s+|\\s*,\\s*)(\\d{4}))?$"
         if let match = firstMatch(normalized, pattern: dayFirst) {
-            let day = Int(match[1])!
-            guard let month = monthNameToIndex[match[2]] else { return nil }
-            if match.indices.contains(3), let yearToken = match[3] {
-                return calendarDate(year: Int(yearToken)!, month: month, day: day)
+            let day = Int(match[0])!
+            guard let month = monthNameToIndex[match[1]] else { return nil }
+            if match.count > 2, !match[2].isEmpty {
+                return calendarDate(year: Int(match[2])!, month: month, day: day)
             }
             return dateWithInferredYear(month: month, day: day, now: now)
         }
