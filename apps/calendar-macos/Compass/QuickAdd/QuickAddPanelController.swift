@@ -12,9 +12,11 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private var nativePanelController: QuickAddNativePanelViewController?
     private var previousApp: NSRunningApplication?
     private var escapeMonitor: Any?
+    private var returnMonitor: Any?
     private var isVisible = false
     /// Menu actions resign key to the main window right after opening the panel.
     private var suppressResignKeyHideUntil: Date?
+    private var isSubmittingNativeQuickAdd = false
 
     private var usesNativeQuickAdd: () -> Bool = { false }
     private var nativeModel: () -> NativeCalendarRootModel? = { nil }
@@ -62,6 +64,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         panel.makeKey()
         isVisible = true
         installEscapeMonitor()
+        installReturnMonitor()
         DispatchQueue.main.async { [weak self] in
             guard let self, self.isVisible, let panel = self.panel else { return }
             panel.makeKey()
@@ -72,6 +75,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         guard isVisible else { return }
         isVisible = false
         removeEscapeMonitor()
+        removeReturnMonitor()
         if usesNativeQuickAdd() {
             nativeModel()?.cancelQuickAddPanelSession()
         }
@@ -162,7 +166,9 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     }
 
     private func submitNativeQuickAdd() async {
-        guard let model = nativeModel() else { return }
+        guard !isSubmittingNativeQuickAdd, let model = nativeModel() else { return }
+        isSubmittingNativeQuickAdd = true
+        defer { isSubmittingNativeQuickAdd = false }
         nativePanelController?.commitQueryToModel()
         await model.saveQuickAddFromPanel()
         quickAddRouter?.dismissQuickAddPanel()
@@ -190,6 +196,26 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         if let escapeMonitor {
             NSEvent.removeMonitor(escapeMonitor)
             self.escapeMonitor = nil
+        }
+    }
+
+    private func installReturnMonitor() {
+        removeReturnMonitor()
+        returnMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+            [weak self] event in
+            guard event.keyCode == 36 || event.keyCode == 76 else { return event }
+            guard let self, self.isVisible, self.usesNativeQuickAdd() else { return event }
+            Task { @MainActor in
+                await self.submitNativeQuickAdd()
+            }
+            return nil
+        }
+    }
+
+    private func removeReturnMonitor() {
+        if let returnMonitor {
+            NSEvent.removeMonitor(returnMonitor)
+            self.returnMonitor = nil
         }
     }
 

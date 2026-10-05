@@ -38,6 +38,7 @@ extension NativeCalendarRootModel {
     }
 
     public func cancelQuickAddPanelSession() {
+        guard draftStore.isDrafting else { return }
         draftStore.discard()
         rebuildPresentation()
     }

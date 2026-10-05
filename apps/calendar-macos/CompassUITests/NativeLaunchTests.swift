@@ -212,7 +212,7 @@ final class NativeLaunchTests: XCTestCase {
         field.click()
         field.typeText("Quick add fixture")
 
-        field.typeKey(.enter, modifierFlags: [])
+        panel.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(
             window.buttons["Quick add fixture"].waitForExistence(timeout: 10),
             "Expected saved quick-add event on the native grid")
