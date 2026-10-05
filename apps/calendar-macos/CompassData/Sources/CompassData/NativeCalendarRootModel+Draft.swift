@@ -162,12 +162,12 @@ extension NativeCalendarRootModel {
             draftStore.commit()
             formFieldDigitHintsVisible = false
             rebuildPresentation()
+            recordCreateUndo(for: optimistic)
             do {
                 try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
                 loadedEvents = try eventsStore.fetchAllEvents()
                 rebuildPresentation()
                 focusEvent(eventId: savedId)
-                recordCreateUndo(for: optimistic)
             } catch {}
         case .edit:
             guard let eventId = draft.persistedEventId,
