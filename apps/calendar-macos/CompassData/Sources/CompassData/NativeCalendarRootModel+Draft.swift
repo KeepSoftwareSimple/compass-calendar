@@ -2,13 +2,6 @@ import CompassKit
 import Foundation
 
 extension NativeCalendarRootModel {
-    func defaultTargetCalendarId() -> CalendarId? {
-        if let demoSeed {
-            return CalendarId(rawValue: demoSeed.calendarId)
-        }
-        return visibleCalendars().first(where: { $0.capabilities.canWrite })?.id
-    }
-
     func draftTargetDay() -> Date {
         let calendar = EffectiveTimeZone.calendar
         let now = referenceNow
@@ -110,8 +103,8 @@ extension NativeCalendarRootModel {
             isStartAllowed: { nextStart in
                 let calendar = EffectiveTimeZone.calendar
                 let start = calendar.startOfDay(for: nextStart)
-                let viewStart = calendar.startOfDay(for: startOfView)
-                let viewEnd = calendar.startOfDay(for: endOfView)
+                let viewStart = calendar.startOfDay(for: self.startOfView)
+                let viewEnd = calendar.startOfDay(for: self.endOfView)
                 return start >= viewStart && start <= viewEnd
             }
         ) != nil

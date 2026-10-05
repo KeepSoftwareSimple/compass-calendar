@@ -652,6 +652,13 @@ public final class NativeCalendarRootModel {
         calendars.filter { $0.isVisible && $0.isActive }
     }
 
+    func defaultTargetCalendarId() -> CalendarId? {
+        if let demoSeed {
+            return CalendarId(rawValue: demoSeed.calendarId)
+        }
+        return visibleCalendars().first(where: \.capabilities.canWrite)?.id
+    }
+
     private func scheduleRefreshVisibleRange() {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
