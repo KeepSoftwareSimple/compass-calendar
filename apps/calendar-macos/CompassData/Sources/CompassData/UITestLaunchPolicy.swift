@@ -37,4 +37,9 @@ public enum UITestLaunchPolicy {
         }
         return nil
     }
+
+    /// Keeps the native quick-add panel key so Debug menu XCUITests can reach the field.
+    public static var stickyQuickAddPanel: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL")
+    }
 }
