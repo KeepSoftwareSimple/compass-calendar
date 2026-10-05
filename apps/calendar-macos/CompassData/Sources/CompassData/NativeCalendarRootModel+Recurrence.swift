@@ -144,6 +144,14 @@ extension NativeCalendarRootModel {
         } catch {}
     }
 
+    private func deleteScope(from scope: ScopeEnum) -> EventDeleteScope {
+        switch scope {
+        case .this: .this
+        case .thisAndFollowing: .thisAndFollowing
+        case .all: .all
+        }
+    }
+
     private func shouldAskRecurrenceScopeOnSave(
         draft: GridEventDraft,
         baseline: Event?
