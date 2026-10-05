@@ -4,6 +4,7 @@ import CompassKit
 @MainActor
 protocol EventCardViewDelegate: AnyObject {
     func eventCardViewDidClick(_ view: EventCardView, eventId: String)
+    func eventCardView(_ view: EventCardView, didEditDraftTitle title: String, eventId: String)
 }
 
 final class EventCardView: NSView {
@@ -18,6 +19,7 @@ final class EventCardView: NSView {
     /// bounds or XCTest accessibility frames are empty in CI but layout is valid.
     private(set) var layoutRectInParent: NSRect = .zero
     private var showsFocusAccessibilityAnchor = false
+    private var showsInlineTitleEditor = false
 
     override var isFlipped: Bool { true }
 
@@ -42,6 +44,7 @@ final class EventCardView: NSView {
         titleField.isEditable = false
         titleField.isBordered = false
         titleField.drawsBackground = false
+        titleField.delegate = self
         addSubview(titleField)
         titleField.setAccessibilityElement(false)
         titleField.refusesFirstResponder = true
@@ -69,7 +72,13 @@ final class EventCardView: NSView {
             height: card.frame.height
         )
         frame = layoutRectInParent
-        titleField.stringValue = card.label
+        showsInlineTitleEditor = card.showsInlineTitleEditor
+        titleField.stringValue = card.showsInlineTitleEditor && card.label == "Untitled event"
+            ? ""
+            : card.label
+        titleField.placeholderString = card.showsInlineTitleEditor ? "Untitled event" : nil
+        titleField.isEditable = card.showsInlineTitleEditor
+        titleField.isSelectable = card.showsInlineTitleEditor
         titleField.textColor = textColor(for: theme)
         setAccessibilityLabel(card.label)
         setAccessibilityIdentifier(card.accessibilityIdentifier)
@@ -247,6 +256,13 @@ private func textColor(for theme: NativeWebTheme) -> NSColor {
         ThemeTokens.lightBeach.text.nsColor
     case .darkAbyss:
         ThemeTokens.darkAbyss.text.nsColor
+    }
+}
+
+extension EventCardView: NSTextFieldDelegate {
+    func controlTextDidChange(_ obj: Notification) {
+        guard showsInlineTitleEditor, obj.object as? NSTextField === titleField else { return }
+        cardDelegate?.eventCardView(self, didEditDraftTitle: titleField.stringValue, eventId: eventId)
     }
 }
 

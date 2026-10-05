@@ -136,6 +136,26 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testKeyboardCreatesTimedDraftOnGrid() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        window.typeKey(.downArrow, modifierFlags: [.shift])
+        XCTAssertTrue(
+            window.buttons["Untitled event"].waitForExistence(timeout: 5),
+            "Expected keyboard-placed draft card on the grid")
+
+        window.typeKey(.enter, modifierFlags: [])
+        XCTAssertTrue(
+            window.buttons["Untitled event"].waitForExistence(timeout: 10),
+            "Expected saved event card after Enter")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

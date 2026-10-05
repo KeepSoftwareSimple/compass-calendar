@@ -56,7 +56,7 @@ public enum CompassDateParsing {
         return nil
     }
 
-    static func calendarDateInEffectiveTimeZone(_ ymd: String) -> Date? {
+    public static func calendarDateInEffectiveTimeZone(_ ymd: String) -> Date? {
         let parts = ymd.split(separator: "-")
         guard parts.count == 3,
               let year = Int(parts[0]),
@@ -76,7 +76,7 @@ public enum CompassDateParsing {
         return EffectiveTimeZone.calendar.date(from: components)
     }
 
-    static func formatLikeDayjs(_ date: Date) -> String {
+    public static func formatLikeDayjs(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.calendar = EffectiveTimeZone.calendar

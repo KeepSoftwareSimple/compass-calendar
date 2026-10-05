@@ -52,9 +52,11 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
     public var eventId: String
     public var fillColorHex: String?
     public var frame: EventPosition
+    public var isDraft: Bool
     public var isHiddenStrip: Bool
     public var kind: GridLayoutCardKind
     public var label: String
+    public var showsInlineTitleEditor: Bool
     public var zIndex: Int
 
     public init(
@@ -65,7 +67,9 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
         isHiddenStrip: Bool,
         kind: GridLayoutCardKind,
         label: String,
-        zIndex: Int
+        zIndex: Int,
+        isDraft: Bool = false,
+        showsInlineTitleEditor: Bool = false
     ) {
         self.accessibilityIdentifier = accessibilityIdentifier
         self.eventId = eventId
@@ -75,6 +79,23 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
         self.kind = kind
         self.label = label
         self.zIndex = zIndex
+        self.isDraft = isDraft
+        self.showsInlineTitleEditor = showsInlineTitleEditor
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        accessibilityIdentifier = try container.decode(String.self, forKey: .accessibilityIdentifier)
+        eventId = try container.decode(String.self, forKey: .eventId)
+        fillColorHex = try container.decodeIfPresent(String.self, forKey: .fillColorHex)
+        frame = try container.decode(EventPosition.self, forKey: .frame)
+        isHiddenStrip = try container.decode(Bool.self, forKey: .isHiddenStrip)
+        kind = try container.decode(GridLayoutCardKind.self, forKey: .kind)
+        label = try container.decode(String.self, forKey: .label)
+        zIndex = try container.decode(Int.self, forKey: .zIndex)
+        isDraft = try container.decodeIfPresent(Bool.self, forKey: .isDraft) ?? false
+        showsInlineTitleEditor =
+            try container.decodeIfPresent(Bool.self, forKey: .showsInlineTitleEditor) ?? false
     }
 }
 
@@ -170,6 +191,7 @@ public struct GridLayoutScenario: Sendable {
     public var allDayEvents: [GridLayoutAllDayEventInput]
     public var busyPeriods: [BusyPeriodInput]
     public var calendars: [CompassCalendar]
+    public var draftOverlay: GridLayoutDraftOverlay?
     public var hiddenEventIds: Set<String>
     public var layoutMode: GridLayoutMode
     public var referenceNow: Date
@@ -180,6 +202,7 @@ public struct GridLayoutScenario: Sendable {
         allDayEvents: [GridLayoutAllDayEventInput] = [],
         busyPeriods: [BusyPeriodInput] = [],
         calendars: [CompassCalendar] = [],
+        draftOverlay: GridLayoutDraftOverlay? = nil,
         hiddenEventIds: Set<String> = [],
         layoutMode: GridLayoutMode,
         referenceNow: Date,
@@ -189,6 +212,7 @@ public struct GridLayoutScenario: Sendable {
         self.allDayEvents = allDayEvents
         self.busyPeriods = busyPeriods
         self.calendars = calendars
+        self.draftOverlay = draftOverlay
         self.hiddenEventIds = hiddenEventIds
         self.layoutMode = layoutMode
         self.referenceNow = referenceNow

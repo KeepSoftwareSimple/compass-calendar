@@ -30,7 +30,7 @@ private let opensFormOnStart: Set<DraftNudgeActivity> = [
 @Observable
 public final class DraftStore {
     public private(set) var status: DraftStatus = DraftStatus()
-    public private(set) var gridSchedule: DraftSchedule?
+    public private(set) var gridDraft: GridEventDraft?
     public private(set) var quickTimeDigits: String = ""
 
     public init() {}
@@ -39,12 +39,12 @@ public final class DraftStore {
 
     public func discard() {
         status = DraftStatus()
-        gridSchedule = nil
+        gridDraft = nil
         quickTimeDigits = ""
     }
 
-    public func startGridDraft(activity: DraftNudgeActivity, schedule: DraftSchedule) {
-        gridSchedule = schedule
+    public func startGridDraft(activity: DraftNudgeActivity, draft: GridEventDraft) {
+        gridDraft = draft
         status = DraftStatus(
             activity: activity,
             isDrafting: true,
@@ -52,15 +52,33 @@ public final class DraftStore {
         )
     }
 
-    public func setGridSchedule(_ schedule: DraftSchedule?) {
-        guard let schedule else {
+    public func setGridDraft(_ draft: GridEventDraft?) {
+        guard let draft else {
             discard()
             return
         }
-        gridSchedule = schedule
+        gridDraft = draft
         if !status.isDrafting {
             status.isDrafting = true
         }
+    }
+
+    public func setGridSchedule(_ schedule: DraftSchedule?) {
+        guard let schedule, var draft = gridDraft else {
+            discard()
+            return
+        }
+        draft.schedule = schedule
+        gridDraft = draft
+        if !status.isDrafting {
+            status.isDrafting = true
+        }
+    }
+
+    public func setTitle(_ title: String) {
+        guard var draft = gridDraft else { return }
+        draft.title = title
+        gridDraft = draft
     }
 
     public func setFormOpen(_ isFormOpen: Bool) {
@@ -86,17 +104,14 @@ public final class DraftStore {
         let step = DraftNudge.nudgeStepFromKeyboard(altKey: altKey)
         guard let next = DraftNudge.repositionDraftByKeyboard(
             activity: status.activity,
-            schedule: gridSchedule,
+            schedule: gridDraft?.schedule,
             key: key,
             isStartAllowed: isStartAllowed,
             step: step
         ) else {
             return nil
         }
-        gridSchedule = next
-        if !status.isDrafting {
-            status.isDrafting = true
-        }
+        setGridSchedule(next)
         return next
     }
 }
