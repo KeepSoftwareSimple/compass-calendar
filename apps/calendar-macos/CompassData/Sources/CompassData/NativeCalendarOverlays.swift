@@ -13,7 +13,9 @@ extension NativeCalendarRootModel {
     func paletteSections() -> [CommandPaletteSection] {
         let trimmed = commandPaletteStore.query
         let handlers = CommandPaletteHandlers { [weak self] date in
-            self?.selectGoToDateFromPalette(date)
+            Task { @MainActor in
+                self?.selectGoToDateFromPalette(date)
+            }
         }
         let localHits = paletteEventHits(query: trimmed)
         let mergedHits = mergePaletteHits(local: localHits, remote: paletteEventSearchHits)
@@ -159,7 +161,7 @@ extension NativeCalendarRootModel {
     public func schedulePaletteEventSearch() {
         let query = commandPaletteStore.query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.count >= EventTitleSearch.minQueryLength else {
-            paletteEventSearchHits = []
+            setPaletteEventSearchHits([])
             return
         }
         paletteSearchTask?.cancel()
@@ -167,7 +169,7 @@ extension NativeCalendarRootModel {
             guard let self else { return }
             let local = paletteEventHits(query: query)
             await MainActor.run {
-                self.paletteEventSearchHits = local
+                self.setPaletteEventSearchHits(local)
             }
             guard isSignedIn, !Task.isCancelled else { return }
             let window = EventTitleSearch.searchWindow(now: referenceNow)
@@ -194,13 +196,11 @@ extension NativeCalendarRootModel {
                             subtitle: paletteEventSubtitle(for: event))
                     }
                 await MainActor.run {
-                    self.paletteEventSearchHits = mergePaletteHits(local: local, remote: remoteHits)
+                    self.setPaletteEventSearchHits(mergePaletteHits(local: local, remote: remoteHits))
                 }
             } catch {}
         }
     }
-
-    private var paletteSearchTask: Task<Void, Never>?
 
     private func mergePaletteHits(
         local: [CommandPaletteEventHit],
@@ -273,12 +273,15 @@ public protocol ShortcutsCatalogPresenting: AnyObject {
     func presentPublicCatalog(sections: [ShortcutLegendSection])
 }
 
+@MainActor
 public final class OverlayStores {
-    public let palette = CommandPaletteStore()
-    public let legend = ShortcutsLegendStore()
+    public let palette: CommandPaletteStore
+    public let legend: ShortcutsLegendStore
     public let catalog: ShortcutsCatalogPresenting
 
     public init(catalog: ShortcutsCatalogPresenting = NoOpShortcutsCatalogPresenter()) {
+        palette = CommandPaletteStore()
+        legend = ShortcutsLegendStore()
         self.catalog = catalog
     }
 }

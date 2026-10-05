@@ -32,8 +32,9 @@ public final class NativeCalendarRootModel {
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
+    var paletteSearchTask: Task<Void, Never>?
 
-    private let environment: NativeCalendarEnvironment
+    let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
@@ -108,6 +109,10 @@ public final class NativeCalendarRootModel {
         }
         billingStore.setAuthenticated(authStore.authenticated)
         rebuildPresentation()
+    }
+
+    func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
+        paletteEventSearchHits = hits
     }
 
     public func start() async {
@@ -507,11 +512,11 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private var startOfView: Date {
+    var startOfView: Date {
         EffectiveTimeZone.calendar.startOfDay(for: viewStore.anchorDate)
     }
 
-    private var endOfView: Date {
+    var endOfView: Date {
         let calendar = EffectiveTimeZone.calendar
         return calendar.date(
             byAdding: .day,
