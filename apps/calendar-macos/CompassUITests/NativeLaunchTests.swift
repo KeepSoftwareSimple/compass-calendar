@@ -211,6 +211,7 @@ final class NativeLaunchTests: XCTestCase {
             field.waitForExistence(timeout: 10),
             "Expected native quick-add text field after opening the panel")
         field.click()
+        // Paste the title so macOS XCUITest does not drop keystrokes from typeText.
         let title = "Quick add fixture"
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(title, forType: .string)
