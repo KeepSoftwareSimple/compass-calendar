@@ -129,6 +129,45 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if model.pendingRecurrenceScopePrompt != nil {
+            if keyEvent.key == .named(.escape) {
+                model.cancelRecurrenceScopePrompt()
+                return true
+            }
+            if keyEvent.modifiers.isEmpty, case .character(let char) = keyEvent.key {
+                switch char {
+                case "1":
+                    Task { await model.confirmRecurrenceScope(.this) }
+                    return true
+                case "2":
+                    Task { await model.confirmRecurrenceScope(.thisAndFollowing) }
+                    return true
+                case "3":
+                    Task { await model.confirmRecurrenceScope(.all) }
+                    return true
+                default:
+                    break
+                }
+            }
+            if keyEvent.key == .named(.enter) {
+                Task { await model.confirmRecurrenceScope(.this) }
+                return true
+            }
+            return false
+        }
+
+        if model.pendingConvertToStandaloneConfirmation {
+            if keyEvent.key == .named(.escape) {
+                model.cancelConvertToStandaloneConfirmation()
+                return true
+            }
+            if keyEvent.key == .named(.enter) {
+                Task { await model.confirmConvertToStandalone() }
+                return true
+            }
+            return false
+        }
+
         dispatcher.isTextInputFocused =
             model.overlayKeyboardCaptureActive || model.isEventFormVisible
         if model.overlayKeyboardCaptureActive {

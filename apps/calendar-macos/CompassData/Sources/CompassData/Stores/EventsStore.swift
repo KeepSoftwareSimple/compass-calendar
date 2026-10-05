@@ -150,7 +150,8 @@ public final class EventsStore {
             try localEvents.delete(id: id)
             return
         }
-        try repository.delete(ids: [id])
+        let snapshot = try recurringDeleteSnapshot(targetId: id)
+        try applyDeleteCacheUpdate(id: id, scope: scope, snapshot: snapshot)
         do {
             try await eventsAPI.delete(id: id, scope: scope)
         } catch {}
@@ -208,6 +209,12 @@ public final class EventsStore {
         let original: Event
         let seriesEvents: [Event]
         let seriesMaster: Event?
+    }
+
+    private struct RecurringDeleteSnapshot: Sendable {
+        let target: Event
+        let seriesId: EventId
+        let seriesEvents: [Event]
     }
 
     private func recurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
@@ -282,6 +289,47 @@ public final class EventsStore {
 
     /// Native GRDB holds materialized rows only; drop superseded occurrence ids that
     /// projection removes and let the next range read re-expand the remainder series.
+    private func recurringDeleteSnapshot(targetId: EventId) throws -> RecurringDeleteSnapshot? {
+        guard let target = try repository.fetch(id: targetId) else { return nil }
+        let seriesId: EventId
+        switch target.recurrence {
+        case .occurrence(let payload):
+            seriesId = payload.seriesId
+        case .series:
+            seriesId = target.id
+        case .single:
+            return nil
+        }
+        let seriesEvents = try seriesOccurrenceSnapshot(seriesId: seriesId, target: target)
+        return RecurringDeleteSnapshot(
+            target: target,
+            seriesId: seriesId,
+            seriesEvents: seriesEvents
+        )
+    }
+
+    private func applyDeleteCacheUpdate(
+        id: EventId,
+        scope: EventDeleteScope,
+        snapshot: RecurringDeleteSnapshot?
+    ) throws {
+        guard let snapshot, scope != .this else {
+            try repository.delete(ids: [id])
+            return
+        }
+        let scopeEnum = ScopeEnum(rawValue: scope.rawValue) ?? .this
+        let projection = ProjectRecurringEdit.projectRecurringDelete(
+            scope: scopeEnum,
+            target: snapshot.target,
+            seriesId: snapshot.seriesId,
+            seriesEvents: snapshot.seriesEvents
+        )
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try repository.delete(ids: ids)
+        }
+    }
+
     private func nativeOptimisticUpserts(
         from projection: RecurringEditProjection,
         edited: Event

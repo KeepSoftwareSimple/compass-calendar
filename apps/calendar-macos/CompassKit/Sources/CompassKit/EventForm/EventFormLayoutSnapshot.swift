@@ -26,8 +26,8 @@ public struct EventFormLayoutSnapshot: Codable, Hashable, Sendable {
 }
 
 public enum EventFormLayoutSnapshotBuilder {
-    private static let wp18VisibleFields: Set<EventFormField> = [
-        .actions, .title, .start, .end, .calendar, .color,
+    private static let wp19VisibleFields: Set<EventFormField> = [
+        .actions, .title, .start, .end, .calendar, .color, .recurrence,
     ]
 
     private static func accessibilityId(for field: EventFormField) -> String {
@@ -54,7 +54,7 @@ public enum EventFormLayoutSnapshotBuilder {
         let sorted = FormFieldDigitMapping.sortedRows(registryRows)
         let rows = sorted.compactMap { row -> EventFormLayoutSnapshot.FieldRow? in
             guard let field = EventFormField(rawValue: row.field) else { return nil }
-            let visible = wp18VisibleFields.contains(field)
+            let visible = wp19VisibleFields.contains(field)
             return EventFormLayoutSnapshot.FieldRow(
                 field: row.field,
                 digit: row.digit,

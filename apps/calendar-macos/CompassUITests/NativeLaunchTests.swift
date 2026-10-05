@@ -252,6 +252,40 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testRecurrenceThisAndFollowingEditOnFixtureSeries() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-weekly-sync|2026-06-12T14:00:00.000Z",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+            "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        waitForFocusedGridEvent(title: "Weekly sync", in: window, timeout: 10)
+
+        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
+        window.typeKey("a", modifierFlags: [.command])
+        window.typeText("Split weekly sync")
+
+        window.typeKey(.enter, modifierFlags: [.command])
+        let scopeDialog = window.descendants(matching: .any)["compass-recurrence-scope-dialog"]
+        XCTAssertTrue(scopeDialog.waitForExistence(timeout: 8))
+        window.typeKey("2", modifierFlags: [])
+
+        XCTAssertTrue(
+            window.buttons["Split weekly sync"].waitForExistence(timeout: 10),
+            "Expected edited occurrence title after this-and-following save")
+        XCTAssertTrue(
+            window.buttons["Weekly sync"].waitForExistence(timeout: 5),
+            "Expected earlier occurrence to keep the original series title")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

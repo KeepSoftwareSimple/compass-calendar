@@ -27,7 +27,7 @@ public enum GridEventDraftMapping {
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = title.isEmpty ? "Untitled event" : title
         let eventId = draft.kind == .edit ? (draft.sourceEventId ?? draft.clientId) : draft.clientId
-        let recurrence = baseline?.recurrence ?? .single(EventRecurrence_SinglePayload(kind: "single"))
+        let recurrence = optimisticRecurrence(from: draft, baseline: baseline)
         let createdAt = baseline?.createdAt ?? now
 
         return Event(
@@ -50,22 +50,53 @@ public enum GridEventDraftMapping {
             calendarId: calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
             id: draft.clientId,
-            recurrence: .single(EventRecurrence_SinglePayload(kind: "single")),
+            recurrence: createRecurrence(from: draft.recurrence),
             schedule: schedule(from: draft.schedule)
         )
     }
 
-    public static func replaceInput(from draft: GridEventDraft) -> ReplaceEventInput? {
+    public static func replaceInput(from draft: GridEventDraft, scope: ScopeEnum) -> ReplaceEventInput? {
         guard draft.kind == .edit, let calendarId = draft.calendarId else { return nil }
         let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = title.isEmpty ? "Untitled event" : title
         return ReplaceEventInput(
             calendarId: calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
-            recurrence: .preserve(ReplaceEventInputRecurrence_PreservePayload(kind: "preserve")),
+            recurrence: replaceRecurrence(from: draft.recurrence),
             schedule: schedule(from: draft.schedule),
-            scope: .this
+            scope: scope
         )
+    }
+
+    private static func createRecurrence(from draft: GridEventRecurrenceDraft) -> CreateEventInputRecurrence {
+        switch draft {
+        case .single, .preserve:
+            return .single(EventRecurrence_SinglePayload(kind: "single"))
+        case .series(let rules):
+            return .series(EventRecurrence_SeriesPayload(kind: "series", rules: rules))
+        }
+    }
+
+    private static func replaceRecurrence(from draft: GridEventRecurrenceDraft) -> ReplaceEventInputRecurrence {
+        switch draft {
+        case .preserve:
+            return .preserve(ReplaceEventInputRecurrence_PreservePayload(kind: "preserve"))
+        case .single:
+            return .single(EventRecurrence_SinglePayload(kind: "single"))
+        case .series(let rules):
+            return .series(EventRecurrence_SeriesPayload(kind: "series", rules: rules))
+        }
+    }
+
+    private static func optimisticRecurrence(from draft: GridEventDraft, baseline: Event?) -> EventRecurrence {
+        switch draft.recurrence {
+        case .preserve:
+            return baseline?.recurrence ?? .single(EventRecurrence_SinglePayload(kind: "single"))
+        case .single:
+            return .single(EventRecurrence_SinglePayload(kind: "single"))
+        case .series(let rules):
+            return .series(EventRecurrence_SeriesPayload(kind: "series", rules: rules))
+        }
     }
 
     private static func inputContent(from draft: GridEventDraft, title: String) -> CreateEventInputContent {

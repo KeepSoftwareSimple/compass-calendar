@@ -18,6 +18,7 @@ public struct GridEventDraft: Sendable, Equatable {
     public var color: EventColorSlot?
     public var description: String
     public var location: String
+    public var recurrence: GridEventRecurrenceDraft
 
     public init(
         kind: GridEventDraftKind = .create,
@@ -28,7 +29,8 @@ public struct GridEventDraft: Sendable, Equatable {
         sourceEventId: EventId? = nil,
         color: EventColorSlot? = nil,
         description: String = "",
-        location: String = ""
+        location: String = "",
+        recurrence: GridEventRecurrenceDraft = .single
     ) {
         self.kind = kind
         self.clientId = clientId
@@ -39,6 +41,7 @@ public struct GridEventDraft: Sendable, Equatable {
         self.color = color
         self.description = description
         self.location = location
+        self.recurrence = recurrence
     }
 
     public var persistedEventId: EventId? {

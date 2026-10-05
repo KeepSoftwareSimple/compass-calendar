@@ -14,7 +14,8 @@ public enum GridEventDraftFromEvent {
             sourceEventId: event.id,
             color: details.color,
             description: details.description,
-            location: details.location
+            location: details.location,
+            recurrence: .preserve
         )
     }
 

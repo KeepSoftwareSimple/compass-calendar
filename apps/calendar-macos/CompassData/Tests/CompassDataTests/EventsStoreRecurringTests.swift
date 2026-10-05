@@ -97,6 +97,66 @@ final class EventsStoreRecurringTests: XCTestCase {
         XCTAssertEqual(julySix.count, 1)
     }
 
+    func testDeleteOptimisticMapsScopeToQuery() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = EventRepository(database: database)
+        let rangeCache = RangeCache(database: database)
+        let localEvents = LocalEventRepository(database: database)
+        let mockAPI = MockEventsAPI()
+        let store = EventsStore(
+            repository: repository,
+            localEvents: localEvents,
+            rangeCache: rangeCache,
+            eventsAPI: mockAPI
+        )
+
+        let seriesId = EventId(rawValue: "demo-weekly-sync")
+        let master = try seriesMaster(id: seriesId)
+        let first = try occurrence(
+            id: "\(seriesId.rawValue)|2026-06-10T14:00:00.000Z",
+            day: 10,
+            seriesId: seriesId
+        )
+        let second = try occurrence(
+            id: "\(seriesId.rawValue)|2026-06-12T14:00:00.000Z",
+            day: 12,
+            seriesId: seriesId
+        )
+        try repository.upsert(events: [master, first, second], isLocal: false)
+
+        try await store.deleteOptimistic(id: second.id, scope: .thisAndFollowing)
+        XCTAssertEqual(mockAPI.lastDeleteScope, .thisAndFollowing)
+
+        mockAPI.lastDeleteScope = nil
+        try await store.deleteOptimistic(id: first.id, scope: .all)
+        XCTAssertEqual(mockAPI.lastDeleteScope, .all)
+    }
+
+    func testReplaceOptimisticMapsThisScopeToQuery() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = EventRepository(database: database)
+        let rangeCache = RangeCache(database: database)
+        let localEvents = LocalEventRepository(database: database)
+        let mockAPI = MockEventsAPI()
+        let store = EventsStore(
+            repository: repository,
+            localEvents: localEvents,
+            rangeCache: rangeCache,
+            eventsAPI: mockAPI
+        )
+
+        let seriesId = EventId(rawValue: "664e21f9a6b3f0b1c2d3e4f5")
+        let split = try occurrence(
+            id: "\(seriesId.rawValue)|2026-06-06T16:00:00.000Z",
+            day: 6,
+            seriesId: seriesId
+        )
+        try repository.upsert(events: [split], isLocal: false)
+        let input = try replaceInput(scope: .this)
+        try await store.replaceOptimistic(id: split.id, input: input, optimisticEvent: split)
+        XCTAssertEqual(mockAPI.lastReplaceScope, .this)
+    }
+
     private func seriesMaster(id: EventId) throws -> Event {
         let json = """
         {

@@ -6,6 +6,9 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
     var listHandler: ((EventListQuery) async throws -> [EventResponseEvent])?
     var createHandler: ((CreateEventInput) async throws -> EventResponseEvent)?
     var replaceHandler: ((EventId, ReplaceEventInput) async throws -> EventResponseEvent)?
+    var deleteHandler: ((EventId, EventDeleteScope) async throws -> Void)?
+    private(set) var lastReplaceScope: ScopeEnum?
+    private(set) var lastDeleteScope: EventDeleteScope?
 
     func list(_ query: EventListQuery) async throws -> [EventResponseEvent] {
         try await listHandler?(query) ?? []
@@ -16,13 +19,19 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
     }
 
     func replace(id: EventId, input: ReplaceEventInput) async throws -> EventResponseEvent {
+        lastReplaceScope = input.scope
         guard let replaceHandler else {
             throw NSError(domain: "MockEventsAPI", code: 0)
         }
         return try await replaceHandler(id, input)
     }
 
-    func delete(id: EventId, scope: EventDeleteScope) async throws {}
+    func delete(id: EventId, scope: EventDeleteScope) async throws {
+        lastDeleteScope = scope
+        if let deleteHandler {
+            try await deleteHandler(id, scope)
+        }
+    }
 
     func rsvp(id: EventId, input: RsvpEventInput) async throws {}
 }

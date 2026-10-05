@@ -111,17 +111,7 @@ extension NativeCalendarRootModel {
     }
 
     public func deleteFormEvent() async {
-        guard let draft = draftStore.gridDraft,
-            draft.kind == .edit,
-            let eventId = draft.persistedEventId
-        else { return }
-        draftStore.discard()
-        rebuildPresentation()
-        do {
-            try await eventsStore.deleteOptimistic(id: eventId, scope: .this)
-            loadedEvents = try eventsStore.fetchAllEvents()
-            rebuildPresentation()
-        } catch {}
+        await requestDeleteFormEvent()
     }
 
     public func jumpEventFormField(digit: Character) {
