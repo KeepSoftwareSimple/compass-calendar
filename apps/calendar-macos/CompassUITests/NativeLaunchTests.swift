@@ -181,6 +181,44 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    /// Opens the native quick-add panel from the Debug menu and saves a fixture event.
+    func testQuickAddPanelCreatesFixtureEvent() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        let debugMenu = app.menuBars.menuBarItems["Debug"]
+        XCTAssertTrue(debugMenu.waitForExistence(timeout: 5))
+        debugMenu.click()
+        app.menuItems["Open Quick Add Panel"].click()
+
+        let panel = app.windows.matching(
+            NSPredicate(format: "identifier == %@", "compass-native-quick-add-window")
+        ).firstMatch
+        XCTAssertTrue(panel.waitForExistence(timeout: 5))
+        let field = panel.textFields.matching(
+            NSPredicate(format: "identifier == %@", "compass-native-quick-add-field")
+        ).firstMatch
+        XCTAssertTrue(
+            field.waitForExistence(timeout: 10),
+            "Expected native quick-add text field after opening the panel")
+        field.click()
+        field.typeText("Quick add fixture")
+
+        field.typeKey(.enter, modifierFlags: [])
+        XCTAssertTrue(
+            window.buttons["Quick add fixture"].waitForExistence(timeout: 10),
+            "Expected saved quick-add event on the native grid")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]

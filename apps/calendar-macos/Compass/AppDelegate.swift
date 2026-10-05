@@ -48,6 +48,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.setNativeTheme(theme)
         }
         mainMenuController = menuController
+        menuController.quickAddCoordinator = quickAddCoordinator
+        refreshQuickAddNativeConfiguration()
         NSApp.mainMenu = MainMenu.make(controller: menuController)
 
         updater.onUpdateReady = { [weak webViewController] version in
@@ -136,12 +138,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.contentViewController = nativeController
             CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
             mainMenuController?.nativeRootController = nativeController
+            refreshQuickAddNativeConfiguration()
         } else {
             nativeRootController = nil
             guard let webViewController else { return }
             window.contentViewController = webViewController
             webViewController.accessibilityHostWindow = window
             CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
+            refreshQuickAddNativeConfiguration()
         }
     }
 
@@ -175,5 +179,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         MainMenuNativeUIState(
             isNativeUIEnabled: usingNativeUI,
             theme: NativeUIThemePreference.load())
+    }
+
+    private func refreshQuickAddNativeConfiguration() {
+        quickAddCoordinator?.configureNativeQuickAdd(
+            usesNativeQuickAdd: { [weak self] in self?.usingNativeUI ?? false },
+            nativeModel: { [weak self] in self?.nativeRootController?.model },
+            nativeTheme: { NativeUIThemePreference.load() })
     }
 }
