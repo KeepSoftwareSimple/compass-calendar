@@ -44,9 +44,11 @@ final class NativeLaunchTests: XCTestCase {
             window.descendants(matching: .any)["compass-native-welcome-modal"].waitForExistence(timeout: 10))
     }
 
+    @MainActor
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
+        // Demo fixture skips the welcome modal; its modal trait hides header/sidebar from XCUITest.
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
