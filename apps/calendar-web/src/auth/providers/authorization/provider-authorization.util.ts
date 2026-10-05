@@ -117,27 +117,17 @@ export function buildMicrosoftAuthorizationUrl({
 export function buildAppleAuthorizationUrl({
   clientId,
   state,
-  redirectUri = `${ENV_WEB.BACKEND_BASEURL}${APPLE_SIGNIN_FORM_POST_PATH}`,
 }: {
   clientId: string;
   state: string;
-  redirectUri?: string;
 }): string {
   const params = new URLSearchParams({
     client_id: clientId,
     response_type: "code",
-    redirect_uri: redirectUri,
+    redirect_uri: `${ENV_WEB.BACKEND_BASEURL}${APPLE_SIGNIN_FORM_POST_PATH}`,
     response_mode: "form_post",
     scope: "name email",
     state,
   });
   return `https://appleid.apple.com/auth/authorize?${params.toString()}`;
-}
-
-export function buildAppleAuthorizationState(
-  frontendRedirectURI: string,
-): string {
-  return btoa(
-    JSON.stringify({ frontendRedirectURI, nonce: crypto.randomUUID() }),
-  );
 }
