@@ -69,7 +69,7 @@ public final class AuthStore {
         self.eventsStore = eventsStore
     }
 
-    public func bootstrap(forceDemoSignedIn: Bool = false) async {
+    public func bootstrap(forceDemoSignedIn: Bool = false, deferModalUntilWelcomeCompletes: Bool = false) async {
         submitError = nil
         if forceDemoSignedIn {
             authenticated = true
@@ -82,8 +82,10 @@ public final class AuthStore {
         if authenticated {
             await identifyAnalyticsUser()
             isModalPresented = false
-        } else {
+        } else if !deferModalUntilWelcomeCompletes {
             openModal(.login)
+        } else {
+            isModalPresented = false
         }
     }
 
