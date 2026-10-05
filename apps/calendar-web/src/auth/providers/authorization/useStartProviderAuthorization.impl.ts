@@ -7,11 +7,19 @@ import { buildOAuthStateForClient } from "@core/desktop/desktop-oauth-state.util
 import { GOOGLE_SCOPES } from "@core/providers/google.scopes";
 import { MICROSOFT_SCOPES } from "@core/providers/microsoft.scopes";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
+import { writeAppleAuthorizationIntent } from "@web/auth/apple/authorization/apple-authorization.storage";
+import {
+  buildAppleAuthorizationState,
+  buildAppleAuthorizationUrl,
+} from "@web/auth/apple/authorization/apple-authorization.util";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
 import { isDesktop } from "@web/desktop/isDesktop";
-import { getMicrosoftSignInClientId } from "./provider-authorization.config";
+import {
+  getAppleSignInClientId,
+  getMicrosoftSignInClientId,
+} from "./provider-authorization.config";
 import { assignAuthorizationRedirect } from "./provider-authorization.redirect";
 import {
   type ProviderAuthorizationIntent,
@@ -152,13 +160,50 @@ const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
     };
   };
 
-const useUnsupportedProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
-  ({ onError }) => ({
-    loading: false,
+const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
+  intent,
+  signupFlow,
+  onStart,
+  onError,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [state] = useState(() =>
+    buildAppleAuthorizationState(buildProviderAuthCallbackUrl("apple")),
+  );
+
+  return {
+    loading,
     startAuthorization: useCallback(() => {
-      onError?.(new Error("This sign-in method is not available yet"));
-    }, [onError]),
-  });
+      const clientId = getAppleSignInClientId();
+      if (!clientId) {
+        onError?.(new Error("Apple sign-in is not configured"));
+        return;
+      }
+      onStart?.();
+      setLoading(true);
+      if (signupFlow) {
+        rememberSignupTrialMethod("apple");
+      }
+      writeAppleAuthorizationIntent(state, {
+        intent,
+        returnPath: signupFlow
+          ? buildSignupTrialReturnPath()
+          : getSafeProviderAuthReturnPath("apple"),
+        createdAt: Date.now(),
+      });
+      track("oauth_redirect_started", { provider: "apple", intent });
+      trackSignupStep("oauth_redirect_started", { method: "apple" });
+      try {
+        assignAuthorizationRedirect(
+          buildAppleAuthorizationUrl({ clientId, state }),
+        );
+      } catch (error) {
+        setLoading(false);
+        onError?.(error);
+      }
+    }, [intent, onError, onStart, signupFlow, state]),
+  };
+};
 
 const PROVIDER_AUTHORIZATION_STRATEGIES: Record<
   ProviderKind,
@@ -166,7 +211,7 @@ const PROVIDER_AUTHORIZATION_STRATEGIES: Record<
 > = {
   google: useGoogleProviderAuthorizationStrategy,
   microsoft: useMicrosoftProviderAuthorizationStrategy,
-  apple: useUnsupportedProviderAuthorizationStrategy,
+  apple: useAppleProviderAuthorizationStrategy,
 };
 
 export const useStartProviderAuthorizationImpl = (
