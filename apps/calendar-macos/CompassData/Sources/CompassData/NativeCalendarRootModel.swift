@@ -86,9 +86,6 @@ public final class NativeCalendarRootModel {
             viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
         }
         settingsStore = SettingsStore(viewStore: viewStore)
-        settingsStore.onDevicePreferencesChanged = { [weak self] in
-            self?.rebuildPresentation()
-        }
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
         pointerHintStore = PointerHintStore()
@@ -101,6 +98,9 @@ public final class NativeCalendarRootModel {
             ),
             trackWidth: 1010
         )
+        settingsStore.onDevicePreferencesChanged = { [weak self] in
+            self?.rebuildPresentation()
+        }
         authStore.onAuthenticated = { [weak self] in
             await self?.handleAuthenticated()
         }
