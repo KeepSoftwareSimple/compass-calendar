@@ -59,8 +59,6 @@ public final class SettingsStore {
         } else {
             quickAddHotKeyDisplay = QuickAddHotKeyStorage.defaultDisplayString
         }
-        viewStore.setPinnedTimeZone(CompassDevicePreferences.readPinnedTimeZone(from: storage))
-        viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone(from: storage))
         refreshLaunchAtLogin()
     }
 
