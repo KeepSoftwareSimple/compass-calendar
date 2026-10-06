@@ -164,8 +164,12 @@ public final class EventsStore {
         beginMutation()
         defer { endMutation() }
         if source == .local {
-            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
-            try localEvents.put(record)
+            let snapshot = try localRecurringReplaceSnapshot(targetId: id)
+            try applyLocalReplaceCacheUpdate(
+                input: input,
+                edited: optimisticEvent,
+                snapshot: snapshot
+            )
             return
         }
         let snapshot = try recurringReplaceSnapshot(targetId: id)
@@ -189,10 +193,12 @@ public final class EventsStore {
         beginMutation()
         defer { endMutation() }
         if source == .local {
-            try localEvents.delete(id: id)
+            let snapshot = try localRecurringDeleteSnapshot(targetId: id)
+            try applyLocalDeleteCacheUpdate(id: id, scope: scope, snapshot: snapshot)
             return
         }
-        try repository.delete(ids: [id])
+        let snapshot = try recurringDeleteSnapshot(targetId: id)
+        try applyDeleteCacheUpdate(id: id, scope: scope, snapshot: snapshot)
         do {
             try await eventsAPI.delete(id: id, scope: scope)
         } catch {}
@@ -251,6 +257,12 @@ public final class EventsStore {
         let original: Event
         let seriesEvents: [Event]
         let seriesMaster: Event?
+    }
+
+    private struct RecurringDeleteSnapshot: Sendable {
+        let target: Event
+        let seriesId: EventId
+        let seriesEvents: [Event]
     }
 
     private func recurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
@@ -325,6 +337,175 @@ public final class EventsStore {
 
     /// Native GRDB holds materialized rows only; drop superseded occurrence ids that
     /// projection removes and let the next range read re-expand the remainder series.
+    private func recurringDeleteSnapshot(targetId: EventId) throws -> RecurringDeleteSnapshot? {
+        guard let target = try repository.fetch(id: targetId) else { return nil }
+        let seriesId: EventId
+        switch target.recurrence {
+        case .occurrence(let payload):
+            seriesId = payload.seriesId
+        case .series:
+            seriesId = target.id
+        case .single:
+            return nil
+        }
+        let seriesEvents = try seriesOccurrenceSnapshot(seriesId: seriesId, target: target)
+        return RecurringDeleteSnapshot(
+            target: target,
+            seriesId: seriesId,
+            seriesEvents: seriesEvents
+        )
+    }
+
+    private func applyDeleteCacheUpdate(
+        id: EventId,
+        scope: EventDeleteScope,
+        snapshot: RecurringDeleteSnapshot?
+    ) throws {
+        guard let snapshot, scope != .this else {
+            try repository.delete(ids: [id])
+            return
+        }
+        let scopeEnum = ScopeEnum(rawValue: scope.rawValue) ?? .this
+        let projection = ProjectRecurringEdit.projectRecurringDelete(
+            scope: scopeEnum,
+            target: snapshot.target,
+            seriesId: snapshot.seriesId,
+            seriesEvents: snapshot.seriesEvents
+        )
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try repository.delete(ids: ids)
+        }
+    }
+
+    private func localRecurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
+        guard let original = try localEvent(id: targetId)?.event else { return nil }
+        guard case .occurrence(let payload) = original.recurrence else { return nil }
+        let seriesId = payload.seriesId
+        let seriesEvents = try localSeriesOccurrenceSnapshot(seriesId: seriesId, target: original)
+        let seriesMaster = try localEvent(id: seriesId)?.event
+        return RecurringReplaceSnapshot(
+            original: original,
+            seriesEvents: seriesEvents,
+            seriesMaster: seriesMaster
+        )
+    }
+
+    private func localRecurringDeleteSnapshot(targetId: EventId) throws -> RecurringDeleteSnapshot? {
+        guard let target = try localEvent(id: targetId)?.event else { return nil }
+        let seriesId: EventId
+        switch target.recurrence {
+        case .occurrence(let payload):
+            seriesId = payload.seriesId
+        case .series:
+            seriesId = target.id
+        case .single:
+            return nil
+        }
+        let seriesEvents = try localSeriesOccurrenceSnapshot(seriesId: seriesId, target: target)
+        return RecurringDeleteSnapshot(
+            target: target,
+            seriesId: seriesId,
+            seriesEvents: seriesEvents
+        )
+    }
+
+    private func localEvent(id: EventId) throws -> LocalEventRecord? {
+        try localEvents.fetchAll().first { $0.id == id }
+    }
+
+    private func localSeriesOccurrenceSnapshot(seriesId: EventId, target: Event) throws -> [Event] {
+        let all = try localEvents.fetchAll().map(\.event)
+        var events = all.filter { event in
+            switch event.recurrence {
+            case .occurrence(let payload):
+                return payload.seriesId == seriesId
+            case .series:
+                return event.id == seriesId
+            case .single:
+                return false
+            }
+        }
+        if !events.contains(where: { $0.id == target.id }) {
+            events.append(target)
+        }
+        return events
+    }
+
+    private func applyLocalReplaceCacheUpdate(
+        input: ReplaceEventInput,
+        edited: Event,
+        snapshot: RecurringReplaceSnapshot?
+    ) throws {
+        if let snapshot,
+           let projection = recurringReplaceProjection(
+               input: input,
+               edited: edited,
+               snapshot: snapshot
+           )
+        {
+            try applyLocalRecurringProjection(projection, edited: edited)
+        } else {
+            try putLocalEvent(edited)
+        }
+    }
+
+    private func applyLocalDeleteCacheUpdate(
+        id: EventId,
+        scope: EventDeleteScope,
+        snapshot: RecurringDeleteSnapshot?
+    ) throws {
+        guard let snapshot, scope != .this else {
+            try localEvents.delete(id: id)
+            return
+        }
+        let scopeEnum = ScopeEnum(rawValue: scope.rawValue) ?? .this
+        let projection = ProjectRecurringEdit.projectRecurringDelete(
+            scope: scopeEnum,
+            target: snapshot.target,
+            seriesId: snapshot.seriesId,
+            seriesEvents: snapshot.seriesEvents
+        )
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try localEvents.delete(ids: ids)
+        }
+    }
+
+    private func applyLocalRecurringProjection(
+        _ projection: RecurringEditProjection,
+        edited: Event
+    ) throws {
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try localEvents.delete(ids: ids)
+        }
+        let upserts = nativeOptimisticUpserts(from: projection, edited: edited)
+        if !upserts.isEmpty {
+            try putLocalEvents(upserts)
+        }
+    }
+
+    private func putLocalEvent(_ event: Event) throws {
+        let isDemo = try localEvent(id: event.id)?.isDemo ?? false
+        let record = LocalEventRecord(id: event.id, event: event, isDemo: isDemo)
+        try localEvents.put(record)
+    }
+
+    private func putLocalEvents(_ events: [Event]) throws {
+        let demoById = Dictionary(
+            uniqueKeysWithValues: try localEvents.fetchAll().map { ($0.id, $0.isDemo) }
+        )
+        let records = events.map { event in
+            LocalEventRecord(
+                id: event.id,
+                event: event,
+                isDemo: demoById[event.id] ?? false
+            )
+        }
+        try localEvents.putMany(records)
+    }
+
     private func nativeOptimisticUpserts(
         from projection: RecurringEditProjection,
         edited: Event

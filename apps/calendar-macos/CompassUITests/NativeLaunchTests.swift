@@ -299,6 +299,32 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    /// Saves a recurring demo fixture edit after confirming scope via keyboard.
+    func testRecurrenceScopePromptEditOnFixtureSeries() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-weekly-sync|2026-06-12T14:00:00.000Z",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+            "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
+            "-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE",
+            "-COMPASS_UI_TEST_EVENT_FORM_TITLE", "Split weekly sync",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        XCTAssertTrue(
+            window.buttons["Split weekly sync"].waitForExistence(timeout: 20),
+            "Expected this occurrence title after auto-saving recurring edit")
+        waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 10)
+        XCTAssertTrue(
+            window.buttons["Weekly sync"].waitForExistence(timeout: 8),
+            "Expected another occurrence to keep the original series title")
+    }
+
+    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]

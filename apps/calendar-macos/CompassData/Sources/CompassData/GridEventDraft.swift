@@ -18,6 +18,7 @@ public struct GridEventDraft: Sendable, Equatable {
     public var color: EventColorSlot?
     public var description: String
     public var location: String
+    public var recurrence: GridEventRecurrenceDraft
     /// Present means replace guest membership on save; nil preserves provider list.
     public var attendees: [DraftAttendeeInput]?
     /// Create-only meeting link request (sync mints conference on create).
@@ -33,6 +34,7 @@ public struct GridEventDraft: Sendable, Equatable {
         color: EventColorSlot? = nil,
         description: String = "",
         location: String = "",
+        recurrence: GridEventRecurrenceDraft = .single,
         attendees: [DraftAttendeeInput]? = nil,
         createConference: Bool = false
     ) {
@@ -45,6 +47,7 @@ public struct GridEventDraft: Sendable, Equatable {
         self.color = color
         self.description = description
         self.location = location
+        self.recurrence = recurrence
         self.attendees = attendees
         self.createConference = createConference
     }

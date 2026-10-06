@@ -82,7 +82,7 @@ describe("desktop export fixtures", () => {
       "@web/desktop-export/export-fixtures/demo-seed.fixtures"
     );
     const demo = buildDemoSeedFixtures();
-    expect(demo.events).toHaveLength(18);
+    expect(demo.events).toHaveLength(22);
     expect(demo.referenceNow).toContain("2026-06-10");
     expect(demo.calendarId).toBe(DEMO_EXPORT_CALENDAR_ID);
   });

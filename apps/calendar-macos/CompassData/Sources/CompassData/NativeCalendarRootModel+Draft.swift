@@ -178,6 +178,18 @@ extension NativeCalendarRootModel {
         }
     }
 
+    func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {
+        draftStore.commit()
+        formFieldDigitHintsVisible = false
+        rebuildPresentation()
+        do {
+            try await apply()
+            loadedEvents = try eventsStore.fetchAllEvents()
+            rebuildPresentation()
+            focusEvent(eventId: savedId)
+        } catch {}
+    }
+
     public func saveDraft() async {
         await saveDraftWithInvitationGate()
     }

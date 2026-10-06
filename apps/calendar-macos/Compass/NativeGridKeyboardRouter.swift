@@ -156,6 +156,45 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if model.pendingRecurrenceScopePrompt != nil {
+            if keyEvent.key == .named(.escape) {
+                model.cancelRecurrenceScopePrompt()
+                return true
+            }
+            if keyEvent.modifiers.isEmpty, case .character(let char) = keyEvent.key {
+                switch char {
+                case "1":
+                    Task { await model.confirmRecurrenceScope(.this) }
+                    return true
+                case "2":
+                    Task { await model.confirmRecurrenceScope(.thisAndFollowing) }
+                    return true
+                case "3":
+                    Task { await model.confirmRecurrenceScope(.all) }
+                    return true
+                default:
+                    break
+                }
+            }
+            if keyEvent.key == .named(.enter) {
+                Task { await model.confirmRecurrenceScope(.this) }
+                return true
+            }
+            return false
+        }
+
+        if model.pendingConvertToStandaloneConfirmation {
+            if keyEvent.key == .named(.escape) {
+                model.cancelConvertToStandaloneConfirmation()
+                return true
+            }
+            if keyEvent.key == .named(.enter) {
+                Task { await model.confirmConvertToStandalone() }
+                return true
+            }
+            return false
+        }
+
         if model.eventMenuStore.isOpen {
             if keyEvent.key == .named(.escape) {
                 model.closeEventMenu()
@@ -239,6 +278,15 @@ final class NativeGridKeyboardRouter {
     /// XCUITest typing often misses the SwiftUI title field; mirror keystrokes into the draft.
     private func handleUITestEventFormTyping(_ keyEvent: KeyEvent) -> Bool {
         guard UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus else { return false }
+        if keyEvent.modifiers == [.command],
+            case .character(let char) = keyEvent.key,
+            char.lowercased() == "v",
+            let pasted = NSPasteboard.general.string(forType: .string)
+        {
+            model.updateDraftFromForm(title: pasted)
+            EventFormAccessibilityProbe.syncTitle(pasted)
+            return true
+        }
         if keyEvent.modifiers == [.command],
             case .character(let char) = keyEvent.key,
             char.lowercased() == "a"

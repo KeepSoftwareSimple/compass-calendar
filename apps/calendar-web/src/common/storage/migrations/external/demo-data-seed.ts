@@ -62,6 +62,7 @@ function createEventRecord(
     id?: string;
     /** Color tag, so the seed doubles as a tour of the color system. */
     color?: EventColorSlot;
+    recurrence?: Event["recurrence"];
   },
   context: DemoSeedContext,
 ): LocalEventRecord {
@@ -88,7 +89,7 @@ function createEventRecord(
     calendarId: context.calendarId,
     content,
     schedule: EventScheduleSchema.parse(overrides.schedule),
-    recurrence: { kind: "single" },
+    recurrence: overrides.recurrence ?? { kind: "single" },
     createdAt,
     updatedAt: null,
   };
@@ -108,6 +109,8 @@ export const DEMO_EVENT_IDS = {
   dentist: "demo-dentist",
   /** Tomorrow, 14:00-15:00 - overlaps Dentist. */
   teamSync: "demo-team-sync",
+  /** Recurring series base for native scope XCUITest. */
+  weeklySync: "demo-weekly-sync",
 } as const;
 
 export interface GenerateDemoDataOptions {
@@ -312,8 +315,56 @@ export function generateDemoData(
     timedOn(2, "Gym", 17, 0, 17, 45, { color: "green" }),
   ];
 
+  const weeklySyncDescription =
+    "Fixture recurring series for native scope tests.";
+  const weeklySyncSeries = record({
+    id: DEMO_EVENT_IDS.weeklySync,
+    title: "Weekly sync",
+    description: weeklySyncDescription,
+    schedule: {
+      kind: "timed",
+      start: dayAt(0, 14, 0),
+      end: dayAt(0, 14, 30),
+      timeZone,
+    },
+    recurrence: {
+      kind: "series",
+      rules: ["RRULE:FREQ=WEEKLY;BYDAY=WE,FR"],
+    },
+  });
+
+  const weeklySyncOccurrence = (offsetDays: number) => {
+    const start = dayAt(offsetDays, 14, 0);
+    const end = dayAt(offsetDays, 14, 30);
+    const occurrenceId = EventIdSchema.parse(
+      `${DEMO_EVENT_IDS.weeklySync}|${dayjs(start).utc().format("YYYY-MM-DDTHH:mm:ss.SSS[Z]")}`,
+    );
+    return record({
+      id: occurrenceId,
+      title: "Weekly sync",
+      description: weeklySyncDescription,
+      schedule: {
+        kind: "timed",
+        start,
+        end,
+        timeZone,
+      },
+      recurrence: {
+        kind: "occurrence",
+        seriesId: EventIdSchema.parse(DEMO_EVENT_IDS.weeklySync),
+      },
+    });
+  };
+
+  const recurringFixtureEvents: LocalEventRecord[] = [
+    weeklySyncSeries,
+    weeklySyncOccurrence(0),
+    weeklySyncOccurrence(2),
+    weeklySyncOccurrence(7),
+  ];
+
   return {
-    events: [...todayEvents, ...nearbyEvents],
+    events: [...todayEvents, ...nearbyEvents, ...recurringFixtureEvents],
   };
 }
 

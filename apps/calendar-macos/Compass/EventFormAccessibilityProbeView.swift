@@ -49,6 +49,15 @@ final class EventFormAccessibilityProbeView: NSView {
 
     override func keyDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command),
+            event.charactersIgnoringModifiers?.lowercased() == "v"
+        {
+            if let string = NSPasteboard.general.string(forType: .string) {
+                titleBuffer = string
+                publishTitle()
+            }
+            return
+        }
+        if event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "a"
         {
             titleBuffer = ""

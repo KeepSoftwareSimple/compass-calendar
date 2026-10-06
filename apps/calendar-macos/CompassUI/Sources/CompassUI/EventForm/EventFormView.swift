@@ -87,6 +87,11 @@ public struct EventFormView: View {
                         draft: draft,
                         focusField: model.eventFormFocusedField
                     )
+                    EventFormRecurrenceSection(
+                        model: model,
+                        draft: draft,
+                        focusField: model.eventFormFocusedField
+                    )
                     EventFormConferenceSection(
                         model: model,
                         draft: draft,

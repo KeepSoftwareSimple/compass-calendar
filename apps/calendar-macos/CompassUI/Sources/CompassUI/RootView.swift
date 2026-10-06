@@ -114,6 +114,26 @@ public struct RootView: View {
             )
         }
         .overlay {
+            RecurrenceScopeDialogView(
+                isPresented: model.pendingRecurrenceScopePrompt != nil,
+                title: model.pendingRecurrenceScopePrompt == .delete
+                    ? "Delete recurring event"
+                    : "Save recurring event",
+                onCancel: { model.cancelRecurrenceScopePrompt() },
+                onConfirm: { scope in Task { await model.confirmRecurrenceScope(scope) } }
+            )
+        }
+        .overlay {
+            ConvertToStandaloneDialogView(
+                isPresented: model.pendingConvertToStandaloneConfirmation,
+                eventTitle: model.draftStore.gridDraft?.title.isEmpty == false
+                    ? (model.draftStore.gridDraft?.title ?? "this event")
+                    : "this event",
+                onCancel: { model.cancelConvertToStandaloneConfirmation() },
+                onConfirm: { Task { await model.confirmConvertToStandalone() } }
+            )
+        }
+        .overlay {
             SendInvitationsDialogView(
                 prompt: model.invitationPrompt,
                 onCancel: { model.cancelInvitationPrompt() },

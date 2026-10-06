@@ -33,8 +33,8 @@ describe("demoDataSeedMigration", () => {
     expect(store.putEvents).toHaveBeenCalled();
 
     const eventsCall = store.putEvents.mock.calls[0][0] as LocalEventRecord[];
-    // 7 today (unchanged) + 11 nearby-day events (2 + 3 + 3 + 3 across ±1/±2).
-    expect(eventsCall).toHaveLength(18);
+    // 7 today + 11 nearby-day events + 4 recurring fixture rows (series + 3 occurrences).
+    expect(eventsCall).toHaveLength(22);
     expect(eventsCall.every((record) => record.isDemo)).toBe(true);
   });
 

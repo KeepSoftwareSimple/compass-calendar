@@ -8,17 +8,19 @@ extension NativeCalendarRootModel {
     }
 
     public func confirmInvitationSend() {
-        guard let draft = pendingInvitationDraft else { return }
+        guard pendingInvitationDraft != nil else { return }
         invitationPrompt = nil
         pendingInvitationDraft = nil
-        Task { await commitSave(draft: draft, invitation: .all) }
+        pendingSaveInvitation = .all
+        Task { await requestSaveDraft() }
     }
 
     public func confirmInvitationDontSend() {
-        guard let draft = pendingInvitationDraft else { return }
+        guard pendingInvitationDraft != nil else { return }
         invitationPrompt = nil
         pendingInvitationDraft = nil
-        Task { await commitSave(draft: draft, invitation: .none) }
+        pendingSaveInvitation = .none
+        Task { await requestSaveDraft() }
     }
 
     public func saveDraftWithInvitationGate() async {
@@ -32,59 +34,8 @@ extension NativeCalendarRootModel {
             )
             return
         }
-        await commitSave(draft: draft, invitation: nil)
-    }
-
-    func commitSave(draft: GridEventDraft, invitation: InvitationEnum?) async {
-        let baseline = baselineEvent(for: draft)
-        var normalized = draft
-        if normalized.createConference,
-            CalendarCapabilities.creatableConferenceKind(on: attendeeCalendar(for: normalized)) == nil
-        {
-            normalized.createConference = false
-        }
-
-        let savedId: String
-        switch normalized.kind {
-        case .create:
-            guard let input = GridEventDraftMapping.createInput(from: normalized, invitation: invitation),
-                let optimistic = GridEventDraftMapping.optimisticEvent(from: normalized, baseline: baseline)
-            else { return }
-            savedId = optimistic.id.rawValue
-            recordCreateUndo(for: optimistic)
-            draftStore.commit()
-            formFieldDigitHintsVisible = false
-            invitationPrompt = nil
-            pendingInvitationDraft = nil
-            rebuildPresentation()
-            do {
-                try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
-                loadedEvents = try eventsStore.fetchAllEvents()
-                rebuildPresentation()
-                focusEvent(eventId: savedId)
-            } catch {}
-        case .edit:
-            guard let eventId = normalized.persistedEventId,
-                let input = GridEventDraftMapping.replaceInput(from: normalized, invitation: invitation),
-                let optimistic = GridEventDraftMapping.optimisticEvent(from: normalized, baseline: baseline)
-            else { return }
-            savedId = eventId.rawValue
-            draftStore.commit()
-            formFieldDigitHintsVisible = false
-            invitationPrompt = nil
-            pendingInvitationDraft = nil
-            rebuildPresentation()
-            do {
-                try await eventsStore.replaceOptimistic(
-                    id: eventId,
-                    input: input,
-                    optimisticEvent: optimistic
-                )
-                loadedEvents = try eventsStore.fetchAllEvents()
-                rebuildPresentation()
-                focusEvent(eventId: savedId)
-            } catch {}
-        }
+        pendingSaveInvitation = nil
+        await requestSaveDraft()
     }
 
     public func cancelRsvpScopeDialog() {
@@ -170,5 +121,15 @@ extension NativeCalendarRootModel {
             loadedEvents = try eventsStore.fetchAllEvents()
             rebuildPresentation()
         } catch {}
+    }
+
+    func normalizedDraftForSave(_ draft: GridEventDraft) -> GridEventDraft {
+        var normalized = draft
+        if normalized.createConference,
+            CalendarCapabilities.creatableConferenceKind(on: attendeeCalendar(for: normalized)) == nil
+        {
+            normalized.createConference = false
+        }
+        return normalized
     }
 }

@@ -37,12 +37,19 @@ public final class NativeCalendarRootModel {
     /// AppKit title-field probe for native UI tests when the event form is open.
     public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
+    public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var pendingRecurrenceScopePrompt: RecurrenceScopePromptKind? {
+        didSet {
+            onRecurrenceScopeAccessibilityProbeChanged?(pendingRecurrenceScopePrompt != nil)
+        }
+    }
+    public var pendingConvertToStandaloneConfirmation = false
     public var invitationPrompt: EventInvitationPromptState?
     public var pendingRsvpChoice: PendingRsvpChoice?
     public var attendeeSuggestions: [DraftAttendeeInput] = []
@@ -50,6 +57,7 @@ public final class NativeCalendarRootModel {
     var attendeeSuggestionTask: Task<Void, Never>?
     var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
     var pendingInvitationDraft: GridEventDraft?
+    var pendingSaveInvitation: InvitationEnum?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
     /// Set when Sparkle has staged an update; cleared after restart prompt dismisses.
@@ -843,7 +851,14 @@ public final class NativeCalendarRootModel {
         Task { @MainActor in
             openKeyboardEditForFocusedEvent()
             openEventFormForCurrentDraft()
+            if let title = UITestLaunchPolicy.presetEventFormTitle {
+                updateDraftFromForm(title: title)
+                onEventFormTitleAccessibilityProbeTitleSync?(title)
+            }
             publishEventFormTitleAccessibilityProbe()
+            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+                await saveDraftWithInvitationGate()
+            }
         }
     }
 

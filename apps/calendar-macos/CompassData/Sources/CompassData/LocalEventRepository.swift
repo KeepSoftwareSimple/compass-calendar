@@ -33,8 +33,15 @@ public struct LocalEventRepository: Sendable {
     }
 
     public func delete(id: EventId) throws {
+        try delete(ids: [id])
+    }
+
+    public func delete(ids: [EventId]) throws {
+        guard !ids.isEmpty else { return }
         try db.write { db in
-            try LocalEventRow.deleteOne(db, key: id.rawValue)
+            for id in ids {
+                try LocalEventRow.deleteOne(db, key: id.rawValue)
+            }
         }
     }
 
