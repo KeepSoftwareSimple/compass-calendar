@@ -3,6 +3,7 @@ import * as Track from "@web/auth/posthog/track";
 import { brighten, darken, isDark } from "@web/common/styles/color.utils";
 import { getEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
+import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
   GRID_EVENT_TITLE_COMPACT_FONT_SIZE,
@@ -154,7 +155,49 @@ describe("EventCard", () => {
       getEventPalette().base,
     );
     expect(card.style.boxShadow).toContain(
-      "0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, var(--text) 70%, transparent)",
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    );
+  });
+
+  it("keeps provider colorHex on a sidebar-editing timed card", () => {
+    render(
+      <TimedEventCard
+        displayMode="draft"
+        event={createEvent({
+          colorHex: "#c4b5fd",
+          startDate: "2099-01-15T09:00:00.000Z",
+          endDate: "2099-01-15T10:00:00.000Z",
+        })}
+        isSelected={true}
+        motionMode="idle"
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "Timed event: Planning block, 9 - 10 AM",
+    });
+    expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
+    expect(card.style.boxShadow).toContain(
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    );
+  });
+
+  it("paints the sidebar-editing ring on all-day cards", () => {
+    render(
+      <AllDayEventCard
+        event={createEvent({ isAllDay: true, title: "Conference" })}
+        isPlaceholder={false}
+        isSelected={true}
+        position={position}
+      />,
+    );
+
+    const card = screen.getByRole("button", {
+      name: "All-day event: Conference",
+    });
+    expect(card.style.boxShadow).toContain(
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
     );
   });
 

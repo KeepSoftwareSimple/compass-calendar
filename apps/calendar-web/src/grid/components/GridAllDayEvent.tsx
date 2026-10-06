@@ -22,6 +22,7 @@ interface Props {
   isDraft?: boolean;
   isHidden?: boolean;
   isPlaceholder: boolean;
+  isSelected?: boolean;
   measurements: GridMeasurements;
   onEventKeyDown?: (event: GridEvent) => void;
   visibleDates: GridVisibleDate[];
@@ -39,6 +40,7 @@ const GridAllDayEventBase = (
     isDraft = false,
     isHidden = false,
     isPlaceholder,
+    isSelected = false,
     measurements,
     onEventKeyDown,
     visibleDates,
@@ -65,6 +67,7 @@ const GridAllDayEventBase = (
       interactionAttributes={interactionAttributes}
       isHidden={isHidden}
       isPlaceholder={isPlaceholder}
+      isSelected={isSelected || isActiveDraft}
       onEventKeyDown={onEventKeyDown}
       position={positionWithDraftStack}
       ref={ref}
@@ -86,6 +89,7 @@ export const GridAllDayEventMemo = memo(GridAllDayEvent, (prev, next) => {
     prev.isDraft === next.isDraft &&
     prev.isHidden === next.isHidden &&
     prev.isPlaceholder === next.isPlaceholder &&
+    prev.isSelected === next.isSelected &&
     prev.measurements === next.measurements &&
     prev.visibleDates === next.visibleDates
   );

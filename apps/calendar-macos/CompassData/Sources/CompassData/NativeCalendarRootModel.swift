@@ -9,6 +9,7 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
@@ -91,6 +92,7 @@ public final class NativeCalendarRootModel {
         configStore = environment.configStore
         authStore = environment.authStore
         billingStore = environment.billingStore
+        settingsStore = SettingsStore()
         levelsStore = environment.levelsStore
         lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
@@ -128,6 +130,7 @@ public final class NativeCalendarRootModel {
             await self?.handleSignedOut()
         }
         billingStore.setAuthenticated(authStore.authenticated)
+        billingStore.attach(settingsStore: settingsStore)
         rebuildPresentation()
     }
 
@@ -176,13 +179,13 @@ public final class NativeCalendarRootModel {
             availableProviderCount: connectCalendarProviderKinds.count,
             storageAvailable: true,
             isAuthModalOpen: authStore.isModalPresented,
-            isSettingsOpen: billingStore.isSettingsPresented,
+            isSettingsOpen: settingsStore.isPresented,
             isAboutOpen: false,
             isAppleFormOpen: false,
             isMissingPermissionsOpen: false)
         let firstEventEligible = OnboardingGating.selectFirstEventPromptSurfaceEligible(
             isAuthModalOpen: authStore.isModalPresented,
-            isSettingsOpen: billingStore.isSettingsPresented,
+            isSettingsOpen: settingsStore.isPresented,
             isAboutOpen: false,
             isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
@@ -270,7 +273,7 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
-        billingStore.closeSettings()
+        settingsStore.close()
         onboardingStore.resetUserMetadataLoaded()
         if let eventStream {
             await eventStream.stop()
@@ -360,7 +363,7 @@ public final class NativeCalendarRootModel {
         case .editCycleEdge:
             cycleFocusedEdge(forward: true)
         case .otherSettings:
-            billingStore.openSettings()
+            settingsStore.open(page: .accounts)
         case .otherPalette:
             toggleCommandPalette()
         case .otherShortcuts:
@@ -701,6 +704,7 @@ public final class NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels
         )
         let snapshot = timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths())

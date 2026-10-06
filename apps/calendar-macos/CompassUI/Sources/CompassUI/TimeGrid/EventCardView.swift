@@ -62,7 +62,8 @@ final class EventCardView: NSView {
         card: GridLayoutCardSnapshot,
         theme: NativeWebTheme,
         surfaceColor: NSColor,
-        isFocused: Bool
+        isFocused: Bool,
+        isSidebarEditing: Bool = false
     ) {
         eventId = card.eventId
         layoutRectInParent = NSRect(
@@ -92,8 +93,12 @@ final class EventCardView: NSView {
         ).cgColor
 
         let ringColor = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? accentColor(for: theme)
-        focusRingLayer.borderColor = ringColor.cgColor
-        focusRingLayer.isHidden = !isFocused
+        if isSidebarEditing {
+            focusRingLayer.borderColor = theme.textColor.cgColor
+        } else {
+            focusRingLayer.borderColor = ringColor.cgColor
+        }
+        focusRingLayer.isHidden = !(isFocused || isSidebarEditing)
         needsLayout = true
         layoutSubtreeIfNeeded()
         syncAccessibilityFrame()

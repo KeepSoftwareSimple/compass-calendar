@@ -90,6 +90,46 @@ test("replaces only the draft schedule", () => {
   expect(updated.values.calendarId).toBeNull();
 });
 
+test("carries provider colorHex onto the grid draft card when no slot is set", () => {
+  const event = {
+    ...timedEvent,
+    content: {
+      kind: "details" as const,
+      title: "Focus",
+      description: "",
+      colorHex: "#c4b5fd",
+    },
+  } as unknown as Event;
+  const draft = editGridEventDraft(event);
+  if (!draft) throw new Error("Expected scheduled event draft");
+
+  expect(gridEventDraftToGridEvent(draft).colorHex).toBe("#c4b5fd");
+});
+
+test("drops source colorHex once the draft picks a slot color", () => {
+  const event = {
+    ...timedEvent,
+    content: {
+      kind: "details" as const,
+      title: "Focus",
+      description: "",
+      colorHex: "#c4b5fd",
+    },
+  } as unknown as Event;
+  const draft = editGridEventDraft(event);
+  if (draft?.kind !== "edit") {
+    throw new Error("Expected scheduled edit draft");
+  }
+
+  const withSlot: GridEventDraft = {
+    ...draft,
+    values: { ...draft.values, color: "blue" },
+  };
+
+  expect(gridEventDraftToGridEvent(withSlot).color).toBe("blue");
+  expect(gridEventDraftToGridEvent(withSlot).colorHex).toBeUndefined();
+});
+
 test("keeps the schedule's own UTC offset instead of forcing Z", () => {
   // Grid position and time label both localize CompassEvent.startDate/
   // endDate to the browser's timezone on read, so the stored offset itself

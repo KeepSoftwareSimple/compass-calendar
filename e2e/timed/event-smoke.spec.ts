@@ -2,6 +2,7 @@ import { test } from "@playwright/test";
 import {
   createEventTitle,
   deleteEventWithKeyboard,
+  expectSidebarEditingRingOnGridEvent,
   expectTimedEventMissing,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
@@ -20,6 +21,7 @@ test("creates, edits, and deletes a timed event", async ({ page }) => {
   await expectTimedEventVisible(page, title);
 
   await openEventForEditingWithKeyboard(page, title);
+  await expectSidebarEditingRingOnGridEvent(page, title);
 
   const updatedTitle = updateEventTitle("Timed Event");
   await fillTitleAndSaveEventForm(page, updatedTitle);
