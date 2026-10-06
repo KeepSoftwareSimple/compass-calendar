@@ -3,11 +3,11 @@ import CompassKit
 import Foundation
 
 final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
-    var listHandler: ((EventListQuery) async throws -> [EventResponseEvent])?
+    var listHandler: ((EventListQuery) async throws -> [Event])?
     var createHandler: ((CreateEventInput) async throws -> EventResponseEvent)?
     var replaceHandler: ((EventId, ReplaceEventInput) async throws -> EventResponseEvent)?
 
-    func list(_ query: EventListQuery) async throws -> [EventResponseEvent] {
+    func list(_ query: EventListQuery) async throws -> [Event] {
         try await listHandler?(query) ?? []
     }
 

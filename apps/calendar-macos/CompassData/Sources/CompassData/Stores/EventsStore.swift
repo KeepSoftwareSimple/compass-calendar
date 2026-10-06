@@ -5,7 +5,7 @@ import CompassKit
 import Foundation
 
 public protocol EventsAPIProtocol: Sendable {
-    func list(_ query: EventListQuery) async throws -> [EventResponseEvent]
+    func list(_ query: EventListQuery) async throws -> [Event]
     func create(_ input: CreateEventInput) async throws -> EventResponseEvent
     func replace(id: EventId, input: ReplaceEventInput) async throws -> EventResponseEvent
     func delete(id: EventId, scope: EventDeleteScope) async throws
@@ -81,8 +81,7 @@ public final class EventsStore {
             start: key.start,
             end: key.end
         )
-        let remote = try await eventsAPI.list(query)
-        let events = try remote.map { try EventMapping.event(from: $0) }
+        let events = try await eventsAPI.list(query)
         try repository.upsert(events: events, isLocal: false)
         try repository.pruneRemoteEvents(
             intersectingStart: key.start,

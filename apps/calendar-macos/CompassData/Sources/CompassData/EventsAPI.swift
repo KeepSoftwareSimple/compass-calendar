@@ -36,7 +36,7 @@ public struct EventsAPI: Sendable {
         self.client = client
     }
 
-    public func list(_ query: EventListQuery) async throws -> [EventResponseEvent] {
+    public func list(_ query: EventListQuery) async throws -> [Event] {
         var items = [
             URLQueryItem(name: "kind", value: query.kind),
             URLQueryItem(name: "start", value: query.start),

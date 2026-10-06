@@ -68,7 +68,7 @@ public final class FixtureTransport: URLProtocol, @unchecked Sendable {
                 let start = items.first(where: { $0.name == "start" })?.value ?? ""
                 let end = items.first(where: { $0.name == "end" })?.value ?? ""
                 let events = fixture.events(inRangeStart: start, end: end)
-                let body = try JSONEncoder().encode(EventListResponse(events: events.map(EventMapping.response)))
+                let body = try JSONEncoder().encode(EventListResponse(events: events))
                 return HTTPPayload(
                     statusCode: 200,
                     headers: ["Content-Type": "application/json"],
