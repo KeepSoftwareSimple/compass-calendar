@@ -187,12 +187,14 @@ extension NativeCalendarRootModel {
         if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
             _ = recurrenceScopeStore.beginDeleteAsk(for: event)
             statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
+            onStatusToastAccessibilityProbeChanged?(true)
         }
     }
 
     public func promotePendingDelete(scope: RecurrenceScopePromotionKind) {
         guard let pending = recurrenceScopeStore.pendingDelete else { return }
         recurrenceScopeStore.clear(opportunityId: pending.opportunityId)
+        statusToastStore.clear()
         let mapped: EventDeleteScope = scope == .all ? .all : .thisAndFollowing
         Task {
             await deleteEvent(pending.event, scope: mapped)

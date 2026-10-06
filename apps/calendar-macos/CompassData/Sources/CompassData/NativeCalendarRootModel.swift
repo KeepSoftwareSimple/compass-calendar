@@ -38,6 +38,8 @@ public final class NativeCalendarRootModel {
     public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
     public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onStatusToastAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
@@ -162,6 +164,12 @@ public final class NativeCalendarRootModel {
         billingStore.setAuthenticated(authStore.authenticated)
         billingStore.attach(settingsStore: settingsStore)
         bookingStore.setAuthenticated(authStore.authenticated)
+        overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
+            self?.onStatusToastAccessibilityProbeChanged?(visible)
+        }
+        overlayStores.legend.onOpenChanged = { [weak self] open in
+            self?.onShortcutsLegendAccessibilityProbeChanged?(open)
+        }
         rebuildPresentation()
     }
 

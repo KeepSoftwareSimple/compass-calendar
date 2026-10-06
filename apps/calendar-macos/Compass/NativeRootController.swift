@@ -68,6 +68,18 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             RecurrenceScopeAccessibilityProbe.publish(visible: visible)
         }
+        model.onStatusToastAccessibilityProbeChanged = { [weak self] visible in
+            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
+                StatusToastAccessibilityProbe.attach(to: window)
+            }
+            StatusToastAccessibilityProbe.publish(visible: visible)
+        }
+        model.onShortcutsLegendAccessibilityProbeChanged = { [weak self] open in
+            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
+                ShortcutsLegendAccessibilityProbe.attach(to: window)
+            }
+            ShortcutsLegendAccessibilityProbe.publish(visible: open)
+        }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)
@@ -99,6 +111,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                     model?.updateDraftFromForm(title: newTitle)
                 }
             )
+            StatusToastAccessibilityProbe.attach(to: window)
+            ShortcutsLegendAccessibilityProbe.attach(to: window)
         }
     }
 

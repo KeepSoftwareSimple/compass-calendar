@@ -28,7 +28,7 @@ public struct KeyEvent: Hashable, Sendable {
     }
 
     public func matches(_ chord: KeyChord) -> Bool {
-        guard modifiers == chord.modifiers else { return false }
+        guard modifiersMatch(chord) else { return false }
         switch (key, chord.token) {
         case (.character(let lhs), .character(let rhs)):
             return lhs.lowercased() == rhs.lowercased()
@@ -37,7 +37,11 @@ public struct KeyEvent: Hashable, Sendable {
         case (.digitRange(let lhs), .digitRange(let rhs)):
             return lhs == rhs
         case (.punctuation(let lhs), .punctuation(let rhs)):
-            return lhs == rhs
+            if lhs == rhs { return true }
+            if rhs == "?", lhs == "/", modifiers.contains(.shift), chord.modifiers.isEmpty {
+                return true
+            }
+            return false
         case (.typedTimeExample, .typedTimeExample), (.arrowKeysLegend, .arrowKeysLegend):
             return true
         default:
@@ -55,5 +59,18 @@ public struct KeyEvent: Hashable, Sendable {
 
     public var isModChord: Bool {
         modifiers.contains(.command)
+    }
+
+    private func modifiersMatch(_ chord: KeyChord) -> Bool {
+        if modifiers == chord.modifiers { return true }
+        // US QWERTY: "?" is shift+"/", but the exported registry lists bare "?".
+        if chord.modifiers.isEmpty,
+           modifiers == [.shift],
+           case .punctuation("/") = key,
+           case .punctuation("?") = chord.token
+        {
+            return true
+        }
+        return false
     }
 }
