@@ -16,6 +16,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let syncConnectionsStore: SyncConnectionsStore
     public let levelsStore: LevelsStore
     public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let shortcutRegistry: ShortcutRegistry
     public let analyticsIdentity: AnalyticsIdentityCoordinator
 
@@ -95,6 +96,7 @@ public struct NativeCalendarEnvironment: Sendable {
         shortcutRegistry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)
         onboardingStore = OnboardingStore(analytics: analytics)
+        blockPartyStore = BlockPartyStore(analytics: analytics)
         self.analyticsIdentity = analyticsIdentity
     }
 }
