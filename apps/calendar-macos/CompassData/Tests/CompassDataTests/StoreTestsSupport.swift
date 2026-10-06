@@ -24,7 +24,7 @@ final class MockEventsAPI: EventsAPIProtocol, @unchecked Sendable {
 
     func delete(id: EventId, scope: EventDeleteScope) async throws {}
 
-    func rsvp(id: EventId, input: RsvpEventInput) async throws {}
+    func rsvp(id: EventId, responseStatus: ResponseStatusEnum, scope: String) async throws {}
 }
 
 final class MockUserAPI: HiddenEventsRemoteClient, @unchecked Sendable {

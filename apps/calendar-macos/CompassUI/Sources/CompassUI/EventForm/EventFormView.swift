@@ -65,6 +65,21 @@ public struct EventFormView: View {
                         draft: draft,
                         focusField: model.eventFormFocusedField
                     )
+                    EventFormConferenceSection(
+                        model: model,
+                        draft: draft,
+                        focusField: model.eventFormFocusedField
+                    )
+                    EventFormAttendeesSection(
+                        model: model,
+                        draft: draft,
+                        focusField: model.eventFormFocusedField
+                    )
+                    EventFormRsvpSection(
+                        model: model,
+                        draft: draft,
+                        focusField: model.eventFormFocusedField
+                    )
                 }
             }
         }

@@ -95,6 +95,21 @@ public struct RootView: View {
             )
         }
         .overlay {
+            SendInvitationsDialogView(
+                prompt: model.invitationPrompt,
+                onCancel: { model.cancelInvitationPrompt() },
+                onDontSend: { model.confirmInvitationDontSend() },
+                onSend: { model.confirmInvitationSend() }
+            )
+        }
+        .overlay {
+            RsvpScopeDialogView(
+                isPresented: model.pendingRsvpChoice != nil,
+                onCancel: { model.cancelRsvpScopeDialog() },
+                onConfirm: { scope in Task { await model.confirmRsvpScope(scope) } }
+            )
+        }
+        .overlay {
             EventFormView(model: model)
         }
         .background {

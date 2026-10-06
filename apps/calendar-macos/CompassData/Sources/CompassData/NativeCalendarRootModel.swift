@@ -41,6 +41,13 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var invitationPrompt: EventInvitationPromptState?
+    public var pendingRsvpChoice: PendingRsvpChoice?
+    public var attendeeSuggestions: [DraftAttendeeInput] = []
+    public var attendeeSuggestionQuery = ""
+    var attendeeSuggestionTask: Task<Void, Never>?
+    var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
+    var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
 

@@ -18,6 +18,10 @@ public struct GridEventDraft: Sendable, Equatable {
     public var color: EventColorSlot?
     public var description: String
     public var location: String
+    /// Present means replace guest membership on save; nil preserves provider list.
+    public var attendees: [DraftAttendeeInput]?
+    /// Create-only meeting link request (sync mints conference on create).
+    public var createConference: Bool
 
     public init(
         kind: GridEventDraftKind = .create,
@@ -28,7 +32,9 @@ public struct GridEventDraft: Sendable, Equatable {
         sourceEventId: EventId? = nil,
         color: EventColorSlot? = nil,
         description: String = "",
-        location: String = ""
+        location: String = "",
+        attendees: [DraftAttendeeInput]? = nil,
+        createConference: Bool = false
     ) {
         self.kind = kind
         self.clientId = clientId
@@ -39,6 +45,8 @@ public struct GridEventDraft: Sendable, Equatable {
         self.color = color
         self.description = description
         self.location = location
+        self.attendees = attendees
+        self.createConference = createConference
     }
 
     public var persistedEventId: EventId? {

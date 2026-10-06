@@ -92,12 +92,13 @@ public struct EventsAPI: Sendable {
         )
     }
 
-    public func rsvp(id: EventId, input: RsvpEventInput) async throws {
+    public func rsvp(id: EventId, responseStatus: ResponseStatusEnum, scope: String) async throws {
         let encoded = id.rawValue.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? id.rawValue
+        let body = RsvpWireInput(responseStatus: responseStatus, scope: scope)
         try await client.sendVoid(
             method: "POST",
             path: "event/\(encoded)/rsvp",
-            body: input
+            body: body
         )
     }
 }

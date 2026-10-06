@@ -8,6 +8,10 @@ struct EventFormScheduleSection: View {
     let draft: GridEventDraft
     let focusField: EventFormField
 
+    private var scheduleLocked: Bool {
+        model.isScheduleLocked(for: draft)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Toggle("All-day", isOn: Binding(
@@ -15,6 +19,7 @@ struct EventFormScheduleSection: View {
                 set: { model.setDraftAllDay($0) }
             ))
             .toggleStyle(.switch)
+            .disabled(scheduleLocked)
             .accessibilityIdentifier("compass-event-form-allday")
 
             if draft.schedule.kind == .timed {
@@ -27,6 +32,7 @@ struct EventFormScheduleSection: View {
                     displayedComponents: [.date, .hourAndMinute]
                 )
                 .labelsHidden()
+                .disabled(scheduleLocked)
                 .accessibilityIdentifier("compass-event-form-start")
                 .pageJumpChipAnchor(id: "form-start")
 
@@ -39,6 +45,7 @@ struct EventFormScheduleSection: View {
                     displayedComponents: [.date, .hourAndMinute]
                 )
                 .labelsHidden()
+                .disabled(scheduleLocked)
                 .accessibilityIdentifier("compass-event-form-end")
                 .pageJumpChipAnchor(id: "form-end")
             } else {
@@ -51,7 +58,18 @@ struct EventFormScheduleSection: View {
                     displayedComponents: [.date]
                 )
                 .labelsHidden()
+                .disabled(scheduleLocked)
                 .accessibilityIdentifier("compass-event-form-start")
+            }
+
+            if scheduleLocked {
+                Text(
+                    "Your calendar provider keeps this event updated (for example from an email), "
+                        + "so its time follows the provider. Changes to the title, notes, and location stay in Compass."
+                )
+                .font(.custom("Rubik", size: 11))
+                .foregroundStyle(theme.textMutedColor)
+                .accessibilityIdentifier("compass-event-form-schedule-locked-note")
             }
         }
         .padding(12)
