@@ -74,22 +74,6 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         }
     }
 
-    override func undo(_ sender: Any?) {
-        switch model.undoStore.peekUndo() {
-        case .create:
-            model.undoKeyboardPlacedCreateNow()
-        default:
-            model.undoLastChange()
-        }
-    }
-
-    override func responds(to aSelector: Selector!) -> Bool {
-        if aSelector == #selector(undo(_:)) {
-            return true
-        }
-        return super.responds(to: aSelector)
-    }
-
     override func viewDidAppear() {
         super.viewDidAppear()
         if let window = view.window {
