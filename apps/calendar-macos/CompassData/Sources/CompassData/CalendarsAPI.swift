@@ -20,7 +20,7 @@ public struct CalendarsAPI: Sendable {
         self.client = client
     }
 
-    public func list() async throws -> [CalendarListResponseCalendars] {
+    public func list() async throws -> [CompassCalendar] {
         let response: CalendarListResponse = try await client.sendDecodable(
             method: "GET",
             path: "calendars"

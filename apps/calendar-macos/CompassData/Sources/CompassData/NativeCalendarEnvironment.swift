@@ -82,7 +82,7 @@ public struct NativeCalendarEnvironment: Sendable {
                 eventsAPI: EventsAPI(client: apiClient),
                 listCalendars: {
                     let remote = try await apiClient.calendars.list()
-                    return remote.map(CompassCalendar.init(listItem:))
+                    return remote
                 }
             ),
             eventsStore: eventsStore

@@ -860,7 +860,7 @@ public final class NativeCalendarRootModel {
         }
         do {
             let remote = try await environment.apiClient.calendars.list()
-            let mapped = remote.map(CompassCalendar.init(listItem:))
+            let mapped = remote
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
             rebuildPresentation()
