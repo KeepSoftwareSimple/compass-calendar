@@ -45,8 +45,8 @@ public struct DemoSeedFixture: Sendable {
         }
     }
 
-    public func calendarListItem() -> CalendarListResponseCalendars {
-        CalendarListResponseCalendars(
+    public func calendarListItem() -> CompassCalendar {
+        CompassCalendar(
             access: .owner,
             accountEmail: nil,
             backgroundColor: "#3b82f6",

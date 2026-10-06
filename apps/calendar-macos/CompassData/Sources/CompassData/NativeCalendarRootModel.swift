@@ -41,6 +41,13 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var invitationPrompt: EventInvitationPromptState?
+    public var pendingRsvpChoice: PendingRsvpChoice?
+    public var attendeeSuggestions: [DraftAttendeeInput] = []
+    public var attendeeSuggestionQuery = ""
+    var attendeeSuggestionTask: Task<Void, Never>?
+    var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
+    var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
 
@@ -873,7 +880,7 @@ public final class NativeCalendarRootModel {
         }
         do {
             let remote = try await environment.apiClient.calendars.list()
-            let mapped = remote.map(CompassCalendar.init(listItem:))
+            let mapped = remote
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
             rebuildPresentation()
@@ -883,7 +890,7 @@ public final class NativeCalendarRootModel {
     private func bootstrapAnonymousCalendarsIfNeeded() async {
         do {
             if let demoPresentation {
-                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                let calendar = demoPresentation.calendarListItem()
                 try calendarRepository.upsert(calendars: [calendar])
             } else {
                 let sentinel = try LocalCalendarSentinel.calendarId(
