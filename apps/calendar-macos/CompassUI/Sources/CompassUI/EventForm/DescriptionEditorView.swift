@@ -107,17 +107,11 @@ final class DescriptionTextView: NSTextView {
         if event.modifierFlags.contains(.command) {
             switch event.charactersIgnoringModifiers?.lowercased() {
             case "b":
-                return NSApplication.shared.sendAction(
-                    #selector(NSTextView.toggleBoldface(_:)),
-                    to: nil,
-                    from: self
-                )
+                toggleFontTrait(.boldFontMask)
+                return true
             case "i":
-                return NSApplication.shared.sendAction(
-                    #selector(NSTextView.toggleItalic(_:)),
-                    to: nil,
-                    from: self
-                )
+                toggleFontTrait(.italicFontMask)
+                return true
             case "k":
                 promptAndApplyLink()
                 return true
