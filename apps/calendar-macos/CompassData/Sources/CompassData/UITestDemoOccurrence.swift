@@ -4,7 +4,7 @@ import Foundation
 /// Extra demo fixture row for XCUITest recurrence-scope flows only.
 enum UITestDemoOccurrence {
     static let eventId = "demo-weekly-occurrence"
-    static let seriesId = "demo-weekly-series"
+    static let seriesId = "demo-weekly-sync"
 
     static func localRecord(calendarId: String) throws -> LocalEventRecord {
         let json = """

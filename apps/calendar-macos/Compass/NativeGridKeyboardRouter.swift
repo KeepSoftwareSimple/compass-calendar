@@ -129,6 +129,9 @@ final class NativeGridKeyboardRouter {
         if handleUndoRedoKeyDown(event) {
             return true
         }
+        if handleRecurrenceDeletePromotionKeyDown(event) {
+            return true
+        }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
         if model.blockPartyKeyboardCaptureActive {
@@ -544,6 +547,25 @@ final class NativeGridKeyboardRouter {
             model.undoKeyboardPlacedCreateNow()
         default:
             model.undoLastChange()
+        }
+    }
+
+    /// Scope digits after a recurring delete are flaky in XCUITest when normalization fails.
+    private func handleRecurrenceDeletePromotionKeyDown(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+            model.recurrenceScopeStore.pendingDelete != nil,
+            event.modifierFlags.intersection([.command, .control, .option]).isEmpty
+        else { return false }
+        let digit = event.characters ?? event.charactersIgnoringModifiers
+        switch digit {
+        case "1":
+            model.promotePendingDelete(scope: .thisAndFollowing)
+            return true
+        case "2":
+            model.promotePendingDelete(scope: .all)
+            return true
+        default:
+            return false
         }
     }
 

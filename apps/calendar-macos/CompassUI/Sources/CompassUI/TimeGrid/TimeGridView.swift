@@ -112,6 +112,12 @@ public final class TimeGridView: NSView {
 
     public override func accessibilityChildren() -> [Any]? {
         var children = super.accessibilityChildren() ?? []
+        if timedContentView.superview != nil {
+            children.append(timedContentView)
+        }
+        if allDayRowView.superview != nil {
+            children.append(allDayRowView)
+        }
         if !focusedEventAccessibilityProxy.isHidden,
             focusedEventAccessibilityProxy.superview === self
         {
@@ -164,7 +170,11 @@ public final class TimeGridView: NSView {
 
         timedContentView.layer?.addSublayer(nowLineLayer)
         timedContentView.wantsLayer = true
+        timedContentView.setAccessibilityElement(true)
+        timedContentView.setAccessibilityRole(.group)
         timedContentView.setAccessibilityIdentifier("compass-grid-timed")
+        allDayRowView.setAccessibilityElement(true)
+        allDayRowView.setAccessibilityRole(.group)
         allDayRowView.setAccessibilityIdentifier("compass-grid-allday")
     }
 

@@ -7,6 +7,9 @@ public final class StatusToastStore {
     public private(set) var message: String?
     public private(set) var toastId: String?
 
+    /// Fires when toast visibility changes (AppKit mirror for XCUITest).
+    public var onVisibilityChanged: ((Bool) -> Void)?
+
     private var dismissTask: Task<Void, Never>?
 
     public init() {}
@@ -15,6 +18,7 @@ public final class StatusToastStore {
         dismissTask?.cancel()
         toastId = id
         self.message = message
+        onVisibilityChanged?(true)
         dismissTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(autoDismissSeconds))
             guard !Task.isCancelled else { return }
@@ -31,5 +35,6 @@ public final class StatusToastStore {
         dismissTask = nil
         message = nil
         toastId = nil
+        onVisibilityChanged?(false)
     }
 }

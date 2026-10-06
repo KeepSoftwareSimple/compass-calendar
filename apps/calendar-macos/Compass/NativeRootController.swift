@@ -68,6 +68,18 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             RecurrenceScopeAccessibilityProbe.publish(visible: visible)
         }
+        model.overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
+            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
+                StatusToastAccessibilityProbe.attach(to: window)
+            }
+            StatusToastAccessibilityProbe.publish(visible: visible)
+        }
+        model.overlayStores.legend.onOpenChanged = { [weak self] open in
+            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
+                ShortcutsLegendAccessibilityProbe.attach(to: window)
+            }
+            ShortcutsLegendAccessibilityProbe.publish(visible: open)
+        }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)

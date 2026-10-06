@@ -193,6 +193,7 @@ extension NativeCalendarRootModel {
     public func promotePendingDelete(scope: RecurrenceScopePromotionKind) {
         guard let pending = recurrenceScopeStore.pendingDelete else { return }
         recurrenceScopeStore.clear(opportunityId: pending.opportunityId)
+        statusToastStore.clear()
         let mapped: EventDeleteScope = scope == .all ? .all : .thisAndFollowing
         Task {
             await deleteEvent(pending.event, scope: mapped)
