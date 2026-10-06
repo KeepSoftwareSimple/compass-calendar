@@ -93,7 +93,6 @@ public final class NativeCalendarRootModel {
         configStore = environment.configStore
         authStore = environment.authStore
         billingStore = environment.billingStore
-        settingsStore = SettingsStore()
         levelsStore = environment.levelsStore
         lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
@@ -109,7 +108,12 @@ public final class NativeCalendarRootModel {
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
             pinnedTimeZone: demoPresentation?.timeZone
+                ?? CompassDevicePreferences.readPinnedTimeZone()
         )
+        if demoPresentation == nil {
+            viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
+        }
+        settingsStore = SettingsStore(viewStore: viewStore)
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
         draftStore = DraftStore()
@@ -124,6 +128,9 @@ public final class NativeCalendarRootModel {
             ),
             trackWidth: 1010
         )
+        settingsStore.onDevicePreferencesChanged = { [weak self] in
+            self?.rebuildPresentation()
+        }
         authStore.onAuthenticated = { [weak self] in
             await self?.handleAuthenticated()
         }
@@ -365,6 +372,8 @@ public final class NativeCalendarRootModel {
             cycleFocusedEdge(forward: true)
         case .otherSettings:
             settingsStore.open(page: .accounts)
+        case .otherTimeTravel:
+            settingsStore.openTimezoneDialog(.timeTravel)
         case .otherPalette:
             toggleCommandPalette()
         case .otherShortcuts:
@@ -562,13 +571,20 @@ public final class NativeCalendarRootModel {
     }
 
     private func applyFocusPresentation() {
+        var scenario = timeGridState.scenario
+        scenario.draftOverlay = draftOverlayForPresentation()
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         timeGridState = TimeGridState(
             layoutMode: timeGridState.layoutMode,
             referenceNow: timeGridState.referenceNow,
-            scenario: timeGridState.scenario,
+            scenario: scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
+            sidebarEditingEventId: sidebarEditingGridEventId(),
+            eventJumpHints: eventJumpHintLabels,
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
         let cards = currentGridCards()
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
@@ -699,6 +715,7 @@ public final class NativeCalendarRootModel {
             demoEventIds: demoIds
         )
         scenario.draftOverlay = draftOverlayForPresentation()
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         timeGridState = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: referenceNow,
@@ -706,7 +723,10 @@ public final class NativeCalendarRootModel {
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
             sidebarEditingEventId: sidebarEditingGridEventId(),
-            eventJumpHints: eventJumpHintLabels
+            eventJumpHints: eventJumpHintLabels,
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
         let snapshot = timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths())
         syncFocusRegistry(from: snapshot.cards)
