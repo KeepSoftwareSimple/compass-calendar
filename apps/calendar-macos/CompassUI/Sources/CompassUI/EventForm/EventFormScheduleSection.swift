@@ -3,6 +3,7 @@ import CompassKit
 import SwiftUI
 
 struct EventFormScheduleSection: View {
+    @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
     let focusField: EventFormField
