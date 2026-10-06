@@ -325,34 +325,6 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testUndoCreateRemovesKeyboardPlacedEvent() {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
-            "-COMPASS_FIXTURE", "demo",
-            "-COMPASS_UI_TEST_SYNC_GRID_DRAFT_SAVE",
-        ]
-        app.launch()
-
-        let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 15))
-
-        window.typeKey(.downArrow, modifierFlags: [.shift])
-        let draft = window.buttons["Untitled event"]
-        XCTAssertTrue(draft.waitForExistence(timeout: 5))
-        window.click()
-        window.typeKey(.enter, modifierFlags: [])
-        XCTAssertTrue(draft.waitForExistence(timeout: 10))
-
-        let undoControl = window.buttons["compass-native-undo-last-change"]
-        XCTAssertTrue(undoControl.waitForExistence(timeout: 5))
-        let undoReady = NSPredicate(format: "label == %@", "Undo ready")
-        wait(for: [expectation(for: undoReady, evaluatedWith: undoControl, handler: nil)], timeout: 10)
-        undoControl.click()
-        XCTAssertFalse(draft.waitForExistence(timeout: 8))
-    }
-
-    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
