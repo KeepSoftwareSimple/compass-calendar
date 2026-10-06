@@ -52,6 +52,8 @@ public struct GridMetrics: Hashable, Sendable, Codable {
 
     public static let gridTimeColumnWidth = 50.0
     public static let gridMarginLeft = gridTimeColumnWidth
+    /// Matches web `EVENT_WIDTH_MINIMUM` for day-view multi-calendar columns.
+    public static let eventWidthMinimum = 80.0
     public static let dayColumnMinUsableWidth = 140.0
 
     public static func gridMarginLeftPx(hasSecondaryTimeZone: Bool = false) -> Double {
