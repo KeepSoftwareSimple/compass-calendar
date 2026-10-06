@@ -47,7 +47,19 @@ final class EventFormAccessibilityProbeView: NSView {
         }
     }
 
+    override func paste(_ sender: Any?) {
+        guard let string = NSPasteboard.general.string(forType: .string) else { return }
+        titleBuffer = string
+        publishTitle()
+    }
+
     override func keyDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command),
+            event.charactersIgnoringModifiers?.lowercased() == "v"
+        {
+            paste(nil)
+            return
+        }
         if event.modifierFlags.contains(.command),
             event.charactersIgnoringModifiers?.lowercased() == "a"
         {

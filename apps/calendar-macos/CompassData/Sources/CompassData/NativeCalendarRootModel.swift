@@ -42,7 +42,11 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
-    public var pendingRecurrenceScopePrompt: RecurrenceScopePromptKind?
+    public var pendingRecurrenceScopePrompt: RecurrenceScopePromptKind? {
+        didSet {
+            onRecurrenceScopeAccessibilityProbeChanged?(pendingRecurrenceScopePrompt != nil)
+        }
+    }
     public var pendingConvertToStandaloneConfirmation = false
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false

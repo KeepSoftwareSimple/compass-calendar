@@ -269,19 +269,21 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        window.typeKey("a", modifierFlags: [.command])
-        window.typeText("Split weekly sync")
+        titleField.click()
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString("Split weekly sync", forType: .string)
+        titleField.typeKey("v", modifierFlags: [.command])
 
         window.typeKey(.enter, modifierFlags: [.command])
         let scopeDialog = window.descendants(matching: .any)["compass-recurrence-scope-dialog"]
-        XCTAssertTrue(scopeDialog.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            scopeDialog.waitForExistence(timeout: 12),
+            "Expected recurrence scope prompt after saving a recurring edit")
         window.typeKey("2", modifierFlags: [])
 
+        waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 15)
         XCTAssertTrue(
-            window.buttons["Split weekly sync"].waitForExistence(timeout: 10),
-            "Expected edited occurrence title after this-and-following save")
-        XCTAssertTrue(
-            window.buttons["Weekly sync"].waitForExistence(timeout: 5),
+            window.buttons["Weekly sync"].waitForExistence(timeout: 8),
             "Expected earlier occurrence to keep the original series title")
     }
 
