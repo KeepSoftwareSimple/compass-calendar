@@ -10,6 +10,7 @@ import {
 import {
   type EventColorSlot,
   withColor,
+  withColorHex,
 } from "@core/types/event-color.contracts";
 import {
   type CreateEventInput,
@@ -264,9 +265,18 @@ export function getGridDraftId(draft: GridEventDraft): string | undefined {
 /**
  * Direct GridEventDraft → GridEvent for the draft render hot path.
  */
+function gridEventDraftColorHex(draft: GridEventDraft): string | undefined {
+  if (draft.values.color != null) return undefined;
+  if (draft.kind !== "edit" || draft.source.content.kind !== "details") {
+    return undefined;
+  }
+  return draft.source.content.colorHex ?? undefined;
+}
+
 export function gridEventDraftToGridEvent(draft: GridEventDraft): GridEvent {
   const { schedule } = draft.values;
   const color = draft.values.color ?? undefined;
+  const colorHex = gridEventDraftColorHex(draft);
   const isAllDay = schedule.kind === "allDay";
 
   return {
@@ -287,6 +297,7 @@ export function gridEventDraftToGridEvent(draft: GridEventDraft): GridEvent {
     calendarId: draft.values.calendarId ?? undefined,
     isBusy: draft.kind === "edit" && draft.source.content.kind === "busy",
     ...withColor(color),
+    ...withColorHex(colorHex),
   };
 }
 

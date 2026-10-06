@@ -225,14 +225,33 @@ extension NativeCalendarRootModel {
         focusEvent(eventId: id)
     }
 
+    func sidebarEditingGridEventId() -> String? {
+        guard draftStore.status.isFormOpen, let draft = draftStore.gridDraft else {
+            return nil
+        }
+        switch draft.kind {
+        case .edit:
+            return draft.persistedEventId?.rawValue
+        case .create:
+            return draft.clientId.rawValue
+        }
+    }
+
     func draftOverlayForPresentation() -> GridLayoutDraftOverlay? {
         guard let draft = draftStore.gridDraft,
             let activity = draftStore.status.activity
         else { return nil }
+        let baseline = baselineEvent(for: draft)
         return GridEventDraftMapping.overlay(
             from: draft,
             activity: activity,
-            status: draftStore.status
+            status: draftStore.status,
+            sourceColorHex: baseline.flatMap(Self.detailsColorHex(from:))
         )
+    }
+
+    static func detailsColorHex(from event: Event) -> String? {
+        guard case .details(let payload) = event.content else { return nil }
+        return payload.colorHex
     }
 }
