@@ -132,6 +132,9 @@ final class NativeGridKeyboardRouter {
         if handleRecurrenceDeletePromotionKeyDown(event) {
             return true
         }
+        if handleToggleShortcutsLegendKeyDown(event) {
+            return true
+        }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
         if model.blockPartyKeyboardCaptureActive {
@@ -548,6 +551,23 @@ final class NativeGridKeyboardRouter {
         default:
             model.undoLastChange()
         }
+    }
+
+    /// XCUITest and some layouts emit shift+"/" without matching the exported "?" chord path.
+    private func handleToggleShortcutsLegendKeyDown(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown,
+            !model.isEventFormVisible,
+            !model.commandPaletteStore.isOpen,
+            event.modifierFlags.intersection([.command, .control, .option]).isEmpty
+        else { return false }
+        let raw = event.charactersIgnoringModifiers ?? event.characters ?? ""
+        let isQuestionMark =
+            raw == "?"
+            || (raw == "/" && event.modifierFlags.contains(.shift))
+            || (event.keyCode == 44 && event.modifierFlags.contains(.shift))
+        guard isQuestionMark else { return false }
+        model.toggleShortcutsLegend()
+        return true
     }
 
     /// Scope digits after a recurring delete are flaky in XCUITest when normalization fails.

@@ -187,6 +187,7 @@ extension NativeCalendarRootModel {
         if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
             _ = recurrenceScopeStore.beginDeleteAsk(for: event)
             statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
+            onStatusToastAccessibilityProbeChanged?(true)
         }
     }
 

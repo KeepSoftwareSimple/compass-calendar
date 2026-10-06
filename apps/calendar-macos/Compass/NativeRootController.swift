@@ -68,13 +68,13 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
             }
             RecurrenceScopeAccessibilityProbe.publish(visible: visible)
         }
-        model.overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
+        model.onStatusToastAccessibilityProbeChanged = { [weak self] visible in
             if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
                 StatusToastAccessibilityProbe.attach(to: window)
             }
             StatusToastAccessibilityProbe.publish(visible: visible)
         }
-        model.overlayStores.legend.onOpenChanged = { [weak self] open in
+        model.onShortcutsLegendAccessibilityProbeChanged = { [weak self] open in
             if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
                 ShortcutsLegendAccessibilityProbe.attach(to: window)
             }
@@ -111,6 +111,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                     model?.updateDraftFromForm(title: newTitle)
                 }
             )
+            StatusToastAccessibilityProbe.attach(to: window)
+            ShortcutsLegendAccessibilityProbe.attach(to: window)
         }
     }
 
