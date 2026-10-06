@@ -286,14 +286,13 @@ public final class BookingStore {
             discovered: discovered
         ) else { return }
         form.blockingCalendarIds = merged
-        if var baselineInput {
+        if let baselineInput {
             if let baselineMerged = MergeBlockingCalendars.withDiscoveredBlockingCalendarIds(
                 blockingCalendarIds: baselineInput.blockingCalendarIds,
                 optedOut: Array(optedOutBlockingCalendarIds),
                 discovered: discovered
             ) {
-                baselineInput.blockingCalendarIds = baselineMerged
-                self.baselineInput = baselineInput
+                self.baselineInput = baselineInput.withBlockingCalendarIds(baselineMerged)
             }
         }
     }
@@ -330,5 +329,21 @@ public final class BookingStore {
             windowEnd: windowEnd
         )
         return ComputeBookingSlots.computeBookingSlots(input)
+    }
+}
+
+private extension AdminPutBookingPageInput {
+    func withBlockingCalendarIds(_ ids: [String]) -> AdminPutBookingPageInput {
+        AdminPutBookingPageInput(
+            blockingCalendarIds: ids,
+            destinationCalendarId: destinationCalendarId,
+            durationMinutes: durationMinutes,
+            enabled: enabled,
+            maxHorizonDays: maxHorizonDays,
+            minNoticeHours: minNoticeHours,
+            slug: slug,
+            timeZone: timeZone,
+            weeklyAvailability: weeklyAvailability
+        )
     }
 }
