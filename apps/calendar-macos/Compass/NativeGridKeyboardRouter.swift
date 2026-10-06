@@ -121,10 +121,12 @@ final class NativeGridKeyboardRouter {
     }
 
     func handleKeyDown(_ event: NSEvent) -> Bool {
-        if event.modifierFlags.contains(.command),
+        if NSApp.keyWindow?.accessibilityIdentifier() != "compass-native-quick-add-window",
+            event.modifierFlags.contains(.command),
             !event.modifierFlags.contains(.option),
             !event.modifierFlags.contains(.control),
             event.charactersIgnoringModifiers?.lowercased() == "z"
+                || event.keyCode == 6
         {
             if event.modifierFlags.contains(.shift) {
                 model.redoLastChange()

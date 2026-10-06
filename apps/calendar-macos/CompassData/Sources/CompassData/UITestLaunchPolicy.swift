@@ -47,4 +47,5 @@ public enum UITestLaunchPolicy {
     public static var syncGridDraftSave: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_SYNC_GRID_DRAFT_SAVE")
     }
+
 }
