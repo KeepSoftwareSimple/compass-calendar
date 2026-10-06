@@ -19,7 +19,7 @@ public struct SettingsWindowOverlay: View {
             ZStack {
                 theme.overlayBackdropColor
                     .ignoresSafeArea()
-                    .onTapGesture { model.settingsStore.close() }
+                    .onTapGesture { model.closeSettingsIfAllowed() }
                 HStack(alignment: .top, spacing: 0) {
                     nav
                     Divider().overlay(theme.borderColor)
@@ -45,11 +45,14 @@ public struct SettingsWindowOverlay: View {
                 .font(.custom("Rubik", size: 18))
                 .foregroundStyle(theme.textColor)
             navButton("Accounts", page: .accounts)
+            if model.isSignedIn {
+                navButton("Meetings", page: .booking, attention: model.bookingStore.bookingNeedsAttention)
+            }
             if showBillingNav {
                 navButton("Billing", page: .billing)
             }
             Spacer()
-            Button("Close") { model.settingsStore.close() }
+            Button("Close") { model.closeSettingsIfAllowed() }
                 .buttonStyle(.plain)
                 .foregroundStyle(theme.textMutedColor)
         }
@@ -57,12 +60,19 @@ public struct SettingsWindowOverlay: View {
         .frame(width: 180, alignment: .leading)
     }
 
-    private func navButton(_ title: String, page: SettingsPage) -> some View {
+    private func navButton(_ title: String, page: SettingsPage, attention: Bool = false) -> some View {
         Button(title) { model.settingsStore.page = page }
             .buttonStyle(.plain)
             .font(.custom("Rubik", size: 14))
             .foregroundStyle(model.settingsStore.page == page ? theme.textColor : theme.textMutedColor)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                if attention {
+                    Circle()
+                        .fill(theme.warningColor)
+                        .frame(width: 6, height: 6)
+                }
+            }
     }
 
     @ViewBuilder
@@ -71,6 +81,8 @@ public struct SettingsWindowOverlay: View {
             VStack(alignment: .leading, spacing: 16) {
                 if model.settingsStore.page == .billing {
                     billingContent
+                } else if model.settingsStore.page == .booking {
+                    SettingsBookingSectionView(model: model)
                 } else {
                     accountsContent
                 }

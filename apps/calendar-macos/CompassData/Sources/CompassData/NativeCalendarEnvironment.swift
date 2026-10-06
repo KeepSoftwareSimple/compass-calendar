@@ -12,6 +12,7 @@ public struct NativeCalendarEnvironment: Sendable {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
     public let oauthService: OAuthAuthorizationService
     public let syncConnectionsStore: SyncConnectionsStore
     public let levelsStore: LevelsStore
@@ -92,6 +93,7 @@ public struct NativeCalendarEnvironment: Sendable {
             configStore: configStore,
             analytics: analytics,
             sessionPresenter: sessionPresenter)
+        bookingStore = BookingStore(apiClient: apiClient, analytics: analytics)
         shortcutRegistry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)
         onboardingStore = OnboardingStore(analytics: analytics)

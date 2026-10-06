@@ -13,6 +13,8 @@ import {
   emitThemeTokensSwift,
   THEME_TOKENS_SWIFT_PATH,
 } from "@scripts/desktop-export/emit-theme-tokens";
+import { emitBookingSetupStepsFixturesJson } from "@scripts/desktop-export/fixtures/booking-setup-steps.fixtures";
+import { emitBookingSlotsFixturesJson } from "@scripts/desktop-export/fixtures/booking-slots.fixtures";
 import { emitRruleFixturesJson } from "@scripts/desktop-export/fixtures/rrule.fixtures";
 import {
   COMPASS_KIT_FIXTURES_DIR,
@@ -68,6 +70,14 @@ const buildScriptGeneratedFiles = (): GeneratedFile[] => {
     {
       path: join(COMPASS_KIT_FIXTURES_DIR, "rrule.vectors.json"),
       contents: emitRruleFixturesJson(),
+    },
+    {
+      path: join(COMPASS_KIT_FIXTURES_DIR, "booking-slots.vectors.json"),
+      contents: emitBookingSlotsFixturesJson(),
+    },
+    {
+      path: join(COMPASS_KIT_FIXTURES_DIR, "booking-setup-steps.vectors.json"),
+      contents: emitBookingSetupStepsFixturesJson(),
     },
   ];
 };
