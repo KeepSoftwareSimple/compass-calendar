@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 @Observable
 public final class BookingStore {
-    public private(set) var serverPage: AdminGetBookingPageResult?
+    public private(set) var serverPage: AdminBookingPage?
     public private(set) var status: BookingPageStatusResponse?
     public private(set) var isLoadingPage = false
     public private(set) var pageLoadFailed = false
@@ -21,7 +21,7 @@ public final class BookingStore {
     private let bookingAPI: BookingAPI
     private let analytics: ProductAnalyticsClient
     private var authenticated = false
-    private var seededPage: AdminGetBookingPageResult?
+    private var seededPage: AdminBookingPage?
     private var didTrackSettingsOpened = false
 
     public init(
@@ -39,7 +39,7 @@ public final class BookingStore {
     }
 
     public var isLive: Bool {
-        BookingSettingsFormLogic.isLivePage(serverPage)
+        AdminBookingPageLogic.isLivePage(serverPage)
     }
 
     public var bookingNeedsAttention: Bool {
@@ -116,7 +116,7 @@ public final class BookingStore {
         minNoticeText = String(seeded.minNoticeHours)
         horizonText = String(seeded.maxHorizonDays)
         baselineInput = seeded
-        if BookingSettingsFormLogic.isUnconfiguredPage(serverPage) {
+        if AdminBookingPageLogic.isUnconfiguredPage(serverPage) {
             setupStep = setupStep ?? .address
         }
     }
@@ -130,7 +130,7 @@ public final class BookingStore {
                 "has_connection": .bool(hasConnection),
                 "is_live": .bool(isLive),
                 "is_bookable": .bool(status?.bookable == true),
-                "configured_host": .bool(!BookingSettingsFormLogic.isUnconfiguredPage(serverPage)),
+                "configured_host": .bool(!AdminBookingPageLogic.isUnconfiguredPage(serverPage)),
             ]
         )
     }
@@ -148,7 +148,7 @@ public final class BookingStore {
         }
         guard let slug = form.slug, !slug.isEmpty else { return nil }
         let prefix = BookingCalendarLogic.bookingAddressPrefix(
-            publicBookingURL: BookingSettingsFormLogic.publicBookingURL(serverPage)
+            publicBookingURL: AdminBookingPageLogic.publicBookingURL(serverPage)
         )
         return URL(string: "\(prefix)\(slug)")
     }
@@ -257,7 +257,7 @@ public final class BookingStore {
             if setupStep == .live {
                 setupStep = nil
             }
-            if BookingSettingsFormLogic.isLivePage(result) {
+            if AdminBookingPageLogic.isLivePage(result) {
                 await refreshStatus()
             }
             return true

@@ -19,7 +19,7 @@ public struct SettingsBookingSectionView: View {
 
     private var addressPrefix: String {
         BookingCalendarLogic.bookingAddressPrefix(
-            publicBookingURL: BookingSettingsFormLogic.publicBookingURL(model.bookingStore.serverPage)
+            publicBookingURL: AdminBookingPageLogic.publicBookingURL(model.bookingStore.serverPage)
         )
     }
 

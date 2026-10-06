@@ -1,16 +1,6 @@
 import CompassKit
 import Foundation
 
-public enum AdminGetBookingPageResult: Sendable, Hashable {
-    case saved(AdminGetBookingPageResponse)
-    case setup(AdminGetBookingPageSetupResponse)
-
-    public var isSaved: Bool {
-        if case .saved = self { return true }
-        return false
-    }
-}
-
 public struct BookingAPI: Sendable {
     private let client: CompassAPIClient
 
@@ -18,7 +8,7 @@ public struct BookingAPI: Sendable {
         self.client = client
     }
 
-    public func getPage() async throws -> AdminGetBookingPageResult {
+    public func getPage() async throws -> AdminBookingPage {
         let payload = try await client.sendRaw(method: "GET", path: "booking/page")
         return try parsePagePayload(payload.body)
     }
@@ -27,7 +17,7 @@ public struct BookingAPI: Sendable {
         try await client.sendDecodable(method: "GET", path: "booking/page/status")
     }
 
-    public func putPage(_ input: AdminPutBookingPageInput) async throws -> AdminGetBookingPageResult {
+    public func putPage(_ input: AdminPutBookingPageInput) async throws -> AdminBookingPage {
         let payload = try await client.sendRaw(
             method: "PUT",
             path: "booking/page",
@@ -36,7 +26,7 @@ public struct BookingAPI: Sendable {
         return try parsePagePayload(payload.body)
     }
 
-    private func parsePagePayload(_ body: Data) throws -> AdminGetBookingPageResult {
+    private func parsePagePayload(_ body: Data) throws -> AdminBookingPage {
         let object = try JSONSerialization.jsonObject(with: body)
         guard let dictionary = object as? [String: Any] else {
             throw CompassAPIError.decodeFailed

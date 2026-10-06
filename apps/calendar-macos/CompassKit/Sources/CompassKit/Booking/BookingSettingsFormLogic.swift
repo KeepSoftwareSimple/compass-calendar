@@ -5,28 +5,6 @@ public enum BookingSettingsFormLogic {
     public static let maxMinNoticeHours = 60 * 24
     public static let durationOptions: [DurationMinutesEnum] = [.v15, .v30, .v45, .v60]
 
-    public static func isUnconfiguredPage(_ page: AdminGetBookingPageResult) -> Bool {
-        if case let .setup(setup) = page { return !setup.isConfigured }
-        return false
-    }
-
-    public static func isLivePage(_ page: AdminGetBookingPageResult?) -> Bool {
-        guard case let .saved(saved) = page else { return false }
-        return saved.enabled
-    }
-
-    public static func slugFromPage(_ page: AdminGetBookingPageResult) -> String {
-        switch page {
-        case let .saved(saved): saved.slug
-        case let .setup(setup): setup.suggestedSlug
-        }
-    }
-
-    public static func publicBookingURL(_ page: AdminGetBookingPageResult?) -> URL? {
-        guard case let .saved(saved) = page else { return nil }
-        return URL(string: saved.bookingUrl)
-    }
-
     public static func defaultWeeklyAvailability() -> [BookingPageWeeklyAvailability] {
         [
             BookingPageWeeklyAvailability(end: "17:00", start: "09:00", weekday: .v1),
@@ -52,7 +30,7 @@ public enum BookingSettingsFormLogic {
     }
 
     public static func buildInitialForm(
-        page: AdminGetBookingPageResult?,
+        page: AdminBookingPage?,
         effectiveTimeZone: String,
         writableCalendars: [CompassCalendar],
         availabilityCalendars: [CompassCalendar]
