@@ -6,6 +6,7 @@ on:
   push:
     tags:
       - "macos-v[0-9]+.[0-9]+.[0-9]+"
+      - "macos-v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
 
 permissions:
   contents: write
@@ -58,8 +59,8 @@ jobs:
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME}"
-          if [[ ! "$tag" =~ ^macos-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
-            echo "::error::Tag must be macos-vX.Y.Z, got ${tag}"
+          if [[ ! "$tag" =~ ^macos-v([0-9]+\.[0-9]+\.[0-9]+)(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::Tag must be macos-vX.Y.Z or macos-vX.Y.Z-rc.N, got ${tag}"
             exit 1
           fi
           tag_version="${BASH_REMATCH[1]}"
@@ -171,7 +172,7 @@ jobs:
           set -euo pipefail
           spctl --assess --verbose=4 --type execute "${{ steps.app.outputs.app_path }}"
 
-      - name: Launch smoke (window title)
+      - name: Launch smoke (native window)
         run: |
           set -euo pipefail
           bash ../../.github/scripts/macos-release-launch-smoke.sh "${{ steps.app.outputs.app_path }}"

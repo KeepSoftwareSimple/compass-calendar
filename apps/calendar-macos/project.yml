@@ -8,7 +8,7 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: 0.1.0
+    MARKETING_VERSION: 1.0.0
     CURRENT_PROJECT_VERSION: 1
     # Empty is stable. release-macos-dev.yml passes COMPASS_UPDATE_CHANNEL=dev.
     COMPASS_UPDATE_CHANNEL: ""

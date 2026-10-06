@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch a stapled Compass.app once on macOS CI and assert the main window title.
+# Launch a stapled Compass.app once on macOS CI and assert the native main window.
 # Unauthenticated only: no credentials, no signed-in flows.
 set -euo pipefail
 
@@ -20,24 +20,36 @@ trap cleanup EXIT
 open -n "$APP_PATH"
 
 deadline=$((SECONDS + TIMEOUT_SECONDS))
-last_title=""
+last_state=""
 while [ "$SECONDS" -lt "$deadline" ]; do
-  last_title="$(osascript 2>/dev/null <<'APPLESCRIPT' || true
+  last_state="$(osascript 2>/dev/null <<'APPLESCRIPT' || true
 tell application "System Events"
-  if not (exists process "Compass") then return ""
+  if not (exists process "Compass") then return "no-process"
   tell process "Compass"
-    if (count of windows) = 0 then return ""
-    return title of window 1
+    if (count of windows) = 0 then return "no-window"
+    set winId to identifier of window 1
+    if winId is not "Compass" then return "bad-window-id:" & winId
+    try
+      set welcomeModal to first UI element of window 1 whose identifier is "compass-native-welcome-modal"
+      if exists welcomeModal then return "ok:welcome-modal"
+    end try
+    try
+      set header to first UI element of window 1 whose identifier is "compass-native-header"
+      if exists header then return "ok:header"
+    end try
+    return "waiting-native-ui"
   end tell
 end tell
 APPLESCRIPT
 )"
-  if [ "$last_title" = "Compass" ]; then
-    echo "Release launch smoke passed (window title: Compass)"
-    exit 0
-  fi
+  case "$last_state" in
+    ok:*)
+      echo "Release launch smoke passed (native window identifier Compass, ${last_state#ok:})"
+      exit 0
+      ;;
+  esac
   sleep 2
 done
 
-echo "::error::Timed out waiting for Compass window title (last: ${last_title:-<none>})"
+echo "::error::Timed out waiting for native Compass window (last: ${last_state:-<none>})"
 exit 1
