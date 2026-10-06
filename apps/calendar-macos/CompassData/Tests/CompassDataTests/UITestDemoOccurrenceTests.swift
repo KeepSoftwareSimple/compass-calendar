@@ -1,6 +1,6 @@
-import CompassData
 import CompassKit
 import XCTest
+@testable import CompassData
 
 final class UITestDemoOccurrenceTests: XCTestCase {
     func testAppendOccurrenceIsRecurringOccurrenceForScopeAsk() throws {
