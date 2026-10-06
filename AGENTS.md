@@ -24,7 +24,10 @@ Playwright. Docs index: `docs/README.md`.
   with `VERDICT: PASS | INCOMPLETE | FAIL`. Run it with `--strict` before
   labeling a PR. `INCOMPLETE` means Playwright was skipped; install Chromium
   with `bunx playwright install chromium` and rerun.
-- macOS: `docs/development/local-development.md`.
+- macOS: `docs/development/local-development.md`. Before Swift changes,
+  run `bun cli contracts:swift --check` and `bun cli desktop:export --check`
+  on Linux CI or locally (regenerate without `--check` when schemas or
+  shortcuts change).
 - Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
   (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
   `bun lint`, `bun knip`.
