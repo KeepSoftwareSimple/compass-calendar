@@ -90,6 +90,8 @@ public struct SettingsWindowOverlay: View {
                 calendars: model.calendars,
                 hasConnectedAccount: !model.syncConnectionsStore.connections.isEmpty)
             SettingsThemeSectionView(settingsStore: model.settingsStore)
+            SettingsLaunchAtLoginSectionView(settingsStore: model.settingsStore)
+            SettingsQuickAddHotkeySectionView(settingsStore: model.settingsStore)
             if model.isSignedIn {
                 SettingsAccountsSectionView(syncStore: model.syncConnectionsStore)
             }

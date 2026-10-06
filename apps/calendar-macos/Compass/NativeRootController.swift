@@ -127,6 +127,11 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         webTheme = NativeWebTheme(themeName: model.settingsStore.theme)
     }
 
+    func attachQuickAddRouter(_ router: DesktopQuickAddRouting) {
+        settingsBridge?.attachQuickAddRouter(router)
+        _ = model.settingsStore.setQuickAddHotKey(model.settingsStore.quickAddHotKeyDisplay)
+    }
+
     func receiveDeepLink(_ url: URL) {
         receiveDeepLink(urlString: url.absoluteString)
     }
