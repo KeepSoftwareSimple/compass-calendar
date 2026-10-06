@@ -144,6 +144,19 @@ final class DescriptionTextView: NSTextView {
         return attributedString().attribute(.link, at: index, effectiveRange: nil) as? URL
     }
 
+    private func toggleFontTrait(_ trait: NSFontTraitMask) {
+        let range = selectedRange()
+        guard range.length > 0 else { return }
+        textStorage?.enumerateAttribute(.font, in: range) { value, subRange, _ in
+            let font = (value as? NSFont) ?? NSFont.systemFont(ofSize: 13)
+            let hasTrait = NSFontManager.shared.traits(of: font).contains(trait)
+            let updated = hasTrait
+                ? NSFontManager.shared.convert(font, toNotHaveTrait: trait)
+                : NSFontManager.shared.convert(font, toHaveTrait: trait)
+            textStorage?.addAttribute(.font, value: updated, range: subRange)
+        }
+    }
+
     private func promptAndApplyLink() {
         let selected = selectedRange()
         guard selected.length > 0 else { return }
