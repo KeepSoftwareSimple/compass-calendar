@@ -59,6 +59,13 @@ describe("desktop export fixtures", () => {
     expect(scenarios[3]?.output.layoutMode).toBe("day");
   });
 
+  it("builds html-fragment vectors", async () => {
+    const { buildHtmlFragmentFixtures } = await import(
+      "@web/desktop/export-fixtures/html-fragment.fixtures"
+    );
+    expect(buildHtmlFragmentFixtures().cases.length).toBeGreaterThan(5);
+  });
+
   it("builds demo seed snapshot", async () => {
     await bootExportFixtures();
     const { buildDemoSeedFixtures, DEMO_EXPORT_CALENDAR_ID } = await import(

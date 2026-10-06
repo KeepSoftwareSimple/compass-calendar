@@ -11,7 +11,7 @@ final class EventFormLayoutSnapshotTests: XCTestCase {
         let visible = snapshot.fields.filter(\.visible).map(\.field)
         XCTAssertEqual(
             visible,
-            ["title", "start", "end", "recurrence", "calendar", "color", "actions"]
+            ["title", "start", "end", "recurrence", "calendar", "color", "description", "actions"]
         )
         XCTAssertEqual(snapshot.fields.first(where: { $0.field == "title" })?.digit, "1")
         XCTAssertEqual(

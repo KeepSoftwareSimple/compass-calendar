@@ -138,6 +138,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.contentViewController = nativeController
             CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
             mainMenuController?.nativeRootController = nativeController
+            if let quickAddCoordinator {
+                nativeController.attachQuickAddRouter(quickAddCoordinator)
+            }
             refreshQuickAddNativeConfiguration()
         } else {
             nativeRootController = nil
