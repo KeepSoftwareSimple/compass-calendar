@@ -293,15 +293,13 @@ final class NativeLaunchTests: XCTestCase {
         window.typeKey(.downArrow, modifierFlags: [.shift])
         let draft = window.buttons["Untitled event"]
         XCTAssertTrue(draft.waitForExistence(timeout: 5))
+        window.click()
         window.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(draft.waitForExistence(timeout: 10))
 
-        let editMenu = app.menuBars.menuBarItems["Edit"]
-        XCTAssertTrue(editMenu.waitForExistence(timeout: 3))
-        editMenu.click()
-        let undoItem = app.menuItems["Undo"]
-        XCTAssertTrue(undoItem.waitForExistence(timeout: 3))
-        undoItem.click()
+        let undoControl = window.buttons["compass-native-undo-last-change"]
+        XCTAssertTrue(undoControl.waitForExistence(timeout: 5))
+        undoControl.click()
         XCTAssertFalse(draft.waitForExistence(timeout: 8))
     }
 

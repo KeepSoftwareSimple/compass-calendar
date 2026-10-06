@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 import CompassKit
 import CompassUI
 
@@ -219,12 +220,19 @@ final class MainMenuController: NSObject {
         quickAddCoordinator?.presentQuickAddPanel()
     }
 
+    private func nativeCalendarModel() -> NativeCalendarRootModel? {
+        if let model = nativeRootController?.model {
+            return model
+        }
+        return (NSApp.keyWindow?.contentViewController as? NativeRootController)?.model
+    }
+
     @objc private func undoNativeChange(_ sender: Any?) {
-        nativeRootController?.model.undoLastChange()
+        nativeCalendarModel()?.undoLastChange()
     }
 
     @objc private func redoNativeChange(_ sender: Any?) {
-        nativeRootController?.model.redoLastChange()
+        nativeCalendarModel()?.redoLastChange()
     }
 
 }
@@ -248,9 +256,9 @@ extension MainMenuController: NSMenuItemValidation {
         case #selector(openQuickAddPanel(_:)):
             return nativeUIState.isNativeUIEnabled
         case #selector(undoNativeChange(_:)):
-            return nativeRootController?.model.undoStore.canUndo ?? false
+            return nativeCalendarModel()?.undoStore.canUndo ?? false
         case #selector(redoNativeChange(_:)):
-            return nativeRootController?.model.undoStore.canRedo ?? false
+            return nativeCalendarModel()?.undoStore.canRedo ?? false
         default:
             return true
         }
