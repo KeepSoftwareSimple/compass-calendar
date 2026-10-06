@@ -47,6 +47,11 @@ public enum SettingsSectionSnapshots {
         theme,
     ]
 
+    public static let launchHotkeySlice: [SettingsSectionSnapshot] = [
+        launchAtLogin,
+        quickAddHotkey,
+    ]
+
     public static let all: [SettingsSectionSnapshot] = [
         accounts,
         defaultCalendar,
