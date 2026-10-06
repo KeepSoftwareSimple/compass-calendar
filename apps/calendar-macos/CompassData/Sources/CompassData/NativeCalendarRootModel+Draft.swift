@@ -149,18 +149,7 @@ extension NativeCalendarRootModel {
     }
 
     public func saveDraftSynchronouslyForUITest() {
-        final class DoneFlag: @unchecked Sendable {
-            var value = false
-        }
-        let done = DoneFlag()
-        Task { @MainActor in
-            await self.saveDraft()
-            done.value = true
-        }
-        let deadline = Date().addingTimeInterval(10)
-        while !done.value, Date() < deadline {
-            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
-        }
+        UITestMainActorSync.runAndWait { await self.saveDraft() }
     }
 
     public func saveDraft() async {

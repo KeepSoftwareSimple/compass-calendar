@@ -266,19 +266,10 @@ extension NativeCalendarRootModel {
     }
 
     private func flushHistoryReplay(_ replay: @escaping () async -> Void) {
-        final class DoneFlag: @unchecked Sendable {
-            var value = false
-        }
-        let done = DoneFlag()
-        Task { @MainActor in
-            await undoStore.runHistoryRestoreAsync {
+        UITestMainActorSync.runAndWait(timeout: 5) {
+            await self.undoStore.runHistoryRestoreAsync {
                 await replay()
             }
-            done.value = true
-        }
-        let deadline = Date().addingTimeInterval(5)
-        while !done.value, Date() < deadline {
-            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.05))
         }
     }
 }

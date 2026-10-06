@@ -65,9 +65,15 @@ enum UndoTestAccessibilityProbe {
     }
 
     static func markUndoReady() {
-        probe?.setAccessibilityValue("ready")
-        if let probe {
-            NSAccessibility.post(element: probe, notification: .valueChanged)
+        guard let probe else { return }
+        probe.isHidden = false
+        probe.setAccessibilityElement(true)
+        probe.setAccessibilityHidden(false)
+        probe.setAccessibilityValue("ready")
+        NSAccessibility.post(element: probe, notification: .valueChanged)
+        NSAccessibility.post(element: probe, notification: .layoutChanged)
+        if let window = probe.window {
+            NSAccessibility.post(element: window, notification: .layoutChanged)
         }
     }
 }
