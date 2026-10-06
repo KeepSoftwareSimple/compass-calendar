@@ -170,7 +170,7 @@ extension NativeCalendarRootModel {
         } catch {}
         rebuildPresentation()
         focusEvent(eventId: savedId)
-        Task { try? await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic) }
+        Task { await eventsStore.settleStagedCreate(input: input, optimisticEvent: optimistic) }
     }
 
     public func saveDraft() async {

@@ -207,7 +207,7 @@ extension NativeCalendarRootModel {
         if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
             levelsStore.recordShortcutInvocation(.otherUndo, section: section)
         }
-        Task { try? await eventsStore.deleteOptimistic(id: event.id, scope: .this) }
+        Task { await eventsStore.settleStagedDelete(id: event.id, scope: .this) }
     }
 
     public func undoLastChangeAndWait() async {

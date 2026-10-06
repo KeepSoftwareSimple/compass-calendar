@@ -116,6 +116,26 @@ public final class EventsStore {
         try repository.delete(ids: [id])
     }
 
+    /// API settle only; optimistic row must already be staged locally.
+    public func settleStagedCreate(input: CreateEventInput, optimisticEvent: Event) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        do {
+            let response = try await eventsAPI.create(input)
+            let settled = try EventMapping.event(from: response)
+            try repository.upsert(events: [settled], isLocal: false)
+        } catch {}
+    }
+
+    /// API settle only; optimistic row must already be removed locally.
+    public func settleStagedDelete(id: EventId, scope: EventDeleteScope) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        try? await eventsAPI.delete(id: id, scope: scope)
+    }
+
     public func createOptimistic(
         input: CreateEventInput,
         optimisticEvent: Event

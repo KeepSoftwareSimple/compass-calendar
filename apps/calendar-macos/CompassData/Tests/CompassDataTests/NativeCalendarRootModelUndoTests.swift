@@ -29,4 +29,26 @@ final class NativeCalendarRootModelUndoTests: XCTestCase {
         }
         XCTAssertTrue(untitledCards().isEmpty)
     }
+
+    func testSyncKeyboardPlaceSaveAndUndo() async throws {
+        let fixture = try DemoSeedFixture.load()
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
+        await model.start()
+        model.updateContentTrackWidth(400)
+
+        XCTAssertTrue(
+            model.nudgeDraftOrPlace(key: "ArrowDown", shiftKey: true, altKey: false))
+        model.saveKeyboardPlacedDraftNow()
+        XCTAssertTrue(model.undoStore.canUndo)
+
+        let widths = model.timeGridState.resolvedColumnWidths()
+        let untitledCards = {
+            model.timeGridState.snapshot(colWidths: widths).cards.filter { $0.label == "Untitled event" }
+        }
+        XCTAssertEqual(untitledCards().count, 1)
+
+        model.undoKeyboardPlacedCreateNow()
+        XCTAssertTrue(untitledCards().isEmpty)
+    }
 }
