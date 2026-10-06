@@ -152,6 +152,18 @@ extension NativeCalendarRootModel {
         await requestSaveDraft()
     }
 
+    func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {
+        draftStore.commit()
+        formFieldDigitHintsVisible = false
+        rebuildPresentation()
+        do {
+            try await apply()
+            loadedEvents = try eventsStore.fetchAllEvents()
+            rebuildPresentation()
+            focusEvent(eventId: savedId)
+        } catch {}
+    }
+
     public func requestDiscardDraft() {
         guard let draft = draftStore.gridDraft else { return }
         if draftStore.status.isFormOpen {
@@ -187,14 +199,33 @@ extension NativeCalendarRootModel {
         focusEvent(eventId: id)
     }
 
+    func sidebarEditingGridEventId() -> String? {
+        guard draftStore.status.isFormOpen, let draft = draftStore.gridDraft else {
+            return nil
+        }
+        switch draft.kind {
+        case .edit:
+            return draft.persistedEventId?.rawValue
+        case .create:
+            return draft.clientId.rawValue
+        }
+    }
+
     func draftOverlayForPresentation() -> GridLayoutDraftOverlay? {
         guard let draft = draftStore.gridDraft,
             let activity = draftStore.status.activity
         else { return nil }
+        let baseline = baselineEvent(for: draft)
         return GridEventDraftMapping.overlay(
             from: draft,
             activity: activity,
-            status: draftStore.status
+            status: draftStore.status,
+            sourceColorHex: baseline.flatMap(Self.detailsColorHex(from:))
         )
+    }
+
+    static func detailsColorHex(from event: Event) -> String? {
+        guard case .details(let payload) = event.content else { return nil }
+        return payload.colorHex
     }
 }

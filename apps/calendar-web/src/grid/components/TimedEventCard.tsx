@@ -25,6 +25,8 @@ import {
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -170,8 +172,6 @@ const TimedEventCardBase = (
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
-  const selectedBoxShadow =
-    "0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, var(--text) 70%, transparent)";
   const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(event._id));
   const focusColorCss = eventFocusColor(focusColor);
   // Edge focus paints outside the card (box-shadow) so short titles stay
@@ -180,10 +180,11 @@ const TimedEventCardBase = (
     ? eventEdgeFocusShadow(focusedEdge, "vertical", focusColorCss)
     : undefined;
 
-  const eventBoxShadow =
-    [isSelected ? selectedBoxShadow : null, boxShadow, edgeFocusShadow]
-      .filter(Boolean)
-      .join(", ") || undefined;
+  const eventBoxShadow = joinGridEventBoxShadow(
+    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    boxShadow,
+    edgeFocusShadow,
+  );
 
   // The fill is neutral and its lightness swings widely across states, so the
   // text color is chosen per-state (whichever of dark/light reads better
@@ -281,6 +282,7 @@ const TimedEventCardBase = (
         mergedStops &&
           "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
         eventFocusOutlineClass(focusedEdge),
+        isSelected && "focus-visible:outline-none",
         (event.isDemo ||
           guestResponse === "awaiting" ||
           guestResponse === "tentative") &&

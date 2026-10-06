@@ -119,6 +119,17 @@ export function eventFocusColor(focusColor: string | null | undefined): string {
   return focusColor;
 }
 
+/** Sidebar-open editing ring: contrasts with the page in both themes. */
+export const GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW =
+  "0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, var(--text) 70%, transparent)";
+
+export function joinGridEventBoxShadow(
+  ...parts: Array<string | undefined | null | false>
+): string | undefined {
+  const joined = parts.filter(Boolean).join(", ");
+  return joined || undefined;
+}
+
 /**
  * Whole-card focus outline classes. Suppressed while an edge is focused so
  * only the outer edge line shows (short titles stay readable).

@@ -402,6 +402,23 @@ export const openAllDayEventFormWithKeyboard = async (page: Page) => {
   });
 };
 
+/** Asserts the grid card for `eventTitle` shows the sidebar-editing ring. */
+export const expectSidebarEditingRingOnGridEvent = async (
+  page: Page,
+  eventTitle: string,
+) => {
+  const eventButton = page
+    .locator("#timedEvents")
+    .getByRole("button", { name: eventTitle })
+    .last();
+  await expect(eventButton).toBeVisible({ timeout: FORM_TIMEOUT });
+  await expect
+    .poll(async () =>
+      eventButton.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
+    .toMatch(/0px 0px 0px 1px.*0px 0px 0px 3px/s);
+};
+
 /** Focuses the event card and opens its form with Enter. */
 export const openEventForEditingWithKeyboard = async (
   page: Page,

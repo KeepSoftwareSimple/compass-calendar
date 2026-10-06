@@ -182,7 +182,7 @@ final class EventsStoreRecurringTests: XCTestCase {
         let titleById = Dictionary(uniqueKeysWithValues: stored.map { ($0.id.rawValue, eventTitle($0)) })
         XCTAssertEqual(titleById[first.id.rawValue], "Series")
         XCTAssertEqual(titleById[split.id.rawValue], "Split weekly sync")
-        XCTAssertEqual(titleById[following.id.rawValue], "Split weekly sync")
+        XCTAssertNil(titleById[following.id.rawValue])
     }
 
     func testReplaceOptimisticMapsThisScopeToQuery() async throws {

@@ -67,14 +67,11 @@ extension NativeCalendarRootModel {
             pendingDiscardDraftConfirmation = true
             return
         }
-        closeEventFormConfirmed()
+        discardDraftConfirmed()
     }
 
     public func closeEventFormConfirmed() {
-        pendingDiscardDraftConfirmation = false
-        draftStore.discard()
-        formFieldDigitHintsVisible = false
-        rebuildPresentation()
+        discardDraftConfirmed()
     }
 
     public func duplicateFocusedOrFormEvent() async {

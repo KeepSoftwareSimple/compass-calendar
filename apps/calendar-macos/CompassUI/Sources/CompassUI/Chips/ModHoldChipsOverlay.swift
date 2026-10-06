@@ -5,6 +5,7 @@ struct ModHoldChipsOverlay: View {
     let targets: [PageJumpTarget]
     let anchors: [String: Anchor<CGRect>]
     let visible: Bool
+    var accessibilityIdentifier: String = "compass-mod-hold-chips"
 
     var body: some View {
         if visible {
@@ -18,7 +19,7 @@ struct ModHoldChipsOverlay: View {
                 }
             }
             .allowsHitTesting(false)
-            .accessibilityIdentifier("compass-mod-hold-chips")
+            .accessibilityIdentifier(accessibilityIdentifier)
         }
     }
 }

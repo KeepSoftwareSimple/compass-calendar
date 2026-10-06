@@ -1,12 +1,17 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Origin } from "@core/constants/core.constants";
+import { type Event } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import { type GridEventDraft } from "@web/events/event-draft.types";
-import { createGridEventDraft } from "@web/events/grid-event-draft.adapter";
+import {
+  createGridEventDraft,
+  editGridEventDraft,
+} from "@web/events/grid-event-draft.adapter";
 import { draftActions, useDraftStore } from "@web/events/stores/draft.store";
+import { GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW } from "@web/grid/components/calendar-accent.util";
 import { DECK_MIN_WIDTH } from "@web/grid/grid.constants";
 import { type WeekProps } from "@web/views/Week/hooks/useWeek";
 import { GridDraft } from "./GridDraft";
@@ -183,6 +188,39 @@ describe("GridDraft", () => {
     expect(
       screen.getAllByRole("button", { name: /Timed event: Planning/ }),
     ).toHaveLength(3);
+  });
+
+  it("shows the sidebar-editing ring on an open timed edit draft", () => {
+    const source = {
+      id: "0123456789abcdef01234567",
+      calendarId: "0123456789abcdef76543210",
+      content: {
+        kind: "details" as const,
+        title: "Planning",
+        description: "",
+        colorHex: "#c4b5fd",
+      },
+      schedule: {
+        kind: "timed" as const,
+        start: "2026-05-26T14:00:00.000Z",
+        end: "2026-05-26T15:00:00.000Z",
+        timeZone: "UTC",
+      },
+      recurrence: { kind: "single" as const },
+      createdAt: "2026-05-01T00:00:00.000Z",
+      updatedAt: null,
+    } as unknown as Event;
+    const draft = editGridEventDraft(source);
+    if (!draft) throw new Error("expected edit draft");
+    draftActions.startGridDraft({ activity: "gridClick", draft });
+
+    renderGridDraft({ draft });
+
+    const card = screen.getByRole("button", { name: /Timed event: Planning/ });
+    expect(card.style.getPropertyValue("--event-bg")).toBe("#c4b5fd");
+    expect(card.style.boxShadow).toContain(
+      GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    );
   });
 
   it("opens the form when Enter is pressed on a form-closed draft", async () => {

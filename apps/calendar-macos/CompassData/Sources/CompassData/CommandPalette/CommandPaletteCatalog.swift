@@ -10,16 +10,15 @@ public enum CommandPaletteCatalog {
         isSignedIn: Bool,
         isTrialing: Bool,
         eventHits: [CommandPaletteEventHit],
-        recentIds: [String],
-        handlers: CommandPaletteHandlers
+        recentIds: [String]
     ) -> [CommandPaletteSection] {
         var built: [CommandPaletteSection] = []
 
-        if let goToDate = goToDateItem(query: query, now: now, handler: handlers.goToDate) {
+        if let goToDate = goToDateItem(query: query, now: now) {
             built.append(CommandPaletteSection(id: "go-to-date", heading: "", items: [goToDate]))
         }
 
-        let navigation = navigationItems(view: view, handlers: handlers)
+        let navigation = navigationItems(view: view)
         if !navigation.isEmpty {
             built.append(CommandPaletteSection(id: "navigation", heading: "Navigation", items: navigation))
         }
@@ -39,13 +38,13 @@ public enum CommandPaletteCatalog {
                     }))
         }
 
-        let recent = recentItems(recentIds: recentIds, navigation: navigation, handlers: handlers)
+        let recent = recentItems(recentIds: recentIds, navigation: navigation)
         if !recent.isEmpty {
             built.append(CommandPaletteSection(id: "recent", heading: "Recent", items: recent))
         }
 
-        built.append(contentsOf: eventActionSections(handlers: handlers))
-        built.append(contentsOf: moreSections(isTrialing: isTrialing, handlers: handlers))
+        built.append(contentsOf: eventActionSections())
+        built.append(contentsOf: moreSections(isTrialing: isTrialing))
 
         if !isSignedIn {
             built.append(
@@ -73,8 +72,7 @@ public enum CommandPaletteCatalog {
 
     private static func goToDateItem(
         query: String,
-        now: Date,
-        handler: @escaping (Date) -> Void
+        now: Date
     ) -> CommandPaletteItem? {
         guard let date = UserDateParsing.parseUserDate(query, now: now) else { return nil }
         return CommandPaletteItem(
@@ -86,8 +84,7 @@ public enum CommandPaletteCatalog {
     }
 
     private static func navigationItems(
-        view: CalendarGridView,
-        handlers: CommandPaletteHandlers
+        view: CalendarGridView
     ) -> [CommandPaletteItem] {
         var items: [CommandPaletteItem] = [
             CommandPaletteItem(
@@ -141,14 +138,13 @@ public enum CommandPaletteCatalog {
 
     private static func recentItems(
         recentIds: [String],
-        navigation: [CommandPaletteItem],
-        handlers: CommandPaletteHandlers
+        navigation: [CommandPaletteItem]
     ) -> [CommandPaletteItem] {
         let lookup = Dictionary(uniqueKeysWithValues: navigation.map { ($0.id, $0) })
         return recentIds.compactMap { lookup[$0] }
     }
 
-    private static func eventActionSections(handlers: CommandPaletteHandlers) -> [CommandPaletteSection] {
+    private static func eventActionSections() -> [CommandPaletteSection] {
         [
             CommandPaletteSection(
                 id: "create",
@@ -173,8 +169,7 @@ public enum CommandPaletteCatalog {
     }
 
     private static func moreSections(
-        isTrialing: Bool,
-        handlers: CommandPaletteHandlers
+        isTrialing: Bool
     ) -> [CommandPaletteSection] {
         var items: [CommandPaletteItem] = [
             CommandPaletteItem(
@@ -218,10 +213,3 @@ public struct CommandPaletteEventHit: Hashable, Sendable {
     }
 }
 
-public struct CommandPaletteHandlers: Sendable {
-    public var goToDate: @Sendable (Date) -> Void
-
-    public init(goToDate: @escaping @Sendable (Date) -> Void) {
-        self.goToDate = goToDate
-    }
-}
