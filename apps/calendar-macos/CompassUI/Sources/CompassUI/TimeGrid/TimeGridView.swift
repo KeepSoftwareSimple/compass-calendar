@@ -309,7 +309,14 @@ public final class TimeGridView: NSView {
             var adjusted = card
             adjusted.frame = frame
             let isFocused = state.focusedEventId == card.eventId
-            view.apply(card: adjusted, theme: theme, surfaceColor: surface, isFocused: isFocused)
+            let isSidebarEditing = state.sidebarEditingEventId == card.eventId
+            view.apply(
+                card: adjusted,
+                theme: theme,
+                surfaceColor: surface,
+                isFocused: isFocused,
+                isSidebarEditing: isSidebarEditing
+            )
             view.cardDelegate = self
             view.layoutSubtreeIfNeeded()
 

@@ -703,6 +703,7 @@ public final class NativeCalendarRootModel {
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
+            sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels
         )
         let snapshot = timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths())

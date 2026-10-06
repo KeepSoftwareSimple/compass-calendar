@@ -25,6 +25,7 @@ import {
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
 } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -170,8 +171,6 @@ const TimedEventCardBase = (
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
-  const selectedBoxShadow =
-    "0 0 0 1px var(--background), 0 0 0 3px color-mix(in srgb, var(--text) 70%, transparent)";
   const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(event._id));
   const focusColorCss = eventFocusColor(focusColor);
   // Edge focus paints outside the card (box-shadow) so short titles stay
@@ -181,7 +180,11 @@ const TimedEventCardBase = (
     : undefined;
 
   const eventBoxShadow =
-    [isSelected ? selectedBoxShadow : null, boxShadow, edgeFocusShadow]
+    [
+      isSelected ? GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW : null,
+      boxShadow,
+      edgeFocusShadow,
+    ]
       .filter(Boolean)
       .join(", ") || undefined;
 
@@ -281,6 +284,7 @@ const TimedEventCardBase = (
         mergedStops &&
           "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
         eventFocusOutlineClass(focusedEdge),
+        isSelected && "focus-visible:outline-none",
         (event.isDemo ||
           guestResponse === "awaiting" ||
           guestResponse === "tentative") &&
