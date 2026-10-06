@@ -42,8 +42,8 @@ extension NativeCalendarRootModel {
         overlayStores.legend.close()
         overlayStores.palette.close()
         eventMenuStore.open(eventId: event.id, anchor: anchor)
-        if fromKeyboard, let section = ShortcutTelemetrySection.section(for: .editMenu) {
-            levelsStore.recordShortcutInvocation(.editMenu, section: section)
+        if fromKeyboard {
+            recordShortcut(.editMenu)
         }
     }
 
@@ -54,9 +54,7 @@ extension NativeCalendarRootModel {
     public func toggleFocusedEventHidden() {
         guard let event = focusedEvent() else { return }
         toggleEventHidden(eventId: event.id)
-        if let section = ShortcutTelemetrySection.section(for: .editHide) {
-            levelsStore.recordShortcutInvocation(.editHide, section: section)
-        }
+        recordShortcut(.editHide)
     }
 
     public func toggleEventHidden(eventId: EventId) {
@@ -84,9 +82,7 @@ extension NativeCalendarRootModel {
     public func copyFocusedEvent() {
         guard let event = focusedEvent() else { return }
         clipboardStore.copy(event)
-        if let section = ShortcutTelemetrySection.section(for: .editCopy) {
-            levelsStore.recordShortcutInvocation(.editCopy, section: section)
-        }
+        recordShortcut(.editCopy)
     }
 
     public func pasteCopiedEvent() {
@@ -95,9 +91,7 @@ extension NativeCalendarRootModel {
         let targetDay = draftTargetDay()
         let adjusted = EventOnTargetDay.moved(source, to: targetDay)
         Task { await commitDuplicate(from: adjusted, recordUndo: true) }
-        if let section = ShortcutTelemetrySection.section(for: .editPaste) {
-            levelsStore.recordShortcutInvocation(.editPaste, section: section)
-        }
+        recordShortcut(.editPaste)
     }
 
     public func duplicateFocusedEvent() {
@@ -105,9 +99,7 @@ extension NativeCalendarRootModel {
               !EventInteractionPolicy.isReadOnly(event: event, calendars: calendars)
         else { return }
         Task { await commitDuplicate(from: event, recordUndo: true) }
-        if let section = ShortcutTelemetrySection.section(for: .editDuplicate) {
-            levelsStore.recordShortcutInvocation(.editDuplicate, section: section)
-        }
+        recordShortcut(.editDuplicate)
     }
 
     public func deleteFocusedEvent() {
@@ -115,9 +107,7 @@ extension NativeCalendarRootModel {
               !EventInteractionPolicy.isReadOnly(event: event, calendars: calendars)
         else { return }
         Task { await deleteEvent(event, scope: .this) }
-        if let section = ShortcutTelemetrySection.section(for: .editDelete) {
-            levelsStore.recordShortcutInvocation(.editDelete, section: section)
-        }
+        recordShortcut(.editDelete)
     }
 
     public func promptEventMenuKeyboardOnly(label: String, keycaps: [String]) {
@@ -145,6 +135,37 @@ extension NativeCalendarRootModel {
         } catch {}
     }
 
+    /// Re-reads the store after a write so the grid reflects what persisted,
+    /// not just the optimistic edit. A read failure leaves the optimistic
+    /// `loadedEvents` in place rather than blanking the grid.
+    private func refreshLoadedEvents() {
+        if let events = try? eventsStore.fetchAllEvents() {
+            loadedEvents = events
+        }
+    }
+
+    private func clearFocusIfShowing(eventId: EventId) {
+        guard focusStore.focusedEventId == eventId else { return }
+        focusStore.setFocused(eventId: nil, eventType: nil)
+    }
+
+    /// Undoes a create: drop the row, resync, and give up focus on it. The
+    /// caller owns the `keyboardCreateSettleGeneration` bump and the staged
+    /// delete, which differ between the sync and async undo paths.
+    private func revertCreatedEvent(_ event: Event) {
+        try? eventsStore.removePersistedEvent(id: event.id)
+        loadedEvents.removeAll { $0.id == event.id }
+        refreshLoadedEvents()
+        clearFocusIfShowing(eventId: event.id)
+        rebuildPresentation()
+    }
+
+    private func applyHiddenState(eventId: EventId, hidden: Bool) async {
+        try? await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: hidden)
+        refreshLoadedEvents()
+        rebuildPresentation()
+    }
+
     func deleteEvent(_ event: Event, scope: EventDeleteScope) async {
         let undoable =
             UndoStore.isUndoableRecurrence(event) && scope == .this
@@ -153,12 +174,8 @@ extension NativeCalendarRootModel {
             try await eventsStore.deleteOptimistic(id: event.id, scope: scope)
         } catch {}
         loadedEvents.removeAll { $0.id == event.id }
-        if let events = try? eventsStore.fetchAllEvents() {
-            loadedEvents = events
-        }
-        if focusStore.focusedEventId == event.id {
-            focusStore.setFocused(eventId: nil, eventType: nil)
-        }
+        refreshLoadedEvents()
+        clearFocusIfShowing(eventId: event.id)
         if !undoStore.isRestoringHistory() {
             if undoable {
                 undoStore.record(.delete(event: snapshot))
@@ -195,19 +212,9 @@ extension NativeCalendarRootModel {
         keyboardCreateSettleGeneration += 1
         undoStore.commitUndo()
         undoStore.runHistoryRestore {
-            try? eventsStore.removePersistedEvent(id: event.id)
-            loadedEvents.removeAll { $0.id == event.id }
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            if focusStore.focusedEventId == event.id {
-                focusStore.setFocused(eventId: nil, eventType: nil)
-            }
-            rebuildPresentation()
+            revertCreatedEvent(event)
         }
-        if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
-            levelsStore.recordShortcutInvocation(.otherUndo, section: section)
-        }
+        recordShortcut(.otherUndo)
         Task { await eventsStore.settleStagedDelete(id: event.id, scope: .this) }
     }
 
@@ -225,9 +232,7 @@ extension NativeCalendarRootModel {
         await undoStore.runHistoryRestoreAsync {
             await self.replayUndoEntry(entry)
         }
-        if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
-            levelsStore.recordShortcutInvocation(.otherUndo, section: section)
-        }
+        recordShortcut(.otherUndo)
     }
 
     public func redoLastChange() {
@@ -241,35 +246,21 @@ extension NativeCalendarRootModel {
                 await self.replayRedoEntry(entry)
             }
         }
-        if let section = ShortcutTelemetrySection.section(for: .otherRedo) {
-            levelsStore.recordShortcutInvocation(.otherRedo, section: section)
-        }
+        recordShortcut(.otherRedo)
     }
 
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
         switch entry {
         case .create(let event):
             keyboardCreateSettleGeneration += 1
-            try? eventsStore.removePersistedEvent(id: event.id)
-            loadedEvents.removeAll { $0.id == event.id }
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            if focusStore.focusedEventId == event.id {
-                focusStore.setFocused(eventId: nil, eventType: nil)
-            }
-            rebuildPresentation()
+            revertCreatedEvent(event)
             await eventsStore.settleStagedDelete(id: event.id, scope: .this)
         case .delete(let event):
             await commitDuplicate(from: event, recordUndo: false)
         case .edit(_, let before, _):
             await replaceEvent(with: before)
         case .hidden(let eventId, let hidden):
-            try? await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: !hidden)
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            rebuildPresentation()
+            await applyHiddenState(eventId: eventId, hidden: !hidden)
         case .unrecorded:
             break
         }
@@ -284,11 +275,7 @@ extension NativeCalendarRootModel {
         case .edit(_, _, let after):
             await replaceEvent(with: after)
         case .hidden(let eventId, let hidden):
-            try? await environment.hiddenEventsStore.setEventHidden(eventId: eventId, hidden: hidden)
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            rebuildPresentation()
+            await applyHiddenState(eventId: eventId, hidden: hidden)
         case .unrecorded:
             break
         }
