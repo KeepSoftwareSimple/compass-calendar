@@ -5,7 +5,7 @@ extension NativeCalendarRootModel {
     public func handleBlockPartyKeyDown(_ event: KeyEvent) -> Bool {
         guard blockPartyStore.isActive else { return false }
 
-        if event.key == .named(.escape), event.modifiers.isEmpty {
+        if case .named(.escape) = event.key, event.modifiers.isEmpty {
             if blockPartyStore.gameState.simOverlay != nil {
                 blockPartyStore.handleKey(.closeOverlay)
                 return true
@@ -19,7 +19,7 @@ extension NativeCalendarRootModel {
         }
 
         if blockPartyStore.gameState.phase == .howto {
-            if event.key == .named(.enter), event.modifiers.isEmpty {
+            if case .named(.enter) = event.key, event.modifiers.isEmpty {
                 blockPartyStore.handleKey(.enter)
                 return true
             }
@@ -70,9 +70,9 @@ extension NativeCalendarRootModel {
         if event.modifiers.contains(.command), case .character(let char) = event.key, char.lowercased() == "z" {
             return .undo
         }
-        if event.key == .named(.enter), event.modifiers.isEmpty { return .enter }
-        if event.key == .named(.delete) || event.key == .named(.deleteForward) { return .delete }
-        if event.key == .named(.tab) {
+        if case .named(.enter) = event.key, event.modifiers.isEmpty { return .enter }
+        if case .named(.delete) = event.key { return .delete }
+        if case .named(.tab) = event.key {
             return .tab(backward: event.modifiers.contains(.shift))
         }
         if event.modifiers.contains(.command), case .character(let char) = event.key, char == "1" || char == "2" {
