@@ -299,6 +299,26 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testKeyboardDeletesFocusedFixtureEvent() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        waitForFocusedGridEvent(title: "Morning standup", in: window, timeout: 10)
+
+        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
+        XCTAssertTrue(standup.waitForExistence(timeout: 5))
+        window.typeKey(.delete, modifierFlags: [])
+        XCTAssertFalse(standup.waitForExistence(timeout: 8))
+    }
+
+    @MainActor
     /// Saves a recurring demo fixture edit after confirming scope via keyboard.
     func testRecurrenceScopePromptEditOnFixtureSeries() {
         let app = XCUIApplication()
@@ -322,6 +342,74 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(
             window.buttons["Weekly sync"].waitForExistence(timeout: 8),
             "Expected another occurrence to keep the original series title")
+    }
+
+    @MainActor
+    func testRecurringDeleteShowsScopePromptAndAcceptsFollowing() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_APPEND_DEMO_OCCURRENCE",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-weekly-occurrence",
+            "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        waitForFocusedGridEvent(title: "Weekly sync", in: window, timeout: 10)
+
+        let occurrence = window.buttons["compass-grid-event-demo-weekly-occurrence"]
+        XCTAssertTrue(occurrence.waitForExistence(timeout: 5))
+        window.typeKey(.delete, modifierFlags: [])
+        XCTAssertFalse(occurrence.waitForExistence(timeout: 8))
+
+        let toast = window.descendants(matching: .any)["compass-native-status-toast"]
+        XCTAssertTrue(toast.waitForExistence(timeout: 8))
+        window.typeKey("1", modifierFlags: [])
+        XCTAssertFalse(toast.waitForExistence(timeout: 8))
+    }
+
+    @MainActor
+    func testQuestionMarkTogglesShortcutsLegend() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        let legend = window.descendants(matching: .any)["compass-native-shortcuts-legend"]
+
+        window.typeKey("/", modifierFlags: [.shift])
+        XCTAssertTrue(legend.waitForExistence(timeout: 5))
+
+        window.typeKey(.escape, modifierFlags: [])
+        XCTAssertFalse(legend.waitForExistence(timeout: 5))
+    }
+
+    @MainActor
+    func testCommandPaletteStartsBlockPartyPractice() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        window.typeKey("k", modifierFlags: [.command])
+        let practiceItem = window.descendants(matching: .any)["compass-native-palette-item-practice-shortcuts"]
+        XCTAssertTrue(practiceItem.waitForExistence(timeout: 8))
+        practiceItem.click()
+
+        let overlay = window.descendants(matching: .any)["block-party-overlay"]
+        XCTAssertTrue(overlay.waitForExistence(timeout: 8))
+
+        let start = window.buttons["Start practicing"]
+        XCTAssertTrue(start.waitForExistence(timeout: 5))
+        start.click()
+
+        XCTAssertTrue(
+            window.descendants(matching: .any)["block-party-practice-grid"].waitForExistence(timeout: 8))
     }
 
     @MainActor

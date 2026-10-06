@@ -57,4 +57,9 @@ public enum UITestLaunchPolicy {
         let value = args[index + 1]
         return value.isEmpty ? nil : value
     }
+
+    /// Appends a recurring occurrence row to the demo seed for recurrence-scope XCUITest.
+    public static var appendDemoOccurrenceForUITest: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_APPEND_DEMO_OCCURRENCE")
+    }
 }
