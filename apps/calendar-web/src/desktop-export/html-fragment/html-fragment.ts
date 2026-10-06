@@ -1,23 +1,13 @@
 import DOMPurify from "dompurify";
 import { JSDOM } from "jsdom";
 import {
+  DESCRIPTION_HTML_ALLOWED_ATTR,
+  DESCRIPTION_HTML_ALLOWED_TAGS,
+} from "@web/components/DescriptionEditor/description-html.policy";
+import {
   looksLikeHtml,
   plainTextToDescriptionHtml,
 } from "@web/components/DescriptionEditor/plain-text-description";
-
-const ALLOWED_TAGS = [
-  "p",
-  "br",
-  "b",
-  "strong",
-  "i",
-  "em",
-  "ul",
-  "ol",
-  "li",
-  "a",
-];
-const ALLOWED_ATTR = ["href"];
 
 export type HtmlFragmentInline =
   | { kind: "text"; text: string }
@@ -45,8 +35,8 @@ const purify = DOMPurify(jsdomWindow);
 
 export const sanitizeDescriptionHtml = (html: string): string =>
   purify.sanitize(html, {
-    ALLOWED_TAGS,
-    ALLOWED_ATTR,
+    ALLOWED_TAGS: DESCRIPTION_HTML_ALLOWED_TAGS,
+    ALLOWED_ATTR: DESCRIPTION_HTML_ALLOWED_ATTR,
   });
 
 export const normalizeDescriptionInput = (value: string): string => {
