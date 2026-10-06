@@ -22,7 +22,6 @@ import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { getToastDefaultOptions } from "@web/common/constants/toast.constants";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { getToast } from "@web/common/utils/toast/toast.port";
-import { isDesktop } from "@web/desktop/isDesktop";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -88,7 +87,7 @@ export function ProviderAuthCallbackView() {
   const shouldRelay =
     providerParam &&
     isSignInProviderKind(providerParam) &&
-    shouldRelayDesktopOAuthCallback(oauthState, isDesktop());
+    shouldRelayDesktopOAuthCallback(oauthState, false);
 
   useOneShotAuthCallback(() => {
     if (shouldRelay) {

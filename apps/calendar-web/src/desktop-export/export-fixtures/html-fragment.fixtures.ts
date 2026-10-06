@@ -4,7 +4,7 @@ import {
   parseHtmlFragmentDocument,
   plainTextFromDocument,
   roundTripDescriptionHtml,
-} from "@web/desktop/html-fragment/html-fragment";
+} from "@web/desktop-export/html-fragment/html-fragment";
 
 type HtmlFragmentVectorCase = {
   id: string;

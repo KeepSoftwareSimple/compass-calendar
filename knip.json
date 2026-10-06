@@ -39,7 +39,7 @@
     "apps/calendar-web": {
       "entry": [
         "src/__tests__/utils/render.test.util.tsx",
-        "src/desktop/export-fixtures/write-fixture-files.ts"
+        "src/desktop-export/export-fixtures/write-fixture-files.ts"
       ],
       "project": ["src/**/*.{ts,tsx}!"]
     },

@@ -19,7 +19,6 @@ import {
 } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
-import { isDesktop } from "@web/desktop/isDesktop";
 
 type CompleteAuthentication = ReturnType<typeof useCompleteAuthentication>;
 
@@ -94,7 +93,7 @@ export function AppleAuthCallbackView() {
   const completeAuthentication = useCompleteAuthentication();
   const shouldRelay = shouldRelayDesktopAppleOAuthCallback(
     location.searchStr,
-    isDesktop(),
+    false,
   );
 
   useOneShotAuthCallback(() => {
