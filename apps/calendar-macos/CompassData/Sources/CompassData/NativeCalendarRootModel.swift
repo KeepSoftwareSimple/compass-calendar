@@ -731,6 +731,10 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
+            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
+        }
+        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
         publishEventFormTitleAccessibilityProbe()
     }
 

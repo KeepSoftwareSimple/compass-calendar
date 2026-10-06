@@ -50,5 +50,6 @@ final class NativeCalendarRootModelUndoTests: XCTestCase {
 
         model.undoKeyboardPlacedCreateNow()
         XCTAssertTrue(untitledCards().isEmpty)
+        XCTAssertNil(model.gridFocusAccessibilityLabel)
     }
 }
