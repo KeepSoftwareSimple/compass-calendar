@@ -11,7 +11,6 @@ import {
 import { useDefaultTargetCalendar } from "@web/calendars/useDefaultTargetCalendar";
 import { RecurringEventUpdateScope } from "@web/common/types/web.event.types";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
-import { dismissDesktopQuickAddPanelIfActive } from "@web/desktop/dismissDesktopQuickAddPanel";
 import { type GridEventDraft } from "@web/events/event-draft.types";
 import {
   gridDraftGuestsChanged,
@@ -184,7 +183,6 @@ export function useSaveEventForm() {
           create(input, {
             onOptimisticApplied: () => {
               closeEventForm(id);
-              dismissDesktopQuickAddPanelIfActive();
             },
             onError: () => restoreSubmittedDraft(activity, draftToRestore),
           });

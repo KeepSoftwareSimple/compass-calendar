@@ -7,7 +7,6 @@ import { filterPosthogBeforeSend } from "@web/auth/posthog/posthog-exception-fil
 import { filterPosthogWebVitals } from "@web/auth/posthog/posthog-web-vitals-filter.util";
 import { ENV_WEB } from "@web/common/constants/env.constants";
 import { APP_VERSION } from "@web/common/constants/version.constants";
-import { isDesktop } from "@web/desktop/isDesktop";
 
 let client: PostHog | undefined;
 
@@ -107,7 +106,6 @@ export function initPosthog(): PostHog | undefined {
     environment: resolvePosthogEnvironment(),
     version: APP_VERSION,
   });
-  registerDesktopPosthogSuperProperty(posthog);
 
   client = posthog;
   return client;
@@ -125,12 +123,4 @@ export function getPosthogClient(): PostHog | undefined {
 /** Test-only: drop the singleton so initPosthog can run again. */
 export function resetPosthogClientForTests(): void {
   client = undefined;
-}
-
-function registerDesktopPosthogSuperProperty(posthog: PostHog): void {
-  if (!isDesktop()) {
-    return;
-  }
-
-  posthog.register({ platform: "desktop" });
 }

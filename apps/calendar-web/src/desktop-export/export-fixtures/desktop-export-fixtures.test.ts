@@ -5,7 +5,7 @@ const bootExportFixtures = async () => {
     "@core/desktop/desktop-export-env"
   );
   ensureDesktopExportEnv();
-  return import("@web/desktop/export-fixtures/demo-seed.fixtures");
+  return import("@web/desktop-export/export-fixtures/demo-seed.fixtures");
 };
 
 describe("desktop export fixtures", () => {
@@ -15,7 +15,7 @@ describe("desktop export fixtures", () => {
     );
     ensureDesktopExportEnv();
     const { buildTimedDeckFixtures } = await import(
-      "@web/desktop/export-fixtures/timed-deck.fixtures"
+      "@web/desktop-export/export-fixtures/timed-deck.fixtures"
     );
     expect(buildTimedDeckFixtures().cases.length).toBeGreaterThan(0);
   });
@@ -26,14 +26,14 @@ describe("desktop export fixtures", () => {
     );
     ensureDesktopExportEnv();
     const { buildNudgeFixtures } = await import(
-      "@web/desktop/export-fixtures/nudge.fixtures"
+      "@web/desktop-export/export-fixtures/nudge.fixtures"
     );
     expect(buildNudgeFixtures().cases[0]?.output).not.toBeNull();
   });
 
   it("builds go-to-date vectors", async () => {
     const { buildGoToDateFixtures } = await import(
-      "@web/desktop/export-fixtures/go-to-date.fixtures"
+      "@web/desktop-export/export-fixtures/go-to-date.fixtures"
     );
     expect(buildGoToDateFixtures().cases.length).toBeGreaterThan(3);
   });
@@ -44,7 +44,7 @@ describe("desktop export fixtures", () => {
     );
     ensureDesktopExportEnv();
     const { buildGridLayoutSnapshotFixtures } = await import(
-      "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures"
+      "@web/desktop-export/export-fixtures/grid-layout.snapshot.fixtures"
     );
     const { scenarios } = buildGridLayoutSnapshotFixtures();
     expect(scenarios.map((scenario) => scenario.id)).toEqual([
@@ -61,14 +61,14 @@ describe("desktop export fixtures", () => {
 
   it("builds html-fragment vectors", async () => {
     const { buildHtmlFragmentFixtures } = await import(
-      "@web/desktop/export-fixtures/html-fragment.fixtures"
+      "@web/desktop-export/export-fixtures/html-fragment.fixtures"
     );
     expect(buildHtmlFragmentFixtures().cases.length).toBeGreaterThan(5);
   });
 
   it("builds block party task vectors", async () => {
     const { buildBlockPartyFixtures } = await import(
-      "@web/desktop/export-fixtures/block-party.fixtures"
+      "@web/desktop-export/export-fixtures/block-party.fixtures"
     );
     const fixtures = buildBlockPartyFixtures();
     expect(fixtures.runTasks).toHaveLength(11);
@@ -79,7 +79,7 @@ describe("desktop export fixtures", () => {
   it("builds demo seed snapshot", async () => {
     await bootExportFixtures();
     const { buildDemoSeedFixtures, DEMO_EXPORT_CALENDAR_ID } = await import(
-      "@web/desktop/export-fixtures/demo-seed.fixtures"
+      "@web/desktop-export/export-fixtures/demo-seed.fixtures"
     );
     const demo = buildDemoSeedFixtures();
     expect(demo.events).toHaveLength(18);

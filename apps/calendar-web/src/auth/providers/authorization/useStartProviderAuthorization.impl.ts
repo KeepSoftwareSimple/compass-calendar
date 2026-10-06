@@ -10,7 +10,6 @@ import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { rememberSignupTrialMethod } from "@web/billing/signup-trial.util";
-import { isDesktop } from "@web/desktop/isDesktop";
 import {
   getAppleSignInClientId,
   getMicrosoftSignInClientId,
@@ -96,7 +95,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   prompt,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [state] = useState(() => buildOAuthStateForClient(isDesktop()));
+  const [state] = useState(() => buildOAuthStateForClient(false));
   const [redirectUri] = useState(() => buildProviderAuthCallbackUrl("google"));
 
   const loginOptions = useMemo<
@@ -137,7 +136,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
 const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
   ({ intent, signupFlow, onStart, onError, prompt }) => {
     const [loading, setLoading] = useState(false);
-    const [state] = useState(() => buildOAuthStateForClient(isDesktop()));
+    const [state] = useState(() => buildOAuthStateForClient(false));
     const [redirectUri] = useState(() =>
       buildProviderAuthCallbackUrl("microsoft"),
     );
