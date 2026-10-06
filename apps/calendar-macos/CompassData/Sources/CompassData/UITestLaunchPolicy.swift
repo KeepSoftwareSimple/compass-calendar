@@ -42,4 +42,9 @@ public enum UITestLaunchPolicy {
     public static var stickyQuickAddPanel: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL")
     }
+
+    /// Appends a recurring occurrence row to the demo seed for recurrence-scope XCUITest.
+    public static var appendDemoOccurrenceForUITest: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_APPEND_DEMO_OCCURRENCE")
+    }
 }
