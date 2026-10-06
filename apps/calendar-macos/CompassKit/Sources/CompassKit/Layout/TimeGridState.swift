@@ -6,6 +6,8 @@ public struct TimeGridState: Sendable {
     public var scenario: GridLayoutScenario
     public var trackWidth: CGFloat
     public var focusedEventId: String?
+    /// Grid card whose event is open in the sidebar form (keyboard focus may be elsewhere).
+    public var sidebarEditingEventId: String?
     public var eventJumpHints: [EventJumpChipHint]
 
     public init(
@@ -14,6 +16,7 @@ public struct TimeGridState: Sendable {
         scenario: GridLayoutScenario,
         trackWidth: CGFloat = 1010,
         focusedEventId: String? = nil,
+        sidebarEditingEventId: String? = nil,
         eventJumpHints: [EventJumpChipHint] = []
     ) {
         self.layoutMode = layoutMode
@@ -21,6 +24,7 @@ public struct TimeGridState: Sendable {
         self.scenario = scenario
         self.trackWidth = trackWidth
         self.focusedEventId = focusedEventId
+        self.sidebarEditingEventId = sidebarEditingEventId
         self.eventJumpHints = eventJumpHints
     }
 

@@ -5,18 +5,21 @@ public enum GridEventDraftMapping {
     public static func overlay(
         from draft: GridEventDraft,
         activity: DraftNudgeActivity,
-        status: DraftStatus
+        status: DraftStatus,
+        sourceColorHex: String? = nil
     ) -> GridLayoutDraftOverlay {
         let showsInline =
             activity == .keyboardPlace && !status.isFormOpen
         let eventId = draft.kind == .edit
             ? (draft.sourceEventId ?? draft.clientId).rawValue
             : draft.clientId.rawValue
+        let colorHex = draft.color == nil ? sourceColorHex : nil
         return GridLayoutDraftOverlay(
             eventId: eventId,
             schedule: draft.schedule,
             title: draft.title,
             calendarId: draft.calendarId?.rawValue,
+            colorHex: colorHex,
             showsInlineTitleEditor: showsInline
         )
     }
