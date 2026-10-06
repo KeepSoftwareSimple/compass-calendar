@@ -10,7 +10,10 @@ public struct BookingAPI: Sendable {
 
     public func getPage() async throws -> AdminBookingPage {
         let payload = try await client.sendRaw(method: "GET", path: "booking/page")
-        return try parsePagePayload(payload.body)
+        guard (200 ..< 300).contains(payload.statusCode) else {
+            throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
+        }
+        return try parsePagePayload(Data(payload.body.utf8))
     }
 
     public func getPageStatus() async throws -> BookingPageStatusResponse {
@@ -23,7 +26,10 @@ public struct BookingAPI: Sendable {
             path: "booking/page",
             bodyData: try JSONEncoder().encode(input)
         )
-        return try parsePagePayload(payload.body)
+        guard (200 ..< 300).contains(payload.statusCode) else {
+            throw CompassAPIError.httpStatus(payload.statusCode, body: payload.body)
+        }
+        return try parsePagePayload(Data(payload.body.utf8))
     }
 
     private func parsePagePayload(_ body: Data) throws -> AdminBookingPage {
