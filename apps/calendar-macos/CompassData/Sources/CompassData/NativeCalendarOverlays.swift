@@ -112,9 +112,7 @@ extension NativeCalendarRootModel {
         case .life: .life
         }
         commandPaletteStore.announce(UserDateParsing.goToDateAnnouncement(date, view: viewKind))
-        if let section = ShortcutTelemetrySection.section(for: .navGoToDate) {
-            levelsStore.recordShortcutInvocation(.navGoToDate, section: section)
-        }
+        recordShortcut(.navGoToDate)
     }
 
     func focusPaletteEvent(eventId: String) {
@@ -139,8 +137,8 @@ extension NativeCalendarRootModel {
         }
         shortcutsLegendStore.close()
         commandPaletteStore.open()
-        if fromGoToDate, let section = ShortcutTelemetrySection.section(for: .navGoToDate) {
-            levelsStore.recordShortcutInvocation(.navGoToDate, section: section)
+        if fromGoToDate {
+            recordShortcut(.navGoToDate)
         }
     }
 
@@ -150,9 +148,7 @@ extension NativeCalendarRootModel {
         } else {
             commandPaletteStore.close()
             shortcutsLegendStore.open()
-            if let section = ShortcutTelemetrySection.section(for: .otherShortcuts) {
-                levelsStore.recordShortcutInvocation(.otherShortcuts, section: section)
-            }
+            recordShortcut(.otherShortcuts)
         }
     }
 
