@@ -308,6 +308,7 @@ final class NativeLaunchTests: XCTestCase {
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
             "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
             "-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE",
+            "-COMPASS_UI_TEST_EVENT_FORM_TITLE", "Split weekly sync",
         ]
         app.launch()
 
@@ -317,8 +318,7 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        window.typeKey("a", modifierFlags: [.command])
-        window.typeText("Split weekly sync")
+        XCTAssertEqual(titleField.value as? String, "Split weekly sync")
 
         window.typeKey(.enter, modifierFlags: [.command])
 

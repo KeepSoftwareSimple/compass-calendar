@@ -47,4 +47,14 @@ public enum UITestLaunchPolicy {
     public static var autoConfirmRecurrenceScopeOnSave: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE")
     }
+
+    /// Seeds the open event form title (XCUITest typing is flaky for recurring edits in CI).
+    public static var presetEventFormTitle: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let index = args.firstIndex(of: "-COMPASS_UI_TEST_EVENT_FORM_TITLE"),
+            index + 1 < args.count
+        else { return nil }
+        let value = args[index + 1]
+        return value.isEmpty ? nil : value
+    }
 }

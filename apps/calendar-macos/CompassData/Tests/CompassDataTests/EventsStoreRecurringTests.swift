@@ -185,6 +185,43 @@ final class EventsStoreRecurringTests: XCTestCase {
         XCTAssertNil(titleById[following.id.rawValue])
     }
 
+    func testLocalReplaceThisUpdatesOccurrenceTitle() async throws {
+        let database = try AppDatabase.inMemory()
+        let repository = EventRepository(database: database)
+        let rangeCache = RangeCache(database: database)
+        let localEvents = LocalEventRepository(database: database)
+        let mockAPI = MockEventsAPI()
+        let store = EventsStore(
+            repository: repository,
+            localEvents: localEvents,
+            rangeCache: rangeCache,
+            eventsAPI: mockAPI,
+            source: .local
+        )
+
+        let seriesId = EventId(rawValue: "demo-weekly-sync")
+        let split = try occurrence(
+            id: "\(seriesId.rawValue)|2026-06-12T14:00:00.000Z",
+            day: 12,
+            seriesId: seriesId,
+            title: "Weekly sync"
+        )
+        try localEvents.putMany([
+            LocalEventRecord(id: split.id, event: split, isDemo: true),
+        ])
+
+        let edited = copyEvent(
+            split,
+            content: .details(.init(description: "", kind: "details", title: "Split weekly sync"))
+        )
+        let input = try replaceInput(scope: .this)
+        try await store.replaceOptimistic(id: split.id, input: input, optimisticEvent: edited)
+
+        let stored = try localEvents.fetchAll().map(\.event)
+        XCTAssertEqual(stored.count, 1)
+        XCTAssertEqual(eventTitle(stored[0]), "Split weekly sync")
+    }
+
     func testReplaceOptimisticMapsThisScopeToQuery() async throws {
         let database = try AppDatabase.inMemory()
         let repository = EventRepository(database: database)

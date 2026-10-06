@@ -831,6 +831,10 @@ public final class NativeCalendarRootModel {
         Task { @MainActor in
             openKeyboardEditForFocusedEvent()
             openEventFormForCurrentDraft()
+            if let title = UITestLaunchPolicy.presetEventFormTitle {
+                updateDraftFromForm(title: title)
+                onEventFormTitleAccessibilityProbeTitleSync?(title)
+            }
             publishEventFormTitleAccessibilityProbe()
         }
     }
