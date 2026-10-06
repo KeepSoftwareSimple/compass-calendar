@@ -63,4 +63,11 @@ enum UndoTestAccessibilityProbe {
         probe = view
         host.addSubview(view)
     }
+
+    static func markUndoReady() {
+        probe?.setAccessibilityValue("ready")
+        if let probe {
+            NSAccessibility.post(element: probe, notification: .valueChanged)
+        }
+    }
 }

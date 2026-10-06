@@ -36,9 +36,8 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         self.model = model
         self.catalogController = catalogController
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
-        model.onNativeUndoReadyForUITest = { [weak self] in
-            let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
-            CompassBridgeAccessibility.publishNativeUndoReadyForUITest(on: window)
+        model.onNativeUndoReadyForUITest = {
+            UndoTestAccessibilityProbe.markUndoReady()
         }
         model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
             let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow

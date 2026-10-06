@@ -296,11 +296,11 @@ final class NativeLaunchTests: XCTestCase {
         window.click()
         window.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(draft.waitForExistence(timeout: 10))
-        let undoReady = NSPredicate(format: "value == %@", "undo-ready")
-        wait(for: [expectation(for: undoReady, evaluatedWith: window, handler: nil)], timeout: 10)
 
         let undoControl = window.buttons["compass-native-undo-last-change"]
         XCTAssertTrue(undoControl.waitForExistence(timeout: 5))
+        let undoReady = NSPredicate(format: "value == %@", "ready")
+        wait(for: [expectation(for: undoReady, evaluatedWith: undoControl, handler: nil)], timeout: 10)
         undoControl.click()
         XCTAssertFalse(draft.waitForExistence(timeout: 8))
     }
