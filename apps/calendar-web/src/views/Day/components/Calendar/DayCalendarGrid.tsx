@@ -34,11 +34,16 @@ import {
 import { EventGrid, isEventGridLoading } from "@web/grid/components/EventGrid";
 import { GridBusyPeriods } from "@web/grid/components/GridBusyPeriods";
 import { eventGridFirstImportFlags } from "@web/grid/event-grid-import-overlay";
+import { EVENT_WIDTH_MINIMUM } from "@web/grid/grid.constants";
+import { useGridMarginLeft } from "@web/grid/grid-margin";
 import { useGridMeasurements } from "@web/grid/hooks/useGridMeasurements";
 import { withAllDayColumnTints } from "@web/grid/utils/allDayColumnTint.util";
 import { EditSequenceMenu } from "@web/shortcuts/edit-sequence/EditSequenceMenu";
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
-import { buildDayPageJumpTargets } from "@web/shortcuts/page-jump/page-jump.targets";
+import {
+  buildDayPageJumpTargets,
+  DAY_COLUMN_JUMP_ID_PREFIX,
+} from "@web/shortcuts/page-jump/page-jump.targets";
 import { QuickTimeSlots } from "@web/shortcuts/quick-time/QuickTimeSlots";
 import {
   buildQuickTimeSlots,
@@ -118,25 +123,33 @@ export function DayCalendarGrid() {
     visibleDates,
   } = useDayCalendarColumns({ allDayEvents, dateInView, timedEvents });
   const connectedAccounts = useConnectedAccounts();
-  const writableDisplayedCalendars = useMemo(
-    () =>
-      getWritableCalendars(displayedCalendars, {
-        hasConnectedAccount: connectedAccounts.length > 0,
-      }),
-    [connectedAccounts.length, displayedCalendars],
-  );
   const writableCalendarIds = useMemo(
     () =>
       new Set<string>(
-        writableDisplayedCalendars.map((calendar) => calendar.id),
+        getWritableCalendars(displayedCalendars, {
+          hasConnectedAccount: connectedAccounts.length > 0,
+        }).map((calendar) => calendar.id),
       ),
-    [writableDisplayedCalendars],
+    [connectedAccounts.length, displayedCalendars],
   );
   const pageJumpTargets = useMemo(
-    () =>
-      buildDayPageJumpTargets(writableDisplayedCalendars, connectedAccounts),
-    [connectedAccounts, writableDisplayedCalendars],
+    () => buildDayPageJumpTargets(displayedCalendars, connectedAccounts),
+    [connectedAccounts, displayedCalendars],
   );
+  const pageJumpDigitByCalendarId = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const target of pageJumpTargets) {
+      if (!target.id.startsWith(DAY_COLUMN_JUMP_ID_PREFIX)) continue;
+      const calendarId = target.id.slice(DAY_COLUMN_JUMP_ID_PREFIX.length);
+      map.set(calendarId, target.digit);
+    }
+    return map;
+  }, [pageJumpTargets]);
+  const marginLeft = useGridMarginLeft();
+  const dayGridMinWidth =
+    displayedCalendars.length > 0
+      ? marginLeft + displayedCalendars.length * EVENT_WIDTH_MINIMUM
+      : undefined;
   const [focusedColumnKey, setFocusedColumnKey] = useState<string | null>(null);
   const { gridRefs, measurements } = useGridMeasurements({
     visibleDateCount: visibleDates.length,
@@ -433,27 +446,34 @@ export function DayCalendarGrid() {
       className="flex h-full min-w-xs flex-1 flex-col bg-background px-0.5 pb-0.5"
       onContextMenu={handleContextMenu}
     >
-      <DayCalendarColumnHeaders
-        calendars={displayedCalendars}
-        focusedColumnKey={focusedColumnKey}
-        onColumnFocusChange={setFocusedColumnKey}
-        writableCalendarIds={writableCalendarIds}
-      />
-      <EventGrid
-        allDayEventsLayer={allDayEventsLayer}
-        allDayRowsCount={allDayRowsCount}
-        gridRefs={gridRefs}
-        highlightedColumnKey={focusedColumnKey}
-        isErrorEvents={showEventsLoadError}
-        isImportFailed={isImportFailed}
-        isImportingEmpty={isImportingEmpty}
-        isLoadingEvents={isLoadingEvents}
-        onRetryEvents={() => void refetch()}
-        onRetryImport={() => refresh()}
-        timedEventsLayer={timedEventsLayer}
-        today={today}
-        visibleDates={tintedVisibleDates}
-      />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto">
+        <div
+          className="flex min-h-0 flex-1 flex-col"
+          style={dayGridMinWidth ? { minWidth: dayGridMinWidth } : undefined}
+        >
+          <DayCalendarColumnHeaders
+            calendars={displayedCalendars}
+            focusedColumnKey={focusedColumnKey}
+            onColumnFocusChange={setFocusedColumnKey}
+            pageJumpDigitByCalendarId={pageJumpDigitByCalendarId}
+          />
+          <EventGrid
+            allDayEventsLayer={allDayEventsLayer}
+            allDayRowsCount={allDayRowsCount}
+            gridRefs={gridRefs}
+            highlightedColumnKey={focusedColumnKey}
+            isErrorEvents={showEventsLoadError}
+            isImportFailed={isImportFailed}
+            isImportingEmpty={isImportingEmpty}
+            isLoadingEvents={isLoadingEvents}
+            onRetryEvents={() => void refetch()}
+            onRetryImport={() => refresh()}
+            timedEventsLayer={timedEventsLayer}
+            today={today}
+            visibleDates={tintedVisibleDates}
+          />
+        </div>
+      </div>
       {contextMenu}
       <ShiftHintOverlay hints={shiftHints} />
       <EditSequenceMenu getAnchor={getEditSequenceAnchor} />

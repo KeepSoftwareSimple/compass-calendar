@@ -18,9 +18,9 @@
  * would overflow the physical top-row keys are omitted.
  *
  * Day view numbers left to right (`buildDayPageJumpTargets`): view dropdown,
- * then writable calendar columns, then that same sidebar map. Extra columns
- * that would crowd out the reserved sidebar slots (month picker, Up next,
- * and each account) are omitted so those chips still appear when mounted.
+ * then each displayed calendar column, then that same sidebar map. When
+ * columns use every physical top-row key, sidebar targets at the end are
+ * omitted first so in-view columns keep predictable Mod+digit bindings.
  */
 
 import {
@@ -155,13 +155,10 @@ export const buildDayPageJumpTargets = (
 ): PageJumpTargets => {
   const [viewSelect, ...sidebarTargets] =
     buildCalendarPageJumpTargets(accounts);
-  const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarTargets.length;
-  const columnTargets = calendars
-    .slice(0, Math.max(0, maxColumns))
-    .map((calendar) => ({
-      id: dayColumnJumpId(calendar.id),
-      label: calendar.name,
-    }));
+  const columnTargets = calendars.map((calendar) => ({
+    id: dayColumnJumpId(calendar.id),
+    label: calendar.name,
+  }));
 
   return withPickDigits([viewSelect, ...columnTargets, ...sidebarTargets]);
 };
