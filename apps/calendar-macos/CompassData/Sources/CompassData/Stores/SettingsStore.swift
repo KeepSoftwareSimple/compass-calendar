@@ -34,6 +34,7 @@ public final class UnavailableNativeSettingsBridge: NativeSettingsBridge {
 public final class SettingsStore {
     public var isPresented = false
     public var page: SettingsPage = .accounts
+    public var guestMeetingSetupActive = false
     public var timezoneDialogPurpose: TimezoneDialogPurpose?
     public private(set) var defaultCalendarId: String?
     public private(set) var quickAddHotKeyDisplay: String
@@ -78,6 +79,23 @@ public final class SettingsStore {
         isPresented = false
         page = .accounts
         timezoneDialogPurpose = nil
+        guestMeetingSetupActive = false
+    }
+
+    public func closeForGuestAuthHandoff() {
+        isPresented = false
+        page = .accounts
+        timezoneDialogPurpose = nil
+    }
+
+    public func beginGuestMeetingSetup() {
+        isPresented = true
+        page = .booking
+        guestMeetingSetupActive = true
+    }
+
+    public func clearGuestMeetingSetup() {
+        guestMeetingSetupActive = false
     }
 
     public func openTimezoneDialog(_ purpose: TimezoneDialogPurpose) {

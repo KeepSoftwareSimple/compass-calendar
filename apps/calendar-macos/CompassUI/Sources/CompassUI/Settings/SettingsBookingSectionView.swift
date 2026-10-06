@@ -43,7 +43,12 @@ public struct SettingsBookingSectionView: View {
         }
     }
 
+    private var guestPreview: Bool {
+        model.settingsStore.guestMeetingSetupActive && !model.isSignedIn
+    }
+
     private var showFirstRunConnectPrompt: Bool {
+        guard !guestPreview else { return false }
         guard !hasHealthyConnection else { return false }
         if let page = model.bookingStore.serverPage {
             return AdminBookingPageLogic.isUnconfiguredPage(page)
@@ -73,17 +78,14 @@ public struct SettingsBookingSectionView: View {
         }
         .accessibilityIdentifier("settings-section-booking")
         .task {
-            await model.bookingStore.refreshPageIfNeeded()
-            model.bookingStore.seedFormIfNeeded(
-                calendars: model.calendars,
-                hasConnectedAccount: !model.syncConnectionsStore.connections.isEmpty
-            )
-            model.bookingStore.syncDiscoveredBlockingCalendars(
-                availabilityCalendars: availabilityCalendars
-            )
-            model.bookingStore.trackSettingsOpenedIfNeeded(
-                hasConnection: !model.syncConnectionsStore.connections.isEmpty
-            )
+            if guestPreview {
+                model.bookingStore.seedGuestPreviewIfNeeded()
+            } else {
+                await model.refreshBookingSettingsContent()
+                model.bookingStore.syncDiscoveredBlockingCalendars(
+                    availabilityCalendars: availabilityCalendars
+                )
+            }
         }
         .onChange(of: model.calendars.map(\.id)) { _, _ in
             model.bookingStore.syncDiscoveredBlockingCalendars(
@@ -129,14 +131,47 @@ public struct SettingsBookingSectionView: View {
         )
     }
 
+    private var savedMeetingLinkUrl: String? {
+        if model.bookingStore.isLive,
+           case let .saved(saved) = model.bookingStore.serverPage
+        {
+            return saved.bookingUrl
+        }
+        return nil
+    }
+
+    private var addressPreview: String? {
+        guard let slug = model.bookingStore.form.slug, !slug.isEmpty else { return nil }
+        return "\(addressPrefix)\(slug)"
+    }
+
     private var configuredForm: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle(
-                "Meeting page enabled",
-                isOn: Binding(
-                    get: { model.bookingStore.form.enabled },
-                    set: { model.bookingStore.form.enabled = $0 }
-                )
+            BookingStatusHeaderView(
+                bookingStore: model.bookingStore,
+                isLive: model.bookingStore.isLive,
+                isPending: model.bookingStore.isSaving,
+                savedUrl: savedMeetingLinkUrl,
+                addressPreview: addressPreview,
+                connections: model.syncConnectionsStore.connections,
+                calendars: model.calendars,
+                hasHealthyConnection: hasHealthyConnection,
+                connectableProviders: connectableProviders,
+                isConnectBusy: model.syncConnectionsStore.isBusy,
+                onToggle: { enabled in
+                    Task {
+                        _ = await model.bookingStore.save(
+                            enabling: enabled,
+                            writableCalendars: writableCalendars
+                        )
+                    }
+                },
+                onConnect: { provider in
+                    Task { await model.syncConnectionsStore.connect(provider: provider) }
+                },
+                onReconnect: { connection in
+                    Task { await model.syncConnectionsStore.reconnect(connection: connection) }
+                }
             )
             HStack {
                 Text(addressPrefix)
@@ -241,13 +276,26 @@ public struct SettingsBookingSectionView: View {
     }
 
     private func handleWizardContinue() async {
+        model.bookingStore.persistGuestDraftIfNeeded(guestPreview: guestPreview)
         let step = model.bookingStore.setupStep ?? .address
         if step == .live {
+            if guestPreview {
+                model.settingsStore.closeForGuestAuthHandoff()
+                model.authStore.openModal(.signUp)
+                return
+            }
             let ok = await save(enabling: true)
-            if ok { model.bookingStore.setupStep = nil }
+            if ok {
+                model.bookingStore.setupStep = nil
+                model.settingsStore.clearGuestMeetingSetup()
+            }
             return
         }
         if step == .address {
+            if guestPreview {
+                model.bookingStore.advanceSetupStep(writableCalendarCount: writableCalendars.count)
+                return
+            }
             let ok = await save(enabling: false)
             if !ok { return }
         }
