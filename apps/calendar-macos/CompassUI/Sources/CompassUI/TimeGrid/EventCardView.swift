@@ -141,9 +141,23 @@ final class EventCardView: NSView {
             setAccessibilityElement(true)
             if showsFocusAccessibilityAnchor {
                 showsFocusAccessibilityAnchor = false
+                NSAccessibility.post(
+                    element: focusAccessibilityAnchor,
+                    notification: .uiElementDestroyed)
                 focusAccessibilityAnchor.removeFromSuperview()
             }
         }
+    }
+
+    func teardownAccessibilityForRemoval() {
+        if showsFocusAccessibilityAnchor {
+            NSAccessibility.post(
+                element: focusAccessibilityAnchor,
+                notification: .uiElementDestroyed)
+            showsFocusAccessibilityAnchor = false
+            focusAccessibilityAnchor.removeFromSuperview()
+        }
+        NSAccessibility.post(element: self, notification: .uiElementDestroyed)
     }
 
     func containsPointInWindow(_ locationInWindow: NSPoint) -> Bool {

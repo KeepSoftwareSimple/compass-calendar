@@ -332,7 +332,11 @@ public final class TimeGridView: NSView {
         }
 
         for (eventId, view) in cardPool where !seen.contains(eventId) {
-            NSAccessibility.post(element: view, notification: .uiElementDestroyed)
+            if let card = view as? EventCardView {
+                card.teardownAccessibilityForRemoval()
+            } else {
+                NSAccessibility.post(element: view, notification: .uiElementDestroyed)
+            }
             view.removeFromSuperview()
             cardPool.removeValue(forKey: eventId)
         }
