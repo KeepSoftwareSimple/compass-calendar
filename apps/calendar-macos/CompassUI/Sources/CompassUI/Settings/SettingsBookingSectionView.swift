@@ -199,10 +199,24 @@ public struct SettingsBookingSectionView: View {
         model.bookingStore.advanceSetupStep(writableCalendarCount: writableCalendars.count)
     }
 
-    private func save(enabling: Bool) async {
-        _ = await model.bookingStore.save(
+    private func save(enabling: Bool) async -> Bool {
+        await model.bookingStore.save(
             enabling: enabling,
             writableCalendars: writableCalendars
+        )
+    }
+
+    private var minNoticeBinding: Binding<String> {
+        Binding(
+            get: { model.bookingStore.minNoticeText },
+            set: { model.bookingStore.minNoticeText = $0 }
+        )
+    }
+
+    private var horizonBinding: Binding<String> {
+        Binding(
+            get: { model.bookingStore.horizonText },
+            set: { model.bookingStore.horizonText = $0 }
         )
     }
 
