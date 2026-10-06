@@ -34,9 +34,15 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testLaunchShowsTheMainWindow() {
+        let app = XCUIApplication()
+        app.launch()
+        XCTAssertTrue(app.windows["Compass"].waitForExistence(timeout: 15))
+    }
+
+    @MainActor
     func testFreshLaunchShowsWelcomeModal() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -49,7 +55,7 @@ final class NativeLaunchTests: XCTestCase {
     func testNativeLaunchShowsHeaderAndSidebar() {
         let app = XCUIApplication()
         // Demo fixture skips the welcome modal; its modal trait hides header/sidebar from XCUITest.
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -63,7 +69,7 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testLifeViewSwitchAndBack() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -88,7 +94,7 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testFixtureLaunchShowsDemoWeekEvents() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -102,7 +108,6 @@ final class NativeLaunchTests: XCTestCase {
     func testArrowMovesFocusBetweenTwoFixtureEvents() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
@@ -121,7 +126,6 @@ final class NativeLaunchTests: XCTestCase {
     func testLaunchDeepLinkNavigatesToDayView() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_LAUNCH_DEEP_LINK", "compass://day/2026-10-15",
         ]
@@ -141,7 +145,7 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testKeyboardCreatesTimedDraftOnGrid() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -161,7 +165,7 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testCommandPaletteGoToToday() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]
@@ -182,10 +186,35 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testEventFormEditsTitleAndSaves() {
+    func testHideAndUnhideFixtureEvent() {
         let app = XCUIApplication()
         app.launchArguments += [
             "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+        ]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
+        XCTAssertTrue(standup.waitForExistence(timeout: 10))
+
+        window.typeKey("x", modifierFlags: [])
+        let hiddenReady = NSPredicate(format: "value == %@", "hidden")
+        let hiddenExpectation = expectation(for: hiddenReady, evaluatedWith: standup, handler: nil)
+        wait(for: [hiddenExpectation], timeout: 8)
+
+        window.typeKey("x", modifierFlags: [])
+        let visibleReady = NSPredicate(format: "value == %@", "visible")
+        let visibleExpectation = expectation(for: visibleReady, evaluatedWith: standup, handler: nil)
+        wait(for: [visibleExpectation], timeout: 8)
+    }
+
+    @MainActor
+    func testEventFormEditsTitleAndSaves() {
+        let app = XCUIApplication()
+        app.launchArguments += [
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
@@ -209,11 +238,29 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    func testUndoCreateRemovesKeyboardPlacedEvent() {
+        let app = XCUIApplication()
+        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launch()
+
+        let window = app.windows["Compass"]
+        XCTAssertTrue(window.waitForExistence(timeout: 15))
+
+        window.typeKey(.downArrow, modifierFlags: [.shift])
+        let draft = window.buttons["Untitled event"]
+        XCTAssertTrue(draft.waitForExistence(timeout: 5))
+        window.typeKey(.enter, modifierFlags: [])
+        XCTAssertTrue(draft.waitForExistence(timeout: 10))
+
+        window.typeKey("z", modifierFlags: [.command])
+        XCTAssertFalse(draft.waitForExistence(timeout: 8))
+    }
+
+    @MainActor
     /// Opens the native quick-add panel from the Debug menu and saves a fixture event.
     func testQuickAddPanelCreatesFixtureEvent() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL",
         ]
@@ -288,7 +335,7 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
         app.launch()
 
         let window = app.windows["Compass"]

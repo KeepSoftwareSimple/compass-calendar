@@ -42,7 +42,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                 GridFocusAccessibilityProbe.attach(to: window)
             }
             GridFocusAccessibilityProbe.publish(label: label)
-            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
+            NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(label, on: window)
         }
         model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
             guard let self else { return }
@@ -87,7 +87,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         if let window = view.window {
             GridFocusAccessibilityProbe.attach(to: window)
             GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
-            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(
+            NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(
                 model.gridFocusAccessibilityLabel,
                 on: window
             )
@@ -210,7 +210,7 @@ extension NativeRootController: CompassNotificationDelivering, CompassAgendaDeep
         view.window?.makeKeyAndOrderFront(nil)
         model.handleDeepLink(url)
         if let path = DesktopDeepLinkParser.navigationPath(for: url) {
-            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
+            NativeAccessibilityProbes.publishDeepLinkNavigationPath(path, on: view.window)
         }
     }
 

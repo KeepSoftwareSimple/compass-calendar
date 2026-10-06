@@ -70,7 +70,17 @@ final class NativeGridKeyboardRouter {
             .otherTimeTravel,
         ]
         let overlayIds: Set<ShortcutId> = [.otherPalette, .otherShortcuts, .navGoToDate]
-        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds)
+        let editIds: Set<ShortcutId> = [
+            .editDelete,
+            .editDuplicate,
+            .editCopy,
+            .editPaste,
+            .editMenu,
+            .editHide,
+            .otherUndo,
+            .otherRedo,
+        ]
+        let handlerIds = focusIds.union(navigationIds).union(createIds).union(overlayIds).union(editIds)
 
         var handlers = registry.entries.compactMap { entry -> ShortcutHandler? in
             guard handlerIds.contains(entry.id) else { return nil }
@@ -116,6 +126,9 @@ final class NativeGridKeyboardRouter {
     }
 
     func handleKeyDown(_ event: NSEvent) -> Bool {
+        if handleUndoRedoKeyDown(event) {
+            return true
+        }
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
         if model.blockPartyKeyboardCaptureActive {
@@ -182,6 +195,22 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        if model.eventMenuStore.isOpen {
+            if keyEvent.key == .named(.escape) {
+                model.closeEventMenu()
+                return true
+            }
+        }
+
+        if model.recurrenceScopeStore.pendingDelete != nil,
+            keyEvent.modifiers.isEmpty,
+            case .character(let digit) = keyEvent.key,
+            digit == "1" || digit == "2"
+        {
+            model.promotePendingDelete(scope: digit == "1" ? .thisAndFollowing : .all)
+            return true
+        }
+
         dispatcher.isTextInputFocused =
             model.overlayKeyboardCaptureActive || model.isEventFormVisible
         if model.overlayKeyboardCaptureActive {
@@ -229,12 +258,14 @@ final class NativeGridKeyboardRouter {
 
         dispatcher.shortcutContext = model.shortcutContext
         if let id = dispatcher.dispatch(keyEvent) {
+            model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
             performShortcut(id)
             if viewSwitchIds.contains(id) {
                 return false
             }
             return true
         }
+        model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
 
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)
@@ -367,7 +398,7 @@ final class NativeGridKeyboardRouter {
                     return false
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
-                    Task { await model.saveDraft() }
+                    model.saveKeyboardPlacedDraftNow()
                     return true
                 }
                 model.openEventFormForCurrentDraft()
@@ -426,8 +457,22 @@ final class NativeGridKeyboardRouter {
             }
         case .createPlaceDiscard:
             model.requestDiscardDraft()
+        case .editDelete:
+            model.deleteFocusedEvent()
         case .editDuplicate:
             Task { await model.duplicateFocusedOrFormEvent() }
+        case .editCopy:
+            model.copyFocusedEvent()
+        case .editPaste:
+            model.pasteCopiedEvent()
+        case .editMenu:
+            model.openEventMenu()
+        case .editHide:
+            model.toggleFocusedEventHidden()
+        case .otherUndo:
+            performUndo()
+        case .otherRedo:
+            model.redoLastChange()
         case .editSave:
             Task { await model.saveDraft() }
         default:
@@ -439,6 +484,8 @@ final class NativeGridKeyboardRouter {
         if event.matches(KeyChord(token: .named(.escape))) {
             if model.commandPaletteStore.isOpen {
                 model.commandPaletteStore.close()
+            } else if model.eventMenuStore.isOpen {
+                model.closeEventMenu()
             } else {
                 model.shortcutsLegendStore.close()
             }
@@ -475,4 +522,36 @@ final class NativeGridKeyboardRouter {
     private func syncEventJumpHints() {
         model.setEventJumpHintsVisible(eventJumpHold.phase == .hintsVisible)
     }
+
+    private func performUndo() {
+        if model.draftStore.gridDraft != nil,
+            model.draftStore.status.activity == .keyboardPlace
+        {
+            model.discardDraftConfirmed()
+            return
+        }
+        switch model.undoStore.peekUndo() {
+        case .create:
+            model.undoKeyboardPlacedCreateNow()
+        default:
+            model.undoLastChange()
+        }
+    }
+
+    /// XCUITest may synthesize key events that fail `KeyEvent(nsEvent:)` normalization.
+    private func handleUndoRedoKeyDown(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown else { return false }
+        let command = event.modifierFlags.contains(.command)
+        guard command else { return false }
+        let isZ = event.keyCode == 6
+            || event.charactersIgnoringModifiers?.lowercased() == "z"
+        guard isZ else { return false }
+        if event.modifierFlags.contains(.shift) {
+            model.redoLastChange()
+            return true
+        }
+        performUndo()
+        return true
+    }
+
 }

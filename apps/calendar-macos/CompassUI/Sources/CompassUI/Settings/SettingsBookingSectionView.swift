@@ -17,6 +17,10 @@ public struct SettingsBookingSectionView: View {
         )
     }
 
+    private var availabilityCalendars: [CompassCalendar] {
+        BookingCalendarLogic.availabilityReadableCalendars(model.calendars)
+    }
+
     private var addressPrefix: String {
         BookingCalendarLogic.bookingAddressPrefix(
             publicBookingURL: AdminBookingPageLogic.publicBookingURL(model.bookingStore.serverPage)
@@ -42,8 +46,16 @@ public struct SettingsBookingSectionView: View {
                 calendars: model.calendars,
                 hasConnectedAccount: !model.syncConnectionsStore.connections.isEmpty
             )
+            model.bookingStore.syncDiscoveredBlockingCalendars(
+                availabilityCalendars: availabilityCalendars
+            )
             model.bookingStore.trackSettingsOpenedIfNeeded(
                 hasConnection: !model.syncConnectionsStore.connections.isEmpty
+            )
+        }
+        .onChange(of: model.calendars.map(\.id)) { _, _ in
+            model.bookingStore.syncDiscoveredBlockingCalendars(
+                availabilityCalendars: availabilityCalendars
             )
         }
         .overlay {
@@ -129,6 +141,17 @@ public struct SettingsBookingSectionView: View {
                     }
                 }
             }
+            BookingBlockingCalendarsFieldView(
+                availabilityCalendars: availabilityCalendars,
+                blockingCalendarIds: model.bookingStore.form.blockingCalendarIds,
+                connections: model.syncConnectionsStore.connections,
+                onToggle: { calendarId, checked in
+                    model.bookingStore.toggleBlockingCalendar(
+                        calendarId: calendarId,
+                        checked: checked
+                    )
+                }
+            )
             HStack {
                 labeledNumberField("Min notice (hours)", text: minNoticeBinding)
                 labeledNumberField("Horizon (days)", text: horizonBinding)

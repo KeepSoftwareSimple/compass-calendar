@@ -81,6 +81,16 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             view.update(state: model.timeGridState, theme: theme)
         }
 
+        public func timeGridView(
+            _ view: TimeGridView,
+            didOpenEventMenu eventId: String,
+            at locationInWindow: NSPoint
+        ) {
+            model.focusGridEvent(eventId: eventId)
+            view.update(state: model.timeGridState, theme: theme)
+            model.openEventMenu(fromKeyboard: false, anchor: CGPoint(x: locationInWindow.x, y: locationInWindow.y))
+        }
+
         public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
             model.settingsStore.openTimezoneDialog(.timeTravel)
         }

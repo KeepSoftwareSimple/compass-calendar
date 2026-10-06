@@ -92,6 +92,49 @@ public final class EventsStore {
         return try eventsInRange(key: key)
     }
 
+    /// Synchronous optimistic insert for keyboard-place saves (XCUITest must see undo before async work).
+    public func stageOptimisticCreate(_ optimisticEvent: Event) throws {
+        beginMutation()
+        defer { endMutation() }
+        if source == .local {
+            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
+            try localEvents.put(record)
+            return
+        }
+        try repository.upsert(events: [optimisticEvent], isLocal: false)
+    }
+
+    /// Removes an event from local persistence without awaiting the API.
+    public func removePersistedEvent(id: EventId) throws {
+        beginMutation()
+        defer { endMutation() }
+        if source == .local {
+            try localEvents.delete(id: id)
+            return
+        }
+        try repository.delete(ids: [id])
+    }
+
+    /// API settle only; optimistic row must already be staged locally.
+    public func settleStagedCreate(input: CreateEventInput, optimisticEvent: Event) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        do {
+            let response = try await eventsAPI.create(input)
+            let settled = try EventMapping.event(from: response)
+            try repository.upsert(events: [settled], isLocal: false)
+        } catch {}
+    }
+
+    /// API settle only; optimistic row must already be removed locally.
+    public func settleStagedDelete(id: EventId, scope: EventDeleteScope) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        try? await eventsAPI.delete(id: id, scope: scope)
+    }
+
     public func createOptimistic(
         input: CreateEventInput,
         optimisticEvent: Event

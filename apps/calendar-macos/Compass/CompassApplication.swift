@@ -9,6 +9,10 @@ final class CompassApplication: NSApplication {
     override func sendEvent(_ event: NSEvent) {
         switch event.type {
         case .keyDown:
+            if quickAddPanelOwnsKeyboard {
+                super.sendEvent(event)
+                return
+            }
             if keyboardMonitor?.handleKeyDown(event) == true {
                 return
             }
@@ -20,5 +24,10 @@ final class CompassApplication: NSApplication {
             break
         }
         super.sendEvent(event)
+    }
+
+    /// Quick-add uses an AppKit field; grid shortcuts (paste, enter) must not run before the responder chain.
+    private var quickAddPanelOwnsKeyboard: Bool {
+        NSApp.keyWindow?.accessibilityIdentifier() == "compass-native-quick-add-window"
     }
 }

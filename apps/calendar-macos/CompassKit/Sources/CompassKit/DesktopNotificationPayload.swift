@@ -29,7 +29,7 @@ public enum DesktopNotificationPayloadCodec {
         guard let raw = userInfo[userInfoKey] as? String,
               let data = raw.data(using: .utf8)
         else {
-            throw BridgeMessageError.invalidPayload
+            throw DesktopNotificationPayloadError.invalidPayload
         }
         return try decode(from: data)
     }
@@ -37,8 +37,12 @@ public enum DesktopNotificationPayloadCodec {
     public static func userInfo(for payload: DesktopNotificationPayload) throws -> [String: String] {
         let data = try encode(payload)
         guard let encoded = String(data: data, encoding: .utf8) else {
-            throw BridgeMessageError.invalidPayload
+            throw DesktopNotificationPayloadError.invalidPayload
         }
         return [userInfoKey: encoded]
     }
+}
+
+public enum DesktopNotificationPayloadError: Error, Equatable {
+    case invalidPayload
 }

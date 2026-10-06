@@ -105,6 +105,7 @@ extension NativeCalendarRootModel {
             guard let input = GridEventDraftMapping.createInput(from: draft, invitation: invitation),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
+            recordCreateUndo(for: optimistic)
             await persistDraftOptimistic(savedId: optimistic.id.rawValue) {
                 try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
             }
