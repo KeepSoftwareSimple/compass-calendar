@@ -24,7 +24,6 @@ enum UITestMainActorSync {
         let deadline = Date().addingTimeInterval(timeout)
         while !done.value, Date() < deadline {
             RunLoop.main.run(mode: .default, before: Date().addingTimeInterval(0.05))
-            RunLoop.main.run(mode: .eventTracking, before: Date().addingTimeInterval(0.05))
         }
     }
 }
