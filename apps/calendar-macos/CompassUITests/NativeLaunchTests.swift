@@ -271,8 +271,11 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        window.typeKey("a", modifierFlags: [.command])
-        window.typeText("Split weekly sync")
+        titleField.click()
+        let newTitle = "Split weekly sync"
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(newTitle, forType: .string)
+        titleField.typeKey("v", modifierFlags: [.command])
 
         window.typeKey(.enter, modifierFlags: [.command])
 
