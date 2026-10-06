@@ -5,7 +5,11 @@ import {
   BillingSubscriptionResponseSchema,
 } from "@core/types/billing.types";
 import {
+  AdminGetBookingPageResponseSchema,
+  AdminGetBookingPageSetupResponseSchema,
+  AdminPutBookingPageInputSchema,
   BookingPageSchema,
+  BookingPageStatusResponseSchema,
   BookingSlotsResponseSchema,
   PublicGetBookingPageResponseSchema,
 } from "@core/types/booking.contracts";
@@ -117,6 +121,22 @@ export const SWIFT_CONTRACT_MANIFEST: SwiftContractManifestEntry[] = [
   },
   { swiftName: "SetEventHiddenInput", schema: SetEventHiddenInputSchema },
   { swiftName: "BookingPage", schema: BookingPageSchema },
+  {
+    swiftName: "AdminPutBookingPageInput",
+    schema: AdminPutBookingPageInputSchema,
+  },
+  {
+    swiftName: "AdminGetBookingPageResponse",
+    schema: AdminGetBookingPageResponseSchema,
+  },
+  {
+    swiftName: "AdminGetBookingPageSetupResponse",
+    schema: AdminGetBookingPageSetupResponseSchema,
+  },
+  {
+    swiftName: "BookingPageStatusResponse",
+    schema: BookingPageStatusResponseSchema,
+  },
   {
     swiftName: "PublicGetBookingPageResponse",
     schema: PublicGetBookingPageResponseSchema,

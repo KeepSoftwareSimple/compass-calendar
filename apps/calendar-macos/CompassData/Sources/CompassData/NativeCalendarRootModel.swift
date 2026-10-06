@@ -9,6 +9,7 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
     public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
@@ -100,6 +101,7 @@ public final class NativeCalendarRootModel {
         configStore = environment.configStore
         authStore = environment.authStore
         billingStore = environment.billingStore
+        bookingStore = environment.bookingStore
         levelsStore = environment.levelsStore
         lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
@@ -147,7 +149,33 @@ public final class NativeCalendarRootModel {
         }
         billingStore.setAuthenticated(authStore.authenticated)
         billingStore.attach(settingsStore: settingsStore)
+        bookingStore.setAuthenticated(authStore.authenticated)
         rebuildPresentation()
+    }
+
+    public func closeSettingsIfAllowed() {
+        let writableCount = bookingStore.writableCalendars(
+            from: calendars,
+            hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+        ).count
+        if bookingStore.attemptDismissSettings(writableCalendarCount: writableCount) {
+            return
+        }
+        settingsStore.close()
+    }
+
+    public func openBookingSettings() {
+        settingsStore.open(page: .booking)
+        Task {
+            await bookingStore.refreshPageIfNeeded()
+            bookingStore.seedFormIfNeeded(
+                calendars: calendars,
+                hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+            )
+            bookingStore.trackSettingsOpenedIfNeeded(
+                hasConnection: !syncConnectionsStore.connections.isEmpty
+            )
+        }
     }
 
     func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
@@ -270,8 +298,10 @@ public final class NativeCalendarRootModel {
 
     private func handleAuthenticated() async {
         billingStore.setAuthenticated(true)
+        bookingStore.setAuthenticated(true)
         cachedDemoEventIds = (try? environment.localEventRepository.demoEventIds()) ?? []
         await billingStore.refreshAfterSignIn()
+        await bookingStore.refreshPageIfNeeded()
         startEventStream()
         await syncConnectionsStore.reloadFromMetadata()
         onboardingStore.markUserMetadataLoaded()
@@ -289,6 +319,7 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
+        bookingStore.setAuthenticated(false)
         settingsStore.close()
         onboardingStore.resetUserMetadataLoaded()
         if let eventStream {

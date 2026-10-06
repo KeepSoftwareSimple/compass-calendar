@@ -6,6 +6,7 @@ import Foundation
 public enum SettingsPage: String, Sendable, Hashable, CaseIterable {
     case accounts
     case billing
+    case booking
 }
 
 public enum TimezoneDialogPurpose: String, Sendable, Hashable {
