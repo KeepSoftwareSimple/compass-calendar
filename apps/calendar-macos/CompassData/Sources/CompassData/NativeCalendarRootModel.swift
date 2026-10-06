@@ -16,6 +16,7 @@ public final class NativeCalendarRootModel {
     public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
     public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let lifeStore: LifeStore
     public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
@@ -67,6 +68,7 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
+    var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -124,6 +126,7 @@ public final class NativeCalendarRootModel {
         draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
         onboardingStore = environment.onboardingStore
+        blockPartyStore = environment.blockPartyStore
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -203,7 +206,7 @@ public final class NativeCalendarRootModel {
             isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
             storageAvailable: true,
-            showcaseActive: false)
+            showcaseActive: blockPartyStore.isActive)
         return OnboardingGating.ActiveSurfaceInput(
             gateStatus: gateStatus,
             isCheckoutCelebrating: false,
@@ -212,7 +215,7 @@ public final class NativeCalendarRootModel {
             isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
             isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
             guestMeetingSetupActive: false,
-            shortcutShowcaseActive: false,
+            shortcutShowcaseActive: blockPartyStore.isActive,
             connectCalendarEligible: connectEligible,
             firstEventEligible: firstEventEligible,
             pointerHintVisible: pointerHintStore.isVisible,

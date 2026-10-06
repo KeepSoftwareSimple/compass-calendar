@@ -65,6 +65,9 @@ public struct RootView: View {
             OnboardingOverlay(model: model)
         }
         .overlay {
+            BlockPartyOverlay(model: model)
+        }
+        .overlay {
             if model.authStore.authenticated, model.billingStore.gateStatus != nil {
                 BillingGateOverlay(billingStore: model.billingStore)
             }
