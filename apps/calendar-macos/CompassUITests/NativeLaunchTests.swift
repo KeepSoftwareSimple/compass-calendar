@@ -296,7 +296,8 @@ final class NativeLaunchTests: XCTestCase {
         window.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(draft.waitForExistence(timeout: 10))
 
-        app.typeKey("z", modifierFlags: [.command])
+        window.click()
+        window.typeKey("z", modifierFlags: [.command])
         XCTAssertFalse(draft.waitForExistence(timeout: 8))
     }
 

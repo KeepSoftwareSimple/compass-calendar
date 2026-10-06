@@ -136,6 +136,10 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
+        if NSApp.keyWindow?.accessibilityIdentifier() == "compass-native-quick-add-window" {
+            return false
+        }
+
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
 
         if model.dedicationDialogVisible {
