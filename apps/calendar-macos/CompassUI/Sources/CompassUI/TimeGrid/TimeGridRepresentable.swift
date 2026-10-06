@@ -91,6 +91,10 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             model.openEventMenu(fromKeyboard: false, anchor: CGPoint(x: locationInWindow.x, y: locationInWindow.y))
         }
 
+        public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
+            model.settingsStore.openTimezoneDialog(.timeTravel)
+        }
+
         private func focusedEventLabel(for eventId: String) -> String? {
             let colWidths = model.timeGridState.resolvedColumnWidths()
             return model.timeGridState.snapshot(colWidths: colWidths).cards

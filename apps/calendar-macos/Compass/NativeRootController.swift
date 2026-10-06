@@ -29,6 +29,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
+    private var settingsBridge: NativeAppSettingsBridge?
 
     init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel, catalogController: ShortcutsCatalogWindowController? = nil) {
         self.webTheme = webTheme
@@ -65,6 +66,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)
         }
+        configureSettingsBridge()
         configureNativeServices()
         configureKeyboard()
         configureResume()
@@ -109,7 +111,20 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     func setWebTheme(_ theme: NativeWebTheme) {
+        NativeUIThemePreference.save(theme)
         webTheme = theme
+    }
+
+    private func configureSettingsBridge() {
+        let bridge = NativeAppSettingsBridge(rootController: self)
+        settingsBridge = bridge
+        model.settingsStore.setBridge(bridge)
+        webTheme = NativeWebTheme(themeName: model.settingsStore.theme)
+    }
+
+    func attachQuickAddRouter(_ router: DesktopQuickAddRouting) {
+        settingsBridge?.attachQuickAddRouter(router)
+        _ = model.settingsStore.setQuickAddHotKey(model.settingsStore.quickAddHotKeyDisplay)
     }
 
     func receiveDeepLink(_ url: URL) {

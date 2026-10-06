@@ -67,6 +67,7 @@ final class NativeGridKeyboardRouter {
             .navUpNext,
             .navJoinMeeting,
             .otherSettings,
+            .otherTimeTravel,
         ]
         let overlayIds: Set<ShortcutId> = [.otherPalette, .otherShortcuts, .navGoToDate]
         let editIds: Set<ShortcutId> = [
