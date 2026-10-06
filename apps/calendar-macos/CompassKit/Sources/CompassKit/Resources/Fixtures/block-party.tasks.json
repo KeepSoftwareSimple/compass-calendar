@@ -1,0 +1,1285 @@
+{
+  "seedEvents": [
+    {
+      "id": "game-kickoff",
+      "title": "Team kickoff",
+      "dayIndex": 0,
+      "startMin": 660,
+      "endMin": 720,
+      "color": "blue"
+    },
+    {
+      "id": "game-one-on-one",
+      "title": "1:1 with Alex",
+      "dayIndex": 1,
+      "startMin": 600,
+      "endMin": 630,
+      "color": "plum"
+    },
+    {
+      "id": "game-gym",
+      "title": "Gym",
+      "dayIndex": 2,
+      "startMin": 720,
+      "endMin": 780,
+      "color": "green"
+    }
+  ],
+  "runTasks": [
+    {
+      "id": "place-standup",
+      "type": "place",
+      "title": "Standup",
+      "instruction": "Get it into the outline on Monday, then lock it in.",
+      "hint": "Press C and a Standup piece drops onto the board. Tap Left to reach Monday, then Enter locks it.",
+      "keycaps": [
+        "C",
+        "ArrowLeft",
+        "Enter"
+      ],
+      "piece": {
+        "id": "piece-standup",
+        "title": "Standup",
+        "color": "gold"
+      },
+      "spawn": {
+        "dayIndex": 1,
+        "startMin": 540,
+        "endMin": 570
+      },
+      "target": {
+        "dayIndex": 0,
+        "startMin": 540,
+        "endMin": 570
+      }
+    },
+    {
+      "id": "quicktime-coffee",
+      "type": "quickTime",
+      "title": "Coffee",
+      "instruction": "Type 930 for 9:30, then lock it in.",
+      "hint": "Type 9 3 0 and Coffee appears at 9:30. Enter locks it.",
+      "keycaps": [
+        "9",
+        "3",
+        "0",
+        "Enter"
+      ],
+      "piece": {
+        "id": "piece-coffee",
+        "title": "Coffee",
+        "color": "mint"
+      },
+      "target": {
+        "dayIndex": 2,
+        "startMin": 570,
+        "endMin": 600
+      }
+    },
+    {
+      "id": "nudge-standup",
+      "type": "nudge",
+      "title": "Standup moved",
+      "instruction": "Hold Shift and tap Down to reach 9:15.",
+      "hint": "Hold Shift and tap Down once. Each tap moves it 15 minutes.",
+      "keycaps": [
+        "Shift",
+        "ArrowDown"
+      ],
+      "targetEventId": "piece-standup",
+      "target": {
+        "dayIndex": 0,
+        "startMin": 555,
+        "endMin": 585
+      }
+    },
+    {
+      "id": "resize-one-on-one",
+      "type": "resize",
+      "title": "1:1 running long",
+      "instruction": "Press Tab to light the top edge, then hold Shift and tap Up to start at 9:45.",
+      "hint": "Tab cycles what your arrows grab: whole block, top edge, bottom edge. Tab once for the top edge, then Shift Up.",
+      "keycaps": [
+        "Tab",
+        "Shift",
+        "ArrowUp"
+      ],
+      "targetEventId": "game-one-on-one",
+      "target": {
+        "dayIndex": 1,
+        "startMin": 585,
+        "endMin": 630
+      },
+      "edge": "start"
+    },
+    {
+      "id": "delete-gym",
+      "type": "delete",
+      "title": "Gym got cancelled",
+      "instruction": "Clear it off the board.",
+      "hint": "The Gym block is already selected. One press of Delete clears it.",
+      "keycaps": [
+        "Delete"
+      ],
+      "targetEventId": "game-gym"
+    },
+    {
+      "id": "undo-gym",
+      "type": "undo",
+      "title": "Wait, it's back on",
+      "instruction": "Undo brings it right back.",
+      "hint": "Hold Cmd or Ctrl and press Z. The block comes right back.",
+      "keycaps": [
+        "Mod",
+        "Z"
+      ],
+      "targetEventId": "game-gym",
+      "target": {
+        "dayIndex": 2,
+        "startMin": 720,
+        "endMin": 780
+      }
+    },
+    {
+      "id": "legend-peek",
+      "type": "legend",
+      "title": "Blanking on a move?",
+      "instruction": "The legend lists every shortcut. Open it, then close it with Esc.",
+      "hint": "The ? key is Shift and /. Open the legend, take a peek, then Esc closes it.",
+      "keycaps": [
+        "?"
+      ]
+    },
+    {
+      "id": "jump-to-kickoff",
+      "type": "eventJump",
+      "title": "Fly across the board",
+      "instruction": "Press H to reveal jump letters, then type the one on Team kickoff.",
+      "hint": "Press H and letters appear on every block. Type the letter sitting on Team kickoff.",
+      "keycaps": [
+        "H"
+      ],
+      "targetEventId": "game-kickoff"
+    },
+    {
+      "id": "page-jump-peek",
+      "type": "pageJump",
+      "title": "Numbers jump anywhere",
+      "instruction": "Hold Cmd or Ctrl until the jump numbers appear, then press 1.",
+      "hint": "Hold Cmd or Ctrl alone and wait a beat. When the numbers appear, press 1 while still holding.",
+      "keycaps": [
+        "Mod",
+        "1"
+      ]
+    },
+    {
+      "id": "palette-peek",
+      "type": "palette",
+      "title": "One palette, every command",
+      "instruction": "Open the command palette, then close it with Esc.",
+      "hint": "Hold Cmd or Ctrl and press K to open it, then Esc to close it.",
+      "keycaps": [
+        "Mod",
+        "K"
+      ]
+    },
+    {
+      "id": "place-party",
+      "type": "place",
+      "title": "Ship-it party",
+      "instruction": "Wednesday at 5. Bring it home.",
+      "hint": "Press C to drop it, tap Down once to reach 5:00, then Enter. Last one.",
+      "keycaps": [
+        "C",
+        "ArrowDown",
+        "Enter"
+      ],
+      "piece": {
+        "id": "piece-party",
+        "title": "Ship-it party",
+        "color": "coral"
+      },
+      "spawn": {
+        "dayIndex": 2,
+        "startMin": 1005,
+        "endMin": 1065
+      },
+      "target": {
+        "dayIndex": 2,
+        "startMin": 1020,
+        "endMin": 1080
+      }
+    }
+  ],
+  "cases": [
+    {
+      "id": "complete-place-standup",
+      "taskId": "place-standup",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 1,
+        "tasksDone": 1,
+        "tasksSkipped": 0,
+        "score": 150,
+        "streak": 1,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "piece-standup",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 600,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 540,
+              "endMin": 570,
+              "color": "gold"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-quicktime-coffee",
+      "taskId": "quicktime-coffee",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 2,
+        "tasksDone": 2,
+        "tasksSkipped": 0,
+        "score": 300,
+        "streak": 2,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "piece-standup",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 600,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 540,
+              "endMin": 570,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-nudge-standup",
+      "taskId": "nudge-standup",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 3,
+        "tasksDone": 3,
+        "tasksSkipped": 0,
+        "score": 600,
+        "streak": 3,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-one-on-one",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 600,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-resize-one-on-one",
+      "taskId": "resize-one-on-one",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 4,
+        "tasksDone": 4,
+        "tasksSkipped": 0,
+        "score": 900,
+        "streak": 4,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-gym",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-delete-gym",
+      "taskId": "delete-gym",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 5,
+        "tasksDone": 5,
+        "tasksSkipped": 0,
+        "score": 1200,
+        "streak": 5,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-kickoff",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": "game-gym",
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-undo-gym",
+      "taskId": "undo-gym",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 6,
+        "tasksDone": 6,
+        "tasksSkipped": 0,
+        "score": 1650,
+        "streak": 6,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-gym",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-legend-peek",
+      "taskId": "legend-peek",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 7,
+        "tasksDone": 7,
+        "tasksSkipped": 0,
+        "score": 2100,
+        "streak": 7,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-gym",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-jump-to-kickoff",
+      "taskId": "jump-to-kickoff",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay",
+        "jump",
+        "letter:s"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 8,
+        "tasksDone": 8,
+        "tasksSkipped": 0,
+        "score": 2550,
+        "streak": 8,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-kickoff",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-page-jump-peek",
+      "taskId": "page-jump-peek",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay",
+        "jump",
+        "letter:s",
+        "modHoldReveal",
+        "pageJumpDigit:1"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 9,
+        "tasksDone": 9,
+        "tasksSkipped": 0,
+        "score": 3000,
+        "streak": 9,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-kickoff",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-palette-peek",
+      "taskId": "palette-peek",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay",
+        "jump",
+        "letter:s",
+        "modHoldReveal",
+        "pageJumpDigit:1",
+        "palette",
+        "closeOverlay"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 10,
+        "tasksDone": 10,
+        "tasksSkipped": 0,
+        "score": 3450,
+        "streak": 10,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "game-kickoff",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "complete-place-party",
+      "taskId": "place-party",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay",
+        "jump",
+        "letter:s",
+        "modHoldReveal",
+        "pageJumpDigit:1",
+        "palette",
+        "closeOverlay",
+        "create",
+        "arrow:down",
+        "enter"
+      ],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "ended",
+        "outcome": "cleared",
+        "taskIndex": 11,
+        "tasksDone": 11,
+        "tasksSkipped": 0,
+        "score": 3900,
+        "streak": 11,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "piece-party",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-party",
+              "title": "Ship-it party",
+              "dayIndex": 2,
+              "startMin": 1020,
+              "endMin": 1080,
+              "color": "coral"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "winning-script",
+      "keys": [
+        "create",
+        "arrow:left",
+        "enter",
+        "digit:9",
+        "digit:3",
+        "digit:0",
+        "enter",
+        "arrow:down:shift",
+        "tab",
+        "arrow:up:shift",
+        "delete",
+        "undo",
+        "legend",
+        "closeOverlay",
+        "jump",
+        "letter:s",
+        "modHoldReveal",
+        "pageJumpDigit:1",
+        "palette",
+        "closeOverlay",
+        "create",
+        "arrow:down",
+        "enter"
+      ],
+      "nowMs": 1001000,
+      "output": {
+        "phase": "ended",
+        "outcome": "cleared",
+        "taskIndex": 11,
+        "tasksDone": 11,
+        "tasksSkipped": 0,
+        "score": 3900,
+        "streak": 11,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": "piece-party",
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 585,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "piece-standup",
+              "title": "Standup",
+              "dayIndex": 0,
+              "startMin": 555,
+              "endMin": 585,
+              "color": "gold"
+            },
+            {
+              "id": "piece-coffee",
+              "title": "Coffee",
+              "dayIndex": 2,
+              "startMin": 570,
+              "endMin": 600,
+              "color": "mint"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            },
+            {
+              "id": "piece-party",
+              "title": "Ship-it party",
+              "dayIndex": 2,
+              "startMin": 1020,
+              "endMin": 1080,
+              "color": "coral"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "skip-first-task",
+      "keys": [],
+      "nowMs": 1000000,
+      "output": {
+        "phase": "running",
+        "outcome": null,
+        "taskIndex": 1,
+        "tasksDone": 0,
+        "tasksSkipped": 1,
+        "score": 0,
+        "streak": 0,
+        "timeBonus": 0,
+        "digitBuffer": "",
+        "timed": false,
+        "simOverlay": null,
+        "simOverlayOpened": false,
+        "jumpChipsShown": false,
+        "buzzer": null,
+        "practice": {
+          "focusedId": null,
+          "placingId": null,
+          "edge": null,
+          "lastDeletedId": null,
+          "events": [
+            {
+              "id": "game-kickoff",
+              "title": "Team kickoff",
+              "dayIndex": 0,
+              "startMin": 660,
+              "endMin": 720,
+              "color": "blue"
+            },
+            {
+              "id": "game-one-on-one",
+              "title": "1:1 with Alex",
+              "dayIndex": 1,
+              "startMin": 600,
+              "endMin": 630,
+              "color": "plum"
+            },
+            {
+              "id": "game-gym",
+              "title": "Gym",
+              "dayIndex": 2,
+              "startMin": 720,
+              "endMin": 780,
+              "color": "green"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
