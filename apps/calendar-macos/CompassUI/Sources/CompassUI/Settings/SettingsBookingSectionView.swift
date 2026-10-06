@@ -131,14 +131,47 @@ public struct SettingsBookingSectionView: View {
         )
     }
 
+    private var savedMeetingLinkUrl: String? {
+        if model.bookingStore.isLive,
+           case let .saved(saved) = model.bookingStore.serverPage
+        {
+            return saved.bookingUrl
+        }
+        return nil
+    }
+
+    private var addressPreview: String? {
+        guard let slug = model.bookingStore.form.slug, !slug.isEmpty else { return nil }
+        return "\(addressPrefix)\(slug)"
+    }
+
     private var configuredForm: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Toggle(
-                "Meeting page enabled",
-                isOn: Binding(
-                    get: { model.bookingStore.form.enabled },
-                    set: { model.bookingStore.form.enabled = $0 }
-                )
+            BookingStatusHeaderView(
+                bookingStore: model.bookingStore,
+                isLive: model.bookingStore.isLive,
+                isPending: model.bookingStore.isSaving,
+                savedUrl: savedMeetingLinkUrl,
+                addressPreview: addressPreview,
+                connections: model.syncConnectionsStore.connections,
+                calendars: model.calendars,
+                hasHealthyConnection: hasHealthyConnection,
+                connectableProviders: connectableProviders,
+                isConnectBusy: model.syncConnectionsStore.isBusy,
+                onToggle: { enabled in
+                    Task {
+                        _ = await model.bookingStore.save(
+                            enabling: enabled,
+                            writableCalendars: writableCalendars
+                        )
+                    }
+                },
+                onConnect: { provider in
+                    Task { await model.syncConnectionsStore.connect(provider: provider) }
+                },
+                onReconnect: { connection in
+                    Task { await model.syncConnectionsStore.reconnect(connection: connection) }
+                }
             )
             HStack {
                 Text(addressPrefix)
