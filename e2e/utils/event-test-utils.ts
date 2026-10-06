@@ -402,8 +402,6 @@ export const openAllDayEventFormWithKeyboard = async (page: Page) => {
   });
 };
 
-const SIDEBAR_EDITING_RING_FRAGMENT = "color-mix(in srgb, var(--text)";
-
 /** Asserts the grid card for `eventTitle` shows the sidebar-editing ring. */
 export const expectSidebarEditingRingOnGridEvent = async (
   page: Page,
@@ -418,7 +416,7 @@ export const expectSidebarEditingRingOnGridEvent = async (
     .poll(async () =>
       eventButton.evaluate((element) => getComputedStyle(element).boxShadow),
     )
-    .toContain(SIDEBAR_EDITING_RING_FRAGMENT);
+    .toMatch(/0px 0px 0px 1px.*0px 0px 0px 3px/s);
 };
 
 /** Focuses the event card and opens its form with Enter. */

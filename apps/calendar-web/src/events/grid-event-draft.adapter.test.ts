@@ -117,7 +117,7 @@ test("drops source colorHex once the draft picks a slot color", () => {
     },
   } as unknown as Event;
   const draft = editGridEventDraft(event);
-  if (!draft || draft.kind !== "edit") {
+  if (draft?.kind !== "edit") {
     throw new Error("Expected scheduled edit draft");
   }
 
