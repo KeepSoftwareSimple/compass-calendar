@@ -9,6 +9,7 @@ public enum GridLayoutSnapshotBuilder {
     ) -> GridLayoutSnapshot {
         let visibleDates = GridVisibleDate.fromKeys(scenario.visibleDateKeys)
         let marginLeft = GridMetrics.gridMarginLeftPx()
+        let gridWidth = colWidths.reduce(0, +) + marginLeft
         let timedGridHeight = Double(GridTimeConstants.timedVisibleHours) * hourHeight
         let lookup = CalendarLookupBuilder.build(scenario.calendars)
 
@@ -26,9 +27,9 @@ public enum GridLayoutSnapshotBuilder {
                 bottom: timedGridHeight,
                 height: timedGridHeight,
                 left: 0,
-                right: colWidths.reduce(0, +) + marginLeft,
+                right: gridWidth,
                 top: 0,
-                width: colWidths.reduce(0, +) + marginLeft,
+                width: gridWidth,
                 x: 0,
                 y: 0
             )
@@ -184,9 +185,7 @@ public enum GridLayoutSnapshotBuilder {
         let nowLine = nowLineSnapshot(
             referenceNow: scenario.referenceNow,
             visibleDates: visibleDates,
-            hourHeight: hourHeight,
-            marginLeft: marginLeft,
-            colWidths: colWidths
+            hourHeight: hourHeight
         )
 
         return GridLayoutSnapshot(
@@ -424,9 +423,7 @@ public enum GridLayoutSnapshotBuilder {
     private static func nowLineSnapshot(
         referenceNow: Date,
         visibleDates: [GridVisibleDate],
-        hourHeight: Double,
-        marginLeft: Double,
-        colWidths: [Double]
+        hourHeight: Double
     ) -> GridLayoutNowLineSnapshot? {
         let dayKey = CompassDateParsing.formatCalendarDay(referenceNow)
         guard let columnIndex = visibleDates.firstIndex(where: { $0.key == dayKey }) else {
@@ -436,8 +433,6 @@ public enum GridLayoutSnapshotBuilder {
         let startOfDay = calendar.startOfDay(for: referenceNow)
         let minutes = referenceNow.timeIntervalSince(startOfDay) / 60
         let top = (minutes / 60) * hourHeight
-        _ = marginLeft
-        _ = colWidths
         return GridLayoutNowLineSnapshot(columnIndex: columnIndex, top: top)
     }
 }

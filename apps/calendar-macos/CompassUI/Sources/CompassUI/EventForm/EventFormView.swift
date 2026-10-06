@@ -19,10 +19,11 @@ public struct EventFormView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlayPreferenceValue(PageJumpChipAnchorKey.self) { anchors in
-                FormFieldDigitChipsOverlay(
+                ModHoldChipsOverlay(
                     targets: model.formFieldDigitTargets(),
                     anchors: anchors,
-                    visible: model.formFieldDigitHintsVisible
+                    visible: model.formFieldDigitHintsVisible,
+                    accessibilityIdentifier: "compass-form-field-digit-chips"
                 )
             }
         }

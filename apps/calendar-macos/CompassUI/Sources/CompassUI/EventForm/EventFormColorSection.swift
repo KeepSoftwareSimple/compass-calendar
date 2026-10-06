@@ -22,13 +22,7 @@ struct EventFormColorSection: View {
             .accessibilityIdentifier("compass-event-form-color")
             .pageJumpChipAnchor(id: "form-color")
         }
-        .padding(12)
-        .background(theme.surfacePanelColor)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(focusField == .color ? theme.accentColor : theme.borderColor, lineWidth: 1)
-        )
+        .eventFormSectionChrome(focused: focusField == .color)
     }
 
     private func colorSwatch(label: String, slot: EventColorSlot?) -> some View {
