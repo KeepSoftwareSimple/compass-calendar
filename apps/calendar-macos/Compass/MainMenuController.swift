@@ -49,8 +49,17 @@ final class MainMenuController: NSObject {
                 switch row.action {
                 case .quit:
                     item.target = NSApp
-                case .standardEdit:
-                    item.target = nil
+                case let .standardEdit(selectorName):
+                    if nativeUIState.isNativeUIEnabled, selectorName == "undo:" {
+                        item.action = #selector(undoNativeChange(_:))
+                        item.target = self
+                    } else if nativeUIState.isNativeUIEnabled, selectorName == "redo:" {
+                        item.action = #selector(redoNativeChange(_:))
+                        item.target = self
+                    } else {
+                        item.action = Selector(selectorName)
+                        item.target = nil
+                    }
                 default:
                     item.target = self
                 }
@@ -210,6 +219,14 @@ final class MainMenuController: NSObject {
         quickAddCoordinator?.presentQuickAddPanel()
     }
 
+    @objc private func undoNativeChange(_ sender: Any?) {
+        nativeRootController?.model.undoLastChange()
+    }
+
+    @objc private func redoNativeChange(_ sender: Any?) {
+        nativeRootController?.model.redoLastChange()
+    }
+
 }
 
 extension MainMenuController: NSMenuItemValidation {
@@ -230,6 +247,10 @@ extension MainMenuController: NSMenuItemValidation {
             return true
         case #selector(openQuickAddPanel(_:)):
             return nativeUIState.isNativeUIEnabled
+        case #selector(undoNativeChange(_:)):
+            return nativeRootController?.model.undoStore.canUndo ?? false
+        case #selector(redoNativeChange(_:)):
+            return nativeRootController?.model.undoStore.canRedo ?? false
         default:
             return true
         }

@@ -296,8 +296,12 @@ final class NativeLaunchTests: XCTestCase {
         window.typeKey(.enter, modifierFlags: [])
         XCTAssertTrue(draft.waitForExistence(timeout: 10))
 
-        window.click()
-        window.typeKey("z", modifierFlags: [.command])
+        let editMenu = app.menuBars.menuBarItems["Edit"]
+        XCTAssertTrue(editMenu.waitForExistence(timeout: 3))
+        editMenu.click()
+        let undoItem = app.menuItems["Undo"]
+        XCTAssertTrue(undoItem.waitForExistence(timeout: 3))
+        undoItem.click()
         XCTAssertFalse(draft.waitForExistence(timeout: 8))
     }
 
