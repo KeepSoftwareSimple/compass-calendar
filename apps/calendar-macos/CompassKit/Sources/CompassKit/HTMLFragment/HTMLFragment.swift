@@ -244,7 +244,7 @@ private final class HTMLFragmentXMLDelegate: NSObject, XMLParserDelegate {
         }
     }
 
-    private var linkHrefStack: [String?] = []
+    private var linkHrefStack: [String] = []
 
     func parser(
         _ parser: XMLParser,
