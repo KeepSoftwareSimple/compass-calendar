@@ -45,7 +45,9 @@ public struct SettingsWindowOverlay: View {
                 .font(.custom("Rubik", size: 18))
                 .foregroundStyle(theme.textColor)
             navButton("Accounts", page: .accounts)
-            if model.isSignedIn {
+            if model.isSignedIn
+                || (model.settingsStore.guestMeetingSetupActive && model.settingsStore.isPresented)
+            {
                 navButton("Meetings", page: .booking, attention: model.bookingStore.bookingNeedsAttention)
             }
             if showBillingNav {
