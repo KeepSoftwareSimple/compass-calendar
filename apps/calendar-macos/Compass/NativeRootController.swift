@@ -77,6 +77,7 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     override func viewDidAppear() {
         super.viewDidAppear()
         if let window = view.window {
+            UndoTestAccessibilityProbe.attachIfNeeded(to: window, model: model)
             GridFocusAccessibilityProbe.attach(to: window)
             GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
             CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(
