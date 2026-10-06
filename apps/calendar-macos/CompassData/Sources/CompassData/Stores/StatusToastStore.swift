@@ -19,8 +19,11 @@ public final class StatusToastStore {
         toastId = id
         self.message = message
         onVisibilityChanged?(true)
+        let dismissAfter =
+            id == "recurrence-scope" ? 0 : autoDismissSeconds
+        guard dismissAfter > 0 else { return }
         dismissTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(autoDismissSeconds))
+            try? await Task.sleep(for: .seconds(dismissAfter))
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 if self?.toastId == id {
