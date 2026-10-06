@@ -32,6 +32,11 @@ public struct SettingsWindowOverlay: View {
             }
             .accessibilityIdentifier("compass-native-settings")
         }
+        if model.settingsStore.timezoneDialogPurpose != nil {
+            TimezonePickerDialogView(
+                settingsStore: model.settingsStore,
+                viewStore: model.viewStore)
+        }
     }
 
     private var nav: some View {
@@ -77,10 +82,14 @@ public struct SettingsWindowOverlay: View {
 
     private var accountsContent: some View {
         Group {
+            SettingsTimezoneSectionView(
+                settingsStore: model.settingsStore,
+                viewStore: model.viewStore)
             SettingsDefaultCalendarSectionView(
                 settingsStore: model.settingsStore,
                 calendars: model.calendars,
                 hasConnectedAccount: !model.syncConnectionsStore.connections.isEmpty)
+            SettingsThemeSectionView(settingsStore: model.settingsStore)
             if model.isSignedIn {
                 SettingsAccountsSectionView(syncStore: model.syncConnectionsStore)
             }

@@ -81,6 +81,10 @@ public struct TimeGridRepresentable: NSViewRepresentable {
             view.update(state: model.timeGridState, theme: theme)
         }
 
+        public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
+            model.settingsStore.openTimezoneDialog(.timeTravel)
+        }
+
         private func focusedEventLabel(for eventId: String) -> String? {
             let colWidths = model.timeGridState.resolvedColumnWidths()
             return model.timeGridState.snapshot(colWidths: colWidths).cards
