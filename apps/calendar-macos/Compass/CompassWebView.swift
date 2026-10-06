@@ -1,4 +1,5 @@
 import AppKit
+import CompassData
 
 /// Mirrors `window.compassDesktop.version` on the main window for XCUITest.
 enum CompassBridgeAccessibility {
