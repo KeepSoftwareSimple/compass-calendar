@@ -61,6 +61,12 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         model.onEventFormTitleAccessibilityProbeTitleSync = { title in
             EventFormAccessibilityProbe.syncTitle(title)
         }
+        model.onRecurrenceScopeAccessibilityProbeChanged = { visible in
+            if let window = Self.compassHostWindow(hostingView: self.view) ?? NSApp.mainWindow {
+                RecurrenceScopeAccessibilityProbe.attach(to: window)
+            }
+            RecurrenceScopeAccessibilityProbe.publish(visible: visible)
+        }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)

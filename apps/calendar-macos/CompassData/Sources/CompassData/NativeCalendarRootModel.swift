@@ -35,6 +35,7 @@ public final class NativeCalendarRootModel {
     /// AppKit title-field probe for native UI tests when the event form is open.
     public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
+    public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []

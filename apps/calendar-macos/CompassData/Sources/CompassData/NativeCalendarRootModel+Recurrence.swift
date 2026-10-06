@@ -27,6 +27,7 @@ extension NativeCalendarRootModel {
 
     public func cancelRecurrenceScopePrompt() {
         pendingRecurrenceScopePrompt = nil
+        onRecurrenceScopeAccessibilityProbeChanged?(false)
     }
 
     public func cancelConvertToStandaloneConfirmation() {
@@ -44,6 +45,7 @@ extension NativeCalendarRootModel {
     public func confirmRecurrenceScope(_ scope: ScopeEnum) async {
         let kind = pendingRecurrenceScopePrompt
         pendingRecurrenceScopePrompt = nil
+        onRecurrenceScopeAccessibilityProbeChanged?(false)
         guard let kind else { return }
         switch kind {
         case .save:
@@ -69,6 +71,7 @@ extension NativeCalendarRootModel {
         case .apply(let scope):
             if shouldAskRecurrenceScopeOnSave(draft: draft, baseline: baseline) {
                 pendingRecurrenceScopePrompt = .save
+                onRecurrenceScopeAccessibilityProbeChanged?(true)
                 return
             }
             await commitSaveDraft(scope: scope)
@@ -83,6 +86,7 @@ extension NativeCalendarRootModel {
         let baseline = baselineEvent(for: draft)
         if RecurrenceScopeDecisionLogic.isExistingEventRecurring(baseline) {
             pendingRecurrenceScopePrompt = .delete
+            onRecurrenceScopeAccessibilityProbeChanged?(true)
             return
         }
         await commitDeleteFormEvent(scope: .this)
