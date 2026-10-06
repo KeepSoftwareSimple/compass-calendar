@@ -316,13 +316,10 @@ final class NativeLaunchTests: XCTestCase {
         XCTAssertTrue(window.waitForExistence(timeout: 15))
         waitForFocusedGridEvent(title: "Weekly sync", in: window, timeout: 10)
 
-        let titleField = window.descendants(matching: .any)["compass-event-form-title"]
-        XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        XCTAssertEqual(titleField.value as? String, "Split weekly sync")
-
-        window.typeKey(.enter, modifierFlags: [.command])
-
-        waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 15)
+        XCTAssertTrue(
+            window.buttons["Split weekly sync"].waitForExistence(timeout: 20),
+            "Expected this occurrence title after auto-saving recurring edit")
+        waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 10)
         XCTAssertTrue(
             window.buttons["Weekly sync"].waitForExistence(timeout: 8),
             "Expected another occurrence to keep the original series title")

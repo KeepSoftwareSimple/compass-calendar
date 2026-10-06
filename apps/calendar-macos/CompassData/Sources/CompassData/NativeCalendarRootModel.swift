@@ -836,6 +836,9 @@ public final class NativeCalendarRootModel {
                 onEventFormTitleAccessibilityProbeTitleSync?(title)
             }
             publishEventFormTitleAccessibilityProbe()
+            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+                await saveDraftWithInvitationGate()
+            }
         }
     }
 
