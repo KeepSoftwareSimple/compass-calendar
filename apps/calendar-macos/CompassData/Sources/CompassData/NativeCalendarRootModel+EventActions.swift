@@ -192,6 +192,7 @@ extension NativeCalendarRootModel {
             statusToastStore.show(id: "undo-status", message: "Nothing to undo")
             return
         }
+        keyboardCreateSettleGeneration += 1
         undoStore.commitUndo()
         undoStore.runHistoryRestore {
             try? eventsStore.removePersistedEvent(id: event.id)

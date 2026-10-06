@@ -170,7 +170,12 @@ extension NativeCalendarRootModel {
         } catch {}
         rebuildPresentation()
         focusEvent(eventId: savedId)
-        Task { await eventsStore.settleStagedCreate(input: input, optimisticEvent: optimistic) }
+        keyboardCreateSettleGeneration += 1
+        let settleGeneration = keyboardCreateSettleGeneration
+        Task {
+            guard settleGeneration == keyboardCreateSettleGeneration else { return }
+            await eventsStore.settleStagedCreate(input: input, optimisticEvent: optimistic)
+        }
     }
 
     public func saveDraft() async {

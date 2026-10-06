@@ -59,6 +59,7 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
+    var keyboardCreateSettleGeneration = 0
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
