@@ -151,25 +151,26 @@ extension NativeCalendarRootModel {
         let snapshot = event
         do {
             try await eventsStore.deleteOptimistic(id: event.id, scope: scope)
-            if let events = try? eventsStore.fetchAllEvents() {
-                loadedEvents = events
-            }
-            if focusStore.focusedEventId == event.id {
-                focusStore.setFocused(eventId: nil, eventType: nil)
-            }
-            if !undoStore.isRestoringHistory() {
-                if undoable {
-                    undoStore.record(.delete(event: snapshot))
-                } else if scope == .this {
-                    undoStore.record(.unrecorded)
-                }
-            }
-            rebuildPresentation()
-            if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
-                _ = recurrenceScopeStore.beginDeleteAsk(for: event)
-                statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
-            }
         } catch {}
+        loadedEvents.removeAll { $0.id == event.id }
+        if let events = try? eventsStore.fetchAllEvents() {
+            loadedEvents = events
+        }
+        if focusStore.focusedEventId == event.id {
+            focusStore.setFocused(eventId: nil, eventType: nil)
+        }
+        if !undoStore.isRestoringHistory() {
+            if undoable {
+                undoStore.record(.delete(event: snapshot))
+            } else if scope == .this {
+                undoStore.record(.unrecorded)
+            }
+        }
+        rebuildPresentation()
+        if EventInteractionPolicy.isOccurrenceThisScopeAsk(event: event, scope: scope) {
+            _ = recurrenceScopeStore.beginDeleteAsk(for: event)
+            statusToastStore.show(id: "recurrence-scope", message: "Deleted. Apply to series? Press 1 for following, 2 for all.")
+        }
     }
 
     public func promotePendingDelete(scope: RecurrenceScopePromotionKind) {
@@ -182,6 +183,35 @@ extension NativeCalendarRootModel {
     }
 
     public func undoLastChange() {
+        Task { await undoLastChangeAndWait() }
+    }
+
+    /// Grid Cmd+Z after keyboard create: undo must update the native grid before the next XCUITest assertion.
+    public func undoKeyboardPlacedCreateNow() {
+        guard case .create(let event)? = undoStore.peekUndo() else {
+            statusToastStore.show(id: "undo-status", message: "Nothing to undo")
+            return
+        }
+        keyboardCreateSettleGeneration += 1
+        undoStore.commitUndo()
+        undoStore.runHistoryRestore {
+            try? eventsStore.removePersistedEvent(id: event.id)
+            loadedEvents.removeAll { $0.id == event.id }
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
+            if focusStore.focusedEventId == event.id {
+                focusStore.setFocused(eventId: nil, eventType: nil)
+            }
+            rebuildPresentation()
+        }
+        if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
+            levelsStore.recordShortcutInvocation(.otherUndo, section: section)
+        }
+        Task { await eventsStore.settleStagedDelete(id: event.id, scope: .this) }
+    }
+
+    public func undoLastChangeAndWait() async {
         guard let entry = undoStore.peekUndo() else {
             statusToastStore.show(id: "undo-status", message: "Nothing to undo")
             return
@@ -192,7 +222,7 @@ extension NativeCalendarRootModel {
             return
         }
         undoStore.commitUndo()
-        flushHistoryReplay {
+        await undoStore.runHistoryRestoreAsync {
             await self.replayUndoEntry(entry)
         }
         if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
@@ -206,8 +236,10 @@ extension NativeCalendarRootModel {
             return
         }
         undoStore.commitRedo()
-        flushHistoryReplay {
-            await self.replayRedoEntry(entry)
+        Task {
+            await undoStore.runHistoryRestoreAsync {
+                await self.replayRedoEntry(entry)
+            }
         }
         if let section = ShortcutTelemetrySection.section(for: .otherRedo) {
             levelsStore.recordShortcutInvocation(.otherRedo, section: section)
@@ -217,8 +249,17 @@ extension NativeCalendarRootModel {
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
         switch entry {
         case .create(let event):
-            let scope: EventDeleteScope = if case .series = event.recurrence { .all } else { .this }
-            await deleteEvent(event, scope: scope)
+            keyboardCreateSettleGeneration += 1
+            try? eventsStore.removePersistedEvent(id: event.id)
+            loadedEvents.removeAll { $0.id == event.id }
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
+            if focusStore.focusedEventId == event.id {
+                focusStore.setFocused(eventId: nil, eventType: nil)
+            }
+            rebuildPresentation()
+            await eventsStore.settleStagedDelete(id: event.id, scope: .this)
         case .delete(let event):
             await commitDuplicate(from: event, recordUndo: false)
         case .edit(_, let before, _):
@@ -262,14 +303,6 @@ extension NativeCalendarRootModel {
         undoStore.record(.create(event: event))
         if UITestLaunchPolicy.syncGridDraftSave {
             onNativeUndoReadyForUITest?()
-        }
-    }
-
-    private func flushHistoryReplay(_ replay: @escaping () async -> Void) {
-        UITestMainActorSync.runAndWait(timeout: 5) {
-            await self.undoStore.runHistoryRestoreAsync {
-                await replay()
-            }
         }
     }
 }

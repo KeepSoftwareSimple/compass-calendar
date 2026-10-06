@@ -1,7 +1,4 @@
-import {
-  DESKTOP_BRIDGE_VERSION,
-  DesktopBridgeOutboundMessageSchema,
-} from "@core/types/desktop-bridge.contracts";
+import { DesktopBridgeOutboundMessageSchema } from "@core/types/desktop-bridge.contracts";
 import { describe, expect, it } from "bun:test";
 
 describe("DesktopBridgeOutboundMessageSchema", () => {
@@ -86,11 +83,5 @@ describe("DesktopBridgeOutboundMessageSchema", () => {
       eventId: "evt-1",
     });
     expect(parsed.method).toBe("showNotification");
-  });
-});
-
-describe("DESKTOP_BRIDGE_VERSION", () => {
-  it("matches the macOS shell marketing version", () => {
-    expect(DESKTOP_BRIDGE_VERSION).toBe("0.1.0");
   });
 });

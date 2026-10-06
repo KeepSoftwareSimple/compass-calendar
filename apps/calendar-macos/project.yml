@@ -37,7 +37,6 @@ targets:
     sources:
       - Compass
     resources:
-      - Resources/offline.html
       - path: Resources/icon.icns
         optional: true
       - path: Resources/Fonts

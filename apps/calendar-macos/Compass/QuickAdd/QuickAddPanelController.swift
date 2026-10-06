@@ -5,10 +5,8 @@ import CompassUI
 
 @MainActor
 final class QuickAddPanelController: NSObject, NSWindowDelegate {
-    private let appURL: URL
     weak var quickAddRouter: DesktopQuickAddRouting?
     private var panel: NSPanel?
-    private var webViewController: WebViewController?
     private var nativePanelController: QuickAddNativePanelViewController?
     private var previousApp: NSRunningApplication?
     private var escapeMonitor: Any?
@@ -18,23 +16,10 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     private var suppressResignKeyHideUntil: Date?
     private var isSubmittingNativeQuickAdd = false
 
-    private var usesNativeQuickAdd: () -> Bool = { false }
     private var nativeModel: () -> NativeCalendarRootModel? = { nil }
-    private var nativeTheme: () -> NativeWebTheme = { .lightBeach }
 
-    init(appURL: URL) {
-        self.appURL = appURL
-        super.init()
-    }
-
-    func configureNativeQuickAdd(
-        usesNativeQuickAdd: @escaping () -> Bool,
-        nativeModel: @escaping () -> NativeCalendarRootModel?,
-        nativeTheme: @escaping () -> NativeWebTheme
-    ) {
-        self.usesNativeQuickAdd = usesNativeQuickAdd
-        self.nativeModel = nativeModel
-        self.nativeTheme = nativeTheme
+    func configureNative(model: @escaping () -> NativeCalendarRootModel?) {
+        self.nativeModel = model
     }
 
     func toggle() {
@@ -46,17 +31,12 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        if usesNativeQuickAdd(), nativeModel() != nil {
-            if panel == nil || nativePanelController == nil {
-                rebuildPanelIfNeeded(force: true)
-            }
-        } else if panel == nil {
-            buildWebPanel()
+        guard nativeModel() != nil else { return }
+        if panel == nil || nativePanelController == nil {
+            buildNativePanel()
         }
         guard let panel else { return }
-        if usesNativeQuickAdd() {
-            nativeModel()?.beginQuickAddPanelSession()
-        }
+        nativeModel()?.beginQuickAddPanelSession()
         previousApp = NSWorkspace.shared.frontmostApplication
         suppressResignKeyHideUntil = Date().addingTimeInterval(0.6)
         panel.center()
@@ -76,9 +56,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         isVisible = false
         removeEscapeMonitor()
         removeReturnMonitor()
-        if usesNativeQuickAdd() {
-            nativeModel()?.cancelQuickAddPanelSession()
-        }
+        nativeModel()?.cancelQuickAddPanelSession()
         panel?.orderOut(nil)
         if let previousApp {
             previousApp.activate(options: [.activateIgnoringOtherApps])
@@ -86,28 +64,9 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         previousApp = nil
     }
 
-    private func rebuildPanelIfNeeded(force: Bool) {
-        let shouldUseNative = usesNativeQuickAdd() && nativeModel() != nil
-        if shouldUseNative {
-            if force || nativePanelController == nil {
-                panel?.orderOut(nil)
-                panel = nil
-                webViewController = nil
-                buildNativePanel()
-            }
-            return
-        }
-        if force || webViewController == nil {
-            panel?.orderOut(nil)
-            panel = nil
-            nativePanelController = nil
-            buildWebPanel()
-        }
-    }
-
     private func buildNativePanel() {
         guard let model = nativeModel() else { return }
-        let theme = nativeTheme()
+        let theme = NativeUIThemePreference.load()
         let contentController = QuickAddNativePanelViewController(
             model: model,
             theme: theme,
@@ -138,33 +97,6 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         self.panel = panel
     }
 
-    private func buildWebPanel() {
-        let launchURL = quickAddLaunchURL(base: appURL)
-        let controller = WebViewController(appURL: launchURL, injectQuickAddBridge: true)
-        if let quickAddRouter {
-            controller.configureQuickAddRouter(quickAddRouter)
-        }
-        webViewController = controller
-
-        let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 680, height: 440),
-            styleMask: [.nonactivatingPanel, .titled, .fullSizeContentView, .utilityWindow],
-            backing: .buffered,
-            defer: false)
-        panel.title = "Quick add"
-        panel.titleVisibility = .hidden
-        panel.titlebarAppearsTransparent = true
-        panel.isFloatingPanel = true
-        panel.level = .floating
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        panel.isMovableByWindowBackground = true
-        panel.hidesOnDeactivate = false
-        panel.isReleasedWhenClosed = false
-        panel.delegate = self
-        panel.contentViewController = controller
-        self.panel = panel
-    }
-
     private func submitNativeQuickAdd() async {
         guard !isSubmittingNativeQuickAdd, let model = nativeModel() else { return }
         isSubmittingNativeQuickAdd = true
@@ -173,14 +105,6 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
         nativePanelController?.commitQueryToModel()
         await model.saveQuickAddFromPanel(submitTitle: submitTitle)
         quickAddRouter?.dismissQuickAddPanel()
-    }
-
-    private func quickAddLaunchURL(base: URL) -> URL {
-        var components = URLComponents(url: base, resolvingAgainstBaseURL: false)
-        var items = components?.queryItems ?? []
-        items.append(URLQueryItem(name: "quickAdd", value: "1"))
-        components?.queryItems = items
-        return components?.url ?? base
     }
 
     private func installEscapeMonitor() {
@@ -209,7 +133,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
                 || event.keyCode == 76
                 || event.charactersIgnoringModifiers == "\r"
             guard isReturn else { return event }
-            guard let self, self.isVisible, self.usesNativeQuickAdd() else { return event }
+            guard let self, self.isVisible else { return event }
             Task { @MainActor in
                 await self.submitNativeQuickAdd()
             }

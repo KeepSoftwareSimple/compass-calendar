@@ -54,12 +54,12 @@ enum UndoTestAccessibilityProbe {
     static func attachIfNeeded(to window: NSWindow?, model: NativeCalendarRootModel) {
         guard UITestLaunchPolicy.syncGridDraftSave, let host = window?.contentView else { return }
         if let existing = probe, existing.superview === host {
-            existing.onUndo = { model.undoLastChange() }
+            existing.onUndo = { model.undoKeyboardPlacedCreateNow() }
             return
         }
         probe?.removeFromSuperview()
         let view = UndoTestAccessibilityProbeView(frame: .zero)
-        view.onUndo = { model.undoLastChange() }
+        view.onUndo = { model.undoKeyboardPlacedCreateNow() }
         probe = view
         host.addSubview(view)
     }

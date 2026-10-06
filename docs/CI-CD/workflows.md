@@ -55,7 +55,7 @@ Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.
 - **Required check:** rollup job `macos` (path-filtered on PRs; merge queue
   skips when the combined diff does not touch the Mac app).
 - **App URL:** `COMPASS_APP_URL` defaults to staging for unauthenticated
-  XCUITest smoke (`LaunchTests` forwards it as `-COMPASS_APP_URL`).
+  XCUITest smoke (`NativeLaunchTests` in anonymous demo mode).
 - **Local:** `bun run verify` runs `test:macos:packages` and `test:macos` when
   Xcode is present; otherwise it reports both macOS legs as CI-only.
 

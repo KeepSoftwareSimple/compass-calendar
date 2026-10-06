@@ -40,13 +40,20 @@ public struct RootView: View {
             )
         }
         .overlay(alignment: .bottom) {
-            UpNextBanner(
-                model: model,
-                onOpen: { model.openUpNextEvent() },
-                onJoin: { model.joinUpNextMeeting() },
-                onBannerShown: { event in
-                    model.upNextBannerShown(event)
-                })
+            VStack(spacing: 12) {
+                if model.desktopUpdateReadyVersion != nil {
+                    DesktopUpdateReadyBannerView {
+                        model.onDesktopRestartToUpdate?()
+                    }
+                }
+                UpNextBanner(
+                    model: model,
+                    onOpen: { model.openUpNextEvent() },
+                    onJoin: { model.joinUpNextMeeting() },
+                    onBannerShown: { event in
+                        model.upNextBannerShown(event)
+                    })
+            }
             .padding(.bottom, 24)
         }
         .overlay(alignment: .top) {

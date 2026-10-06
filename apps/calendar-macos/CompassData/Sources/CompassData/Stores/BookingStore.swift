@@ -18,6 +18,7 @@ public final class BookingStore {
     public var isDiscardConfirmationPresented = false
 
     private var baselineInput: AdminPutBookingPageInput?
+    private var optedOutBlockingCalendarIds: Set<String> = []
     private let bookingAPI: BookingAPI
     private let analytics: ProductAnalyticsClient
     private var authenticated = false
@@ -116,6 +117,14 @@ public final class BookingStore {
         minNoticeText = String(seeded.minNoticeHours)
         horizonText = String(seeded.maxHorizonDays)
         baselineInput = seeded
+        let eligible = availability.map(\.id)
+        optedOutBlockingCalendarIds = Set(
+            MergeBlockingCalendars.nextOptedOutBlockingCalendarIds(
+                previousOptedOut: [],
+                eligible: eligible,
+                submitted: seeded.blockingCalendarIds
+            )
+        )
         if AdminBookingPageLogic.isUnconfiguredPage(serverPage) {
             setupStep = setupStep ?? .address
         }
@@ -268,6 +277,41 @@ public final class BookingStore {
         }
     }
 
+    public func syncDiscoveredBlockingCalendars(availabilityCalendars: [CompassCalendar]) {
+        guard setupStep == nil else { return }
+        let discovered = availabilityCalendars.map(\.id)
+        guard let merged = MergeBlockingCalendars.withDiscoveredBlockingCalendarIds(
+            blockingCalendarIds: form.blockingCalendarIds,
+            optedOut: Array(optedOutBlockingCalendarIds),
+            discovered: discovered
+        ) else { return }
+        form.blockingCalendarIds = merged
+        if let baselineInput {
+            if let baselineMerged = MergeBlockingCalendars.withDiscoveredBlockingCalendarIds(
+                blockingCalendarIds: baselineInput.blockingCalendarIds,
+                optedOut: Array(optedOutBlockingCalendarIds),
+                discovered: discovered
+            ) {
+                self.baselineInput = baselineInput.withBlockingCalendarIds(baselineMerged)
+            }
+        }
+    }
+
+    public func toggleBlockingCalendar(calendarId: String, checked: Bool) {
+        if checked {
+            optedOutBlockingCalendarIds.remove(calendarId)
+        } else {
+            optedOutBlockingCalendarIds.insert(calendarId)
+        }
+        var ids = Set(form.blockingCalendarIds)
+        if checked {
+            ids.insert(calendarId)
+        } else {
+            ids.remove(calendarId)
+        }
+        form.blockingCalendarIds = Array(ids)
+    }
+
     public func previewSlotStarts(now: Date = Date()) -> [String] {
         let windowStart = now
         let windowEnd = Calendar.current.date(byAdding: .day, value: 7, to: now) ?? now
@@ -285,5 +329,21 @@ public final class BookingStore {
             windowEnd: windowEnd
         )
         return ComputeBookingSlots.computeBookingSlots(input)
+    }
+}
+
+private extension AdminPutBookingPageInput {
+    func withBlockingCalendarIds(_ ids: [String]) -> AdminPutBookingPageInput {
+        AdminPutBookingPageInput(
+            blockingCalendarIds: ids,
+            destinationCalendarId: destinationCalendarId,
+            durationMinutes: durationMinutes,
+            enabled: enabled,
+            maxHorizonDays: maxHorizonDays,
+            minNoticeHours: minNoticeHours,
+            slug: slug,
+            timeZone: timeZone,
+            weeklyAvailability: weeklyAvailability
+        )
     }
 }

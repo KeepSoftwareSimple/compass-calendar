@@ -146,9 +146,6 @@ jobs:
 
       # The Compass scheme runs CompassKitTests and CompassUITests.
       - name: Build and test
-        env:
-          # Unauthenticated staging smoke (same rule as agent-loop-staging-smoke.sh).
-          COMPASS_APP_URL: https://staging.compasscalendar.com
         run: |
           xcodebuild -version
           xcodebuild test \

@@ -54,6 +54,9 @@ public final class NativeCalendarRootModel {
     var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
+    /// Set when Sparkle has staged an update; cleared after restart prompt dismisses.
+    public var desktopUpdateReadyVersion: String?
+    public var onDesktopRestartToUpdate: (() -> Void)?
 
     let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
@@ -71,6 +74,7 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
+    var keyboardCreateSettleGeneration = 0
     var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
@@ -793,6 +797,10 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
+            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
+        }
+        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
         publishEventFormTitleAccessibilityProbe()
     }
 

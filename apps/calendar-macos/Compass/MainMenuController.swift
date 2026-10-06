@@ -5,23 +5,20 @@ import CompassUI
 
 @MainActor
 final class MainMenuController: NSObject {
-    private weak var webViewController: WebViewController?
     private let showDebugMenu: Bool
     private let updater: DesktopUpdater
     private var nativeUIState: MainMenuNativeUIState
 
-    var onToggleNativeUI: (() -> Void)?
     var onSelectNativeTheme: ((NativeWebTheme) -> Void)?
+    var onReloadAppHost: (() -> Void)?
     weak var nativeRootController: NativeRootController?
     weak var quickAddCoordinator: DesktopQuickAddCoordinator?
 
     init(
-        webViewController: WebViewController,
         updater: DesktopUpdater,
         showDebugMenu: Bool,
         nativeUIState: MainMenuNativeUIState
     ) {
-        self.webViewController = webViewController
         self.updater = updater
         self.showDebugMenu = showDebugMenu
         self.nativeUIState = nativeUIState
@@ -116,8 +113,6 @@ final class MainMenuController: NSObject {
             return #selector(switchToStaging(_:))
         case .switchToProduction:
             return #selector(switchToProduction(_:))
-        case .toggleNativeUI:
-            return #selector(toggleNativeUI(_:))
         case .nativeThemeLightBeach:
             return #selector(useNativeThemeLightBeach(_:))
         case .nativeThemeDarkAbyss:
@@ -147,43 +142,31 @@ final class MainMenuController: NSObject {
     }
 
     @objc private func openSettings(_ sender: Any?) {
-        if nativeUIState.isNativeUIEnabled, let nativeRootController {
-            nativeRootController.model.handleShortcut(.otherSettings)
-            return
-        }
-        webViewController?.dispatchShortcut(.otherSettings)
+        nativeRootController?.model.handleShortcut(.otherSettings)
     }
 
     @objc private func openHelp(_ sender: Any?) {
-        if nativeUIState.isNativeUIEnabled, let nativeRootController {
-            nativeRootController.model.openShortcutsCatalogWindow()
-            return
-        }
-        webViewController?.dispatchShortcut(.otherShortcuts)
+        nativeRootController?.model.openShortcutsCatalogWindow()
     }
 
     @objc private func newEvent(_ sender: Any?) {
-        webViewController?.dispatchShortcut(.createTimed)
+        nativeRootController?.model.handleShortcut(.createTimed)
     }
 
     @objc private func goToday(_ sender: Any?) {
-        webViewController?.dispatchShortcut(.navToday)
+        nativeRootController?.model.handleShortcut(.navToday)
     }
 
     @objc private func showDay(_ sender: Any?) {
-        webViewController?.dispatchShortcut(.navDayView)
+        nativeRootController?.model.handleShortcut(.navDayView)
     }
 
     @objc private func showWeek(_ sender: Any?) {
-        webViewController?.dispatchShortcut(.navWeekView)
+        nativeRootController?.model.handleShortcut(.navWeekView)
     }
 
     @objc private func openCommandPalette(_ sender: Any?) {
-        if nativeUIState.isNativeUIEnabled, let nativeRootController {
-            nativeRootController.model.toggleCommandPalette()
-            return
-        }
-        webViewController?.dispatchShortcut(.otherPalette)
+        nativeRootController?.model.toggleCommandPalette()
     }
 
     @objc private func checkForUpdates(_ sender: Any?) {
@@ -196,16 +179,12 @@ final class MainMenuController: NSObject {
 
     @objc private func switchToStaging(_ sender: Any?) {
         AppHostPreference.staging.save()
-        webViewController?.reloadAppHost()
+        onReloadAppHost?()
     }
 
     @objc private func switchToProduction(_ sender: Any?) {
         AppHostPreference.production.save()
-        webViewController?.reloadAppHost()
-    }
-
-    @objc private func toggleNativeUI(_ sender: Any?) {
-        onToggleNativeUI?()
+        onReloadAppHost?()
     }
 
     @objc private func useNativeThemeLightBeach(_ sender: Any?) {
@@ -244,9 +223,6 @@ extension MainMenuController: NSMenuItemValidation {
             return updater.canCheckForUpdates
         case #selector(restartToUpdate(_:)):
             return updater.isUpdateStaged
-        case #selector(toggleNativeUI(_:)):
-            item.state = nativeUIState.isNativeUIEnabled ? .on : .off
-            return true
         case #selector(useNativeThemeLightBeach(_:)):
             item.state = nativeUIState.theme == .lightBeach ? .on : .off
             return true
