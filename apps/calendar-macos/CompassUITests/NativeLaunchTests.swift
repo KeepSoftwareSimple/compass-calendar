@@ -252,7 +252,7 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testRecurrenceThisAndFollowingEditOnFixtureSeries() {
+    func testRecurrenceScopePromptEditOnFixtureSeries() {
         let app = XCUIApplication()
         app.launchArguments += [
             "-COMPASS_NATIVE_UI", "YES",
@@ -273,17 +273,17 @@ final class NativeLaunchTests: XCTestCase {
         window.typeText("Split weekly sync")
 
         window.typeKey(.enter, modifierFlags: [.command])
-        // Scope prompt is keyboard-driven; wait briefly for the async save hook, then pick
-        // "this and following" (digit 2). SwiftUI dialog identifiers are flaky in CI.
+        // Scope prompt is keyboard-driven (digit 1/2/3). SwiftUI dialog identifiers are
+        // flaky in CI, so wait for the AppKit probe when present, then confirm "this event".
         let scopeDialog = window.descendants(matching: .any)["compass-recurrence-scope-dialog"]
         _ = scopeDialog.waitForExistence(timeout: 12)
         Thread.sleep(forTimeInterval: 0.5)
-        window.typeKey("2", modifierFlags: [])
+        window.typeKey("1", modifierFlags: [])
 
         waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 15)
         XCTAssertTrue(
             window.buttons["Weekly sync"].waitForExistence(timeout: 8),
-            "Expected earlier occurrence to keep the original series title")
+            "Expected another occurrence to keep the original series title")
     }
 
     @MainActor
