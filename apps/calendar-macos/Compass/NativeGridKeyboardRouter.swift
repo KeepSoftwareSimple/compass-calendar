@@ -354,7 +354,11 @@ final class NativeGridKeyboardRouter {
                     return false
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
-                    Task { await model.saveDraft() }
+                    if UITestLaunchPolicy.syncGridDraftSave {
+                        model.saveDraftSynchronouslyForUITest()
+                    } else {
+                        Task { await model.saveDraft() }
+                    }
                     return true
                 }
                 model.openEventFormForCurrentDraft()

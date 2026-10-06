@@ -280,7 +280,11 @@ final class NativeLaunchTests: XCTestCase {
     @MainActor
     func testUndoCreateRemovesKeyboardPlacedEvent() {
         let app = XCUIApplication()
-        app.launchArguments += ["-COMPASS_NATIVE_UI", "YES", "-COMPASS_FIXTURE", "demo"]
+        app.launchArguments += [
+            "-COMPASS_NATIVE_UI", "YES",
+            "-COMPASS_FIXTURE", "demo",
+            "-COMPASS_UI_TEST_SYNC_GRID_DRAFT_SAVE",
+        ]
         app.launch()
 
         let window = app.windows["Compass"]

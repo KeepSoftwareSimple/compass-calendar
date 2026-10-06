@@ -42,4 +42,9 @@ public enum UITestLaunchPolicy {
     public static var stickyQuickAddPanel: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL")
     }
+
+    /// Blocks until keyboard Enter finishes `saveDraft()` (undo XCUITest timing).
+    public static var syncGridDraftSave: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_SYNC_GRID_DRAFT_SAVE")
+    }
 }
