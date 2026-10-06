@@ -27,10 +27,42 @@ public struct SettingsBookingSectionView: View {
         )
     }
 
+    private var hasHealthyConnection: Bool {
+        BookingConnectionHealth.hasHealthyConnection(
+            connections: model.syncConnectionsStore.connections
+        )
+    }
+
+    private var connectableProviders: [ProviderEnum] {
+        model.connectCalendarProviderKinds.compactMap { kind in
+            switch kind {
+            case .google: .google
+            case .microsoft: .microsoft
+            case .apple: .apple
+            }
+        }
+    }
+
+    private var showFirstRunConnectPrompt: Bool {
+        guard !hasHealthyConnection else { return false }
+        if let page = model.bookingStore.serverPage {
+            return AdminBookingPageLogic.isUnconfiguredPage(page)
+        }
+        return !model.bookingStore.isLoadingPage && model.bookingStore.serverPage == nil
+    }
+
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             header
-            if model.bookingStore.isLoadingPage, model.bookingStore.serverPage == nil {
+            if showFirstRunConnectPrompt {
+                BookingConnectPromptView(
+                    connectableProviders: connectableProviders,
+                    isBusy: model.syncConnectionsStore.isBusy,
+                    onConnect: { provider in
+                        Task { await model.syncConnectionsStore.connect(provider: provider) }
+                    }
+                )
+            } else if model.bookingStore.isLoadingPage, model.bookingStore.serverPage == nil {
                 Text("Loading meeting settings…")
                     .foregroundStyle(theme.textMutedColor)
             } else if model.bookingStore.setupStep != nil {
