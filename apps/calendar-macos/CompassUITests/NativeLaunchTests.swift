@@ -299,7 +299,7 @@ final class NativeLaunchTests: XCTestCase {
 
         let undoControl = window.buttons["compass-native-undo-last-change"]
         XCTAssertTrue(undoControl.waitForExistence(timeout: 5))
-        let undoReady = NSPredicate(format: "value == %@", "ready")
+        let undoReady = NSPredicate(format: "label == %@", "Undo ready")
         wait(for: [expectation(for: undoReady, evaluatedWith: undoControl, handler: nil)], timeout: 10)
         undoControl.click()
         XCTAssertFalse(draft.waitForExistence(timeout: 8))

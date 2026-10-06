@@ -375,7 +375,11 @@ final class NativeGridKeyboardRouter {
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
                     if UITestLaunchPolicy.syncGridDraftSave {
-                        model.saveDraftSynchronouslyForUITest()
+                        // Finish key handling before blocking on save; otherwise MainActor
+                        // async work scheduled from this handler never runs.
+                        DispatchQueue.main.async {
+                            model.saveDraftSynchronouslyForUITest()
+                        }
                     } else {
                         Task { await model.saveDraft() }
                     }

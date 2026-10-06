@@ -70,6 +70,7 @@ enum UndoTestAccessibilityProbe {
         probe.setAccessibilityElement(true)
         probe.setAccessibilityHidden(false)
         probe.setAccessibilityValue("ready")
+        probe.setAccessibilityLabel("Undo ready")
         NSAccessibility.post(element: probe, notification: .valueChanged)
         NSAccessibility.post(element: probe, notification: .layoutChanged)
         if let window = probe.window {
