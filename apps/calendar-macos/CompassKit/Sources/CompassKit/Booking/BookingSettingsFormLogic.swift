@@ -24,7 +24,7 @@ public enum BookingSettingsFormLogic {
             maxHorizonDays: maxHorizonDays,
             minNoticeHours: 4,
             slug: nil,
-            timeZone: timeZone,
+            timeZone: IANATimeZone(rawValue: timeZone),
             weeklyAvailability: defaultWeeklyAvailability()
         )
     }
