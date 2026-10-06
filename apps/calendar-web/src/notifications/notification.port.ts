@@ -1,5 +1,3 @@
-import { isDesktop } from "@web/desktop/isDesktop";
-
 /**
  * Injectable seam over the browser Notification API, mirroring toast.port.ts.
  *
@@ -94,21 +92,11 @@ const productionNotificationPort: NotificationPort = {
 };
 
 let notificationPort: NotificationPort | undefined;
-let desktopPortRequested = false;
 
 export function getNotificationPort(): NotificationPort {
   if (notificationPort) return notificationPort;
-  if (isDesktop()) {
-    if (!desktopPortRequested) {
-      desktopPortRequested = true;
-      void import("./notification.desktop.port").then((m) => {
-        notificationPort = m.desktopNotificationPort;
-      });
-    }
-  } else {
-    notificationPort = productionNotificationPort;
-  }
-  return productionNotificationPort;
+  notificationPort = productionNotificationPort;
+  return notificationPort;
 }
 
 export function registerNotificationPort(port: NotificationPort): void {
@@ -117,5 +105,4 @@ export function registerNotificationPort(port: NotificationPort): void {
 
 export function resetNotificationPort(): void {
   notificationPort = undefined;
-  desktopPortRequested = false;
 }

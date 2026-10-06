@@ -3,8 +3,8 @@ import CompassKit
 import Sparkle
 
 /// Sparkle wrapper. Checks on launch and every six hours, downloads in the
-/// background, and installs on quit. When an update is staged the web app is
-/// told so it can offer a restart; failures are logged and never block the app.
+/// background, and installs on quit. When an update is staged the native banner
+/// or Compass menu offers restart via Sparkle; failures are logged and never block the app.
 @MainActor
 final class DesktopUpdater: NSObject, SPUUpdaterDelegate {
     var onUpdateReady: ((String) -> Void)?
@@ -52,7 +52,7 @@ final class DesktopUpdater: NSObject, SPUUpdaterDelegate {
     }
 
     /// Returning true takes over the restart prompt: Sparkle stays quiet and
-    /// the web toast (or the menu item) calls the stored block.
+    /// the native banner (or the menu item) calls the stored block.
     func updater(
         _ updater: SPUUpdater,
         willInstallUpdateOnQuit item: SUAppcastItem,

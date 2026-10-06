@@ -5,7 +5,7 @@ export const runWebDesktopFixtures = async (
 ): Promise<void> => {
   const scriptPath = join(
     process.cwd(),
-    "apps/calendar-web/src/desktop/export-fixtures/write-fixture-files.ts",
+    "apps/calendar-web/src/desktop-export/export-fixtures/write-fixture-files.ts",
   );
   const proc = Bun.spawn(["bun", scriptPath, outputDir], {
     cwd: process.cwd(),
