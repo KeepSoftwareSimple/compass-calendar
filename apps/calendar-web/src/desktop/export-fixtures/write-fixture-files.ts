@@ -2,6 +2,7 @@ import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-fil
 import { emitDemoSeedFixturesJson } from "@web/desktop/export-fixtures/demo-seed.fixtures";
 import { emitGoToDateFixturesJson } from "@web/desktop/export-fixtures/go-to-date.fixtures";
 import { emitGridLayoutSnapshotFixturesJson } from "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures";
+import { emitHtmlFragmentFixturesJson } from "@web/desktop/export-fixtures/html-fragment.fixtures";
 import { emitLifeGridSnapshotFixturesJson } from "@web/desktop/export-fixtures/life-grid.snapshot.fixtures";
 import { emitNudgeFixturesJson } from "@web/desktop/export-fixtures/nudge.fixtures";
 import { emitTimedDeckFixturesJson } from "@web/desktop/export-fixtures/timed-deck.fixtures";
@@ -22,6 +23,7 @@ const emitters: Record<
   "timed-deck.vectors.json": emitTimedDeckFixturesJson,
   "nudge.vectors.json": emitNudgeFixturesJson,
   "go-to-date.vectors.json": emitGoToDateFixturesJson,
+  "html-fragment.vectors.json": emitHtmlFragmentFixturesJson,
   "demo-seed.json": emitDemoSeedFixturesJson,
   "grid-layout.snapshots.json": emitGridLayoutSnapshotFixturesJson,
   "life-grid.snapshots.json": emitLifeGridSnapshotFixturesJson,

@@ -49,6 +49,27 @@ public struct EventFormView: View {
             .focused($titleFocused)
             .pageJumpChipAnchor(id: "form-title")
 
+            DescriptionEditorView(
+                html: Binding(
+                    get: { draft.description },
+                    set: { model.updateDraftFromForm(description: $0) }
+                ),
+                resetKey: draft.persistedEventId?.rawValue ?? draft.clientId.rawValue,
+                isFocused: model.eventFormFocusedField == .description
+            )
+            .frame(minHeight: 72, maxHeight: 140)
+            .padding(8)
+            .background(theme.surfacePanelColor)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(
+                        model.eventFormFocusedField == .description ? theme.accentColor : theme.borderColor,
+                        lineWidth: 1
+                    )
+            )
+            .pageJumpChipAnchor(id: "form-description")
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     EventFormScheduleSection(
@@ -85,11 +106,7 @@ public struct EventFormView: View {
             model.eventFormFocusedField = .title
         }
         .onChange(of: model.eventFormFocusedField) { _, field in
-            if field == .title {
-                titleFocused = true
-            } else {
-                titleFocused = false
-            }
+            titleFocused = field == .title
         }
     }
 }
