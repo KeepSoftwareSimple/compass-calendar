@@ -7,7 +7,11 @@ extension NativeCalendarRootModel {
     public var shortcutsCatalogPresenter: ShortcutsCatalogPresenting { overlayStores.catalog }
 
     public var overlayKeyboardCaptureActive: Bool {
-        commandPaletteStore.isOpen || shortcutsLegendStore.isOpen
+        commandPaletteStore.isOpen || shortcutsLegendStore.isOpen || blockPartyStore.isActive
+    }
+
+    public var blockPartyKeyboardCaptureActive: Bool {
+        blockPartyStore.isActive
     }
 
     func paletteSections() -> [CommandPaletteSection] {
@@ -82,6 +86,10 @@ extension NativeCalendarRootModel {
             shortcutsLegendStore.open()
         case "open-settings":
             handleShortcut(.otherSettings)
+        case "practice-shortcuts":
+            blockPartyStore.replayFromPalette()
+        case "show-welcome-guide":
+            onboardingStore.openWelcomeGuide()
         case "sign-up":
             authStore.openModal(.signUp)
         case "log-in":
@@ -175,9 +183,8 @@ extension NativeCalendarRootModel {
                 q: query)
             do {
                 let remoteEvents = try await environment.apiClient.events.list(listQuery)
-                let mapped = try remoteEvents.map { try EventMapping.event(from: $0) }
                 let remoteHits = EventTitleSearch.search(
-                    events: mapped,
+                    events: remoteEvents,
                     query: query,
                     now: referenceNow,
                     limit: EventTitleSearch.paletteLimit)

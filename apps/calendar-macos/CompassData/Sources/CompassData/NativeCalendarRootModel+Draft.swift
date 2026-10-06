@@ -149,7 +149,7 @@ extension NativeCalendarRootModel {
     }
 
     public func saveDraft() async {
-        await requestSaveDraft()
+        await saveDraftWithInvitationGate()
     }
 
     func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {

@@ -29,7 +29,7 @@ final class EventsStoreRecurringTests: XCTestCase {
         try repository.upsert(events: [stale], isLocal: false)
 
         mockAPI.listHandler = { _ in
-            [try StoreSampleEvents.response(from: replacement)]
+            [replacement]
         }
 
         _ = try await store.loadRange(key: key)

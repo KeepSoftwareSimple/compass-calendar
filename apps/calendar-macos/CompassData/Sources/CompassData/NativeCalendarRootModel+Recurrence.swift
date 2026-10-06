@@ -92,12 +92,17 @@ extension NativeCalendarRootModel {
     }
 
     func commitSaveDraft(scope: ScopeEnum) async {
-        guard let draft = draftStore.gridDraft else { return }
+        guard var draft = draftStore.gridDraft else { return }
+        draft = normalizedDraftForSave(draft)
+        let invitation = pendingSaveInvitation
+        pendingSaveInvitation = nil
+        invitationPrompt = nil
+        pendingInvitationDraft = nil
         let baseline = baselineEvent(for: draft)
 
         switch draft.kind {
         case .create:
-            guard let input = GridEventDraftMapping.createInput(from: draft),
+            guard let input = GridEventDraftMapping.createInput(from: draft, invitation: invitation),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
             await persistDraftOptimistic(savedId: optimistic.id.rawValue) {
@@ -105,7 +110,11 @@ extension NativeCalendarRootModel {
             }
         case .edit:
             guard let eventId = draft.persistedEventId,
-                let input = GridEventDraftMapping.replaceInput(from: draft, scope: scope),
+                let input = GridEventDraftMapping.replaceInput(
+                    from: draft,
+                    scope: scope,
+                    invitation: invitation
+                ),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
             await persistDraftOptimistic(savedId: eventId.rawValue) {

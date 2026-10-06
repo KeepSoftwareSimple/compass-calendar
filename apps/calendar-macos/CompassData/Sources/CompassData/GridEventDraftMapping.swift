@@ -41,25 +41,36 @@ public enum GridEventDraftMapping {
         )
     }
 
-    public static func createInput(from draft: GridEventDraft) -> CreateEventInput? {
+    public static func createInput(
+        from draft: GridEventDraft,
+        invitation: InvitationEnum? = nil
+    ) -> CreateEventInput? {
         guard let calendarId = draft.calendarId else { return nil }
         let resolvedTitle = resolvedTitle(from: draft)
+        let createConference = draft.createConference ? true : nil
 
         return CreateEventInput(
             calendarId: calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
+            createConference: createConference,
             id: draft.clientId,
+            invitation: invitation,
             recurrence: createRecurrence(from: draft.recurrence),
             schedule: schedule(from: draft.schedule)
         )
     }
 
-    public static func replaceInput(from draft: GridEventDraft, scope: ScopeEnum) -> ReplaceEventInput? {
+    public static func replaceInput(
+        from draft: GridEventDraft,
+        scope: ScopeEnum,
+        invitation: InvitationEnum? = nil
+    ) -> ReplaceEventInput? {
         guard draft.kind == .edit, let calendarId = draft.calendarId else { return nil }
         let resolvedTitle = resolvedTitle(from: draft)
         return ReplaceEventInput(
             calendarId: calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
+            invitation: invitation,
             recurrence: replaceRecurrence(from: draft.recurrence),
             schedule: schedule(from: draft.schedule),
             scope: scope
@@ -98,7 +109,9 @@ public enum GridEventDraftMapping {
     }
 
     private static func inputContent(from draft: GridEventDraft, title: String) -> CreateEventInputContent {
-        CreateEventInputContent(
+        let wireAttendees = draft.attendees?.map { $0.toOrganizerWire() }
+        return CreateEventInputContent(
+            attendees: wireAttendees,
             color: draftColorEnum(draft),
             description: draft.description,
             kind: "details",
@@ -108,7 +121,15 @@ public enum GridEventDraftMapping {
     }
 
     private static func contentPayload(from draft: GridEventDraft, title: String) -> EventContent_DetailsPayload {
-        EventContent_DetailsPayload(
+        let attendees: [EventContentDetailsAttendees]? = draft.attendees?.map {
+            EventContentDetailsAttendees(
+                displayName: $0.displayName,
+                email: $0.email,
+                responseStatus: .needsAction
+            )
+        }
+        return EventContent_DetailsPayload(
+            attendees: attendees,
             color: draftColorEnum(draft),
             description: draft.description,
             kind: "details",
