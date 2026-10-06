@@ -31,17 +31,20 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+// The web emitters only write to a directory, so stage them somewhere
+// disposable and read the bytes back. That makes them ordinary
+// `GeneratedFile`s, so `--check` and the write path share one list.
 const buildWebFixtureFiles = async (): Promise<GeneratedFile[]> => {
   const tempDir = mkdtempSync(join(tmpdir(), "desktop-web-fixtures-"));
-  await runWebDesktopFixtures(tempDir);
-  const files = DESKTOP_WEB_FIXTURE_FILES.map((name) => ({
-    path: join(COMPASS_KIT_FIXTURES_DIR, name),
-    contents: readFileSync(join(tempDir, name), "utf8"),
-  }));
-  if (process.env["CI"] !== "true") {
+  try {
+    await runWebDesktopFixtures(tempDir);
+    return DESKTOP_WEB_FIXTURE_FILES.map((name) => ({
+      path: join(COMPASS_KIT_FIXTURES_DIR, name),
+      contents: readFileSync(join(tempDir, name), "utf8"),
+    }));
+  } finally {
     rmSync(tempDir, { recursive: true, force: true });
   }
-  return files;
 };
 
 const buildScriptGeneratedFiles = (): GeneratedFile[] => {
@@ -92,7 +95,6 @@ export const runDesktopExport = async (check: boolean): Promise<void> => {
     console.log("desktop:export --check OK");
     return;
   }
-  writeGeneratedFiles(buildScriptGeneratedFiles());
-  await runWebDesktopFixtures(COMPASS_KIT_FIXTURES_DIR);
+  writeGeneratedFiles(files);
   console.log("Wrote desktop export artifacts");
 };
