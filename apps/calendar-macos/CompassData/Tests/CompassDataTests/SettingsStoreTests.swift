@@ -49,6 +49,22 @@ final class SettingsStoreTests: XCTestCase {
             "America/Los_Angeles")
     }
 
+    func testQuickAddHotKeyPersistsAndUsesBridge() {
+        let viewStore = ViewStore()
+        final class HotKeyBridge: NativeSettingsBridge {
+            var applied: String?
+            func launchAtLoginEnabled() -> Bool { false }
+            func setLaunchAtLogin(_ enabled: Bool) throws {}
+            func applyQuickAddHotKey(_ displayString: String) { applied = displayString }
+            func applyTheme(_ theme: CompassThemeName) {}
+        }
+        let bridge = HotKeyBridge()
+        let store = SettingsStore(viewStore: viewStore, storage: defaults, bridge: bridge)
+        XCTAssertTrue(store.setQuickAddHotKey("Ctrl+Option+Cmd+Space"))
+        XCTAssertEqual(store.quickAddHotKeyDisplay, "Ctrl+Option+Cmd+Space")
+        XCTAssertEqual(bridge.applied, "Ctrl+Option+Cmd+Space")
+    }
+
     func testThemePersistsAndUsesBridge() {
         let viewStore = ViewStore()
         final class ThemeBridge: NativeSettingsBridge {

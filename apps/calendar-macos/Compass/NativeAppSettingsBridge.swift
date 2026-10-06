@@ -6,9 +6,15 @@ import Foundation
 @MainActor
 final class NativeAppSettingsBridge: NativeSettingsBridge {
     private weak var rootController: NativeRootController?
+    private weak var quickAddRouter: DesktopQuickAddRouting?
 
-    init(rootController: NativeRootController) {
+    init(rootController: NativeRootController, quickAddRouter: DesktopQuickAddRouting? = nil) {
         self.rootController = rootController
+        self.quickAddRouter = quickAddRouter
+    }
+
+    func attachQuickAddRouter(_ router: DesktopQuickAddRouting) {
+        quickAddRouter = router
     }
 
     func launchAtLoginEnabled() -> Bool {
@@ -19,7 +25,9 @@ final class NativeAppSettingsBridge: NativeSettingsBridge {
         try DesktopNativeServices.setLaunchAtLogin(enabled)
     }
 
-    func applyQuickAddHotKey(_ displayString: String) {}
+    func applyQuickAddHotKey(_ displayString: String) {
+        quickAddRouter?.setQuickAddHotkey(displayString)
+    }
 
     func applyTheme(_ theme: CompassThemeName) {
         rootController?.setWebTheme(NativeWebTheme(themeName: theme))
