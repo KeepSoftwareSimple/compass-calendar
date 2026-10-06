@@ -4,9 +4,6 @@ import {
   DesktopBridgeSetQuickAddHotkeyMessageSchema,
 } from "@core/desktop/desktop-quick-add.contract";
 
-/** Must stay in sync with MARKETING_VERSION in apps/calendar-macos/project.yml. */
-export const DESKTOP_BRIDGE_VERSION = "0.1.0";
-
 /** Maximum events the menu bar can show. */
 export const DESKTOP_AGENDA_MAX_ITEMS = 20;
 

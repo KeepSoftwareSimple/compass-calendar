@@ -46,7 +46,6 @@ public enum MainMenuActionKind: Equatable, Sendable {
     case restartToUpdate
     case switchToStaging
     case switchToProduction
-    case toggleNativeUI
     case nativeThemeLightBeach
     case nativeThemeDarkAbyss
     case openQuickAddPanel
@@ -205,7 +204,6 @@ public enum MainMenuModel {
         MainMenuSection(
             title: "Debug",
             rows: [
-                MainMenuRow(title: "Use Native UI", action: .toggleNativeUI),
                 MainMenuRow(title: "Native Theme: Light Beach", action: .nativeThemeLightBeach),
                 MainMenuRow(title: "Native Theme: Dark Abyss", action: .nativeThemeDarkAbyss),
                 MainMenuRow(title: "", action: .separator),

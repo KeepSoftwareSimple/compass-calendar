@@ -52,6 +52,9 @@ public final class NativeCalendarRootModel {
     var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
+    /// Set when Sparkle has staged an update; cleared after restart prompt dismisses.
+    public var desktopUpdateReadyVersion: String?
+    public var onDesktopRestartToUpdate: (() -> Void)?
 
     let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
