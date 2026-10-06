@@ -30,13 +30,7 @@ struct EventFormCalendarSection: View {
             .accessibilityIdentifier("compass-event-form-calendar")
             .pageJumpChipAnchor(id: "form-calendar")
         }
-        .padding(12)
-        .background(theme.surfacePanelColor)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(focusField == .calendar ? theme.accentColor : theme.borderColor, lineWidth: 1)
-        )
+        .eventFormSectionChrome(focused: focusField == .calendar)
     }
 
     private var writableCalendars: [CompassCalendar] {

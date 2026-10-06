@@ -102,6 +102,7 @@ describe("sse.client degraded state", () => {
       "openAuthModalFromOutsideRouter",
     ).mockResolvedValue(undefined);
     spyOn(session, "doesSessionExist").mockResolvedValue(true);
+    spyOn(session, "attemptRefreshingSession").mockResolvedValue(true);
 
     timerCallbacks = [];
     setTimeoutSpy = mock((callback: () => void, delayMs: number) => {
@@ -408,6 +409,97 @@ describe("sse.client degraded state", () => {
       "sse_connection_degraded",
       expect.objectContaining({ stopped_reason: "auth" }),
     );
+  });
+
+  it("refreshes the session after a server close before reconnecting", async () => {
+    const attemptRefresh = session.attemptRefreshingSession as ReturnType<
+      typeof mock
+    >;
+    attemptRefresh.mockClear();
+    await openThenError(FakeEventSource.CLOSED);
+    expect(attemptRefresh).toHaveBeenCalledTimes(1);
+
+    await runLatestReconnectTimer();
+    expect(eventSourceMock).toHaveBeenCalledTimes(2);
+
+    fakeEs.readyState = FakeEventSource.OPEN;
+    fakeEs.dispatch("open");
+  });
+
+  it("stops with auth when refresh fails after a server close", async () => {
+    spyOn(session, "attemptRefreshingSession").mockResolvedValue(false);
+    await openThenError(FakeEventSource.CLOSED);
+    await runLatestReconnectTimer();
+    await flush();
+
+    expect(eventSourceMock).toHaveBeenCalledTimes(1);
+    expect(openAuthModal).toHaveBeenCalledWith("login");
+    expect(capture).toHaveBeenCalledWith(
+      "sse_connection_degraded",
+      expect.objectContaining({
+        stopped_reason: "auth",
+        error_type: "server_closed",
+      }),
+    );
+  });
+
+  it("classifies a failed reconnect after server close as auth_rejected", async () => {
+    await openThenError(FakeEventSource.CLOSED);
+    await runLatestReconnectTimer();
+    fakeEs.dispatch("error");
+    await flush();
+    runDegradedTimer();
+
+    expect(capture).toHaveBeenCalledWith(
+      "sse_connection_degraded",
+      expect.objectContaining({ error_type: "auth_rejected" }),
+    );
+  });
+
+  it("emits sse_connection_recovered with downtime after reconnect", async () => {
+    openStream();
+    fakeEs.readyState = FakeEventSource.OPEN;
+    fakeEs.dispatch("open");
+    fakeEs.dispatch("error");
+    await flush();
+    runDegradedTimer();
+    expect(capture).toHaveBeenCalledTimes(1);
+
+    nowMs += 5_000;
+    await runLatestReconnectTimer();
+    fakeEs.readyState = FakeEventSource.OPEN;
+    fakeEs.dispatch("open");
+
+    expect(capture).toHaveBeenCalledWith("sse_connection_recovered", {
+      downtime_ms: 5_000,
+      reconnect_count: 1,
+      page_path: "/",
+    });
+  });
+
+  it("reports sse_connection_degraded only once when giving up", async () => {
+    openStream();
+    for (let i = 0; i < 10; i += 1) {
+      fakeEs.dispatch("error");
+      await flush();
+      if (i < 9) {
+        await runLatestReconnectTimer();
+      }
+    }
+
+    expect(capture).toHaveBeenCalledTimes(1);
+    expect(capture).toHaveBeenCalledWith(
+      "sse_connection_degraded",
+      expect.objectContaining({ stopped_reason: "max_attempts" }),
+    );
+
+    const leftoverDegradedTimers = timerCallbacks.filter(
+      (t) => t.delayMs === 15_000,
+    );
+    for (const timer of leftoverDegradedTimers) {
+      timer.callback();
+    }
+    expect(capture).toHaveBeenCalledTimes(1);
   });
 
   it("resets the backoff counter when the stream opens", async () => {

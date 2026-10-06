@@ -10,9 +10,7 @@ public enum GridEventDraftMapping {
     ) -> GridLayoutDraftOverlay {
         let showsInline =
             activity == .keyboardPlace && !status.isFormOpen
-        let eventId = draft.kind == .edit
-            ? (draft.sourceEventId ?? draft.clientId).rawValue
-            : draft.clientId.rawValue
+        let eventId = wireEventId(from: draft).rawValue
         let colorHex = draft.color == nil ? sourceColorHex : nil
         return GridLayoutDraftOverlay(
             eventId: eventId,
@@ -27,9 +25,8 @@ public enum GridEventDraftMapping {
     public static func optimisticEvent(from draft: GridEventDraft, baseline: Event? = nil) -> Event? {
         guard let calendarId = draft.calendarId ?? baseline?.calendarId else { return nil }
         let now = DateTime(rawValue: CompassDateParsing.formatLikeDayjs(Date()))
-        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedTitle = title.isEmpty ? "Untitled event" : title
-        let eventId = draft.kind == .edit ? (draft.sourceEventId ?? draft.clientId) : draft.clientId
+        let resolvedTitle = resolvedTitle(from: draft)
+        let eventId = wireEventId(from: draft)
         let recurrence = baseline?.recurrence ?? .single(EventRecurrence_SinglePayload(kind: "single"))
         let createdAt = baseline?.createdAt ?? now
 
@@ -49,8 +46,7 @@ public enum GridEventDraftMapping {
         invitation: InvitationEnum? = nil
     ) -> CreateEventInput? {
         guard let calendarId = draft.calendarId else { return nil }
-        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedTitle = title.isEmpty ? "Untitled event" : title
+        let resolvedTitle = resolvedTitle(from: draft)
         let createConference = draft.createConference ? true : nil
 
         return CreateEventInput(
@@ -69,8 +65,7 @@ public enum GridEventDraftMapping {
         invitation: InvitationEnum? = nil
     ) -> ReplaceEventInput? {
         guard draft.kind == .edit, let calendarId = draft.calendarId else { return nil }
-        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
-        let resolvedTitle = title.isEmpty ? "Untitled event" : title
+        let resolvedTitle = resolvedTitle(from: draft)
         return ReplaceEventInput(
             calendarId: calendarId,
             content: inputContent(from: draft, title: resolvedTitle),
@@ -85,7 +80,7 @@ public enum GridEventDraftMapping {
         let wireAttendees = draft.attendees?.map { $0.toOrganizerWire() }
         return CreateEventInputContent(
             attendees: wireAttendees,
-            color: draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) },
+            color: draftColorEnum(draft),
             description: draft.description,
             kind: "details",
             location: draft.location,
@@ -103,12 +98,25 @@ public enum GridEventDraftMapping {
         }
         return EventContent_DetailsPayload(
             attendees: attendees,
-            color: draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) },
+            color: draftColorEnum(draft),
             description: draft.description,
             kind: "details",
             location: draft.location.isEmpty ? nil : draft.location,
             title: title
         )
+    }
+
+    private static func resolvedTitle(from draft: GridEventDraft) -> String {
+        let title = draft.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return title.isEmpty ? "Untitled event" : title
+    }
+
+    private static func wireEventId(from draft: GridEventDraft) -> EventId {
+        draft.kind == .edit ? (draft.sourceEventId ?? draft.clientId) : draft.clientId
+    }
+
+    private static func draftColorEnum(_ draft: GridEventDraft) -> ColorEnum? {
+        draft.color.flatMap { ColorEnum(rawValue: $0.rawValue) }
     }
 
     private static func schedule(from draftSchedule: DraftSchedule) -> EventSchedule {

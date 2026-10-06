@@ -27,24 +27,11 @@ public struct EventFormLayoutSnapshot: Codable, Hashable, Sendable {
 
 public enum EventFormLayoutSnapshotBuilder {
     private static let wp18VisibleFields: Set<EventFormField> = [
-        .actions, .title, .start, .end, .calendar, .color,
+        .actions, .title, .description, .start, .end, .calendar, .color,
     ]
 
     private static func accessibilityId(for field: EventFormField) -> String {
-        switch field {
-        case .actions: return "compass-event-form-actions"
-        case .title: return "compass-event-form-title"
-        case .start: return "compass-event-form-start"
-        case .end: return "compass-event-form-end"
-        case .calendar: return "compass-event-form-calendar"
-        case .color: return "compass-event-form-color"
-        case .recurrence: return "compass-event-form-recurrence"
-        case .location: return "compass-event-form-location"
-        case .attendees: return "compass-event-form-attendees"
-        case .description: return "compass-event-form-description"
-        case .rsvp: return "compass-event-form-rsvp"
-        case .conference: return "compass-event-form-conference"
-        }
+        "compass-event-form-\(field.rawValue)"
     }
 
     public static func build(
