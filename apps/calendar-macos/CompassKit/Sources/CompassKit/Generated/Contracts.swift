@@ -125,6 +125,90 @@ public enum AccessEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case writer = "writer"
 }
 
+public struct AdminGetBookingPageResponse: Codable, Hashable, Sendable {
+    public let blockingCalendarIds: [String]
+    public let bookingUrl: String
+    public let createdAt: DateTime
+    public let destinationCalendarId: String
+    public let durationMinutes: DurationMinutesEnum
+    public let enabled: Bool
+    public let hostUserId: String
+    public let id: String
+    public let maxHorizonDays: Int
+    public let minNoticeHours: Int
+    public let slug: String
+    public let timeZone: IANATimeZone
+    public let updatedAt: DateTime
+    public let weeklyAvailability: [BookingPageWeeklyAvailability]
+
+    public init(blockingCalendarIds: [String], bookingUrl: String, createdAt: DateTime, destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, hostUserId: String, id: String, maxHorizonDays: Int, minNoticeHours: Int, slug: String, timeZone: IANATimeZone, updatedAt: DateTime, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+        self.blockingCalendarIds = blockingCalendarIds
+        self.bookingUrl = bookingUrl
+        self.createdAt = createdAt
+        self.destinationCalendarId = destinationCalendarId
+        self.durationMinutes = durationMinutes
+        self.enabled = enabled
+        self.hostUserId = hostUserId
+        self.id = id
+        self.maxHorizonDays = maxHorizonDays
+        self.minNoticeHours = minNoticeHours
+        self.slug = slug
+        self.timeZone = timeZone
+        self.updatedAt = updatedAt
+        self.weeklyAvailability = weeklyAvailability
+    }
+}
+
+public struct AdminGetBookingPageSetupResponse: Codable, Hashable, Sendable {
+    public let blockingCalendarIds: [String]
+    public let destinationCalendarId: String
+    public let durationMinutes: DurationMinutesEnum
+    public let enabled: Bool
+    public let isConfigured: Bool
+    public let maxHorizonDays: Int
+    public let minNoticeHours: Int
+    public let suggestedSlug: String
+    public let timeZone: IANATimeZone
+    public let weeklyAvailability: [BookingPageWeeklyAvailability]
+
+    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, isConfigured: Bool, maxHorizonDays: Int, minNoticeHours: Int, suggestedSlug: String, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+        self.blockingCalendarIds = blockingCalendarIds
+        self.destinationCalendarId = destinationCalendarId
+        self.durationMinutes = durationMinutes
+        self.enabled = enabled
+        self.isConfigured = isConfigured
+        self.maxHorizonDays = maxHorizonDays
+        self.minNoticeHours = minNoticeHours
+        self.suggestedSlug = suggestedSlug
+        self.timeZone = timeZone
+        self.weeklyAvailability = weeklyAvailability
+    }
+}
+
+public struct AdminPutBookingPageInput: Codable, Hashable, Sendable {
+    public let blockingCalendarIds: [String]
+    public let destinationCalendarId: String
+    public let durationMinutes: DurationMinutesEnum
+    public let enabled: Bool
+    public let maxHorizonDays: Int
+    public let minNoticeHours: Int
+    public let slug: String?
+    public let timeZone: IANATimeZone
+    public let weeklyAvailability: [BookingPageWeeklyAvailability]
+
+    public init(blockingCalendarIds: [String], destinationCalendarId: String, durationMinutes: DurationMinutesEnum, enabled: Bool, maxHorizonDays: Int, minNoticeHours: Int, slug: String? = nil, timeZone: IANATimeZone, weeklyAvailability: [BookingPageWeeklyAvailability]) {
+        self.blockingCalendarIds = blockingCalendarIds
+        self.destinationCalendarId = destinationCalendarId
+        self.durationMinutes = durationMinutes
+        self.enabled = enabled
+        self.maxHorizonDays = maxHorizonDays
+        self.minNoticeHours = minNoticeHours
+        self.slug = slug
+        self.timeZone = timeZone
+        self.weeklyAvailability = weeklyAvailability
+    }
+}
+
 public struct AppConfig: Codable, Hashable, Sendable {
     public let billing: AppConfigBilling
     public let oauth: AppConfigOauth?
@@ -224,22 +308,10 @@ public struct Attendee: Codable, Hashable, Sendable {
 }
 
 public struct AvailabilityResponse: Codable, Hashable, Sendable {
-    public let busyPeriods: [AvailabilityResponseBusyPeriods]
+    public let busyPeriods: [BusyPeriod]
 
-    public init(busyPeriods: [AvailabilityResponseBusyPeriods]) {
+    public init(busyPeriods: [BusyPeriod]) {
         self.busyPeriods = busyPeriods
-    }
-}
-
-public struct AvailabilityResponseBusyPeriods: Codable, Hashable, Sendable {
-    public let calendarId: CalendarId
-    public let end: DateTime
-    public let start: DateTime
-
-    public init(calendarId: CalendarId, end: DateTime, start: DateTime) {
-        self.calendarId = calendarId
-        self.end = end
-        self.start = start
     }
 }
 
@@ -409,6 +481,34 @@ public struct BookingPage: Codable, Hashable, Sendable {
     }
 }
 
+public struct BookingPageStatusResponse: Codable, Hashable, Sendable {
+    public let bookable: Bool
+    public let reasons: [BookingPageStatusResponseReasons]
+
+    public init(bookable: Bool, reasons: [BookingPageStatusResponseReasons]) {
+        self.bookable = bookable
+        self.reasons = reasons
+    }
+}
+
+public struct BookingPageStatusResponseReasons: Codable, Hashable, Sendable {
+    public let accountEmail: String?
+    public let calendarId: CalendarId?
+    public let connectionState: ConnectionStateEnum?
+    public let kind: KindEnum
+    public let provider: ProviderEnum?
+    public let reason: String
+
+    public init(accountEmail: String? = nil, calendarId: CalendarId? = nil, connectionState: ConnectionStateEnum? = nil, kind: KindEnum, provider: ProviderEnum? = nil, reason: String) {
+        self.accountEmail = accountEmail
+        self.calendarId = calendarId
+        self.connectionState = connectionState
+        self.kind = kind
+        self.provider = provider
+        self.reason = reason
+    }
+}
+
 public struct BookingPageWeeklyAvailability: Codable, Hashable, Sendable {
     public let end: String
     public let start: String
@@ -454,46 +554,10 @@ public struct BusyPeriod: Codable, Hashable, Sendable {
 }
 
 public struct CalendarListResponse: Codable, Hashable, Sendable {
-    public let calendars: [CalendarListResponseCalendars]
+    public let calendars: [CompassCalendar]
 
-    public init(calendars: [CalendarListResponseCalendars]) {
+    public init(calendars: [CompassCalendar]) {
         self.calendars = calendars
-    }
-}
-
-public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
-    public let access: AccessEnum
-    public let accountEmail: String?
-    public let backgroundColor: String
-    public let capabilities: CompassCalendarCapabilities
-    public let conference: ConferenceEnum?
-    public let createsGoogleMeet: Bool?
-    public let description: String
-    public let foregroundColor: String
-    public let id: String
-    public let isActive: Bool
-    public let isPrimary: Bool
-    public let isVisible: Bool
-    public let name: String
-    public let provider: String
-    public let timeZone: IANATimeZone?
-
-    public init(access: AccessEnum, accountEmail: String? = nil, backgroundColor: String, capabilities: CompassCalendarCapabilities, conference: ConferenceEnum? = nil, createsGoogleMeet: Bool? = nil, description: String, foregroundColor: String, id: String, isActive: Bool, isPrimary: Bool, isVisible: Bool, name: String, provider: String, timeZone: IANATimeZone?) {
-        self.access = access
-        self.accountEmail = accountEmail
-        self.backgroundColor = backgroundColor
-        self.capabilities = capabilities
-        self.conference = conference
-        self.createsGoogleMeet = createsGoogleMeet
-        self.description = description
-        self.foregroundColor = foregroundColor
-        self.id = id
-        self.isActive = isActive
-        self.isPrimary = isPrimary
-        self.isVisible = isVisible
-        self.name = name
-        self.provider = provider
-        self.timeZone = timeZone
     }
 }
 
@@ -723,11 +787,13 @@ public struct ConnectionRefreshResponse: Codable, Hashable, Sendable {
 }
 
 public enum ConnectionStateEnum: String, Codable, Hashable, Sendable, CaseIterable {
-    case aTTENTION = "ATTENTION"
-    case hEALTHY = "HEALTHY"
-    case iMPORTING = "IMPORTING"
-    case nOT_CONNECTED = "NOT_CONNECTED"
-    case rECONNECT_REQUIRED = "RECONNECT_REQUIRED"
+    case actionRequired = "actionRequired"
+    case catchingUp = "catchingUp"
+    case connecting = "connecting"
+    case delayed = "delayed"
+    case disconnected = "disconnected"
+    case healthy = "healthy"
+    case importing = "importing"
 }
 
 public struct ContactSuggestion: Codable, Hashable, Sendable {
@@ -741,9 +807,9 @@ public struct ContactSuggestion: Codable, Hashable, Sendable {
 }
 
 public struct ContactSuggestionsResponse: Codable, Hashable, Sendable {
-    public let suggestions: [EventContentDetailsOrganizer]
+    public let suggestions: [ContactSuggestion]
 
-    public init(suggestions: [EventContentDetailsOrganizer]) {
+    public init(suggestions: [ContactSuggestion]) {
         self.suggestions = suggestions
     }
 }
@@ -984,9 +1050,9 @@ public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
 }
 
 public struct EventListResponse: Codable, Hashable, Sendable {
-    public let events: [EventResponseEvent]
+    public let events: [Event]
 
-    public init(events: [EventResponseEvent]) {
+    public init(events: [Event]) {
         self.events = events
     }
 }
@@ -1186,6 +1252,12 @@ public enum InvitationEnum: String, Codable, Hashable, Sendable, CaseIterable {
     case all = "all"
     case externalOnly = "externalOnly"
     case none = "none"
+}
+
+public enum KindEnum: String, Codable, Hashable, Sendable, CaseIterable {
+    case billing = "billing"
+    case calendar = "calendar"
+    case connection = "connection"
 }
 
 public enum OperationEnum: String, Codable, Hashable, Sendable, CaseIterable {

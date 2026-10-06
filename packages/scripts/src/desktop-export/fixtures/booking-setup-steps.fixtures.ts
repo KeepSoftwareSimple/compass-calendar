@@ -1,0 +1,96 @@
+type SetupStepsVectorCase = {
+  id: string;
+  input: { writableCalendarCount: number; stepId?: string };
+  output: Record<string, unknown>;
+};
+
+/** Parity vectors for native BookingSetupSteps (mirrors setup-steps.test.ts). */
+export const buildBookingSetupStepsFixtures = () => ({
+  cases: [
+    {
+      id: "visible-zero-writable",
+      input: { writableCalendarCount: 0 },
+      output: {
+        visible: ["address", "hours", "duration", "destination", "live"],
+      },
+    },
+    {
+      id: "visible-one-writable",
+      input: { writableCalendarCount: 1 },
+      output: {
+        visible: ["address", "hours", "duration", "live"],
+      },
+    },
+    {
+      id: "visible-two-writable",
+      input: { writableCalendarCount: 2 },
+      output: {
+        visible: ["address", "hours", "duration", "destination", "live"],
+      },
+    },
+    {
+      id: "destination-sentence-zero-writable",
+      input: { writableCalendarCount: 0, stepId: "destination" },
+      output: {
+        sentence: "Connect a calendar you can write to before going live.",
+      },
+    },
+    {
+      id: "destination-sentence-one-writable",
+      input: { writableCalendarCount: 1, stepId: "destination" },
+      output: {
+        sentence: "New meetings you accept are added to this calendar.",
+      },
+    },
+    {
+      id: "next-steps-one-writable",
+      input: { writableCalendarCount: 1, stepId: "address" },
+      output: {
+        nextFromAddress: "hours",
+        nextFromHours: "duration",
+        nextFromDuration: "live",
+        nextFromLive: null,
+      },
+    },
+    {
+      id: "next-steps-two-writable",
+      input: { writableCalendarCount: 2, stepId: "duration" },
+      output: {
+        nextFromDuration: "destination",
+        nextFromDestination: "live",
+        nextFromLive: null,
+      },
+    },
+    {
+      id: "prev-steps-one-writable",
+      input: { writableCalendarCount: 1, stepId: "live" },
+      output: {
+        prevFromAddress: null,
+        prevFromHours: "address",
+        prevFromDuration: "hours",
+        prevFromLive: "duration",
+      },
+    },
+    {
+      id: "prev-steps-zero-writable",
+      input: { writableCalendarCount: 0, stepId: "live" },
+      output: {
+        prevFromLive: "destination",
+        prevFromDestination: "duration",
+      },
+    },
+    {
+      id: "progress-mixed",
+      input: { writableCalendarCount: 2, stepId: "duration" },
+      output: {
+        progressAddress: { current: 1, total: 4 },
+        progressLiveTwo: { current: 5, total: 5 },
+        progressDurationTwo: { current: 3, total: 5 },
+        progressDestinationZero: { current: 4, total: 5 },
+      },
+    },
+  ] satisfies SetupStepsVectorCase[],
+});
+
+export const emitBookingSetupStepsFixturesJson = (): string =>
+  `${JSON.stringify(buildBookingSetupStepsFixtures(), null, 2)}\n`;

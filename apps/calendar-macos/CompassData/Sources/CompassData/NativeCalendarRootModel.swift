@@ -9,6 +9,7 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
     public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
@@ -16,6 +17,7 @@ public final class NativeCalendarRootModel {
     public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
     public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let lifeStore: LifeStore
     public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
@@ -43,6 +45,13 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var invitationPrompt: EventInvitationPromptState?
+    public var pendingRsvpChoice: PendingRsvpChoice?
+    public var attendeeSuggestions: [DraftAttendeeInput] = []
+    public var attendeeSuggestionQuery = ""
+    var attendeeSuggestionTask: Task<Void, Never>?
+    var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
+    var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
 
@@ -62,6 +71,7 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
+    var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -93,6 +103,7 @@ public final class NativeCalendarRootModel {
         configStore = environment.configStore
         authStore = environment.authStore
         billingStore = environment.billingStore
+        bookingStore = environment.bookingStore
         levelsStore = environment.levelsStore
         lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
@@ -119,6 +130,7 @@ public final class NativeCalendarRootModel {
         draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
         onboardingStore = environment.onboardingStore
+        blockPartyStore = environment.blockPartyStore
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -139,7 +151,33 @@ public final class NativeCalendarRootModel {
         }
         billingStore.setAuthenticated(authStore.authenticated)
         billingStore.attach(settingsStore: settingsStore)
+        bookingStore.setAuthenticated(authStore.authenticated)
         rebuildPresentation()
+    }
+
+    public func closeSettingsIfAllowed() {
+        let writableCount = bookingStore.writableCalendars(
+            from: calendars,
+            hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+        ).count
+        if bookingStore.attemptDismissSettings(writableCalendarCount: writableCount) {
+            return
+        }
+        settingsStore.close()
+    }
+
+    public func openBookingSettings() {
+        settingsStore.open(page: .booking)
+        Task {
+            await bookingStore.refreshPageIfNeeded()
+            bookingStore.seedFormIfNeeded(
+                calendars: calendars,
+                hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+            )
+            bookingStore.trackSettingsOpenedIfNeeded(
+                hasConnection: !syncConnectionsStore.connections.isEmpty
+            )
+        }
     }
 
     func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
@@ -198,7 +236,7 @@ public final class NativeCalendarRootModel {
             isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
             storageAvailable: true,
-            showcaseActive: false)
+            showcaseActive: blockPartyStore.isActive)
         return OnboardingGating.ActiveSurfaceInput(
             gateStatus: gateStatus,
             isCheckoutCelebrating: false,
@@ -207,7 +245,7 @@ public final class NativeCalendarRootModel {
             isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
             isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
             guestMeetingSetupActive: false,
-            shortcutShowcaseActive: false,
+            shortcutShowcaseActive: blockPartyStore.isActive,
             connectCalendarEligible: connectEligible,
             firstEventEligible: firstEventEligible,
             pointerHintVisible: pointerHintStore.isVisible,
@@ -262,8 +300,10 @@ public final class NativeCalendarRootModel {
 
     private func handleAuthenticated() async {
         billingStore.setAuthenticated(true)
+        bookingStore.setAuthenticated(true)
         cachedDemoEventIds = (try? environment.localEventRepository.demoEventIds()) ?? []
         await billingStore.refreshAfterSignIn()
+        await bookingStore.refreshPageIfNeeded()
         startEventStream()
         await syncConnectionsStore.reloadFromMetadata()
         onboardingStore.markUserMetadataLoaded()
@@ -281,6 +321,7 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
+        bookingStore.setAuthenticated(false)
         settingsStore.close()
         onboardingStore.resetUserMetadataLoaded()
         if let eventStream {
@@ -875,7 +916,7 @@ public final class NativeCalendarRootModel {
         }
         do {
             let remote = try await environment.apiClient.calendars.list()
-            let mapped = remote.map(CompassCalendar.init(listItem:))
+            let mapped = remote
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
             rebuildPresentation()
@@ -885,7 +926,7 @@ public final class NativeCalendarRootModel {
     private func bootstrapAnonymousCalendarsIfNeeded() async {
         do {
             if let demoPresentation {
-                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                let calendar = demoPresentation.calendarListItem()
                 try calendarRepository.upsert(calendars: [calendar])
             } else {
                 let sentinel = try LocalCalendarSentinel.calendarId(

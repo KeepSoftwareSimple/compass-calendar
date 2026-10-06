@@ -5,11 +5,11 @@ import CompassKit
 import Foundation
 
 public protocol EventsAPIProtocol: Sendable {
-    func list(_ query: EventListQuery) async throws -> [EventResponseEvent]
+    func list(_ query: EventListQuery) async throws -> [Event]
     func create(_ input: CreateEventInput) async throws -> EventResponseEvent
     func replace(id: EventId, input: ReplaceEventInput) async throws -> EventResponseEvent
     func delete(id: EventId, scope: EventDeleteScope) async throws
-    func rsvp(id: EventId, input: RsvpEventInput) async throws
+    func rsvp(id: EventId, responseStatus: ResponseStatusEnum, scope: String) async throws
 }
 
 extension EventsAPI: EventsAPIProtocol {}
@@ -81,8 +81,7 @@ public final class EventsStore {
             start: key.start,
             end: key.end
         )
-        let remote = try await eventsAPI.list(query)
-        let events = try remote.map { try EventMapping.event(from: $0) }
+        let events = try await eventsAPI.list(query)
         try repository.upsert(events: events, isLocal: false)
         try repository.pruneRemoteEvents(
             intersectingStart: key.start,
@@ -158,7 +157,8 @@ public final class EventsStore {
 
     public func rsvpOptimistic(
         id: EventId,
-        input: RsvpEventInput,
+        responseStatus: ResponseStatusEnum,
+        scope: String,
         optimisticEvent: Event
     ) async throws {
         beginMutation()
@@ -168,7 +168,7 @@ public final class EventsStore {
         }
         try repository.upsert(events: [optimisticEvent], isLocal: false)
         do {
-            try await eventsAPI.rsvp(id: id, input: input)
+            try await eventsAPI.rsvp(id: id, responseStatus: responseStatus, scope: scope)
         } catch {}
     }
 

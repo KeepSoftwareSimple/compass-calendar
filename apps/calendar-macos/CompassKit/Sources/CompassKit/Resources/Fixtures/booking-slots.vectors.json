@@ -1,0 +1,290 @@
+{
+  "cases": [
+    {
+      "id": "mon-wed-grid",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          },
+          {
+            "weekday": 3,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-14T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T15:15:00Z",
+          "2026-09-07T15:30:00Z",
+          "2026-09-07T15:45:00Z",
+          "2026-09-07T16:00:00Z",
+          "2026-09-07T16:15:00Z",
+          "2026-09-07T16:30:00Z",
+          "2026-09-07T16:45:00Z",
+          "2026-09-07T17:00:00Z",
+          "2026-09-07T17:15:00Z",
+          "2026-09-07T17:30:00Z",
+          "2026-09-09T15:00:00Z",
+          "2026-09-09T15:15:00Z",
+          "2026-09-09T15:30:00Z",
+          "2026-09-09T15:45:00Z",
+          "2026-09-09T16:00:00Z",
+          "2026-09-09T16:15:00Z",
+          "2026-09-09T16:30:00Z",
+          "2026-09-09T16:45:00Z",
+          "2026-09-09T17:00:00Z",
+          "2026-09-09T17:15:00Z",
+          "2026-09-09T17:30:00Z"
+        ]
+      }
+    },
+    {
+      "id": "empty-weekly-availability",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-14T06:00:00.000Z"
+      },
+      "output": {
+        "slots": []
+      }
+    },
+    {
+      "id": "busy-interval-gap",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "12:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [
+          {
+            "start": "2026-09-07T16:00:00.000Z",
+            "end": "2026-09-07T17:00:00.000Z"
+          }
+        ],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T12:00:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T15:00:00Z",
+          "2026-09-07T15:15:00Z",
+          "2026-09-07T15:30:00Z",
+          "2026-09-07T17:00:00Z",
+          "2026-09-07T17:15:00Z",
+          "2026-09-07T17:30:00Z"
+        ]
+      }
+    },
+    {
+      "id": "min-notice",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 1,
+            "start": "09:00",
+            "end": "17:00"
+          }
+        ],
+        "minNoticeHours": 4,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-07T14:30:00.000Z",
+        "windowStart": "2026-09-07T06:00:00.000Z",
+        "windowEnd": "2026-09-08T06:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-09-07T18:30:00Z",
+          "2026-09-07T18:45:00Z",
+          "2026-09-07T19:00:00Z",
+          "2026-09-07T19:15:00Z",
+          "2026-09-07T19:30:00Z",
+          "2026-09-07T19:45:00Z",
+          "2026-09-07T20:00:00Z",
+          "2026-09-07T20:15:00Z",
+          "2026-09-07T20:30:00Z",
+          "2026-09-07T20:45:00Z",
+          "2026-09-07T21:00:00Z",
+          "2026-09-07T21:15:00Z",
+          "2026-09-07T21:30:00Z",
+          "2026-09-07T21:45:00Z",
+          "2026-09-07T22:00:00Z",
+          "2026-09-07T22:15:00Z",
+          "2026-09-07T22:30:00Z"
+        ]
+      }
+    },
+    {
+      "id": "horizon-cap",
+      "input": {
+        "timeZone": "America/Denver",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 7,
+            "start": "09:00",
+            "end": "10:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-09-01T00:00:00.000Z",
+        "windowStart": "2026-11-01T06:00:00.000Z",
+        "windowEnd": "2026-11-02T06:00:00.000Z"
+      },
+      "output": {
+        "slots": []
+      }
+    },
+    {
+      "id": "dst-fall-back",
+      "input": {
+        "timeZone": "America/New_York",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 7,
+            "start": "01:00",
+            "end": "03:30"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-10-25T00:00:00.000Z",
+        "windowStart": "2026-11-01T04:00:00.000Z",
+        "windowEnd": "2026-11-02T08:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-11-01T05:00:00Z",
+          "2026-11-01T05:15:00Z",
+          "2026-11-01T05:30:00Z",
+          "2026-11-01T05:45:00Z",
+          "2026-11-01T07:00:00Z",
+          "2026-11-01T07:15:00Z",
+          "2026-11-01T07:30:00Z",
+          "2026-11-01T07:45:00Z",
+          "2026-11-01T08:00:00Z"
+        ]
+      }
+    },
+    {
+      "id": "spring-forward-gap",
+      "input": {
+        "timeZone": "America/New_York",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 7,
+            "start": "02:00",
+            "end": "02:30"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-03-01T00:00:00.000Z",
+        "windowStart": "2026-03-08T05:00:00.000Z",
+        "windowEnd": "2026-03-09T08:00:00.000Z"
+      },
+      "output": {
+        "slots": []
+      }
+    },
+    {
+      "id": "spring-forward-surround",
+      "input": {
+        "timeZone": "America/New_York",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 7,
+            "start": "01:00",
+            "end": "04:00"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-03-01T00:00:00.000Z",
+        "windowStart": "2026-03-08T05:00:00.000Z",
+        "windowEnd": "2026-03-09T08:00:00.000Z"
+      },
+      "output": {
+        "slots": [
+          "2026-03-08T06:00:00Z",
+          "2026-03-08T06:15:00Z",
+          "2026-03-08T06:30:00Z",
+          "2026-03-08T06:45:00Z",
+          "2026-03-08T07:00:00Z",
+          "2026-03-08T07:15:00Z",
+          "2026-03-08T07:30:00Z"
+        ]
+      }
+    },
+    {
+      "id": "spring-forward-end-outside-hours",
+      "input": {
+        "timeZone": "America/New_York",
+        "durationMinutes": 30,
+        "weeklyAvailability": [
+          {
+            "weekday": 7,
+            "start": "01:30",
+            "end": "02:30"
+          }
+        ],
+        "minNoticeHours": 0,
+        "maxHorizonDays": 60,
+        "busyIntervals": [],
+        "confirmedReservationStarts": [],
+        "now": "2026-03-01T00:00:00.000Z",
+        "windowStart": "2026-03-08T05:00:00.000Z",
+        "windowEnd": "2026-03-09T08:00:00.000Z"
+      },
+      "output": {
+        "slots": []
+      }
+    }
+  ]
+}

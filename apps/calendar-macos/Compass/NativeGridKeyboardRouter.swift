@@ -110,6 +110,10 @@ final class NativeGridKeyboardRouter {
 
     func handleFlagsChanged(_ event: NSEvent) {
         let commandDown = event.modifierFlags.contains(.command)
+        if model.blockPartyKeyboardCaptureActive {
+            model.handleBlockPartyFlagsChanged(commandDown: commandDown)
+            return
+        }
         if model.isEventFormVisible {
             formModHold.handleFlagsChanged(modifierDown: commandDown, isRepeat: event.isARepeat)
             model.formFieldDigitHintsVisible = formModHold.phase == .hintsVisible
@@ -142,6 +146,15 @@ final class NativeGridKeyboardRouter {
         }
 
         guard let keyEvent = KeyEvent(nsEvent: event) else { return false }
+
+        if model.blockPartyKeyboardCaptureActive {
+            if model.handleBlockPartyKeyDown(keyEvent) {
+                return true
+            }
+            if model.blockPartyStore.gameState.phase != .ended {
+                return true
+            }
+        }
 
         if model.dedicationDialogVisible {
             if keyEvent.key == .named(.escape) {

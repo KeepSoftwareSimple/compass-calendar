@@ -14,10 +14,12 @@ public struct NativeCalendarEnvironment: Sendable {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
     public let oauthService: OAuthAuthorizationService
     public let syncConnectionsStore: SyncConnectionsStore
     public let levelsStore: LevelsStore
     public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let shortcutRegistry: ShortcutRegistry
     public let analyticsIdentity: AnalyticsIdentityCoordinator
 
@@ -88,7 +90,7 @@ public struct NativeCalendarEnvironment: Sendable {
                 eventsAPI: EventsAPI(client: apiClient),
                 listCalendars: {
                     let remote = try await apiClient.calendars.list()
-                    return remote.map(CompassCalendar.init(listItem:))
+                    return remote
                 }
             ),
             eventsStore: eventsStore
@@ -98,9 +100,11 @@ public struct NativeCalendarEnvironment: Sendable {
             configStore: configStore,
             analytics: analytics,
             sessionPresenter: sessionPresenter)
+        bookingStore = BookingStore(apiClient: apiClient, analytics: analytics)
         shortcutRegistry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)
         onboardingStore = OnboardingStore(analytics: analytics)
+        blockPartyStore = BlockPartyStore(analytics: analytics)
         self.analyticsIdentity = analyticsIdentity
     }
 }

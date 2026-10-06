@@ -153,49 +153,7 @@ extension NativeCalendarRootModel {
     }
 
     public func saveDraft() async {
-        guard let draft = draftStore.gridDraft else { return }
-        let baseline = baselineEvent(for: draft)
-
-        switch draft.kind {
-        case .create:
-            guard let input = GridEventDraftMapping.createInput(from: draft),
-                let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
-            else { return }
-            await persistDraftOptimistic(savedId: optimistic.id.rawValue, undoCreate: optimistic) {
-                try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
-            }
-        case .edit:
-            guard let eventId = draft.persistedEventId,
-                let input = GridEventDraftMapping.replaceInput(from: draft),
-                let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
-            else { return }
-            await persistDraftOptimistic(savedId: eventId.rawValue) {
-                try await eventsStore.replaceOptimistic(
-                    id: eventId,
-                    input: input,
-                    optimisticEvent: optimistic
-                )
-            }
-        }
-    }
-
-    private func persistDraftOptimistic(
-        savedId: String,
-        undoCreate: Event? = nil,
-        apply: () async throws -> Void
-    ) async {
-        draftStore.commit()
-        formFieldDigitHintsVisible = false
-        if let undoCreate {
-            recordCreateUndo(for: undoCreate)
-        }
-        rebuildPresentation()
-        do {
-            try await apply()
-            loadedEvents = try eventsStore.fetchAllEvents()
-            rebuildPresentation()
-            focusEvent(eventId: savedId)
-        } catch {}
+        await saveDraftWithInvitationGate()
     }
 
     public func requestDiscardDraft() {
