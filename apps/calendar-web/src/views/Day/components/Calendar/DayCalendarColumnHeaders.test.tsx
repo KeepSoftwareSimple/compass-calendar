@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
 import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
 import { PAGE_JUMP_ATTRIBUTE } from "@web/shortcuts/page-jump/page-jump.targets";
@@ -49,29 +50,55 @@ describe("DayCalendarColumnHeaders", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("makes writable calendars focusable jump targets", () => {
+  it("makes every displayed calendar a focusable jump target", () => {
     render(
       <DayCalendarColumnHeaders
         calendars={[personal, holidays]}
-        writableCalendarIds={new Set([personal.id])}
+        pageJumpDigitByCalendarId={
+          new Map([
+            [personal.id, "2"],
+            [holidays.id, "3"],
+          ])
+        }
       />,
     );
 
-    const column = screen.getByRole("button", {
-      name: "Focus Personal column",
-    });
-    expect(column).toHaveAttribute(
-      PAGE_JUMP_ATTRIBUTE,
-      `day-column:${personal.id}`,
+    for (const calendar of [personal, holidays]) {
+      const column = screen.getByRole("button", {
+        name: `Focus ${calendar.name} column`,
+      });
+      expect(column).toHaveAttribute(
+        PAGE_JUMP_ATTRIBUTE,
+        `day-column:${calendar.id}`,
+      );
+      expect(column).toHaveAttribute(CALENDAR_COLUMN_ID_ATTRIBUTE, calendar.id);
+      expect(column).toHaveClass("w-full");
+    }
+  });
+
+  it("shows the full calendar name in a tooltip on hover", async () => {
+    const user = userEvent.setup();
+    render(
+      <DayCalendarColumnHeaders
+        calendars={[
+          createMockCalendar({
+            name: "Holidays in United States",
+          }),
+        ]}
+      />,
     );
-    expect(column).toHaveAttribute(CALENDAR_COLUMN_ID_ATTRIBUTE, personal.id);
-    expect(column).toHaveClass("w-full");
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "Focus Holidays in United States column",
+      }),
+    );
+
     expect(
-      screen.queryByRole("button", { name: "Focus Holidays column" }),
-    ).toBeNull();
-    expect(screen.getByRole("region", { name: "Calendars" })).toHaveTextContent(
-      "Holidays",
-    );
+      await screen.findByRole("tooltip", {
+        name: "Holidays in United States",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("reports focus changes for full-column highlight", () => {
@@ -80,7 +107,6 @@ describe("DayCalendarColumnHeaders", () => {
       <DayCalendarColumnHeaders
         calendars={[personal]}
         onColumnFocusChange={onColumnFocusChange}
-        writableCalendarIds={new Set([personal.id])}
       />,
     );
 

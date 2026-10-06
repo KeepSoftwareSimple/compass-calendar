@@ -143,23 +143,27 @@ describe("buildDayPageJumpTargets", () => {
     expect(targets.at(-1)).toMatchObject({ id: "calendars", digit: "5" });
   });
 
-  it("omits calendars that would overflow the reserved sidebar slots", () => {
+  it("keeps left-to-right column digits and drops sidebar targets when columns overflow", () => {
     const sidebarCount = CALENDAR_PAGE_JUMP_TARGETS.length - 1;
-    const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarCount;
-    const calendars = Array.from({ length: maxColumns + 3 }, (_, index) => ({
-      id: `cal-${index}`,
-      name: `Calendar ${index}`,
-    }));
+    const calendars = Array.from(
+      { length: PICK_KEY_LABELS.length - 1 + 2 },
+      (_, index) => ({
+        id: `cal-${index}`,
+        name: `Calendar ${index}`,
+      }),
+    );
     const targets = buildDayPageJumpTargets(calendars);
 
     expect(targets).toHaveLength(PICK_KEY_LABELS.length);
-    expect(targets.at(-1)).toMatchObject({
-      id: "calendars",
-      digit: PICK_KEY_LABELS.at(-1),
-    });
+    expect(targets[0]).toMatchObject({ id: "view-select", digit: "1" });
     expect(
       targets.filter((target) => target.id.startsWith("day-column:")),
-    ).toHaveLength(maxColumns);
+    ).toHaveLength(PICK_KEY_LABELS.length - 1);
+    expect(targets.some((target) => target.id === "month-picker")).toBe(false);
+    expect(targets.at(-1)).toMatchObject({
+      id: dayColumnJumpId(`cal-${PICK_KEY_LABELS.length - 2}`),
+    });
+    expect(sidebarCount).toBeGreaterThan(0);
   });
 
   it("replaces the list-level calendars slot with one target per account", () => {
@@ -190,26 +194,30 @@ describe("buildDayPageJumpTargets", () => {
     ]);
   });
 
-  it("omits extra columns so per-account sidebar slots still fit", () => {
+  it("numbers every displayed column before sidebar accounts when space allows", () => {
     const accounts = ["a@x.com", "b@x.com", "c@x.com"].map((email) =>
       account(email),
     );
-    const sidebarCount = buildCalendarPageJumpTargets(accounts).length - 1;
-    const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarCount;
-    const calendars = Array.from({ length: maxColumns + 3 }, (_, index) => ({
-      id: `cal-${index}`,
-      name: `Calendar ${index}`,
-    }));
+    const calendars = [{ id: "cal-work", name: "Work" }];
     const targets = buildDayPageJumpTargets(calendars, accounts);
 
-    expect(targets).toHaveLength(PICK_KEY_LABELS.length);
+    expect(targets.map((target) => target.digit)).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+    ]);
+    expect(targets[1]).toMatchObject({
+      id: dayColumnJumpId("cal-work"),
+      digit: "2",
+    });
     expect(targets.at(-1)).toMatchObject({
       id: calendarAccountJumpId(accountKey(account("c@x.com"))),
-      digit: PICK_KEY_LABELS.at(-1),
+      digit: "7",
     });
-    expect(
-      targets.filter((target) => target.id.startsWith("day-column:")),
-    ).toHaveLength(maxColumns);
   });
 });
 
