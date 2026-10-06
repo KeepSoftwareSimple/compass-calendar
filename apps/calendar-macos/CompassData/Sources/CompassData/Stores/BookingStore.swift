@@ -18,6 +18,7 @@ public final class BookingStore {
     public var isDiscardConfirmationPresented = false
 
     private var baselineInput: AdminPutBookingPageInput?
+    private var optedOutBlockingCalendarIds: Set<String> = []
     private let bookingAPI: BookingAPI
     private let analytics: ProductAnalyticsClient
     private var authenticated = false
@@ -116,6 +117,14 @@ public final class BookingStore {
         minNoticeText = String(seeded.minNoticeHours)
         horizonText = String(seeded.maxHorizonDays)
         baselineInput = seeded
+        let eligible = availability.map(\.id)
+        optedOutBlockingCalendarIds = Set(
+            MergeBlockingCalendars.nextOptedOutBlockingCalendarIds(
+                previousOptedOut: [],
+                eligible: eligible,
+                submitted: seeded.blockingCalendarIds
+            )
+        )
         if AdminBookingPageLogic.isUnconfiguredPage(serverPage) {
             setupStep = setupStep ?? .address
         }
@@ -266,6 +275,42 @@ public final class BookingStore {
             analytics.track(.bookingSetupSaveFailed, properties: [:])
             return false
         }
+    }
+
+    public func syncDiscoveredBlockingCalendars(availabilityCalendars: [CompassCalendar]) {
+        guard setupStep == nil else { return }
+        let discovered = availabilityCalendars.map(\.id)
+        guard let merged = MergeBlockingCalendars.withDiscoveredBlockingCalendarIds(
+            blockingCalendarIds: form.blockingCalendarIds,
+            optedOut: Array(optedOutBlockingCalendarIds),
+            discovered: discovered
+        ) else { return }
+        form.blockingCalendarIds = merged
+        if var baselineInput {
+            if let baselineMerged = MergeBlockingCalendars.withDiscoveredBlockingCalendarIds(
+                blockingCalendarIds: baselineInput.blockingCalendarIds,
+                optedOut: Array(optedOutBlockingCalendarIds),
+                discovered: discovered
+            ) {
+                baselineInput.blockingCalendarIds = baselineMerged
+                self.baselineInput = baselineInput
+            }
+        }
+    }
+
+    public func toggleBlockingCalendar(calendarId: String, checked: Bool) {
+        if checked {
+            optedOutBlockingCalendarIds.remove(calendarId)
+        } else {
+            optedOutBlockingCalendarIds.insert(calendarId)
+        }
+        var ids = Set(form.blockingCalendarIds)
+        if checked {
+            ids.insert(calendarId)
+        } else {
+            ids.remove(calendarId)
+        }
+        form.blockingCalendarIds = Array(ids)
     }
 
     public func previewSlotStarts(now: Date = Date()) -> [String] {
