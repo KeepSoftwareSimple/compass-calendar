@@ -180,10 +180,15 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
-        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key, char == "z" {
-            if case .create = model.undoStore.peekUndo() {
+        if keyEvent.modifiers.contains(.command),
+            !keyEvent.modifiers.contains(.shift),
+            case .character(let char) = keyEvent.key,
+            char == "z"
+        {
+            switch model.undoStore.peekUndo() {
+            case .create:
                 model.undoKeyboardPlacedCreateNow()
-            } else {
+            default:
                 Task { await model.undoLastChangeAndWait() }
             }
             return true
