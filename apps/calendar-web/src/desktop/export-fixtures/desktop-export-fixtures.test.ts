@@ -66,6 +66,16 @@ describe("desktop export fixtures", () => {
     expect(buildHtmlFragmentFixtures().cases.length).toBeGreaterThan(5);
   });
 
+  it("builds block party task vectors", async () => {
+    const { buildBlockPartyFixtures } = await import(
+      "@web/desktop/export-fixtures/block-party.fixtures"
+    );
+    const fixtures = buildBlockPartyFixtures();
+    expect(fixtures.runTasks).toHaveLength(11);
+    expect(fixtures.cases.length).toBeGreaterThan(11);
+    expect(fixtures.cases.some((c) => c.id === "winning-script")).toBe(true);
+  });
+
   it("builds demo seed snapshot", async () => {
     await bootExportFixtures();
     const { buildDemoSeedFixtures, DEMO_EXPORT_CALENDAR_ID } = await import(

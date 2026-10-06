@@ -1,4 +1,5 @@
 import { DESKTOP_WEB_FIXTURE_FILES } from "@core/desktop/desktop-web-fixture-files";
+import { emitBlockPartyFixturesJson } from "@web/desktop/export-fixtures/block-party.fixtures";
 import { emitDemoSeedFixturesJson } from "@web/desktop/export-fixtures/demo-seed.fixtures";
 import { emitGoToDateFixturesJson } from "@web/desktop/export-fixtures/go-to-date.fixtures";
 import { emitGridLayoutSnapshotFixturesJson } from "@web/desktop/export-fixtures/grid-layout.snapshot.fixtures";
@@ -27,6 +28,7 @@ const emitters: Record<
   "demo-seed.json": emitDemoSeedFixturesJson,
   "grid-layout.snapshots.json": emitGridLayoutSnapshotFixturesJson,
   "life-grid.snapshots.json": emitLifeGridSnapshotFixturesJson,
+  "block-party.tasks.json": emitBlockPartyFixturesJson,
 };
 
 const files: Record<string, string> = Object.fromEntries(

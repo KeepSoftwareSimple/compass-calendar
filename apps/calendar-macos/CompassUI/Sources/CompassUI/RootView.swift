@@ -65,6 +65,9 @@ public struct RootView: View {
             OnboardingOverlay(model: model)
         }
         .overlay {
+            BlockPartyOverlay(model: model)
+        }
+        .overlay {
             if model.authStore.authenticated, model.billingStore.gateStatus != nil {
                 BillingGateOverlay(billingStore: model.billingStore)
             }
@@ -101,6 +104,21 @@ public struct RootView: View {
                 isPresented: model.pendingDiscardDraftConfirmation,
                 onCancel: { model.cancelDiscardDraftConfirmation() },
                 onDiscard: { model.discardDraftConfirmed() }
+            )
+        }
+        .overlay {
+            SendInvitationsDialogView(
+                prompt: model.invitationPrompt,
+                onCancel: { model.cancelInvitationPrompt() },
+                onDontSend: { model.confirmInvitationDontSend() },
+                onSend: { model.confirmInvitationSend() }
+            )
+        }
+        .overlay {
+            RsvpScopeDialogView(
+                isPresented: model.pendingRsvpChoice != nil,
+                onCancel: { model.cancelRsvpScopeDialog() },
+                onConfirm: { scope in Task { await model.confirmRsvpScope(scope) } }
             )
         }
         .overlay {

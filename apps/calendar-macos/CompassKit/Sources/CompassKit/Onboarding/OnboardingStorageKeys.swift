@@ -9,4 +9,10 @@ public enum OnboardingStorageKeys {
         "compass.onboarding.has-dismissed-connect-calendar-prompt"
     public static let pointerHintDismissedPermanently =
         "compass.pointer-hint.dismissed-permanently"
+    public static let hasSeenShortcutShowcase =
+        "compass.onboarding.has-seen-shortcut-showcase"
+    public static let shortcutShowcaseOutcome =
+        "compass.onboarding.shortcut-showcase-outcome"
+    public static let shortcutShowcaseStep =
+        "compass.onboarding.shortcut-showcase-step"
 }

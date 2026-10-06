@@ -16,6 +16,7 @@ public final class NativeCalendarRootModel {
     public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
     public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let lifeStore: LifeStore
     public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
@@ -41,6 +42,13 @@ public final class NativeCalendarRootModel {
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
     public var pendingDiscardDraftConfirmation = false
+    public var invitationPrompt: EventInvitationPromptState?
+    public var pendingRsvpChoice: PendingRsvpChoice?
+    public var attendeeSuggestions: [DraftAttendeeInput] = []
+    public var attendeeSuggestionQuery = ""
+    var attendeeSuggestionTask: Task<Void, Never>?
+    var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
+    var pendingInvitationDraft: GridEventDraft?
     public var eventFormFocusedField: EventFormField = .title
     public var formFieldDigitHintsVisible = false
 
@@ -61,6 +69,7 @@ public final class NativeCalendarRootModel {
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
     var keyboardCreateSettleGeneration = 0
+    var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -118,6 +127,7 @@ public final class NativeCalendarRootModel {
         draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
         onboardingStore = environment.onboardingStore
+        blockPartyStore = environment.blockPartyStore
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -197,7 +207,7 @@ public final class NativeCalendarRootModel {
             isFormOpen: draftStore.status.isFormOpen,
             isDone: onboardingStore.isFirstEventDone,
             storageAvailable: true,
-            showcaseActive: false)
+            showcaseActive: blockPartyStore.isActive)
         return OnboardingGating.ActiveSurfaceInput(
             gateStatus: gateStatus,
             isCheckoutCelebrating: false,
@@ -206,7 +216,7 @@ public final class NativeCalendarRootModel {
             isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
             isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
             guestMeetingSetupActive: false,
-            shortcutShowcaseActive: false,
+            shortcutShowcaseActive: blockPartyStore.isActive,
             connectCalendarEligible: connectEligible,
             firstEventEligible: firstEventEligible,
             pointerHintVisible: pointerHintStore.isVisible,
@@ -878,7 +888,7 @@ public final class NativeCalendarRootModel {
         }
         do {
             let remote = try await environment.apiClient.calendars.list()
-            let mapped = remote.map(CompassCalendar.init(listItem:))
+            let mapped = remote
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
             rebuildPresentation()
@@ -888,7 +898,7 @@ public final class NativeCalendarRootModel {
     private func bootstrapAnonymousCalendarsIfNeeded() async {
         do {
             if let demoPresentation {
-                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                let calendar = demoPresentation.calendarListItem()
                 try calendarRepository.upsert(calendars: [calendar])
             } else {
                 let sentinel = try LocalCalendarSentinel.calendarId(

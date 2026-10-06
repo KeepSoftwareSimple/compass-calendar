@@ -113,4 +113,9 @@ describe("swift contract emitter", () => {
     expect(output).not.toContain("public struct Calendar: Codable");
     expect(output).not.toContain("public struct TimeZone: RawRepresentable");
   });
+
+  it("uses manifest array element types instead of deduped nested structs", () => {
+    const output = emitContractsSwiftFile();
+    expect(output).toContain("public let suggestions: [ContactSuggestion]");
+  });
 });

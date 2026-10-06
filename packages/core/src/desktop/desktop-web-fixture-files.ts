@@ -6,4 +6,5 @@ export const DESKTOP_WEB_FIXTURE_FILES = [
   "demo-seed.json",
   "grid-layout.snapshots.json",
   "life-grid.snapshots.json",
+  "block-party.tasks.json",
 ] as const;

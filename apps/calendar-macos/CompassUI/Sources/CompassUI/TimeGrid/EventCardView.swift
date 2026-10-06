@@ -232,7 +232,7 @@ private final class FocusedEventAccessibilityAnchorView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         setAccessibilityElement(true)
-        setAccessibilityRole(.button)
+        setAccessibilityRole(.staticText)
     }
 
     @available(*, unavailable)

@@ -173,6 +173,21 @@ public enum CommandPaletteCatalog {
     ) -> [CommandPaletteSection] {
         var items: [CommandPaletteItem] = [
             CommandPaletteItem(
+                id: "show-welcome-guide",
+                sectionId: "advanced",
+                sectionHeading: "More",
+                label: "Show welcome guide",
+                keywords: ["onboarding", "tour", "intro", "help", "faq"]),
+            CommandPaletteItem(
+                id: "practice-shortcuts",
+                sectionId: "advanced",
+                sectionHeading: "More",
+                label: "Play Block Party (practice shortcuts)",
+                keywords: [
+                    "onboarding", "tour", "intro", "help", "tutorial", "coach", "sandbox",
+                    "practice", "shortcuts", "game", "play", "block party",
+                ]),
+            CommandPaletteItem(
                 id: "open-settings",
                 sectionId: "advanced",
                 sectionHeading: "More",

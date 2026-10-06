@@ -224,22 +224,10 @@ public struct Attendee: Codable, Hashable, Sendable {
 }
 
 public struct AvailabilityResponse: Codable, Hashable, Sendable {
-    public let busyPeriods: [AvailabilityResponseBusyPeriods]
+    public let busyPeriods: [BusyPeriod]
 
-    public init(busyPeriods: [AvailabilityResponseBusyPeriods]) {
+    public init(busyPeriods: [BusyPeriod]) {
         self.busyPeriods = busyPeriods
-    }
-}
-
-public struct AvailabilityResponseBusyPeriods: Codable, Hashable, Sendable {
-    public let calendarId: CalendarId
-    public let end: DateTime
-    public let start: DateTime
-
-    public init(calendarId: CalendarId, end: DateTime, start: DateTime) {
-        self.calendarId = calendarId
-        self.end = end
-        self.start = start
     }
 }
 
@@ -454,46 +442,10 @@ public struct BusyPeriod: Codable, Hashable, Sendable {
 }
 
 public struct CalendarListResponse: Codable, Hashable, Sendable {
-    public let calendars: [CalendarListResponseCalendars]
+    public let calendars: [CompassCalendar]
 
-    public init(calendars: [CalendarListResponseCalendars]) {
+    public init(calendars: [CompassCalendar]) {
         self.calendars = calendars
-    }
-}
-
-public struct CalendarListResponseCalendars: Codable, Hashable, Sendable {
-    public let access: AccessEnum
-    public let accountEmail: String?
-    public let backgroundColor: String
-    public let capabilities: CompassCalendarCapabilities
-    public let conference: ConferenceEnum?
-    public let createsGoogleMeet: Bool?
-    public let description: String
-    public let foregroundColor: String
-    public let id: String
-    public let isActive: Bool
-    public let isPrimary: Bool
-    public let isVisible: Bool
-    public let name: String
-    public let provider: String
-    public let timeZone: IANATimeZone?
-
-    public init(access: AccessEnum, accountEmail: String? = nil, backgroundColor: String, capabilities: CompassCalendarCapabilities, conference: ConferenceEnum? = nil, createsGoogleMeet: Bool? = nil, description: String, foregroundColor: String, id: String, isActive: Bool, isPrimary: Bool, isVisible: Bool, name: String, provider: String, timeZone: IANATimeZone?) {
-        self.access = access
-        self.accountEmail = accountEmail
-        self.backgroundColor = backgroundColor
-        self.capabilities = capabilities
-        self.conference = conference
-        self.createsGoogleMeet = createsGoogleMeet
-        self.description = description
-        self.foregroundColor = foregroundColor
-        self.id = id
-        self.isActive = isActive
-        self.isPrimary = isPrimary
-        self.isVisible = isVisible
-        self.name = name
-        self.provider = provider
-        self.timeZone = timeZone
     }
 }
 
@@ -741,9 +693,9 @@ public struct ContactSuggestion: Codable, Hashable, Sendable {
 }
 
 public struct ContactSuggestionsResponse: Codable, Hashable, Sendable {
-    public let suggestions: [EventContentDetailsOrganizer]
+    public let suggestions: [ContactSuggestion]
 
-    public init(suggestions: [EventContentDetailsOrganizer]) {
+    public init(suggestions: [ContactSuggestion]) {
         self.suggestions = suggestions
     }
 }
@@ -984,9 +936,9 @@ public struct EventContent_DetailsPayload: Codable, Hashable, Sendable {
 }
 
 public struct EventListResponse: Codable, Hashable, Sendable {
-    public let events: [EventResponseEvent]
+    public let events: [Event]
 
-    public init(events: [EventResponseEvent]) {
+    public init(events: [Event]) {
         self.events = events
     }
 }
