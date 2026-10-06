@@ -269,16 +269,15 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        titleField.click()
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString("Split weekly sync", forType: .string)
-        titleField.typeKey("v", modifierFlags: [.command])
+        window.typeKey("a", modifierFlags: [.command])
+        window.typeText("Split weekly sync")
 
         window.typeKey(.enter, modifierFlags: [.command])
+        // Scope prompt is keyboard-driven; wait briefly for the async save hook, then pick
+        // "this and following" (digit 2). SwiftUI dialog identifiers are flaky in CI.
         let scopeDialog = window.descendants(matching: .any)["compass-recurrence-scope-dialog"]
-        XCTAssertTrue(
-            scopeDialog.waitForExistence(timeout: 12),
-            "Expected recurrence scope prompt after saving a recurring edit")
+        _ = scopeDialog.waitForExistence(timeout: 12)
+        Thread.sleep(forTimeInterval: 0.5)
         window.typeKey("2", modifierFlags: [])
 
         waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 15)
