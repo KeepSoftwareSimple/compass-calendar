@@ -102,7 +102,7 @@ public enum BookingBlockerLogic {
                 message: BookingBookabilityCopy.line(BookingBookabilityCopy.billingStatus)
             )
         case .calendar:
-            let name = bookingCalendarName(calendars, calendarId: reason.calendarId)
+            let name = bookingCalendarName(calendars, calendarId: reason.calendarId?.rawValue)
             return BookingBlocker(
                 action: .info,
                 message: BookingBookabilityCopy.line(
