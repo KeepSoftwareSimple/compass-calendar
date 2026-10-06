@@ -26,6 +26,7 @@ import {
   eventFocusColor,
   eventFocusOutlineClass,
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
@@ -179,14 +180,11 @@ const TimedEventCardBase = (
     ? eventEdgeFocusShadow(focusedEdge, "vertical", focusColorCss)
     : undefined;
 
-  const eventBoxShadow =
-    [
-      isSelected ? GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW : null,
-      boxShadow,
-      edgeFocusShadow,
-    ]
-      .filter(Boolean)
-      .join(", ") || undefined;
+  const eventBoxShadow = joinGridEventBoxShadow(
+    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    boxShadow,
+    edgeFocusShadow,
+  );
 
   // The fill is neutral and its lightness swings widely across states, so the
   // text color is chosen per-state (whichever of dark/light reads better

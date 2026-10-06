@@ -181,44 +181,41 @@ extension NativeCalendarRootModel {
     public func saveDraft() async {
         guard let draft = draftStore.gridDraft else { return }
         let baseline = baselineEvent(for: draft)
-        let savedId: String
 
         switch draft.kind {
         case .create:
             guard let input = GridEventDraftMapping.createInput(from: draft),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
-            savedId = optimistic.id.rawValue
-            draftStore.commit()
-            formFieldDigitHintsVisible = false
-            rebuildPresentation()
             recordCreateUndo(for: optimistic)
-            do {
+            await persistDraftOptimistic(savedId: optimistic.id.rawValue) {
                 try await eventsStore.createOptimistic(input: input, optimisticEvent: optimistic)
-                loadedEvents = try eventsStore.fetchAllEvents()
-                rebuildPresentation()
-                focusEvent(eventId: savedId)
-            } catch {}
+            }
         case .edit:
             guard let eventId = draft.persistedEventId,
                 let input = GridEventDraftMapping.replaceInput(from: draft),
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: draft, baseline: baseline)
             else { return }
-            savedId = eventId.rawValue
-            draftStore.commit()
-            formFieldDigitHintsVisible = false
-            rebuildPresentation()
-            do {
+            await persistDraftOptimistic(savedId: eventId.rawValue) {
                 try await eventsStore.replaceOptimistic(
                     id: eventId,
                     input: input,
                     optimisticEvent: optimistic
                 )
-                loadedEvents = try eventsStore.fetchAllEvents()
-                rebuildPresentation()
-                focusEvent(eventId: savedId)
-            } catch {}
+            }
         }
+    }
+
+    private func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {
+        draftStore.commit()
+        formFieldDigitHintsVisible = false
+        rebuildPresentation()
+        do {
+            try await apply()
+            loadedEvents = try eventsStore.fetchAllEvents()
+            rebuildPresentation()
+            focusEvent(eventId: savedId)
+        } catch {}
     }
 
     public func requestDiscardDraft() {

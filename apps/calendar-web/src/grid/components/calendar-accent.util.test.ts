@@ -6,6 +6,7 @@ import {
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  joinGridEventBoxShadow,
   mergedCalendarStops,
 } from "./calendar-accent.util";
 import { describe, expect, it } from "bun:test";
@@ -173,5 +174,14 @@ describe("eventEdgeFocusShadow", () => {
     expect(eventEdgeFocusShadow("endDate", "horizontal", "#3b82f6")).toBe(
       "3px 0 0 0 #3b82f6",
     );
+  });
+});
+
+describe("joinGridEventBoxShadow", () => {
+  it("joins present shadows and drops empty parts", () => {
+    expect(
+      joinGridEventBoxShadow("0 0 0 1px red", undefined, "0 3px 0 0 blue"),
+    ).toBe("0 0 0 1px red, 0 3px 0 0 blue");
+    expect(joinGridEventBoxShadow(false, null, undefined)).toBeUndefined();
   });
 });

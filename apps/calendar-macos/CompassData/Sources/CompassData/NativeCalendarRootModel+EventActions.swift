@@ -249,10 +249,17 @@ extension NativeCalendarRootModel {
     private func replayUndoEntry(_ entry: UndoHistoryEntry) async {
         switch entry {
         case .create(let event):
-            let scope: EventDeleteScope = if case .series = event.recurrence { .all } else { .this }
-            await deleteEvent(event, scope: scope)
+            keyboardCreateSettleGeneration += 1
+            try? eventsStore.removePersistedEvent(id: event.id)
             loadedEvents.removeAll { $0.id == event.id }
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
+            if focusStore.focusedEventId == event.id {
+                focusStore.setFocused(eventId: nil, eventType: nil)
+            }
             rebuildPresentation()
+            await eventsStore.settleStagedDelete(id: event.id, scope: .this)
         case .delete(let event):
             await commitDuplicate(from: event, recordUndo: false)
         case .edit(_, let before, _):
