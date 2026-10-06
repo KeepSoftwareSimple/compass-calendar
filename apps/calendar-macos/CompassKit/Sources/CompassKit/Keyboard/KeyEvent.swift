@@ -37,7 +37,11 @@ public struct KeyEvent: Hashable, Sendable {
         case (.digitRange(let lhs), .digitRange(let rhs)):
             return lhs == rhs
         case (.punctuation(let lhs), .punctuation(let rhs)):
-            return lhs == rhs
+            if lhs == rhs { return true }
+            if rhs == "?", lhs == "/", modifiers.contains(.shift), chord.modifiers.isEmpty {
+                return true
+            }
+            return false
         case (.typedTimeExample, .typedTimeExample), (.arrowKeysLegend, .arrowKeysLegend):
             return true
         default:
