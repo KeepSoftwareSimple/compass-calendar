@@ -42,4 +42,9 @@ public enum UITestLaunchPolicy {
     public static var stickyQuickAddPanel: Bool {
         ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_STICKY_QUICK_ADD_PANEL")
     }
+
+    /// Confirms recurring save scope in-process (keyboard scope digits are flaky in CI).
+    public static var autoConfirmRecurrenceScopeOnSave: Bool {
+        ProcessInfo.processInfo.arguments.contains("-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE")
+    }
 }

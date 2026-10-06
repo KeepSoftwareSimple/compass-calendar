@@ -261,6 +261,7 @@ final class NativeLaunchTests: XCTestCase {
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-weekly-sync|2026-06-12T14:00:00.000Z",
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
             "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
+            "-COMPASS_UI_TEST_AUTO_CONFIRM_RECURRENCE_SCOPE_SAVE",
         ]
         app.launch()
 
@@ -274,12 +275,6 @@ final class NativeLaunchTests: XCTestCase {
         window.typeText("Split weekly sync")
 
         window.typeKey(.enter, modifierFlags: [.command])
-        // Scope prompt is keyboard-driven (digit 1/2/3). SwiftUI dialog identifiers are
-        // flaky in CI, so wait for the AppKit probe when present, then confirm "this event".
-        let scopeDialog = window.descendants(matching: .any)["compass-recurrence-scope-dialog"]
-        _ = scopeDialog.waitForExistence(timeout: 12)
-        Thread.sleep(forTimeInterval: 0.5)
-        window.typeKey("1", modifierFlags: [])
 
         waitForFocusedGridEvent(title: "Split weekly sync", in: window, timeout: 15)
         XCTAssertTrue(

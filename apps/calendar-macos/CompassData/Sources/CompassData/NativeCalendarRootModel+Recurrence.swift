@@ -69,6 +69,9 @@ extension NativeCalendarRootModel {
         case .apply(let scope):
             if shouldAskRecurrenceScopeOnSave(draft: draft, baseline: baseline) {
                 pendingRecurrenceScopePrompt = .save
+                if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+                    await confirmRecurrenceScope(.this)
+                }
                 return
             }
             await commitSaveDraft(scope: scope)
