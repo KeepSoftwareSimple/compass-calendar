@@ -569,11 +569,13 @@ public final class NativeCalendarRootModel {
     }
 
     private func applyFocusPresentation() {
+        var scenario = timeGridState.scenario
+        scenario.draftOverlay = draftOverlayForPresentation()
         let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         timeGridState = TimeGridState(
             layoutMode: timeGridState.layoutMode,
             referenceNow: timeGridState.referenceNow,
-            scenario: timeGridState.scenario,
+            scenario: scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
             eventJumpHints: eventJumpHintLabels,
