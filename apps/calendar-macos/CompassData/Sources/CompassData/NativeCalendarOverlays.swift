@@ -12,11 +12,6 @@ extension NativeCalendarRootModel {
 
     func paletteSections() -> [CommandPaletteSection] {
         let trimmed = commandPaletteStore.query
-        let handlers = CommandPaletteHandlers { [weak self] date in
-            Task { @MainActor in
-                self?.selectGoToDateFromPalette(date)
-            }
-        }
         let localHits = paletteEventHits(query: trimmed)
         let mergedHits = mergePaletteHits(local: localHits, remote: paletteEventSearchHits)
         return CommandPaletteCatalog.sections(
@@ -26,8 +21,7 @@ extension NativeCalendarRootModel {
             isSignedIn: isSignedIn,
             isTrialing: billingStore.status?.subscriptionStatus == .trialing,
             eventHits: mergedHits,
-            recentIds: commandPaletteStore.recentCommandIds,
-            handlers: handlers)
+            recentIds: commandPaletteStore.recentCommandIds)
     }
 
     public func filteredPaletteSections() -> [CommandPaletteSection] {
@@ -187,14 +181,7 @@ extension NativeCalendarRootModel {
                     query: query,
                     now: referenceNow,
                     limit: EventTitleSearch.paletteLimit)
-                    .compactMap { event -> CommandPaletteEventHit? in
-                        let title = EventTitleSearch.eventTitle(event)
-                        guard !title.isEmpty else { return nil }
-                        return CommandPaletteEventHit(
-                            eventId: event.id.rawValue,
-                            label: title,
-                            subtitle: paletteEventSubtitle(for: event))
-                    }
+                    .compactMap(paletteHit(from:))
                 await MainActor.run {
                     self.setPaletteEventSearchHits(mergePaletteHits(local: local, remote: remoteHits))
                 }
@@ -225,14 +212,16 @@ extension NativeCalendarRootModel {
             query: query,
             now: referenceNow,
             limit: EventTitleSearch.paletteLimit)
-        return local.compactMap { event in
-            let title = EventTitleSearch.eventTitle(event)
-            guard !title.isEmpty else { return nil }
-            return CommandPaletteEventHit(
-                eventId: event.id.rawValue,
-                label: title,
-                subtitle: paletteEventSubtitle(for: event))
-        }
+        return local.compactMap(paletteHit(from:))
+    }
+
+    private func paletteHit(from event: Event) -> CommandPaletteEventHit? {
+        let title = EventTitleSearch.eventTitle(event)
+        guard !title.isEmpty else { return nil }
+        return CommandPaletteEventHit(
+            eventId: event.id.rawValue,
+            label: title,
+            subtitle: paletteEventSubtitle(for: event))
     }
 
     private func paletteEventSubtitle(for event: Event) -> String {

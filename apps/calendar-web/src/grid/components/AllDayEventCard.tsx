@@ -23,6 +23,7 @@ import {
   eventFocusColor,
   eventFocusOutlineClass,
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
 import {
   gridEventCardOpacity,
@@ -104,12 +105,10 @@ const AllDayEventCardBase = (
   const edgeFocusShadow = focusedEdge
     ? eventEdgeFocusShadow(focusedEdge, "horizontal", focusColorCss)
     : undefined;
-  const sidebarEditingShadow = isSelected
-    ? GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW
-    : undefined;
-  const eventBoxShadow =
-    [sidebarEditingShadow, edgeFocusShadow].filter(Boolean).join(", ") ||
-    undefined;
+  const eventBoxShadow = joinGridEventBoxShadow(
+    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    edgeFocusShadow,
+  );
 
   const eventStyle = {
     "--event-bg": bgColor,

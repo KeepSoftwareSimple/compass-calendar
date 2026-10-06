@@ -73,26 +73,16 @@ public enum UserDateParsing {
     }
 
     public static func goToDatePaletteLabel(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = EffectiveTimeZone.calendar
-        formatter.timeZone = EffectiveTimeZone.timeZone
-        formatter.dateFormat = "EEE, MMM d, yyyy"
-        return "Go to \(formatter.string(from: date))"
+        "Go to \(effectiveTimeZoneFormatter(dateFormat: "EEE, MMM d, yyyy").string(from: date))"
     }
 
     public static func goToDateAnnouncement(_ date: Date, view: GoToDateViewKind) -> String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = EffectiveTimeZone.calendar
-        formatter.timeZone = EffectiveTimeZone.timeZone
+        let formatted = effectiveTimeZoneFormatter(dateFormat: "EEEE, MMMM d, yyyy").string(from: date)
         switch view {
         case .day:
-            formatter.dateFormat = "EEEE, MMMM d, yyyy"
-            return "Showing \(formatter.string(from: date))"
+            return "Showing \(formatted)"
         case .week, .life:
-            formatter.dateFormat = "EEEE, MMMM d, yyyy"
-            return "Showing week of \(formatter.string(from: date))"
+            return "Showing week of \(formatted)"
         }
     }
 
@@ -100,6 +90,15 @@ public enum UserDateParsing {
         case day
         case week
         case life
+    }
+
+    private static func effectiveTimeZoneFormatter(dateFormat: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = EffectiveTimeZone.calendar
+        formatter.timeZone = EffectiveTimeZone.timeZone
+        formatter.dateFormat = dateFormat
+        return formatter
     }
 
     private static func firstMatch(_ text: String, pattern: String) -> [String]? {
