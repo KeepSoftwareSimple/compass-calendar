@@ -34,7 +34,7 @@ struct EnableContactSuggestionsNudgeView: View {
 
 enum ContactSuggestionsNudgeGate {
     private static let dismissedKey = "compass.contactsNudge.dismissed"
-    private static var shownThisSession = false
+    private nonisolated(unsafe) static var shownThisSession = false
 
     static var shouldShow: Bool {
         !shownThisSession && !UserDefaults.standard.bool(forKey: dismissedKey)
