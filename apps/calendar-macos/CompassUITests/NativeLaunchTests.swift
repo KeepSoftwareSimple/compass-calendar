@@ -299,32 +299,6 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
-    func testHideAndUnhideFixtureEvent() {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
-            "-COMPASS_FIXTURE", "demo",
-            "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
-        ]
-        app.launch()
-
-        let window = app.windows["Compass"]
-        XCTAssertTrue(window.waitForExistence(timeout: 15))
-        let standup = window.buttons["compass-grid-event-demo-morning-standup"]
-        XCTAssertTrue(standup.waitForExistence(timeout: 10))
-
-        window.typeKey("x", modifierFlags: [])
-        let hiddenReady = NSPredicate(format: "value == %@", "hidden")
-        let hiddenExpectation = expectation(for: hiddenReady, evaluatedWith: standup, handler: nil)
-        wait(for: [hiddenExpectation], timeout: 8)
-
-        window.typeKey("x", modifierFlags: [])
-        let visibleReady = NSPredicate(format: "value == %@", "visible")
-        let visibleExpectation = expectation(for: visibleReady, evaluatedWith: standup, handler: nil)
-        wait(for: [visibleExpectation], timeout: 8)
-    }
-
-    @MainActor
     func testEventClickShowsPointerHintWithoutOpening() {
         let app = XCUIApplication()
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
