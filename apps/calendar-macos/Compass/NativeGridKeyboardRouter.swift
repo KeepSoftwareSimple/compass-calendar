@@ -280,6 +280,15 @@ final class NativeGridKeyboardRouter {
         guard UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus else { return false }
         if keyEvent.modifiers == [.command],
             case .character(let char) = keyEvent.key,
+            char.lowercased() == "v",
+            let pasted = NSPasteboard.general.string(forType: .string)
+        {
+            model.updateDraftFromForm(title: pasted)
+            EventFormAccessibilityProbe.syncTitle(pasted)
+            return true
+        }
+        if keyEvent.modifiers == [.command],
+            case .character(let char) = keyEvent.key,
             char.lowercased() == "a"
         {
             model.updateDraftFromForm(title: "")

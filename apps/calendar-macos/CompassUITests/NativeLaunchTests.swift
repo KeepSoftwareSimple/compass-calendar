@@ -303,7 +303,6 @@ final class NativeLaunchTests: XCTestCase {
     func testRecurrenceScopePromptEditOnFixtureSeries() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-COMPASS_NATIVE_UI", "YES",
             "-COMPASS_FIXTURE", "demo",
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-weekly-sync|2026-06-12T14:00:00.000Z",
             "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
@@ -318,11 +317,8 @@ final class NativeLaunchTests: XCTestCase {
 
         let titleField = window.descendants(matching: .any)["compass-event-form-title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 8))
-        titleField.click()
-        let newTitle = "Split weekly sync"
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(newTitle, forType: .string)
-        titleField.typeKey("v", modifierFlags: [.command])
+        window.typeKey("a", modifierFlags: [.command])
+        window.typeText("Split weekly sync")
 
         window.typeKey(.enter, modifierFlags: [.command])
 
