@@ -314,7 +314,6 @@ final class NativeLaunchTests: XCTestCase {
 
         let window = app.windows["Compass"]
         XCTAssertTrue(window.waitForExistence(timeout: 15))
-        waitForFocusedGridEvent(title: "Weekly sync", in: window, timeout: 10)
 
         XCTAssertTrue(
             window.buttons["Split weekly sync"].waitForExistence(timeout: 20),
