@@ -870,7 +870,7 @@ public final class NativeCalendarRootModel {
     private func bootstrapAnonymousCalendarsIfNeeded() async {
         do {
             if let demoPresentation {
-                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                let calendar = demoPresentation.calendarListItem()
                 try calendarRepository.upsert(calendars: [calendar])
             } else {
                 let sentinel = try LocalCalendarSentinel.calendarId(
