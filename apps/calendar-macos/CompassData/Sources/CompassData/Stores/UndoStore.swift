@@ -35,6 +35,12 @@ public final class UndoStore {
         work()
     }
 
+    public func runHistoryRestoreAsync(_ work: () async -> Void) async {
+        restoring = true
+        defer { restoring = false }
+        await work()
+    }
+
     /// Series-master edits have no client-computable inverse; never recorded.
     public static func isUndoableRecurrence(_ event: Event) -> Bool {
         switch event.recurrence {

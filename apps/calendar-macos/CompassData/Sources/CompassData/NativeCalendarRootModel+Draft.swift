@@ -148,20 +148,38 @@ extension NativeCalendarRootModel {
         focusDraftCard()
     }
 
-    public func saveDraft() async {
-        await saveDraftWithInvitationGate()
-    }
+    /// Keyboard-place Enter must finish before the next shortcut; XCUITest does not wait on async Tasks.
+    public func saveKeyboardPlacedDraftNow() {
+        guard let draft = draftStore.gridDraft,
+            draftStore.status.activity == .keyboardPlace,
+            draft.kind == .create
+        else { return }
+        guard let input = GridEventDraftMapping.createInput(from: draft),
+            let optimistic = GridEventDraftMapping.optimisticEvent(
+                from: draft,
+                baseline: baselineEvent(for: draft))
+        else { return }
 
-    private func persistDraftOptimistic(savedId: String, apply: () async throws -> Void) async {
+        let savedId = optimistic.id.rawValue
         draftStore.commit()
         formFieldDigitHintsVisible = false
-        rebuildPresentation()
+        recordCreateUndo(for: optimistic)
         do {
-            try await apply()
+            try eventsStore.stageOptimisticCreate(optimistic)
             loadedEvents = try eventsStore.fetchAllEvents()
-            rebuildPresentation()
-            focusEvent(eventId: savedId)
         } catch {}
+        rebuildPresentation()
+        focusEvent(eventId: savedId)
+        keyboardCreateSettleGeneration += 1
+        let settleGeneration = keyboardCreateSettleGeneration
+        Task {
+            guard settleGeneration == keyboardCreateSettleGeneration else { return }
+            await eventsStore.settleStagedCreate(input: input, optimisticEvent: optimistic)
+        }
+    }
+
+    public func saveDraft() async {
+        await saveDraftWithInvitationGate()
     }
 
     public func requestDiscardDraft() {

@@ -51,6 +51,7 @@ extension NativeCalendarRootModel {
                 let optimistic = GridEventDraftMapping.optimisticEvent(from: normalized, baseline: baseline)
             else { return }
             savedId = optimistic.id.rawValue
+            recordCreateUndo(for: optimistic)
             draftStore.commit()
             formFieldDigitHintsVisible = false
             invitationPrompt = nil

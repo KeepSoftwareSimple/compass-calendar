@@ -72,6 +72,7 @@ public final class NativeCalendarRootModel {
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
     private var eventFormTitleProbeVisible = false
+    var keyboardCreateSettleGeneration = 0
     var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
@@ -794,6 +795,10 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
+            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
+        }
+        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
         publishEventFormTitleAccessibilityProbe()
     }
 
