@@ -48,10 +48,10 @@ final class MainMenuController: NSObject {
                 case .quit:
                     item.target = NSApp
                 case let .standardEdit(selectorName):
-                    if nativeUIState.isNativeUIEnabled, selectorName == "undo:" {
+                    if selectorName == "undo:" {
                         item.action = #selector(undoNativeChange(_:))
                         item.target = self
-                    } else if nativeUIState.isNativeUIEnabled, selectorName == "redo:" {
+                    } else if selectorName == "redo:" {
                         item.action = #selector(redoNativeChange(_:))
                         item.target = self
                     } else {
@@ -230,7 +230,7 @@ extension MainMenuController: NSMenuItemValidation {
             item.state = nativeUIState.theme == .darkAbyss ? .on : .off
             return true
         case #selector(openQuickAddPanel(_:)):
-            return nativeUIState.isNativeUIEnabled
+            return showDebugMenu
         case #selector(undoNativeChange(_:)):
             return nativeCalendarModel()?.undoStore.canUndo ?? false
         case #selector(redoNativeChange(_:)):
