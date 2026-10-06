@@ -186,6 +186,30 @@ extension NativeCalendarRootModel {
         Task { await undoLastChangeAndWait() }
     }
 
+    /// Grid Cmd+Z after keyboard create: undo must update the native grid before the next XCUITest assertion.
+    public func undoKeyboardPlacedCreateNow() {
+        guard case .create(let event)? = undoStore.peekUndo() else {
+            statusToastStore.show(id: "undo-status", message: "Nothing to undo")
+            return
+        }
+        undoStore.commitUndo()
+        undoStore.runHistoryRestore {
+            try? eventsStore.removePersistedEvent(id: event.id)
+            loadedEvents.removeAll { $0.id == event.id }
+            if let events = try? eventsStore.fetchAllEvents() {
+                loadedEvents = events
+            }
+            if focusStore.focusedEventId == event.id {
+                focusStore.setFocused(eventId: nil, eventType: nil)
+            }
+            rebuildPresentation()
+        }
+        if let section = ShortcutTelemetrySection.section(for: .otherUndo) {
+            levelsStore.recordShortcutInvocation(.otherUndo, section: section)
+        }
+        Task { try? await eventsStore.deleteOptimistic(id: event.id, scope: .this) }
+    }
+
     public func undoLastChangeAndWait() async {
         guard let entry = undoStore.peekUndo() else {
             statusToastStore.show(id: "undo-status", message: "Nothing to undo")

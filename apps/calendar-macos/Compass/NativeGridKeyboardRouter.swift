@@ -181,8 +181,10 @@ final class NativeGridKeyboardRouter {
         }
 
         if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key, char == "z" {
-            pumpMainActorUntilAsyncWork(timeout: 10) {
-                await self.model.undoLastChangeAndWait()
+            if case .create = model.undoStore.peekUndo() {
+                model.undoKeyboardPlacedCreateNow()
+            } else {
+                Task { await model.undoLastChangeAndWait() }
             }
             return true
         }
@@ -349,9 +351,7 @@ final class NativeGridKeyboardRouter {
                     return false
                 }
                 if model.draftStore.status.activity == .keyboardPlace {
-                    pumpMainActorUntilAsyncWork(timeout: 10) {
-                        await self.model.saveDraft()
-                    }
+                    model.saveKeyboardPlacedDraftNow()
                     return true
                 }
                 model.openEventFormForCurrentDraft()
@@ -476,23 +476,4 @@ final class NativeGridKeyboardRouter {
         model.setEventJumpHintsVisible(eventJumpHold.phase == .hintsVisible)
     }
 
-    /// XCUITest can send the next key before an unstructured `Task` runs; drain through async grid work.
-    private func pumpMainActorUntilAsyncWork(
-        timeout: TimeInterval,
-        _ work: @escaping @MainActor () async -> Void
-    ) {
-        final class Gate: @unchecked Sendable {
-            var finished = false
-        }
-        let gate = Gate()
-        Task { @MainActor in
-            await work()
-            gate.finished = true
-        }
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline {
-            if gate.finished { return }
-            RunLoop.current.run(until: Date().addingTimeInterval(0.01))
-        }
-    }
 }
