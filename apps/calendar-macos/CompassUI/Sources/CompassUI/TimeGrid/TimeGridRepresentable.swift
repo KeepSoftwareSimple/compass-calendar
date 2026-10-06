@@ -28,6 +28,10 @@ public struct TimeGridRepresentable: NSViewRepresentable {
         if let scroll = model.consumePendingScroll() {
             nsView.applyScroll(scroll)
         }
+        if let calendarId = model.pendingFocusDayColumnCalendarId {
+            model.pendingFocusDayColumnCalendarId = nil
+            nsView.focusDayColumn(calendarId: calendarId)
+        }
     }
 
     private func syncGrid(_ nsView: TimeGridView, theme: NativeWebTheme) {
@@ -93,6 +97,11 @@ public struct TimeGridRepresentable: NSViewRepresentable {
 
         public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
             model.settingsStore.openTimezoneDialog(.timeTravel)
+        }
+
+        public func timeGridView(_ view: TimeGridView, didFocusDayColumn calendarId: String) {
+            model.focusDayColumn(calendarId: calendarId)
+            view.update(state: model.timeGridState, theme: theme)
         }
 
         private func focusedEventLabel(for eventId: String) -> String? {

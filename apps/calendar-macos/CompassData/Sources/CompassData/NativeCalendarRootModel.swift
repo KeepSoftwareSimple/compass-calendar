@@ -78,6 +78,8 @@ public final class NativeCalendarRootModel {
     private var refreshTask: Task<Void, Never>?
     private var focusLayoutCards: [FocusLayoutCard] = []
     private var eventJumpHintLabels: [EventJumpChipHint] = []
+    public var focusedDayColumnCalendarId: String?
+    public var pendingFocusDayColumnCalendarId: String?
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
@@ -476,6 +478,13 @@ public final class NativeCalendarRootModel {
 
     public func setPageJumpHintsVisible(_ visible: Bool) {
         focusStore.setPageJumpHintsVisible(visible)
+        applyFocusPresentation()
+    }
+
+    public func focusDayColumn(calendarId: String) {
+        focusedDayColumnCalendarId = calendarId
+        pendingFocusDayColumnCalendarId = calendarId
+        applyFocusPresentation()
     }
 
     public func setEventJumpHintsVisible(_ visible: Bool) {
@@ -547,6 +556,9 @@ public final class NativeCalendarRootModel {
         switch target.id {
         case "month-picker":
             monthPickerMonth = viewStore.anchorDate
+        case let id where id.hasPrefix(PageJumpTargets.dayColumnPrefix):
+            let calendarId = String(id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
+            focusDayColumn(calendarId: calendarId)
         default:
             break
         }
@@ -667,6 +679,9 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
+            focusedDayColumnCalendarId: focusedDayColumnCalendarId,
+            pageJumpHintsVisible: focusStore.pageJumpHintsVisible,
+            pageJumpDigitByCalendarId: pageJumpDigitByCalendarId(),
             hasSecondaryTimeZone: hasSecondaryTimeZone,
             effectiveTimeZone: viewStore.effectiveTimeZone,
             timeTravelTimeZone: viewStore.timeTravelTimeZone
@@ -809,6 +824,9 @@ public final class NativeCalendarRootModel {
             focusedEventId: focusStore.focusedEventId?.rawValue,
             sidebarEditingEventId: sidebarEditingGridEventId(),
             eventJumpHints: eventJumpHintLabels,
+            focusedDayColumnCalendarId: focusedDayColumnCalendarId,
+            pageJumpHintsVisible: focusStore.pageJumpHintsVisible,
+            pageJumpDigitByCalendarId: pageJumpDigitByCalendarId(),
             hasSecondaryTimeZone: hasSecondaryTimeZone,
             effectiveTimeZone: viewStore.effectiveTimeZone,
             timeTravelTimeZone: viewStore.timeTravelTimeZone
@@ -897,10 +915,26 @@ public final class NativeCalendarRootModel {
     }
 
     private func nativePageJumpTargets() -> [PageJumpTarget] {
-        [
-            PageJumpTarget(id: "month-picker", digit: "1", label: "Month picker"),
-            PageJumpTarget(id: "calendars", digit: "2", label: "Calendars"),
-        ]
+        let resolved: [PageJumpTargets.Resolved]
+        if viewStore.view == .day {
+            let displayed = visibleCalendars().map { (id: $0.id, name: $0.name) }
+            resolved = PageJumpTargets.buildDayPageJumpTargets(displayedCalendars: displayed)
+        } else {
+            resolved = PageJumpTargets.buildSidebarPageJumpTargets()
+        }
+        return resolved.map { target in
+            PageJumpTarget(id: target.id, digit: target.digit, label: target.label)
+        }
+    }
+
+    private func pageJumpDigitByCalendarId() -> [String: String] {
+        var map: [String: String] = [:]
+        for target in focusStore.pageJumpTargets {
+            guard target.id.hasPrefix(PageJumpTargets.dayColumnPrefix) else { continue }
+            let calendarId = String(target.id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
+            map[calendarId] = target.digit
+        }
+        return map
     }
 
     private func buildEventJumpHints() -> [EventJumpChipHint] {

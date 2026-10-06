@@ -8,10 +8,12 @@ public protocol TimeGridViewDelegate: AnyObject {
     func timeGridView(_ view: TimeGridView, didEditDraftTitle title: String, eventId: String)
     func timeGridView(_ view: TimeGridView, didOpenEventMenu eventId: String, at locationInWindow: NSPoint)
     func timeGridViewDidRequestTimeTravel(_ view: TimeGridView)
+    func timeGridView(_ view: TimeGridView, didFocusDayColumn calendarId: String)
 }
 
 extension TimeGridViewDelegate {
     public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {}
+    public func timeGridView(_ view: TimeGridView, didFocusDayColumn calendarId: String) {}
 }
 
 @MainActor
@@ -157,7 +159,7 @@ public final class TimeGridView: NSView {
     private func configureScrollView() {
         scrollView.drawsBackground = false
         scrollView.hasVerticalScroller = true
-        scrollView.hasHorizontalScroller = false
+        scrollView.hasHorizontalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.borderType = .noBorder
         scrollView.documentView = documentView
@@ -204,9 +206,11 @@ public final class TimeGridView: NSView {
         let headerHeight = GridTimeConstants.dayHeaderRowHeight
         let totalHeight = headerHeight + allDayHeight + gridHeight + GridTimeConstants.gridPaddingBottom
 
-        documentView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: totalHeight)
-        headerRowView.frame = NSRect(x: 0, y: 0, width: bounds.width, height: headerHeight)
-        allDayRowView.frame = NSRect(x: 0, y: headerHeight, width: bounds.width, height: allDayHeight)
+        let contentWidth = max(bounds.width, state.documentContentWidth())
+        scrollView.hasHorizontalScroller = state.layoutMode == .day && contentWidth > bounds.width + 1
+        documentView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: totalHeight)
+        headerRowView.frame = NSRect(x: 0, y: 0, width: contentWidth, height: headerHeight)
+        allDayRowView.frame = NSRect(x: 0, y: headerHeight, width: contentWidth, height: allDayHeight)
         hourGutterView.frame = NSRect(
             x: 0,
             y: headerHeight + allDayHeight,
@@ -216,7 +220,7 @@ public final class TimeGridView: NSView {
         timedContentView.frame = NSRect(
             x: 0,
             y: headerHeight + allDayHeight,
-            width: bounds.width,
+            width: contentWidth,
             height: gridHeight
         )
 
@@ -299,12 +303,47 @@ public final class TimeGridView: NSView {
         }
     }
 
+    public func focusDayColumn(calendarId: String) {
+        guard state.layoutMode == .day else { return }
+        for case let header as DayCalendarColumnHeaderControl in headerRowView.subviews {
+            if header.calendarId == calendarId {
+                window?.makeFirstResponder(header)
+                return
+            }
+        }
+    }
+
     private func renderHeaders(snapshot: GridLayoutSnapshot, headerHeight: Double) {
         headerRowView.subviews.forEach { $0.removeFromSuperview() }
         let palette = themePalette
         headerRowView.layer?.backgroundColor = palette.surface.cgColor
 
         renderTimezoneHeader(snapshot: snapshot, headerHeight: headerHeight, palette: palette)
+
+        if state.layoutMode == .day {
+            let dayCalendars = DayCalendarColumns.dayViewCalendars(state.scenario.calendars)
+            for column in snapshot.columns {
+                guard let calendar = dayCalendars.first(where: { $0.id == column.key }) else {
+                    continue
+                }
+                let header = DayCalendarColumnHeaderControl(
+                    frame: NSRect(x: column.left, y: 4, width: column.width, height: headerHeight - 8)
+                )
+                header.onFocus = { [weak self] calendarId in
+                    guard let self else { return }
+                    delegate?.timeGridView(self, didFocusDayColumn: calendarId)
+                }
+                header.apply(
+                    calendar: calendar,
+                    jumpDigit: state.pageJumpDigitByCalendarId[calendar.id],
+                    hintsVisible: state.pageJumpHintsVisible,
+                    isFocused: state.focusedDayColumnCalendarId == calendar.id,
+                    palette: (text: palette.text, accent: themeAccentColor, surface: palette.surface)
+                )
+                headerRowView.addSubview(header)
+            }
+            return
+        }
 
         for column in snapshot.columns {
             let header = NSTextField(labelWithString: column.key)
@@ -327,6 +366,16 @@ public final class TimeGridView: NSView {
         allDayRowView.layer?.backgroundColor = palette.background.cgColor
 
         for column in snapshot.columns {
+            if state.layoutMode == .day,
+                state.focusedDayColumnCalendarId == column.key
+            {
+                let highlight = NSView(
+                    frame: NSRect(x: column.left, y: 0, width: column.width, height: allDayHeight + headerHeight)
+                )
+                highlight.wantsLayer = true
+                highlight.layer?.backgroundColor = themeAccentColor.withAlphaComponent(0.08).cgColor
+                allDayRowView.addSubview(highlight)
+            }
             let divider = NSView(
                 frame: NSRect(x: column.left, y: 0, width: 1, height: allDayHeight + headerHeight)
             )
@@ -342,6 +391,16 @@ public final class TimeGridView: NSView {
         timedContentView.layer?.backgroundColor = palette.background.cgColor
 
         for column in snapshot.columns {
+            if state.layoutMode == .day,
+                state.focusedDayColumnCalendarId == column.key
+            {
+                let highlight = NSView(
+                    frame: NSRect(x: column.left, y: 0, width: column.width, height: gridHeight)
+                )
+                highlight.wantsLayer = true
+                highlight.layer?.backgroundColor = themeAccentColor.withAlphaComponent(0.08).cgColor
+                timedContentView.addSubview(highlight)
+            }
             let divider = NSView(frame: NSRect(x: column.left, y: 0, width: 1, height: gridHeight))
             divider.wantsLayer = true
             divider.layer?.backgroundColor = palette.border.withAlphaComponent(0.35).cgColor
@@ -349,7 +408,14 @@ public final class TimeGridView: NSView {
         }
 
         for hour in 1 ..< GridTimeConstants.timedVisibleHours {
-            let line = NSView(frame: NSRect(x: snapshot.metrics.marginLeft, y: Double(hour) * hourHeight, width: bounds.width, height: 1))
+            let line = NSView(
+                frame: NSRect(
+                    x: snapshot.metrics.marginLeft,
+                    y: Double(hour) * hourHeight,
+                    width: timedContentView.frame.width - snapshot.metrics.marginLeft,
+                    height: 1
+                )
+            )
             line.wantsLayer = true
             line.layer?.backgroundColor = palette.border.withAlphaComponent(0.25).cgColor
             timedContentView.addSubview(line)
