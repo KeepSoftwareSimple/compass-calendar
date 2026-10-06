@@ -9,8 +9,11 @@ so the keyboard calendar stays learnable.
 
 Acceptance walkthroughs live in [Shortcuts](../acceptance/shortcuts.md).
 The display registry lives in `packages/core/src/shortcuts/shortcuts.registry.ts`
-(the web app re-exports it). The macOS app consumes the same data through
-`bun cli desktop:export`.
+(the web app re-exports it). The macOS app is a second consumer: `bun cli
+desktop:export` writes `shortcuts.json` and generated Swift under
+`apps/calendar-macos/CompassKit/Sources/CompassKit/Generated/`; CompassKit's
+`ShortcutDispatcher` loads the JSON and must stay aligned with the web
+dispatcher rules in this doc.
 
 ---
 

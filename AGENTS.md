@@ -27,6 +27,10 @@ Playwright. Docs index: `docs/README.md`.
 - Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
   (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
   `bun lint`, `bun knip`.
+- macOS contract drift (Linux): `bun cli contracts:swift --check` and
+  `bun cli desktop:export --check`. Regenerate with the same commands without
+  `--check` after changing shared Zod schemas, shortcuts, theme tokens, or
+  parity fixtures.
 - `bun lint` mechanically enforces Tailwind semantic colors, the barrel-file
   ban, no CSS or `data-*` locators in web tests, no duplicate `EventSchema`,
   and Bun version pins. Read its output instead of looking for those rules
