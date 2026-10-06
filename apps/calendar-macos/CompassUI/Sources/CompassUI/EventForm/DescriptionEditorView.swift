@@ -83,8 +83,8 @@ struct DescriptionEditorView: NSViewRepresentable {
             sourceDocument = HTMLFragmentDocument.parse(html)
             let attributed = HTMLFragmentAppKit.attributedString(
                 from: sourceDocument,
-                textColor: NSColor(textView.textColor ?? .labelColor),
-                linkColor: NSColor(textView.linkTextAttributes?[.foregroundColor] as? NSColor ?? .linkColor)
+                textColor: textView.textColor ?? .labelColor,
+                linkColor: (textView.linkTextAttributes?[.foregroundColor] as? NSColor) ?? .linkColor
             )
             suppressDelegate = true
             textView.textStorage?.setAttributedString(attributed)

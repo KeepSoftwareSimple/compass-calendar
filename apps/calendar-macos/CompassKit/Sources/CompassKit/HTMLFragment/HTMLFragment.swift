@@ -85,6 +85,11 @@ enum HTMLFragmentSanitizer {
             options: [.regularExpression, .caseInsensitive]
         )
         output = stripDisallowedTags(output)
+        output = output.replacingOccurrences(
+            of: #"<a\s+>"#,
+            with: "<a>",
+            options: .regularExpression
+        )
         return output
     }
 
