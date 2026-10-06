@@ -95,6 +95,51 @@ public final class BookingStore {
         status = try? await bookingAPI.getPageStatus()
     }
 
+    public func seedGuestPreviewIfNeeded() {
+        guard !authenticated else { return }
+        guard let draft = GuestMeetingSetupDraftStorage.read() else {
+            setupStep = setupStep ?? .address
+            return
+        }
+        form.apply(draft)
+        minNoticeText = String(draft.minNoticeHours)
+        horizonText = String(draft.maxHorizonDays)
+        baselineInput = draft
+        setupStep = setupStep ?? .address
+    }
+
+    public func persistGuestDraftIfNeeded(guestPreview: Bool) {
+        guard guestPreview else { return }
+        GuestMeetingSetupDraftStorage.write(form.putInput)
+    }
+
+    public func resumeGuestMeetingSetupIfNeeded(
+        calendars: [CompassCalendar],
+        hasConnectedAccount: Bool
+    ) {
+        guard authenticated, let draft = GuestMeetingSetupDraftStorage.read() else { return }
+        let writable = BookingCalendarLogic.writableCalendars(
+            calendars,
+            hasConnectedAccount: hasConnectedAccount
+        )
+        let availability = BookingCalendarLogic.availabilityReadableCalendars(calendars)
+        guard !writable.isEmpty else { return }
+        let hydrated = GuestMeetingSetupLogic.guestDraftForAuthenticatedHost(
+            draft: draft,
+            writableCalendars: writable,
+            availabilityCalendars: availability
+        )
+        form.apply(hydrated)
+        minNoticeText = String(hydrated.minNoticeHours)
+        horizonText = String(hydrated.maxHorizonDays)
+        baselineInput = hydrated
+        setupStep = .live
+    }
+
+    public func clearGuestMeetingSetupAfterSave() {
+        GuestMeetingSetupDraftStorage.clear()
+    }
+
     public func seedFormIfNeeded(
         calendars: [CompassCalendar],
         hasConnectedAccount: Bool
@@ -269,6 +314,7 @@ public final class BookingStore {
             if AdminBookingPageLogic.isLivePage(result) {
                 await refreshStatus()
             }
+            clearGuestMeetingSetupAfterSave()
             return true
         } catch {
             saveErrorMessage = "Could not save meeting settings. Try again."

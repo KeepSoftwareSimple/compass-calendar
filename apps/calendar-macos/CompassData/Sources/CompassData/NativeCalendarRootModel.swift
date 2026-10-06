@@ -171,15 +171,28 @@ public final class NativeCalendarRootModel {
     public func openBookingSettings() {
         settingsStore.open(page: .booking)
         Task {
-            await bookingStore.refreshPageIfNeeded()
-            bookingStore.seedFormIfNeeded(
-                calendars: calendars,
-                hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
-            )
-            bookingStore.trackSettingsOpenedIfNeeded(
-                hasConnection: !syncConnectionsStore.connections.isEmpty
-            )
+            await refreshBookingSettingsContent()
         }
+    }
+
+    public func beginGuestMeetingSetup() {
+        settingsStore.beginGuestMeetingSetup()
+        bookingStore.seedGuestPreviewIfNeeded()
+    }
+
+    public func refreshBookingSettingsContent() async {
+        if settingsStore.guestMeetingSetupActive, !isSignedIn {
+            bookingStore.seedGuestPreviewIfNeeded()
+            return
+        }
+        await bookingStore.refreshPageIfNeeded()
+        bookingStore.seedFormIfNeeded(
+            calendars: calendars,
+            hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+        )
+        bookingStore.trackSettingsOpenedIfNeeded(
+            hasConnection: !syncConnectionsStore.connections.isEmpty
+        )
     }
 
     func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
@@ -246,7 +259,7 @@ public final class NativeCalendarRootModel {
             authenticated: isSignedIn,
             isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
             isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
-            guestMeetingSetupActive: false,
+            guestMeetingSetupActive: settingsStore.guestMeetingSetupActive,
             shortcutShowcaseActive: blockPartyStore.isActive,
             connectCalendarEligible: connectEligible,
             firstEventEligible: firstEventEligible,
@@ -314,6 +327,13 @@ public final class NativeCalendarRootModel {
         try? await hiddenEventsStore.load()
         await refreshVisibleRange()
         await refreshSideband()
+        if GuestMeetingSetupDraftStorage.read() != nil {
+            settingsStore.beginGuestMeetingSetup()
+            bookingStore.resumeGuestMeetingSetupIfNeeded(
+                calendars: calendars,
+                hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+            )
+        }
     }
 
     func refreshCalendarsAndVisibleRange() async {
