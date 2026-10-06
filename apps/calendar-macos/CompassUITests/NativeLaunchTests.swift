@@ -252,6 +252,7 @@ final class NativeLaunchTests: XCTestCase {
     }
 
     @MainActor
+    /// Saves a recurring demo fixture edit after confirming scope via keyboard.
     func testRecurrenceScopePromptEditOnFixtureSeries() {
         let app = XCUIApplication()
         app.launchArguments += [
