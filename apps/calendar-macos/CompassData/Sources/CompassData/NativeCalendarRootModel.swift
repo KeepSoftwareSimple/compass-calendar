@@ -32,6 +32,8 @@ public final class NativeCalendarRootModel {
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     /// Window-level accessibility probe for native UI tests (see Compass app).
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
+    /// Fires when native undo records a create (XCUITest timing probe in Compass app).
+    public var onNativeUndoReadyForUITest: (() -> Void)?
     /// AppKit title-field probe for native UI tests when the event form is open.
     public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?

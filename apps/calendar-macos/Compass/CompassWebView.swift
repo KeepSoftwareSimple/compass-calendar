@@ -43,4 +43,13 @@ enum CompassBridgeAccessibility {
         }
         NSAccessibility.post(element: window, notification: .valueChanged)
     }
+
+    /// XCUITest-only mirror: `"undo-ready"` after a create records native undo.
+    @MainActor
+    static func publishNativeUndoReadyForUITest(on window: NSWindow?) {
+        guard UITestLaunchPolicy.syncGridDraftSave, let window else { return }
+        window.setAccessibilityIdentifier("Compass")
+        window.setAccessibilityValue("undo-ready")
+        NSAccessibility.post(element: window, notification: .valueChanged)
+    }
 }

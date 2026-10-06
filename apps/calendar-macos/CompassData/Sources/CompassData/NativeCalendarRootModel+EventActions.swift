@@ -260,6 +260,9 @@ extension NativeCalendarRootModel {
     public func recordCreateUndo(for event: Event) {
         guard !undoStore.isRestoringHistory() else { return }
         undoStore.record(.create(event: event))
+        if UITestLaunchPolicy.syncGridDraftSave {
+            onNativeUndoReadyForUITest?()
+        }
     }
 
     private func flushHistoryReplay(_ replay: @escaping () async -> Void) {
