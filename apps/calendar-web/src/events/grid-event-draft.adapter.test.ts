@@ -117,11 +117,13 @@ test("drops source colorHex once the draft picks a slot color", () => {
     },
   } as unknown as Event;
   const draft = editGridEventDraft(event);
-  if (!draft) throw new Error("Expected scheduled event draft");
+  if (!draft || draft.kind !== "edit") {
+    throw new Error("Expected scheduled edit draft");
+  }
 
-  const withSlot = {
+  const withSlot: GridEventDraft = {
     ...draft,
-    values: { ...draft.values, color: "blue" as const },
+    values: { ...draft.values, color: "blue" },
   };
 
   expect(gridEventDraftToGridEvent(withSlot).color).toBe("blue");
