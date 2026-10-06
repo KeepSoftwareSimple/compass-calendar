@@ -3,7 +3,6 @@ import CompassKit
 import SwiftUI
 
 struct EventFormScheduleSection: View {
-    @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
     let focusField: EventFormField
@@ -54,13 +53,7 @@ struct EventFormScheduleSection: View {
                 .accessibilityIdentifier("compass-event-form-start")
             }
         }
-        .padding(12)
-        .background(theme.surfacePanelColor)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(focusField == .start || focusField == .end ? theme.accentColor : theme.borderColor, lineWidth: 1)
-        )
+        .eventFormSectionChrome(focused: focusField == .start || focusField == .end)
     }
 
     private func updateStart(_ date: Date) {
