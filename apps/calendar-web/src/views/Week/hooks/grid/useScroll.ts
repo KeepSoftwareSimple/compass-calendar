@@ -1,5 +1,9 @@
 import { type MutableRefObject, useCallback, useLayoutEffect } from "react";
-import { getScrollToNowTop } from "@web/common/utils/grid/grid.util";
+import {
+  getScrollToNowTop,
+  scrollTimedGridToNow,
+} from "@web/common/utils/grid/grid.util";
+import { nowCueActions } from "@web/grid/now-cue/now-cue.store";
 
 export const useScroll = (
   timedGridRef: MutableRefObject<HTMLElement | null>,
@@ -16,7 +20,14 @@ export const useScroll = (
     [timedGridRef],
   );
 
-  const scrollToNow = useCallback(() => scrollTo("smooth"), [scrollTo]);
+  const scrollToNow = useCallback(() => {
+    const grid = timedGridRef.current;
+    if (!grid) return;
+
+    if (!scrollTimedGridToNow(grid, "smooth")) {
+      nowCueActions.pulse();
+    }
+  }, [timedGridRef]);
 
   // Mount: jump, don't glide. The HTML boot shell in index.html is already
   // sitting at this position, so an animated scroll here would visibly

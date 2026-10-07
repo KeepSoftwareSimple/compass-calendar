@@ -13,6 +13,7 @@ import { type MouseEvent, useRef, useState } from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
@@ -27,15 +28,22 @@ interface SelectViewProps {
   /** The date heading text, e.g. "July 2026" or "Monday, July 20". */
   label: string;
   onToday?: () => void;
+  /** Day view: pulse the heading when already on today and at the now line. */
+  emphasizeDayLabel?: boolean;
 }
 
-export const SelectView = ({ label, onToday }: SelectViewProps) => {
+export const SelectView = ({
+  label,
+  onToday,
+  emphasizeDayLabel = false,
+}: SelectViewProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const listRef = useRef<Array<HTMLElement | null>>([]);
   useFloatingLayer("viewSelect", isOpen);
+  const pulseDayLabel = useNowCuePulse() && emphasizeDayLabel;
 
   const getCurrentView = (): "Day" | "Week" | "Life" => {
     const pathname = location.pathname;
@@ -168,7 +176,14 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
           aria-haspopup="listbox"
           aria-controls={isOpen ? dropdownId : undefined}
         >
-          <span>{label}</span>
+          <span
+            className={classNames(
+              pulseDayLabel &&
+                "c-now-cue-pulse rounded-sm motion-reduce:transition-none",
+            )}
+          >
+            {label}
+          </span>
           <CaretDownIcon size={14} aria-hidden="true" />
         </button>
       </h1>

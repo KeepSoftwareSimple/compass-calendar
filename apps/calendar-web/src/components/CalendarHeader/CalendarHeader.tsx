@@ -10,6 +10,8 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onToday?: () => void;
+  /** Day view: allow the title to pulse with the now-cue teach animation. */
+  emphasizeDayLabel?: boolean;
   showNavigation?: boolean;
   /** Accessible + tooltip label for the previous arrow, e.g. "Previous week". */
   prevLabel?: string;
@@ -30,6 +32,7 @@ export const CalendarHeader: FC<Props> = ({
   onPrev,
   onNext,
   onToday,
+  emphasizeDayLabel = false,
   prevLabel = "Previous",
   nextLabel = "Next",
   showNavigation = true,
@@ -66,7 +69,11 @@ export const CalendarHeader: FC<Props> = ({
             </TooltipWrapper>
           </div>
         )}
-        <SelectView label={label} onToday={onToday} />
+        <SelectView
+          emphasizeDayLabel={emphasizeDayLabel}
+          label={label}
+          onToday={onToday}
+        />
       </div>
 
       <div className="z-2 flex shrink-0 items-center pr-5">
