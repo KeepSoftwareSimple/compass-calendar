@@ -3,7 +3,6 @@ import {
   type CSSProperties,
   type ForwardedRef,
   forwardRef,
-  type KeyboardEvent,
   type MouseEvent,
   useMemo,
 } from "react";
@@ -18,9 +17,9 @@ import { type GridEvent } from "@web/common/types/web.event.types";
 import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { getLineClamp } from "@web/common/utils/grid/grid.util";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
+import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   calendarAccentAccessibleSuffix,
-  calendarAccentStyle,
   eventCardFill,
   eventEdgeFocusShadow,
   eventFocusColor,
@@ -28,6 +27,7 @@ import {
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
+import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
   GRID_EVENT_TIME_LABEL_FONT_SIZE,
@@ -53,7 +53,6 @@ import {
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
 import { type EventPosition } from "@web/grid/types/grid.types";
-import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
 // Gate the repeat indicator on the event's duration, not its rendered pixel
@@ -291,29 +290,12 @@ const TimedEventCardBase = (
       style={eventStyle}
       onBlur={onBlur}
       onFocus={onFocus}
-      onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-        if (e.key !== "Enter" && e.key !== " ") {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        if (!onEventKeyDown) {
-          return;
-        }
-
-        onEventKeyDown(event);
-        recordHandledShortcutInvocation("edit-open");
-      }}
+      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {!isHidden && calendarIdentity && !mergedStops && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={calendarAccentStyle(calendarIdentity)}
-        />
+        <CalendarAccentStripe identity={calendarIdentity} />
       )}
       {!isHidden && (
         <div

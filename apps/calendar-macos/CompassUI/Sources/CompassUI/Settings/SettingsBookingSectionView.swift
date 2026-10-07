@@ -139,13 +139,10 @@ public struct SettingsBookingSectionView: View {
         VStack(alignment: .leading, spacing: 12) {
             BookingStatusHeaderView(
                 bookingStore: model.bookingStore,
-                isLive: model.bookingStore.isLive,
-                isPending: model.bookingStore.isSaving,
                 savedUrl: savedMeetingLinkUrl,
                 addressPreview: addressPreview,
                 connections: model.syncConnectionsStore.connections,
                 calendars: model.calendars,
-                hasHealthyConnection: hasHealthyConnection,
                 connectableProviders: model.connectableCalendarProviders,
                 isConnectBusy: model.syncConnectionsStore.isBusy,
                 onToggle: { enabled in

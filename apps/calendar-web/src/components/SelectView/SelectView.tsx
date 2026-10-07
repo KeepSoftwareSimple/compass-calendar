@@ -9,7 +9,12 @@ import {
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
-import { type MouseEvent, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useRef,
+  useState,
+} from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
@@ -142,6 +147,23 @@ export const SelectView = ({
     };
   };
 
+  /**
+   * Enter and Space commit the active option. Both the trigger and the list
+   * need it: focus can still sit on the trigger for a frame after
+   * useListNavigation opens the list, and the button's native Enter-click
+   * would toggle the dropdown closed and lose the selection.
+   */
+  const commitActiveOption = (event: ReactKeyboardEvent<Element>): void => {
+    if (activeIndex === null) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    const option = options[activeIndex];
+    if (option) {
+      selectOption(option.onSelect, option.shortcutId)();
+    }
+  };
+
   const dropdownId = "view-select-dropdown";
 
   return (
@@ -151,23 +173,7 @@ export const SelectView = ({
           ref={refs.setReference}
           {...getReferenceProps({
             onKeyDown: (e) => {
-              // While the list is open, focus can sit on this trigger for a
-              // frame - useListNavigation moves it to the active option
-              // asynchronously - so a fast ArrowDown+Enter lands Enter here.
-              // The button's native Enter-click would then toggle the
-              // dropdown closed and LOSE the selection. Commit the active
-              // option instead, mirroring the floating element's handler.
-              if (
-                isOpen &&
-                activeIndex !== null &&
-                (e.key === "Enter" || e.key === " ")
-              ) {
-                e.preventDefault();
-                const option = options[activeIndex];
-                if (option) {
-                  selectOption(option.onSelect, option.shortcutId)();
-                }
-              }
+              if (isOpen) commitActiveOption(e);
             },
           })}
           type="button"
@@ -192,18 +198,7 @@ export const SelectView = ({
         <div
           ref={refs.setFloating}
           {...getFloatingProps({
-            onKeyDown: (e) => {
-              if (
-                activeIndex !== null &&
-                (e.key === "Enter" || e.key === " ")
-              ) {
-                e.preventDefault();
-                const option = options[activeIndex];
-                if (option) {
-                  selectOption(option.onSelect, option.shortcutId)();
-                }
-              }
-            },
+            onKeyDown: commitActiveOption,
           })}
           id={dropdownId}
           data-testid="view-select-dropdown"
