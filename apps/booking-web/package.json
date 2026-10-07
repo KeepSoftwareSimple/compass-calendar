@@ -19,7 +19,7 @@
     "@tanstack/react-router": "1.170.41",
     "posthog-js": "^1.435.8",
     "react": "^18.1.0",
-    "react-dom": "^18.1.0",
+    "react-dom": "^19.3.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -27,7 +27,7 @@
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^18.0.3",
+    "@types/react-dom": "^19.3.0",
     "@types/testing-library__jest-dom": "^5.9.1",
     "bun-types": "^1.4.2",
     "jsdom": "^26.1.0",
