@@ -23,6 +23,6 @@
     "@faker-js/faker": "^10.5.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.6.4",
-    "mongodb-memory-server": "^9.2.0"
+    "mongodb-memory-server": "^11.3.0"
   }
 }
