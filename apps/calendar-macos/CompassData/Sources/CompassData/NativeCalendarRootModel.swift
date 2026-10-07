@@ -42,6 +42,7 @@ public final class NativeCalendarRootModel {
     public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
+    public private(set) var nowCuePulseToken = 0
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
@@ -574,6 +575,10 @@ public final class NativeCalendarRootModel {
         return pendingScroll
     }
 
+    public func registerNowCuePulse() {
+        nowCuePulseToken += 1
+    }
+
     private func moveFocus(_ direction: FocusMoveDirection) {
         let arrowKey: String = {
             switch direction {
@@ -752,6 +757,7 @@ public final class NativeCalendarRootModel {
         monthPickerMonth = today
         rebuildPresentation()
         scheduleRefreshVisibleRange()
+        pendingScroll = .scrollToNowOrPulse
     }
 
     private func shiftMonth(by months: Int) {

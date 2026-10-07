@@ -6,6 +6,7 @@ public struct RootView: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable public var model: NativeCalendarRootModel
     @State private var titleBarLeadingInset: CGFloat = 72
+    @State private var nowCueHeaderHighlight = false
     public init(model: NativeCalendarRootModel) {
         self.model = model
     }
@@ -232,7 +233,27 @@ public struct RootView: View {
                     .font(.custom("Rubik", size: 15, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(theme.accentColor.opacity(nowCueHeaderHighlight ? 0.1 : 0))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(
+                                theme.accentColor.opacity(nowCueHeaderHighlight ? 0.45 : 0),
+                                lineWidth: 2
+                            )
+                    )
                     .accessibilityIdentifier("compass-native-header-title")
+                    .animation(.easeInOut(duration: 0.35), value: nowCueHeaderHighlight)
+                    .onChange(of: model.nowCuePulseToken) { _, _ in
+                        guard model.viewStore.view != .life else { return }
+                        nowCueHeaderHighlight = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                            nowCueHeaderHighlight = false
+                        }
+                    }
                 headerButton(
                     label: model.viewStore.view == .life ? "Focus current week" : "Today",
                     systemImage: nil,
