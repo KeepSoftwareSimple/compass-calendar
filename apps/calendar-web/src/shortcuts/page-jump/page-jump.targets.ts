@@ -126,7 +126,7 @@ export const CALENDAR_PAGE_JUMP_TARGETS: PageJumpTargets =
   buildCalendarPageJumpTargets();
 
 export const LIFE_PAGE_JUMP_TARGETS: PageJumpTargets = withPickDigits([
-  { id: "view-select", label: "View dropdown" },
+  VIEW_SELECT_TARGET,
   { id: "life-grid", label: "Current week" },
   { id: "life-variation", label: "Life variation" },
   { id: "life-details", label: "Life details" },
@@ -161,6 +161,18 @@ export const buildDayPageJumpTargets = (
   }));
 
   return withPickDigits([viewSelect, ...columnTargets, ...sidebarTargets]);
+};
+
+/** Digit chips for day-view column headers, keyed by calendar id. */
+export const dayColumnJumpDigits = (
+  targets: PageJumpTargets,
+): ReadonlyMap<string, string> => {
+  const map = new Map<string, string>();
+  for (const target of targets) {
+    if (!target.id.startsWith(DAY_COLUMN_JUMP_ID_PREFIX)) continue;
+    map.set(target.id.slice(DAY_COLUMN_JUMP_ID_PREFIX.length), target.digit);
+  }
+  return map;
 };
 
 /** Spread onto a component's container element to mark it as a jump target. */

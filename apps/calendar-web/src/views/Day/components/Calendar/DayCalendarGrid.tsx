@@ -42,7 +42,7 @@ import { EditSequenceMenu } from "@web/shortcuts/edit-sequence/EditSequenceMenu"
 import { PageJumpHints } from "@web/shortcuts/page-jump/PageJumpHints";
 import {
   buildDayPageJumpTargets,
-  DAY_COLUMN_JUMP_ID_PREFIX,
+  dayColumnJumpDigits,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { QuickTimeSlots } from "@web/shortcuts/quick-time/QuickTimeSlots";
 import {
@@ -136,15 +136,10 @@ export function DayCalendarGrid() {
     () => buildDayPageJumpTargets(displayedCalendars, connectedAccounts),
     [connectedAccounts, displayedCalendars],
   );
-  const pageJumpDigitByCalendarId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const target of pageJumpTargets) {
-      if (!target.id.startsWith(DAY_COLUMN_JUMP_ID_PREFIX)) continue;
-      const calendarId = target.id.slice(DAY_COLUMN_JUMP_ID_PREFIX.length);
-      map.set(calendarId, target.digit);
-    }
-    return map;
-  }, [pageJumpTargets]);
+  const pageJumpDigitByCalendarId = useMemo(
+    () => dayColumnJumpDigits(pageJumpTargets),
+    [pageJumpTargets],
+  );
   const marginLeft = useGridMarginLeft();
   const dayGridMinWidth =
     displayedCalendars.length > 0

@@ -41,15 +41,11 @@ struct BookingBlockerNoticeView: View {
                     }
                 }
                 if blocker.action == .connect {
-                    ForEach(connectableProviders, id: \.self) { provider in
-                        Button(connectLabel(provider)) {
-                            onConnect(provider)
-                        }
-                        .buttonStyle(.plain)
-                        .font(.custom("Rubik", size: 12))
-                        .foregroundStyle(theme.accentColor)
-                        .disabled(isBusy)
-                    }
+                    BookingProviderConnectButtons(
+                        providers: connectableProviders,
+                        isBusy: isBusy,
+                        onConnect: onConnect
+                    )
                 }
             }
         }
@@ -59,13 +55,5 @@ struct BookingBlockerNoticeView: View {
         let required = BookingConnectionHealth.reconnectRequiredConnections(connections)
         if !required.isEmpty { return required }
         return connections
-    }
-
-    private func connectLabel(_ provider: ProviderEnum) -> String {
-        switch provider {
-        case .google: "Connect Google"
-        case .microsoft: "Connect Microsoft"
-        case .apple: "Connect iCloud"
-        }
     }
 }

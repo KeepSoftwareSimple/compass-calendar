@@ -43,4 +43,17 @@ final class PageJumpTargetsTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(widths[0], GridMetrics.eventWidthMinimum)
         XCTAssertGreaterThanOrEqual(state.documentContentWidth(), 400)
     }
+
+    func testDayColumnJumpDigitsMapCalendarIds() {
+        let targets = PageJumpTargets.buildDayPageJumpTargets(
+            displayedCalendars: [
+                (id: "cal-a", name: "Personal"),
+                (id: "cal-b", name: "Work"),
+            ]
+        )
+        XCTAssertEqual(
+            PageJumpTargets.dayColumnJumpDigits(from: targets),
+            ["cal-a": "2", "cal-b": "3"]
+        )
+    }
 }

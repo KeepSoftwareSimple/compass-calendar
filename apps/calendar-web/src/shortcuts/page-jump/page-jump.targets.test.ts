@@ -6,6 +6,7 @@ import {
   buildDayPageJumpTargets,
   CALENDAR_PAGE_JUMP_TARGETS,
   calendarAccountJumpId,
+  dayColumnJumpDigits,
   dayColumnJumpId,
   focusPageJumpTarget,
   getPageJumpFocusElement,
@@ -218,6 +219,19 @@ describe("buildDayPageJumpTargets", () => {
       id: calendarAccountJumpId(accountKey(account("c@x.com"))),
       digit: "7",
     });
+  });
+
+  it("maps displayed column digits by calendar id", () => {
+    const personal = { id: "cal-personal", name: "Personal" };
+    const work = { id: "cal-work", name: "Work" };
+    const digits = dayColumnJumpDigits(
+      buildDayPageJumpTargets([personal, work]),
+    );
+
+    expect([...digits]).toEqual([
+      [personal.id, "2"],
+      [work.id, "3"],
+    ]);
   });
 });
 

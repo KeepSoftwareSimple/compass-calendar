@@ -40,6 +40,17 @@ public final class BookingSettingsForm {
         )
     }
 
+    public func setDestinationCalendarId(
+        _ newId: String,
+        calendars: [CompassCalendar]
+    ) {
+        destinationCalendarId = newId
+        blockingCalendarIds = BookingCalendarLogic.defaultBlockingCalendarIds(
+            destinationCalendarId: newId,
+            calendars: calendars
+        )
+    }
+
     public func apply(_ input: AdminPutBookingPageInput) {
         slug = input.slug
         enabled = input.enabled

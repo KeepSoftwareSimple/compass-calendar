@@ -230,17 +230,16 @@ public final class NativeCalendarRootModel {
         return kinds
     }
 
+    public var connectableCalendarProviders: [ProviderEnum] {
+        connectCalendarProviderKinds.map(\.calendarConnectProvider)
+    }
+
     public func openWelcomeGuideFromMenu() {
         onboardingStore.openWelcomeGuide()
     }
 
     public func connectCalendar(provider: SignInProviderKind) async {
-        let mapped: ProviderEnum = switch provider {
-        case .google: .google
-        case .microsoft: .microsoft
-        case .apple: .apple
-        }
-        await syncConnectionsStore.connect(provider: mapped)
+        await syncConnectionsStore.connect(provider: provider.calendarConnectProvider)
         await syncConnectionsStore.reloadFromMetadata()
     }
 
@@ -928,13 +927,9 @@ public final class NativeCalendarRootModel {
     }
 
     private func pageJumpDigitByCalendarId() -> [String: String] {
-        var map: [String: String] = [:]
-        for target in focusStore.pageJumpTargets {
-            guard target.id.hasPrefix(PageJumpTargets.dayColumnPrefix) else { continue }
-            let calendarId = String(target.id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
-            map[calendarId] = target.digit
-        }
-        return map
+        PageJumpTargets.dayColumnJumpDigits(
+            from: focusStore.pageJumpTargets.map { (id: $0.id, digit: $0.digit) }
+        )
     }
 
     private func buildEventJumpHints() -> [EventJumpChipHint] {

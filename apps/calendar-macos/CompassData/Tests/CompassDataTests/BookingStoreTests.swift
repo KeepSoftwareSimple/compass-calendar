@@ -17,4 +17,18 @@ final class BookingStoreTests: XCTestCase {
         let slots = store.previewSlotStarts(now: now)
         XCTAssertFalse(slots.isEmpty)
     }
+
+    func testSetDestinationCalendarIdUpdatesBlockingIds() {
+        let store = BookingStore(apiClient: CompassAPIClient())
+        let destination = GridLayoutSnapshotFixtures.parityCalendars[0]
+        store.form.setDestinationCalendarId(destination.id, calendars: GridLayoutSnapshotFixtures.parityCalendars)
+        XCTAssertEqual(store.form.destinationCalendarId, destination.id)
+        XCTAssertEqual(
+            store.form.blockingCalendarIds,
+            BookingCalendarLogic.defaultBlockingCalendarIds(
+                destinationCalendarId: destination.id,
+                calendars: GridLayoutSnapshotFixtures.parityCalendars
+            )
+        )
+    }
 }
