@@ -16,6 +16,14 @@ public enum SignInProviderKind: String, Sendable, CaseIterable {
     case google
     case microsoft
     case apple
+
+    public var calendarConnectProvider: ProviderEnum {
+        switch self {
+        case .google: .google
+        case .microsoft: .microsoft
+        case .apple: .apple
+        }
+    }
 }
 
 @MainActor

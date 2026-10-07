@@ -56,17 +56,17 @@ struct BookingSetupWizardView: View {
                 Text(addressPrefix)
                     .font(.custom("Rubik", size: 13))
                     .foregroundStyle(theme.textMutedColor)
-                TextField("your-name", text: slugBinding)
+                TextField("your-name", text: bookingStore.form.slugBinding)
                     .textFieldStyle(.roundedBorder)
                     .accessibilityIdentifier("booking-address-field")
             }
         case .hours:
             BookingWeeklyHoursEditorView(
-                value: weeklyBinding,
+                value: bookingStore.form.weeklyBinding,
                 disabled: bookingStore.isSaving
             )
         case .duration:
-            Picker("Duration", selection: durationBinding) {
+            Picker("Duration", selection: bookingStore.form.durationBinding) {
                 ForEach(BookingSettingsFormLogic.durationOptions, id: \.rawValue) { option in
                     Text("\(option.rawValue) minutes").tag(option)
                 }
@@ -78,7 +78,7 @@ struct BookingSetupWizardView: View {
                     .font(.custom("Rubik", size: 13))
                     .foregroundStyle(theme.textMutedColor)
             } else {
-                Picker("Destination", selection: destinationBinding) {
+                Picker("Destination", selection: bookingStore.form.destinationBinding(calendars: writableCalendars)) {
                     ForEach(writableCalendars, id: \.id) { calendar in
                         Text(calendar.name).tag(calendar.id)
                     }
@@ -104,40 +104,5 @@ struct BookingSetupWizardView: View {
                 .foregroundStyle(theme.textColor)
         }
         .font(.custom("Rubik", size: 13))
-    }
-
-    private var slugBinding: Binding<String> {
-        Binding(
-            get: { bookingStore.form.slug ?? "" },
-            set: { bookingStore.form.slug = $0.isEmpty ? nil : $0 }
-        )
-    }
-
-    private var weeklyBinding: Binding<[BookingPageWeeklyAvailability]> {
-        Binding(
-            get: { bookingStore.form.weeklyAvailability },
-            set: { bookingStore.form.weeklyAvailability = $0 }
-        )
-    }
-
-    private var durationBinding: Binding<DurationMinutesEnum> {
-        Binding(
-            get: { bookingStore.form.durationMinutes },
-            set: { bookingStore.form.durationMinutes = $0 }
-        )
-    }
-
-    private var destinationBinding: Binding<String> {
-        Binding(
-            get: { bookingStore.form.destinationCalendarId },
-            set: { newId in
-                bookingStore.form.destinationCalendarId = newId
-                bookingStore.form.blockingCalendarIds =
-                    BookingCalendarLogic.defaultBlockingCalendarIds(
-                        destinationCalendarId: newId,
-                        calendars: writableCalendars
-                    )
-            }
-        )
     }
 }

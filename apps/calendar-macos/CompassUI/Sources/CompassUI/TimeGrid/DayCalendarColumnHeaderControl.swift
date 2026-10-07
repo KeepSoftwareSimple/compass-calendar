@@ -46,7 +46,7 @@ final class DayCalendarColumnHeaderControl: NSControl {
         setAccessibilityLabel("Focus \(calendar.name) column")
         setAccessibilityIdentifier("compass-day-column-header-\(calendar.id)")
 
-        if let color = NSColor(hex: calendar.backgroundColor) {
+        if let color = EventCardColorParser.nsColor(hex: calendar.backgroundColor) {
             colorDot.layer?.backgroundColor = color.cgColor
         }
         colorDot.layer?.cornerRadius = 4
@@ -101,18 +101,4 @@ final class DayCalendarColumnHeaderControl: NSControl {
     }
 
     override var focusRingMaskBounds: NSRect { bounds.insetBy(dx: 1, dy: 1) }
-}
-
-private extension NSColor {
-    convenience init?(hex: String) {
-        var cleaned = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-        if cleaned.hasPrefix("#") {
-            cleaned.removeFirst()
-        }
-        guard cleaned.count == 6, let value = UInt64(cleaned, radix: 16) else { return nil }
-        let r = CGFloat((value >> 16) & 0xFF) / 255
-        let g = CGFloat((value >> 8) & 0xFF) / 255
-        let b = CGFloat(value & 0xFF) / 255
-        self.init(red: r, green: g, blue: b, alpha: 1)
-    }
 }

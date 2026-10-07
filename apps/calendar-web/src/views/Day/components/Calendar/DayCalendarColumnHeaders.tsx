@@ -77,18 +77,12 @@ export const DayCalendarColumnHeaders = ({
                 data-focused-column={isFocused ? "true" : undefined}
                 key={calendar.id}
               >
-                {jumpDigit ? (
-                  <TooltipWrapper
-                    description={calendar.name}
-                    shortcut={["Mod", jumpDigit]}
-                  >
-                    {focusButton}
-                  </TooltipWrapper>
-                ) : (
-                  <TooltipWrapper description={calendar.name}>
-                    {focusButton}
-                  </TooltipWrapper>
-                )}
+                <TooltipWrapper
+                  description={calendar.name}
+                  shortcut={jumpDigit ? ["Mod", jumpDigit] : undefined}
+                >
+                  {focusButton}
+                </TooltipWrapper>
               </div>
             );
           })}
