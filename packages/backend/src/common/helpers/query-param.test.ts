@@ -1,5 +1,22 @@
-import { parseCommaSeparatedQueryParam } from "@backend/common/helpers/query-param";
+import {
+  parseCommaSeparatedQueryParam,
+  routeParam,
+} from "@backend/common/helpers/query-param";
 import { describe, expect, it } from "bun:test";
+
+describe("routeParam", () => {
+  it("returns a string param unchanged", () => {
+    expect(routeParam("slug")).toBe("slug");
+  });
+
+  it("returns the first value for repeated params", () => {
+    expect(routeParam(["a", "b"])).toBe("a");
+  });
+
+  it("returns undefined when absent", () => {
+    expect(routeParam(undefined)).toBeUndefined();
+  });
+});
 
 describe("parseCommaSeparatedQueryParam", () => {
   it("parses comma-separated values", () => {

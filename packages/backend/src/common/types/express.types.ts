@@ -15,9 +15,7 @@ export interface ReqBody<T> extends Request {
   body: T;
 }
 
-export interface Res_Promise extends Response {
-  promise: (p: Promise<unknown> | (() => unknown) | unknown) => Response;
-}
+export type Res_Promise = Response;
 
 export interface SReqBody<T> extends SessionRequest {
   body: T;

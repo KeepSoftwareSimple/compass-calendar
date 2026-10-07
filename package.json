@@ -67,7 +67,7 @@
     "@biomejs/biome": "^2.5.15",
     "@playwright/test": "^1.63.0",
     "@types/express": "^5.0.6",
-    "@types/express-serve-static-core": "^4.17.33",
+    "@types/express-serve-static-core": "^5.0.0",
     "@types/node": "^26.6.4",
     "axe-core": "^4.13.0",
     "bun-types": "^1.4.2",
