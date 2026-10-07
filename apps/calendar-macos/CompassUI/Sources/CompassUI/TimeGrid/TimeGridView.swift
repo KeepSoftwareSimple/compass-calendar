@@ -19,6 +19,7 @@ extension TimeGridViewDelegate {
 @MainActor
 public final class TimeGridView: NSView {
     public weak var delegate: TimeGridViewDelegate?
+    public var onNowCuePulse: (() -> Void)?
 
     private let scrollView = GridScrollView()
     private let documentView = FlippedView()
@@ -144,9 +145,69 @@ public final class TimeGridView: NSView {
             origin.y += pageDelta
         case .hourDown:
             origin.y += hourHeight
+        case .scrollToNowOrPulse:
+            scrollToNowOrPulse()
+            return
         }
         scrollView.contentView.scroll(to: origin)
         scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
+    private func scrollToNowOrPulse() {
+        guard let snapshot, snapshot.nowLine != nil else { return }
+        let allDayOffset = GridTimeConstants.timedContentDocumentYOffset(
+            allDayRowHeight: snapshot.metrics.allDayRowHeight
+        )
+        let targetY = GridScrollMath.scrollToNowDocumentY(
+            referenceNow: state.referenceNow,
+            hourHeight: snapshot.metrics.hourHeight,
+            allDayOffset: allDayOffset
+        )
+        let currentY = scrollView.contentView.bounds.origin.y
+        if GridScrollMath.isAtScrollTarget(currentY: currentY, targetY: targetY) {
+            pulseNowCue(snapshot: snapshot)
+            return
+        }
+        var origin = scrollView.contentView.bounds.origin
+        origin.y = targetY
+        scrollView.contentView.scroll(to: origin)
+        scrollView.reflectScrolledClipView(scrollView.contentView)
+    }
+
+    private func pulseNowCue(snapshot: GridLayoutSnapshot) {
+        guard snapshot.nowLine != nil else { return }
+        let accent = themeAccentColor
+
+        let linePulse = CABasicAnimation(keyPath: "opacity")
+        linePulse.fromValue = 1
+        linePulse.toValue = 0.35
+        linePulse.duration = 0.35
+        linePulse.autoreverses = true
+        linePulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        nowLineLayer.add(linePulse, forKey: "nowCuePulse")
+
+        let todayKey = CompassDateParsing.formatCalendarDay(state.referenceNow)
+        if state.layoutMode == .week {
+            for subview in headerRowView.subviews {
+                guard let header = subview as? NSTextField, header.stringValue == todayKey else {
+                    continue
+                }
+                pulseHeaderBackground(header, accent: accent)
+            }
+        } else {
+            onNowCuePulse?()
+        }
+    }
+
+    private func pulseHeaderBackground(_ view: NSView, accent: NSColor) {
+        view.wantsLayer = true
+        let pulse = CABasicAnimation(keyPath: "backgroundColor")
+        pulse.fromValue = NSColor.clear.cgColor
+        pulse.toValue = accent.withAlphaComponent(0.18).cgColor
+        pulse.duration = 0.35
+        pulse.autoreverses = true
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        view.layer?.add(pulse, forKey: "nowCuePulse")
     }
 
     public override func rightMouseDown(with event: NSEvent) {

@@ -52,10 +52,31 @@ export const getCurrentPercentOfDay = () => {
 
 // Scrolls the current time to just below the viewport top, not flush with
 // it, so the now-line isn't hidden behind the header.
-const SCROLL_TO_NOW_BUFFER_PX = 150;
+export const SCROLL_TO_NOW_BUFFER_PX = 150;
+
+const SCROLL_TO_NOW_TOLERANCE_PX = 2;
 
 export const getScrollToNowTop = (clientHeight: number) =>
   getCurrentMinute() * getMinuteHeight(clientHeight) - SCROLL_TO_NOW_BUFFER_PX;
+
+export const isTimedGridScrolledToNow = (timedGrid: HTMLElement) => {
+  const targetTop = getScrollToNowTop(timedGrid.clientHeight);
+  return (
+    Math.abs(timedGrid.scrollTop - targetTop) <= SCROLL_TO_NOW_TOLERANCE_PX
+  );
+};
+
+/** Returns true when the grid scroll position changed. */
+export const scrollTimedGridToNow = (
+  timedGrid: HTMLElement,
+  behavior: ScrollBehavior = "smooth",
+) => {
+  const targetTop = getScrollToNowTop(timedGrid.clientHeight);
+  if (isTimedGridScrolledToNow(timedGrid)) return false;
+
+  timedGrid.scroll({ behavior, top: targetTop });
+  return true;
+};
 
 // #mainGrid/#allDayRow are <section> elements, not <div>s, so an
 // HTMLDivElement-only check made every lookup on them return null and

@@ -19,11 +19,13 @@ public struct TimeGridRepresentable: NSViewRepresentable {
     public func makeNSView(context: Context) -> TimeGridView {
         let view = TimeGridView(state: model.timeGridState, theme: theme)
         view.delegate = context.coordinator
+        view.onNowCuePulse = { [model] in model.registerNowCuePulse() }
         return view
     }
 
     public func updateNSView(_ nsView: TimeGridView, context: Context) {
         context.coordinator.theme = theme
+        nsView.onNowCuePulse = { [model] in model.registerNowCuePulse() }
         syncGrid(nsView, theme: theme)
         if let scroll = model.consumePendingScroll() {
             nsView.applyScroll(scroll)
