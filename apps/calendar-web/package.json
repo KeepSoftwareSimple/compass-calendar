@@ -57,7 +57,7 @@
     "bun-types": "^1.4.2",
     "fake-indexeddb": "^6.2.5",
     "jsdom": "^26.1.0",
-    "msw": "^2.15.0",
+    "msw": "^3.0.2",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.1.14",
     "typescript": "^7.0.2"
