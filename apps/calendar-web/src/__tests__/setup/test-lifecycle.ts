@@ -69,7 +69,7 @@ beforeEach(() => {
 
 beforeAll(async () => {
   await ensureIndexedDbTestEnv();
-  server.listen({ onUnhandledRequest: "error" });
+  server.listen({ onUnhandledFrame: "error" });
 });
 afterEach(async () => {
   setSystemTime();
