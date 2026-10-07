@@ -18,8 +18,11 @@ type RouteLayer = {
 const routeHandles = (path: string, method: string): unknown[] => {
   const app = express();
   new BillingRoutes(app);
-  const stack = (app as unknown as { _router?: { stack?: RouteLayer[] } })
-    ._router?.stack;
+  const appWithRouter = app as unknown as {
+    router?: { stack?: RouteLayer[] };
+    _router?: { stack?: RouteLayer[] };
+  };
+  const stack = appWithRouter.router?.stack ?? appWithRouter._router?.stack;
   const layer = stack?.find(
     (entry) => entry.route?.path === path && entry.route.methods[method],
   );
