@@ -1,4 +1,3 @@
-import CompassData
 import CompassKit
 import SwiftUI
 
@@ -18,25 +17,13 @@ struct BookingConnectPromptView: View {
                     .font(.custom("Rubik", size: 12))
                     .foregroundStyle(theme.textMutedColor)
             } else {
-                ForEach(connectableProviders, id: \.self) { provider in
-                    Button(connectLabel(provider)) {
-                        onConnect(provider)
-                    }
-                    .buttonStyle(.plain)
-                    .font(.custom("Rubik", size: 12))
-                    .foregroundStyle(theme.accentColor)
-                    .disabled(isBusy)
-                }
+                BookingProviderConnectButtons(
+                    providers: connectableProviders,
+                    isBusy: isBusy,
+                    onConnect: onConnect
+                )
             }
         }
         .accessibilityIdentifier("booking-connect-prompt")
-    }
-
-    private func connectLabel(_ provider: ProviderEnum) -> String {
-        switch provider {
-        case .google: "Connect Google"
-        case .microsoft: "Connect Microsoft"
-        case .apple: "Connect iCloud"
-        }
     }
 }

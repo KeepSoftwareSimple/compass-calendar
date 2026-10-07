@@ -33,16 +33,6 @@ public struct SettingsBookingSectionView: View {
         )
     }
 
-    private var connectableProviders: [ProviderEnum] {
-        model.connectCalendarProviderKinds.compactMap { kind in
-            switch kind {
-            case .google: .google
-            case .microsoft: .microsoft
-            case .apple: .apple
-            }
-        }
-    }
-
     private var guestPreview: Bool {
         model.settingsStore.guestMeetingSetupActive && !model.isSignedIn
     }
@@ -61,7 +51,7 @@ public struct SettingsBookingSectionView: View {
             header
             if showFirstRunConnectPrompt {
                 BookingConnectPromptView(
-                    connectableProviders: connectableProviders,
+                    connectableProviders: model.connectableCalendarProviders,
                     isBusy: model.syncConnectionsStore.isBusy,
                     onConnect: { provider in
                         Task { await model.syncConnectionsStore.connect(provider: provider) }
@@ -156,7 +146,7 @@ public struct SettingsBookingSectionView: View {
                 connections: model.syncConnectionsStore.connections,
                 calendars: model.calendars,
                 hasHealthyConnection: hasHealthyConnection,
-                connectableProviders: connectableProviders,
+                connectableProviders: model.connectableCalendarProviders,
                 isConnectBusy: model.syncConnectionsStore.isBusy,
                 onToggle: { enabled in
                     Task {
@@ -176,7 +166,7 @@ public struct SettingsBookingSectionView: View {
             HStack {
                 Text(addressPrefix)
                     .foregroundStyle(theme.textMutedColor)
-                TextField("slug", text: slugBinding)
+                TextField("slug", text: model.bookingStore.form.slugBinding)
                     .textFieldStyle(.roundedBorder)
             }
             if let link = model.bookingStore.meetingLinkURL(calendars: model.calendars) {
@@ -193,16 +183,16 @@ public struct SettingsBookingSectionView: View {
                 }
             }
             BookingWeeklyHoursEditorView(
-                value: weeklyBinding,
+                value: model.bookingStore.form.weeklyBinding,
                 disabled: model.bookingStore.isSaving
             )
-            Picker("Duration", selection: durationBinding) {
+            Picker("Duration", selection: model.bookingStore.form.durationBinding) {
                 ForEach(BookingSettingsFormLogic.durationOptions, id: \.rawValue) { option in
                     Text("\(option.rawValue) min").tag(option)
                 }
             }
             if !writableCalendars.isEmpty {
-                Picker("Destination calendar", selection: destinationBinding) {
+                Picker("Destination calendar", selection: model.bookingStore.form.destinationBinding(calendars: model.calendars)) {
                     ForEach(writableCalendars, id: \.id) { calendar in
                         Text(calendar.name).tag(calendar.id)
                     }
@@ -329,41 +319,6 @@ public struct SettingsBookingSectionView: View {
         NSPasteboard.general.setString(url.absoluteString, forType: .string)
         #endif
         model.bookingStore.trackLinkCopied()
-    }
-
-    private var slugBinding: Binding<String> {
-        Binding(
-            get: { model.bookingStore.form.slug ?? "" },
-            set: { model.bookingStore.form.slug = $0.isEmpty ? nil : $0 }
-        )
-    }
-
-    private var weeklyBinding: Binding<[BookingPageWeeklyAvailability]> {
-        Binding(
-            get: { model.bookingStore.form.weeklyAvailability },
-            set: { model.bookingStore.form.weeklyAvailability = $0 }
-        )
-    }
-
-    private var durationBinding: Binding<DurationMinutesEnum> {
-        Binding(
-            get: { model.bookingStore.form.durationMinutes },
-            set: { model.bookingStore.form.durationMinutes = $0 }
-        )
-    }
-
-    private var destinationBinding: Binding<String> {
-        Binding(
-            get: { model.bookingStore.form.destinationCalendarId },
-            set: { newId in
-                model.bookingStore.form.destinationCalendarId = newId
-                model.bookingStore.form.blockingCalendarIds =
-                    BookingCalendarLogic.defaultBlockingCalendarIds(
-                        destinationCalendarId: newId,
-                        calendars: model.calendars
-                    )
-            }
-        )
     }
 }
 

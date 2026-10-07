@@ -53,6 +53,21 @@ public enum PageJumpTargets {
         ])
     }
 
+    public static func dayColumnJumpDigits(from targets: [Resolved]) -> [String: String] {
+        dayColumnJumpDigits(from: targets.map { (id: $0.id, digit: $0.digit) })
+    }
+
+    public static func dayColumnJumpDigits(
+        from targets: some Sequence<(id: String, digit: String)>
+    ) -> [String: String] {
+        var map: [String: String] = [:]
+        for target in targets {
+            guard target.id.hasPrefix(dayColumnPrefix) else { continue }
+            map[String(target.id.dropFirst(dayColumnPrefix.count))] = target.digit
+        }
+        return map
+    }
+
     private static func withPickDigits(_ drafts: [Draft]) -> [Resolved] {
         drafts.prefix(FormFieldDigitMapping.pickKeyLabels.count).enumerated().map {
             index,

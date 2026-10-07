@@ -39,6 +39,14 @@ public enum BookingConnectPromptCopy {
         return singleProviderCopy(.google)
     }
 
+    public static func connectButtonTitle(_ provider: ProviderEnum) -> String {
+        switch provider {
+        case .google: "Connect Google"
+        case .microsoft: "Connect Microsoft"
+        case .apple: "Connect iCloud"
+        }
+    }
+
     private static func singleProviderCopy(_ provider: ProviderEnum) -> String {
         switch provider {
         case .google:

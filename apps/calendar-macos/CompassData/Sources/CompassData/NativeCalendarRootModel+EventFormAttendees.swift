@@ -33,26 +33,35 @@ extension NativeCalendarRootModel {
     }
 
     public func isScheduleLocked(for draft: GridEventDraft) -> Bool {
-        let baseline = baselineEvent(for: draft)
-        let lookup = CalendarLookupBuilder.build(calendars)
-        let isBusy = baseline.map { if case .busy = $0.content { true } else { false } } ?? false
-        let providerManaged = baseline?.providerManaged == true
+        let access = formAccessContext(for: draft)
         return GridEventAccess.isGridEventScheduleLocked(
-            lookup: lookup,
+            lookup: access.lookup,
             calendarId: draft.calendarId,
-            isBusy: isBusy,
-            isProviderManaged: providerManaged
+            isBusy: access.isBusy,
+            isProviderManaged: access.baseline?.providerManaged == true
         )
     }
 
     public func isEventFormReadOnly(for draft: GridEventDraft) -> Bool {
-        let lookup = CalendarLookupBuilder.build(calendars)
-        let isBusy = baselineEvent(for: draft).map { if case .busy = $0.content { true } else { false } } ?? false
+        let access = formAccessContext(for: draft)
         return GridEventAccess.isEventReadOnly(
-            lookup: lookup,
+            lookup: access.lookup,
             calendarId: draft.calendarId,
-            isBusy: isBusy
+            isBusy: access.isBusy
         )
+    }
+
+    private func formAccessContext(for draft: GridEventDraft) -> (
+        lookup: CalendarLookup,
+        isBusy: Bool,
+        baseline: Event?
+    ) {
+        let baseline = baselineEvent(for: draft)
+        let isBusy = baseline.map { event in
+            if case .busy = event.content { return true }
+            return false
+        } ?? false
+        return (CalendarLookupBuilder.build(calendars), isBusy, baseline)
     }
 
     public func displayAttendees(for draft: GridEventDraft) -> [DraftAttendeeInput] {
