@@ -3,23 +3,9 @@ import AppKit
 /// AppKit mirror of the event form title field for XCUITest. SwiftUI text fields are
 /// not reliably exposed in CI; this probe uses the same identifier as `EventFormView`.
 @MainActor
-final class EventFormAccessibilityProbeView: NSView {
+final class EventFormAccessibilityProbeView: AccessibilityProbeView {
     private var titleBuffer = ""
     var onTitleChanged: ((String) -> Void)?
-
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        wantsLayer = true
-        layer?.backgroundColor = NSColor.clear.cgColor
-        alphaValue = 1
-        isHidden = true
-        setAccessibilityElement(false)
-    }
-
-    @available(*, unavailable)
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
 
     override var acceptsFirstResponder: Bool {
         !isHidden
@@ -79,42 +65,16 @@ final class EventFormAccessibilityProbeView: NSView {
         publishTitle()
     }
 
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        nil
-    }
-
     func syncTitle(_ title: String?) {
         guard !isHidden else { return }
         titleBuffer = title ?? ""
         setAccessibilityValue(titleBuffer)
     }
 
-    override func layout() {
-        super.layout()
-        syncAccessibilityFrame()
-    }
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        syncAccessibilityFrame()
-    }
-
-    override func accessibilityFrame() -> NSRect {
-        guard let window, bounds.width > 0, bounds.height > 0 else {
-            return super.accessibilityFrame()
-        }
-        return window.convertToScreen(convert(bounds, to: nil))
-    }
-
     private func publishTitle() {
         setAccessibilityValue(titleBuffer)
         onTitleChanged?(titleBuffer)
         NSAccessibility.post(element: self, notification: .valueChanged)
-    }
-
-    private func syncAccessibilityFrame() {
-        guard let window, bounds.width > 0, bounds.height > 0 else { return }
-        setAccessibilityFrame(window.convertToScreen(convert(bounds, to: nil)))
     }
 }
 
@@ -159,9 +119,6 @@ enum EventFormAccessibilityProbe {
                 window.makeFirstResponder(probe)
             }
         }
-        if let window = probe.window {
-            NSAccessibility.post(element: probe, notification: .layoutChanged)
-            NSAccessibility.post(element: window, notification: .layoutChanged)
-        }
+        probe.postLayoutChanged()
     }
 }

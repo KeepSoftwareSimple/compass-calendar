@@ -5,13 +5,10 @@ import SwiftUI
 struct BookingStatusHeaderView: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var bookingStore: BookingStore
-    let isLive: Bool
-    let isPending: Bool
     let savedUrl: String?
     let addressPreview: String?
     let connections: [UserMetadataConnections]
     let calendars: [CompassCalendar]
-    let hasHealthyConnection: Bool
     let connectableProviders: [ProviderEnum]
     let isConnectBusy: Bool
     let onToggle: (Bool) -> Void
@@ -27,8 +24,8 @@ struct BookingStatusHeaderView: View {
                     set: { onToggle($0) }
                 )
             )
-            .disabled(isPending)
-            if !isLive {
+            .disabled(bookingStore.isSaving)
+            if !bookingStore.isLive {
                 if savedUrl != nil {
                     Text("Off. Guests can use this link once you turn it on.")
                         .font(.custom("Rubik", size: 12))
@@ -44,11 +41,10 @@ struct BookingStatusHeaderView: View {
                     }
                 }
             }
-            if isLive {
+            if bookingStore.isLive {
                 BookingBlockerNoticeView(
                     connections: connections,
                     calendars: calendars,
-                    hasHealthyConnection: hasHealthyConnection,
                     status: bookingStore.status,
                     connectableProviders: connectableProviders,
                     isBusy: isConnectBusy,

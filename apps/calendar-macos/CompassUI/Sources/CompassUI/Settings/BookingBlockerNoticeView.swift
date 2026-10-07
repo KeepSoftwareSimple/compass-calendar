@@ -6,7 +6,6 @@ struct BookingBlockerNoticeView: View {
     @Environment(\.nativeWebTheme) private var theme
     let connections: [UserMetadataConnections]
     let calendars: [CompassCalendar]
-    let hasHealthyConnection: Bool
     let status: BookingPageStatusResponse?
     let connectableProviders: [ProviderEnum]
     let isBusy: Bool
@@ -17,7 +16,9 @@ struct BookingBlockerNoticeView: View {
         BookingBlockerLogic.selectBookingBlocker(
             connections: connections,
             calendars: calendars,
-            hasHealthyConnection: hasHealthyConnection,
+            hasHealthyConnection: BookingConnectionHealth.hasHealthyConnection(
+                connections: connections
+            ),
             status: status
         )
     }

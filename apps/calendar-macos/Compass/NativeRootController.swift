@@ -62,23 +62,14 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         model.onEventFormTitleAccessibilityProbeTitleSync = { title in
             EventFormAccessibilityProbe.syncTitle(title)
         }
-        model.onRecurrenceScopeAccessibilityProbeChanged = { visible in
-            if let window = Self.compassHostWindow(hostingView: self.view) ?? NSApp.mainWindow {
-                RecurrenceScopeAccessibilityProbe.attach(to: window)
-            }
-            RecurrenceScopeAccessibilityProbe.publish(visible: visible)
+        model.onRecurrenceScopeAccessibilityProbeChanged = { [weak self] visible in
+            Self.publish(NativeOverlayProbes.recurrenceScope, visible: visible, hostingView: self?.view)
         }
         model.onStatusToastAccessibilityProbeChanged = { [weak self] visible in
-            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
-                StatusToastAccessibilityProbe.attach(to: window)
-            }
-            StatusToastAccessibilityProbe.publish(visible: visible)
+            Self.publish(NativeOverlayProbes.statusToast, visible: visible, hostingView: self?.view)
         }
         model.onShortcutsLegendAccessibilityProbeChanged = { [weak self] open in
-            if let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow {
-                ShortcutsLegendAccessibilityProbe.attach(to: window)
-            }
-            ShortcutsLegendAccessibilityProbe.publish(visible: open)
+            Self.publish(NativeOverlayProbes.shortcutsLegend, visible: open, hostingView: self?.view)
         }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
@@ -111,9 +102,23 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                     model?.updateDraftFromForm(title: newTitle)
                 }
             )
-            StatusToastAccessibilityProbe.attach(to: window)
-            ShortcutsLegendAccessibilityProbe.attach(to: window)
+            NativeOverlayProbes.statusToast.attach(to: window)
+            NativeOverlayProbes.shortcutsLegend.attach(to: window)
         }
+    }
+
+    /// Attaches to whichever window XCUITest is driving, then mirrors the
+    /// overlay's visibility. The window search falls back to the Compass
+    /// window by identifier, so a torn-down controller still publishes.
+    private static func publish(
+        _ probe: OverlayAccessibilityProbe,
+        visible: Bool,
+        hostingView: NSView?
+    ) {
+        if let window = compassHostWindow(hostingView: hostingView) ?? NSApp.mainWindow {
+            probe.attach(to: window)
+        }
+        probe.publish(visible: visible)
     }
 
     private static func compassHostWindow(hostingView: NSView?) -> NSWindow? {
