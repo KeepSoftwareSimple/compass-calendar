@@ -1,32 +1,12 @@
 import { type MutableRefObject, useCallback, useLayoutEffect } from "react";
-import {
-  getScrollToNowTop,
-  scrollTimedGridToNow,
-} from "@web/common/utils/grid/grid.util";
-import { nowCueActions } from "@web/grid/now-cue/now-cue.store";
+import { scrollTimedGridToNow } from "@web/common/utils/grid/grid.util";
+import { scrollToNowOrPulse } from "@web/grid/now-cue/scroll-to-now-or-pulse";
 
 export const useScroll = (
   timedGridRef: MutableRefObject<HTMLElement | null>,
 ) => {
-  const scrollTo = useCallback(
-    (behavior: ScrollBehavior) => {
-      if (!timedGridRef.current) return;
-
-      timedGridRef.current.scroll({
-        top: getScrollToNowTop(timedGridRef.current.clientHeight),
-        behavior,
-      });
-    },
-    [timedGridRef],
-  );
-
   const scrollToNow = useCallback(() => {
-    const grid = timedGridRef.current;
-    if (!grid) return;
-
-    if (!scrollTimedGridToNow(grid, "smooth")) {
-      nowCueActions.pulse();
-    }
+    scrollToNowOrPulse(timedGridRef.current);
   }, [timedGridRef]);
 
   // Mount: jump, don't glide. The HTML boot shell in index.html is already
@@ -35,8 +15,9 @@ export const useScroll = (
   // "t" (today) owns scroll-to-now while viewing the current week; do not
   // bind "c" here — that creates a draft.
   useLayoutEffect(() => {
-    scrollTo("instant");
-  }, [scrollTo]);
+    const timedGrid = timedGridRef.current;
+    if (timedGrid) scrollTimedGridToNow(timedGrid, "instant");
+  }, [timedGridRef]);
 
   return { scrollToNow };
 };
