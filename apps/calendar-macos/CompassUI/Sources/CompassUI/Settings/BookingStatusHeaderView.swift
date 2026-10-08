@@ -25,22 +25,6 @@ struct BookingStatusHeaderView: View {
                 )
             )
             .disabled(bookingStore.isSaving)
-            if !bookingStore.isLive {
-                if savedUrl != nil {
-                    Text("Off. Guests can use this link once you turn it on.")
-                        .font(.custom("Rubik", size: 12))
-                        .foregroundStyle(theme.textColor)
-                } else {
-                    Text("Off. Turn it on to share your link.")
-                        .font(.custom("Rubik", size: 12))
-                        .foregroundStyle(theme.textColor)
-                    if let addressPreview {
-                        Text("It will be at \(addressPreview)")
-                            .font(.custom("Rubik", size: 12))
-                            .foregroundStyle(theme.textMutedColor)
-                    }
-                }
-            }
             if bookingStore.isLive {
                 BookingBlockerNoticeView(
                     connections: connections,
@@ -51,6 +35,19 @@ struct BookingStatusHeaderView: View {
                     onConnect: onConnect,
                     onReconnect: onReconnect
                 )
+            } else if savedUrl != nil {
+                Text("Off. Guests can use this link once you turn it on.")
+                    .font(.custom("Rubik", size: 12))
+                    .foregroundStyle(theme.textColor)
+            } else {
+                Text("Off. Turn it on to share your link.")
+                    .font(.custom("Rubik", size: 12))
+                    .foregroundStyle(theme.textColor)
+                if let addressPreview {
+                    Text("It will be at \(addressPreview)")
+                        .font(.custom("Rubik", size: 12))
+                        .foregroundStyle(theme.textMutedColor)
+                }
             }
         }
         .accessibilityIdentifier("booking-status-header")

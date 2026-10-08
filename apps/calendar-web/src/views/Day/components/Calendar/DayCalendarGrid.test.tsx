@@ -791,7 +791,7 @@ describe("DayCalendarGrid", () => {
     emitViewCommand("SCROLL_TO_NOW_LINE");
 
     expect(scroll).not.toHaveBeenCalled();
-    expect(useNowCueStore.getState().pulse).toBe(1);
+    expect(useNowCueStore.getState().active).toBe(true);
   });
 
   it("seeds a keyboardPlace draft on the focused writable column", async () => {

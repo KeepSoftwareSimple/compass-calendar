@@ -88,13 +88,9 @@ enum EventFormAccessibilityProbe {
     }
 
     static func attach(to hostView: NSView) {
-        if let existing = probe, existing.superview === hostView {
-            return
+        probe = AccessibilityProbeView.attach(existing: probe, to: hostView) {
+            EventFormAccessibilityProbeView(frame: .zero)
         }
-        probe?.removeFromSuperview()
-        let view = EventFormAccessibilityProbeView(frame: .zero)
-        probe = view
-        hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
     static func syncTitle(_ title: String?) {

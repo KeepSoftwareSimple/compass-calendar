@@ -31,13 +31,9 @@ enum GridFocusAccessibilityProbe {
     }
 
     static func attach(to hostView: NSView) {
-        if let existing = probe, existing.superview === hostView {
-            return
+        probe = AccessibilityProbeView.attach(existing: probe, to: hostView) {
+            GridFocusAccessibilityProbeView(frame: .zero)
         }
-        probe?.removeFromSuperview()
-        let view = GridFocusAccessibilityProbeView(frame: .zero)
-        probe = view
-        hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
     static func publish(label: String?) {

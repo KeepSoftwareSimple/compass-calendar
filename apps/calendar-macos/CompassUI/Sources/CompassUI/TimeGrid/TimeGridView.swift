@@ -165,7 +165,7 @@ public final class TimeGridView: NSView {
         )
         let currentY = scrollView.contentView.bounds.origin.y
         if GridScrollMath.isAtScrollTarget(currentY: currentY, targetY: targetY) {
-            pulseNowCue(snapshot: snapshot)
+            pulseNowCue()
             return
         }
         var origin = scrollView.contentView.bounds.origin
@@ -174,17 +174,12 @@ public final class TimeGridView: NSView {
         scrollView.reflectScrolledClipView(scrollView.contentView)
     }
 
-    private func pulseNowCue(snapshot: GridLayoutSnapshot) {
-        guard snapshot.nowLine != nil else { return }
+    private func pulseNowCue() {
         let accent = themeAccentColor
-
-        let linePulse = CABasicAnimation(keyPath: "opacity")
-        linePulse.fromValue = 1
-        linePulse.toValue = 0.35
-        linePulse.duration = 0.35
-        linePulse.autoreverses = true
-        linePulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        nowLineLayer.add(linePulse, forKey: "nowCuePulse")
+        nowLineLayer.add(
+            nowCuePulseAnimation(keyPath: "opacity", from: 1, to: 0.35),
+            forKey: "nowCuePulse"
+        )
 
         let todayKey = CompassDateParsing.formatCalendarDay(state.referenceNow)
         if state.layoutMode == .week {
@@ -201,13 +196,24 @@ public final class TimeGridView: NSView {
 
     private func pulseHeaderBackground(_ view: NSView, accent: NSColor) {
         view.wantsLayer = true
-        let pulse = CABasicAnimation(keyPath: "backgroundColor")
-        pulse.fromValue = NSColor.clear.cgColor
-        pulse.toValue = accent.withAlphaComponent(0.18).cgColor
+        view.layer?.add(
+            nowCuePulseAnimation(
+                keyPath: "backgroundColor",
+                from: NSColor.clear.cgColor,
+                to: accent.withAlphaComponent(0.18).cgColor
+            ),
+            forKey: "nowCuePulse"
+        )
+    }
+
+    private func nowCuePulseAnimation(keyPath: String, from: Any?, to: Any?) -> CABasicAnimation {
+        let pulse = CABasicAnimation(keyPath: keyPath)
+        pulse.fromValue = from
+        pulse.toValue = to
         pulse.duration = 0.35
         pulse.autoreverses = true
         pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        view.layer?.add(pulse, forKey: "nowCuePulse")
+        return pulse
     }
 
     public override func rightMouseDown(with event: NSEvent) {
