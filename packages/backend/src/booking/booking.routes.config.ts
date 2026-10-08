@@ -10,16 +10,17 @@ import { createBookingRateLimitStore } from "@backend/booking/booking-rate-limit
 import bookingController from "@backend/booking/controllers/booking.controller";
 import { CommonRoutesConfig } from "@backend/common/common.routes.config";
 import { CONFIG } from "@backend/common/constants/config.constants";
+import { routeParam } from "@backend/common/helpers/query-param";
 
 const logger = Logger("app:booking.rate-limit");
 
 const MINUTE_MS = 60 * 1000;
 
 const bookingSlugKey = (req: express.Request): string =>
-  bookingPublicRateLimitKey(req.ip, req.params["slug"]);
+  bookingPublicRateLimitKey(req.ip, routeParam(req.params["slug"]));
 
 const bookingReservationKey = (req: express.Request): string =>
-  bookingPublicRateLimitKey(req.ip, req.params["id"]);
+  bookingPublicRateLimitKey(req.ip, routeParam(req.params["id"]));
 
 const bookingAdminKey = (req: express.Request): string =>
   `booking-admin:${(req as SessionRequest).session?.getUserId?.() ?? "unknown"}`;

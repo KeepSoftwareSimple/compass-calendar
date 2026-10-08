@@ -553,6 +553,39 @@ done
 REMOTE
 }
 
+remote_check_production_email_config() {
+  ssh_remote "bash -se" <<'REMOTE'
+set -euo pipefail
+config="$HOME/compass/compass.yaml"
+if [ ! -f "$config" ]; then
+  printf 'missing %s\n' "$config" >&2
+  exit 1
+fi
+if ! grep -Eq '^email:[[:space:]]*$' "$config"; then
+  printf 'compass.yaml has no email: block (welcome drip disabled)\n' >&2
+  exit 1
+fi
+if ! awk '
+  /^email:[[:space:]]*$/ { in_email=1; next }
+  in_email && /^[^[:space:]]/ { in_email=0 }
+  in_email && /^[[:space:]]+provider:[[:space:]]+resend[[:space:]]*$/ { found=1 }
+  END { exit found ? 0 : 1 }
+' "$config"; then
+  printf 'compass.yaml email.provider is not resend\n' >&2
+  exit 1
+fi
+if awk '
+  /^email:[[:space:]]*$/ { in_email=1; next }
+  in_email && /^[^[:space:]]/ { in_email=0 }
+  in_email && /^[[:space:]]+allowlist:/ { found=1 }
+  END { exit found ? 1 : 0 }
+' "$config"; then
+  printf 'compass.yaml email.allowlist must be unset in production\n' >&2
+  exit 1
+fi
+REMOTE
+}
+
 remote_check_cloud_mongo() {
   require_env MONGO_URI || return 1
 
@@ -648,6 +681,9 @@ run_all_checks() {
 
   case "$PROFILE" in
     cloud)
+      if [ "$ENVIRONMENT" = "production" ]; then
+        run_check "production-email-config" remote_check_production_email_config
+      fi
       run_check "mongo-cloud-data" remote_check_cloud_mongo
       ;;
     selfhosted)

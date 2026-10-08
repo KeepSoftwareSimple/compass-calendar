@@ -301,6 +301,8 @@ jobs:
             if { [ "${{ inputs.environment }}" = "production" ] || [ "${{ inputs.environment }}" = "staging-cloud" ]; }; then
               # shellcheck source=.github/scripts/deploy-write-email-block.sh
               . .github/scripts/deploy-write-email-block.sh
+              DEPLOY_ENVIRONMENT="${{ inputs.environment }}"
+              require_production_email_config
               write_email_block
             else
               echo "Email config: omitting email block (environment=${{ inputs.environment }})" >&2

@@ -9,10 +9,19 @@ import {
 import { CaretDownIcon } from "@phosphor-icons/react/dist/csr/CaretDown";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import classNames from "classnames";
-import { type MouseEvent, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useRef,
+  useState,
+} from "react";
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import {
+  selectNowCueActive,
+  useNowCueStore,
+} from "@web/grid/now-cue/now-cue.store";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
@@ -27,15 +36,22 @@ interface SelectViewProps {
   /** The date heading text, e.g. "July 2026" or "Monday, July 20". */
   label: string;
   onToday?: () => void;
+  /** Day view: pulse the heading when already on today and at the now line. */
+  emphasizeDayLabel?: boolean;
 }
 
-export const SelectView = ({ label, onToday }: SelectViewProps) => {
+export const SelectView = ({
+  label,
+  onToday,
+  emphasizeDayLabel = false,
+}: SelectViewProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
   const listRef = useRef<Array<HTMLElement | null>>([]);
   useFloatingLayer("viewSelect", isOpen);
+  const pulseDayLabel = useNowCueStore(selectNowCueActive) && emphasizeDayLabel;
 
   const getCurrentView = (): "Day" | "Week" | "Life" => {
     const pathname = location.pathname;
@@ -134,6 +150,23 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
     };
   };
 
+  /**
+   * Enter and Space commit the active option. Both the trigger and the list
+   * need it: focus can still sit on the trigger for a frame after
+   * useListNavigation opens the list, and the button's native Enter-click
+   * would toggle the dropdown closed and lose the selection.
+   */
+  const commitActiveOption = (event: ReactKeyboardEvent<Element>): void => {
+    if (activeIndex === null) return;
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    const option = options[activeIndex];
+    if (option) {
+      selectOption(option.onSelect, option.shortcutId)();
+    }
+  };
+
   const dropdownId = "view-select-dropdown";
 
   return (
@@ -143,23 +176,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
           ref={refs.setReference}
           {...getReferenceProps({
             onKeyDown: (e) => {
-              // While the list is open, focus can sit on this trigger for a
-              // frame - useListNavigation moves it to the active option
-              // asynchronously - so a fast ArrowDown+Enter lands Enter here.
-              // The button's native Enter-click would then toggle the
-              // dropdown closed and LOSE the selection. Commit the active
-              // option instead, mirroring the floating element's handler.
-              if (
-                isOpen &&
-                activeIndex !== null &&
-                (e.key === "Enter" || e.key === " ")
-              ) {
-                e.preventDefault();
-                const option = options[activeIndex];
-                if (option) {
-                  selectOption(option.onSelect, option.shortcutId)();
-                }
-              }
+              if (isOpen) commitActiveOption(e);
             },
           })}
           type="button"
@@ -168,7 +185,14 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
           aria-haspopup="listbox"
           aria-controls={isOpen ? dropdownId : undefined}
         >
-          <span>{label}</span>
+          <span
+            className={classNames(
+              pulseDayLabel &&
+                "c-now-cue-pulse rounded-sm motion-reduce:transition-none",
+            )}
+          >
+            {label}
+          </span>
           <CaretDownIcon size={14} aria-hidden="true" />
         </button>
       </h1>
@@ -177,18 +201,7 @@ export const SelectView = ({ label, onToday }: SelectViewProps) => {
         <div
           ref={refs.setFloating}
           {...getFloatingProps({
-            onKeyDown: (e) => {
-              if (
-                activeIndex !== null &&
-                (e.key === "Enter" || e.key === " ")
-              ) {
-                e.preventDefault();
-                const option = options[activeIndex];
-                if (option) {
-                  selectOption(option.onSelect, option.shortcutId)();
-                }
-              }
-            },
+            onKeyDown: commitActiveOption,
           })}
           id={dropdownId}
           data-testid="view-select-dropdown"

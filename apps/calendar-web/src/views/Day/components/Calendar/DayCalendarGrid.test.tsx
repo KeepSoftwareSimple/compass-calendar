@@ -29,6 +29,7 @@ import { ENV_WEB } from "@web/common/constants/env.constants";
 import { ZIndex } from "@web/common/constants/web.constants";
 import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
 import { createTimedDraft } from "@web/common/utils/draft/draft.util";
+import { getScrollToNowTop } from "@web/common/utils/grid/grid.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   createGridEventDraft,
@@ -47,6 +48,7 @@ import {
 } from "@web/grid/grid.constants";
 import * as realUsegridmeasurements from "@web/grid/hooks/useGridMeasurements";
 import { dayEventRegistry } from "@web/grid/interaction/view-event-registry";
+import { useNowCueStore } from "@web/grid/now-cue/now-cue.store";
 import { type GridMeasurements } from "@web/grid/types/grid.types";
 import * as realUsedateinview from "@web/views/Day/hooks/navigation/useDateInView";
 import {
@@ -770,6 +772,26 @@ describe("DayCalendarGrid", () => {
         top: expect.any(Number),
       }),
     );
+  });
+
+  it("pulses the now cue when the Day grid is already scrolled to now", () => {
+    setSystemTime(new Date("2026-02-05T12:00:00.000Z"));
+    const scroll = mock();
+
+    HTMLElement.prototype.scroll = scroll;
+    renderDayCalendarGrid();
+    const mainGrid = document.getElementById("mainGrid");
+    if (!(mainGrid instanceof HTMLElement)) {
+      throw new Error("expected main grid");
+    }
+    Object.defineProperty(mainGrid, "clientHeight", { value: 1440 });
+    mainGrid.scrollTop = getScrollToNowTop(1440);
+    scroll.mockClear();
+
+    emitViewCommand("SCROLL_TO_NOW_LINE");
+
+    expect(scroll).not.toHaveBeenCalled();
+    expect(useNowCueStore.getState().active).toBe(true);
   });
 
   it("seeds a keyboardPlace draft on the focused writable column", async () => {

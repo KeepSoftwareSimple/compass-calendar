@@ -19,8 +19,11 @@ public enum DemoDataSeeder {
         }
 
         let seed = try fixture ?? DemoSeedFixture.load()
-        let records = seed.events.map { row in
+        var records = seed.events.map { row in
             LocalEventRecord(id: EventId(rawValue: row.id), event: row.event, isDemo: row.isDemo)
+        }
+        if UITestLaunchPolicy.appendDemoOccurrenceForUITest {
+            records.append(try UITestDemoOccurrence.localRecord(calendarId: seed.calendarId))
         }
         try localEvents.putMany(records)
         try metadata.upsert(key: migrationKey, value: MigrationMarker(appliedAt: ISO8601DateFormatter().string(from: Date())))

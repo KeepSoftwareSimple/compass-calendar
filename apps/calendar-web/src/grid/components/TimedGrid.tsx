@@ -1,3 +1,4 @@
+import cn from "classnames";
 import { type FC, type ReactNode, type RefCallback } from "react";
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
@@ -20,6 +21,10 @@ import {
   TIMED_VISIBLE_HOURS,
 } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
+import {
+  selectNowCueActive,
+  useNowCueStore,
+} from "@web/grid/now-cue/now-cue.store";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
 import {
@@ -156,11 +161,15 @@ const CalendarNowLine = ({
 }) => {
   useMinuteTick();
   const percentOfDay = getCurrentPercentOfDay();
+  const pulseNowLine = useNowCueStore(selectNowCueActive);
 
   return (
     <div
       aria-hidden="true"
-      className="absolute h-px"
+      className={cn(
+        "absolute h-px motion-reduce:transition-none",
+        pulseNowLine && "c-now-cue-pulse",
+      )}
       style={{
         background: accentGradient,
         // Paper-colored rim: invisible on the grid, keeps the line readable

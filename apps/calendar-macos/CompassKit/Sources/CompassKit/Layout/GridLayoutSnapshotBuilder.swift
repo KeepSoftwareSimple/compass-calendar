@@ -5,10 +5,12 @@ public enum GridLayoutSnapshotBuilder {
         scenario: GridLayoutScenario,
         colWidths: [Double],
         hourHeight: Double = 60,
-        allDayRowsCount: Int? = nil
+        allDayRowsCount: Int? = nil,
+        hasSecondaryTimeZone: Bool = false
     ) -> GridLayoutSnapshot {
         let visibleDates = GridVisibleDate.fromKeys(scenario.visibleDateKeys)
-        let marginLeft = GridMetrics.gridMarginLeftPx()
+        let marginLeft = GridMetrics.gridMarginLeftPx(hasSecondaryTimeZone: hasSecondaryTimeZone)
+        let gridWidth = colWidths.reduce(0, +) + marginLeft
         let timedGridHeight = Double(GridTimeConstants.timedVisibleHours) * hourHeight
         let lookup = CalendarLookupBuilder.build(scenario.calendars)
 
@@ -26,9 +28,9 @@ public enum GridLayoutSnapshotBuilder {
                 bottom: timedGridHeight,
                 height: timedGridHeight,
                 left: 0,
-                right: colWidths.reduce(0, +) + marginLeft,
+                right: gridWidth,
                 top: 0,
-                width: colWidths.reduce(0, +) + marginLeft,
+                width: gridWidth,
                 x: 0,
                 y: 0
             )
@@ -164,6 +166,18 @@ public enum GridLayoutSnapshotBuilder {
             )
         }
 
+        if let draft = scenario.draftOverlay {
+            cards.append(
+                draftCard(
+                    draft: draft,
+                    scenario: scenario,
+                    measurements: measurements,
+                    visibleDates: visibleDates,
+                    lookup: lookup
+                )
+            )
+        }
+
         cards.sort { lhs, rhs in
             if lhs.zIndex != rhs.zIndex { return lhs.zIndex < rhs.zIndex }
             return lhs.eventId < rhs.eventId
@@ -172,9 +186,7 @@ public enum GridLayoutSnapshotBuilder {
         let nowLine = nowLineSnapshot(
             referenceNow: scenario.referenceNow,
             visibleDates: visibleDates,
-            hourHeight: hourHeight,
-            marginLeft: marginLeft,
-            colWidths: colWidths
+            hourHeight: hourHeight
         )
 
         return GridLayoutSnapshot(
@@ -302,6 +314,107 @@ public enum GridLayoutSnapshotBuilder {
         )
     }
 
+    private static func draftCard(
+        draft: GridLayoutDraftOverlay,
+        scenario: GridLayoutScenario,
+        measurements: GridMetrics,
+        visibleDates: [GridVisibleDate],
+        lookup: CalendarLookup
+    ) -> GridLayoutCardSnapshot {
+        let allDayDraft = AllDayDraftSchedule(
+            kind: draft.schedule.kind == .allDay ? .allDay : .timed,
+            start: draft.schedule.start,
+            end: draft.schedule.end
+        )
+        let displayTitle = draft.title.isEmpty ? "Untitled event" : draft.title
+
+        if AllDayDraftPosition.isDraftRenderedInAllDayRow(allDayDraft) {
+            let existingEvents = scenario.allDayEvents.map {
+                AllDayDraftEvent(
+                    id: $0.eventId,
+                    startDate: $0.startDate,
+                    endDate: $0.endDate,
+                    row: $0.row,
+                    title: $0.title,
+                    isAllDay: true
+                )
+            }
+            let positioned = AllDayDraftPosition.positionAllDayDraftEvent(
+                draftId: draft.eventId,
+                draft: allDayDraft,
+                title: displayTitle,
+                events: existingEvents
+            )
+            let active = positioned.activeDraftEvent ?? AllDayDraftPosition.draftToAllDayRowGridEvent(
+                id: draft.eventId,
+                title: displayTitle,
+                draft: allDayDraft
+            )
+            let position = EventPositionCalculator.getAllDayEventPosition(
+                startDate: active.startDate,
+                endDate: active.endDate,
+                row: active.row ?? 0,
+                measurements: measurements,
+                visibleDates: visibleDates,
+                columnIndex: nil
+            )
+            return GridLayoutCardSnapshot(
+                accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: draft.eventId),
+                eventId: draft.eventId,
+                fillColorHex: GridEventCardChrome.cardFillColorHex(
+                    lookup: lookup,
+                    calendarId: draft.calendarId,
+                    eventColorHex: draft.colorHex
+                ),
+                frame: position,
+                isHiddenStrip: false,
+                kind: .allDay,
+                label: displayTitle,
+                zIndex: 10_000,
+                isDraft: true,
+                showsInlineTitleEditor: draft.showsInlineTitleEditor
+            )
+        }
+
+        let startISO = CompassDateParsing.formatLikeDayjs(draft.schedule.start)
+        let endISO = CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+        let columnIndex = columnIndexForEvent(
+            calendarId: draft.calendarId,
+            scenario: scenario,
+            visibleDates: visibleDates,
+            startDate: startISO
+        )
+        let position = EventPositionCalculator.getTimedEventPosition(
+            EventPositionCalculator.TimedEventInput(
+                startDate: startISO,
+                endDate: endISO,
+                isDraft: true
+            ),
+            measurements: measurements,
+            visibleDates: visibleDates,
+            columnIndex: scenario.layoutMode == .day ? columnIndex : nil
+        )
+        var floated = position
+        floated.zIndex = 10_000
+
+        return GridLayoutCardSnapshot(
+            accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: draft.eventId),
+            eventId: draft.eventId,
+            fillColorHex: GridEventCardChrome.cardFillColorHex(
+                lookup: lookup,
+                calendarId: draft.calendarId,
+                eventColorHex: draft.colorHex
+            ),
+            frame: floated,
+            isHiddenStrip: false,
+            kind: .timed,
+            label: displayTitle,
+            zIndex: 10_000,
+            isDraft: true,
+            showsInlineTitleEditor: draft.showsInlineTitleEditor
+        )
+    }
+
     private static func allDayRowHeightPx(rowsCount: Int) -> Double {
         let rows = max(1, rowsCount)
         return 2 * GridLayoutConstants.eventAllDayGap
@@ -311,9 +424,7 @@ public enum GridLayoutSnapshotBuilder {
     private static func nowLineSnapshot(
         referenceNow: Date,
         visibleDates: [GridVisibleDate],
-        hourHeight: Double,
-        marginLeft: Double,
-        colWidths: [Double]
+        hourHeight: Double
     ) -> GridLayoutNowLineSnapshot? {
         let dayKey = CompassDateParsing.formatCalendarDay(referenceNow)
         guard let columnIndex = visibleDates.firstIndex(where: { $0.key == dayKey }) else {
@@ -323,8 +434,6 @@ public enum GridLayoutSnapshotBuilder {
         let startOfDay = calendar.startOfDay(for: referenceNow)
         let minutes = referenceNow.timeIntervalSince(startOfDay) / 60
         let top = (minutes / 60) * hourHeight
-        _ = marginLeft
-        _ = colWidths
         return GridLayoutNowLineSnapshot(columnIndex: columnIndex, top: top)
     }
 }

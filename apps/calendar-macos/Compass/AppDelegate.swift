@@ -5,15 +5,14 @@ import CompassUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var window: NSWindow?
-    private var webViewController: WebViewController?
     private var nativeRootController: NativeRootController?
+    private var shortcutsCatalogController: ShortcutsCatalogWindowController?
     /// Menu items hold a weak target; retain the controller for the app lifetime.
     private var mainMenuController: MainMenuController?
     private var quickAddCoordinator: DesktopQuickAddCoordinator?
     private let updater = DesktopUpdater()
     private var optionHeldAtLaunch = false
     private var showDebugMenu = false
-    private var usingNativeUI = false
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         optionHeldAtLaunch = NSApp.currentEvent?.modifierFlags.contains(.option) ?? false
@@ -21,39 +20,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         showDebugMenu = DebugMenuPolicy.shouldShow(optionHeldAtLaunch: optionHeldAtLaunch)
-        usingNativeUI = NativeUILaunchPolicy.shouldUseNativeUI(showDebugMenu: showDebugMenu)
 
         let appURL = AppOrigin.resolve(
             override: UserDefaults.standard.string(forKey: "COMPASS_APP_URL"),
             infoValue: Bundle.main.object(forInfoDictionaryKey: "COMPASS_APP_URL") as? String)
 
-        let quickAddCoordinator = DesktopQuickAddCoordinator(appURL: appURL)
+        let quickAddCoordinator = DesktopQuickAddCoordinator()
         self.quickAddCoordinator = quickAddCoordinator
         quickAddCoordinator.start()
 
-        let webViewController = WebViewController(appURL: appURL)
-        self.webViewController = webViewController
-        webViewController.configureQuickAddRouter(quickAddCoordinator)
-
         let menuController = MainMenuController(
-            webViewController: webViewController,
             updater: updater,
             showDebugMenu: showDebugMenu,
             nativeUIState: nativeUIStateProvider())
-        menuController.onToggleNativeUI = { [weak self] in
-            self?.toggleNativeUI()
-        }
         menuController.onSelectNativeTheme = { [weak self] theme in
             self?.setNativeTheme(theme)
         }
+        menuController.onReloadAppHost = { [weak self] in
+            self?.reloadNativeRoot()
+        }
         mainMenuController = menuController
+        menuController.quickAddCoordinator = quickAddCoordinator
         NSApp.mainMenu = MainMenu.make(controller: menuController)
 
-        updater.onUpdateReady = { [weak webViewController] version in
-            webViewController?.deliverUpdateReady(version: version)
-        }
-        webViewController.onRestartToUpdate = { [updater] in
-            updater.restartToUpdate()
+        updater.onUpdateReady = { [weak self] version in
+            self?.nativeRootController?.model.desktopUpdateReadyVersion = version
         }
         updater.start()
 
@@ -62,23 +53,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         installRootContent(on: window)
 
         if let launchDeepLink = UserDefaults.standard.string(forKey: "COMPASS_LAUNCH_DEEP_LINK") {
-            if usingNativeUI {
-                nativeRootController?.receiveDeepLink(urlString: launchDeepLink)
-            } else {
-                webViewController.receiveDeepLink(urlString: launchDeepLink)
-            }
+            nativeRootController?.receiveDeepLink(urlString: launchDeepLink)
         }
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        if usingNativeUI {
-            for url in urls {
-                nativeRootController?.receiveDeepLink(url)
-            }
-            return
-        }
         for url in urls {
-            webViewController?.receiveDeepLink(url)
+            nativeRootController?.receiveDeepLink(url)
         }
     }
 
@@ -116,55 +97,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func installRootContent(on window: NSWindow) {
         nativeRootController?.keyboardMonitor?.stop()
         (NSApp as? CompassApplication)?.keyboardMonitor = nil
-        if usingNativeUI {
-            let theme = NativeUIThemePreference.load()
-            let presenter = WebAuthSessionPresenter()
-            guard let model = try? NativeRootFactory.makeModel(webAuthPresenter: presenter) else {
-                return
-            }
-            let nativeController = NativeRootController(webTheme: theme, model: model)
-            nativeRootController = nativeController
-            window.contentViewController = nativeController
-            CompassBridgeAccessibility.prepareNativeRootWindowForXCUITest(window)
-            mainMenuController?.nativeRootController = nativeController
-        } else {
-            nativeRootController = nil
-            guard let webViewController else { return }
-            window.contentViewController = webViewController
-            webViewController.accessibilityHostWindow = window
-            CompassBridgeAccessibility.publishBridgeVersion(BridgeScript.bridgeVersion, on: window)
-        }
-    }
 
-    private func toggleNativeUI() {
-        if NativeUILaunchPolicy.launchArgumentEnabled == true {
+        let theme = NativeUIThemePreference.load()
+        let presenter = WebAuthSessionPresenter()
+        let catalog = shortcutsCatalogController ?? ShortcutsCatalogWindowController()
+        shortcutsCatalogController = catalog
+        guard let model = try? NativeRootFactory.makeModel(
+            webAuthPresenter: presenter,
+            catalogController: catalog
+        ) else {
             return
         }
-        let next = !NativeUILaunchPolicy.isDebugPreferenceEnabled
-        NativeUILaunchPolicy.setDebugPreferenceEnabled(next)
-        usingNativeUI = NativeUILaunchPolicy.shouldUseNativeUI(showDebugMenu: showDebugMenu)
+        model.onDesktopRestartToUpdate = { [weak self] in
+            self?.updater.restartToUpdate()
+        }
+        let nativeController = NativeRootController(
+            webTheme: theme,
+            model: model,
+            catalogController: catalog)
+        nativeRootController = nativeController
+        window.contentViewController = nativeController
+        NativeAccessibilityProbes.prepareNativeRootWindowForXCUITest(window)
+        mainMenuController?.nativeRootController = nativeController
+        if let quickAddCoordinator {
+            nativeController.attachQuickAddRouter(quickAddCoordinator)
+            quickAddCoordinator.configureNative(model: { [weak nativeController] in nativeController?.model })
+        }
+        mainMenuController?.refreshNativeUIState(nativeUIStateProvider())
+    }
+
+    private func reloadNativeRoot() {
         guard let window else { return }
         nativeRootController = nil
         installRootContent(on: window)
-        mainMenuController?.refreshNativeUIState(nativeUIStateProvider())
     }
 
     private func setNativeTheme(_ theme: NativeWebTheme) {
         NativeUIThemePreference.save(theme)
-        if !usingNativeUI {
-            NativeUILaunchPolicy.setDebugPreferenceEnabled(true)
-            usingNativeUI = true
-            guard let window else { return }
-            nativeRootController = nil
-            installRootContent(on: window)
-        }
         nativeRootController?.setWebTheme(theme)
         mainMenuController?.refreshNativeUIState(nativeUIStateProvider())
     }
 
     private func nativeUIStateProvider() -> MainMenuNativeUIState {
-        MainMenuNativeUIState(
-            isNativeUIEnabled: usingNativeUI,
-            theme: NativeUIThemePreference.load())
+        MainMenuNativeUIState(theme: NativeUIThemePreference.load())
     }
 }

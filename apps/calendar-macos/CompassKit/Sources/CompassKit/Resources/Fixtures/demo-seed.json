@@ -492,6 +492,112 @@
       },
       "isDemo": true,
       "version": 2
+    },
+    {
+      "id": "demo-weekly-sync",
+      "event": {
+        "id": "demo-weekly-sync",
+        "calendarId": "507f1f77bcf86cd799439011",
+        "content": {
+          "kind": "details",
+          "title": "Weekly sync",
+          "description": "Fixture recurring series for native scope tests."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T14:00:00+00:00",
+          "end": "2026-06-10T14:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "series",
+          "rules": [
+            "RRULE:FREQ=WEEKLY;BYDAY=WE,FR"
+          ]
+        },
+        "createdAt": "2026-06-10T15:00:00.000Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "demo-weekly-sync|2026-06-10T14:00:00.000Z",
+      "event": {
+        "id": "demo-weekly-sync|2026-06-10T14:00:00.000Z",
+        "calendarId": "507f1f77bcf86cd799439011",
+        "content": {
+          "kind": "details",
+          "title": "Weekly sync",
+          "description": "Fixture recurring series for native scope tests."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-10T14:00:00+00:00",
+          "end": "2026-06-10T14:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "occurrence",
+          "seriesId": "demo-weekly-sync"
+        },
+        "createdAt": "2026-06-10T15:00:00.000Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "demo-weekly-sync|2026-06-12T14:00:00.000Z",
+      "event": {
+        "id": "demo-weekly-sync|2026-06-12T14:00:00.000Z",
+        "calendarId": "507f1f77bcf86cd799439011",
+        "content": {
+          "kind": "details",
+          "title": "Weekly sync",
+          "description": "Fixture recurring series for native scope tests."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-12T14:00:00+00:00",
+          "end": "2026-06-12T14:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "occurrence",
+          "seriesId": "demo-weekly-sync"
+        },
+        "createdAt": "2026-06-10T15:00:00.000Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
+    },
+    {
+      "id": "demo-weekly-sync|2026-06-17T14:00:00.000Z",
+      "event": {
+        "id": "demo-weekly-sync|2026-06-17T14:00:00.000Z",
+        "calendarId": "507f1f77bcf86cd799439011",
+        "content": {
+          "kind": "details",
+          "title": "Weekly sync",
+          "description": "Fixture recurring series for native scope tests."
+        },
+        "schedule": {
+          "kind": "timed",
+          "start": "2026-06-17T14:00:00+00:00",
+          "end": "2026-06-17T14:30:00+00:00",
+          "timeZone": "UTC"
+        },
+        "recurrence": {
+          "kind": "occurrence",
+          "seriesId": "demo-weekly-sync"
+        },
+        "createdAt": "2026-06-10T15:00:00.000Z",
+        "updatedAt": null
+      },
+      "isDemo": true,
+      "version": 2
     }
   ]
 }

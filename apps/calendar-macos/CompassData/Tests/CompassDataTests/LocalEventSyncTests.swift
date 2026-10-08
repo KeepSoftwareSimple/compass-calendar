@@ -29,7 +29,7 @@ final class LocalEventSyncTests: XCTestCase {
             localEvents: localEvents,
             eventsAPI: mockAPI,
             listCalendars: {
-                [CompassCalendar(listItem: demoFixture.calendarListItem())]
+                [demoFixture.calendarListItem()]
             })
 
         let synced = try await sync.syncLocalEventsToCloud()

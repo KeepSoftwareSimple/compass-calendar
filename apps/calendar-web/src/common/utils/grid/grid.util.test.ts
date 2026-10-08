@@ -11,12 +11,51 @@ import {
   getMinuteHeight,
   getPrevDayWidth,
   getScrollToNowTop,
+  isTimedGridScrolledToNow,
+  scrollTimedGridToNow,
 } from "./grid.util";
-import { afterEach, describe, expect, it, setSystemTime, test } from "bun:test";
+import {
+  afterEach,
+  describe,
+  expect,
+  it,
+  mock,
+  setSystemTime,
+  test,
+} from "bun:test";
 
 describe("getScrollToNowTop", () => {
   afterEach(() => {
     setSystemTime();
+  });
+
+  it("detects when the timed grid is already scrolled to now", () => {
+    setSystemTime(new Date("2026-02-05T12:00:00.000Z"));
+
+    const clientHeight = 1440;
+    const grid = {
+      clientHeight,
+      scrollTop: getScrollToNowTop(clientHeight),
+    } as HTMLElement;
+
+    expect(isTimedGridScrolledToNow(grid)).toBe(true);
+    grid.scrollTop += 10;
+    expect(isTimedGridScrolledToNow(grid)).toBe(false);
+  });
+
+  it("does not scroll when already at now", () => {
+    setSystemTime(new Date("2026-02-05T12:00:00.000Z"));
+
+    const clientHeight = 1440;
+    const scroll = mock(() => {});
+    const grid = {
+      clientHeight,
+      scrollTop: getScrollToNowTop(clientHeight),
+      scroll,
+    } as unknown as HTMLElement;
+
+    expect(scrollTimedGridToNow(grid)).toBe(false);
+    expect(scroll).not.toHaveBeenCalled();
   });
 
   it("positions the current time 150px below the viewport top", () => {

@@ -206,6 +206,13 @@ final class KeyboardEngineTests: XCTestCase {
         XCTAssertEqual(digits, ["2"])
     }
 
+    func testShiftSlashMatchesQuestionMarkShortcutBinding() throws {
+        let entry = try XCTUnwrap(registry.entries.first { $0.id == .otherShortcuts })
+        let chord = try XCTUnwrap(entry.bindingChords.first)
+        let shiftSlash = KeyEvent(key: .punctuation("/"), modifiers: [.shift])
+        XCTAssertTrue(shiftSlash.matches(chord))
+    }
+
     func testPointerHintResolver() {
         XCTAssertEqual(PointerHintResolver.primaryShortcut(for: .eventCard), .editOpen)
         XCTAssertEqual(PointerHintResolver.primaryShortcut(for: .timedSlot), .createTypedTime)

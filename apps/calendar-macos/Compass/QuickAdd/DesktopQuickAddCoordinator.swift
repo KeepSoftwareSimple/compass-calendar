@@ -1,5 +1,7 @@
 import AppKit
+import CompassData
 import CompassKit
+import CompassUI
 
 @MainActor
 protocol DesktopQuickAddRouting: AnyObject {
@@ -13,13 +15,21 @@ final class DesktopQuickAddCoordinator: DesktopQuickAddRouting {
     private let hotKeyController: QuickAddHotKeyController
     private let panelController: QuickAddPanelController
 
-    init(appURL: URL) {
+    init() {
         hotKeyController = QuickAddHotKeyController()
-        panelController = QuickAddPanelController(appURL: appURL)
+        panelController = QuickAddPanelController()
         panelController.quickAddRouter = self
         hotKeyController.onHotKeyPressed = { [weak self] in
             self?.panelController.show()
         }
+    }
+
+    func configureNative(model: @escaping () -> NativeCalendarRootModel?) {
+        panelController.configureNative(model: model)
+    }
+
+    func presentQuickAddPanel() {
+        panelController.show()
     }
 
     func start() {

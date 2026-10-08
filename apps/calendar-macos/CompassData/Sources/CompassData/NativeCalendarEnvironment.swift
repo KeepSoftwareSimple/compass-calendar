@@ -6,15 +6,20 @@ public struct NativeCalendarEnvironment: Sendable {
     public let database: AppDatabase
     public let eventsStore: EventsStore
     public let hiddenEventsStore: HiddenEventsStore
+    public let clipboardStore: ClipboardStore
+    public let undoStore: UndoStore
     public let calendarRepository: CalendarRepository
     public let localEventRepository: LocalEventRepository
     public let userMetadataRepository: UserMetadataRepository
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
     public let oauthService: OAuthAuthorizationService
     public let syncConnectionsStore: SyncConnectionsStore
     public let levelsStore: LevelsStore
+    public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let shortcutRegistry: ShortcutRegistry
     public let analyticsIdentity: AnalyticsIdentityCoordinator
 
@@ -56,10 +61,14 @@ public struct NativeCalendarEnvironment: Sendable {
             eventsAPI: EventsAPI(client: apiClient),
             source: source
         )
+        let hiddenSource: HiddenEventRepositorySource = source == .local ? .local : .remote
         hiddenEventsStore = HiddenEventsStore(
             repository: HiddenEventRepository(database: database),
-            remoteClient: UserAPI(client: apiClient)
+            remoteClient: UserAPI(client: apiClient),
+            source: hiddenSource
         )
+        clipboardStore = ClipboardStore()
+        undoStore = UndoStore()
         configStore = ConfigStore(apiClient: apiClient)
         oauthService = OAuthAuthorizationService(
             apiClient: apiClient,
@@ -81,7 +90,7 @@ public struct NativeCalendarEnvironment: Sendable {
                 eventsAPI: EventsAPI(client: apiClient),
                 listCalendars: {
                     let remote = try await apiClient.calendars.list()
-                    return remote.map(CompassCalendar.init(listItem:))
+                    return remote
                 }
             ),
             eventsStore: eventsStore
@@ -91,8 +100,11 @@ public struct NativeCalendarEnvironment: Sendable {
             configStore: configStore,
             analytics: analytics,
             sessionPresenter: sessionPresenter)
+        bookingStore = BookingStore(apiClient: apiClient, analytics: analytics)
         shortcutRegistry = try ShortcutRegistry()
         levelsStore = LevelsStore(registry: shortcutRegistry, analytics: analytics)
+        onboardingStore = OnboardingStore(analytics: analytics)
+        blockPartyStore = BlockPartyStore(analytics: analytics)
         self.analyticsIdentity = analyticsIdentity
     }
 }

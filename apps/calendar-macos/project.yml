@@ -8,7 +8,7 @@ options:
   createIntermediateGroups: true
 settings:
   base:
-    MARKETING_VERSION: 0.1.0
+    MARKETING_VERSION: 1.0.0
     CURRENT_PROJECT_VERSION: 1
     # Empty is stable. release-macos-dev.yml passes COMPASS_UPDATE_CHANNEL=dev.
     COMPASS_UPDATE_CHANNEL: ""
@@ -37,7 +37,6 @@ targets:
     sources:
       - Compass
     resources:
-      - Resources/offline.html
       - path: Resources/icon.icns
         optional: true
       - path: Resources/Fonts
@@ -75,8 +74,13 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
     sources:
       - CompassUITests
+    resources:
+      - path: CompassUITests/ReferenceImages
+        type: folder
+        optional: true
     dependencies:
       - target: Compass
+      - package: CompassKit
 schemes:
   Compass:
     build:

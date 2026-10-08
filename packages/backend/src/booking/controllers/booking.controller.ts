@@ -10,6 +10,7 @@ import {
 import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
 import bookingPageService from "@backend/booking/services/booking-page.service";
 import publicBookingService from "@backend/booking/services/public-booking.service";
+import { routeParam } from "@backend/common/helpers/query-param";
 
 const respondBookingError = (
   res: Response,
@@ -70,7 +71,7 @@ class BookingController {
   getPublicPage = async (req: Request, res: Response) => {
     try {
       const response = await publicBookingService.getPublicPage(
-        req.params["slug"] ?? "",
+        routeParam(req.params["slug"]) ?? "",
       );
       res.status(Status.OK).json(response);
     } catch (error) {
@@ -81,7 +82,7 @@ class BookingController {
   getPublicSlots = async (req: Request, res: Response) => {
     try {
       const response = await publicBookingService.getSlots(
-        req.params["slug"] ?? "",
+        routeParam(req.params["slug"]) ?? "",
         {
           start: req.query["start"],
           end: req.query["end"],
@@ -97,7 +98,7 @@ class BookingController {
   createReservation = async (req: Request, res: Response) => {
     try {
       const response = await publicBookingService.createReservation(
-        req.params["slug"] ?? "",
+        routeParam(req.params["slug"]) ?? "",
         req.body,
       );
       res.status(Status.OK).json(response);

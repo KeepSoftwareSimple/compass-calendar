@@ -288,10 +288,20 @@ Stop the tunnel when testing is complete. Do not use personal calendars with sen
 Source: [`apps/calendar-macos`](../../apps/calendar-macos). Feature decisions and
 architecture: [Compass Desktop (macOS)](../features/desktop-client.md).
 
-The Mac app is moving to a fully native Swift UI (see
-[Compass Desktop (macOS)](../features/desktop-client.md)). Linux agents and
-Cursor Cloud VMs cannot compile AppKit; macOS builds and tests run on GitHub
-`macos-latest` ([macOS workflow](../CI-CD/workflows.md#macos-workflows)).
+The Mac app is a fully native Swift UI. Linux agents and Cursor Cloud VMs
+cannot compile AppKit; macOS builds and tests run on GitHub `macos-latest`
+([macOS workflow](../CI-CD/workflows.md#macos-workflows)).
+
+Shared contracts and shortcuts come from TypeScript generators (run on Linux
+before you push Swift changes):
+
+```bash
+bun cli contracts:swift --check
+bun cli desktop:export --check
+```
+
+Regenerate without `--check` when you change Zod schemas, shortcuts, theme
+tokens, or parity fixtures.
 
 ### Prerequisites
 
@@ -307,26 +317,34 @@ xcodegen generate
 open Compass.xcodeproj
 ```
 
-Select the **Compass** scheme in Xcode and run (⌘R). The web view loads
-`COMPASS_APP_URL` from `Resources/Info.plist` (default
-`https://www.compasscalendar.com`).
+Select the **Compass** scheme in Xcode and run (⌘R). The calendar UI is
+native; API calls use `AppHostPreference` (production by default).
 
-### Override `COMPASS_APP_URL`
+### API host (production vs staging)
 
-Point the shell at local web dev or staging without rebuilding the web app:
+`AppHostPreference` in CompassKit selects which Compass origin backs
+`/api/*` and SSE. Release builds default to production.
 
-1. **Xcode scheme:** Product → Scheme → Edit Scheme → Run → Arguments.
-   Add `-COMPASS_APP_URL` with value `http://localhost:9080` (match
-   `web.port` in your `compass.yaml`) or `https://staging.compasscalendar.com`.
-2. **Launch argument from Terminal:**
-   `open -a Compass --args -COMPASS_APP_URL https://staging.compasscalendar.com`
-   (path depends on where the `.app` lives).
-3. **Signed internal builds:** Compass menu → **Switch to Staging** or
-   **Switch to Production** (persists in `UserDefaults`; see
+For local QA against staging or a tunneled backend:
+
+1. **Debug menu (recommended):** Hold **Option** while launching Compass, or
+   use a dev-channel DMG, then **Debug → Switch to Staging** or **Switch to
+   Production** (persists in `UserDefaults`; see
    [Desktop acceptance](../acceptance/desktop.md)).
+2. **Launch override:** `-COMPASS_APP_URL` with an `https://` origin (for
+   example `https://staging.compasscalendar.com`). Same key as
+   `Resources/Info.plist` when no saved preference exists.
 
-Do not commit a localhost URL in `Info.plist` unless the team explicitly
+Do not commit a non-production URL in `Info.plist` unless the team explicitly
 wants that default for everyone.
+
+### Debug menu
+
+The **Debug** menu appears when any of these is true: **Option** held at
+launch, `COMPASS_UPDATE_CHANNEL=dev`, `COMPASS_INTERNAL=1`, `#if DEBUG`
+builds, or the `COMPASS_INTERNAL` Info.plist flag. It exposes theme toggles,
+**Open Quick Add Panel** (for XCUITest and manual panel checks), and staging
+host switches. Release DMGs without those flags hide the menu.
 
 ### Unsigned local builds
 
@@ -359,9 +377,9 @@ xcodebuild test -project Compass.xcodeproj -scheme Compass \
   -destination 'platform=macOS'
 ```
 
-`CompassUITests` load the configured app URL over the network (CI sets
-`COMPASS_APP_URL` to staging). CI runs pure packages in the `swift-packages`
-job and the app in the `build` job; see
+`CompassUITests` launch with `-COMPASS_FIXTURE demo` for anonymous smoke (no
+backend). CI runs pure packages in the `swift-packages` job and the app in
+the `build` job; see
 [test-macos.yml](../../.github/workflows/test-macos.yml).
 
 ## Common Failure Modes

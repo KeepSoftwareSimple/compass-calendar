@@ -3,7 +3,6 @@ import {
   type CSSProperties,
   type ForwardedRef,
   forwardRef,
-  type KeyboardEvent,
   type MouseEvent,
 } from "react";
 import dayjs from "@core/util/date/dayjs";
@@ -15,14 +14,17 @@ import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
+import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
   calendarAccentAccessibleSuffix,
-  calendarAccentStyle,
   eventCardFill,
   eventEdgeFocusShadow,
   eventFocusColor,
   eventFocusOutlineClass,
+  GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+  joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
+import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
   gridEventCardOpacity,
   guestResponseAccessiblePrefix,
@@ -32,7 +34,6 @@ import {
   useEdgeFocusStore,
 } from "@web/grid/shortcuts/edge-focus.store";
 import { type EventPosition } from "@web/grid/types/grid.types";
-import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
 const REPEAT_ICON_MIN_WIDTH = 60;
@@ -47,6 +48,7 @@ export interface AllDayEventCardProps {
   interactionAttributes?: Record<string, string | undefined>;
   isHidden?: boolean;
   isPlaceholder: boolean;
+  isSelected?: boolean;
   onEventKeyDown?: (event: GridEvent) => void;
   onMouseEnter?: (e: MouseEvent<HTMLDivElement>) => void;
   onMouseLeave?: (e: MouseEvent<HTMLDivElement>) => void;
@@ -62,6 +64,7 @@ const AllDayEventCardBase = (
     interactionAttributes,
     isHidden = false,
     isPlaceholder,
+    isSelected = false,
     onEventKeyDown,
     onMouseEnter,
     onMouseLeave,
@@ -101,6 +104,10 @@ const AllDayEventCardBase = (
   const edgeFocusShadow = focusedEdge
     ? eventEdgeFocusShadow(focusedEdge, "horizontal", focusColorCss)
     : undefined;
+  const eventBoxShadow = joinGridEventBoxShadow(
+    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+    edgeFocusShadow,
+  );
 
   const eventStyle = {
     "--event-bg": bgColor,
@@ -117,7 +124,7 @@ const AllDayEventCardBase = (
     top: position.top,
     width: position.width,
     zIndex: position.zIndex ?? ZIndex.LAYER_1,
-    boxShadow: edgeFocusShadow,
+    boxShadow: eventBoxShadow,
   } as CSSProperties;
 
   const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
@@ -159,31 +166,15 @@ const AllDayEventCardBase = (
             guestResponse === "tentative",
         },
         eventFocusOutlineClass(focusedEdge),
+        isSelected && "focus-visible:outline-none",
       )}
       style={eventStyle}
-      onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-        if (e.key !== "Enter" && e.key !== " ") {
-          return;
-        }
-
-        e.preventDefault();
-        e.stopPropagation();
-        if (!onEventKeyDown) {
-          return;
-        }
-
-        onEventKeyDown(event);
-        recordHandledShortcutInvocation("edit-open");
-      }}
+      onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {!isHidden && calendarIdentity && !mergedStops && (
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 w-[3px]"
-          style={calendarAccentStyle(calendarIdentity)}
-        />
+        <CalendarAccentStripe identity={calendarIdentity} />
       )}
       {!isHidden && (
         <div

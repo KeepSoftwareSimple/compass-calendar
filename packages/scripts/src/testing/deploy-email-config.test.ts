@@ -3,9 +3,12 @@ import { readFileSync } from "node:fs";
 
 const EMAIL_BLOCK_SCRIPT = ".github/scripts/deploy-write-email-block.sh";
 
-async function runWriteEmailBlock(env: Record<string, string>) {
+async function runEmailBlockScript(
+  command: string,
+  env: Record<string, string>,
+) {
   const proc = Bun.spawn(
-    ["bash", "-c", `. ${EMAIL_BLOCK_SCRIPT}; write_email_block`],
+    ["bash", "-c", `. ${EMAIL_BLOCK_SCRIPT}; ${command}`],
     {
       cwd: process.cwd(),
       env: { ...process.env, ...env },
@@ -19,6 +22,14 @@ async function runWriteEmailBlock(env: Record<string, string>) {
     proc.exited,
   ]);
   return { exitCode, stderr, stdout };
+}
+
+async function runWriteEmailBlock(env: Record<string, string>) {
+  return runEmailBlockScript("write_email_block", env);
+}
+
+async function runRequireProductionEmailConfig(env: Record<string, string>) {
+  return runEmailBlockScript("require_production_email_config", env);
 }
 
 describe("deploy write email block", () => {
@@ -70,5 +81,46 @@ describe("deploy write email block", () => {
     expect(result.stderr).toContain("omitting email block");
     expect(result.stderr).toContain("apiKey=empty");
     expect(result.stderr).toContain("webhookSecret=empty");
+  });
+
+  it("fails production deploy when resend email secrets are missing", async () => {
+    const result = await runRequireProductionEmailConfig({
+      DEPLOY_ENVIRONMENT: "production",
+      EMAIL_PROVIDER: "resend",
+      EMAIL_FROM: "Compass <hello@mail.example.com>",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Production deploy requires");
+    expect(result.stderr).toContain("EMAIL_API_KEY");
+  });
+
+  it("fails production deploy when EMAIL_ALLOWLIST is set", async () => {
+    const result = await runRequireProductionEmailConfig({
+      DEPLOY_ENVIRONMENT: "production",
+      EMAIL_PROVIDER: "resend",
+      EMAIL_API_KEY: "re_test",
+      EMAIL_FROM: "Compass <hello@mail.example.com>",
+      EMAIL_WEBHOOK_SECRET: "whsec_test",
+      EMAIL_UNSUBSCRIBE_SECRET: "unsub-secret",
+      EMAIL_ALLOWLIST: "qa@example.com",
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("must not set EMAIL_ALLOWLIST");
+  });
+
+  it("allows staging-cloud deploy when email secrets are present", async () => {
+    const result = await runRequireProductionEmailConfig({
+      DEPLOY_ENVIRONMENT: "staging-cloud",
+      EMAIL_PROVIDER: "resend",
+      EMAIL_API_KEY: "re_test",
+      EMAIL_FROM: "Compass <hello@mail.example.com>",
+      EMAIL_WEBHOOK_SECRET: "whsec_test",
+      EMAIL_UNSUBSCRIBE_SECRET: "unsub-secret",
+      EMAIL_ALLOWLIST: "qa@example.com",
+    });
+
+    expect(result.exitCode).toBe(0);
   });
 });

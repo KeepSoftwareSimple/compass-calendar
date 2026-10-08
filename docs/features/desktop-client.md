@@ -1,12 +1,13 @@
 # Compass Desktop (macOS)
 
-**Status:** Native rewrite planned 2026-10-01. Work is tracked on GitHub: the
-[Compass Desktop board](https://github.com/orgs/KeepSoftwareSimple/projects/9)
-[milestone Desktop native v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/45),
-and the tracking issue
-[#4215](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4215),
-which holds status, owner confirmations, and QA notes. This doc holds the
-decisions and the reference material only.
+**Status:** Shipped on `main` (native cutover, October 2026). Release tags,
+founder acceptance, and open bugs stay on the tracking issue
+[#4215](https://github.com/KeepSoftwareSimple/compass-calendar/issues/4215).
+Board:
+[Compass Desktop](https://github.com/orgs/KeepSoftwareSimple/projects/9),
+milestone
+[Desktop native v1](https://github.com/KeepSoftwareSimple/compass-calendar/milestone/45).
+This doc holds the locked decisions and reference material only.
 
 **Owner:** Tyler (credentials, production deploys, QA). Agents build the rest
 through the agent loop.
@@ -29,8 +30,8 @@ the web app in a WKWebView. It proved the native services (notifications,
 agenda, hotkey, deep links, Sparkle, signing, release pipeline) and it
 proved the shell approach was not good enough: the web header fought the
 traffic lights, and every chrome detail was a web page pretending to be a
-window. The shell never launched publicly. It stays an internal dogfood
-build until the native app passes acceptance, then it is deleted.
+window. The shell never launched publicly and was deleted once the native
+app on this milestone replaced it.
 
 ## Decisions
 

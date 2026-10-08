@@ -5,12 +5,12 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import { afterEach, describe, expect, it } from "bun:test";
 
 function bookingRoutePaths(app: express.Express): string[] {
-  const router = (
-    app as unknown as {
-      _router?: { stack?: Array<{ route?: { path?: string } }> };
-    }
-  )._router;
-  return (router?.stack ?? []).flatMap((layer) => {
+  const appWithRouter = app as unknown as {
+    router?: { stack?: Array<{ route?: { path?: string } }> };
+    _router?: { stack?: Array<{ route?: { path?: string } }> };
+  };
+  const stack = appWithRouter.router?.stack ?? appWithRouter._router?.stack;
+  return (stack ?? []).flatMap((layer) => {
     const path = layer.route?.path;
     return path?.startsWith("/api/booking") ? [path] : [];
   });

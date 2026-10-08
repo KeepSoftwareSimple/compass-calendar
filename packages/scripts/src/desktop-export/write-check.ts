@@ -1,16 +1,24 @@
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
 export interface GeneratedFile {
   path: string;
   contents: string;
+}
+
+function firstDifference(
+  existing: string,
+  expected: string,
+  path: string,
+): string {
+  const max = Math.max(existing.length, expected.length);
+  for (let index = 0; index < max; index += 1) {
+    if (existing[index] !== expected[index]) {
+      return `first difference at byte ${index} in ${path}`;
+    }
+  }
+  return `same bytes but unequal strings in ${path}`;
 }
 
 export function writeGeneratedFiles(files: GeneratedFile[]): void {
@@ -31,23 +39,18 @@ export function assertGeneratedFilesMatch(
       continue;
     }
 
+    // Keep the expected bytes on disk: the message points at them so the
+    // reader can diff against the stale file, and this process exits next.
     const tempDir = mkdtempSync(join(tmpdir(), tempPrefix));
     const tempFile = join(tempDir, file.path.split("/").pop() ?? "output");
     writeFileSync(tempFile, file.contents, "utf8");
-    let firstDiff = "";
-    const max = Math.max(existing.length, file.contents.length);
-    for (let index = 0; index < max; index += 1) {
-      if (existing[index] !== file.contents[index]) {
-        firstDiff = `first difference at byte ${index} in ${file.path}`;
-        break;
-      }
-    }
     console.error(
-      `${label} drift: regenerate with \`bun cli ${label}\` (${firstDiff}; temp at ${tempFile})`,
+      `${label} drift: regenerate with \`bun cli ${label}\` (${firstDifference(
+        existing,
+        file.contents,
+        file.path,
+      )}; expected bytes at ${tempFile})`,
     );
-    if (process.env["CI"] !== "true") {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
     process.exit(1);
   }
 }

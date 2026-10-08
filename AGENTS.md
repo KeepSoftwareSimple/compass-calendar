@@ -11,19 +11,21 @@ Playwright. Docs index: `docs/README.md`.
 - Run `bun install` first in every fresh worktree. Without it `type-check`
   and `dev:*` fail with misleading `Cannot find module` errors.
 - Frontend-only work: `bun dev:web` (anonymous IndexedDB mode, no backend).
-- Backend, auth, MongoDB, sync, and SSE work need `compass.yaml` at the repo
-  root: `cp compass.example.yaml compass.yaml`. It holds secrets; never
-  commit it. `dev:ports` assigns free ports per worktree and fills a missing
-  `sync:` block itself. Trust the URL it prints, not `.claude/launch.json`.
+- Backend, auth, MongoDB, sync, and SSE need `compass.yaml` at repo root
+  (`cp compass.example.yaml compass.yaml`; never commit). `dev:ports` picks
+  free ports per worktree and fills a missing `sync:` block. Trust its URL,
+  not `.claude/launch.json`.
 - Details: `docs/development/local-development.md`. Cursor Cloud VMs:
   `docs/development/cursor-cloud.md`.
 
 ## Verify
 
-- `bun run verify` selects the required-check subset from the diff and ends
-  with `VERDICT: PASS | INCOMPLETE | FAIL`. Run it with `--strict` before
-  labeling a PR. `INCOMPLETE` means Playwright was skipped; install Chromium
-  with `bunx playwright install chromium` and rerun.
+- `bun run verify` picks required checks from the diff and ends with
+  `VERDICT: PASS | INCOMPLETE | FAIL`. Use `--strict` before labeling a PR.
+  `INCOMPLETE`: install Chromium with `bunx playwright install chromium` and rerun.
+- macOS: `docs/development/local-development.md`. Swift edits: run
+  `bun cli contracts:swift --check` and `bun cli desktop:export --check`
+  (drop `--check` to regenerate when schemas or shortcuts change).
 - Focused suites: `bun test:core|web|backend|sync|scripts|self-host`
   (`:fast` tiers skip Mongo). Avoid bare `bun test`. Also `bun type-check`,
   `bun lint`, `bun knip`.
@@ -42,9 +44,9 @@ Playwright. Docs index: `docs/README.md`.
   imported from `zod/v4`. Put code in the package that owns the concept.
 - One React component per file.
 - Web tests use React Testing Library, semantic role/name/text queries, and
-  `user-event`. Register every new Zustand store in the reset registry and
-  the state seeder. Restore replaced globals, timers, and spies in teardown.
-  Keep `bun test:web` sequential (documented jsdom/MSW constraint).
+  `user-event`. Register new Zustand stores in the reset registry and state
+  seeder. Restore globals, timers, and spies in teardown. Keep `bun test:web`
+  sequential (jsdom/MSW).
 - Web styles use Tailwind semantic colors from `apps/calendar-web/src/index.css`
   and canonical scale utilities, with native semantic elements and visible
   focus states.
@@ -62,26 +64,19 @@ Playwright. Docs index: `docs/README.md`.
 - Stage explicit paths. Never force-push, rewrite published history, weaken
   tests, or widen timeouts to go green.
 - Ship: implement, `bun run verify --strict`, open a draft PR with
-  `Fixes #N` and the `VERDICT:` line, mark it ready, label it
-  `agent-automerge`, and enable auto-merge yourself. `main` takes changes
-  only through the merge queue, which squash-merges once required checks
-  pass. `.github/scripts/agent-loop-merge-guard.sh` checks line count and that
-  main is not red; those rails are the gate. There is no path denylist; do
-  not look for one. A local verdict that fails only on sandbox-bound
-  Playwright timeouts, in specs the diff cannot reach, is evidence to report
-  and not a blocker; CI decides. Never wait for CI or for the user to say
-  "merge" on a green, mergeable PR, interactive sessions included. Product
-  judgment calls (copy, key choices) go in the PR body, not on hold.
-  Procedure: `.agents/skills/ship/SKILL.md`.
+  `Fixes #N` and the `VERDICT:` line, mark ready, label `agent-automerge`,
+  enable auto-merge. `main` merges only via the merge queue (squash after
+  checks). `.github/scripts/agent-loop-merge-guard.sh` guards line count and
+  main health; no path denylist. Sandbox Playwright timeouts in untouched
+  specs are PR evidence, not local blockers; CI decides. Do not wait for CI
+  or "merge" on a green PR. Product choices go in the PR body. Procedure:
+  `.agents/skills/ship/SKILL.md`.
 - Escalate with the `agent-loop-needs-human` label for product ambiguity,
   production deploy, secrets, OAuth grants, deletion, and access grants.
-- Claude Code web sessions: `apt-get install -y gh` (not persistent; reinstall
-  each session). GraphQL blocked: `gh issue list` and `gh pr list` return 403;
-  REST `gh api repos/...` works. On `curl https://api.github.com`, omit
-  `Authorization` from `GITHUB_TOKEN` (session proxy auths; explicit tokens
-  trigger credential exploration). GitHub MCP has no milestone tool; REST
-  `POST /repos/<owner>/<repo>/milestones` and issue `milestone` work. Actions
-  variables blocked; a human sets `AGENT_LOOP_MILESTONES`.
+- Claude Code web: `apt-get install -y gh` each session (not persistent).
+  GraphQL blocked on `gh issue/pr list` (403); use REST `gh api`. Omit
+  `Authorization` from `GITHUB_TOKEN` on GitHub API curls. Milestones via REST;
+  a human sets `AGENT_LOOP_MILESTONES` (Actions variables blocked).
 
 ## Lookups
 

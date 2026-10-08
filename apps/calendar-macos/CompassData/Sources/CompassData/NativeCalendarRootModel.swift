@@ -9,11 +9,17 @@ public final class NativeCalendarRootModel {
     public let configStore: ConfigStore
     public let authStore: AuthStore
     public let billingStore: BillingStore
+    public let bookingStore: BookingStore
+    public let settingsStore: SettingsStore
     public var syncConnectionsStore: SyncConnectionsStore { environment.syncConnectionsStore }
     public let levelsStore: LevelsStore
     public let focusStore: FocusStore
+    public let draftStore: DraftStore
     public let pointerHintStore: PointerHintStore
+    public let onboardingStore: OnboardingStore
+    public let blockPartyStore: BlockPartyStore
     public let lifeStore: LifeStore
+    public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
     public private(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
@@ -28,10 +34,42 @@ public final class NativeCalendarRootModel {
     public var onUpNextBannerShown: ((NotifiableEvent) -> Void)?
     /// Window-level accessibility probe for native UI tests (see Compass app).
     public var onGridFocusAccessibilityLabelChanged: ((String?) -> Void)?
+    /// AppKit title-field probe for native UI tests when the event form is open.
+    public var onEventFormTitleAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onEventFormTitleAccessibilityProbeTitleSync: ((String?) -> Void)?
+    public var onRecurrenceScopeAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onStatusToastAccessibilityProbeChanged: ((Bool) -> Void)?
+    public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
+    /// True for 700ms after an already-at-now teach pulse. Matches web `NOW_CUE_PULSE_MS`.
+    public private(set) var nowCueHeaderHighlight = false
+    private var nowCuePulseTask: Task<Void, Never>?
+    public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
+    var paletteSearchTask: Task<Void, Never>?
+    public var dedicationDialogVisible = false
+    public var pendingDiscardDraftConfirmation = false
+    public var pendingRecurrenceScopePrompt: RecurrenceScopePromptKind? {
+        didSet {
+            onRecurrenceScopeAccessibilityProbeChanged?(pendingRecurrenceScopePrompt != nil)
+        }
+    }
+    public var pendingConvertToStandaloneConfirmation = false
+    public var invitationPrompt: EventInvitationPromptState?
+    public var pendingRsvpChoice: PendingRsvpChoice?
+    public var attendeeSuggestions: [DraftAttendeeInput] = []
+    public var attendeeSuggestionQuery = ""
+    var attendeeSuggestionTask: Task<Void, Never>?
+    var _contactSuggestionDebouncer: ContactSuggestionDebouncer?
+    var pendingInvitationDraft: GridEventDraft?
+    var pendingSaveInvitation: InvitationEnum?
+    public var eventFormFocusedField: EventFormField = .title
+    public var formFieldDigitHintsVisible = false
+    /// Set when Sparkle has staged an update; cleared after restart prompt dismisses.
+    public var desktopUpdateReadyVersion: String?
+    public var onDesktopRestartToUpdate: (() -> Void)?
 
-    private let environment: NativeCalendarEnvironment
+    let environment: NativeCalendarEnvironment
     let eventsStore: EventsStore
     private let hiddenEventsStore: HiddenEventsStore
     private let calendarRepository: CalendarRepository
@@ -43,8 +81,14 @@ public final class NativeCalendarRootModel {
     private var refreshTask: Task<Void, Never>?
     private var focusLayoutCards: [FocusLayoutCard] = []
     private var eventJumpHintLabels: [EventJumpChipHint] = []
+    public var focusedDayColumnCalendarId: String?
+    public var pendingFocusDayColumnCalendarId: String?
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
+    private var didApplyUITestFocusedEventForm = false
+    private var eventFormTitleProbeVisible = false
+    var keyboardCreateSettleGeneration = 0
+    var blockPartyModHoldTask: Task<Void, Never>?
 
     public var referenceNow: Date {
         demoPresentation?.referenceNow ?? Date()
@@ -59,9 +103,14 @@ public final class NativeCalendarRootModel {
             repository: environment.userMetadataRepository)
     }
 
-    public init(environment: NativeCalendarEnvironment, demoPresentation: DemoSeedFixture? = nil) {
+    public init(
+        environment: NativeCalendarEnvironment,
+        demoPresentation: DemoSeedFixture? = nil,
+        overlayStores: OverlayStores = OverlayStores()
+    ) {
         self.environment = environment
         self.demoPresentation = demoPresentation
+        self.overlayStores = overlayStores
         if let demoPresentation {
             EffectiveTimeZone.identifier = demoPresentation.timeZone
         }
@@ -71,6 +120,7 @@ public final class NativeCalendarRootModel {
         configStore = environment.configStore
         authStore = environment.authStore
         billingStore = environment.billingStore
+        bookingStore = environment.bookingStore
         levelsStore = environment.levelsStore
         lifeStore = LifeStore(today: { demoPresentation?.referenceNow ?? Date() })
         analyticsIdentity = environment.analyticsIdentity
@@ -86,10 +136,18 @@ public final class NativeCalendarRootModel {
             anchorDate: anchor,
             visibleDayCount: CalendarWindowMath.weekDayCount,
             pinnedTimeZone: demoPresentation?.timeZone
+                ?? CompassDevicePreferences.readPinnedTimeZone()
         )
+        if demoPresentation == nil {
+            viewStore.setTimeTravelTimeZone(CompassDevicePreferences.readTimeTravelTimeZone())
+        }
+        settingsStore = SettingsStore(viewStore: viewStore)
         monthPickerMonth = anchor
         focusStore = FocusStore(view: .week)
+        draftStore = DraftStore()
         pointerHintStore = PointerHintStore()
+        onboardingStore = environment.onboardingStore
+        blockPartyStore = environment.blockPartyStore
         timeGridState = TimeGridState(
             layoutMode: .week,
             referenceNow: anchor,
@@ -99,6 +157,9 @@ public final class NativeCalendarRootModel {
             ),
             trackWidth: 1010
         )
+        settingsStore.onDevicePreferencesChanged = { [weak self] in
+            self?.rebuildPresentation()
+        }
         authStore.onAuthenticated = { [weak self] in
             await self?.handleAuthenticated()
         }
@@ -106,13 +167,132 @@ public final class NativeCalendarRootModel {
             await self?.handleSignedOut()
         }
         billingStore.setAuthenticated(authStore.authenticated)
+        billingStore.attach(settingsStore: settingsStore)
+        bookingStore.setAuthenticated(authStore.authenticated)
+        overlayStores.statusToast.onVisibilityChanged = { [weak self] visible in
+            self?.onStatusToastAccessibilityProbeChanged?(visible)
+        }
+        overlayStores.legend.onOpenChanged = { [weak self] open in
+            self?.onShortcutsLegendAccessibilityProbeChanged?(open)
+        }
         rebuildPresentation()
+    }
+
+    public func closeSettingsIfAllowed() {
+        let writableCount = bookingStore.writableCalendars(
+            from: calendars,
+            hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+        ).count
+        if bookingStore.attemptDismissSettings(writableCalendarCount: writableCount) {
+            return
+        }
+        settingsStore.close()
+    }
+
+    public func openBookingSettings() {
+        settingsStore.open(page: .booking)
+        Task {
+            await refreshBookingSettingsContent()
+        }
+    }
+
+    public func beginGuestMeetingSetup() {
+        settingsStore.beginGuestMeetingSetup()
+        bookingStore.seedGuestPreviewIfNeeded()
+    }
+
+    public func refreshBookingSettingsContent() async {
+        if settingsStore.guestMeetingSetupActive, !isSignedIn {
+            bookingStore.seedGuestPreviewIfNeeded()
+            return
+        }
+        await bookingStore.refreshPageIfNeeded()
+        bookingStore.seedFormIfNeeded(
+            calendars: calendars,
+            hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+        )
+        bookingStore.trackSettingsOpenedIfNeeded(
+            hasConnection: !syncConnectionsStore.connections.isEmpty
+        )
+    }
+
+    func setPaletteEventSearchHits(_ hits: [CommandPaletteEventHit]) {
+        paletteEventSearchHits = hits
+    }
+
+    public var activeOnboardingSurface: OnboardingSurfaceKind? {
+        OnboardingGating.selectActiveSurface(onboardingSurfaceInput)
+    }
+
+    public var connectCalendarProviderKinds: [SignInProviderKind] {
+        guard let providers = configStore.config?.providers else { return [] }
+        var kinds: [SignInProviderKind] = []
+        if providers.google.connect { kinds.append(.google) }
+        if providers.microsoft.connect { kinds.append(.microsoft) }
+        if providers.apple.connect { kinds.append(.apple) }
+        return kinds
+    }
+
+    public var connectableCalendarProviders: [ProviderEnum] {
+        connectCalendarProviderKinds.map(\.calendarConnectProvider)
+    }
+
+    public func openWelcomeGuideFromMenu() {
+        onboardingStore.openWelcomeGuide()
+    }
+
+    public func connectCalendar(provider: SignInProviderKind) async {
+        await syncConnectionsStore.connect(provider: provider.calendarConnectProvider)
+        await syncConnectionsStore.reloadFromMetadata()
+    }
+
+    private var onboardingSurfaceInput: OnboardingGating.ActiveSurfaceInput {
+        let gateStatus = billingStore.gateStatus
+        let showCalendarOnboarding =
+            gateStatus == nil &&
+            demoPresentation == nil &&
+            viewStore.view != .life
+        let connectEligible = OnboardingGating.selectConnectCalendarPromptSurfaceEligible(
+            authenticated: isSignedIn,
+            metadataLoaded: onboardingStore.userMetadataLoaded,
+            connectionCount: syncConnectionsStore.connections.count,
+            isSnoozed: onboardingStore.isConnectCalendarSnoozed,
+            availableProviderCount: connectCalendarProviderKinds.count,
+            storageAvailable: true,
+            isAuthModalOpen: authStore.isModalPresented,
+            isSettingsOpen: settingsStore.isPresented,
+            isAboutOpen: false,
+            isAppleFormOpen: false,
+            isMissingPermissionsOpen: false)
+        let firstEventEligible = OnboardingGating.selectFirstEventPromptSurfaceEligible(
+            isAuthModalOpen: authStore.isModalPresented,
+            isSettingsOpen: settingsStore.isPresented,
+            isAboutOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
+            isDone: onboardingStore.isFirstEventDone,
+            storageAvailable: true,
+            showcaseActive: blockPartyStore.isActive)
+        return OnboardingGating.ActiveSurfaceInput(
+            gateStatus: gateStatus,
+            isCheckoutCelebrating: false,
+            showCalendarOnboarding: showCalendarOnboarding,
+            authenticated: isSignedIn,
+            isWelcomeFirstVisitOpen: onboardingStore.isWelcomeFirstVisitOpen,
+            isWelcomeGuideOpen: onboardingStore.isWelcomeGuideOpen,
+            guestMeetingSetupActive: settingsStore.guestMeetingSetupActive,
+            shortcutShowcaseActive: blockPartyStore.isActive,
+            connectCalendarEligible: connectEligible,
+            firstEventEligible: firstEventEligible,
+            pointerHintVisible: pointerHintStore.isVisible,
+            pointerHintDismissedPermanently: OnboardingGating.pointerHintDismissedPermanently(),
+            isLifeView: viewStore.view == .life)
     }
 
     public func start() async {
         await configStore.load()
         await configureAnalyticsFromConfig()
-        await authStore.bootstrap()
+        let deferAuthForWelcome = demoPresentation == nil && !onboardingStore.hasSeenWelcome
+        await authStore.bootstrap(deferModalUntilWelcomeCompletes: deferAuthForWelcome)
         if demoPresentation != nil {
             authStore.closeModal()
         }
@@ -155,14 +335,25 @@ public final class NativeCalendarRootModel {
 
     private func handleAuthenticated() async {
         billingStore.setAuthenticated(true)
+        bookingStore.setAuthenticated(true)
         cachedDemoEventIds = (try? environment.localEventRepository.demoEventIds()) ?? []
         await billingStore.refreshAfterSignIn()
+        await bookingStore.refreshPageIfNeeded()
         startEventStream()
         await syncConnectionsStore.reloadFromMetadata()
+        onboardingStore.markUserMetadataLoaded()
+        onboardingStore.refreshConnectCalendarSnooze()
         await reloadCalendars()
         try? await hiddenEventsStore.load()
         await refreshVisibleRange()
         await refreshSideband()
+        if GuestMeetingSetupDraftStorage.read() != nil {
+            settingsStore.beginGuestMeetingSetup()
+            bookingStore.resumeGuestMeetingSetupIfNeeded(
+                calendars: calendars,
+                hasConnectedAccount: !syncConnectionsStore.connections.isEmpty
+            )
+        }
     }
 
     func refreshCalendarsAndVisibleRange() async {
@@ -172,7 +363,9 @@ public final class NativeCalendarRootModel {
 
     private func handleSignedOut() async {
         billingStore.setAuthenticated(false)
-        billingStore.closeSettings()
+        bookingStore.setAuthenticated(false)
+        settingsStore.close()
+        onboardingStore.resetUserMetadataLoaded()
         if let eventStream {
             await eventStream.stop()
         }
@@ -193,10 +386,16 @@ public final class NativeCalendarRootModel {
         }
     }
 
+    /// Records a shortcut invocation for the levels/tips telemetry, if the id
+    /// belongs to a section. Every shortcut handler funnels through here so the
+    /// `section(for:)` lookup lives in one place.
+    func recordShortcut(_ id: ShortcutId) {
+        guard let section = ShortcutTelemetrySection.section(for: id) else { return }
+        levelsStore.recordShortcutInvocation(id, section: section)
+    }
+
     public func handleShortcut(_ id: ShortcutId) {
-        if let section = ShortcutTelemetrySection.section(for: id) {
-            levelsStore.recordShortcutInvocation(id, section: section)
-        }
+        recordShortcut(id)
         switch id {
         case .navNext:
             if viewStore.view == .life {
@@ -261,7 +460,15 @@ public final class NativeCalendarRootModel {
         case .editCycleEdge:
             cycleFocusedEdge(forward: true)
         case .otherSettings:
-            billingStore.openSettings()
+            settingsStore.open(page: .accounts)
+        case .otherTimeTravel:
+            settingsStore.openTimezoneDialog(.timeTravel)
+        case .otherPalette:
+            toggleCommandPalette()
+        case .otherShortcuts:
+            toggleShortcutsLegend()
+        case .navGoToDate:
+            toggleCommandPalette(fromGoToDate: true)
         default:
             break
         }
@@ -273,6 +480,13 @@ public final class NativeCalendarRootModel {
 
     public func setPageJumpHintsVisible(_ visible: Bool) {
         focusStore.setPageJumpHintsVisible(visible)
+        applyFocusPresentation()
+    }
+
+    public func focusDayColumn(calendarId: String) {
+        focusedDayColumnCalendarId = calendarId
+        pendingFocusDayColumnCalendarId = calendarId
+        applyFocusPresentation()
     }
 
     public func setEventJumpHintsVisible(_ visible: Bool) {
@@ -321,6 +535,18 @@ public final class NativeCalendarRootModel {
         onGridFocusAccessibilityLabelChanged?(resolved)
     }
 
+    public func publishEventFormTitleAccessibilityProbe() {
+        let visible = isEventFormVisible
+        if visible != eventFormTitleProbeVisible {
+            eventFormTitleProbeVisible = visible
+            onEventFormTitleAccessibilityProbeChanged?(visible)
+            return
+        }
+        if visible {
+            onEventFormTitleAccessibilityProbeTitleSync?(draftStore.gridDraft?.title)
+        }
+    }
+
     public func handleGridPointerDown(registry: ShortcutRegistry) {
         showPointerHint(for: .gridScroll, registry: registry)
     }
@@ -332,6 +558,9 @@ public final class NativeCalendarRootModel {
         switch target.id {
         case "month-picker":
             monthPickerMonth = viewStore.anchorDate
+        case let id where id.hasPrefix(PageJumpTargets.dayColumnPrefix):
+            let calendarId = String(id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
+            focusDayColumn(calendarId: calendarId)
         default:
             break
         }
@@ -347,7 +576,30 @@ public final class NativeCalendarRootModel {
         return pendingScroll
     }
 
+    public func registerNowCuePulse() {
+        guard viewStore.view != .life else { return }
+        nowCuePulseTask?.cancel()
+        nowCueHeaderHighlight = true
+        nowCuePulseTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            self?.nowCueHeaderHighlight = false
+        }
+    }
+
     private func moveFocus(_ direction: FocusMoveDirection) {
+        let arrowKey: String = {
+            switch direction {
+            case .up: return "ArrowUp"
+            case .down: return "ArrowDown"
+            case .left: return "ArrowLeft"
+            case .right: return "ArrowRight"
+            }
+        }()
+        if nudgeDraftOrPlace(key: arrowKey, shiftKey: false, altKey: false) {
+            return
+        }
+
         guard !focusLayoutCards.isEmpty else { return }
 
         if let focusedId = focusStore.focusedEventId?.rawValue,
@@ -394,7 +646,7 @@ public final class NativeCalendarRootModel {
         applyFocusPresentation()
     }
 
-    private func focusEvent(eventId: String) {
+    func focusEvent(eventId: String) {
         let type: ViewInteractionEventType =
             focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
                 ? .allDay
@@ -429,13 +681,23 @@ public final class NativeCalendarRootModel {
     }
 
     private func applyFocusPresentation() {
+        var scenario = timeGridState.scenario
+        scenario.draftOverlay = draftOverlayForPresentation()
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         timeGridState = TimeGridState(
             layoutMode: timeGridState.layoutMode,
             referenceNow: timeGridState.referenceNow,
-            scenario: timeGridState.scenario,
+            scenario: scenario,
             trackWidth: timeGridState.trackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
+            sidebarEditingEventId: sidebarEditingGridEventId(),
+            eventJumpHints: eventJumpHintLabels,
+            focusedDayColumnCalendarId: focusedDayColumnCalendarId,
+            pageJumpHintsVisible: focusStore.pageJumpHintsVisible,
+            pageJumpDigitByCalendarId: pageJumpDigitByCalendarId(),
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
         let cards = currentGridCards()
         gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
@@ -503,6 +765,7 @@ public final class NativeCalendarRootModel {
         monthPickerMonth = today
         rebuildPresentation()
         scheduleRefreshVisibleRange()
+        pendingScroll = .scrollToNowOrPulse
     }
 
     private func shiftMonth(by months: Int) {
@@ -512,11 +775,11 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private var startOfView: Date {
+    var startOfView: Date {
         EffectiveTimeZone.calendar.startOfDay(for: viewStore.anchorDate)
     }
 
-    private var endOfView: Date {
+    var endOfView: Date {
         let calendar = EffectiveTimeZone.calendar
         return calendar.date(
             byAdding: .day,
@@ -539,7 +802,7 @@ public final class NativeCalendarRootModel {
         ShortcutContext(
             lifeView: viewStore.view == .life,
             weekView: viewStore.view == .week,
-            isFormOpen: false,
+            isFormOpen: draftStore.status.isFormOpen,
             isTrialing: billingStore.status?.subscriptionStatus == .trialing)
     }
 
@@ -547,7 +810,7 @@ public final class NativeCalendarRootModel {
         viewStore.view == .day ? .day : .week
     }
 
-    private func rebuildPresentation() {
+    func rebuildPresentation() {
         if viewStore.view == .life {
             headerTitle = "Life"
             return
@@ -556,7 +819,7 @@ public final class NativeCalendarRootModel {
         let hiddenIds = Set(hiddenEventsStore.hiddenEventIds.map(\.rawValue))
         let demoIds = demoEventIds
         let referenceNow = self.referenceNow
-        let scenario = GridLayoutScenarioBuilder.build(
+        var scenario = GridLayoutScenarioBuilder.build(
             layoutMode: layoutMode(),
             visibleDateKeys: visibleDateKeys(),
             referenceNow: referenceNow,
@@ -565,13 +828,22 @@ public final class NativeCalendarRootModel {
             hiddenEventIds: hiddenIds,
             demoEventIds: demoIds
         )
+        scenario.draftOverlay = draftOverlayForPresentation()
+        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
         timeGridState = TimeGridState(
             layoutMode: layoutMode(),
             referenceNow: referenceNow,
             scenario: scenario,
             trackWidth: contentTrackWidth,
             focusedEventId: focusStore.focusedEventId?.rawValue,
-            eventJumpHints: eventJumpHintLabels
+            sidebarEditingEventId: sidebarEditingGridEventId(),
+            eventJumpHints: eventJumpHintLabels,
+            focusedDayColumnCalendarId: focusedDayColumnCalendarId,
+            pageJumpHintsVisible: focusStore.pageJumpHintsVisible,
+            pageJumpDigitByCalendarId: pageJumpDigitByCalendarId(),
+            hasSecondaryTimeZone: hasSecondaryTimeZone,
+            effectiveTimeZone: viewStore.effectiveTimeZone,
+            timeTravelTimeZone: viewStore.timeTravelTimeZone
         )
         let snapshot = timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths())
         syncFocusRegistry(from: snapshot.cards)
@@ -597,6 +869,11 @@ public final class NativeCalendarRootModel {
             didApplyDemoFixtureScroll = true
         }
         applyInitialUIFocusIfNeeded()
+        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
+            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: snapshot.cards)
+        }
+        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
+        publishEventFormTitleAccessibilityProbe()
     }
 
     private func applyInitialUIFocusIfNeeded() {
@@ -608,6 +885,27 @@ public final class NativeCalendarRootModel {
         didApplyInitialUIFocus = true
         focusGridEvent(eventId: eventId)
         publishGridFocusAccessibilityProbe(eventId: eventId)
+        scheduleUITestFocusedEventFormOpenIfNeeded()
+    }
+
+    private func scheduleUITestFocusedEventFormOpenIfNeeded() {
+        guard !didApplyUITestFocusedEventForm,
+            UITestLaunchPolicy.openFocusedEventFormAfterInitialGridFocus,
+            focusStore.focusedEventId != nil
+        else { return }
+        didApplyUITestFocusedEventForm = true
+        Task { @MainActor in
+            openKeyboardEditForFocusedEvent()
+            openEventFormForCurrentDraft()
+            if let title = UITestLaunchPolicy.presetEventFormTitle {
+                updateDraftFromForm(title: title)
+                onEventFormTitleAccessibilityProbeTitleSync?(title)
+            }
+            publishEventFormTitleAccessibilityProbe()
+            if UITestLaunchPolicy.autoConfirmRecurrenceScopeOnSave {
+                await saveDraftWithInvitationGate()
+            }
+        }
     }
 
     private func currentGridCards() -> [GridLayoutCardSnapshot] {
@@ -631,10 +929,22 @@ public final class NativeCalendarRootModel {
     }
 
     private func nativePageJumpTargets() -> [PageJumpTarget] {
-        [
-            PageJumpTarget(id: "month-picker", digit: "1", label: "Month picker"),
-            PageJumpTarget(id: "calendars", digit: "2", label: "Calendars"),
-        ]
+        let resolved: [PageJumpTargets.Resolved]
+        if viewStore.view == .day {
+            let displayed = visibleCalendars().map { (id: $0.id, name: $0.name) }
+            resolved = PageJumpTargets.buildDayPageJumpTargets(displayedCalendars: displayed)
+        } else {
+            resolved = PageJumpTargets.buildSidebarPageJumpTargets()
+        }
+        return resolved.map { target in
+            PageJumpTarget(id: target.id, digit: target.digit, label: target.label)
+        }
+    }
+
+    private func pageJumpDigitByCalendarId() -> [String: String] {
+        PageJumpTargets.dayColumnJumpDigits(
+            from: focusStore.pageJumpTargets.map { (id: $0.id, digit: $0.digit) }
+        )
     }
 
     private func buildEventJumpHints() -> [EventJumpChipHint] {
@@ -649,8 +959,18 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func visibleCalendars() -> [CompassCalendar] {
+    public func visibleCalendars() -> [CompassCalendar] {
         calendars.filter { $0.isVisible && $0.isActive }
+    }
+
+    func defaultTargetCalendarId() -> CalendarId? {
+        if let demoPresentation {
+            return CalendarId(rawValue: demoPresentation.calendarId)
+        }
+        guard let calendar = visibleCalendars().first(where: { $0.capabilities.canWrite }) else {
+            return nil
+        }
+        return CalendarId(rawValue: calendar.id)
     }
 
     private func scheduleRefreshVisibleRange() {
@@ -695,7 +1015,7 @@ public final class NativeCalendarRootModel {
         }
         do {
             let remote = try await environment.apiClient.calendars.list()
-            let mapped = remote.map(CompassCalendar.init(listItem:))
+            let mapped = remote
             try calendarRepository.upsert(calendars: mapped)
             calendars = try calendarRepository.fetchAll()
             rebuildPresentation()
@@ -705,7 +1025,7 @@ public final class NativeCalendarRootModel {
     private func bootstrapAnonymousCalendarsIfNeeded() async {
         do {
             if let demoPresentation {
-                let calendar = CompassCalendar(listItem: demoPresentation.calendarListItem())
+                let calendar = demoPresentation.calendarListItem()
                 try calendarRepository.upsert(calendars: [calendar])
             } else {
                 let sentinel = try LocalCalendarSentinel.calendarId(

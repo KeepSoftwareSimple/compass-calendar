@@ -36,7 +36,63 @@ type EmitContext = {
   emitted: Map<string, string>;
   pending: Set<string>;
   fingerprintToName: Map<string, string>;
+  /** Parent manifest struct + property -> element manifest struct for array fields. */
+  manifestArrayElementTypes: Map<string, string>;
 };
+
+type ZodRuntimeShape = {
+  type?: string;
+  element?: z.ZodType;
+  shape?: Record<string, z.ZodType>;
+  def?: { type?: string; innerType?: z.ZodType; element?: z.ZodType };
+};
+
+function zodRuntime(schema: z.ZodType): ZodRuntimeShape {
+  return schema as unknown as ZodRuntimeShape;
+}
+
+function zodTypeTag(schema: z.ZodType): string | undefined {
+  const runtime = zodRuntime(schema);
+  return runtime.type ?? runtime.def?.type;
+}
+
+function unwrapZodArray(schema: z.ZodType): z.ZodType | null {
+  const runtime = zodRuntime(schema);
+  const type = zodTypeTag(schema);
+  if (type === "array") {
+    return runtime.element ?? runtime.def?.element ?? null;
+  }
+  if (type === "readonly" && runtime.def?.innerType) {
+    return unwrapZodArray(runtime.def.innerType);
+  }
+  return null;
+}
+
+function buildManifestArrayElementTypes(): Map<string, string> {
+  const schemaToSwiftName = new Map<z.ZodType, string>();
+  for (const { swiftName, schema } of SWIFT_CONTRACT_MANIFEST) {
+    schemaToSwiftName.set(schema, swiftName);
+  }
+
+  const hints = new Map<string, string>();
+  for (const { swiftName, schema } of SWIFT_CONTRACT_MANIFEST) {
+    const shape = zodRuntime(schema).shape;
+    if (!shape) {
+      continue;
+    }
+    for (const [propName, propSchema] of Object.entries(shape)) {
+      const element = unwrapZodArray(propSchema as z.ZodType);
+      if (!element) {
+        continue;
+      }
+      const elementSwiftName = schemaToSwiftName.get(element);
+      if (elementSwiftName) {
+        hints.set(`${swiftName}.${propName}`, elementSwiftName);
+      }
+    }
+  }
+  return hints;
+}
 
 function schemaFingerprint(schema: JsonSchema): string {
   return stableJsonStringify(schema);
@@ -233,6 +289,10 @@ function emitTypeCore(
   if (schema.type === "array") {
     if (!schema.items) {
       throw new SwiftEmitError(path, "array missing items");
+    }
+    const manifestElement = ctx.manifestArrayElementTypes.get(path);
+    if (manifestElement) {
+      return `[${manifestElement}]`;
     }
     const element = emitType(schema.items, `${path}[]`, ctx);
     return `[${element}]`;
@@ -575,6 +635,7 @@ export function emitSwiftForSchema(
     emitted: new Map(),
     pending: new Set(),
     fingerprintToName: new Map(),
+    manifestArrayElementTypes: buildManifestArrayElementTypes(),
   };
   const jsonSchema = z.toJSONSchema(schema, {
     unrepresentable: "any",
@@ -596,6 +657,7 @@ export function emitContractsSwiftFile(): string {
     emitted: new Map(),
     pending: new Set(),
     fingerprintToName: new Map(),
+    manifestArrayElementTypes: buildManifestArrayElementTypes(),
   };
 
   for (const { swiftName, schema } of SWIFT_CONTRACT_MANIFEST) {

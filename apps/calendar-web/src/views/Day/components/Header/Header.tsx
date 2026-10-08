@@ -2,18 +2,22 @@ import { type FC } from "react";
 import { CalendarHeader } from "@web/components/CalendarHeader/CalendarHeader";
 import { useDateInView } from "@web/views/Day/hooks/navigation/useDateInView";
 import { useDateNavigation } from "@web/views/Day/hooks/navigation/useDateNavigation";
+import { useToday } from "@web/views/Week/hooks/useToday";
 
 const DAY_LABEL_FORMAT = "dddd, MMMM D";
 
 export const Header: FC = () => {
   const dateInView = useDateInView();
+  const { today } = useToday();
   const { navigateToPreviousDay, navigateToNextDay, navigateToToday } =
     useDateNavigation();
 
   const label = dateInView.locale("en").format(DAY_LABEL_FORMAT);
+  const isViewingToday = dateInView.isSame(today, "day");
 
   return (
     <CalendarHeader
+      emphasizeDayLabel={isViewingToday}
       label={label}
       onPrev={navigateToPreviousDay}
       onNext={navigateToNextDay}

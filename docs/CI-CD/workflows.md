@@ -8,7 +8,7 @@ Compass uses GitHub Actions for continuous integration, Docker Hub for image dis
 | E2E (`test-e2e.yml`) | Push / PR / merge_group to `main` | Playwright e2e in four shards behind one required `e2e` gate (PRs that touch only docs, only `apps/calendar-macos/**`, only `apps/booking-web/**`, or only `packages/backend` / `packages/sync` / `packages/scripts`, skip the shards; merge queue and `main` always run them) |
 | macOS (`test-macos.yml`) | PR / merge_group to `main`; push to `main` touching `apps/calendar-macos/**` | `swift-packages` runs `swift test` on CompassKit and CompassData without XcodeGen; `build` runs XcodeGen + `xcodebuild test` (app, CompassKitTests, CompassUITests) on `macos-latest` behind one required `macos` gate. `CompassUITests` load `https://staging.compasscalendar.com` via `COMPASS_APP_URL` (unauthenticated smoke). PRs and merge groups that do not touch `apps/calendar-macos/` skip both jobs. Locally, `bun run verify` runs `test:macos:packages` and `test:macos` where Xcode is installed and otherwise names both CI-only. |
 | Release macOS dev (`release-macos-dev.yml`) | Push to `main` touching `apps/calendar-macos/**`; manual dispatch | Unsigned Sparkle dev channel for owner QA. Builds a universal ad-hoc signed DMG stamped `COMPASS_UPDATE_CHANNEL=dev` (version `X.Y.Z-dev.<run>`), Sparkle-signs it, and replaces the DMG and `appcast.xml` on the rolling prerelease `macos-dev`. Builds with that stamp read the `macos-dev` feed instead of `SUFeedURL`. No Developer ID, notarization, or Apple secrets. Exits green with a notice until `SPARKLE_PRIVATE_KEY` and `SUPublicEDKey` are set. Never for customers. |
-| Release macOS (`release-macos.yml`) | Push tag `macos-vX.Y.Z` matching `MARKETING_VERSION` in `apps/calendar-macos/project.yml` | On `macos-latest`: render `icon.icns`, XcodeGen, universal Release archive with Developer ID signing and hardened runtime, `notarytool` + staple, `spctl --assess`, one launch smoke (main window title), DMG on the GitHub Release for the tag (not marked Latest, so web `releases/latest` is untouched). Signs the DMG with Sparkle and replaces `appcast.xml` on the rolling `macos-appcast` release, which is the in-app update feed. The archive build number is the run number so every tag outranks the last. Fails immediately if any of `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`, or `SPARKLE_PRIVATE_KEY` is missing, or if `SUPublicEDKey` in `Info.plist` is empty. |
+| Release macOS (`release-macos.yml`) | Push tag `macos-vX.Y.Z` or `macos-vX.Y.Z-rc.N` matching `MARKETING_VERSION` in `apps/calendar-macos/project.yml` | On `macos-latest`: render `icon.icns`, XcodeGen, universal Release archive with Developer ID signing and hardened runtime, `notarytool` + staple, `spctl --assess`, one launch smoke (native window identifier and SwiftUI chrome), DMG on the GitHub Release for the tag (not marked Latest, so web `releases/latest` is untouched). Signs the DMG with Sparkle and replaces `appcast.xml` on the rolling `macos-appcast` release, which is the in-app update feed. The archive build number is the run number so every tag outranks the last. Fails immediately if any of `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`, or `SPARKLE_PRIVATE_KEY` is missing, or if `SUPublicEDKey` in `Info.plist` is empty. |
 | CodeQL | Push / PR to `main` | Static security analysis |
 | Performance budget | Push to `main` (web/core/lock/budget), nightly schedule, `workflow_dispatch`; PR only when `.github/perf/**` or the workflow file changes | Lighthouse budget (not a required merge check). Desktop script transfer is calibrated to 1,060 KB as of 2026-09-07 (main measured 1,034,338 bytes). |
 | Error autofix (`error-autofix.yml`) | `posthog[bot]` issue opened/reopened, hourly sweep, `workflow_dispatch` | Governed Routine: triage or fix PostHog error issues; sweep re-enters missed recurrences |
@@ -55,7 +55,7 @@ Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.
 - **Required check:** rollup job `macos` (path-filtered on PRs; merge queue
   skips when the combined diff does not touch the Mac app).
 - **App URL:** `COMPASS_APP_URL` defaults to staging for unauthenticated
-  XCUITest smoke (`LaunchTests` forwards it as `-COMPASS_APP_URL`).
+  XCUITest smoke (`NativeLaunchTests` in anonymous demo mode).
 - **Local:** `bun run verify` runs `test:macos:packages` and `test:macos` when
   Xcode is present; otherwise it reports both macOS legs as CI-only.
 
@@ -63,14 +63,14 @@ Source: [`.github/workflows/test-macos.yml`](../../.github/workflows/test-macos.
 
 Source: [`.github/workflows/release-macos.yml`](../../.github/workflows/release-macos.yml)
 
-- **Trigger:** push tag `macos-vX.Y.Z` where `X.Y.Z` matches
-  `MARKETING_VERSION` in `apps/calendar-macos/project.yml`.
+- **Trigger:** push tag `macos-vX.Y.Z` or `macos-vX.Y.Z-rc.N` where `X.Y.Z`
+  matches `MARKETING_VERSION` in `apps/calendar-macos/project.yml`.
 - **Runner:** `macos-latest` (90-minute job timeout).
 - **Secrets (required):** `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_P8`,
   `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`, `APPLE_TEAM_ID`.
 - **Pipeline:** render `icon.icns`, XcodeGen, universal Release archive with
   Developer ID signing and hardened runtime, `notarytool` submit and staple,
-  `spctl --assess`, launch smoke (main window title), UDZO DMG attached to
+  `spctl --assess`, launch smoke (native window identifier), UDZO DMG attached to
   the GitHub Release for the tag.
 - **Optional:** `SPARKLE_PRIVATE_KEY` when Sparkle appcast signing is enabled
   in the app (see tracking issue #4149).

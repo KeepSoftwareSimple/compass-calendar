@@ -17,22 +17,26 @@ import {
 } from "react";
 import { openExternalUrl } from "@web/common/utils/browser/open-external-url.util";
 import {
+  DESCRIPTION_HTML_ALLOWED_ATTR,
+  DESCRIPTION_HTML_ALLOWED_TAGS,
+} from "@web/components/DescriptionEditor/description-html.policy";
+import {
   looksLikeHtml,
   plainTextToDescriptionHtml,
 } from "@web/components/DescriptionEditor/plain-text-description";
 import { Divider } from "@web/components/Divider/Divider";
 
-// Google's description HTML is untrusted input - strip everything but the
-// formatting this editor actually supports. TipTap's own schema (StarterKit
-// with headings/code/blockquote/etc disabled below) is a second filter: any
+// The allowlist is shared with the desktop export (description-html.policy),
+// which sanitizes the same untrusted provider HTML before emitting the native
+// parser's parity vectors. TipTap's own schema (StarterKit with
+// headings/code/blockquote/etc disabled below) is a second filter here: any
 // surviving tag it doesn't recognize as a node/mark just becomes plain text.
-// `href` is the only attribute let through - target/rel are forced by the
-// SafeLink mark below regardless of what (if anything) survived on the
-// source tag.
+// target/rel are forced by the SafeLink mark below regardless of what (if
+// anything) survived on the source tag.
 const sanitizeDescriptionHtml = (html: string): string =>
   DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["p", "br", "b", "strong", "i", "em", "ul", "ol", "li", "a"],
-    ALLOWED_ATTR: ["href"],
+    ALLOWED_TAGS: DESCRIPTION_HTML_ALLOWED_TAGS,
+    ALLOWED_ATTR: DESCRIPTION_HTML_ALLOWED_ATTR,
   });
 
 // DOMPurify only runs on the `value` prop at (re)creation - pasting into a

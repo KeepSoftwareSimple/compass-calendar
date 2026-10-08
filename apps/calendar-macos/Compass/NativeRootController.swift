@@ -22,16 +22,19 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     let model: NativeCalendarRootModel
+    private let catalogController: ShortcutsCatalogWindowController?
     private var deepLinkRouter = DeepLinkRouter()
     private(set) var keyboardMonitor: NativeKeyboardMonitor?
     private var resumeMonitor: NativeDesktopResumeMonitor?
     private var notificationScheduler: NotificationScheduler?
     private var agendaSync: NativeAgendaSync?
     private var sidebandTimer: Timer?
+    private var settingsBridge: NativeAppSettingsBridge?
 
-    init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel) {
+    init(webTheme: NativeWebTheme = .lightBeach, model: NativeCalendarRootModel, catalogController: ShortcutsCatalogWindowController? = nil) {
         self.webTheme = webTheme
         self.model = model
+        self.catalogController = catalogController
         super.init(rootView: ThemedRootView(webTheme: webTheme, model: model))
         model.onGridFocusAccessibilityLabelChanged = { [weak self] label in
             let window = Self.compassHostWindow(hostingView: self?.view) ?? NSApp.mainWindow
@@ -39,12 +42,40 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
                 GridFocusAccessibilityProbe.attach(to: window)
             }
             GridFocusAccessibilityProbe.publish(label: label)
-            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(label, on: window)
+            NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(label, on: window)
+        }
+        model.onEventFormTitleAccessibilityProbeChanged = { [weak self] visible in
+            guard let self else { return }
+            let window = Self.compassHostWindow(hostingView: self.view) ?? NSApp.mainWindow
+            if let window {
+                EventFormAccessibilityProbe.attach(to: window)
+            }
+            let title = model.draftStore.gridDraft?.title
+            EventFormAccessibilityProbe.publish(
+                visible: visible,
+                title: title,
+                onTitleChanged: visible
+                    ? { [weak model] newTitle in model?.updateDraftFromForm(title: newTitle) }
+                    : nil
+            )
+        }
+        model.onEventFormTitleAccessibilityProbeTitleSync = { title in
+            EventFormAccessibilityProbe.syncTitle(title)
+        }
+        model.onRecurrenceScopeAccessibilityProbeChanged = { [weak self] visible in
+            Self.publish(NativeOverlayProbes.recurrenceScope, visible: visible, hostingView: self?.view)
+        }
+        model.onStatusToastAccessibilityProbeChanged = { [weak self] visible in
+            Self.publish(NativeOverlayProbes.statusToast, visible: visible, hostingView: self?.view)
+        }
+        model.onShortcutsLegendAccessibilityProbeChanged = { [weak self] open in
+            Self.publish(NativeOverlayProbes.shortcutsLegend, visible: open, hostingView: self?.view)
         }
         applyTheme()
         deepLinkRouter.onDeliver = { [weak self] url in
             self?.deliverDeepLink(url)
         }
+        configureSettingsBridge()
         configureNativeServices()
         configureKeyboard()
         configureResume()
@@ -59,11 +90,35 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
         if let window = view.window {
             GridFocusAccessibilityProbe.attach(to: window)
             GridFocusAccessibilityProbe.publish(label: model.gridFocusAccessibilityLabel)
-            CompassBridgeAccessibility.publishNativeGridFocusedEventTitle(
+            NativeAccessibilityProbes.publishNativeGridFocusedEventTitle(
                 model.gridFocusAccessibilityLabel,
                 on: window
             )
+            EventFormAccessibilityProbe.attach(to: window)
+            EventFormAccessibilityProbe.publish(
+                visible: model.isEventFormVisible,
+                title: model.draftStore.gridDraft?.title,
+                onTitleChanged: { [weak model] newTitle in
+                    model?.updateDraftFromForm(title: newTitle)
+                }
+            )
+            NativeOverlayProbes.statusToast.attach(to: window)
+            NativeOverlayProbes.shortcutsLegend.attach(to: window)
         }
+    }
+
+    /// Attaches to whichever window XCUITest is driving, then mirrors the
+    /// overlay's visibility. The window search falls back to the Compass
+    /// window by identifier, so a torn-down controller still publishes.
+    private static func publish(
+        _ probe: OverlayAccessibilityProbe,
+        visible: Bool,
+        hostingView: NSView?
+    ) {
+        if let window = compassHostWindow(hostingView: hostingView) ?? NSApp.mainWindow {
+            probe.attach(to: window)
+        }
+        probe.publish(visible: visible)
     }
 
     private static func compassHostWindow(hostingView: NSView?) -> NSWindow? {
@@ -81,7 +136,20 @@ final class NativeRootController: NSHostingController<ThemedRootView> {
     }
 
     func setWebTheme(_ theme: NativeWebTheme) {
+        NativeUIThemePreference.save(theme)
         webTheme = theme
+    }
+
+    private func configureSettingsBridge() {
+        let bridge = NativeAppSettingsBridge(rootController: self)
+        settingsBridge = bridge
+        model.settingsStore.setBridge(bridge)
+        webTheme = NativeWebTheme(themeName: model.settingsStore.theme)
+    }
+
+    func attachQuickAddRouter(_ router: DesktopQuickAddRouting) {
+        settingsBridge?.attachQuickAddRouter(router)
+        _ = model.settingsStore.setQuickAddHotKey(model.settingsStore.quickAddHotKeyDisplay)
     }
 
     func receiveDeepLink(_ url: URL) {
@@ -161,7 +229,7 @@ extension NativeRootController: CompassNotificationDelivering, CompassAgendaDeep
         view.window?.makeKeyAndOrderFront(nil)
         model.handleDeepLink(url)
         if let path = DesktopDeepLinkParser.navigationPath(for: url) {
-            CompassBridgeAccessibility.publishDeepLinkNavigationPath(path, on: view.window)
+            NativeAccessibilityProbes.publishDeepLinkNavigationPath(path, on: view.window)
         }
     }
 

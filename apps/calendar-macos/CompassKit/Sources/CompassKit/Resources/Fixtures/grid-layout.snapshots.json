@@ -23,9 +23,11 @@
               "top": 630,
               "width": 310
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "busy",
             "label": "Busy",
+            "showsInlineTitleEditor": false,
             "zIndex": 0
           },
           {
@@ -38,9 +40,11 @@
               "top": 3,
               "width": 310
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "allDay",
             "label": "All-day span",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -53,9 +57,11 @@
               "top": 660,
               "width": 8
             },
+            "isDraft": false,
             "isHiddenStrip": true,
             "kind": "timed",
             "label": "Hidden",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -69,9 +75,11 @@
               "width": 212,
               "zIndex": 1
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap A",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -85,9 +93,11 @@
               "width": 212,
               "zIndex": 2
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap B",
+            "showsInlineTitleEditor": false,
             "zIndex": 2
           }
         ],
@@ -143,9 +153,11 @@
               "top": 630,
               "width": 310
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "busy",
             "label": "Busy",
+            "showsInlineTitleEditor": false,
             "zIndex": 0
           },
           {
@@ -158,9 +170,11 @@
               "top": 3,
               "width": 950
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "allDay",
             "label": "All-day span",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -173,9 +187,11 @@
               "top": 660,
               "width": 8
             },
+            "isDraft": false,
             "isHiddenStrip": true,
             "kind": "timed",
             "label": "Hidden",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -189,9 +205,11 @@
               "width": 212,
               "zIndex": 1
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap A",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -205,9 +223,11 @@
               "width": 212,
               "zIndex": 2
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap B",
+            "showsInlineTitleEditor": false,
             "zIndex": 2
           }
         ],
@@ -285,9 +305,11 @@
               "top": 630,
               "width": 120
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "busy",
             "label": "Busy",
+            "showsInlineTitleEditor": false,
             "zIndex": 0
           },
           {
@@ -300,9 +322,11 @@
               "top": 3,
               "width": 380
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "allDay",
             "label": "All-day span",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -315,9 +339,11 @@
               "top": 660,
               "width": 8
             },
+            "isDraft": false,
             "isHiddenStrip": true,
             "kind": "timed",
             "label": "Hidden",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -331,9 +357,11 @@
               "width": 72,
               "zIndex": 1
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap A",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -347,9 +375,11 @@
               "width": 72,
               "zIndex": 2
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap B",
+            "showsInlineTitleEditor": false,
             "zIndex": 2
           }
         ],
@@ -444,9 +474,11 @@
               "top": 630,
               "width": 310
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "busy",
             "label": "Busy",
+            "showsInlineTitleEditor": false,
             "zIndex": 0
           },
           {
@@ -459,9 +491,11 @@
               "top": 3,
               "width": 310
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "allDay",
             "label": "All-day span",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -474,9 +508,11 @@
               "top": 660,
               "width": 8
             },
+            "isDraft": false,
             "isHiddenStrip": true,
             "kind": "timed",
             "label": "Hidden",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -490,9 +526,11 @@
               "width": 212,
               "zIndex": 1
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap A",
+            "showsInlineTitleEditor": false,
             "zIndex": 1
           },
           {
@@ -506,9 +544,11 @@
               "width": 212,
               "zIndex": 2
             },
+            "isDraft": false,
             "isHiddenStrip": false,
             "kind": "timed",
             "label": "Overlap B",
+            "showsInlineTitleEditor": false,
             "zIndex": 2
           }
         ],

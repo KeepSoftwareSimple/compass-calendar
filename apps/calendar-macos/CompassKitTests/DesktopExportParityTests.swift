@@ -33,7 +33,11 @@ final class DesktopExportParityTests: XCTestCase {
             "rrule.vectors",
             "nudge.vectors",
             "go-to-date.vectors",
+            "html-fragment.vectors",
+            "booking-slots.vectors",
+            "booking-setup-steps.vectors",
             "demo-seed",
+            "block-party.tasks",
         ] {
             let url = try XCTUnwrap(
                 DesktopExportFixtures.url(named: name),

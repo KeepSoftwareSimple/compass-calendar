@@ -6,7 +6,7 @@
   "private": true,
   "main": "",
   "dependencies": {
-    "@googleapis/calendar": "^20.0.1",
+    "@googleapis/calendar": "^20.1.0",
     "@mongodb-js/zstd": "^7.0.0",
     "@opentelemetry/api-logs": "^0.222.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.222.0",
@@ -17,7 +17,7 @@
     "google-auth-library": "^11.1.0",
     "lodash": "^4.18.1",
     "logform": "^2.7.0",
-    "posthog-node": "^5.54.1",
+    "posthog-node": "^5.55.0",
     "rrule": "^2.7.2",
     "snappy": "^7.3.2",
     "tslib": "^2.4.0",

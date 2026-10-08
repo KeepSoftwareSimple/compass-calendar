@@ -1,9 +1,6 @@
 import { z } from "zod/v4";
 
-/**
- * Query flag the macOS quick-add panel loads (`/?quickAdd=1`). Honored only
- * when {@link isDesktop} is true in calendar-web.
- */
+/** Query flag the native macOS quick-add flow uses (`/?quickAdd=1`). */
 export const DESKTOP_QUICK_ADD_SEARCH_PARAM = "quickAdd";
 
 /** Default global hotkey (Carbon RegisterEventHotKey, no Accessibility). */

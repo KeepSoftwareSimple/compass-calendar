@@ -54,6 +54,7 @@ import {
   useUndoHistoryStore,
 } from "@web/events/stores/undo.store";
 import { initialViewState, useViewStore } from "@web/events/stores/view.store";
+import { nowCueActions } from "@web/grid/now-cue/now-cue.store";
 import {
   initialSettingsState,
   useSettingsStore,
@@ -125,6 +126,7 @@ const storeResets: StoreReset[] = [
   resetPointerHintPersistenceForTests,
   resetPointerHintTimerForTests,
   () => usePointerHintStore.setState(initialPointerHintState, true),
+  nowCueActions.resetForTests,
   () => useEventJumpStore.setState(initialEventJumpState, true),
   () => usePageJumpHintStore.setState(initialPageJumpHintState, true),
   resetBillingGateAttentionForTests,

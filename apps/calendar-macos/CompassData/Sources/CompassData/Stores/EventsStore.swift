@@ -5,11 +5,11 @@ import CompassKit
 import Foundation
 
 public protocol EventsAPIProtocol: Sendable {
-    func list(_ query: EventListQuery) async throws -> [EventResponseEvent]
+    func list(_ query: EventListQuery) async throws -> [Event]
     func create(_ input: CreateEventInput) async throws -> EventResponseEvent
     func replace(id: EventId, input: ReplaceEventInput) async throws -> EventResponseEvent
     func delete(id: EventId, scope: EventDeleteScope) async throws
-    func rsvp(id: EventId, input: RsvpEventInput) async throws
+    func rsvp(id: EventId, responseStatus: ResponseStatusEnum, scope: String) async throws
 }
 
 extension EventsAPI: EventsAPIProtocol {}
@@ -81,8 +81,7 @@ public final class EventsStore {
             start: key.start,
             end: key.end
         )
-        let remote = try await eventsAPI.list(query)
-        let events = try remote.map { try EventMapping.event(from: $0) }
+        let events = try await eventsAPI.list(query)
         try repository.upsert(events: events, isLocal: false)
         try repository.pruneRemoteEvents(
             intersectingStart: key.start,
@@ -91,6 +90,49 @@ public final class EventsStore {
         )
         try rangeCache.markLoaded(key: key)
         return try eventsInRange(key: key)
+    }
+
+    /// Synchronous optimistic insert for keyboard-place saves (XCUITest must see undo before async work).
+    public func stageOptimisticCreate(_ optimisticEvent: Event) throws {
+        beginMutation()
+        defer { endMutation() }
+        if source == .local {
+            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
+            try localEvents.put(record)
+            return
+        }
+        try repository.upsert(events: [optimisticEvent], isLocal: false)
+    }
+
+    /// Removes an event from local persistence without awaiting the API.
+    public func removePersistedEvent(id: EventId) throws {
+        beginMutation()
+        defer { endMutation() }
+        if source == .local {
+            try localEvents.delete(id: id)
+            return
+        }
+        try repository.delete(ids: [id])
+    }
+
+    /// API settle only; optimistic row must already be staged locally.
+    public func settleStagedCreate(input: CreateEventInput, optimisticEvent: Event) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        do {
+            let response = try await eventsAPI.create(input)
+            let settled = try EventMapping.event(from: response)
+            try repository.upsert(events: [settled], isLocal: false)
+        } catch {}
+    }
+
+    /// API settle only; optimistic row must already be removed locally.
+    public func settleStagedDelete(id: EventId, scope: EventDeleteScope) async {
+        beginMutation()
+        defer { endMutation() }
+        guard source != .local else { return }
+        try? await eventsAPI.delete(id: id, scope: scope)
     }
 
     public func createOptimistic(
@@ -122,8 +164,12 @@ public final class EventsStore {
         beginMutation()
         defer { endMutation() }
         if source == .local {
-            let record = LocalEventRecord(id: optimisticEvent.id, event: optimisticEvent, isDemo: false)
-            try localEvents.put(record)
+            let snapshot = try localRecurringReplaceSnapshot(targetId: id)
+            try applyLocalReplaceCacheUpdate(
+                input: input,
+                edited: optimisticEvent,
+                snapshot: snapshot
+            )
             return
         }
         let snapshot = try recurringReplaceSnapshot(targetId: id)
@@ -147,10 +193,12 @@ public final class EventsStore {
         beginMutation()
         defer { endMutation() }
         if source == .local {
-            try localEvents.delete(id: id)
+            let snapshot = try localRecurringDeleteSnapshot(targetId: id)
+            try applyLocalDeleteCacheUpdate(id: id, scope: scope, snapshot: snapshot)
             return
         }
-        try repository.delete(ids: [id])
+        let snapshot = try recurringDeleteSnapshot(targetId: id)
+        try applyDeleteCacheUpdate(id: id, scope: scope, snapshot: snapshot)
         do {
             try await eventsAPI.delete(id: id, scope: scope)
         } catch {}
@@ -158,7 +206,8 @@ public final class EventsStore {
 
     public func rsvpOptimistic(
         id: EventId,
-        input: RsvpEventInput,
+        responseStatus: ResponseStatusEnum,
+        scope: String,
         optimisticEvent: Event
     ) async throws {
         beginMutation()
@@ -168,7 +217,7 @@ public final class EventsStore {
         }
         try repository.upsert(events: [optimisticEvent], isLocal: false)
         do {
-            try await eventsAPI.rsvp(id: id, input: input)
+            try await eventsAPI.rsvp(id: id, responseStatus: responseStatus, scope: scope)
         } catch {}
     }
 
@@ -208,6 +257,12 @@ public final class EventsStore {
         let original: Event
         let seriesEvents: [Event]
         let seriesMaster: Event?
+    }
+
+    private struct RecurringDeleteSnapshot: Sendable {
+        let target: Event
+        let seriesId: EventId
+        let seriesEvents: [Event]
     }
 
     private func recurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
@@ -282,6 +337,175 @@ public final class EventsStore {
 
     /// Native GRDB holds materialized rows only; drop superseded occurrence ids that
     /// projection removes and let the next range read re-expand the remainder series.
+    private func recurringDeleteSnapshot(targetId: EventId) throws -> RecurringDeleteSnapshot? {
+        guard let target = try repository.fetch(id: targetId) else { return nil }
+        let seriesId: EventId
+        switch target.recurrence {
+        case .occurrence(let payload):
+            seriesId = payload.seriesId
+        case .series:
+            seriesId = target.id
+        case .single:
+            return nil
+        }
+        let seriesEvents = try seriesOccurrenceSnapshot(seriesId: seriesId, target: target)
+        return RecurringDeleteSnapshot(
+            target: target,
+            seriesId: seriesId,
+            seriesEvents: seriesEvents
+        )
+    }
+
+    private func applyDeleteCacheUpdate(
+        id: EventId,
+        scope: EventDeleteScope,
+        snapshot: RecurringDeleteSnapshot?
+    ) throws {
+        guard let snapshot, scope != .this else {
+            try repository.delete(ids: [id])
+            return
+        }
+        let scopeEnum = ScopeEnum(rawValue: scope.rawValue) ?? .this
+        let projection = ProjectRecurringEdit.projectRecurringDelete(
+            scope: scopeEnum,
+            target: snapshot.target,
+            seriesId: snapshot.seriesId,
+            seriesEvents: snapshot.seriesEvents
+        )
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try repository.delete(ids: ids)
+        }
+    }
+
+    private func localRecurringReplaceSnapshot(targetId: EventId) throws -> RecurringReplaceSnapshot? {
+        guard let original = try localEvent(id: targetId)?.event else { return nil }
+        guard case .occurrence(let payload) = original.recurrence else { return nil }
+        let seriesId = payload.seriesId
+        let seriesEvents = try localSeriesOccurrenceSnapshot(seriesId: seriesId, target: original)
+        let seriesMaster = try localEvent(id: seriesId)?.event
+        return RecurringReplaceSnapshot(
+            original: original,
+            seriesEvents: seriesEvents,
+            seriesMaster: seriesMaster
+        )
+    }
+
+    private func localRecurringDeleteSnapshot(targetId: EventId) throws -> RecurringDeleteSnapshot? {
+        guard let target = try localEvent(id: targetId)?.event else { return nil }
+        let seriesId: EventId
+        switch target.recurrence {
+        case .occurrence(let payload):
+            seriesId = payload.seriesId
+        case .series:
+            seriesId = target.id
+        case .single:
+            return nil
+        }
+        let seriesEvents = try localSeriesOccurrenceSnapshot(seriesId: seriesId, target: target)
+        return RecurringDeleteSnapshot(
+            target: target,
+            seriesId: seriesId,
+            seriesEvents: seriesEvents
+        )
+    }
+
+    private func localEvent(id: EventId) throws -> LocalEventRecord? {
+        try localEvents.fetchAll().first { $0.id == id }
+    }
+
+    private func localSeriesOccurrenceSnapshot(seriesId: EventId, target: Event) throws -> [Event] {
+        let all = try localEvents.fetchAll().map(\.event)
+        var events = all.filter { event in
+            switch event.recurrence {
+            case .occurrence(let payload):
+                return payload.seriesId == seriesId
+            case .series:
+                return event.id == seriesId
+            case .single:
+                return false
+            }
+        }
+        if !events.contains(where: { $0.id == target.id }) {
+            events.append(target)
+        }
+        return events
+    }
+
+    private func applyLocalReplaceCacheUpdate(
+        input: ReplaceEventInput,
+        edited: Event,
+        snapshot: RecurringReplaceSnapshot?
+    ) throws {
+        if let snapshot,
+           let projection = recurringReplaceProjection(
+               input: input,
+               edited: edited,
+               snapshot: snapshot
+           )
+        {
+            try applyLocalRecurringProjection(projection, edited: edited)
+        } else {
+            try putLocalEvent(edited)
+        }
+    }
+
+    private func applyLocalDeleteCacheUpdate(
+        id: EventId,
+        scope: EventDeleteScope,
+        snapshot: RecurringDeleteSnapshot?
+    ) throws {
+        guard let snapshot, scope != .this else {
+            try localEvents.delete(id: id)
+            return
+        }
+        let scopeEnum = ScopeEnum(rawValue: scope.rawValue) ?? .this
+        let projection = ProjectRecurringEdit.projectRecurringDelete(
+            scope: scopeEnum,
+            target: snapshot.target,
+            seriesId: snapshot.seriesId,
+            seriesEvents: snapshot.seriesEvents
+        )
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try localEvents.delete(ids: ids)
+        }
+    }
+
+    private func applyLocalRecurringProjection(
+        _ projection: RecurringEditProjection,
+        edited: Event
+    ) throws {
+        if !projection.removeIds.isEmpty {
+            let ids = projection.removeIds.map { EventId(rawValue: $0) }
+            try localEvents.delete(ids: ids)
+        }
+        let upserts = nativeOptimisticUpserts(from: projection, edited: edited)
+        if !upserts.isEmpty {
+            try putLocalEvents(upserts)
+        }
+    }
+
+    private func putLocalEvent(_ event: Event) throws {
+        let isDemo = try localEvent(id: event.id)?.isDemo ?? false
+        let record = LocalEventRecord(id: event.id, event: event, isDemo: isDemo)
+        try localEvents.put(record)
+    }
+
+    private func putLocalEvents(_ events: [Event]) throws {
+        let demoById = Dictionary(
+            uniqueKeysWithValues: try localEvents.fetchAll().map { ($0.id, $0.isDemo) }
+        )
+        let records = events.map { event in
+            LocalEventRecord(
+                id: event.id,
+                event: event,
+                isDemo: demoById[event.id] ?? false
+            )
+        }
+        try localEvents.putMany(records)
+    }
+
     private func nativeOptimisticUpserts(
         from projection: RecurringEditProjection,
         edited: Event

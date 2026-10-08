@@ -40,7 +40,7 @@ describe("run-web-fixtures", () => {
     const demoSeed = JSON.parse(
       readFileSync(join(tempDir, "demo-seed.json"), "utf8"),
     ) as { events: unknown[]; referenceNow: string };
-    expect(demoSeed.events).toHaveLength(18);
+    expect(demoSeed.events).toHaveLength(22);
     expect(demoSeed.referenceNow).toContain("2026-06-10");
 
     const timedDeck = JSON.parse(

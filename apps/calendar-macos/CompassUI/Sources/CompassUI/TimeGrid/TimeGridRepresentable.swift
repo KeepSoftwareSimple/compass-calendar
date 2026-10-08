@@ -19,14 +19,20 @@ public struct TimeGridRepresentable: NSViewRepresentable {
     public func makeNSView(context: Context) -> TimeGridView {
         let view = TimeGridView(state: model.timeGridState, theme: theme)
         view.delegate = context.coordinator
+        view.onNowCuePulse = { [model] in model.registerNowCuePulse() }
         return view
     }
 
     public func updateNSView(_ nsView: TimeGridView, context: Context) {
         context.coordinator.theme = theme
+        nsView.onNowCuePulse = { [model] in model.registerNowCuePulse() }
         syncGrid(nsView, theme: theme)
         if let scroll = model.consumePendingScroll() {
             nsView.applyScroll(scroll)
+        }
+        if let calendarId = model.pendingFocusDayColumnCalendarId {
+            model.pendingFocusDayColumnCalendarId = nil
+            nsView.focusDayColumn(calendarId: calendarId)
         }
     }
 
@@ -69,6 +75,35 @@ public struct TimeGridRepresentable: NSViewRepresentable {
                 registry: model.shortcutRegistry,
                 focusedGridEventLabel: focusedLabel
             )
+        }
+
+        public func timeGridView(
+            _ view: TimeGridView,
+            didEditDraftTitle title: String,
+            eventId: String
+        ) {
+            guard model.draftStore.gridDraft?.clientId.rawValue == eventId else { return }
+            model.setDraftTitle(title)
+            view.update(state: model.timeGridState, theme: theme)
+        }
+
+        public func timeGridView(
+            _ view: TimeGridView,
+            didOpenEventMenu eventId: String,
+            at locationInWindow: NSPoint
+        ) {
+            model.focusGridEvent(eventId: eventId)
+            view.update(state: model.timeGridState, theme: theme)
+            model.openEventMenu(fromKeyboard: false, anchor: CGPoint(x: locationInWindow.x, y: locationInWindow.y))
+        }
+
+        public func timeGridViewDidRequestTimeTravel(_ view: TimeGridView) {
+            model.settingsStore.openTimezoneDialog(.timeTravel)
+        }
+
+        public func timeGridView(_ view: TimeGridView, didFocusDayColumn calendarId: String) {
+            model.focusDayColumn(calendarId: calendarId)
+            view.update(state: model.timeGridState, theme: theme)
         }
 
         private func focusedEventLabel(for eventId: String) -> String? {

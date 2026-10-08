@@ -1,0 +1,46 @@
+name: Record macOS UI snapshots
+
+# Re-records CompassUITests ReferenceImages on a macOS runner and pushes to the
+# PR branch (docs/features/desktop-client.md).
+on:
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to update
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  record:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out the pull request branch
+        uses: actions/checkout@v7
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/head
+          fetch-depth: 0
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Record UI snapshots
+        run: bash .github/scripts/record-macos-ui-snapshots.sh
+
+      - name: Commit snapshot images
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          if git diff --quiet -- apps/calendar-macos/CompassUITests/ReferenceImages; then
+            echo "No snapshot changes to commit."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/calendar-macos/CompassUITests/ReferenceImages
+          git commit -m "chore(desktop): record macOS UI snapshots for PR #${PR_NUMBER}"
+          git push origin HEAD

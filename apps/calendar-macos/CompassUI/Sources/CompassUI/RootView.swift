@@ -40,13 +40,20 @@ public struct RootView: View {
             )
         }
         .overlay(alignment: .bottom) {
-            UpNextBanner(
-                model: model,
-                onOpen: { model.openUpNextEvent() },
-                onJoin: { model.joinUpNextMeeting() },
-                onBannerShown: { event in
-                    model.upNextBannerShown(event)
-                })
+            VStack(spacing: 12) {
+                if model.desktopUpdateReadyVersion != nil {
+                    DesktopUpdateReadyBannerView {
+                        model.onDesktopRestartToUpdate?()
+                    }
+                }
+                UpNextBanner(
+                    model: model,
+                    onOpen: { model.openUpNextEvent() },
+                    onJoin: { model.joinUpNextMeeting() },
+                    onBannerShown: { event in
+                        model.upNextBannerShown(event)
+                    })
+            }
             .padding(.bottom, 24)
         }
         .overlay(alignment: .top) {
@@ -57,7 +64,15 @@ public struct RootView: View {
             }
         }
         .overlay {
-            AuthModalOverlay(authStore: model.authStore, billingStore: model.billingStore)
+            if model.authStore.isModalPresented, model.activeOnboardingSurface != .welcomeModal {
+                AuthModalOverlay(authStore: model.authStore, billingStore: model.billingStore)
+            }
+        }
+        .overlay {
+            OnboardingOverlay(model: model)
+        }
+        .overlay {
+            BlockPartyOverlay(model: model)
         }
         .overlay {
             if model.authStore.authenticated, model.billingStore.gateStatus != nil {
@@ -65,10 +80,76 @@ public struct RootView: View {
             }
         }
         .overlay {
-            BillingSettingsOverlay(billingStore: model.billingStore)
+            SettingsWindowOverlay(model: model)
         }
         .overlay {
             BillingUpgradeConfirmationSheet(billingStore: model.billingStore)
+        }
+        .overlay {
+            CommandPaletteOverlay(model: model)
+        }
+        .overlay {
+            ShortcutsLegendOverlay(model: model)
+        }
+        .overlay {
+            WhichKeyPanelOverlay(model: model)
+        }
+        .overlay {
+            EventContextMenuOverlay(model: model)
+        }
+        .overlay {
+            StatusToastOverlay(model: model)
+        }
+        .overlay {
+            DedicationDialogView(
+                isPresented: model.dedicationDialogVisible,
+                onClose: { model.dedicationDialogVisible = false }
+            )
+        }
+        .overlay {
+            DiscardUnsavedDraftDialogView(
+                isPresented: model.pendingDiscardDraftConfirmation,
+                onCancel: { model.cancelDiscardDraftConfirmation() },
+                onDiscard: { model.discardDraftConfirmed() }
+            )
+        }
+        .overlay {
+            RecurrenceScopeDialogView(
+                isPresented: model.pendingRecurrenceScopePrompt != nil,
+                title: model.pendingRecurrenceScopePrompt == .delete
+                    ? "Delete recurring event"
+                    : "Save recurring event",
+                onCancel: { model.cancelRecurrenceScopePrompt() },
+                onConfirm: { scope in Task { await model.confirmRecurrenceScope(scope) } }
+            )
+        }
+        .overlay {
+            ConvertToStandaloneDialogView(
+                isPresented: model.pendingConvertToStandaloneConfirmation,
+                eventTitle: model.draftStore.gridDraft?.title.isEmpty == false
+                    ? (model.draftStore.gridDraft?.title ?? "this event")
+                    : "this event",
+                onCancel: { model.cancelConvertToStandaloneConfirmation() },
+                onConfirm: { Task { await model.confirmConvertToStandalone() } }
+            )
+        }
+        .overlay {
+            SendInvitationsDialogView(
+                prompt: model.invitationPrompt,
+                onCancel: { model.cancelInvitationPrompt() },
+                onDontSend: { model.confirmInvitationDontSend() },
+                onSend: { model.confirmInvitationSend() }
+            )
+        }
+        .overlay {
+            RsvpScopeDialogView(
+                isPresented: model.pendingRsvpChoice != nil,
+                onCancel: { model.cancelRsvpScopeDialog() },
+                onConfirm: { scope in Task { await model.confirmRsvpScope(scope) } }
+            )
+        }
+        .overlay {
+            EventFormView(model: model)
         }
         .background {
             GeometryReader { geometry in
@@ -151,7 +232,20 @@ public struct RootView: View {
                     .font(.custom("Rubik", size: 15, relativeTo: .headline))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
+                    .padding(.horizontal, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(theme.accentColor.opacity(model.nowCueHeaderHighlight ? 0.1 : 0))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(
+                                theme.accentColor.opacity(model.nowCueHeaderHighlight ? 0.45 : 0),
+                                lineWidth: 2
+                            )
+                    )
                     .accessibilityIdentifier("compass-native-header-title")
+                    .animation(.easeInOut(duration: 0.35), value: model.nowCueHeaderHighlight)
                 headerButton(
                     label: model.viewStore.view == .life ? "Focus current week" : "Today",
                     systemImage: nil,
@@ -212,7 +306,7 @@ public struct RootView: View {
 
     @ViewBuilder
     private var pointerHintLayer: some View {
-        if model.pointerHintStore.isVisible {
+        if model.activeOnboardingSurface == .pointerHint, model.pointerHintStore.isVisible {
             PointerHintView(store: model.pointerHintStore, registry: model.shortcutRegistry)
                 .padding(.top, 16)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

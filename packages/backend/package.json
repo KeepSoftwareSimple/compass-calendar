@@ -8,7 +8,7 @@
     "@compass/core": "1.0.0",
     "cors": "^2.8.5",
     "exponential-backoff": "^3.1.2",
-    "express": "^4.22.3",
+    "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "google-auth-library": "^11.1.0",
     "helmet": "^8.3.0",
@@ -23,14 +23,14 @@
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
     "@types/cors": "^2.8.12",
-    "@types/express": "^4.17.13",
+    "@types/express": "^5.0.6",
     "@types/lodash": "^4.17.25",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "@types/qs": "^6.15.1",
     "@types/supertest": "^7.2.1",
     "bson": "^7.3.3",
-    "mongodb-memory-server": "^9.2.0",
+    "mongodb-memory-server": "^11.3.0",
     "qs": "^6.16.0",
-    "supertest": "^7.3.0"
+    "supertest": "^7.3.1"
   }
 }

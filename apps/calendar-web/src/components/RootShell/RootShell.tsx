@@ -57,11 +57,6 @@ import {
   hasSeenWelcome,
   selectWelcomeModalSurfaceEligible,
 } from "@web/components/WelcomeModal/welcome.modal.util";
-import { useDesktopAgendaSync } from "@web/desktop/useDesktopAgendaSync";
-import { useDesktopAppearanceSync } from "@web/desktop/useDesktopAppearanceSync";
-import { useDesktopDeepLink } from "@web/desktop/useDesktopDeepLink";
-import { useDesktopQuickAddEntry } from "@web/desktop/useDesktopQuickAddEntry";
-import { useDesktopUpdateReady } from "@web/desktop/useDesktopUpdateReady";
 import { useUpcomingEventNotifier } from "@web/notifications/useUpcomingEventNotifier";
 import {
   selectGuestMeetingSetupActive,
@@ -137,11 +132,6 @@ export function RootShell() {
   useGuestMeetingSetupEntry();
   useGuestMeetingSetupResume();
   useSettingsSearchEntry();
-  useDesktopDeepLink();
-  useDesktopQuickAddEntry();
-  useDesktopAgendaSync();
-  useDesktopAppearanceSync();
-  useDesktopUpdateReady();
 
   const readOnlyStatus =
     access.kind === "server" && access.isReadOnly ? access.status : null;

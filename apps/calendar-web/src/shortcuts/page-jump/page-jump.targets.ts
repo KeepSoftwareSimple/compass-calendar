@@ -18,9 +18,9 @@
  * would overflow the physical top-row keys are omitted.
  *
  * Day view numbers left to right (`buildDayPageJumpTargets`): view dropdown,
- * then writable calendar columns, then that same sidebar map. Extra columns
- * that would crowd out the reserved sidebar slots (month picker, Up next,
- * and each account) are omitted so those chips still appear when mounted.
+ * then each displayed calendar column, then that same sidebar map. When
+ * columns use every physical top-row key, sidebar targets at the end are
+ * omitted first so in-view columns keep predictable Mod+digit bindings.
  */
 
 import {
@@ -126,7 +126,7 @@ export const CALENDAR_PAGE_JUMP_TARGETS: PageJumpTargets =
   buildCalendarPageJumpTargets();
 
 export const LIFE_PAGE_JUMP_TARGETS: PageJumpTargets = withPickDigits([
-  { id: "view-select", label: "View dropdown" },
+  VIEW_SELECT_TARGET,
   { id: "life-grid", label: "Current week" },
   { id: "life-variation", label: "Life variation" },
   { id: "life-details", label: "Life details" },
@@ -155,15 +155,24 @@ export const buildDayPageJumpTargets = (
 ): PageJumpTargets => {
   const [viewSelect, ...sidebarTargets] =
     buildCalendarPageJumpTargets(accounts);
-  const maxColumns = PICK_KEY_LABELS.length - 1 - sidebarTargets.length;
-  const columnTargets = calendars
-    .slice(0, Math.max(0, maxColumns))
-    .map((calendar) => ({
-      id: dayColumnJumpId(calendar.id),
-      label: calendar.name,
-    }));
+  const columnTargets = calendars.map((calendar) => ({
+    id: dayColumnJumpId(calendar.id),
+    label: calendar.name,
+  }));
 
   return withPickDigits([viewSelect, ...columnTargets, ...sidebarTargets]);
+};
+
+/** Digit chips for day-view column headers, keyed by calendar id. */
+export const dayColumnJumpDigits = (
+  targets: PageJumpTargets,
+): ReadonlyMap<string, string> => {
+  const map = new Map<string, string>();
+  for (const target of targets) {
+    if (!target.id.startsWith(DAY_COLUMN_JUMP_ID_PREFIX)) continue;
+    map.set(target.id.slice(DAY_COLUMN_JUMP_ID_PREFIX.length), target.digit);
+  }
+  return map;
 };
 
 /** Spread onto a component's container element to mark it as a jump target. */

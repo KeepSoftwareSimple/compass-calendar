@@ -107,6 +107,28 @@ public enum ProjectRecurringEdit {
         return RecurringEditProjection(removeIds: removeIds, upserts: upserts)
     }
 
+    public static func projectRecurringDelete(
+        scope: ScopeEnum,
+        target: Event,
+        seriesId: EventId,
+        seriesEvents: [Event]
+    ) -> RecurringEditProjection {
+        let affected: [Event]
+        if scope == .all {
+            affected = seriesEvents
+        } else {
+            affected = seriesEvents.filter { event in
+                event.id == target.id || isAtOrAfter(event: event, cutoff: target.schedule)
+            }
+        }
+        var removeIds = Set(affected.map(\.id.rawValue))
+        removeIds.insert(target.id.rawValue)
+        if scope == .all {
+            removeIds.insert(seriesId.rawValue)
+        }
+        return RecurringEditProjection(removeIds: removeIds, upserts: [])
+    }
+
     private static func isAtOrAfter(event: Event, cutoff: EventSchedule) -> Bool {
         guard let eventStart = CompassDateParsing.parseInEffectiveTimeZone(scheduleStartString(event.schedule)),
               let cutoffStart = CompassDateParsing.parseInEffectiveTimeZone(scheduleStartString(cutoff))

@@ -1,14 +1,8 @@
-import classNames from "classnames";
 import { type FC } from "react";
 import { ArrowButton } from "@web/components/Button/ArrowButton";
 import { SelectView } from "@web/components/SelectView/SelectView";
 import { SidebarToggleButton } from "@web/components/Sidebar/SidebarToggleButton";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
-import {
-  DESKTOP_TITLE_BAR_DRAG_CLASS,
-  DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
-} from "@web/desktop/desktop-title-bar.util";
-import { isDesktop } from "@web/desktop/isDesktop";
 
 interface Props {
   /** Left-aligned heading text (e.g. "June 2026" or "Wednesday, July 1"). */
@@ -16,6 +10,8 @@ interface Props {
   onPrev?: () => void;
   onNext?: () => void;
   onToday?: () => void;
+  /** Day view: allow the title to pulse with the now-cue teach animation. */
+  emphasizeDayLabel?: boolean;
   showNavigation?: boolean;
   /** Accessible + tooltip label for the previous arrow, e.g. "Previous week". */
   prevLabel?: string;
@@ -36,28 +32,17 @@ export const CalendarHeader: FC<Props> = ({
   onPrev,
   onNext,
   onToday,
+  emphasizeDayLabel = false,
   prevLabel = "Previous",
   nextLabel = "Next",
   showNavigation = true,
 }) => {
-  const desktopChrome = isDesktop();
-
   return (
-    <div
-      className={classNames(
-        "flex h-12 w-full shrink-0 items-center gap-3 text-text-muted",
-        desktopChrome && DESKTOP_TITLE_BAR_DRAG_CLASS,
-      )}
-    >
+    <div className="flex h-12 w-full shrink-0 items-center gap-3 text-text-muted">
       {/* min-w-0 lets the title cluster shrink so the sidebar toggle stays in
           layout. Avoid overflow-hidden here — SelectView's menu is absolutely
           positioned inside this cluster and must paint below the header. */}
-      <div
-        className={classNames(
-          "flex min-w-0 flex-1 items-center gap-3",
-          desktopChrome && DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
-        )}
-      >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
         {showNavigation && onPrev && onNext && (
           <div className="flex items-center gap-3">
             <TooltipWrapper
@@ -84,15 +69,14 @@ export const CalendarHeader: FC<Props> = ({
             </TooltipWrapper>
           </div>
         )}
-        <SelectView label={label} onToday={onToday} />
+        <SelectView
+          emphasizeDayLabel={emphasizeDayLabel}
+          label={label}
+          onToday={onToday}
+        />
       </div>
 
-      <div
-        className={classNames(
-          "z-2 flex shrink-0 items-center pr-5",
-          desktopChrome && DESKTOP_TITLE_BAR_NO_DRAG_CLASS,
-        )}
-      >
+      <div className="z-2 flex shrink-0 items-center pr-5">
         <SidebarToggleButton />
       </div>
     </div>

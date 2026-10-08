@@ -35,7 +35,11 @@ const reopenListeners = new Set<() => void>();
 // Native EventSource does not expose WebSocket-style close codes. Classify
 // from the signals the browser does give us so PostHog can split the
 // sse_connection_degraded series instead of a single unlabelled count.
-type SseDegradedErrorType = "network_error" | "timeout" | "server_closed";
+type SseDegradedErrorType =
+  | "network_error"
+  | "timeout"
+  | "server_closed"
+  | "auth_rejected";
 type SseStoppedReason = "auth" | "max_attempts";
 
 let es: EventSource | null = null;
@@ -54,6 +58,7 @@ let lastErrorType: SseDegradedErrorType = "timeout";
 let awaitingReconnect = false;
 let reconnectGeneration = 0;
 let stoppedReason: SseStoppedReason | undefined;
+let pendingServerCloseReconnect = false;
 
 const DEGRADED_AFTER_MS = 15_000;
 const RECONNECT_BASE_MS = 1_000;
@@ -75,15 +80,45 @@ function currentPagePath(): string {
   return window.location.pathname;
 }
 
-function resetConnectionDiagnostics() {
-  reconnectCount = 0;
+// Analytics must never interrupt the stream lifecycle it observes, so every
+// capture from this module goes through here. `page_path` is on every series,
+// so it is added here rather than remembered at each call site.
+function captureSseEvent(
+  event: string,
+  properties: Record<string, unknown>,
+): void {
+  try {
+    getPosthogClient()?.capture(event, {
+      ...properties,
+      page_path: currentPagePath(),
+    });
+  } catch {
+    // Reporting a dead stream must not be what kills the reconnect loop.
+  }
+}
+
+// An "episode" is one run of consecutive errors between healthy opens. Both
+// `closeStream` and the open handler end one, and every field they share has
+// to be cleared by both: a field reset in only one of them is how a stale
+// `hasReportedDegraded` or `pendingServerCloseReconnect` leaks into the next
+// episode and mislabels its analytics.
+function resetEpisodeDiagnostics() {
   episodeErrorCount = 0;
-  connectionOpenedAtMs = null;
-  connectionDurationMs = 0;
+  hasReportedDegraded = false;
   userEventCount = 0;
   lastErrorType = "timeout";
   awaitingReconnect = false;
   stoppedReason = undefined;
+  pendingServerCloseReconnect = false;
+}
+
+// Only `closeStream` also ends the reconnect *attempt* history; the open
+// handler keeps `reconnectCount` so a recovery reports how many tries it took.
+function resetConnectionDiagnostics() {
+  resetEpisodeDiagnostics();
+  reconnectCount = 0;
+  connectionOpenedAtMs = null;
+  connectionDurationMs = 0;
 }
 
 function reconnectDelayMs(errorCount: number): number {
@@ -93,23 +128,31 @@ function reconnectDelayMs(errorCount: number): number {
   return Math.max(0, Math.round(base + jitter));
 }
 
-function statusFromUnknown(error: unknown): number | undefined {
-  if (typeof error === "object" && error !== null && "status" in error) {
-    const status = (error as { status: unknown }).status;
-    if (typeof status === "number") return status;
+// A thrown 401/403 is the session answering "no", not the session call
+// failing. Anything else is a transport problem and must not be read as a
+// signed-out user: that would close the stream and prompt a login on a blip.
+function isAuthRejection(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("status" in error)) {
+    return false;
   }
-  return undefined;
+  const status = (error as { status: unknown }).status;
+  return status === Status.UNAUTHORIZED || status === Status.FORBIDDEN;
 }
 
 async function sessionAllowsSseReconnect(): Promise<boolean> {
   try {
     return await session.doesSessionExist();
   } catch (error) {
-    const status = statusFromUnknown(error);
-    if (status === Status.UNAUTHORIZED || status === Status.FORBIDDEN) {
-      return false;
-    }
-    return true;
+    return !isAuthRejection(error);
+  }
+}
+
+async function refreshedSessionForReconnect(): Promise<boolean> {
+  try {
+    return await session.attemptRefreshingSession();
+  } catch (error) {
+    if (isAuthRejection(error)) return false;
+    throw error;
   }
 }
 
@@ -148,21 +191,16 @@ function reportSseDegraded() {
   if (sseDegradedSinceStore.get() === null) {
     sseDegradedSinceStore.set(Date.now());
   }
-  if (hasReportedDegraded && stoppedReason === undefined) return;
+  if (hasReportedDegraded) return;
   hasReportedDegraded = true;
-  try {
-    getPosthogClient()?.capture("sse_connection_degraded", {
-      reconnect_count: reconnectCount,
-      error_type: lastErrorType,
-      connection_duration_ms: connectionDurationMs,
-      retry_attempt: Math.max(0, episodeErrorCount - 1),
-      user_event_count: userEventCount,
-      page_path: currentPagePath(),
-      ...(stoppedReason !== undefined ? { stopped_reason: stoppedReason } : {}),
-    });
-  } catch {
-    // Analytics must never interrupt the stream lifecycle it observes.
-  }
+  captureSseEvent("sse_connection_degraded", {
+    reconnect_count: reconnectCount,
+    error_type: lastErrorType,
+    connection_duration_ms: connectionDurationMs,
+    retry_attempt: Math.max(0, episodeErrorCount - 1),
+    user_event_count: userEventCount,
+    ...(stoppedReason !== undefined ? { stopped_reason: stoppedReason } : {}),
+  });
 }
 
 function armDegradedTimer() {
@@ -202,6 +240,7 @@ function stopReconnecting(reason: SseStoppedReason) {
   stoppedReason = reason;
   awaitingReconnect = true;
   clearReconnectTimer();
+  clearDegradedTimer();
   reportSseDegraded();
   if (reason === "auth") {
     void openAuthModalFromOutsideRouter("login");
@@ -213,6 +252,11 @@ async function handleStreamError() {
   reconnectCount += 1;
   episodeErrorCount += 1;
   lastErrorType = classifySseError(es);
+  if (lastErrorType === "server_closed") {
+    pendingServerCloseReconnect = true;
+  } else if (pendingServerCloseReconnect && episodeErrorCount > 1) {
+    lastErrorType = "auth_rejected";
+  }
   if (episodeErrorCount === 1) {
     connectionDurationMs =
       connectionOpenedAtMs === null
@@ -227,6 +271,15 @@ async function handleStreamError() {
   if (episodeErrorCount >= MAX_EPISODE_ERRORS) {
     stopReconnecting("max_attempts");
     return;
+  }
+
+  if (lastErrorType === "server_closed" || lastErrorType === "auth_rejected") {
+    const refreshed = await refreshedSessionForReconnect();
+    if (generation !== reconnectGeneration) return;
+    if (!refreshed) {
+      stopReconnecting("auth");
+      return;
+    }
   }
 
   const allowed = await sessionAllowsSseReconnect();
@@ -276,15 +329,17 @@ export const openStream = (): EventSource => {
   // After we own the reconnect loop, the same handler still refetches the
   // missed window and resets the episode error budget.
   openHandler = () => {
+    const degradedSinceMs = sseDegradedSinceStore.get();
     clearDegradedTimer();
-    hasReportedDegraded = false;
-    episodeErrorCount = 0;
-    awaitingReconnect = false;
-    stoppedReason = undefined;
+    resetEpisodeDiagnostics();
     connectionOpenedAtMs = Date.now();
-    userEventCount = 0;
-    lastErrorType = "timeout";
     sseDegradedSinceStore.set(null);
+    if (degradedSinceMs !== null) {
+      captureSseEvent("sse_connection_recovered", {
+        downtime_ms: Math.max(0, Date.now() - degradedSinceMs),
+        reconnect_count: reconnectCount,
+      });
+    }
     for (const listener of reopenListeners) {
       listener();
     }
