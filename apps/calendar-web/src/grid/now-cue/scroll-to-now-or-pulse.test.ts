@@ -23,6 +23,6 @@ describe("scrollToNowOrPulse", () => {
     scrollToNowOrPulse(grid);
 
     expect(scroll).not.toHaveBeenCalled();
-    expect(useNowCueStore.getState().pulse).toBe(1);
+    expect(useNowCueStore.getState().active).toBe(true);
   });
 });

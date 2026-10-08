@@ -42,7 +42,9 @@ public final class NativeCalendarRootModel {
     public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
-    public private(set) var nowCuePulseToken = 0
+    /// True for 700ms after an already-at-now teach pulse. Matches web `NOW_CUE_PULSE_MS`.
+    public private(set) var nowCueHeaderHighlight = false
+    private var nowCuePulseTask: Task<Void, Never>?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var paletteSearchTask: Task<Void, Never>?
     public var dedicationDialogVisible = false
@@ -575,7 +577,14 @@ public final class NativeCalendarRootModel {
     }
 
     public func registerNowCuePulse() {
-        nowCuePulseToken += 1
+        guard viewStore.view != .life else { return }
+        nowCuePulseTask?.cancel()
+        nowCueHeaderHighlight = true
+        nowCuePulseTask = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled else { return }
+            self?.nowCueHeaderHighlight = false
+        }
     }
 
     private func moveFocus(_ direction: FocusMoveDirection) {

@@ -10,7 +10,10 @@ import {
 } from "@web/events/stores/draft.store";
 import { EVENT_WIDTH_MINIMUM } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
-import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
+import {
+  selectNowCueActive,
+  useNowCueStore,
+} from "@web/grid/now-cue/now-cue.store";
 import {
   selectPageJumpHintsVisible,
   usePageJumpHintStore,
@@ -51,7 +54,7 @@ export const DayLabels: FC<Props> = ({
   const showDayJumpPrefixes =
     !isEventFormOpen && (pageJumpHintsVisible || isEventJumpActive);
   const marginLeft = useGridMarginLeft();
-  const pulseTodayLabel = useNowCuePulse();
+  const pulseTodayLabel = useNowCueStore(selectNowCueActive);
   const dayJumpHowTo = isEventJumpActive
     ? "Type the day key to focus that column."
     : "Hold Shift and press the day key to focus that column.";

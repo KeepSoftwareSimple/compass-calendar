@@ -54,4 +54,20 @@ class AccessibilityProbeView: NSView {
         NSAccessibility.post(element: self, notification: .layoutChanged)
         NSAccessibility.post(element: window, notification: .layoutChanged)
     }
+
+    /// Reuses the existing probe when it is already on `hostView`; otherwise
+    /// replaces it. Overlay, form, and grid-focus probes share this attach.
+    static func attach<T: AccessibilityProbeView>(
+        existing: T?,
+        to hostView: NSView,
+        create: () -> T
+    ) -> T {
+        if let existing, existing.superview === hostView {
+            return existing
+        }
+        existing?.removeFromSuperview()
+        let view = create()
+        hostView.addSubview(view, positioned: .above, relativeTo: nil)
+        return view
+    }
 }

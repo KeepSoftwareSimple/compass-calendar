@@ -18,7 +18,10 @@ import {
 import { ROOT_ROUTES } from "@web/common/constants/routes";
 import { Z_INDEX_FLOATING_MENU } from "@web/common/constants/web.constants";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
+import {
+  selectNowCueActive,
+  useNowCueStore,
+} from "@web/grid/now-cue/now-cue.store";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { pulseClickTaughtShortcut } from "@web/shortcuts/pointer-intent/pulseClickTaughtShortcut";
@@ -48,7 +51,7 @@ export const SelectView = ({
   const navigate = useNavigate();
   const listRef = useRef<Array<HTMLElement | null>>([]);
   useFloatingLayer("viewSelect", isOpen);
-  const pulseDayLabel = useNowCuePulse() && emphasizeDayLabel;
+  const pulseDayLabel = useNowCueStore(selectNowCueActive) && emphasizeDayLabel;
 
   const getCurrentView = (): "Day" | "Week" | "Life" => {
     const pathname = location.pathname;

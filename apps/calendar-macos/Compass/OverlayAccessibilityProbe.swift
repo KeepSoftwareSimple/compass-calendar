@@ -62,13 +62,9 @@ final class OverlayAccessibilityProbe {
     }
 
     func attach(to hostView: NSView) {
-        if let existing = probe, existing.superview === hostView {
-            return
+        probe = AccessibilityProbeView.attach(existing: probe, to: hostView) {
+            OverlayAccessibilityProbeView(descriptor: descriptor)
         }
-        probe?.removeFromSuperview()
-        let view = OverlayAccessibilityProbeView(descriptor: descriptor)
-        probe = view
-        hostView.addSubview(view, positioned: .above, relativeTo: nil)
     }
 
     func publish(visible: Bool) {

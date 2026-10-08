@@ -21,7 +21,10 @@ import {
   TIMED_VISIBLE_HOURS,
 } from "@web/grid/grid.constants";
 import { useGridMarginLeft } from "@web/grid/grid-margin";
-import { useNowCuePulse } from "@web/grid/now-cue/useNowCuePulse";
+import {
+  selectNowCueActive,
+  useNowCueStore,
+} from "@web/grid/now-cue/now-cue.store";
 import { type GridVisibleDate } from "@web/grid/types/grid.types";
 import { allDayColumnTintStyle } from "@web/grid/utils/allDayColumnTint.util";
 import {
@@ -158,7 +161,7 @@ const CalendarNowLine = ({
 }) => {
   useMinuteTick();
   const percentOfDay = getCurrentPercentOfDay();
-  const pulseNowLine = useNowCuePulse();
+  const pulseNowLine = useNowCueStore(selectNowCueActive);
 
   return (
     <div
