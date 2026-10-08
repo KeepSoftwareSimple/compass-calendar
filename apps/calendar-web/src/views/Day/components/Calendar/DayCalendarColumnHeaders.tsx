@@ -6,6 +6,7 @@ import {
   pageJumpAttrs,
 } from "@web/shortcuts/page-jump/page-jump.targets";
 import { GridTimezoneLabel } from "@web/timezone/GridTimezoneLabel";
+import { DayCalendarColumnLabel } from "./DayCalendarColumnLabel";
 import { CALENDAR_COLUMN_ID_ATTRIBUTE } from "./dayCalendarColumnFocus.util";
 import { dayCalendarColumnCountStyle } from "./dayCalendarColumnGrid.util";
 
@@ -40,7 +41,7 @@ export const DayCalendarColumnHeaders = ({
             const isFocused = focusedColumnKey === calendar.id;
             const jumpDigit = pageJumpDigitByCalendarId?.get(calendar.id);
             const label = (
-              <ColumnLabel
+              <DayCalendarColumnLabel
                 backgroundColor={calendar.backgroundColor}
                 name={calendar.name}
               />
@@ -91,20 +92,3 @@ export const DayCalendarColumnHeaders = ({
     </div>
   );
 };
-
-const ColumnLabel = ({
-  backgroundColor,
-  name,
-}: {
-  backgroundColor: string;
-  name: string;
-}) => (
-  <>
-    <span
-      aria-hidden="true"
-      className="size-2 shrink-0 rounded-full"
-      style={{ backgroundColor }}
-    />
-    <span className="truncate text-sm text-text">{name}</span>
-  </>
-);
