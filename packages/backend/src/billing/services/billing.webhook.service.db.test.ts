@@ -111,7 +111,7 @@ describe("Stripe webhook", () => {
       Status.BAD_REQUEST,
     );
     expect((json.mock.calls as unknown[][])[0]?.[0]).toEqual({
-      error: "No signatures found matching the expected signature",
+      error: "Invalid Stripe webhook signature",
     });
   });
 

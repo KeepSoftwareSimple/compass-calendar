@@ -226,6 +226,7 @@
     "body-parser": "^1.20.6",
     "bson": "7.2.0",
     "cookie": "^0.7.2",
+    "dompurify": "3.4.16",
     "fflate": "^0.4.9",
     "follow-redirects": "^1.16.0",
     "form-data": "^4.0.6",
