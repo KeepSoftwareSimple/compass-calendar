@@ -46,25 +46,35 @@ type ProviderAuthorizationStrategy = (
   options: StartProviderAuthorizationOptions,
 ) => StartProviderAuthorizationResult;
 
+/** The `state` and callback URL one mount's authorization attempt is pinned to. */
+type AuthorizationSession = {
+  state: string;
+  redirectUri: string;
+};
+
+/**
+ * Pins the OAuth `state` and callback URL for the life of the mount, so the
+ * value handed to the consent screen is the one the callback later looks up.
+ * Built lazily because `crypto.randomUUID` and `window.location` should not be
+ * read on every render.
+ */
+function useAuthorizationSession(
+  provider: ProviderKind,
+  createState: (redirectUri: string) => string,
+): AuthorizationSession {
+  const [session] = useState<AuthorizationSession>(() => {
+    const redirectUri = buildProviderAuthCallbackUrl(provider);
+    return { state: createState(redirectUri), redirectUri };
+  });
+  return session;
+}
+
 /**
  * The bookkeeping every provider does before handing the browser to a consent
  * screen: remember the trial method, store the intent under the OAuth state so
  * the callback can recover the return path, and report the funnel step. Each
  * strategy then launches its own way, which is all they still spell out.
  */
-function assignAuthorizationRedirectOrReportError(
-  url: string,
-  setLoading: (loading: boolean) => void,
-  onError?: (error: unknown) => void,
-): void {
-  try {
-    assignAuthorizationRedirect(url);
-  } catch (error) {
-    setLoading(false);
-    onError?.(error);
-  }
-}
-
 function recordAuthorizationStart(
   provider: ProviderKind,
   state: string,
@@ -87,6 +97,80 @@ function recordAuthorizationStart(
   trackSignupStep("oauth_redirect_started", { method: provider });
 }
 
+function assignAuthorizationRedirectOrReportError(
+  url: string,
+  setLoading: (loading: boolean) => void,
+  onError?: (error: unknown) => void,
+): void {
+  try {
+    assignAuthorizationRedirect(url);
+  } catch (error) {
+    setLoading(false);
+    onError?.(error);
+  }
+}
+
+type RedirectAuthorizationSpec = {
+  provider: ProviderKind;
+  /**
+   * Empty when the provider has no client id configured for this deployment.
+   * Called per attempt, not captured, so the config module stays mockable.
+   */
+  getClientId: () => string;
+  notConfiguredMessage: string;
+  createState: (redirectUri: string) => string;
+  buildAuthorizationUrl: (
+    args: AuthorizationSession & {
+      clientId: string;
+      prompt?: AuthorizationPrompt;
+    },
+  ) => string;
+};
+
+/**
+ * Microsoft and Apple both authorize by navigating the whole page to a
+ * provider URL, so they share everything but the client id, the `state` shape,
+ * and the URL itself. Google can't use this: `useGoogleLogin` owns its own
+ * launch and reports errors through callbacks instead of a thrown navigation.
+ */
+function createRedirectAuthorizationStrategy({
+  provider,
+  getClientId,
+  notConfiguredMessage,
+  createState,
+  buildAuthorizationUrl,
+}: RedirectAuthorizationSpec): ProviderAuthorizationStrategy {
+  return ({ intent, signupFlow, onStart, onError, prompt }) => {
+    const [loading, setLoading] = useState(false);
+    const session = useAuthorizationSession(provider, createState);
+
+    return {
+      loading,
+      startAuthorization: useCallback(() => {
+        const clientId = getClientId();
+
+        if (!clientId) {
+          onError?.(new Error(notConfiguredMessage));
+          return;
+        }
+
+        onStart?.();
+        setLoading(true);
+        recordAuthorizationStart(provider, session.state, {
+          intent,
+          signupFlow,
+        });
+
+        assignAuthorizationRedirectOrReportError(
+          buildAuthorizationUrl({ ...session, clientId, prompt }),
+          setLoading,
+          onError,
+        );
+      }, [intent, onError, onStart, prompt, session, signupFlow]),
+    };
+  };
+}
+
 const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   intent,
   signupFlow,
@@ -95,8 +179,9 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   prompt,
 }) => {
   const [loading, setLoading] = useState(false);
-  const [state] = useState(() => buildOAuthStateForClient(false));
-  const [redirectUri] = useState(() => buildProviderAuthCallbackUrl("google"));
+  const { state, redirectUri } = useAuthorizationSession("google", () =>
+    buildOAuthStateForClient(false),
+  );
 
   const loginOptions = useMemo<
     UseGoogleLoginOptionsAuthCodeFlow & { prompt?: AuthorizationPrompt }
@@ -133,83 +218,39 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   };
 };
 
-const useMicrosoftProviderAuthorizationStrategy: ProviderAuthorizationStrategy =
-  ({ intent, signupFlow, onStart, onError, prompt }) => {
-    const [loading, setLoading] = useState(false);
-    const [state] = useState(() => buildOAuthStateForClient(false));
-    const [redirectUri] = useState(() =>
-      buildProviderAuthCallbackUrl("microsoft"),
-    );
-
-    return {
-      loading,
-      startAuthorization: useCallback(() => {
-        const clientId = getMicrosoftSignInClientId();
-
-        if (!clientId) {
-          onError?.(new Error("Microsoft sign-in is not configured"));
-          return;
-        }
-
-        onStart?.();
-        setLoading(true);
-        recordAuthorizationStart("microsoft", state, { intent, signupFlow });
-
-        assignAuthorizationRedirectOrReportError(
-          buildMicrosoftAuthorizationUrl({
-            clientId,
-            redirectUri,
-            scopes: MICROSOFT_SCOPES,
-            state,
-            prompt,
-          }),
-          setLoading,
-          onError,
-        );
-      }, [intent, onError, onStart, prompt, redirectUri, signupFlow, state]),
-    };
-  };
-
-const useAppleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
-  intent,
-  signupFlow,
-  onStart,
-  onError,
-}) => {
-  const [loading, setLoading] = useState(false);
-  // Apple returns to the backend form_post route, so the frontend callback it
-  // should land on afterwards rides along inside the state.
-  const [state] = useState(() =>
-    btoa(
-      JSON.stringify({
-        frontendRedirectURI: buildProviderAuthCallbackUrl("apple"),
-        nonce: crypto.randomUUID(),
+const useMicrosoftProviderAuthorizationStrategy =
+  createRedirectAuthorizationStrategy({
+    provider: "microsoft",
+    getClientId: () => getMicrosoftSignInClientId(),
+    notConfiguredMessage: "Microsoft sign-in is not configured",
+    createState: () => buildOAuthStateForClient(false),
+    buildAuthorizationUrl: ({ clientId, redirectUri, state, prompt }) =>
+      buildMicrosoftAuthorizationUrl({
+        clientId,
+        redirectUri,
+        scopes: MICROSOFT_SCOPES,
+        state,
+        prompt,
       }),
-    ),
-  );
+  });
 
-  return {
-    loading,
-    startAuthorization: useCallback(() => {
-      const clientId = getAppleSignInClientId();
-
-      if (!clientId) {
-        onError?.(new Error("Apple sign-in is not configured"));
-        return;
-      }
-
-      onStart?.();
-      setLoading(true);
-      recordAuthorizationStart("apple", state, { intent, signupFlow });
-
-      assignAuthorizationRedirectOrReportError(
-        buildAppleAuthorizationUrl({ clientId, state }),
-        setLoading,
-        onError,
-      );
-    }, [intent, onError, onStart, signupFlow, state]),
-  };
-};
+const useAppleProviderAuthorizationStrategy =
+  createRedirectAuthorizationStrategy({
+    provider: "apple",
+    getClientId: () => getAppleSignInClientId(),
+    notConfiguredMessage: "Apple sign-in is not configured",
+    // Apple returns to the backend form_post route, so the frontend callback it
+    // should land on afterwards rides along inside the state.
+    createState: (redirectUri) =>
+      btoa(
+        JSON.stringify({
+          frontendRedirectURI: redirectUri,
+          nonce: crypto.randomUUID(),
+        }),
+      ),
+    buildAuthorizationUrl: ({ clientId, state }) =>
+      buildAppleAuthorizationUrl({ clientId, state }),
+  });
 
 const PROVIDER_AUTHORIZATION_STRATEGIES: Record<
   ProviderKind,
