@@ -1,3 +1,5 @@
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as statusToastUtil from "@web/common/utils/toast/status-toast.util";
 import {
   resetTimeTravelStoreForTests,
   setTimeTravelZone,
@@ -5,9 +7,13 @@ import {
 import { afterEach, describe, expect, it, mock } from "bun:test";
 
 const showStatusToast = mock();
-mock.module("@web/common/utils/toast/status-toast.util", () => ({
-  showStatusToast,
-}));
+mockModuleForFile(
+  "@web/common/utils/toast/status-toast.util",
+  statusToastUtil,
+  {
+    showStatusToast,
+  },
+);
 
 const { dismissSecondaryTimeZone, SECONDARY_TIMEZONE_HIDDEN_TOAST_ID } =
   require("@web/timezone/dismiss-secondary-timezone") as typeof import("@web/timezone/dismiss-secondary-timezone");

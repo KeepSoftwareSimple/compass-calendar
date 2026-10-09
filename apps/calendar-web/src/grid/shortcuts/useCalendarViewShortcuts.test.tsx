@@ -2,6 +2,8 @@ import { HotkeyManager, HotkeysProvider } from "@tanstack/react-hotkeys";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as statusToastUtil from "@web/common/utils/toast/status-toast.util";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -27,9 +29,13 @@ import {
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
 const showStatusToast = mock();
-mock.module("@web/common/utils/toast/status-toast.util", () => ({
-  showStatusToast,
-}));
+mockModuleForFile(
+  "@web/common/utils/toast/status-toast.util",
+  statusToastUtil,
+  {
+    showStatusToast,
+  },
+);
 
 const { useCalendarViewShortcuts } =
   require("./useCalendarViewShortcuts") as typeof import("./useCalendarViewShortcuts");
