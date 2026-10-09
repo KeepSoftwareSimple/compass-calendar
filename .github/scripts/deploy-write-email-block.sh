@@ -72,4 +72,42 @@ write_email_block() {
     printf '%s\n' "  allowlist: [${allowlist_seq}]"
     echo "Email config: ${EMAIL_ALLOWLIST} on the send allowlist" >&2
   fi
+
+  preview_loop_written=0
+  if [ -n "${EMAIL_PREVIEW_LOOP_RECIPIENTS:-}" ]; then
+    preview_recipients_seq=$(printf '%s' "$EMAIL_PREVIEW_LOOP_RECIPIENTS" |
+      tr ',' '\n' |
+      sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' -e 's/.*/"&"/' |
+      paste -sd, -)
+    if [ "$preview_loop_written" -eq 0 ]; then
+      printf '%s\n' "  previewLoop:"
+      preview_loop_written=1
+    fi
+    printf '%s\n' "    recipients: [${preview_recipients_seq}]"
+    echo "Email config: preview loop enabled for ${EMAIL_PREVIEW_LOOP_RECIPIENTS}" >&2
+  fi
+
+  if [ -n "${EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE:-}" ]; then
+    if [ "$preview_loop_written" -eq 0 ]; then
+      printf '%s\n' "  previewLoop:"
+      preview_loop_written=1
+    fi
+    printf '%s\n' "    scheduleProfile: ${EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE}"
+  fi
+
+  if [ -n "${EMAIL_PREVIEW_LOOP_GAP_DAYS:-}" ]; then
+    if [ "$preview_loop_written" -eq 0 ]; then
+      printf '%s\n' "  previewLoop:"
+      preview_loop_written=1
+    fi
+    printf '%s\n' "    gapDays: ${EMAIL_PREVIEW_LOOP_GAP_DAYS}"
+  fi
+
+  if [ -n "${EMAIL_PREVIEW_LOOP_MAX_PER_DAY:-}" ]; then
+    if [ "$preview_loop_written" -eq 0 ]; then
+      printf '%s\n' "  previewLoop:"
+      preview_loop_written=1
+    fi
+    printf '%s\n' "    maxEmailsPerDay: ${EMAIL_PREVIEW_LOOP_MAX_PER_DAY}"
+  fi
 }

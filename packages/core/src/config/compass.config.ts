@@ -100,6 +100,14 @@ const CompassConfigSchema = z
         unsubscribeSecret: optionalString,
         scheduleProfile: z.enum(["real", "fast"]).optional(),
         allowlist: z.array(z.string()).optional(),
+        previewLoop: z
+          .object({
+            recipients: z.array(z.string()).optional(),
+            scheduleProfile: z.enum(["real", "fast"]).optional(),
+            gapDays: z.number().int().nonnegative().optional(),
+            maxEmailsPerDay: z.number().int().positive().max(50).optional(),
+          })
+          .optional(),
       })
       .nullish(),
     posthog: z
@@ -247,6 +255,18 @@ const CompassConfigSchema = z
         message:
           "email.scheduleProfile fast is not allowed when runtime.nodeEnv is production",
         path: ["email", "scheduleProfile"],
+      });
+    }
+
+    if (
+      email?.previewLoop?.scheduleProfile === "fast" &&
+      !isNonProduction(config.runtime.nodeEnv as NodeEnv)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "email.previewLoop.scheduleProfile fast is not allowed when runtime.nodeEnv is production",
+        path: ["email", "previewLoop", "scheduleProfile"],
       });
     }
   });

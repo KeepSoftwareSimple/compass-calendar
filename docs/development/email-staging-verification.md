@@ -6,6 +6,30 @@ GitHub Environment values from WP-00 (#3913).
 
 Founder-only: sign in on staging. Unattended agents never enter credentials.
 
+## Founder preview loop (optional)
+
+The welcome drip can loop forever for explicit staging recipients so the
+founder receives every template on the real poller path without signing up
+again. Off by default.
+
+Enable on the **staging-cloud** GitHub Environment (unset every variable to
+disable):
+
+| Variable | Format | Notes |
+| --- | --- | --- |
+| `EMAIL_PREVIEW_LOOP_RECIPIENTS` | Comma-separated addresses | Must also appear on `EMAIL_ALLOWLIST` so sends are not skipped |
+| `EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE` | `real` or `fast` | Optional. Loop-only cadence override; omit to follow `EMAIL_SCHEDULE_PROFILE` (staging is usually `fast`, about two minutes between welcome and shortcuts) |
+| `EMAIL_PREVIEW_LOOP_GAP_DAYS` | Integer days | Optional, default `1`. Pause between loop restarts |
+| `EMAIL_PREVIEW_LOOP_MAX_PER_DAY` | Integer, max `50` | Optional, default `10`. Hard cap per recipient per rolling day |
+
+After deploy, restart the backend on the host (`./compass restart`) and confirm
+startup logs include `previewLoop=1 recipient(s)` (count only, no addresses).
+
+PostHog per-send events include `preview_loop: true`. Filter them out of launch
+dashboards with `preview_loop != true` (or `is not set` for real users).
+
+Unsubscribe in a preview email stops the loop the same way as a normal user.
+
 ## Preconditions
 
 - The `email:` block is present in staging `compass.yaml` (see deploy logs:

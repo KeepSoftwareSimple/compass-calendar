@@ -77,6 +77,15 @@ const ConfigSchema = z
     EMAIL_UNSUBSCRIBE_SECRET: z.string().nonempty().optional(),
     EMAIL_SCHEDULE_PROFILE: z.enum(["real", "fast"]).optional(),
     EMAIL_ALLOWLIST: z.array(z.string()).default([]),
+    EMAIL_PREVIEW_LOOP_RECIPIENTS: z.array(z.string()).default([]),
+    EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE: z.enum(["real", "fast"]).optional(),
+    EMAIL_PREVIEW_LOOP_GAP_DAYS: z.number().int().nonnegative().optional(),
+    EMAIL_PREVIEW_LOOP_MAX_PER_DAY: z
+      .number()
+      .int()
+      .positive()
+      .max(50)
+      .optional(),
   })
   .strict()
   .superRefine((env, context) => {
@@ -184,6 +193,19 @@ const ConfigSchema = z
         path: ["EMAIL_SCHEDULE_PROFILE"],
       });
     }
+
+    if (
+      env.EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE === "fast" &&
+      !isNonProduction(env.NODE_ENV)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        fatal: true,
+        message:
+          "EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE fast is not allowed when NODE_ENV is production",
+        path: ["EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE"],
+      });
+    }
   });
 
 export type Config = z.infer<typeof ConfigSchema>;
@@ -250,6 +272,13 @@ export function parseRawConfig(config: CompassConfig): Config {
     EMAIL_UNSUBSCRIBE_SECRET: nonEmpty(config.email?.unsubscribeSecret),
     EMAIL_SCHEDULE_PROFILE: config.email?.scheduleProfile,
     EMAIL_ALLOWLIST: toEmailList(config.email?.allowlist),
+    EMAIL_PREVIEW_LOOP_RECIPIENTS: toEmailList(
+      config.email?.previewLoop?.recipients,
+    ),
+    EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE:
+      config.email?.previewLoop?.scheduleProfile,
+    EMAIL_PREVIEW_LOOP_GAP_DAYS: config.email?.previewLoop?.gapDays,
+    EMAIL_PREVIEW_LOOP_MAX_PER_DAY: config.email?.previewLoop?.maxEmailsPerDay,
   });
 }
 
@@ -315,6 +344,18 @@ export function parseConfigFromEnv(
       | "fast"
       | undefined,
     EMAIL_ALLOWLIST: toEmailList(rawEnv["EMAIL_ALLOWLIST"]?.split(",")),
+    EMAIL_PREVIEW_LOOP_RECIPIENTS: toEmailList(
+      rawEnv["EMAIL_PREVIEW_LOOP_RECIPIENTS"]?.split(","),
+    ),
+    EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE: nonEmpty(
+      rawEnv["EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE"],
+    ) as "real" | "fast" | undefined,
+    EMAIL_PREVIEW_LOOP_GAP_DAYS: rawEnv["EMAIL_PREVIEW_LOOP_GAP_DAYS"]
+      ? Number.parseInt(rawEnv["EMAIL_PREVIEW_LOOP_GAP_DAYS"], 10)
+      : undefined,
+    EMAIL_PREVIEW_LOOP_MAX_PER_DAY: rawEnv["EMAIL_PREVIEW_LOOP_MAX_PER_DAY"]
+      ? Number.parseInt(rawEnv["EMAIL_PREVIEW_LOOP_MAX_PER_DAY"], 10)
+      : undefined,
   });
 }
 

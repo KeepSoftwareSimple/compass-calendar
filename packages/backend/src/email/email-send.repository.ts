@@ -142,6 +142,13 @@ class EmailSendRepository {
     return patchRow({ _id: id }, () => ({ status: "canceled" }));
   }
 
+  async deferNextAttempt(
+    id: string,
+    nextAttemptAt: Date,
+  ): Promise<EmailSendRecord | null> {
+    return patchRow({ _id: id, status: "queued" }, () => ({ nextAttemptAt }));
+  }
+
   // One more attempt left requeues at `nextAttemptAt`; the last one fails
   // terminally. The attempt count is read first rather than $inc'd so the
   // decision and the stored count come from the same value.
