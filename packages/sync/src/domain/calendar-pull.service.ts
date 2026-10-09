@@ -126,6 +126,8 @@ export async function pullCalendarChanges(
   let cursor = resource.syncCursor;
   let deleted = 0;
   const colorLabels = toColorLabelMap(calendar.eventLabels);
+  const calendarDefaultPopupReminderMinutes =
+    calendar.defaultPopupReminderMinutes ?? [];
 
   do {
     let page: Awaited<ReturnType<ProviderEventReader["listEventPage"]>>;
@@ -141,6 +143,7 @@ export async function pullCalendarChanges(
           cursor: pageToken === null ? cursor : null,
           pageToken,
           colorLabels,
+          calendarDefaultPopupReminderMinutes,
         },
       );
       page = read.page;

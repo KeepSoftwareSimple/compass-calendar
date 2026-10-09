@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import dayjs from "@core/util/date/dayjs";
 import { useTodayTimedEvents } from "@web/components/Sidebar/UpNextCard/useUpNextEvent";
 import { getNotificationPort } from "@web/notifications/notification.port";
 import { useNotificationsEffectivelyOn } from "@web/notifications/notification.state";
@@ -30,4 +31,28 @@ export function useUpcomingEventNotifier(): void {
       firedKeysRef.current,
     );
   }, [effectivelyOn, now, allTimedEvents]);
+
+  // Background tabs freeze the minute tick; on return, retry reminders that
+  // became due while the tab slept (same cadence as useMinuteTick catch-up).
+  useEffect(() => {
+    if (!effectivelyOn) return;
+
+    const catchUpMissed = () => {
+      if (document.visibilityState !== "visible") return;
+      firedKeysRef.current = announceUpcomingEvents(
+        getNotificationPort(),
+        dayjs(),
+        toNotifiableEvents(allTimedEvents),
+        firedKeysRef.current,
+        { allowMissedGrace: true },
+      );
+    };
+
+    document.addEventListener("visibilitychange", catchUpMissed);
+    window.addEventListener("focus", catchUpMissed);
+    return () => {
+      document.removeEventListener("visibilitychange", catchUpMissed);
+      window.removeEventListener("focus", catchUpMissed);
+    };
+  }, [effectivelyOn, allTimedEvents]);
 }

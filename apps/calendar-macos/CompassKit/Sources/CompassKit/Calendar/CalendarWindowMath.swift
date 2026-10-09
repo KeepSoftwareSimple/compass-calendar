@@ -28,13 +28,15 @@ public enum CalendarWindowMath {
         )
     }
 
-    /// Today's local day plus the five-minute lead into tomorrow (notifier and Up Next range).
+    /// Today's local day plus long synced reminder lead into tomorrow (notifier and Up Next range).
     public static func notifiableEventQueryRange(now: Date) -> (startDate: String, endDate: String) {
         let calendar = EffectiveTimeZone.calendar
         let startOfDay = calendar.startOfDay(for: now)
         let endExclusive =
-            calendar.date(byAdding: .minute, value: UpcomingNotifierLogic.notifyLeadMinutes, to:
-                calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay)
+            calendar.date(
+                byAdding: .minute,
+                value: UpcomingNotifierLogic.maxNotificationLookaheadMinutes,
+                to: calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? startOfDay)
             ?? startOfDay
         return (
             CompassDateParsing.formatLikeDayjs(startOfDay),

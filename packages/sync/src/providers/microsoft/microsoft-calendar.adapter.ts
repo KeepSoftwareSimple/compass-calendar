@@ -134,6 +134,7 @@ function mapCalendar(item: MicrosoftGraphCalendar): DiscoveredCalendar | null {
     accessRole,
     capabilities: microsoftDiscoveredCalendarCapabilities(canEdit),
     createsGoogleMeet: false,
+    defaultPopupReminderMinutes: [],
   };
 }
 

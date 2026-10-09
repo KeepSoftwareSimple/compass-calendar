@@ -104,6 +104,7 @@ function mapCalendar(calendar: DiscoveredCaldavCalendar): DiscoveredCalendar {
     accessRole,
     capabilities: capabilitiesForAccessRole(accessRole),
     createsGoogleMeet: false,
+    defaultPopupReminderMinutes: [],
   };
 }
 

@@ -86,7 +86,8 @@ public enum UpNextProjection {
                 title: title,
                 startDate: payload.start.rawValue,
                 endDate: payload.end.rawValue,
-                isDemo: demoEventIds.contains(event.id.rawValue))
+                isDemo: demoEventIds.contains(event.id.rawValue),
+                popupReminderMinutes: event.popupReminderMinutes)
         }
     }
 }

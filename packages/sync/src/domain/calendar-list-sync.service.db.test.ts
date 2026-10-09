@@ -40,6 +40,7 @@ const discovered = (
   },
   eventLabels: [],
   createsGoogleMeet: true,
+  defaultPopupReminderMinutes: [],
 });
 
 // Replays scripted discovery passes and records the cursor each call received.

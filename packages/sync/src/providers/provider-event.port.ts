@@ -44,6 +44,8 @@ export interface ProviderEvent {
   // CalDAV resource href for resolving sync-collection deletions.
   readonly resourceHref?: string;
   readonly recurrence: ProviderEventRecurrence;
+  /** Popup reminder offsets in minutes before start; empty when explicitly none. */
+  readonly popupReminderMinutes?: readonly number[];
 }
 
 // A cancelled event or cancelled series occurrence. Providers report these with

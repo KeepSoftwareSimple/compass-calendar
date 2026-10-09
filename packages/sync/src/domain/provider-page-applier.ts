@@ -1,3 +1,4 @@
+import { encodePopupReminderMinutes } from "@core/notifications/google-popup-reminders.util";
 import { type DateTime, type EventId } from "@core/types/domain-primitives";
 import { type SyncEventRecurrence } from "@core/types/sync/event.contracts";
 import { type ProviderEventId } from "@core/types/sync/identity.contracts";
@@ -33,6 +34,11 @@ function providerMetadataFor(
     ...(read.icalUid ? { iCalUID: read.icalUid } : {}),
     ...providerManagedMetadataEntry(read.providerManaged),
     ...(read.resourceHref ? { href: read.resourceHref } : {}),
+    ...(read.popupReminderMinutes !== undefined
+      ? {
+          popupReminders: encodePopupReminderMinutes(read.popupReminderMinutes),
+        }
+      : {}),
   };
   return Object.keys(metadata).length > 0 ? metadata : null;
 }

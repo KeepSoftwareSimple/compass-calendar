@@ -473,4 +473,27 @@ describe("normalizeGoogleEvent", () => {
 
     expect(read).not.toHaveProperty("providerManaged");
   });
+
+  it("resolves popup reminder minutes from overrides and calendar defaults", () => {
+    const fromDefaults = asProviderEvent(
+      normalizeGoogleEvent(
+        gEvent({ reminders: { useDefault: true } }),
+        undefined,
+        [10, 0],
+      ),
+    );
+    expect(fromDefaults.popupReminderMinutes).toEqual([10, 0]);
+
+    const fromOverrides = asProviderEvent(
+      normalizeGoogleEvent(
+        gEvent({
+          reminders: {
+            useDefault: false,
+            overrides: [{ method: "popup", minutes: 0 }],
+          },
+        }),
+      ),
+    );
+    expect(fromOverrides.popupReminderMinutes).toEqual([0]);
+  });
 });

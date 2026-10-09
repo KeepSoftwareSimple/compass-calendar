@@ -114,6 +114,7 @@ describe("GoogleCalendarAdapter", () => {
           canInviteAttendees: true,
         },
         createsGoogleMeet: true,
+        defaultPopupReminderMinutes: [],
       },
     ]);
   });

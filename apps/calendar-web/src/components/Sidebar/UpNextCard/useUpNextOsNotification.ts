@@ -1,4 +1,6 @@
 import { useEffect, useRef } from "react";
+import { effectivePopupReminderMinutes } from "@core/notifications/upcoming-event-reminders.util";
+import dayjs from "@core/util/date/dayjs";
 import { track } from "@web/auth/posthog/track";
 import { getNotificationPort } from "@web/notifications/notification.port";
 import { useNotificationsEffectivelyOn } from "@web/notifications/notification.state";
@@ -10,9 +12,9 @@ import {
 
 /**
  * When the in-app Up Next banner appears, try the OS notification again with
- * the same tag as the 5-minute notifier. Some browsers accept the constructor
- * but drop the banner on screen; a second attempt while the user is already
- * looking at the app often succeeds without stacking duplicates.
+ * the same tag as the notifier. Some browsers accept the constructor but drop
+ * the banner on screen; a second attempt while the user is already looking at
+ * the app often succeeds without stacking duplicates.
  */
 export function useUpNextOsNotification(
   upNext: NotifiableEvent | undefined,
@@ -24,10 +26,24 @@ export function useUpNextOsNotification(
   useEffect(() => {
     if (!effectivelyOn || !isActive || !upNext?._id) return;
 
-    const key = notificationKey(upNext);
+    const minutesUntilStart = dayjs(upNext.startDate).diff(
+      dayjs(),
+      "minute",
+      true,
+    );
+    const reminderMinutes = effectivePopupReminderMinutes(upNext).find(
+      (offset) => minutesUntilStart <= offset,
+    );
+    if (reminderMinutes === undefined) return;
+
+    const key = notificationKey(upNext, reminderMinutes);
     if (attemptedKeysRef.current.has(key)) return;
 
-    const shown = showUpcomingEventNotification(getNotificationPort(), upNext);
+    const shown = showUpcomingEventNotification(
+      getNotificationPort(),
+      upNext,
+      reminderMinutes,
+    );
     attemptedKeysRef.current.add(key);
 
     if (shown) {

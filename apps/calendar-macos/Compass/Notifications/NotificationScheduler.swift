@@ -35,10 +35,25 @@ final class NotificationScheduler {
     }
 
     func retryBannerNotification(for event: NotifiableEvent) async {
-        let key = UpcomingNotifierLogic.notificationKey(for: event)
+        let now = model?.referenceNow ?? Date()
+        guard let start = CompassDateParsing.parseInEffectiveTimeZone(event.startDate) else {
+            return
+        }
+        let minutesUntilStart = start.timeIntervalSince(now) / 60
+        guard
+            let reminderMinutes = UpcomingNotifierLogic.effectivePopupReminderMinutes(for: event)
+                .first(where: { minutesUntilStart <= Double($0) })
+        else { return }
+
+        let key = UpcomingNotifierLogic.notificationKey(
+            for: event,
+            reminderMinutes: reminderMinutes)
         guard !bannerRetryKeys.contains(key) else { return }
         bannerRetryKeys.insert(key)
-        let payload = UpcomingNotifierLogic.notificationPayload(for: event)
+        let payload = UpcomingNotifierLogic.notificationPayload(
+            for: event,
+            reminderMinutes: reminderMinutes,
+            now: now)
         _ = await CompassNotificationCenter.shared.showNative(payload)
     }
 

@@ -214,6 +214,8 @@ class ImportRun {
           window: options.window ?? null,
           pageToken,
           colorLabels: toColorLabelMap(this.calendar.eventLabels),
+          calendarDefaultPopupReminderMinutes:
+            this.calendar.defaultPopupReminderMinutes ?? [],
         },
       );
       this.#accessToken = read.accessToken;

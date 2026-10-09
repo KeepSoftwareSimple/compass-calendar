@@ -28,7 +28,7 @@ final class UpcomingNotifierLogicTests: XCTestCase {
         let now = isoDate("2026-03-10T09:00:00.000Z")
         let events = [eventAt(minutesFromNow: 0), eventAt(minutesFromNow: 5)]
         let due = UpcomingNotifierLogic.selectEventsToNotify(now: now, events: events, firedKeys: [])
-        XCTAssertEqual(due.map(\.id), ["e0", "e5"])
+        XCTAssertEqual(due.map { "\($0.event.id):\($0.reminderMinutes)" }, ["e0:5", "e5:5"])
     }
 
     func testSkipsAlreadyStartedEvents() {
@@ -46,7 +46,11 @@ final class UpcomingNotifierLogicTests: XCTestCase {
         let due = UpcomingNotifierLogic.selectEventsToNotify(
             now: now,
             events: [event],
-            firedKeys: [UpcomingNotifierLogic.notificationKey(for: event)])
+            firedKeys: [
+                UpcomingNotifierLogic.notificationKey(
+                    for: event,
+                    reminderMinutes: UpcomingNotifierLogic.notifyLeadMinutes),
+            ])
         XCTAssertTrue(due.isEmpty)
     }
 
@@ -61,12 +65,16 @@ final class UpcomingNotifierLogicTests: XCTestCase {
     }
 
     func testNotificationBodyUsesEffectiveTimeZone() {
+        let now = isoDate("2026-03-10T09:00:00.000Z")
         let event = NotifiableEvent(
             id: "standup",
             title: "Standup",
             startDate: "2026-03-10T09:03:00.000Z")
-        let payload = UpcomingNotifierLogic.notificationPayload(for: event)
-        XCTAssertEqual(payload.body, "Starts at 3:03 AM")
+        let payload = UpcomingNotifierLogic.notificationPayload(
+            for: event,
+            reminderMinutes: 5,
+            now: now)
+        XCTAssertEqual(payload.body, "Starts in 3 minutes (3:03 AM)")
     }
 
     func testNotifiableEventQueryRangeIncludesLeadIntoTomorrow() {
@@ -80,12 +88,12 @@ final class UpcomingNotifierLogicTests: XCTestCase {
         }
         let evening = isoDate("2026-07-17T03:00:00.000Z")
         let justAfterMidnight = isoDate("2026-07-17T06:03:00.000Z")
-        let afterLead = isoDate("2026-07-17T06:06:00.000Z")
+        let beyondLookahead = isoDate("2026-07-18T07:00:00.000Z")
         XCTAssertGreaterThanOrEqual(evening, start)
         XCTAssertLessThan(evening, end)
         XCTAssertGreaterThanOrEqual(justAfterMidnight, start)
         XCTAssertLessThan(justAfterMidnight, end)
-        XCTAssertGreaterThanOrEqual(afterLead, end)
+        XCTAssertGreaterThanOrEqual(beyondLookahead, end)
     }
 
     private func isoDate(_ value: String) -> Date {
