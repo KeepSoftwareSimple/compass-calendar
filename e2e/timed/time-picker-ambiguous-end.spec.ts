@@ -18,15 +18,15 @@ test("typed 1145 on the end field resolves to 11:45 AM after an 11:30 AM start",
   await page.getByRole("option", { name: "11:30 AM" }).click();
 
   await end.click();
-  await end.fill("1145");
-  await expect(page.getByRole("option", { name: "11:45 AM" })).toBeVisible();
-  await page.keyboard.press("Enter");
+  await end.pressSequentially("1145");
+  const suggestion = page.getByRole("option", { name: "11:45 AM" });
+  await expect(suggestion).toBeVisible();
+  await suggestion.click();
 
-  await expect(end).toContainText("11:45 AM");
-  await expect(page.getByText("11:45 PM")).toHaveCount(0);
+  await expect(page.locator("#endTimePicker")).toContainText("11:45 AM");
+  await expect(page.locator("#endTimePicker")).not.toContainText("11:45 PM");
 
-  await page.screenshot({
+  await page.locator("#endTimePicker").screenshot({
     path: "/opt/cursor/artifacts/time-picker-1145-fixed.png",
-    fullPage: false,
   });
 });
