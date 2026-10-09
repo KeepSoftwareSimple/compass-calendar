@@ -90,6 +90,9 @@ const eventToGridEvent = (
     organizer: details?.organizer,
     attendees: details?.attendees,
     conference: details?.conference,
+    ...(event.popupReminderMinutes !== undefined
+      ? { popupReminderMinutes: event.popupReminderMinutes }
+      : {}),
   };
 };
 

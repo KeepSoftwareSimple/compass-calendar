@@ -115,7 +115,13 @@ export class GoogleEventReaderAdapter implements ProviderEventReader {
     let skipped = 0;
     for (const item of page.items) {
       try {
-        events.push(normalizeGoogleEvent(item, input.colorLabels));
+        events.push(
+          normalizeGoogleEvent(
+            item,
+            input.colorLabels,
+            input.calendarDefaultPopupReminderMinutes ?? [],
+          ),
+        );
       } catch (error) {
         // A structurally unusable event (no id/etag, unmappable schedule) is
         // dropped so one bad row never fails the whole page or the import.

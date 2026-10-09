@@ -1,5 +1,6 @@
 import { calendar } from "@googleapis/calendar";
 import { OAuth2Client } from "google-auth-library";
+import { googleCalendarListDefaultPopupMinutes } from "@core/notifications/google-popup-reminders.util";
 import {
   type gCalendar,
   type gSchema$Calendar,
@@ -198,6 +199,9 @@ async function mapCalendar(
     capabilities: capabilitiesForAccessRole(accessRole),
     createsGoogleMeet: calendarCreatesGoogleMeet(
       item.conferenceProperties?.allowedConferenceSolutionTypes,
+    ),
+    defaultPopupReminderMinutes: googleCalendarListDefaultPopupMinutes(
+      item.defaultReminders,
     ),
   };
 }

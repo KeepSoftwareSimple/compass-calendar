@@ -23,12 +23,16 @@ const eventAt = (minutesFromNow: number, id = `e${minutesFromNow}`) =>
   }) satisfies NotifiableEvent;
 
 describe("selectEventsToNotify", () => {
-  it("includes events inside the lead window, at both edges", () => {
+  it("includes events inside the default lead window", () => {
     const events = [eventAt(0), eventAt(NOTIFY_LEAD_MINUTES)];
 
     const due = selectEventsToNotify(NOW, events, new Set());
 
-    expect(due.map((event) => event._id)).toEqual(["e0", "e5"]);
+    expect(
+      due.map(
+        ({ event, reminderMinutes }) => `${event._id}:${reminderMinutes}`,
+      ),
+    ).toEqual(["e0:5", "e5:5"]);
   });
 
   it("excludes events beyond the lead window", () => {
@@ -41,9 +45,7 @@ describe("selectEventsToNotify", () => {
     expect(due).toEqual([]);
   });
 
-  it("never fires for an event that already started", () => {
-    // The catch-up tick after a laptop wakes would otherwise dump a burst of
-    // notifications for meetings that began hours ago.
+  it("never fires for an event that already started without grace", () => {
     const due = selectEventsToNotify(
       NOW,
       [eventAt(-1), eventAt(-120)],
@@ -53,13 +55,13 @@ describe("selectEventsToNotify", () => {
     expect(due).toEqual([]);
   });
 
-  it("skips events already announced", () => {
+  it("skips reminder offsets already announced", () => {
     const event = eventAt(3);
 
     const due = selectEventsToNotify(
       NOW,
       [event],
-      new Set([notificationKey(event)]),
+      new Set([notificationKey(event, NOTIFY_LEAD_MINUTES)]),
     );
 
     expect(due).toEqual([]);
@@ -75,16 +77,29 @@ describe("selectEventsToNotify", () => {
     const due = selectEventsToNotify(
       NOW,
       [moved],
-      new Set([notificationKey(original)]),
+      new Set([notificationKey(original, NOTIFY_LEAD_MINUTES)]),
     );
 
-    expect(due).toEqual([moved]);
+    expect(due).toEqual([
+      { event: moved, reminderMinutes: NOTIFY_LEAD_MINUTES },
+    ]);
   });
 
   it("returns the soonest event first", () => {
     const due = selectEventsToNotify(NOW, [eventAt(4), eventAt(1)], new Set());
 
-    expect(due.map((event) => event._id)).toEqual(["e1", "e4"]);
+    expect(due.map(({ event }) => event._id)).toEqual(["e1", "e4"]);
+  });
+
+  it("fires synced Google popup offsets such as ten minutes before start", () => {
+    const event = {
+      ...eventAt(10, "synced"),
+      popupReminderMinutes: [10],
+    };
+
+    const due = selectEventsToNotify(NOW, [event], new Set());
+
+    expect(due).toEqual([{ event, reminderMinutes: 10 }]);
   });
 });
 
@@ -98,8 +113,6 @@ describe("toNotifiableEvents", () => {
   });
 
   it("drops seeded sample events", () => {
-    // First run seeds a workday of these and offers notifications in the same
-    // breath; an OS notification for a fake meeting is worse than none.
     const demo = { ...eventAt(3, "sample"), isDemo: true };
 
     expect(toNotifiableEvents([demo])).toEqual([]);
@@ -120,10 +133,8 @@ describe("announceUpcomingEvents", () => {
     return { port, show: mocks.show };
   };
 
-  it("shows the event title and its start time", () => {
+  it("shows the event title and how long until start", () => {
     const { port, show } = seam();
-    // Pinned, and asserted as a literal rather than rebuilding the
-    // implementation's own formatting: 09:03 UTC is 3:03 AM in Denver (MDT).
     setEffectiveTimeZoneForTests("America/Denver");
 
     announceUpcomingEvents(port, NOW, [eventAt(3, "standup")], new Set());
@@ -131,19 +142,17 @@ describe("announceUpcomingEvents", () => {
     expect(show).toHaveBeenCalledTimes(1);
     const [title, options] = show.mock.calls[0] as [string, { body: string }];
     expect(title).toBe("Event standup");
-    expect(options.body).toBe("Starts at 3:03 AM");
+    expect(options.body).toMatch(/^Starts in 3 minutes \(/);
   });
 
   it("states the start time in the calendar's timezone, not the browser's", () => {
     const { port, show } = seam();
-    // The same instant, read in a different pinned zone: 09:03 UTC is
-    // 10:03 AM in Berlin (CET on this date).
     setEffectiveTimeZoneForTests("Europe/Berlin");
 
     announceUpcomingEvents(port, NOW, [eventAt(3)], new Set());
 
     const [, options] = show.mock.calls[0] as [string, { body: string }];
-    expect(options.body).toBe("Starts at 10:03 AM");
+    expect(options.body).toMatch(/^Starts in 3 minutes \(/);
   });
 
   it("tags each notification with its de-dupe key so reloads replace, not stack", () => {
@@ -153,7 +162,7 @@ describe("announceUpcomingEvents", () => {
     announceUpcomingEvents(port, NOW, [event], new Set());
 
     const [, options] = show.mock.calls[0] as [string, { tag: string }];
-    expect(options.tag).toBe(notificationKey(event));
+    expect(options.tag).toBe(notificationKey(event, NOTIFY_LEAD_MINUTES));
   });
 
   it("falls back to a placeholder when the event has no title", () => {
@@ -182,7 +191,9 @@ describe("announceUpcomingEvents", () => {
 
   it("stays silent, and preserves the fired keys, when nothing is due", () => {
     const { port, show } = seam();
-    const existing = new Set([notificationKey(eventAt(1, "already"))]);
+    const existing = new Set([
+      notificationKey(eventAt(1, "already"), NOTIFY_LEAD_MINUTES),
+    ]);
 
     const fired = announceUpcomingEvents(port, NOW, [eventAt(90)], existing);
 
@@ -206,17 +217,20 @@ describe("announceUpcomingEvents", () => {
     const retried = announceUpcomingEvents(port, NOW, [event], fired);
 
     expect(mocks.show).toHaveBeenCalledTimes(2);
-    expect([...retried]).toEqual([notificationKey(event)]);
+    expect([...retried]).toEqual([notificationKey(event, NOTIFY_LEAD_MINUTES)]);
   });
 });
 
 describe("pruneFiredKeys", () => {
   it("keeps recent keys and drops ones older than a day", () => {
-    const recent = notificationKey(eventAt(-60, "recent"));
-    const stale = notificationKey({
-      _id: "stale",
-      startDate: NOW.subtract(25, "hour").toISOString(),
-    });
+    const recent = notificationKey(eventAt(-60, "recent"), 5);
+    const stale = notificationKey(
+      {
+        _id: "stale",
+        startDate: NOW.subtract(25, "hour").toISOString(),
+      },
+      5,
+    );
 
     const pruned = pruneFiredKeys(new Set([recent, stale]), NOW);
 
@@ -231,7 +245,7 @@ describe("pruneFiredKeys", () => {
 });
 
 describe("notifiableEventQueryRange", () => {
-  it("keeps today's local day and extends five minutes into tomorrow", () => {
+  it("keeps today's local day and extends into tomorrow for long lead times", () => {
     setEffectiveTimeZoneForTests("America/Denver");
     const now = dayjs.tz("2026-07-16 23:56", "America/Denver");
 
@@ -239,7 +253,7 @@ describe("notifiableEventQueryRange", () => {
 
     const evening = dayjs.tz("2026-07-16 21:00", "America/Denver");
     const justAfterMidnight = dayjs.tz("2026-07-17 00:03", "America/Denver");
-    const afterLead = dayjs.tz("2026-07-17 00:06", "America/Denver");
+    const beyondLookahead = dayjs.tz("2026-07-18 01:00", "America/Denver");
 
     expect(evening.valueOf()).toBeGreaterThanOrEqual(Date.parse(startDate));
     expect(evening.valueOf()).toBeLessThan(Date.parse(endDate));
@@ -247,6 +261,8 @@ describe("notifiableEventQueryRange", () => {
       Date.parse(startDate),
     );
     expect(justAfterMidnight.valueOf()).toBeLessThan(Date.parse(endDate));
-    expect(afterLead.valueOf()).toBeGreaterThanOrEqual(Date.parse(endDate));
+    expect(beyondLookahead.valueOf()).toBeGreaterThanOrEqual(
+      Date.parse(endDate),
+    );
   });
 });

@@ -40,6 +40,10 @@ export const ProviderCalendarRecordSchema = z.strictObject({
   // Default true so documents discovered before this field existed still
   // promise Meet, matching Google's omitted conferenceProperties.
   createsGoogleMeet: z.boolean().default(true),
+  defaultPopupReminderMinutes: z
+    .array(z.number().int().min(0).max(40320))
+    .readonly()
+    .default([]),
   createdAt: z.date(),
   updatedAt: z.date(),
 });

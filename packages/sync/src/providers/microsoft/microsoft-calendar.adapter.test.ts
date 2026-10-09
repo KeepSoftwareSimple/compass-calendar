@@ -109,6 +109,7 @@ describe("MicrosoftCalendarAdapter", () => {
           canInviteAttendees: true,
         },
         createsGoogleMeet: false,
+        defaultPopupReminderMinutes: [],
       },
     ]);
   });

@@ -38,6 +38,9 @@ export const syncEventInstanceToBrowser = (
     ...(instance.providerManaged
       ? { providerManaged: instance.providerManaged }
       : {}),
+    ...(instance.popupReminderMinutes !== undefined
+      ? { popupReminderMinutes: instance.popupReminderMinutes }
+      : {}),
   };
 
   // EventInstanceListResponseSchema already validated this instance on the

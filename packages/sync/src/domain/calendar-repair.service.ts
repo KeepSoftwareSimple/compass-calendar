@@ -104,6 +104,8 @@ export async function repairCalendar(
     now,
   );
   const colorLabels = toColorLabelMap(calendar.eventLabels);
+  const calendarDefaultPopupReminderMinutes =
+    calendar.defaultPopupReminderMinutes ?? [];
   let pageToken: string | null = null;
   let cursor: string | null = null;
   do {
@@ -112,6 +114,7 @@ export async function repairCalendar(
       calendarId: calendar.providerCalendarId,
       pageToken,
       colorLabels,
+      calendarDefaultPopupReminderMinutes,
     });
     const page = read.page;
     accessToken = read.accessToken;

@@ -37,6 +37,8 @@ export interface ProviderEventReadInput {
   // providers that support them (e.g. Google's post-June-2026 event labels).
   // A provider with no such concept simply ignores this.
   readonly colorLabels?: ReadonlyMap<string, string>;
+  /** Calendar default popup offsets for resolving `reminders.useDefault`. */
+  readonly calendarDefaultPopupReminderMinutes?: readonly number[];
 }
 
 // A provider-neutral event read port. One call reads one page; the caller

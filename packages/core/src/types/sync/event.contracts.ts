@@ -238,6 +238,10 @@ export const SyncEventInstanceSchema = z.object({
   // The provider owns this event's details and schedule. Omitted rather than
   // nulled so events imported before it was recorded stay contract-valid.
   providerManaged: z.literal(true).optional(),
+  popupReminderMinutes: z
+    .array(z.number().int().min(0).max(40320))
+    .readonly()
+    .optional(),
 });
 export type SyncEventInstance = z.infer<typeof SyncEventInstanceSchema>;
 

@@ -155,6 +155,7 @@ export async function syncCalendarList(
       accessRole: calendar.accessRole,
       capabilities: calendar.capabilities,
       createsGoogleMeet: calendar.createsGoogleMeet,
+      defaultPopupReminderMinutes: calendar.defaultPopupReminderMinutes,
     });
     upserted.push(record);
   }

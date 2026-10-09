@@ -1,20 +1,24 @@
+import {
+  DEFAULT_POPUP_REMINDER_MINUTES,
+  type DueEventReminder,
+  MAX_NOTIFICATION_LOOKAHEAD_MINUTES,
+  notificationKey,
+  type RemindableEvent,
+  selectDueEventReminders,
+} from "@core/notifications/upcoming-event-reminders.util";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { track } from "@web/auth/posthog/track";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { type NotificationPort } from "@web/notifications/notification.port";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
-/** Fixed lead time. Long enough to walk to a meeting, short enough to be news. */
-export const NOTIFY_LEAD_MINUTES = 5;
+/** @deprecated Use synced popup offsets; kept for tests and sample copy. */
+export const NOTIFY_LEAD_MINUTES = DEFAULT_POPUP_REMINDER_MINUTES[0]!;
 
 const FIRED_KEY_TTL_HOURS = 24;
 
 /** The subset of a GridEvent this module needs; keeps the logic testable. */
-export interface NotifiableEvent {
-  _id: string;
-  title?: string;
-  startDate: string;
-}
+export type NotifiableEvent = RemindableEvent;
 
 /** The GridEvent fields the notifier reads before deciding to announce. */
 export interface CandidateEvent {
@@ -22,6 +26,7 @@ export interface CandidateEvent {
   title?: string;
   startDate: string;
   isDemo?: boolean;
+  popupReminderMinutes?: readonly number[];
 }
 
 /**
@@ -38,24 +43,24 @@ export function toNotifiableEvents(
 ): NotifiableEvent[] {
   return events.flatMap((event) =>
     event._id && !event.isDemo
-      ? [{ _id: event._id, title: event.title, startDate: event.startDate }]
+      ? [
+          {
+            _id: event._id,
+            title: event.title,
+            startDate: event.startDate,
+            popupReminderMinutes: event.popupReminderMinutes,
+          },
+        ]
       : [],
   );
 }
 
-/**
- * Start time is part of the key, not just the id: rescheduling an event should
- * earn a fresh notification at its new time. Recurring occurrences already
- * carry distinct ids, so they never collide.
- */
-export function notificationKey(event: NotifiableEvent): string {
-  return `${event._id}|${event.startDate}`;
-}
+export { notificationKey };
 
 /**
  * Event query range for the notifier and up-next: today's local day, plus the
  * lead window into tomorrow so a meeting just after midnight still gets a
- * full five-minute heads-up.
+ * full heads-up for long synced reminders.
  *
  * Same `[start, end)` shape as `dayEventQueryRange`.
  */
@@ -66,36 +71,21 @@ export function notifiableEventQueryRange(now: Dayjs): {
   return {
     startDate: toUTCOffset(now.startOf("day")),
     endDate: toUTCOffset(
-      now.startOf("day").add(1, "day").add(NOTIFY_LEAD_MINUTES, "minute"),
+      now
+        .startOf("day")
+        .add(1, "day")
+        .add(MAX_NOTIFICATION_LOOKAHEAD_MINUTES, "minute"),
     ),
   };
 }
 
-/**
- * Events starting within the lead window that have not been announced yet.
- *
- * Already-started events are excluded on purpose: after a laptop wakes, the
- * tick catches up all at once, and a burst of notifications for meetings that
- * began an hour ago is noise. The in-app UpNextBanner covers "happening now".
- */
 export function selectEventsToNotify(
   now: Dayjs,
   events: readonly NotifiableEvent[],
   firedKeys: ReadonlySet<string>,
-): NotifiableEvent[] {
-  return events
-    .filter((event) => {
-      if (firedKeys.has(notificationKey(event))) return false;
-      const minutesUntilStart = dayjs(event.startDate).diff(
-        now,
-        "minute",
-        true,
-      );
-      return minutesUntilStart >= 0 && minutesUntilStart <= NOTIFY_LEAD_MINUTES;
-    })
-    .sort(
-      (a, b) => dayjs(a.startDate).valueOf() - dayjs(b.startDate).valueOf(),
-    );
+  options?: { allowMissedGrace?: boolean },
+): DueEventReminder[] {
+  return selectDueEventReminders(now, events, firedKeys, options);
 }
 
 /**
@@ -110,23 +100,40 @@ export function pruneFiredKeys(
   return new Set(
     [...firedKeys].filter((key) => {
       const startDate = key.slice(key.indexOf("|") + 1);
-      const start = dayjs(startDate);
+      const pipeAfterStart = startDate.indexOf("|");
+      const parsedStart =
+        pipeAfterStart >= 0 ? startDate.slice(0, pipeAfterStart) : startDate;
+      const start = dayjs(parsedStart);
       // An unparseable key can never match a real event again; drop it.
       return start.isValid() && start.isAfter(cutoff);
     }),
   );
 }
 
-/** Title, start-time body, and de-dupe tag used by the 5-minute notifier
+/** Title, start-time body, and de-dupe tag used by the notifier
  * and the Up Next banner retry. Same payload so the second attempt replaces
  * the first instead of stacking. */
 export function showUpcomingEventNotification(
   port: NotificationPort,
   event: NotifiableEvent,
+  reminderMinutes: number,
+  now: Dayjs = dayjs(),
 ): boolean {
+  const minutesUntilStart = Math.max(
+    0,
+    Math.ceil(dayjs(event.startDate).diff(now, "minute", true)),
+  );
+  const startLabel = inEffectiveTimeZone(event.startDate).format("h:mm A");
+  const body =
+    minutesUntilStart === 0
+      ? `Starting now (${startLabel})`
+      : minutesUntilStart === 1
+        ? `Starts in 1 minute (${startLabel})`
+        : `Starts in ${minutesUntilStart} minutes (${startLabel})`;
+
   return port.show(event.title?.trim() || "Untitled event", {
-    body: `Starts at ${inEffectiveTimeZone(event.startDate).format("h:mm A")}`,
-    tag: notificationKey(event),
+    body,
+    tag: notificationKey(event, reminderMinutes),
     onClick: () => window.focus(),
   });
 }
@@ -142,14 +149,20 @@ export function announceUpcomingEvents(
   now: Dayjs,
   events: readonly NotifiableEvent[],
   firedKeys: ReadonlySet<string>,
+  options?: { allowMissedGrace?: boolean },
 ): Set<string> {
-  const due = selectEventsToNotify(now, events, firedKeys);
+  const due = selectEventsToNotify(now, events, firedKeys, options);
   if (due.length === 0) return new Set(firedKeys);
 
   const announced = pruneFiredKeys(firedKeys, now);
-  for (const event of due) {
-    const key = notificationKey(event);
-    const shown = showUpcomingEventNotification(port, event);
+  for (const { event, reminderMinutes } of due) {
+    const key = notificationKey(event, reminderMinutes);
+    const shown = showUpcomingEventNotification(
+      port,
+      event,
+      reminderMinutes,
+      now,
+    );
     if (shown) {
       announced.add(key);
       track("notifications_shown");

@@ -1,3 +1,4 @@
+import { reminderMinutesFromProviderMetadata } from "@core/notifications/upcoming-event-reminders.util";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import {
   type SyncEventInstance,
@@ -53,6 +54,7 @@ export function assembleEventInstances(
     const correlation = {
       ...toIcalUid(event),
       ...toProviderManaged(event),
+      ...toPopupReminderMinutes(event),
     };
 
     if (event.recurrence.kind === "single") {
@@ -128,6 +130,7 @@ export function assembleEventInstances(
         updatedAt: master.updatedAt.toISOString(),
         ...toIcalUid(master),
         ...toProviderManaged(master),
+        ...toPopupReminderMinutes(master),
       }),
     );
   }
@@ -147,6 +150,13 @@ const toProviderManaged = (event: EventRecord): { providerManaged?: true } => {
   return isProviderManagedMetadata(event.providerMetadata)
     ? { providerManaged: true }
     : {};
+};
+
+const toPopupReminderMinutes = (
+  event: EventRecord,
+): { popupReminderMinutes?: readonly number[] } => {
+  const minutes = reminderMinutesFromProviderMetadata(event.providerMetadata);
+  return minutes !== undefined ? { popupReminderMinutes: minutes } : {};
 };
 
 const toInstanceContent = (event: EventRecord) => {

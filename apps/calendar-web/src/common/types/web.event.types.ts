@@ -67,6 +67,10 @@ const GridEventSchema = WebEventSchema.extend({
   /** Provider-owned event: schedule follows the provider, details editable. */
   isProviderManaged: z.literal(true).optional(),
   isDemo: z.boolean().optional(),
+  popupReminderMinutes: z
+    .array(z.number().int().min(0).max(40320))
+    .readonly()
+    .optional(),
   /** Timed event shown in the all-day row because it spans midnight. */
   isTimedMultiDayDisplay: z.boolean().optional(),
   // Optional Google-mapped event color tag. Joined like calendarId — not part

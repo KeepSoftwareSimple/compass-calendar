@@ -1,4 +1,5 @@
 import { type calendar_v3 } from "@googleapis/calendar";
+import { resolveGooglePopupReminderMinutes } from "@core/notifications/google-popup-reminders.util";
 import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
@@ -36,6 +37,7 @@ const NO_COLOR_LABELS: ReadonlyMap<string, string> = new Map();
 export function normalizeGoogleEvent(
   item: gSchema$Event,
   colorLabels: ReadonlyMap<string, string> = NO_COLOR_LABELS,
+  calendarDefaultPopupReminderMinutes: readonly number[] = [],
 ): ProviderEventRead {
   const providerEventId = requireId(item);
 
@@ -52,6 +54,10 @@ export function normalizeGoogleEvent(
   }
 
   const providerVersion = requireVersion(item);
+  const popupReminderMinutes = resolveGooglePopupReminderMinutes(
+    item.reminders,
+    calendarDefaultPopupReminderMinutes,
+  );
 
   return {
     kind: "event",
@@ -67,6 +73,7 @@ export function normalizeGoogleEvent(
       ? { providerManaged: true as const }
       : {}),
     recurrence: mapRecurrence(item),
+    popupReminderMinutes,
   };
 }
 

@@ -31,6 +31,8 @@ export interface DiscoveredCalendar {
   // types from Google keep the current Meet promise (true). An advertised
   // list that omits hangoutsMeet is false.
   readonly createsGoogleMeet: boolean;
+  /** Popup offsets from the provider calendar's default reminders. */
+  readonly defaultPopupReminderMinutes: readonly number[];
 }
 
 // The result of one discovery pass: the full set of calendars the provider

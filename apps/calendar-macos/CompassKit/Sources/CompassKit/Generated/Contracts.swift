@@ -908,17 +908,19 @@ public struct Event: Codable, Hashable, Sendable {
     public let createdAt: DateTime
     public let icalUid: String?
     public let id: EventId
+    public let popupReminderMinutes: [Int]?
     public let providerManaged: Bool?
     public let recurrence: EventRecurrence
     public let schedule: EventSchedule
     public let updatedAt: DateTime?
 
-    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
+    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, popupReminderMinutes: [Int]? = nil, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
         self.calendarId = calendarId
         self.content = content
         self.createdAt = createdAt
         self.icalUid = icalUid
         self.id = id
+        self.popupReminderMinutes = popupReminderMinutes
         self.providerManaged = providerManaged
         self.recurrence = recurrence
         self.schedule = schedule
@@ -1149,17 +1151,19 @@ public struct EventResponseEvent: Codable, Hashable, Sendable {
     public let createdAt: DateTime
     public let icalUid: String?
     public let id: EventId
+    public let popupReminderMinutes: [Int]?
     public let providerManaged: Bool?
     public let recurrence: EventRecurrence
     public let schedule: EventSchedule
     public let updatedAt: DateTime?
 
-    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
+    public init(calendarId: CalendarId, content: EventContent, createdAt: DateTime, icalUid: String? = nil, id: EventId, popupReminderMinutes: [Int]? = nil, providerManaged: Bool? = nil, recurrence: EventRecurrence, schedule: EventSchedule, updatedAt: DateTime?) {
         self.calendarId = calendarId
         self.content = content
         self.createdAt = createdAt
         self.icalUid = icalUid
         self.id = id
+        self.popupReminderMinutes = popupReminderMinutes
         self.providerManaged = providerManaged
         self.recurrence = recurrence
         self.schedule = schedule
