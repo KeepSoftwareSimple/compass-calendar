@@ -175,10 +175,12 @@ const resolveAmbiguousMinutes = (
     }
 
     const reference =
-      (options.currentValue && timeValueToMinutes(options.currentValue)) ??
-      (options.complementaryValue &&
-        timeValueToMinutes(options.complementaryValue)) ??
-      null;
+      (options.currentValue
+        ? timeValueToMinutes(options.currentValue)
+        : null) ??
+      (options.complementaryValue
+        ? timeValueToMinutes(options.complementaryValue)
+        : null);
     if (reference !== null) {
       return pickNearestToReference(pool, reference);
     }
