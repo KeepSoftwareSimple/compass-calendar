@@ -350,6 +350,7 @@ echo "Setting up environment for Docker Compose..."
 
 # Export all variables needed by compose.yaml.
 export COMPASS_CONFIG_FILE="$CONFIG_FILE"
+export COMPASS_CONFIG_REVISION="$(config_file_revision)"
 export COMPOSE_PROFILES="${COMPOSE_PROFILES-$(default_profiles)}"
 export COMPASS_VERSION="$(strip_quotes "$(read_config_value runtime.version)")"
 export WEB_PORT="$(strip_quotes "$(read_config_value web.port)")"
