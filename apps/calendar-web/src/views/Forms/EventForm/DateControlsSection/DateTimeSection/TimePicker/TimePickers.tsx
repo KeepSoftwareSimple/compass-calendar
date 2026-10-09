@@ -139,11 +139,13 @@ export const TimePickers: FC<Props> = ({
       <div className="flex items-center">
         <TimePicker
           aria-label="Start time"
+          complementaryTime={endTime.value}
           inputId="startTimePicker"
           isMenuOpen={isStartMenuOpen}
           onChange={(option) => onTimeSelected("start", option)}
           openMenuOnFocus
           options={timeOptions}
+          pickerRole="start"
           setIsMenuOpen={setIsStartMenuOpen}
           value={startTime}
         />
@@ -152,11 +154,13 @@ export const TimePickers: FC<Props> = ({
           aria-describedby={timeError ? timeErrorId : undefined}
           aria-invalid={timeError ? true : undefined}
           aria-label="End time"
+          complementaryTime={startTime.value}
           inputId="endTimePicker"
           isMenuOpen={isEndMenuOpen}
           onChange={(option) => onTimeSelected("end", option)}
           openMenuOnFocus
           options={timeOptions}
+          pickerRole="end"
           setIsMenuOpen={setIsEndMenuOpen}
           value={endTime}
         />
