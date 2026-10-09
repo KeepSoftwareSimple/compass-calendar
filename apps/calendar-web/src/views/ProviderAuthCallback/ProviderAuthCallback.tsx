@@ -4,6 +4,7 @@ import { AuthApi } from "@web/api/auth.api";
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
 import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
 import { shouldRelayDesktopOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
+import { reportAuthCallbackCrash } from "@web/auth/callback/report-auth-callback-crash";
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
@@ -108,14 +109,13 @@ export function ProviderAuthCallbackView() {
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
-    }).catch((error: unknown) => {
-      trackSignupFailed("oauth_callback_crashed", {
+    }).catch(
+      reportAuthCallbackCrash({
         method: providerParam,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      showErrorToast(PROVIDER_AUTHORIZATION_ERROR_MESSAGE);
-      router.history.replace(DEFAULT_CALENDAR_ROUTE);
-    });
+        errorMessage: PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
+        replace: (path) => router.history.replace(path),
+      }),
+    );
   });
 
   if (shouldRelay && providerParam && isSignInProviderKind(providerParam)) {
