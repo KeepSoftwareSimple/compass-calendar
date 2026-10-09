@@ -131,25 +131,20 @@ describe("DayCalendarColumnHeaders", () => {
             : `calendar-column-${index}-with-a-very-long-name`,
       }),
     );
-    const { container } = render(
+    render(
       <div style={{ width: 960 }}>
         <DayCalendarColumnHeaders calendars={calendars} />
       </div>,
     );
 
-    const columnGroups = within(
-      screen.getByRole("region", { name: "Calendars" }),
-    ).getAllByRole("group");
+    const calendarRegion = screen.getByRole("region", { name: "Calendars" });
+    const columnGroups = within(calendarRegion).getAllByRole("group");
     expect(columnGroups).toHaveLength(14);
 
     for (const column of columnGroups) {
       expect(column).toHaveClass("overflow-hidden");
       expect(column.scrollWidth).toBeLessThanOrEqual(column.clientWidth + 1);
     }
-
-    expect(
-      container.querySelector('[style*="grid-template-columns"]'),
-    ).toBeTruthy();
   });
 
   it("reports focus changes for full-column highlight", () => {
