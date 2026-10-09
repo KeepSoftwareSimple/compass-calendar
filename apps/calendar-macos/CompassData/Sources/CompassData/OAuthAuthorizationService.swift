@@ -35,7 +35,7 @@ public final class OAuthAuthorizationService {
         provider: SignInProviderKind,
         oauthClients: OAuthPublicClients
     ) async -> OAuthAuthorizationOutcome {
-        guard let presenter = webAuthPresenter else {
+        guard webAuthPresenter != nil else {
             return .failed(message: "Sign in is unavailable in this build.")
         }
         let providerId = provider.rawValue
@@ -49,15 +49,12 @@ public final class OAuthAuthorizationService {
         else {
             return .failed(message: "This sign-in method is not configured.")
         }
-        do {
-            let callbackURL = try await presenter.present(
-                url: url,
-                callbackURLScheme: "compass")
-            return await finishAuthCallback(callbackURL: callbackURL, expectedProvider: providerId)
-        } catch WebAuthSessionError.userCancelled {
-            return .userCancelled
-        } catch {
-            return .failed(message: "We couldn't finish signing you in. Please try again.")
+        return await presentOAuth(
+            url: url,
+            unavailable: "Sign in is unavailable in this build.",
+            failed: "We couldn't finish signing you in. Please try again."
+        ) { callbackURL in
+            await finishAuthCallback(callbackURL: callbackURL, expectedProvider: providerId)
         }
     }
 
@@ -66,7 +63,7 @@ public final class OAuthAuthorizationService {
         connectionId: ConnectionId?,
         oauthClients: OAuthPublicClients
     ) async -> OAuthAuthorizationOutcome {
-        guard let presenter = webAuthPresenter else {
+        guard webAuthPresenter != nil else {
             return .failed(message: "Connect is unavailable in this build.")
         }
         do {
@@ -76,22 +73,23 @@ public final class OAuthAuthorizationService {
                     desktopRelay: true,
                     features: nil,
                     provider: provider))
-            let redirectURL: URL
             switch begin {
-            case let .redirect(url):
-                redirectURL = url
             case .connected:
                 return .completed
+            case let .redirect(url):
+                return await presentOAuth(
+                    url: url,
+                    unavailable: "Connect is unavailable in this build.",
+                    failed: "We couldn't connect your calendar. Please try again."
+                ) { callbackURL in
+                    if callbackURL.absoluteString.contains("compass://connect/") {
+                        return await handleConnectDeepLink(callbackURL.absoluteString)
+                    }
+                    return await finishAuthCallback(
+                        callbackURL: callbackURL,
+                        expectedProvider: provider.rawValue)
+                }
             }
-            let callbackURL = try await presenter.present(
-                url: redirectURL,
-                callbackURLScheme: "compass")
-            if callbackURL.absoluteString.contains("compass://connect/") {
-                return await handleConnectDeepLink(callbackURL.absoluteString)
-            }
-            return await finishAuthCallback(
-                callbackURL: callbackURL,
-                expectedProvider: provider.rawValue)
         } catch WebAuthSessionError.userCancelled {
             return .userCancelled
         } catch {
@@ -135,6 +133,27 @@ public final class OAuthAuthorizationService {
             return .completed
         }
         return .failed(message: "We couldn't finish connecting your calendar.")
+    }
+
+    private func presentOAuth(
+        url: URL,
+        unavailable: String,
+        failed: String,
+        finish: (URL) async -> OAuthAuthorizationOutcome
+    ) async -> OAuthAuthorizationOutcome {
+        guard let presenter = webAuthPresenter else {
+            return .failed(message: unavailable)
+        }
+        do {
+            let callbackURL = try await presenter.present(
+                url: url,
+                callbackURLScheme: "compass")
+            return await finish(callbackURL)
+        } catch WebAuthSessionError.userCancelled {
+            return .userCancelled
+        } catch {
+            return .failed(message: failed)
+        }
     }
 
     private func authorizationURL(

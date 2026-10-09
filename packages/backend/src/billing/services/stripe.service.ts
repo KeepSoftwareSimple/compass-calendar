@@ -22,6 +22,7 @@ import {
   type StripeBillingGateway,
   stripeBillingGateway,
 } from "@backend/billing/services/stripe.client";
+import { stripeExpandableId } from "@backend/billing/stripe-expandable-id.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
@@ -337,7 +338,7 @@ export class StripeService {
       subscription.default_payment_method,
     );
     const customerId =
-      customerIdOf(subscription.customer) ?? billing?.stripeCustomerId;
+      stripeExpandableId(subscription.customer) ?? billing?.stripeCustomerId;
     if (!paymentMethod && customerId) {
       const customer = await this.stripe
         .retrieveCustomer(customerId, {
@@ -453,19 +454,6 @@ function isMissingStripeCustomer(error: unknown): boolean {
       candidate.message.startsWith("No such customer"))
   );
 }
-
-const customerIdOf = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.length > 0) return value;
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof (value as { id: unknown }).id === "string"
-  ) {
-    return (value as { id: string }).id;
-  }
-  return undefined;
-};
 
 const cardFromPaymentMethod = (
   value: unknown,

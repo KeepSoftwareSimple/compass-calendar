@@ -10,6 +10,7 @@ import {
   type StripeBillingGateway,
   stripeBillingGateway,
 } from "@backend/billing/services/stripe.client";
+import { stripeExpandableId } from "@backend/billing/stripe-expandable-id.util";
 import mongoService from "@backend/common/services/mongo.service";
 
 const logger = Logger("app:billing.webhook");
@@ -25,20 +26,6 @@ const HANDLED_TYPES = new Set<Stripe.Event.Type>([
 
 const toDate = (unixSeconds: number | null | undefined): Date | undefined =>
   typeof unixSeconds === "number" ? new Date(unixSeconds * 1000) : undefined;
-
-/** Stripe expandable fields arrive as either an id string or `{ id: string }`. */
-const stripeReferenceIdOf = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.length > 0) return value;
-  if (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    typeof (value as { id: unknown }).id === "string"
-  ) {
-    return (value as { id: string }).id;
-  }
-  return undefined;
-};
 
 /** First Stripe subscription Checkout: no subscription id on the row yet. */
 const shouldEmitCheckoutCompleted = (
@@ -68,13 +55,13 @@ async function resolveSubscriptionForCheckoutSession(
   session: Stripe.Checkout.Session;
   subscription: Stripe.Subscription;
 } | null> {
-  let subscriptionId = stripeReferenceIdOf(session.subscription);
+  let subscriptionId = stripeExpandableId(session.subscription);
   let resolvedSession = session;
   if (!subscriptionId) {
     resolvedSession = await stripe.retrieveCheckoutSession(session.id, {
       expand: ["subscription"],
     });
-    subscriptionId = stripeReferenceIdOf(resolvedSession.subscription);
+    subscriptionId = stripeExpandableId(resolvedSession.subscription);
   }
   if (!subscriptionId) {
     logger.warn("checkout.session.completed had no subscription id");
@@ -129,7 +116,7 @@ export async function applySubscription(
     {
       $set: {
         "billing.subscriptionStatus": status,
-        "billing.stripeCustomerId": stripeReferenceIdOf(subscription.customer),
+        "billing.stripeCustomerId": stripeExpandableId(subscription.customer),
         "billing.stripeSubscriptionId": subscription.id,
         ...(priceId ? { "billing.stripePriceId": priceId } : {}),
         ...(currentPeriodEnd
@@ -144,6 +131,16 @@ export async function applySubscription(
   );
 }
 
+async function findUserIdByStripeCustomerId(
+  customerId: string | undefined,
+): Promise<string | null> {
+  if (!customerId) return null;
+  const byCustomer = await mongoService.user.findOne({
+    "billing.stripeCustomerId": customerId,
+  });
+  return byCustomer?._id.toString() ?? null;
+}
+
 async function findUserIdForSubscription(
   subscription: Stripe.Subscription,
   clientReferenceId?: string | null,
@@ -155,20 +152,14 @@ async function findUserIdForSubscription(
   const metadataUserId = subscription.metadata?.["compassUserId"];
   if (metadataUserId) return metadataUserId;
 
-  const customerId = stripeReferenceIdOf(subscription.customer);
   const bySubscription = await mongoService.user.findOne({
     "billing.stripeSubscriptionId": subscription.id,
   });
   if (bySubscription) return bySubscription._id.toString();
 
-  if (customerId) {
-    const byCustomer = await mongoService.user.findOne({
-      "billing.stripeCustomerId": customerId,
-    });
-    if (byCustomer) return byCustomer._id.toString();
-  }
-
-  return null;
+  return findUserIdByStripeCustomerId(
+    stripeExpandableId(subscription.customer),
+  );
 }
 
 async function applySubscriptionAndMaybeCaptureCheckoutCompleted(
@@ -191,12 +182,7 @@ async function findUserIdForCheckoutSession(
   session: Pick<Stripe.Checkout.Session, "client_reference_id" | "customer">,
 ): Promise<string | null> {
   if (session.client_reference_id) return session.client_reference_id;
-  const customerId = stripeReferenceIdOf(session.customer);
-  if (!customerId) return null;
-  const byCustomer = await mongoService.user.findOne({
-    "billing.stripeCustomerId": customerId,
-  });
-  return byCustomer?._id.toString() ?? null;
+  return findUserIdByStripeCustomerId(stripeExpandableId(session.customer));
 }
 
 async function handleSetupCheckoutSession(
@@ -208,7 +194,7 @@ async function handleSetupCheckoutSession(
     expand: ["setup_intent"],
   });
   const setupIntent = retrieved.setup_intent;
-  const paymentMethodId = stripeReferenceIdOf(
+  const paymentMethodId = stripeExpandableId(
     typeof setupIntent === "object" && setupIntent !== null
       ? setupIntent.payment_method
       : undefined,
@@ -220,15 +206,12 @@ async function handleSetupCheckoutSession(
   }
 
   const customerId =
-    stripeReferenceIdOf(retrieved.customer) ??
-    stripeReferenceIdOf(session.customer);
+    stripeExpandableId(retrieved.customer) ??
+    stripeExpandableId(session.customer);
   let userId: string | null =
     retrieved.client_reference_id ?? session.client_reference_id ?? null;
-  if (!userId && customerId) {
-    const byCustomer = await mongoService.user.findOne({
-      "billing.stripeCustomerId": customerId,
-    });
-    userId = byCustomer?._id.toString() ?? null;
+  if (!userId) {
+    userId = await findUserIdByStripeCustomerId(customerId);
   }
   if (!userId) {
     logger.warn(`No Compass user for setup checkout session ${session.id}`);
@@ -314,7 +297,7 @@ async function handleEvent(
     return;
   }
 
-  const subscriptionId = stripeReferenceIdOf(event.data.object);
+  const subscriptionId = stripeExpandableId(event.data.object);
   if (!subscriptionId) {
     logger.warn(`${event.type} had no subscription id`);
     return;

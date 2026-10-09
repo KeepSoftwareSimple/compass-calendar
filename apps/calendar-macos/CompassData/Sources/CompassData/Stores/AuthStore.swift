@@ -193,23 +193,10 @@ public final class AuthStore {
         defer { isSubmitting = false }
         let outcome = await emailPassword.sendPasswordResetEmail(
             email: AuthFormValidation.normalizedEmail(email))
-        if case let .fieldError(message) = outcome {
-            throw AuthStoreError(message: message)
-        }
-        if case let .notAllowed(message) = outcome {
-            throw AuthStoreError(message: message)
-        }
-        if case let .httpError(_, body) = outcome {
-            throw AuthStoreError(message: 
-                AuthStore.userFacingMessage(from: body, fallback: "Unable to send reset email"))
-        }
-        if case let .transport(message) = outcome {
-            throw AuthStoreError(message: 
-                AuthStore.connectionMessage(fallback: "Unable to send reset email", detail: message))
-        }
-        guard case .success = outcome else {
-            throw AuthStoreError(message: "Unable to send reset email")
-        }
+        if case .success = outcome { return }
+        throw AuthStoreError(message: sharedAuthErrorMessage(
+            outcome,
+            fallback: "Unable to send reset email"))
     }
 
     public func resetPassword(password: String) async {
@@ -226,42 +213,22 @@ public final class AuthStore {
                 submitError = nil
             case .invalidResetToken:
                 submitError = "This reset link is invalid or expired. Request a new one."
-            case let .fieldError(message):
-                submitError = message
-            case let .notAllowed(message):
-                submitError = message
-            case let .httpError(_, body):
-                submitError = AuthStore.userFacingMessage(
-                    from: body,
-                    fallback: "Unable to reset password")
-            case let .transport(message):
-                submitError = AuthStore.connectionMessage(
-                    fallback: "Unable to reset password",
-                    detail: message)
             default:
-                submitError = "Unable to reset password"
+                submitError = sharedAuthErrorMessage(
+                    outcome,
+                    fallback: "Unable to reset password")
             }
         }
     }
 
     public func signOut() async throws {
         try await apiClient.auth.signOut()
-        authenticated = false
-        submitError = nil
-        refreshRepositorySource()
-        openModal(.login)
-        await analyticsIdentity.resetIdentity()
-        await onSignedOut?()
+        await endSessionAndPromptLogin()
     }
 
     public func handleSessionExpired() async {
         try? await apiClient.signOutLocally()
-        authenticated = false
-        submitError = "Your session expired. Log in again."
-        refreshRepositorySource()
-        openModal(.login)
-        await analyticsIdentity.resetIdentity()
-        await onSignedOut?()
+        await endSessionAndPromptLogin()
     }
 
     public func shouldOfferSignupTrialStep() -> Bool {
@@ -297,19 +264,8 @@ public final class AuthStore {
             try await completeAuthentication(closeAfter: true)
         case .wrongCredentials:
             throw AuthStoreError(message: "Incorrect email or password.")
-        case let .fieldError(message):
-            throw AuthStoreError(message: message)
-        case let .notAllowed(message):
-            throw AuthStoreError(message: message)
-        case let .httpError(_, body):
-            throw AuthStoreError(message: AuthStore.userFacingMessage(from: body, fallback: fallback))
-        case let .transport(message):
-            throw AuthStoreError(message: 
-                AuthStore.connectionMessage(fallback: fallback, detail: message))
-        case .missingSession:
-            throw AuthStoreError(message: fallback)
         default:
-            throw AuthStoreError(message: fallback)
+            throw AuthStoreError(message: sharedAuthErrorMessage(outcome, fallback: fallback))
         }
     }
 
@@ -322,19 +278,38 @@ public final class AuthStore {
             } else {
                 try await completeAuthentication(closeAfter: true)
             }
-        case let .fieldError(message):
-            throw AuthStoreError(message: message)
-        case let .notAllowed(message):
-            throw AuthStoreError(message: message)
-        case let .httpError(_, body):
-            throw AuthStoreError(message: 
-                AuthStore.userFacingMessage(from: body, fallback: "Unable to sign up"))
-        case let .transport(message):
-            throw AuthStoreError(message: 
-                AuthStore.connectionMessage(fallback: "Unable to sign up", detail: message))
         default:
-            throw AuthStoreError(message: "Unable to sign up")
+            throw AuthStoreError(message: sharedAuthErrorMessage(
+                outcome,
+                fallback: "Unable to sign up"))
         }
+    }
+
+    /// Field, allow-list, HTTP, and transport errors share copy. Success,
+    /// wrong-credentials, and invalid-reset-token stay on the caller so the
+    /// trial step and reset-token paths stay distinct.
+    private func sharedAuthErrorMessage(
+        _ outcome: AuthEmailPasswordOutcome,
+        fallback: String
+    ) -> String {
+        switch outcome {
+        case let .fieldError(message), let .notAllowed(message):
+            return message
+        case let .httpError(_, body):
+            return AuthAPIUserFacing.message(from: body, fallback: fallback)
+        case let .transport(message):
+            return AuthAPIUserFacing.connectionMessage(fallback: fallback, detail: message)
+        default:
+            return fallback
+        }
+    }
+
+    private func endSessionAndPromptLogin() async {
+        authenticated = false
+        refreshRepositorySource()
+        openModal(.login)
+        await analyticsIdentity.resetIdentity()
+        await onSignedOut?()
     }
 
     private func completeAuthentication(closeAfter: Bool) async throws {
@@ -370,37 +345,6 @@ public final class AuthStore {
             await analyticsIdentity.identify(userId: profile.userId)
             await analyticsIdentity.trackLoginCompleted()
         } catch {}
-    }
-
-    static func userFacingMessage(from body: String, fallback: String) -> String {
-        guard let data = body.data(using: .utf8),
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else {
-            return fallback
-        }
-        if let status = json["status"] as? String, status == "WRONG_CREDENTIALS_ERROR" {
-            return "Incorrect email or password."
-        }
-        if let fields = json["formFields"] as? [[String: Any]],
-           let first = fields.first,
-           let message = first["error"] as? String
-        {
-            return message
-        }
-        if let reason = json["reason"] as? String {
-            return reason
-        }
-        return fallback
-    }
-
-    static func connectionMessage(fallback: String, detail: String) -> String {
-        if detail.localizedCaseInsensitiveContains("offline")
-            || detail.localizedCaseInsensitiveContains("network")
-            || detail.localizedCaseInsensitiveContains("internet")
-        {
-            return "We can't reach Compass right now. Please check your connection and try again."
-        }
-        return fallback
     }
 }
 
