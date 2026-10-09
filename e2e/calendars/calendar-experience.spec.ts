@@ -827,3 +827,72 @@ test("sidebar lists a Microsoft calendar under its account heading", async ({
     }),
   ).toBeVisible();
 });
+
+const DAY_COLUMN_STRESS_NAMES = [
+  "miscellaneous",
+  "anniversaries",
+  "switchback",
+  "holidays-de",
+  "journey-mens-group",
+  "bujo-u-deutsch",
+  "holidays-ch",
+  "Holidays in United States",
+  "tyler@tylerdane.com",
+  "tyler@keepsoftwaresimple.com",
+  "Calendar",
+  "Compass",
+] as const;
+
+function stressTestDayCalendars(): FixtureCalendar[] {
+  return DAY_COLUMN_STRESS_NAMES.map((name, index) =>
+    calendar({
+      id: `f${String(index).padStart(23, "0")}`,
+      name,
+      timeZone: TIME_ZONE,
+      backgroundColor: "#4285f4",
+      provider: "google",
+      access: "owner",
+      isPrimary: index === 0,
+      isVisible: true,
+      accountEmail: GOOGLE_ACCOUNT_EMAIL,
+    }),
+  );
+}
+
+test("day view keeps calendar column labels clipped with many visible columns", async ({
+  page,
+}) => {
+  await setupCalendarExperiencePage(page, [], {
+    extraCalendars: stressTestDayCalendars(),
+  });
+
+  await page.keyboard.press("d");
+  await page.waitForURL((url) => url.pathname.startsWith("/day"), {
+    timeout: 10000,
+  });
+
+  const calendarHeaders = page.getByRole("region", { name: "Calendars" });
+  const columnGroups = calendarHeaders.getByRole("group");
+  await expect(columnGroups).toHaveCount(3 + DAY_COLUMN_STRESS_NAMES.length);
+
+  const clipping = await page.evaluate(() => {
+    const groups = Array.from(
+      document.querySelectorAll('[aria-label="Calendars"] [role="group"]'),
+    ) as HTMLElement[];
+    return groups.map((group) => ({
+      label: group.getAttribute("aria-label") ?? "",
+      fits: group.scrollWidth <= group.clientWidth + 1,
+    }));
+  });
+
+  for (const column of clipping) {
+    expect(column.fits).toBe(true);
+  }
+
+  await expect(
+    calendarHeaders.getByRole("group", {
+      name: "tyler@keepsoftwaresimple.com",
+      exact: true,
+    }),
+  ).toContainText("tyler");
+});

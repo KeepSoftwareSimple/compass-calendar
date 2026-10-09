@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { getCalendarCapabilities } from "@core/types/calendar.contracts";
 import { createMockCalendar } from "@web/__tests__/utils/factories/calendar.factory";
@@ -99,6 +99,57 @@ describe("DayCalendarColumnHeaders", () => {
         name: "Holidays in United States",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("shows a compact email local part in the header while keeping the full name accessible", () => {
+    render(
+      <DayCalendarColumnHeaders
+        calendars={[
+          createMockCalendar({
+            name: "tyler@keepsoftwaresimple.com",
+          }),
+        ]}
+      />,
+    );
+
+    expect(
+      screen.getByLabelText("tyler@keepsoftwaresimple.com"),
+    ).toHaveTextContent("tyler");
+    expect(
+      screen.getByRole("button", {
+        name: "Focus tyler@keepsoftwaresimple.com column",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("clips long names inside each column without widening the grid cell", () => {
+    const calendars = Array.from({ length: 14 }, (_, index) =>
+      createMockCalendar({
+        name:
+          index === 0
+            ? "Holidays in United States"
+            : `calendar-column-${index}-with-a-very-long-name`,
+      }),
+    );
+    const { container } = render(
+      <div style={{ width: 960 }}>
+        <DayCalendarColumnHeaders calendars={calendars} />
+      </div>,
+    );
+
+    const columnGroups = within(
+      screen.getByRole("region", { name: "Calendars" }),
+    ).getAllByRole("group");
+    expect(columnGroups).toHaveLength(14);
+
+    for (const column of columnGroups) {
+      expect(column).toHaveClass("overflow-hidden");
+      expect(column.scrollWidth).toBeLessThanOrEqual(column.clientWidth + 1);
+    }
+
+    expect(
+      container.querySelector('[style*="grid-template-columns"]'),
+    ).toBeTruthy();
   });
 
   it("reports focus changes for full-column highlight", () => {
