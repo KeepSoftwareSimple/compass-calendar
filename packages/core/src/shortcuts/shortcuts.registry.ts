@@ -525,7 +525,7 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "other-time-travel",
     keys: [...B.otherTimeTravel.keycaps],
-    label: "Time travel",
+    label: "Show second timezone",
     section: "other",
   },
 ] as const satisfies readonly Shortcut[];

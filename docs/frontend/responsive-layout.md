@@ -29,7 +29,7 @@ week. Two pieces derive that window from the measured grid width:
   `ResizeObserver` on the grid track computes `visibleDayCount` via
   `computeVisibleDayCount(trackWidth, marginLeft)`
   (`apps/calendar-web/src/views/Week/util/week-window.util.ts`). The hour-label
-  gutter is subtracted so a second time-travel column does not change how
+  gutter is subtracted so a second timezone column does not change how
   many days fit. Defaults to the full week (`WEEK_DAY_COUNT = 7`) until a
   real measurement lands — jsdom never measures, so tests default to a full
   week unless they explicitly mock the observer.

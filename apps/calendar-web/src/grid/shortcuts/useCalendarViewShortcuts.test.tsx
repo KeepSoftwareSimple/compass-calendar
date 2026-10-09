@@ -2,6 +2,8 @@ import { HotkeyManager, HotkeysProvider } from "@tanstack/react-hotkeys";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { act, type PropsWithChildren } from "react";
 import { pressKey } from "@web/__tests__/utils/keyboard.test.util";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
+import * as statusToastUtil from "@web/common/utils/toast/status-toast.util";
 import {
   createGridEventDraft,
   timedGridSchedule,
@@ -24,8 +26,21 @@ import {
   timezoneDialogActions,
   useTimezoneDialogStore,
 } from "@web/timezone/timezone-dialog.store";
-import { useCalendarViewShortcuts } from "./useCalendarViewShortcuts";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+
+const showStatusToast = mock();
+mockModuleForFile(
+  "@web/common/utils/toast/status-toast.util",
+  statusToastUtil,
+  {
+    showStatusToast,
+  },
+);
+
+const { useCalendarViewShortcuts } =
+  require("./useCalendarViewShortcuts") as typeof import("./useCalendarViewShortcuts");
+const { SECONDARY_TIMEZONE_HIDDEN_TOAST_ID } =
+  require("@web/timezone/dismiss-secondary-timezone") as typeof import("@web/timezone/dismiss-secondary-timezone");
 
 const wrapper = ({ children }: PropsWithChildren) => (
   <HotkeysProvider>{children}</HotkeysProvider>
@@ -38,6 +53,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
+  showStatusToast.mockClear();
   resetTimeTravelStoreForTests();
   draftActions.discard();
   useEdgeFocusStore.setState(initialEdgeFocusState, true);
@@ -168,13 +184,17 @@ describe("useCalendarViewShortcuts", () => {
     });
   });
 
-  it("clears time travel on Escape", () => {
+  it("clears the second timezone on Escape and shows a toast", () => {
     setTimeTravelZone("America/Denver");
     renderHook(() => useCalendarViewShortcuts({}), { wrapper });
 
     pressKey("Escape");
 
     expect(getTimeTravelZone()).toBeNull();
+    expect(showStatusToast).toHaveBeenCalledWith(
+      SECONDARY_TIMEZONE_HIDDEN_TOAST_ID,
+      "Second timezone hidden",
+    );
   });
 
   it("does not clear time travel on Escape when no secondary zone is set", () => {

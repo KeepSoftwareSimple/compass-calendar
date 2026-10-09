@@ -213,7 +213,7 @@ toggle with Space, Enter confirms the set), minimum notice and horizon
 Ranked by value. Each is small enough to be its own issue; the first three
 depend on WP-01.
 
-1. **Timezone and time travel as pages.** Today both rows open a separate
+1. **Timezone and second timezone as pages.** Today both rows open a separate
    dialog and reopen the palette on dismiss (`usePaletteAwareOverlayDismiss`).
    As a text page with a filtered list they never leave the palette, and the
    dialog bounce plus its focus-restore special case go away.

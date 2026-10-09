@@ -394,7 +394,7 @@ scrolls, so the first wheel tick does not re-rasterize the backdrop.
   the card on that browser. Turning the page on hides it everywhere. The
   card does not show on mobile or while the first-event prompt is still
   pending.
-- **Timezone** uses the same searchable combobox as time travel. The
+- **Timezone** uses the same searchable combobox as the second-timezone picker. The
   trigger is one tab stop and still renders a stored non-canonical alias.
   It lives under More options on the configured form. The setup wizard
   hours step shows a muted line with the city and abbreviation. The

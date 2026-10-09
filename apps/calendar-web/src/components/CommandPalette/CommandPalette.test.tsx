@@ -267,7 +267,7 @@ describe("CommandPalette", () => {
     expect(screen.getByText("Create event")).toBeInTheDocument();
     expect(screen.getByText("Create all-day event")).toBeInTheDocument();
     expect(screen.getByText(/Change default timezone/)).toBeInTheDocument();
-    expect(screen.getByText("Time travel")).toBeInTheDocument();
+    expect(screen.getByText("Show second timezone")).toBeInTheDocument();
     expect(getInput()).toHaveFocus();
     // First option is active by default.
     expect(activeRowText(container)).toBe("Go to Today");
@@ -279,7 +279,7 @@ describe("CommandPalette", () => {
     expect(optionKeycaps("Focus month picker")).toBe("I");
     expect(optionKeycaps("Open Up Next event")).toBe("N");
     expect(optionKeycaps("Join meeting")).toBe("V");
-    expect(optionKeycaps("Time travel")).toBe("Z");
+    expect(optionKeycaps("Show second timezone")).toBe("Z");
     expect(
       screen
         .getByRole("option", { name: "Settings" })

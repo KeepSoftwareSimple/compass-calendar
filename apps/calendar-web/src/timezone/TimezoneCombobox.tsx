@@ -21,7 +21,7 @@ const VISIBLE_PAGE = 40;
 
 /**
  * A synthetic row above the catalog, e.g. "Use browser timezone (Auto)" or
- * "Stop time travel". Kept as a prop so pinning and time travel stay in the
+ * "Hide second timezone". Kept as a prop so pinning and the second zone stay in the
  * dialog and this component knows nothing about either.
  */
 export interface TimezoneComboboxHeadOption {
@@ -31,7 +31,7 @@ export interface TimezoneComboboxHeadOption {
   selected: boolean;
   /** What onSelect receives when this row is chosen. */
   value: string | null;
-  /** Drop the row once the user types, e.g. "Stop time travel". */
+  /** Drop the row once the user types, e.g. "Hide second timezone". */
   hideOnQuery?: boolean;
 }
 
@@ -176,7 +176,7 @@ export function TimezoneCombobox({
           setQuery(nextQuery);
           const nextZones = filterTimeZones(catalog, nextQuery);
           // Typing seats the top result; clearing seats a head row that
-          // survives a query (Auto), else the top result (time travel's Stop
+          // survives a query (Auto), else the top result (Hide second timezone)
           // row is gone by then).
           const nextActive =
             nextQuery.trim().length > 0
