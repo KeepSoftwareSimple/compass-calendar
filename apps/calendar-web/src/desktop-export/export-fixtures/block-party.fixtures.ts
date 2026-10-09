@@ -138,34 +138,25 @@ const playKeys = (
     state,
   );
 
-const keysThroughTask = (taskIndex: number): GameKey[] => {
+/** The prefix of the winning script that lands the task at `taskIndex`. */
+const playThroughTask = (
+  taskIndex: number,
+): { keys: GameKey[]; state: GameState } => {
   let state = startRun(createInitialGameState(), T0);
   const keys: GameKey[] = [];
-  let scriptIndex = 0;
-  while (
-    state.taskIndex < taskIndex + 1 &&
-    scriptIndex < WINNING_SCRIPT.length
-  ) {
-    const before = state.taskIndex;
-    const nextKey = WINNING_SCRIPT[scriptIndex];
-    if (!nextKey) break;
-    keys.push(nextKey);
-    state = handleGameKey(state, nextKey, T0);
-    scriptIndex += 1;
-    if (state.taskIndex > before) {
-      if (state.taskIndex === taskIndex + 1) break;
-    }
+  for (const gameKey of WINNING_SCRIPT) {
+    if (state.taskIndex > taskIndex) break;
+    keys.push(gameKey);
+    state = handleGameKey(state, gameKey, T0);
   }
-  return keys;
+  return { keys, state };
 };
 
 export const buildBlockPartyFixtures = () => {
   ensureDesktopExportEnv();
 
   const perTaskCases = RUN_TASKS.map((task, index) => {
-    const keys = keysThroughTask(index);
-    let state = startRun(createInitialGameState(), T0);
-    state = playKeys(state, keys, T0);
+    const { keys, state } = playThroughTask(index);
     return {
       id: `complete-${task.id}`,
       taskId: task.id,
