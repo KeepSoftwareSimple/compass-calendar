@@ -14,6 +14,7 @@ import { ShortcutHint } from "../Shortcuts/ShortcutHint";
 import { TooltipDescription } from "./Description/TooltipDescription";
 
 type TooltipWrapperBaseProps = {
+  asChild?: boolean;
   children: ReactNode;
   disabled?: boolean;
   onClick?: (event: MouseEvent<HTMLElement>) => void;
@@ -36,6 +37,7 @@ export type Props = TooltipWrapperWithoutShortcut | TooltipWrapperWithShortcut;
 
 export const TooltipWrapper: React.FC<Props> = (props) => {
   const {
+    asChild = false,
     children,
     description,
     disabled = false,
@@ -57,6 +59,7 @@ export const TooltipWrapper: React.FC<Props> = (props) => {
   return (
     <Tooltip placement={placement}>
       <TooltipTrigger
+        asChild={asChild}
         aria-disabled={disabled || undefined}
         onClick={disabled ? undefined : handleTriggerClick}
       >

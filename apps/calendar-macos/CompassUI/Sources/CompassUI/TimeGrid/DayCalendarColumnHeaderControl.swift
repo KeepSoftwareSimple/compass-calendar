@@ -41,7 +41,8 @@ final class DayCalendarColumnHeaderControl: NSControl {
         palette: (text: NSColor, accent: NSColor, surface: NSColor)
     ) {
         calendarId = calendar.id
-        titleField.stringValue = calendar.name
+        let displayName = DayCalendarColumnDisplayName.format(calendar.name)
+        titleField.stringValue = displayName
         toolTip = calendar.name
         setAccessibilityLabel("Focus \(calendar.name) column")
         setAccessibilityIdentifier("compass-day-column-header-\(calendar.id)")
@@ -67,6 +68,7 @@ final class DayCalendarColumnHeaderControl: NSControl {
         let chipSize = CGSize(width: 20, height: 18)
         let chipPadding: CGFloat = chipLabel.isHidden ? 0 : chipSize.width + 4
         let contentWidth = bounds.width - dotSize - 8 - chipPadding
+        layer?.masksToBounds = true
         colorDot.frame = NSRect(x: 4, y: (bounds.height - dotSize) / 2, width: dotSize, height: dotSize)
         titleField.frame = NSRect(
             x: colorDot.frame.maxX + 4,
