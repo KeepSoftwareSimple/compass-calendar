@@ -70,6 +70,7 @@ services:
     # selfhosted profile is active.
     environment:
       COMPASS_CONFIG_FILE: /app/compass.yaml
+      COMPASS_CONFIG_REVISION: ${COMPASS_CONFIG_REVISION:-}
       # Default to info so health-check requests stay out of the tail. Reveal
       # them with `LOG_LEVEL=debug docker compose up -d backend`. A logLevel in
       # compass.yaml takes precedence over this default.
@@ -110,6 +111,7 @@ services:
       - *sync-port
     environment:
       COMPASS_CONFIG_FILE: /app/compass.yaml
+      COMPASS_CONFIG_REVISION: ${COMPASS_CONFIG_REVISION:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     read_only: true
     tmpfs:

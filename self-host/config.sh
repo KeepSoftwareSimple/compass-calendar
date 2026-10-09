@@ -68,6 +68,27 @@ read_config_value() {
 
 # The profiles this install actually needs, read from its own config. An
 # explicit COMPOSE_PROFILES still wins in the caller's environment.
+# Short hash of compass.yaml. Exported as COMPASS_CONFIG_REVISION so Compose
+# recreates config-reading services when the file changes without an image bump.
+config_file_revision() {
+  [ -f "$CONFIG_FILE" ] || {
+    printf '%s\n' "missing"
+    return
+  }
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$CONFIG_FILE" | awk '{print substr($1, 1, 16)}'
+    return
+  fi
+
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$CONFIG_FILE" | awk '{print substr($1, 1, 16)}'
+    return
+  fi
+
+  wc -c < "$CONFIG_FILE" | tr -d ' '
+}
+
 default_profiles() {
   profiles=
 

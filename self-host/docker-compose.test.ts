@@ -107,9 +107,22 @@ describe("self-host docker compose", () => {
 
     expect(compose).toContain("COMPASS_CONFIG_FILE: /app/compass.yaml");
     expect(compose).toContain(
+      "COMPASS_CONFIG_REVISION: ${COMPASS_CONFIG_REVISION:-}",
+    );
+    expect(compose).toContain(
       "- $".concat(
         "{COMPASS_CONFIG_FILE:-./compass.yaml}:/app/compass.yaml:ro",
       ),
+    );
+  });
+
+  it("exports COMPASS_CONFIG_REVISION from compass.yaml for compose", () => {
+    const compass = readRepoFile("self-host/compass");
+    const config = readRepoFile("self-host/config.sh");
+
+    expect(config).toContain("config_file_revision()");
+    expect(compass).toContain(
+      'export COMPASS_CONFIG_REVISION="$(config_file_revision)"',
     );
   });
 

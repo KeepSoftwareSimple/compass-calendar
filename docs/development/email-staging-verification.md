@@ -119,8 +119,10 @@ After deploy, backend logs include one line (no addresses):
 Config is read once at startup; this line confirms a redeploy picked up
 allowlist or provider changes.
 
-Redeploying the **same** tag rewrites `compass.yaml` but does not restart the
-backend, because `./compass update` only recreates containers whose image
-changed. After changing any `EMAIL_*` value, run `./compass restart` on the host
-and look for this line with the new timestamp. Until then the webhook route
-answers 404 (`Email is not configured`).
+Deploy writes a new `compass.yaml` and `./compass update` exports
+`COMPASS_CONFIG_REVISION` (a hash of that file) into the backend and sync
+containers, so a config-only redeploy recreates those services even when the
+image tag is unchanged. After changing any `EMAIL_*` value, confirm this
+startup line with a fresh timestamp. If an old host still lacks that revision
+env, run `./compass restart` once. Until the backend reloads config, the
+webhook route answers 404 (`Email is not configured`).

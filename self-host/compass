@@ -81,6 +81,7 @@ load_env_if_present() {
 set_compose_env() {
   load_env
   export COMPASS_CONFIG_FILE="$CONFIG_FILE"
+  export COMPASS_CONFIG_REVISION="$(config_file_revision)"
   export COMPOSE_PROFILES="${COMPOSE_PROFILES-$(default_profiles)}"
   export COMPASS_VERSION="$(strip_quotes "$(read_config_value runtime.version)")"
   export COMPASS_WEB_IMAGE="$(strip_quotes "$(read_config_value web.image)")"
