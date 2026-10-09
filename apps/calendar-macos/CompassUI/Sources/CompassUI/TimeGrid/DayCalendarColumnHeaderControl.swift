@@ -35,13 +35,13 @@ final class DayCalendarColumnHeaderControl: NSControl {
 
     func apply(
         calendar: CompassCalendar,
+        displayName: String,
         jumpDigit: String?,
         hintsVisible: Bool,
         isFocused: Bool,
         palette: (text: NSColor, accent: NSColor, surface: NSColor)
     ) {
         calendarId = calendar.id
-        let displayName = DayCalendarColumnDisplayName.format(calendar.name)
         titleField.stringValue = displayName
         toolTip = calendar.name
         setAccessibilityLabel("Focus \(calendar.name) column")

@@ -2,10 +2,20 @@ import XCTest
 @testable import CompassKit
 
 final class DayCalendarColumnDisplayNameTests: XCTestCase {
-    func testEmailUsesLocalPart() {
+    func testEmailUsesLocalPartWhenUnique() {
         XCTAssertEqual(
             DayCalendarColumnDisplayName.format("tyler@tylerdane.com"),
             "tyler"
+        )
+    }
+
+    func testDisambiguatesDuplicateEmailLocalParts() {
+        XCTAssertEqual(
+            DayCalendarColumnDisplayName.displayNames(for: [
+                "tyler@tylerdane.com",
+                "tyler@keepsoftwaresimple.com",
+            ]),
+            ["tylerdane", "keepsoftwaresimple"]
         )
     }
 
