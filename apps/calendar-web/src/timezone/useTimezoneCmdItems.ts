@@ -24,7 +24,7 @@ export function useTimezoneCmdItems(): CommandItem[] {
     },
     {
       id: "time-travel",
-      label: "Time travel",
+      label: "Show second timezone",
       icon: GlobeIcon,
       shortcut: [...APP_SHORTCUT_BINDINGS.otherTimeTravel.keycaps],
       keywords: ["timezone", "time zone", "tz", "secondary"],

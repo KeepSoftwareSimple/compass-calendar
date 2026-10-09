@@ -52,7 +52,7 @@ describe("useTimezoneCmdItems", () => {
     );
   });
 
-  it("opens the time-travel picker from the Time travel command", () => {
+  it("opens the second-timezone picker from the Show second timezone command", () => {
     const { result } = renderHook(() => useTimezoneCmdItems());
     expect(result.current[1]?.shortcut).toEqual([
       ...APP_SHORTCUT_BINDINGS.otherTimeTravel.keycaps,

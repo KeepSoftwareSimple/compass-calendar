@@ -13,7 +13,7 @@ struct TimezonePickerDialogView: View {
     }
 
     private var title: String {
-        purpose == .timeTravel ? "Time travel" : "Change default timezone"
+        purpose == .timeTravel ? "Second timezone" : "Change default timezone"
     }
 
     private var filteredZones: [String] {
@@ -49,7 +49,7 @@ struct TimezonePickerDialogView: View {
                     timezoneRow(label: "Use browser timezone (Auto)", value: nil)
                 }
                 if purpose == .timeTravel, viewStore.timeTravelTimeZone != nil {
-                    timezoneRow(label: "Stop time travel", value: nil, clearsTravel: true)
+                    timezoneRow(label: "Hide second timezone", value: nil, clearsTravel: true)
                 }
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 4) {

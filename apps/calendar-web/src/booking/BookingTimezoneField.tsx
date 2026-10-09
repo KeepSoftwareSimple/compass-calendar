@@ -13,7 +13,7 @@ interface BookingTimezoneFieldProps {
 
 /**
  * The meeting page's timezone, picked through the same searchable combobox as
- * time travel and the default-timezone dialog. It was a native <select> over
+ * second-timezone picker and the default-timezone dialog. It was a native <select> over
  * the whole IANA catalog: ~420 options in raw id order, where the browser's
  * type-ahead matches the rendered city text, so typing "America" or "US" found
  * nothing. Now it is one tab stop, and the trigger renders whatever zone is

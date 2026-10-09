@@ -3,14 +3,14 @@ import { ShortcutTipParts } from "@web/shortcuts/tips/ShortcutTipParts";
 import { type ShortcutTipPart } from "@web/shortcuts/tips/shortcut-tips.data";
 
 export const TIME_TRAVEL_HINT_PARTS: readonly ShortcutTipPart[] = [
-  "Two timezones · ",
+  "Second timezone · ",
   { key: "Esc" },
-  " to exit",
+  " to hide",
 ];
 
 /**
  * Contextual sidebar hint while a secondary hour column is showing:
- * Esc clears time travel from the grid.
+ * Esc hides the second timezone column.
  */
 export const TimeTravelIndicator: FC = () => {
   return (

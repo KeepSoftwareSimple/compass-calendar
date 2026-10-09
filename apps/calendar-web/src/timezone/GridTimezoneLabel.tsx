@@ -6,6 +6,7 @@ import {
   useEffectiveTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { formatTimeZoneAbbreviation } from "@web/timezone/format-timezone-abbreviation";
+import { SecondaryTimezoneExitHint } from "@web/timezone/SecondaryTimezoneExitHint";
 import { useTimeTravelZone } from "@web/timezone/time-travel.store";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 
@@ -16,7 +17,7 @@ const travelingLabelClassName =
 
 /**
  * Week/Day grid-corner control showing the effective timezone abbreviation.
- * A blocked click teaches `z`; Enter/Space still opens time travel.
+ * A blocked click teaches `z`; Enter/Space still opens the second-timezone picker.
  */
 export const GridTimezoneLabel = () => {
   const timeZone = useEffectiveTimeZone();
@@ -45,22 +46,24 @@ export const GridTimezoneLabel = () => {
   return (
     // biome-ignore lint/a11y/useAriaPropsSupportedByRole: role="group" is set under the same isTraveling condition as the label
     <div
-      aria-label={isTraveling ? "Time travel timezones" : undefined}
+      aria-label={isTraveling ? "Primary and second timezone" : undefined}
       className={
         isTraveling ? "flex w-full min-w-0 items-end" : "w-full max-w-full"
       }
       role={isTraveling ? "group" : undefined}
     >
-      {isTraveling ? (
-        <button
-          aria-label={`Time travel timezone: ${travelAbbreviation}`}
-          className={travelingLabelClassName}
-          onClick={openTimeTravel}
-          style={{ width: GRID_TIME_COLUMN_WIDTH }}
-          type="button"
-        >
-          {travelAbbreviation}
-        </button>
+      {isTraveling && travelAbbreviation !== null && timeTravelZone ? (
+        <SecondaryTimezoneExitHint key={timeTravelZone}>
+          <button
+            aria-label={`Second timezone: ${travelAbbreviation}`}
+            className={travelingLabelClassName}
+            onClick={openTimeTravel}
+            style={{ width: GRID_TIME_COLUMN_WIDTH }}
+            type="button"
+          >
+            {travelAbbreviation}
+          </button>
+        </SecondaryTimezoneExitHint>
       ) : null}
       <button
         aria-label={`Calendar timezone: ${abbreviation}`}

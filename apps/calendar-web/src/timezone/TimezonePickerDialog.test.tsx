@@ -99,7 +99,7 @@ describe("TimezonePickerDialog", () => {
       screen.queryByRole("option", { name: /Use browser timezone \(Auto\)/ }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("dialog", { name: "Time travel" }),
+      screen.getByRole("dialog", { name: "Second timezone" }),
     ).toHaveAccessibleDescription(
       "Compare your calendar hours in a second timezone.",
     );
@@ -137,7 +137,7 @@ describe("TimezonePickerDialog", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("offers Stop time travel when a secondary zone is already set", async () => {
+  it("offers Hide second timezone when a secondary zone is already set", async () => {
     const user = userEvent.setup();
     act(() => {
       setTimeTravelZone("America/Denver");
@@ -150,7 +150,9 @@ describe("TimezonePickerDialog", () => {
       />,
     );
 
-    await user.click(screen.getByRole("option", { name: /Stop time travel/ }));
+    await user.click(
+      screen.getByRole("option", { name: /Hide second timezone/ }),
+    );
     expect(getTimeTravelZone()).toBeNull();
   });
 

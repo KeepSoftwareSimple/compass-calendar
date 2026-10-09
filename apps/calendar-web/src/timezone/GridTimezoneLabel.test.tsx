@@ -171,7 +171,7 @@ describe("GridTimezoneLabel", () => {
     }
   });
 
-  it("shows both abbreviations without a remove control while time traveling", () => {
+  it("shows the Esc exit hint on the second timezone label", async () => {
     act(() => {
       setEffectiveTimeZoneForTests("America/New_York");
       setTimeTravelZone("America/Denver");
@@ -180,11 +180,29 @@ describe("GridTimezoneLabel", () => {
     render(<GridTimezoneLabel />);
 
     expect(
-      screen.getByRole("group", { name: "Time travel timezones" }),
+      screen.getByRole("tooltip", { name: /Hide second timezone/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Esc")).toBeInTheDocument();
+
+    act(() => {
+      resetTimeTravelStoreForTests();
+    });
+  });
+
+  it("shows both abbreviations without a remove control while a second zone is active", () => {
+    act(() => {
+      setEffectiveTimeZoneForTests("America/New_York");
+      setTimeTravelZone("America/Denver");
+    });
+
+    render(<GridTimezoneLabel />);
+
+    expect(
+      screen.getByRole("group", { name: "Primary and second timezone" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: `Time travel timezone: ${formatTimeZoneAbbreviation("America/Denver")}`,
+        name: `Second timezone: ${formatTimeZoneAbbreviation("America/Denver")}`,
       }),
     ).toBeInTheDocument();
     expect(
@@ -193,7 +211,7 @@ describe("GridTimezoneLabel", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Remove time travel timezone" }),
+      screen.queryByRole("button", { name: "Remove second timezone" }),
     ).not.toBeInTheDocument();
     act(() => {
       resetTimeTravelStoreForTests();

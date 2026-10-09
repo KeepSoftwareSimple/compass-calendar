@@ -11,10 +11,8 @@ import {
   useAppShortcutUp,
   WRITE_CREATE_SHORTCUT,
 } from "@web/shortcuts/useAppShortcut";
-import {
-  setTimeTravelZone,
-  useTimeTravelZone,
-} from "@web/timezone/time-travel.store";
+import { dismissSecondaryTimeZone } from "@web/timezone/dismiss-secondary-timezone";
+import { useTimeTravelZone } from "@web/timezone/time-travel.store";
 import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 
 export interface CalendarViewShortcutsConfig {
@@ -116,7 +114,7 @@ export function useCalendarViewShortcuts(config: CalendarViewShortcutsConfig) {
       ) {
         return;
       }
-      setTimeTravelZone(null);
+      dismissSecondaryTimeZone();
     },
     { enabled: timeTravelZone !== null, shortcutId: "create-place-discard" },
   );

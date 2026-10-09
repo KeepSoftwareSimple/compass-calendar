@@ -1,6 +1,7 @@
 import { type RefObject, useMemo, useRef } from "react";
 import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { getBrowserTimeZone } from "@web/timezone/browser-timezone";
+import { dismissSecondaryTimeZone } from "@web/timezone/dismiss-secondary-timezone";
 import {
   setPinnedTimeZone,
   useEffectiveTimeZone,
@@ -18,7 +19,7 @@ import {
 import { type TimezoneDialogPurpose } from "@web/timezone/timezone-dialog.store";
 
 const AUTO_ID = "auto";
-const STOP_ID = "stop-time-travel";
+const STOP_ID = "hide-second-timezone";
 
 interface TimezonePickerDialogProps {
   onDismiss: () => void;
@@ -43,14 +44,14 @@ export function TimezonePickerDialog({
 
   const headOptions = useMemo<TimezoneComboboxHeadOption[]>(() => {
     if (isTimeTravel) {
-      // Only offered while time travel is on, and it goes away as soon as the
-      // user starts searching for a zone to travel to.
+      // Only offered while a second zone is showing, and it goes away as soon as
+      // the user starts searching for another zone.
       return timeTravelZone === null
         ? []
         : [
             {
               id: STOP_ID,
-              label: "Stop time travel",
+              label: "Hide second timezone",
               description: "Remove the extra hour column",
               selected: false,
               value: null,
@@ -77,7 +78,11 @@ export function TimezonePickerDialog({
 
   const commit = (timeZone: string | null) => {
     if (isTimeTravel) {
-      setTimeTravelZone(timeZone);
+      if (timeZone === null) {
+        dismissSecondaryTimeZone();
+      } else {
+        setTimeTravelZone(timeZone);
+      }
     } else {
       setPinnedTimeZone(timeZone);
     }
@@ -86,7 +91,7 @@ export function TimezonePickerDialog({
 
   return (
     <OverlayPanel
-      title={isTimeTravel ? "Time travel" : "Change default timezone"}
+      title={isTimeTravel ? "Second timezone" : "Change default timezone"}
       message={
         isTimeTravel
           ? "Compare your calendar hours in a second timezone."

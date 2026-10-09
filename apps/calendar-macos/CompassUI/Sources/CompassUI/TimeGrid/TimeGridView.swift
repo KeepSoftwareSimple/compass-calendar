@@ -622,7 +622,7 @@ public final class TimeGridView: NSView {
                 width: columnWidth,
                 headerHeight: headerHeight,
                 palette: palette,
-                accessibilityLabel: "Time travel timezone: \(abbrev)")
+                accessibilityLabel: "Second timezone: \(abbrev)")
             x += columnWidth
         }
         let effectiveAbbrev = TimeZoneFormatting.abbreviation(

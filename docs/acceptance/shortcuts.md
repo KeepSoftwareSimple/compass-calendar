@@ -149,7 +149,7 @@ Pressing Cmd+K opens the command palette from any view, including while a text i
 ### Expected Results
 
 - The command palette opens immediately.
-- Items include: Go to Today, Go to Day or Go to Week (the view you are not on), Go to Life, Show shortcuts, Play Block Party (practice shortcuts), Show welcome guide, Create event, Create all-day event, Undo last change, Redo last change, Toggle sidebar, Focus month picker, Open Up Next event, Join Up Next meeting, Time travel, Settings, Log Out (when signed in), Book personal onboarding. Selecting a row that advertises a shortcut pulses the top-center hint "Next time, press …" unless tips are off. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
+- Items include: Go to Today, Go to Day or Go to Week (the view you are not on), Go to Life, Show shortcuts, Play Block Party (practice shortcuts), Show welcome guide, Create event, Create all-day event, Undo last change, Redo last change, Toggle sidebar, Focus month picker, Open Up Next event, Join Up Next meeting, Show second timezone, Settings, Log Out (when signed in), Book personal onboarding. Selecting a row that advertises a shortcut pulses the top-center hint "Next time, press …" unless tips are off. The search field placeholder is "Search commands, events, or type a date". Typing two or more characters that match an event title adds an Events section (title plus weekday, date, and time or All day). A query that parses as a date pins a "Go to …" row first; Enter navigates to that date and selects its column. Bare `G` opens the palette for this.
 - Undo / Redo rows show their keycaps and stay disabled when there is no history.
 - Google Calendar connection status and actions appear in the sidebar, not the command palette.
 - Typing filters the list.
@@ -483,11 +483,11 @@ PageUp and PageDown always scroll the timed grid by one viewport. Alt+ArrowUp an
 
 ---
 
-## Scenario 16: Time Travel With Z
+## Scenario 16: Second Timezone With Z
 
 ### UX
 
-Bare `Z` opens the time-travel timezone picker in Day and Week view. Cmd+Z / Ctrl+Z remains undo. Escape on the picker closes it without dropping an existing secondary hour column. Escape on the grid while traveling clears the extra column. The second timezone has no click-to-dismiss control; the sidebar hint advertises Esc to exit.
+Bare `Z` opens the second-timezone picker in Day and Week view. Cmd+Z / Ctrl+Z remains undo. Escape on the picker closes it without dropping an existing secondary hour column. Escape on the grid while a second timezone is showing clears the extra column and shows a confirmation toast. The second timezone label shows an Esc tooltip on entry (and on hover or focus afterward). The sidebar hint also advertises Esc when it is open.
 
 ### Steps
 
@@ -500,12 +500,12 @@ Bare `Z` opens the time-travel timezone picker in Day and Week view. Cmd+Z / Ctr
 
 ### Expected Results
 
-- `Z` opens the Time travel picker with a one-line description of the feature.
+- `Z` opens the Second timezone picker with a one-line description of the feature.
 - A second hour column appears after a zone is chosen and survives reload until removed. Both timezone abbreviations show in the gutter; there is no X control.
-- The sidebar hint reads that two timezones are showing and Esc exits.
-- Escape from the grid while traveling clears the extra column.
+- The second timezone label tooltip and sidebar hint advertise Esc to hide.
+- Escape from the grid while a second timezone is showing clears the extra column and shows "Second timezone hidden".
 - Escape closes the picker and leaves the extra column in place.
-- Cmd+Z undoes; it does not open time travel.
+- Cmd+Z undoes; it does not open the second-timezone picker.
 
 ---
 
@@ -805,7 +805,7 @@ If time is limited, run these checks before shipping shortcut-related changes:
 16. Grid pointer intent teaches once per intent in `PointerHint` (scenario 13); palette teaching is scenario 25. `/life` allows normal clicks without intent pills. `M` opens the focused event's menu; `F` focuses the newest notice.
 17. PageUp / PageDown scroll the timed grid by one viewport in Day and Week view even when an event is focused; they do not fire in a text input.
 18. Alt+ArrowUp / Alt+ArrowDown pan the timed grid by one hour in Day and Week view even when an event is focused; they do not fire in a text input.
-19. `Z` opens time travel in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.
+19. `Z` opens the second-timezone picker in Day and Week view; Cmd+Z / Ctrl+Z still undoes and does not open the picker.
 20. On Day view, hold Mod then a column digit (2+) focuses that writable calendar column; Shift+Arrow / `C` seed a draft there.
 21. Cmd+C / Ctrl+C copies a focused event; Cmd+V / Ctrl+V pastes a duplicate on the create target day (selected column, else focused event's day, else the copied event's day) without requiring focus. A later copy replaces the clipboard. Empty paste is a no-op. Copy/paste do not fire while typing in an input (native text clipboard). Cmd+D is unchanged.
 22. In Settings > Meeting, hold Mod to reveal chips `1`/`2`/`3` and Enter; extra digits focus nothing; U with Mod held does not copy.
