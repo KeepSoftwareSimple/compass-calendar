@@ -274,7 +274,7 @@ public final class BillingStore {
 
     private func billingActionMessage(_ error: Error, fallback: String) -> String {
         if let api = error as? CompassAPIError, case let .httpStatus(_, body) = api, !body.isEmpty {
-            return AuthStore.userFacingMessage(from: body, fallback: fallback)
+            return AuthAPIUserFacing.message(from: body, fallback: fallback)
         }
         return fallback
     }
