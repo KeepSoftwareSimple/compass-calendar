@@ -22,33 +22,22 @@ public struct SendInvitationsDialogView: View {
 
     public var body: some View {
         if let prompt {
-            ZStack {
-                theme.overlayBackdropColor
-                    .ignoresSafeArea()
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Send invitation emails?")
-                        .font(.custom("Rubik", size: 17, relativeTo: .headline))
-                        .foregroundStyle(theme.textColor)
-                    Text("\(prompt.hostLabel) will email the affected guests about this event.")
-                        .font(.custom("Rubik", size: 13))
-                        .foregroundStyle(theme.textMutedColor)
-                    HStack {
-                        Spacer()
-                        Button("Don't send", action: onDontSend)
-                        Button("Send", action: onSend)
-                            .keyboardShortcut(.defaultAction)
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                ModalDialogTitle("Send invitation emails?")
+                Text("\(prompt.hostLabel) will email the affected guests about this event.")
+                    .font(.custom("Rubik", size: 13))
+                    .foregroundStyle(theme.textMutedColor)
+                HStack {
+                    Spacer()
+                    Button("Don't send", action: onDontSend)
+                    Button("Send", action: onSend)
+                        .keyboardShortcut(.defaultAction)
                 }
-                .padding(20)
-                .frame(maxWidth: 400)
-                .background(theme.surfacePanelColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(theme.borderColor, lineWidth: 1)
-                )
-                .accessibilityIdentifier("compass-send-invitations-dialog")
             }
+            .modalDialogChrome(
+                maxWidth: 400,
+                identifier: "compass-send-invitations-dialog"
+            )
             .onExitCommand(perform: onCancel)
         }
     }

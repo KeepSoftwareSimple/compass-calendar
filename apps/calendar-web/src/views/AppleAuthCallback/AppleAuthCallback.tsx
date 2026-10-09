@@ -5,11 +5,11 @@ import { buildAppleAuthCodePayload } from "@web/auth/apple/authorization/apple-a
 import { AuthCallbackOverlay } from "@web/auth/callback/AuthCallbackOverlay";
 import { DesktopOAuthCallbackRelay } from "@web/auth/callback/DesktopOAuthCallbackRelay";
 import { shouldRelayDesktopAppleOAuthCallback } from "@web/auth/callback/desktop-oauth-callback-relay";
+import { reportAuthCallbackCrash } from "@web/auth/callback/report-auth-callback-crash";
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import {
   trackSignupCompleted,
-  trackSignupFailed,
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
@@ -36,29 +36,29 @@ export async function completeAppleAuthCallback({
   trackSignupStep("oauth_callback_returned", { method: "apple" });
 
   const params = new URLSearchParams(search);
+
+  // Every way this callback can fail ends the same way: one error toast, then
+  // off the callback route, which renders nothing but a spinner.
+  const failTo = (path: string) => {
+    showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
+    navigate(path, { replace: true });
+  };
+
   const state = params.get("state");
 
   if (!state) {
-    showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
-    navigate(DEFAULT_CALENDAR_ROUTE, { replace: true });
+    failTo(DEFAULT_CALENDAR_ROUTE);
     return;
   }
 
   const savedIntent = readProviderAuthorizationIntent("apple", state);
   clearProviderAuthorizationIntent("apple", state);
   const returnPath = savedIntent?.returnPath ?? DEFAULT_CALENDAR_ROUTE;
-
-  if (!savedIntent || params.get("error")) {
-    showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
-    navigate(returnPath, { replace: true });
-    return;
-  }
-
   const code = params.get("code");
 
-  if (!code) {
-    showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
-    navigate(returnPath, { replace: true });
+  // No intent to resume, an error reported by Apple, or nothing to exchange.
+  if (!savedIntent || params.get("error") || !code) {
+    failTo(returnPath);
     return;
   }
 
@@ -82,8 +82,7 @@ export async function completeAppleAuthCallback({
 
     navigate(returnPath, { replace: true });
   } catch {
-    showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
-    navigate(returnPath, { replace: true });
+    failTo(returnPath);
   }
 }
 
@@ -104,14 +103,13 @@ export function AppleAuthCallbackView() {
       completeAuthentication,
       navigate: (path) => router.history.replace(path),
       search: location.searchStr,
-    }).catch((error: unknown) => {
-      trackSignupFailed("oauth_callback_crashed", {
+    }).catch(
+      reportAuthCallbackCrash({
         method: "apple",
-        error: error instanceof Error ? error.message : String(error),
-      });
-      showErrorToast(APPLE_AUTHORIZATION_ERROR_MESSAGE);
-      router.history.replace(DEFAULT_CALENDAR_ROUTE);
-    });
+        errorMessage: APPLE_AUTHORIZATION_ERROR_MESSAGE,
+        replace: (path) => router.history.replace(path),
+      }),
+    );
   });
 
   if (shouldRelay) {

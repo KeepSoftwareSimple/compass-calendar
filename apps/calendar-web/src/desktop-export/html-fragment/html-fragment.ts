@@ -81,24 +81,26 @@ const serializeInline = (inline: HtmlFragmentInline): string => {
   }
 };
 
+const serializeList = (
+  tag: "ul" | "ol",
+  items: HtmlFragmentListItem[],
+): string => {
+  const listItems = items
+    .map(
+      (item) => `<li><p>${item.inlines.map(serializeInline).join("")}</p></li>`,
+    )
+    .join("");
+  return `<${tag}>${listItems}</${tag}>`;
+};
+
 const serializeBlock = (block: HtmlFragmentBlock): string => {
   switch (block.kind) {
     case "paragraph":
       return `<p>${block.inlines.map(serializeInline).join("")}</p>`;
     case "unorderedList":
-      return `<ul>${block.items
-        .map(
-          (item) =>
-            `<li><p>${item.inlines.map(serializeInline).join("")}</p></li>`,
-        )
-        .join("")}</ul>`;
+      return serializeList("ul", block.items);
     case "orderedList":
-      return `<ol>${block.items
-        .map(
-          (item) =>
-            `<li><p>${item.inlines.map(serializeInline).join("")}</p></li>`,
-        )
-        .join("")}</ol>`;
+      return serializeList("ol", block.items);
     case "verbatim":
       return block.html;
   }
@@ -239,39 +241,14 @@ const parseStructuredBlocksFromSanitized = (
   return blocks;
 };
 
-const findStructuredBlockRanges = (
-  html: string,
-): Array<{
-  start: number;
-  end: number;
-  innerStart: number;
-  innerEnd: number;
-  tag: string;
-}> => {
-  const ranges: Array<{
-    start: number;
-    end: number;
-    innerStart: number;
-    innerEnd: number;
-    tag: string;
-  }> = [];
+type StructuredBlockRange = { start: number; end: number };
+
+const findStructuredBlockRanges = (html: string): StructuredBlockRange[] => {
+  const ranges: StructuredBlockRange[] = [];
   const pattern = /<(p|ul|ol)(\s[^>]*)?>[\s\S]*?<\/\1>/gi;
   for (const match of html.matchAll(pattern)) {
-    const full = match[0];
-    const tag = (match[1] ?? "p").toLowerCase();
     const start = match.index ?? 0;
-    const end = start + full.length;
-    const openEnd = html.indexOf(">", start);
-    if (openEnd < 0) {
-      continue;
-    }
-    ranges.push({
-      start,
-      end,
-      innerStart: openEnd + 1,
-      innerEnd: end - tag.length - 3,
-      tag,
-    });
+    ranges.push({ start, end: start + match[0].length });
   }
   ranges.sort((a, b) => a.start - b.start);
   return ranges;
