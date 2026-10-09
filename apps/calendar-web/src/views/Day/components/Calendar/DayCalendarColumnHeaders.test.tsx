@@ -122,6 +122,24 @@ describe("DayCalendarColumnHeaders", () => {
     ).toBeInTheDocument();
   });
 
+  it("disambiguates duplicate email local parts using domain stems", () => {
+    render(
+      <DayCalendarColumnHeaders
+        calendars={[
+          createMockCalendar({ name: "tyler@tylerdane.com" }),
+          createMockCalendar({ name: "tyler@keepsoftwaresimple.com" }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByLabelText("tyler@tylerdane.com")).toHaveTextContent(
+      "tylerdane",
+    );
+    expect(
+      screen.getByLabelText("tyler@keepsoftwaresimple.com"),
+    ).toHaveTextContent("keepsoftwaresimple");
+  });
+
   it("clips long names inside each column without widening the grid cell", () => {
     const calendars = Array.from({ length: 14 }, (_, index) =>
       createMockCalendar({

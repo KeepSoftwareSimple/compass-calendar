@@ -389,6 +389,12 @@ public final class TimeGridView: NSView {
 
         if state.layoutMode == .day {
             let dayCalendars = DayCalendarColumns.dayViewCalendars(state.scenario.calendars)
+            let columnDisplayNames = DayCalendarColumnDisplayName.displayNames(
+                for: dayCalendars.map(\.name)
+            )
+            let displayNameByCalendarId = Dictionary(
+                uniqueKeysWithValues: zip(dayCalendars.map(\.id), columnDisplayNames)
+            )
             for column in snapshot.columns {
                 guard let calendar = dayCalendars.first(where: { $0.id == column.key }) else {
                     continue
@@ -402,6 +408,7 @@ public final class TimeGridView: NSView {
                 }
                 header.apply(
                     calendar: calendar,
+                    displayName: displayNameByCalendarId[calendar.id] ?? calendar.name,
                     jumpDigit: state.pageJumpDigitByCalendarId[calendar.id],
                     hintsVisible: state.pageJumpHintsVisible,
                     isFocused: state.focusedDayColumnCalendarId == calendar.id,

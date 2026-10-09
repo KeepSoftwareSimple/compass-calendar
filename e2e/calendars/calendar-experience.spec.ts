@@ -891,8 +891,14 @@ test("day view keeps calendar column labels clipped with many visible columns", 
 
   await expect(
     calendarHeaders.getByRole("group", {
+      name: "tyler@tylerdane.com",
+      exact: true,
+    }),
+  ).toContainText("tylerdane");
+  await expect(
+    calendarHeaders.getByRole("group", {
       name: "tyler@keepsoftwaresimple.com",
       exact: true,
     }),
-  ).toContainText("tyler");
+  ).toContainText("keepsoftwaresimple");
 });
