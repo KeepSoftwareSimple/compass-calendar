@@ -579,6 +579,77 @@ describe("parseUserTime", () => {
     const result = parseUserTime("10:00");
     expect(result?.label).toBe("10 AM");
   });
+
+  describe("complementary time resolution", () => {
+    const endAfterStart = {
+      role: "end" as const,
+      complementaryValue: "11:30 AM",
+      currentValue: "12:30 PM",
+    };
+
+    it("resolves 1145 after 11:30 AM start to 11:45 AM, not PM", () => {
+      expect(parseUserTime("1145", endAfterStart)?.value).toBe("11:45 AM");
+    });
+
+    it("resolves bare 1 after late-morning start to 1:00 PM", () => {
+      expect(parseUserTime("1", endAfterStart)?.value).toBe("1:00 PM");
+    });
+
+    it("resolves 9 after 8 PM start to 9:00 PM", () => {
+      expect(
+        parseUserTime("9", {
+          role: "end",
+          complementaryValue: "8:00 PM",
+          currentValue: "9:00 PM",
+        })?.value,
+      ).toBe("9:00 PM");
+    });
+
+    it("wraps to the next day when nothing later today matches", () => {
+      expect(
+        parseUserTime("1145", {
+          role: "end",
+          complementaryValue: "11:50 PM",
+          currentValue: "11:55 PM",
+        })?.value,
+      ).toBe("11:45 AM");
+    });
+
+    it("keeps explicit meridiem on the end field", () => {
+      expect(parseUserTime("11:45p", endAfterStart)?.value).toBe("11:45 PM");
+    });
+
+    it("parses 24-hour 1345 without meridiem guessing", () => {
+      expect(parseUserTime("1345", endAfterStart)?.value).toBe("1:45 PM");
+    });
+
+    it("handles noon and midnight edges on the end field", () => {
+      expect(
+        parseUserTime("12", {
+          role: "end",
+          complementaryValue: "11:00 AM",
+          currentValue: "12:00 PM",
+        })?.value,
+      ).toBe("12:00 PM");
+      expect(
+        parseUserTime("12", {
+          role: "end",
+          complementaryValue: "11:00 PM",
+          currentValue: "12:00 AM",
+        })?.value,
+      ).toBe("12:00 AM");
+    });
+
+    it("prefers the start nearest the current start when ambiguous", () => {
+      expect(
+        parseUserTime("2:33", {
+          role: "start",
+          complementaryValue: "3:00 PM",
+          currentValue: "2:15 PM",
+        })?.value,
+      ).toBe("2:33 PM");
+    });
+  });
 });
 
 describe("filterTimeOption", () => {

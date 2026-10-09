@@ -6,15 +6,18 @@ import { type SelectOption } from "@web/common/types/component.types";
 import { type TimeOption } from "@web/common/types/util.types";
 import {
   filterTimeOption,
+  type ParseUserTimeOptions,
   parseUserTime,
 } from "@web/common/utils/datetime/web.date.util";
 import { useFloatingLayer } from "@web/shortcuts/floating-layer";
 import { resolveTimePickerSelection } from "./resolveTimePickerSelection";
 
 export interface Props extends Omit<RSProps, "onChange" | "value"> {
+  complementaryTime?: string;
   isMenuOpen: boolean;
   onChange: (option: SelectOption<string>) => void;
   options?: TimeOption[];
+  pickerRole?: ParseUserTimeOptions["role"];
   selectClassName?: string;
   setIsMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   value: SelectOption<string>;
@@ -62,7 +65,7 @@ const MENU_NAV_KEYS = new Set([
 function optionFromFocusedMenu(
   container: HTMLElement | null,
   options: TimeOption[] | undefined,
-  currentValue: string | undefined,
+  parseContext: ParseUserTimeOptions,
 ): TimeOption | undefined {
   const combobox = container?.querySelector<HTMLElement>('[role="combobox"]');
   const activeId = combobox?.getAttribute("aria-activedescendant");
@@ -75,14 +78,16 @@ function optionFromFocusedMenu(
   const listed = options?.find((option) => option.label === focusedLabel);
   if (listed) return listed;
 
-  const created = parseUserTime(focusedLabel, currentValue);
+  const created = parseUserTime(focusedLabel, parseContext);
   return created?.label === focusedLabel ? created : undefined;
 }
 
 export const TimePicker = ({
+  complementaryTime,
   isMenuOpen,
   onChange: _onChange,
   options,
+  pickerRole,
   selectClassName,
   setIsMenuOpen,
   value,
@@ -99,7 +104,12 @@ export const TimePicker = ({
 
   const { value: selectValue, options: selectOptions } =
     resolveTimePickerSelection(value, options);
-  const parseInput = (input: string) => parseUserTime(input, value?.value);
+  const parseContext: ParseUserTimeOptions = {
+    currentValue: value?.value,
+    complementaryValue: complementaryTime,
+    role: pickerRole,
+  };
+  const parseInput = (input: string) => parseUserTime(input, parseContext);
 
   const cancelScrollToSelected = () => {
     if (scrollRafRef.current !== null) {
@@ -132,7 +142,7 @@ export const TimePicker = ({
   }, []);
 
   const focusedMenuOption = () =>
-    optionFromFocusedMenu(containerRef.current, selectOptions, value?.value);
+    optionFromFocusedMenu(containerRef.current, selectOptions, parseContext);
 
   const commitFocusedOption = () => {
     if (!userAdjustedRef.current) return;
@@ -237,7 +247,7 @@ export const TimePicker = ({
         openMenuOnFocus={true}
         options={selectOptions}
         filterOption={(option, inputValue) =>
-          filterTimeOption(option, inputValue, value?.value)
+          filterTimeOption(option, inputValue, parseContext)
         }
         tabSelectsValue={false}
         ariaLiveMessages={{

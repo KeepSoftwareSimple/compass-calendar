@@ -195,6 +195,24 @@ describe("TimePickers", () => {
     expectDraft("2026-04-24T13:00:00+00:00", "2026-04-24T14:15:00+00:00");
   });
 
+  it("types 1145 on the end field after 11:30 AM as 11:45 AM", async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        start={new Date("2026-04-24T11:30:00.000Z")}
+        end={new Date("2026-04-24T12:30:00.000Z")}
+      />,
+    );
+
+    const end = screen.getByRole("combobox", { name: "End time" });
+    await user.click(end);
+    await user.keyboard("1145{Enter}");
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByText("11:45 AM")).toBeInTheDocument();
+    expect(screen.queryByText("11:45 PM")).not.toBeInTheDocument();
+  });
+
   it("does not reject a later overnight end just because the clock is before start", async () => {
     const user = userEvent.setup();
     render(

@@ -96,11 +96,122 @@ export const getTimeOptions = (): TimeOption[] => {
 // "430", "4:30", "4.30", "430 am", "4:30p", and "16h30" all parse.
 const USER_TIME_PATTERN = /^(\d{1,2})(?:[:.h]?(\d{2}))?(?:([ap])\.?m?\.?)?$/;
 
+export type ParseUserTimeOptions = {
+  /** Value already shown in this picker (meridiem fallback). */
+  currentValue?: string;
+  /** The other side of the range (start when editing end, and vice versa). */
+  complementaryValue?: string;
+  role?: "start" | "end";
+};
+
+const timeValueToMinutes = (timeValue: string): number | null => {
+  const parsed = getDayjsByTimeValue(timeValue);
+  if (!parsed.isValid()) return null;
+  return parsed.hour() * 60 + parsed.minute();
+};
+
+const ambiguousCandidates = (hour: number, minute: number): number[] => {
+  if (hour === 12) {
+    return [minute, 12 * 60 + minute];
+  }
+  return [hour * 60 + minute, (hour + 12) * 60 + minute];
+};
+
+const pickEarliestAfterReference = (
+  candidates: number[],
+  referenceMinutes: number,
+): number => {
+  const laterToday = candidates.filter(
+    (candidate) => candidate > referenceMinutes,
+  );
+  if (laterToday.length > 0) {
+    return Math.min(...laterToday);
+  }
+  return Math.min(...candidates);
+};
+
+const circularMinuteDistance = (a: number, b: number): number => {
+  const diff = Math.abs(a - b);
+  return Math.min(diff, 1440 - diff);
+};
+
+const pickNearestToReference = (
+  candidates: number[],
+  referenceMinutes: number,
+): number =>
+  candidates.reduce((best, candidate) =>
+    circularMinuteDistance(candidate, referenceMinutes) <
+    circularMinuteDistance(best, referenceMinutes)
+      ? candidate
+      : best,
+  );
+
+const resolveAmbiguousMinutes = (
+  hour: number,
+  minute: number,
+  options: ParseUserTimeOptions,
+): number => {
+  const candidates = ambiguousCandidates(hour, minute);
+
+  if (options.role === "end" && options.complementaryValue) {
+    const reference = timeValueToMinutes(options.complementaryValue);
+    if (reference !== null) {
+      return pickEarliestAfterReference(candidates, reference);
+    }
+  }
+
+  if (options.role === "start") {
+    let pool = candidates;
+    if (options.complementaryValue) {
+      const endMinutes = timeValueToMinutes(options.complementaryValue);
+      if (endMinutes !== null) {
+        const beforeEnd = candidates.filter(
+          (candidate) => candidate < endMinutes,
+        );
+        if (beforeEnd.length > 0) {
+          pool = beforeEnd;
+        }
+      }
+    }
+
+    const reference =
+      (options.currentValue && timeValueToMinutes(options.currentValue)) ??
+      (options.complementaryValue &&
+        timeValueToMinutes(options.complementaryValue)) ??
+      null;
+    if (reference !== null) {
+      return pickNearestToReference(pool, reference);
+    }
+  }
+
+  if (options.currentValue) {
+    const current = getDayjsByTimeValue(options.currentValue);
+    if (current.isValid()) {
+      const currentIsPM = current.hour() >= 12;
+      if (currentIsPM && hour !== 12) return (hour + 12) * 60 + minute;
+      if (!currentIsPM && hour === 12) return minute;
+      return hour * 60 + minute;
+    }
+  }
+
+  return hour === 12 ? 12 * 60 + minute : hour * 60 + minute;
+};
+
+const minutesToClock = (minutes: number): { hour: number; minute: number } => ({
+  hour: Math.floor(minutes / 60) % 24,
+  minute: minutes % 60,
+});
+
 export const parseUserTime = (
   input: string,
-  currentValue?: string,
+  currentValueOrOptions?: string | ParseUserTimeOptions,
 ): TimeOption | null => {
   if (!input || typeof input !== "string") return null;
+
+  const options: ParseUserTimeOptions =
+    typeof currentValueOrOptions === "string"
+      ? { currentValue: currentValueOrOptions }
+      : (currentValueOrOptions ?? {});
 
   const match = input
     .toLowerCase()
@@ -110,7 +221,7 @@ export const parseUserTime = (
 
   const [, hourText, minuteText = "0", meridiem] = match;
   let hour = Number(hourText);
-  const minute = Number(minuteText);
+  let minute = Number(minuteText);
   if (minute > 59) return null;
 
   if (meridiem) {
@@ -118,24 +229,12 @@ export const parseUserTime = (
     hour = (hour % 12) + (meridiem === "p" ? 12 : 0);
   } else if (hour > 23) {
     return null;
-  } else if (
-    currentValue &&
-    !hourText?.startsWith("0") &&
-    hour >= 1 &&
-    hour <= 12
-  ) {
-    // No meridiem: inherit it from the current value. A leading zero
-    // ("0500", "05:00") is 24-hour notation, and hours 0 and 13-23 are
-    // unambiguous.
-    const current = getDayjsByTimeValue(currentValue);
-    if (current.isValid()) {
-      const currentIsPM = current.hour() >= 12;
-      if (currentIsPM && hour !== 12) hour += 12;
-      else if (!currentIsPM && hour === 12) hour = 0;
-    }
+  } else if (!hourText?.startsWith("0") && hour >= 1 && hour <= 12) {
+    ({ hour, minute } = minutesToClock(
+      resolveAmbiguousMinutes(hour, minute, options),
+    ));
   }
 
-  // Return via getTimeOptionByValue so it normalizes like list options
   return getTimeOptionByValue(dayjs().startOf("day").hour(hour).minute(minute));
 };
 
@@ -288,9 +387,12 @@ export const goToDateAnnouncement = (
 export const filterTimeOption = (
   option: { label: string; value: string },
   input: string,
-  currentValue?: string,
+  context?: string | ParseUserTimeOptions,
 ): boolean => {
-  const parsed = parseUserTime(input, currentValue);
+  const parsed = parseUserTime(
+    input,
+    typeof context === "string" ? { currentValue: context } : context,
+  );
   if (parsed) {
     return option.value === parsed.value || option.label === parsed.label;
   }
