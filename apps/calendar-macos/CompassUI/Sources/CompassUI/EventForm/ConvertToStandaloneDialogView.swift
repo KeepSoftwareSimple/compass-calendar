@@ -21,34 +21,23 @@ public struct ConvertToStandaloneDialogView: View {
 
     public var body: some View {
         if isPresented {
-            ZStack {
-                theme.overlayBackdropColor
-                    .ignoresSafeArea()
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Convert to standalone event?")
-                        .font(.custom("Rubik", size: 17, relativeTo: .headline))
-                        .foregroundStyle(theme.textColor)
-                    Text("\"\(eventTitle)\" will be removed from its recurring series.")
-                        .font(.custom("Rubik", size: 14))
-                        .foregroundStyle(theme.textMutedColor)
-                    HStack {
-                        Spacer()
-                        Button("Cancel", action: onCancel)
-                            .keyboardShortcut(.cancelAction)
-                        Button("Convert", action: onConfirm)
-                            .keyboardShortcut(.defaultAction)
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                ModalDialogTitle("Convert to standalone event?")
+                Text("\"\(eventTitle)\" will be removed from its recurring series.")
+                    .font(.custom("Rubik", size: 14))
+                    .foregroundStyle(theme.textMutedColor)
+                HStack {
+                    Spacer()
+                    Button("Cancel", action: onCancel)
+                        .keyboardShortcut(.cancelAction)
+                    Button("Convert", action: onConfirm)
+                        .keyboardShortcut(.defaultAction)
                 }
-                .padding(20)
-                .frame(maxWidth: 400)
-                .background(theme.surfacePanelColor)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(theme.borderColor, lineWidth: 1)
-                )
-                .accessibilityIdentifier("compass-convert-standalone-dialog")
             }
+            .modalDialogChrome(
+                maxWidth: 400,
+                identifier: "compass-convert-standalone-dialog"
+            )
         }
     }
 }
