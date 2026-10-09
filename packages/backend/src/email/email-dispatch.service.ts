@@ -27,6 +27,14 @@ import { findWelcomeStep } from "@backend/email/welcome-sequence";
 import { loadWelcomeSequenceUser } from "@backend/email/welcome-sequence.context";
 import { isWelcomeEmailEnabled } from "@backend/email/welcome-sequence.enrollment";
 import {
+  deferPreviewLoopDailyCap,
+  ensurePreviewLoopEnrollments,
+  handlePreviewLoopAfterSend,
+  isPreviewLoopOverDailyCap,
+  isPreviewLoopRow,
+  welcomeUserForSkipIf,
+} from "@backend/email/welcome-sequence.preview-loop";
+import {
   buildWelcomeResendTemplateVariables,
   getWelcomeStepCtaBaseHref,
   getWelcomeStepTemplateAlias,
@@ -113,6 +121,8 @@ export class EmailDispatchService {
       await this.#dispatchRow(row);
       await sleep(EMAIL_SEND_PROVIDER_SPACING_MS);
     }
+
+    await ensurePreviewLoopEnrollments(now);
   };
 
   #runCycle = (): void => {
@@ -134,12 +144,16 @@ export class EmailDispatchService {
 
   async #dispatchRow(row: EmailSendRecord): Promise<void> {
     const userIdHex = row.userId.toHexString();
+    const previewLoop = isPreviewLoopRow(row);
+    const analyticsBase = previewLoop ? { preview_loop: true } : undefined;
+
     const skip = async (reason: string) => {
       await emailSendRepository.markSkipped(row._id, reason);
       void emailAnalytics.capture({
         event: "email_skipped",
         userId: userIdHex,
         step: row.stepKey,
+        properties: analyticsBase,
       });
       logger.info("Welcome email skipped", {
         rowId: row._id,
@@ -153,15 +167,28 @@ export class EmailDispatchService {
       return;
     }
 
+    const now = new Date();
     const user = await loadWelcomeSequenceUser(row.userId);
     if (!user) {
       await skip("User not found");
       return;
     }
 
-    if (step.skipIf?.(user)) {
+    if (step.skipIf?.(welcomeUserForSkipIf(user, previewLoop))) {
       await skip("Step skipped by skipIf");
       return;
+    }
+
+    if (previewLoop && row.recipientEmail) {
+      const capped = await isPreviewLoopOverDailyCap(row.recipientEmail, now);
+      if (capped) {
+        await deferPreviewLoopDailyCap(row, now);
+        logger.info("Welcome email preview loop daily cap reached", {
+          rowId: row._id,
+          stepKey: row.stepKey,
+        });
+        return;
+      }
     }
 
     if (isEmailSequenceStopped(user.emailPreferences)) {
@@ -215,11 +242,15 @@ export class EmailDispatchService {
         event: "email_sent",
         userId: userIdHex,
         step: row.stepKey,
+        properties: analyticsBase,
       });
       logger.info("Welcome email sent", {
         rowId: row._id,
         stepKey: row.stepKey,
       });
+      if (previewLoop) {
+        await handlePreviewLoopAfterSend(row, now);
+      }
     } catch (error) {
       const message = errorMessage(error);
       if (isInvalidRecipientError(error)) {
@@ -240,6 +271,7 @@ export class EmailDispatchService {
           event: "email_failed",
           userId: userIdHex,
           step: row.stepKey,
+          properties: analyticsBase,
         });
       }
       logger.warn("Welcome email send failed", {

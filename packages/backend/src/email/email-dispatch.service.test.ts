@@ -5,6 +5,7 @@ import { type EmailSendRecord } from "@backend/email/email-send.record";
 import { emailSendRepository } from "@backend/email/email-send.repository";
 import * as emailClient from "@backend/email/providers/email.client";
 import * as welcomeContext from "@backend/email/welcome-sequence.context";
+import * as previewLoop from "@backend/email/welcome-sequence.preview-loop";
 import { afterEach, describe, expect, it, mock, spyOn } from "bun:test";
 
 const baseRow = (overrides: Partial<EmailSendRecord> = {}): EmailSendRecord => {
@@ -38,6 +39,42 @@ describe("EmailDispatchService", () => {
     CONFIG.EMAIL_PROVIDER = originalProvider;
     CONFIG.EMAIL_ALLOWLIST = originalAllowlist;
     mock.restore();
+  });
+
+  it("sends skipIf-gated steps for preview loop rows", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.EMAIL_UNSUBSCRIBE_SECRET = "unsub-secret";
+    const row = baseRow({
+      stepKey: "connect-calendar",
+      _id: "preview-loop:abc:1:connect-calendar",
+      previewLoop: true,
+      recipientEmail: "founder@example.com",
+      previewLoopGeneration: 1,
+    });
+    const send = mock(async () => ({ messageId: "msg-preview" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    spyOn(emailSendRepository, "markSent").mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "founder@example.com",
+      hasConnectedCalendar: true,
+      billing: undefined,
+    });
+    spyOn(previewLoop, "isPreviewLoopOverDailyCap").mockResolvedValue(false);
+    spyOn(previewLoop, "handlePreviewLoopAfterSend").mockResolvedValue(
+      undefined,
+    );
+    spyOn(previewLoop, "ensurePreviewLoopEnrollments").mockResolvedValue(
+      undefined,
+    );
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(send).toHaveBeenCalled();
   });
 
   it("marks skipIf steps as skipped without calling the provider", async () => {

@@ -67,6 +67,27 @@ describe("deploy write email block", () => {
     );
   });
 
+  it("writes preview loop settings when configured", async () => {
+    const result = await runWriteEmailBlock({
+      EMAIL_PROVIDER: "resend",
+      EMAIL_API_KEY: "re_test",
+      EMAIL_FROM: "Compass <hello@mail.example.com>",
+      EMAIL_WEBHOOK_SECRET: "whsec_test",
+      EMAIL_UNSUBSCRIBE_SECRET: "unsub-secret",
+      EMAIL_PREVIEW_LOOP_RECIPIENTS: "founder@example.com",
+      EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE: "fast",
+      EMAIL_PREVIEW_LOOP_GAP_DAYS: "1",
+      EMAIL_PREVIEW_LOOP_MAX_PER_DAY: "10",
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("previewLoop:");
+    expect(result.stdout).toContain('recipients: ["founder@example.com"]');
+    expect(result.stdout).toContain("scheduleProfile: fast");
+    expect(result.stdout).toContain("gapDays: 1");
+    expect(result.stdout).toContain("maxEmailsPerDay: 10");
+  });
+
   it("omits the block and logs missing values when secrets are absent", async () => {
     const result = await runWriteEmailBlock({
       EMAIL_PROVIDER: "resend",

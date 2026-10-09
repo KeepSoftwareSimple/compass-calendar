@@ -6,6 +6,7 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import emailDispatchService from "@backend/email/email-dispatch.service";
 import { ensureEmailIndexes } from "@backend/email/email-indexes";
+import { ensurePreviewLoopEnrollments } from "@backend/email/welcome-sequence.preview-loop";
 import { createBackendHttpServer } from "@backend/servers/express/express.server";
 import { foregroundSyncRefresh } from "@backend/servers/sse/foreground-sync-refresh";
 import { syncChangeFeedBridge } from "@backend/servers/sse/sync-change-feed.bridge";
@@ -43,7 +44,7 @@ async function start() {
         }
         if (CONFIG.EMAIL_PROVIDER) {
           logger.info(
-            `Welcome email: provider=${CONFIG.EMAIL_PROVIDER}, allowlist=${CONFIG.EMAIL_ALLOWLIST.length} address(es)`,
+            `Welcome email: provider=${CONFIG.EMAIL_PROVIDER}, allowlist=${CONFIG.EMAIL_ALLOWLIST.length} address(es), previewLoop=${CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS.length} recipient(s)`,
           );
         }
         resolve(undefined);
@@ -58,6 +59,7 @@ async function start() {
     foregroundSyncRefresh.start();
     userService.startAccountDeletionRetries();
     publicBookingService.startRecoveryRetries();
+    await ensurePreviewLoopEnrollments();
     emailDispatchService.startPolling();
   } catch (error) {
     logger.error("Problems encountered during startup", error);

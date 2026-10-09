@@ -23,6 +23,9 @@ export const EmailSendRecordSchema = z.strictObject({
   providerMessageId: z.string().nullable(),
   sentAt: z.date().nullable(),
   deliveredAt: z.date().nullable(),
+  previewLoop: z.boolean().optional(),
+  recipientEmail: z.string().trim().min(1).optional(),
+  previewLoopGeneration: z.number().int().positive().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
