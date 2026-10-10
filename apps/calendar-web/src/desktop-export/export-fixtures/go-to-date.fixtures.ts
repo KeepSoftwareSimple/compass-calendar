@@ -6,22 +6,30 @@ import {
   parseUserDate,
 } from "@web/common/utils/datetime/web.date.util";
 
+const PARSE_CASES = [
+  ["2026-10-03", "2026-10-03"],
+  ["2026/10/29", "2026-10-29"],
+  ["10/29", "2026-10-29"],
+  ["10-29", "2026-10-29"],
+  ["10.29.2026", "2026-10-29"],
+  ["29/10", "2026-10-29"],
+  ["2026-10", "2026-10-01"],
+  ["october 2026", "2026-10-01"],
+  ["oct 3", "2026-10-03"],
+  ["october 29", "2026-10-29"],
+  ["jan 3", "2027-01-03"],
+  ["2/30", null],
+  ["hello", null],
+] as const;
+
 export const buildGoToDateFixtures = () => {
   const now = dayjs("2026-09-15T12:00:00.000Z");
-  const parsedCases = [
-    ["2026-10-03", "2026-10-03"],
-    ["10/3", "2026-10-03"],
-    ["oct 3", "2026-10-03"],
-    ["jan 3", "2027-01-03"],
-    ["hello", null],
-  ] as const;
-
   const target = dayjs("2026-10-03");
 
   return {
     referenceNow: now.toISOString(),
     cases: [
-      ...parsedCases.map(([input, expected]) => ({
+      ...PARSE_CASES.map(([input, expected]) => ({
         id: `parse-${input.replace(/\s+/g, "-")}`,
         input: { text: input, now: now.toISOString() },
         output: {

@@ -305,30 +305,91 @@ const dateWithInferredYear = (
   return thisYear;
 };
 
+/** US month-first when both parts are at most 12; otherwise unambiguous D/M. */
+const resolveMonthDayOrder = (
+  first: number,
+  second: number,
+): { month: number; day: number } | null => {
+  if (first < 1 || second < 1 || first > 31 || second > 31) return null;
+  if (first > 12 && second > 12) return null;
+  if (first > 12) {
+    if (second > 12) return null;
+    return { month: second, day: first };
+  }
+  if (second > 12) {
+    return { month: first, day: second };
+  }
+  return { month: first, day: second };
+};
+
+const NUMERIC_DATE_PATTERN = /^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2}|\d{4}))?$/;
+
 /** Parses a typed calendar date. Month-first for `M/D`. English month names only. */
 export const parseUserDate = (text: string, now: Dayjs): Dayjs | null => {
   if (!text || typeof text !== "string") return null;
 
-  const normalized = text
-    .trim()
-    .toLowerCase()
-    .replace(/\./g, "")
-    .replace(/\s+/g, " ");
-  if (!normalized) return null;
+  const collapsed = text.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!collapsed) return null;
 
-  const iso = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-  if (iso) {
-    return calendarDate(Number(iso[1]), Number(iso[2]), Number(iso[3]));
+  const isoFull = collapsed.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (isoFull) {
+    return calendarDate(
+      Number(isoFull[1]),
+      Number(isoFull[2]),
+      Number(isoFull[3]),
+    );
   }
 
-  const slash = normalized.match(/^(\d{1,2})\/(\d{1,2})(?:\/(\d{2}|\d{4}))?$/);
-  if (slash) {
-    const month = Number(slash[1]);
-    const day = Number(slash[2]);
-    if (slash[3] !== undefined) {
-      return calendarDate(expandTwoDigitYear(Number(slash[3])), month, day);
+  const isoMonth = collapsed.match(/^(\d{4})-(\d{1,2})$/);
+  if (isoMonth) {
+    return calendarDate(Number(isoMonth[1]), Number(isoMonth[2]), 1);
+  }
+
+  const yearFirst = collapsed.match(/^(\d{4})[/.](\d{1,2})(?:[/.](\d{1,2}))?$/);
+  if (yearFirst) {
+    const year = Number(yearFirst[1]);
+    const month = Number(yearFirst[2]);
+    if (yearFirst[3] === undefined) {
+      return calendarDate(year, month, 1);
     }
-    return dateWithInferredYear(month, day, now);
+    return calendarDate(year, month, Number(yearFirst[3]));
+  }
+
+  const numeric = collapsed.match(NUMERIC_DATE_PATTERN);
+  if (numeric) {
+    const resolved = resolveMonthDayOrder(
+      Number(numeric[1]),
+      Number(numeric[2]),
+    );
+    if (!resolved) return null;
+    if (numeric[3] !== undefined) {
+      return calendarDate(
+        expandTwoDigitYear(Number(numeric[3])),
+        resolved.month,
+        resolved.day,
+      );
+    }
+    return dateWithInferredYear(resolved.month, resolved.day, now);
+  }
+
+  const normalized = collapsed.replace(/\./g, "");
+
+  const monthYear = normalized.match(
+    new RegExp(`^(${MONTH_NAME_PATTERN})\\s+(\\d{4})$`),
+  );
+  if (monthYear) {
+    const month = MONTH_NAME_TO_INDEX[monthYear[1] ?? ""];
+    if (month === undefined) return null;
+    return calendarDate(Number(monthYear[2]), month, 1);
+  }
+
+  const yearMonthName = normalized.match(
+    new RegExp(`^(\\d{4})\\s+(${MONTH_NAME_PATTERN})$`),
+  );
+  if (yearMonthName) {
+    const month = MONTH_NAME_TO_INDEX[yearMonthName[2] ?? ""];
+    if (month === undefined) return null;
+    return calendarDate(Number(yearMonthName[1]), month, 1);
   }
 
   const monthFirst = normalized.match(
