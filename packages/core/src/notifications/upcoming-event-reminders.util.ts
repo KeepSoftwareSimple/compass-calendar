@@ -41,6 +41,15 @@ export function notificationKey(
   return `${event._id}|${event.startDate}|${reminderMinutes}`;
 }
 
+/**
+ * The start date inside a {@link notificationKey}, or null when the key is not
+ * one. Keeps the key's shape in this module so callers that age keys out never
+ * have to slice them apart themselves.
+ */
+export function notificationKeyStartDate(key: string): string | null {
+  return key.split("|")[1] ?? null;
+}
+
 export function selectDueEventReminders(
   now: Dayjs,
   events: readonly RemindableEvent[],

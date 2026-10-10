@@ -1,107 +1,28 @@
+import {
+  DEFAULT_POPUP_REMINDER_MINUTES,
+  notificationKey,
+  type RemindableEvent,
+} from "@core/notifications/upcoming-event-reminders.util";
 import dayjs from "@core/util/date/dayjs";
 import { createTestNotificationPort } from "@web/__tests__/helpers/web-test-seams";
 import {
   announceUpcomingEvents,
-  NOTIFY_LEAD_MINUTES,
-  type NotifiableEvent,
   notifiableEventQueryRange,
-  notificationKey,
   pruneFiredKeys,
-  selectEventsToNotify,
   toNotifiableEvents,
 } from "@web/notifications/upcoming-notifier.logic";
 import { setEffectiveTimeZoneForTests } from "@web/timezone/effective-timezone.store";
 import { describe, expect, it } from "bun:test";
 
 const NOW = dayjs("2026-03-10T09:00:00.000Z");
+const DEFAULT_LEAD_MINUTES = DEFAULT_POPUP_REMINDER_MINUTES[0]!;
 
 const eventAt = (minutesFromNow: number, id = `e${minutesFromNow}`) =>
   ({
     _id: id,
     title: `Event ${id}`,
     startDate: NOW.add(minutesFromNow, "minute").toISOString(),
-  }) satisfies NotifiableEvent;
-
-describe("selectEventsToNotify", () => {
-  it("includes events inside the default lead window", () => {
-    const events = [eventAt(0), eventAt(NOTIFY_LEAD_MINUTES)];
-
-    const due = selectEventsToNotify(NOW, events, new Set());
-
-    expect(
-      due.map(
-        ({ event, reminderMinutes }) => `${event._id}:${reminderMinutes}`,
-      ),
-    ).toEqual(["e0:5", "e5:5"]);
-  });
-
-  it("excludes events beyond the lead window", () => {
-    const due = selectEventsToNotify(
-      NOW,
-      [eventAt(NOTIFY_LEAD_MINUTES + 1)],
-      new Set(),
-    );
-
-    expect(due).toEqual([]);
-  });
-
-  it("never fires for an event that already started without grace", () => {
-    const due = selectEventsToNotify(
-      NOW,
-      [eventAt(-1), eventAt(-120)],
-      new Set(),
-    );
-
-    expect(due).toEqual([]);
-  });
-
-  it("skips reminder offsets already announced", () => {
-    const event = eventAt(3);
-
-    const due = selectEventsToNotify(
-      NOW,
-      [event],
-      new Set([notificationKey(event, NOTIFY_LEAD_MINUTES)]),
-    );
-
-    expect(due).toEqual([]);
-  });
-
-  it("re-announces an event that moved to a new start time", () => {
-    const original = eventAt(3, "same-id");
-    const moved = {
-      ...original,
-      startDate: NOW.add(4, "minute").toISOString(),
-    };
-
-    const due = selectEventsToNotify(
-      NOW,
-      [moved],
-      new Set([notificationKey(original, NOTIFY_LEAD_MINUTES)]),
-    );
-
-    expect(due).toEqual([
-      { event: moved, reminderMinutes: NOTIFY_LEAD_MINUTES },
-    ]);
-  });
-
-  it("returns the soonest event first", () => {
-    const due = selectEventsToNotify(NOW, [eventAt(4), eventAt(1)], new Set());
-
-    expect(due.map(({ event }) => event._id)).toEqual(["e1", "e4"]);
-  });
-
-  it("fires synced Google popup offsets such as ten minutes before start", () => {
-    const event = {
-      ...eventAt(10, "synced"),
-      popupReminderMinutes: [10],
-    };
-
-    const due = selectEventsToNotify(NOW, [event], new Set());
-
-    expect(due).toEqual([{ event, reminderMinutes: 10 }]);
-  });
-});
+  }) satisfies RemindableEvent;
 
 describe("toNotifiableEvents", () => {
   it("keeps a saved event and carries its title and start time through", () => {
@@ -162,7 +83,7 @@ describe("announceUpcomingEvents", () => {
     announceUpcomingEvents(port, NOW, [event], new Set());
 
     const [, options] = show.mock.calls[0] as [string, { tag: string }];
-    expect(options.tag).toBe(notificationKey(event, NOTIFY_LEAD_MINUTES));
+    expect(options.tag).toBe(notificationKey(event, DEFAULT_LEAD_MINUTES));
   });
 
   it("falls back to a placeholder when the event has no title", () => {
@@ -192,7 +113,7 @@ describe("announceUpcomingEvents", () => {
   it("stays silent, and preserves the fired keys, when nothing is due", () => {
     const { port, show } = seam();
     const existing = new Set([
-      notificationKey(eventAt(1, "already"), NOTIFY_LEAD_MINUTES),
+      notificationKey(eventAt(1, "already"), DEFAULT_LEAD_MINUTES),
     ]);
 
     const fired = announceUpcomingEvents(port, NOW, [eventAt(90)], existing);
@@ -217,7 +138,9 @@ describe("announceUpcomingEvents", () => {
     const retried = announceUpcomingEvents(port, NOW, [event], fired);
 
     expect(mocks.show).toHaveBeenCalledTimes(2);
-    expect([...retried]).toEqual([notificationKey(event, NOTIFY_LEAD_MINUTES)]);
+    expect([...retried]).toEqual([
+      notificationKey(event, DEFAULT_LEAD_MINUTES),
+    ]);
   });
 });
 

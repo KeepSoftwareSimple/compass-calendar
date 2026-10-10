@@ -9,10 +9,10 @@ import {
 } from "@web/notifications/upcoming-notifier.logic";
 
 /**
- * Fires a browser notification NOTIFY_LEAD_MINUTES before each timed event.
+ * Fires a browser notification at each of a timed event's popup reminders.
  *
  * Runs on the shared minute tick rather than a setTimeout chain: 60s
- * granularity is plenty for a 5-minute lead, and it stays correct across
+ * granularity is plenty for a minutes-ahead lead, and it stays correct across
  * sleep/wake, where pending timers do not. Background tabs throttle timers to
  * roughly one per minute, which is exactly this cadence.
  */

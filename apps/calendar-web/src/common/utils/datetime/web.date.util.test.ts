@@ -493,29 +493,35 @@ describe("parseUserTime", () => {
   });
 
   it("inherits meridiem from currentValue when ambiguous", () => {
-    const result = parseUserTime("2:33", "2:15 PM");
+    const result = parseUserTime("2:33", { currentValue: "2:15 PM" });
     expect(result?.value).toBe("2:33 PM");
   });
 
   it("inherits AM meridiem from currentValue", () => {
-    const result = parseUserTime("7:30", "7:00 AM");
+    const result = parseUserTime("7:30", { currentValue: "7:00 AM" });
     expect(result?.value).toBe("7:30 AM");
   });
 
   it("explicit meridiem overrides currentValue meridiem", () => {
-    const result = parseUserTime("2:33 am", "2:15 PM");
+    const result = parseUserTime("2:33 am", { currentValue: "2:15 PM" });
     expect(result?.value).toBe("2:33 AM");
   });
 
   it("24-hour format ignores currentValue meridiem", () => {
-    const result = parseUserTime("14:33", "2:15 AM");
+    const result = parseUserTime("14:33", { currentValue: "2:15 AM" });
     expect(result?.value).toBe("2:33 PM");
   });
 
   it("leading-zero hour ignores currentValue meridiem", () => {
-    expect(parseUserTime("0500", "3:00 PM")?.value).toBe("5:00 AM");
-    expect(parseUserTime("05:00", "3:00 PM")?.value).toBe("5:00 AM");
-    expect(parseUserTime("500", "3:00 PM")?.value).toBe("5:00 PM");
+    expect(parseUserTime("0500", { currentValue: "3:00 PM" })?.value).toBe(
+      "5:00 AM",
+    );
+    expect(parseUserTime("05:00", { currentValue: "3:00 PM" })?.value).toBe(
+      "5:00 AM",
+    );
+    expect(parseUserTime("500", { currentValue: "3:00 PM" })?.value).toBe(
+      "5:00 PM",
+    );
   });
 
   it("rejects empty input", () => {
@@ -551,7 +557,9 @@ describe("parseUserTime", () => {
   });
 
   it("parses digits with a spaced meridiem", () => {
-    expect(parseUserTime("430 am", "5:30 PM")?.value).toBe("4:30 AM");
+    expect(parseUserTime("430 am", { currentValue: "5:30 PM" })?.value).toBe(
+      "4:30 AM",
+    );
     expect(parseUserTime("430 p")?.value).toBe("4:30 PM");
     expect(parseUserTime("1030pm")?.value).toBe("10:30 PM");
     expect(parseUserTime("8 pm")?.value).toBe("8:00 PM");
