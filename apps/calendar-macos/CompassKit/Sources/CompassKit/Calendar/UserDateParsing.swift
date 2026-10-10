@@ -23,30 +23,67 @@ public enum UserDateParsing {
     }()
 
     public static func parseUserDate(_ text: String, now: Date) -> Date? {
-        let normalized = text
+        let collapsed = text
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-            .replacingOccurrences(of: ".", with: "")
             .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
-        guard !normalized.isEmpty else { return nil }
+        guard !collapsed.isEmpty else { return nil }
 
-        if let match = firstMatch(normalized, pattern: #"^(\d{4})-(\d{1,2})-(\d{1,2})$"#) {
+        if let match = firstMatch(collapsed, pattern: #"^(\d{4})-(\d{1,2})-(\d{1,2})$"#) {
             return calendarDate(
                 year: Int(match[0])!,
                 month: Int(match[1])!,
                 day: Int(match[2])!)
         }
 
-        if let match = firstMatch(normalized, pattern: #"^(\d{1,2})/(\d{1,2})(?:/(\d{2}|\d{4}))?$"#) {
-            let month = Int(match[0])!
-            let day = Int(match[1])!
+        if let match = firstMatch(collapsed, pattern: #"^(\d{4})-(\d{1,2})$"#) {
+            return calendarDate(
+                year: Int(match[0])!,
+                month: Int(match[1])!,
+                day: 1)
+        }
+
+        if let match = firstMatch(collapsed, pattern: #"^(\d{4})[/.](\d{1,2})(?:[/.](\d{1,2}))?$"#) {
+            let year = Int(match[0])!
+            let month = Int(match[1])!
+            if match.count > 2, !match[2].isEmpty {
+                return calendarDate(year: year, month: month, day: Int(match[2])!)
+            }
+            return calendarDate(year: year, month: month, day: 1)
+        }
+
+        if let match = firstMatch(
+            collapsed,
+            pattern: #"^(\d{1,2})[-/.](\d{1,2})(?:[-/.](\d{2}|\d{4}))?$"#)
+        {
+            guard let resolved = resolveMonthDayOrder(
+                first: Int(match[0])!,
+                second: Int(match[1])!)
+            else { return nil }
             if match.count > 2, !match[2].isEmpty {
                 return calendarDate(
                     year: expandTwoDigitYear(Int(match[2])!),
-                    month: month,
-                    day: day)
+                    month: resolved.month,
+                    day: resolved.day)
             }
-            return dateWithInferredYear(month: month, day: day, now: now)
+            return dateWithInferredYear(
+                month: resolved.month,
+                day: resolved.day,
+                now: now)
+        }
+
+        let normalized = collapsed.replacingOccurrences(of: ".", with: "")
+
+        let monthYear = "^(\(monthNamePattern))\\s+(\\d{4})$"
+        if let match = firstMatch(normalized, pattern: monthYear) {
+            guard let month = monthNameToIndex[match[0]] else { return nil }
+            return calendarDate(year: Int(match[1])!, month: month, day: 1)
+        }
+
+        let yearMonthName = "^(\\d{4})\\s+(\(monthNamePattern))$"
+        if let match = firstMatch(normalized, pattern: yearMonthName) {
+            guard let month = monthNameToIndex[match[1]] else { return nil }
+            return calendarDate(year: Int(match[0])!, month: month, day: 1)
         }
 
         let monthFirst = "^(\(monthNamePattern))(?:\\s+|\\s*,\\s*)(\\d{1,2})(?:(?:\\s+|\\s*,\\s*)(\\d{4}))?$"
@@ -121,6 +158,19 @@ public enum UserDateParsing {
 
     private static func expandTwoDigitYear(_ year: Int) -> Int {
         year >= 100 ? year : 2000 + year
+    }
+
+    private static func resolveMonthDayOrder(first: Int, second: Int) -> (month: Int, day: Int)? {
+        guard first >= 1, second >= 1, first <= 31, second <= 31 else { return nil }
+        if first > 12, second > 12 { return nil }
+        if first > 12 {
+            guard second <= 12 else { return nil }
+            return (month: second, day: first)
+        }
+        if second > 12 {
+            return (month: first, day: second)
+        }
+        return (month: first, day: second)
     }
 
     private static func calendarDate(year: Int, month: Int, day: Int) -> Date? {
