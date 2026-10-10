@@ -1,14 +1,14 @@
 import { useEffect, useRef } from "react";
-import { effectivePopupReminderMinutes } from "@core/notifications/upcoming-event-reminders.util";
+import {
+  effectivePopupReminderMinutes,
+  notificationKey,
+  type RemindableEvent,
+} from "@core/notifications/upcoming-event-reminders.util";
 import dayjs from "@core/util/date/dayjs";
 import { track } from "@web/auth/posthog/track";
 import { getNotificationPort } from "@web/notifications/notification.port";
 import { useNotificationsEffectivelyOn } from "@web/notifications/notification.state";
-import {
-  type NotifiableEvent,
-  notificationKey,
-  showUpcomingEventNotification,
-} from "@web/notifications/upcoming-notifier.logic";
+import { showUpcomingEventNotification } from "@web/notifications/upcoming-notifier.logic";
 
 /**
  * When the in-app Up Next banner appears, try the OS notification again with
@@ -17,7 +17,7 @@ import {
  * the app often succeeds without stacking duplicates.
  */
 export function useUpNextOsNotification(
-  upNext: NotifiableEvent | undefined,
+  upNext: RemindableEvent | undefined,
   isActive: boolean,
 ): void {
   const effectivelyOn = useNotificationsEffectivelyOn();

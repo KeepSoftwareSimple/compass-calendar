@@ -1,4 +1,3 @@
-import cn from "classnames";
 import {
   type CSSProperties,
   type ForwardedRef,
@@ -10,7 +9,7 @@ import dayjs from "@core/util/date/dayjs";
 import { isRecurringEvent } from "@core/util/event/event.util";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
 import { ZIndex } from "@web/common/constants/web.constants";
-import { brighten, darken, isDark } from "@web/common/styles/color.utils";
+import { brighten } from "@web/common/styles/color.utils";
 import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
@@ -19,15 +18,18 @@ import { getLineClamp } from "@web/common/utils/grid/grid.util";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
-  calendarAccentAccessibleSuffix,
   eventCardFill,
-  eventEdgeFocusShadow,
-  eventFocusColor,
-  eventFocusOutlineClass,
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
 import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
+import {
+  gridEventCardClassName,
+  gridEventCardLabelSuffix,
+  gridEventCardStyle,
+  pastEventFill,
+} from "@web/grid/components/grid-event-card-shell";
+import { useGridEventEdgeFocus } from "@web/grid/components/useGridEventEdgeFocus";
 import {
   COMPACT_EVENT_MAX_HEIGHT,
   GRID_EVENT_TIME_LABEL_FONT_SIZE,
@@ -40,18 +42,11 @@ import {
   MIN_EVENT_HEIGHT_FOR_TIME_LABEL,
   MIN_EVENT_WIDTH_FOR_TIME_LABEL,
 } from "@web/grid/grid.constants";
-import {
-  gridEventCardOpacity,
-  guestResponseAccessiblePrefix,
-} from "@web/grid/grid-event-card-chrome";
+import { guestResponseAccessiblePrefix } from "@web/grid/grid-event-card-chrome";
 import {
   EVENT_CONTENT_ATTRIBUTE,
   EVENT_TIME_LABEL_ATTRIBUTE,
 } from "@web/grid/interaction/dom";
-import {
-  selectEdgeForEvent,
-  useEdgeFocusStore,
-} from "@web/grid/shortcuts/edge-focus.store";
 import { type EventPosition } from "@web/grid/types/grid.types";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
@@ -148,15 +143,10 @@ const TimedEventCardBase = (
   // the form/context-menu swatch (and the eventual save). Draft vs saved is
   // carried by a light drop-shadow below — enough lift to read as a draft
   // without a heavy bottom shadow that obscures the end edge.
-  // Past events recede in the direction of the theme's grid: the dark theme's
-  // light steel fill dims slightly, the light theme's ink fill fades toward
-  // the paper (brighten 14 keeps light text >= 4.5:1 and stays clearly apart
-  // from the brighten-10 hover fill). A `brightness()` filter can't do either
-  // safely — it scales the title text along with the fill.
   const adjustFill = (fill: string) => {
     if (isDraft) return fill;
     if (isResizing || isDragging) return brighten(fill);
-    if (isInPast) return isDark(fill) ? brighten(fill, 14) : darken(fill, 5);
+    if (isInPast) return pastEventFill(fill);
     return fill;
   };
   // isInPast is excluded here (falls through to adjustFill, i.e. the dimmed
@@ -166,49 +156,41 @@ const TimedEventCardBase = (
     !isDraft && !isPlaceholder && !isResizing && !isInPast
       ? brighten(fill)
       : adjustFill(fill);
-  const { mergedStops, fillStops, bgColor, hoverBgColor, imageVars } =
-    eventCardFill(calendarIdentity, baseColor, adjustFill, adjustHover);
+  const fill = eventCardFill(
+    calendarIdentity,
+    baseColor,
+    adjustFill,
+    adjustHover,
+  );
   // Ring color follows --text so it contrasts with the page in both themes;
   // a fixed white ring vanished on the light theme's paper background. Pair
   // with a background halo so the ring stays visible on dark default fills.
-  const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(event._id));
-  const focusColorCss = eventFocusColor(focusColor);
-  // Edge focus paints outside the card (box-shadow) so short titles stay
-  // readable — an inset accent bar used to cover the top of compact events.
-  const edgeFocusShadow = focusedEdge
-    ? eventEdgeFocusShadow(focusedEdge, "vertical", focusColorCss)
-    : undefined;
-
-  const eventBoxShadow = joinGridEventBoxShadow(
-    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
-    boxShadow,
-    edgeFocusShadow,
+  const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
+    event._id,
+    focusColor,
+    "vertical",
   );
 
   // The fill is neutral and its lightness swings widely across states, so the
   // text color is chosen per-state (whichever of dark/light reads better
   // across every stop) and set on the content wrapper so the title and time
   // label share it.
-  const contentColor = theme.getContrastText(fillStops);
+  const contentColor = theme.getContrastText(fill.fillStops);
 
-  const eventStyle = {
-    "--event-bg": bgColor,
-    "--event-hover-bg": hoverBgColor,
-    ...imageVars,
-    "--event-focus-color": focusColorCss,
-    height: position.height || 0,
-    left: position.left,
-    opacity: gridEventCardOpacity({
-      isHidden,
-      isPlaceholder,
-      guestResponse,
-    }),
-    top: position.top,
-    width: position.width || 0,
-    zIndex: position.zIndex ?? ZIndex.LAYER_1,
-    boxShadow: eventBoxShadow,
+  const eventStyle = gridEventCardStyle({
+    boxShadow: joinGridEventBoxShadow(
+      isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+      boxShadow,
+      edgeFocusShadow,
+    ),
+    fill,
     filter: isDraft ? "drop-shadow(0 1px 2px rgb(0 0 0 / 0.28))" : undefined,
-  } as CSSProperties;
+    focusColorCss,
+    guestResponse,
+    isHidden,
+    isPlaceholder,
+    position,
+  });
 
   const isCompactEvent = position.height <= COMPACT_EVENT_MAX_HEIGHT;
 
@@ -249,20 +231,12 @@ const TimedEventCardBase = (
   const hiddenPrefix = isHidden ? "Hidden " : "";
   const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
   // Fill stays a flat neutral color except on a merged card, whose gradient
-  // paints its calendars; the accent or gradient + this suffix are the only
-  // calendar signal, and the name (never color alone) is what makes it
+  // paints its calendars; the accent or gradient + the label suffix are the
+  // only calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
-  const edgeFocusSuffix =
-    focusedEdge === "startDate"
-      ? ", editing start time"
-      : focusedEdge === "endDate"
-        ? ", editing end time"
-        : "";
-  const accessibleLabel =
-    (calendarIdentity
-      ? `${hiddenPrefix}${guestResponsePrefix}${samplePrefix}${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
-      : `${hiddenPrefix}${guestResponsePrefix}${samplePrefix}${baseAccessibleLabel}`) +
-    edgeFocusSuffix;
+  const accessibleLabel = `${hiddenPrefix}${guestResponsePrefix}${samplePrefix}${baseAccessibleLabel}${gridEventCardLabelSuffix(
+    { calendarIdentity, edgeNoun: "time", focusedEdge },
+  )}`;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: Grid events are draggable/resizable blocks, not native buttons.
@@ -274,19 +248,14 @@ const TimedEventCardBase = (
       role="button"
       tabIndex={0}
       title={isHidden ? event.title : undefined}
-      className={cn(
-        "absolute min-h-2.5 overflow-hidden pr-0.75 pl-1.25 transition-[background-color,filter] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
-        isHidden ? "rounded-full" : "rounded-xs",
-        "bg-(--event-bg) hover:bg-(--event-hover-bg)",
-        mergedStops &&
-          "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
-        eventFocusOutlineClass(focusedEdge),
-        isSelected && "focus-visible:outline-none",
-        (event.isDemo ||
-          guestResponse === "awaiting" ||
-          guestResponse === "tentative") &&
-          "outline outline-dashed outline-1 outline-text-muted/50",
-      )}
+      className={gridEventCardClassName({
+        focusedEdge,
+        guestResponse,
+        isDemo: event.isDemo,
+        isHidden,
+        isMerged: fill.mergedStops !== null,
+        isSelected,
+      })}
       style={eventStyle}
       onBlur={onBlur}
       onFocus={onFocus}
@@ -294,7 +263,7 @@ const TimedEventCardBase = (
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {!isHidden && calendarIdentity && !mergedStops && (
+      {!isHidden && calendarIdentity && !fill.mergedStops && (
         <CalendarAccentStripe identity={calendarIdentity} />
       )}
       {!isHidden && (
@@ -315,7 +284,7 @@ const TimedEventCardBase = (
           )}
         </div>
       )}
-      {showRepeatIcon && <EventRepeatIcon baseColor={bgColor} />}
+      {showRepeatIcon && <EventRepeatIcon baseColor={fill.bgColor} />}
     </div>
   );
 };

@@ -200,14 +200,9 @@ const minutesToClock = (minutes: number): { hour: number; minute: number } => ({
 
 export const parseUserTime = (
   input: string,
-  currentValueOrOptions?: string | ParseUserTimeOptions,
+  options: ParseUserTimeOptions = {},
 ): TimeOption | null => {
   if (!input || typeof input !== "string") return null;
-
-  const options: ParseUserTimeOptions =
-    typeof currentValueOrOptions === "string"
-      ? { currentValue: currentValueOrOptions }
-      : (currentValueOrOptions ?? {});
 
   const match = input
     .toLowerCase()

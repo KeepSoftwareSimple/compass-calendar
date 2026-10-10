@@ -1,38 +1,28 @@
 import cn from "classnames";
-import {
-  type CSSProperties,
-  type ForwardedRef,
-  forwardRef,
-  type MouseEvent,
-} from "react";
+import { type ForwardedRef, forwardRef, type MouseEvent } from "react";
 import dayjs from "@core/util/date/dayjs";
 import { isRecurringEvent } from "@core/util/event/event.util";
 import { type CalendarCardIdentity } from "@web/calendars/useCalendarLookup";
-import { ZIndex } from "@web/common/constants/web.constants";
-import { brighten, darken, isDark } from "@web/common/styles/color.utils";
+import { brighten } from "@web/common/styles/color.utils";
 import { theme } from "@web/common/styles/theme";
 import { useEventPalette } from "@web/common/styles/theme.util";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { type GridGuestResponseState } from "@web/events/attendee-rsvp";
 import { CalendarAccentStripe } from "@web/grid/components/CalendarAccentStripe";
 import {
-  calendarAccentAccessibleSuffix,
   eventCardFill,
-  eventEdgeFocusShadow,
-  eventFocusColor,
-  eventFocusOutlineClass,
   GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
   joinGridEventBoxShadow,
 } from "@web/grid/components/calendar-accent.util";
 import { gridEventCardActivationKeyDown } from "@web/grid/components/event-card-activation";
 import {
-  gridEventCardOpacity,
-  guestResponseAccessiblePrefix,
-} from "@web/grid/grid-event-card-chrome";
-import {
-  selectEdgeForEvent,
-  useEdgeFocusStore,
-} from "@web/grid/shortcuts/edge-focus.store";
+  gridEventCardClassName,
+  gridEventCardLabelSuffix,
+  gridEventCardStyle,
+  pastEventFill,
+} from "@web/grid/components/grid-event-card-shell";
+import { useGridEventEdgeFocus } from "@web/grid/components/useGridEventEdgeFocus";
+import { guestResponseAccessiblePrefix } from "@web/grid/grid-event-card-chrome";
 import { type EventPosition } from "@web/grid/types/grid.types";
 import { EventRepeatIcon } from "./EventRepeatIcon";
 
@@ -80,69 +70,37 @@ const AllDayEventCardBase = (
     isRecurring &&
     !isPlaceholder &&
     position.width >= REPEAT_ICON_MIN_WIDTH;
-  // Past events recede in the direction of the theme's grid, matching
-  // TimedEventCard: the dark theme's light steel fill dims slightly, the
-  // light theme's ink fill fades toward the paper. Only the fill moves — a
-  // `brightness()` filter would drag the title text along with it and let
-  // past events fall below the 4.5:1 contrast minimum.
-  const adjustFill = (fill: string) =>
-    isInPast ? (isDark(fill) ? brighten(fill, 14) : darken(fill, 5)) : fill;
+  const adjustFill = (fill: string) => (isInPast ? pastEventFill(fill) : fill);
   // isInPast is excluded here (falls through to adjustFill) so a past event
   // stays dimmed on hover instead of snapping to full brightness.
   // brighten(fill) is the palette's own hover step.
   const adjustHover = (fill: string) =>
     !isPlaceholder && !isInPast ? brighten(fill) : adjustFill(fill);
-  const { mergedStops, fillStops, bgColor, hoverBgColor, imageVars } =
-    eventCardFill(calendarIdentity, baseColor, adjustFill, adjustHover);
+  const fill = eventCardFill(
+    calendarIdentity,
+    baseColor,
+    adjustFill,
+    adjustHover,
+  );
   // Chosen per-fill (whichever of dark/light reads better across every stop)
   // rather than a fixed color, matching TimedEventCard, so a future
   // fill/darken tweak can't quietly drop the title below 4.5:1.
-  const titleColor = theme.getContrastText(fillStops);
+  const titleColor = theme.getContrastText(fill.fillStops);
 
-  const focusedEdge = useEdgeFocusStore(selectEdgeForEvent(event._id));
-  const focusColorCss = eventFocusColor(focusColor);
-  const edgeFocusShadow = focusedEdge
-    ? eventEdgeFocusShadow(focusedEdge, "horizontal", focusColorCss)
-    : undefined;
-  const eventBoxShadow = joinGridEventBoxShadow(
-    isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
-    edgeFocusShadow,
+  const { focusedEdge, focusColorCss, edgeFocusShadow } = useGridEventEdgeFocus(
+    event._id,
+    focusColor,
+    "horizontal",
   );
 
-  const eventStyle = {
-    "--event-bg": bgColor,
-    "--event-hover-bg": hoverBgColor,
-    ...imageVars,
-    "--event-focus-color": focusColorCss,
-    height: position.height,
-    left: position.left,
-    opacity: gridEventCardOpacity({
-      isHidden,
-      isPlaceholder,
-      guestResponse,
-    }),
-    top: position.top,
-    width: position.width,
-    zIndex: position.zIndex ?? ZIndex.LAYER_1,
-    boxShadow: eventBoxShadow,
-  } as CSSProperties;
-
   const guestResponsePrefix = guestResponseAccessiblePrefix(guestResponse);
-  const baseAccessibleLabel = `${isHidden ? "Hidden " : ""}${guestResponsePrefix}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}`;
   // Fill stays a flat neutral color except on a merged card, whose gradient
-  // paints its calendars; the accent or gradient + this suffix are the only
-  // calendar signal, and the name (never color alone) is what makes it
+  // paints its calendars; the accent or gradient + the label suffix are the
+  // only calendar signal, and the name (never color alone) is what makes it
   // accessible (A9).
-  const edgeFocusSuffix =
-    focusedEdge === "startDate"
-      ? ", editing start date"
-      : focusedEdge === "endDate"
-        ? ", editing end date"
-        : "";
-  const accessibleLabel =
-    (calendarIdentity
-      ? `${baseAccessibleLabel}${calendarAccentAccessibleSuffix(calendarIdentity)}`
-      : baseAccessibleLabel) + edgeFocusSuffix;
+  const accessibleLabel = `${isHidden ? "Hidden " : ""}${guestResponsePrefix}${isRecurring ? "Recurring " : ""}${event.isDemo ? "Sample " : ""}All-day event: ${event.title || "Untitled event"}${gridEventCardLabelSuffix(
+    { calendarIdentity, edgeNoun: "date", focusedEdge },
+  )}`;
 
   return (
     // biome-ignore lint/a11y/useSemanticElements: All-day events are draggable/resizable blocks, not native buttons.
@@ -154,26 +112,31 @@ const AllDayEventCardBase = (
       role="button"
       tabIndex={0}
       title={isHidden ? event.title : undefined}
-      className={cn(
-        "absolute min-h-2.5 overflow-hidden bg-(--event-bg) pr-0.75 pl-1.25 transition-[background-color,filter] duration-260 ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-(--event-hover-bg)",
-        isHidden ? "rounded-full" : "rounded-xs",
-        mergedStops &&
-          "bg-(image:--event-bg-image) hover:bg-(image:--event-hover-bg-image)",
-        {
-          "outline outline-dashed outline-1 outline-text-muted/50":
-            event.isDemo ||
-            guestResponse === "awaiting" ||
-            guestResponse === "tentative",
-        },
-        eventFocusOutlineClass(focusedEdge),
-        isSelected && "focus-visible:outline-none",
-      )}
-      style={eventStyle}
+      className={gridEventCardClassName({
+        focusedEdge,
+        guestResponse,
+        isDemo: event.isDemo,
+        isHidden,
+        isMerged: fill.mergedStops !== null,
+        isSelected,
+      })}
+      style={gridEventCardStyle({
+        boxShadow: joinGridEventBoxShadow(
+          isSelected && GRID_EVENT_SIDEBAR_EDITING_BOX_SHADOW,
+          edgeFocusShadow,
+        ),
+        fill,
+        focusColorCss,
+        guestResponse,
+        isHidden,
+        isPlaceholder,
+        position,
+      })}
       onKeyDown={gridEventCardActivationKeyDown(event, onEventKeyDown)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      {!isHidden && calendarIdentity && !mergedStops && (
+      {!isHidden && calendarIdentity && !fill.mergedStops && (
         <CalendarAccentStripe identity={calendarIdentity} />
       )}
       {!isHidden && (
@@ -192,7 +155,7 @@ const AllDayEventCardBase = (
           </span>
         </div>
       )}
-      {showRepeatIcon && <EventRepeatIcon baseColor={bgColor} />}
+      {showRepeatIcon && <EventRepeatIcon baseColor={fill.bgColor} />}
     </div>
   );
 };

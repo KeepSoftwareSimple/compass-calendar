@@ -1,8 +1,7 @@
 import {
-  DEFAULT_POPUP_REMINDER_MINUTES,
-  type DueEventReminder,
   MAX_NOTIFICATION_LOOKAHEAD_MINUTES,
   notificationKey,
+  notificationKeyStartDate,
   type RemindableEvent,
   selectDueEventReminders,
 } from "@core/notifications/upcoming-event-reminders.util";
@@ -13,13 +12,7 @@ import { type NotificationPort } from "@web/notifications/notification.port";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 
-/** @deprecated Use synced popup offsets; kept for tests and sample copy. */
-export const NOTIFY_LEAD_MINUTES = DEFAULT_POPUP_REMINDER_MINUTES[0]!;
-
 const FIRED_KEY_TTL_HOURS = 24;
-
-/** The subset of a GridEvent this module needs; keeps the logic testable. */
-export type NotifiableEvent = RemindableEvent;
 
 /** The GridEvent fields the notifier reads before deciding to announce. */
 export interface CandidateEvent {
@@ -41,7 +34,7 @@ export interface CandidateEvent {
  */
 export function toNotifiableEvents(
   events: readonly CandidateEvent[],
-): NotifiableEvent[] {
+): RemindableEvent[] {
   return events.flatMap((event) =>
     event._id && !event.isDemo
       ? [
@@ -55,8 +48,6 @@ export function toNotifiableEvents(
       : [],
   );
 }
-
-export { notificationKey };
 
 /**
  * Event query range for the notifier and up-next: today's local day, plus the
@@ -81,15 +72,6 @@ export function notifiableEventQueryRange(now: Dayjs): {
   };
 }
 
-export function selectEventsToNotify(
-  now: Dayjs,
-  events: readonly NotifiableEvent[],
-  firedKeys: ReadonlySet<string>,
-  options?: { allowMissedGrace?: boolean },
-): DueEventReminder[] {
-  return selectDueEventReminders(now, events, firedKeys, options);
-}
-
 /**
  * Drop keys for events that are long past so a tab left open for days does not
  * grow the set without bound.
@@ -101,9 +83,9 @@ export function pruneFiredKeys(
   const cutoff = now.subtract(FIRED_KEY_TTL_HOURS, "hour");
   return new Set(
     [...firedKeys].filter((key) => {
-      const parsedStart = key.split("|")[1];
-      if (!parsedStart) return false;
-      const start = dayjs(parsedStart);
+      const startDate = notificationKeyStartDate(key);
+      if (!startDate) return false;
+      const start = dayjs(startDate);
       // An unparseable key can never match a real event again; drop it.
       return start.isValid() && start.isAfter(cutoff);
     }),
@@ -115,7 +97,7 @@ export function pruneFiredKeys(
  * the first instead of stacking. */
 export function showUpcomingEventNotification(
   port: NotificationPort,
-  event: NotifiableEvent,
+  event: RemindableEvent,
   reminderMinutes: number,
   now: Dayjs = dayjs(),
 ): boolean {
@@ -147,11 +129,11 @@ export function showUpcomingEventNotification(
 export function announceUpcomingEvents(
   port: NotificationPort,
   now: Dayjs,
-  events: readonly NotifiableEvent[],
+  events: readonly RemindableEvent[],
   firedKeys: ReadonlySet<string>,
   options?: { allowMissedGrace?: boolean },
 ): Set<string> {
-  const due = selectEventsToNotify(now, events, firedKeys, options);
+  const due = selectDueEventReminders(now, events, firedKeys, options);
   if (due.length === 0) return new Set(firedKeys);
 
   const announced = pruneFiredKeys(firedKeys, now);
