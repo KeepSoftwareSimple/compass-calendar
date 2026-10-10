@@ -142,6 +142,7 @@ describe("EventForm meeting link switch", () => {
 
     const toggle = screen.getByRole("switch", { name: "Add Google Meet" });
     expect(toggle).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByText("Add Google Meet")).toHaveClass("text-text-muted");
   });
 
   it("labels the switch by the calendar's conference kind, never its provider", () => {

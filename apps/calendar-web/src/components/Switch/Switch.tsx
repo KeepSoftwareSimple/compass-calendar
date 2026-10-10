@@ -15,6 +15,10 @@ export interface SwitchProps
   busy?: boolean;
   disabled?: boolean;
   shortcutKeys?: readonly string[];
+  /** Applied to the outer label + switch row (e.g. `w-full justify-between`). */
+  rowClassName?: string;
+  /** Merged onto the label; defaults to primary `text-text`. */
+  labelClassName?: string;
 }
 
 /**
@@ -30,6 +34,8 @@ export function Switch({
   busy = false,
   disabled = false,
   shortcutKeys,
+  rowClassName,
+  labelClassName,
   className,
   ...props
 }: SwitchProps) {
@@ -42,8 +48,14 @@ export function Switch({
     ) : null;
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="flex items-center gap-1 text-sm text-text" htmlFor={id}>
+    <div className={classNames("flex items-center gap-2", rowClassName)}>
+      <label
+        className={classNames(
+          "flex items-center gap-1 text-sm text-text",
+          labelClassName,
+        )}
+        htmlFor={id}
+      >
         {label}
         {chip}
       </label>

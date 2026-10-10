@@ -87,6 +87,7 @@ import {
   FormActionsRow,
   type FormActionsRowHandle,
 } from "@web/views/Forms/EventForm/FormActionsRow";
+import { FormCardIconRow } from "@web/views/Forms/EventForm/FormCardIconRow";
 import { RsvpControl } from "@web/views/Forms/EventForm/RsvpControl";
 import { SaveSection } from "@web/views/Forms/EventForm/SaveSection/SaveSection";
 import {
@@ -906,29 +907,29 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
               </FormCard>
 
               <FormCard>
-                <div className="flex items-center gap-2">
-                  {location ? (
-                    <a
-                      href={mapsUrlForLocation(location)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Open in Google Maps"
-                      className="shrink-0 text-text-muted hover:text-text"
-                    >
+                <FormCardIconRow
+                  icon={
+                    location ? (
+                      <a
+                        href={mapsUrlForLocation(location)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Open in Google Maps"
+                        className="text-text-muted hover:text-text"
+                      >
+                        <MapPinIcon size={16} />
+                      </a>
+                    ) : (
                       <MapPinIcon size={16} />
-                    </a>
-                  ) : (
-                    <MapPinIcon
-                      size={16}
-                      className="shrink-0 text-text-muted"
-                    />
-                  )}
+                    )
+                  }
+                >
                   <Focusable
                     id={EVENT_FORM_LOCATION_ID}
                     Component="input"
                     className={classNames(
                       INPUT_RESET_CLASSNAME,
-                      "min-w-0 flex-1 bg-transparent text-sm",
+                      "h-auto min-h-0 min-w-0 flex-1 bg-transparent px-0 text-sm text-text",
                     )}
                     disabled={isReadOnly}
                     onChange={onChangeLocation}
@@ -938,20 +939,18 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                     name="Event Location"
                     value={location}
                   />
-                </div>
+                </FormCardIconRow>
                 {conferenceKind && draft.kind === "create" && (
-                  <div className="flex items-center gap-2">
-                    <VideoCameraIcon
-                      size={16}
-                      className="shrink-0 text-text-muted"
-                    />
+                  <FormCardIconRow icon={<VideoCameraIcon size={16} />}>
                     <Switch
                       id={EVENT_FORM_CONFERENCE_ID}
                       checked={draft.values.createConference ?? false}
                       onCheckedChange={onCreateConferenceChange}
                       label={`Add ${CONFERENCE_KIND_LABEL[conferenceKind]}`}
+                      labelClassName="text-text-muted"
+                      rowClassName="w-full justify-between"
                     />
-                  </div>
+                  </FormCardIconRow>
                 )}
               </FormCard>
 
