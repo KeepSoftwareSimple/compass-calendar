@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import {
+  installDeterministicBrowserClock,
   openTimedEventFormWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
@@ -7,6 +8,9 @@ import {
 test("typed 1145 on the end field resolves to 11:45 AM after an 11:30 AM start", async ({
   page,
 }) => {
+  // Start-field parsing picks the meridiem nearest the draft default (wall
+  // clock). Pin before navigation so "11:30" stays AM regardless of CI hour.
+  await installDeterministicBrowserClock(page);
   await prepareCalendarPage(page);
   await openTimedEventFormWithKeyboard(page);
 
