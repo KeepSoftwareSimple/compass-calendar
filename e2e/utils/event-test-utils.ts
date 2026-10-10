@@ -2,6 +2,14 @@ import { expect, type Page } from "@playwright/test";
 
 const LOCAL_DB_NAME = "compass-local";
 
+/** Mid-morning UTC anchor for timed specs that type ambiguous clock times. */
+export const DETERMINISTIC_E2E_CLOCK = new Date("2026-04-24T10:00:00.000Z");
+
+/** Pin the browser clock before navigation so draft defaults and AM/PM inference stay stable. */
+export const installDeterministicBrowserClock = async (page: Page) => {
+  await page.clock.install({ time: DETERMINISTIC_E2E_CLOCK });
+};
+
 // LocalEventRecord (B13) nests the event under `.event`; title lives at
 // `.event.content.title` (kind "details") and the schedule is a discriminated
 // union ("timed"/"allDay" both use start/end) rather than flat
