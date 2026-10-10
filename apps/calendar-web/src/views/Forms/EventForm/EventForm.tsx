@@ -87,7 +87,10 @@ import {
   FormActionsRow,
   type FormActionsRowHandle,
 } from "@web/views/Forms/EventForm/FormActionsRow";
-import { FormCardIconRow } from "@web/views/Forms/EventForm/FormCardIconRow";
+import {
+  FORM_CARD_FIELD_INPUT_CLASSNAME,
+  FormCardIconRow,
+} from "@web/views/Forms/EventForm/FormCardIconRow";
 import { RsvpControl } from "@web/views/Forms/EventForm/RsvpControl";
 import { SaveSection } from "@web/views/Forms/EventForm/SaveSection/SaveSection";
 import {
@@ -927,10 +930,7 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
                   <Focusable
                     id={EVENT_FORM_LOCATION_ID}
                     Component="input"
-                    className={classNames(
-                      INPUT_RESET_CLASSNAME,
-                      "h-auto min-h-0 min-w-0 flex-1 bg-transparent px-0 text-sm text-text",
-                    )}
+                    className={FORM_CARD_FIELD_INPUT_CLASSNAME}
                     disabled={isReadOnly}
                     onChange={onChangeLocation}
                     onKeyDown={handleIgnoredKeys}
