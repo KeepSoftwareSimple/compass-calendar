@@ -181,31 +181,28 @@ const ConfigSchema = z
       }
     }
 
-    if (
-      env.EMAIL_SCHEDULE_PROFILE === "fast" &&
-      !isNonProduction(env.NODE_ENV)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        fatal: true,
-        message:
-          "EMAIL_SCHEDULE_PROFILE fast is not allowed when NODE_ENV is production",
-        path: ["EMAIL_SCHEDULE_PROFILE"],
-      });
-    }
+    const rejectFastScheduleInProduction = (
+      profile: "real" | "fast" | undefined,
+      path: "EMAIL_SCHEDULE_PROFILE" | "EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE",
+    ) => {
+      if (profile === "fast" && !isNonProduction(env.NODE_ENV)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          fatal: true,
+          message: `${path} fast is not allowed when NODE_ENV is production`,
+          path: [path],
+        });
+      }
+    };
 
-    if (
-      env.EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE === "fast" &&
-      !isNonProduction(env.NODE_ENV)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        fatal: true,
-        message:
-          "EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE fast is not allowed when NODE_ENV is production",
-        path: ["EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE"],
-      });
-    }
+    rejectFastScheduleInProduction(
+      env.EMAIL_SCHEDULE_PROFILE,
+      "EMAIL_SCHEDULE_PROFILE",
+    );
+    rejectFastScheduleInProduction(
+      env.EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE,
+      "EMAIL_PREVIEW_LOOP_SCHEDULE_PROFILE",
+    );
   });
 
 export type Config = z.infer<typeof ConfigSchema>;

@@ -1,4 +1,8 @@
-import { normalizeEmail, normalizeEmailOrNull } from "@core/util/email.util";
+import {
+  emailListIncludes,
+  normalizeEmail,
+  normalizeEmailOrNull,
+} from "@core/util/email.util";
 import { describe, expect, it } from "bun:test";
 
 describe("normalizeEmail", () => {
@@ -21,5 +25,16 @@ describe("normalizeEmailOrNull", () => {
     expect(normalizeEmailOrNull(null)).toBeNull();
     expect(normalizeEmailOrNull("")).toBeNull();
     expect(normalizeEmailOrNull("   ")).toBeNull();
+  });
+});
+
+describe("emailListIncludes", () => {
+  it("matches after the same fold as storage", () => {
+    expect(
+      emailListIncludes(["  Founder@Example.com "], "founder@example.com"),
+    ).toBe(true);
+    expect(emailListIncludes(["ada@example.com"], "grace@example.com")).toBe(
+      false,
+    );
   });
 });

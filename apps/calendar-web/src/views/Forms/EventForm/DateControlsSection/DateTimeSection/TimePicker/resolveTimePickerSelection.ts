@@ -1,12 +1,6 @@
-import { YMDHAM_FORMAT } from "@core/constants/date.constants";
-import dayjs from "@core/util/date/dayjs";
 import { type SelectOption } from "@web/common/types/component.types";
 import { type TimeOption } from "@web/common/types/util.types";
-
-const timeValueToMinutes = (timeValue: string): number => {
-  const parsed = dayjs(`2000-01-01 ${timeValue}`, YMDHAM_FORMAT);
-  return parsed.hour() * 60 + parsed.minute();
-};
+import { minutesFromTimeValue } from "@web/common/utils/datetime/web.date.util";
 
 /**
  * react-select's openMenu focuses the selected option via reference equality
@@ -27,10 +21,15 @@ export const resolveTimePickerSelection = (
     return { value: exactMatch, options };
   }
 
-  const valueMinutes = timeValueToMinutes(value.value);
-  const insertAt = options.findIndex(
-    (option) => timeValueToMinutes(option.value) > valueMinutes,
-  );
+  const valueMinutes = minutesFromTimeValue(value.value);
+  const insertAt = options.findIndex((option) => {
+    const optionMinutes = minutesFromTimeValue(option.value);
+    return (
+      valueMinutes !== null &&
+      optionMinutes !== null &&
+      optionMinutes > valueMinutes
+    );
+  });
   const nextOptions =
     insertAt === -1
       ? [...options, value as TimeOption]

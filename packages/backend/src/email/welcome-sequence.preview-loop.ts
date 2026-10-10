@@ -1,5 +1,5 @@
 import { ObjectId, type ObjectId as ObjectIdType } from "mongodb";
-import { normalizeEmail } from "@core/util/email.util";
+import { emailListIncludes, normalizeEmail } from "@core/util/email.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import mongoService from "@backend/common/services/mongo.service";
 import { type EmailSendRecord } from "@backend/email/email-send.record";
@@ -27,10 +27,7 @@ export function isPreviewLoopEnabled(): boolean {
 }
 
 export function isPreviewLoopRecipient(email: string): boolean {
-  const normalized = normalizeEmail(email);
-  return CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS.some(
-    (entry) => normalizeEmail(entry) === normalized,
-  );
+  return emailListIncludes(CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS, email);
 }
 
 export function previewLoopScheduleProfile(): ScheduleProfile {
@@ -76,19 +73,30 @@ export function welcomeUserForSkipIf(
   };
 }
 
-export function previewLoopEmailHash(email: string): string {
+function previewLoopDigest(purpose: "" | "-user", email: string) {
   return createHash("sha256")
-    .update(`compass-email-preview-loop:${normalizeEmail(email)}`)
-    .digest("hex")
-    .slice(0, 16);
+    .update(`compass-email-preview-loop${purpose}:${normalizeEmail(email)}`)
+    .digest();
+}
+
+export function previewLoopEmailHash(email: string): string {
+  return previewLoopDigest("", email).toString("hex").slice(0, 16);
 }
 
 /** Stable user id for preview sends when no Compass account exists yet. */
 export function previewLoopSyntheticUserId(email: string): ObjectIdType {
-  const digest = createHash("sha256")
-    .update(`compass-email-preview-loop-user:${normalizeEmail(email)}`)
-    .digest();
-  return new ObjectId(digest.subarray(0, 12));
+  return new ObjectId(previewLoopDigest("-user", email).subarray(0, 12));
+}
+
+function previewLoopRecipientFilter(
+  email: string,
+  extra: Record<string, unknown> = {},
+) {
+  return {
+    previewLoop: true as const,
+    recipientEmail: normalizeEmail(email),
+    ...extra,
+  };
 }
 
 export function previewLoopRowId(
@@ -127,14 +135,15 @@ async function ensurePreviewLoopUserDocument(
   userId: ObjectIdType,
 ): Promise<void> {
   const normalized = normalizeEmail(email);
+  const firstName = previewFirstNameFromEmail(normalized);
   await mongoService.user.updateOne(
     { _id: userId },
     {
       $setOnInsert: {
         email: normalized,
-        firstName: previewFirstNameFromEmail(normalized),
+        firstName,
         lastName: "",
-        name: previewFirstNameFromEmail(normalized),
+        name: firstName,
         locale: "en",
         signedUpAt: new Date(),
       },
@@ -165,12 +174,12 @@ async function countPreviewLoopSentSince(
   recipientEmail: string,
   since: Date,
 ): Promise<number> {
-  return mongoService.emailSend.countDocuments({
-    previewLoop: true,
-    recipientEmail: normalizeEmail(recipientEmail),
-    status: "sent",
-    sentAt: { $gte: since },
-  });
+  return mongoService.emailSend.countDocuments(
+    previewLoopRecipientFilter(recipientEmail, {
+      status: "sent",
+      sentAt: { $gte: since },
+    }),
+  );
 }
 
 export async function deferPreviewLoopDailyCap(
@@ -193,9 +202,8 @@ export async function isPreviewLoopOverDailyCap(
 async function findLatestPreviewGeneration(
   recipientEmail: string,
 ): Promise<number | null> {
-  const normalized = normalizeEmail(recipientEmail);
   const row = await mongoService.emailSend.findOne(
-    { previewLoop: true, recipientEmail: normalized },
+    previewLoopRecipientFilter(recipientEmail),
     {
       sort: { previewLoopGeneration: -1 },
       projection: { previewLoopGeneration: 1 },
@@ -208,13 +216,12 @@ async function generationHasQueuedRows(
   recipientEmail: string,
   generation: number,
 ): Promise<boolean> {
-  const normalized = normalizeEmail(recipientEmail);
-  const queued = await mongoService.emailSend.findOne({
-    previewLoop: true,
-    recipientEmail: normalized,
-    previewLoopGeneration: generation,
-    status: "queued",
-  });
+  const queued = await mongoService.emailSend.findOne(
+    previewLoopRecipientFilter(recipientEmail, {
+      previewLoopGeneration: generation,
+      status: "queued",
+    }),
+  );
   return queued !== null;
 }
 
@@ -222,13 +229,12 @@ async function generationIsComplete(
   recipientEmail: string,
   generation: number,
 ): Promise<boolean> {
-  const normalized = normalizeEmail(recipientEmail);
   const rows = await mongoService.emailSend
-    .find({
-      previewLoop: true,
-      recipientEmail: normalized,
-      previewLoopGeneration: generation,
-    })
+    .find(
+      previewLoopRecipientFilter(recipientEmail, {
+        previewLoopGeneration: generation,
+      }),
+    )
     .toArray();
   if (rows.length < WELCOME_SEQUENCE.length) {
     return false;
@@ -240,14 +246,11 @@ async function lastSentAtForGeneration(
   recipientEmail: string,
   generation: number,
 ): Promise<Date | null> {
-  const normalized = normalizeEmail(recipientEmail);
   const row = await mongoService.emailSend.findOne(
-    {
-      previewLoop: true,
-      recipientEmail: normalized,
+    previewLoopRecipientFilter(recipientEmail, {
       previewLoopGeneration: generation,
       status: "sent",
-    },
+    }),
     { sort: { sentAt: -1 }, projection: { sentAt: 1 } },
   );
   return row?.sentAt ?? null;

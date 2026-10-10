@@ -11,6 +11,7 @@ import { track } from "@web/auth/posthog/track";
 import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { type NotificationPort } from "@web/notifications/notification.port";
 import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
+import { dayEventQueryRange } from "@web/views/Day/util/day-window.util";
 
 /** @deprecated Use synced popup offsets; kept for tests and sample copy. */
 export const NOTIFY_LEAD_MINUTES = DEFAULT_POPUP_REMINDER_MINUTES[0]!;
@@ -68,8 +69,9 @@ export function notifiableEventQueryRange(now: Dayjs): {
   startDate: string;
   endDate: string;
 } {
+  const { startDate } = dayEventQueryRange(now);
   return {
-    startDate: toUTCOffset(now.startOf("day")),
+    startDate,
     endDate: toUTCOffset(
       now
         .startOf("day")
@@ -99,10 +101,8 @@ export function pruneFiredKeys(
   const cutoff = now.subtract(FIRED_KEY_TTL_HOURS, "hour");
   return new Set(
     [...firedKeys].filter((key) => {
-      const startDate = key.slice(key.indexOf("|") + 1);
-      const pipeAfterStart = startDate.indexOf("|");
-      const parsedStart =
-        pipeAfterStart >= 0 ? startDate.slice(0, pipeAfterStart) : startDate;
+      const parsedStart = key.split("|")[1];
+      if (!parsedStart) return false;
       const start = dayjs(parsedStart);
       // An unparseable key can never match a real event again; drop it.
       return start.isValid() && start.isAfter(cutoff);

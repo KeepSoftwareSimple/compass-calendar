@@ -246,29 +246,31 @@ const CompassConfigSchema = z
       }
     }
 
-    if (
-      email?.scheduleProfile === "fast" &&
-      !isNonProduction(config.runtime.nodeEnv as NodeEnv)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "email.scheduleProfile fast is not allowed when runtime.nodeEnv is production",
-        path: ["email", "scheduleProfile"],
-      });
-    }
+    const rejectFastScheduleInProduction = (
+      profile: "real" | "fast" | undefined,
+      path: Array<string | number>,
+    ) => {
+      if (
+        profile === "fast" &&
+        !isNonProduction(config.runtime.nodeEnv as NodeEnv)
+      ) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${path.join(".")} fast is not allowed when runtime.nodeEnv is production`,
+          path,
+        });
+      }
+    };
 
-    if (
-      email?.previewLoop?.scheduleProfile === "fast" &&
-      !isNonProduction(config.runtime.nodeEnv as NodeEnv)
-    ) {
-      context.addIssue({
-        code: z.ZodIssueCode.custom,
-        message:
-          "email.previewLoop.scheduleProfile fast is not allowed when runtime.nodeEnv is production",
-        path: ["email", "previewLoop", "scheduleProfile"],
-      });
-    }
+    rejectFastScheduleInProduction(email?.scheduleProfile, [
+      "email",
+      "scheduleProfile",
+    ]);
+    rejectFastScheduleInProduction(email?.previewLoop?.scheduleProfile, [
+      "email",
+      "previewLoop",
+      "scheduleProfile",
+    ]);
   });
 
 export type CompassConfig = z.infer<typeof CompassConfigSchema>;

@@ -1,5 +1,5 @@
 import { Logger } from "@core/logger/winston.logger";
-import { normalizeEmail } from "@core/util/email.util";
+import { emailListIncludes } from "@core/util/email.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { emailAnalytics } from "@backend/email/email.analytics";
 import {
@@ -49,11 +49,7 @@ const sleep = (ms: number): Promise<void> =>
 
 const isAllowlistedRecipient = (email: string): boolean => {
   const allowlist = CONFIG.EMAIL_ALLOWLIST;
-  if (allowlist.length === 0) {
-    return true;
-  }
-  const normalized = normalizeEmail(email);
-  return allowlist.some((entry) => normalizeEmail(entry) === normalized);
+  return allowlist.length === 0 || emailListIncludes(allowlist, email);
 };
 
 const errorMessage = (error: unknown): string =>
