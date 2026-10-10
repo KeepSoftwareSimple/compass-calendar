@@ -22,16 +22,25 @@ public enum DayCalendarColumnDisplayName {
         )
     }
 
-    public static func emailDomainStem(_ domain: String) -> String {
-        let parts = domain
+    private static func domainParts(_ domain: String) -> [String] {
+        domain
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
             .split(separator: ".")
             .map(String.init)
+    }
+
+    public static func emailDomainStem(_ domain: String) -> String {
+        let parts = domainParts(domain)
         guard parts.count >= 2, let tld = parts.last, tld.count <= 3 else {
             return parts.first ?? domain
         }
         return parts[parts.count - 2]
+    }
+
+    private static func emailDomainHint(_ domain: String) -> String {
+        let parts = domainParts(domain)
+        return parts.count >= 3 ? parts[0] : emailDomainStem(domain)
     }
 
     public static func defaultDisplayName(_ name: String) -> String {
@@ -43,39 +52,36 @@ public enum DayCalendarColumnDisplayName {
 
     public static func displayNames(for names: [String]) -> [String] {
         let emails = names.map { parseEmail($0) }
-        var labels = names.map { defaultDisplayName($0) }
-
-        var duplicates = duplicateKeys(in: labels)
-        if duplicates.isEmpty {
-            return labels
+        let afterStem = remapColliding(
+            labels: names.map { defaultDisplayName($0) },
+            emails: emails
+        ) { email in
+            emailDomainStem(email.domain)
         }
+        if !afterStem.stillColliding {
+            return afterStem.labels
+        }
+        return remapColliding(labels: afterStem.labels, emails: emails) { email in
+            "\(email.local)@\(emailDomainHint(email.domain))"
+        }.labels
+    }
 
-        labels = labels.enumerated().map { index, label in
+    private static func remapColliding(
+        labels: [String],
+        emails: [EmailParts?],
+        nextLabel: (EmailParts) -> String
+    ) -> (labels: [String], stillColliding: Bool) {
+        let duplicates = duplicateKeys(in: labels)
+        if duplicates.isEmpty {
+            return (labels, false)
+        }
+        let remapped = labels.enumerated().map { index, label in
             guard duplicates.contains(label), let email = emails[index] else {
                 return label
             }
-            return emailDomainStem(email.domain)
+            return nextLabel(email)
         }
-
-        duplicates = duplicateKeys(in: labels)
-        if duplicates.isEmpty {
-            return labels
-        }
-
-        return labels.enumerated().map { index, label in
-            guard duplicates.contains(label), let email = emails[index] else {
-                return label
-            }
-            let domainParts = email.domain
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-                .lowercased()
-                .split(separator: ".")
-                .map(String.init)
-            let domainHint = domainParts.count >= 3
-                ? domainParts[0]
-                : emailDomainStem(email.domain)
-            return "\(email.local)@\(domainHint)"
-        }
+        return (remapped, !duplicateKeys(in: remapped).isEmpty)
     }
 
     public static func format(_ name: String) -> String {

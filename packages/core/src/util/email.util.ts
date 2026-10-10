@@ -23,3 +23,12 @@ export const normalizeEmailOrNull = (
   const normalized = normalizeEmail(email);
   return normalized.length > 0 ? normalized : null;
 };
+
+/** True when `email` matches any entry after the same fold as storage. */
+export const emailListIncludes = (
+  list: readonly string[],
+  email: string,
+): boolean => {
+  const normalized = normalizeEmail(email);
+  return list.some((entry) => normalizeEmail(entry) === normalized);
+};

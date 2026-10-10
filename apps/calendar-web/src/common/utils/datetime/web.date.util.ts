@@ -104,11 +104,14 @@ export type ParseUserTimeOptions = {
   role?: "start" | "end";
 };
 
-const timeValueToMinutes = (timeValue: string): number | null => {
+export const minutesFromTimeValue = (timeValue: string): number | null => {
   const parsed = getDayjsByTimeValue(timeValue);
   if (!parsed.isValid()) return null;
   return parsed.hour() * 60 + parsed.minute();
 };
+
+const minutesFromOptional = (timeValue?: string): number | null =>
+  timeValue ? minutesFromTimeValue(timeValue) : null;
 
 const ambiguousCandidates = (hour: number, minute: number): number[] => {
   if (hour === 12) {
@@ -152,35 +155,26 @@ const resolveAmbiguousMinutes = (
   options: ParseUserTimeOptions,
 ): number => {
   const candidates = ambiguousCandidates(hour, minute);
+  const complementaryMinutes = minutesFromOptional(options.complementaryValue);
+  const currentMinutes = minutesFromOptional(options.currentValue);
+  const fallback = hour === 12 ? 12 * 60 + minute : hour * 60 + minute;
 
-  if (options.role === "end" && options.complementaryValue) {
-    const reference = timeValueToMinutes(options.complementaryValue);
-    if (reference !== null) {
-      return pickEarliestAfterReference(candidates, reference);
-    }
+  if (options.role === "end" && complementaryMinutes !== null) {
+    return pickEarliestAfterReference(candidates, complementaryMinutes);
   }
 
   if (options.role === "start") {
     let pool = candidates;
-    if (options.complementaryValue) {
-      const endMinutes = timeValueToMinutes(options.complementaryValue);
-      if (endMinutes !== null) {
-        const beforeEnd = candidates.filter(
-          (candidate) => candidate < endMinutes,
-        );
-        if (beforeEnd.length > 0) {
-          pool = beforeEnd;
-        }
+    if (complementaryMinutes !== null) {
+      const beforeEnd = candidates.filter(
+        (candidate) => candidate < complementaryMinutes,
+      );
+      if (beforeEnd.length > 0) {
+        pool = beforeEnd;
       }
     }
 
-    const reference =
-      (options.currentValue
-        ? timeValueToMinutes(options.currentValue)
-        : null) ??
-      (options.complementaryValue
-        ? timeValueToMinutes(options.complementaryValue)
-        : null);
+    const reference = currentMinutes ?? complementaryMinutes;
     if (reference !== null) {
       return pickNearestToReference(pool, reference);
     }
@@ -192,11 +186,11 @@ const resolveAmbiguousMinutes = (
       const currentIsPM = current.hour() >= 12;
       if (currentIsPM && hour !== 12) return (hour + 12) * 60 + minute;
       if (!currentIsPM && hour === 12) return minute;
-      return hour * 60 + minute;
+      return fallback;
     }
   }
 
-  return hour === 12 ? 12 * 60 + minute : hour * 60 + minute;
+  return fallback;
 };
 
 const minutesToClock = (minutes: number): { hour: number; minute: number } => ({

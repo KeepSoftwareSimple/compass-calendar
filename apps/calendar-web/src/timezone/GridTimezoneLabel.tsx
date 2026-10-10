@@ -12,7 +12,7 @@ import { timezoneDialogActions } from "@web/timezone/timezone-dialog.store";
 
 const BROWSER_ZONE_POLL_MS = 60_000;
 
-const travelingLabelClassName =
+const timezoneAbbrevClassName =
   "c-focus-ring min-h-6 truncate rounded-sm px-0.5 text-center text-[10px] text-text-muted leading-none hover:text-text";
 
 /**
@@ -36,11 +36,12 @@ export const GridTimezoneLabel = () => {
     return () => clearInterval(id);
   }, []);
 
-  const abbreviation = formatTimeZoneAbbreviation(timeZone, now.toDate());
+  const clock = now.toDate();
+  const abbreviation = formatTimeZoneAbbreviation(timeZone, clock);
   const openTimeTravel = () => timezoneDialogActions.open("time-travel");
   const isTraveling = timeTravelZone !== null;
   const travelAbbreviation = isTraveling
-    ? formatTimeZoneAbbreviation(timeTravelZone, now.toDate())
+    ? formatTimeZoneAbbreviation(timeTravelZone, clock)
     : null;
 
   return (
@@ -56,7 +57,7 @@ export const GridTimezoneLabel = () => {
         <SecondaryTimezoneExitHint key={timeTravelZone}>
           <button
             aria-label={`Second timezone: ${travelAbbreviation}`}
-            className={travelingLabelClassName}
+            className={timezoneAbbrevClassName}
             onClick={openTimeTravel}
             style={{ width: GRID_TIME_COLUMN_WIDTH }}
             type="button"
@@ -69,8 +70,8 @@ export const GridTimezoneLabel = () => {
         aria-label={`Calendar timezone: ${abbreviation}`}
         className={
           isTraveling
-            ? travelingLabelClassName
-            : "c-focus-ring min-h-6 w-full max-w-full truncate rounded-sm px-0.5 text-center text-[10px] text-text-muted leading-none hover:text-text"
+            ? timezoneAbbrevClassName
+            : `${timezoneAbbrevClassName} w-full max-w-full`
         }
         onClick={openTimeTravel}
         style={isTraveling ? { width: GRID_TIME_COLUMN_WIDTH } : undefined}
