@@ -57,7 +57,7 @@
         "@floating-ui/react": "^0.27.20",
         "@phosphor-icons/react": "^2.1.7",
         "@react-oauth/google": "^0.13.5",
-        "@stripe/react-stripe-js": "6.12.0",
+        "@stripe/react-stripe-js": "7.0.0",
         "@stripe/stripe-js": "9.17.0",
         "@tanstack/react-hotkeys": "0.13.0",
         "@tanstack/react-query": "^5",
@@ -608,7 +608,7 @@
 
     "@solid-primitives/utils": ["@solid-primitives/utils@6.4.1", "", { "peerDependencies": { "solid-js": "^1.6.12" } }, "sha512-ISSB5QX1qP2ynrheIpYwc4oKR5Ny4siNuUyf1qZniy+Il+p/PtDB0QK1Dnle8noiHpwRD3gpPdubOC3qI/Zamg=="],
 
-    "@stripe/react-stripe-js": ["@stripe/react-stripe-js@6.12.0", "", { "dependencies": { "prop-types": "^15.7.2" }, "peerDependencies": { "@stripe/stripe-js": ">=9.16.0 <10.0.0", "react": ">=16.8.0 <20.0.0", "react-dom": ">=16.8.0 <20.0.0" } }, "sha512-5RVfx92MTb66+ELuQTreUqX2oFvma5wybZ7MaifoNo0QgrjbJiLZcysGw5kIHU7p1TCd1Lx5JnasoqteSwlUsg=="],
+    "@stripe/react-stripe-js": ["@stripe/react-stripe-js@7.0.0", "", { "dependencies": { "prop-types": "^15.7.2" }, "peerDependencies": { "@stripe/stripe-js": ">=10.0.0 <11.0.0", "react": ">=16.8.0 <20.0.0", "react-dom": ">=16.8.0 <20.0.0" } }, "sha512-wKw6YM0p/IpGj7hcwdJL7UAb7s0hlO8kLJIXn0CezewYILQ8j/A7j55EHuHHjF6dV+cr4yZhbhg4QLRjovfM4A=="],
 
     "@stripe/stripe-js": ["@stripe/stripe-js@9.17.0", "", {}, "sha512-uidL4OJum5kivsOAQnVfQmYLJ2zdgirtmT0zWgskASZ4TPXxpXQ0MNrzW4NsXB90uEqmPHpSEtciLFbF1QQvNA=="],
 
@@ -1664,13 +1664,9 @@
 
     "slash": ["slash@3.0.0", "", {}, "sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q=="],
 
-    "smart-buffer": ["smart-buffer@4.2.0", "", {}, "sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg=="],
-
     "smol-toml": ["smol-toml@1.9.0", "", {}, "sha512-hpd+HLON7HdZXqYchMM/+LaTTbdK0AU3NngIJ4KVyWbY9bfQqdL9cD+4yf6dUoU2Ap4VsU0JkQi6FxAI1B2mXQ=="],
 
     "snappy": ["snappy@7.4.3", "", { "optionalDependencies": { "@napi-rs/snappy-android-arm-eabi": "7.4.3", "@napi-rs/snappy-android-arm64": "7.4.3", "@napi-rs/snappy-darwin-arm64": "7.4.3", "@napi-rs/snappy-darwin-x64": "7.4.3", "@napi-rs/snappy-freebsd-x64": "7.4.3", "@napi-rs/snappy-linux-arm-gnueabihf": "7.4.3", "@napi-rs/snappy-linux-arm64-gnu": "7.4.3", "@napi-rs/snappy-linux-arm64-musl": "7.4.3", "@napi-rs/snappy-linux-ppc64-gnu": "7.4.3", "@napi-rs/snappy-linux-riscv64-gnu": "7.4.3", "@napi-rs/snappy-linux-s390x-gnu": "7.4.3", "@napi-rs/snappy-linux-x64-gnu": "7.4.3", "@napi-rs/snappy-linux-x64-musl": "7.4.3", "@napi-rs/snappy-openharmony-arm64": "7.4.3", "@napi-rs/snappy-win32-arm64-msvc": "7.4.3", "@napi-rs/snappy-win32-ia32-msvc": "7.4.3", "@napi-rs/snappy-win32-x64-msvc": "7.4.3" } }, "sha512-oP0N73t0urt9niE9PAoj8eV7SDXkCWB76oWkPbGmIJ70L4nBes66hZxRhVtOBQG1uJXkmLhs6yTxyW/I8XAeHQ=="],
-
-    "socks": ["socks@2.8.7", "", { "dependencies": { "ip-address": "^10.0.1", "smart-buffer": "^4.2.0" } }, "sha512-HLpt+uLy/pxB+bum/9DzAgiKS8CX1EvbWxI4zlmgGCExImLdiad2iCwXT5Z4c9c3Eq8rP2318mPW2c+QbtjK8A=="],
 
     "solid-js": ["solid-js@1.9.15", "", { "dependencies": { "csstype": "^3.1.0", "seroval": "~1.5.4", "seroval-plugins": "~1.5.4" } }, "sha512-EeiY2xfpZJqPLjXspVEKjAII4yv8NyG//NxZ3IpOFHdUNnnTyL0uJOeS9LWGvA7cFCz5y94cjFwYlmw5Luncsg=="],
 
