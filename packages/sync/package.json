@@ -8,8 +8,8 @@
     "@compass/core": "1.0.0",
     "@googleapis/calendar": "^20.1.0",
     "@googleapis/people": "^8.0.0",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.7.0",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
     "fast-xml-parser": "^5.11.2",
     "google-auth-library": "^11.1.0",
     "ical.js": "^2.2.1",
@@ -17,12 +17,12 @@
     "mongodb": "^7.7.0",
     "rrule": "^2.7.2",
     "tslib": "^2.4.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.5.0",
     "@types/express": "^5.0.6",
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "mongodb-memory-server": "^11.3.0"
   }
 }

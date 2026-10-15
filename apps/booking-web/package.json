@@ -16,11 +16,11 @@
     "@phosphor-icons/react": "^2.1.7",
     "@tanstack/react-hotkeys": "0.13.0",
     "@tanstack/react-query": "^5",
-    "@tanstack/react-router": "1.170.41",
-    "posthog-js": "^1.435.8",
+    "@tanstack/react-router": "1.170.42",
+    "posthog-js": "^1.438.7",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^5.16.5",
@@ -29,7 +29,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^18.0.3",
     "@types/testing-library__jest-dom": "^5.9.1",
-    "bun-types": "^1.4.2",
+    "bun-types": "^1.4.3",
     "jsdom": "^26.1.0",
     "msw": "^2.7.0",
     "typescript": "^7.0.2"
