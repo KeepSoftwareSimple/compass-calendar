@@ -6,6 +6,7 @@ public struct CommandPaletteOverlay: View {
     public var model: NativeCalendarRootModel
     @Bindable private var paletteStore: CommandPaletteStore
     @FocusState private var searchFocused: Bool
+    @State private var resultsHeight: CGFloat = 360
 
     public init(model: NativeCalendarRootModel) {
         self.model = model
@@ -34,7 +35,7 @@ public struct CommandPaletteOverlay: View {
 
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(alignment: .leading, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 if sections.isEmpty {
                                     Text("No results for “\(paletteStore.query)”")
                                         .foregroundStyle(theme.textMutedColor)
@@ -52,8 +53,14 @@ public struct CommandPaletteOverlay: View {
                                     }
                                 }
                             }
+                            .background {
+                                GeometryReader { geometry in
+                                    Color.clear.preference(key: PaletteResultsHeightKey.self, value: geometry.size.height)
+                                }
+                            }
                         }
-                        .frame(maxHeight: 360)
+                        .frame(height: min(resultsHeight, 360))
+                        .onPreferenceChange(PaletteResultsHeightKey.self) { resultsHeight = $0 }
                         .onChange(of: selectedId) { _, id in
                             if let id { proxy.scrollTo(id, anchor: .center) }
                         }
@@ -116,5 +123,13 @@ public struct CommandPaletteOverlay: View {
         .accessibilityValue(selected ? "Selected" : "Not selected")
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityIdentifier("compass-native-palette-item-\(item.id)")
+    }
+}
+
+private struct PaletteResultsHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat { 360 }
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }

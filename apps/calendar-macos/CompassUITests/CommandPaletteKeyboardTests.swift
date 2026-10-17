@@ -34,6 +34,25 @@ final class CommandPaletteKeyboardTests: XCTestCase {
     }
 
     @MainActor
+    func testPaletteFitsShortResultsAndExpandsWhenCleared() {
+        let app = XCUIApplication.compassUITest()
+        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
+        app.launch()
+        let window = app.windows["Compass"]
+        window.typeKey("k", modifierFlags: [.command])
+        let palette = window.descendants(matching: .any)["compass-native-command-palette"]
+        let search = window.textFields["compass-native-command-palette-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 8))
+        let fullHeight = palette.frame.height
+        search.typeText("create")
+        XCTAssertTrue(window.buttons["compass-native-palette-item-create-event"].exists)
+        XCTAssertLessThan(palette.frame.height, fullHeight)
+        search.typeKey("a", modifierFlags: [.command])
+        search.typeKey(.delete, modifierFlags: [])
+        XCTAssertEqual(palette.frame.height, fullHeight, accuracy: 1)
+    }
+
+    @MainActor
     func testFileNewEventOpensTheNativeForm() {
         let app = XCUIApplication.compassUITest()
         app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
