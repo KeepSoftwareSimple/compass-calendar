@@ -147,7 +147,13 @@ extension NativeCalendarRootModel {
     }
 
     func focusPaletteEvent(eventId: String) {
-        guard let event = loadedEvents.first(where: { $0.id.rawValue == eventId }) else { return }
+        guard let event = paletteEventSearchEvents[eventId]
+            ?? loadedEvents.first(where: { $0.id.rawValue == eventId }) else { return }
+        if paletteEventSearchEvents[eventId] != nil {
+            loadedEvents.removeAll { $0.id == event.id }
+            loadedEvents.append(event)
+        }
+        if viewStore.view == .life { viewStore.view = .week }
         if case .timed(let timed) = event.schedule,
            let start = CompassDateParsing.parseInEffectiveTimeZone(timed.start.rawValue)
         {
@@ -164,9 +170,11 @@ extension NativeCalendarRootModel {
     public func toggleCommandPalette(fromGoToDate: Bool = false) {
         if commandPaletteStore.isOpen {
             commandPaletteStore.close()
+            resetPaletteEventSearch()
             return
         }
         shortcutsLegendStore.close()
+        resetPaletteEventSearch()
         commandPaletteStore.open()
         if fromGoToDate {
             recordShortcut(.navGoToDate)
@@ -190,18 +198,13 @@ extension NativeCalendarRootModel {
 
     public func schedulePaletteEventSearch() {
         let query = commandPaletteStore.query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard query.count >= EventTitleSearch.minQueryLength else {
-            setPaletteEventSearchHits([])
-            return
-        }
-        paletteSearchTask?.cancel()
+        resetPaletteEventSearch()
+        guard query.count >= EventTitleSearch.minQueryLength else { return }
         let revision = sessionRevision
         paletteSearchTask = Task { [weak self] in
             guard let self else { return }
             let local = paletteEventHits(query: query)
-            await MainActor.run {
-                self.setPaletteEventSearchHits(local)
-            }
+            self.setPaletteEventSearchHits(local)
             guard isSignedIn, !Task.isCancelled else { return }
             let window = EventTitleSearch.searchWindow(now: referenceNow)
             let range = DateRange(start: window.start, end: window.end)
@@ -213,17 +216,27 @@ extension NativeCalendarRootModel {
             do {
                 let remoteEvents = try await environment.apiClient.events.list(listQuery)
                 guard revision == sessionRevision, isSignedIn, !Task.isCancelled else { return }
-                let remoteHits = EventTitleSearch.search(
-                    events: remoteEvents,
-                    query: query,
-                    now: referenceNow,
-                    limit: EventTitleSearch.paletteLimit)
-                    .compactMap(paletteHit(from:))
-                await MainActor.run {
-                    self.setPaletteEventSearchHits(mergePaletteHits(local: local, remote: remoteHits))
-                }
+                self.acceptPaletteSearchResults(remoteEvents, query: query)
             } catch {}
         }
+    }
+
+    func resetPaletteEventSearch() {
+        paletteSearchTask?.cancel()
+        paletteSearchTask = nil
+        paletteEventSearchEvents = [:]
+        setPaletteEventSearchHits([])
+    }
+
+    func acceptPaletteSearchResults(_ events: [Event], query: String) {
+        guard commandPaletteStore.isOpen,
+              query == commandPaletteStore.query.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+        let matches = EventTitleSearch.search(events: events, query: query,
+            now: referenceNow, limit: EventTitleSearch.paletteLimit)
+        paletteEventSearchEvents = Dictionary(matches.map { ($0.id.rawValue, $0) },
+            uniquingKeysWith: { _, latest in latest })
+        let hits = matches.compactMap(paletteHit(from:))
+        setPaletteEventSearchHits(mergePaletteHits(local: paletteEventHits(query: query), remote: hits))
     }
 
     private func mergePaletteHits(
