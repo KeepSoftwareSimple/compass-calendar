@@ -23,6 +23,7 @@ public struct QuickAddView: View {
                     model.syncQuickAddQuery(newValue)
                 }
             )
+            .disabled(model.isSavingQuickAdd)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(theme.surfacePanelColor)
@@ -31,8 +32,13 @@ public struct QuickAddView: View {
                     .stroke(theme.borderColor, lineWidth: 1)
             )
 
-            if !model.draftStore.quickTimeDigits.isEmpty {
-                Text(quickTimeStatus(model.draftStore.quickTimeDigits))
+            if let error = model.quickAddError {
+                Text(error)
+                    .font(.rubik(12))
+                    .foregroundStyle(theme.errorColor)
+                    .accessibilityIdentifier("compass-native-quick-add-error")
+            } else if !model.quickAddTimeDigits.isEmpty {
+                Text(quickTimeStatus(model.quickAddTimeDigits))
                     .font(.rubik(12))
                     .foregroundStyle(theme.textMutedColor)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -44,9 +50,11 @@ public struct QuickAddView: View {
         .background(theme.backgroundColor)
         .accessibilityIdentifier("compass-native-quick-add-panel")
         .onAppear {
+            model.beginQuickAddPanelSession()
             query = ""
             shouldFocusField = true
         }
+        .onDisappear { model.cancelQuickAddPanelSession() }
     }
 
     private func quickTimeStatus(_ digits: String) -> String {

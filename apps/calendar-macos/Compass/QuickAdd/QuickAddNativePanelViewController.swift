@@ -5,7 +5,7 @@ import CompassUI
 @MainActor
 final class QuickAddNativePanelViewController: NSViewController {
     private let model: NativeCalendarRootModel
-    private let theme: NativeWebTheme
+    private var theme: NativeWebTheme
     private let onSubmit: () -> Void
 
     private let queryField = NSTextField()
@@ -68,15 +68,40 @@ final class QuickAddNativePanelViewController: NSViewController {
         view.window?.makeFirstResponder(queryField)
     }
 
-    func applyTheme() {
-        view.layer?.backgroundColor = NSColor(theme.backgroundColor).cgColor
-        queryField.backgroundColor = NSColor(theme.surfacePanelColor)
-        queryField.textColor = NSColor(theme.textColor)
-        hintField.textColor = NSColor(theme.textMutedColor)
+    func applyTheme(_ theme: NativeWebTheme? = nil) {
+        if let theme { self.theme = theme }
+        view.layer?.backgroundColor = NSColor(self.theme.backgroundColor).cgColor
+        queryField.backgroundColor = NSColor(self.theme.surfacePanelColor)
+        queryField.textColor = NSColor(self.theme.textColor)
+        hintField.textColor = NSColor(self.theme.textMutedColor)
+        if model.isSavingQuickAdd {
+            hintField.stringValue = "Saving…"
+        } else {
+            syncHint()
+        }
+    }
+
+    func setSubmitting(_ submitting: Bool) {
+        queryField.isEnabled = !submitting
+        if submitting {
+            hintField.isHidden = false
+            hintField.textColor = NSColor(theme.textMutedColor)
+            hintField.stringValue = "Saving…"
+        } else {
+            syncHint()
+            if view.window?.isKeyWindow == true { view.window?.makeFirstResponder(queryField) }
+        }
     }
 
     private func syncHint() {
-        let digits = model.draftStore.quickTimeDigits
+        if let error = model.quickAddError {
+            hintField.isHidden = false
+            hintField.textColor = NSColor(theme.errorColor)
+            hintField.stringValue = error
+            return
+        }
+        hintField.textColor = NSColor(theme.textMutedColor)
+        let digits = model.quickAddTimeDigits
         if digits.isEmpty {
             hintField.isHidden = true
             hintField.stringValue = ""
@@ -110,6 +135,7 @@ extension QuickAddNativePanelViewController: NSTextFieldDelegate {
 
     func commitQueryToModel() {
         model.syncQuickAddQuery(queryField.stringValue)
+        syncHint()
     }
 
     func currentQueryText() -> String {

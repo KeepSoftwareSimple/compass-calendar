@@ -15,6 +15,7 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     /// Menu actions resign key to the main window right after opening the panel. UI tests keep the panel key via `UITestLaunchPolicy`.
     private var suppressResignKeyHideUntil: Date?
     private var isSubmittingNativeQuickAdd = false
+    private var nativePresentationGeneration = 0
 
     private var nativeModel: () -> NativeCalendarRootModel? = { nil }
 
@@ -32,11 +33,20 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
 
     func show() {
         guard nativeModel() != nil else { return }
+        if isVisible {
+            nativePanelController?.applyTheme(NativeUIThemePreference.load())
+            panel?.makeKey()
+            return
+        }
+        nativePresentationGeneration += 1
+        isSubmittingNativeQuickAdd = false
         if panel == nil || nativePanelController == nil {
             buildNativePanel()
         }
         guard let panel else { return }
         nativeModel()?.beginQuickAddPanelSession()
+        nativePanelController?.applyTheme(NativeUIThemePreference.load())
+        nativePanelController?.setSubmitting(false)
         previousApp = NSWorkspace.shared.frontmostApplication
         suppressResignKeyHideUntil = Date().addingTimeInterval(0.6)
         panel.center()
@@ -54,6 +64,8 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     func hide() {
         guard isVisible else { return }
         isVisible = false
+        nativePresentationGeneration += 1
+        isSubmittingNativeQuickAdd = false
         removeEscapeMonitor()
         removeReturnMonitor()
         nativeModel()?.cancelQuickAddPanelSession()
@@ -98,13 +110,21 @@ final class QuickAddPanelController: NSObject, NSWindowDelegate {
     }
 
     private func submitNativeQuickAdd() async {
-        guard !isSubmittingNativeQuickAdd, let model = nativeModel() else { return }
+        guard isVisible, !isSubmittingNativeQuickAdd, let model = nativeModel() else { return }
+        let generation = nativePresentationGeneration
         isSubmittingNativeQuickAdd = true
-        defer { isSubmittingNativeQuickAdd = false }
+        defer {
+            if generation == nativePresentationGeneration {
+                isSubmittingNativeQuickAdd = false
+                nativePanelController?.setSubmitting(false)
+            }
+        }
         let submitTitle = nativePanelController?.currentQueryText()
         nativePanelController?.commitQueryToModel()
-        await model.saveQuickAddFromPanel(submitTitle: submitTitle)
-        quickAddRouter?.dismissQuickAddPanel()
+        nativePanelController?.setSubmitting(true)
+        let saved = await model.saveQuickAddFromPanel(submitTitle: submitTitle)
+        guard generation == nativePresentationGeneration, isVisible else { return }
+        if saved { quickAddRouter?.dismissQuickAddPanel() }
     }
 
     private func installEscapeMonitor() {
