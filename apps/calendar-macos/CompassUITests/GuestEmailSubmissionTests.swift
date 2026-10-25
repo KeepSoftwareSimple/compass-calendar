@@ -10,6 +10,7 @@ final class GuestEmailSubmissionTests: XCTestCase {
         ]
         app.launch()
         let window = app.windows["Compass"]
+        XCTAssertTrue(window.buttons["Morning standup"].waitForExistence(timeout: 8))
         window.typeKey("c", modifierFlags: [])
         let form = window.descendants(matching: .any)["compass-event-form"].firstMatch
         XCTAssertTrue(form.waitForExistence(timeout: 8))
