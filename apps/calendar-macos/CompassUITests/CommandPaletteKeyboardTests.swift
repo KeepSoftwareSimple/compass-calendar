@@ -2,6 +2,26 @@ import XCTest
 
 final class CommandPaletteKeyboardTests: XCTestCase {
     @MainActor
+    func testEscapeFromSearchClosesPaletteAndReleasesKeyboard() {
+        for theme in ["light-beach", "dark-abyss"] {
+            let app = XCUIApplication.compassUITest()
+            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme]
+            app.launch()
+            let window = app.windows["Compass"]
+            window.typeKey("k", modifierFlags: [.command])
+            let search = window.textFields["compass-native-command-palette-search"]
+            XCTAssertTrue(search.waitForExistence(timeout: 8))
+            search.typeText("today")
+            search.typeKey(.escape, modifierFlags: [])
+            let palette = window.descendants(matching: .any)["compass-native-command-palette"]
+            XCTAssertTrue(palette.waitForNonExistence(timeout: 5))
+            window.typeKey("?", modifierFlags: [])
+            XCTAssertTrue(window.groups["compass-native-shortcuts-panel"].waitForExistence(timeout: 5))
+            app.terminate()
+        }
+    }
+
+    @MainActor
     func testBackdropClickClosesPalette() {
         for theme in ["light-beach", "dark-abyss"] {
             let app = XCUIApplication.compassUITest()

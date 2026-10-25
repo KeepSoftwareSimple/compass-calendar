@@ -12,6 +12,7 @@ final class ClientPolishUITests: XCTestCase {
         XCTAssertTrue(palette.waitForExistence(timeout: 5))
         let width = palette.frame.width
         window.typeKey(.escape, modifierFlags: [])
+        XCTAssertTrue(palette.waitForNonExistence(timeout: 5))
         window.typeKey("?", modifierFlags: [])
         let helper = window.groups["compass-native-shortcuts-panel"]
         XCTAssertTrue(helper.waitForExistence(timeout: 5))
