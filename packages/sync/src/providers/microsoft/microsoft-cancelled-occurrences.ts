@@ -32,17 +32,14 @@ function seriesRecurrenceZone(item: CancelledOccurrenceMasterContext): string {
   return toIanaTimeZone(raw);
 }
 
+/** Wall-clock time of the series master occurrence in the recurrence zone. */
 function masterOccurrenceClock(
   item: CancelledOccurrenceMasterContext,
   schedule: EventSchedule,
 ): string | null {
   if (schedule.kind !== "timed") return null;
-  if (item.start?.dateTime) {
-    return dayjs
-      .utc(item.start.dateTime.replace(/\.\d+$/, ""))
-      .format("HH:mm:ss");
-  }
-  return dayjs(schedule.start).utc().format("HH:mm:ss");
+  const zone = seriesRecurrenceZone(item);
+  return dayjs(schedule.start).tz(zone).format("HH:mm:ss");
 }
 
 function instantForCancelledSeriesDate(
