@@ -131,7 +131,7 @@ test.describe("Week grid event alignment", () => {
     );
     expect(alignment.ok, JSON.stringify(alignment)).toBe(true);
     await page.screenshot({
-      path: "/opt/cursor/artifacts/week-grid-gutter-alignment-fixed.png",
+      path: test.info().outputPath("week-grid-gutter-alignment-fixed.png"),
       fullPage: false,
     });
   });

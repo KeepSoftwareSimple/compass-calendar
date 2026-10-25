@@ -80,7 +80,7 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
   ).toHaveCount(0);
 
   await dialog.screenshot({
-    path: "/opt/cursor/artifacts/signup-trial-step-staging-stripe-1280.png",
+    path: test.info().outputPath("signup-trial-step-staging-stripe-1280.png"),
   });
 
   test.info().attach("staging-publishable-key-prefix", {

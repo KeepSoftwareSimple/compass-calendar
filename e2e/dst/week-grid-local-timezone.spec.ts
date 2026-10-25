@@ -36,7 +36,7 @@ test.describe("Week grid local timezone", () => {
     await expect(timezoneButton).toHaveText(/MDT|MST/);
 
     await page.locator("#mainSection").screenshot({
-      path: "/opt/cursor/artifacts/week-grid-denver-timezone-fixed.png",
+      path: test.info().outputPath("week-grid-denver-timezone-fixed.png"),
     });
   });
 });

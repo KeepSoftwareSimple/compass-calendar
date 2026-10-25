@@ -78,7 +78,7 @@ test("description links shorten, keep hover copy, and open from shortcuts", asyn
 
   await page.getByLabel("Title").click();
   await page.screenshot({
-    path: "/opt/cursor/artifacts/event-description-links-shortened.png",
+    path: test.info().outputPath("event-description-links-shortened.png"),
   });
   const savedHtml = await description.innerHTML();
   expect(savedHtml).toContain(linkUrl);

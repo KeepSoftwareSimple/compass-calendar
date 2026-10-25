@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type FC, Suspense, useCallback } from "react";
+import { type FC, Suspense, useCallback, useLayoutEffect, useRef } from "react";
 import { BillingApi } from "@web/api/billing.api";
 import { fetchEmbeddedCheckoutSecret } from "@web/billing/checkout-client-secret";
 import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
@@ -30,6 +30,10 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   onBack,
   onCheckoutComplete,
 }) => {
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    backButtonRef.current?.focus();
+  }, []);
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
@@ -53,6 +57,7 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
       </Suspense>
       {onBack ? (
         <button
+          ref={backButtonRef}
           className={`${SECONDARY_BUTTON_CLASSNAME} self-center`}
           onClick={onBack}
           onPointerEnter={focusOnPointerEnter}
