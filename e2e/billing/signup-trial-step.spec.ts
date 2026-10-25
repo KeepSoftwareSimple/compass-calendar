@@ -161,10 +161,11 @@ test("awaiting checkout can explore the calendar and opt into the trial step", a
       name: "Start your 7-day free trial",
     });
     await dialog.screenshot({
-      path: "/opt/cursor/artifacts/signup-trial-step-layout-1280.png",
+      path: test.info().outputPath("signup-trial-step-layout-1280.png"),
     });
   }
 
+  await expect(page.getByRole("button", { name: "Back" })).toBeFocused();
   await page.keyboard.press("Escape");
 
   await expect(
