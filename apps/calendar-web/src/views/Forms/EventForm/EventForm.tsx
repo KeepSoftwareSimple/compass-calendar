@@ -98,6 +98,22 @@ import {
 } from "@web/views/Forms/EventForm/EventDetailsSection";
 import { eventFormCmdActions } from "@web/views/Forms/EventForm/event-form-cmd.store";
 import {
+  controlIdForFieldError,
+  EVENT_FORM_ATTENDEES_ID,
+  EVENT_FORM_CALENDAR_ID,
+  EVENT_FORM_COLOR_ID,
+  EVENT_FORM_DESCRIPTION_ID,
+  EVENT_FORM_LOCATION_ID,
+  EVENT_FORM_PLAIN_HOTKEY_OPTIONS,
+  EVENT_FORM_RECURRENCE_ID,
+  EVENT_FORM_RSVP_ID,
+  EVENT_FORM_SCHEDULE_ID,
+  EVENT_FORM_TITLE_ID,
+  eventFormErrorId,
+  FIELD_CONTROL_FOCUS_ORDER,
+  mapsUrlForLocation,
+} from "@web/views/Forms/EventForm/event-form-field-controls.util";
+import {
   FormActionsRow,
   type FormActionsRowHandle,
 } from "@web/views/Forms/EventForm/FormActionsRow";
@@ -123,53 +139,6 @@ import { useCopyMeetingLinkShortcut } from "@web/views/Forms/EventForm/useCopyMe
 import { EventFormShell } from "@web/views/Forms/EventFormShell";
 import { useEscapeToCloseForm } from "@web/views/Forms/hooks/useEscapeToCloseForm";
 
-const EVENT_FORM_PLAIN_HOTKEY_OPTIONS = {
-  enabled: true,
-  ignoreInputs: false,
-} as const;
-
-const EVENT_FORM_TITLE_ID = "event-form-title";
-const EVENT_FORM_LOCATION_ID = "event-form-location";
-const EVENT_FORM_ATTENDEES_ID = "event-form-attendees";
-const EVENT_FORM_DESCRIPTION_ID = "event-form-description";
-const EVENT_FORM_CALENDAR_ID = "event-form-calendar";
-const EVENT_FORM_COLOR_ID = "event-form-color";
-const EVENT_FORM_SCHEDULE_ID = "event-form-schedule";
-const EVENT_FORM_RECURRENCE_ID = "event-form-recurrence";
-const EVENT_FORM_RSVP_ID = "event-form-rsvp";
-
-const eventFormErrorId = (field: string) =>
-  `event-form-error-${field.replaceAll(".", "-")}`;
-
-// DOM / reading order in the form: title → schedule → recurrence → calendar.
-const FIELD_CONTROL_FOCUS_ORDER = [
-  "content.title",
-  "title",
-  "start",
-  "end",
-  "timeZone",
-  "recurrence",
-  "calendarId",
-] as const;
-
-const controlIdForFieldError = (field: string): string | null => {
-  switch (field) {
-    case "calendarId":
-      return EVENT_FORM_CALENDAR_ID;
-    case "start":
-    case "end":
-    case "timeZone":
-      return EVENT_FORM_SCHEDULE_ID;
-    case "recurrence":
-      return EVENT_FORM_RECURRENCE_ID;
-    case "content.title":
-    case "title":
-      return EVENT_FORM_TITLE_ID;
-    default:
-      return null;
-  }
-};
-
 /**
  * Subtle raised surface grouping related fields on the sidebar's translucent
  * panel background — same recipe as CommandPalette rows / c-button-secondary.
@@ -179,9 +148,6 @@ const FormCard = ({ children }: { children: ReactNode }) => (
     {children}
   </div>
 );
-
-const mapsUrlForLocation = (location: string) =>
-  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(location)}`;
 
 const handleEventFormDelete = ({
   isDraft,

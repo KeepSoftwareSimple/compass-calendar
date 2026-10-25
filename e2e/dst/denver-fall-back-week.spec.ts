@@ -200,7 +200,7 @@ test.describe("Denver browser fall-back week", () => {
     expect(alignment.ok, JSON.stringify(alignment)).toBe(true);
 
     await page.locator("#mainSection").screenshot({
-      path: "/opt/cursor/artifacts/dst-nov-week-full.png",
+      path: test.info().outputPath("dst-nov-week-full.png"),
     });
 
     const slots = await page

@@ -12,7 +12,7 @@ assert_contains() {
   local haystack=$1
   local needle=$2
   local name=$3
-  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+  if grep -Fq -- "$needle" <<<"$haystack"; then
     echo "ok ${name}"
     PASS=$((PASS + 1))
   else
@@ -25,7 +25,7 @@ assert_not_contains() {
   local haystack=$1
   local needle=$2
   local name=$3
-  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+  if grep -Fq -- "$needle" <<<"$haystack"; then
     echo "FAIL ${name}: unexpectedly found '${needle}' in:${haystack}" >&2
     FAIL=$((FAIL + 1))
   else
@@ -125,10 +125,10 @@ if [ "\$cmd" = "pr" ]; then
       exit 1
       ;;
     merge)
-      if printf '%s\\n' "\$*" | grep -q -- '--disable-auto'; then
+      if grep -q -- '--disable-auto' <<<"\$*"; then
         exit 0
       fi
-      if printf '%s\\n' "\$*" | grep -q -- '--auto'; then
+      if grep -q -- '--auto' <<<"\$*"; then
         echo "GraphQL: Pull request is not mergeable" >&2
         exit 1
       fi

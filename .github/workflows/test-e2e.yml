@@ -156,6 +156,10 @@ jobs:
           # shellcheck disable=SC2086
           bunx playwright test $SPECS
 
+      - name: Summarize flaky Playwright tests
+        if: always()
+        run: bash .github/scripts/playwright-flaky-summary.sh
+
   # The one required status check. Reports success when every shard passed
   # or when the `changes` gate skipped them all, and fails on a shard
   # failure. A cancelled run (a newer push superseded it) is not a failure;

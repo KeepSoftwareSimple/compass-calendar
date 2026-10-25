@@ -15,9 +15,6 @@ export type PointerHintAttempt = {
   keys?: string[][];
 };
 
-/** @deprecated Use {@link PointerHintAttempt}. */
-export type PalettePointerHintAttempt = PointerHintAttempt;
-
 export type PointerHintState = {
   /** Increments on every teach pulse so the hint can re-animate. */
   pulse: number;

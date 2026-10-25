@@ -30,10 +30,15 @@ const onboardingStorageState = (origin: string) => ({
   ],
 });
 
+const ciReporters: [string, { outputFile: string }][] = [
+  ["json", { outputFile: "test-results/playwright-report.json" }],
+];
+
 export default defineConfig({
   testDir: "./e2e",
   timeout: 30_000,
   retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [["list"], ...ciReporters] : "list",
   // Two workers share one dev server and the CI container's 2 vCPUs; running
   // both browsers concurrently there causes React renders/saves to blow
   // through assertion timeouts under load (different spec each time). Serial

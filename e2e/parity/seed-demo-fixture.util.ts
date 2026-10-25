@@ -107,7 +107,6 @@ export async function prepareParityDemoWeek(
     },
     { referenceNowIso: demoFixture.referenceNow },
   );
-  await page.waitForTimeout(400);
   await page
     .getByRole("button", { name: "Lunch with Sam" })
     .waitFor({ timeout: 15_000 });

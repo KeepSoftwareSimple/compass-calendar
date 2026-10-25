@@ -22,8 +22,6 @@ export enum ZIndex {
   LAYER_1 = 1,
   LAYER_2 = 2,
   LAYER_3 = 3,
-  LAYER_4 = 4,
-  LAYER_5 = 5,
   MAX = 20,
 }
 

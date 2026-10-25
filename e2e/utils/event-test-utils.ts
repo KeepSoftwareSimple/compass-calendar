@@ -320,26 +320,30 @@ export const resetLocalEventDb = async (page: Page) => {
 // targets against a mid-transition column count.
 const waitForMainGridWidthToSettle = async (page: Page) => {
   const mainGrid = page.locator("#mainGrid");
-  const getWidth = () =>
-    mainGrid.evaluate((el) => el.getBoundingClientRect().width);
+  let lastWidth: number | null = null;
+  let stableSamples = 0;
 
-  let previousWidth = await getWidth();
-
-  for (let attempt = 0; attempt < 20; attempt++) {
-    await page.waitForTimeout(50);
-    const width = await getWidth();
-    if (width === previousWidth) {
-      return;
-    }
-    previousWidth = width;
-  }
-
-  throw new Error(
-    `#mainGrid width never settled after 1s (still moving at ${previousWidth}px). ` +
-      "A caller computed click/drag targets against this width right after " +
-      "this timeout previously gave up silently, so a genuine layout stall " +
-      "would show up as a confusing downstream failure instead of here.",
-  );
+  await expect
+    .poll(
+      async () => {
+        const width = await mainGrid.evaluate(
+          (el) => el.getBoundingClientRect().width,
+        );
+        if (width === lastWidth) {
+          stableSamples += 1;
+        } else {
+          lastWidth = width;
+          stableSamples = 0;
+        }
+        // ~200ms of unchanged width (4 × 50ms poll intervals).
+        return stableSamples >= 4 ? width : null;
+      },
+      {
+        timeout: 5_000,
+        intervals: [50, 50, 50, 50, 50],
+      },
+    )
+    .not.toBeNull();
 };
 
 export const ensureSidebarOpen = async (page: Page) => {

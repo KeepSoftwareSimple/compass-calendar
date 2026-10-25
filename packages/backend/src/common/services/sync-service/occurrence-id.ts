@@ -9,5 +9,4 @@ export {
   composeOccurrenceId,
   decodeOccurrenceId,
   looksLikeOccurrenceId,
-  type OccurrenceIdParts,
 } from "@core/util/occurrence-id";

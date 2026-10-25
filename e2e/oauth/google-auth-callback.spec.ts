@@ -23,6 +23,19 @@ const getCallbackUrl = (state: string, grantedScopes = REQUIRED_SCOPES) =>
     state,
   )}&code=auth-code&scope=${encodeURIComponent(grantedScopes.join(" "))}`;
 
+const waitForSignedInWeek = async (page: Page, state: string) => {
+  await expect(page).toHaveURL(/\/week$/);
+  await expect(page.locator("#mainGrid")).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (key) => sessionStorage.getItem(key),
+        getIntentStorageKey(state),
+      ),
+    )
+    .toBeNull();
+};
+
 type MetadataPayload = Record<string, unknown>;
 
 const prepareGoogleAuthCallbackPage = async (
@@ -130,12 +143,12 @@ test("ignores a replayed Google callback when already signed in", async ({
   );
 
   await page.goto(getCallbackUrl(state));
-  await expect(page).toHaveURL(/\/week$/);
+  await waitForSignedInWeek(page, state);
   expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
 
   await page.goto(getCallbackUrl(state));
-  await expect(page).toHaveURL(/\/week$/);
-  expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
+  await waitForSignedInWeek(page, state);
+  await expect.poll(() => apiMocks.loginOrSignupRequests.length).toBe(1);
   await expect(
     page.getByText("We couldn't connect your Google account"),
   ).toHaveCount(0);
@@ -164,7 +177,7 @@ test("returns to the calendar when the browser back button revisits the consumed
   );
 
   await page.goto(callbackUrl);
-  await expect(page).toHaveURL(/\/week$/);
+  await waitForSignedInWeek(page, state);
   expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
 
   await page.evaluate(
@@ -174,10 +187,11 @@ test("returns to the calendar when the browser back button revisits the consumed
     { url: callbackUrl },
   );
   await page.goBack();
-  await page.goForward();
+  await expect(page).toHaveURL(/\/week$/, { timeout: 15_000 });
 
-  await expect(page).toHaveURL(/\/week$/);
-  expect(apiMocks.loginOrSignupRequests).toHaveLength(1);
+  await page.goForward();
+  await waitForSignedInWeek(page, state);
+  await expect.poll(() => apiMocks.loginOrSignupRequests.length).toBe(1);
   await expect(
     page.getByText("We couldn't connect your Google account"),
   ).toHaveCount(0);

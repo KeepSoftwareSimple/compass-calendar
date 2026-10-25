@@ -1,4 +1,10 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
+import {
+  GO_TO_DATE_ANNOUNCEMENT_TARGET_YMD,
+  GO_TO_DATE_PARSE_VECTORS,
+  GO_TO_DATE_REFERENCE_NOW_ISO,
+  GO_TO_DATE_YEAR_INFERENCE_VECTORS,
+} from "@core/test/go-to-date.vectors.data";
 import { type CompassEvent } from "@core/types/compass-event.contracts";
 import { TimeZoneSchema } from "@core/types/domain-primitives";
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
@@ -847,55 +853,38 @@ describe("mapToBackend timed overnight", () => {
 });
 
 describe("parseUserDate", () => {
-  const now = dayjs("2026-09-15T12:00:00.000Z");
+  const now = dayjs(GO_TO_DATE_REFERENCE_NOW_ISO);
   const ymd = (value: Dayjs | null) => value?.format(YEAR_MONTH_DAY_FORMAT);
 
-  it.each([
-    ["2026-10-03", "2026-10-03"],
-    ["2026-10-29", "2026-10-29"],
-    ["2026/10/29", "2026-10-29"],
-    ["2026/10/03", "2026-10-03"],
-    ["2026.10.29", "2026-10-29"],
-    ["10/3", "2026-10-03"],
-    ["10/29", "2026-10-29"],
-    ["10-29", "2026-10-29"],
-    ["10.29.2026", "2026-10-29"],
-    ["10/3/2026", "2026-10-03"],
-    ["10/29/2026", "2026-10-29"],
-    ["10/3/26", "2026-10-03"],
-    ["10/29/26", "2026-10-29"],
-    ["29/10", "2026-10-29"],
-    ["29/10/2026", "2026-10-29"],
-    ["oct 3", "2026-10-03"],
-    ["Oct 29", "2026-10-29"],
-    ["october 29", "2026-10-29"],
-    ["3 oct", "2026-10-03"],
-    ["29 Oct", "2026-10-29"],
-    ["october 3 2026", "2026-10-03"],
-    ["Oct 29 2026", "2026-10-29"],
-    ["2026-10", "2026-10-01"],
-    ["2026/10", "2026-10-01"],
-    ["october 2026", "2026-10-01"],
-    ["oct 2026", "2026-10-01"],
-    ["2026 october", "2026-10-01"],
-  ] as const)("parses %s", (input, expected) => {
+  it.each(
+    GO_TO_DATE_PARSE_VECTORS.flatMap(({ input, expectedYmd }) =>
+      expectedYmd === null ? [] : [[input, expectedYmd] as const],
+    ),
+  )("parses %s", (input, expected) => {
     expect(ymd(parseUserDate(input, now))).toBe(expected);
   });
 
-  it.each(["2/30", "32/1", "oct", "hello"] as const)("rejects %s", (input) => {
+  it.each(
+    GO_TO_DATE_PARSE_VECTORS.filter(
+      ({ expectedYmd }) => expectedYmd === null,
+    ).map(({ input }) => [input] as const),
+  )("rejects %s", (input) => {
     expect(parseUserDate(input, now)).toBeNull();
   });
 
   it("uses next year when an omitted year is more than six months in the past", () => {
-    expect(ymd(parseUserDate("jan 3", now))).toBe("2027-01-03");
-    expect(ymd(parseUserDate("mar 14", now))).toBe("2027-03-14");
-    expect(ymd(parseUserDate("mar 15", now))).toBe("2026-03-15");
-    expect(ymd(parseUserDate("10/29", dayjs("2027-04-15")))).toBe("2027-10-29");
+    for (const {
+      input,
+      nowIso,
+      expectedYmd,
+    } of GO_TO_DATE_YEAR_INFERENCE_VECTORS) {
+      expect(ymd(parseUserDate(input, dayjs(nowIso)))).toBe(expectedYmd);
+    }
   });
 });
 
 describe("goToDateAnnouncement", () => {
-  const date = dayjs("2026-10-03");
+  const date = dayjs(GO_TO_DATE_ANNOUNCEMENT_TARGET_YMD);
 
   it("names the day on Day view", () => {
     expect(goToDatePaletteLabel(date)).toBe("Go to Sat, Oct 3, 2026");

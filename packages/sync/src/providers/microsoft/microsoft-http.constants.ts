@@ -25,6 +25,7 @@ export const MICROSOFT_EVENT_SELECT = [
   "originalStart",
   "originalStartTimeZone",
   "originalEndTimeZone",
+  "cancelledOccurrences",
   "organizer",
   "attendees",
   "location",

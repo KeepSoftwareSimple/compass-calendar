@@ -26,7 +26,7 @@ assert_contains() {
   local haystack=$1
   local needle=$2
   local name=$3
-  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+  if grep -Fq -- "$needle" <<<"$haystack"; then
     echo "ok ${name}"
     PASS=$((PASS + 1))
   else
@@ -149,7 +149,7 @@ assert_contains "$out" "ISSUE_NUMBER=3100" "falls through to later milestone whe
 
 out=$(AGENT_LOOP_CONCURRENCY=1 STUB_L_OPEN="$L_ISSUE" STUB_B_OPEN="$B_ISSUE" STUB_L_RUNNING="$L_RUNNING_FRESH" run_next)
 assert_contains "$out" "found=false" "fresh running label idles when fleet is at N"
-if printf '%s' "$out" | grep -q 'ISSUE_NUMBER='; then
+if grep -q 'ISSUE_NUMBER=' <<<"$out"; then
   echo "FAIL idle run must not print ISSUE_NUMBER" >&2
   FAIL=$((FAIL + 1))
 else
@@ -178,7 +178,7 @@ assert_contains "$out" "ISSUE_NUMBER=3222" "skips Approval boundary human"
 
 out=$(STUB_L_OPEN="$(json_cat "$L_DEP" "$L_ALLOW")" STUB_P0_OPEN="$P0_DEP" run_next)
 assert_contains "$out" "ISSUE_NUMBER=3222" "skips WP whose Depends on issue is still open"
-if printf '%s' "$out" | grep -Eq 'ISSUE_NUMBERS=.*3272'; then
+if grep -Eq 'ISSUE_NUMBERS=.*3272' <<<"$out"; then
   echo "FAIL blocked WP-10 must not appear in ISSUE_NUMBERS: ${out}" >&2
   FAIL=$((FAIL + 1))
 else
@@ -221,7 +221,7 @@ PY
 )
 out=$(AGENT_LOOP_CONCURRENCY=2 STUB_L_OPEN="$L_SYNC_CORE_PAIR" run_next)
 assert_contains "$out" "ISSUE_NUMBERS=10" "overlapping sync-core labels pick only the lower number"
-if printf '%s' "$out" | grep -Eq 'ISSUE_NUMBERS=.*11'; then
+if grep -Eq 'ISSUE_NUMBERS=.*11' <<<"$out"; then
   echo "FAIL overlapping sync-core issue 11 must not be selected: ${out}" >&2
   FAIL=$((FAIL + 1))
 else
@@ -247,7 +247,7 @@ PY
 )
 out=$(AGENT_LOOP_CONCURRENCY=3 STUB_L_OPEN="$L_DESKTOP_LANES" run_next)
 assert_contains "$out" "ISSUE_NUMBERS=20 21 22" "desktop, desktop-kit, and desktop-ui are separate partitions"
-if printf '%s' "$out" | grep -Eq 'ISSUE_NUMBERS=.*23'; then
+if grep -Eq 'ISSUE_NUMBERS=.*23' <<<"$out"; then
   echo "FAIL second desktop-kit issue must not share the lane: ${out}" >&2
   FAIL=$((FAIL + 1))
 else
@@ -270,7 +270,7 @@ PY
 )
 out=$(AGENT_LOOP_CONCURRENCY=2 STUB_L_OPEN="$L_WEB_AND_CORE" STUB_L_RUNNING="$L_RUNNING_CORE" run_next)
 assert_contains "$out" "ISSUE_NUMBERS=12" "running sync-core occupies that partition so only web is launched"
-if printf '%s' "$out" | grep -Eq 'ISSUE_NUMBERS=.*11'; then
+if grep -Eq 'ISSUE_NUMBERS=.*11' <<<"$out"; then
   echo "FAIL running partition must block the other sync-core WP: ${out}" >&2
   FAIL=$((FAIL + 1))
 else
@@ -286,7 +286,7 @@ out=$(
 )
 assert_contains "$out" "found=false" "empty AGENT_LOOP_MILESTONES idles"
 assert_contains "$out" "AGENT_LOOP_MILESTONES is empty" "empty milestones prints idle reason"
-if printf '%s' "$out" | grep -q 'ISSUE_NUMBER='; then
+if grep -q 'ISSUE_NUMBER=' <<<"$out"; then
   echo "FAIL empty milestones must not print ISSUE_NUMBER" >&2
   FAIL=$((FAIL + 1))
 else

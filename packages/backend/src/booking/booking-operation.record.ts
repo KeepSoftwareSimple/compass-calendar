@@ -10,7 +10,6 @@ export const BookingOperationKindSchema = z.enum([
   "reschedule",
   "edit",
 ]);
-export type BookingOperationKind = z.infer<typeof BookingOperationKindSchema>;
 
 export const BookingOperationStatusSchema = z.enum([
   "pending",

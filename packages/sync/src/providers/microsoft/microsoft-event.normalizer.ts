@@ -7,13 +7,13 @@ import {
 } from "@core/types/event-attendance.contracts";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
+import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
+import { toIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
 import {
   ProviderEventError,
   type ProviderEventRead,
@@ -85,6 +85,8 @@ export interface GraphEvent {
   readonly originalStart?: string;
   readonly originalStartTimeZone?: string;
   readonly originalEndTimeZone?: string;
+  readonly cancelledOccurrences?: readonly string[];
+  readonly exceptionOccurrences?: readonly GraphEvent[];
   readonly onlineMeeting?: GraphOnlineMeeting;
   readonly onlineMeetingProvider?: string;
   readonly categories?: readonly string[];
@@ -123,6 +125,7 @@ export function normalizeMicrosoftEvent(
   }
 
   const providerVersion = requireVersion(item);
+  const schedule = mapSchedule(item, options);
 
   return {
     kind: "event",
@@ -130,10 +133,10 @@ export function normalizeMicrosoftEvent(
     providerVersion,
     providerUpdatedAt: item.lastModifiedDateTime ?? null,
     content: mapContent(item, masterCategories),
-    schedule: mapSchedule(item, options),
+    schedule,
     busy: item.showAs !== "free",
     ...(item.iCalUId ? { icalUid: item.iCalUId } : {}),
-    recurrence: mapRecurrence(item),
+    recurrence: mapRecurrence(item, schedule),
   };
 }
 
@@ -325,15 +328,6 @@ function extractDatePart(value: GraphDateTimeTimeZone): string | null {
   return parsed.format(DATE_ONLY);
 }
 
-function toIanaTimeZone(timeZone: string): string {
-  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
-  try {
-    return windowsZoneToIana(timeZone);
-  } catch {
-    return "UTC";
-  }
-}
-
 function resolveTimedEventTimeZone(
   item: GraphEvent,
   startFieldZone: string,
@@ -367,10 +361,21 @@ function parseSchedule(candidate: unknown) {
   return parsed.data;
 }
 
-function mapRecurrence(item: GraphEvent): ProviderEventRecurrence {
+function mapRecurrence(
+  item: GraphEvent,
+  schedule: ReturnType<typeof mapSchedule>,
+): ProviderEventRecurrence {
   if (item.type === "seriesMaster" && item.recurrence) {
     try {
-      return { kind: "seriesMaster", rules: toRRule(item.recurrence) };
+      const rules = [
+        ...toRRule(item.recurrence),
+        ...cancelledOccurrencesToExdateRules(
+          item.cancelledOccurrences,
+          item,
+          schedule,
+        ),
+      ];
+      return { kind: "seriesMaster", rules };
     } catch (error) {
       if (error instanceof UnsupportedRecurrenceError) {
         throw new ProviderEventError(
@@ -381,13 +386,6 @@ function mapRecurrence(item: GraphEvent): ProviderEventRecurrence {
       }
       throw error;
     }
-  }
-  if (item.type === "exception" && item.seriesMasterId && item.originalStart) {
-    return {
-      kind: "instance",
-      seriesProviderId: item.seriesMasterId,
-      recurrenceId: toCanonicalRecurrenceId(item.originalStart),
-    };
   }
   if (item.seriesMasterId && item.originalStart) {
     return {

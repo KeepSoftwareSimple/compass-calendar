@@ -5,8 +5,7 @@ import {
   EDIT_SEQUENCE_LETTER_FIELDS,
 } from "@core/shortcuts/edit-sequence.fields";
 import { KEYMAP } from "@core/shortcuts/keymap";
-import { defersAwaitingCheckoutGateToCommit } from "@web/billing/awaiting-checkout-explore.util";
-import { isBillingWriteLocked } from "@web/billing/billing-write-lock";
+import { isWriteLockedAtIntent } from "@web/billing/billing-write-lock";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import {
   type EventFormFocusField,
@@ -168,11 +167,7 @@ export function useEditSequenceShortcut<
           disarm();
           return;
         }
-        if (
-          !ignoreAppLock &&
-          isBillingWriteLocked() &&
-          !defersAwaitingCheckoutGateToCommit()
-        ) {
+        if (!ignoreAppLock && isWriteLockedAtIntent()) {
           disarm();
           promptShortcutUpgrade({
             featureArea: "event_editing",
@@ -225,11 +220,7 @@ export function useEditSequenceShortcut<
         return;
       }
 
-      if (
-        !ignoreAppLock &&
-        isBillingWriteLocked() &&
-        !defersAwaitingCheckoutGateToCommit()
-      ) {
+      if (!ignoreAppLock && isWriteLockedAtIntent()) {
         const isMod = isModLeader(event);
         const isLeader =
           isMod ||

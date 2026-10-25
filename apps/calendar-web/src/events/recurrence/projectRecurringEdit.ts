@@ -13,6 +13,7 @@ import {
   decodeOccurrenceId,
 } from "@core/util/occurrence-id";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
+import { truncateSeriesRulesBefore } from "@web/events/recurrence/truncate-series-rules.util";
 
 export type RecurringEditProjection = {
   removeIds: ReadonlySet<string>;
@@ -27,33 +28,6 @@ type ProjectRecurringEditInput = {
   /** Series base row; required to optimistically truncate on thisAndFollowing. */
   seriesMaster?: Event | null;
 };
-
-// RRULE UNTIL is inclusive; end strictly before the split instant (mirrors
-// LocalEventRepository.truncateRules and sync truncateRulesBefore).
-function truncateSeriesRules(
-  rules: readonly string[],
-  beforeStart: string,
-): string[] {
-  const allDay = !beforeStart.includes("T");
-  const excludedInstant = allDay
-    ? dayjs(beforeStart, "YYYY-MM-DD").tz(dayjs.tz.guess()).local().toDate()
-    : dayjs(beforeStart).toDate();
-  const until = dayjs(excludedInstant)
-    .subtract(1, "second")
-    .utc()
-    .toRRuleDTSTARTString();
-
-  return rules.map((rule) => {
-    if (!rule.startsWith("RRULE:")) return rule;
-    const kept = rule
-      .slice("RRULE:".length)
-      .split(";")
-      .filter(
-        (part) => !part.startsWith("UNTIL=") && !part.startsWith("COUNT="),
-      );
-    return `RRULE:${[...kept, `UNTIL=${until}`].join(";")}`;
-  });
-}
 
 function stripRuleBounds(rules: readonly string[]): string[] {
   return rules.map((rule) =>
@@ -282,7 +256,10 @@ export function projectRecurringEdit({
     ...seriesMaster,
     recurrence: {
       kind: "series",
-      rules: truncateSeriesRules(seriesMaster.recurrence.rules, splitInstant),
+      rules: truncateSeriesRulesBefore(
+        seriesMaster.recurrence.rules,
+        splitInstant,
+      ),
     },
   };
 

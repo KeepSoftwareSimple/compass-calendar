@@ -10,8 +10,6 @@ export const BookingGuestActionSchema = z.enum([
   "cancelled",
   "rescheduled",
 ]);
-export type BookingGuestAction = z.infer<typeof BookingGuestActionSchema>;
-
 export const BookingReservationRecordSchema = z.strictObject({
   _id: ObjectIdSchema,
   pageId: ObjectIdSchema,

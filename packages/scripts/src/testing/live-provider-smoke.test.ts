@@ -1,8 +1,27 @@
 import { describe, expect, it } from "bun:test";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
-describe("live-provider-smoke missing credentials", () => {
-  it("fails when credentials are absent and runs bun when ready", () => {
+const LIVE_SMOKE_TS = join(
+  process.cwd(),
+  "packages/sync/src/providers/__contract__/live-provider-smoke.ts",
+);
+
+describe("live-provider-smoke expected providers", () => {
+  it("routes each provider smoke through one shared setup-and-create helper", () => {
+    const source = readFileSync(LIVE_SMOKE_TS, "utf8");
+    const helperCalls = source.match(/setupAndCreateLiveSmokeEvent\(/g) ?? [];
+    expect(helperCalls).toHaveLength(4);
+    for (const provider of ["microsoft", "apple", "google"] as const) {
+      expect(source).toMatch(
+        new RegExp(
+          `run${provider[0]!.toUpperCase()}${provider.slice(1)}LiveSmoke[\\s\\S]*?setupAndCreateLiveSmokeEvent\\([\\s\\S]*?provider: "${provider}"`,
+        ),
+      );
+    }
+  });
+  it("fails when an expected provider lacks creds and skips others", () => {
     const result = spawnSync(
       "bash",
       [".github/scripts/live-provider-smoke.test.sh"],
@@ -10,10 +29,10 @@ describe("live-provider-smoke missing credentials", () => {
     );
 
     expect(result.status, result.stderr + result.stdout).toBe(0);
-    expect(result.stdout).toContain("all missing creds exits 1");
+    expect(result.stdout).toContain("expected missing creds exits 1");
     expect(result.stdout).toContain(
-      "partial ready exits 1 when any provider failed",
+      "expected ready providers exit 0 when bun passes",
     );
-    expect(result.stdout).toContain("all ready exits 0 when bun passes");
+    expect(result.stdout).toContain("nothing expected and all skipped exits 0");
   });
 });

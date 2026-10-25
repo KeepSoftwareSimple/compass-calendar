@@ -3,7 +3,7 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import { isStripeConfigured } from "@backend/common/constants/config.util";
 
 /** Stripe API version supported by the installed SDK. */
-export const STRIPE_API_VERSION = "2026-08-26.dahlia" as const;
+export const STRIPE_API_VERSION = "2026-09-30.endive" as const;
 
 let client: Stripe | undefined;
 

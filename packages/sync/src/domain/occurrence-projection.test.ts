@@ -1,5 +1,9 @@
 import { faker } from "@faker-js/faker";
 import {
+  RRULE_WEEKLY_DST_SPRING_DENVER_STARTS,
+  rruleVectorInput,
+} from "@core/test/rrule.vectors.data";
+import {
   type CalendarId,
   type DateOnly,
   type DateTime,
@@ -287,19 +291,18 @@ describe("projectOccurrences", () => {
     it("keeps wall-clock time across a DST spring-forward transition", () => {
       // US DST 2026 begins 2026-03-08. A weekly 09:00 Denver series should read
       // 09:00 local on both sides, with the civil offset changing -07 -> -06.
-      const e = event(
-        timed("2026-03-01T09:00:00-07:00", "2026-03-01T10:00:00-07:00"),
-        { kind: "seriesMaster", rules: ["RRULE:FREQ=WEEKLY;COUNT=3"] },
+      const { startDate, endDate, recurrenceRule } = rruleVectorInput(
+        "weekly-dst-spring-denver",
       );
+      const e = event(timed(startDate, endDate), {
+        kind: "seriesMaster",
+        rules: [recurrenceRule],
+      });
       const occ = projectOccurrences(e, HORIZON);
       const starts = occ.map((o) =>
         o.schedule.kind === "timed" ? o.schedule.start : ("" as DateTime),
       );
-      expect(starts).toEqual([
-        "2026-03-01T09:00:00-07:00" as DateTime,
-        "2026-03-08T09:00:00-06:00" as DateTime,
-        "2026-03-15T09:00:00-06:00" as DateTime,
-      ]);
+      expect(starts).toEqual([...RRULE_WEEKLY_DST_SPRING_DENVER_STARTS]);
     });
 
     it("bounds a non-ending daily rule to the horizon rather than expanding forever", () => {
@@ -319,13 +322,13 @@ describe("projectOccurrences", () => {
       // Google encodes "ends June 9 (America/Denver)" as UNTIL=20260610T055959Z.
       // A real-UTC UNTIL compared against floating candidates would leak one
       // extra occurrence on June 10; the boundary must land on June 9.
-      const e = event(
-        timed("2026-06-01T03:00:00-06:00", "2026-06-01T03:15:00-06:00"),
-        {
-          kind: "seriesMaster",
-          rules: ["RRULE:FREQ=DAILY;UNTIL=20260610T055959Z"],
-        },
+      const { startDate, endDate, recurrenceRule } = rruleVectorInput(
+        "until-daily-denver-phantom",
       );
+      const e = event(timed(startDate, endDate), {
+        kind: "seriesMaster",
+        rules: [recurrenceRule],
+      });
       const starts = projectOccurrences(e, HORIZON).map((o) =>
         o.startAt.toISOString(),
       );
@@ -337,17 +340,13 @@ describe("projectOccurrences", () => {
       // "ends June 5 (Asia/Kolkata, +05:30)" is UNTIL=20260605T182959Z. A
       // real-UTC UNTIL would drop the true June 5 occurrence (20:00 IST is
       // 14:30Z, past the naive 18:29:59 boundary in the floating frame).
-      const e = event(
-        timed(
-          "2026-06-01T20:00:00+05:30",
-          "2026-06-01T20:30:00+05:30",
-          "Asia/Kolkata",
-        ),
-        {
-          kind: "seriesMaster",
-          rules: ["RRULE:FREQ=DAILY;UNTIL=20260605T182959Z"],
-        },
+      const { startDate, endDate, recurrenceRule, timeZone } = rruleVectorInput(
+        "until-daily-kolkata",
       );
+      const e = event(timed(startDate, endDate, timeZone), {
+        kind: "seriesMaster",
+        rules: [recurrenceRule],
+      });
       const starts = projectOccurrences(e, HORIZON).map((o) =>
         o.startAt.toISOString(),
       );

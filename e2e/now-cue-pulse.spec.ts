@@ -18,7 +18,7 @@ test.describe("go-to-today now cue pulse", () => {
     await nowLine.waitFor({ state: "attached" });
 
     await dispatchDocumentKey(page, "t");
-    await page.waitForTimeout(800);
+    await page.clock.runFor(700);
 
     await dispatchDocumentKey(page, "t");
     await expect(nowLine).toHaveClass(/c-now-cue-pulse/);

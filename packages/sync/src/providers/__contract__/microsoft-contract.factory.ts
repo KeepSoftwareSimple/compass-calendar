@@ -77,6 +77,10 @@ class CorpusEventListApi implements MicrosoftEventListApi {
     }
     return normalizePage(this.corpus.page1);
   }
+
+  async listExceptionInstances(): Promise<readonly GraphEventDeltaItem[]> {
+    return [];
+  }
 }
 
 function normalizePage(page: ReaderCorpusPage): MicrosoftEventListPage {

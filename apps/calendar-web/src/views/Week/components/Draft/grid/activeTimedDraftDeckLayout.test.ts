@@ -79,6 +79,53 @@ describe("getActiveTimedDraftDeckLayout", () => {
     });
   });
 
+  it("returns to solo width once its overlap partner is deleted", () => {
+    const draft = createTimedEvent({ _id: "draft" });
+    const overlap = createTimedEvent({
+      _id: "overlap",
+      endDate: "2026-05-26T10:30:00.000Z",
+      startDate: "2026-05-26T09:30:00.000Z",
+    });
+
+    expect(getActiveTimedDraftDeckLayout(draft, [draft, overlap])).toEqual({
+      groupSize: 2,
+      order: 0,
+    });
+    expect(getActiveTimedDraftDeckLayout(draft, [draft])).toBeNull();
+  });
+
+  it("ignores hidden overlap partners like the grid does", () => {
+    const draft = createTimedEvent({ _id: "draft" });
+    const events = [
+      draft,
+      createTimedEvent({
+        _id: "hidden",
+        endDate: "2026-05-26T10:30:00.000Z",
+        startDate: "2026-05-26T09:30:00.000Z",
+      }),
+    ];
+
+    expect(
+      getActiveTimedDraftDeckLayout(draft, events, new Set(["hidden"])),
+    ).toBeNull();
+  });
+
+  it("keeps a hidden draft decked against its visible partners", () => {
+    const draft = createTimedEvent({ _id: "draft" });
+    const events = [
+      draft,
+      createTimedEvent({
+        _id: "overlap",
+        endDate: "2026-05-26T10:30:00.000Z",
+        startDate: "2026-05-26T09:30:00.000Z",
+      }),
+    ];
+
+    expect(
+      getActiveTimedDraftDeckLayout(draft, events, new Set(["draft"])),
+    ).toEqual({ groupSize: 2, order: 0 });
+  });
+
   it("ignores all-day drafts", () => {
     const draft = createTimedEvent({
       _id: "draft",

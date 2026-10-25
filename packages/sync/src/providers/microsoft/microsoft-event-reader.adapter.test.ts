@@ -3,6 +3,7 @@ import {
   type MicrosoftEventListApi,
   type MicrosoftEventListPage,
   MicrosoftEventReaderAdapter,
+  type MicrosoftExceptionInstancesParams,
 } from "@sync/providers/microsoft/microsoft-event-reader.adapter";
 import { ProviderEventReadError } from "@sync/providers/provider-event-reader.port";
 
@@ -23,12 +24,19 @@ const expectListPageError = async (
 
 class FakeEventListApi implements MicrosoftEventListApi {
   calls: Array<Parameters<MicrosoftEventListApi["listPage"]>[0]> = [];
+  exceptionCalls: MicrosoftExceptionInstancesParams[] = [];
   #pages: MicrosoftEventListPage[];
+  #exceptionsByMaster: Map<string, GraphEventDeltaItem[]>;
   #error?: unknown;
 
-  constructor(pages: MicrosoftEventListPage[], error?: unknown) {
+  constructor(
+    pages: MicrosoftEventListPage[],
+    error?: unknown,
+    exceptionsByMaster: Map<string, GraphEventDeltaItem[]> = new Map(),
+  ) {
     this.#pages = pages;
     this.#error = error;
+    this.#exceptionsByMaster = exceptionsByMaster;
   }
 
   async listPage(
@@ -39,6 +47,13 @@ class FakeEventListApi implements MicrosoftEventListApi {
     const page = this.#pages.shift();
     if (!page) throw new Error("FakeEventListApi: no page scripted");
     return page;
+  }
+
+  async listExceptionInstances(
+    params: MicrosoftExceptionInstancesParams,
+  ): Promise<readonly GraphEventDeltaItem[]> {
+    this.exceptionCalls.push(params);
+    return this.#exceptionsByMaster.get(params.seriesMasterId) ?? [];
   }
 }
 
@@ -100,6 +115,47 @@ describe("MicrosoftEventReaderAdapter", () => {
     expect(result.nextSyncToken).toBe(
       "https://graph.microsoft.com/delta?$deltatoken=sync-1",
     );
+  });
+
+  it("fetches exception instances for series masters and dedupes by provider id", async () => {
+    const master = mEvent({
+      id: "master-1",
+      type: "seriesMaster",
+      recurrence: {
+        pattern: { type: "daily", interval: 1 },
+        range: { type: "noEnd", startDate: "2025-10-19" },
+      },
+    });
+    const exception = mEvent({
+      id: "exc-1",
+      type: "exception",
+      seriesMasterId: "master-1",
+      originalStart: "2025-10-18T01:00:00.0000000Z",
+      start: { dateTime: "2025-10-18T02:15:00.0000000", timeZone: "UTC" },
+      end: { dateTime: "2025-10-18T03:00:00.0000000", timeZone: "UTC" },
+    });
+    const api = new FakeEventListApi(
+      [page({ items: [master] })],
+      undefined,
+      new Map([["master-1", [exception, exception]]]),
+    );
+    const { adapter } = adapterWith(api);
+
+    const result = await adapter.listEventPage({
+      accessToken: "tok",
+      calendarId: "cal-1",
+      window: {
+        timeMin: "2025-10-01T00:00:00Z",
+        timeMax: "2025-11-01T00:00:00Z",
+      },
+    });
+
+    expect(api.exceptionCalls).toHaveLength(1);
+    expect(api.exceptionCalls[0]?.seriesMasterId).toBe("master-1");
+    const ids = result.events
+      .filter((e) => e.kind === "event")
+      .map((e) => e.providerEventId);
+    expect(ids).toEqual(["master-1", "exc-1"]);
   });
 
   it("uses calendarView delta when a bounded window is provided", async () => {

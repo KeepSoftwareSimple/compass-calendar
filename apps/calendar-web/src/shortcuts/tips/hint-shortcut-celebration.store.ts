@@ -6,12 +6,10 @@ import { IS_DEV } from "@web/common/constants/env.constants";
 export const HINT_SHORTCUT_CELEBRATION_MS = 600;
 
 type HintShortcutCelebrationState = {
-  pulse: number;
   activeKey: HintShortcutCelebrationKey | null;
 };
 
 const initialState: HintShortcutCelebrationState = {
-  pulse: 0,
   activeKey: null,
 };
 
@@ -28,14 +26,9 @@ let clearTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 export const hintShortcutCelebrationActions = {
   pulse: (key: HintShortcutCelebrationKey) => {
     if (clearTimer !== undefined) globalThis.clearTimeout(clearTimer);
-    useHintShortcutCelebrationStore.setState(
-      (state) => ({
-        pulse: state.pulse + 1,
-        activeKey: key,
-      }),
-      false,
-      { type: "pulse" },
-    );
+    useHintShortcutCelebrationStore.setState({ activeKey: key }, false, {
+      type: "pulse",
+    });
     clearTimer = globalThis.setTimeout(() => {
       clearTimer = undefined;
       useHintShortcutCelebrationStore.setState({ activeKey: null }, false, {
@@ -52,10 +45,6 @@ export const resetHintShortcutCelebrationTimerForTests = (): void => {
   }
   useHintShortcutCelebrationStore.setState(initialState, true);
 };
-
-export const selectHintShortcutCelebrationPulse = (
-  state: HintShortcutCelebrationState,
-) => state.pulse;
 
 export const selectHintShortcutCelebrationKey = (
   state: HintShortcutCelebrationState,

@@ -161,8 +161,6 @@ export const getShortcutsBySection = (
     }))
     .filter((section) => section.shortcuts.length > 0);
 
-export type ShortcutMenuView = FilterOptions["view"];
-
 /**
  * Shortcut menu sections for the `?` legend overlay: the registry filtered
  * for the current view/state, grouped by section.

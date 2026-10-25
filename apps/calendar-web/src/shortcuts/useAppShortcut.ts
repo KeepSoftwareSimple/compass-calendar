@@ -3,8 +3,10 @@ import {
   type RegisterableHotkey,
   useHotkey,
 } from "@tanstack/react-hotkeys";
-import { defersAwaitingCheckoutGateToCommit } from "@web/billing/awaiting-checkout-explore.util";
-import { isBillingWriteLocked } from "@web/billing/billing-write-lock";
+import {
+  isBillingWriteLocked,
+  isWriteLockedAtIntent,
+} from "@web/billing/billing-write-lock";
 import { promptShortcutUpgrade } from "@web/billing/prompt-shortcut-upgrade";
 import { hasAppLockReason, isAppLocked } from "@web/shortcuts/app-lock";
 import { type ShortcutRegistryId } from "@web/shortcuts/shortcuts.registry";
@@ -121,11 +123,7 @@ export function useAppShortcut(
         return;
       }
 
-      if (
-        requiresWrite &&
-        isBillingWriteLocked() &&
-        !defersAwaitingCheckoutGateToCommit()
-      ) {
+      if (requiresWrite && isWriteLockedAtIntent()) {
         if (telemetryHintId) {
           recordShortcutUnavailableAttempt(telemetryHintId, "billing_locked", {
             hotkey,

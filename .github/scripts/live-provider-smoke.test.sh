@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local assertions for live-provider-smoke.sh missing-credential failures.
+# Local assertions for live-provider-smoke.sh expected-provider behavior.
 # Run: bash .github/scripts/live-provider-smoke.test.sh
 # Needs bash 4+ (GitHub Actions; not macOS system bash 3).
 set -euo pipefail
@@ -27,7 +27,7 @@ assert_contains() {
   local haystack=$1
   local needle=$2
   local name=$3
-  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+  if grep -Fq -- "$needle" <<<"$haystack"; then
     echo "ok ${name}"
     PASS=$((PASS + 1))
   else
@@ -40,7 +40,7 @@ assert_not_contains() {
   local haystack=$1
   local needle=$2
   local name=$3
-  if printf '%s' "$haystack" | grep -Fq "$needle"; then
+  if grep -Fq -- "$needle" <<<"$haystack"; then
     echo "FAIL ${name}: unexpectedly found '${needle}' in:${haystack}" >&2
     FAIL=$((FAIL + 1))
   else
@@ -74,65 +74,31 @@ run_smoke() {
     bash "${ROOT}/.github/scripts/live-provider-smoke.sh" >"$log" 2>&1
 }
 
-# 1. All credentials absent: fail each provider, exit 1, do not invoke bun.
+# 1. Expected provider missing creds fails; unexpected providers skip.
 : > "${STUB_DIR}/bun.log"
-summary="${STUB_DIR}/all-missing.md"
-log="${STUB_DIR}/all-missing.log"
+summary="${STUB_DIR}/expected-missing.md"
+log="${STUB_DIR}/expected-missing.log"
 set +e
-run_smoke "$summary" "$log"
+run_smoke "$summary" "$log" SMOKE_EXPECTED_PROVIDERS=microsoft,apple
 status=$?
 set -e
 out=$(cat "$log")
-assert_eq "$status" "1" "all missing creds exits 1"
-assert_contains "$out" "::error::google failed:" "all-missing errors on google"
-assert_contains "$out" "SMOKE_GOOGLE_REFRESH_TOKEN" "all-missing google message mentions refresh token"
-assert_contains "$out" "::error::microsoft failed:" "all-missing errors on microsoft"
-assert_contains "$out" "::error::apple failed:" "all-missing errors on apple"
-assert_contains "$out" "live-provider-smoke passed=none failed=google microsoft apple" \
-  "all-missing prints the summary line"
-assert_contains "$out" "live-provider-smoke failed: google microsoft apple" \
-  "all-missing Discord notify mentions failed providers"
-assert_not_contains "$out" "::warning::" "all-missing does not warn-skip"
-assert_contains "$(cat "$summary")" \
-  "live-provider-smoke passed=none failed=google microsoft apple" \
-  "all-missing writes the summary to GITHUB_STEP_SUMMARY"
+assert_eq "$status" "1" "expected missing creds exits 1"
+assert_contains "$out" "::warning::google skipped:" "expected-missing skips google"
+assert_contains "$out" "::error::microsoft failed:" "expected-missing errors on microsoft"
+assert_contains "$out" "::error::apple failed:" "expected-missing errors on apple"
+assert_contains "$out" "live-provider-smoke passed=none skipped=google failed=microsoft apple" \
+  "expected-missing prints the summary line"
 assert_not_contains "$(cat "${STUB_DIR}/bun.log" 2>/dev/null || true)" "LIVE_PROVIDER=" \
-  "all-missing does not run bun"
+  "expected-missing does not run bun"
 
-# 2. One provider ready: runs bun for it, fails job for the others.
+# 2. Ready expected providers run; others skip when not expected.
 : > "${STUB_DIR}/bun.log"
-summary="${STUB_DIR}/partial-ready.md"
-log="${STUB_DIR}/partial-ready.log"
+summary="${STUB_DIR}/microsoft-apple-ready.md"
+log="${STUB_DIR}/microsoft-apple-ready.log"
 set +e
 run_smoke "$summary" "$log" \
-  SMOKE_MICROSOFT_REFRESH_TOKEN=rt \
-  MICROSOFT_CLIENT_ID=id \
-  MICROSOFT_CLIENT_SECRET=secret
-status=$?
-set -e
-out=$(cat "$log")
-assert_eq "$status" "1" "partial ready exits 1 when any provider failed"
-assert_contains "$out" "::error::google failed:" "partial-ready errors on google"
-assert_not_contains "$out" "::error::microsoft failed:" "ready microsoft is not a setup failure"
-assert_contains "$out" "microsoft: pass" "partial-ready microsoft contract passes"
-assert_contains "$out" "::error::apple failed:" "partial-ready errors on apple"
-assert_contains "$out" "live-provider-smoke passed=microsoft failed=google apple" \
-  "partial-ready summary lists passed and failed"
-assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=microsoft" \
-  "partial-ready invokes bun for microsoft"
-assert_contains "$(cat "$summary")" \
-  "live-provider-smoke passed=microsoft failed=google apple" \
-  "partial-ready writes the summary to GITHUB_STEP_SUMMARY"
-
-# 3. All providers ready: exit 0 when bun passes.
-: > "${STUB_DIR}/bun.log"
-summary="${STUB_DIR}/all-ready.md"
-log="${STUB_DIR}/all-ready.log"
-set +e
-run_smoke "$summary" "$log" \
-  SMOKE_GOOGLE_REFRESH_TOKEN=grt \
-  GOOGLE_CLIENT_ID=gid \
-  GOOGLE_CLIENT_SECRET=gsec \
+  SMOKE_EXPECTED_PROVIDERS=microsoft,apple \
   SMOKE_MICROSOFT_REFRESH_TOKEN=rt \
   MICROSOFT_CLIENT_ID=id \
   MICROSOFT_CLIENT_SECRET=secret \
@@ -141,15 +107,35 @@ run_smoke "$summary" "$log" \
 status=$?
 set -e
 out=$(cat "$log")
-assert_eq "$status" "0" "all ready exits 0 when bun passes"
-assert_contains "$out" "live-provider-smoke passed=google microsoft apple failed=none" \
-  "all-ready summary lists all passed"
-assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=google" \
-  "all-ready invokes bun for google"
+assert_eq "$status" "0" "expected ready providers exit 0 when bun passes"
+assert_contains "$out" "::warning::google skipped:" "microsoft-apple-ready skips google"
+assert_not_contains "$out" "::error::microsoft failed:" "ready microsoft is not a setup failure"
+assert_not_contains "$out" "::error::apple failed:" "ready apple is not a setup failure"
+assert_contains "$out" "microsoft: pass" "microsoft-apple-ready microsoft contract passes"
+assert_contains "$out" "apple: pass" "microsoft-apple-ready apple contract passes"
+assert_contains "$out" "live-provider-smoke passed=microsoft apple skipped=google failed=none" \
+  "microsoft-apple-ready summary lists passed and skipped"
 assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=microsoft" \
-  "all-ready invokes bun for microsoft"
+  "microsoft-apple-ready invokes bun for microsoft"
 assert_contains "$(cat "${STUB_DIR}/bun.log")" "LIVE_PROVIDER=apple" \
-  "all-ready invokes bun for apple"
+  "microsoft-apple-ready invokes bun for apple"
+
+# 3. Nothing expected: every provider skipped exits 0.
+: > "${STUB_DIR}/bun.log"
+summary="${STUB_DIR}/nothing-expected.md"
+log="${STUB_DIR}/nothing-expected.log"
+set +e
+run_smoke "$summary" "$log"
+status=$?
+set -e
+out=$(cat "$log")
+assert_eq "$status" "0" "nothing expected and all skipped exits 0"
+assert_contains "$out" "::warning::google skipped:" "nothing-expected warns on google"
+assert_contains "$out" "::warning::microsoft skipped:" "nothing-expected warns on microsoft"
+assert_contains "$out" "::warning::apple skipped:" "nothing-expected warns on apple"
+assert_contains "$out" "live-provider-smoke passed=none skipped=google microsoft apple failed=none" \
+  "nothing-expected prints the summary line"
+assert_not_contains "$out" "::error::" "nothing expected does not error on skipped providers"
 
 if [ "$FAIL" -gt 0 ]; then
   echo "${FAIL} failed, ${PASS} passed" >&2

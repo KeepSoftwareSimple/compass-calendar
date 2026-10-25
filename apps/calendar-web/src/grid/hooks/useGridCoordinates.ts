@@ -88,5 +88,3 @@ export const useGridCoordinates = (
     getYByDate,
   };
 };
-
-export type GridCoordinates = ReturnType<typeof useGridCoordinates>;

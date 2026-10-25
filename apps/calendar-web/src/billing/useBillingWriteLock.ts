@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { defersAwaitingCheckoutGateToCommit } from "@web/billing/awaiting-checkout-explore.util";
 import {
+  isAwaitingCheckoutWriteLocked,
   isWriteLockedAccess,
   setBillingWriteLock,
 } from "@web/billing/billing-write-lock";
@@ -23,7 +23,7 @@ export function useShortcutWriteLocked(): boolean {
 /** Write-locked for UI that blocks before intent (shortcuts, palette). */
 export function useShortcutWriteLockedAtIntent(): boolean {
   const locked = useShortcutWriteLocked();
-  return locked && !defersAwaitingCheckoutGateToCommit();
+  return locked && !isAwaitingCheckoutWriteLocked();
 }
 
 /**

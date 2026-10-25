@@ -1,7 +1,4 @@
-export type {
-  AuthDecision,
-  AuthMode,
-} from "@backend/auth/services/google/google.auth.types";
+export type { AuthDecision } from "@backend/auth/services/google/google.auth.types";
 
 export type AppleIdTokenPayload = {
   sub?: string;

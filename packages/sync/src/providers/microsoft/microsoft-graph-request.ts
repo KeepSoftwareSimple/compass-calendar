@@ -1,6 +1,5 @@
 import { MICROSOFT_REQUEST_TIMEOUT_MS } from "@sync/providers/microsoft/microsoft-http.constants";
 import {
-  isRetryableProviderHttpStatus,
   parseRetryAfterMs,
   withRetryableProviderHttp,
 } from "@sync/providers/provider-http-retry.util";
@@ -19,13 +18,11 @@ export interface MicrosoftGraphRequestInit {
 export async function microsoftGraphRequest<T>(
   init: MicrosoftGraphRequestInit,
 ): Promise<T> {
+  // Retryable status detection is the shared default: Graph errors already
+  // carry `response.status`. Only Retry-After needs a Graph-specific read.
   return withRetryableProviderHttp(
     () => executeMicrosoftGraphRequest<T>(init),
     {
-      isRetryable: (error) =>
-        isRetryableProviderHttpStatus(
-          (error as { response?: { status?: number } })?.response?.status,
-        ),
       readRetryAfterMs: (error) =>
         parseRetryAfterMs(
           (error as { retryAfter?: string | null })?.retryAfter ?? undefined,

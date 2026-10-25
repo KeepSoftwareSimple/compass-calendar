@@ -33,6 +33,17 @@ export function isAwaitingCheckoutWriteLocked(): boolean {
   );
 }
 
+/**
+ * Write-locked for UI that blocks before intent (shortcuts, palette).
+ *
+ * Explore-first `awaiting_checkout`: those users may start drafts and edit
+ * locally, so their gate opens on commit (mutations) instead. Expired and
+ * canceled accounts are blocked at the key press.
+ */
+export function isWriteLockedAtIntent(): boolean {
+  return isBillingWriteLocked() && !isAwaitingCheckoutWriteLocked();
+}
+
 export function resetBillingWriteLockForTests(): void {
   state = unlocked;
 }

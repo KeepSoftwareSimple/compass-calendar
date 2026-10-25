@@ -82,7 +82,8 @@ describe("StripeService", () => {
         .payment_method_collection,
     ).toBe("always");
     expect(
-      (sessionArgs as { payment_method_types?: unknown }).payment_method_types,
+      (sessionArgs as { allowed_payment_method_types?: unknown })
+        .allowed_payment_method_types,
     ).toBeUndefined();
     // Stripe Tax needs all three together with an existing customer: drop
     // one and tax silently calculates as zero instead of erroring.
@@ -1067,7 +1068,7 @@ describe("StripeService", () => {
       expect((sessionsCreate.mock.calls as unknown[][])[0]?.[0]).toEqual({
         mode: "setup",
         customer: "cus_card",
-        payment_method_types: ["card"],
+        allowed_payment_method_types: ["card"],
         ui_mode: "embedded_page",
         redirect_on_completion: "never",
         client_reference_id: userId.toString(),

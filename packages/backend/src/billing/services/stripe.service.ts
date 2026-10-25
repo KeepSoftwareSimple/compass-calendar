@@ -449,7 +449,7 @@ export class StripeService {
       .createCheckoutSession({
         mode: "setup",
         customer: customerId,
-        payment_method_types: ["card"],
+        allowed_payment_method_types: ["card"],
         client_reference_id: userId,
         setup_intent_data: { metadata: { compassUserId: userId } },
         ...checkoutReturnParams(options),

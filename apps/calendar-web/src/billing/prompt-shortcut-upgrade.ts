@@ -1,10 +1,9 @@
 import { createElement } from "react";
 import { type Id } from "react-toastify";
 import { track } from "@web/auth/posthog/track";
-import { defersAwaitingCheckoutGateToCommit } from "@web/billing/awaiting-checkout-explore.util";
 import {
   getBillingWriteLockStatus,
-  isBillingWriteLocked,
+  isWriteLockedAtIntent,
 } from "@web/billing/billing-write-lock";
 import { type CheckoutPanelSource } from "@web/billing/checkout-panel.store";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
@@ -81,12 +80,8 @@ export function promptShortcutUpgrade(
   input: ShortcutUpgradePromptInput,
   now = Date.now(),
 ): void {
-  if (!isBillingWriteLocked()) return;
+  if (!isWriteLockedAtIntent()) return;
   if (hasAppLockReason("billingGate")) return;
-
-  if (defersAwaitingCheckoutGateToCommit()) {
-    return;
-  }
 
   const copy = promptCopy(input);
   const presentationKey = `${input.featureArea}:${input.actionId ?? ""}:${input.source}`;

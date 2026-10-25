@@ -116,7 +116,7 @@ test("date picker arrow keys move the highlight while the input stays focused", 
   await expect(highlighted).toBeVisible();
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/event-form-date-picker-arrow-highlight.png",
+    path: test.info().outputPath("event-form-date-picker-arrow-highlight.png"),
   });
   await page.screenshot({
     path: testInfo.outputPath("event-form-date-picker-arrow-highlight.png"),

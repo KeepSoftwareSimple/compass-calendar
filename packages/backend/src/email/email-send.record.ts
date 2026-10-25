@@ -8,10 +8,8 @@ export const EmailSendStatusSchema = z.enum([
   "canceled",
   "failed",
 ]);
-export type EmailSendStatus = z.infer<typeof EmailSendStatusSchema>;
 
 export const EmailSendSequenceSchema = z.enum(["welcome", "booking-host"]);
-export type EmailSendSequence = z.infer<typeof EmailSendSequenceSchema>;
 
 export const EmailSendRecordSchema = z.strictObject({
   _id: z.string(),

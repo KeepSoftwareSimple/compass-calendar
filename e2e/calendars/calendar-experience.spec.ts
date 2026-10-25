@@ -705,7 +705,9 @@ test("a read-only event blocks a drag attempt", async ({ page }) => {
   await card.focus();
   await page.keyboard.press("Shift+ArrowDown");
   await page.keyboard.press("Shift+ArrowRight");
-  await page.waitForTimeout(150);
+  await expect
+    .poll(() => harness.mutationRequests.length, { timeout: 3_000 })
+    .toBe(0);
 
   expect(harness.mutationRequests).toHaveLength(0);
   await expect(card).toBeVisible();
@@ -983,8 +985,7 @@ function microsoftHolidayCalendar(): FixtureCalendar {
 test("week all-day row dedupes the same holiday across connected holiday calendars", async ({
   page,
 }) => {
-  const today = new Date();
-  const holidayYmd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const holidayYmd = dayjs().tz(TIME_ZONE).format("YYYY-MM-DD");
 
   const holidayEvents: FixtureEvent[] = [
     buildAllDayEvent(

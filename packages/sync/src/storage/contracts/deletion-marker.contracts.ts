@@ -12,7 +12,6 @@ import {
 import { ObjectIdStringSchema } from "@core/types/type.utils";
 
 export const DeletionSourceSchema = z.enum(["compass", "provider"]);
-export type DeletionSource = z.infer<typeof DeletionSourceSchema>;
 
 // Persistence record for `deletion_markers` — the content-free memory of a
 // confirmed deletion, kept only long enough to stop delayed sync work from

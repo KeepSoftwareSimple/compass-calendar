@@ -31,7 +31,7 @@ import { eventQueryKeys } from "@web/events/queries/event.query.keys";
 import * as realRouters from "@web/routers";
 import {
   resetEffectiveTimeZoneStoreForTests,
-  setEffectiveTimeZoneForTests,
+  setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import {
   afterEach,
@@ -130,7 +130,7 @@ describe("useGuestRsvpNotice", () => {
     mockNavigate.mockClear();
     registerToastPort(port);
     resetGuestRsvpNoticeForTests();
-    setEffectiveTimeZoneForTests("America/Chicago");
+    setPinnedTimeZone("America/Chicago");
     setSystemTime(new Date("2026-09-09T12:00:00.000Z"));
     userMetadataActions.set({
       connections: [createMockConnection(HOST_EMAIL)],

@@ -1,9 +1,24 @@
+import Stripe from "stripe";
 import { Status } from "@core/errors/status.codes";
 import {
   BillingHttpError,
   logBillingHttpError,
+  wrapStripeFailure,
 } from "@backend/billing/billing.errors";
 import { describe, expect, it, mock } from "bun:test";
+
+describe("wrapStripeFailure", () => {
+  it("maps StripeConnectionError to BAD_GATEWAY when statusCode is missing", () => {
+    const connectionError = new Stripe.errors.StripeConnectionError({
+      message: "An error occurred with our connection to Stripe.",
+    });
+
+    expect(() => wrapStripeFailure(connectionError)).toThrow(BillingHttpError);
+    expect(() => wrapStripeFailure(connectionError)).toThrow(
+      expect.objectContaining({ status: Status.BAD_GATEWAY }),
+    );
+  });
+});
 
 describe("logBillingHttpError", () => {
   it("logs client billing errors at warn without attaching the error", () => {

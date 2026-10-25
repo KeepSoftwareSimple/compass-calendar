@@ -22,6 +22,7 @@ import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { seedHiddenEventIds } from "@web/__tests__/utils/hidden-events-test-data";
 import { createCompassQueryClient } from "@web/api/query-client";
 import { ZIndex } from "@web/common/constants/web.constants";
+import { getTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { createObjectIdString } from "@web/common/utils/id/object-id.util";
 import {
   allDayGridSchedule,
@@ -473,6 +474,16 @@ describe("saved Week event ownership", () => {
 
     expect(parseFloat(copyCard.style.width)).toBeGreaterThan(
       parseFloat(originalCard.style.width) * 0.95,
+    );
+
+    const draftTimeLabel = getTimesLabel(fridayStart, fridayEnd, "UTC");
+    expect(copyCard).toHaveAccessibleName(
+      expect.stringMatching(
+        new RegExp(
+          `hang art copy, ${draftTimeLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+          "i",
+        ),
+      ),
     );
   });
 

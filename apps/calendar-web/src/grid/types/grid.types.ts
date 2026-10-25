@@ -1,4 +1,4 @@
-import { type MutableRefObject, type ReactNode, type RefCallback } from "react";
+import { type MutableRefObject, type RefCallback } from "react";
 import { type Dayjs } from "@core/util/date/dayjs";
 
 export interface GridVisibleDate {
@@ -43,9 +43,4 @@ export interface EventPosition {
   top: number;
   width: number;
   zIndex?: number;
-}
-
-export interface GridRenderLayers {
-  allDayEvents: ReactNode;
-  timedEvents: ReactNode;
 }

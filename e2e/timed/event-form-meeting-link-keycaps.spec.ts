@@ -116,7 +116,7 @@ test("shows meeting-link copy keycaps and copies with Mod+Shift+L", async ({
 
   const sidebar = page.locator("#sidebar");
   await sidebar.screenshot({
-    path: "/opt/cursor/artifacts/event-form-meeting-link-keycaps.png",
+    path: test.info().outputPath("event-form-meeting-link-keycaps.png"),
   });
 
   await sidebar.screenshot({

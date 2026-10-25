@@ -92,7 +92,7 @@ public enum GridLayoutSnapshotBuilder {
         let deckById = Dictionary(uniqueKeysWithValues: deckLayout.map { ($0.eventId, $0) })
 
         for timed in scenario.timedEvents {
-            if shouldRenderDraftOverlayCard(for: timed.eventId, scenario: scenario) {
+            if timedDraftOverlay(matching: timed.eventId, in: scenario) != nil {
                 continue
             }
             guard let deckItem = deckById[timed.eventId] else { continue }
@@ -255,16 +255,34 @@ public enum GridLayoutSnapshotBuilder {
         }
     }
 
+    private static func timedDraftOverlay(
+        matching eventId: String,
+        in scenario: GridLayoutScenario
+    ) -> GridLayoutDraftOverlay? {
+        guard let draft = scenario.draftOverlay,
+              draft.eventId == eventId,
+              draft.schedule.kind == .timed
+        else { return nil }
+        return draft
+    }
+
+    private static func formattedTimedScheduleISO(
+        for draft: GridLayoutDraftOverlay
+    ) -> (start: String, end: String) {
+        (
+            CompassDateParsing.formatLikeDayjs(draft.schedule.start),
+            CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+        )
+    }
+
     private static func timedDeckInputs(for scenario: GridLayoutScenario) -> [TimedDeckEventInput] {
         scenario.timedEvents.map { timed in
-            if let draft = scenario.draftOverlay,
-               draft.eventId == timed.eventId,
-               draft.schedule.kind == .timed
-            {
+            if let draft = timedDraftOverlay(matching: timed.eventId, in: scenario) {
+                let formatted = formattedTimedScheduleISO(for: draft)
                 return TimedDeckEventInput(
                     id: timed.eventId,
-                    startDate: CompassDateParsing.formatLikeDayjs(draft.schedule.start),
-                    endDate: CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+                    startDate: formatted.start,
+                    endDate: formatted.end
                 )
             }
             return TimedDeckEventInput(
@@ -273,14 +291,6 @@ public enum GridLayoutSnapshotBuilder {
                 endDate: timed.endDate
             )
         }
-    }
-
-    private static func shouldRenderDraftOverlayCard(
-        for eventId: String,
-        scenario: GridLayoutScenario
-    ) -> Bool {
-        guard let draft = scenario.draftOverlay else { return false }
-        return draft.eventId == eventId && draft.schedule.kind == .timed
     }
 
     private static func columnIndexForEvent(
@@ -405,8 +415,9 @@ public enum GridLayoutSnapshotBuilder {
             )
         }
 
-        let startISO = CompassDateParsing.formatLikeDayjs(draft.schedule.start)
-        let endISO = CompassDateParsing.formatLikeDayjs(draft.schedule.end)
+        let formatted = formattedTimedScheduleISO(for: draft)
+        let startISO = formatted.start
+        let endISO = formatted.end
         let columnIndex = columnIndexForEvent(
             calendarId: draft.calendarId,
             scenario: scenario,

@@ -44,6 +44,16 @@ const GRAPH_TO_RRULE_DAY: Record<GraphDayOfWeek, string> = {
   saturday: "SA",
 };
 
+const RRULE_WEEKDAY_TOKENS = [
+  "MO",
+  "TU",
+  "WE",
+  "TH",
+  "FR",
+  "SA",
+  "SU",
+] as const;
+
 const RRULE_TO_GRAPH_DAY: Record<string, GraphDayOfWeek> = {
   SU: "sunday",
   MO: "monday",
@@ -433,12 +443,14 @@ function serializeRRule(parts: ParsedRRuleParts): string {
 
 function relativeByDay(pattern: GraphRecurrencePattern): string[] {
   const ordinal = INDEX_TO_ORDINAL[pattern.index ?? "first"];
-  return requireDays(pattern.daysOfWeek, pattern.type).map((day) => {
-    const code = graphDayToRrule(day);
-    if (ordinal < 0) return `${ordinal}${code}`;
-    if (ordinal === 1) return code;
-    return `${ordinal}${code}`;
-  });
+  return requireDays(pattern.daysOfWeek, pattern.type).map((day) =>
+    ordinalDayToken(ordinal, graphDayToRrule(day)),
+  );
+}
+
+/** `1MO` is just `MO` in RRULE; every other ordinal, last included, prefixes. */
+function ordinalDayToken(ordinal: number, code: string): string {
+  return ordinal === 1 ? code : `${ordinal}${code}`;
 }
 
 function splitRelativeByDay(byday: readonly string[]): {
@@ -494,34 +506,31 @@ function byweekdayToTokens(
     return weekdays.map((day) => weekdayToken(day));
   }
 
-  const ordinals = new Set(
-    weekdays.map((day) => (day.n === 0 ? 1 : (day.n ?? 1))),
-  );
+  const ordinals = new Set(weekdays.map(weekdayOrdinal));
   if (ordinals.size > 1) {
     throw new UnsupportedRecurrenceError(
       "Multiple BYDAY ordinals are not supported by Microsoft Graph",
     );
   }
 
-  return weekdays.map((day) => {
-    const ordinal = day.n === 0 ? 1 : (day.n ?? 1);
-    const code = weekdayToken(day);
-    if (ordinal < 0) return `${ordinal}${code}`;
-    if (ordinal === 1) return code;
-    return `${ordinal}${code}`;
-  });
+  return weekdays.map((day) =>
+    ordinalDayToken(weekdayOrdinal(day), weekdayToken(day)),
+  );
+}
+
+function weekdayOrdinal(day: WeekdayType): number {
+  return day.n === 0 ? 1 : (day.n ?? 1);
 }
 
 function weekdayToken(day: WeekdayType | number): string {
-  const tokens = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const;
   if (typeof day === "number") {
-    const token = tokens[day];
+    const token = RRULE_WEEKDAY_TOKENS[day];
     if (!token) {
       throw new UnsupportedRecurrenceError(`Invalid weekday index: ${day}`);
     }
     return token;
   }
-  return tokens[day.weekday]!;
+  return RRULE_WEEKDAY_TOKENS[day.weekday]!;
 }
 
 function frequencyName(freq: Frequency | undefined): string {

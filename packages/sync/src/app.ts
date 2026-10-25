@@ -300,34 +300,26 @@ async function start(): Promise<void> {
     // Retention is local-only (no provider calls), so it runs in passive mode
     // too — soft-disconnected caches must still age out. Register before the
     // mongo drain so reverse-order teardown stops the sweep first.
-    const retention = buildRetentionSweep(mongo);
-    service.shutdown.register("retention", () => retention.stop());
-    retention.start();
-
-    const credentialUsableReconcile =
-      buildCredentialUsableReconcileSweep(mongo);
-    service.shutdown.register("credentialUsableReconcile", () =>
-      credentialUsableReconcile.stop(),
+    startSweep(service, "retention", buildRetentionSweep(mongo));
+    startSweep(
+      service,
+      "credentialUsableReconcile",
+      buildCredentialUsableReconcileSweep(mongo),
     );
-    credentialUsableReconcile.start();
-
-    const connectionStateRefresh = buildConnectionStateRefreshSweep(mongo);
-    service.shutdown.register("connectionStateRefresh", () =>
-      connectionStateRefresh.stop(),
+    startSweep(
+      service,
+      "connectionStateRefresh",
+      buildConnectionStateRefreshSweep(mongo),
     );
-    connectionStateRefresh.start();
 
     // Sanitized sync_health_snapshot every five minutes (S44). Runs in passive
     // mode too so the heartbeat stays alive before provider work is enabled.
     const registry = buildProviderRegistry(config);
-    const health = buildHealthSnapshotSweep(
-      service.identity,
-      mongo,
-      posthog,
-      registry,
+    startSweep(
+      service,
+      "health",
+      buildHealthSnapshotSweep(service.identity, mongo, posthog, registry),
     );
-    service.shutdown.register("health", () => health.stop());
-    health.start();
 
     // Active, provider-configured deployments also drain jobs and renew
     // channels. Those register AFTER the mongo drain so teardown stops them
@@ -418,6 +410,20 @@ function buildPostHogClient(config: SyncConfig): PostHogCaptureClient | null {
 // for nine days, and it keeps a diagnostic counter out of the storage schema.
 const PUSH_SILENCE_ALERT_AFTER_SAMPLES = 12;
 const pushSilenceStreaks = new Map<string, number>();
+
+/**
+ * Register a background sweep's stop before starting it, so a shutdown that
+ * lands mid-boot still tears the sweep down. Registration order is teardown
+ * order reversed, so callers stay in start order.
+ */
+function startSweep(
+  service: SyncService,
+  name: string,
+  sweep: SweepScheduler,
+): void {
+  service.shutdown.register(name, () => sweep.stop());
+  sweep.start();
+}
 
 function buildHealthSnapshotSweep(
   identity: ReturnType<typeof buildServiceIdentity>,
