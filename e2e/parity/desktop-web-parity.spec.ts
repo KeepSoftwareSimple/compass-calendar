@@ -134,7 +134,10 @@ test.describe("Desktop web parity captures", () => {
     await expect(page.getByLabel("Command palette search")).toBeVisible({
       timeout: 10_000,
     });
-    await page.screenshot({ path: join(outputDir, "command-palette.png") });
+    await page.screenshot({
+      path: join(outputDir, "command-palette.png"),
+      animations: "disabled",
+    });
   });
 
   test("settings", async ({ page }) => {
