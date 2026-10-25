@@ -7,14 +7,13 @@ import {
 } from "@core/types/event-attendance.contracts";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
 import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
+import { toIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
 import {
   ProviderEventError,
   type ProviderEventRead,
@@ -329,15 +328,6 @@ function extractDatePart(value: GraphDateTimeTimeZone): string | null {
   return parsed.format(DATE_ONLY);
 }
 
-function toIanaTimeZone(timeZone: string): string {
-  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
-  try {
-    return windowsZoneToIana(timeZone);
-  } catch {
-    return "UTC";
-  }
-}
-
 function resolveTimedEventTimeZone(
   item: GraphEvent,
   startFieldZone: string,
@@ -396,13 +386,6 @@ function mapRecurrence(
       }
       throw error;
     }
-  }
-  if (item.type === "exception" && item.seriesMasterId && item.originalStart) {
-    return {
-      kind: "instance",
-      seriesProviderId: item.seriesMasterId,
-      recurrenceId: toCanonicalRecurrenceId(item.originalStart),
-    };
   }
   if (item.seriesMasterId && item.originalStart) {
     return {

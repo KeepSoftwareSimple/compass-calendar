@@ -1,7 +1,6 @@
 import { type EventSchedule } from "@core/types/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
-import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
+import { toIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
 
 export interface CancelledOccurrenceMasterContext {
   readonly start?: { readonly dateTime?: string; readonly timeZone?: string };
@@ -13,15 +12,6 @@ export interface CancelledOccurrenceMasterContext {
 
 /** Graph cancelledOccurrences entry: `OID.<id>.<yyyy-mm-dd>` in the series zone. */
 const OID_CANCELLED_DATE = /^OID\.[^.]+(?:\.[^.]+)*\.(\d{4}-\d{2}-\d{2})$/i;
-
-function toIanaTimeZone(timeZone: string): string {
-  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
-  try {
-    return windowsZoneToIana(timeZone);
-  } catch {
-    return "UTC";
-  }
-}
 
 function seriesRecurrenceZone(item: CancelledOccurrenceMasterContext): string {
   const raw =
