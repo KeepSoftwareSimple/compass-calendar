@@ -18,6 +18,11 @@ on:
   # post-merge run was a duplicate full UI suite (about 15 macOS minutes) per
   # merged PR, and it queued behind the PRs still waiting to merge.
   workflow_dispatch:
+    inputs:
+      strict_verify:
+        description: Run full strict verification on an isolated Mac
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,7 +92,7 @@ jobs:
 
   swift-packages:
     needs: changes
-    if: needs.changes.outputs.macos == 'true'
+    if: needs.changes.outputs.macos == 'true' && !inputs.strict_verify
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -111,7 +116,7 @@ jobs:
 
   build:
     needs: changes
-    if: needs.changes.outputs.macos == 'true'
+    if: needs.changes.outputs.macos == 'true' && !inputs.strict_verify
     runs-on: macos-latest
     timeout-minutes: 30
     defaults:
@@ -193,11 +198,43 @@ jobs:
           path: apps/calendar-macos/build/Compass.xcresult
           retention-days: 7
 
+  strict:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Render app icon
+        run: bash .github/scripts/render-macos-icon.sh
+      - name: Verify Swift contracts and desktop exports
+        run: |
+          bun cli contracts:swift --check
+          bun cli desktop:export --check
+      - name: Run full strict verification
+        run: |
+          mkdir -p build
+          bun run verify --strict | tee build/macos-strict.log
+      - name: Upload strict verification log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-strict-log
+          path: build/macos-strict.log
+          if-no-files-found: warn
+          retention-days: 14
+
   # One required context whether or not the build ran, like `unit` over
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
   macos:
-    needs: [changes, build, swift-packages]
+    needs: [changes, build, swift-packages, strict]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -207,10 +244,11 @@ jobs:
           CHANGES: ${{ needs.changes.result }}
           BUILD: ${{ needs.build.result }}
           SWIFT_PACKAGES: ${{ needs.swift-packages.result }}
+          STRICT: ${{ needs.strict.result }}
         run: |
           echo "changes: ${CHANGES}, build: ${BUILD}, swift-packages: ${SWIFT_PACKAGES}"
           [ "$CHANGES" = "success" ] || exit 1
-          for leg in "$BUILD" "$SWIFT_PACKAGES"; do
+          for leg in "$BUILD" "$SWIFT_PACKAGES" "$STRICT"; do
             case "$leg" in
               success|skipped) ;;
               *) exit 1 ;;
