@@ -985,8 +985,7 @@ function microsoftHolidayCalendar(): FixtureCalendar {
 test("week all-day row dedupes the same holiday across connected holiday calendars", async ({
   page,
 }) => {
-  const today = new Date();
-  const holidayYmd = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const holidayYmd = dayjs().tz(TIME_ZONE).format("YYYY-MM-DD");
 
   const holidayEvents: FixtureEvent[] = [
     buildAllDayEvent(
