@@ -51,7 +51,8 @@ const createTimedEventOffsetBy = async (
     await page.keyboard.press(key);
     const direction = key === "Shift+ArrowUp" ? -1 : 1;
     const expectedStart =
-      new Date(saved.startDate).getTime() + direction * (press + 1) * 15 * 60_000;
+      new Date(saved.startDate).getTime() +
+      direction * (press + 1) * 15 * 60_000;
     await expect
       .poll(async () => {
         const [event] = await getSavedEventsByTitle(page, title);
