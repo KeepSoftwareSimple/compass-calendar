@@ -368,13 +368,13 @@ public struct RootView: View {
                 HStack(spacing: 12) {
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Previous life variation" : "Previous",
-                        icon: .caretLeft
+                        symbol: "arrow.left"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifePrev : .navPrevious)
                     }
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Next life variation" : "Next",
-                        icon: .caretRight
+                        symbol: "arrow.right"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifeNext : .navNext)
                     }
@@ -386,8 +386,8 @@ public struct RootView: View {
 
                 titleBarNavButton(
                     label: model.isSidebarOpen ? "Close sidebar" : "Open sidebar",
-                    icon: .sidebarSimple,
-                    mirrored: true
+                    symbol: "sidebar.left",
+                    symbolSize: 12
                 ) {
                     model.isSidebarOpen.toggle()
                 }
@@ -466,17 +466,14 @@ public struct RootView: View {
 
     private func titleBarNavButton(
         label: String,
-        icon: PhosphorIcon,
-        mirrored: Bool = false,
+        symbol: String,
+        symbolSize: CGFloat = 14,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            PhosphorIconView(
-                icon: icon,
-                size: 16,
-                color: theme.textMutedColor,
-                mirrored: mirrored
-            )
+            Image(systemName: symbol)
+                .font(.system(size: symbolSize, weight: .regular))
+                .foregroundStyle(theme.textMutedColor)
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }
