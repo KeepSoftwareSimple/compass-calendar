@@ -36,7 +36,7 @@ test.describe("Timezone mismatch banner", () => {
     await expect(banner.getByText("P", { exact: true })).toBeVisible();
 
     await banner.screenshot({
-      path: "/opt/cursor/artifacts/timezone-mismatch-banner-shortcuts.png",
+      path: test.info().outputPath("timezone-mismatch-banner-shortcuts.png"),
     });
   });
 });

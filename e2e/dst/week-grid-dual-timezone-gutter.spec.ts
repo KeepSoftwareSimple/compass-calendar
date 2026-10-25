@@ -57,7 +57,7 @@ test.describe("Week grid dual timezone gutter", () => {
     }
 
     await page.locator("#mainSection").screenshot({
-      path: "/opt/cursor/artifacts/week-grid-dual-timezone-gutter.png",
+      path: test.info().outputPath("week-grid-dual-timezone-gutter.png"),
     });
   });
 });

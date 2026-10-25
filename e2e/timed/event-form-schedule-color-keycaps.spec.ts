@@ -94,10 +94,10 @@ test("shows date, time, and color keycaps on the event form", async ({
   await expect(endTime).toBeInViewport();
 
   await sidebar.screenshot({
-    path: "/opt/cursor/artifacts/event-form-date-focused-no-overlap.png",
+    path: test.info().outputPath("event-form-date-focused-no-overlap.png"),
   });
   await sidebar.screenshot({
-    path: "/opt/cursor/artifacts/event-form-schedule-color-keycaps.png",
+    path: test.info().outputPath("event-form-schedule-color-keycaps.png"),
   });
   await sidebar.screenshot({
     path: testInfo.outputPath("event-form-schedule-color-keycaps.png"),

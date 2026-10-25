@@ -141,7 +141,7 @@ test.describe("UTC browser with Denver calendar zone", () => {
     await expect(form).toContainText("10:45 AM");
 
     await page.locator("#mainSection").screenshot({
-      path: "/opt/cursor/artifacts/utc-browser-denver-calendar.png",
+      path: test.info().outputPath("utc-browser-denver-calendar.png"),
     });
   });
 });

@@ -183,14 +183,14 @@ test("explore banner dismiss hides until the next session", async ({
   const bannerText = "Start your 7-day free trial to plan your week.";
   await expect(page.getByText(bannerText)).toBeVisible({ timeout: 15000 });
   await page.screenshot({
-    path: "/opt/cursor/artifacts/before-explore-calendar-banner.png",
+    path: test.info().outputPath("before-explore-calendar-banner.png"),
     fullPage: true,
   });
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByText(bannerText)).toHaveCount(0);
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/after-explore-banner-dismissed.png",
+    path: test.info().outputPath("after-explore-banner-dismissed.png"),
     fullPage: true,
   });
 
@@ -263,7 +263,7 @@ test("event create opens the draft without the trial step", async ({
   expect(page.url()).not.toContain("auth=trial");
 
   await page.screenshot({
-    path: "/opt/cursor/artifacts/explore-draft-open-before-save.png",
+    path: test.info().outputPath("explore-draft-open-before-save.png"),
     fullPage: true,
   });
   await page.keyboard.press("Escape");
@@ -313,7 +313,7 @@ test("save opens the trial step and closing keeps the draft without a ghost even
   await expect(trialDialog).toBeVisible({ timeout: 15000 });
   expect(page.url()).toContain("auth=trial");
   await trialDialog.screenshot({
-    path: "/opt/cursor/artifacts/explore-trial-step-on-save.png",
+    path: test.info().outputPath("explore-trial-step-on-save.png"),
   });
 
   await page.keyboard.press("Escape");
