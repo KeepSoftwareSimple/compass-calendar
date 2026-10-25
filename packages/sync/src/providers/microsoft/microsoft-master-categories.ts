@@ -1,6 +1,9 @@
 import { MICROSOFT_CATEGORY_PRESET_HEX } from "@sync/providers/microsoft/microsoft-event-category.map";
 import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph-request";
-import { MICROSOFT_GRAPH_BASE_URL } from "@sync/providers/microsoft/microsoft-http.constants";
+import {
+  MICROSOFT_GRAPH_BASE_URL,
+  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER,
+} from "@sync/providers/microsoft/microsoft-http.constants";
 
 export interface GraphOutlookCategory {
   readonly id?: string;
@@ -53,7 +56,7 @@ class FetchMicrosoftMasterCategoryApi implements MicrosoftMasterCategoryApi {
       accessToken: this.#accessToken,
       url: `${MICROSOFT_GRAPH_BASE_URL}/me/outlook/masterCategories`,
       method: "GET",
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER },
       fallbackError: "microsoft_master_categories_failed",
     });
     return data.value ?? [];

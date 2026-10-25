@@ -7,6 +7,9 @@ export const MICROSOFT_REQUEST_TIMEOUT_MS = 30_000;
 export const MICROSOFT_CALENDAR_LIST_SELECT =
   "id,name,color,hexColor,canEdit,canShare,isDefaultCalendar,owner,isRemovable";
 export const MICROSOFT_EVENT_PAGE_SIZE = 200;
+export const MICROSOFT_GRAPH_OUTLOOK_TIMEZONE = "UTC";
+export const MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER = `outlook.timezone="${MICROSOFT_GRAPH_OUTLOOK_TIMEZONE}"`;
+export const MICROSOFT_GRAPH_EVENT_LIST_PREFER = `odata.maxpagesize=${MICROSOFT_EVENT_PAGE_SIZE}, ${MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER}`;
 
 // Fields the M-04 normalizer reads from a Graph event resource.
 export const MICROSOFT_EVENT_SELECT = [

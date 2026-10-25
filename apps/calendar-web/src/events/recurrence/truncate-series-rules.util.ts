@@ -32,3 +32,14 @@ export function truncateSeriesRulesBefore(
     return `RRULE:${[...kept, `UNTIL=${until}`].join(";")}`;
   });
 }
+
+// Removes COUNT and UNTIL from each rule, leaving an open-ended pattern. Used
+// for the remainder series of a thisAndFollowing split.
+export function stripRuleBounds(rules: readonly string[]): string[] {
+  return rules.map((rule) =>
+    rule
+      .split(";")
+      .filter((part) => !/^COUNT=/i.test(part) && !/^UNTIL=/i.test(part))
+      .join(";"),
+  );
+}

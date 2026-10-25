@@ -16,6 +16,8 @@ import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph
 import {
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
+  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
+  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import {
   type GraphCalendarMeetingSettings,
@@ -203,7 +205,7 @@ export class MicrosoftEventWriter implements ProviderEventWriter {
     try {
       const event = await api.get({ eventId: input.providerEventId });
       return normalizeMicrosoftEvent(event, undefined, {
-        graphPreferTimeZone: "UTC",
+        graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
       });
     } catch (error) {
       if (isNotFound(error)) return null;
@@ -228,7 +230,7 @@ export class MicrosoftEventWriter implements ProviderEventWriter {
       if (!match) return null;
       return normalizeMicrosoftEvent(match, undefined, {
         allowOccurrence: true,
-        graphPreferTimeZone: "UTC",
+        graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
       });
     } catch (error) {
       if (isNotFound(error)) return null;
@@ -528,7 +530,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
     ifMatch: string | null = null,
   ): Promise<GraphEvent> {
     const headers: Record<string, string> = {
-      Prefer: 'outlook.timezone="UTC"',
+      Prefer: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER,
     };
     if (ifMatch) headers["If-Match"] = ifMatch;
 
@@ -552,7 +554,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
       accessToken: this.#accessToken,
       url,
       method,
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER },
       fallbackError: "microsoft_event_write_failed",
     });
     return data.value ?? [];
@@ -563,7 +565,7 @@ class FetchMicrosoftEventWriteApi implements MicrosoftEventWriteApi {
       accessToken: this.#accessToken,
       url,
       method,
-      headers: { Prefer: 'outlook.timezone="UTC"' },
+      headers: { Prefer: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE_PREFER },
       fallbackError: "microsoft_event_write_failed",
     });
   }

@@ -7,14 +7,16 @@ import {
 } from "@core/types/event-attendance.contracts";
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
 import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
+import {
+  graphTimeZoneToIana,
+  stripGraphDateTimeFraction,
+} from "@sync/providers/microsoft/microsoft-graph-timezone";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import { windowsZoneToIana } from "@sync/providers/microsoft/windows-zones";
 import {
   ProviderEventError,
   type ProviderEventRead,
@@ -300,7 +302,7 @@ function mapSchedule(
 
   if (start.dateTime && end.dateTime) {
     const graphPreferTimeZone = options.graphPreferTimeZone ?? "UTC";
-    const startFieldZone = toIanaTimeZone(
+    const startFieldZone = graphTimeZoneToIana(
       start.timeZone ?? end.timeZone ?? "UTC",
     );
     const timeZone = resolveTimedEventTimeZone(
@@ -329,25 +331,16 @@ function extractDatePart(value: GraphDateTimeTimeZone): string | null {
   return parsed.format(DATE_ONLY);
 }
 
-function toIanaTimeZone(timeZone: string): string {
-  if (TimezoneSchema.safeParse(timeZone).success) return timeZone;
-  try {
-    return windowsZoneToIana(timeZone);
-  } catch {
-    return "UTC";
-  }
-}
-
 function resolveTimedEventTimeZone(
   item: GraphEvent,
   startFieldZone: string,
   graphPreferTimeZone: string,
 ): string {
   const recurrenceZone = item.recurrence?.range?.recurrenceTimeZone
-    ? toIanaTimeZone(item.recurrence.range.recurrenceTimeZone)
+    ? graphTimeZoneToIana(item.recurrence.range.recurrenceTimeZone)
     : null;
   const originalStartZone = item.originalStartTimeZone
-    ? toIanaTimeZone(item.originalStartTimeZone)
+    ? graphTimeZoneToIana(item.originalStartTimeZone)
     : null;
   if (graphPreferTimeZone === "UTC" && startFieldZone === "UTC") {
     if (recurrenceZone && recurrenceZone !== "UTC") return recurrenceZone;
@@ -397,13 +390,6 @@ function mapRecurrence(
       throw error;
     }
   }
-  if (item.type === "exception" && item.seriesMasterId && item.originalStart) {
-    return {
-      kind: "instance",
-      seriesProviderId: item.seriesMasterId,
-      recurrenceId: toCanonicalRecurrenceId(item.originalStart),
-    };
-  }
   if (item.seriesMasterId && item.originalStart) {
     return {
       kind: "instance",
@@ -416,10 +402,6 @@ function mapRecurrence(
 
 function toCanonicalRecurrenceId(originalStart: string): string {
   return new Date(originalStart).toISOString();
-}
-
-function stripGraphDateTimeFraction(dateTime: string): string {
-  return dateTime.replace(/\.\d+$/, "");
 }
 
 function toOffsetIso(

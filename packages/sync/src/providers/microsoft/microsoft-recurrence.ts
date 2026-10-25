@@ -94,17 +94,12 @@ interface ParsedRRuleParts {
 export function toRRule(
   recurrence: GraphPatternedRecurrence,
 ): readonly [string] {
-  const normalized = normalizeGraphRecurrence(recurrence);
-  const patternParts = patternToParts(normalized.pattern);
-  const rangeParts = rangeToParts(normalized.range);
+  const patternParts = patternToParts(
+    normalizeGraphPattern(recurrence.pattern),
+  );
+  const rangeParts = rangeToParts(recurrence.range);
   const rule = serializeRRule({ ...patternParts, ...rangeParts });
   return [rule];
-}
-
-function normalizeGraphRecurrence(
-  recurrence: GraphPatternedRecurrence,
-): GraphPatternedRecurrence {
-  return { ...recurrence, pattern: normalizeGraphPattern(recurrence.pattern) };
 }
 
 function normalizeGraphPattern(

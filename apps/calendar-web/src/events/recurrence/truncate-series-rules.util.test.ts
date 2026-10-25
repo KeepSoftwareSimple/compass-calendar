@@ -1,4 +1,7 @@
-import { truncateSeriesRulesBefore } from "./truncate-series-rules.util";
+import {
+  stripRuleBounds,
+  truncateSeriesRulesBefore,
+} from "./truncate-series-rules.util";
 import { describe, expect, test } from "bun:test";
 
 describe("truncateSeriesRulesBefore", () => {
@@ -15,6 +18,15 @@ describe("truncateSeriesRulesBefore", () => {
     expect(
       truncateSeriesRulesBefore(["RRULE:FREQ=DAILY;COUNT=10"], "2026-08-04"),
     ).toEqual(["RRULE:FREQ=DAILY;UNTIL=20260803T235959Z"]);
+  });
+
+  test("stripRuleBounds drops COUNT and UNTIL and leaves EXDATE intact", () => {
+    expect(
+      stripRuleBounds([
+        "RRULE:FREQ=DAILY;COUNT=10;UNTIL=20260506T085959Z",
+        "EXDATE:20260101T120000Z",
+      ]),
+    ).toEqual(["RRULE:FREQ=DAILY", "EXDATE:20260101T120000Z"]);
   });
 
   test("passes through non-RRULE lines unchanged", () => {
