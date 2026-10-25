@@ -5,7 +5,8 @@ final class EventFormActionsKeyboardTests: XCTestCase {
     func testShiftEscapeDiscardsChangedEventWithoutPromptingOrSaving() {
         let app = launchForm(mirrorTitleTyping: true)
         let window = app.windows["Compass"]
-        let title = window.textFields.matching(identifier: "compass-event-form-title").firstMatch
+        let title = window.textFields.matching(identifier: "compass-event-form-title")
+            .matching(NSPredicate(format: "enabled == true")).firstMatch
         window.typeKey("a", modifierFlags: [.command])
         window.typeText("Unsaved edit")
         XCTAssertTrue(title.waitForExistence(timeout: 2))
@@ -21,7 +22,8 @@ final class EventFormActionsKeyboardTests: XCTestCase {
     func testHeaderJumpTabsToCloseAndReturnPromptsInsteadOfSavingEdits() {
         let app = launchForm(mirrorTitleTyping: true)
         let window = app.windows["Compass"]
-        let title = window.textFields.matching(identifier: "compass-event-form-title").firstMatch
+        let title = window.textFields.matching(identifier: "compass-event-form-title")
+            .matching(NSPredicate(format: "enabled == true")).firstMatch
         XCTAssertTrue(title.waitForExistence(timeout: 2))
         title.click()
         title.typeKey("a", modifierFlags: [.command])
