@@ -232,6 +232,15 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      - name: Upload strict native test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-macos-strict-xcresult
+          path: ~/Library/Developer/Xcode/DerivedData/Compass-*/Logs/Test/*.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
   # One required context whether or not the build ran, like `unit` over
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
