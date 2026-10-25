@@ -286,6 +286,36 @@ describe("attachPointerIntentTracker", () => {
     ).toBe(false);
   });
 
+  it("pulses slot-click at Explorer on every empty timed-grid click", async () => {
+    writeShortcutUsageProfile({
+      version: 2,
+      actions: {},
+      shortcuts: {
+        "edit-open": { invocations: 1, recentImpressions: 0 },
+        "create-timed": { invocations: 10, recentImpressions: 0 },
+        "create-typed-time": { invocations: 10, recentImpressions: 0 },
+        "nav-previous": { invocations: 1, recentImpressions: 0 },
+        "nav-next": { invocations: 1, recentImpressions: 0 },
+      },
+    });
+    const user = userEvent.setup();
+    const column = document.getElementById(ID_GRID_COLUMNS_TIMED)!
+      .firstElementChild as HTMLElement;
+
+    for (let click = 0; click < 4; click += 1) {
+      usePointerHintStore.setState(initialPointerHintState, true);
+      await user.pointer({
+        keys: "[MouseLeft>]",
+        target: column,
+        coords: { clientY: 720 },
+      });
+      expect(usePointerHintStore.getState().pulse).toBe(1);
+      expect(
+        track.mock.calls.some(([event]) => event === "pointer_hint_shown"),
+      ).toBe(true);
+    }
+  });
+
   it("records pointer_intent_detected when muted but not pointer_hint_shown", async () => {
     setTipsMuted(true);
     const user = userEvent.setup();

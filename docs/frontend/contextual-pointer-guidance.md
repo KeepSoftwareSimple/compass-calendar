@@ -29,16 +29,24 @@ hint is demonstrated, not described.
 
 ## Rules
 
-- **Once per intent per session.** Each named intent teaches at most once.
+- **Empty grid clicks (timed slot and all-day).** Every intentional empty-grid
+  click shows the keyboard-create pill, matching the Mac app. These intents skip
+  once-per-session, the three-hint session cap, retire-on-use, and the Explorer
+  cutoff. Mute, tips off (permanent dismiss), app lock, and one-tip-at-a-time
+  still apply. Do not remove or suppress this hint because of PostHog dead-click
+  metrics: empty-grid clicks are deliberate teaching, not dead UI.
+- **Once per intent per session.** Each other named intent teaches at most once.
 - **Session cap.** At most three pointer-sourced pills per session
   (`MAX_POINTER_HINTS_PER_SESSION`), counting grid, chrome and form-field
-  hints. The right-click `m` tip is capped separately, at once per session.
+  hints other than empty-slot clicks. The right-click `m` tip is capped
+  separately, at once per session.
 - **Retire on use.** No hint for a registry id the per-browser usage profile
-  already records as invoked.
+  already records as invoked (empty-slot clicks excepted).
 - **Level 2 (Explorer).** No grid, chrome or form-field hints once the browser
-  reaches Explorer (four shortcuts used). The right-click `m` tip is the one
-  exception: it teaches once per session regardless of level, because sharing
-  the gate would pull the level reader into the context menu's boot chunk.
+  reaches Explorer (four shortcuts used), except empty-slot clicks. The
+  right-click `m` tip is the one other exception: it teaches once per session
+  regardless of level, because sharing the gate would pull the level reader
+  into the context menu's boot chunk.
 - **Muted and dismissed.** `compass.shortcuts.tips-muted` and
   `compass.pointer-hint.dismissed-permanently` suppress pills. Palette and
   pointer sources share the same store.
