@@ -218,7 +218,9 @@ jobs:
           bun cli contracts:swift --check
           bun cli desktop:export --check
       - name: Run full strict verification
+        shell: bash
         run: |
+          set -o pipefail
           mkdir -p build
           bun run verify --strict | tee build/macos-strict.log
       - name: Upload strict verification log
