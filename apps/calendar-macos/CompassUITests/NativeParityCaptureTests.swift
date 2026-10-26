@@ -208,7 +208,7 @@ final class NativeParityCaptureTests: XCTestCase {
             "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
             "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
         ]).window
-        prepareParityGrid(window, dismissDemoBanner: true)
+        prepareParityGridForOpenEventFormCapture(window)
         XCTAssertTrue(
             window.descendants(matching: .any)["compass-event-form-conference"].waitForExistence(timeout: 8))
         NativeImageSnapshotSupport.captureWindow(window, named: "event-form-meeting-link")
@@ -226,6 +226,26 @@ final class NativeParityCaptureTests: XCTestCase {
             "Expected command palette after keyboard or View menu shortcut")
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         NativeImageSnapshotSupport.captureWindow(launch.window, named: "command-palette")
+    }
+
+    /// Event form is already open: skip grid `t` jumps and demo-event buttons (the edited card is not a grid button).
+    @MainActor
+    private func prepareParityGridForOpenEventFormCapture(_ window: XCUIElement) {
+        let okay = window.buttons["Okay"]
+        if okay.waitForExistence(timeout: 4) {
+            okay.tap()
+            let banner = window.descendants(matching: .any)["compass-native-demo-events-banner"]
+            let dismissDeadline = Date().addingTimeInterval(5)
+            while Date() < dismissDeadline, banner.exists {
+                RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+            }
+        }
+        XCTAssertTrue(
+            waitForGridColumnCount(window, atLeast: 5, timeout: 20),
+            "Expected five day columns behind the open event form")
+        let form = window.descendants(matching: .any)["compass-event-form"]
+        XCTAssertTrue(form.waitForExistence(timeout: 12), "Expected event form for meeting-link parity capture")
+        sleep(2)
     }
 
     /// Full `prepareParityGrid` (today jump, scroll-hint dismiss, long settle) breaks palette open in CI.
