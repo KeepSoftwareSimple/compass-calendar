@@ -259,7 +259,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          bun run verify --strict --serial web | tee build/web-strict.log
+          bun run verify --strict web | tee build/web-strict.log
       - name: Upload web strict verification log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

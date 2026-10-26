@@ -34,7 +34,7 @@ public struct CommandPaletteOverlay: View {
                         .onTapGesture { paletteStore.close() }
 
                     VStack(spacing: 0) {
-                        Spacer(minLength: geometry.size.height * Self.topInsetViewportFraction)
+                        Color.clear.frame(height: geometry.size.height * Self.topInsetViewportFraction)
                         VStack(alignment: .leading, spacing: 0) {
                             TextField(
                                 "Search commands, events, or type a date",
