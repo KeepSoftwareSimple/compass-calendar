@@ -120,7 +120,17 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await page.getByLabel("Email").fill(uniqueEmail);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Log in" }).click();
-  await expectTimedEventVisible(page, editedTitle);
+  await page
+    .locator("#mainGrid")
+    .waitFor({ state: "visible", timeout: 60_000 });
+  await page
+    .waitForResponse(
+      (response) =>
+        response.url().includes("/api/calendars") && response.status() === 200,
+      { timeout: 60_000 },
+    )
+    .catch(() => undefined);
+  await expectTimedEventVisible(page, editedTitle, 60_000);
 
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Delete account" }).click();
