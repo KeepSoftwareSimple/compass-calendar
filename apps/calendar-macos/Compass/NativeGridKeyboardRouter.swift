@@ -9,9 +9,12 @@ final class NativeGridKeyboardRouter {
     private let model: NativeCalendarRootModel
     private let modHold: ModHoldDetector
     private let formModHold: ModHoldDetector
+    private let pageJumpHintsPinned: Bool
     private let viewSwitchIds: Set<ShortcutId> = [.navDayView, .navWeekView, .navLifeView]
 
-    init(model: NativeCalendarRootModel, registry: ShortcutRegistry) {
+    init(model: NativeCalendarRootModel, registry: ShortcutRegistry,
+        pageJumpHintsPinned: Bool = UITestLaunchPolicy.showPageJumpHintsForUITest) {
+        self.pageJumpHintsPinned = pageJumpHintsPinned
         self.model = model
         self.registry = registry
         modHold = HoldModifierDetectorFactory.modHold { [weak model] digit in
@@ -161,7 +164,7 @@ final class NativeGridKeyboardRouter {
         modHold.advanceTime(by: interval)
         formModHold.advanceTime(by: interval)
         dispatcher.leaderEngine.advanceTime(by: interval)
-        let pageHints = !model.isEventFormVisible && modHold.phase == .hintsVisible
+        let pageHints = !model.isEventFormVisible && (pageJumpHintsPinned || modHold.phase == .hintsVisible)
         let formHints = model.isEventFormVisible && formModHold.phase == .hintsVisible
         if model.focusStore.pageJumpHintsVisible != pageHints { model.setPageJumpHintsVisible(pageHints) }
         if model.formFieldDigitHintsVisible != formHints { model.formFieldDigitHintsVisible = formHints }
