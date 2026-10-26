@@ -19,6 +19,17 @@ final class KeyboardHintClockTests: XCTestCase {
         XCTAssertFalse(model.focusStore.pageJumpHintsVisible)
     }
 
+    func testCapturePinnedPageHintsSurviveClockTicksWithoutHoldingCommand() async throws {
+        let (model, router) = try await makeRouter(pageJumpHintsPinned: true)
+        router.advanceKeyboardClock(by: 0.3, isActive: true)
+        XCTAssertTrue(model.focusStore.pageJumpHintsVisible)
+        router.advanceKeyboardClock(by: 1, isActive: true)
+        XCTAssertTrue(model.focusStore.pageJumpHintsVisible)
+        model.settingsStore.open()
+        router.advanceKeyboardClock(by: 0.1, isActive: true)
+        XCTAssertFalse(model.focusStore.pageJumpHintsVisible)
+    }
+
     func testModalCancelsPendingFormHints() async throws {
         let (model, router) = try await makeRouter()
         model.focusGridEvent(eventId: "demo-morning-standup")
@@ -32,13 +43,14 @@ final class KeyboardHintClockTests: XCTestCase {
         XCTAssertFalse(model.focusStore.pageJumpHintsVisible)
     }
 
-    private func makeRouter() async throws -> (NativeCalendarRootModel, NativeGridKeyboardRouter) {
+    private func makeRouter(pageJumpHintsPinned: Bool = false) async throws -> (NativeCalendarRootModel, NativeGridKeyboardRouter) {
         _ = NSApplication.shared
         let environment = try NativeCalendarEnvironment(appURL: URL(string: "https://compass.invalid")!,
             inMemoryDatabase: true, sessionStore: MemorySessionStore())
         let model = NativeCalendarRootModel(environment: environment, demoPresentation: try DemoSeedFixture.load())
         await model.start()
-        return (model, NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry()))
+        return (model, NativeGridKeyboardRouter(model: model, registry: try ShortcutRegistry(),
+            pageJumpHintsPinned: pageJumpHintsPinned))
     }
 
     private func commandDown(isRepeat: Bool = false) throws -> NSEvent {
