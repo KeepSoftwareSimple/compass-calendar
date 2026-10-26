@@ -16,7 +16,6 @@ import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph
 import {
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
-  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
   MICROSOFT_GRAPH_PREFER_OUTLOOK_TIMEZONE,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import {
@@ -204,9 +203,7 @@ export class MicrosoftEventWriter implements ProviderEventWriter {
     const api = this.#makeApi(input.accessToken);
     try {
       const event = await api.get({ eventId: input.providerEventId });
-      return normalizeMicrosoftEvent(event, undefined, {
-        graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
-      });
+      return normalizeMicrosoftEvent(event);
     } catch (error) {
       if (isNotFound(error)) return null;
       throw classifyWriteError(error);
@@ -230,7 +227,6 @@ export class MicrosoftEventWriter implements ProviderEventWriter {
       if (!match) return null;
       return normalizeMicrosoftEvent(match, undefined, {
         allowOccurrence: true,
-        graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
       });
     } catch (error) {
       if (isNotFound(error)) return null;

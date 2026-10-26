@@ -104,9 +104,7 @@ const toMasterRecord = (
 
 describe("normalizeMicrosoftEvent Microsoft recurring Unwind (UTC daily)", () => {
   it("keeps UTC when Graph declares UTC on the series and maps OID cancelledOccurrences to EXDATE", () => {
-    const read = normalizeMicrosoftEvent(unwindUtcDailyMaster(), undefined, {
-      graphPreferTimeZone: "UTC",
-    });
+    const read = normalizeMicrosoftEvent(unwindUtcDailyMaster());
     const master = asSeriesMaster(read);
 
     expect(read.schedule.kind).toBe("timed");
@@ -120,9 +118,7 @@ describe("normalizeMicrosoftEvent Microsoft recurring Unwind (UTC daily)", () =>
   });
 
   it("does not project occurrences on cancelled UTC dates", () => {
-    const read = normalizeMicrosoftEvent(unwindUtcDailyMaster(), undefined, {
-      graphPreferTimeZone: "UTC",
-    });
+    const read = normalizeMicrosoftEvent(unwindUtcDailyMaster());
     const master = toMasterRecord(read);
     const horizon = {
       start: new Date("2025-10-19T00:00:00.000Z"),
@@ -139,20 +135,8 @@ describe("normalizeMicrosoftEvent Microsoft recurring Unwind (UTC daily)", () =>
   });
 
   it("renders edited Oct 17 occurrence at 8:15 PM Denver without duplicating the series slot", () => {
-    const masterRead = normalizeMicrosoftEvent(
-      unwindUtcDailyMaster(),
-      undefined,
-      {
-        graphPreferTimeZone: "UTC",
-      },
-    );
-    const exceptionRead = normalizeMicrosoftEvent(
-      oct17DenverException(),
-      undefined,
-      {
-        graphPreferTimeZone: "UTC",
-      },
-    );
+    const masterRead = normalizeMicrosoftEvent(unwindUtcDailyMaster());
+    const exceptionRead = normalizeMicrosoftEvent(oct17DenverException());
     expect(exceptionRead.kind).toBe("event");
     if (exceptionRead.kind !== "event") return;
     expect(exceptionRead.schedule.kind).toBe("timed");
@@ -213,8 +197,6 @@ describe("normalizeMicrosoftEvent Microsoft recurring Unwind (UTC daily)", () =>
         id: "series-a",
         cancelledOccurrences: [OID("2025-10-26")],
       }),
-      undefined,
-      { graphPreferTimeZone: "UTC" },
     );
     const second = normalizeMicrosoftEvent(
       unwindUtcDailyMaster({
@@ -222,8 +204,6 @@ describe("normalizeMicrosoftEvent Microsoft recurring Unwind (UTC daily)", () =>
         iCalUId: "other-ical-uid",
         cancelledOccurrences: [OID("2025-10-25")],
       }),
-      undefined,
-      { graphPreferTimeZone: "UTC" },
     );
     const eventA = toMasterRecord(first);
     const eventB = toMasterRecord(second);

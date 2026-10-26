@@ -14,7 +14,6 @@ import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph
 import {
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
-  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
   MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import { ProviderEventError } from "@sync/providers/provider-event.port";
@@ -100,17 +99,12 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
     const seenProviderIds = new Set<string>();
     let skipped = 0;
     const colorLabels = input.colorLabels ?? new Map();
-    const normalizeOptions = {
-      graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
-    };
     const seriesMasterIds = new Set<string>();
 
     const pushItem = (item: GraphEventDeltaItem) => {
       if (!item.id || seenProviderIds.has(item.id)) return;
       try {
-        events.push(
-          normalizeMicrosoftEvent(item, colorLabels, normalizeOptions),
-        );
+        events.push(normalizeMicrosoftEvent(item, colorLabels));
         seenProviderIds.add(item.id);
       } catch (error) {
         if (error instanceof ProviderEventError) {

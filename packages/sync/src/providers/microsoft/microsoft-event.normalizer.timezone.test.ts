@@ -133,13 +133,7 @@ describe("normalizeMicrosoftEvent Microsoft time zones", () => {
   it.each(zoneFixtures)(
     "maps Unwind ($label) to Denver wall time and weekly BYDAY",
     (fixture) => {
-      const read = normalizeMicrosoftEvent(
-        unwindGraphEvent(fixture),
-        undefined,
-        {
-          graphPreferTimeZone: "UTC",
-        },
-      );
+      const read = normalizeMicrosoftEvent(unwindGraphEvent(fixture));
       const schedule = asTimedSchedule(read);
       const recurrence = asSeriesMaster(read);
 
@@ -157,8 +151,6 @@ describe("normalizeMicrosoftEvent Microsoft time zones", () => {
         startEndTimeZone: "UTC",
         recurrenceTimeZone: "Mountain Standard Time",
       }),
-      undefined,
-      { graphPreferTimeZone: "UTC" },
     );
     const event = toEventRecord(read.schedule, asSeriesMaster(read).rules);
     const slots = projectedLocalSlots(
@@ -181,8 +173,6 @@ describe("normalizeMicrosoftEvent Microsoft time zones", () => {
         startEndTimeZone: "UTC",
         originalStartTimeZone: "Mountain Standard Time",
       }),
-      undefined,
-      { graphPreferTimeZone: "UTC" },
     );
     const event = toEventRecord(read.schedule, asSeriesMaster(read).rules);
     const slots = projectedLocalSlots(
@@ -207,8 +197,6 @@ describe("normalizeMicrosoftEvent Microsoft time zones", () => {
     try {
       const read = normalizeMicrosoftEvent(
         unwindGraphEvent({ startEndTimeZone: "Mountain Standard Time" }),
-        undefined,
-        { graphPreferTimeZone: "UTC" },
       );
       const event = toEventRecord(read.schedule, asSeriesMaster(read).rules);
       const slots = projectedLocalSlots(
