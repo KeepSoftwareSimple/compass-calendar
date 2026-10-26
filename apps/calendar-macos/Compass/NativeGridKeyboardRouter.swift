@@ -111,7 +111,10 @@ final class NativeGridKeyboardRouter {
     }
 
     func handleFlagsChanged(_ event: NSEvent) {
-        let commandDown = event.modifierFlags.contains(.command)
+        handleCommandStateChanged(commandDown: event.modifierFlags.contains(.command))
+    }
+
+    func handleCommandStateChanged(commandDown: Bool) {
         if model.settingsStore.isPresented || model.authStore.isModalPresented || model.pendingLogoutConfirmation
             || model.isFeedbackDialogPresented
             || model.pendingDeleteAccountConfirmation
@@ -127,17 +130,45 @@ final class NativeGridKeyboardRouter {
             return
         }
         if model.isEventFormVisible {
-            formModHold.handleFlagsChanged(modifierDown: commandDown, isRepeat: event.isARepeat)
+            formModHold.handleFlagsChanged(modifierDown: commandDown)
             model.formFieldDigitHintsVisible = formModHold.phase == .hintsVisible
             model.setPageJumpHintsVisible(false)
             return
         }
-        modHold.handleFlagsChanged(modifierDown: commandDown, isRepeat: event.isARepeat)
+        modHold.handleFlagsChanged(modifierDown: commandDown)
         model.setPageJumpHintsVisible(modHold.phase == .hintsVisible)
         model.formFieldDigitHintsVisible = false
     }
 
     func handleKeyUp(_: NSEvent) {}
+
+    func advanceKeyboardClock(by interval: TimeInterval, isActive: Bool) {
+        let modalIsPresented = model.settingsStore.isPresented || model.authStore.isModalPresented
+            || model.pendingLogoutConfirmation || model.pendingDeleteAccountConfirmation
+            || model.isFeedbackDialogPresented || model.invitationPrompt != nil
+            || model.pendingRsvpChoice != nil || model.isWelcomeModalActive || model.isLifeViewIntroActive
+            || model.dedicationDialogVisible || model.pendingDiscardDraftConfirmation
+            || model.pendingRecurrenceScopePrompt != nil || model.pendingConvertToStandaloneConfirmation
+        guard isActive && !model.overlayKeyboardCaptureActive && !modalIsPresented else {
+            modHold.handleFlagsChanged(modifierDown: false)
+            formModHold.handleFlagsChanged(modifierDown: false)
+            dispatcher.leaderEngine.disarm()
+            if model.focusStore.pageJumpHintsVisible { model.setPageJumpHintsVisible(false) }
+            if model.formFieldDigitHintsVisible { model.formFieldDigitHintsVisible = false }
+            if model.editSequenceMenuVisible { model.syncEditSequencePhase(.idle) }
+            return
+        }
+        modHold.advanceTime(by: interval)
+        formModHold.advanceTime(by: interval)
+        dispatcher.leaderEngine.advanceTime(by: interval)
+        let pageHints = !model.isEventFormVisible && modHold.phase == .hintsVisible
+        let formHints = model.isEventFormVisible && formModHold.phase == .hintsVisible
+        if model.focusStore.pageJumpHintsVisible != pageHints { model.setPageJumpHintsVisible(pageHints) }
+        if model.formFieldDigitHintsVisible != formHints { model.formFieldDigitHintsVisible = formHints }
+        if model.editSequenceMenuVisible != (dispatcher.leaderEngine.phase == .armedWithMenu) {
+            model.syncEditSequencePhase(dispatcher.leaderEngine.phase)
+        }
+    }
 
     func handleKeyDown(_ event: NSEvent) -> Bool {
         if model.isFeedbackDialogPresented {
@@ -471,6 +502,11 @@ final class NativeGridKeyboardRouter {
     }
 
     private func handleEventFormKeys(_ keyEvent: KeyEvent) -> Bool {
+        if model.eventFormTimeKeyOwner != nil, keyEvent.modifiers.isEmpty,
+            (isSpaceKey(keyEvent.key)
+                || [KeyToken.named(.enter), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key)) {
+            return false
+        }
         if EventFormDateFieldKeys.fieldOwnsKey(keyEvent, owner: model.eventFormDateKeyOwner) {
             return false
         }
@@ -565,8 +601,7 @@ final class NativeGridKeyboardRouter {
             }
         }
 
-        // Header buttons own activation and Tab navigation. Otherwise Return
-        // reaches edit-open below and saves instead of pressing the button.
+        // Header buttons own activation and Tab navigation.
         if model.isEventFormActionFocused {
             if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty { return false }
             if keyEvent.modifiers.isEmpty, isSpaceKey(keyEvent.key) { return false }
@@ -575,12 +610,11 @@ final class NativeGridKeyboardRouter {
             }
         }
 
+        // Return belongs to the current field or control. Only Command+Return saves.
+        if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty { return false }
         if let textView = NSApp.keyWindow?.firstResponder as? NSTextView, textView.isEditable {
-            // Guest entry owns Return so an address becomes a chip before saving.
-            let isSingleLineReturn = textView.isFieldEditor && !model.isGuestEmailInputFocused
-                && keyEvent.key == .named(.enter) && keyEvent.modifiers.isEmpty
             let isPalette = keyEvent.matches(KeyChord(modifiers: [.command], token: .character("k")))
-            guard isSingleLineReturn || isPalette else { return false }
+            guard isPalette else { return false }
         }
 
         dispatcher.shortcutContext = model.shortcutContext
@@ -890,9 +924,7 @@ final class NativeGridKeyboardRouter {
             model.handleShortcut(id)
         case .editOpen:
             if model.draftStore.gridDraft != nil {
-                if model.draftStore.status.isFormOpen {
-                    Task { await model.saveDraft() }
-                } else {
+                if !model.draftStore.status.isFormOpen {
                     model.openEventFormForCurrentDraft()
                 }
             } else if model.focusStore.focusedEventId != nil {

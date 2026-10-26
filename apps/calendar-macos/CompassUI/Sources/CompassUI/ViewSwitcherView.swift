@@ -36,7 +36,7 @@ struct ViewSwitcherView: View {
         } label: {
             HStack(spacing: 6) {
                 Text(model.headerTitle)
-                    .font(.rubik(20))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(theme.textColor)
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
@@ -61,6 +61,7 @@ struct ViewSwitcherView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(model.headerTitle)
         .accessibilityHint("Change view")
+        .help("Change view: Day (D), Week (W), Life (L), Today (T)")
         .accessibilityIdentifier("compass-native-header-title")
         .pageJumpChipAnchor(id: "view-select")
         .popover(isPresented: $model.isViewSwitcherOpen, arrowEdge: .bottom) {

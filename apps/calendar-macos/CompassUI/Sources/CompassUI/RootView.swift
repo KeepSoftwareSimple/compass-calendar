@@ -5,6 +5,7 @@ import SwiftUI
 
 public struct RootView: View {
     @Environment(\.nativeWebTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable public var model: NativeCalendarRootModel
     /// Web `SIDEBAR_DIVIDER_WIDTH`: the resize handle's column.
     private let sidebarDividerWidth: CGFloat = 32
@@ -56,8 +57,11 @@ public struct RootView: View {
                         sidebar
                     }
                     .padding(.top, MacTitleBarChromeMetrics.mainContentTopInset)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isSidebarOpen)
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.isEventFormVisible)
             titleBarChrome
                 .frame(maxWidth: .infinity, alignment: .leading)
             pointerHintLayer
@@ -155,7 +159,8 @@ public struct RootView: View {
 
     private var calendarWithTools: some View {
         calendarWithOnboarding
-        .blur(radius: model.overlayStores.palette.isOpen ? NativeWebLayoutTokens.blurSmall : 0)
+        .blur(radius: model.overlayStores.palette.isOpen || model.shortcutsLegendStore.isOpen
+            ? NativeWebLayoutTokens.blurSmall : 0)
         .overlay {
             CommandPaletteOverlay(model: model)
         }
@@ -248,10 +253,12 @@ public struct RootView: View {
         VStack(alignment: .leading, spacing: 0) {
             if model.isEventFormVisible {
                 EventFormView(model: model)
+                    .transition(.opacity.combined(with: .move(edge: .trailing)))
             } else if model.viewStore.view == .life {
                 LifeSidebarView(model: model)
             } else {
                 sidebarBody
+                    .transition(.opacity)
             }
             QuickTimeStatusLine(model: model)
                 .padding(.horizontal, 16)
@@ -296,6 +303,7 @@ public struct RootView: View {
                 focusedDate: model.monthPickerFocusDate,
                 visibleDayCount: model.viewStore.visibleDayCount,
                 today: model.referenceNow,
+                daysAreClickable: true,
                 trailingHeader: {
                     TrialBadgeView(billingStore: model.billingStore)
                 }
@@ -319,14 +327,14 @@ public struct RootView: View {
         HStack(spacing: 8) {
             sidebarActionButton(
                 label: model.shortcutsLegendStore.isOpen ? "Close shortcuts" : "Open shortcuts",
-                icon: .keyboard
+                icon: .keyboard, shortcut: "?"
             ) {
                 model.toggleShortcutsLegend()
             }
-            sidebarActionButton(label: "Open settings", icon: .gear) {
+            sidebarActionButton(label: "Open settings", icon: .gear, shortcut: "⌘ ,") {
                 model.settingsStore.open()
             }
-            sidebarActionButton(label: "Open command palette", icon: .command) {
+            sidebarActionButton(label: "Open command palette", icon: .command, shortcut: "⌘ K") {
                 model.toggleCommandPalette()
             }
             ShortcutLevelBadgeView(levelsStore: model.levelsStore) { model.toggleShortcutsLegend() }
@@ -345,6 +353,7 @@ public struct RootView: View {
     private func sidebarActionButton(
         label: String,
         icon: PhosphorIcon,
+        shortcut: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -353,7 +362,7 @@ public struct RootView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(label)
+        .help("\(label) (\(shortcut))")
         .accessibilityLabel(label)
     }
 
@@ -364,17 +373,17 @@ public struct RootView: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: MacTitleBarChromeMetrics.contentBandHeight)
                 .accessibilityIdentifier("compass-native-header")
-            HStack(spacing: 12) {
-                HStack(spacing: 12) {
+            HStack(spacing: 6) {
+                HStack(spacing: 6) {
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Previous life variation" : "Previous",
-                        symbol: "arrow.left"
+                        symbol: "arrow.left", shortcut: model.viewStore.view == .life ? "←" : "J"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifePrev : .navPrevious)
                     }
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Next life variation" : "Next",
-                        symbol: "arrow.right"
+                        symbol: "arrow.right", shortcut: model.viewStore.view == .life ? "→" : "K"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifeNext : .navNext)
                     }
@@ -387,7 +396,8 @@ public struct RootView: View {
                 titleBarNavButton(
                     label: model.isSidebarOpen ? "Close sidebar" : "Open sidebar",
                     symbol: "sidebar.left",
-                    symbolSize: 12
+                    symbolSize: 12,
+                    shortcut: "]"
                 ) {
                     model.isSidebarOpen.toggle()
                 }
@@ -468,6 +478,7 @@ public struct RootView: View {
         label: String,
         symbol: String,
         symbolSize: CGFloat = 14,
+        shortcut: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
@@ -478,7 +489,7 @@ public struct RootView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .help(label)
+        .help("\(label) (\(shortcut))")
         .accessibilityLabel(label)
     }
 }

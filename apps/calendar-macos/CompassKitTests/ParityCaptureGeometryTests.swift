@@ -12,6 +12,6 @@ final class ParityCaptureGeometryTests: XCTestCase {
 
     func testTitleBarChromeInsetMatchesParityComposeScript() {
         // Keep in sync with MAC_MAIN_CONTENT_TOP in compose-desktop-parity-shots.py
-        XCTAssertEqual(Double(MacTitleBarChromeMetrics.mainContentTopInset), 52, accuracy: 0.1)
+        XCTAssertEqual(Double(MacTitleBarChromeMetrics.mainContentTopInset), 44, accuracy: 0.1)
     }
 }

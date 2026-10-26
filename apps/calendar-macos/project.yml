@@ -36,11 +36,12 @@ targets:
     platform: macOS
     sources:
       - Compass
+      - path: Resources/Fonts
+        type: folder
+        buildPhase: resources
     resources:
       - path: Resources/icon.icns
         optional: true
-      - path: Resources/Fonts
-        type: folder
     settings:
       base:
         PRODUCT_NAME: Compass

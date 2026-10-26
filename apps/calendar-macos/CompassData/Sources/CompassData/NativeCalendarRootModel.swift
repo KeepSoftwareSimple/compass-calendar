@@ -32,6 +32,7 @@ public final class NativeCalendarRootModel {
     public var isSignedIn: Bool { authStore.authenticated }
     public var shortcutRegistry: ShortcutRegistry { environment.shortcutRegistry }
     public private(set) var contentTrackWidth: CGFloat = 1010
+    private var hasResolvedInitialContentWidth = false
     public internal(set) var sidebandEvents: [Event] = []
     public var onSidebandDidChange: (() -> Void)?
     public var openExternalURLHandler: ((URL) -> Void)?
@@ -95,6 +96,7 @@ public final class NativeCalendarRootModel {
     public var isGuestEmailInputFocused = false
     /// The form date field owning Return (and its open calendar's keys); the key router lets them through.
     public var eventFormDateKeyOwner: EventFormDateFieldKeys.Owner?
+    public var eventFormTimeKeyOwner: String?
     public var eventFormFocusedField: EventFormField = .title
     public internal(set) var eventFormActionsFocusRequest = 0
     public var isEventFormActionFocused = false
@@ -560,6 +562,7 @@ public final class NativeCalendarRootModel {
         loadedEvents = []
         isGuestEmailInputFocused = false
         eventFormDateKeyOwner = nil
+        eventFormTimeKeyOwner = nil
         sidebandEvents = []
         pendingBookingCancellation = nil
         isCancellingBookedMeeting = false
@@ -591,10 +594,18 @@ public final class NativeCalendarRootModel {
             return
         }
         let resolved = max(UITestLaunchPolicy.pinnedWeekGridTrackWidth ?? width, 320)
-        if abs(resolved - contentTrackWidth) > 0.5 {
+        let initialLayout = !hasResolvedInitialContentWidth
+        hasResolvedInitialContentWidth = true
+        if initialLayout || abs(resolved - contentTrackWidth) > 0.5 {
             contentTrackWidth = resolved
             let count = CalendarWindowMath.computeVisibleDayCount(trackWidth: Double(resolved))
             viewStore.setVisibleDayCount(count)
+            if initialLayout, demoPresentation == nil, viewStore.view == .week,
+                EffectiveTimeZone.calendar.isDate(viewStore.anchorDate,
+                    inSameDayAs: CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)) {
+                viewStore.setAnchorDate(currentWeekWindowStart())
+                monthPickerMonth = viewStore.anchorDate
+            }
             rebuildPresentation()
             scheduleRefreshVisibleRange()
         }
@@ -1039,7 +1050,7 @@ public final class NativeCalendarRootModel {
                 anchorChanged = true
             }
         } else if !isReferenceDayInVisibleWindow(today) {
-            viewStore.setAnchorDate(CalendarWindowMath.sundayWeekViewStart(containing: today))
+            viewStore.setAnchorDate(currentWeekWindowStart())
             anchorChanged = true
         }
         monthPickerMonth = today
@@ -1049,6 +1060,17 @@ public final class NativeCalendarRootModel {
         }
         // Web `goToTodayInWeek` always runs scroll-to-now / now-cue even when the anchor is unchanged.
         pendingScroll = .scrollToNowOrPulse
+    }
+
+    /// Keep today inside partial-week windows, retaining Sunday for a full week.
+    private func currentWeekWindowStart() -> Date {
+        let calendar = EffectiveTimeZone.calendar
+        let weekStart = CalendarWindowMath.sundayWeekViewStart(containing: referenceNow)
+        let dayIndex = calendar.dateComponents([.day], from: weekStart,
+            to: calendar.startOfDay(for: referenceNow)).day ?? 0
+        let offset = CalendarWindowMath.computeVisibleWindowOffset(anchorIndex: dayIndex,
+            visibleDayCount: viewStore.visibleDayCount)
+        return calendar.date(byAdding: .day, value: offset, to: weekStart) ?? weekStart
     }
 
     /// Matches web `useWeek` `isCurrentWeek` before `goToToday` moves the anchor.

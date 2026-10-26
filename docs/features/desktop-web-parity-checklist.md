@@ -38,7 +38,7 @@ This checklist compares **apps/calendar-web** (reference UI) with **apps/calenda
 
 | Item | Web | macOS | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Font family | Rubik (`index.css` `@theme`) | `Resources/Fonts/Rubik-Variable.ttf`, `.rubik()` | ✅ | |
+| Font family | Rubik (`index.css` `@theme`) | `Resources/Fonts/Rubik-Variable.ttf`, `.rubik()` | ✅ | Fixed XcodeGen packaging: the previous resource declaration omitted every font from the built app, causing system fallback. Font files now appear in the built bundle; fresh local launch inspected. Broader typography and layout acceptance remains partial |
 | Base size 14px | `text-sm` / body | `RootView` `.font(.rubik(14))` | ✅ | |
 | Scale (10–20px utilities) | Tailwind `--font-size-*` | Per-view hardcoded point sizes | 🟡 | No shared typography export yet |
 | VT323 / Caveat (special) | Web where used | Bundled fonts | 🟡 | Spot-check Life / onboarding |
@@ -76,8 +76,8 @@ This checklist compares **apps/calendar-web** (reference UI) with **apps/calenda
 
 | Item | Web | macOS | Status | Notes |
 | --- | --- | --- | --- | --- |
-| Calendar nav + title + sidebar toggle | In-content header row (`CalendarHeader`, `h-12`) | Unified title bar beside traffic lights (`MacTitleBarChromeMetrics`) | ✅ | Tyler: reclaim vertical space; window drag on empty title-bar background |
-| Parity screenshot grid region | Crop includes in-viewport header band | Regional grid crop starts at `mainContentTopInset` (52px); web crop skips 48px header | ✅ | `.github/scripts/compose-desktop-parity-shots.py` `grid_region_crop()` |
+| Calendar nav + title + sidebar toggle | In-content header row (`CalendarHeader`, `h-12`) | Unified title bar beside traffic lights (`MacTitleBarChromeMetrics`) | ✅ | Compact 28pt band, 13pt system title and 14pt navigation icons. Local native regression passes, including title/nav alignment with the actual window close button |
+| Parity screenshot grid region | Crop includes in-viewport header band | Regional grid crop starts at `mainContentTopInset` (44px); web crop skips 48px header | ✅ | `.github/scripts/compose-desktop-parity-shots.py` `grid_region_crop()` |
 
 ---
 
@@ -408,6 +408,14 @@ The compact-window CI follow-up reproduces Settings export hit testing at 720×6
 The welcome modal now uses the existing background tint and applies the shared 8pt blur only to the content behind it, matching the web OverlayPanel treatment. Primary-button text and shadow use semantic theme colors. A native regression covers forward and backward navigation through the three welcome steps in both themes without starting authentication.
 
 Local WelcomeKeyboardTests passed on an interactive desktop on 2026-10-23, exercising clicks, Enter and Escape across all three steps in both themes. Both native window screenshots were inspected: the panel stays sharp, underlying content is blurred, and button text is readable. CI run 39897743843 also passed. Swift contract and desktop export checks pass. This verifies the corrected treatment and navigation, not complete pixel equality. See #4766 and #4767.
+
+### 2026-10-24 native client polish follow-up
+
+Issues #4800 and #4801 address bundled fonts, compact title-bar controls, clickable month days, shortcut hover help, reduced-motion-aware sidebar/form transitions and consistent command-palette/shortcuts-helper surfaces and width. Native interaction regressions pass for actual traffic-light alignment, month clicks, date-to-time Tab navigation, time-arrow menu ownership, plain Return versus Command+Return, held Command hints and matching panel widths. The helper has a named accessibility group separate from its visibility-only test probe.
+
+Command-hold detection needed a running clock for the manual timer engines and had to stop treating modifier transitions as character autorepeats. The monitor also reconciles current modifier state when a key window misses a flags event. A native test holds Command without forcing hint visibility and verifies that the hints disappear on release.
+
+Untouched legacy June samples move to the current week once. Edited or deleted recurring families, edited samples and real events are preserved. Initial narrow/partial-week windows and Today include the current day; explicit date selection survives resizing. Package regressions cover these cases, and a fresh 720pt local launch showed October 23, Friday, with visible samples instead of an empty Sunday. Overlapping event labels, the blank short-chip observation and broader visual/signed-in acceptance remain open for further investigation.
 
 ### 2026-10-24 event form footer follow-up
 

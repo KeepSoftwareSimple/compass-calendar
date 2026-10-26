@@ -46,6 +46,7 @@ public struct CommandPaletteOverlay: View {
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
                             .focused($searchFocused)
+                            .onExitCommand { paletteStore.close() }
                             .accessibilityIdentifier("compass-native-command-palette-search")
                             .overlay(alignment: .bottom) {
                                 Rectangle()

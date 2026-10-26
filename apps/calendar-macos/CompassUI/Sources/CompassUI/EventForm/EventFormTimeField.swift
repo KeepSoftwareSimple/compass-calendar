@@ -6,11 +6,14 @@ struct EventFormTimeField: View {
     @Environment(\.nativeWebTheme) private var theme
     @Binding var date: Date
     let accessibilityIdentifier: String
+    @Binding var keyOwner: String?
     @State private var showsMenu: Bool
+    @FocusState private var isFocused: Bool
 
-    init(date: Binding<Date>, accessibilityIdentifier: String) {
+    init(date: Binding<Date>, accessibilityIdentifier: String, keyOwner: Binding<String?> = .constant(nil)) {
         _date = date
         self.accessibilityIdentifier = accessibilityIdentifier
+        _keyOwner = keyOwner
         let openPicker = UITestLaunchPolicy.openEventFormTimePickerForUITest
             && accessibilityIdentifier == "compass-event-form-start"
         _showsMenu = State(initialValue: openPicker)
@@ -39,10 +42,32 @@ struct EventFormTimeField: View {
             .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
             .overlay {
                 RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
-                    .stroke(showsMenu ? theme.accentColor : theme.borderColor, lineWidth: 1)
+                    .stroke(showsMenu || isFocused ? theme.accentColor : theme.borderColor, lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onChange(of: isFocused) { _, focused in
+            if focused { keyOwner = accessibilityIdentifier }
+            else if keyOwner == accessibilityIdentifier { keyOwner = nil }
+        }
+        .onDisappear {
+            if keyOwner == accessibilityIdentifier { keyOwner = nil }
+        }
+        .onKeyPress(.return) {
+            showsMenu = true
+            return .handled
+        }
+        .onKeyPress(.downArrow) {
+            showsMenu = true
+            return .handled
+        }
+        .onKeyPress(.upArrow) {
+            showsMenu = true
+            return .handled
+        }
         .accessibilityIdentifier(accessibilityIdentifier)
         .popover(isPresented: $showsMenu, arrowEdge: .bottom) {
             ScrollViewReader { proxy in

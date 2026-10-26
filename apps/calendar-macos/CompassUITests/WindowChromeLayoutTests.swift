@@ -9,9 +9,15 @@ final class WindowChromeLayoutTests: XCTestCase {
         let window = app.windows["Compass"]
         let title = window.buttons["compass-native-header-title"]
         XCTAssertTrue(title.waitForExistence(timeout: 10))
-        XCTAssertLessThan(title.frame.midY - window.frame.minY, 60,
+        XCTAssertLessThan(title.frame.midY - window.frame.minY, 24,
             "The calendar header belongs in the top chrome, not below an empty toolbar")
         let previous = window.buttons["Previous"]
+        let close = window.buttons[XCUIIdentifierCloseWindow]
+        XCTAssertTrue(close.exists)
+        XCTAssertLessThanOrEqual(title.frame.height, 24)
+        XCTAssertEqual(title.frame.midY, previous.frame.midY, accuracy: 2)
+        XCTAssertEqual(title.frame.midY, close.frame.midY, accuracy: 3,
+            "Navigation and title should share the traffic lights' horizontal row")
         XCTAssertLessThan(previous.frame.minX - window.frame.minX, 96,
             "Previous week control should sit in the unified title bar beside traffic lights")
         let evidence = XCTAttachment(screenshot: window.screenshot())

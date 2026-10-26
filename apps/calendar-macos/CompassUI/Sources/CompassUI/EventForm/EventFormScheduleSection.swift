@@ -103,7 +103,8 @@ struct EventFormScheduleSection: View {
                     get: { draft.schedule.start },
                     set: { updateStart($0) }
                 ),
-                accessibilityIdentifier: "compass-event-form-start"
+                accessibilityIdentifier: "compass-event-form-start",
+                keyOwner: $model.eventFormTimeKeyOwner
             )
             .disabled(scheduleLocked)
 
@@ -128,7 +129,8 @@ struct EventFormScheduleSection: View {
                     get: { draft.schedule.end },
                     set: { updateEnd($0) }
                 ),
-                accessibilityIdentifier: "compass-event-form-end"
+                accessibilityIdentifier: "compass-event-form-end",
+                keyOwner: $model.eventFormTimeKeyOwner
             )
             .disabled(scheduleLocked)
             .pageJumpChipAnchor(id: "form-end")
