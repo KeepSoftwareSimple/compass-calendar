@@ -139,11 +139,14 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await expectTimedEventVisible(page, editedTitle, 60_000);
 
   await page.getByRole("button", { name: "Open settings" }).click();
-  await page.getByRole("button", { name: "Delete account" }).click();
+  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
+  await expect(settingsDialog).toBeVisible({ timeout: 15_000 });
+  await settingsDialog.getByRole("button", { name: "Delete account" }).click();
   const deleteDialog = page.getByRole("dialog", {
-    name: /delete your account/i,
+    name: /delete your compass account/i,
   });
-  await deleteDialog.getByRole("textbox").fill("delete my compass account");
+  await expect(deleteDialog).toBeVisible({ timeout: 15_000 });
+  await deleteDialog.getByLabel(/type/i).fill("Delete my Compass account");
   await deleteDialog.getByRole("button", { name: "Delete account" }).click();
   await expect(page.getByText(/until our sails cross paths/i)).toBeVisible({
     timeout: 60_000,
