@@ -735,6 +735,9 @@ public final class NativeCalendarRootModel {
     }
 
     public func setPageJumpHintsVisible(_ visible: Bool) {
+        if !visible, UITestLaunchPolicy.showPageJumpHintsForUITest {
+            return
+        }
         focusStore.setPageJumpHintsVisible(visible)
         rebuildPresentation()
     }
