@@ -48,6 +48,8 @@ public final class NativeCalendarRootModel {
     public var onStatusToastAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onShortcutsLegendAccessibilityProbeChanged: ((Bool) -> Void)?
     public var onEventJumpChipsAccessibilityProbeChanged: (([EventJumpChipHint]) -> Void)?
+    /// Web `view-select` page jump opens the view dropdown, like clicking it.
+    public var isViewSwitcherOpen = false
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     /// True for 700ms after an already-at-now teach pulse. Matches web `NOW_CUE_PULSE_MS`.
@@ -128,7 +130,7 @@ public final class NativeCalendarRootModel {
         didSet { syncSidebandWithLoadedEvents() }
     }
     private var refreshTask: Task<Void, Never>?
-    private var focusLayoutCards: [FocusLayoutCard] = []
+    var focusLayoutCards: [FocusLayoutCard] = []
     var eventJumpHintLabels: [EventJumpChipHint] = []
     var quickTimeSlotHintLabels: [QuickTimeSlotHint] = []
     public var focusedDayColumnCalendarId: String?
@@ -136,7 +138,7 @@ public final class NativeCalendarRootModel {
     private var didApplyDemoFixtureScroll = false
     private var didApplyInitialUIFocus = false
     private var didApplyUITestFocusedEventForm = false
-    private var eventFormTitleProbeVisible = false
+    var eventFormTitleProbeVisible = false
     var keyboardCreateSettleGeneration = 0
     var quickAddPanelSession: QuickAddPanelSession?
     public internal(set) var quickAddError: String?
@@ -611,406 +613,6 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    /// Records a shortcut invocation for the levels/tips telemetry, if the id
-    /// belongs to a section. Every shortcut handler funnels through here so the
-    /// `section(for:)` lookup lives in one place.
-    public func recordShortcut(_ id: ShortcutId) {
-        guard let section = ShortcutTelemetrySection.section(for: id) else { return }
-        levelsStore.recordShortcutInvocation(id, section: section)
-        noteShortcutEngagementIfAnonymous()
-    }
-
-    public func handleShortcut(_ id: ShortcutId) {
-        if id == .createTimed || id == .createAllday {
-            guard !settingsStore.isPresented, !authStore.isModalPresented,
-                  !pendingLogoutConfirmation, !pendingDiscardDraftConfirmation,
-                  billingStore.gateStatus == nil else { return }
-        }
-        recordShortcut(id)
-        switch id {
-        case .createTimed, .createAllday:
-            if viewStore.view == .life {
-                viewStore.view = .week
-                scheduleRefreshVisibleRange()
-            }
-            if id == .createTimed { createTimedDraft(activity: .createShortcut) }
-            else { createAllDayDraft() }
-        case .navNext:
-            if viewStore.view == .life {
-                lifeStore.cycleVariation(direction: 1)
-            } else {
-                pageWindow(direction: 1)
-            }
-        case .navPrevious:
-            if viewStore.view == .life {
-                lifeStore.cycleVariation(direction: -1)
-            } else {
-                pageWindow(direction: -1)
-            }
-        case .navToday:
-            if viewStore.view == .life {
-                lifeStore.focusCurrentWeek()
-            } else {
-                goToToday()
-            }
-        case .navLifePrev:
-            lifeStore.cycleVariation(direction: -1)
-        case .navLifeNext:
-            lifeStore.cycleVariation(direction: 1)
-        case .navLifeCurrent:
-            lifeStore.focusCurrentWeek()
-        case .navLifeView:
-            viewStore.view = .life
-            rebuildPresentation()
-        case .navDayView:
-            viewStore.view = .day
-            viewStore.setVisibleDayCount(1)
-            rebuildPresentation()
-            scheduleRefreshVisibleRange()
-        case .navWeekView:
-            viewStore.view = .week
-            rebuildPresentation()
-            scheduleRefreshVisibleRange()
-        case .navShiftLeft:
-            shiftViewByDay(-1)
-        case .navShiftRight:
-            shiftViewByDay(1)
-        case .navMonthPrev:
-            shiftMonth(by: -1)
-        case .navMonthNext:
-            shiftMonth(by: 1)
-        case .navMonthCurrent:
-            goToMonthPickerCurrentMonth()
-        case .navScrollUp:
-            pendingScroll = .pageUp
-        case .navScrollDown:
-            pendingScroll = .pageDown
-        case .navScrollHourUp:
-            pendingScroll = .hourUp
-        case .navScrollHourDown:
-            pendingScroll = .hourDown
-        case .editFocusPrev:
-            moveFocus(.up)
-        case .editFocusNext:
-            moveFocus(.down)
-        case .editFocusLeft:
-            moveFocus(.left)
-        case .editFocusRight:
-            moveFocus(.right)
-        case .editCycleEdge:
-            cycleFocusedEdge(forward: true)
-        case .otherSettings:
-            settingsStore.open(page: .accounts)
-        case .otherTimeTravel:
-            settingsStore.openTimezoneDialog(.timeTravel)
-        case .otherPalette:
-            toggleCommandPalette()
-        case .otherShortcuts:
-            toggleShortcutsLegend()
-        case .otherSidebar:
-            isSidebarOpen.toggle()
-        case .focusSidebar:
-            focusSidebar()
-        case .focusEvent:
-            focusFirstCalendarEvent()
-        case .focusNotice:
-            focusNextNotice()
-        case .focusShiftHold:
-            if eventJumpSelection.modeActive {
-                _ = handleEventJumpKeystroke("f")
-            } else {
-                activateEventJumpMode()
-            }
-        case .otherSubscribe:
-            openUpgradeConfirmation()
-        case .navGoToDate:
-            toggleCommandPalette(fromGoToDate: true)
-        default:
-            break
-        }
-    }
-
-    public func handleShiftTabCycleEdge() {
-        cycleFocusedEdge(forward: false)
-    }
-
-    public func setPageJumpHintsVisible(_ visible: Bool) {
-        focusStore.setPageJumpHintsVisible(visible)
-        rebuildPresentation()
-    }
-
-    public func focusDayColumn(calendarId: String) {
-        focusedDayColumnCalendarId = calendarId
-        pendingFocusDayColumnCalendarId = calendarId
-        applyFocusPresentation()
-    }
-
-    public func setEventJumpHintsVisible(_ visible: Bool) {
-        if visible {
-            eventJumpHintLabels = buildEventJumpHints()
-        } else if !eventJumpSelection.modeActive {
-            eventJumpHintLabels = []
-        }
-        applyFocusPresentation()
-    }
-
-    public func showPointerHint(
-        for target: PointerClickTarget,
-        registry: ShortcutRegistry,
-        slotClick: GridPointerSlotClickContext? = nil,
-        focusedGridEventLabel: String? = nil
-    ) {
-        var resolvedFocusLabel = focusedGridEventLabel
-        if target == .eventCard, resolvedFocusLabel == nil {
-            resolvedFocusLabel = gridFocusAccessibilityLabel ?? focusedGridEventAccessibilityLabel()
-        }
-        pointerHintStore.pulse(
-            target: target,
-            registry: registry,
-            slotClick: slotClick,
-            focusedGridEventLabel: resolvedFocusLabel
-        )
-    }
-
-    public func handleEventCardPointerDown(eventId: String, registry: ShortcutRegistry) {
-        focusEvent(eventId: eventId)
-        showPointerHint(for: .eventCard, registry: registry)
-    }
-
-    public func focusGridEvent(eventId: String) {
-        focusEvent(eventId: eventId)
-    }
-
-    public func publishGridFocusAccessibilityProbe(eventId: String? = nil) {
-        let cards = currentGridCards()
-        let resolved =
-            gridFocusAccessibilityLabel
-            ?? eventId.flatMap { resolveGridFocusLabel(eventId: $0, cards: cards) }
-            ?? focusedGridEventAccessibilityLabel()
-        if let resolved {
-            gridFocusAccessibilityLabel = resolved
-        }
-        onGridFocusAccessibilityLabelChanged?(resolved)
-    }
-
-    public func publishEventFormTitleAccessibilityProbe() {
-        let visible = isEventFormVisible
-        if visible != eventFormTitleProbeVisible {
-            eventFormTitleProbeVisible = visible
-            onEventFormTitleAccessibilityProbeChanged?(visible)
-            return
-        }
-        if visible {
-            onEventFormTitleAccessibilityProbeTitleSync?(draftStore.gridDraft?.title)
-        }
-    }
-
-    /// Web `view-select` page jump opens the view dropdown, like clicking it.
-    public var isViewSwitcherOpen = false
-
-    public func focusPageJump(digit: Character) {
-        guard let target = focusStore.pageJumpTargets.first(where: { $0.digit == String(digit) }) else {
-            return
-        }
-        switch target.id {
-        case "view-select":
-            isViewSwitcherOpen = true
-        case "up-next":
-            // Web focuses the Up next card so Enter opens it; with no event the digit does nothing.
-            openUpNextEvent()
-        case "month-picker":
-            monthPickerMonth = viewStore.anchorDate
-        case "calendars":
-            focusCalendarList()
-        case let id where id.hasPrefix(PageJumpTargets.calendarAccountPrefix):
-            // Web clicks a collapsed heading so the jump shows its calendars.
-            let key = String(id.dropFirst(PageJumpTargets.calendarAccountPrefix.count))
-            if isAccountCollapsed(key) {
-                toggleAccountCollapsed(key)
-            }
-            focusCalendarList(key)
-        case let id where id.hasPrefix(PageJumpTargets.dayColumnPrefix):
-            let calendarId = String(id.dropFirst(PageJumpTargets.dayColumnPrefix.count))
-            focusDayColumn(calendarId: calendarId)
-        default:
-            break
-        }
-    }
-
-    public func consumePendingScroll() -> TimeGridScrollRequest? {
-        defer { pendingScroll = nil }
-        return pendingScroll
-    }
-
-    public func registerNowCuePulse() {
-        guard viewStore.view != .life else { return }
-        nowCuePulseTask?.cancel()
-        nowCueHeaderHighlight = true
-        nowCuePulseTask = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(700))
-            guard !Task.isCancelled else { return }
-            self?.nowCueHeaderHighlight = false
-        }
-    }
-
-    private func moveFocus(_ direction: FocusMoveDirection) {
-        let arrowKey: String = {
-            switch direction {
-            case .up: return "ArrowUp"
-            case .down: return "ArrowDown"
-            case .left: return "ArrowLeft"
-            case .right: return "ArrowRight"
-            }
-        }()
-        if nudgeDraftOrPlace(key: arrowKey, shiftKey: false, altKey: false) {
-            return
-        }
-
-        guard !focusLayoutCards.isEmpty else { return }
-
-        if let focusedId = focusStore.focusedEventId?.rawValue,
-            let focused = focusLayoutCard(for: focusedId),
-            let next = GridFocusNavigator.adjacent(
-                focused: focused,
-                direction: direction,
-                candidates: focusLayoutCards,
-                layoutMode: layoutMode()
-            )
-        {
-            focusEvent(eventId: next.eventId)
-            return
-        }
-
-        // Match web `moveDraftOrFocusAdjacent`: seed nearest-to-now only when nothing is focused.
-        guard focusStore.focusedEventId == nil else { return }
-
-        if let seeded = seedFocusEventId() {
-            focusEvent(eventId: seeded)
-        }
-    }
-
-    private func focusLayoutCard(for eventId: String) -> FocusLayoutCard? {
-        if let card = focusLayoutCards.first(where: { $0.eventId == eventId }) {
-            return card
-        }
-        guard
-            let card = currentGridCards().first(where: { $0.eventId == eventId })
-        else { return nil }
-        return FocusLayoutCard(
-            eventId: card.eventId,
-            frame: card.frame,
-            isAllDay: card.kind == .allDay
-        )
-    }
-
-    private func cycleFocusedEdge(forward: Bool) {
-        guard let eventId = focusStore.focusedEventId else { return }
-        focusStore.cycleEdge(
-            for: eventId,
-            direction: forward ? .forward : .backward
-        )
-        applyFocusPresentation()
-    }
-
-    func focusEvent(eventId: String) {
-        let type: ViewInteractionEventType =
-            focusLayoutCards.first(where: { $0.eventId == eventId })?.isAllDay == true
-                ? .allDay
-                : .timed
-        focusStore.setFocused(
-            eventId: EventId(rawValue: eventId),
-            eventType: type
-        )
-        applyFocusPresentation()
-    }
-
-    /// Web `onFocusCalendar` / `u`: seed grid focus on the nearest event when nothing is focused.
-    public func focusFirstCalendarEvent() {
-        guard viewStore.view != .life else { return }
-        guard focusStore.focusedEventId == nil else { return }
-        if let seeded = seedFocusEventId() {
-            focusEvent(eventId: seeded)
-        }
-    }
-
-    private func seedFocusEventId() -> String? {
-        let reference = referenceNow
-        if !loadedEvents.isEmpty {
-            if let nearest = loadedEvents.min(by: { lhs, rhs in
-                abs(eventStart(lhs).timeIntervalSince(reference))
-                    < abs(eventStart(rhs).timeIntervalSince(reference))
-            }) {
-                return nearest.id.rawValue
-            }
-        }
-        return focusLayoutCards.sorted { $0.frame.top < $1.frame.top }.first?.eventId
-    }
-
-    private func eventStart(_ event: Event) -> Date {
-        switch event.schedule {
-        case .timed(let timed):
-            CompassDateParsing.parseInEffectiveTimeZone(timed.start.rawValue) ?? .distantPast
-        case .allDay(let allDay):
-            CompassDateParsing.parseInEffectiveTimeZone(allDay.start) ?? .distantPast
-        }
-    }
-
-    func applyFocusPresentation() {
-        var scenario = timeGridState.scenario
-        scenario.draftOverlay = draftOverlayForPresentation()
-        scenario.pinnedDayColumnCalendarIds = pinnedDayColumnCalendarIds()
-        scenario.defaultTargetCalendarId = defaultTargetCalendarId()?.rawValue
-        let hasSecondaryTimeZone = viewStore.timeTravelTimeZone != nil
-        let eventJumpActive = eventJumpSelection.modeActive || eventJumpSelection.isActive
-        let showDayJumpPrefixes =
-            !isEventFormVisible && (focusStore.pageJumpHintsVisible || eventJumpActive)
-        timeGridState = TimeGridState(
-            layoutMode: timeGridState.layoutMode,
-            referenceNow: timeGridState.referenceNow,
-            scenario: scenario,
-            trackWidth: timeGridState.trackWidth,
-            focusedEventId: focusStore.focusedEventId?.rawValue,
-            sidebarEditingEventId: sidebarEditingGridEventId(),
-            eventJumpHints: eventJumpHintLabels,
-            quickTimeSlotHints: quickTimeSlotHintLabels,
-            focusedDayColumnCalendarId: focusedDayColumnCalendarId,
-            pageJumpHintsVisible: focusStore.pageJumpHintsVisible,
-            pageJumpDigitByCalendarId: pageJumpDigitByCalendarId(),
-            showDayJumpPrefixes: showDayJumpPrefixes,
-            dayJumpUseShiftPrefix: !eventJumpSelection.modeActive,
-            eventJumpActiveDayKeys: eventJumpSelection.activeDayKeys,
-            hasSecondaryTimeZone: hasSecondaryTimeZone,
-            effectiveTimeZone: viewStore.effectiveTimeZone,
-            timeTravelTimeZone: viewStore.timeTravelTimeZone
-        )
-        let cards = currentGridCards()
-        gridFocusAccessibilityLabel = focusStore.focusedEventId.flatMap { focusedId in
-            resolveGridFocusLabel(eventId: focusedId.rawValue, cards: cards)
-        }
-        if pointerHintStore.isVisible {
-            pointerHintStore.updateFocusedGridEventLabel(gridFocusAccessibilityLabel)
-        }
-        onGridFocusAccessibilityLabelChanged?(gridFocusAccessibilityLabel)
-    }
-
-    private func focusedGridEventAccessibilityLabel() -> String? {
-        guard let focusedId = focusStore.focusedEventId?.rawValue else { return nil }
-        return resolveGridFocusLabel(eventId: focusedId, cards: currentGridCards())
-    }
-
-    private func resolveGridFocusLabel(eventId: String, cards: [GridLayoutCardSnapshot]) -> String? {
-        if let label = cards.first(where: { $0.eventId == eventId })?.label {
-            return label
-        }
-        guard let event = loadedEvents.first(where: { $0.id.rawValue == eventId }) else { return nil }
-        switch event.content {
-        case .busy:
-            return CalendarEventViewModel.busyEventTitle
-        case .details(let details):
-            return details.title
-        }
-    }
-
     public func goToDate(_ date: Date) {
         viewStore.setAnchorDate(date)
         monthPickerMonth = date
@@ -1018,7 +620,7 @@ public final class NativeCalendarRootModel {
         scheduleRefreshVisibleRange()
     }
 
-    private func pageWindow(direction: Int) {
+    func pageWindow(direction: Int) {
         let calendar = EffectiveTimeZone.calendar
         let delta = direction * viewStore.visibleDayCount
         if let next = calendar.date(byAdding: .day, value: delta, to: startOfView) {
@@ -1030,7 +632,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func shiftViewByDay(_ days: Int) {
+    func shiftViewByDay(_ days: Int) {
         let calendar = EffectiveTimeZone.calendar
         if let next = calendar.date(byAdding: .day, value: days, to: startOfView) {
             viewStore.setAnchorDate(next)
@@ -1040,7 +642,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func goToToday() {
+    func goToToday() {
         let today = referenceNow
         let calendar = EffectiveTimeZone.calendar
         var anchorChanged = false
@@ -1080,7 +682,7 @@ public final class NativeCalendarRootModel {
         return dayStart >= startOfView && dayStart <= endOfView
     }
 
-    private func shiftMonth(by months: Int) {
+    func shiftMonth(by months: Int) {
         let calendar = EffectiveTimeZone.calendar
         if let next = calendar.date(byAdding: .month, value: months, to: monthPickerMonth) {
             browseMonth(next)
@@ -1089,7 +691,7 @@ public final class NativeCalendarRootModel {
 
     /// Web `Mod+Alt+T` / sidebar "Go to this month": move the picker to the
     /// current month without changing the main grid anchor.
-    private func goToMonthPickerCurrentMonth() {
+    func goToMonthPickerCurrentMonth() {
         browseMonth(referenceNow)
     }
 
@@ -1143,7 +745,7 @@ public final class NativeCalendarRootModel {
         return ids
     }
 
-    private func layoutMode() -> GridLayoutMode {
+    func layoutMode() -> GridLayoutMode {
         viewStore.view == .day ? .day : .week
     }
 
@@ -1251,7 +853,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func currentGridCards() -> [GridLayoutCardSnapshot] {
+    func currentGridCards() -> [GridLayoutCardSnapshot] {
         timeGridState.snapshot(colWidths: timeGridState.resolvedColumnWidths()).cards
     }
 
@@ -1287,7 +889,7 @@ public final class NativeCalendarRootModel {
         }
     }
 
-    private func pageJumpDigitByCalendarId() -> [String: String] {
+    func pageJumpDigitByCalendarId() -> [String: String] {
         PageJumpTargets.dayColumnJumpDigits(
             from: focusStore.pageJumpTargets.map { (id: $0.id, digit: $0.digit) }
         )
@@ -1381,7 +983,7 @@ public final class NativeCalendarRootModel {
         ).map { CalendarId(rawValue: $0.id) }
     }
 
-    private func scheduleRefreshVisibleRange() {
+    func scheduleRefreshVisibleRange() {
         refreshTask?.cancel()
         refreshTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(50))
