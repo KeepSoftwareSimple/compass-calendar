@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 import { COMPASS_SYNTHETIC_ACCOUNT_HEADER } from "@core/analytics/synthetic-account.util";
 import {
   createEventTitle,
+  dismissBringYourEventsPromptIfOpen,
+  dismissExploreTrialBannerIfOpen,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
+  openTimedEventFormWithKeyboard,
 } from "../utils/event-test-utils";
 
 const provider = (process.env.STAGING_JOURNEY_PROVIDER ?? "").toLowerCase();
@@ -80,8 +83,16 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
     );
   }
 
+  await page
+    .locator("#mainGrid")
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await dismissBringYourEventsPromptIfOpen(page);
+  await dismissExploreTrialBannerIfOpen(page);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+
   const createdTitle = createEventTitle("Journey create");
-  await page.keyboard.press("c");
+  await openTimedEventFormWithKeyboard(page);
   await fillTitleAndSaveEventForm(page, createdTitle);
   await expectTimedEventVisible(page, createdTitle);
 

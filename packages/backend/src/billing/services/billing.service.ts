@@ -12,6 +12,7 @@ import {
   isStripeConfigured,
 } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
+import { isSyntheticBillingBypassAccount } from "@backend/user/synthetic-account.service";
 
 /**
  * Pure status derivation. Writability is a total map over the status union
@@ -60,7 +61,7 @@ class BillingService {
   getStatus = async (userId: string): Promise<BillingStatusResponse> => {
     const user = await mongoService.user.findOne(
       { _id: mongoService.objectId(userId) },
-      { projection: { billing: 1, email: 1 } },
+      { projection: { billing: 1, email: 1, isSynthetic: 1 } },
     );
     if (!user) {
       throw new Error("User not found");
@@ -69,7 +70,8 @@ class BillingService {
     if (
       isBillingEnforced(CONFIG) &&
       isStripeConfigured(CONFIG) &&
-      isBillingBypassed(CONFIG, user.email)
+      (isBillingBypassed(CONFIG, user.email) ||
+        isSyntheticBillingBypassAccount(user.email, user.isSynthetic))
     ) {
       return {
         subscriptionStatus: "active",

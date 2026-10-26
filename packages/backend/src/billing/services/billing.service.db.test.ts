@@ -36,6 +36,33 @@ describe("BillingService (db)", () => {
     ).rejects.toThrow("User not found");
   });
 
+  it("reports synthetic journey accounts as active without touching stored billing", async () => {
+    using _env = mockEnv({
+      ...stripeEnforcing,
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+    });
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: "runner+journey1@example.com",
+      name: "Journey Bot",
+      firstName: "Journey",
+      lastName: "Bot",
+      locale: "en",
+      isSynthetic: true,
+      billing: { subscriptionStatus: "awaiting_checkout" },
+    });
+
+    const status = await billingService.getStatus(userId.toString());
+
+    expect(status).toEqual({
+      subscriptionStatus: "active",
+      trialEndsAt: null,
+      isReadOnly: false,
+      cancelAtPeriodEnd: false,
+    });
+  });
+
   it("reports a bypassed account as active without touching stored billing", async () => {
     using _env = mockEnv({
       ...stripeEnforcing,

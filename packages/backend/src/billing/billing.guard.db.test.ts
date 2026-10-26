@@ -25,7 +25,11 @@ const stripeConfigured = {
   BILLING_ENFORCEMENT: true,
 };
 
-const insertUser = async (billing?: Schema_UserBilling, email?: string) => {
+const insertUser = async (
+  billing?: Schema_UserBilling,
+  email?: string,
+  extra?: { isSynthetic?: boolean },
+) => {
   const userId = mongoService.objectId();
   await mongoService.user.insertOne({
     _id: userId,
@@ -35,6 +39,7 @@ const insertUser = async (billing?: Schema_UserBilling, email?: string) => {
     lastName: "User",
     locale: "en",
     ...(billing ? { billing } : {}),
+    ...(extra?.isSynthetic ? { isSynthetic: true } : {}),
   });
   return userId.toString();
 };
@@ -132,6 +137,20 @@ describe("assertBillingAllowsWrites", () => {
     ).rejects.toMatchObject({
       mutationCode: "BILLING_REQUIRED",
     });
+  });
+
+  it("allows synthetic journey accounts that would otherwise be gated", async () => {
+    using _env = mockEnv({
+      ...stripeConfigured,
+      SYNTHETIC_JOURNEY_EMAILS: ["runner@example.com"],
+    });
+    const synthetic = await insertUser(
+      { subscriptionStatus: "awaiting_checkout" },
+      "runner+journey1@example.com",
+      { isSynthetic: true },
+    );
+
+    await expect(assertBillingAllowsWrites(synthetic)).resolves.toBeUndefined();
   });
 
   it("allows a bypassed account that would otherwise be gated", async () => {
