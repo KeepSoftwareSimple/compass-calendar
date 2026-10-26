@@ -12,9 +12,10 @@ import {
 } from "@sync/providers/microsoft/microsoft-event.normalizer";
 import { microsoftGraphRequest } from "@sync/providers/microsoft/microsoft-graph-request";
 import {
-  MICROSOFT_EVENT_PAGE_SIZE,
   MICROSOFT_EVENT_SELECT,
   MICROSOFT_GRAPH_BASE_URL,
+  MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
+  MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
 } from "@sync/providers/microsoft/microsoft-http.constants";
 import { ProviderEventError } from "@sync/providers/provider-event.port";
 import {
@@ -99,7 +100,9 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
     const seenProviderIds = new Set<string>();
     let skipped = 0;
     const colorLabels = input.colorLabels ?? new Map();
-    const normalizeOptions = { graphPreferTimeZone: "UTC" as const };
+    const normalizeOptions = {
+      graphPreferTimeZone: MICROSOFT_GRAPH_OUTLOOK_TIMEZONE,
+    };
     const seriesMasterIds = new Set<string>();
 
     const pushItem = (item: GraphEventDeltaItem) => {
@@ -252,7 +255,7 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
       accessToken: this.#accessToken,
       url,
       headers: {
-        Prefer: `odata.maxpagesize=${MICROSOFT_EVENT_PAGE_SIZE}, outlook.timezone="UTC"`,
+        Prefer: MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
       },
       fallbackError: "microsoft_event_delta_failed",
     });
@@ -288,7 +291,7 @@ class FetchMicrosoftEventListApi implements MicrosoftEventListApi {
         accessToken: this.#accessToken,
         url: requestUrl,
         headers: {
-          Prefer: `odata.maxpagesize=${MICROSOFT_EVENT_PAGE_SIZE}, outlook.timezone="UTC"`,
+          Prefer: MICROSOFT_GRAPH_PREFER_EVENT_PAGE,
         },
         fallbackError: "microsoft_event_instances_failed",
       });

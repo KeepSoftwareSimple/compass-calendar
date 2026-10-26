@@ -28,6 +28,22 @@ export type ShouldTeachPointerHintInput = PointerHintGateOverrides & {
 };
 
 /**
+ * Mute, permanent dismiss, app lock, and a visible pill. Empty-grid clicks
+ * share only these; every other pointer hint also applies Explorer, session
+ * cap, and retire-on-use.
+ */
+export function arePointerHintEnvironmentGatesClosed(
+  gates: PointerHintGateOverrides = {},
+): boolean {
+  const tipsMuted = gates.tipsMuted ?? readTipsMuted();
+  const tipsDismissedPermanently =
+    gates.tipsDismissedPermanently ?? readPointerHintDismissedPermanently();
+  const appLocked = gates.appLocked ?? isAppLocked();
+  const pillVisible = gates.pillVisible ?? false;
+  return tipsMuted || tipsDismissedPermanently || appLocked || pillVisible;
+}
+
+/**
  * The one teach gate behind grid intents, chrome clicks and form field clicks.
  * The rules it enforces are documented in
  * `docs/frontend/contextual-pointer-guidance.md`; keeping them in a single
@@ -43,16 +59,11 @@ export function shouldTeachPointerHint({
   shortcutId,
   alreadyShown,
   hintsShownThisSession,
-  tipsMuted = readTipsMuted(),
-  tipsDismissedPermanently = readPointerHintDismissedPermanently(),
-  appLocked = isAppLocked(),
-  pillVisible = false,
   usageProfile = readShortcutUsageProfile(),
+  ...gates
 }: ShouldTeachPointerHintInput): boolean {
   if (hasReachedExplorerShortcutLevel(usageProfile)) return false;
-  if (tipsMuted || tipsDismissedPermanently || appLocked || pillVisible) {
-    return false;
-  }
+  if (arePointerHintEnvironmentGatesClosed(gates)) return false;
   if (alreadyShown) return false;
   if (hintsShownThisSession >= MAX_POINTER_HINTS_PER_SESSION) return false;
   const usage = usageProfile.shortcuts[shortcutId];

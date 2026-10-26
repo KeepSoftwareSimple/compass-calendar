@@ -1,10 +1,8 @@
-import { isAppLocked } from "@web/shortcuts/app-lock";
-import { readPointerHintDismissedPermanently } from "@web/shortcuts/keyboard-only/pointer-hint.storage";
 import {
+  arePointerHintEnvironmentGatesClosed,
   type PointerHintGateOverrides,
   shouldTeachPointerHint,
 } from "@web/shortcuts/pointer-intent/pointer-hint.teach-policy";
-import { readTipsMuted } from "@web/shortcuts/tips/shortcut-tips-muted.store";
 import {
   INTENT_TEACHING,
   type PointerIntent,
@@ -26,28 +24,9 @@ function isEmptyGridEveryClickIntent(intent: PointerIntent): boolean {
 }
 
 /**
- * Empty timed and all-day grid clicks teach on every click (Mac parity). Only
- * mute, permanent dismiss, app lock, and a visible pill block them.
- */
-function shouldTeachEmptyGridClickIntent(
-  gates: PointerHintGateOverrides,
-): boolean {
-  const tipsMuted = gates.tipsMuted ?? readTipsMuted();
-  const tipsDismissedPermanently =
-    gates.tipsDismissedPermanently ?? readPointerHintDismissedPermanently();
-  const appLocked = gates.appLocked ?? isAppLocked();
-  const pillVisible = gates.pillVisible ?? false;
-
-  if (tipsMuted || tipsDismissedPermanently || appLocked || pillVisible) {
-    return false;
-  }
-  return true;
-}
-
-/**
  * Grid intents other than empty-slot clicks teach once per session and retire
- * on the first registry id they name; every other rule lives in the shared
- * pointer-hint gate.
+ * on the first registry id they name. Empty-grid clicks reuse the shared
+ * mute/lock/pill gates and skip Explorer, session cap, and retire-on-use.
  */
 export function shouldTeachPointerIntent({
   intent,
@@ -55,7 +34,7 @@ export function shouldTeachPointerIntent({
   ...gates
 }: ShouldTeachPointerIntentInput): boolean {
   if (isEmptyGridEveryClickIntent(intent)) {
-    return shouldTeachEmptyGridClickIntent(gates);
+    return !arePointerHintEnvironmentGatesClosed(gates);
   }
 
   return shouldTeachPointerHint({
