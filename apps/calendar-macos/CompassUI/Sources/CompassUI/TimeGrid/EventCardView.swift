@@ -8,6 +8,8 @@ protocol EventCardViewDelegate: AnyObject {
 }
 
 final class EventCardView: NSView {
+    private let textContainer = EventCardTextContainerView()
+    private var visibleContentRect: NSRect?
     private let titleField = NSTextField(labelWithString: "")
     private let timeField = NSTextField(labelWithString: "")
     private let accentLayer = CALayer()
@@ -48,6 +50,10 @@ final class EventCardView: NSView {
         focusRingLayer.isHidden = true
         layer?.addSublayer(focusRingLayer)
 
+        textContainer.wantsLayer = true
+        textContainer.clipsToBounds = true
+        textContainer.layer?.masksToBounds = true
+        addSubview(textContainer)
         titleField.font = CompassFont.nsFont(size: 13)
         titleField.lineBreakMode = .byTruncatingTail
         titleField.maximumNumberOfLines = 2
@@ -55,7 +61,7 @@ final class EventCardView: NSView {
         titleField.isBordered = false
         titleField.drawsBackground = false
         titleField.delegate = self
-        addSubview(titleField)
+        textContainer.addSubview(titleField)
         titleField.setAccessibilityElement(false)
         titleField.refusesFirstResponder = true
         timeField.font = CompassFont.nsFont(size: 11)
@@ -64,7 +70,7 @@ final class EventCardView: NSView {
         timeField.alphaValue = 0.82
         timeField.isHidden = true
         timeField.setAccessibilityElement(false)
-        addSubview(timeField)
+        textContainer.addSubview(timeField)
 
         setAccessibilityElement(true)
         setAccessibilityRole(.button)
@@ -90,6 +96,7 @@ final class EventCardView: NSView {
             width: card.frame.width,
             height: card.frame.height
         )
+        visibleContentRect = nil
         frame = layoutRectInParent
         showsInlineTitleEditor = card.showsInlineTitleEditor
         // Web prints the raw title, so an untitled draft shows only its time;
@@ -154,13 +161,24 @@ final class EventCardView: NSView {
         syncAccessibilityFrame()
     }
 
+    func updateVisibleContentRect(_ rect: NSRect) {
+        guard visibleContentRect != rect else { return }
+        visibleContentRect = rect
+        needsLayout = true
+        layoutSubtreeIfNeeded()
+    }
+
     override func layout() {
         super.layout()
         // Short cards (all-day rows are 20pt) trim the vertical inset so the
         // title line is not clipped.
         let titleLineHeight = 16.0
         let verticalInset = max(0, min(4, (bounds.height - titleLineHeight) / 2))
-        let titleBounds = bounds.insetBy(dx: 6, dy: verticalInset)
+        textContainer.frame = bounds
+        let visibleBounds = visibleContentRect.map { bounds.intersection($0) } ?? bounds
+        let labelBounds = visibleBounds.isEmpty ? bounds : NSRect(
+            x: bounds.minX, y: visibleBounds.minY, width: bounds.width, height: visibleBounds.height)
+        let titleBounds = labelBounds.insetBy(dx: 6, dy: verticalInset)
         let timeHeight: CGFloat = timeField.isHidden ? 0 : 13
         let titleFont = CompassFont.nsFont(size: bounds.height <= 15 ? 10 : 13)
         titleField.font = titleFont
@@ -396,4 +414,9 @@ extension EventCardView: NSTextFieldDelegate {
         guard showsInlineTitleEditor, obj.object as? NSTextField === titleField else { return }
         cardDelegate?.eventCardView(self, didEditDraftTitle: titleField.stringValue, eventId: eventId)
     }
+}
+
+/// Text clips independently so the card's external focus outline stays visible.
+private final class EventCardTextContainerView: NSView {
+    override var isFlipped: Bool { true }
 }
