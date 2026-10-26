@@ -432,3 +432,7 @@ The web gives overlapping timed cards a background-colored separation ring and a
 ### 2026-10-26 command palette placement follow-up
 
 The composited reference in run 40328832414 confirms that the palette sits below the web's 15vh inset: flexible top and bottom spacers shared unused height. The top inset is now fixed while the bottom retains flexible space. The existing short/full-results regression also checks top position through filtering and clearing in both themes and records window screenshots. Runtime evidence is tracked in #4847; this does not close the broader palette typography or signed-in acceptance review.
+
+### 2026-10-26 command palette typography follow-up
+
+A hidden local web browser measured palette text at16px with24px line height,18px icons,40px rows and49px search header. Native plain/search/highlighted text and icon sizes now follow those measurements, with fixed line boxes and results padding inside the50vh maximum. Both-theme sizing regressions also assert full and filtered row heights; actual runtime/capture evidence is tracked in #4861. Signed-in acceptance and broader visual parity remain open.

@@ -8,7 +8,7 @@ struct CommandPaletteHighlightedLabel: View {
 
     var body: some View {
         Text(attributedLabel)
-            .font(.rubik(14))
+            .font(.rubik(NativeWebLayoutTokens.fontSizeL))
     }
 
     private var attributedLabel: AttributedString {
@@ -24,7 +24,7 @@ struct CommandPaletteHighlightedLabel: View {
             let end = label.index(label.startIndex, offsetBy: range.upperBound)
             let lower = start..<end
             if let attrRange = Range(lower, in: result) {
-                result[attrRange].font = .rubik(14, weight: .semibold)
+                result[attrRange].font = .rubik(NativeWebLayoutTokens.fontSizeL, weight: .semibold)
                 result[attrRange].foregroundColor = theme.textColor
             }
         }
