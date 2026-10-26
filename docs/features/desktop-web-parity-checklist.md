@@ -436,3 +436,7 @@ The composited reference in run 40328832414 confirms that the palette sits below
 ### 2026-10-26 command palette typography follow-up
 
 A hidden local web browser measured palette text at16px with24px line height,18px icons,40px rows and49px search header. Native plain/search/highlighted text and icon sizes now follow those measurements, with fixed line boxes and results padding inside the50vh maximum. Both-theme sizing regressions also assert full and filtered row heights; actual runtime/capture evidence is tracked in #4861. Signed-in acceptance and broader visual parity remain open.
+
+### 2026-10-26 Settings navigation focus follow-up
+
+Web Settings initially focuses the current navigation button and paints its focus ring separately from the selected-page marker. Native Settings now requests current-page focus after mounting and shows an accent outline while that button owns keyboard focus. Both-theme regression coverage exercises initial focus, Tab/Shift+Tab return and Escape; screenshot/runtime evidence is tracked in #4863. Other Settings layout and signed-in acceptance gaps remain open.
