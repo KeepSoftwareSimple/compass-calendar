@@ -539,7 +539,7 @@ export const deleteEventWithKeyboard = async (page: Page) => {
 
 export const expectTimedEventVisible = async (page: Page, title: string) => {
   await expect(
-    page.locator("#mainGrid").getByRole("button", { name: title }),
+    page.locator("#mainGrid").getByRole("button", { name: title }).last(),
   ).toBeVisible({ timeout: 8000 });
 };
 
