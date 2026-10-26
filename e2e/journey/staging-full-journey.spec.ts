@@ -55,6 +55,10 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
       "true",
     );
     localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+    localStorage.setItem(
+      "compass.onboarding.has-dismissed-connect-calendar-prompt",
+      String(Date.now()),
+    );
   });
 
   const uniqueEmail = accountEmail.includes("@")
@@ -97,7 +101,7 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await expectTimedEventVisible(page, createdTitle);
 
   const editedTitle = createEventTitle("Journey edit");
-  await page.getByRole("button", { name: createdTitle }).click();
+  await page.getByRole("button", { name: createdTitle }).last().click();
   await page.getByLabel("Title").fill(editedTitle);
   await page.getByRole("button", { name: "Save" }).click();
   await expectTimedEventVisible(page, editedTitle);
