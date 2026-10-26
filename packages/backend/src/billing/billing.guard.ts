@@ -7,6 +7,7 @@ import {
 } from "@backend/common/constants/config.util";
 import mongoService from "@backend/common/services/mongo.service";
 import { eventMutationError } from "@backend/event/event.error";
+import { isSyntheticBillingBypassAccount } from "@backend/user/synthetic-account.service";
 
 /**
  * Throw BILLING_REQUIRED (403) when the user cannot mutate events.
@@ -21,9 +22,10 @@ export async function assertBillingAllowsWrites(userId: string): Promise<void> {
 
   const user = await mongoService.user.findOne(
     { _id: mongoService.objectId(userId) },
-    { projection: { billing: 1, email: 1 } },
+    { projection: { billing: 1, email: 1, isSynthetic: 1 } },
   );
   if (isBillingBypassed(CONFIG, user?.email)) return;
+  if (isSyntheticBillingBypassAccount(user?.email, user?.isSynthetic)) return;
 
   const status = deriveBillingStatus(user?.billing);
   if (!status.isReadOnly) return;

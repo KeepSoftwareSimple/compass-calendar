@@ -12,6 +12,16 @@ export function resolveSyntheticAccountFromEmail(
   return isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 }
 
+/** Staging/prod journey and automation accounts skip billing gates without Stripe. */
+export function isSyntheticBillingBypassAccount(
+  email: string | undefined,
+  isSynthetic?: boolean,
+): boolean {
+  if (isSynthetic === true) return true;
+  if (!email) return false;
+  return isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
+}
+
 export async function isSyntheticCompassUserId(
   userId: string,
 ): Promise<boolean> {

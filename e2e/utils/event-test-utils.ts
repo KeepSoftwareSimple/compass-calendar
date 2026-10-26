@@ -436,14 +436,40 @@ export const fillTitleAndSaveEventForm = async (page: Page, title: string) => {
   await titleInput.waitFor({ state: "hidden", timeout: FORM_TIMEOUT });
 };
 
+/** Dismisses the awaiting-checkout explore banner so it does not steal focus. */
+export const dismissExploreTrialBannerIfOpen = async (page: Page) => {
+  const exploreBanner = page.getByRole("status").filter({
+    hasText: /Start your .* free trial to plan your week/i,
+  });
+  if (!(await exploreBanner.isVisible().catch(() => false))) {
+    return;
+  }
+  await exploreBanner.getByRole("button", { name: "Dismiss" }).click();
+  await expect(exploreBanner).toHaveCount(0);
+};
+
+/** Dismisses the post-signup calendar connect overlay when it blocks the grid. */
+export const dismissBringYourEventsPromptIfOpen = async (page: Page) => {
+  const skipForNow = page.getByRole("button", { name: "Skip for now" });
+  const appeared = await skipForNow
+    .waitFor({ state: "visible", timeout: 20_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (!appeared) {
+    return;
+  }
+  await skipForNow.click();
+  await expect(
+    page.getByRole("dialog", { name: "Bring your events" }),
+  ).toBeHidden({ timeout: 15_000 });
+};
+
 /** Opens a timed draft via the `c` shortcut (KEYMAP.createEvent). */
 export const openTimedEventFormWithKeyboard = async (page: Page) => {
   const titleInput = getFormTitleInput(page);
 
   if (!(await titleInput.isVisible().catch(() => false))) {
-    await blurActiveElement(page);
-    await page.locator("#mainGrid").focus();
-    await page.keyboard.press("c");
+    await dispatchDocumentKey(page, "c");
   }
 
   await titleInput.waitFor({ state: "visible", timeout: FORM_TIMEOUT });
