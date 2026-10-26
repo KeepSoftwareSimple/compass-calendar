@@ -36,6 +36,10 @@ type StartProviderAuthorizationOptions = {
   onStart?: () => void;
   onError?: (error: unknown) => void;
   prompt?: AuthorizationPrompt;
+  /** Google only: request a subset of scopes (incremental authorization). */
+  scopes?: readonly string[];
+  /** Google only: keep scopes the user already granted on prior consent. */
+  includeGrantedScopes?: boolean;
 };
 
 type StartProviderAuthorizationResult = {
@@ -107,6 +111,7 @@ function recordAuthorizationStart(
       ? buildSignupTrialReturnPath()
       : getSafeProviderAuthReturnPath(provider),
     createdAt: Date.now(),
+    ...(signupFlow ? { signupFlow: true } : {}),
   });
   track("oauth_redirect_started", { provider, intent });
   trackSignupStep("oauth_redirect_started", { method: provider });
@@ -192,6 +197,8 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   onStart,
   onError,
   prompt,
+  scopes,
+  includeGrantedScopes,
 }) => {
   const [loading, setLoading] = useState(false);
   const { state, redirectUri } = useAuthorizationSession(
@@ -210,7 +217,8 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
   >(
     () => ({
       flow: "auth-code",
-      scope: GOOGLE_SCOPES.join(" "),
+      scope: (scopes ?? GOOGLE_SCOPES).join(" "),
+      ...(includeGrantedScopes ? { include_granted_scopes: true } : {}),
       prompt,
       state,
       ux_mode: "redirect",
@@ -224,7 +232,7 @@ const useGoogleProviderAuthorizationStrategy: ProviderAuthorizationStrategy = ({
         onError?.(error);
       },
     }),
-    [onError, prompt, redirectUri, state],
+    [includeGrantedScopes, onError, prompt, redirectUri, scopes, state],
   );
 
   const startGoogleAuthorization = useGoogleLoginBase(loginOptions);

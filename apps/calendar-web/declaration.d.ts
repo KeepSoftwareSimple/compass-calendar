@@ -57,6 +57,7 @@ interface Window {
       open: (
         provider: import("@core/types/sync/identity.contracts").ProviderKind,
       ) => void;
+      openGoogleSignupRecovery: (missingScopes: readonly string[]) => void;
     };
     userMetadata?: {
       getState: () => import("@web/auth/state/user-metadata.store").UserMetadataState;

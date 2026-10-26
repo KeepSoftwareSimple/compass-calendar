@@ -5,13 +5,17 @@ import { readProviderAuthorizationIntent } from "./provider-authorization.storag
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const mockGoogleLogin = mock();
+let lastGoogleLoginOptions: Record<string, unknown> | undefined;
 const mockTrack = mock();
 const mockAssignAuthorizationRedirect = mock();
 const mockGetAppleSignInClientId = mock(() => "com.compasscalendar.web");
 const mockGetMicrosoftSignInClientId = mock(() => "microsoft-client-id");
 
 mock.module("@react-oauth/google", () => ({
-  useGoogleLogin: () => mockGoogleLogin,
+  useGoogleLogin: (options: Record<string, unknown>) => {
+    lastGoogleLoginOptions = options;
+    return mockGoogleLogin;
+  },
 }));
 
 mock.module("@web/auth/posthog/track", () => ({
@@ -37,10 +41,33 @@ describe("useStartProviderAuthorizationImpl", () => {
     mockGetAppleSignInClientId.mockReset();
     mockGetAppleSignInClientId.mockReturnValue("com.compasscalendar.web");
     mockGoogleLogin.mockClear();
+    lastGoogleLoginOptions = undefined;
     mockTrack.mockClear();
     mockAssignAuthorizationRedirect.mockClear();
     mockGetMicrosoftSignInClientId.mockClear();
     mockGetMicrosoftSignInClientId.mockReturnValue("microsoft-client-id");
+  });
+
+  it("passes incremental scope options to Google login", () => {
+    const { result } = renderHook(() =>
+      useStartProviderAuthorizationImpl("google", {
+        intent: "signIn",
+        signupFlow: true,
+        prompt: "consent",
+        scopes: [GOOGLE_SCOPES[1]!],
+        includeGrantedScopes: true,
+      }),
+    );
+
+    act(() => {
+      result.current.startAuthorization();
+    });
+
+    expect(lastGoogleLoginOptions).toMatchObject({
+      scope: GOOGLE_SCOPES[1],
+      include_granted_scopes: true,
+      prompt: "consent",
+    });
   });
 
   it("starts Google authorization with core scopes and analytics", () => {

@@ -6,6 +6,7 @@ import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import {
   missingPermissionsActions,
   selectMissingPermissionsProvider,
+  selectMissingPermissionsSurface,
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
 import {
@@ -27,8 +28,9 @@ import { useAppLockReason } from "@web/shortcuts/app-lock";
 
 export const MissingPermissionsModal: FC = () => {
   const provider = useMissingPermissionsStore(selectMissingPermissionsProvider);
+  const surface = useMissingPermissionsStore(selectMissingPermissionsSurface);
   const { authenticated } = useSession();
-  const isOpen = provider !== null;
+  const isOpen = provider !== null && surface === "connect_modal";
   useAppLockReason("missingPermissionsModal", isOpen);
 
   // Reopens the provider's consent screen with every permission checked, the
@@ -44,11 +46,11 @@ export const MissingPermissionsModal: FC = () => {
   };
 
   useEffect(() => {
-    if (!provider) return;
+    if (!isOpen || !provider) return;
     trackSignupStep("permissions_explainer_shown", { method: provider });
-  }, [provider]);
+  }, [isOpen, provider]);
 
-  if (!provider) return null;
+  if (!isOpen || !provider) return null;
 
   const permissions = REQUESTED_PERMISSIONS[provider];
 
