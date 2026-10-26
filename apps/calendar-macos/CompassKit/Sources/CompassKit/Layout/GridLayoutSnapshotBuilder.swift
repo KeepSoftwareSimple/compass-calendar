@@ -126,7 +126,8 @@ public enum GridLayoutSnapshotBuilder {
                     lookup: lookup,
                     calendarId: timed.calendarId,
                     colorHex: timed.colorHex,
-                    isHidden: deckItem.isHidden
+                    isHidden: deckItem.isHidden,
+                    isDeck: deckItem.deckLayout != nil
                 )
             )
         }
@@ -335,7 +336,8 @@ public enum GridLayoutSnapshotBuilder {
         lookup: CalendarLookup,
         calendarId: String?,
         colorHex: String?,
-        isHidden: Bool
+        isHidden: Bool,
+        isDeck: Bool = false
     ) -> GridLayoutCardSnapshot {
         GridLayoutCardSnapshot(
             accessibilityIdentifier: GridLayoutAccessibility.eventIdentifier(eventId: eventId),
@@ -349,7 +351,8 @@ public enum GridLayoutSnapshotBuilder {
             isHiddenStrip: isHidden,
             kind: kind,
             label: label,
-            zIndex: zIndex
+            zIndex: zIndex,
+            isDeck: isDeck
         )
     }
 

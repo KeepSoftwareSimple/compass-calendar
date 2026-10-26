@@ -55,6 +55,7 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
     public var focusColorHex: String?
     public var frame: EventPosition
     public var isDraft: Bool
+    public var isDeck: Bool
     public var isHiddenStrip: Bool
     public var kind: GridLayoutCardKind
     public var label: String
@@ -73,6 +74,7 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
         label: String,
         zIndex: Int,
         isDraft: Bool = false,
+        isDeck: Bool = false,
         showsInlineTitleEditor: Bool = false
     ) {
         self.accessibilityIdentifier = accessibilityIdentifier
@@ -86,6 +88,7 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
         self.label = label
         self.zIndex = zIndex
         self.isDraft = isDraft
+        self.isDeck = isDeck
         self.showsInlineTitleEditor = showsInlineTitleEditor
     }
 
@@ -102,6 +105,7 @@ public struct GridLayoutCardSnapshot: Hashable, Sendable, Codable {
         label = try container.decode(String.self, forKey: .label)
         zIndex = try container.decode(Int.self, forKey: .zIndex)
         isDraft = try container.decodeIfPresent(Bool.self, forKey: .isDraft) ?? false
+        isDeck = try container.decodeIfPresent(Bool.self, forKey: .isDeck) ?? false
         showsInlineTitleEditor =
             try container.decodeIfPresent(Bool.self, forKey: .showsInlineTitleEditor) ?? false
     }

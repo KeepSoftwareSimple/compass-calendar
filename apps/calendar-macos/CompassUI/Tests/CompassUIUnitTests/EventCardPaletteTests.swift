@@ -42,6 +42,42 @@ final class EventCardPaletteTests: XCTestCase {
         assertColor(view.layer?.backgroundColor, hex: "#454442")
     }
 
+    func testDeckEdgesSeparateCardsInBothThemesAndClearWhenPooled() throws {
+        let scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
+        var card = try XCTUnwrap(snapshot.cards.first { $0.eventId == "overlap-a" })
+        XCTAssertTrue(card.isDeck)
+        for theme in [NativeWebTheme.lightBeach, .darkAbyss] {
+            let view = EventCardView(frame: .zero)
+            view.apply(card: card, theme: theme, isFocused: false)
+            let edge = try XCTUnwrap(view.layer?.sublayers?.first { $0.name == "deck-separation-edge" } as? CAShapeLayer)
+            XCTAssertFalse(edge.isHidden)
+            XCTAssertEqual(edge.lineWidth, 0.75)
+            XCTAssertEqual(edge.strokeColor, NSColor(theme.backgroundColor).cgColor)
+            XCTAssertEqual(view.layer?.shadowOpacity, 0.4)
+            view.apply(card: card, theme: theme, isFocused: true)
+            XCTAssertEqual(view.layer?.shadowOpacity, 0.55)
+            card.isDeck = false
+            view.apply(card: card, theme: theme, isFocused: false)
+            XCTAssertTrue(edge.isHidden)
+            XCTAssertEqual(view.layer?.shadowOpacity, 0)
+            card.isDeck = true
+        }
+    }
+
+    func testDeckMembershipRoundTripsAndOlderSnapshotsDefaultToNonDeck() throws {
+        let scenario = GridLayoutSnapshotFixtures.parityScenario(layoutMode: .week, visibleDateKeys: ["2026-05-20"])
+        let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
+        let card = try XCTUnwrap(snapshot.cards.first { $0.eventId == "overlap-a" })
+        XCTAssertTrue(try JSONDecoder().decode(GridLayoutCardSnapshot.self, from: JSONEncoder().encode(card)).isDeck)
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(card)) as? [String: Any])
+        legacy.removeValue(forKey: "isDeck")
+        let decoded = try JSONDecoder().decode(GridLayoutCardSnapshot.self,
+            from: JSONSerialization.data(withJSONObject: legacy))
+        XCTAssertFalse(decoded.isDeck)
+        XCTAssertFalse(try XCTUnwrap(snapshot.cards.first { $0.eventId == "hidden-strip" }).isDeck)
+    }
+
     private func cardView(scenario: GridLayoutScenario, theme: NativeWebTheme, eventId: String = "overlap-a") throws -> EventCardView {
         let snapshot = GridLayoutSnapshotBuilder.build(scenario: scenario, colWidths: [400])
         let card = try XCTUnwrap(snapshot.cards.first { $0.eventId == eventId })
