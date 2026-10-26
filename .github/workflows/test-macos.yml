@@ -209,8 +209,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         run: bun install
-      - name: Install Playwright Chromium
-        run: bunx playwright install chromium
       - name: Install XcodeGen
         run: brew install xcodegen
       - name: Render app icon
@@ -224,7 +222,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p build
-          bun run verify --strict --serial | tee build/macos-strict.log
+          bun run verify --strict --serial macos | tee build/macos-strict.log
       - name: Upload strict verification log
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7
@@ -243,11 +241,39 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  strict-web:
+    if: github.event_name == 'workflow_dispatch' && inputs.strict_verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install
+      - name: Install Playwright Chromium
+        run: bunx playwright install --with-deps chromium
+      - name: Run full web strict verification
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p build
+          bun run verify --strict --serial web | tee build/web-strict.log
+      - name: Upload web strict verification log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: compass-web-strict-log
+          path: build/web-strict.log
+          if-no-files-found: warn
+          retention-days: 14
+
   # One required context whether or not the build ran, like `unit` over
   # `unit-leg`. `changes` must succeed too: a failed filter skips `build`,
   # and a skipped build alone would read as a pass.
   macos:
-    needs: [changes, build, swift-packages, strict]
+    needs: [changes, build, swift-packages, strict, strict-web]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -258,10 +284,15 @@ jobs:
           BUILD: ${{ needs.build.result }}
           SWIFT_PACKAGES: ${{ needs.swift-packages.result }}
           STRICT: ${{ needs.strict.result }}
+          STRICT_WEB: ${{ needs.strict-web.result }}
+          STRICT_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.strict_verify }}
         run: |
           echo "changes: ${CHANGES}, build: ${BUILD}, swift-packages: ${SWIFT_PACKAGES}"
           [ "$CHANGES" = "success" ] || exit 1
-          for leg in "$BUILD" "$SWIFT_PACKAGES" "$STRICT"; do
+          if [ "$STRICT_REQUESTED" = "true" ]; then
+            [ "$STRICT" = "success" ] && [ "$STRICT_WEB" = "success" ] || exit 1
+          fi
+          for leg in "$BUILD" "$SWIFT_PACKAGES" "$STRICT" "$STRICT_WEB"; do
             case "$leg" in
               success|skipped) ;;
               *) exit 1 ;;
