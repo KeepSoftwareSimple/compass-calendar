@@ -18,6 +18,11 @@ describe("synthetic account helpers", () => {
         "runner@example.com",
       ]),
     ).toBe(true);
+    expect(
+      isSyntheticAccountEmail("lance.essert+journey1730123456789@gmail.com", [
+        "lance.essert@gmail.com",
+      ]),
+    ).toBe(true);
   });
 
   it("flags internal domains and compasscaltest.invalid", () => {

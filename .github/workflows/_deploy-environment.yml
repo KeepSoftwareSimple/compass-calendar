@@ -121,6 +121,8 @@ jobs:
           # Comma-separated accounts exempt from billing gates. Staging test
           # accounts only; leave unset in production.
           BILLING_BYPASS_EMAILS: ${{ vars.BILLING_BYPASS_EMAILS }}
+          # Base signup emails for Playwright journey legs (comma-separated).
+          SYNTHETIC_JOURNEY_EMAILS: ${{ vars.SYNTHETIC_JOURNEY_EMAILS }}
           WEB_IMAGE: switchbacktech/compass-web:${{ inputs.environment }}-${{ steps.version.outputs.image_version }}
           # Sensitive
           COMPASS_SYNC_TOKEN: ${{ secrets.COMPASS_SYNC_TOKEN }}
@@ -315,6 +317,9 @@ jobs:
             else
               echo "Email config: omitting email block (environment=${{ inputs.environment }})" >&2
             fi
+            # shellcheck source=.github/scripts/deploy-write-journeys-block.sh
+            . .github/scripts/deploy-write-journeys-block.sh
+            write_journeys_block
             printf '%s\n' \
               'sync:' \
               "  mongoUri: \"${SYNC_MONGO_URI}\"" \
