@@ -18,6 +18,7 @@ const clearAuthenticationState = mock();
 const setAuthenticated = mock();
 const mockUseSession = mock();
 const clearAccountScopedClientState = mock();
+const waitForPendingEventMutations = mock(async () => undefined);
 const posthogReset = mock();
 const track = mock();
 let signOut = spyOn(session, "signOut");
@@ -67,6 +68,10 @@ mock.module("@web/auth/posthog/posthog.bootstrap", () => ({
       : actualPosthogBootstrap.getPosthogClient(),
 }));
 
+mock.module("@web/events/mutations/event.mutation.runtime", () => ({
+  waitForPendingEventMutations: () => waitForPendingEventMutations(),
+}));
+
 mock.module("@web/auth/posthog/track", () => ({
   ...actualTrack,
   track: (
@@ -89,6 +94,7 @@ describe("useLogout", () => {
     signOut = spyOn(session, "signOut").mockResolvedValue(undefined);
     clearAuthenticationState.mockClear();
     clearAccountScopedClientState.mockClear();
+    waitForPendingEventMutations.mockClear();
     posthogReset.mockClear();
     track.mockClear();
     setAuthenticated.mockClear();
@@ -124,6 +130,9 @@ describe("useLogout", () => {
 
   it("clears authentication state before awaiting signOut", async () => {
     const callOrder: string[] = [];
+    waitForPendingEventMutations.mockImplementation(async () => {
+      callOrder.push("waitForPendingEventMutations");
+    });
     clearAuthenticationState.mockImplementation(() => {
       callOrder.push("clearAuthenticationState");
     });
@@ -136,8 +145,9 @@ describe("useLogout", () => {
       await result.current();
     });
 
-    expect(callOrder[0]).toBe("clearAuthenticationState");
-    expect(callOrder[1]).toBe("signOut");
+    expect(callOrder[0]).toBe("waitForPendingEventMutations");
+    expect(callOrder[1]).toBe("clearAuthenticationState");
+    expect(callOrder[2]).toBe("signOut");
   });
 
   it("does not set authenticated=false until after signOut completes", async () => {

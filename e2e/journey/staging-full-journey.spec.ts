@@ -101,9 +101,15 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await expectTimedEventVisible(page, createdTitle);
 
   const editedTitle = createEventTitle("Journey edit");
+  const replaceSettled = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" &&
+      /\/api\/event\//.test(response.url()) &&
+      response.ok(),
+  );
   await page.getByRole("button", { name: createdTitle }).last().click();
-  await page.getByLabel("Title").fill(editedTitle);
-  await page.getByRole("button", { name: "Save" }).click();
+  await fillTitleAndSaveEventForm(page, editedTitle);
+  await replaceSettled;
   await expectTimedEventVisible(page, editedTitle);
 
   await page.getByRole("button", { name: "Open settings" }).click();
