@@ -106,7 +106,7 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await page.getByRole("button", { name: "Save" }).click();
   await expectTimedEventVisible(page, editedTitle);
 
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Log out" }).click();
   await page
     .getByRole("dialog", { name: /log out/i })
@@ -122,7 +122,7 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await page.getByRole("button", { name: "Log in" }).click();
   await expectTimedEventVisible(page, editedTitle);
 
-  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Delete account" }).click();
   const deleteDialog = page.getByRole("dialog", {
     name: /delete your account/i,
