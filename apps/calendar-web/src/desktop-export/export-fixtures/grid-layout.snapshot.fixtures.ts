@@ -222,6 +222,7 @@ const buildSnapshot = ({
     focusColorHex?: string;
     frame: ReturnType<typeof getTimedEventPosition>;
     isDraft: boolean;
+    isDeck: boolean;
     isHiddenStrip: boolean;
     kind: "timed" | "allDay" | "busy";
     label: string;
@@ -261,6 +262,7 @@ const buildSnapshot = ({
         undefined,
       frame,
       isDraft: false,
+      isDeck: false,
       isHiddenStrip: false,
       kind: "allDay",
       label: event.title ?? "Untitled",
@@ -316,6 +318,7 @@ const buildSnapshot = ({
         undefined,
       frame,
       isDraft: false,
+      isDeck: Boolean(item.deckLayout),
       isHiddenStrip: item.isHidden,
       kind: "timed",
       label: timed.title,
@@ -355,6 +358,7 @@ const buildSnapshot = ({
         undefined,
       frame,
       isDraft: false,
+      isDeck: false,
       isHiddenStrip: false,
       kind: "busy",
       label: "Busy",

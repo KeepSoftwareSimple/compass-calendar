@@ -55,8 +55,12 @@ final class EventCardPaletteTests: XCTestCase {
             XCTAssertEqual(edge.lineWidth, 0.75)
             XCTAssertEqual(edge.strokeColor, NSColor(theme.backgroundColor).cgColor)
             XCTAssertEqual(view.layer?.shadowOpacity, 0.4)
+            XCTAssertEqual(view.layer?.shadowOffset.height, -3)
+            XCTAssertEqual(view.layer?.shadowPath?.boundingBox, view.bounds.insetBy(dx: 2, dy: 2))
             view.apply(card: card, theme: theme, isFocused: true)
             XCTAssertEqual(view.layer?.shadowOpacity, 0.55)
+            XCTAssertEqual(view.layer?.shadowOffset.height, -6)
+            XCTAssertEqual(view.layer?.shadowPath?.boundingBox, view.bounds.insetBy(dx: 3, dy: 3))
             card.isDeck = false
             view.apply(card: card, theme: theme, isFocused: false)
             XCTAssertTrue(edge.isHidden)

@@ -14,6 +14,7 @@ final class EventCardView: NSView {
     private let timeField = NSTextField(labelWithString: "")
     private let accentLayer = CALayer()
     private let deckEdgeLayer = CAShapeLayer()
+    private var shadowSpreadInset: CGFloat = 0
     private let focusRingLayer = CALayer()
     /// Web `outline-dashed outline-1 outline-text-muted/50` for unsettled cards.
     private let unsettledOutlineLayer = CAShapeLayer()
@@ -126,9 +127,10 @@ final class EventCardView: NSView {
         layer?.opacity = card.isHiddenStrip ? 0.6 : 1
         deckEdgeLayer.isHidden = !card.isDeck
         deckEdgeLayer.strokeColor = NSColor(theme.backgroundColor).cgColor
+        shadowSpreadInset = card.isDeck ? (isFocused ? 3 : 2) : 0
         if card.isDeck {
             layer?.shadowColor = NSColor.black.cgColor
-            layer?.shadowOffset = CGSize(width: 0, height: isFocused ? 6 : 3)
+            layer?.shadowOffset = CGSize(width: 0, height: isFocused ? -6 : -3)
             layer?.shadowRadius = isFocused ? 7 : 3
             layer?.shadowOpacity = isFocused ? 0.55 : 0.4
         } else if card.isDraft {
@@ -206,6 +208,8 @@ final class EventCardView: NSView {
         timeField.frame = NSRect(x: titleBounds.minX, y: titleField.frame.maxY,
             width: titleBounds.width, height: timeHeight)
         accentLayer.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
+        layer?.shadowPath = CGPath(roundedRect: bounds.insetBy(dx: shadowSpreadInset, dy: shadowSpreadInset),
+            cornerWidth: max(0, 4 - shadowSpreadInset), cornerHeight: max(0, 4 - shadowSpreadInset), transform: nil)
         deckEdgeLayer.frame = bounds
         deckEdgeLayer.path = CGPath(roundedRect: bounds.insetBy(dx: -0.375, dy: -0.375),
             cornerWidth: 4.375, cornerHeight: 4.375, transform: nil)
