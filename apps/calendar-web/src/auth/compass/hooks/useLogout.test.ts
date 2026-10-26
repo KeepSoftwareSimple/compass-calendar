@@ -69,8 +69,7 @@ mock.module("@web/auth/posthog/posthog.bootstrap", () => ({
 }));
 
 mock.module("@web/events/mutations/event.mutation.runtime", () => ({
-  waitForPendingEventMutations: (...args: unknown[]) =>
-    waitForPendingEventMutations(...args),
+  waitForPendingEventMutations: () => waitForPendingEventMutations(),
 }));
 
 mock.module("@web/auth/posthog/track", () => ({
