@@ -10,6 +10,7 @@ import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
+import { MICROSOFT_GRAPH_OUTLOOK_TIMEZONE } from "@sync/providers/microsoft/microsoft-http.constants";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
@@ -298,7 +299,8 @@ function mapSchedule(
   }
 
   if (start.dateTime && end.dateTime) {
-    const graphPreferTimeZone = options.graphPreferTimeZone ?? "UTC";
+    const graphPreferTimeZone =
+      options.graphPreferTimeZone ?? MICROSOFT_GRAPH_OUTLOOK_TIMEZONE;
     const startFieldZone = toIanaTimeZone(
       start.timeZone ?? end.timeZone ?? "UTC",
     );
@@ -339,7 +341,10 @@ function resolveTimedEventTimeZone(
   const originalStartZone = item.originalStartTimeZone
     ? toIanaTimeZone(item.originalStartTimeZone)
     : null;
-  if (graphPreferTimeZone === "UTC" && startFieldZone === "UTC") {
+  if (
+    graphPreferTimeZone === MICROSOFT_GRAPH_OUTLOOK_TIMEZONE &&
+    startFieldZone === "UTC"
+  ) {
     if (recurrenceZone && recurrenceZone !== "UTC") return recurrenceZone;
     if (originalStartZone && originalStartZone !== "UTC") {
       return originalStartZone;
@@ -418,7 +423,7 @@ function toOffsetIso(
   }
   const raw = stripGraphDateTimeFraction(value.dateTime);
   const anchored =
-    graphPreferTimeZone === "UTC"
+    graphPreferTimeZone === MICROSOFT_GRAPH_OUTLOOK_TIMEZONE
       ? dayjs.utc(raw).tz(timeZone)
       : dayjs.tz(raw, timeZone);
   return anchored.format(RFC3339_OFFSET);

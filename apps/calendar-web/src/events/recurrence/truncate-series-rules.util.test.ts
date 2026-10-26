@@ -1,5 +1,19 @@
-import { truncateSeriesRulesBefore } from "./truncate-series-rules.util";
+import {
+  stripRuleBounds,
+  truncateSeriesRulesBefore,
+} from "./truncate-series-rules.util";
 import { describe, expect, test } from "bun:test";
+
+describe("stripRuleBounds", () => {
+  test("drops COUNT and UNTIL and leaves the cadence", () => {
+    expect(stripRuleBounds(["RRULE:FREQ=DAILY;COUNT=10;INTERVAL=2"])).toEqual([
+      "RRULE:FREQ=DAILY;INTERVAL=2",
+    ]);
+    expect(
+      stripRuleBounds(["RRULE:FREQ=WEEKLY;UNTIL=20260506T085959Z;BYDAY=MO"]),
+    ).toEqual(["RRULE:FREQ=WEEKLY;BYDAY=MO"]);
+  });
+});
 
 describe("truncateSeriesRulesBefore", () => {
   test("truncates a timed daily rule one second before the split instant", () => {

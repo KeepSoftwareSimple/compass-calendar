@@ -2,7 +2,7 @@ import dayjs from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
   EMPTY_HIDDEN_EVENT_IDS,
-  isEventIdHidden,
+  withoutHiddenEventId,
 } from "@web/events/hidden/hidden-event-id";
 import {
   createTimedEventLayout,
@@ -27,15 +27,13 @@ export const getActiveTimedDraftDeckLayout = (
   eventsWithDraft[draftIndex] = draft;
   const draftDayEvents = eventsWithDraft.filter(
     (event) =>
-      !event.isAllDay &&
-      dayjs(event.startDate).isSame(draft.startDate, "day") &&
-      // Match the grid: hidden partners render as strips, not deck members.
-      (event._id === draft._id || !isEventIdHidden(event._id, hiddenEventIds)),
+      !event.isAllDay && dayjs(event.startDate).isSame(draft.startDate, "day"),
   );
 
   return (
-    createTimedEventLayout(draftDayEvents).find(
-      ({ event }) => event._id === draft._id,
-    )?.deckLayout ?? null
+    createTimedEventLayout(
+      draftDayEvents,
+      withoutHiddenEventId(hiddenEventIds, draft._id),
+    ).find(({ event }) => event._id === draft._id)?.deckLayout ?? null
   );
 };

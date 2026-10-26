@@ -1,5 +1,16 @@
 import dayjs from "@core/util/date/dayjs";
 
+// Removes COUNT and UNTIL from each rule, leaving an open-ended pattern. Used
+// to derive the remainder series of a thisAndFollowing split.
+export function stripRuleBounds(rules: readonly string[]): string[] {
+  return rules.map((rule) =>
+    rule
+      .split(";")
+      .filter((part) => !/^COUNT=/i.test(part) && !/^UNTIL=/i.test(part))
+      .join(";"),
+  );
+}
+
 // RRULE UNTIL is inclusive, so truncating "everything at/after `beforeStart`"
 // means UNTIL = one second before its instant. Always emits the full UTC
 // timed format (matching the backend's withUntil), never a bare date: an

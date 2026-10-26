@@ -24,7 +24,7 @@ export function seriesIdOf(event: Event | null | undefined): EventId | null {
   return null;
 }
 
-export function readAttendees(
+function readAttendees(
   attendees: CreateEventInput["content"]["attendees"],
 ): readonly Attendee[] | undefined {
   if (attendees === undefined) return undefined;
@@ -34,7 +34,7 @@ export function readAttendees(
   return withStatus.length === attendees.length ? withStatus : undefined;
 }
 
-export function isGuestEditInput(
+function isGuestEditInput(
   attendees: CreateEventInput["content"]["attendees"],
 ): attendees is readonly AttendeeInput[] {
   return (
@@ -62,7 +62,7 @@ export function optimisticGuestList(
   );
 }
 
-export function optimisticAttendeesFromInput(
+function optimisticAttendeesFromInput(
   attendees: CreateEventInput["content"]["attendees"],
   existing?: readonly Attendee[],
 ) {
@@ -109,7 +109,7 @@ export function optimisticEventFromCreate(input: CreateEventInput): Event {
   };
 }
 
-export function mergeReplaceContent(
+function mergeReplaceContent(
   existing: Event["content"],
   input: ReplaceEventInput["content"],
 ): Event["content"] {
@@ -159,11 +159,7 @@ export function seriesWriteKey(
   fallbackId: EventId,
 ): EventId {
   if (scope === "this" || !original) return fallbackId;
-  const seriesId =
-    original.recurrence.kind === "occurrence"
-      ? original.recurrence.seriesId
-      : original.recurrence.kind === "series"
-        ? original.id
-        : fallbackId;
-  return EventIdSchema.parse(rootSeriesMasterId(seriesId));
+  return EventIdSchema.parse(
+    rootSeriesMasterId(seriesIdOf(original) ?? fallbackId),
+  );
 }

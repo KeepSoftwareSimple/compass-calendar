@@ -13,7 +13,10 @@ import {
   decodeOccurrenceId,
 } from "@core/util/occurrence-id";
 import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
-import { truncateSeriesRulesBefore } from "@web/events/recurrence/truncate-series-rules.util";
+import {
+  stripRuleBounds,
+  truncateSeriesRulesBefore,
+} from "@web/events/recurrence/truncate-series-rules.util";
 
 export type RecurringEditProjection = {
   removeIds: ReadonlySet<string>;
@@ -28,15 +31,6 @@ type ProjectRecurringEditInput = {
   /** Series base row; required to optimistically truncate on thisAndFollowing. */
   seriesMaster?: Event | null;
 };
-
-function stripRuleBounds(rules: readonly string[]): string[] {
-  return rules.map((rule) =>
-    rule
-      .split(";")
-      .filter((part) => !/^COUNT=/i.test(part) && !/^UNTIL=/i.test(part))
-      .join(";"),
-  );
-}
 
 // Instances keep their own `occurrence` recurrence pointer; only content
 // propagates from the edit. The series base (and a standalone "single"
