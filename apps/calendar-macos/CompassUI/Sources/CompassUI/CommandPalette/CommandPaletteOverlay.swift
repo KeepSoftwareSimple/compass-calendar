@@ -41,10 +41,12 @@ public struct CommandPaletteOverlay: View {
                                 text: $paletteStore.query
                             )
                             .textFieldStyle(.plain)
-                            .font(.rubik(15))
+                            .font(.rubik(NativeWebLayoutTokens.fontSizeL))
+                            .frame(height: 24)
                             .foregroundStyle(theme.textColor)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
+                            .padding(.bottom, 1)
                             .focused($searchFocused)
                             .onExitCommand { paletteStore.close() }
                             .accessibilityIdentifier("compass-native-command-palette-search")
@@ -56,7 +58,7 @@ public struct CommandPaletteOverlay: View {
 
                             ScrollViewReader { proxy in
                                 ScrollView {
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 0) {
                                         if sections.isEmpty {
                                             Text("No results for “\(query)”")
                                                 .font(.rubik(NativeWebLayoutTokens.fontSizeBody))
@@ -68,6 +70,7 @@ public struct CommandPaletteOverlay: View {
                                             if !section.heading.isEmpty {
                                                 Text(section.heading.uppercased())
                                                     .font(.rubik(12, weight: .semibold))
+                                                    .frame(height: 16)
                                                     .foregroundStyle(theme.textColor)
                                                     .tracking(0.4)
                                                     .padding(.horizontal, 12)
@@ -92,8 +95,8 @@ public struct CommandPaletteOverlay: View {
                                         }
                                     }
                                 }
-                                .frame(height: min(resultsHeight, resultsMaxHeight))
                                 .padding(8)
+                                .frame(height: min(resultsHeight + 16, resultsMaxHeight))
                                 .onChange(of: selectedId) { _, id in
                                     if let id { proxy.scrollTo(id, anchor: .center) }
                                 }
@@ -144,10 +147,10 @@ public struct CommandPaletteOverlay: View {
             HStack(spacing: 12) {
                 Group {
                     if let phosphor = CommandPalettePhosphorIcon.icon(for: item) {
-                        PhosphorIconView(icon: phosphor, size: 16)
+                        PhosphorIconView(icon: phosphor, size: 18)
                     } else if let systemImage = item.systemImage {
                         Image(systemName: systemImage)
-                            .font(.system(size: 16, weight: .regular))
+                            .font(.system(size: 18, weight: .regular))
                     } else {
                         Color.clear
                     }
@@ -158,7 +161,7 @@ public struct CommandPaletteOverlay: View {
                     if isSearching, item.subtitle == nil, item.id != "go-to-date" {
                         CommandPaletteHighlightedLabel(label: item.label, query: query)
                     } else {
-                        Text(item.label).font(.rubik(14))
+                        Text(item.label).font(.rubik(NativeWebLayoutTokens.fontSizeL))
                     }
                 }
                 .lineLimit(1)
@@ -188,6 +191,7 @@ public struct CommandPaletteOverlay: View {
                     .fixedSize()
                 }
             }
+            .frame(minHeight: 24)
             .padding(.vertical, 8)
             .padding(.horizontal, 12)
             .foregroundStyle(theme.textMutedColor)

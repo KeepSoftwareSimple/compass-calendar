@@ -87,11 +87,15 @@ final class CommandPaletteKeyboardTests: XCTestCase {
             let palette = window.descendants(matching: .any)["compass-native-command-palette"]
             let search = window.textFields["compass-native-command-palette-search"]
             XCTAssertTrue(search.waitForExistence(timeout: 8))
+            let today = window.buttons["compass-native-palette-item-today"]
+            XCTAssertTrue(today.exists)
+            XCTAssertEqual(today.frame.height, 40, accuracy: 1)
             let fullHeight = palette.frame.height
             let top = palette.frame.minY
             XCTAssertEqual(top - window.frame.minY, window.frame.height * 0.15, accuracy: 3)
             search.typeText("create")
             XCTAssertTrue(window.buttons["compass-native-palette-item-create-event"].exists)
+            XCTAssertEqual(window.buttons["compass-native-palette-item-create-event"].frame.height, 40, accuracy: 1)
             XCTAssertLessThan(palette.frame.height, fullHeight)
             XCTAssertEqual(palette.frame.minY, top, accuracy: 1)
             search.typeKey("a", modifierFlags: [.command])
