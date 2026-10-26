@@ -219,3 +219,38 @@ export function releaseCoalescedReplaceSignal(
     inFlightReplaceByWriteKey.delete(writeKey);
   }
 }
+
+const pendingEventMutations = (queryClient: QueryClient): AnyMutation[] =>
+  listEventMutations(queryClient).filter(
+    (mutation) =>
+      mutation.state.status === "pending" &&
+      operationOf(mutation) !== undefined,
+  );
+
+/**
+ * Lets in-flight event writes finish before auth teardown. Logout clears
+ * account-scoped caches and can abort coalesced replaces; without this,
+ * a save followed immediately by logout can leave the server on the pre-edit
+ * document while the UI already showed the optimistic title.
+ */
+export async function waitForPendingEventMutations(
+  queryClient: QueryClient,
+  timeoutMs = 15_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const pending = pendingEventMutations(queryClient);
+    if (pending.length === 0) {
+      return;
+    }
+    await Promise.all(
+      pending.map((mutation) => whenSettled(queryClient, mutation)),
+    );
+  }
+  const remaining = pendingEventMutations(queryClient).length;
+  if (remaining > 0) {
+    console.warn(
+      `[waitForPendingEventMutations] ${remaining} event mutation(s) still pending after ${timeoutMs}ms; proceeding with logout`,
+    );
+  }
+}
