@@ -107,7 +107,6 @@ public struct SettingsWindowOverlay: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
-            .focusable()
             .focusEffectDisabled()
             .focused($focusedPage, equals: page)
             .overlay {
