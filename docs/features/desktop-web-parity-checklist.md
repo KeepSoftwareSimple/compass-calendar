@@ -428,3 +428,7 @@ Fresh main capture run 40264860791 shows blank titles on top-clipped Lunch with 
 ### 2026-10-26 overlapping deck contrast follow-up
 
 The web gives overlapping timed cards a background-colored separation ring and a shadow; native snapshots previously discarded deck membership and only draft cards had a shadow. Native cards now retain that membership and paint a 0.75pt background edge plus focus-sensitive shadow without changing shared deck geometry. Both-theme tests cover edges, focus elevation and pooled-view cleanup, with backward-compatible snapshot decoding. Actual isolated strict and screenshot evidence is tracked in #4842; the full visual and signed-in acceptance audit remains open.
+
+### 2026-10-26 command palette placement follow-up
+
+The composited reference in run 40328832414 confirms that the palette sits below the web's 15vh inset: flexible top and bottom spacers shared unused height. The top inset is now fixed while the bottom retains flexible space. The existing short/full-results regression also checks top position through filtering and clearing in both themes and records window screenshots. Runtime evidence is tracked in #4847; this does not close the broader palette typography or signed-in acceptance review.

@@ -78,21 +78,32 @@ final class CommandPaletteKeyboardTests: XCTestCase {
 
     @MainActor
     func testPaletteFitsShortResultsAndExpandsWhenCleared() {
-        let app = XCUIApplication.compassUITest()
-        app.launchArguments += ["-COMPASS_FIXTURE", "demo"]
-        app.launch()
-        let window = app.windows["Compass"]
-        window.typeKey("k", modifierFlags: [.command])
-        let palette = window.descendants(matching: .any)["compass-native-command-palette"]
-        let search = window.textFields["compass-native-command-palette-search"]
-        XCTAssertTrue(search.waitForExistence(timeout: 8))
-        let fullHeight = palette.frame.height
-        search.typeText("create")
-        XCTAssertTrue(window.buttons["compass-native-palette-item-create-event"].exists)
-        XCTAssertLessThan(palette.frame.height, fullHeight)
-        search.typeKey("a", modifierFlags: [.command])
-        search.typeKey(.delete, modifierFlags: [])
-        XCTAssertEqual(palette.frame.height, fullHeight, accuracy: 1)
+        for theme in ["light-beach", "dark-abyss"] {
+            let app = XCUIApplication.compassUITest()
+            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme]
+            app.launch()
+            let window = app.windows["Compass"]
+            window.typeKey("k", modifierFlags: [.command])
+            let palette = window.descendants(matching: .any)["compass-native-command-palette"]
+            let search = window.textFields["compass-native-command-palette-search"]
+            XCTAssertTrue(search.waitForExistence(timeout: 8))
+            let fullHeight = palette.frame.height
+            let top = palette.frame.minY
+            XCTAssertEqual(top - window.frame.minY, window.frame.height * 0.15, accuracy: 3)
+            search.typeText("create")
+            XCTAssertTrue(window.buttons["compass-native-palette-item-create-event"].exists)
+            XCTAssertLessThan(palette.frame.height, fullHeight)
+            XCTAssertEqual(palette.frame.minY, top, accuracy: 1)
+            search.typeKey("a", modifierFlags: [.command])
+            search.typeKey(.delete, modifierFlags: [])
+            XCTAssertEqual(palette.frame.height, fullHeight, accuracy: 1)
+            XCTAssertEqual(palette.frame.minY, top, accuracy: 1)
+            let screenshot = XCTAttachment(screenshot: window.screenshot())
+            screenshot.name = "Palette fixed top inset, \(theme)"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            app.terminate()
+        }
     }
 
     @MainActor
