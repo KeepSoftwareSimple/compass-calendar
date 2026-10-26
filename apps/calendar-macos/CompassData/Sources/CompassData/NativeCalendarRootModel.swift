@@ -24,9 +24,9 @@ public final class NativeCalendarRootModel {
     public let lifeViewIntroStore: LifeViewIntroStore
     public let overlayStores: OverlayStores
     public private(set) var headerTitle = ""
-    public private(set) var timeGridState: TimeGridState
+    public internal(set) var timeGridState: TimeGridState
     /// Title of the focused grid event for native UI tests and accessibility probes.
-    public private(set) var gridFocusAccessibilityLabel: String?
+    public internal(set) var gridFocusAccessibilityLabel: String?
     public private(set) var calendars: [CompassCalendar] = []
     var localCalendarId: String?
     public var isSignedIn: Bool { authStore.authenticated }
@@ -53,8 +53,8 @@ public final class NativeCalendarRootModel {
     public var monthPickerMonth: Date
     public var pendingScroll: TimeGridScrollRequest?
     /// True for 700ms after an already-at-now teach pulse. Matches web `NOW_CUE_PULSE_MS`.
-    public private(set) var nowCueHeaderHighlight = false
-    private var nowCuePulseTask: Task<Void, Never>?
+    public internal(set) var nowCueHeaderHighlight = false
+    var nowCuePulseTask: Task<Void, Never>?
     public private(set) var paletteEventSearchHits: [CommandPaletteEventHit] = []
     var sessionRevision = 0
     var paletteSearchTask: Task<Void, Never>?
