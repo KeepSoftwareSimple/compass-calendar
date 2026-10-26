@@ -34,6 +34,14 @@ enum ParityViewSnapshotExporter {
             window.displayIfNeeded()
         }
 
+        let folder = URL(fileURLWithPath: directory, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // Keep the window-server result independent of cacheDisplay's layer changes.
+        // Comparing the two exposes export artifacts before we change product rendering.
+        if let windowPNG = windowListPNG(window: window) {
+            try windowPNG.write(to: folder.appendingPathComponent("\(surface)-window-reference.png"))
+        }
+
         guard let bitmap = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: pixelWidth,
@@ -59,8 +67,6 @@ enum ParityViewSnapshotExporter {
         NSGraphicsContext.current = context
         drawPopoverWindows(over: window)
 
-        let folder = URL(fileURLWithPath: directory, isDirectory: true)
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let file = folder.appendingPathComponent("\(surface).png")
 
         let pngData = bitmap.representation(using: .png, properties: [:])
