@@ -10,7 +10,6 @@ import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { cancelledOccurrencesToExdateRules } from "@sync/providers/microsoft/microsoft-cancelled-occurrences";
 import { outlookCategoryNameToSlot } from "@sync/providers/microsoft/microsoft-event-category.map";
-import { MICROSOFT_GRAPH_OUTLOOK_TIMEZONE } from "@sync/providers/microsoft/microsoft-http.constants";
 import { toRRule } from "@sync/providers/microsoft/microsoft-recurrence";
 import { UnsupportedRecurrenceError } from "@sync/providers/microsoft/microsoft-recurrence.error";
 import { type GraphPatternedRecurrence } from "@sync/providers/microsoft/microsoft-recurrence.types";
@@ -35,8 +34,6 @@ const MEETING_PROVIDER_LABELS: Readonly<Record<string, string>> = {
 
 export interface NormalizeMicrosoftEventOptions {
   readonly allowOccurrence?: boolean;
-  /** Matches Prefer outlook.timezone on Graph reads (see event reader adapter). */
-  readonly graphPreferTimeZone?: string;
 }
 
 export interface GraphDateTimeTimeZone {
@@ -126,7 +123,7 @@ export function normalizeMicrosoftEvent(
   }
 
   const providerVersion = requireVersion(item);
-  const schedule = mapSchedule(item, options);
+  const schedule = mapSchedule(item);
 
   return {
     kind: "event",
@@ -270,10 +267,7 @@ export function mapConference(item: GraphEvent): Conference | null {
   return parsed.success ? parsed.data : null;
 }
 
-function mapSchedule(
-  item: GraphEvent,
-  options: NormalizeMicrosoftEventOptions,
-) {
+function mapSchedule(item: GraphEvent) {
   const { start, end } = item;
   if (!start || !end) {
     throw new ProviderEventError(
@@ -299,20 +293,14 @@ function mapSchedule(
   }
 
   if (start.dateTime && end.dateTime) {
-    const graphPreferTimeZone =
-      options.graphPreferTimeZone ?? MICROSOFT_GRAPH_OUTLOOK_TIMEZONE;
     const startFieldZone = toIanaTimeZone(
       start.timeZone ?? end.timeZone ?? "UTC",
     );
-    const timeZone = resolveTimedEventTimeZone(
-      item,
-      startFieldZone,
-      graphPreferTimeZone,
-    );
+    const timeZone = resolveTimedEventTimeZone(item, startFieldZone);
     return parseSchedule({
       kind: "timed",
-      start: toOffsetIso(start, timeZone, graphPreferTimeZone),
-      end: toOffsetIso(end, timeZone, graphPreferTimeZone),
+      start: toOffsetIso(start, timeZone),
+      end: toOffsetIso(end, timeZone),
       timeZone,
     });
   }
@@ -330,28 +318,27 @@ function extractDatePart(value: GraphDateTimeTimeZone): string | null {
   return parsed.format(DATE_ONLY);
 }
 
+/**
+ * Reads come back under `Prefer: outlook.timezone="UTC"`, so a UTC start field
+ * carries no zone of its own: fall back to the series' recurrence zone, then to
+ * the original start zone. Any other start-field zone is the event's real one.
+ */
 function resolveTimedEventTimeZone(
   item: GraphEvent,
   startFieldZone: string,
-  graphPreferTimeZone: string,
 ): string {
+  if (startFieldZone !== "UTC") return startFieldZone;
   const recurrenceZone = item.recurrence?.range?.recurrenceTimeZone
     ? toIanaTimeZone(item.recurrence.range.recurrenceTimeZone)
     : null;
+  if (recurrenceZone && recurrenceZone !== "UTC") return recurrenceZone;
   const originalStartZone = item.originalStartTimeZone
     ? toIanaTimeZone(item.originalStartTimeZone)
     : null;
-  if (
-    graphPreferTimeZone === MICROSOFT_GRAPH_OUTLOOK_TIMEZONE &&
-    startFieldZone === "UTC"
-  ) {
-    if (recurrenceZone && recurrenceZone !== "UTC") return recurrenceZone;
-    if (originalStartZone && originalStartZone !== "UTC") {
-      return originalStartZone;
-    }
+  if (originalStartZone && originalStartZone !== "UTC") {
+    return originalStartZone;
   }
-  if (startFieldZone !== "UTC") return startFieldZone;
-  return recurrenceZone ?? originalStartZone ?? startFieldZone;
+  return "UTC";
 }
 
 function parseSchedule(candidate: unknown) {
@@ -410,11 +397,8 @@ function stripGraphDateTimeFraction(dateTime: string): string {
   return dateTime.replace(/\.\d+$/, "");
 }
 
-function toOffsetIso(
-  value: GraphDateTimeTimeZone,
-  timeZone: string,
-  graphPreferTimeZone: string,
-): string {
+/** Graph wall clocks arrive in UTC (see the Prefer header), then shift to `timeZone`. */
+function toOffsetIso(value: GraphDateTimeTimeZone, timeZone: string): string {
   if (!value.dateTime) {
     throw new ProviderEventError(
       "unmappableSchedule",
@@ -422,9 +406,5 @@ function toOffsetIso(
     );
   }
   const raw = stripGraphDateTimeFraction(value.dateTime);
-  const anchored =
-    graphPreferTimeZone === MICROSOFT_GRAPH_OUTLOOK_TIMEZONE
-      ? dayjs.utc(raw).tz(timeZone)
-      : dayjs.tz(raw, timeZone);
-  return anchored.format(RFC3339_OFFSET);
+  return dayjs.utc(raw).tz(timeZone).format(RFC3339_OFFSET);
 }
