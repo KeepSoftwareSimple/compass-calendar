@@ -424,3 +424,7 @@ Fresh main comparison run 40048315826 confirms that the title-bar sidebar toggle
 ### 2026-10-25 event label visibility follow-up
 
 Fresh main capture run 40264860791 shows blank titles on top-clipped Lunch with Sam and Exercise cards and overlapping Wednesday labels. Card text now clips independently of the external focus outline, and timed cards update title placement against the visible viewport when scrolling. A regression fails on the previous unclipped hierarchy; focused tests cover clipping, preserved focus outlines, visible title bounds and scroll-back restoration. Runtime and screenshot verification is tracked in #4840. These focused checks do not establish complete visual parity or signed-in acceptance.
+
+### 2026-10-26 overlapping deck contrast follow-up
+
+The web gives overlapping timed cards a background-colored separation ring and a shadow; native snapshots previously discarded deck membership and only draft cards had a shadow. Native cards now retain that membership and paint a 0.75pt background edge plus focus-sensitive shadow without changing shared deck geometry. Both-theme tests cover edges, focus elevation and pooled-view cleanup, with backward-compatible snapshot decoding. Actual isolated strict and screenshot evidence is tracked in #4842; the full visual and signed-in acceptance audit remains open.

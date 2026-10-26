@@ -13,6 +13,8 @@ final class EventCardView: NSView {
     private let titleField = NSTextField(labelWithString: "")
     private let timeField = NSTextField(labelWithString: "")
     private let accentLayer = CALayer()
+    private let deckEdgeLayer = CAShapeLayer()
+    private var shadowSpreadInset: CGFloat = 0
     private let focusRingLayer = CALayer()
     /// Web `outline-dashed outline-1 outline-text-muted/50` for unsettled cards.
     private let unsettledOutlineLayer = CAShapeLayer()
@@ -37,6 +39,10 @@ final class EventCardView: NSView {
         accentLayer.cornerRadius = 4
         accentLayer.maskedCorners = [.layerMinXMinYCorner, .layerMinXMaxYCorner]
         layer?.addSublayer(accentLayer)
+        deckEdgeLayer.name = "deck-separation-edge"
+        deckEdgeLayer.fillColor = nil
+        deckEdgeLayer.lineWidth = 0.75
+        layer?.addSublayer(deckEdgeLayer)
 
         unsettledOutlineLayer.fillColor = nil
         unsettledOutlineLayer.lineWidth = 1
@@ -119,7 +125,15 @@ final class EventCardView: NSView {
         let fill = EventCardColorParser.nsColor(hex: card.fillColorHex) ?? defaultEventFill(for: theme)
         layer?.backgroundColor = fill.cgColor
         layer?.opacity = card.isHiddenStrip ? 0.6 : 1
-        if card.isDraft {
+        deckEdgeLayer.isHidden = !card.isDeck
+        deckEdgeLayer.strokeColor = NSColor(theme.backgroundColor).cgColor
+        shadowSpreadInset = card.isDeck ? (isFocused ? 3 : 2) : 0
+        if card.isDeck {
+            layer?.shadowColor = NSColor.black.cgColor
+            layer?.shadowOffset = CGSize(width: 0, height: isFocused ? -6 : -3)
+            layer?.shadowRadius = isFocused ? 7 : 3
+            layer?.shadowOpacity = isFocused ? 0.55 : 0.4
+        } else if card.isDraft {
             layer?.shadowColor = NSColor.black.withAlphaComponent(0.28).cgColor
             layer?.shadowOffset = CGSize(width: 0, height: -1)
             layer?.shadowRadius = 2
@@ -194,6 +208,11 @@ final class EventCardView: NSView {
         timeField.frame = NSRect(x: titleBounds.minX, y: titleField.frame.maxY,
             width: titleBounds.width, height: timeHeight)
         accentLayer.frame = CGRect(x: 0, y: 0, width: 3, height: bounds.height)
+        layer?.shadowPath = CGPath(roundedRect: bounds.insetBy(dx: shadowSpreadInset, dy: shadowSpreadInset),
+            cornerWidth: max(0, 4 - shadowSpreadInset), cornerHeight: max(0, 4 - shadowSpreadInset), transform: nil)
+        deckEdgeLayer.frame = bounds
+        deckEdgeLayer.path = CGPath(roundedRect: bounds.insetBy(dx: -0.375, dy: -0.375),
+            cornerWidth: 4.375, cornerHeight: 4.375, transform: nil)
         focusRingLayer.frame = bounds.insetBy(dx: -4, dy: -4)
         // A CSS outline sits just outside the border box.
         let outlineRect = bounds.insetBy(dx: -0.5, dy: -0.5)
