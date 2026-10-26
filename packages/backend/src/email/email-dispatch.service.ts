@@ -1,3 +1,4 @@
+import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
 import { Logger } from "@core/logger/winston.logger";
 import { emailListIncludes } from "@core/util/email.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
@@ -58,6 +59,13 @@ const isAllowlistedRecipient = (email: string): boolean => {
   const allowlist = CONFIG.EMAIL_ALLOWLIST;
   return allowlist.length === 0 || emailListIncludes(allowlist, email);
 };
+
+const isSyntheticEmailRecipient = (
+  email: string,
+  isSyntheticFlag?: boolean,
+): boolean =>
+  isSyntheticFlag === true ||
+  isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -278,7 +286,9 @@ export class EmailDispatchService {
       return;
     }
 
-    if (booking.user.isSynthetic) {
+    if (
+      isSyntheticEmailRecipient(booking.user.email, booking.user.isSynthetic)
+    ) {
       await skip("Synthetic account");
       return;
     }
@@ -372,7 +382,7 @@ export class EmailDispatchService {
       return;
     }
 
-    if (user.isSynthetic) {
+    if (isSyntheticEmailRecipient(user.email, user.isSynthetic)) {
       await skip("Synthetic account");
       return;
     }
