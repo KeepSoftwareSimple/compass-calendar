@@ -52,7 +52,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: staging-journey-${{ matrix.provider }}-${{ github.run_id }}
-          path: test-results/staging-journey/
+          path: e2e/test-results/staging-journey/
           retention-days: 14
           if-no-files-found: ignore
 

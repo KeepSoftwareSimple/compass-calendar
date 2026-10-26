@@ -72,7 +72,8 @@ export const getVisibleDayDates = (page: Page) =>
   );
 
 // Shared timeout for form operations - use a single reasonable timeout instead of short retries
-const FORM_TIMEOUT = 10000;
+const FORM_TIMEOUT =
+  process.env.STAGING_JOURNEY_ENABLED === "1" ? 30_000 : 10_000;
 
 /**
  * Dispatch a keyboard shortcut on `document`. Playwright's Control+K is
@@ -451,17 +452,19 @@ export const dismissExploreTrialBannerIfOpen = async (page: Page) => {
 /** Dismisses the post-signup calendar connect overlay when it blocks the grid. */
 export const dismissBringYourEventsPromptIfOpen = async (page: Page) => {
   const skipForNow = page.getByRole("button", { name: "Skip for now" });
-  const appeared = await skipForNow
-    .waitFor({ state: "visible", timeout: 20_000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!appeared) {
-    return;
+  const connectDialog = page.getByRole("dialog", {
+    name: "Bring your events",
+  });
+  try {
+    await skipForNow.click({ timeout: 45_000 });
+    await expect(connectDialog).toBeHidden({ timeout: 20_000 });
+  } catch {
+    if (await connectDialog.isVisible().catch(() => false)) {
+      throw new Error(
+        "Bring your events connect prompt is still open; keyboard shortcuts are blocked.",
+      );
+    }
   }
-  await skipForNow.click();
-  await expect(
-    page.getByRole("dialog", { name: "Bring your events" }),
-  ).toBeHidden({ timeout: 15_000 });
 };
 
 /** Opens a timed draft via the `c` shortcut (KEYMAP.createEvent). */

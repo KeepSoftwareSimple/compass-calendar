@@ -74,6 +74,11 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
     timeout: 120_000,
   });
 
+  await page
+    .locator("#mainGrid")
+    .waitFor({ state: "visible", timeout: 30_000 });
+  await dismissBringYourEventsPromptIfOpen(page);
+
   const connectPrompt = page.getByRole("complementary", {
     name: /connect/i,
   });
@@ -82,11 +87,6 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
       `Calendar connect is required for the ${provider} leg but OAuth is not automated in this scaffold yet. Tyler: add a pre-connected test account or extend this spec with provider OAuth.`,
     );
   }
-
-  await page
-    .locator("#mainGrid")
-    .waitFor({ state: "visible", timeout: 30_000 });
-  await dismissBringYourEventsPromptIfOpen(page);
   await dismissExploreTrialBannerIfOpen(page);
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
