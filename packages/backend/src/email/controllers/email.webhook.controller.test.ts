@@ -47,7 +47,9 @@ describe("EmailWebhookController", () => {
 
     expect(captured.status).toBe(Status.BAD_REQUEST);
     expect(process).not.toHaveBeenCalled();
-    expect(captured.payload).toEqual({ error: "bad signature" });
+    expect(captured.payload).toEqual({
+      error: "Invalid Resend webhook signature",
+    });
   });
 
   it("returns 400 for an empty unsigned request", async () => {
