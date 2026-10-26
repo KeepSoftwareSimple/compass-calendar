@@ -150,7 +150,9 @@ final class DescriptionEditorTests: XCTestCase {
                 .link: URL(string: "https://two.example/b")!,
             ])
         )
-        XCTAssertTrue(editor.openDescriptionLink(at: 1))
+        var openedURLs: [URL] = []
+        XCTAssertTrue(editor.openDescriptionLink(at: 1, openURL: { openedURLs.append($0) }))
+        XCTAssertEqual(openedURLs.map(\.absoluteString), ["https://two.example/b"])
     }
 
     func testBookingManagementLinksSkipHintSlotAttachments() {

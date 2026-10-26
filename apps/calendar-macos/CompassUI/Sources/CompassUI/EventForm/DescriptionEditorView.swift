@@ -251,11 +251,11 @@ public final class DescriptionTextView: NSTextView {
     }
 
     @discardableResult
-    func openDescriptionLink(at index: Int) -> Bool {
+    func openDescriptionLink(at index: Int, openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }) -> Bool {
         guard index >= 0, index < orderedLinkHrefs().count,
               let url = URL(string: orderedLinkHrefs()[index])
         else { return false }
-        NSWorkspace.shared.open(url)
+        openURL(url)
         return true
     }
 
