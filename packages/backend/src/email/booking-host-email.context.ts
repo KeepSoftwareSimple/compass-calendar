@@ -19,10 +19,10 @@ export type BookingHostEmailDispatchContext = {
       bookingHostEmailDisabledAt?: Date;
     };
   };
-  reservation: Awaited<
-    ReturnType<typeof bookingReservationRepository.findById>
+  reservation: NonNullable<
+    Awaited<ReturnType<typeof bookingReservationRepository.findById>>
   >;
-  page: Awaited<ReturnType<typeof bookingPageRepository.findById>>;
+  page: NonNullable<Awaited<ReturnType<typeof bookingPageRepository.findById>>>;
   durationMinutes: number;
   conference: CalendarConference;
   openInCompassUrl: string;
