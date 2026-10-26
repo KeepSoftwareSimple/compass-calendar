@@ -70,6 +70,13 @@ const isSyntheticEmailRecipient = (
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+const listUnsubscribeHeaders = (
+  unsubscribe: NonNullable<ReturnType<typeof buildUnsubscribeUrls>>,
+): Record<string, string> => ({
+  "List-Unsubscribe": unsubscribe.listUnsubscribeHeader,
+  "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+});
+
 const isInvalidRecipientError = (error: unknown): boolean => {
   if (!(error instanceof Error)) {
     return false;
@@ -304,10 +311,6 @@ export class EmailDispatchService {
     }
 
     const reservation = booking.reservation;
-    if (!reservation) {
-      await skip("Reservation not found");
-      return;
-    }
 
     const unsubscribeToken = buildUnsubscribeTokenForUser(userIdHex);
     const unsubscribe =
@@ -321,7 +324,7 @@ export class EmailDispatchService {
       guestEmail: reservation.guestEmail,
       notes: reservation.notes,
       durationMinutes: booking.durationMinutes,
-      pageTimeZone: booking.page!.timeZone,
+      pageTimeZone: booking.page.timeZone,
       guestTimeZone: reservation.guestTimeZone,
       slotStart: reservation.slotStart,
       slotEnd: reservation.slotEnd,
@@ -331,11 +334,7 @@ export class EmailDispatchService {
       unsubscribe,
     });
 
-    const headers: Record<string, string> = {};
-    if (unsubscribe) {
-      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
-      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-    }
+    const headers = unsubscribe ? listUnsubscribeHeaders(unsubscribe) : {};
 
     await this.#deliverRow(context, {
       stillSendable: async () => {
@@ -434,11 +433,7 @@ export class EmailDispatchService {
       firstName: user.firstName,
     });
 
-    const headers: Record<string, string> = {};
-    if (unsubscribe) {
-      headers["List-Unsubscribe"] = unsubscribe.listUnsubscribeHeader;
-      headers["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click";
-    }
+    const headers = unsubscribe ? listUnsubscribeHeaders(unsubscribe) : {};
 
     await this.#deliverRow(context, {
       stillSendable: async () => {
