@@ -34,7 +34,7 @@ final class EventCardTimeLabelTests: XCTestCase {
         var card = card()
         card.label = "A longer title that wraps across several lines of a tall event card"
         view.apply(card: card, theme: .lightBeach, isFocused: false, timeLabel: "9 - 10 AM")
-        let fields = view.subviews.compactMap { $0 as? NSTextField }
+        let fields = view.subviews.flatMap { [$0] + $0.subviews }.compactMap { $0 as? NSTextField }
         let time = try XCTUnwrap(fields.first { $0.stringValue == "9 - 10 AM" })
         let title = try XCTUnwrap(fields.first { $0.stringValue == card.label })
         XCTAssertFalse(time.isHidden)
@@ -55,9 +55,35 @@ final class EventCardTimeLabelTests: XCTestCase {
             card.isHiddenStrip = hidden
             card.kind = kind
             view.apply(card: card, theme: .lightBeach, isFocused: false, timeLabel: "9 - 10 AM")
-            let time = try XCTUnwrap(view.subviews.compactMap { $0 as? NSTextField }.first { $0.stringValue == "9 - 10 AM" })
+            let time = try XCTUnwrap(view.subviews.flatMap { [$0] + $0.subviews }.compactMap { $0 as? NSTextField }.first { $0.stringValue == "9 - 10 AM" })
             XCTAssertTrue(time.isHidden)
         }
+    }
+
+    func testTextClipsInsideCardWithoutClippingOutsideFocusRing() throws {
+        let view = EventCardView(frame: .zero)
+        view.apply(card: card(width: 30, height: 20), theme: .lightBeach, isFocused: true)
+        let title = try XCTUnwrap(view.subviews.flatMap { [$0] + $0.subviews }
+            .compactMap { $0 as? NSTextField }.first)
+        let textContainer = try XCTUnwrap(title.superview)
+        XCTAssertFalse(view.clipsToBounds)
+        XCTAssertFalse(view.layer?.masksToBounds ?? true)
+        XCTAssertTrue(textContainer !== view)
+        XCTAssertTrue(textContainer.clipsToBounds)
+        XCTAssertTrue(textContainer.layer?.masksToBounds ?? false)
+        XCTAssertEqual(textContainer.frame, view.bounds)
+    }
+
+    func testTopClippedCardKeepsTitleInVisiblePartAndResetsWhenScrolledBack() throws {
+        let view = EventCardView(frame: .zero)
+        view.apply(card: card(height: 90), theme: .lightBeach, isFocused: false)
+        let title = try XCTUnwrap(view.subviews.flatMap { [$0] + $0.subviews }
+            .compactMap { $0 as? NSTextField }.first)
+        view.updateVisibleContentRect(NSRect(x: 0, y: 55, width: 120, height: 35))
+        XCTAssertGreaterThanOrEqual(title.frame.minY, 55)
+        XCTAssertLessThanOrEqual(title.frame.maxY, 90)
+        view.updateVisibleContentRect(view.bounds)
+        XCTAssertLessThan(title.frame.minY, 10)
     }
 
     private func card(width: Double = 120, height: Double = 60) -> GridLayoutCardSnapshot {

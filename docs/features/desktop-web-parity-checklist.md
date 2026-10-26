@@ -420,3 +420,7 @@ Untouched legacy June samples move to the current week once. Edited or deleted r
 ### 2026-10-24 event form footer follow-up
 
 Fresh main comparison run 40048315826 confirms that the title-bar sidebar toggle renders; draft #4667's older rendering experiments are not needed for that capture. The event form footer still squeezed instruction text into two- and three-line word fragments. Its instruction groups now retain their natural width and move onto separate centered rows when the sidebar is narrow. Both-theme native regressions assert single-line instruction bounds and preserve screenshot evidence. The unchanged baseline failed at 42pt for “between fields” and 28pt for “for actions”; corrected local captures show readable groups. Other visual and signed-in acceptance gaps remain open.
+
+### 2026-10-25 event label visibility follow-up
+
+Fresh main capture run 40264860791 shows blank titles on top-clipped Lunch with Sam and Exercise cards and overlapping Wednesday labels. Card text now clips independently of the external focus outline, and timed cards update title placement against the visible viewport when scrolling. A regression fails on the previous unclipped hierarchy; focused tests cover clipping, preserved focus outlines, visible title bounds and scroll-back restoration. Runtime and screenshot verification is tracked in #4840. These focused checks do not establish complete visual parity or signed-in acceptance.
