@@ -180,22 +180,28 @@ describe("refreshUserMetadata metadata fetch timeout", () => {
   it("releases single-flight after abort so a forced refresh can fetch again", async () => {
     get = spyOn(BaseApi, "get");
     get
-      .mockImplementationOnce((_url, config?: { signal?: AbortSignal }) => {
-        return new Promise((_resolve, reject) => {
-          const signal = config?.signal;
-          if (!signal) {
-            reject(new Error("expected abort signal"));
-            return;
-          }
-          if (signal.aborted) {
-            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
-            return;
-          }
-          signal.addEventListener("abort", () => {
-            reject(Object.assign(new Error("aborted"), { name: "AbortError" }));
-          });
-        }) as never;
-      })
+      .mockImplementationOnce(
+        (_url: string, config?: { signal?: AbortSignal }) => {
+          return new Promise((_resolve, reject) => {
+            const signal = config?.signal;
+            if (!signal) {
+              reject(new Error("expected abort signal"));
+              return;
+            }
+            if (signal.aborted) {
+              reject(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+              return;
+            }
+            signal.addEventListener("abort", () => {
+              reject(
+                Object.assign(new Error("aborted"), { name: "AbortError" }),
+              );
+            });
+          }) as never;
+        },
+      )
       .mockResolvedValueOnce({ data: attention } as never);
 
     const hung = refreshUserMetadata();
