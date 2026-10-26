@@ -15,6 +15,8 @@ export const ProviderAuthorizationIntentSchema = z.object({
     .startsWith("/")
     .refine((path) => !path.startsWith("//")),
   createdAt: z.number(),
+  /** Set when OAuth began from the signup trial path so callbacks can branch. */
+  signupFlow: z.boolean().optional(),
 });
 
 export type ProviderAuthorizationIntent = z.infer<
@@ -99,4 +101,19 @@ export function consumeGoogleAuthNeedsConsentRetry(): boolean {
     sessionBrowserStore.remove(googleNeedsConsentRetryKey);
   }
   return needsRetry;
+}
+
+const googleScopesRecoveryPendingKey = `${GOOGLE_AUTH_INTENT_STORAGE_PREFIX}.scopesRecoveryPending`;
+
+export function markGoogleOAuthScopesRecoveryPending(): void {
+  sessionBrowserStore.set(googleScopesRecoveryPendingKey, "1");
+}
+
+export function consumeGoogleOAuthScopesRecoveryPending(): boolean {
+  const pending =
+    sessionBrowserStore.get(googleScopesRecoveryPendingKey) !== null;
+  if (pending) {
+    sessionBrowserStore.remove(googleScopesRecoveryPendingKey);
+  }
+  return pending;
 }

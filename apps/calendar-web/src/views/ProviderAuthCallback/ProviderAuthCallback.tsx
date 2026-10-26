@@ -10,6 +10,7 @@ import { stripOAuthCallbackQueryFromHistory } from "@web/auth/callback/strip-oau
 import { useOneShotAuthCallback } from "@web/auth/callback/useOneShotAuthCallback";
 import { useRedirectStaleProviderOAuthReplay } from "@web/auth/callback/useRedirectStaleProviderOAuthReplay";
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
+import { trackGoogleOAuthScopesRecoverySucceeded } from "@web/auth/posthog/google-oauth-scopes-recovery-funnel";
 import { trackOAuthSignupFailed } from "@web/auth/posthog/oauth-signup-funnel";
 import {
   trackSignupCompleted,
@@ -21,6 +22,7 @@ import {
   isSignInProviderKind,
   PROVIDER_AUTHORIZATION_ERROR_MESSAGE,
 } from "@web/auth/providers/authorization/provider-authorization.constants";
+import { consumeGoogleOAuthScopesRecoveryPending } from "@web/auth/providers/authorization/provider-authorization.storage";
 import { recordOAuthSignInCallbackLanding } from "@web/auth/providers/authorization/record-oauth-signin-callback-landing";
 import { missingPermissionsActions } from "@web/auth/providers/missing-permissions.store";
 import { DEFAULT_CALENDAR_ROUTE } from "@web/common/constants/routes";
@@ -83,18 +85,33 @@ export async function completeProviderAuthCallback({
     if (result.reason === "oauth_user_cancelled") {
       getToast().info(result.message, getToastDefaultOptions());
     } else if (result.reason === "oauth_missing_scopes") {
-      // Unchecking a permission on the consent screen deserves an
-      // explanation and a one-click retry, not a toast.
-      missingPermissionsActions.open(provider);
+      const isGoogleSignupRecovery =
+        provider === "google" &&
+        result.signupFlow === true &&
+        (result.missingScopes?.length ?? 0) > 0;
+      if (isGoogleSignupRecovery) {
+        missingPermissionsActions.openGoogleSignupRecovery(
+          result.missingScopes ?? [],
+        );
+      } else {
+        // Unchecking a permission on the consent screen deserves an
+        // explanation and a one-click retry, not a toast.
+        missingPermissionsActions.open(provider);
+      }
     } else {
       showErrorToast(result.message);
     }
-  } else if (result.isNewUser) {
-    trackSignupCompleted(provider);
-    track("calendar_connected", { source: `signup_${provider}` });
-    trackSignupStep("calendar_connected", { method: provider });
   } else {
-    track("login_completed", { method: provider });
+    if (consumeGoogleOAuthScopesRecoveryPending()) {
+      trackGoogleOAuthScopesRecoverySucceeded();
+    }
+    if (result.isNewUser) {
+      trackSignupCompleted(provider);
+      track("calendar_connected", { source: `signup_${provider}` });
+      trackSignupStep("calendar_connected", { method: provider });
+    } else {
+      track("login_completed", { method: provider });
+    }
   }
 
   navigate(result.returnPath, { replace: true });

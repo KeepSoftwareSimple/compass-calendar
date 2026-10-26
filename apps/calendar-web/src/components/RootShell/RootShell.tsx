@@ -2,6 +2,7 @@ import { Outlet, useLocation, useSearch } from "@tanstack/react-router";
 import { useContext, useEffect, useMemo } from "react";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { ConnectAppleForm } from "@web/auth/providers/ConnectAppleForm";
+import { GoogleOAuthSignupScopesRecovery } from "@web/auth/providers/GoogleOAuthSignupScopesRecovery";
 import { MissingPermissionsModal } from "@web/auth/providers/MissingPermissionsModal";
 import { BillingAwaitingCheckoutBanner } from "@web/billing/BillingAwaitingCheckoutBanner";
 import { BillingGateModal } from "@web/billing/BillingGateModal";
@@ -221,6 +222,7 @@ export function RootShell() {
       <Outlet />
       <AuthModal />
       <ConnectAppleForm />
+      <GoogleOAuthSignupScopesRecovery />
       <MissingPermissionsModal />
       {gateStatus === null && <CheckoutOverlay />}
       {showCalendarOnboarding && <ShowcasePlayLink />}

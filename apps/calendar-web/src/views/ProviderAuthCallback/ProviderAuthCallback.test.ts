@@ -9,6 +9,7 @@ import {
 import {
   resetMissingPermissionsStoreForTests,
   selectMissingPermissionsProvider,
+  selectMissingPermissionsSurface,
   useMissingPermissionsStore,
 } from "@web/auth/providers/missing-permissions.store";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
@@ -111,7 +112,7 @@ describe("completeProviderAuthCallback (google)", () => {
     ).toBeNull();
   });
 
-  it("rejects a Google callback that is missing required calendar scopes", async () => {
+  it("opens the connect missing-permissions modal when scopes are short on login", async () => {
     writeIntent("missing-scopes-state", "/week");
 
     await completeProviderAuthCallback({
@@ -127,10 +128,39 @@ describe("completeProviderAuthCallback (google)", () => {
     expect(mockLoginOrSignup).not.toHaveBeenCalled();
     expect(completeAuthentication).not.toHaveBeenCalled();
     expect(mocks.error).not.toHaveBeenCalled();
-    expect(
-      selectMissingPermissionsProvider(useMissingPermissionsStore.getState()),
-    ).toBe("google");
+    const missingState = useMissingPermissionsStore.getState();
+    expect(selectMissingPermissionsProvider(missingState)).toBe("google");
+    expect(selectMissingPermissionsSurface(missingState)).toBe("connect_modal");
     expect(navigate).toHaveBeenCalledWith("/week", { replace: true });
+  });
+
+  it("opens the Google signup scopes recovery screen when signup OAuth is short scopes", async () => {
+    writeProviderAuthorizationIntent("google", "signup-missing-scopes", {
+      intent: "signIn",
+      returnPath: "/week",
+      createdAt: Date.now(),
+      signupFlow: true,
+    });
+
+    await completeProviderAuthCallback({
+      provider: "google",
+      completeAuthentication,
+      navigate,
+      search: callbackSearch(
+        "signup-missing-scopes",
+        GOOGLE_SCOPES_REQUIRED[0]!,
+      ),
+    });
+
+    const missingState = useMissingPermissionsStore.getState();
+    expect(selectMissingPermissionsSurface(missingState)).toBe(
+      "google_signup_recovery",
+    );
+    expect(missingState.missingScopes).toEqual(
+      GOOGLE_SCOPES_REQUIRED.filter(
+        (scope) => scope !== GOOGLE_SCOPES_REQUIRED[0],
+      ),
+    );
   });
 
   it("rejects a Google callback without a saved intent", async () => {

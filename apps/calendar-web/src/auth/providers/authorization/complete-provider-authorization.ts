@@ -56,6 +56,8 @@ export type CompleteProviderAuthorizationResult =
       reason: SignupFailureReason;
       /** The underlying error, so `signup_failed` never ships with it empty. */
       error: string;
+      missingScopes?: readonly string[];
+      signupFlow?: boolean;
     };
 
 const AUTHORIZATION_ERROR_MESSAGE: Record<ProviderKind, string> = {
@@ -76,12 +78,17 @@ const fail = (
   returnPath: string = DEFAULT_CALENDAR_ROUTE,
   message = AUTHORIZATION_ERROR_MESSAGE[provider],
   error: string = reason,
+  extras: {
+    missingScopes?: readonly string[];
+    signupFlow?: boolean;
+  } = {},
 ): CompleteProviderAuthorizationResult => ({
   message,
   reason,
   returnPath,
   status: "failed",
   error,
+  ...extras,
 });
 
 const getApiError = (error: unknown): ApiError | undefined => {
@@ -171,6 +178,10 @@ export async function completeProviderAuthorization({
       returnPath,
       undefined,
       `missing_scopes:${missingScopes.join(",")}`,
+      {
+        missingScopes,
+        signupFlow: savedIntent.signupFlow === true,
+      },
     );
   }
 

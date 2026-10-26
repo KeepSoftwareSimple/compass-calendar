@@ -31,6 +31,9 @@ export type SignupStep =
   | "calendar_connected"
   /** Fired when the missing-permissions modal opens, replacing the old toast. */
   | "permissions_explainer_shown"
+  | "google_oauth_scopes_recovery_viewed"
+  | "google_oauth_scopes_recovery_retry_clicked"
+  | "google_oauth_scopes_recovery_succeeded"
   | "trial_step_viewed"
   | "trial_step_completed"
   | "trial_step_abandoned";
@@ -105,7 +108,11 @@ export function trackSignupStep(
   step: SignupStep,
   properties: StepProperties = {},
 ): void {
-  track("signup_step_viewed", { step_name: step, ...compact(properties) });
+  track("signup_step_viewed", {
+    step_name: step,
+    step,
+    ...compact(properties),
+  });
 }
 
 export function trackSignupFailed(
