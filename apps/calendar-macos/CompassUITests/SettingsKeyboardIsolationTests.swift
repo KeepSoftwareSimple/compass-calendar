@@ -18,7 +18,11 @@ final class SettingsKeyboardIsolationTests: XCTestCase {
             evidence.lifetime = .keepAlways
             add(evidence)
             window.typeKey(.tab, modifierFlags: [])
-            XCTAssertFalse(accounts.debugDescription.contains("Keyboard Focused"))
+            let traversal = XCTAttachment(string: window.debugDescription)
+            traversal.name = "Settings focus after Tab, \(theme)"
+            traversal.lifetime = .keepAlways
+            add(traversal)
+            XCTAssertFalse(accounts.debugDescription.contains("Keyboard Focused"), window.debugDescription)
             window.typeKey(.tab, modifierFlags: [.shift])
             XCTAssertTrue(accounts.debugDescription.contains("Keyboard Focused"))
             window.typeKey(.escape, modifierFlags: [])
