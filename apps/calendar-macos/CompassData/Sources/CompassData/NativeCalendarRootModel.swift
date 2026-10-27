@@ -102,6 +102,7 @@ public final class NativeCalendarRootModel {
     public var eventFormFocusedField: EventFormField = .title
     public internal(set) var eventFormActionsFocusRequest = 0
     public internal(set) var eventFormCalendarFocusRequest = 0
+    public internal(set) var eventFormRecurrenceFocusRequest = 0
     public var isEventFormActionFocused = false
     /// Keyboard focus inside the color swatches while `eventFormFocusedField == .color`.
     public internal(set) var colorSwatchFocusIndex = 0

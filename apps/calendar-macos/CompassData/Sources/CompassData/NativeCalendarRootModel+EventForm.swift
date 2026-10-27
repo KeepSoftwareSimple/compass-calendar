@@ -14,6 +14,7 @@ extension NativeCalendarRootModel {
     public func focusEventFormField(_ field: EventFormField) {
         if field == .actions { eventFormActionsFocusRequest += 1 }
         if field == .calendar { eventFormCalendarFocusRequest += 1 }
+        if field == .recurrence { eventFormRecurrenceFocusRequest += 1 }
         if field == .color {
             colorSwatchFocusIndex = Self.colorSwatchOptions.firstIndex(of: draftStore.gridDraft?.color) ?? 0
         }

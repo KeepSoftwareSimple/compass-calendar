@@ -448,3 +448,6 @@ A hidden anonymous web browser measured Settings field labels at14px with20px li
 ### 2026-10-27 calendar-menu shortcut focus follow-up
 
 Calendar-menu shortcut requests now bind actual focus to the create form menu, including repeated jumps, and the outline follows that focus. Both-theme native coverage opens the menu with Mod+5 and Space, selects with Return, repeats the jump after returning to Title, and dismisses the menu without closing the form. Runtime evidence remains pending under #4783; recurrence is tracked in #4869 and RSVP/signed-in acceptance remain open.
+### 2026-10-27 recurrence shortcut focus follow-up
+
+The recurrence shortcut now requests actual focus on its toggle, including repeated jumps while the requested field remains unchanged. The visible outline follows actual toggle focus rather than the last requested field. Both-theme native coverage exercises Mod+4, Space activation, Tab departure, repeated Mod+4 and Return activation without saving. Runtime evidence remains pending under #4783; calendar menu, RSVP and signed-in acceptance in that issue remain open.

@@ -55,8 +55,7 @@ public struct EventFormView: View {
                                 )
                                 EventFormRecurrenceSection(
                                     model: model,
-                                    draft: draft,
-                                    focusField: model.eventFormFocusedField
+                                    draft: draft
                                 )
                                 .disabled(model.isScheduleLocked(for: draft))
                             }

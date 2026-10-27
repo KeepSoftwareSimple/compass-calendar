@@ -2,6 +2,7 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realBrowserNavigationUtil from "@web/common/utils/browser/browser-navigation.util";
 import {
   importOrReload,
+  installMissingChunkUnhandledRejectionHandler,
   isMissingChunkError,
   reloadOnceForMissingChunk,
 } from "@web/common/utils/browser/missing-chunk-reload.util";
@@ -170,6 +171,24 @@ describe("importOrReload", () => {
     await expect(
       importOrReload(() => Promise.reject(missingChunk())),
     ).rejects.toThrow("Failed to fetch dynamically imported module");
+    expect(mockReload).toHaveBeenCalledTimes(1);
+  });
+
+  it("reloads once from an unhandledrejection for a missing chunk", async () => {
+    mockReload.mockClear();
+    sessionStorage.clear();
+    installMissingChunkUnhandledRejectionHandler(sessionStorage, () => {
+      mockReload();
+    });
+
+    const reason = missingChunk();
+    const event = new Event("unhandledrejection", {
+      cancelable: true,
+    }) as Event & { reason: unknown; promise: Promise<unknown> };
+    event.reason = reason;
+    event.promise = new Promise(() => {});
+    window.dispatchEvent(event);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(mockReload).toHaveBeenCalledTimes(1);
   });
 
