@@ -21,5 +21,13 @@ final class EventFormPunctuationFocusTests: XCTestCase {
         XCTAssertTrue(router.handleKeyDown(event))
         XCTAssertEqual(model.eventFormFocusedField, .rsvp)
         XCTAssertEqual(model.eventFormRsvpFocusRequest, 1)
+        for (letter, code) in [("e", UInt16(14)), ("g", UInt16(5))] {
+            let key = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
+                characters: letter, charactersIgnoringModifiers: letter, isARepeat: false, keyCode: code))
+            _ = router.handleKeyDown(key)
+        }
+        XCTAssertEqual(model.eventFormFocusedField, .rsvp)
+        XCTAssertEqual(model.eventFormRsvpFocusRequest, 2)
     }
 }

@@ -640,6 +640,9 @@ final class NativeGridKeyboardRouter {
             guard isPalette else { return false }
         }
 
+        // A focused form button is not a text editor. Allow E-field sequences
+        // after the editable first-responder guard above has passed.
+        dispatcher.isTextInputFocused = false
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
         if let id = dispatcher.dispatch(keyEvent) {
