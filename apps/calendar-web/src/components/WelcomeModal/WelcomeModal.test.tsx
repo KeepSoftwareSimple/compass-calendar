@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -7,6 +8,8 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { type ReactNode } from "react";
+import { createWebTestQueryClient } from "@web/__tests__/helpers/seed-app-config-for-tests";
 import { dispatchMissingKey } from "@web/__tests__/utils/keyboard.test.util";
 import {
   registerUseStartProviderAuthorizationForTests,
@@ -71,6 +74,23 @@ const { useShortcutShowcaseStore, initialShortcutShowcaseState } =
 
 const WELCOME_DIALOG = { name: "Welcome to Compass Calendar" };
 
+function renderWelcomeModal() {
+  const queryClient = createWebTestQueryClient();
+  const Wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+  const utils = render(<WelcomeModal />, { wrapper: Wrapper });
+  return {
+    ...utils,
+    rerenderWelcomeModal: () => utils.rerender(<WelcomeModal />),
+  };
+}
+
+function wrapWelcomeModalUi(ui: ReactNode) {
+  const queryClient = createWebTestQueryClient();
+  return <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>;
+}
+
 // Screens 1 and 2 each seat focus on one primary button, and Enter is its
 // native activation. Two presses reach the screen with the auth choices.
 const goToChooseScreen = async (user: ReturnType<typeof userEvent.setup>) => {
@@ -110,7 +130,7 @@ describe("WelcomeModal", () => {
   });
 
   it("shows the new copy and the pixel pirate mascot", () => {
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     expect(
       screen.getByRole("heading", {
@@ -129,7 +149,7 @@ describe("WelcomeModal", () => {
   it("opens the auth modal from the Log in pill", async () => {
     const user = userEvent.setup();
 
-    const { rerender } = render(<WelcomeModal />);
+    const { rerenderWelcomeModal } = renderWelcomeModal();
 
     await user.click(screen.getByRole("button", { name: "Log in" }));
 
@@ -142,7 +162,7 @@ describe("WelcomeModal", () => {
 
     // The welcome screen hides while the auth modal is open
     authModalState.isOpen = true;
-    rerender(<WelcomeModal />);
+    rerenderWelcomeModal();
     expect(
       screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
     ).toBeNull();
@@ -150,7 +170,7 @@ describe("WelcomeModal", () => {
 
   it("marks the Log in pill busy on the first click so a repeat click is inert", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     const login = screen.getByRole("button", { name: "Log in" });
     expect(login.getAttribute("aria-busy")).toBe("false");
 
@@ -163,7 +183,7 @@ describe("WelcomeModal", () => {
 
   it("marks the explore action busy while its fade runs", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
     const explore = screen.getByRole("button", {
       name: "On this device only",
@@ -191,10 +211,12 @@ describe("WelcomeModal", () => {
     outside.focus();
 
     rerender(
-      <>
-        <button type="button">Outside calendar</button>
-        <WelcomeModal />
-      </>,
+      wrapWelcomeModalUi(
+        <>
+          <button type="button">Outside calendar</button>
+          <WelcomeModal />
+        </>,
+      ),
     );
     expect(
       screen.getByRole("button", { name: "Get started for free" }),
@@ -203,10 +225,12 @@ describe("WelcomeModal", () => {
     await user.click(screen.getByRole("button", { name: "Log in" }));
     authModalState.isOpen = true;
     rerender(
-      <>
-        <button type="button">Outside calendar</button>
-        <WelcomeModal />
-      </>,
+      wrapWelcomeModalUi(
+        <>
+          <button type="button">Outside calendar</button>
+          <WelcomeModal />
+        </>,
+      ),
     );
 
     expect(
@@ -218,25 +242,25 @@ describe("WelcomeModal", () => {
   it("reappears when the auth modal closes (e.g. via the browser back button)", async () => {
     const user = userEvent.setup();
 
-    const { rerender } = render(<WelcomeModal />);
+    const { rerenderWelcomeModal } = renderWelcomeModal();
 
     await user.click(screen.getByRole("button", { name: "Log in" }));
     authModalState.isOpen = true;
-    rerender(<WelcomeModal />);
+    rerenderWelcomeModal();
     expect(
       screen.queryByRole("dialog", { name: "Welcome to Compass Calendar" }),
     ).toBeNull();
 
     // Back press pops the ?auth= entry, which closes the auth modal
     authModalState.isOpen = false;
-    rerender(<WelcomeModal />);
+    rerenderWelcomeModal();
     expect(
       screen.getByRole("dialog", { name: "Welcome to Compass Calendar" }),
     ).toBeTruthy();
   });
 
   it("opens on a single Get started action with the headline as the page heading", () => {
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     expect(
       screen.getByRole("heading", { level: 1, name: "The Keyboard Calendar" }),
@@ -260,7 +284,7 @@ describe("WelcomeModal", () => {
 
   it("advances through every step and FAQ row with pointer clicks only", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.click(
       screen.getByRole("button", { name: "Get started for free" }),
@@ -296,7 +320,7 @@ describe("WelcomeModal", () => {
 
   it("advances with Enter after clicking non-button modal content", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     const dialog = screen.getByRole("dialog", WELCOME_DIALOG);
     await user.click(
@@ -310,7 +334,7 @@ describe("WelcomeModal", () => {
 
   it("does not advance with Enter when Log in is focused", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.tab({ shift: true });
     const logIn = screen.getByRole("button", { name: "Log in" });
@@ -323,7 +347,7 @@ describe("WelcomeModal", () => {
 
   it("advances with Enter or a click, and Escape steps back", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("{Enter}");
     expect(screen.getByText("Step 2 of 3")).toBeTruthy();
@@ -372,7 +396,7 @@ describe("WelcomeModal", () => {
 
   it("ignores the auth shortcuts before the last screen, except Log in", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("s");
     await user.keyboard("u");
@@ -389,7 +413,7 @@ describe("WelcomeModal", () => {
 
   it("toggles FAQ with digits only on the second screen", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("1");
     await user.keyboard("{Enter}");
@@ -405,7 +429,7 @@ describe("WelcomeModal", () => {
   });
 
   it("lets the mouse through on the welcome overlay", () => {
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     expect(
       screen.getByRole("button", { name: "Get started for free" }),
@@ -415,7 +439,7 @@ describe("WelcomeModal", () => {
   it("expands and collapses FAQ answers on the second screen", async () => {
     const user = userEvent.setup();
 
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await user.keyboard("{Enter}");
 
     const questionButton = screen.getByRole("button", {
@@ -449,7 +473,7 @@ describe("WelcomeModal", () => {
   it("keeps a FAQ answer open after a double-click", async () => {
     const user = userEvent.setup();
 
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await user.keyboard("{Enter}");
 
     const questionButton = screen.getByRole("button", {
@@ -464,7 +488,7 @@ describe("WelcomeModal", () => {
   it("closes a FAQ answer when a second click arrives after the guard", async () => {
     const user = userEvent.setup();
 
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await user.keyboard("{Enter}");
 
     const questionButton = screen.getByRole("button", {
@@ -482,7 +506,7 @@ describe("WelcomeModal", () => {
 
   it("lets a digit key toggle the same FAQ twice in a row", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("{Enter}");
 
@@ -500,7 +524,7 @@ describe("WelcomeModal", () => {
   it("shows shortcut keycaps on auth and explore actions without hover", async () => {
     const user = userEvent.setup();
     setSignInAvailability({ google: "available" });
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
 
     for (const [name, key] of [
@@ -519,7 +543,7 @@ describe("WelcomeModal", () => {
   it("opens sign up with the U shortcut", async () => {
     const user = userEvent.setup();
     setSignInAvailability({ google: "available" });
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
 
     await user.keyboard("u");
@@ -530,7 +554,7 @@ describe("WelcomeModal", () => {
 
   it("opens log in with the I shortcut", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("i");
 
@@ -541,7 +565,7 @@ describe("WelcomeModal", () => {
   it("closes without starting the practice after exploring without an account", async () => {
     const user = userEvent.setup();
 
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
 
     await user.keyboard("s");
@@ -560,7 +584,7 @@ describe("WelcomeModal", () => {
 
   it("does not start practice if explore is pressed after login before auth opens", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
 
     await user.keyboard("i");
@@ -580,7 +604,7 @@ describe("WelcomeModal", () => {
 
   it("does not mark the practice seen when logging in", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("i");
 
@@ -592,7 +616,7 @@ describe("WelcomeModal", () => {
 
   it("does not defer the practice offer when signing up from welcome", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     await goToChooseScreen(user);
 
     await user.click(screen.getByRole("button", { name: "Sign up" }));
@@ -605,7 +629,7 @@ describe("WelcomeModal", () => {
   });
 
   it("ignores KeyboardEvents with no key instead of throwing", () => {
-    render(<WelcomeModal />);
+    renderWelcomeModal();
     const getStarted = screen.getByRole("button", {
       name: "Get started for free",
     });
@@ -622,7 +646,7 @@ describe("WelcomeModal", () => {
 
   it("ignores the shortcut keys when a modifier is held", async () => {
     const user = userEvent.setup();
-    render(<WelcomeModal />);
+    renderWelcomeModal();
 
     await user.keyboard("{Meta>}u{/Meta}");
 
@@ -635,10 +659,12 @@ describe("WelcomeModal", () => {
     setSignInAvailability({ google: "available" });
 
     render(
-      <>
-        <button type="button">Outside calendar</button>
-        <WelcomeModal />
-      </>,
+      wrapWelcomeModalUi(
+        <>
+          <button type="button">Outside calendar</button>
+          <WelcomeModal />
+        </>,
+      ),
     );
 
     await goToChooseScreen(user);
@@ -692,7 +718,7 @@ describe("WelcomeModal", () => {
 
     it("leads with the Google trial primary and keeps explore quiet", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       const trialPrimary = screen.getByRole("button", {
@@ -735,7 +761,7 @@ describe("WelcomeModal", () => {
 
     it("starts Google auth from the trial primary without queueing the practice", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       await user.click(
@@ -749,7 +775,7 @@ describe("WelcomeModal", () => {
 
     it("starts Google auth with the G shortcut", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       await user.keyboard("g");
@@ -764,7 +790,7 @@ describe("WelcomeModal", () => {
         apple: "available",
       });
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       expect(
@@ -790,7 +816,7 @@ describe("WelcomeModal", () => {
 
     it("renders only the Google trial primary when it is the sole configured provider", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       expect(
@@ -807,7 +833,7 @@ describe("WelcomeModal", () => {
     it("shows Sign up as the primary when no providers are configured", async () => {
       setSignInAvailability({});
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       expect(
@@ -823,7 +849,7 @@ describe("WelcomeModal", () => {
 
     it("starts Google auth from Enter on step 3", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       await user.keyboard("{Enter}");
@@ -837,7 +863,7 @@ describe("WelcomeModal", () => {
         microsoft: "available",
       });
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       await user.keyboard("m");
@@ -858,7 +884,7 @@ describe("WelcomeModal", () => {
 
     it("offers a Connect Microsoft button when sign-in is not available", async () => {
       const user = userEvent.setup();
-      render(<WelcomeModal />);
+      renderWelcomeModal();
       await goToChooseScreen(user);
 
       expect(

@@ -1,3 +1,4 @@
+import { QueryClientProvider } from "@tanstack/react-query";
 import {
   type AnyRouter,
   createMemoryHistory,
@@ -12,6 +13,7 @@ import "@testing-library/jest-dom";
 import { resolveModifier } from "@tanstack/react-hotkeys";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createWebTestQueryClient } from "@web/__tests__/helpers/seed-app-config-for-tests";
 import { createTestEmailPasswordPort } from "@web/__tests__/helpers/web-test-seams";
 import { createTestRouter } from "@web/__tests__/utils/providers/createTestRouter";
 import {
@@ -106,11 +108,14 @@ const renderWithProviders = async (
   component: ReactElement,
   initialRoute: string = "/day",
 ) => {
+  const queryClient = createWebTestQueryClient();
   const router = createTestRouter(
-    <AuthModalProvider>
-      {component}
-      <AuthModal />
-    </AuthModalProvider>,
+    <QueryClientProvider client={queryClient}>
+      <AuthModalProvider>
+        {component}
+        <AuthModal />
+      </AuthModalProvider>
+    </QueryClientProvider>,
     { initialEntries: [initialRoute] },
   );
   const result = render(<RouterProvider router={router} />);
@@ -118,14 +123,16 @@ const renderWithProviders = async (
   return { router, ...result };
 };
 
-const DayRedirectShell = () => (
-  <AuthModalProvider>
-    <AuthModal />
-    <Outlet />
-  </AuthModalProvider>
-);
-
 const renderWithDayRedirectRoute = async (initialRoute: string) => {
+  const queryClient = createWebTestQueryClient();
+  const DayRedirectShell = () => (
+    <QueryClientProvider client={queryClient}>
+      <AuthModalProvider>
+        <AuthModal />
+        <Outlet />
+      </AuthModalProvider>
+    </QueryClientProvider>
+  );
   const dayRootRoute = createRootRoute({ validateSearch: validateAuthSearch });
   const dayRoute = createRoute({
     getParentRoute: () => dayRootRoute,
