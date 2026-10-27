@@ -6,10 +6,10 @@ struct EventFormRecurrenceSection: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
-    let focusField: EventFormField
 
     @State private var pattern: RecurrenceRuleLine.Pattern = .init(frequency: .daily)
     @State private var hasRecurrence: Bool = false
+    @FocusState private var recurrenceFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -28,6 +28,9 @@ struct EventFormRecurrenceSection: View {
             .buttonStyle(.plain)
             .accessibilityLabel(hasRecurrence ? "Repeat" : "Edit recurrence")
             .accessibilityIdentifier("compass-event-form-recurrence-toggle")
+            .focusable()
+            .focusEffectDisabled()
+            .focused($recurrenceFocused)
 
             if hasRecurrence {
                 Picker("Frequency", selection: $pattern.frequency) {
@@ -37,6 +40,7 @@ struct EventFormRecurrenceSection: View {
                     Text("Yearly").tag(RecurrenceRuleLine.Frequency.yearly)
                 }
                 .pickerStyle(.menu)
+                .focusable()
                 .accessibilityIdentifier("compass-event-form-recurrence-frequency")
                 .onChange(of: pattern.frequency) { _, _ in syncDraftRecurrence() }
 
@@ -95,13 +99,20 @@ struct EventFormRecurrenceSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay {
-            if focusField == .recurrence {
+            if recurrenceFocused {
                 RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
                     .stroke(theme.accentColor, lineWidth: 1)
                     .padding(-4)
             }
         }
         .onAppear { reloadFromDraft() }
+        .onChange(of: model.eventFormRecurrenceFocusRequest) { _, _ in
+            // The parent releases title focus for the same request first.
+            DispatchQueue.main.async {
+                guard model.isEventFormVisible, model.eventFormFocusedField == .recurrence else { return }
+                recurrenceFocused = true
+            }
+        }
         .onChange(of: draft.recurrence) { _, _ in reloadFromDraft() }
         .onChange(of: draft.schedule.start) { _, _ in syncDraftRecurrence() }
     }

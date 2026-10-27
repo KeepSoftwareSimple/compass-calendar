@@ -444,3 +444,7 @@ Web Settings initially focuses the current navigation button and paints its focu
 ### 2026-10-27 Settings field line-box follow-up
 
 A hidden anonymous web browser measured Settings field labels at14px with20px line height and the timezone button at30px including padding and border. Native field labels now reserve20pt and the timezone chrome reserves30pt without changing fonts or forcing the native calendar menu to that height. Both-theme hosting-view geometry tests cover those dimensions; runtime and composited screenshot evidence is tracked in #4867. Helper text metrics, other Settings surfaces and signed-in acceptance remain open.
+
+### 2026-10-27 recurrence shortcut focus follow-up
+
+The recurrence shortcut now requests actual focus on its toggle, including repeated jumps while the requested field remains unchanged. The visible outline follows actual toggle focus rather than the last requested field. Both-theme native coverage exercises Mod+4, Space activation, Tab departure, repeated Mod+4 and Return activation without saving. Runtime evidence remains pending under #4783; calendar menu, RSVP and signed-in acceptance in that issue remain open.

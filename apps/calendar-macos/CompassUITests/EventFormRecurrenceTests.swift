@@ -2,6 +2,39 @@ import XCTest
 
 final class EventFormRecurrenceTests: XCTestCase {
     @MainActor
+    func testRecurrenceJumpMovesRealFocusAndRepeatedJumpActivatesInBothThemes() {
+        for theme in ["light-beach", "dark-abyss"] {
+            let app = XCUIApplication.compassUITest()
+            app.launchArguments += [
+                "-COMPASS_FIXTURE", "demo", "-compass.theme", theme,
+                "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
+                "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
+                "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
+            ]
+            app.launch()
+            let window = app.windows["Compass"]
+            let toggle = window.buttons["compass-event-form-recurrence-toggle"]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 8))
+            window.typeKey("4", modifierFlags: [.command])
+            window.typeKey(.space, modifierFlags: [])
+            let frequency = window.descendants(matching: .any)["compass-event-form-recurrence-frequency"]
+            XCTAssertTrue(frequency.waitForExistence(timeout: 5))
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            window.typeKey("4", modifierFlags: [.command])
+            XCTAssertTrue(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, toggle.debugDescription)
+            let evidence = XCTAttachment(screenshot: window.screenshot())
+            evidence.name = "Recurrence keyboard focus, \(theme)"
+            evidence.lifetime = .keepAlways
+            add(evidence)
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(frequency.waitForNonExistence(timeout: 5))
+            XCTAssertTrue(window.descendants(matching: .any)["compass-event-form"].exists)
+            app.terminate()
+        }
+    }
+
+    @MainActor
     func testRecurrenceEndDateCanBeEnabledAndRemoved() {
         let app = XCUIApplication.compassUITest()
         app.launchArguments += [
