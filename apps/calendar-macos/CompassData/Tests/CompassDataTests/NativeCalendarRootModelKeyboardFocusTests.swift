@@ -12,6 +12,15 @@ final class NativeCalendarRootModelKeyboardFocusTests: XCTestCase {
         return model
     }
 
+    func testRepeatedRecurrenceFocusRequestsAreNotLostWhenTheFieldIsUnchanged() async throws {
+        let model = try await makeModel()
+        let initial = model.eventFormRecurrenceFocusRequest
+        model.focusEventFormField(.recurrence)
+        model.focusEventFormField(.recurrence)
+        XCTAssertEqual(model.eventFormFocusedField, .recurrence)
+        XCTAssertEqual(model.eventFormRecurrenceFocusRequest, initial + 2)
+    }
+
     func testFocusSidebarOpensSidebarAndFocusesAnchorDay() async throws {
         let model = try await makeModel()
         model.isSidebarOpen = false
