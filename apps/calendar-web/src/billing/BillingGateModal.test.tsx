@@ -85,6 +85,7 @@ describe("BillingGateModal", () => {
   });
 
   it("opens embedded Checkout inside the gate from Start free trial", async () => {
+    const track = spyOn(Track, "track");
     const user = userEvent.setup();
     renderGate();
 
@@ -97,6 +98,8 @@ describe("BillingGateModal", () => {
         screen.getByRole("dialog", { name: "Finish starting your trial" }),
       ).getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
+    expect(track).toHaveBeenCalledWith("checkout_opened", { source: "gate" });
+    track.mockRestore();
   });
 
   it("shows shortcut keycaps without autofocusing Start free trial", () => {
@@ -141,6 +144,7 @@ describe("BillingGateModal", () => {
       screen.getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
 
+    const track = spyOn(Track, "track");
     const back = screen.getByRole("button", { name: "Back" });
     expect(within(back).getByText("Esc")).toBeTruthy();
     await user.click(back);
@@ -148,6 +152,8 @@ describe("BillingGateModal", () => {
     expect(
       screen.getByRole("button", { name: TRIAL_START_PRIMARY_LABEL }),
     ).toBeInTheDocument();
+    expect(track).toHaveBeenCalledWith("checkout_back", { source: "gate" });
+    track.mockRestore();
     expect(
       screen.queryByRole("button", { name: "Complete checkout" }),
     ).not.toBeInTheDocument();

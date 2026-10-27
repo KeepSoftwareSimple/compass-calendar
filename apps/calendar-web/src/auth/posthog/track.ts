@@ -21,6 +21,8 @@ import { getPosthogClient } from "@web/auth/posthog/posthog.bootstrap";
  *
  * Billing:
  * - `trial_converted`: `source`, optional `feature_area`, `action_id`, `trial`
+ * - `checkout_opened`: `source` (embedded Checkout mounted)
+ * - `checkout_back`: `source` (Back or Esc from embedded Checkout)
  */
 export type ProductEvent =
   | "welcome_modal_shown"
@@ -69,6 +71,8 @@ export type ProductEvent =
   | "connect_prompt_dismissed"
   | "trial_converted"
   | "trial_celebration_shown"
+  | "checkout_opened"
+  | "checkout_back"
   | "billing_gate_shown"
   | "billing_gate_cta_clicked"
   | "billing_gate_shortcut_converted"
