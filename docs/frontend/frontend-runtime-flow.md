@@ -103,9 +103,11 @@ Welcome → signup → first-event contract:
 - **Practice the shortcuts** in the welcome footer (or `?play=1`, or the
   command palette replay) is the opt-in entry to Block Party
 - signing up (either route) does not start or defer the showcase
-- hosted signup with billing enforced continues to the **Start your 7-day free
-  trial** auth step (`StartTrialStep`, `?auth=trial`): charge-date copy and
-  embedded Checkout with `trial_period_days: 7`. While that step is open,
+- hosted signup with billing enforced continues to the **Start your N-day free
+  trial** auth step (`StartTrialStep`, `?auth=trial`, `N = billing.trialLengthDays`):
+  `TrialStartAsk` shows charge-date copy (`No charge until …`), **S** and
+  **Mod+Enter** open embedded Checkout (plain Enter does not), and Checkout uses
+  `trial_period_days` from config. While that step is open,
   `RootShell` suppresses the billing gate and calendar onboarding surfaces.
   Closing without paying returns to read-only `awaiting_checkout` and
   **Finish starting your trial**. After Checkout completes, Compass polls

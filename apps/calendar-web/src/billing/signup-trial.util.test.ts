@@ -3,6 +3,7 @@ import dayjs from "@core/util/date/dayjs";
 import { shouldOfferSignupTrialStep } from "@web/billing/billing.query";
 import {
   formatTrialAskChargeLine,
+  formatSignupTrialTitle,
   formatTrialChargeDate,
 } from "@web/billing/signup-trial-format.util";
 import { formatTrialStartPriceLine } from "@web/billing/trial-start-display.util";
@@ -47,6 +48,12 @@ describe("shouldOfferSignupTrialStep", () => {
         },
       }),
     ).toBe(false);
+  });
+});
+
+describe("formatSignupTrialTitle", () => {
+  it("uses trial length from config", () => {
+    expect(formatSignupTrialTitle(7)).toBe("Start your 7-day free trial");
   });
 });
 

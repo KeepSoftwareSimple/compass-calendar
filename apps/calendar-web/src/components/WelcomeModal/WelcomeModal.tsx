@@ -1,4 +1,5 @@
 import { useContext, useEffect, useId, useRef, useState } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { SessionContext } from "@web/auth/compass/session/session.context";
 import { trackSignupStartedAtClick } from "@web/auth/posthog/signup-funnel";
@@ -10,6 +11,7 @@ import {
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useIsProviderAvailable } from "@web/auth/providers/useIsProviderAvailable";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
+import { useAppConfigQuery } from "@web/billing/billing.query";
 import { MODAL_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
 import { SignInProviderButtons } from "@web/components/AuthModal/components/SignInProviderButtons";
@@ -57,6 +59,9 @@ const QUIET_TEXT_CTA_CLASS =
 
 export function WelcomeModal() {
   const { authenticated } = useContext(SessionContext);
+  const trialLengthDays =
+    useAppConfigQuery().data?.billing.trialLengthDays ??
+    BILLING_PLAN.TRIAL_LENGTH_DAYS;
   const { openModal, isOpen: isAuthModalOpen } = useAuthModal();
   const { available, isLoading, loadingKind, startSignIn } = useSignInProviders(
     { signupFlow: true },
@@ -421,7 +426,7 @@ export function WelcomeModal() {
                     <ShortcutHint className="ml-2">Enter</ShortcutHint>
                   </button>
                   <p className="whitespace-nowrap text-center text-text-muted text-xs">
-                    {welcomeTrialCardTermsLine()}
+                    {welcomeTrialCardTermsLine(trialLengthDays)}
                   </p>
                 </>
               ) : (

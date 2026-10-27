@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { consumeGoogleAuthNeedsConsentRetry } from "@web/auth/providers/authorization/provider-authorization.storage";
@@ -17,11 +18,13 @@ import {
 } from "@web/auth/providers/provider-copy.util";
 import { signInProviderForShortcutLetter } from "@web/auth/providers/sign-in-provider.util";
 import { useSignInProviders } from "@web/auth/providers/useSignInProviders";
+import { useAppConfigQuery } from "@web/billing/billing.query";
 import {
   checkoutPanelActions,
   selectCheckoutPanelOpen,
   useCheckoutPanelStore,
 } from "@web/billing/checkout-panel.store";
+import { formatSignupTrialTitle } from "@web/billing/signup-trial-format.util";
 import { useIsEditableFocused } from "@web/common/hooks/useIsEditableFocused";
 import { isEditableKeyboardTarget } from "@web/common/utils/form/form.util";
 import {
@@ -70,6 +73,9 @@ function getInitialAuthToken(search: AuthSearch): string | undefined {
  */
 export const AuthModal: FC = () => {
   const navigate = useNavigate();
+  const trialLengthDays =
+    useAppConfigQuery().data?.billing.trialLengthDays ??
+    BILLING_PLAN.TRIAL_LENGTH_DAYS;
   const { isOpen, currentView, closeModal, setView } = useAuthModal();
   const isStartTrialView = currentView === "startTrial";
   const isTrialCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
@@ -245,7 +251,7 @@ export const AuthModal: FC = () => {
     submitError !== null && (isLoginView || currentView === "signUp");
   const trimmedName = signUpName.trim();
   const title = isStartTrialView
-    ? "Start your 7-day free trial"
+    ? formatSignupTrialTitle(trialLengthDays)
     : currentView === "forgotPassword"
       ? "Reset Password"
       : currentView === "resetPassword"

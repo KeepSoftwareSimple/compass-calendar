@@ -1,4 +1,4 @@
-import { checkoutCompletionGrantsTrial } from "@web/auth/posthog/checkout-grants-trial.util";
+import { checkoutCompletionGrantsTrial } from "@web/billing/checkout-grants-trial.util";
 import { describe, expect, it } from "bun:test";
 
 describe("checkoutCompletionGrantsTrial", () => {
