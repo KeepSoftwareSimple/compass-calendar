@@ -13,10 +13,26 @@ async function fillStripeTrialCheckout(
   await stripeFrame.getByRole("textbox", { name: /CVC/i }).fill("123");
   await stripeFrame.getByLabel(/Cardholder name/i).fill("Staging Trial");
   await stripeFrame.getByLabel("Country or region").selectOption("US");
-  await stripeFrame.getByLabel(/Address line 1/i).fill("123 Main St");
+
+  const addressLine = stripeFrame
+    .getByLabel(/^Address$/i)
+    .or(stripeFrame.getByLabel(/Address line 1/i))
+    .first();
+  await addressLine.fill("123 Main St");
+  await expect(addressLine).toHaveValue("123 Main St");
+
   await stripeFrame.getByLabel(/City/i).fill("Denver");
   await stripeFrame.getByLabel(/^State$/i).selectOption("CO");
   await stripeFrame.getByLabel("ZIP").fill("80202");
+
+  const linkSave = stripeFrame.getByRole("checkbox", {
+    name: /Save my information with Link/i,
+  });
+  if (await linkSave.isVisible().catch(() => false)) {
+    if (await linkSave.isChecked().catch(() => false)) {
+      await linkSave.uncheck();
+    }
+  }
 }
 
 test("staging signup trial step with live Stripe embedded checkout", async ({
@@ -122,33 +138,53 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
   });
 
   if (process.env.STAGING_TRIAL_SUBMIT_CHECKOUT === "1") {
+    await dialog.screenshot({
+      path: "/opt/cursor/artifacts/staging-checkout-before-submit.png",
+    });
+
     await stripeFrame.getByTestId("hosted-payment-submit-button").click({
       timeout: 120_000,
     });
     await expect(page.getByText("You're aboard!")).toBeVisible({
       timeout: 300_000,
     });
+    await page.screenshot({
+      path: "/opt/cursor/artifacts/staging-checkout-after-submit.png",
+      fullPage: true,
+    });
+
     const cookieHeader = (await page.context().cookies())
       .map((c) => `${c.name}=${c.value}`)
       .join("; ");
+
+    const readBillingStatus = async (): Promise<string> => {
+      const response = await page.request.get(`${baseUrl}/api/billing/status`, {
+        headers: cookieHeader ? { cookie: cookieHeader } : {},
+      });
+      if (!response.ok()) return "http_error";
+      const body = (await response.json()) as { subscriptionStatus?: string };
+      return body.subscriptionStatus ?? "unknown";
+    };
+
+    let finalBillingStatus = "unknown";
     await expect
       .poll(
         async () => {
-          const response = await page.request.get(
-            `${baseUrl}/api/billing/status`,
-            {
-              headers: cookieHeader ? { cookie: cookieHeader } : {},
-            },
-          );
-          if (!response.ok()) return "pending";
-          const body = (await response.json()) as {
-            subscriptionStatus?: string;
-          };
-          return body.subscriptionStatus ?? "pending";
+          finalBillingStatus = await readBillingStatus();
+          return finalBillingStatus;
         },
         { timeout: 300_000 },
       )
       .toMatch(/trialing|active/);
+
+    test.info().attach("staging-post-submit-billing-status", {
+      body: finalBillingStatus,
+      contentType: "text/plain",
+    });
+    test.info().attach("checkout-client-secret-for-stripe-dashboard", {
+      body: checkoutClientSecret,
+      contentType: "text/plain",
+    });
   }
 
   test.info().attach("staging-publishable-key-prefix", {
