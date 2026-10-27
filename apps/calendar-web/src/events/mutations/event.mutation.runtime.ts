@@ -237,32 +237,26 @@ export async function waitForPendingEventMutations(
   queryClient: QueryClient,
   timeoutMs = 15_000,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (true) {
-    const pending = pendingEventMutations(queryClient);
-    if (pending.length === 0) {
-      return;
-    }
+  // One timer for the whole budget: a settled batch can enqueue follow-up
+  // writes, so the pending set is re-read until it empties or time runs out.
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<"timeout">((resolve) => {
+    timeoutId = setTimeout(() => resolve("timeout"), timeoutMs);
+  });
 
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) {
-      break;
+  try {
+    let pending = pendingEventMutations(queryClient);
+    while (pending.length > 0) {
+      const settled = Promise.all(
+        pending.map((mutation) => whenSettled(queryClient, mutation)),
+      ).then(() => "settled" as const);
+      if ((await Promise.race([settled, timedOut])) === "timeout") {
+        break;
+      }
+      pending = pendingEventMutations(queryClient);
     }
-
-    const settled = Promise.all(
-      pending.map((mutation) => whenSettled(queryClient, mutation)),
-    ).then(() => "settled" as const);
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    const timedOut = new Promise<"timeout">((resolve) => {
-      timeoutId = setTimeout(() => resolve("timeout"), remainingMs);
-    });
-    const outcome = await Promise.race([settled, timedOut]);
-    if (timeoutId !== undefined) {
-      clearTimeout(timeoutId);
-    }
-    if (outcome === "timeout") {
-      break;
-    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 
   const remaining = pendingEventMutations(queryClient).length;
