@@ -604,6 +604,12 @@ final class NativeGridKeyboardRouter {
             }
         }
 
+        // RSVP radio-style controls own arrows and activation before grid shortcuts.
+        if model.eventFormFocusedField == .rsvp, keyEvent.modifiers.isEmpty,
+            isSpaceKey(keyEvent.key) || [.named(.arrowLeft), .named(.arrowRight), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key) {
+            return false
+        }
+
         // Header buttons own activation and Tab navigation.
         if model.isEventFormActionFocused {
             if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty { return false }

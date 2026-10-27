@@ -21,6 +21,25 @@ final class NativeCalendarRootModelKeyboardFocusTests: XCTestCase {
         XCTAssertEqual(model.eventFormRecurrenceFocusRequest, initial + 2)
     }
 
+    func testAttendeeFixtureEnablesRsvpAndRepeatedFocusRequests() async throws {
+        let fixture = try DemoSeedFixture.load().attendeeVariant()
+        XCTAssertEqual(fixture.calendarListItem().accountEmail, "sam@example.com")
+        let environment = try NativeCalendarEnvironment(inMemoryDatabase: true)
+        let model = NativeCalendarRootModel(environment: environment, demoPresentation: fixture)
+        await model.start()
+        model.focusGridEvent(eventId: "demo-morning-standup")
+        model.openKeyboardEditForFocusedEvent()
+        let draft = try XCTUnwrap(model.draftStore.gridDraft)
+        XCTAssertTrue(model.showRsvpControl(for: draft))
+        let initial = model.eventFormRsvpFocusRequest
+        model.focusEventFormField(.rsvp)
+        model.focusEventFormField(.rsvp)
+        XCTAssertEqual(model.eventFormRsvpFocusRequest, initial + 2)
+        await model.selectRsvpResponse(.tentative)
+        XCTAssertEqual(model.pendingRsvpChoice?.responseStatus, .tentative)
+        XCTAssertTrue(model.isEventFormVisible)
+    }
+
     func testFocusSidebarOpensSidebarAndFocusesAnchorDay() async throws {
         let model = try await makeModel()
         model.isSidebarOpen = false

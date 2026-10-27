@@ -122,8 +122,7 @@ public struct EventFormView: View {
 
                         EventFormRsvpSection(
                             model: model,
-                            draft: draft,
-                            focusField: model.eventFormFocusedField
+                            draft: draft
                         )
                         .id(EventFormField.rsvp)
                     }
