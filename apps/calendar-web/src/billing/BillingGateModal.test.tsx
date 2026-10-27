@@ -144,14 +144,10 @@ describe("BillingGateModal", () => {
       screen.getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
 
-<<<<<<< HEAD
+    const track = spyOn(Track, "track");
     const back = screen.getByRole("button", { name: "Back" });
     expect(within(back).getByText("Esc")).toBeTruthy();
     await user.click(back);
-=======
-    const track = spyOn(Track, "track");
-    await user.click(screen.getByRole("button", { name: "Back" }));
->>>>>>> 856f58d59 (feat(web): track checkout_opened and checkout_back)
 
     expect(
       screen.getByRole("button", { name: TRIAL_START_PRIMARY_LABEL }),

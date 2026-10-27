@@ -1,7 +1,4 @@
 import { useQueryClient } from "@tanstack/react-query";
-<<<<<<< HEAD
-import { type FC, Suspense, useCallback, useRef } from "react";
-=======
 import {
   type FC,
   Suspense,
@@ -10,7 +7,6 @@ import {
   useLayoutEffect,
   useRef,
 } from "react";
->>>>>>> 856f58d59 (feat(web): track checkout_opened and checkout_back)
 import { BillingApi } from "@web/api/billing.api";
 import {
   checkoutTelemetrySource,
@@ -50,21 +46,6 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   onCheckoutComplete,
 }) => {
   const backButtonRef = useRef<HTMLButtonElement>(null);
-<<<<<<< HEAD
-
-  useAppShortcut(
-    "Escape",
-    () => {
-      onBack?.();
-    },
-    {
-      enabled: Boolean(onBack),
-      ignoreAppLock: true,
-      preventDefault: true,
-      stopPropagation: true,
-    },
-  );
-=======
   const checkoutSource = useCheckoutPanelStore((state) => state.source);
   const telemetrySource = checkoutTelemetrySource(checkoutSource);
 
@@ -77,10 +58,23 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
     onBack?.();
   }, [onBack, telemetrySource]);
 
+  useAppShortcut(
+    "Escape",
+    () => {
+      handleBack();
+    },
+    {
+      enabled: Boolean(onBack),
+      ignoreAppLock: true,
+      preventDefault: true,
+      stopPropagation: true,
+    },
+  );
+
   useLayoutEffect(() => {
     backButtonRef.current?.focus();
   }, []);
->>>>>>> 856f58d59 (feat(web): track checkout_opened and checkout_back)
+
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
