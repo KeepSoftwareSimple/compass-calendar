@@ -1,5 +1,6 @@
 import {
   emailMatchesSyntheticJourneyBase,
+  isBillingAutomationBypassEmail,
   isSyntheticAccountEmail,
   isSyntheticAccountHeaderValue,
 } from "@core/analytics/synthetic-account.util";
@@ -29,6 +30,16 @@ describe("synthetic account helpers", () => {
     expect(isSyntheticAccountEmail("tyler@keepsoftwaresimple.com")).toBe(true);
     expect(isSyntheticAccountEmail("x@compasscaltest.invalid")).toBe(true);
     expect(isSyntheticAccountEmail("real.user@gmail.com")).toBe(false);
+  });
+
+  it("keeps compasscaltest.invalid on the real billing path unless +journey", () => {
+    expect(isBillingAutomationBypassEmail("x@compasscaltest.invalid")).toBe(
+      false,
+    );
+    expect(
+      isBillingAutomationBypassEmail("x+journey1@compasscaltest.invalid"),
+    ).toBe(true);
+    expect(isSyntheticAccountEmail("x@compasscaltest.invalid")).toBe(true);
   });
 
   it("reads the synthetic account request header", () => {

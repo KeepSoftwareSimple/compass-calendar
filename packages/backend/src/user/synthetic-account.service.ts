@@ -1,4 +1,4 @@
-import { isSyntheticAccountEmail } from "@core/analytics/synthetic-account.util";
+import { isBillingAutomationBypassEmail } from "@core/analytics/synthetic-account.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { isSyntheticSignupFromRequestHeader } from "@backend/common/context/synthetic-signup.context";
 import mongoService from "@backend/common/services/mongo.service";
@@ -13,7 +13,7 @@ export function resolveSyntheticAccountFromEmail(
 ): boolean {
   if (existingIsSynthetic) return true;
   if (isSyntheticSignupFromRequestHeader()) return true;
-  return isSyntheticAccount(email);
+  return isBillingAutomationBypassEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 }
 
 /**
@@ -27,7 +27,7 @@ export function isSyntheticAccount(
 ): boolean {
   if (isSynthetic === true) return true;
   if (!email) return false;
-  return isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
+  return isBillingAutomationBypassEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 }
 
 export async function isSyntheticCompassUserId(

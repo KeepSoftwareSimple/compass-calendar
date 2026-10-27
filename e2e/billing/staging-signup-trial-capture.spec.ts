@@ -55,10 +55,15 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
   await page.getByLabel("Password").fill("CompassStagingTrial1!");
   await page.getByRole("button", { name: "Sign up" }).click();
 
+  await expect(
+    page.getByRole("button", { name: /Start free trial/i }),
+  ).toBeVisible({ timeout: 120_000 });
+  await page.getByRole("button", { name: /Start free trial/i }).click();
+
   const dialog = page.getByRole("dialog", {
     name: "Start your 7-day free trial",
   });
-  await expect(dialog).toBeVisible({ timeout: 120000 });
+  await expect(dialog).toBeVisible({ timeout: 120_000 });
   const terms = dialog.getByText(
     /Card required\. No charge until the trial ends\.|7-day free trial\. Card required, no charge until it ends\./,
   );

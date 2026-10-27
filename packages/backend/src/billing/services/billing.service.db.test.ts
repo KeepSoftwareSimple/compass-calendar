@@ -36,6 +36,24 @@ describe("BillingService (db)", () => {
     ).rejects.toThrow("User not found");
   });
 
+  it("reports compasscaltest.invalid signups as awaiting_checkout when not journey-tagged", async () => {
+    using _env = mockEnv(stripeEnforcing);
+    const userId = mongoService.objectId();
+    await mongoService.user.insertOne({
+      _id: userId,
+      email: `agent.trial.${Date.now()}@compasscaltest.invalid`,
+      name: "Staging Trial",
+      firstName: "Staging",
+      lastName: "Trial",
+      locale: "en",
+    });
+
+    const status = await billingService.getStatus(userId.toString());
+
+    expect(status.subscriptionStatus).toBe("awaiting_checkout");
+    expect(status.isReadOnly).toBe(true);
+  });
+
   it("reports synthetic journey accounts as active without touching stored billing", async () => {
     using _env = mockEnv({
       ...stripeEnforcing,
