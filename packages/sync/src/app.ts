@@ -45,6 +45,7 @@ import {
   FAILED_JOB_MAX_REQUEUES,
   requeueFailedJobs,
 } from "@sync/domain/failed-job-requeue.service";
+import { exhaustedFailedJobLogLevel } from "@sync/domain/failed-job-requeue-log.util";
 import {
   enqueuePushStampHeal,
   PUSH_STAMP_HEAL_SWEEP_LIMIT,
@@ -872,21 +873,24 @@ function buildSchedulers(
           );
         }
         if (result.exhausted > 0) {
-          logger.error(
-            `Sync self-heal sweep: ${result.exhausted} failed job(s) exhausted their requeue budget and need operator attention`,
-            {
-              exhaustedJobs: result.exhaustedJobs.map((job) => ({
-                id: job.id,
-                coalescingKey: job.coalescingKey,
-                connectionId: job.connectionId,
-                tenantId: job.tenantId,
-                principalId: job.principalId,
-                failureClass: job.failureClass,
-                requeuedCount: job.requeuedCount,
-                updatedAt: job.updatedAt.toISOString(),
-              })),
-            },
-          );
+          const payload = {
+            exhaustedJobs: result.exhaustedJobs.map((job) => ({
+              id: job.id,
+              coalescingKey: job.coalescingKey,
+              connectionId: job.connectionId,
+              tenantId: job.tenantId,
+              principalId: job.principalId,
+              failureClass: job.failureClass,
+              requeuedCount: job.requeuedCount,
+              updatedAt: job.updatedAt.toISOString(),
+            })),
+          };
+          const message = `Sync self-heal sweep: ${result.exhausted} failed job(s) exhausted their requeue budget and need operator attention`;
+          if (exhaustedFailedJobLogLevel(result.exhaustedJobs) === "error") {
+            logger.error(message, payload);
+          } else {
+            logger.debug(message, payload);
+          }
         }
         return result.requeued + result.clearedDurable;
       },
