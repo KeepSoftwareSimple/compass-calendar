@@ -57,6 +57,30 @@ describe("description list selection", () => {
     editor.destroy();
   });
 
+  it("toggles list off without leaving a broken list when only one item was selected", () => {
+    const editor = createEditor(
+      "<ul><li><p>one</p></li><li><p>two</p></li></ul>",
+    );
+    const doc = editor.state.doc;
+    let from = 0;
+    let to = 0;
+    doc.descendants((node, pos) => {
+      if (node.isText && node.text === "two") {
+        from = pos;
+        to = pos + node.nodeSize;
+      }
+    });
+    editor.commands.setTextSelection({ from, to });
+
+    toggleDescriptionList(editor, "bullet");
+
+    expect(editor.getHTML()).not.toContain("<ul>");
+    expect(editor.getHTML()).toContain("one");
+    expect(editor.getHTML()).toContain("two");
+
+    editor.destroy();
+  });
+
   it("splits hard breaks before toggling list", () => {
     const editor = createEditor("<p>one<br>two<br>three</p>");
     const middleStart = 2;
