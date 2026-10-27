@@ -23,7 +23,7 @@ const INTERVAL_SHORT: Record<BillingDisplayPrice["interval"], string> = {
 
 export type TrialStartPriceLineContext = "default" | "settings";
 
-/** Trial ask copy: "$12/mo after 7 days. Cancel anytime in Settings." */
+/** Trial ask copy: "$7.99/mo after 7 days. Cancel anytime in Settings." */
 export function formatTrialStartPriceLine(
   price: BillingDisplayPrice,
   trialLengthDays: number = BILLING_PLAN.TRIAL_LENGTH_DAYS,

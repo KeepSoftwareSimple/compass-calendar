@@ -4,8 +4,8 @@ import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 test.use({ viewport: { width: 1280, height: 800 } });
 
 const TRIAL_ASK_PRICE_LINE =
-  "$12.00/mo after 7 days. Cancel anytime in Settings.";
-const SETTINGS_BILLING_PRICE_LINE = "$12.00/mo after 7 days. Cancel anytime.";
+  "$7.99/mo after 7 days. Cancel anytime in Settings.";
+const SETTINGS_BILLING_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime.";
 
 const jsonResponse = (body: unknown) => ({
   status: 200,

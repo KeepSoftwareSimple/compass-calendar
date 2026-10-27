@@ -107,7 +107,7 @@ const seedBillingQueries = (
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     trialEndsAt: null,
-    price: { amount: 1200, currency: "usd", interval: "month" },
+    price: { amount: 799, currency: "usd", interval: "month" },
     paymentMethod: null,
     invoices: [],
   });

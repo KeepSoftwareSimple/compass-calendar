@@ -52,6 +52,7 @@ export interface StripeBillingGateway {
     id: string,
     params?: Stripe.SubscriptionRetrieveParams,
   ): Promise<Stripe.Subscription>;
+  retrievePrice(id: string): Promise<Stripe.Price>;
   listInvoices(
     params?: Stripe.InvoiceListParams,
   ): Promise<{ data: Stripe.Invoice[] }>;
@@ -80,6 +81,7 @@ function createStripeBillingGateway(): StripeBillingGateway {
       getStripe().subscriptions.update(id, params, options),
     retrieveSubscription: (id, params) =>
       getStripe().subscriptions.retrieve(id, params),
+    retrievePrice: (id) => getStripe().prices.retrieve(id),
     listInvoices: (params) => getStripe().invoices.list(params),
     constructWebhookEvent: (payload, header, secret) =>
       getStripe().webhooks.constructEventAsync(payload, header, secret),

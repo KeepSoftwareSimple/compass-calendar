@@ -46,7 +46,7 @@ const GATE_CONFIG = {
   },
 };
 
-const TRIAL_PRICE_LINE = "$12.00/mo after 7 days. Cancel anytime in Settings.";
+const TRIAL_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime in Settings.";
 
 const renderGate = (status = "awaiting_checkout") => {
   const queryClient = new QueryClient({
