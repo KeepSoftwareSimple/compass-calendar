@@ -1,4 +1,5 @@
 import { type KeyboardEvent, useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   SUBSCRIPTION_CANCEL_REASONS,
   type SubscriptionCancelReasonSlug,
@@ -20,7 +21,10 @@ interface CancelSubscriptionDialogProps {
 }
 
 const reasonOptionClassName =
-  "c-focus-ring flex w-full items-center gap-3 rounded border border-border px-3 py-2 text-left text-sm text-text hover:bg-surface-panel aria-checked:border-accent aria-checked:bg-surface-panel";
+  "c-focus-ring flex w-full min-h-7 items-center rounded border border-border px-2.5 py-0.5 text-left text-sm text-text hover:bg-surface-panel aria-checked:border-accent aria-checked:bg-surface-panel";
+
+const MODAL_PANEL_CLASSNAME =
+  "gap-3 bg-surface-panel shadow-[0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)]";
 
 /**
  * Confirms scheduling cancel-at-period-end. Access continues until the
@@ -120,64 +124,19 @@ export function CancelSubscriptionDialog({
     radios[nextIndex ?? 0]?.focus();
   };
 
-  return (
+  return createPortal(
     <OverlayPanel
       title="Cancel your plan?"
       message={message}
       onDismiss={dismiss}
       onModEnter={submit}
       align="start"
+      anchor="top"
       variant="modal"
-      widthClassName="w-[480px]"
-    >
-      <div className="flex w-full flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <p className="m-0 text-sm text-text" id={reasonGroupId}>
-            Why are you canceling? (optional)
-          </p>
-          <div
-            aria-labelledby={reasonGroupId}
-            className="flex flex-col gap-2"
-            onKeyDown={handleReasonKeyDown}
-            role="radiogroup"
-          >
-            {SUBSCRIPTION_CANCEL_REASONS.map((option) => (
-              // biome-ignore lint/a11y/useSemanticElements: pill radios match booking duration pills
-              <button
-                aria-checked={selectedReason === option.slug}
-                className={reasonOptionClassName}
-                key={option.slug}
-                onClick={() => setSelectedReason(option.slug)}
-                role="radio"
-                tabIndex={
-                  selectedReason == null
-                    ? option.slug === SUBSCRIPTION_CANCEL_REASONS[0]?.slug
-                      ? 0
-                      : -1
-                    : selectedReason === option.slug
-                      ? 0
-                      : -1
-                }
-                type="button"
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          {selectedReason === "other" ? (
-            <textarea
-              aria-label="Other reason"
-              className="w-full resize-y rounded border border-border bg-transparent px-3 py-2 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-accent"
-              id={otherDetailsId}
-              maxLength={500}
-              onChange={(event) => setOtherDetails(event.target.value)}
-              placeholder="Tell us more (optional)."
-              rows={3}
-              value={otherDetails}
-            />
-          ) : null}
-        </div>
-
+      widthClassName="w-[440px]"
+      panelClassName={MODAL_PANEL_CLASSNAME}
+      scrollChildrenOnly
+      footer={
         <OverlayPanelActions align="start">
           <OverlayPanelActionButton
             aria-keyshortcuts="Meta+Enter Control+Enter"
@@ -196,7 +155,55 @@ export function CancelSubscriptionDialog({
             Keep plan
           </OverlayPanelActionButton>
         </OverlayPanelActions>
+      }
+    >
+      <div className="flex min-h-0 w-full flex-col gap-1.5">
+        <p className="m-0 shrink-0 text-sm text-text" id={reasonGroupId}>
+          Why are you canceling? (optional)
+        </p>
+        <div
+          aria-labelledby={reasonGroupId}
+          className="flex min-h-0 flex-col gap-1"
+          onKeyDown={handleReasonKeyDown}
+          role="radiogroup"
+        >
+          {SUBSCRIPTION_CANCEL_REASONS.map((option) => (
+            // biome-ignore lint/a11y/useSemanticElements: pill radios match booking duration pills
+            <button
+              aria-checked={selectedReason === option.slug}
+              className={reasonOptionClassName}
+              key={option.slug}
+              onClick={() => setSelectedReason(option.slug)}
+              role="radio"
+              tabIndex={
+                selectedReason == null
+                  ? option.slug === SUBSCRIPTION_CANCEL_REASONS[0]?.slug
+                    ? 0
+                    : -1
+                  : selectedReason === option.slug
+                    ? 0
+                    : -1
+              }
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {selectedReason === "other" ? (
+          <textarea
+            aria-label="Other reason"
+            className="w-full shrink-0 resize-y rounded border border-border bg-transparent px-2.5 py-1.5 text-sm text-text outline-none placeholder:text-text-muted focus-visible:border-accent"
+            id={otherDetailsId}
+            maxLength={500}
+            onChange={(event) => setOtherDetails(event.target.value)}
+            placeholder="Tell us more (optional)."
+            rows={2}
+            value={otherDetails}
+          />
+        ) : null}
       </div>
-    </OverlayPanel>
+    </OverlayPanel>,
+    document.body,
   );
 }

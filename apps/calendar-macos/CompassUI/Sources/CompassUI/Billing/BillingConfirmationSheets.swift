@@ -75,84 +75,91 @@ public struct BillingCancelConfirmationSheet: View {
                 title: "Cancel your plan?",
                 message: message,
                 onDismiss: dismiss,
-                maxWidth: 480
+                maxWidth: 440,
+                bodySpacing: 12
             ) {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Why are you canceling? (optional)")
-                        .font(.rubik(14))
-                        .foregroundStyle(theme.textColor)
-                    VStack(alignment: .leading, spacing: 8) {
-                        ForEach(SubscriptionCancelReason.allCases, id: \.self) { reason in
-                            Button {
-                                selectedReason = reason
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(
-                                        systemName: selectedReason == reason
-                                            ? "largecircle.fill.circle"
-                                            : "circle"
-                                    )
-                                    .foregroundStyle(
-                                        selectedReason == reason
-                                            ? theme.accentColor : theme.textMutedColor
-                                    )
-                                    Text(reason.label)
-                                        .font(.rubik(14))
-                                        .foregroundStyle(theme.textColor)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    RoundedRectangle(
-                                        cornerRadius: NativeWebLayoutTokens.radiusDefault
-                                    )
-                                    .stroke(
-                                        selectedReason == reason
-                                            ? theme.accentColor : theme.borderColor,
-                                        lineWidth: 1
-                                    )
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
-                        }
-                    }
-                    .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Why are you canceling? (optional)")
-
-                    if selectedReason == .other {
-                        ZStack(alignment: .topLeading) {
-                            TextEditor(text: $otherDetails)
-                                .font(.rubik(14))
+                VStack(alignment: .leading, spacing: 12) {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Why are you canceling? (optional)")
+                                .font(.rubik(13))
                                 .foregroundStyle(theme.textColor)
-                                .scrollContentBackground(.hidden)
-                                .focused($otherDetailsFocused)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .accessibilityLabel("Other reason")
-                                .accessibilityIdentifier("compass-cancel-reason-other")
-                                .onChange(of: otherDetails) { _, value in
-                                    if value.count > 500 { otherDetails = String(value.prefix(500)) }
+                            VStack(alignment: .leading, spacing: 4) {
+                                ForEach(SubscriptionCancelReason.allCases, id: \.self) { reason in
+                                    Button {
+                                        selectedReason = reason
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(
+                                                systemName: selectedReason == reason
+                                                    ? "largecircle.fill.circle"
+                                                    : "circle"
+                                            )
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(
+                                                selectedReason == reason
+                                                    ? theme.accentColor : theme.textMutedColor
+                                            )
+                                            Text(reason.label)
+                                                .font(.rubik(13))
+                                                .foregroundStyle(theme.textColor)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 4)
+                                        .background(
+                                            RoundedRectangle(
+                                                cornerRadius: NativeWebLayoutTokens.radiusDefault
+                                            )
+                                            .stroke(
+                                                selectedReason == reason
+                                                    ? theme.accentColor : theme.borderColor,
+                                                lineWidth: 1
+                                            )
+                                        )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityAddTraits(selectedReason == reason ? .isSelected : [])
                                 }
-                            if otherDetails.isEmpty {
-                                Text("Tell us more (optional).")
-                                    .font(.rubik(14))
-                                    .foregroundStyle(theme.textMutedColor)
-                                    .padding(.horizontal, 13)
-                                    .padding(.vertical, 6)
-                                    .allowsHitTesting(false)
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Why are you canceling? (optional)")
+
+                            if selectedReason == .other {
+                                ZStack(alignment: .topLeading) {
+                                    TextEditor(text: $otherDetails)
+                                        .font(.rubik(13))
+                                        .foregroundStyle(theme.textColor)
+                                        .scrollContentBackground(.hidden)
+                                        .focused($otherDetailsFocused)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 4)
+                                        .accessibilityLabel("Other reason")
+                                        .accessibilityIdentifier("compass-cancel-reason-other")
+                                        .onChange(of: otherDetails) { _, value in
+                                            if value.count > 500 { otherDetails = String(value.prefix(500)) }
+                                        }
+                                    if otherDetails.isEmpty {
+                                        Text("Tell us more (optional).")
+                                            .font(.rubik(13))
+                                            .foregroundStyle(theme.textMutedColor)
+                                            .padding(.horizontal, 13)
+                                            .padding(.vertical, 4)
+                                            .allowsHitTesting(false)
+                                    }
+                                }
+                                .frame(height: 56)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
+                                        .stroke(
+                                            otherDetailsFocused ? theme.accentColor : theme.borderColor,
+                                            lineWidth: 1
+                                        )
+                                )
                             }
                         }
-                        .frame(height: 88)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
-                                .stroke(
-                                    otherDetailsFocused ? theme.accentColor : theme.borderColor,
-                                    lineWidth: 1
-                                )
-                        )
                     }
+                    .frame(maxHeight: 260)
 
                     HStack(spacing: 12) {
                         OverlayPanelActionButton(
@@ -194,10 +201,11 @@ private struct BillingDialogPanel<Actions: View>: View {
     let message: String
     let onDismiss: () -> Void
     var maxWidth: CGFloat = 400
+    var bodySpacing: CGFloat = 24
     @ViewBuilder let actions: Actions
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
+        VStack(alignment: .leading, spacing: bodySpacing) {
             ModalDialogTitle(title)
             ModalDialogMessage(message)
             actions

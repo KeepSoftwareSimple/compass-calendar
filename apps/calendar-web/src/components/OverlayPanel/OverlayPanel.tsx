@@ -157,6 +157,7 @@ export const OverlayPanel = ({
     align === "start" ? "items-start" : "items-center",
     variant === "modal" && [
       widthClassName,
+      scrollChildrenOnly && "min-h-0",
       "max-h-[90vh] max-w-[90vw] overflow-hidden rounded-xl outline-none will-change-transform",
       "transition-transform duration-400 ease-out data-closing:scale-105 motion-reduce:transition-none",
       panelClassName ??
@@ -168,10 +169,10 @@ export const OverlayPanel = ({
   );
 
   const scrollBodyClasses = classNames(
-    "flex min-h-0 w-full flex-1 flex-col p-8",
+    "flex w-full flex-col p-8",
     scrollChildrenOnly
-      ? "max-h-[min(720px,calc(90vh-2rem))] gap-4 overflow-hidden"
-      : "gap-6 overflow-y-auto",
+      ? "max-h-[min(720px,calc(100dvh-7rem))] min-h-0 gap-4 overflow-hidden"
+      : "min-h-0 flex-1 gap-6 overflow-y-auto",
     align === "start" ? "items-start" : "items-center",
   );
 
@@ -257,11 +258,11 @@ export const OverlayPanel = ({
   );
 
   const panelBody = scrollChildrenOnly ? (
-    <>
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-hidden">
       {panelHeader}
       <div className={scrollChildrenClasses}>{children}</div>
       {footer ? <div className="w-full shrink-0">{footer}</div> : null}
-    </>
+    </div>
   ) : (
     <>
       {panelHeader}
