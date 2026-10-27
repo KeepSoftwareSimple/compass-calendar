@@ -21,6 +21,8 @@ afterAll(() => {
 });
 
 const {
+  trackCheckoutBack,
+  trackCheckoutOpened,
   trackLocalModeSelected,
   trackSignupCompleted,
   trackSignupFailed,
@@ -120,6 +122,18 @@ describe("signup funnel", () => {
       step_name: "account_created",
       step: "account_created",
       method: "email",
+    });
+  });
+
+  it("tracks checkout_opened and checkout_back", () => {
+    trackCheckoutOpened({ source: "signup_trial_step" });
+    trackCheckoutBack({ source: "gate" });
+
+    expect(capture).toHaveBeenNthCalledWith(1, "checkout_opened", {
+      source: "signup_trial_step",
+    });
+    expect(capture).toHaveBeenNthCalledWith(2, "checkout_back", {
+      source: "gate",
     });
   });
 

@@ -1,6 +1,7 @@
 import { type ProviderKind } from "@core/types/sync/identity.contracts";
 import { countLocalNonDemoEvents } from "@web/auth/posthog/anon-events-created.util";
 import { track } from "@web/auth/posthog/track";
+import { type CheckoutPanelSource } from "@web/billing/checkout-panel.store";
 
 /**
  * The signup funnel, as one enumerable vocabulary.
@@ -138,6 +139,29 @@ export function trackTrialStepCompleted(properties: TrialStepTelemetry): void {
 
 export function trackTrialStepAbandoned(properties: TrialStepTelemetry): void {
   trackSignupStep("trial_step_abandoned", properties);
+}
+
+type CheckoutTelemetry = {
+  source: SignupSource | "gate" | "settings_trial_ask" | "shortcut_prompt";
+};
+
+/** Embedded Checkout mounted (trial or subscribe). */
+export function trackCheckoutOpened(properties: CheckoutTelemetry): void {
+  track("checkout_opened", properties);
+}
+
+/** User left embedded Checkout via Back or Esc. */
+export function trackCheckoutBack(properties: CheckoutTelemetry): void {
+  track("checkout_back", properties);
+}
+
+export function checkoutTelemetrySource(
+  source: CheckoutPanelSource | null,
+): CheckoutTelemetry["source"] {
+  if (!source) return "gate";
+  if (source.kind === "signup_trial_step") return "signup_trial_step";
+  if (source.kind === "settings_trial_ask") return "settings_trial_ask";
+  return "shortcut_prompt";
 }
 
 /** Legacy `signup_started` plus its funnel step, so both stay in lockstep. */

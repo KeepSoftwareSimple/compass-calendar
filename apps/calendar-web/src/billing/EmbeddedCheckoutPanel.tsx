@@ -1,7 +1,24 @@
 import { useQueryClient } from "@tanstack/react-query";
+<<<<<<< HEAD
 import { type FC, Suspense, useCallback, useRef } from "react";
+=======
+import {
+  type FC,
+  Suspense,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
+>>>>>>> 856f58d59 (feat(web): track checkout_opened and checkout_back)
 import { BillingApi } from "@web/api/billing.api";
+import {
+  checkoutTelemetrySource,
+  trackCheckoutBack,
+  trackCheckoutOpened,
+} from "@web/auth/posthog/signup-funnel";
 import { fetchEmbeddedCheckoutSecret } from "@web/billing/checkout-client-secret";
+import { useCheckoutPanelStore } from "@web/billing/checkout-panel.store";
 import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
 import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
@@ -33,6 +50,7 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
   onCheckoutComplete,
 }) => {
   const backButtonRef = useRef<HTMLButtonElement>(null);
+<<<<<<< HEAD
 
   useAppShortcut(
     "Escape",
@@ -46,6 +64,23 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
       stopPropagation: true,
     },
   );
+=======
+  const checkoutSource = useCheckoutPanelStore((state) => state.source);
+  const telemetrySource = checkoutTelemetrySource(checkoutSource);
+
+  useEffect(() => {
+    trackCheckoutOpened({ source: telemetrySource });
+  }, [telemetrySource]);
+
+  const handleBack = useCallback(() => {
+    trackCheckoutBack({ source: telemetrySource });
+    onBack?.();
+  }, [onBack, telemetrySource]);
+
+  useLayoutEffect(() => {
+    backButtonRef.current?.focus();
+  }, []);
+>>>>>>> 856f58d59 (feat(web): track checkout_opened and checkout_back)
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
@@ -71,7 +106,7 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
         <button
           ref={backButtonRef}
           className={`${SECONDARY_BUTTON_CLASSNAME} self-center`}
-          onClick={onBack}
+          onClick={handleBack}
           onPointerEnter={focusOnPointerEnter}
           type="button"
         >
