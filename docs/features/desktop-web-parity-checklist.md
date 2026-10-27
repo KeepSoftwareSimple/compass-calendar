@@ -444,3 +444,7 @@ Web Settings initially focuses the current navigation button and paints its focu
 ### 2026-10-27 Settings field line-box follow-up
 
 A hidden anonymous web browser measured Settings field labels at14px with20px line height and the timezone button at30px including padding and border. Native field labels now reserve20pt and the timezone chrome reserves30pt without changing fonts or forcing the native calendar menu to that height. Both-theme hosting-view geometry tests cover those dimensions; runtime and composited screenshot evidence is tracked in #4867. Helper text metrics, other Settings surfaces and signed-in acceptance remain open.
+
+### 2026-10-27 calendar-menu shortcut focus follow-up
+
+Calendar-menu shortcut requests now bind actual focus to the create form menu, including repeated jumps, and the outline follows that focus. Both-theme native coverage opens the menu with Mod+5 and Space, selects with Return, repeats the jump after returning to Title, and dismisses the menu without closing the form. Runtime evidence remains pending under #4783; recurrence is tracked in #4869 and RSVP/signed-in acceptance remain open.

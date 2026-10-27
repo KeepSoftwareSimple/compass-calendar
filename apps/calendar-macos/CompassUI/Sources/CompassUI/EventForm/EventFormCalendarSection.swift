@@ -5,9 +5,9 @@ import SwiftUI
 struct EventFormCalendarSection: View {
     @Environment(\.nativeWebTheme) private var theme
     @State private var isHovered = false
+    @FocusState private var calendarFocused: Bool
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
-    let focusField: EventFormField
 
     var body: some View {
         // Web `CalendarSelect`: a compact, borderless trigger (`px-1.5 py-1
@@ -49,7 +49,7 @@ struct EventFormCalendarSection: View {
             .background(isHovered ? theme.textColor.opacity(0.1) : .clear)
             .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
             .overlay {
-                if focusField == .calendar {
+                if calendarFocused {
                     RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
                         .stroke(theme.accentColor, lineWidth: 1)
                 }
@@ -59,6 +59,15 @@ struct EventFormCalendarSection: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($calendarFocused)
+        .onChange(of: model.eventFormCalendarFocusRequest) { _, _ in
+            DispatchQueue.main.async {
+                guard model.isEventFormVisible, model.eventFormFocusedField == .calendar else { return }
+                calendarFocused = true
+            }
+        }
         .onHover { isHovered = $0 }
         .disabled(!model.canChangeDraftCalendar)
         .accessibilityIdentifier("compass-event-form-calendar")
