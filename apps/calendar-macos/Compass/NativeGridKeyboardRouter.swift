@@ -645,13 +645,13 @@ final class NativeGridKeyboardRouter {
         dispatcher.isTextInputFocused = false
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
-        if let id = dispatcher.dispatch(keyEvent) {
-            performShortcut(id)
-            return true
-        }
-
+        let shortcut = dispatcher.dispatch(keyEvent)
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)
+            return true
+        }
+        if let shortcut {
+            performShortcut(shortcut)
             return true
         }
 

@@ -26,6 +26,8 @@ final class EventFormPunctuationFocusTests: XCTestCase {
                 modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
                 characters: letter, charactersIgnoringModifiers: letter, isARepeat: false, keyCode: code))
             _ = router.handleKeyDown(key)
+            if letter == "e" { XCTAssertEqual(router.dispatcher.leaderEngine.phase, .armedSilent) }
+            if letter == "g" { XCTAssertEqual(router.dispatcher.lastResolvedLeaderField, "rsvp") }
         }
         XCTAssertEqual(model.eventFormFocusedField, .rsvp)
         XCTAssertEqual(model.eventFormRsvpFocusRequest, 2)
