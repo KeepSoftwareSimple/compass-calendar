@@ -78,7 +78,10 @@ export const BillingGateModal: FC<BillingGateModalProps> = ({ status }) => {
       restoreFocus={() => {
         trialInitialFocusRef.current?.focus({ preventScroll: true });
       }}
-      widthClassName={isCheckoutOpen ? "w-[560px]" : "w-120"}
+      bodyPaddingClassName="px-4 py-6 sm:p-8"
+      widthClassName={
+        isCheckoutOpen ? "w-[min(560px,calc(100vw-2rem))]" : "w-120"
+      }
     >
       {isCheckoutOpen && publishableKey ? (
         <EmbeddedCheckoutPanel
