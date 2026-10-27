@@ -19,6 +19,8 @@ final class SettingsKeyboardIsolationTests: XCTestCase {
             add(evidence)
             window.typeKey(.tab, modifierFlags: [])
             XCTAssertFalse(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            let timezone = window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Default timezone:")).firstMatch
+            XCTAssertTrue(timezone.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, timezone.debugDescription)
             window.typeKey(.tab, modifierFlags: [.shift])
             XCTAssertTrue(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, accounts.debugDescription)
             window.typeKey(.escape, modifierFlags: [])
