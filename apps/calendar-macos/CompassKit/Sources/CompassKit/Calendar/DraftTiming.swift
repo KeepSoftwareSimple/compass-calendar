@@ -2,6 +2,9 @@ import Foundation
 
 /// Mirrors `apps/calendar-web/src/common/utils/draft/draft.util.ts`.
 public enum DraftTiming {
+    /// Minimum timed event length when correcting inverted start/end (matches web).
+    public static let minimumTimedDuration: TimeInterval = 60
+
     public static func timedDraftEnd(start: Date) -> Date {
         let calendar = EffectiveTimeZone.calendar
         let startOfDay = calendar.startOfDay(for: start)
@@ -38,6 +41,30 @@ public enum DraftTiming {
 
         let end = timedDraftEnd(start: start)
         return (start, end)
+    }
+
+    public static func preserveDurationWhenStartMovesPastEnd(
+        oldStart: Date,
+        oldEnd: Date,
+        newStart: Date
+    ) -> Date {
+        if newStart < oldEnd {
+            return oldEnd
+        }
+        let duration = max(oldEnd.timeIntervalSince(oldStart), minimumTimedDuration)
+        return newStart.addingTimeInterval(duration)
+    }
+
+    public static func preserveDurationWhenEndMovesBeforeStart(
+        oldStart: Date,
+        oldEnd: Date,
+        newEnd: Date
+    ) -> Date {
+        if newEnd > oldStart {
+            return newEnd
+        }
+        let duration = max(oldEnd.timeIntervalSince(oldStart), minimumTimedDuration)
+        return newEnd.addingTimeInterval(-duration)
     }
 
     private static func roundToNext(_ value: Int, step: Int) -> Int {
