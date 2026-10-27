@@ -3,7 +3,6 @@ import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { trackTrialStepViewed } from "@web/auth/posthog/signup-funnel";
 import {
   useAppConfigQuery,
-  useBillingSubscriptionQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
 import {
@@ -15,11 +14,8 @@ import {
 import { EmbeddedCheckoutPanel } from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { readSignupTrialMethod } from "@web/billing/signup-trial.util";
-import {
-  formatTrialStartPriceLine,
-  resolveBillingDisplayPrice,
-  type TrialStartPriceLineContext,
-} from "@web/billing/trial-start-display.util";
+import { formatTrialAskChargeLine } from "@web/billing/signup-trial-format.util";
+import { type TrialStartPriceLineContext } from "@web/billing/trial-start-display.util";
 import {
   consumeTrialStepTrigger,
   TRIAL_STEP_WRITE_LEAD,
@@ -58,19 +54,14 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
   showMascot = false,
   trackSignupView = false,
   onBeforeOpenCheckout,
-  priceLineContext = "default",
+  priceLineContext: _priceLineContext = "default",
 }) => {
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
   const configQuery = useAppConfigQuery();
-  const subscriptionQuery = useBillingSubscriptionQuery(true);
   const trialLengthDays =
     configQuery.data?.billing.trialLengthDays ?? BILLING_PLAN.TRIAL_LENGTH_DAYS;
-  const priceLine = formatTrialStartPriceLine(
-    resolveBillingDisplayPrice(subscriptionQuery.data?.price),
-    trialLengthDays,
-    priceLineContext,
-  );
+  const chargeLine = formatTrialAskChargeLine(trialLengthDays);
   const viewedRef = useRef(false);
   const writeLeadRef = useRef(consumeTrialStepTrigger() === "write");
 
@@ -118,7 +109,7 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
           {TRIAL_STEP_WRITE_LEAD}
         </p>
       ) : null}
-      <p className="w-full text-center text-sm text-text-muted">{priceLine}</p>
+      <p className="w-full text-center text-sm text-text-muted">{chargeLine}</p>
       <div className="mt-2 flex w-full flex-col gap-2">
         <button
           ref={primaryButtonRef}

@@ -2,8 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const TRIAL_PRICE_LINE =
-  /\$\d+\.\d{2}\/mo after 7 days\. Cancel anytime in Settings\./;
+const TRIAL_CHARGE_LINE = /No charge until .+\. Cancel anytime\./;
 
 test("staging signup trial step with live Stripe embedded checkout", async ({
   page,
@@ -78,7 +77,7 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
     name: "Start your 7-day free trial",
   });
   await expect(dialog).toBeVisible({ timeout: 120_000 });
-  await expect(dialog.getByText(TRIAL_PRICE_LINE)).toBeVisible({
+  await expect(dialog.getByText(TRIAL_CHARGE_LINE)).toBeVisible({
     timeout: 30_000,
   });
   await dialog.getByRole("button", { name: "Start free trial" }).click();

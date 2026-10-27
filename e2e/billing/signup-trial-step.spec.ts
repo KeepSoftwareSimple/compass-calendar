@@ -3,7 +3,7 @@ import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const TRIAL_PRICE_LINE = "$12.00/mo after 7 days. Cancel anytime in Settings.";
+const TRIAL_CHARGE_LINE = /No charge until .+\. Cancel anytime\./;
 
 const jsonResponse = (body: unknown) => ({
   status: 200,
@@ -144,7 +144,7 @@ test("awaiting checkout can explore the calendar and opt into the trial step", a
     page.getByRole("dialog", { name: "Start your 7-day free trial" }),
   ).toBeVisible({ timeout: 15000 });
 
-  await expect(page.getByText(TRIAL_PRICE_LINE)).toBeVisible();
+  await expect(page.getByText(TRIAL_CHARGE_LINE)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Start free trial" }),
   ).toBeVisible();
@@ -171,7 +171,7 @@ test("awaiting checkout can explore the calendar and opt into the trial step", a
   await expect(
     page.getByRole("dialog", { name: "Start your 7-day free trial" }),
   ).toBeVisible();
-  await expect(page.getByText(TRIAL_PRICE_LINE)).toBeVisible();
+  await expect(page.getByText(TRIAL_CHARGE_LINE)).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Start free trial" }),
   ).toBeVisible();
