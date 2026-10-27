@@ -1,6 +1,9 @@
-import { UNAUTHENTICATED_USER } from "@web/auth/compass/session/session.util";
+import {
+  getUserId,
+  UNAUTHENTICATED_USER,
+  waitForAuthSession,
+} from "@web/auth/compass/session/session.util";
 import { session } from "./Session";
-import { getUserId } from "./session.util";
 import { afterAll, beforeEach, describe, expect, it, spyOn } from "bun:test";
 
 const mockDoesSessionExist = spyOn(session, "doesSessionExist");
@@ -20,6 +23,37 @@ describe("session.util", () => {
   beforeEach(() => {
     mockDoesSessionExist.mockClear();
     mockGetAccessTokenPayloadSecurely.mockClear();
+  });
+
+  describe("waitForAuthSession", () => {
+    it("returns true immediately in e2e test mode without calling SuperTokens", async () => {
+      const previous = globalThis.window;
+      globalThis.window = {
+        __COMPASS_E2E_TEST__: true,
+      } as Window & typeof globalThis.window;
+
+      await expect(waitForAuthSession({ timeoutMs: 80 })).resolves.toBe(true);
+      expect(mockDoesSessionExist).not.toHaveBeenCalled();
+
+      globalThis.window = previous;
+    });
+
+    it("returns true as soon as doesSessionExist succeeds", async () => {
+      mockDoesSessionExist.mockResolvedValueOnce(false).mockResolvedValue(true);
+
+      await expect(
+        waitForAuthSession({ timeoutMs: 500, intervalMs: 10 }),
+      ).resolves.toBe(true);
+      expect(mockDoesSessionExist.mock.calls.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it("returns false when the session never appears", async () => {
+      mockDoesSessionExist.mockResolvedValue(false);
+
+      await expect(
+        waitForAuthSession({ timeoutMs: 80, intervalMs: 20 }),
+      ).resolves.toBe(false);
+    });
   });
 
   describe("getUserId", () => {
