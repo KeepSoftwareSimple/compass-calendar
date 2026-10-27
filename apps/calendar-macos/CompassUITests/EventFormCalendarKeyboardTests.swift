@@ -13,6 +13,11 @@ final class EventFormCalendarKeyboardTests: XCTestCase {
             let calendar = window.descendants(matching: .any)["compass-event-form-calendar"]
             XCTAssertTrue(calendar.waitForExistence(timeout: 8))
             window.typeKey("5", modifierFlags: [.command])
+            XCTAssertTrue(calendar.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, calendar.debugDescription)
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(calendar.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, window.debugDescription)
+            window.typeKey(.tab, modifierFlags: [.shift])
+            XCTAssertTrue(calendar.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, calendar.debugDescription)
             window.typeKey(.space, modifierFlags: [])
             let choice = app.menuItems["Compass (primary)"]
             XCTAssertTrue(choice.waitForExistence(timeout: 5))

@@ -37,6 +37,12 @@ final class EventFormRsvpKeyboardTests: XCTestCase {
             window.typeKey("e", modifierFlags: [])
             window.typeKey("g", modifierFlags: [])
             XCTAssertTrue(going.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, going.debugDescription)
+            window.typeKey(.tab, modifierFlags: [])
+            for label in ["Going", "Maybe", "Decline"] {
+                XCTAssertFalse(window.buttons[label].debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, window.debugDescription)
+            }
+            window.typeKey(.tab, modifierFlags: [.shift])
+            XCTAssertTrue(going.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, going.debugDescription)
             XCTAssertTrue(window.descendants(matching: .any)["compass-event-form"].exists)
             app.terminate()
         }
