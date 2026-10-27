@@ -22,7 +22,7 @@ struct SettingsTimezoneSectionView: View {
             Button {
                 settingsStore.openTimezoneDialog(.pin)
             } label: {
-                Text(label).settingsSelectChrome()
+                Text(label).settingsSelectChrome(minimumHeight: 30)
             }
             .buttonStyle(.plain)
             .focusable()
