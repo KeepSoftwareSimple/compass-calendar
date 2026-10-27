@@ -1,4 +1,5 @@
 import { type ComponentType, lazy } from "react";
+import { importOrReload } from "@web/common/utils/browser/missing-chunk-reload.util";
 
 export type EmbeddedCheckoutProps = {
   publishableKey: string;
@@ -12,7 +13,9 @@ export type EmbeddedCheckoutProps = {
  * stays out of the boot chunk. The lighthouse script budget has ~13 KB of
  * headroom; a static import of that stack fails the gate.
  */
-const LazyEmbeddedCheckout = lazy(() => import("./embedded-checkout.port"));
+const LazyEmbeddedCheckout = lazy(() =>
+  importOrReload(() => import("./embedded-checkout.port")),
+);
 
 let embeddedCheckoutOverride: ComponentType<EmbeddedCheckoutProps> | null =
   null;

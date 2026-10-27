@@ -2,8 +2,12 @@ import {
   getPosthogClient,
   initPosthog,
 } from "@web/auth/posthog/posthog.bootstrap";
-import { reloadOnceForMissingChunk } from "@web/common/utils/browser/missing-chunk-reload.util";
+import {
+  installMissingChunkUnhandledRejectionHandler,
+  reloadOnceForMissingChunk,
+} from "@web/common/utils/browser/missing-chunk-reload.util";
 
+installMissingChunkUnhandledRejectionHandler();
 initPosthog();
 
 void import("./app.bootstrap")
