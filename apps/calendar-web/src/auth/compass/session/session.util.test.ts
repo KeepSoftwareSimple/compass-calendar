@@ -26,6 +26,18 @@ describe("session.util", () => {
   });
 
   describe("waitForAuthSession", () => {
+    it("returns true immediately in e2e test mode without calling SuperTokens", async () => {
+      const previous = globalThis.window;
+      globalThis.window = {
+        __COMPASS_E2E_TEST__: true,
+      } as Window & typeof globalThis.window;
+
+      await expect(waitForAuthSession({ timeoutMs: 80 })).resolves.toBe(true);
+      expect(mockDoesSessionExist).not.toHaveBeenCalled();
+
+      globalThis.window = previous;
+    });
+
     it("returns true as soon as doesSessionExist succeeds", async () => {
       mockDoesSessionExist.mockResolvedValueOnce(false).mockResolvedValue(true);
 

@@ -13,6 +13,14 @@ const DEFAULT_SESSION_POLL_MS = 50;
 export async function waitForAuthSession(
   options: { timeoutMs?: number; intervalMs?: number } = {},
 ): Promise<boolean> {
+  // Playwright oauth specs mock `/api/signinup` but do not run a full
+  // SuperTokens session handshake. SessionProvider already skips
+  // `doesSessionExist` in this mode; waiting here only delays or breaks
+  // `completeAuthentication` until timeout.
+  if (typeof window !== "undefined" && window.__COMPASS_E2E_TEST__) {
+    return true;
+  }
+
   const timeoutMs = options.timeoutMs ?? DEFAULT_SESSION_WAIT_MS;
   const intervalMs = options.intervalMs ?? DEFAULT_SESSION_POLL_MS;
   const deadline = Date.now() + timeoutMs;
