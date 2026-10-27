@@ -31,6 +31,14 @@ struct EventFormRecurrenceSection: View {
             .focusable()
             .focusEffectDisabled()
             .focused($recurrenceFocused)
+            .onKeyPress(.return) {
+                toggleRecurrence(!hasRecurrence)
+                return .handled
+            }
+            .onKeyPress(.space) {
+                toggleRecurrence(!hasRecurrence)
+                return .handled
+            }
 
             if hasRecurrence {
                 Picker("Frequency", selection: $pattern.frequency) {
