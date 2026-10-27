@@ -3,13 +3,17 @@ import { CONFIG } from "@backend/common/constants/config.constants";
 import { isSyntheticSignupFromRequestHeader } from "@backend/common/context/synthetic-signup.context";
 import mongoService from "@backend/common/services/mongo.service";
 
+/**
+ * `isSyntheticAccount` plus the request header, for the signup and enrollment
+ * paths that run inside a request and can still flag the account.
+ */
 export function resolveSyntheticAccountFromEmail(
   email: string,
   existingIsSynthetic?: boolean,
 ): boolean {
   if (existingIsSynthetic) return true;
   if (isSyntheticSignupFromRequestHeader()) return true;
-  return isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
+  return isSyntheticAccount(email);
 }
 
 /**

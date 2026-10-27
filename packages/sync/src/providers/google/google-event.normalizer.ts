@@ -10,7 +10,6 @@ import {
 import { withColor, withColorHex } from "@core/types/event-color.contracts";
 import { type gSchema$Event } from "@core/types/gcal";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
 import { googleColorIdToSlot } from "@sync/providers/google/google-color.map";
 import { parseGoogleInstanceEventId } from "@sync/providers/google/google-instance-id";
@@ -19,6 +18,7 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { toIanaTimeZoneOrUtc } from "@sync/providers/provider-timezone.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
 
@@ -229,7 +229,7 @@ function mapSchedule(item: gSchema$Event) {
     // zones fall back to UTC — the instant is preserved, wall-clock zone
     // is not (same as the GMT-07:00 path below).
     const timeZone = start.timeZone ?? end.timeZone;
-    const ianaTimeZone = timeZone ? toIanaTimeZone(timeZone) : "UTC";
+    const ianaTimeZone = timeZone ? toIanaTimeZoneOrUtc(timeZone) : "UTC";
     return parseSchedule({
       kind: "timed",
       start: toOffsetIso({ ...start, timeZone: ianaTimeZone }),
@@ -242,14 +242,6 @@ function mapSchedule(item: gSchema$Event) {
     "unmappableSchedule",
     "Event start/end mixes date and dateTime",
   );
-}
-
-// Google mostly emits IANA zone names, but a small number of events carry a
-// fixed-offset string ("GMT-07:00") that TimeZoneSchema rejects. The instant
-// is unaffected either way, so falling back to UTC only loses the wall-clock
-// display context rather than dropping the event.
-function toIanaTimeZone(timeZone: string): string {
-  return TimezoneSchema.safeParse(timeZone).success ? timeZone : "UTC";
 }
 
 // safeParse the neutral schedule so a value the contract rejects surfaces as a

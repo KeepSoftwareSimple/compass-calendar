@@ -8,27 +8,19 @@ import {
   fillTitleAndSaveEventForm,
   openTimedEventFormWithKeyboard,
 } from "../utils/event-test-utils";
+import {
+  deleteJourneyAccount,
+  isJourneyEnabled,
+  journeyCredentials,
+  journeyProvider,
+  logInJourneyAccount,
+  logOutOfJourneyAccount,
+  seedJourneyOnboarding,
+  signUpJourneyAccount,
+  uniqueJourneyEmail,
+} from "./journey-leg.util";
 
-const provider = (process.env.STAGING_JOURNEY_PROVIDER ?? "").toLowerCase();
-
-const requireEnv = (name: string): string => {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(
-      `Missing ${name}. Add it to the staging-journey GitHub Environment secrets before this leg can run.`,
-    );
-  }
-  return value;
-};
-
-const credentialEnvPrefix = (): string => {
-  if (provider === "google") return "STAGING_JOURNEY_GOOGLE";
-  if (provider === "microsoft") return "STAGING_JOURNEY_MICROSOFT";
-  if (provider === "apple") return "STAGING_JOURNEY_APPLE";
-  throw new Error(
-    `STAGING_JOURNEY_PROVIDER must be google, microsoft, or apple (got "${provider}").`,
-  );
-};
+const provider = journeyProvider("STAGING");
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -40,37 +32,21 @@ test.use({
 
 test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   test.skip(
-    process.env.STAGING_JOURNEY_ENABLED !== "1",
+    !isJourneyEnabled("STAGING"),
     "Set STAGING_JOURNEY_ENABLED=1 to run against staging",
   );
 
-  const prefix = credentialEnvPrefix();
-  const accountEmail = requireEnv(`${prefix}_EMAIL`);
-  const accountPassword = requireEnv(`${prefix}_PASSWORD`);
+  const { accountEmail, password } = journeyCredentials("STAGING");
 
-  await page.addInitScript(() => {
-    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-    localStorage.setItem(
-      "compass.onboarding.has-seen-shortcut-showcase",
-      "true",
-    );
-    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-    localStorage.setItem(
-      "compass.onboarding.has-dismissed-connect-calendar-prompt",
-      String(Date.now()),
-    );
+  await seedJourneyOnboarding(page, { snoozeConnectPrompt: true });
+
+  const uniqueEmail = uniqueJourneyEmail(accountEmail);
+
+  await signUpJourneyAccount(page, {
+    name: "Staging Journey",
+    email: uniqueEmail,
+    password,
   });
-
-  const uniqueEmail = accountEmail.includes("@")
-    ? accountEmail.replace("@", `+journey${Date.now()}@`)
-    : `journey.${Date.now()}@compasscaltest.invalid`;
-  const password = accountPassword;
-
-  await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Name").fill("Staging Journey");
-  await page.getByLabel("Email").fill(uniqueEmail);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign up" }).click();
 
   await expect(
     page.getByRole("dialog", { name: /welcome back|trial/i }),
@@ -112,20 +88,10 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
   await replaceSettled;
   await expectTimedEventVisible(page, editedTitle);
 
-  await page.getByRole("button", { name: "Open settings" }).click();
-  await page.getByRole("button", { name: "Log out" }).click();
-  await page
-    .getByRole("dialog", { name: /log out/i })
-    .getByRole("button", {
-      name: "Log out",
-    })
-    .click();
+  await logOutOfJourneyAccount(page);
   await expect(page.getByText(/logged out/i)).toBeVisible({ timeout: 30_000 });
 
-  await page.goto("/week?auth=login", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Email").fill(uniqueEmail);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Log in" }).click();
+  await logInJourneyAccount(page, { email: uniqueEmail, password });
   await page
     .locator("#mainGrid")
     .waitFor({ state: "visible", timeout: 60_000 });
@@ -138,17 +104,5 @@ test(`staging full journey (${provider || "unset"})`, async ({ page }) => {
     .catch(() => undefined);
   await expectTimedEventVisible(page, editedTitle, 60_000);
 
-  await page.getByRole("button", { name: "Open settings" }).click();
-  const settingsDialog = page.getByRole("dialog", { name: "Settings" });
-  await expect(settingsDialog).toBeVisible({ timeout: 15_000 });
-  await settingsDialog.getByRole("button", { name: "Delete account" }).click();
-  const deleteDialog = page.getByRole("dialog", {
-    name: /delete your compass account/i,
-  });
-  await expect(deleteDialog).toBeVisible({ timeout: 15_000 });
-  await deleteDialog.getByLabel(/type/i).fill("Delete my Compass account");
-  await deleteDialog.getByRole("button", { name: "Delete account" }).click();
-  await expect(page.getByText(/until our sails cross paths/i)).toBeVisible({
-    timeout: 60_000,
-  });
+  await deleteJourneyAccount(page);
 });
