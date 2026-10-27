@@ -2,6 +2,42 @@ import XCTest
 
 final class EventFormRecurrenceTests: XCTestCase {
     @MainActor
+    func testRecurrenceJumpMovesRealFocusAndRepeatedJumpActivatesInBothThemes() {
+        for theme in ["light-beach", "dark-abyss"] {
+            let app = XCUIApplication.compassUITest()
+            app.launchArguments += [
+                "-COMPASS_FIXTURE", "demo", "-compass.theme", theme,
+            ]
+            app.launch()
+            let window = app.windows["Compass"]
+            XCTAssertTrue(window.waitForExistence(timeout: 15))
+            window.typeKey("c", modifierFlags: [])
+            let toggle = window.buttons["compass-event-form-recurrence-toggle"]
+            XCTAssertTrue(toggle.waitForExistence(timeout: 8))
+            window.typeKey("4", modifierFlags: [.command])
+            window.typeKey(.space, modifierFlags: [])
+            let frequency = window.descendants(matching: .any)["compass-event-form-recurrence-frequency"]
+            XCTAssertTrue(frequency.waitForExistence(timeout: 5))
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            window.typeKey(.tab, modifierFlags: [.shift])
+            XCTAssertTrue(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, toggle.debugDescription)
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            window.typeKey("4", modifierFlags: [.command])
+            XCTAssertTrue(toggle.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, toggle.debugDescription)
+            let evidence = XCTAttachment(screenshot: window.screenshot())
+            evidence.name = "Recurrence keyboard focus, \(theme)"
+            evidence.lifetime = .keepAlways
+            add(evidence)
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertTrue(frequency.waitForNonExistence(timeout: 5))
+            XCTAssertTrue(window.descendants(matching: .any)["compass-event-form"].exists)
+            app.terminate()
+        }
+    }
+
+    @MainActor
     func testRecurrenceEndDateCanBeEnabledAndRemoved() {
         let app = XCUIApplication.compassUITest()
         app.launchArguments += [

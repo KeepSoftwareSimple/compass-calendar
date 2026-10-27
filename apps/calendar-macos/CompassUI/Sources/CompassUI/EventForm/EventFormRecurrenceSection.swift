@@ -6,10 +6,11 @@ struct EventFormRecurrenceSection: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
-    let focusField: EventFormField
 
     @State private var pattern: RecurrenceRuleLine.Pattern = .init(frequency: .daily)
     @State private var hasRecurrence: Bool = false
+    private enum Control: Hashable { case toggle, frequency }
+    @FocusState private var focusedControl: Control?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -28,6 +29,17 @@ struct EventFormRecurrenceSection: View {
             .buttonStyle(.plain)
             .accessibilityLabel(hasRecurrence ? "Repeat" : "Edit recurrence")
             .accessibilityIdentifier("compass-event-form-recurrence-toggle")
+            .focusable()
+            .focusEffectDisabled()
+            .focused($focusedControl, equals: .toggle)
+            .onKeyPress(.return) {
+                toggleRecurrence(!hasRecurrence)
+                return .handled
+            }
+            .onKeyPress(.space) {
+                toggleRecurrence(!hasRecurrence)
+                return .handled
+            }
 
             if hasRecurrence {
                 Picker("Frequency", selection: $pattern.frequency) {
@@ -37,6 +49,8 @@ struct EventFormRecurrenceSection: View {
                     Text("Yearly").tag(RecurrenceRuleLine.Frequency.yearly)
                 }
                 .pickerStyle(.menu)
+                .focusable()
+                .focused($focusedControl, equals: .frequency)
                 .accessibilityIdentifier("compass-event-form-recurrence-frequency")
                 .onChange(of: pattern.frequency) { _, _ in syncDraftRecurrence() }
 
@@ -94,14 +108,33 @@ struct EventFormRecurrenceSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onKeyPress(keys: [.tab]) { press in
+            guard hasRecurrence else { return .ignored }
+            if focusedControl == .toggle, press.modifiers.isEmpty {
+                focusedControl = .frequency
+                return .handled
+            }
+            if focusedControl == .frequency, press.modifiers == .shift {
+                focusedControl = .toggle
+                return .handled
+            }
+            return .ignored
+        }
         .overlay {
-            if focusField == .recurrence {
+            if focusedControl == .toggle {
                 RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
                     .stroke(theme.accentColor, lineWidth: 1)
                     .padding(-4)
             }
         }
         .onAppear { reloadFromDraft() }
+        .onChange(of: model.eventFormRecurrenceFocusRequest) { _, _ in
+            // The parent releases title focus for the same request first.
+            DispatchQueue.main.async {
+                guard model.isEventFormVisible, model.eventFormFocusedField == .recurrence else { return }
+                focusedControl = .toggle
+            }
+        }
         .onChange(of: draft.recurrence) { _, _ in reloadFromDraft() }
         .onChange(of: draft.schedule.start) { _, _ in syncDraftRecurrence() }
     }

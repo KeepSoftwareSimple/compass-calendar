@@ -613,6 +613,12 @@ final class NativeGridKeyboardRouter {
             }
         }
 
+        // Form controls own Tab traversal, including Shift+Tab. Do not dispatch
+        // the grid's edge-cycling shortcut while a form is open.
+        if keyEvent.key == .named(.tab), keyEvent.modifiers.isEmpty || keyEvent.modifiers == [.shift] {
+            return false
+        }
+
         // Return belongs to the current field or control. Only Command+Return saves.
         if keyEvent.key == .named(.enter), keyEvent.modifiers.isEmpty { return false }
         if let textView = NSApp.keyWindow?.firstResponder as? NSTextView, textView.isEditable {

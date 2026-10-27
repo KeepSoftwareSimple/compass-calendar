@@ -130,7 +130,7 @@ production.
 
 There is no `POST /api/billing/trial/start`. New accounts are
 `awaiting_checkout` until Checkout completes; Checkout grants the 7-day trial.
-Sessions use `ui_mode: "embedded"` and `redirect_on_completion: "never"`, so
+Sessions use `ui_mode: "embedded_page"` and `redirect_on_completion: "never"`, so
 Checkout stays inside Compass. Redirect-based payment methods are therefore
 unavailable by design.
 

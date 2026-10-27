@@ -61,6 +61,27 @@ export function isSyntheticAccountEmail(
   );
 }
 
+/**
+ * Inboxes that skip Stripe billing gates and persisted automation flags.
+ * Unlike {@link isSyntheticAccountEmail}, the Playwright-only
+ * `@compasscaltest.invalid` domain is excluded unless it carries a `+journey`
+ * tag so staging can exercise the real trial funnel without polluting prod
+ * analytics (those addresses stay synthetic in PostHog via
+ * `isSyntheticAccountEmail`).
+ */
+export function isBillingAutomationBypassEmail(
+  email: string,
+  journeyBaseEmails: readonly string[] = [],
+): boolean {
+  const normalized = normalizeEmail(email);
+  if (!normalized) return false;
+  if (isInternalOrTestEmail(normalized)) return true;
+  if (SYNTHETIC_JOURNEY_LOCAL_TAG.test(localPart(normalized))) return true;
+  return journeyBaseEmails.some((base) =>
+    emailMatchesSyntheticJourneyBase(normalized, base),
+  );
+}
+
 export function isSyntheticAccountHeaderValue(
   value: string | string[] | undefined,
 ): boolean {

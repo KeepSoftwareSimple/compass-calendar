@@ -9,6 +9,7 @@ const dependencies = {
   refreshUserMetadata: mock(),
   resolveShouldSyncPendingLocalEvents: mock(),
   syncPendingLocalEvents: mock(),
+  waitForAuthSession: mock(() => Promise.resolve(true)),
   useSession: mock(),
 };
 
@@ -24,8 +25,10 @@ describe("useCompleteAuthentication", () => {
     dependencies.refreshUserMetadata.mockClear();
     dependencies.syncPendingLocalEvents.mockClear();
     dependencies.resolveShouldSyncPendingLocalEvents.mockClear();
+    dependencies.waitForAuthSession.mockClear();
     dependencies.useSession.mockClear();
 
+    dependencies.waitForAuthSession.mockResolvedValue(true);
     dependencies.useSession.mockReturnValue({
       authenticated: false,
       setAuthenticated,
@@ -33,6 +36,40 @@ describe("useCompleteAuthentication", () => {
     dependencies.refreshUserMetadata.mockResolvedValue(true);
     dependencies.resolveShouldSyncPendingLocalEvents.mockResolvedValue(true);
     dependencies.syncPendingLocalEvents.mockResolvedValue(true);
+  });
+
+  it("does not mark authenticated until the session wait resolves", async () => {
+    let resolveWait: (ready: boolean) => void = () => {};
+    dependencies.waitForAuthSession.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        resolveWait = resolve;
+      }),
+    );
+    const useCompleteAuthentication =
+      createUseCompleteAuthentication(dependencies);
+    const { result } = renderHook(() => useCompleteAuthentication());
+
+    const completion = result.current({ email: "test@example.com" });
+
+    await Promise.resolve();
+    expect(setAuthenticated).not.toHaveBeenCalled();
+
+    resolveWait(true);
+    await completion;
+
+    expect(setAuthenticated).toHaveBeenCalledWith(true);
+  });
+
+  it("throws when the SuperTokens session never becomes readable", async () => {
+    dependencies.waitForAuthSession.mockResolvedValue(false);
+    const useCompleteAuthentication =
+      createUseCompleteAuthentication(dependencies);
+    const { result } = renderHook(() => useCompleteAuthentication());
+
+    await expect(result.current({ email: "test@example.com" })).rejects.toThrow(
+      /session did not start/i,
+    );
+    expect(setAuthenticated).not.toHaveBeenCalled();
   });
 
   it("skips local event sync when billing is read-only", async () => {
