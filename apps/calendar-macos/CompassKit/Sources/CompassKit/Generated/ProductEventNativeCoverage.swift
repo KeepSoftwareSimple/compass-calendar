@@ -60,6 +60,8 @@ public enum ProductEventNativeCoverage: Sendable {
         .connectPromptDismissed,
         .trialConverted,
         .trialCelebrationShown,
+        .checkoutOpened,
+        .checkoutBack,
         .billingGateShown,
         .billingGateCtaClicked,
         .billingGateShortcutConverted,
