@@ -37,14 +37,17 @@ struct EventFormRsvpSection: View {
                         .focusable()
                         .focusEffectDisabled()
                         .focused($focusedResponse, equals: status)
-                        .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
-                            guard press.modifiers.isEmpty,
-                                let index = options.firstIndex(where: { $0.0 == status }) else { return .ignored }
-                            let delta = press.key == .leftArrow || press.key == .upArrow ? -1 : 1
+                        .onMoveCommand { direction in
+                            guard let index = options.firstIndex(where: { $0.0 == status }) else { return }
+                            let delta: Int
+                            switch direction {
+                            case .left, .up: delta = -1
+                            case .right, .down: delta = 1
+                            @unknown default: return
+                            }
                             let next = options[(index + delta + options.count) % options.count].0
                             focusedResponse = next
                             respond(next)
-                            return .handled
                         }
                         .onKeyPress(.return) { respond(status); return .handled }
                         .onKeyPress(.space) { respond(status); return .handled }
