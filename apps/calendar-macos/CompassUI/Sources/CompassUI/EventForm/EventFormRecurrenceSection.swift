@@ -32,11 +32,6 @@ struct EventFormRecurrenceSection: View {
             .focusable()
             .focusEffectDisabled()
             .focused($focusedControl, equals: .toggle)
-            .onKeyPress(keys: [.tab]) { press in
-                guard hasRecurrence, press.modifiers.isEmpty else { return .ignored }
-                focusedControl = .frequency
-                return .handled
-            }
             .onKeyPress(.return) {
                 toggleRecurrence(!hasRecurrence)
                 return .handled
@@ -56,11 +51,6 @@ struct EventFormRecurrenceSection: View {
                 .pickerStyle(.menu)
                 .focusable()
                 .focused($focusedControl, equals: .frequency)
-                .onKeyPress(keys: [.tab]) { press in
-                    guard press.modifiers == .shift else { return .ignored }
-                    focusedControl = .toggle
-                    return .handled
-                }
                 .accessibilityIdentifier("compass-event-form-recurrence-frequency")
                 .onChange(of: pattern.frequency) { _, _ in syncDraftRecurrence() }
 
@@ -118,6 +108,18 @@ struct EventFormRecurrenceSection: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .onKeyPress(keys: [.tab]) { press in
+            guard hasRecurrence else { return .ignored }
+            if focusedControl == .toggle, press.modifiers.isEmpty {
+                focusedControl = .frequency
+                return .handled
+            }
+            if focusedControl == .frequency, press.modifiers == .shift {
+                focusedControl = .toggle
+                return .handled
+            }
+            return .ignored
+        }
         .overlay {
             if focusedControl == .toggle {
                 RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
