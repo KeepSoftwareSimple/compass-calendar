@@ -4,28 +4,22 @@ import {
   createEventTitle,
   expectTimedEventVisible,
   fillTitleAndSaveEventForm,
+  openTimedEventFormWithKeyboard,
 } from "../utils/event-test-utils";
+import {
+  deleteJourneyAccount,
+  isJourneyEnabled,
+  journeyCredentials,
+  journeyProvider,
+  logInJourneyAccount,
+  logOutOfJourneyAccount,
+  openJourneySettings,
+  seedJourneyOnboarding,
+  signUpJourneyAccount,
+  uniqueJourneyEmail,
+} from "./journey-leg.util";
 
-const provider = (process.env.PROD_JOURNEY_PROVIDER ?? "").toLowerCase();
-
-const requireEnv = (name: string): string => {
-  const value = process.env[name]?.trim();
-  if (!value) {
-    throw new Error(
-      `Missing ${name}. Add it to the prod-journey GitHub Environment before this leg can run.`,
-    );
-  }
-  return value;
-};
-
-const credentialEnvPrefix = (): string => {
-  if (provider === "google") return "PROD_JOURNEY_GOOGLE";
-  if (provider === "microsoft") return "PROD_JOURNEY_MICROSOFT";
-  if (provider === "apple") return "PROD_JOURNEY_APPLE";
-  throw new Error(
-    `PROD_JOURNEY_PROVIDER must be google, microsoft, or apple (got "${provider}").`,
-  );
-};
+const provider = journeyProvider("PROD");
 
 test.use({ storageState: { cookies: [], origins: [] } });
 test.use({ viewport: { width: 1280, height: 800 } });
@@ -37,38 +31,15 @@ test.use({
 
 test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   test.skip(
-    process.env.PROD_JOURNEY_ENABLED !== "1",
+    !isJourneyEnabled("PROD"),
     "Set PROD_JOURNEY_ENABLED=1 to run against production",
   );
 
-  const prefix = credentialEnvPrefix();
-  const accountEmail = requireEnv(`${prefix}_EMAIL`);
-  const accountPassword = requireEnv(`${prefix}_PASSWORD`);
+  const { accountEmail, password } = journeyCredentials("PROD");
 
-  await page.addInitScript(() => {
-    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-    localStorage.setItem(
-      "compass.onboarding.has-seen-shortcut-showcase",
-      "true",
-    );
-    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-  });
+  await seedJourneyOnboarding(page);
 
-  const uniqueEmail = accountEmail.includes("@")
-    ? accountEmail.replace("@", `+journey${Date.now()}@`)
-    : `journey.${Date.now()}@compasscaltest.invalid`;
-  const password = accountPassword;
-
-  await page.goto("/week?auth=signup", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Name").fill("Prod Journey");
-  await page.getByLabel("Email").fill(uniqueEmail);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign up" }).click();
-
-  const trialDialog = page.getByRole("dialog", {
-    name: "Start your 7-day free trial",
-  });
-  await expect(trialDialog).toBeVisible({ timeout: 120_000 });
+  const uniqueEmail = uniqueJourneyEmail(accountEmail);
 
   let checkoutClientSecret = "";
   page.on("response", async (response) => {
@@ -79,9 +50,20 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
       const body = (await response.json()) as { clientSecret?: string };
       checkoutClientSecret = body.clientSecret ?? "";
     } catch {
-      // ignore
+      // A body we cannot read leaves the poll below to time out and report.
     }
   });
+
+  await signUpJourneyAccount(page, {
+    name: "Prod Journey",
+    email: uniqueEmail,
+    password,
+  });
+
+  const trialDialog = page.getByRole("dialog", {
+    name: "Start your 7-day free trial",
+  });
+  await expect(trialDialog).toBeVisible({ timeout: 120_000 });
 
   await expect
     .poll(() => checkoutClientSecret.length > 0, { timeout: 120_000 })
@@ -100,45 +82,30 @@ test(`prod full journey (${provider || "unset"})`, async ({ page }) => {
   await expect(trialDialog).toBeHidden({ timeout: 180_000 });
 
   const createdTitle = createEventTitle("Prod journey create");
-  await page.keyboard.press("c");
+  await openTimedEventFormWithKeyboard(page);
   await fillTitleAndSaveEventForm(page, createdTitle);
   await expectTimedEventVisible(page, createdTitle);
 
-  await page.getByRole("button", { name: "Settings" }).click();
-  await page.getByRole("button", { name: "Cancel subscription" }).click();
+  const settings = await openJourneySettings(page);
+  await settings.getByRole("button", { name: "Cancel subscription" }).click();
   await page
-    .getByRole("dialog")
+    .getByRole("dialog", { name: /cancel/i })
     .getByRole("button", { name: "Cancel subscription" })
     .click();
   await expect(page.getByText(/canceled|cancelled/i)).toBeVisible({
     timeout: 60_000,
   });
+  await page.keyboard.press("Escape");
 
   const editedTitle = createEventTitle("Prod journey edit");
-  await page.getByRole("button", { name: createdTitle }).click();
-  await page.getByLabel("Title").fill(editedTitle);
-  await page.getByRole("button", { name: "Save" }).click();
+  await page.getByRole("button", { name: createdTitle }).last().click();
+  await fillTitleAndSaveEventForm(page, editedTitle);
   await expectTimedEventVisible(page, editedTitle);
 
-  await page.getByRole("button", { name: "Log out" }).click();
-  await page
-    .getByRole("dialog", { name: /log out/i })
-    .getByRole("button", { name: "Log out" })
-    .click();
+  await logOutOfJourneyAccount(page);
 
-  await page.goto("/week?auth=login", { waitUntil: "domcontentloaded" });
-  await page.getByLabel("Email").fill(uniqueEmail);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Log in" }).click();
-  await expectTimedEventVisible(page, editedTitle);
+  await logInJourneyAccount(page, { email: uniqueEmail, password });
+  await expectTimedEventVisible(page, editedTitle, 60_000);
 
-  await page.getByRole("button", { name: "Delete account" }).click();
-  const deleteDialog = page.getByRole("dialog", {
-    name: /delete your account/i,
-  });
-  await deleteDialog.getByRole("textbox").fill("delete my compass account");
-  await deleteDialog.getByRole("button", { name: "Delete account" }).click();
-  await expect(page.getByText(/until our sails cross paths/i)).toBeVisible({
-    timeout: 60_000,
-  });
+  await deleteJourneyAccount(page);
 });
