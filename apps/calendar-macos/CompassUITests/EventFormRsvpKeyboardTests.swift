@@ -21,16 +21,20 @@ final class EventFormRsvpKeyboardTests: XCTestCase {
             evidence.lifetime = .keepAlways
             add(evidence)
             window.typeKey(.rightArrow, modifierFlags: [])
+            let afterArrow = XCTAttachment(screenshot: app.screenshot())
+            afterArrow.name = "RSVP after arrow, \(theme)"
+            afterArrow.lifetime = .keepAlways
+            add(afterArrow)
             let scope = window.descendants(matching: .any)["compass-rsvp-scope-dialog"]
-            XCTAssertTrue(scope.waitForExistence(timeout: 5), window.debugDescription)
+            XCTAssertTrue(scope.waitForExistence(timeout: 5), app.debugDescription)
             window.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(scope.waitForNonExistence(timeout: 5))
             window.typeKey(.space, modifierFlags: [])
-            XCTAssertTrue(scope.waitForExistence(timeout: 5), window.debugDescription)
+            XCTAssertTrue(scope.waitForExistence(timeout: 5), app.debugDescription)
             window.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(scope.waitForNonExistence(timeout: 5))
             window.typeKey(.return, modifierFlags: [])
-            XCTAssertTrue(scope.waitForExistence(timeout: 5), window.debugDescription)
+            XCTAssertTrue(scope.waitForExistence(timeout: 5), app.debugDescription)
             window.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(scope.waitForNonExistence(timeout: 5))
             window.typeKey("e", modifierFlags: [])
