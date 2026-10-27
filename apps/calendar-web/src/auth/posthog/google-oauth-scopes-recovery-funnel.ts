@@ -1,26 +1,29 @@
 import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 
+function trackGoogleOAuthScopesRecovery(
+  step:
+    | "google_oauth_scopes_recovery_viewed"
+    | "google_oauth_scopes_recovery_retry_clicked"
+    | "google_oauth_scopes_recovery_succeeded",
+  extra?: { missing_scope_count: number },
+): void {
+  track(step, { provider: "google", ...extra });
+  trackSignupStep(step, { method: "google" });
+}
+
 export function trackGoogleOAuthScopesRecoveryViewed(): void {
-  track("google_oauth_scopes_recovery_viewed", { provider: "google" });
-  trackSignupStep("google_oauth_scopes_recovery_viewed", { method: "google" });
+  trackGoogleOAuthScopesRecovery("google_oauth_scopes_recovery_viewed");
 }
 
 export function trackGoogleOAuthScopesRecoveryRetryClicked(
   missingScopeCount: number,
 ): void {
-  track("google_oauth_scopes_recovery_retry_clicked", {
-    provider: "google",
+  trackGoogleOAuthScopesRecovery("google_oauth_scopes_recovery_retry_clicked", {
     missing_scope_count: missingScopeCount,
-  });
-  trackSignupStep("google_oauth_scopes_recovery_retry_clicked", {
-    method: "google",
   });
 }
 
 export function trackGoogleOAuthScopesRecoverySucceeded(): void {
-  track("google_oauth_scopes_recovery_succeeded", { provider: "google" });
-  trackSignupStep("google_oauth_scopes_recovery_succeeded", {
-    method: "google",
-  });
+  trackGoogleOAuthScopesRecovery("google_oauth_scopes_recovery_succeeded");
 }

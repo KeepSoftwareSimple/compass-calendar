@@ -161,14 +161,11 @@ export async function completeProviderAuthorization({
 
   const requiredScopes = PROVIDER_AUTH_SCOPES_REQUIRED[provider];
   const grantedScopes = new Set((params.get("scope") ?? "").split(" "));
-  const isMissingRequiredScope = requiredScopes.some(
+  const missingScopes = requiredScopes.filter(
     (scope) => !grantedScopes.has(scope),
   );
 
-  if (isMissingRequiredScope) {
-    const missingScopes = requiredScopes.filter(
-      (scope) => !grantedScopes.has(scope),
-    );
+  if (missingScopes.length > 0) {
     // The message is no longer shown as a toast: the missing-permissions
     // modal explains this failure instead, so this falls through to the
     // default per-provider message that other callers still read.
