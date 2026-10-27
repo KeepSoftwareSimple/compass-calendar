@@ -3,8 +3,7 @@ import { E2E_APP_CONFIG_VERSION } from "../utils/test-constants";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
-const TRIAL_ASK_PRICE_LINE =
-  "$7.99/mo after 7 days. Cancel anytime in Settings.";
+const TRIAL_ASK_CHARGE_LINE = /No charge until .+\. Cancel anytime\./;
 const SETTINGS_BILLING_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime.";
 
 const jsonResponse = (body: unknown) => ({
@@ -128,7 +127,7 @@ test("capture trial flow screenshots", async ({ page }) => {
     name: "Start your 7-day free trial",
   });
   await expect(signupDialog).toBeVisible({ timeout: 15000 });
-  await expect(signupDialog.getByText(TRIAL_ASK_PRICE_LINE)).toBeVisible();
+  await expect(signupDialog.getByText(TRIAL_ASK_CHARGE_LINE)).toBeVisible();
   await signupDialog.screenshot({
     path: test.info().outputPath("trial-step-ask.png"),
   });

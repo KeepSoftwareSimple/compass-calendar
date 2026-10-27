@@ -46,8 +46,6 @@ const GATE_CONFIG = {
   },
 };
 
-const TRIAL_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime in Settings.";
-
 const renderGate = (status = "awaiting_checkout") => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -117,10 +115,12 @@ describe("BillingGateModal", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows the trial price line before subscription data loads", () => {
+  it("shows the trial charge date line", () => {
     renderGate();
 
-    expect(screen.getByText(TRIAL_PRICE_LINE)).toBeInTheDocument();
+    expect(
+      screen.getByText(/No charge until .+\. Cancel anytime\./),
+    ).toBeInTheDocument();
   });
 
   it("opens Checkout with S, returns to the buttons with Back, and does not dismiss on Escape", async () => {
