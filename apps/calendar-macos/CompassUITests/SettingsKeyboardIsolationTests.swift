@@ -12,7 +12,7 @@ final class SettingsKeyboardIsolationTests: XCTestCase {
             let accounts = window.buttons["Accounts"]
             XCTAssertTrue(accounts.waitForExistence(timeout: 8))
             let focused = NSPredicate { _, _ in accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true }
-            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)], timeout: 5), .completed)
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)], timeout: 5), .completed, accounts.debugDescription)
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Settings navigation focus, \(theme)"
             evidence.lifetime = .keepAlways
@@ -20,7 +20,7 @@ final class SettingsKeyboardIsolationTests: XCTestCase {
             window.typeKey(.tab, modifierFlags: [])
             XCTAssertFalse(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
             window.typeKey(.tab, modifierFlags: [.shift])
-            XCTAssertTrue(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            XCTAssertTrue(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, accounts.debugDescription)
             window.typeKey(.escape, modifierFlags: [])
             XCTAssertTrue(window.descendants(matching: .any)["compass-native-settings"].waitForNonExistence(timeout: 5))
             app.terminate()
