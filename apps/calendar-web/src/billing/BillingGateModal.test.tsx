@@ -101,12 +101,12 @@ describe("BillingGateModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows shortcut keycaps and focuses Start free trial", () => {
+  it("shows shortcut keycaps without autofocusing Start free trial", () => {
     renderGate();
 
     expect(
       screen.getByRole("button", { name: TRIAL_START_PRIMARY_LABEL }),
-    ).toHaveFocus();
+    ).not.toHaveFocus();
     expect(
       within(
         screen.getByRole("button", { name: TRIAL_START_PRIMARY_LABEL }),
@@ -225,16 +225,25 @@ describe("BillingGateModal", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps focus on Start free trial when tabbing", async () => {
+  it("does not open checkout on plain Enter", async () => {
     const user = userEvent.setup();
     renderGate();
 
-    const start = screen.getByRole("button", {
-      name: TRIAL_START_PRIMARY_LABEL,
-    });
-    expect(start).toHaveFocus();
+    await user.keyboard("{Enter}");
 
-    await user.tab();
-    expect(start).toHaveFocus();
+    expect(
+      screen.queryByRole("button", { name: "Complete checkout" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("opens checkout with S", async () => {
+    const user = userEvent.setup();
+    renderGate();
+
+    await user.keyboard("s");
+
+    expect(
+      screen.getByRole("button", { name: "Complete checkout" }),
+    ).toBeInTheDocument();
   });
 });

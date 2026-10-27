@@ -26,6 +26,7 @@ import {
 } from "@web/billing/trial-step-request";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { PixelPirateScouting } from "@web/components/WelcomeModal/PixelPirateScouting";
 import { START_TRIAL_SHORTCUT_KEY } from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -43,6 +44,8 @@ type TrialStartAskProps = {
   trackSignupView?: boolean;
   onBeforeOpenCheckout?: () => void;
   priceLineContext?: TrialStartPriceLineContext;
+  /** OverlayPanel seats focus here so plain Enter does not activate Start. */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 };
 
 /**
@@ -59,6 +62,7 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
   trackSignupView = false,
   onBeforeOpenCheckout,
   priceLineContext = "default",
+  initialFocusRef,
 }) => {
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
@@ -109,6 +113,12 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
 
   return (
     <div className="flex w-full flex-col items-center gap-4">
+      <div
+        ref={initialFocusRef as RefObject<HTMLDivElement>}
+        aria-hidden
+        className="sr-only outline-none"
+        tabIndex={-1}
+      />
       {showMascot ? <PixelPirateScouting className="h-14 w-14" /> : null}
       {showTitle && title ? (
         <h1 className="font-medium text-xl">{title}</h1>
@@ -124,13 +134,25 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
           ref={primaryButtonRef}
           className="c-button c-button-primary c-button-elevated inline-flex items-center justify-center rounded-full px-6 py-2"
           onClick={openCheckout}
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.metaKey &&
+              !event.ctrlKey &&
+              !event.altKey &&
+              !event.shiftKey
+            ) {
+              event.preventDefault();
+            }
+          }}
           onPointerEnter={focusOnPointerEnter}
           type="button"
         >
           {TRIAL_START_PRIMARY_LABEL}
-          <ShortcutHint className="ml-2">
+          <ShortcutHint className="ml-2 pointer-coarse:hidden">
             {START_TRIAL_SHORTCUT_KEY}
           </ShortcutHint>
+          <ShortcutKeys className="ml-2" keys={["Mod", "Enter"]} />
         </button>
       </div>
     </div>
