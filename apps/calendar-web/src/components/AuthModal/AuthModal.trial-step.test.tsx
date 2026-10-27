@@ -217,6 +217,31 @@ describe("AuthModal signup trial step", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides the Pricing, Terms, and Privacy footer on the trial step", async () => {
+    await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
+    mockUseSession.mockReturnValue({
+      authenticated: true,
+      userId: "user-1",
+      setAuthenticated: mock(),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("dialog", { name: "Start your 7-day free trial" }),
+      ).toBeInTheDocument();
+    });
+
+    expect(
+      screen.queryByRole("link", { name: /Pricing/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Terms/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Privacy/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("returns to the calendar after closing the trial step", async () => {
     const user = userEvent.setup();
     const { router } = await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
