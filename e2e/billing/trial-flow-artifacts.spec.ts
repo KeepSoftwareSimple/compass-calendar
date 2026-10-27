@@ -190,9 +190,7 @@ test("capture trial flow screenshots", async ({ page }) => {
   const settingsTrialAsk = page.getByRole("dialog", {
     name: "Start your free trial",
   });
-  await expect(
-    settingsTrialAsk.getByText(SETTINGS_BILLING_PRICE_LINE),
-  ).toBeVisible();
+  await expect(settingsTrialAsk.getByText(TRIAL_ASK_CHARGE_LINE)).toBeVisible();
   await settingsTrialAsk.screenshot({
     path: test.info().outputPath("trial-follow-up-settings-ask.png"),
   });
