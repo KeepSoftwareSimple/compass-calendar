@@ -96,7 +96,6 @@ describe("BillingController", () => {
         sessionReq("507f1f77bcf86cd799439011"),
         res,
       );
-      await new Promise((resolve) => setImmediate(resolve));
       return res;
     };
 
