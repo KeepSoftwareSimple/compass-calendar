@@ -1,9 +1,23 @@
-import { expect, test } from "@playwright/test";
+import { expect, type FrameLocator, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
 const TRIAL_PRICE_LINE =
   /\$\d+\.\d{2}\/mo after 7 days\. Cancel anytime in Settings\./;
+
+async function fillStripeTrialCheckout(
+  stripeFrame: FrameLocator,
+): Promise<void> {
+  await stripeFrame.getByLabel("Card number").fill("4242424242424242");
+  await stripeFrame.getByLabel("Expiration").fill("12/34");
+  await stripeFrame.getByRole("textbox", { name: /CVC/i }).fill("123");
+  await stripeFrame.getByLabel(/Cardholder name/i).fill("Staging Trial");
+  await stripeFrame.getByLabel("Country or region").selectOption("US");
+  await stripeFrame.getByLabel(/Address line 1/i).fill("123 Main St");
+  await stripeFrame.getByLabel(/City/i).fill("Denver");
+  await stripeFrame.getByLabel(/^State$/i).selectOption("CO");
+  await stripeFrame.getByLabel("ZIP").fill("80202");
+}
 
 test("staging signup trial step with live Stripe embedded checkout", async ({
   page,
@@ -95,10 +109,7 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
   const stripeFrame = page
     .frameLocator('iframe[name*="stripe"], iframe[src*="stripe"]')
     .first();
-  await stripeFrame.getByLabel("Card number").fill("4242424242424242");
-  await stripeFrame.getByLabel("Expiration").fill("12/34");
-  await stripeFrame.getByRole("textbox", { name: /CVC/i }).fill("123");
-  await stripeFrame.getByLabel("ZIP").fill("12345");
+  await fillStripeTrialCheckout(stripeFrame);
   await expect(
     stripeFrame.getByTestId("hosted-payment-submit-button"),
   ).toBeVisible();
