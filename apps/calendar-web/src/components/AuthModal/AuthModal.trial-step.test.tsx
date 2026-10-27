@@ -231,9 +231,15 @@ describe("AuthModal signup trial step", () => {
       ).toBeInTheDocument();
     });
 
-    expect(screen.queryByRole("link", { name: /Pricing/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Terms/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Privacy/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Pricing/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Terms/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: /Privacy/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("returns to the calendar after closing the trial step", async () => {
