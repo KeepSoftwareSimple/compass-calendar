@@ -1,11 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { type FC, Suspense, useCallback, useEffect, useRef } from "react";
+import { type FC, Suspense, useCallback, useRef } from "react";
 import { BillingApi } from "@web/api/billing.api";
 import { fetchEmbeddedCheckoutSecret } from "@web/billing/checkout-client-secret";
 import { completeCheckoutSession } from "@web/billing/complete-checkout-session";
 import { getEmbeddedCheckoutComponent } from "@web/billing/embedded-checkout/embedded-checkout.seam";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
+import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 export const EMBEDDED_CHECKOUT_PANEL_CLASSNAME =
   "max-w-full gap-4 border border-border bg-surface text-center text-text shadow-xl";
@@ -33,17 +34,18 @@ export const EmbeddedCheckoutPanel: FC<EmbeddedCheckoutPanelProps> = ({
 }) => {
   const backButtonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!onBack) return;
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.shiftKey) return;
-      event.preventDefault();
-      event.stopPropagation();
-      onBack();
-    };
-    window.addEventListener("keydown", handleEscape, true);
-    return () => window.removeEventListener("keydown", handleEscape, true);
-  }, [onBack]);
+  useAppShortcut(
+    "Escape",
+    () => {
+      onBack?.();
+    },
+    {
+      enabled: Boolean(onBack),
+      ignoreAppLock: true,
+      preventDefault: true,
+      stopPropagation: true,
+    },
+  );
   const queryClient = useQueryClient();
   const EmbeddedCheckout = getEmbeddedCheckoutComponent();
   const onComplete = useCallback(() => {
