@@ -2,6 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1280, height: 800 } });
 
+const TRIAL_PRICE_LINE =
+  /\$\d+\.\d{2}\/mo after 7 days\. Cancel anytime in Settings\./;
+
 test("staging signup trial step with live Stripe embedded checkout", async ({
   page,
 }) => {
@@ -55,38 +58,87 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
   await page.getByLabel("Password").fill("CompassStagingTrial1!");
   await page.getByRole("button", { name: "Sign up" }).click();
 
+  await expect(page.getByLabel("Password")).toHaveCount(0, {
+    timeout: 120_000,
+  });
+
+  const exploreBanner = page.getByRole("status").filter({
+    hasText: "Start your 7-day free trial to plan your week.",
+  });
+  await expect(exploreBanner).toBeVisible({ timeout: 120_000 });
   await expect(
-    page.getByRole("button", { name: /Start free trial/i }),
-  ).toBeVisible({ timeout: 120_000 });
-  await page.getByRole("button", { name: /Start free trial/i }).click();
+    exploreBanner.getByRole("button", { name: /Start free trial/i }),
+  ).toBeVisible();
+
+  await page.goto(`${baseUrl}/week?auth=trial`, {
+    waitUntil: "domcontentloaded",
+  });
 
   const dialog = page.getByRole("dialog", {
     name: "Start your 7-day free trial",
   });
   await expect(dialog).toBeVisible({ timeout: 120_000 });
-  const terms = dialog.getByText(
-    /Card required\. No charge until the trial ends\.|7-day free trial\. Card required, no charge until it ends\./,
-  );
-  await expect(terms).toBeVisible({ timeout: 30000 });
-  await expect(dialog.getByRole("button", { name: "Back" })).toBeVisible();
+  await expect(dialog.getByText(TRIAL_PRICE_LINE)).toBeVisible({
+    timeout: 30_000,
+  });
+  await dialog.getByRole("button", { name: "Start free trial" }).click();
+
+  await expect(dialog.getByRole("button", { name: "Back" })).toBeVisible({
+    timeout: 120_000,
+  });
 
   await expect
-    .poll(() => checkoutClientSecret.length > 0, { timeout: 120000 })
+    .poll(() => checkoutClientSecret.length > 0, { timeout: 120_000 })
     .toBe(true);
   expect(checkoutClientSecret).toMatch(/^cs_/);
 
   const stripeFrame = page
     .frameLocator('iframe[name*="stripe"], iframe[src*="stripe"]')
     .first();
-  await stripeFrame.locator("input").first().waitFor({ timeout: 120000 });
-
+  await stripeFrame.getByLabel("Card number").fill("4242424242424242");
+  await stripeFrame.getByLabel("Expiration").fill("12/34");
+  await stripeFrame.getByRole("textbox", { name: /CVC/i }).fill("123");
+  await stripeFrame.getByLabel("ZIP").fill("12345");
   await expect(
-    dialog.locator("button.c-button-primary", { hasText: "Start free trial" }),
-  ).toHaveCount(0);
+    stripeFrame.getByTestId("hosted-payment-submit-button"),
+  ).toBeVisible();
 
+  await dialog.screenshot({
+    path: "/opt/cursor/artifacts/signup-trial-step-staging-stripe-1280.png",
+  });
   await dialog.screenshot({
     path: test.info().outputPath("signup-trial-step-staging-stripe-1280.png"),
   });
+
+  if (process.env.STAGING_TRIAL_SUBMIT_CHECKOUT === "1") {
+    await stripeFrame.getByTestId("hosted-payment-submit-button").click({
+      timeout: 120_000,
+    });
+    await expect(page.getByText("You're aboard!")).toBeVisible({
+      timeout: 300_000,
+    });
+    const cookieHeader = (await page.context().cookies())
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+    await expect
+      .poll(
+        async () => {
+          const response = await page.request.get(
+            `${baseUrl}/api/billing/status`,
+            {
+              headers: cookieHeader ? { cookie: cookieHeader } : {},
+            },
+          );
+          if (!response.ok()) return "pending";
+          const body = (await response.json()) as {
+            subscriptionStatus?: string;
+          };
+          return body.subscriptionStatus ?? "pending";
+        },
+        { timeout: 300_000 },
+      )
+      .toMatch(/trialing|active/);
+  }
 
   test.info().attach("staging-publishable-key-prefix", {
     body: publishableKey ? publishableKey.slice(0, 12) : "missing",
