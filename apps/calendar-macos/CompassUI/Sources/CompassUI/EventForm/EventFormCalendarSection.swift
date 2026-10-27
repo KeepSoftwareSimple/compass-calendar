@@ -59,7 +59,6 @@ struct EventFormCalendarSection: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .focusable()
         .focusEffectDisabled()
         .focused($calendarFocused)
         .onChange(of: model.eventFormCalendarFocusRequest) { _, _ in
