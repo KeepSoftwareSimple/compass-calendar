@@ -440,3 +440,7 @@ A hidden local web browser measured palette text at16px with24px line height,18p
 ### 2026-10-26 Settings navigation focus follow-up
 
 Web Settings initially focuses the current navigation button and paints its focus ring separately from the selected-page marker. Native Settings now requests current-page focus after mounting and shows an accent outline while that button owns keyboard focus. Both-theme regression coverage exercises initial focus, Tab/Shift+Tab return and Escape; screenshot/runtime evidence is tracked in #4863. Other Settings layout and signed-in acceptance gaps remain open.
+
+### 2026-10-27 Settings field line-box follow-up
+
+A hidden anonymous web browser measured Settings field labels at14px with20px line height and the timezone button at30px including padding and border. Native field labels now reserve20pt and the timezone chrome reserves30pt without changing fonts or forcing the native calendar menu to that height. Both-theme hosting-view geometry tests cover those dimensions; runtime and composited screenshot evidence is tracked in #4867. Helper text metrics, other Settings surfaces and signed-in acceptance remain open.

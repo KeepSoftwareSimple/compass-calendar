@@ -13,6 +13,7 @@ struct SettingsFieldLabel: View {
     var body: some View {
         Text(text)
             .font(.rubik(14))
+            .frame(height: 20)
             .foregroundStyle(theme.textColor)
     }
 }
@@ -20,6 +21,7 @@ struct SettingsFieldLabel: View {
 /// Web settings select/button: `w-full rounded border border-border
 /// bg-surface-overlay px-2 py-1 text-sm hover:bg-surface-panel`.
 struct SettingsSelectChrome: ViewModifier {
+    var minimumHeight: CGFloat? = nil
     @Environment(\.nativeWebTheme) private var theme
     @State private var isHovered = false
 
@@ -30,6 +32,7 @@ struct SettingsSelectChrome: ViewModifier {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
+            .frame(minHeight: minimumHeight)
             .background(isHovered ? theme.surfacePanelColor : theme.surfaceOverlayColor)
             .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
             .overlay(
@@ -41,7 +44,7 @@ struct SettingsSelectChrome: ViewModifier {
 }
 
 extension View {
-    func settingsSelectChrome() -> some View {
-        modifier(SettingsSelectChrome())
+    func settingsSelectChrome(minimumHeight: CGFloat? = nil) -> some View {
+        modifier(SettingsSelectChrome(minimumHeight: minimumHeight))
     }
 }
