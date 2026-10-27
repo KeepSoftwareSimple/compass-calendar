@@ -7,12 +7,11 @@ final class EventFormRecurrenceTests: XCTestCase {
             let app = XCUIApplication.compassUITest()
             app.launchArguments += [
                 "-COMPASS_FIXTURE", "demo", "-compass.theme", theme,
-                "-COMPASS_UI_TEST_INITIAL_GRID_FOCUS_EVENT", "demo-morning-standup",
-                "-COMPASS_UI_TEST_PIN_WEEK_GRID_TRACK",
-                "-COMPASS_UI_TEST_OPEN_FOCUSED_EVENT_FORM",
             ]
             app.launch()
             let window = app.windows["Compass"]
+            XCTAssertTrue(window.waitForExistence(timeout: 15))
+            window.typeKey("c", modifierFlags: [])
             let toggle = window.buttons["compass-event-form-recurrence-toggle"]
             XCTAssertTrue(toggle.waitForExistence(timeout: 8))
             window.typeKey("4", modifierFlags: [.command])
