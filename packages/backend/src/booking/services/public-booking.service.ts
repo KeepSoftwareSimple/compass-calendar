@@ -40,6 +40,7 @@ import {
 import dayjs from "@core/util/date/dayjs";
 import { escapeHtml } from "@core/util/escape-html.util";
 import { isDuplicateKeyError } from "@core/util/mongo-duplicate-key.util";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { BookingException, bookingError } from "@backend/booking/booking.error";
 import {
   generateCancelToken,
@@ -1108,8 +1109,10 @@ export class PublicBookingService {
 
   #runRecoveryCycle = (): void => {
     const cycle = this.recoverDueOperations().catch((error: unknown) => {
-      logger.error(
+      logMongoNetworkError(
+        logger,
         "Could not recover interrupted booking operations",
+        error,
         error instanceof Error
           ? { message: error.message }
           : { error: String(error) },

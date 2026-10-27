@@ -1,5 +1,6 @@
 import { Logger } from "@core/logger/winston.logger";
 import { emailListIncludes } from "@core/util/email.util";
+import { logMongoNetworkError } from "@core/util/mongo-network-error.util";
 import { CONFIG } from "@backend/common/constants/config.constants";
 import { renderBookingHostEmail } from "@backend/email/booking-host-email.content";
 import { loadBookingHostEmailDispatchContext } from "@backend/email/booking-host-email.context";
@@ -153,8 +154,10 @@ export class EmailDispatchService {
       return;
     }
     const cycle = this.dispatchDue().catch((error: unknown) => {
-      logger.error(
+      logMongoNetworkError(
+        logger,
         "Welcome email dispatch cycle failed",
+        error,
         error instanceof Error
           ? { message: error.message }
           : { error: String(error) },
