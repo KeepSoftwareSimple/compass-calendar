@@ -596,9 +596,16 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key {
-            if char.isNumber || char == "-" || char == "=" {
-                model.jumpEventFormField(digit: char)
+        if keyEvent.modifiers == [.command] {
+            let digit: Character?
+            switch keyEvent.key {
+            case .character(let char) where char.isNumber: digit = char
+            case .punctuation("-"): digit = "-"
+            case .punctuation("="): digit = "="
+            default: digit = nil
+            }
+            if let digit {
+                model.jumpEventFormField(digit: digit)
                 model.formFieldDigitHintsVisible = false
                 return true
             }
