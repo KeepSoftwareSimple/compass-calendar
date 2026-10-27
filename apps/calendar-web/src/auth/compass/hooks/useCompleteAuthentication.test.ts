@@ -38,6 +38,28 @@ describe("useCompleteAuthentication", () => {
     dependencies.syncPendingLocalEvents.mockResolvedValue(true);
   });
 
+  it("does not mark authenticated until the session wait resolves", async () => {
+    let resolveWait: (ready: boolean) => void = () => {};
+    dependencies.waitForAuthSession.mockReturnValue(
+      new Promise<boolean>((resolve) => {
+        resolveWait = resolve;
+      }),
+    );
+    const useCompleteAuthentication =
+      createUseCompleteAuthentication(dependencies);
+    const { result } = renderHook(() => useCompleteAuthentication());
+
+    const completion = result.current({ email: "test@example.com" });
+
+    await Promise.resolve();
+    expect(setAuthenticated).not.toHaveBeenCalled();
+
+    resolveWait(true);
+    await completion;
+
+    expect(setAuthenticated).toHaveBeenCalledWith(true);
+  });
+
   it("throws when the SuperTokens session never becomes readable", async () => {
     dependencies.waitForAuthSession.mockResolvedValue(false);
     const useCompleteAuthentication =
