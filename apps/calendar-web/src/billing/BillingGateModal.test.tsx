@@ -141,7 +141,9 @@ describe("BillingGateModal", () => {
       screen.getByRole("button", { name: "Complete checkout" }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Back" }));
+    const back = screen.getByRole("button", { name: "Back" });
+    expect(within(back).getByText("Esc")).toBeTruthy();
+    await user.click(back);
 
     expect(
       screen.getByRole("button", { name: TRIAL_START_PRIMARY_LABEL }),
