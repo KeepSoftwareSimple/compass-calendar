@@ -12,6 +12,7 @@ public struct DemoSeedFixture: Sendable {
     public let timeZone: String
     public let calendarId: String
     public let events: [Row]
+    public let attendeeAccountEmail: String?
 
     public static func load(bundle: Bundle = CompassKitResourceBundle.resources) throws -> DemoSeedFixture {
         guard let url = bundle.url(
@@ -31,7 +32,8 @@ public struct DemoSeedFixture: Sendable {
             referenceNow: referenceNow,
             timeZone: document.timeZone,
             calendarId: document.calendarId,
-            events: document.events.map { Row(id: $0.id, event: $0.event, isDemo: $0.isDemo) }
+            events: document.events.map { Row(id: $0.id, event: $0.event, isDemo: $0.isDemo) },
+            attendeeAccountEmail: nil
         )
     }
 
@@ -117,7 +119,24 @@ public struct DemoSeedFixture: Sendable {
             return Row(id: id, event: moved, isDemo: row.isDemo)
         }
         return DemoSeedFixture(
-            referenceNow: now, timeZone: timeZone.identifier, calendarId: calendarId, events: rows)
+            referenceNow: now, timeZone: timeZone.identifier, calendarId: calendarId, events: rows, attendeeAccountEmail: attendeeAccountEmail)
+    }
+
+    /// An attendee/occurrence variant exercises RSVP without credentials or network writes.
+    public func attendeeVariant() -> DemoSeedFixture {
+        let rows = events.map { row -> Row in
+            guard row.id == "demo-morning-standup" else { return row }
+            let event = row.event
+            let occurrence = Event(
+                calendarId: event.calendarId, content: event.content, createdAt: event.createdAt,
+                icalUid: event.icalUid, id: event.id, popupReminderMinutes: event.popupReminderMinutes,
+                providerManaged: event.providerManaged,
+                recurrence: .occurrence(.init(kind: "occurrence", seriesId: EventId(rawValue: "demo-rsvp-series"))),
+                schedule: event.schedule, updatedAt: event.updatedAt)
+            return Row(id: row.id, event: occurrence, isDemo: row.isDemo)
+        }
+        return DemoSeedFixture(referenceNow: referenceNow, timeZone: timeZone, calendarId: calendarId,
+            events: rows, attendeeAccountEmail: "sam@example.com")
     }
 
     public var demoEventIds: Set<String> {
@@ -133,7 +152,7 @@ public struct DemoSeedFixture: Sendable {
     public func calendarListItem() -> CompassCalendar {
         CompassCalendar(
             access: .owner,
-            accountEmail: nil,
+            accountEmail: attendeeAccountEmail,
             backgroundColor: "#ffffff",
             capabilities: CompassCalendarCapabilities(
                 canInviteAttendees: true,

@@ -461,7 +461,8 @@ final class NativeGridKeyboardRouter {
     /// XCUITest typing often misses the SwiftUI title field; mirror keystrokes into the draft.
     /// Probes mirror via `EventFormAccessibilityProbeView` when `-COMPASS_UI_TEST` is set.
     private func handleUITestEventFormTyping(_ keyEvent: KeyEvent) -> Bool {
-        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping else { return false }
+        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping,
+            model.eventFormFocusedField == .title else { return false }
         // The title probe is a fallback, never a replacement for a real text editor.
         if let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isEditable {
             return false
@@ -596,12 +597,25 @@ final class NativeGridKeyboardRouter {
             return true
         }
 
-        if keyEvent.modifiers == [.command], case .character(let char) = keyEvent.key {
-            if char.isNumber || char == "-" || char == "=" {
-                model.jumpEventFormField(digit: char)
+        if keyEvent.modifiers == [.command] {
+            let digit: Character?
+            switch keyEvent.key {
+            case .character(let char) where char.isNumber: digit = char
+            case .punctuation("-"): digit = "-"
+            case .punctuation("="): digit = "="
+            default: digit = nil
+            }
+            if let digit {
+                model.jumpEventFormField(digit: digit)
                 model.formFieldDigitHintsVisible = false
                 return true
             }
+        }
+
+        // RSVP radio-style controls own arrows and activation before grid shortcuts.
+        if model.eventFormFocusedField == .rsvp, keyEvent.modifiers.isEmpty,
+            isSpaceKey(keyEvent.key) || [.named(.arrowLeft), .named(.arrowRight), .named(.arrowUp), .named(.arrowDown)].contains(keyEvent.key) {
+            return false
         }
 
         // Header buttons own activation and Tab navigation.
@@ -626,15 +640,18 @@ final class NativeGridKeyboardRouter {
             guard isPalette else { return false }
         }
 
+        // A focused form button is not a text editor. Allow E-field sequences
+        // after the editable first-responder guard above has passed.
+        dispatcher.isTextInputFocused = false
         dispatcher.shortcutContext = model.shortcutContext
         syncEditSequenceFieldGating()
-        if let id = dispatcher.dispatch(keyEvent) {
-            performShortcut(id)
-            return true
-        }
-
+        let shortcut = dispatcher.dispatch(keyEvent)
         if let field = dispatcher.lastResolvedLeaderField {
             handleEditSequenceField(field)
+            return true
+        }
+        if let shortcut {
+            performShortcut(shortcut)
             return true
         }
 

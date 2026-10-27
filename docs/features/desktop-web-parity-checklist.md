@@ -451,3 +451,7 @@ Calendar-menu shortcut requests now bind actual focus to the create form menu, i
 ### 2026-10-27 recurrence shortcut focus follow-up
 
 The recurrence shortcut now requests actual focus on its toggle, including repeated jumps while the requested field remains unchanged. The visible outline follows actual toggle focus rather than the last requested field. Both-theme native coverage exercises Mod+4, Space activation, Tab departure, repeated Mod+4 and Return activation without saving. Runtime evidence remains pending under #4783; calendar menu, RSVP and signed-in acceptance in that issue remain open.
+
+### 2026-10-27 RSVP keyboard focus follow-up
+
+RSVP shortcut requests now focus the current response or first response, with visible focus and native Space/Return activation. Arrow keys move and respond like web radios; selected text uses the semantic on-accent color. A named attendee/occurrence demo fixture exercises scope-dialog activation without credentials or network writes. Both-theme native evidence is tracked in #4894; actual signed-in response submission and calendar Tab acceptance remain outstanding under #4783.
