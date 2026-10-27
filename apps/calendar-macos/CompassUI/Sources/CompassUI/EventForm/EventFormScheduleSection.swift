@@ -150,16 +150,27 @@ struct EventFormScheduleSection: View {
 
     private func updateStart(_ date: Date) {
         var schedule = draft.schedule
+        let previousStart = schedule.start
+        let previousEnd = schedule.end
         schedule.start = date
-        if schedule.end <= date {
-            schedule.end = DraftTiming.timedDraftEnd(start: date)
-        }
+        schedule.end = DraftTiming.preserveDurationWhenStartMovesPastEnd(
+            oldStart: previousStart,
+            oldEnd: previousEnd,
+            newStart: date
+        )
         model.updateDraftFromForm(schedule: schedule)
     }
 
     private func updateEnd(_ date: Date) {
         var schedule = draft.schedule
-        schedule.end = max(date, schedule.start.addingTimeInterval(60))
+        let previousStart = schedule.start
+        let previousEnd = schedule.end
+        schedule.start = DraftTiming.preserveDurationWhenEndMovesBeforeStart(
+            oldStart: previousStart,
+            oldEnd: previousEnd,
+            newEnd: date
+        )
+        schedule.end = date
         model.updateDraftFromForm(schedule: schedule)
     }
 
