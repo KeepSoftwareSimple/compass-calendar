@@ -37,6 +37,15 @@ struct EventFormRsvpSection: View {
                         .focusable()
                         .focusEffectDisabled()
                         .focused($focusedResponse, equals: status)
+                        .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
+                            guard press.modifiers.isEmpty,
+                                let index = options.firstIndex(where: { $0.0 == status }) else { return .ignored }
+                            let delta = press.key == .leftArrow || press.key == .upArrow ? -1 : 1
+                            let next = options[(index + delta + options.count) % options.count].0
+                            focusedResponse = next
+                            respond(next)
+                            return .handled
+                        }
                         .onKeyPress(.return) { respond(status); return .handled }
                         .onKeyPress(.space) { respond(status); return .handled }
                         .overlay {
@@ -51,15 +60,6 @@ struct EventFormRsvpSection: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 6))
                 .overlay(RoundedRectangle(cornerRadius: 6).stroke(theme.borderColor, lineWidth: 1))
-            }
-            .onKeyPress(keys: [.leftArrow, .rightArrow, .upArrow, .downArrow]) { press in
-                guard press.modifiers.isEmpty, let focusedResponse,
-                    let index = options.firstIndex(where: { $0.0 == focusedResponse }) else { return .ignored }
-                let delta = press.key == .leftArrow || press.key == .upArrow ? -1 : 1
-                let next = options[(index + delta + options.count) % options.count].0
-                self.focusedResponse = next
-                respond(next)
-                return .handled
             }
             .padding(12)
             .background(theme.surfacePanelColor)
