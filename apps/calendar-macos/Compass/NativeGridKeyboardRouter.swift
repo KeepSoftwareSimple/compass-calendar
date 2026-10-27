@@ -461,7 +461,8 @@ final class NativeGridKeyboardRouter {
     /// XCUITest typing often misses the SwiftUI title field; mirror keystrokes into the draft.
     /// Probes mirror via `EventFormAccessibilityProbeView` when `-COMPASS_UI_TEST` is set.
     private func handleUITestEventFormTyping(_ keyEvent: KeyEvent) -> Bool {
-        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping else { return false }
+        guard UITestLaunchPolicy.mirrorsEventFormTitleTyping,
+            model.eventFormFocusedField == .title else { return false }
         // The title probe is a fallback, never a replacement for a real text editor.
         if let editor = NSApp.keyWindow?.firstResponder as? NSTextView, editor.isEditable {
             return false
