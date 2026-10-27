@@ -22,17 +22,37 @@ async function fillStripeTrialCheckout(
   await expect(addressLine).toHaveValue("123 Main St");
 
   await stripeFrame.getByLabel(/City/i).fill("Denver");
-  await stripeFrame.getByLabel(/^State$/i).selectOption("CO");
+
+  const stateField = stripeFrame
+    .getByLabel(/^State$/i)
+    .or(stripeFrame.getByRole("combobox", { name: /^State$/i }));
+  await stateField.selectOption({ label: "Colorado" });
+
   await stripeFrame.getByLabel("ZIP").fill("80202");
 
-  const linkSave = stripeFrame.getByRole("checkbox", {
-    name: /Save my information with Link/i,
-  });
+  const linkSave = stripeFrame.locator("#enableStripePass");
   if (await linkSave.isVisible().catch(() => false)) {
     if (await linkSave.isChecked().catch(() => false)) {
-      await linkSave.uncheck();
+      await linkSave.click({ force: true });
+    }
+    if (await linkSave.isChecked().catch(() => false)) {
+      const phone = stripeFrame.getByRole("textbox", { name: /Phone/i });
+      if (await phone.isVisible().catch(() => false)) {
+        await phone.click();
+        await phone.fill("");
+        await phone.fill("(303) 555-0100");
+        await expect(phone).toHaveValue(/303/);
+      }
+    } else {
+      await expect(
+        stripeFrame.getByRole("textbox", { name: /Phone/i }),
+      ).toHaveCount(0);
     }
   }
+
+  await expect(
+    stripeFrame.getByTestId("hosted-payment-submit-button"),
+  ).toBeEnabled({ timeout: 30_000 });
 }
 
 test("staging signup trial step with live Stripe embedded checkout", async ({
@@ -145,9 +165,21 @@ test("staging signup trial step with live Stripe embedded checkout", async ({
     await stripeFrame.getByTestId("hosted-payment-submit-button").click({
       timeout: 120_000,
     });
-    await expect(page.getByText("You're aboard!")).toBeVisible({
-      timeout: 300_000,
-    });
+
+    const celebration = page.getByText("You're aboard!");
+    try {
+      await expect(celebration).toBeVisible({ timeout: 300_000 });
+    } catch (error) {
+      await dialog.screenshot({
+        path: "/opt/cursor/artifacts/staging-checkout-submit-failed-dialog.png",
+      });
+      const stripeText = await stripeFrame.locator("body").innerText();
+      test.info().attach("stripe-frame-text-on-failure", {
+        body: stripeText.slice(0, 4000),
+        contentType: "text/plain",
+      });
+      throw error;
+    }
     await page.screenshot({
       path: "/opt/cursor/artifacts/staging-checkout-after-submit.png",
       fullPage: true,
