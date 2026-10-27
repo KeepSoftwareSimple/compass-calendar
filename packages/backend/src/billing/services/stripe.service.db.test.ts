@@ -7,7 +7,10 @@ import {
   setupTestDb,
 } from "@backend/__tests__/helpers/mock.db.setup";
 import { mockEnv } from "@backend/__tests__/helpers/mock.setup";
-import { StripeService } from "@backend/billing/services/stripe.service";
+import {
+  resetCatalogPriceCacheForTests,
+  StripeService,
+} from "@backend/billing/services/stripe.service";
 import { stubBillingGateway } from "@backend/billing/services/stripe-billing-gateway.test-helpers";
 import mongoService from "@backend/common/services/mongo.service";
 import {
@@ -33,6 +36,7 @@ describe("StripeService", () => {
     await setupTestDb(import.meta.url);
   });
   beforeEach(cleanupCollections);
+  beforeEach(resetCatalogPriceCacheForTests);
   afterAll(cleanupTestDb);
 
   it("creates a Checkout session in subscription mode with a trial", async () => {
@@ -764,18 +768,29 @@ describe("StripeService", () => {
       });
     });
 
-    it("returns nulls and skips Stripe when there is no subscription id", async () => {
+    it("returns the Stripe catalog price when there is no subscription id", async () => {
       using _env = mockEnv(stripeConfigured);
       const userId = await seedUser({
         subscriptionStatus: "awaiting_checkout",
         stripeCustomerId: "cus_pending",
       });
 
-      const retrieve = mock(() => Promise.reject(new Error("no stripe")));
+      const retrieveSubscription = mock(() =>
+        Promise.reject(new Error("no subscription")),
+      );
+      const retrievePrice = mock(() =>
+        Promise.resolve({
+          id: "price_test",
+          unit_amount: 799,
+          currency: "usd",
+          recurring: { interval: "month" },
+        }),
+      );
       const invoicesList = mock(() => Promise.reject(new Error("no stripe")));
       const stripeService = new StripeService(
         stubBillingGateway({
-          retrieveSubscription: retrieve,
+          retrieveSubscription,
+          retrievePrice,
           listInvoices: invoicesList,
         }),
       );
@@ -784,14 +799,17 @@ describe("StripeService", () => {
         userId.toString(),
       );
 
-      expect(retrieve).not.toHaveBeenCalled();
+      expect(retrieveSubscription).not.toHaveBeenCalled();
       expect(invoicesList).not.toHaveBeenCalled();
+      expect((retrievePrice.mock.calls as unknown[][])[0]?.[0]).toBe(
+        "price_test",
+      );
       expect(result).toEqual({
         subscriptionStatus: "awaiting_checkout",
         currentPeriodEnd: null,
         cancelAtPeriodEnd: false,
         trialEndsAt: null,
-        price: null,
+        price: { amount: 799, currency: "usd", interval: "month" },
         paymentMethod: null,
         invoices: [],
       });

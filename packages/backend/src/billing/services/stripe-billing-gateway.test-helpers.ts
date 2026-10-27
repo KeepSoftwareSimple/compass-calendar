@@ -20,6 +20,7 @@ export function stubBillingGateway(
     retrieveCheckoutSession: unused("retrieveCheckoutSession"),
     updateSubscription: unused("updateSubscription"),
     retrieveSubscription: unused("retrieveSubscription"),
+    retrievePrice: unused("retrievePrice"),
     listInvoices: unused("listInvoices"),
     constructWebhookEvent: unused("constructWebhookEvent"),
     ...overrides,

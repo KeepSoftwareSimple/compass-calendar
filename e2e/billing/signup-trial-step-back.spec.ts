@@ -7,7 +7,7 @@ test.use({ viewport: { width: 1600, height: 900 } });
 const CALLBACK_PATH = "/auth/google/callback";
 const INTENT_STORAGE_PREFIX = "compass.googleAuthorizationIntent";
 const REQUIRED_SCOPES = [...GOOGLE_SCOPES];
-const TRIAL_PRICE_LINE = "$12.00/mo after 7 days. Cancel anytime in Settings.";
+const TRIAL_PRICE_LINE = "$7.99/mo after 7 days. Cancel anytime in Settings.";
 
 const getIntentStorageKey = (state: string) =>
   `${INTENT_STORAGE_PREFIX}.${state}`;
@@ -90,7 +90,7 @@ const prepareSignupTrialPage = async (page: Page) => {
           currentPeriodEnd: null,
           cancelAtPeriodEnd: false,
           trialEndsAt: null,
-          price: { amount: 1200, currency: "usd", interval: "month" },
+          price: { amount: 799, currency: "usd", interval: "month" },
           paymentMethod: null,
           invoices: [],
         }),

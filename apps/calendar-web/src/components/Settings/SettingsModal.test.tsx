@@ -1027,7 +1027,7 @@ describe("SettingsModal", () => {
 
     expect(screen.getByText("Premium")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("$12.00 per month")).toBeInTheDocument();
+      expect(screen.getByText("$7.99 per month")).toBeInTheDocument();
     });
     expect(
       screen.getByText("Visa ending in 4242, expires 12/99"),

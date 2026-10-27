@@ -341,7 +341,15 @@ export class StripeService {
 
     const subscriptionId = billing?.stripeSubscriptionId;
     if (!subscriptionId) {
-      return { ...mongo, price: null, paymentMethod: null, invoices: [] };
+      const catalogPrice = isStripeConfigured(CONFIG)
+        ? await getCatalogPrice(this.stripe)
+        : null;
+      return {
+        ...mongo,
+        price: catalogPrice ?? null,
+        paymentMethod: null,
+        invoices: [],
+      };
     }
 
     if (!isStripeConfigured(CONFIG)) {
@@ -496,10 +504,9 @@ type BillingInterval = NonNullable<
 const isBillingInterval = (value: string): value is BillingInterval =>
   value === "day" || value === "week" || value === "month" || value === "year";
 
-const mapPrice = (
-  subscription: Stripe.Subscription,
+const mapStripePriceObject = (
+  price: Stripe.Price | null | undefined,
 ): BillingSubscriptionResponse["price"] => {
-  const price = subscription.items.data[0]?.price;
   if (!price || typeof price === "string") return null;
   const amount = price.unit_amount;
   const interval = price.recurring?.interval;
@@ -512,6 +519,36 @@ const mapPrice = (
     return null;
   }
   return { amount, currency: price.currency, interval };
+};
+
+const mapPrice = (
+  subscription: Stripe.Subscription,
+): BillingSubscriptionResponse["price"] => {
+  return mapStripePriceObject(subscription.items.data[0]?.price);
+};
+
+let cachedCatalogPrice: BillingSubscriptionResponse["price"] | null | undefined;
+
+/** Clears the in-memory Stripe catalog price cache (tests only). */
+export function resetCatalogPriceCacheForTests(): void {
+  cachedCatalogPrice = undefined;
+}
+
+const getCatalogPrice = async (
+  stripe: StripeBillingGateway,
+): Promise<BillingSubscriptionResponse["price"] | null> => {
+  if (cachedCatalogPrice !== undefined) {
+    return cachedCatalogPrice;
+  }
+  try {
+    const price = await stripe
+      .retrievePrice(getStripePriceId())
+      .catch(wrapStripeFailure);
+    cachedCatalogPrice = mapStripePriceObject(price);
+  } catch {
+    cachedCatalogPrice = null;
+  }
+  return cachedCatalogPrice;
 };
 
 const mapInvoice = (

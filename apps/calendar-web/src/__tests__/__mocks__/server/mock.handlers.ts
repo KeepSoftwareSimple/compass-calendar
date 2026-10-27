@@ -83,7 +83,7 @@ export const globalHandlers = [
         currentPeriodEnd: "2099-06-15T12:00:00.000Z",
         cancelAtPeriodEnd: false,
         trialEndsAt: null,
-        price: { amount: 1200, currency: "usd", interval: "month" },
+        price: { amount: 799, currency: "usd", interval: "month" },
         paymentMethod: {
           brand: "visa",
           last4: "4242",

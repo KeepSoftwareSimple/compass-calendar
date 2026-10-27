@@ -72,7 +72,7 @@ const activeSummary = (
   currentPeriodEnd: PERIOD_END,
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
-  price: { amount: 1200, currency: "usd", interval: "month" },
+  price: { amount: 799, currency: "usd", interval: "month" },
   paymentMethod: {
     brand: "visa",
     last4: "4242",
@@ -190,7 +190,7 @@ describe("PlanSection", () => {
 
     expect(screen.getByText("Trial not started")).toBeInTheDocument();
     expect(
-      screen.getByText("$12.00/mo after 7 days. Cancel anytime."),
+      screen.getByText("$7.99/mo after 7 days. Cancel anytime."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Loading your plan")).not.toBeInTheDocument();
     const startTrial = screen.getByRole("button", { name: "Start free trial" });
@@ -255,7 +255,7 @@ describe("PlanSection", () => {
 
     expect(screen.getByText("Premium")).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText("$12.00 per month")).toBeInTheDocument();
+      expect(screen.getByText("$7.99 per month")).toBeInTheDocument();
     });
     expect(screen.getByText(`Renews ${PERIOD_END_LABEL}`)).toBeInTheDocument();
     expect(
@@ -428,7 +428,7 @@ describe("PlanSection", () => {
     await renderPlan();
 
     await waitFor(() => {
-      expect(screen.getByText("$12.00 per month")).toBeInTheDocument();
+      expect(screen.getByText("$7.99 per month")).toBeInTheDocument();
     });
     expect(screen.queryByText("Receipts")).not.toBeInTheDocument();
   });

@@ -57,7 +57,7 @@ describe("formatTrialChargeDate", () => {
 describe("formatTrialStartPriceLine", () => {
   it("matches the trial ask copy", () => {
     expect(formatTrialStartPriceLine(BILLING_PLAN.DISPLAY_PRICE, 7)).toBe(
-      "$12.00/mo after 7 days. Cancel anytime in Settings.",
+      "$7.99/mo after 7 days. Cancel anytime in Settings.",
     );
   });
 });
