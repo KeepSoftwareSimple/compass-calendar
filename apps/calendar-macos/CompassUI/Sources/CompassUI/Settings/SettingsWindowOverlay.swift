@@ -5,6 +5,7 @@ import SwiftUI
 public struct SettingsWindowOverlay: View {
     @Environment(\.nativeWebTheme) private var theme
     @Bindable public var model: NativeCalendarRootModel
+    @FocusState private var focusedPage: SettingsPage?
 
     public init(model: NativeCalendarRootModel) {
         self.model = model
@@ -47,6 +48,9 @@ public struct SettingsWindowOverlay: View {
             .accessibilityElement(children: .contain)
             .accessibilityAddTraits(.isModal)
             .accessibilityIdentifier("compass-native-settings")
+            .onAppear {
+                DispatchQueue.main.async { focusedPage = model.settingsStore.page }
+            }
         }
         if model.settingsStore.timezoneDialogPurpose != nil {
             TimezonePickerDialogView(
@@ -103,6 +107,17 @@ public struct SettingsWindowOverlay: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
+            .focusable()
+            .focusEffectDisabled()
+            .focused($focusedPage, equals: page)
+            .overlay {
+                if focusedPage == page {
+                    RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
+                        .inset(by: -2)
+                        .stroke(theme.accentColor, lineWidth: 1)
+                        .allowsHitTesting(false)
+                }
+            }
             .overlay(alignment: .trailing) {
                 if attention {
                     Circle()

@@ -2,6 +2,34 @@ import XCTest
 
 final class SettingsKeyboardIsolationTests: XCTestCase {
     @MainActor
+    func testSettingsInitiallyFocusesCurrentPageAndTabReturnsInBothThemes() {
+        for theme in ["light-beach", "dark-abyss"] {
+            let app = XCUIApplication.compassUITest()
+            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme]
+            app.launch()
+            let window = app.windows["Compass"]
+            window.typeKey(",", modifierFlags: [.command])
+            let accounts = window.buttons["Accounts"]
+            XCTAssertTrue(accounts.waitForExistence(timeout: 8))
+            let focused = NSPredicate { _, _ in accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true }
+            XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: focused, object: nil)], timeout: 5), .completed, accounts.debugDescription)
+            let evidence = XCTAttachment(screenshot: window.screenshot())
+            evidence.name = "Settings navigation focus, \(theme)"
+            evidence.lifetime = .keepAlways
+            add(evidence)
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            let timezone = window.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Default timezone:")).firstMatch
+            XCTAssertTrue(timezone.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, timezone.debugDescription)
+            window.typeKey(.tab, modifierFlags: [.shift])
+            XCTAssertTrue(accounts.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, accounts.debugDescription)
+            window.typeKey(.escape, modifierFlags: [])
+            XCTAssertTrue(window.descendants(matching: .any)["compass-native-settings"].waitForNonExistence(timeout: 5))
+            app.terminate()
+        }
+    }
+
+    @MainActor
     func testBackdropAndEscapeCloseSettingsInBothThemes() {
         for theme in ["light-beach", "dark-abyss"] {
             let app = XCUIApplication.compassUITest()

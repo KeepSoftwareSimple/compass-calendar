@@ -25,6 +25,7 @@ struct SettingsTimezoneSectionView: View {
                 Text(label).settingsSelectChrome()
             }
             .buttonStyle(.plain)
+            .focusable()
             .accessibilityLabel("Default timezone: \(label)")
         }
         .accessibilityIdentifier("settings-section-timezone")
