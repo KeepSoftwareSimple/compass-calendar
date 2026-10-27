@@ -74,6 +74,7 @@ export type ProductEvent =
   | "billing_gate_shortcut_converted"
   | "trial_gate_triggered"
   | "billing_cancel_scheduled"
+  | "subscription_cancel_reason_submitted"
   | "billing_resumed"
   | "billing_card_update_completed"
   | "shortcut_upgrade_prompted"

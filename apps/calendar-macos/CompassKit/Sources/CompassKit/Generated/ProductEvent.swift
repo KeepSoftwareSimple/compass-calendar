@@ -54,6 +54,7 @@ public enum ProductEvent: String, Codable, Hashable, Sendable, CaseIterable {
     case billingGateShortcutConverted = "billing_gate_shortcut_converted"
     case trialGateTriggered = "trial_gate_triggered"
     case billingCancelScheduled = "billing_cancel_scheduled"
+    case subscriptionCancelReasonSubmitted = "subscription_cancel_reason_submitted"
     case billingResumed = "billing_resumed"
     case billingCardUpdateCompleted = "billing_card_update_completed"
     case shortcutUpgradePrompted = "shortcut_upgrade_prompted"
