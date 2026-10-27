@@ -65,8 +65,7 @@ public struct EventFormView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 EventFormCalendarSection(
                                     model: model,
-                                    draft: draft,
-                                    focusField: model.eventFormFocusedField
+                                    draft: draft
                                 )
                                 .disabled(isReadOnly)
                                 EventFormColorSection(
