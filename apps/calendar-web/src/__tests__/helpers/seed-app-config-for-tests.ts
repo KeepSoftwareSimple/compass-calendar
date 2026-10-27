@@ -1,10 +1,13 @@
-import { type QueryClient, QueryClient } from "@tanstack/react-query";
+import { QueryClient } from "@tanstack/react-query";
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { billingQueryKeys } from "@web/billing/billing.query";
 
 export const DEFAULT_TEST_APP_CONFIG = {
   version: "test",
-  sync: { cloudMutationMode: "enabled" as const, execution: "passive" as const },
+  sync: {
+    cloudMutationMode: "enabled" as const,
+    execution: "passive" as const,
+  },
   providers: {
     google: { signIn: false, connect: false },
     microsoft: { signIn: false, connect: false },
