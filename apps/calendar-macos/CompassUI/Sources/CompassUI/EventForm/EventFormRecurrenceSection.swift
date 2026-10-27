@@ -9,7 +9,8 @@ struct EventFormRecurrenceSection: View {
 
     @State private var pattern: RecurrenceRuleLine.Pattern = .init(frequency: .daily)
     @State private var hasRecurrence: Bool = false
-    @FocusState private var recurrenceFocused: Bool
+    private enum Control: Hashable { case toggle, frequency }
+    @FocusState private var focusedControl: Control?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,7 +31,12 @@ struct EventFormRecurrenceSection: View {
             .accessibilityIdentifier("compass-event-form-recurrence-toggle")
             .focusable()
             .focusEffectDisabled()
-            .focused($recurrenceFocused)
+            .focused($focusedControl, equals: .toggle)
+            .onKeyPress(keys: [.tab]) { press in
+                guard hasRecurrence, press.modifiers.isEmpty else { return .ignored }
+                focusedControl = .frequency
+                return .handled
+            }
             .onKeyPress(.return) {
                 toggleRecurrence(!hasRecurrence)
                 return .handled
@@ -49,6 +55,12 @@ struct EventFormRecurrenceSection: View {
                 }
                 .pickerStyle(.menu)
                 .focusable()
+                .focused($focusedControl, equals: .frequency)
+                .onKeyPress(keys: [.tab]) { press in
+                    guard press.modifiers == .shift else { return .ignored }
+                    focusedControl = .toggle
+                    return .handled
+                }
                 .accessibilityIdentifier("compass-event-form-recurrence-frequency")
                 .onChange(of: pattern.frequency) { _, _ in syncDraftRecurrence() }
 
@@ -107,7 +119,7 @@ struct EventFormRecurrenceSection: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay {
-            if recurrenceFocused {
+            if focusedControl == .toggle {
                 RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
                     .stroke(theme.accentColor, lineWidth: 1)
                     .padding(-4)
@@ -118,7 +130,7 @@ struct EventFormRecurrenceSection: View {
             // The parent releases title focus for the same request first.
             DispatchQueue.main.async {
                 guard model.isEventFormVisible, model.eventFormFocusedField == .recurrence else { return }
-                recurrenceFocused = true
+                focusedControl = .toggle
             }
         }
         .onChange(of: draft.recurrence) { _, _ in reloadFromDraft() }
