@@ -7,7 +7,6 @@ import {
   type Organizer,
 } from "@core/types/event-attendance.contracts";
 import { SyncEventContentSchema } from "@core/types/sync/event.contracts";
-import { TimezoneSchema } from "@core/types/type.utils";
 import dayjs from "@core/util/date/dayjs";
 import { appleInstanceEventId } from "@sync/providers/apple/apple-instance-id";
 import {
@@ -15,6 +14,7 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { toIanaTimeZoneOrUtc } from "@sync/providers/provider-timezone.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
 const COMPACT_DATE = dayjs.DateFormat.YEAR_MONTH_DAY_COMPACT_FORMAT;
@@ -360,13 +360,9 @@ function compactDateToDateOnly(compact: string): string {
 function resolveTimeZone(time: ICAL.Time, connectionTimeZone: string): string {
   const tzid = time.zone?.tzid;
   if (!tzid || tzid === "floating") {
-    return toIanaTimeZone(connectionTimeZone);
+    return toIanaTimeZoneOrUtc(connectionTimeZone);
   }
-  return toIanaTimeZone(tzid);
-}
-
-function toIanaTimeZone(timeZone: string): string {
-  return TimezoneSchema.safeParse(timeZone).success ? timeZone : "UTC";
+  return toIanaTimeZoneOrUtc(tzid);
 }
 
 function toOffsetIso(

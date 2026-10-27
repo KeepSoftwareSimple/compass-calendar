@@ -17,10 +17,8 @@ import {
   type GraphWeekIndex,
   type MicrosoftRecurrenceWriteContext,
 } from "@sync/providers/microsoft/microsoft-recurrence.types";
-import {
-  ianaZoneToWindows,
-  windowsZoneToIana,
-} from "@sync/providers/microsoft/windows-zones";
+import { requireIanaTimeZone } from "@sync/providers/microsoft/microsoft-timezone";
+import { ianaZoneToWindows } from "@sync/providers/microsoft/windows-zones";
 
 const RRULE_PREFIX = /^RRULE:/i;
 
@@ -234,7 +232,7 @@ function rangeToParts(
     case "endDate": {
       const endDate = requireField(range.endDate, range.type, "endDate");
       const zone = range.recurrenceTimeZone ?? "UTC";
-      const iana = resolveIanaZone(zone);
+      const iana = requireIanaTimeZone(zone);
       return {
         until: endDateToUntil(endDate, iana),
       };
@@ -618,11 +616,6 @@ function requireField<T>(
     );
   }
   return value;
-}
-
-function resolveIanaZone(zone: string): string {
-  if (zone.includes("/")) return zone;
-  return windowsZoneToIana(zone);
 }
 
 function endDateToUntil(endDate: string, ianaZone: string): string {
