@@ -238,15 +238,33 @@ export async function waitForPendingEventMutations(
   timeoutMs = 15_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
+  while (true) {
     const pending = pendingEventMutations(queryClient);
     if (pending.length === 0) {
       return;
     }
-    await Promise.all(
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+
+    const settled = Promise.all(
       pending.map((mutation) => whenSettled(queryClient, mutation)),
-    );
+    ).then(() => "settled" as const);
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = new Promise<"timeout">((resolve) => {
+      timeoutId = setTimeout(() => resolve("timeout"), remainingMs);
+    });
+    const outcome = await Promise.race([settled, timedOut]);
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
+    if (outcome === "timeout") {
+      break;
+    }
   }
+
   const remaining = pendingEventMutations(queryClient).length;
   if (remaining > 0) {
     console.warn(

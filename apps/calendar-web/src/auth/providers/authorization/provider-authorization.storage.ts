@@ -88,32 +88,34 @@ export function clearProviderAuthorizationIntent(
   sessionBrowserStore.remove(getStorageKey(provider, state));
 }
 
+function markSessionFlag(key: string): void {
+  sessionBrowserStore.set(key, "1");
+}
+
+function consumeSessionFlag(key: string): boolean {
+  const wasSet = sessionBrowserStore.get(key) !== null;
+  if (wasSet) {
+    sessionBrowserStore.remove(key);
+  }
+  return wasSet;
+}
+
 const googleNeedsConsentRetryKey = `${GOOGLE_AUTH_INTENT_STORAGE_PREFIX}.needsConsentRetry`;
 
 export function markGoogleAuthNeedsConsentRetry(): void {
-  sessionBrowserStore.set(googleNeedsConsentRetryKey, "1");
+  markSessionFlag(googleNeedsConsentRetryKey);
 }
 
 export function consumeGoogleAuthNeedsConsentRetry(): boolean {
-  const needsRetry =
-    sessionBrowserStore.get(googleNeedsConsentRetryKey) !== null;
-  if (needsRetry) {
-    sessionBrowserStore.remove(googleNeedsConsentRetryKey);
-  }
-  return needsRetry;
+  return consumeSessionFlag(googleNeedsConsentRetryKey);
 }
 
 const googleScopesRecoveryPendingKey = `${GOOGLE_AUTH_INTENT_STORAGE_PREFIX}.scopesRecoveryPending`;
 
 export function markGoogleOAuthScopesRecoveryPending(): void {
-  sessionBrowserStore.set(googleScopesRecoveryPendingKey, "1");
+  markSessionFlag(googleScopesRecoveryPendingKey);
 }
 
 export function consumeGoogleOAuthScopesRecoveryPending(): boolean {
-  const pending =
-    sessionBrowserStore.get(googleScopesRecoveryPendingKey) !== null;
-  if (pending) {
-    sessionBrowserStore.remove(googleScopesRecoveryPendingKey);
-  }
-  return pending;
+  return consumeSessionFlag(googleScopesRecoveryPendingKey);
 }

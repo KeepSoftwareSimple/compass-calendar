@@ -85,14 +85,13 @@ export async function completeProviderAuthCallback({
     if (result.reason === "oauth_user_cancelled") {
       getToast().info(result.message, getToastDefaultOptions());
     } else if (result.reason === "oauth_missing_scopes") {
-      const isGoogleSignupRecovery =
+      const missingScopes = result.missingScopes ?? [];
+      if (
         provider === "google" &&
         result.signupFlow === true &&
-        (result.missingScopes?.length ?? 0) > 0;
-      if (isGoogleSignupRecovery) {
-        missingPermissionsActions.openGoogleSignupRecovery(
-          result.missingScopes ?? [],
-        );
+        missingScopes.length > 0
+      ) {
+        missingPermissionsActions.openGoogleSignupRecovery(missingScopes);
       } else {
         // Unchecking a permission on the consent screen deserves an
         // explanation and a one-click retry, not a toast.

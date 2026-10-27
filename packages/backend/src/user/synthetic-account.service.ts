@@ -12,8 +12,12 @@ export function resolveSyntheticAccountFromEmail(
   return isSyntheticAccountEmail(email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
 }
 
-/** Staging/prod journey and automation accounts skip billing gates without Stripe. */
-export function isSyntheticBillingBypassAccount(
+/**
+ * Journey and automation accounts: flagged on the user, or matching a
+ * configured journey / test inbox. Billing uses this to skip Stripe gates;
+ * email dispatch uses it to skip product mail.
+ */
+export function isSyntheticAccount(
   email: string | undefined,
   isSynthetic?: boolean,
 ): boolean {
@@ -31,6 +35,5 @@ export async function isSyntheticCompassUserId(
     { projection: { email: 1, isSynthetic: 1 } },
   );
   if (!user) return false;
-  if (user.isSynthetic === true) return true;
-  return isSyntheticAccountEmail(user.email, CONFIG.SYNTHETIC_JOURNEY_EMAILS);
+  return isSyntheticAccount(user.email, user.isSynthetic);
 }
