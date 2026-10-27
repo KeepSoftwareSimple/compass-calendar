@@ -5,7 +5,7 @@ import SwiftUI
 struct EventFormCalendarSection: View {
     @Environment(\.nativeWebTheme) private var theme
     @State private var isHovered = false
-    @FocusState private var calendarFocused: Bool
+    @State private var calendarFocused = false
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
 
@@ -27,45 +27,36 @@ struct EventFormCalendarSection: View {
     }
 
     private var calendarMenu: some View {
-        Menu {
-            ForEach(model.writableEventCalendars, id: \.id) { calendar in
-                Button(calendarLabel(calendar)) {
-                    model.updateDraftFromForm(calendarId: CalendarId(rawValue: calendar.id))
-                }
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(selectedCalendar.map(calendarDotColor) ?? .clear)
-                    .frame(width: 10, height: 10)
-                Text(selectedCalendar.map(calendarLabel) ?? "Select a calendar")
-                    .font(.rubik(12))
-                    .foregroundStyle(theme.textColor)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(isHovered ? theme.textColor.opacity(0.1) : .clear)
-            .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
-            .overlay {
-                if calendarFocused {
-                    RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
-                        .stroke(theme.accentColor, lineWidth: 1)
-                }
-            }
-            .contentShape(Rectangle())
+        HStack(spacing: 8) {
+            Circle()
+                .fill(selectedCalendar.map(calendarDotColor) ?? .clear)
+                .frame(width: 10, height: 10)
+            Text(selectedCalendar.map(calendarLabel) ?? "Select a calendar")
+                .font(.rubik(12))
+                .foregroundStyle(theme.textColor)
+                .lineLimit(1)
+            Spacer(minLength: 0)
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .focusEffectDisabled()
-        .focused($calendarFocused)
-        .onChange(of: model.eventFormCalendarFocusRequest) { _, _ in
-            DispatchQueue.main.async {
-                guard model.isEventFormVisible, model.eventFormFocusedField == .calendar else { return }
-                calendarFocused = true
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(isHovered ? theme.textColor.opacity(0.1) : .clear)
+        .clipShape(RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault))
+        .overlay {
+            if calendarFocused {
+                RoundedRectangle(cornerRadius: NativeWebLayoutTokens.radiusDefault)
+                    .stroke(theme.accentColor, lineWidth: 1)
             }
+        }
+        .contentShape(Rectangle())
+        .overlay {
+            EventFormCalendarMenuControl(
+                calendars: model.writableEventCalendars,
+                selectedId: draft.calendarId?.rawValue,
+                focusRequest: model.eventFormCalendarFocusRequest,
+                requestsFocus: model.eventFormFocusedField == .calendar,
+                isFocused: $calendarFocused,
+                onSelect: { model.updateDraftFromForm(calendarId: CalendarId(rawValue: $0)) }
+            )
         }
         .onHover { isHovered = $0 }
         .disabled(!model.canChangeDraftCalendar)
