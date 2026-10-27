@@ -60,7 +60,6 @@ struct EventFormCalendarSection: View {
         }
         .onHover { isHovered = $0 }
         .disabled(!model.canChangeDraftCalendar)
-        .accessibilityIdentifier("compass-event-form-calendar")
         .pageJumpChipAnchor(id: "form-calendar")
     }
 
