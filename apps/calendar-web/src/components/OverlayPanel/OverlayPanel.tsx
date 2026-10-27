@@ -70,6 +70,8 @@ interface Props {
   widthClassName?: string;
   /** Extra classes for the backdrop (e.g. overflow for tall dialogs) */
   backdropClassName?: string;
+  /** Overrides default modal body padding (default: `p-8`). */
+  bodyPaddingClassName?: string;
   /**
    * Backdrop cross-axis alignment. `"top"` pins the panel under a 5vh inset
    * so height changes grow downward instead of recentering.
@@ -104,6 +106,7 @@ export const OverlayPanel = ({
   variant = "modal",
   widthClassName = "w-[400px]",
   backdropClassName,
+  bodyPaddingClassName = "p-8",
   panelClassName,
   closing = false,
   anchor = "center",
@@ -169,7 +172,8 @@ export const OverlayPanel = ({
   );
 
   const scrollBodyClasses = classNames(
-    "flex w-full flex-col p-8",
+    "flex min-h-0 w-full flex-1 flex-col",
+    bodyPaddingClassName,
     scrollChildrenOnly
       ? "max-h-[min(720px,calc(100dvh-7rem))] min-h-0 gap-4 overflow-hidden"
       : "min-h-0 flex-1 gap-6 overflow-y-auto",

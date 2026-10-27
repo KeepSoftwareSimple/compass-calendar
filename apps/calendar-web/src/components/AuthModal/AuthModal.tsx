@@ -278,12 +278,13 @@ export const AuthModal: FC = () => {
             </AuthButton>
           )
         }
+        bodyPaddingClassName="px-4 py-6 sm:p-8"
         initialFocusRef={trialInitialFocusRef}
         onDismiss={leaveTrialCheckoutOrStep}
         onModEnter={isTrialCheckoutOpen ? undefined : openSignupTrialCheckout}
         title={title}
         variant="modal"
-        widthClassName="w-[560px]"
+        widthClassName="w-[min(560px,calc(100vw-2rem))]"
       >
         <StartTrialStep
           initialFocusRef={trialInitialFocusRef}

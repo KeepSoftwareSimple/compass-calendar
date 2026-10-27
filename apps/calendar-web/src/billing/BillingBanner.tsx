@@ -34,7 +34,7 @@ export const BillingBanner: FC<BillingBannerProps> = ({
 
   return (
     <div
-      className="flex items-center justify-center gap-3 border-warning/40 border-b bg-warning/10 px-4 py-2 text-sm text-text"
+      className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 border-warning/40 border-b bg-warning/10 px-4 py-2 text-sm text-text"
       data-notice=""
       role="status"
     >
