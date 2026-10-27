@@ -14,12 +14,12 @@ import {
 import { EmbeddedCheckoutPanel } from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { readSignupTrialMethod } from "@web/billing/signup-trial.util";
-import { formatTrialAskChargeLine } from "@web/billing/signup-trial-format.util";
-import { type TrialStartPriceLineContext } from "@web/billing/trial-start-display.util";
 import {
-  consumeTrialStepTrigger,
-  TRIAL_STEP_WRITE_LEAD,
-} from "@web/billing/trial-step-request";
+  formatTrialAskChargeLine,
+  formatTrialStepWriteLead,
+} from "@web/billing/signup-trial-format.util";
+import { type TrialStartPriceLineContext } from "@web/billing/trial-start-display.util";
+import { consumeTrialStepTrigger } from "@web/billing/trial-step-request";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
@@ -116,7 +116,7 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
       ) : null}
       {writeLeadRef.current ? (
         <p className="w-full text-center text-sm text-text">
-          {TRIAL_STEP_WRITE_LEAD}
+          {formatTrialStepWriteLead(trialLengthDays)}
         </p>
       ) : null}
       <p className="w-full text-center text-sm text-text-muted">{chargeLine}</p>

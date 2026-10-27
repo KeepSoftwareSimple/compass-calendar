@@ -9,10 +9,6 @@ export type TrialGateEventAction = "create" | "replace" | "delete";
 
 let pendingTrigger: TrialGateTrigger | null = null;
 
-/** Copy for StartTrialStep when the user hit a write block. */
-export const TRIAL_STEP_WRITE_LEAD =
-  "Add a card to start your 7-day free trial and save changes to your calendar.";
-
 export function consumeTrialStepTrigger(): TrialGateTrigger | null {
   const trigger = pendingTrigger;
   pendingTrigger = null;
