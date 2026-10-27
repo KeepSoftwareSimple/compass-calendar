@@ -242,6 +242,28 @@ describe("AuthModal signup trial step", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("does not open checkout on plain Enter", async () => {
+    const user = userEvent.setup();
+    await renderTrialFlow(HOSTED_CONFIG, "/day?auth=trial");
+    mockUseSession.mockReturnValue({
+      authenticated: true,
+      userId: "user-1",
+      setAuthenticated: mock(),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Start free trial" }),
+      ).toBeInTheDocument();
+    });
+
+    await user.keyboard("{Enter}");
+
+    expect(
+      screen.queryByRole("button", { name: "Submit checkout" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("migrates anonymous events once after checkout completes", async () => {
     const user = userEvent.setup();
     const { queryClient } = await renderTrialFlow(

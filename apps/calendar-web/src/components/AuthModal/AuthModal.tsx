@@ -73,6 +73,10 @@ export const AuthModal: FC = () => {
   const { isOpen, currentView, closeModal, setView } = useAuthModal();
   const isStartTrialView = currentView === "startTrial";
   const isTrialCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
+  const trialInitialFocusRef = useRef<HTMLDivElement>(null);
+  const openSignupTrialCheckout = useCallback(() => {
+    checkoutPanelActions.open({ kind: "signup_trial_step" });
+  }, []);
   const dismissSignupTrial = useCallback(
     () => dismissSignupTrialStep(navigate),
     [navigate],
@@ -270,16 +274,21 @@ export const AuthModal: FC = () => {
               variant="link"
             >
               Back
-              <ShortcutHint>Esc</ShortcutHint>
+              <ShortcutHint className="pointer-coarse:hidden">Esc</ShortcutHint>
             </AuthButton>
           )
         }
+        initialFocusRef={trialInitialFocusRef}
         onDismiss={leaveTrialCheckoutOrStep}
+        onModEnter={isTrialCheckoutOpen ? undefined : openSignupTrialCheckout}
         title={title}
         variant="modal"
         widthClassName="w-[560px]"
       >
-        <StartTrialStep onDismiss={dismissSignupTrial} />
+        <StartTrialStep
+          initialFocusRef={trialInitialFocusRef}
+          onDismiss={dismissSignupTrial}
+        />
       </OverlayPanel>
     );
   }
