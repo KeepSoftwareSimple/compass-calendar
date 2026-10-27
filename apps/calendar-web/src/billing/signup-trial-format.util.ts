@@ -7,3 +7,11 @@ export function formatTrialChargeDate(
 ): string {
   return now.add(trialLengthDays, "day").format("dddd, MMMM D");
 }
+
+/** Trial ask charge-date line below the title. */
+export function formatTrialAskChargeLine(
+  trialLengthDays: number,
+  now: dayjs.Dayjs = dayjs(),
+): string {
+  return `No charge until ${formatTrialChargeDate(trialLengthDays, now)}. Cancel anytime.`;
+}

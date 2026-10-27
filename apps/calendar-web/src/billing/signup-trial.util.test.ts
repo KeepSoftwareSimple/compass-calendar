@@ -1,7 +1,10 @@
 import { BILLING_PLAN } from "@core/constants/billing.constants";
 import dayjs from "@core/util/date/dayjs";
 import { shouldOfferSignupTrialStep } from "@web/billing/billing.query";
-import { formatTrialChargeDate } from "@web/billing/signup-trial-format.util";
+import {
+  formatTrialAskChargeLine,
+  formatTrialChargeDate,
+} from "@web/billing/signup-trial-format.util";
 import { formatTrialStartPriceLine } from "@web/billing/trial-start-display.util";
 import { describe, expect, it } from "bun:test";
 
@@ -51,6 +54,15 @@ describe("formatTrialChargeDate", () => {
   it("formats the charge date from a pinned clock", () => {
     const pinned = dayjs("2026-01-15T12:00:00.000Z");
     expect(formatTrialChargeDate(7, pinned)).toBe("Thursday, January 22");
+  });
+});
+
+describe("formatTrialAskChargeLine", () => {
+  it("builds the trial ask charge copy from trial length", () => {
+    const pinned = dayjs("2026-01-15T12:00:00.000Z");
+    expect(formatTrialAskChargeLine(7, pinned)).toBe(
+      "No charge until Thursday, January 22. Cancel anytime.",
+    );
   });
 });
 
