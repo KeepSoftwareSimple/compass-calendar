@@ -7,6 +7,7 @@ public struct RootView: View {
     @Environment(\.nativeWebTheme) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable public var model: NativeCalendarRootModel
+    @FocusState private var focusedTitleBarControl: String?
     /// Web `SIDEBAR_DIVIDER_WIDTH`: the resize handle's column.
     private let sidebarDividerWidth: CGFloat = 32
     /// Web main column `pl-8`.
@@ -496,6 +497,18 @@ public struct RootView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focusedTitleBarControl, equals: symbol)
+        .overlay {
+            if focusedTitleBarControl == symbol {
+                if symbol == "chevron.left" || symbol == "chevron.right" {
+                    Circle().stroke(theme.accentColor, lineWidth: 2).padding(-1)
+                } else {
+                    RoundedRectangle(cornerRadius: 4).stroke(theme.accentColor, lineWidth: 2).padding(-1)
+                }
+            }
+        }
         .help("\(label) (\(shortcut))")
         .accessibilityLabel(label)
     }

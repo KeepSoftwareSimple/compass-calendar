@@ -23,6 +23,12 @@ final class WindowChromeLayoutTests: XCTestCase {
                 "Navigation and title should share the traffic lights' horizontal row")
             XCTAssertLessThan(previous.frame.minX - window.frame.minX, 96,
                 "Previous week control should sit in the unified title bar beside traffic lights")
+            for _ in 0 ..< 12 {
+                if previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true { break }
+                window.typeKey(.tab, modifierFlags: [])
+            }
+            XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
+                "Previous navigation must be reachable by Tab")
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Calendar styling and top chrome, \(theme)"
             evidence.lifetime = .keepAlways
