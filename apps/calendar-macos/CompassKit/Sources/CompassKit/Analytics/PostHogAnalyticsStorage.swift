@@ -22,8 +22,8 @@ extension UserDefaults: PostHogAnalyticsDefaults {
     }
 }
 
-public struct PostHogAnalyticsDefaultsBox: PostHogAnalyticsDefaults, @unchecked Sendable {
-    private let storage: NSLock
+public final class PostHogAnalyticsDefaultsBox: PostHogAnalyticsDefaults, @unchecked Sendable {
+    private let lock = NSLock()
     private var values: [String: String]
     private var numbers: [String: Double]
 
@@ -31,17 +31,16 @@ public struct PostHogAnalyticsDefaultsBox: PostHogAnalyticsDefaults, @unchecked 
         values: [String: String] = [:],
         numbers: [String: Double] = [:]
     ) {
-        storage = NSLock()
         self.values = values
         self.numbers = numbers
     }
 
     public func string(forKey key: String) -> String? {
-        storage.withLock { values[key] }
+        lock.withLock { values[key] }
     }
 
     public func set(_ value: String?, forKey key: String) {
-        storage.withLock {
+        lock.withLock {
             if let value {
                 values[key] = value
             } else {
@@ -51,15 +50,15 @@ public struct PostHogAnalyticsDefaultsBox: PostHogAnalyticsDefaults, @unchecked 
     }
 
     public func double(forKey key: String) -> Double {
-        storage.withLock { numbers[key] ?? 0 }
+        lock.withLock { numbers[key] ?? 0 }
     }
 
     public func set(_ value: Double, forKey key: String) {
-        storage.withLock { numbers[key] = value }
+        lock.withLock { numbers[key] = value }
     }
 
     public func removeObject(forKey key: String) {
-        storage.withLock {
+        lock.withLock {
             values.removeValue(forKey: key)
             numbers.removeValue(forKey: key)
         }
