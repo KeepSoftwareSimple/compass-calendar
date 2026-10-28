@@ -241,10 +241,27 @@ async function previewGenerationHasRows(
   return row !== null;
 }
 
-/**
- * At most one generation may have queued rows. Extra generations are skipped
- * so restarts and competing pollers cannot double-send the same step.
- */
+async function skipPreviewLoopQueuedRows(
+  recipientEmail: string,
+  now: Date,
+  lastError: string,
+  extra: Record<string, unknown> = {},
+): Promise<void> {
+  await mongoService.emailSend.updateMany(
+    previewLoopRecipientFilter(recipientEmail, {
+      status: "queued",
+      ...extra,
+    }),
+    {
+      $set: {
+        status: "skipped",
+        lastError,
+        updatedAt: now,
+      },
+    },
+  );
+}
+
 /** Clears queued preview rows until the next 1st-at-8:00-Denver window opens. */
 export async function pausePreviewLoopUntilMonthlyStart(
   recipientEmail: string,
@@ -254,18 +271,17 @@ export async function pausePreviewLoopUntilMonthlyStart(
   if (now.getTime() >= nextStart.getTime()) {
     return;
   }
-  await mongoService.emailSend.updateMany(
-    previewLoopRecipientFilter(recipientEmail, { status: "queued" }),
-    {
-      $set: {
-        status: "skipped",
-        lastError: AWAITING_MONTHLY_PREVIEW_SKIP_REASON,
-        updatedAt: now,
-      },
-    },
+  await skipPreviewLoopQueuedRows(
+    recipientEmail,
+    now,
+    AWAITING_MONTHLY_PREVIEW_SKIP_REASON,
   );
 }
 
+/**
+ * At most one generation may have queued rows. Extra generations are skipped
+ * so restarts and competing pollers cannot double-send the same step.
+ */
 export async function dedupePreviewLoopQueuedGenerations(
   recipientEmail: string,
   now: Date,
@@ -274,19 +290,11 @@ export async function dedupePreviewLoopQueuedGenerations(
   if (queuedGenerations.length <= 1) {
     return;
   }
-  const retireGenerations = queuedGenerations.slice(1);
-  await mongoService.emailSend.updateMany(
-    previewLoopRecipientFilter(recipientEmail, {
-      previewLoopGeneration: { $in: retireGenerations },
-      status: "queued",
-    }),
-    {
-      $set: {
-        status: "skipped",
-        lastError: DUPLICATE_GENERATION_SKIP_REASON,
-        updatedAt: now,
-      },
-    },
+  await skipPreviewLoopQueuedRows(
+    recipientEmail,
+    now,
+    DUPLICATE_GENERATION_SKIP_REASON,
+    { previewLoopGeneration: { $in: queuedGenerations.slice(1) } },
   );
 }
 
@@ -361,6 +369,18 @@ export async function enqueuePreviewLoopGeneration(
   await emailSendRepository.insertMany(rows);
 }
 
+async function enqueuePreviewLoopAtMonthlyStart(
+  email: string,
+  generation: number,
+  now: Date,
+): Promise<void> {
+  await enqueuePreviewLoopGeneration(
+    email,
+    generation,
+    nextPreviewLoopMonthlyStart(now),
+  );
+}
+
 export async function ensurePreviewLoopForRecipient(
   email: string,
   now: Date = new Date(),
@@ -385,8 +405,7 @@ export async function ensurePreviewLoopForRecipient(
 
   const latestGeneration = await findLatestPreviewGeneration(normalized);
   if (latestGeneration === null) {
-    const anchor = nextPreviewLoopMonthlyStart(now);
-    await enqueuePreviewLoopGeneration(normalized, 1, anchor);
+    await enqueuePreviewLoopAtMonthlyStart(normalized, 1, now);
     return;
   }
 
@@ -397,24 +416,16 @@ export async function ensurePreviewLoopForRecipient(
   if (generation.isStale) {
     // Rows from a retired step list can sit queued for days (their sendAt is
     // still in the future). Retire them now so the new sequence starts fresh.
-    await mongoService.emailSend.updateMany(
-      previewLoopRecipientFilter(normalized, {
-        previewLoopGeneration: latestGeneration,
-        status: "queued",
-      }),
-      {
-        $set: {
-          status: "skipped",
-          lastError: "Retired welcome step list",
-          updatedAt: now,
-        },
-      },
+    await skipPreviewLoopQueuedRows(
+      normalized,
+      now,
+      "Retired welcome step list",
+      { previewLoopGeneration: latestGeneration },
     );
-    const anchor = nextPreviewLoopMonthlyStart(now);
-    await enqueuePreviewLoopGeneration(
+    await enqueuePreviewLoopAtMonthlyStart(
       normalized,
       latestGeneration + 1,
-      anchor,
+      now,
     );
     return;
   }

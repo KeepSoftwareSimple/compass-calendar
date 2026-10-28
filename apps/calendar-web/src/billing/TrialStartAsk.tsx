@@ -18,7 +18,6 @@ import {
   formatTrialAskChargeLine,
   formatTrialStepWriteLead,
 } from "@web/billing/signup-trial-format.util";
-import { type TrialStartPriceLineContext } from "@web/billing/trial-start-display.util";
 import { consumeTrialStepTrigger } from "@web/billing/trial-step-request";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
@@ -39,7 +38,6 @@ type TrialStartAskProps = {
   showMascot?: boolean;
   trackSignupView?: boolean;
   onBeforeOpenCheckout?: () => void;
-  priceLineContext?: TrialStartPriceLineContext;
   /** OverlayPanel seats focus here so plain Enter does not activate Start. */
   initialFocusRef?: RefObject<HTMLElement | null>;
 };
@@ -57,7 +55,6 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
   showMascot = false,
   trackSignupView = false,
   onBeforeOpenCheckout,
-  priceLineContext: _priceLineContext = "default",
   initialFocusRef,
 }) => {
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
