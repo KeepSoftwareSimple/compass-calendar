@@ -1,3 +1,8 @@
+import {
+  type LoggerInstance,
+  registerLoggerFactory,
+  resetLoggerFactory,
+} from "@core/logger/logger.factory";
 import { type EventSchedule } from "@core/types/event.contracts";
 import { type gSchema$Event, type gSchema$Events } from "@core/types/gcal";
 import { type SyncEventContent } from "@core/types/sync/event.contracts";
@@ -9,6 +14,7 @@ import {
 } from "@sync/providers/google/google-event-writer.adapter";
 import { googleInstanceEventId } from "@sync/providers/google/google-instance-id";
 import { ProviderWriteError } from "@sync/providers/provider-event-writer.port";
+import { describe, expect, it, mock } from "bun:test";
 
 // A gaxios-shaped error: a numeric HTTP status on `response`, an optional
 // Google reason, and a request config that carries a bearer token (so tests can
@@ -187,6 +193,21 @@ const basePatch = {
   schedule: timedSchedule,
   recurrence: { kind: "single" } as const,
   invitation: "none" as const,
+};
+
+// Route LoggerFactory warns into a mock. Callers reset the factory in finally.
+const captureWarnings = () => {
+  const warn = mock(() => {});
+  registerLoggerFactory(
+    () =>
+      ({
+        warn,
+        error: mock(),
+        info: mock(),
+        debug: mock(),
+      }) as unknown as LoggerInstance,
+  );
+  return warn;
 };
 
 describe("GoogleEventWriter", () => {
@@ -569,6 +590,60 @@ describe("GoogleEventWriter", () => {
     expect(JSON.stringify(error.cause ?? {})).not.toContain(
       "super-secret-token",
     );
+  });
+
+  it("logs the schedule shape of a rejected series patch, never its values", async () => {
+    const warn = captureWarnings();
+    const api = new FakeEventsApi({ patch: gError(400, "invalid") });
+    const { writer } = writerWith(api);
+
+    try {
+      await writer
+        .patchEvent({
+          ...basePatch,
+          recurrence: {
+            kind: "series",
+            rules: ["RRULE:FREQ=WEEKLY;BYDAY=MO", "EXDATE:20250120T140000Z"],
+          },
+        })
+        .catch(() => {});
+    } finally {
+      resetLoggerFactory();
+    }
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const [message] = (warn.mock.calls as unknown[][])[0] ?? [];
+    expect(message).toContain("Google events.patch HTTP 400: reason=invalid");
+    expect(message).toContain(
+      "schedule={start=timed, end=timed, start.timeZone=y, end.timeZone=y, sameTimeZone=y, startVsEnd=before, recurrence=series[RRULE,EXDATE]}",
+    );
+    expect(message).not.toContain("2025-01-15");
+    expect(message).not.toContain("America/New_York");
+    expect(message).not.toContain("FREQ=WEEKLY");
+  });
+
+  it("logs only body keys for a rejected delete, which writes no schedule", async () => {
+    const warn = captureWarnings();
+    const api = new FakeEventsApi({ delete: gError(400, "badRequest") });
+    const { writer } = writerWith(api);
+
+    try {
+      await writer
+        .deleteEvent({
+          accessToken: "at",
+          calendarId: "cal",
+          providerEventId: "abc12deadbeef00000000000",
+          expectedVersion: null,
+          invitation: "none",
+        })
+        .catch(() => {});
+    } finally {
+      resetLoggerFactory();
+    }
+
+    const [message] = (warn.mock.calls as unknown[][])[0] ?? [];
+    expect(message).toContain("bodyKeys=[]");
+    expect(message).not.toContain("schedule=");
   });
 
   it("maps a quota 403 to transient (retryable)", async () => {

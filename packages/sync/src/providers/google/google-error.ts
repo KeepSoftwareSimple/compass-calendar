@@ -105,6 +105,54 @@ export function summarizeGoogleEventFieldsForLog(item: gSchema$Event): string {
   ].join(", ");
 }
 
+/**
+ * Schedule/recurrence shape of a Google write body, for 400 logs only. Says
+ * which start/end fields are set, how start compares to end, and which
+ * recurrence line types were sent, never the times, zones, or rules.
+ */
+export function summarizeGoogleScheduleForLog(body: gSchema$Event): string {
+  const { start, end, recurrence } = body;
+  return [
+    `start=${eventDateTimeKind(start)}`,
+    `end=${eventDateTimeKind(end)}`,
+    `start.timeZone=${start?.timeZone ? "y" : "n"}`,
+    `end.timeZone=${end?.timeZone ? "y" : "n"}`,
+    `sameTimeZone=${start?.timeZone === end?.timeZone ? "y" : "n"}`,
+    `startVsEnd=${compareStartToEnd(start, end)}`,
+    `recurrence=${recurrenceShape(recurrence)}`,
+  ].join(", ");
+}
+
+type EventDateTime = NonNullable<gSchema$Event["start"]>;
+
+function eventDateTimeKind(value: EventDateTime | undefined): string {
+  if (value?.date && value.dateTime) return "both";
+  if (value?.dateTime) return "timed";
+  if (value?.date) return "allDay";
+  return "none";
+}
+
+function compareStartToEnd(
+  start: EventDateTime | undefined,
+  end: EventDateTime | undefined,
+): string {
+  const startMs = Date.parse(start?.dateTime ?? start?.date ?? "");
+  const endMs = Date.parse(end?.dateTime ?? end?.date ?? "");
+  if (Number.isNaN(startMs) || Number.isNaN(endMs)) return "unparsed";
+  if (startMs < endMs) return "before";
+  if (startMs === endMs) return "equal";
+  return "after";
+}
+
+// "series[RRULE,EXDATE]" for written rules, "cleared" for a null (convert to
+// single), "omitted" for an instance write that leaves the key off.
+function recurrenceShape(recurrence: gSchema$Event["recurrence"]): string {
+  if (recurrence === undefined) return "omitted";
+  if (recurrence === null) return "cleared";
+  const lineTypes = recurrence.map((line) => line.split(/[:;]/, 1)[0]);
+  return `series[${lineTypes.join(",")}]`;
+}
+
 // Quota/rate 403s mean "slow down", not "forbidden".
 export const GOOGLE_RATE_LIMIT_REASONS = [
   "rateLimitExceeded",
