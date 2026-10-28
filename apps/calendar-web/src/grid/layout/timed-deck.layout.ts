@@ -1,5 +1,5 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
-import dayjs, { type Dayjs } from "@core/util/date/dayjs";
+import { type Dayjs } from "@core/util/date/dayjs";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
   EMPTY_HIDDEN_EVENT_IDS,
@@ -16,6 +16,8 @@ import {
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
 import { type EventPosition } from "@web/grid/types/grid.types";
+import { getEffectiveTimeZone } from "@web/timezone/effective-timezone.store";
+import { inEffectiveTimeZone } from "@web/timezone/in-time-zone";
 
 export interface TimedDeckLayout {
   groupSize: number;
@@ -170,11 +172,13 @@ const getDeckIndent = (
 };
 
 const toDeckCandidate = (item: TimedEventLayoutItem): DeckCandidate => {
-  const start = dayjs(item.event.startDate);
+  const timeZone = item.event.timeZone ?? getEffectiveTimeZone();
+  const start = inEffectiveTimeZone(item.event.startDate, timeZone);
+  const end = inEffectiveTimeZone(item.event.endDate, timeZone);
 
   return {
     dayKey: start.format(YEAR_MONTH_DAY_FORMAT),
-    end: dayjs(item.event.endDate),
+    end,
     item,
     start,
   };
