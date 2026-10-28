@@ -13,6 +13,10 @@ import {
   TIMED_EVENT_WIDTH_RATIO,
 } from "@web/grid/grid.constants";
 import {
+  resetEffectiveTimeZoneStoreForTests,
+  setPinnedTimeZone,
+} from "@web/timezone/effective-timezone.store";
+import {
   applyTimedDeckPosition,
   applyTimedEventDisplayPosition,
   createTimedEventLayout,
@@ -33,6 +37,8 @@ const createTimedEvent = (
   ...overrides,
   position: { ...gridEventDefaultPosition, ...overrides.position },
 });
+
+const denver = "America/Denver";
 
 const event = (id: string, startDate: string, endDate: string) =>
   createTimedEvent({
@@ -143,6 +149,42 @@ describe("createTimedEventLayout", () => {
 
     expect(deckOf(laid, "morning")).toBeNull();
     expect(deckOf(laid, "afternoon")).toBeNull();
+  });
+
+  it("decks same-start overlaps when one event is UTC Z and the other is wall clock", () => {
+    resetEffectiveTimeZoneStoreForTests();
+    setPinnedTimeZone(denver);
+
+    const events = [
+      createTimedEvent({
+        _id: "ritual",
+        calendarId: "507f1f77bcf86cd799439012",
+        endDate: "2026-11-01T02:30:00.000Z",
+        startDate: "2026-11-01T01:00:00.000Z",
+        title: "Monthly Ritual",
+      }),
+      createTimedEvent({
+        _id: "unwind",
+        calendarId: "507f1f77bcf86cd799439011",
+        endDate: "2026-10-31T20:00:00-06:00",
+        recurrence: { eventId: "series-unwind", rule: ["RRULE:FREQ=WEEKLY"] },
+        startDate: "2026-10-31T19:00:00-06:00",
+        timeZone: denver,
+        title: "Unwind",
+      }),
+      createTimedEvent({
+        _id: "update",
+        endDate: "2026-10-31T19:00:00-06:00",
+        startDate: "2026-10-31T18:00:00-06:00",
+        title: "Update",
+      }),
+    ];
+
+    const laid = createTimedEventLayout(events);
+
+    expect(deckOf(laid, "ritual")).toEqual({ order: 0, groupSize: 2 });
+    expect(deckOf(laid, "unwind")).toEqual({ order: 1, groupSize: 2 });
+    expect(deckOf(laid, "update")).toBeNull();
   });
 
   it("excludes a hidden event from overlap fanning", () => {
