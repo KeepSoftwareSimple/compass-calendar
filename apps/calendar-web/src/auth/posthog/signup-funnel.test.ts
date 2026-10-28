@@ -38,6 +38,14 @@ describe("signup funnel", () => {
     capture.mockClear();
   });
 
+  it("always sends a non-empty step property", () => {
+    trackSignupStep("trial_step_viewed", { source: "signup_trial_step" });
+
+    const payload = capture.mock.calls[0]?.[1] as { step?: string };
+    expect(typeof payload.step).toBe("string");
+    expect(payload.step?.length).toBeGreaterThan(0);
+  });
+
   it("shapes a step as signup_step_viewed with step_name", () => {
     trackSignupStep("oauth_callback_returned", { method: "google" });
 
