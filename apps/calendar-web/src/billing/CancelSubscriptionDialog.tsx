@@ -65,13 +65,11 @@ export function CancelSubscriptionDialog({
     | SubscriptionCancelReasonSubmission
     | undefined => {
     if (!selectedReason) return undefined;
-    if (selectedReason !== "other") {
-      return { reason: selectedReason };
-    }
     const trimmed = otherDetails.trim();
-    return trimmed
-      ? { reason: "other", details: trimmed }
-      : { reason: "other" };
+    if (selectedReason === "other" && trimmed) {
+      return { reason: "other", details: trimmed };
+    }
+    return { reason: selectedReason };
   };
 
   const submit = () => {
@@ -176,13 +174,11 @@ export function CancelSubscriptionDialog({
               onClick={() => setSelectedReason(option.slug)}
               role="radio"
               tabIndex={
-                selectedReason == null
-                  ? option.slug === SUBSCRIPTION_CANCEL_REASONS[0]?.slug
-                    ? 0
-                    : -1
-                  : selectedReason === option.slug
-                    ? 0
-                    : -1
+                selectedReason === option.slug ||
+                (selectedReason == null &&
+                  option.slug === SUBSCRIPTION_CANCEL_REASONS[0]?.slug)
+                  ? 0
+                  : -1
               }
               type="button"
             >
