@@ -731,6 +731,7 @@ public final class TimeGridView: NSView {
                 isFocused: isFocused,
                 isSidebarEditing: isSidebarEditing,
                 isUnsettled: state.unsettledEventIds.contains(card.eventId),
+                isPast: EventCardPastFill.isPast(card, state: state),
                 timeLabel: EventCardTimeLabel.text(for: card, state: state)
             )
             view.cardDelegate = self
