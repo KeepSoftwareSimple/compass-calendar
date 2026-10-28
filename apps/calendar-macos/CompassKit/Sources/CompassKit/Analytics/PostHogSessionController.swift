@@ -9,7 +9,7 @@ public struct PostHogSessionController: Sendable {
     private let now: @Sendable () -> Date
 
     public init(
-        defaults: PostHogAnalyticsDefaults = UserDefaults.standard,
+        defaults: PostHogAnalyticsDefaults = UserDefaultsPostHogAnalyticsDefaults(),
         generateSessionId: @escaping @Sendable () -> String = {
             UUID().uuidString.lowercased()
         },

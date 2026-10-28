@@ -14,9 +14,31 @@ public protocol PostHogAnalyticsDefaults: Sendable {
     func removeObject(forKey key: String)
 }
 
-extension UserDefaults: PostHogAnalyticsDefaults {
+public struct UserDefaultsPostHogAnalyticsDefaults: PostHogAnalyticsDefaults, @unchecked Sendable {
+    private let defaults: UserDefaults
+
+    public init(_ defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    public func string(forKey key: String) -> String? {
+        defaults.string(forKey: key)
+    }
+
     public func set(_ value: String?, forKey key: String) {
-        set(value as Any?, forKey: key)
+        defaults.set(value, forKey: key)
+    }
+
+    public func double(forKey key: String) -> Double {
+        defaults.double(forKey: key)
+    }
+
+    public func set(_ value: Double, forKey key: String) {
+        defaults.set(value, forKey: key)
+    }
+
+    public func removeObject(forKey key: String) {
+        defaults.removeObject(forKey: key)
     }
 }
 
