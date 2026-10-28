@@ -38,6 +38,11 @@ const expandSelectionToActiveListContent = (
   }
 };
 
+const runListToggle = (editor: Editor, list: "bullet" | "ordered") =>
+  list === "bullet"
+    ? editor.chain().focus().toggleBulletList().run()
+    : editor.chain().focus().toggleOrderedList().run();
+
 export const toggleDescriptionList = (
   editor: Editor,
   list: "bullet" | "ordered",
@@ -51,20 +56,10 @@ export const toggleDescriptionList = (
     expandSelectionToListItems(editor);
   }
 
-  const chain = editor.chain().focus();
-  const ran =
-    list === "bullet"
-      ? chain.toggleBulletList().run()
-      : chain.toggleOrderedList().run();
-
-  if (ran) return;
+  if (runListToggle(editor, list)) return;
 
   expandSelectionToActiveListContent(editor, listType);
-  const retry =
-    list === "bullet"
-      ? editor.chain().focus().toggleBulletList().run()
-      : editor.chain().focus().toggleOrderedList().run();
-  if (!retry) {
+  if (!runListToggle(editor, list)) {
     console.warn("Description list toggle did not apply");
   }
 };
