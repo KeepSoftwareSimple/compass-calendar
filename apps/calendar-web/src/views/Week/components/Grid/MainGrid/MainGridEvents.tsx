@@ -19,9 +19,7 @@ import {
   resolveGridEventCardChrome,
   resolvePlaceholderCardChrome,
 } from "@web/grid/grid-event-card-chrome";
-import { readOverlapScreenshotLegacyDeck } from "@web/grid/layout/overlap-screenshot.harness";
 import { createTimedEventLayout } from "@web/grid/layout/timed-deck.layout";
-import { createTimedEventLayoutPre4905 } from "@web/grid/layout/timed-deck.layout.legacy";
 import { useGridEventDraftHandlers } from "@web/views/Week/components/Grid/useGridEventDraftHandlers";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
 import { useWeekVisibleDates } from "@web/views/Week/hooks/grid/useWeekVisibleDates";
@@ -84,15 +82,14 @@ export const MainGridEvents = ({ measurements, weekProps }: Props) => {
       weekDays,
     ],
   );
-  const timedEventItems = useMemo(() => {
-    const layoutTimedEvents = readOverlapScreenshotLegacyDeck()
-      ? createTimedEventLayoutPre4905
-      : createTimedEventLayout;
-    return layoutTimedEvents(
-      timedEventsForDeckLayout(visibleTimedEvents, draftOverlay),
-      hiddenEventIds,
-    );
-  }, [draftOverlay, hiddenEventIds, visibleTimedEvents]);
+  const timedEventItems = useMemo(
+    () =>
+      createTimedEventLayout(
+        timedEventsForDeckLayout(visibleTimedEvents, draftOverlay),
+        hiddenEventIds,
+      ),
+    [draftOverlay, hiddenEventIds, visibleTimedEvents],
+  );
   // Resolved once per event here (not inside each card) and kept referentially
   // stable across renders where neither the events nor the calendars changed,
   // so GridTimedEventMemo's per-card comparator doesn't over-invalidate.

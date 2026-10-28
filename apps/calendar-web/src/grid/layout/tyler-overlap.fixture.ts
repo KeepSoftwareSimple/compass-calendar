@@ -12,14 +12,12 @@ const denver = "America/Denver";
  * mixed encodings after sync: Z instant on one card, offset wall clock on the
  * other (see #4905).
  */
-export const tylerOct31OverlapGridEventsLegacy = (): GridEvent[] => [
+export const tylerOct31OverlapGridEvents = (): GridEvent[] => [
   {
     _id: "tyler-ritual",
     calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
     description: "",
-    // Naive wall end (legacy import path): breaks pre-4905 overlap checks on a
-    // UTC browser host while cards still paint at 7:00–8:30 PM MDT.
-    endDate: "2026-10-31T20:30:00.000",
+    endDate: "2026-10-31T20:30:00-06:00",
     isAllDay: false,
     origin: Origin.COMPASS,
     position: gridEventDefaultPosition,
@@ -56,11 +54,3 @@ export const tylerOct31OverlapGridEventsLegacy = (): GridEvent[] => [
     user: "",
   },
 ];
-
-/** Same cards with offset-normalized end instants (post-#4905 / current sync). */
-export const tylerOct31OverlapGridEvents = (): GridEvent[] =>
-  tylerOct31OverlapGridEventsLegacy().map((event) =>
-    event._id === "tyler-ritual"
-      ? { ...event, endDate: "2026-10-31T20:30:00-06:00" }
-      : event,
-  );
