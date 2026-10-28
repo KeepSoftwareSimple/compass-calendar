@@ -13,7 +13,15 @@ import {
   resetConnectCalendarPromptStoreForTests,
 } from "@web/components/ConnectCalendarPrompt/connect-calendar.store";
 import { emitWelcomeIntroAnalyticsOnce } from "@web/components/WelcomeModal/welcome-analytics.util";
-import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 
 const capture = mock();
 
@@ -28,8 +36,11 @@ mock.module("@web/auth/posthog/posthog.bootstrap", () => ({
     isClientMocked ? { capture } : actualPosthogBootstrap.getPosthogClient(),
 }));
 
+const realFetch = globalThis.fetch;
+
 afterAll(() => {
   isClientMocked = false;
+  globalThis.fetch = realFetch;
 });
 
 /** Direct trackSignupStep call sites (web only; macOS does not emit this event). */
@@ -72,6 +83,10 @@ describe("signup_step_viewed emit sites", () => {
     globalThis.fetch = mock(
       async () => new Response(null, { status: 204 }),
     ) as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
   });
 
   it("covers every vocabulary step via funnel helpers", () => {
