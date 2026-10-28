@@ -5,7 +5,7 @@ final class WindowChromeLayoutTests: XCTestCase {
     func testHeaderUsesTopChromeWithoutAnEmptyToolbarBand() {
         for theme in ["light-beach", "dark-abyss"] {
             let app = XCUIApplication.compassUITest()
-            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme, "-COMPASS_APP_URL", "https://compass.invalid"]
+            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme, "-COMPASS_APP_URL", "https://compass.invalid", "-AppleKeyboardUIMode", "3"]
             app.launch()
             let window = app.windows["Compass"]
             let title = window.buttons["compass-native-header-title"]
@@ -28,7 +28,7 @@ final class WindowChromeLayoutTests: XCTestCase {
                 window.typeKey(.tab, modifierFlags: [])
             }
             XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
-                "Previous navigation must be reachable by Tab")
+                "Previous navigation must be reachable by Tab: \(window.debugDescription)")
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Calendar styling and top chrome, \(theme)"
             evidence.lifetime = .keepAlways
