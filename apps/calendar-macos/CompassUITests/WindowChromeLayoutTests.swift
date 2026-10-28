@@ -31,10 +31,16 @@ final class WindowChromeLayoutTests: XCTestCase {
             window.typeKey(.tab, modifierFlags: [.shift])
             XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
                 "Previous navigation must be reachable by Tab: \(window.debugDescription)")
-            let beforeActivation = title.label
-            for _ in 0 ..< 5 { window.typeKey(.space, modifierFlags: []) }
-            XCTAssertNotEqual(title.label, beforeActivation,
-                "Five previous-week activations must change the month heading")
+            let columns = window.descendants(matching: .any).matching(
+                NSPredicate(format: "identifier BEGINSWITH %@", "compass-grid-column-"))
+            let beforeSpace = columns.allElementsBoundByIndex.map(\.identifier).sorted()
+            XCTAssertFalse(beforeSpace.isEmpty)
+            window.typeKey(.space, modifierFlags: [])
+            let afterSpace = columns.allElementsBoundByIndex.map(\.identifier).sorted()
+            XCTAssertNotEqual(afterSpace, beforeSpace, "Space must navigate the visible dates")
+            window.typeKey(.return, modifierFlags: [])
+            XCTAssertNotEqual(columns.allElementsBoundByIndex.map(\.identifier).sorted(), afterSpace,
+                "Return must navigate the visible dates")
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Calendar styling and top chrome, \(theme)"
             evidence.lifetime = .keepAlways
