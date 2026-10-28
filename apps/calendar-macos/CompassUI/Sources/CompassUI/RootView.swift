@@ -507,6 +507,8 @@ public struct RootView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($focusedTitleBarControl, equals: symbol)
+        .onKeyPress(.return) { action(); return .handled }
+        .onKeyPress(.space) { action(); return .handled }
         .onKeyPress(keys: [.tab]) { press in
             guard press.modifiers.subtracting(.shift).isEmpty else { return .ignored }
             if symbol == "chevron.left", press.modifiers.isEmpty {

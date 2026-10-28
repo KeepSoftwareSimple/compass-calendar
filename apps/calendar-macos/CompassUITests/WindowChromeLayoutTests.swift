@@ -31,6 +31,10 @@ final class WindowChromeLayoutTests: XCTestCase {
             window.typeKey(.tab, modifierFlags: [.shift])
             XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
                 "Previous navigation must be reachable by Tab: \(window.debugDescription)")
+            let beforeActivation = title.label
+            for _ in 0 ..< 5 { window.typeKey(.space, modifierFlags: []) }
+            XCTAssertNotEqual(title.label, beforeActivation,
+                "Five previous-week activations must change the month heading")
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Calendar styling and top chrome, \(theme)"
             evidence.lifetime = .keepAlways
