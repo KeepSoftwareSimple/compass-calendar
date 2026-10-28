@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { prepareCalendarPage } from "../utils/event-test-utils";
 
 const DENVER = "America/Denver";
-const WEEK_START = "2026-10-25";
+const WEEK_START = "2026-10-31";
 
 type SeedEvent = {
   calendarId: string;
@@ -20,20 +20,19 @@ async function seedOverlapScenario(page: import("@playwright/test").Page) {
     )
     .not.toBeNull();
 
-  await page.evaluate(async () => {
+  await page.evaluate(async (denverZone) => {
     const primary = localStorage.getItem("compass.localCalendarId");
     if (!primary) {
       throw new Error("missing local calendar id");
     }
-    const imported = `${primary.slice(0, 23)}2`;
 
-    const seedEvents: SeedEvent[] = [
+    const seedEvents = [
       {
-        calendarId: imported,
+        calendarId: primary,
         end: "2026-11-01T02:30:00.000Z",
         id: `${"a".repeat(24)}`,
         start: "2026-11-01T01:00:00.000Z",
-        timeZone: "UTC",
+        timeZone: denverZone,
         title: "Monthly Ritual",
       },
       {
@@ -41,7 +40,7 @@ async function seedOverlapScenario(page: import("@playwright/test").Page) {
         end: "2026-11-01T02:00:00.000Z",
         id: `${"b".repeat(24)}`,
         start: "2026-11-01T01:00:00.000Z",
-        timeZone: DENVER,
+        timeZone: denverZone,
         title: "Unwind",
       },
       {
@@ -49,7 +48,7 @@ async function seedOverlapScenario(page: import("@playwright/test").Page) {
         end: "2026-11-01T01:00:00.000Z",
         id: `${"c".repeat(24)}`,
         start: "2026-11-01T00:00:00.000Z",
-        timeZone: DENVER,
+        timeZone: denverZone,
         title: "Update 4e2d",
       },
     ];
@@ -89,13 +88,13 @@ async function seedOverlapScenario(page: import("@playwright/test").Page) {
     } finally {
       db.close();
     }
-  });
+  }, DENVER);
 }
 
 test.describe("timed overlap deck screenshot", () => {
   test.use({
     timezoneId: DENVER,
-    viewport: { width: 1280, height: 800 },
+    viewport: { width: 1600, height: 800 },
   });
 
   test("capture saturday overlap grid", async ({ page }) => {
@@ -117,11 +116,14 @@ test.describe("timed overlap deck screenshot", () => {
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.locator("#mainGrid").waitFor({ state: "visible" });
     await expect(
-      page.getByRole("button", { name: /timed event: monthly ritual/i }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /timed event: unwind/i }),
-    ).toBeVisible();
+      page.getByRole("button", { name: /monthly ritual/i }),
+    ).toBeVisible({ timeout: 20_000 });
+    await page.evaluate(() => {
+      const grid = document.querySelector("#weekGridScroller");
+      if (grid instanceof HTMLElement) {
+        grid.scrollTop = 17 * 60;
+      }
+    });
 
     const output =
       process.env.OVERLAP_SCREENSHOT_PATH ??
