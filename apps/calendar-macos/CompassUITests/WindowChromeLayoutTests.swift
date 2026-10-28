@@ -5,7 +5,7 @@ final class WindowChromeLayoutTests: XCTestCase {
     func testHeaderUsesTopChromeWithoutAnEmptyToolbarBand() {
         for theme in ["light-beach", "dark-abyss"] {
             let app = XCUIApplication.compassUITest()
-            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme, "-COMPASS_APP_URL", "https://compass.invalid", "-AppleKeyboardUIMode", "3"]
+            app.launchArguments += ["-COMPASS_FIXTURE", "demo", "-compass.theme", theme, "-COMPASS_APP_URL", "https://compass.invalid"]
             app.launch()
             let window = app.windows["Compass"]
             let title = window.buttons["compass-native-header-title"]
@@ -23,10 +23,12 @@ final class WindowChromeLayoutTests: XCTestCase {
                 "Navigation and title should share the traffic lights' horizontal row")
             XCTAssertLessThan(previous.frame.minX - window.frame.minX, 96,
                 "Previous week control should sit in the unified title bar beside traffic lights")
-            for _ in 0 ..< 12 {
-                if previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true { break }
-                window.typeKey(.tab, modifierFlags: [])
-            }
+            previous.click()
+            XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, window.debugDescription)
+            window.typeKey(.tab, modifierFlags: [])
+            let next = window.buttons["Next"]
+            XCTAssertTrue(next.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, window.debugDescription)
+            window.typeKey(.tab, modifierFlags: [.shift])
             XCTAssertTrue(previous.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
                 "Previous navigation must be reachable by Tab: \(window.debugDescription)")
             let evidence = XCTAttachment(screenshot: window.screenshot())

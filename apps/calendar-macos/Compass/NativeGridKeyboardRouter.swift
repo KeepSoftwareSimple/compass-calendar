@@ -400,6 +400,15 @@ final class NativeGridKeyboardRouter {
             return false
         }
 
+        // Header buttons own activation and traversal, rather than grid edge cycling.
+        if model.isTitleBarControlFocused {
+            if keyEvent.modifiers.isEmpty,
+                keyEvent.key == .named(.enter) || isSpaceKey(keyEvent.key) { return false }
+            if keyEvent.key == .named(.tab), keyEvent.modifiers.isEmpty || keyEvent.modifiers == [.shift] {
+                return false
+            }
+        }
+
         // Sidebar and banner focus own their keys before the grid's draft keys,
         // which would read digits as a typed time and Enter as "open event".
         if !model.isEventFormVisible,

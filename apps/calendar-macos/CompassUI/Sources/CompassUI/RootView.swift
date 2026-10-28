@@ -409,6 +409,10 @@ public struct RootView: View {
         }
         .frame(maxWidth: .infinity, alignment: .top)
         .frame(width: mainTrackColumnWidth, alignment: .topLeading)
+        .onChange(of: focusedTitleBarControl) { _, focused in
+            model.isTitleBarControlFocused = focused != nil
+        }
+        .onDisappear { model.isTitleBarControlFocused = false }
     }
 
     /// Main calendar column width during parity capture (excludes open sidebar chrome).
@@ -482,7 +486,10 @@ public struct RootView: View {
         shortcut: String,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button {
+            focusedTitleBarControl = symbol
+            action()
+        } label: {
             Group {
                 if symbol == "chevron.left" || symbol == "chevron.right" {
                     CalendarChevronIcon(pointsLeft: symbol == "chevron.left")
@@ -500,6 +507,18 @@ public struct RootView: View {
         .focusable()
         .focusEffectDisabled()
         .focused($focusedTitleBarControl, equals: symbol)
+        .onKeyPress(keys: [.tab]) { press in
+            guard press.modifiers.subtracting(.shift).isEmpty else { return .ignored }
+            if symbol == "chevron.left", press.modifiers.isEmpty {
+                focusedTitleBarControl = "chevron.right"
+                return .handled
+            }
+            if symbol == "chevron.right", press.modifiers == .shift {
+                focusedTitleBarControl = "chevron.left"
+                return .handled
+            }
+            return .ignored
+        }
         .overlay {
             if focusedTitleBarControl == symbol {
                 if symbol == "chevron.left" || symbol == "chevron.right" {
