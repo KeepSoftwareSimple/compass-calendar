@@ -12,6 +12,7 @@ import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 import { TrialBadge } from "@web/billing/TrialBadge";
 import { ID_DATEPICKER_SIDEBAR } from "@web/common/constants/web.constants";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import { restoreSidebarPickerReturnFocus } from "@web/components/Sidebar/util/sidebarFocus.util";
 import { pageJumpAttrs } from "@web/shortcuts/page-jump/page-jump.targets";
 import { recordHandledShortcutInvocation } from "@web/shortcuts/tips/shortcut-telemetry";
 import { MonthPickerHint } from "./MonthPickerHint";
@@ -55,7 +56,11 @@ const swallowDayPointer = (event: MouseEvent<HTMLElement>) => {
 
 /** react-datepicker moves its own cursor on Arrow keys; there is no app
  * handler to hang a shortcutId off, so the legend row records here instead. */
-const recordPickerStep = (event: KeyboardEvent<HTMLElement>) => {
+const handlePickerKeyDownCapture = (event: KeyboardEvent<HTMLElement>) => {
+  if (event.key === "Escape") {
+    restoreSidebarPickerReturnFocus();
+    return;
+  }
   if (event.key.startsWith("Arrow")) {
     recordHandledShortcutInvocation("nav-picker-step");
   }
@@ -176,7 +181,7 @@ export const MonthPicker: FC<Props> = ({
       aria-label="Date navigation"
       onClickCapture={swallowDayPointer}
       onMouseDownCapture={swallowDayPointer}
-      onKeyDown={recordPickerStep}
+      onKeyDownCapture={handlePickerKeyDownCapture}
       {...pageJumpAttrs("month-picker")}
     >
       <MonthPickerHint unit={unit}>
