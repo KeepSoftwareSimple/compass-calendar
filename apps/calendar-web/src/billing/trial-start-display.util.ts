@@ -3,7 +3,9 @@ import {
   type BillingDisplayPrice,
 } from "@core/constants/billing.constants";
 import { type BillingSubscriptionResponse } from "@core/types/billing.types";
+import dayjs from "@core/util/date/dayjs";
 import { formatBillingMoney } from "@web/billing/billing-display";
+import { formatTrialChargeDate } from "@web/billing/signup-trial-format.util";
 
 export function resolveBillingDisplayPrice(
   subscriptionPrice: BillingSubscriptionResponse["price"] | null | undefined,
@@ -22,6 +24,18 @@ const INTERVAL_SHORT: Record<BillingDisplayPrice["interval"], string> = {
 };
 
 export type TrialStartPriceLineContext = "default" | "settings";
+
+/** Trial ask subline: catalog price plus charge date from trial length. */
+export function formatTrialAskSubline(
+  price: BillingDisplayPrice,
+  trialLengthDays: number,
+  now: dayjs.Dayjs = dayjs(),
+): string {
+  const money = formatBillingMoney(price.amount, price.currency);
+  const interval = INTERVAL_SHORT[price.interval];
+  const chargeDate = formatTrialChargeDate(trialLengthDays, now);
+  return `${money}/${interval} after. No charge until ${chargeDate}. Cancel anytime.`;
+}
 
 /** Trial ask copy: "$7.99/mo after 7 days. Cancel anytime in Settings." */
 export function formatTrialStartPriceLine(
