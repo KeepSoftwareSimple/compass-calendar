@@ -163,6 +163,58 @@ describe("EmailDispatchService", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it("skips welcome sends for keepsoftwaresimple.com inboxes", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "founder@keepsoftwaresimple.com",
+      isSynthetic: true,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("skips welcome sends for compasscaltest.invalid journey inboxes", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    const row = baseRow();
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "runner+journey1@compasscaltest.invalid",
+      isSynthetic: true,
+      billing: undefined,
+    });
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("passes USER_FIRST_NAME when the user has a first name", async () => {
     CONFIG.EMAIL_PROVIDER = "log";
     CONFIG.EMAIL_ALLOWLIST = [];

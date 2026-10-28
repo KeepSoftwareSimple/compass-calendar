@@ -11,12 +11,15 @@ import { emailSendRepository } from "@backend/email/email-send.repository";
 import { WELCOME_SEQUENCE } from "@backend/email/welcome-sequence";
 import { enrollWelcomeSequenceForNewUser } from "@backend/email/welcome-sequence.enrollment";
 import {
+  dedupePreviewLoopQueuedGenerations,
   enqueuePreviewLoopGeneration,
   ensurePreviewLoopEnrollments,
   ensurePreviewLoopForRecipient,
   isPreviewLoopOverDailyCap,
   previewLoopRowId,
 } from "@backend/email/welcome-sequence.preview-loop";
+import { nextPreviewLoopMonthlyStart } from "@backend/email/welcome-sequence.preview-loop.schedule";
+import userService from "@backend/user/services/user.service";
 import {
   afterAll,
   afterEach,
@@ -31,7 +34,6 @@ describe("welcome sequence preview loop", () => {
   const originalProvider = CONFIG.EMAIL_PROVIDER;
   const originalProfile = CONFIG.EMAIL_SCHEDULE_PROFILE;
   const originalRecipients = [...CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS];
-  const originalGapDays = CONFIG.EMAIL_PREVIEW_LOOP_GAP_DAYS;
   const originalMaxPerDay = CONFIG.EMAIL_PREVIEW_LOOP_MAX_PER_DAY;
   const previewEmail = "founder-preview-loop@example.com";
 
@@ -44,7 +46,6 @@ describe("welcome sequence preview loop", () => {
     CONFIG.EMAIL_PROVIDER = "log";
     CONFIG.EMAIL_SCHEDULE_PROFILE = "fast";
     CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS = [previewEmail];
-    CONFIG.EMAIL_PREVIEW_LOOP_GAP_DAYS = 0;
     CONFIG.EMAIL_PREVIEW_LOOP_MAX_PER_DAY = 10;
   });
 
@@ -52,26 +53,28 @@ describe("welcome sequence preview loop", () => {
     CONFIG.EMAIL_PROVIDER = originalProvider;
     CONFIG.EMAIL_SCHEDULE_PROFILE = originalProfile;
     CONFIG.EMAIL_PREVIEW_LOOP_RECIPIENTS = originalRecipients;
-    CONFIG.EMAIL_PREVIEW_LOOP_GAP_DAYS = originalGapDays;
     CONFIG.EMAIL_PREVIEW_LOOP_MAX_PER_DAY = originalMaxPerDay;
     await cleanupCollections();
   });
 
   afterAll(cleanupTestDb);
 
-  it("enrolls the first preview generation idempotently", async () => {
-    await ensurePreviewLoopEnrollments(new Date("2026-01-01T00:00:00.000Z"));
-    await ensurePreviewLoopEnrollments(new Date("2026-01-01T00:00:00.000Z"));
+  it("enrolls the first preview generation on the next monthly anchor idempotently", async () => {
+    const now = new Date("2026-10-28T12:00:00.000Z");
+    const anchor = nextPreviewLoopMonthlyStart(now);
+    await ensurePreviewLoopEnrollments(now);
+    await ensurePreviewLoopEnrollments(now);
 
     const rows = await mongoService.emailSend
       .find({ previewLoop: true, recipientEmail: previewEmail })
       .toArray();
     expect(rows).toHaveLength(WELCOME_SEQUENCE.length);
     expect(rows.every((row) => row.previewLoopGeneration === 1)).toBe(true);
+    expect(rows[0]?.sendAt?.toISOString()).toBe(anchor.toISOString());
   });
 
-  it("restarts the loop after the final step with a new generation", async () => {
-    const anchor = new Date("2026-01-01T00:00:00.000Z");
+  it("restarts on the next monthly anchor after the final step", async () => {
+    const anchor = new Date("2026-10-01T14:00:00.000Z");
     await enqueuePreviewLoopGeneration(previewEmail, 1, anchor);
 
     for (const step of WELCOME_SEQUENCE) {
@@ -79,7 +82,8 @@ describe("welcome sequence preview loop", () => {
       await emailSendRepository.markSent(rowId, `msg-${step.key}`);
     }
 
-    await ensurePreviewLoopForRecipient(previewEmail, new Date());
+    const afterCompletion = new Date("2026-10-20T12:00:00.000Z");
+    await ensurePreviewLoopForRecipient(previewEmail, afterCompletion);
 
     const generationTwo = await mongoService.emailSend.countDocuments({
       previewLoop: true,
@@ -87,20 +91,32 @@ describe("welcome sequence preview loop", () => {
       previewLoopGeneration: 2,
       status: "queued",
     });
-    expect(generationTwo).toBe(WELCOME_SEQUENCE.length);
+    expect(generationTwo).toBe(0);
+
+    const novemberStart = new Date("2026-11-01T14:05:00.000Z");
+    await ensurePreviewLoopForRecipient(previewEmail, novemberStart);
+
+    const generationTwoRows = await mongoService.emailSend
+      .find({
+        previewLoop: true,
+        recipientEmail: previewEmail,
+        previewLoopGeneration: 2,
+      })
+      .toArray();
+    expect(generationTwoRows).toHaveLength(WELCOME_SEQUENCE.length);
+    expect(generationTwoRows[0]?.sendAt?.toISOString()).toBe(
+      "2026-11-01T14:00:00.000Z",
+    );
   });
 
-  it("starts a fresh generation right away when the last one used retired steps", async () => {
-    CONFIG.EMAIL_PREVIEW_LOOP_GAP_DAYS = 30;
-    const anchor = new Date("2026-01-01T00:00:00.000Z");
+  it("starts a fresh generation on the next monthly anchor when steps are stale", async () => {
+    const anchor = new Date("2026-09-01T14:00:00.000Z");
     await enqueuePreviewLoopGeneration(previewEmail, 1, anchor);
     const userId = (await mongoService.emailSend.findOne({
       previewLoop: true,
       recipientEmail: previewEmail,
     }))!.userId;
     await mongoService.emailSend.deleteMany({ previewLoop: true });
-    // A generation enrolled under the old step list, with a step still queued
-    // far in the future.
     await mongoService.emailSend.insertMany(
       ["welcome", "shortcuts"].map((stepKey) => ({
         _id: previewLoopRowId(previewEmail, 1, stepKey),
@@ -116,7 +132,8 @@ describe("welcome sequence preview loop", () => {
       })),
     );
 
-    await ensurePreviewLoopForRecipient(previewEmail, new Date());
+    const now = new Date("2026-10-28T12:00:00.000Z");
+    await ensurePreviewLoopForRecipient(previewEmail, now);
 
     const generationTwo = await mongoService.emailSend
       .find({
@@ -132,6 +149,45 @@ describe("welcome sequence preview loop", () => {
       _id: previewLoopRowId(previewEmail, 1, "shortcuts"),
     });
     expect(retired?.status).toBe("skipped");
+  });
+
+  it("retires duplicate queued generations, keeping the lowest number", async () => {
+    const anchor = new Date("2026-10-01T14:00:00.000Z");
+    await enqueuePreviewLoopGeneration(previewEmail, 1, anchor);
+    await enqueuePreviewLoopGeneration(previewEmail, 2, anchor);
+
+    const now = new Date("2026-10-28T12:00:00.000Z");
+    await dedupePreviewLoopQueuedGenerations(previewEmail, now);
+
+    const genOneQueued = await mongoService.emailSend.countDocuments({
+      previewLoop: true,
+      recipientEmail: previewEmail,
+      previewLoopGeneration: 1,
+      status: "queued",
+    });
+    const genTwoQueued = await mongoService.emailSend.countDocuments({
+      previewLoop: true,
+      recipientEmail: previewEmail,
+      previewLoopGeneration: 2,
+      status: "queued",
+    });
+    expect(genOneQueued).toBe(WELCOME_SEQUENCE.length);
+    expect(genTwoQueued).toBe(0);
+  });
+
+  it("skips queued preview rows until the next monthly window", async () => {
+    const anchor = new Date("2026-10-01T14:00:00.000Z");
+    await enqueuePreviewLoopGeneration(previewEmail, 1, anchor);
+
+    const now = new Date("2026-10-28T12:00:00.000Z");
+    await ensurePreviewLoopForRecipient(previewEmail, now);
+
+    const queued = await mongoService.emailSend.countDocuments({
+      previewLoop: true,
+      recipientEmail: previewEmail,
+      status: "queued",
+    });
+    expect(queued).toBe(0);
   });
 
   it("defers sends when the daily cap is reached", async () => {
@@ -173,5 +229,26 @@ describe("welcome sequence preview loop", () => {
 
     const rows = await mongoService.emailSend.countDocuments({ userId });
     expect(rows).toBe(WELCOME_SEQUENCE.length);
+  });
+
+  it("does not enroll returning users via auth upsert or preview loop", async () => {
+    const userId = new ObjectId().toString();
+    await userService.upsertUserFromAuth({
+      userId,
+      email: "returning-non-preview@example.com",
+      name: "Returning",
+    });
+    await userService.upsertUserFromAuth({
+      userId,
+      email: "returning-non-preview@example.com",
+      name: "Returning",
+    });
+
+    await ensurePreviewLoopEnrollments(new Date("2026-10-28T12:00:00.000Z"));
+
+    const count = await mongoService.emailSend.countDocuments({
+      userId: new ObjectId(userId),
+    });
+    expect(count).toBe(WELCOME_SEQUENCE.length);
   });
 });
