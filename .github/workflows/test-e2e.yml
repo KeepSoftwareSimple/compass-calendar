@@ -100,7 +100,7 @@ jobs:
           - shard: 4
             specs: e2e/onboarding e2e/calendars e2e/life e2e/navigation e2e/attendees
           - shard: 5
-            specs: e2e/dst e2e/event-form e2e/journey e2e/parity
+            specs: e2e/dst e2e/event-form e2e/journey e2e/overlap e2e/parity
     container:
       # Keep this tag aligned with the Playwright version in bun.lock.
       image: mcr.microsoft.com/playwright:v1.60.0-noble
