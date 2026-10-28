@@ -7,6 +7,8 @@ struct EventFormRsvpSection: View {
     @Bindable var model: NativeCalendarRootModel
     let draft: GridEventDraft
     @FocusState private var focusedResponse: ResponseStatusEnum?
+    // Keep key-loop eligibility stable while a scope dialog temporarily takes focus.
+    @State private var tabStopResponse: ResponseStatusEnum?
 
     private let options: [(ResponseStatusEnum, String)] = [
         (.accepted, "Going"),
@@ -34,7 +36,7 @@ struct EventFormRsvpSection: View {
                                 .foregroundStyle(selectedStatus == status ? theme.onAccentColor : theme.textMutedColor)
                         }
                         .buttonStyle(.plain)
-                        .focusable()
+                        .focusable(status == (tabStopResponse ?? selectedStatus ?? options.first?.0))
                         .focusEffectDisabled()
                         .focused($focusedResponse, equals: status)
                         .onMoveCommand { direction in
@@ -46,8 +48,11 @@ struct EventFormRsvpSection: View {
                             @unknown default: return
                             }
                             let next = options[(index + delta + options.count) % options.count].0
-                            focusedResponse = next
-                            respond(next)
+                            tabStopResponse = next
+                            DispatchQueue.main.async {
+                                focusedResponse = next
+                                respond(next)
+                            }
                         }
                         .onKeyPress(.return) { respond(status); return .handled }
                         .onKeyPress(.space) { respond(status); return .handled }
@@ -74,10 +79,12 @@ struct EventFormRsvpSection: View {
             .accessibilityIdentifier("compass-event-form-rsvp")
             .pageJumpChipAnchor(id: "form-rsvp")
             .onChange(of: model.eventFormRsvpFocusRequest) { _, _ in
+                let target = selectedStatus.flatMap { status in options.contains(where: { $0.0 == status }) ? status : nil }
+                    ?? options.first?.0
+                tabStopResponse = target
                 DispatchQueue.main.async {
                     guard model.isEventFormVisible, model.eventFormFocusedField == .rsvp else { return }
-                    focusedResponse = selectedStatus.flatMap { status in options.contains(where: { $0.0 == status }) ? status : nil }
-                        ?? options.first?.0
+                    focusedResponse = target
                 }
             }
         }
