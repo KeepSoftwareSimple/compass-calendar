@@ -1,5 +1,6 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { type PropsWithChildren, useState } from "react";
+import { EventIdSchema } from "@core/types/domain-primitives";
 import { type Event, EventScheduleSchema } from "@core/types/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { cleanup, render, screen } from "@web/__tests__/__mocks__/mock.render";
@@ -101,9 +102,8 @@ describe("timed overlap deck with mixed instant encoding", () => {
       calendarId: outlookCalendarId,
       content: { kind: "details", title: "Unwind", description: "" },
       recurrence: {
-        eventId: "series-unwind",
-        kind: "recurring",
-        rule: ["RRULE:FREQ=WEEKLY"],
+        kind: "occurrence",
+        seriesId: EventIdSchema.parse("507f1f77bcf86cd799439099"),
       },
       schedule: EventScheduleSchema.parse({
         end: "2026-11-01T02:00:00.000Z",

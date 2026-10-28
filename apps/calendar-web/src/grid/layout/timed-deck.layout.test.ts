@@ -1,4 +1,5 @@
 import { Origin } from "@core/constants/core.constants";
+import { CalendarIdSchema } from "@core/types/domain-primitives";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 import {
@@ -158,14 +159,14 @@ describe("createTimedEventLayout", () => {
     const events = [
       createTimedEvent({
         _id: "ritual",
-        calendarId: "507f1f77bcf86cd799439012",
+        calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
         endDate: "2026-11-01T02:30:00.000Z",
         startDate: "2026-11-01T01:00:00.000Z",
         title: "Monthly Ritual",
       }),
       createTimedEvent({
         _id: "unwind",
-        calendarId: "507f1f77bcf86cd799439011",
+        calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439011"),
         endDate: "2026-10-31T20:00:00-06:00",
         recurrence: { eventId: "series-unwind", rule: ["RRULE:FREQ=WEEKLY"] },
         startDate: "2026-10-31T19:00:00-06:00",

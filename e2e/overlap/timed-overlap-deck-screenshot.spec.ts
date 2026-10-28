@@ -4,15 +4,6 @@ import { prepareCalendarPage } from "../utils/event-test-utils";
 const DENVER = "America/Denver";
 const WEEK_START = "2026-10-31";
 
-type SeedEvent = {
-  calendarId: string;
-  end: string;
-  id: string;
-  start: string;
-  timeZone: string;
-  title: string;
-};
-
 async function seedOverlapScenario(page: import("@playwright/test").Page) {
   await expect
     .poll(() =>
