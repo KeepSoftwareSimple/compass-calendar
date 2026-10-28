@@ -377,13 +377,13 @@ public struct RootView: View {
                 HStack(spacing: 6) {
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Previous life variation" : "Previous",
-                        symbol: "arrow.left", shortcut: model.viewStore.view == .life ? "←" : "J"
+                        symbol: "chevron.left", shortcut: model.viewStore.view == .life ? "←" : "J"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifePrev : .navPrevious)
                     }
                     titleBarNavButton(
                         label: model.viewStore.view == .life ? "Next life variation" : "Next",
-                        symbol: "arrow.right", shortcut: model.viewStore.view == .life ? "→" : "K"
+                        symbol: "chevron.right", shortcut: model.viewStore.view == .life ? "→" : "K"
                     ) {
                         model.handleShortcut(model.viewStore.view == .life ? .navLifeNext : .navNext)
                     }
@@ -482,9 +482,16 @@ public struct RootView: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: symbolSize, weight: .regular))
-                .foregroundStyle(theme.textMutedColor)
+            Group {
+                if symbol == "chevron.left" || symbol == "chevron.right" {
+                    CalendarChevronIcon(pointsLeft: symbol == "chevron.left")
+                        .foregroundStyle(theme.textColor)
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: symbolSize, weight: .regular))
+                        .foregroundStyle(theme.textMutedColor)
+                }
+            }
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
         }

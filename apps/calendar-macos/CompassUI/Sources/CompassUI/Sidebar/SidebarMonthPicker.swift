@@ -149,8 +149,8 @@ public struct SidebarMonthPicker: View {
                 displayedMonth = today
             } label: {
                 Circle()
-                    .stroke(theme.textColor, lineWidth: 1.5)
-                    .frame(width: 10, height: 10)
+                    .fill(theme.textColor)
+                    .frame(width: 6, height: 6)
                     .frame(width: 24, height: 24)
                     .contentShape(Rectangle())
             }
@@ -272,8 +272,7 @@ public struct SidebarMonthPicker: View {
 
     private func monthButton(_ label: String, symbol: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 12, weight: .semibold))
+            CalendarChevronIcon(pointsLeft: symbol == "chevron.left")
                 .foregroundStyle(theme.textColor.opacity(0.9))
                 .frame(width: 24, height: 24)
                 .contentShape(Rectangle())
