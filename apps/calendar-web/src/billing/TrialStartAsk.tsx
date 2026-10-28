@@ -3,6 +3,7 @@ import { BILLING_PLAN } from "@core/constants/billing.constants";
 import { trackTrialStepViewed } from "@web/auth/posthog/signup-funnel";
 import {
   useAppConfigQuery,
+  useBillingSubscriptionQuery,
   useStripePublishableKey,
 } from "@web/billing/billing.query";
 import {
@@ -14,10 +15,11 @@ import {
 import { EmbeddedCheckoutPanel } from "@web/billing/EmbeddedCheckoutPanel";
 import { OVERLAY_LETTER_SHORTCUT } from "@web/billing/overlay-letter-shortcut";
 import { readSignupTrialMethod } from "@web/billing/signup-trial.util";
+import { formatTrialStepWriteLead } from "@web/billing/signup-trial-format.util";
 import {
-  formatTrialAskChargeLine,
-  formatTrialStepWriteLead,
-} from "@web/billing/signup-trial-format.util";
+  formatTrialAskSubline,
+  resolveBillingDisplayPrice,
+} from "@web/billing/trial-start-display.util";
 import { consumeTrialStepTrigger } from "@web/billing/trial-step-request";
 import { focusOnPointerEnter } from "@web/common/utils/focus-on-pointer-enter";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
@@ -60,9 +62,13 @@ export const TrialStartAsk: FC<TrialStartAskProps> = ({
   const isCheckoutOpen = useCheckoutPanelStore(selectCheckoutPanelOpen);
   const publishableKey = useStripePublishableKey();
   const configQuery = useAppConfigQuery();
+  const subscriptionQuery = useBillingSubscriptionQuery(true);
   const trialLengthDays =
     configQuery.data?.billing.trialLengthDays ?? BILLING_PLAN.TRIAL_LENGTH_DAYS;
-  const chargeLine = formatTrialAskChargeLine(trialLengthDays);
+  const chargeLine = formatTrialAskSubline(
+    resolveBillingDisplayPrice(subscriptionQuery.data?.price),
+    trialLengthDays,
+  );
   const viewedRef = useRef(false);
   const writeLeadRef = useRef(consumeTrialStepTrigger() === "write");
 

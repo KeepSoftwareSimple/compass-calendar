@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { EventFormDateField } from "@web/views/Forms/EventForm/DateControlsSection/DateTimeSection/EventFormDateField";
@@ -25,6 +25,40 @@ function Harness({ onCommit = mock() }: { onCommit?: (date: Date) => void }) {
       sideLabel="start"
       title="Pick Start Date"
     />
+  );
+}
+
+function OpenHarness({
+  onCalendarClose = mock(),
+  onCommit = mock(),
+}: {
+  onCalendarClose?: () => void;
+  onCommit?: (date: Date) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+  const [selected, setSelected] = useState(START);
+
+  return (
+    <>
+      <button type="button">Before</button>
+      <EventFormDateField
+        isOpen={isOpen}
+        onCalendarClose={() => {
+          onCalendarClose();
+          setIsOpen(false);
+        }}
+        onCalendarOpen={() => setIsOpen(true)}
+        onCommit={(date) => {
+          onCommit(date);
+          setSelected(date);
+          setIsOpen(false);
+        }}
+        selected={selected}
+        sideLabel="start"
+        title="Pick Start Date"
+      />
+      <button type="button">After</button>
+    </>
   );
 }
 
@@ -293,7 +327,7 @@ describe("EventFormDateField", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("moves the keyboard highlight by week with arrows while the calendar is open", async () => {
+  it("moves focus into the grid on ArrowDown and steps by day and week", async () => {
     const user = userEvent.setup();
     render(
       <EventFormDateField
@@ -314,8 +348,102 @@ describe("EventFormDateField", () => {
     const highlighted = document.querySelector(
       ".react-datepicker__day--keyboard-selected",
     );
-    expect(highlighted?.textContent?.trim()).toBe("20");
+    expect(highlighted?.textContent?.trim()).toBe("13");
+    await waitFor(() => {
+      expect(highlighted).toHaveFocus();
+    });
+
+    await user.keyboard("{ArrowRight}");
+    expect(
+      document
+        .querySelector(".react-datepicker__day--keyboard-selected")
+        ?.textContent?.trim(),
+    ).toBe("14");
+
+    await user.keyboard("{ArrowDown}");
+    expect(
+      document
+        .querySelector(".react-datepicker__day--keyboard-selected")
+        ?.textContent?.trim(),
+    ).toBe("21");
+  });
+
+  it("changes the displayed month when arrow keys cross a boundary", async () => {
+    const user = userEvent.setup();
+    render(
+      <EventFormDateField
+        isOpen
+        onCalendarClose={() => undefined}
+        onCalendarOpen={() => undefined}
+        onCommit={() => undefined}
+        selected={new Date("2026-10-31T12:00:00.000Z")}
+        sideLabel="start"
+        title="Pick Start Date"
+      />,
+    );
+
+    const input = screen.getByTitle("Pick Start Date");
+    input.focus();
+    await user.keyboard("{ArrowDown}{ArrowRight}");
+
+    expect(screen.getByText("Nov 2026")).toBeInTheDocument();
+    expect(
+      document
+        .querySelector(".react-datepicker__day--keyboard-selected")
+        ?.textContent?.trim(),
+    ).toBe("1");
+  });
+
+  it("closes the calendar on Tab without trapping focus", async () => {
+    const user = userEvent.setup();
+    const onCalendarClose = mock();
+    render(<OpenHarness onCalendarClose={onCalendarClose} />);
+
+    const input = screen.getByTitle("Pick Start Date");
+    input.focus();
+    await user.tab();
+
+    expect(onCalendarClose).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".react-datepicker")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "After" })).toHaveFocus();
+  });
+
+  it("closes the calendar on Shift+Tab without trapping focus", async () => {
+    const user = userEvent.setup();
+    const onCalendarClose = mock();
+    render(<OpenHarness onCalendarClose={onCalendarClose} />);
+
+    const input = screen.getByTitle("Pick Start Date");
+    input.focus();
+    await user.keyboard("{Shift>}{Tab}{/Shift}");
+
+    expect(onCalendarClose).toHaveBeenCalledTimes(1);
+    expect(document.querySelector(".react-datepicker")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Before" })).toHaveFocus();
+  });
+
+  it("keeps Left and Right editing the input text before the grid is focused", async () => {
+    const user = userEvent.setup();
+    render(
+      <EventFormDateField
+        isOpen
+        onCalendarClose={() => undefined}
+        onCalendarOpen={() => undefined}
+        onCommit={() => undefined}
+        selected={START}
+        sideLabel="start"
+        title="Pick Start Date"
+      />,
+    );
+
+    const input = screen.getByTitle("Pick Start Date");
+    input.focus();
+    await user.keyboard("{ArrowLeft}");
+
     expect(input).toHaveFocus();
+    expect(
+      document.querySelector(".react-datepicker__day--keyboard-selected"),
+    ).toBeNull();
   });
 
   it("selects the highlighted day on Enter without submitting through the form", async () => {
@@ -336,10 +464,10 @@ describe("EventFormDateField", () => {
 
     const input = screen.getByTitle("Pick Start Date");
     input.focus();
-    await user.keyboard("{ArrowDown}{Enter}");
+    await user.keyboard("{ArrowDown}{ArrowRight}{Enter}");
 
     expect(onCommit).toHaveBeenCalledTimes(1);
-    expect(onCommit.mock.calls[0]?.[0].getDate()).toBe(20);
+    expect(onCommit.mock.calls[0]?.[0].getDate()).toBe(14);
     expect(onCalendarClose).toHaveBeenCalledTimes(1);
   });
 

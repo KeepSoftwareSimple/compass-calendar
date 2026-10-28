@@ -32,6 +32,8 @@ export interface Props extends Omit<ReactDatePickerProps, "autoFocus"> {
   headerActionsClassName?: string;
   headerClassName?: string;
   headerEndContent?: React.ReactNode;
+  /** Capture-phase keyboard handler on the popper calendar root (grid popovers portal here). */
+  onCalendarKeyDownCapture?: React.KeyboardEventHandler<HTMLDivElement>;
   inputClassName?: string;
   inputColor?: string;
   isOpen?: boolean;
@@ -84,6 +86,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
     headerActionsClassName,
     headerClassName,
     headerEndContent,
+    onCalendarKeyDownCapture,
     inputClassName,
     inputColor,
     isOpen = true,
@@ -264,6 +267,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
           data-dark={usesThemeText ? "true" : "false"}
           data-view={view}
           style={datePickerStyle}
+          onKeyDownCapture={onCalendarKeyDownCapture}
         >
           {children}
         </div>
