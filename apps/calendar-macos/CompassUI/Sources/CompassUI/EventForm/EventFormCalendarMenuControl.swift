@@ -50,6 +50,7 @@ final class CalendarPopupButton: NSPopUpButton {
     var onSelect: ((String) -> Void)?
     var onFocusChange: ((Bool) -> Void)?
     override var acceptsFirstResponder: Bool { true }
+    override var canBecomeKeyView: Bool { isEnabled && !isHiddenOrHasHiddenAncestor }
 
     override func becomeFirstResponder() -> Bool {
         let accepted = super.becomeFirstResponder()

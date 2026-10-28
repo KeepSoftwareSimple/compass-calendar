@@ -34,7 +34,7 @@ struct EventFormRsvpSection: View {
                                 .foregroundStyle(selectedStatus == status ? theme.onAccentColor : theme.textMutedColor)
                         }
                         .buttonStyle(.plain)
-                        .focusable()
+                        .focusable(status == (focusedResponse ?? selectedStatus ?? options.first?.0))
                         .focusEffectDisabled()
                         .focused($focusedResponse, equals: status)
                         .onMoveCommand { direction in
