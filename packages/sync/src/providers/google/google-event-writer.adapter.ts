@@ -12,13 +12,12 @@ import { type SyncEventContent } from "@core/types/sync/event.contracts";
 import dayjs from "@core/util/date/dayjs";
 import { googleColorIdFields } from "@sync/providers/google/google-color.map";
 import {
+  describeGoogleRequestBodyForLog,
   formatGoogleErrorEntriesForLog,
   googleErrorReasons,
   googleFailureCause,
-  googleRequestBodyKeys,
   googleStatus,
   hasGoogleRateLimitReason,
-  summarizeGoogleScheduleForLog,
 } from "@sync/providers/google/google-error";
 import {
   mapConference,
@@ -253,11 +252,12 @@ export class GoogleEventWriter implements ProviderEventWriter {
         typeof input.content.color === "string" &&
         input.usesEventLabelColor === true
       ) {
+        const clearBody = { eventLabelId: "" };
         try {
           const cleared = await api.patch({
             calendarId: input.calendarId,
             eventId: input.providerEventId,
-            requestBody: { eventLabelId: "" },
+            requestBody: clearBody,
             sendUpdates: "none",
             ifMatch,
             eventLabelVersion: 1,
@@ -269,7 +269,7 @@ export class GoogleEventWriter implements ProviderEventWriter {
             "Google declined to clear the event label",
             {
               operation: "events.patch(clearEventLabel)",
-              requestBody: { eventLabelId: "" },
+              requestBody: clearBody,
             },
           );
         }
@@ -633,6 +633,8 @@ const GOOGLE_WRITE_ERROR_POLICY: ProviderWriteErrorPolicy = {
 
 const GOOGLE_UNSUPPORTED_400_REASONS = new Set(["eventTypeRestriction"]);
 
+const googleWriteLog = LoggerFactory("sync:google-write");
+
 function googleUnsupportedCapability(
   error: unknown,
   message: string,
@@ -649,8 +651,8 @@ function classifyGoogle400(
   message: string,
   context: GoogleWriteContext,
 ): ProviderWriteError {
-  LoggerFactory("sync:google-write").warn(
-    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; ${describeRequestBodyForLog(context.requestBody)}`,
+  googleWriteLog.warn(
+    `Google ${context.operation} HTTP 400: ${formatGoogleErrorEntriesForLog(error)}; ${describeGoogleRequestBodyForLog(context.requestBody)}`,
   );
   if (
     googleErrorReasons(error).some((reason) =>
@@ -664,24 +666,9 @@ function classifyGoogle400(
   });
 }
 
-const SCHEDULE_BODY_KEYS = new Set(["start", "end", "recurrence"]);
-
-// A 400 like "Invalid start time" names the field but not what was wrong
-// with it, so a body that writes the schedule or rules also logs their shape.
-function describeRequestBodyForLog(body: gSchema$Event | undefined): string {
-  const keys = googleRequestBodyKeys(
-    body as Record<string, unknown> | undefined,
-  );
-  const bodyKeys = `bodyKeys=[${keys.join(",")}]`;
-  if (!body || !keys.some((key) => SCHEDULE_BODY_KEYS.has(key))) {
-    return bodyKeys;
-  }
-  return `${bodyKeys}; schedule={${summarizeGoogleScheduleForLog(body)}}`;
-}
-
 // Every Google write catch triages the same way: a 400 is Google declining
-// this particular change (logged with its `errors[]` entries and the request's
-// top-level body keys), anything else falls through to the shared table. One
+// this particular change (logged with its `errors[]` entries and the request
+// body's shape), anything else falls through to the shared table. One
 // funnel keeps the four call sites from drifting on which statuses get the 400
 // treatment.
 function classifyWriteFailure(

@@ -1,7 +1,7 @@
 import {
+  describeGoogleRequestBodyForLog,
   googleErrorReasons,
   hasGoogleRateLimitReason,
-  summarizeGoogleScheduleForLog,
 } from "@sync/providers/google/google-error";
 import { describe, expect, it } from "bun:test";
 
@@ -31,31 +31,51 @@ describe("hasGoogleRateLimitReason", () => {
   });
 });
 
-describe("summarizeGoogleScheduleForLog", () => {
-  it("flags a start after its end and a mixed date/dateTime start", () => {
+describe("describeGoogleRequestBodyForLog", () => {
+  it("logs the schedule shape of a series patch, never its values", () => {
+    const message = describeGoogleRequestBodyForLog({
+      summary: "Secret title",
+      start: {
+        date: null,
+        dateTime: "2025-01-15T09:00:00-05:00",
+        timeZone: "America/New_York",
+      },
+      end: {
+        date: null,
+        dateTime: "2025-01-15T10:00:00-05:00",
+        timeZone: "America/New_York",
+      },
+      recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO", "EXDATE:20250120T140000Z"],
+    });
+
+    expect(message).toBe(
+      "bodyKeys=[end,recurrence,start,summary]; schedule={start.date=n, start.dateTime=y, start.timeZone=y, end.date=n, end.dateTime=y, end.timeZone=y, sameTimeZone=y, startVsEnd=before, recurrence=series[RRULE,EXDATE]}",
+    );
+  });
+
+  it("flags a start after its end and a cleared recurrence", () => {
     expect(
-      summarizeGoogleScheduleForLog({
-        start: {
-          date: "2026-10-29",
-          dateTime: "2026-10-29T10:00:00Z",
-          timeZone: "Europe/Berlin",
-        },
-        end: { date: null, dateTime: "2026-10-28T10:00:00Z", timeZone: null },
+      describeGoogleRequestBodyForLog({
+        start: { dateTime: "2026-10-29T10:00:00Z", timeZone: "Europe/Berlin" },
+        end: { dateTime: "2026-10-28T10:00:00Z", timeZone: null },
         recurrence: null,
       }),
-    ).toBe(
-      "start=both, end=timed, start.timeZone=y, end.timeZone=n, sameTimeZone=n, startVsEnd=after, recurrence=cleared",
-    );
+    ).toContain("sameTimeZone=n, startVsEnd=after, recurrence=cleared");
   });
 
   it("reports an unparsable time and an omitted recurrence key", () => {
     expect(
-      summarizeGoogleScheduleForLog({
+      describeGoogleRequestBodyForLog({
         start: { dateTime: "not-a-time", timeZone: "UTC" },
         end: { dateTime: "2026-10-28T10:00:00Z", timeZone: "UTC" },
       }),
-    ).toBe(
-      "start=timed, end=timed, start.timeZone=y, end.timeZone=y, sameTimeZone=y, startVsEnd=unparsed, recurrence=omitted",
+    ).toContain("startVsEnd=unparsed, recurrence=omitted");
+  });
+
+  it("logs only body keys when the body writes no schedule", () => {
+    expect(describeGoogleRequestBodyForLog({ eventLabelId: "" })).toBe(
+      "bodyKeys=[eventLabelId]",
     );
+    expect(describeGoogleRequestBodyForLog(undefined)).toBe("bodyKeys=[]");
   });
 });
