@@ -4,6 +4,7 @@ import { toUTCOffset } from "@web/common/utils/datetime/web.date.util";
 import { deriveOverlappingEventQueryData } from "@web/events/queries/event.query.cache";
 import { weekEventsViewQueryOptions } from "@web/events/queries/event.query.options";
 import { useEventRepositorySource } from "@web/events/repositories/event.repository.source.store";
+import { tylerOverlapGridEventsForScreenshot } from "@web/grid/layout/overlap-screenshot.harness";
 import { useCalendarEventViewModel } from "./useCalendarEventViewModel";
 import { useEventListCalendarIds } from "./useEventListCalendarIds";
 import { useRemoteEventsEnabled } from "./useRemoteEventsEnabled";
@@ -47,5 +48,16 @@ export function useWeekEventsQuery({
 export function useWeekEventViewModel(args: WeekEventsQueryArgs) {
   const query = useWeekEventsQuery(args);
   const viewModel = useCalendarEventViewModel(query.data);
+  const screenshotEvents = tylerOverlapGridEventsForScreenshot();
+  if (screenshotEvents) {
+    return {
+      ...query,
+      ...viewModel,
+      allDayEvents: [],
+      events: [],
+      rowCount: 0,
+      timedEvents: screenshotEvents,
+    };
+  }
   return { ...query, ...viewModel };
 }
