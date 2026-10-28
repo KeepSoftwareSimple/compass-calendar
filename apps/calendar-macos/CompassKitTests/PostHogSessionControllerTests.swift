@@ -18,12 +18,14 @@ final class PostHogSessionControllerTests: XCTestCase {
     func testSessionIdRotatesAfterIdleTimeout() {
         let defaults = PostHogAnalyticsDefaultsBox()
         let clock = TestClock(start: Date(timeIntervalSince1970: 1_000))
-        var sessionCounter = 0
+        let sessionCounter = LockedBox(0)
         var controller = PostHogSessionController(
             defaults: defaults,
             generateSessionId: {
-                sessionCounter += 1
-                return "session-\(sessionCounter)"
+                sessionCounter.withLock { value in
+                    value += 1
+                    return "session-\(value)"
+                }
             },
             now: { clock.now })
 
@@ -47,14 +49,42 @@ final class PostHogSessionControllerTests: XCTestCase {
     }
 }
 
-private final class TestClock {
-    private(set) var now: Date
+private final class TestClock: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: Date
 
     init(start: Date) {
-        now = start
+        current = start
+    }
+
+    var now: Date {
+        lock.withLock { current }
     }
 
     func advance(by interval: TimeInterval) {
-        now = now.addingTimeInterval(interval)
+        lock.withLock { current = current.addingTimeInterval(interval) }
+    }
+}
+
+private final class LockedBox<T>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value: T
+
+    init(_ value: T) {
+        self.value = value
+    }
+
+    func withLock<R>(_ body: (inout T) -> R) -> R {
+        lock.lock()
+        defer { lock.unlock() }
+        return body(&value)
+    }
+}
+
+private extension NSLock {
+    func withLock<R>(_ body: () -> R) -> R {
+        lock()
+        defer { unlock() }
+        return body()
     }
 }
