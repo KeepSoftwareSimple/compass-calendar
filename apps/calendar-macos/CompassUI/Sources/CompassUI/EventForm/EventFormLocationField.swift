@@ -71,6 +71,12 @@ struct EventFormLocationField: View {
         .onChange(of: focusField) { _, field in
             fieldFocused = field == .location
         }
+        .onChange(of: model.eventFormLocationFocusRequest) { _, _ in
+            DispatchQueue.main.async {
+                guard model.isEventFormVisible, model.eventFormFocusedField == .location else { return }
+                fieldFocused = true
+            }
+        }
         .onChange(of: fieldFocused) { _, focused in
             if !focused { closeList() }
         }
