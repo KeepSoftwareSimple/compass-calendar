@@ -10,14 +10,16 @@ final class EventFormTitleKeyboardTests: XCTestCase {
             let window = app.windows["Compass"]
             XCTAssertTrue(window.waitForExistence(timeout: 15))
             window.typeKey("c", modifierFlags: [])
-            let title = window.descendants(matching: .any)["compass-event-form-title"].firstMatch
+            let form = window.descendants(matching: .any)["compass-event-form"]
+            XCTAssertTrue(form.waitForExistence(timeout: 8))
+            let title = form.textFields["compass-event-form-title"]
             XCTAssertTrue(title.waitForExistence(timeout: 8))
             XCTAssertTrue(title.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
             window.typeKey(.tab, modifierFlags: [])
             XCTAssertFalse(title.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
             window.typeKey("1", modifierFlags: [.command])
             XCTAssertTrue(title.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true, title.debugDescription)
-            XCTAssertTrue(window.descendants(matching: .any)["compass-event-form"].exists)
+            XCTAssertTrue(form.exists)
             app.terminate()
         }
     }
