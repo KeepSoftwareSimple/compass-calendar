@@ -63,11 +63,8 @@ struct EventFormAttendeesSection: View {
             }
             .accessibilityIdentifier("compass-event-form-attendees")
             .pageJumpChipAnchor(id: "form-attendees")
-            .onChange(of: model.eventFormAttendeesFocusRequest) { _, _ in
-                DispatchQueue.main.async {
-                    guard model.isEventFormVisible, model.eventFormFocusedField == .attendees else { return }
-                    fieldFocused = true
-                }
+            .onEventFormFocusRequest(model, field: .attendees) {
+                fieldFocused = true
             }
             .onChange(of: focusField) { _, field in
                 fieldFocused = field == .attendees

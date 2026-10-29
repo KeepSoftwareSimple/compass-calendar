@@ -15,9 +15,7 @@ public struct PostHogIdentityController: Sendable {
 
     public init(
         defaults: PostHogAnalyticsDefaults = UserDefaultsPostHogAnalyticsDefaults(),
-        generateDistinctId: @escaping @Sendable () -> String = {
-            UUID().uuidString.lowercased()
-        },
+        generateDistinctId: @escaping @Sendable () -> String = PostHogAnalyticsIds.makeLowercasedUUID,
         signedInUserId: String? = nil
     ) {
         self.defaults = defaults

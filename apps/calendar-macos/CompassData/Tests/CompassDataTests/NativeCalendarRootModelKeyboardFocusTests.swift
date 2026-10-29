@@ -14,11 +14,11 @@ final class NativeCalendarRootModelKeyboardFocusTests: XCTestCase {
 
     func testRepeatedRecurrenceFocusRequestsAreNotLostWhenTheFieldIsUnchanged() async throws {
         let model = try await makeModel()
-        let initial = model.eventFormRecurrenceFocusRequest
+        let initial = model.eventFormFocusRequest
         model.focusEventFormField(.recurrence)
         model.focusEventFormField(.recurrence)
         XCTAssertEqual(model.eventFormFocusedField, .recurrence)
-        XCTAssertEqual(model.eventFormRecurrenceFocusRequest, initial + 2)
+        XCTAssertEqual(model.eventFormFocusRequest, initial + 2)
     }
 
     func testAttendeeFixtureEnablesRsvpAndRepeatedFocusRequests() async throws {
@@ -31,10 +31,10 @@ final class NativeCalendarRootModelKeyboardFocusTests: XCTestCase {
         model.openKeyboardEditForFocusedEvent()
         let draft = try XCTUnwrap(model.draftStore.gridDraft)
         XCTAssertTrue(model.showRsvpControl(for: draft))
-        let initial = model.eventFormRsvpFocusRequest
+        let initial = model.eventFormFocusRequest
         model.focusEventFormField(.rsvp)
         model.focusEventFormField(.rsvp)
-        XCTAssertEqual(model.eventFormRsvpFocusRequest, initial + 2)
+        XCTAssertEqual(model.eventFormFocusRequest, initial + 2)
         await model.selectRsvpResponse(.tentative)
         XCTAssertEqual(model.pendingRsvpChoice?.responseStatus, .tentative)
         XCTAssertTrue(model.isEventFormVisible)
