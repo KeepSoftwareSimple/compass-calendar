@@ -38,7 +38,7 @@ enum ParityViewSnapshotExporter {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         // Keep the window-server result independent of cacheDisplay's layer changes.
         // Comparing the two exposes export artifacts before we change product rendering.
-        if let windowPNG = windowListPNG(window: window) {
+        if let windowPNG = windowListPNG(window: window, includingPopovers: true) {
             try windowPNG.write(to: folder.appendingPathComponent("\(surface)-window-reference.png"))
         }
 
@@ -146,18 +146,29 @@ enum ParityViewSnapshotExporter {
         }
     }
 
-    private static func windowListPNG(window: NSWindow) -> Data? {
+    private static func windowListPNG(window: NSWindow, includingPopovers: Bool = false) -> Data? {
         window.orderFrontRegardless()
         window.displayIfNeeded()
         let windowID = CGWindowID(window.windowNumber)
-        guard windowID != 0,
-              let cgImage = CGWindowListCreateImage(
-                  .null,
-                  .optionIncludingWindow,
-                  windowID,
-                  [.boundsIgnoreFraming, .bestResolution]
-              )
-        else { return nil }
+        guard windowID != 0 else { return nil }
+        let popovers = includingPopovers ? ((window.childWindows ?? []) + NSApp.windows.filter {
+            String(describing: type(of: $0)).contains("Popover")
+        }).filter { $0 !== window && $0.isVisible && $0.frame.intersects(window.frame) } : []
+        let image: CGImage?
+        if popovers.isEmpty {
+            image = CGWindowListCreateImage(.null, .optionIncludingWindow, windowID, [.boundsIgnoreFraming, .bestResolution])
+        } else {
+            // Only the target and its app-owned popovers, never other apps or windows.
+            let ids = Set(([window] + popovers).map { $0.windowNumber })
+            let orderedIDs = NSApp.orderedWindows.filter { ids.contains($0.windowNumber) }
+                .map { NSNumber(value: $0.windowNumber) }
+            guard let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, windowID) as? [[String: Any]],
+                  let bounds = info.first?[kCGWindowBounds as String] as? [String: Any],
+                  let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary)
+            else { return nil }
+            image = CGWindowListCreateImageFromArray(rect, orderedIDs as CFArray, [.boundsIgnoreFraming, .bestResolution])
+        }
+        guard let cgImage = image else { return nil }
         let rep = NSBitmapImageRep(cgImage: cgImage)
         rep.size = NSSize(
             width: ParityCaptureGeometry.viewportWidth,
