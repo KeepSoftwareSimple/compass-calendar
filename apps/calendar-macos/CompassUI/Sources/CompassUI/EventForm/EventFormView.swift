@@ -91,6 +91,7 @@ public struct EventFormView: View {
                                     model: model,
                                     draft: draft
                                 )
+                                .id(EventFormField.conference)
                                 EventFormIconRow(icon: .users, alignTop: true) {
                                     EventFormAttendeesSection(
                                         model: model,
