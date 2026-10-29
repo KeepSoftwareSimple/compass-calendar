@@ -160,13 +160,15 @@ enum ParityViewSnapshotExporter {
         } else {
             // Only the target and its app-owned popovers, never other apps or windows.
             let ids = Set(([window] + popovers).map { $0.windowNumber })
-            let orderedIDs = NSApp.orderedWindows.filter { ids.contains($0.windowNumber) }
-                .map { NSNumber(value: $0.windowNumber) }
+            let windowArray = CFArrayCreateMutable(nil, 0, nil)!
+            for candidate in NSApp.orderedWindows where ids.contains(candidate.windowNumber) {
+                CFArrayAppendValue(windowArray, UnsafeRawPointer(bitPattern: candidate.windowNumber))
+            }
             guard let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, windowID) as? [[String: Any]],
                   let bounds = info.first?[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary)
             else { return nil }
-            image = CGImage(windowListFromArrayScreenBounds: rect, windowArray: orderedIDs as CFArray, imageOption: [.boundsIgnoreFraming, .bestResolution])
+            image = CGImage(windowListFromArrayScreenBounds: rect, windowArray: windowArray, imageOption: [.boundsIgnoreFraming, .bestResolution])
         }
         guard let cgImage = image else { return nil }
         let rep = NSBitmapImageRep(cgImage: cgImage)
