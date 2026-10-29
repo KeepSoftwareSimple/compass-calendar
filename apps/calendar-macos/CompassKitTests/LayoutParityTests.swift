@@ -78,7 +78,7 @@ final class LayoutParityTests: XCTestCase {
         let input = try XCTUnwrap(vectorCase["input"] as? [String: Any])
 
         switch id {
-        case "createTimedEventLayout-overlap":
+        case "createTimedEventLayout-overlap", "createTimedEventLayout-inverted-end-overlap":
             let eventsJSON = try XCTUnwrap(input["events"] as? [[String: Any]])
             let hidden = Set((input["hiddenEventIds"] as? [String]) ?? [])
             let events = eventsJSON.map { row in

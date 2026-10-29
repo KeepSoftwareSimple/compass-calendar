@@ -37,6 +37,42 @@
       ]
     },
     {
+      "id": "createTimedEventLayout-inverted-end-overlap",
+      "input": {
+        "events": [
+          {
+            "_id": "unwind",
+            "startDate": "2026-10-31T19:00:00.000Z",
+            "endDate": "2026-10-31T20:00:00.000Z"
+          },
+          {
+            "_id": "ritual",
+            "startDate": "2026-10-31T19:30:00.000Z",
+            "endDate": "2026-10-31T19:00:00.000"
+          }
+        ],
+        "hiddenEventIds": []
+      },
+      "output": [
+        {
+          "eventId": "unwind",
+          "deckLayout": {
+            "order": 0,
+            "groupSize": 2
+          },
+          "isHidden": false
+        },
+        {
+          "eventId": "ritual",
+          "deckLayout": {
+            "order": 1,
+            "groupSize": 2
+          },
+          "isHidden": false
+        }
+      ]
+    },
+    {
       "id": "applyTimedDeckPosition",
       "input": {
         "position": {

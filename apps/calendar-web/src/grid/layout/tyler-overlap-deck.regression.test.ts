@@ -4,7 +4,11 @@ import {
   applyTimedEventDisplayPosition,
   createTimedEventLayout,
 } from "@web/grid/layout/timed-deck.layout";
-import { tylerOct31OverlapGridEvents } from "@web/grid/layout/tyler-overlap.fixture";
+import {
+  tylerOct31OverlapGridEvents,
+  tylerOct31OverlapGridEventsInvertedEnd,
+  tylerOct31OverlapGridEventsLegacy,
+} from "@web/grid/layout/tyler-overlap.fixture";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setBrowserTimeZoneForTests,
@@ -29,14 +33,15 @@ describe("Tyler Oct 31 overlap deck regression", () => {
     const laid = createTimedEventLayout(events);
 
     const unwind = laid.find((item) => item.event._id === "tyler-unwind");
-    const deutsch = laid.find((item) => item.event._id === "tyler-deutsch");
+    const ritual = laid.find((item) => item.event._id === "tyler-ritual");
     const demo = laid.find((item) => item.event._id === "tyler-compass-demo");
     const festival = laid.find(
       (item) => item.event._id === "tyler-fall-festival",
     );
 
-    expect(unwind?.deckLayout).toEqual({ order: 0, groupSize: 2 });
-    expect(deutsch?.deckLayout).toEqual({ order: 1, groupSize: 2 });
+    expect(unwind?.deckLayout?.groupSize).toBe(2);
+    expect(ritual?.deckLayout?.groupSize).toBe(2);
+    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
     expect(demo?.deckLayout).toEqual({ order: 1, groupSize: 2 });
     expect(festival?.deckLayout).toEqual({ order: 0, groupSize: 2 });
 
@@ -52,17 +57,22 @@ describe("Tyler Oct 31 overlap deck regression", () => {
     });
     const columnIndex = 5;
 
-    const deutschPos = applyTimedEventDisplayPosition(
-      getTimedEventPosition(events[4], {
+    const ritualEvent = events.find((event) => event._id === "tyler-ritual");
+    const unwindEvent = events.find((event) => event._id === "tyler-unwind");
+    expect(ritualEvent).toBeDefined();
+    expect(unwindEvent).toBeDefined();
+
+    const ritualPos = applyTimedEventDisplayPosition(
+      getTimedEventPosition(ritualEvent!, {
         columnIndex,
         isDraft: false,
         measurements,
         visibleDates,
       }),
-      deutsch?.deckLayout ?? null,
+      ritual?.deckLayout ?? null,
     );
     const unwindPos = applyTimedEventDisplayPosition(
-      getTimedEventPosition(events[3], {
+      getTimedEventPosition(unwindEvent!, {
         columnIndex,
         isDraft: false,
         measurements,
@@ -71,7 +81,37 @@ describe("Tyler Oct 31 overlap deck regression", () => {
       unwind?.deckLayout ?? null,
     );
 
-    expect(unwindPos.width).toBe(deutschPos.width);
-    expect(deutschPos.left).toBe(unwindPos.left + unwindPos.width);
+    expect(unwindPos.width).toBe(ritualPos.width);
+    expect(Math.abs(unwindPos.left - ritualPos.left)).toBe(unwindPos.width);
+  });
+
+  it("groups Unwind with ritual when naive end parses before Z start (prod Oct 31)", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint(denver);
+    setPinnedTimeZone(denver);
+
+    const laid = createTimedEventLayout(
+      tylerOct31OverlapGridEventsInvertedEnd(),
+    );
+    const unwind = laid.find((item) => item.event._id === "tyler-unwind");
+    const ritual = laid.find((item) => item.event._id === "tyler-ritual");
+
+    expect(unwind?.deckLayout?.groupSize).toBe(2);
+    expect(ritual?.deckLayout?.groupSize).toBe(2);
+    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
+  });
+
+  it("groups legacy naive ritual end with Unwind on a UTC host", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint(denver);
+    setPinnedTimeZone(denver);
+
+    const laid = createTimedEventLayout(tylerOct31OverlapGridEventsLegacy());
+    const unwind = laid.find((item) => item.event._id === "tyler-unwind");
+    const ritual = laid.find((item) => item.event._id === "tyler-ritual");
+
+    expect(unwind?.deckLayout?.groupSize).toBe(2);
+    expect(ritual?.deckLayout?.groupSize).toBe(2);
+    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
   });
 });

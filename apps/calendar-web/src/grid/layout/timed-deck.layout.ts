@@ -1,5 +1,6 @@
 import { YEAR_MONTH_DAY_FORMAT } from "@core/constants/date.constants";
 import { type Dayjs } from "@core/util/date/dayjs";
+import { gridOverlapIntervalEnd } from "@core/util/date/grid-overlap-interval";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import {
   EMPTY_HIDDEN_EVENT_IDS,
@@ -126,7 +127,10 @@ const toDeckCandidate = (item: TimedEventLayoutItem): DeckCandidate => {
   const calendarZone = getEffectiveTimeZone();
   const eventZone = item.event.timeZone ?? calendarZone;
   const start = parseGridScheduleDate(item.event.startDate, eventZone);
-  const end = parseGridScheduleDate(item.event.endDate, eventZone);
+  const end = gridOverlapIntervalEnd(
+    start,
+    parseGridScheduleDate(item.event.endDate, eventZone),
+  );
 
   return {
     dayKey: start.tz(calendarZone).format(YEAR_MONTH_DAY_FORMAT),

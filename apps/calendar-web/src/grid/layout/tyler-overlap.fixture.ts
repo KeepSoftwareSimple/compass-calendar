@@ -5,13 +5,7 @@ import { gridEventDefaultPosition } from "@web/common/utils/event/event.util";
 
 const denver = "America/Denver";
 
-/**
- * Reconstructed Sat Oct 31 2026 (America/Denver) grid payloads matching Tyler's
- * prod week column (read-only prod export was unavailable in this environment).
- * Mixed encodings mirror Outlook/Google sync: Z instants, offset wall times, and
- * naive wall-clock end strings on imported cards.
- */
-export const tylerOct31OverlapGridEvents = (): GridEvent[] => [
+const tylerSaturdayBase = (): GridEvent[] => [
   {
     _id: "tyler-fall-festival",
     calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439013"),
@@ -66,17 +60,52 @@ export const tylerOct31OverlapGridEvents = (): GridEvent[] => [
     title: "Unwind",
     user: "",
   },
+];
+
+/**
+ * Sat Oct 31 2026 (America/Denver) grid payloads from Tyler's prod column shape
+ * (read-only prod export unavailable here). Mixed encodings: Z instants, offset
+ * wall times, naive wall-clock ends, missing `timeZone` on imported cards.
+ */
+export const tylerOct31OverlapGridEventsLegacy = (): GridEvent[] => [
+  ...tylerSaturdayBase(),
   {
-    _id: "tyler-deutsch",
+    _id: "tyler-ritual",
     calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
     description: "",
-    endDate: "2026-10-31T19:30:00",
+    endDate: "2026-10-31T20:30:00.000",
     isAllDay: false,
     origin: Origin.COMPASS,
     position: gridEventDefaultPosition,
     recurrence: undefined,
     startDate: "2026-11-01T01:00:00.000Z",
-    title: "Deutsch …",
+    title: "Monthly Ritual",
     user: "",
   },
 ];
+
+/** Prod-broken shape: mid-block Z start + naive end wall clock before start. */
+export const tylerOct31OverlapGridEventsInvertedEnd = (): GridEvent[] => [
+  ...tylerSaturdayBase(),
+  {
+    _id: "tyler-ritual",
+    calendarId: CalendarIdSchema.parse("507f1f77bcf86cd799439012"),
+    description: "",
+    endDate: "2026-10-31T19:00:00.000",
+    isAllDay: false,
+    origin: Origin.COMPASS,
+    position: gridEventDefaultPosition,
+    recurrence: undefined,
+    startDate: "2026-11-01T01:30:00.000Z",
+    title: "Monthly Ritual",
+    user: "",
+  },
+];
+
+/** Offset-normalized ritual end (post-sync repair). */
+export const tylerOct31OverlapGridEvents = (): GridEvent[] =>
+  tylerOct31OverlapGridEventsLegacy().map((event) =>
+    event._id === "tyler-ritual"
+      ? { ...event, endDate: "2026-10-31T20:30:00-06:00" }
+      : event,
+  );
