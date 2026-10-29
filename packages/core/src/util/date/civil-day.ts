@@ -1,4 +1,5 @@
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
+import { parseGridDateTime } from "@core/util/date/parse-grid-datetime";
 
 const CIVIL_DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -116,5 +117,8 @@ export function formatInstantInTimeZone(
   iso: string | Date,
   timeZone: string,
 ): string {
-  return dayjs(iso).tz(timeZone).format();
+  if (iso instanceof Date) {
+    return dayjs(iso).tz(timeZone).format();
+  }
+  return parseGridDateTime(iso, timeZone).format();
 }

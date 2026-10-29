@@ -7,9 +7,9 @@ import { cleanup, render, screen } from "@web/__tests__/__mocks__/mock.render";
 import { seedEventQueries } from "@web/__tests__/utils/event-query-test-data";
 import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { createCompassQueryClient } from "@web/api/query-client";
-import { DECK_INDENT } from "@web/grid/grid.constants";
 import {
   resetEffectiveTimeZoneStoreForTests,
+  setCalendarTimeZoneHint,
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { type Measurements_Grid } from "@web/views/Week/hooks/grid/useGridLayout";
@@ -83,6 +83,7 @@ const weekProps = {
 
 describe("timed overlap deck with mixed instant encoding", () => {
   it("fans out same-start overlaps from different calendars on Sat Oct 31 2026", () => {
+    setCalendarTimeZoneHint(denver);
     setPinnedTimeZone(denver);
 
     const importedCalendarId = createMockEvent().calendarId;
@@ -137,9 +138,12 @@ describe("timed overlap deck with mixed instant encoding", () => {
     expect(parseFloat(ritualCard.style.width)).toBe(
       parseFloat(unwindCard.style.width),
     );
+    expect(parseFloat(unwindCard.style.left)).toBeGreaterThan(
+      parseFloat(ritualCard.style.left),
+    );
     expect(
       parseFloat(unwindCard.style.left) - parseFloat(ritualCard.style.left),
-    ).toBeGreaterThan(DECK_INDENT);
+    ).toBe(parseFloat(ritualCard.style.width));
     expect(parseFloat(updateCard.style.width)).toBeGreaterThan(
       parseFloat(ritualCard.style.width),
     );

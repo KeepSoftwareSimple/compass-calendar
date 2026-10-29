@@ -25,6 +25,7 @@ import {
   calendarDateInEffectiveTimeZone,
   inEffectiveTimeZone,
 } from "@web/timezone/in-time-zone";
+import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
 
 export interface EventPositionInput {
   columnIndex?: number;
@@ -38,8 +39,8 @@ export const getTimedEventPosition = (
   input: EventPositionInput,
 ): EventPosition => {
   const timeZone = event.timeZone ?? getEffectiveTimeZone();
-  const start = inEffectiveTimeZone(event.startDate, timeZone);
-  const end = inEffectiveTimeZone(event.endDate, timeZone);
+  const start = parseGridScheduleDate(event.startDate, timeZone);
+  const end = parseGridScheduleDate(event.endDate, timeZone);
   const dateIndex =
     input.columnIndex ?? getVisibleDateIndex(start, input.visibleDates);
   if (dateIndex === null) {

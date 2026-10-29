@@ -3,6 +3,7 @@ import dayjs from "@core/util/date/dayjs";
 import {
   resetEffectiveTimeZoneStoreForTests,
   setBrowserTimeZoneForTests,
+  setCalendarTimeZoneHint,
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { setTimeTravelZone } from "@web/timezone/time-travel.store";
@@ -332,6 +333,7 @@ describe("event position", () => {
     ).top;
 
     act(() => {
+      setCalendarTimeZoneHint("America/Chicago");
       setPinnedTimeZone("America/Chicago");
     });
 
@@ -353,6 +355,7 @@ describe("event position", () => {
   it("uses civil midnight when the browser zone differs from the pinned zone", () => {
     act(() => {
       setBrowserTimeZoneForTests("UTC");
+      setCalendarTimeZoneHint("America/Denver");
       setPinnedTimeZone("America/Denver");
     });
 
