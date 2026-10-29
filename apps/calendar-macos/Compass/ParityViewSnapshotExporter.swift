@@ -170,11 +170,11 @@ enum ParityViewSnapshotExporter {
                           .null, .optionIncludingWindow, CGWindowID(popover.windowNumber), [.boundsIgnoreFraming, .bestResolution]
                       )
                 else { continue }
-                NSBitmapImageRep(cgImage: image).draw(in: NSRect(
+                NSImage(cgImage: image, size: popover.frame.size).draw(in: NSRect(
                     x: popover.frame.minX - window.frame.minX,
                     y: popover.frame.minY - window.frame.minY,
                     width: popover.frame.width,
-                    height: popover.frame.height))
+                    height: popover.frame.height), from: .zero, operation: .sourceOver, fraction: 1)
             }
         }
         return rep.representation(using: .png, properties: [:])
