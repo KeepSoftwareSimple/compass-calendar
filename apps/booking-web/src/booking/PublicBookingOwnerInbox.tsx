@@ -5,7 +5,6 @@ import {
   usePublicBookingOwnerInboxQuery,
 } from "@booking-web/booking/public-booking.query";
 import { useId } from "react";
-import { IS_MEET_PAGE_OWNER_INBOX_ENABLED } from "@web/common/constants/env.constants";
 
 interface PublicBookingOwnerInboxProps {
   slug: string;
@@ -19,10 +18,6 @@ export function PublicBookingOwnerInbox({
   const inboxQuery = usePublicBookingOwnerInboxQuery(slug);
   const cancelMutation = useCancelPublicBookingOwnerReservationMutation(slug);
   const sectionHeadingId = useId();
-
-  if (!IS_MEET_PAGE_OWNER_INBOX_ENABLED) {
-    return null;
-  }
 
   if (inboxQuery.isError) {
     const status = getErrorStatus(inboxQuery.error);

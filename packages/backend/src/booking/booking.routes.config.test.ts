@@ -37,4 +37,19 @@ describe("BookingRoutes registration", () => {
       expect(bookingRoutePaths(app)).toContain("/api/booking/pages/:slug");
     },
   );
+
+  it.each([NodeEnv.Staging, NodeEnv.Production] as const)(
+    "registers owner upcoming inbox routes when NODE_ENV is %s",
+    (nodeEnv) => {
+      CONFIG.NODE_ENV = nodeEnv;
+      const app = express();
+      new BookingRoutes(app);
+      expect(bookingRoutePaths(app)).toContain(
+        "/api/booking/pages/:slug/owner/upcoming",
+      );
+      expect(bookingRoutePaths(app)).toContain(
+        "/api/booking/pages/:slug/owner/reservations/:id/cancel",
+      );
+    },
+  );
 });
