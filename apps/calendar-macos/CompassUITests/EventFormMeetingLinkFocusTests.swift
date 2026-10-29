@@ -15,7 +15,7 @@ final class EventFormMeetingLinkFocusTests: XCTestCase {
             let form = window.descendants(matching: .any)["compass-event-form"]
             XCTAssertTrue(form.waitForExistence(timeout: 12))
             window.typeKey("=", modifierFlags: [.command])
-            let conference = form.descendants(matching: .any)["compass-event-form-conference"]
+            let conference = form.links["compass-event-form-conference"]
             XCTAssertTrue(conference.waitForExistence(timeout: 8))
             XCTAssertTrue(
                 conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
@@ -27,7 +27,7 @@ final class EventFormMeetingLinkFocusTests: XCTestCase {
             let viewport = form.scrollViews.firstMatch.frame
             XCTAssertGreaterThan(conference.frame.height, 0)
             XCTAssertTrue(viewport.contains(conference.frame), "Focused link must fit inside the scrolling viewport")
-            XCTAssertLessThanOrEqual(conference.frame.maxY, form.buttons["Save"].frame.minY)
+            XCTAssertLessThanOrEqual(conference.frame.maxY, form.buttons["compass-event-form-save"].frame.minY)
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Meeting link keyboard focus, \(theme)"
             evidence.lifetime = .keepAlways

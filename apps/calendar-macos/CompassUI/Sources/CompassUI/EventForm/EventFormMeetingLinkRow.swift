@@ -25,6 +25,7 @@ struct EventFormMeetingLinkRow: View {
                             .truncationMode(.tail)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .accessibilityIdentifier("compass-event-form-conference")
                     .buttonStyle(.plain)
                     .focusable()
                     .focusEffectDisabled()
@@ -41,6 +42,7 @@ struct EventFormMeetingLinkRow: View {
                         .font(.rubik(12))
                         .foregroundStyle(theme.textColor)
                         .lineLimit(1)
+                        .accessibilityIdentifier("compass-event-form-conference")
                 }
                 EventFormCopyLinkButton(
                     label: "copy meeting link",
@@ -50,7 +52,6 @@ struct EventFormMeetingLinkRow: View {
                 )
             }
         }
-        .accessibilityIdentifier("compass-event-form-conference")
         .pageJumpChipAnchor(id: "form-conference")
         .onChange(of: model.eventFormConferenceFocusRequest) { _, _ in
             DispatchQueue.main.async {
