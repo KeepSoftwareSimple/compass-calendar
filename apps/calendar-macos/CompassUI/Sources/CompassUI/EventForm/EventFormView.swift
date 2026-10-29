@@ -187,6 +187,9 @@ public struct EventFormView: View {
         .onChange(of: model.eventFormFocusedField) { _, field in
             titleFocused = field == .title
         }
+        .onEventFormFocusRequest(model, field: .title) {
+            titleFocused = true
+        }
     }
 
     private func isLogisticsFieldFocused(_ field: EventFormField) -> Bool {
