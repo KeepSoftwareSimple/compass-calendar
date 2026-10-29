@@ -2,7 +2,7 @@ import type express from "express";
 import rateLimit, { type Options } from "express-rate-limit";
 import { type SessionRequest } from "supertokens-node/framework/express";
 import { Logger } from "@core/logger/winston.logger";
-import { isBookingEnabled } from "@core/util/env.util";
+import { isBookingEnabled, isNonProduction } from "@core/util/env.util";
 import { verifySession } from "@backend/auth/session/session.middleware";
 import { bookingPublicRateLimitKey } from "@backend/booking/booking-client-ip";
 import { bookingLifecycleAnalytics } from "@backend/booking/booking-lifecycle.analytics";
@@ -94,6 +94,8 @@ const adminPageGetLimiter = adminLimiter("booking:admin-get", 60);
 const adminPageStatusGetLimiter = adminLimiter("booking:admin-status", 60);
 const adminPagePutLimiter = adminLimiter("booking:admin-put", 20);
 const adminNewMeetingsClaimLimiter = adminLimiter("booking:admin-claim", 20);
+const adminOwnerUpcomingLimiter = adminLimiter("booking:owner-upcoming", 60);
+const adminOwnerCancelLimiter = adminLimiter("booking:owner-cancel", 20);
 
 /**
  * Host admin routes require a session. Public guest routes are unauthenticated.
@@ -135,6 +137,21 @@ export class BookingRoutes extends CommonRoutesConfig {
     this.app
       .route(`/api/booking/pages/:slug/reservations`)
       .post(publicConfirmLimiter, bookingController.createReservation);
+
+    if (isNonProduction(CONFIG.NODE_ENV)) {
+      this.app
+        .route(`/api/booking/pages/:slug/owner/upcoming`)
+        .all(verifySession())
+        .get(
+          adminOwnerUpcomingLimiter,
+          bookingController.getHostUpcomingReservations,
+        );
+
+      this.app
+        .route(`/api/booking/pages/:slug/owner/reservations/:id/cancel`)
+        .all(verifySession())
+        .post(adminOwnerCancelLimiter, bookingController.cancelHostReservation);
+    }
 
     this.app
       .route(`/api/booking/reservations/:id`)

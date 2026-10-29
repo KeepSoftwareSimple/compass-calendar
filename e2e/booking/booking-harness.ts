@@ -334,6 +334,17 @@ export interface PublicBookingStubOptions {
   notes?: string | null;
   conference?: "meet" | "teams" | "none";
   createsGoogleMeet?: boolean;
+  /** Owner inbox GET /owner/upcoming. Defaults to unauthorized (guest view). */
+  ownerUpcomingMode?: "unauthorized" | "empty" | "list";
+  ownerUpcomingReservations?: Array<{
+    reservationId: string;
+    guestName: string;
+    guestEmail: string;
+    slotStart: string;
+    slotEnd: string;
+    durationMinutes: number;
+    meetLink: string | null;
+  }>;
 }
 
 export interface CapturedBookingRequests {
@@ -437,6 +448,64 @@ export async function preparePublicBookingPage(
           createsGoogleMeet,
         }),
       );
+    }
+
+    if (
+      path === `/api/booking/pages/${slug}/owner/upcoming` &&
+      request.method() === "GET"
+    ) {
+      const mode = options.ownerUpcomingMode ?? "unauthorized";
+      if (mode === "unauthorized") {
+        return route.fulfill(jsonResponse({}, 401));
+      }
+      if (mode === "empty") {
+        return route.fulfill(jsonResponse({ reservations: [] }));
+      }
+      const defaults = [
+        {
+          reservationId: "507f1f77bcf86cd799439011",
+          guestName: "Ada Lovelace",
+          guestEmail: "ada@example.com",
+          slotStart: slots[0]?.slotStart ?? slot.slotStart,
+          slotEnd: slots[0]?.slotEnd ?? slot.slotEnd,
+          durationMinutes,
+          meetLink: "https://meet.google.com/abc-defg-hij",
+        },
+        {
+          reservationId: "507f1f77bcf86cd799439012",
+          guestName: "Grace Hopper",
+          guestEmail: "grace@example.com",
+          slotStart:
+            slots[1]?.slotStart ?? slots[0]?.slotStart ?? slot.slotStart,
+          slotEnd: slots[1]?.slotEnd ?? slots[0]?.slotEnd ?? slot.slotEnd,
+          durationMinutes,
+          meetLink: null,
+        },
+        {
+          reservationId: "507f1f77bcf86cd799439013",
+          guestName: "Alan Turing",
+          guestEmail: "alan@example.com",
+          slotStart:
+            slots[2]?.slotStart ?? slots[0]?.slotStart ?? slot.slotStart,
+          slotEnd: slots[2]?.slotEnd ?? slots[0]?.slotEnd ?? slot.slotEnd,
+          durationMinutes,
+          meetLink: "https://meet.google.com/xyz-uvwx-rst",
+        },
+      ];
+      return route.fulfill(
+        jsonResponse({
+          reservations: options.ownerUpcomingReservations ?? defaults,
+        }),
+      );
+    }
+
+    if (
+      /^\/api\/booking\/pages\/[^/]+\/owner\/reservations\/[^/]+\/cancel$/.test(
+        path,
+      ) &&
+      request.method() === "POST"
+    ) {
+      return route.fulfill(jsonResponse({ ok: true }));
     }
 
     if (
