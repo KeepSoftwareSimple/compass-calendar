@@ -166,7 +166,7 @@ enum ParityViewSnapshotExporter {
                   let bounds = info.first?[kCGWindowBounds as String] as? [String: Any],
                   let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary)
             else { return nil }
-            image = CGWindowListCreateImageFromArray(rect, orderedIDs as CFArray, [.boundsIgnoreFraming, .bestResolution])
+            image = CGImage(windowListFromArrayScreenBounds: rect, windowArray: orderedIDs as CFArray, imageOption: [.boundsIgnoreFraming, .bestResolution])
         }
         guard let cgImage = image else { return nil }
         let rep = NSBitmapImageRep(cgImage: cgImage)
