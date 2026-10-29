@@ -4,6 +4,7 @@ import {
   openEventForEditingWithKeyboard,
   prepareTimedCalendarPage,
 } from "../utils/event-test-utils";
+import { seedLocalEvents } from "../utils/local-event-seed.util";
 
 const EVENT_TITLE = "Keyboard schedule color hints";
 
@@ -13,58 +14,19 @@ test("shows date, time, and color keycaps on the event form", async ({
   await installDeterministicBrowserClock(page);
   await prepareTimedCalendarPage(page);
 
-  await expect
-    .poll(() =>
-      page.evaluate(() => localStorage.getItem("compass.localCalendarId")),
-    )
-    .not.toBeNull();
-
-  await page.evaluate(
-    async ({ title, id }) => {
-      const calendarId = localStorage.getItem("compass.localCalendarId");
-      if (!calendarId) throw new Error("missing local calendar id");
-      const record = {
-        version: 2,
-        id,
-        isDemo: false,
-        event: {
-          id,
-          calendarId,
-          content: {
-            kind: "details",
-            title,
-            description: "",
-          },
-          schedule: {
-            kind: "timed",
-            start: "2026-04-24T15:00:00.000Z",
-            end: "2026-04-24T16:00:00.000Z",
-            timeZone: "UTC",
-          },
-          recurrence: { kind: "single" },
-          createdAt: "2026-04-24T10:00:00.000Z",
-          updatedAt: null,
-        },
-      };
-
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("compass-local");
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-      });
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction("events", "readwrite");
-          tx.objectStore("events").put(record);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-      } finally {
-        db.close();
-      }
+  await seedLocalEvents(page, [
+    {
+      id: "e2e0000000000000000000002",
+      content: { kind: "details", title: EVENT_TITLE, description: "" },
+      schedule: {
+        kind: "timed",
+        start: "2026-04-24T15:00:00.000Z",
+        end: "2026-04-24T16:00:00.000Z",
+        timeZone: "UTC",
+      },
+      createdAt: "2026-04-24T10:00:00.000Z",
     },
-    { title: EVENT_TITLE, id: "e2e0000000000000000000002" },
-  );
+  ]);
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.locator("#mainGrid").waitFor({ state: "visible", timeout: 15000 });

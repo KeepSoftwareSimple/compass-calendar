@@ -3,6 +3,7 @@ import {
   getVisibleDayDates,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
+import { seedLocalEvents } from "../utils/local-event-seed.util";
 
 const DENVER = "America/Denver";
 const WEEK_START = "2026-11-01";
@@ -38,57 +39,20 @@ function tylerWeekEvents(): SeededEvent[] {
 }
 
 async function seedTylerWeek(page: import("@playwright/test").Page) {
-  await expect
-    .poll(() =>
-      page.evaluate(() => localStorage.getItem("compass.localCalendarId")),
-    )
-    .not.toBeNull();
-
-  await page.evaluate(async (seedEvents) => {
-    const calendarId = localStorage.getItem("compass.localCalendarId");
-    if (!calendarId) {
-      throw new Error("missing local calendar id");
-    }
-
-    const records = seedEvents.map(({ id, title, startUtc, endUtc }) => ({
-      version: 2,
+  await seedLocalEvents(
+    page,
+    tylerWeekEvents().map(({ id, title, startUtc, endUtc }) => ({
       id,
-      isDemo: false,
-      event: {
-        id,
-        calendarId,
-        content: { kind: "details", title, description: "" },
-        schedule: {
-          kind: "timed",
-          start: startUtc,
-          end: endUtc,
-          timeZone: "America/Denver",
-        },
-        recurrence: { kind: "single" },
-        createdAt: "2026-11-01T00:00:00.000Z",
-        updatedAt: null,
+      content: { kind: "details", title, description: "" },
+      schedule: {
+        kind: "timed",
+        start: startUtc,
+        end: endUtc,
+        timeZone: DENVER,
       },
-    }));
-
-    const db = await new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open("compass-local");
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-    });
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction("events", "readwrite");
-        const store = tx.objectStore("events");
-        for (const record of records) {
-          store.put(record);
-        }
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } finally {
-      db.close();
-    }
-  }, tylerWeekEvents());
+      createdAt: "2026-11-01T00:00:00.000Z",
+    })),
+  );
 }
 
 function alignmentPayload() {

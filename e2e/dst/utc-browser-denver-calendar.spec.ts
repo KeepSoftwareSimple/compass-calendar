@@ -3,6 +3,7 @@ import {
   openEventForEditingWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
+import { seedLocalEvents } from "../utils/local-event-seed.util";
 import { evaluateWeekGridEventAlignment } from "../utils/week-grid-alignment.util";
 
 const DENVER = "America/Denver";
@@ -12,61 +13,19 @@ const FROZEN_NOW_MINUTES = 12 * 60 + 25;
 const PROBE_TITLE = "UTC host Denver probe";
 
 async function seedAlignmentProbe(page: import("@playwright/test").Page) {
-  await expect
-    .poll(() =>
-      page.evaluate(() => localStorage.getItem("compass.localCalendarId")),
-    )
-    .not.toBeNull();
-
-  await page.evaluate(
-    async ({ endUtc, startUtc, timeZone, title }) => {
-      const calendarId = localStorage.getItem("compass.localCalendarId");
-      if (!calendarId) {
-        throw new Error("missing local calendar id");
-      }
-      const id = `06${"b".repeat(22)}`;
-      const record = {
-        version: 2,
-        id,
-        isDemo: false,
-        event: {
-          id,
-          calendarId,
-          content: { kind: "details", title, description: "" },
-          schedule: {
-            kind: "timed",
-            start: startUtc,
-            end: endUtc,
-            timeZone,
-          },
-          recurrence: { kind: "single" },
-          createdAt: "2026-11-01T00:00:00.000Z",
-          updatedAt: null,
-        },
-      };
-      const db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = indexedDB.open("compass-local");
-        request.onerror = () => reject(request.error);
-        request.onsuccess = () => resolve(request.result);
-      });
-      try {
-        await new Promise<void>((resolve, reject) => {
-          const tx = db.transaction("events", "readwrite");
-          tx.objectStore("events").put(record);
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-      } finally {
-        db.close();
-      }
-    },
+  await seedLocalEvents(page, [
     {
-      endUtc: "2026-10-22T16:45:00.000Z",
-      startUtc: "2026-10-22T16:00:00.000Z",
-      timeZone: DENVER,
-      title: PROBE_TITLE,
+      id: `06${"b".repeat(22)}`,
+      content: { kind: "details", title: PROBE_TITLE, description: "" },
+      schedule: {
+        kind: "timed",
+        start: "2026-10-22T16:00:00.000Z",
+        end: "2026-10-22T16:45:00.000Z",
+        timeZone: DENVER,
+      },
+      createdAt: "2026-11-01T00:00:00.000Z",
     },
-  );
+  ]);
 }
 
 test.describe("UTC browser with Denver calendar zone", () => {
