@@ -454,6 +454,15 @@ public final class DescriptionTextView: NSTextView {
         onFormattingChange?()
     }
 
+    public override func insertTab(_ sender: Any?) {
+        let paragraph = paragraphRange(containing: selectedRange())
+        let listKind = paragraph.length > 0
+            ? textStorage?.attribute(HTMLFragmentAppKit.listKindKey, at: paragraph.location, effectiveRange: nil)
+            : typingAttributes[HTMLFragmentAppKit.listKindKey]
+        guard listKind == nil else { super.insertTab(sender); return }
+        window?.selectNextKeyView(self)
+    }
+
     public override func insertNewline(_ sender: Any?) {
         guard isEditable, let storage = textStorage else { return }
         let range = paragraphRange(containing: NSRange(location: selectedRange().location, length: 0))
