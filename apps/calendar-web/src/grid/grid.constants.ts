@@ -31,12 +31,9 @@ export const EVENT_WIDTH_MINIMUM = 80;
 // wider than EVENT_WIDTH_MINIMUM so titles/time labels stay legible.
 export const DAY_COLUMN_MIN_USABLE_WIDTH = 140;
 export const DECK_INDENT = 16;
-export const DECK_RIGHT_RESERVE = 24;
-export const DECK_MIN_WIDTH = 72;
 export const TIMED_EVENT_WIDTH_RATIO = 0.6;
 export const TIMED_EVENT_MIN_WIDTH = 280;
 export const TIMED_EVENT_FAN_INDENT = 44;
-export const TIMED_EVENT_FAN_GUTTER = 120;
 export const HIDDEN_EVENT_STRIP_WIDTH = 8;
 
 export function applyHiddenEventStripWidth<T extends { width: number }>(

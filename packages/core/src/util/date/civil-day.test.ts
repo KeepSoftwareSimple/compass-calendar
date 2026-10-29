@@ -129,4 +129,12 @@ describe("formatInstantInTimeZone", () => {
     );
     expect(formatted).toBe("2026-11-05T09:00:00-07:00");
   });
+
+  it("formats naive wall-clock strings in the schedule zone", () => {
+    const formatted = formatInstantInTimeZone(
+      "2026-10-31T19:30:00",
+      CIVIL_DAY_DENVER,
+    );
+    expect(formatted).toBe("2026-10-31T19:30:00-06:00");
+  });
 });

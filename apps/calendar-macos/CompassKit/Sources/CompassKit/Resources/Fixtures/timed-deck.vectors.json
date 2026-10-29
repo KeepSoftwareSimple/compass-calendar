@@ -52,9 +52,9 @@
       },
       "output": {
         "height": 60,
-        "left": 36,
+        "left": 110,
         "top": 30,
-        "width": 140,
+        "width": 90,
         "zIndex": 2
       }
     },
@@ -193,7 +193,7 @@
         "height": 57,
         "left": 55,
         "top": 480,
-        "width": 212,
+        "width": 155,
         "zIndex": 1
       }
     }

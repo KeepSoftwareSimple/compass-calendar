@@ -107,16 +107,8 @@ public enum TimedDeckLayoutEngine {
             return next
         }
 
-        let deckWidth = getTimedEventDeckWidth(
-            availableWidth: position.width,
-            cardWidth: cardWidth,
-            groupSize: deckLayout.groupSize
-        )
-
-        var base = position
-        base.width = deckWidth
         return applyTimedDeckPositionWithIndent(
-            base,
+            position,
             deckLayout: deckLayout,
             indentMax: GridLayoutConstants.timedEventFanIndent
         )
@@ -127,21 +119,13 @@ public enum TimedDeckLayoutEngine {
         deckLayout: TimedDeckLayout,
         indentMax: Double
     ) -> EventPosition {
-        let indent = getDeckIndent(
-            width: position.width,
-            groupSize: deckLayout.groupSize,
-            indentMax: indentMax
-        )
-        let maxIndent = Double(deckLayout.groupSize - 1) * indent
-        let fanned = position.width - GridLayoutConstants.deckRightReserve - maxIndent
-        let maxWidthWithinColumn = max(0, position.width - maxIndent)
-        let width = min(max(GridLayoutConstants.deckMinWidth, fanned), maxWidthWithinColumn)
+        let slotWidth = position.width / Double(deckLayout.groupSize)
 
         return EventPosition(
             height: position.height,
-            left: position.left + Double(deckLayout.order) * indent,
+            left: position.left + Double(deckLayout.order) * slotWidth,
             top: position.top,
-            width: width,
+            width: slotWidth,
             zIndex: deckLayout.order + 1
         )
     }
