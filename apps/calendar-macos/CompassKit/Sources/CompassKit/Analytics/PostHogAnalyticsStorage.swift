@@ -6,8 +6,8 @@ enum PostHogAnalyticsStorageKeys {
     static let sessionLastActivity = "COMPASS_POSTHOG_SESSION_LAST_ACTIVITY"
 }
 
-enum PostHogAnalyticsIds {
-    static func makeLowercasedUUID() -> String {
+public enum PostHogAnalyticsIds {
+    public static func makeLowercasedUUID() -> String {
         UUID().uuidString.lowercased()
     }
 }
