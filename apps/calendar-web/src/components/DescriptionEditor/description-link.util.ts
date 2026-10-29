@@ -98,6 +98,29 @@ export const copyDescriptionLinkUrl = async (url: string): Promise<boolean> => {
   return didCopy;
 };
 
+/**
+ * Runs `mutate` with ProseMirror's DOM observer paused. Link chrome decorates
+ * ProseMirror-owned <a> nodes (tabindex, title, focus ring, short labels);
+ * if ProseMirror sees those writes it redraws the links, and a redraw that
+ * re-triggers the decorator loops forever and freezes the tab.
+ */
+export const withEditorDomObserverPaused = (
+  editor: Editor,
+  mutate: () => void,
+): void => {
+  const domObserver = (
+    editor.view as unknown as {
+      domObserver: { stop: () => void; start: () => void };
+    }
+  ).domObserver;
+  domObserver.stop();
+  try {
+    mutate();
+  } finally {
+    domObserver.start();
+  }
+};
+
 export const listDescriptionLinks = (root: HTMLElement): HTMLAnchorElement[] =>
   [...root.querySelectorAll<HTMLAnchorElement>(LINK_SELECTOR)].filter(
     (link) => link.href.length > 0,

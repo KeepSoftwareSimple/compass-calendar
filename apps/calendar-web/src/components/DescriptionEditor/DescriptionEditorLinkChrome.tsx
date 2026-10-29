@@ -6,12 +6,14 @@ import {
   useFloating,
 } from "@floating-ui/react";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
+import { type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import {
   copyDescriptionLinkUrl,
   findLinkElement,
   listDescriptionLinks,
+  withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
@@ -21,10 +23,12 @@ const COPY_ICON_SIZE = 14;
 const HOVER_CLOSE_DELAY_MS = 150;
 
 interface DescriptionEditorLinkChromeProps {
+  editor: Editor;
   editorRoot: HTMLElement | null;
 }
 
 export const DescriptionEditorLinkChrome = ({
+  editor,
   editorRoot,
 }: DescriptionEditorLinkChromeProps) => {
   const [activeLink, setActiveLink] = useState<HTMLAnchorElement | null>(null);
@@ -51,12 +55,33 @@ export const DescriptionEditorLinkChrome = ({
   useEffect(() => {
     if (!editorRoot) return;
 
+    // Write only what is missing, with ProseMirror's observer paused: an
+    // unconditional write that ProseMirror sees makes it redraw the links,
+    // which fires this observer again (an endless loop with two or more
+    // links in one paragraph, e.g. a booking's "Cancel | Reschedule").
     const syncTabIndex = () => {
-      for (const link of listDescriptionLinks(editorRoot)) {
-        link.tabIndex = 0;
-        link.title = link.href;
-        link.classList.add("c-focus-ring", "rounded-xs");
-      }
+      const links = listDescriptionLinks(editorRoot).filter(
+        (link) =>
+          link.getAttribute("tabindex") !== "0" ||
+          link.title !== link.href ||
+          !link.classList.contains("c-focus-ring") ||
+          !link.classList.contains("rounded-xs"),
+      );
+      if (links.length === 0) return;
+      withEditorDomObserverPaused(editor, () => {
+        for (const link of links) {
+          if (link.getAttribute("tabindex") !== "0") {
+            link.setAttribute("tabindex", "0");
+          }
+          if (link.title !== link.href) link.title = link.href;
+          if (!link.classList.contains("c-focus-ring")) {
+            link.classList.add("c-focus-ring");
+          }
+          if (!link.classList.contains("rounded-xs")) {
+            link.classList.add("rounded-xs");
+          }
+        }
+      });
     };
 
     syncTabIndex();
@@ -120,7 +145,7 @@ export const DescriptionEditorLinkChrome = ({
       observer.disconnect();
       cancelClearHover();
     };
-  }, [cancelClearHover, editorRoot, scheduleClearHover]);
+  }, [cancelClearHover, editor, editorRoot, scheduleClearHover]);
 
   const { refs, floatingStyles } = useFloating({
     open: Boolean(chromeLink),
