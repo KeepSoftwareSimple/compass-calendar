@@ -1,7 +1,4 @@
-import {
-  formatBookingSlotLabel,
-  formatDurationMinutes,
-} from "@booking-web/booking/public-booking.format";
+import { formatOwnerInboxScheduleLine } from "@booking-web/booking/public-booking.format";
 import { useBookingShortcut } from "@booking-web/shortcuts/useBookingShortcut";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
@@ -72,12 +69,16 @@ export function PublicBookingOwnerInboxRow({
     { enabled: confirming && !cancelPending, ignoreInputs: false },
   );
 
-  const whenLabel = formatBookingSlotLabel(booking.slotStart, hostTimeZone);
-  const durationLabel = formatDurationMinutes(booking.durationMinutes);
+  const scheduleLine = formatOwnerInboxScheduleLine(
+    booking.slotStart,
+    booking.durationMinutes,
+    hostTimeZone,
+  );
+  const guestLine = `${booking.guestName} · ${booking.guestEmail}`;
 
   if (confirming) {
     return (
-      <li className="rounded-lg border border-border bg-surface p-4">
+      <li className="rounded-lg border border-border bg-surface p-3">
         <div
           aria-describedby={dialogDescriptionId}
           aria-labelledby={dialogHeadingId}
@@ -89,8 +90,8 @@ export function PublicBookingOwnerInboxRow({
             Cancel this booking?
           </h3>
           <p className="text-sm text-text-muted" id={dialogDescriptionId}>
-            {booking.guestName} ({booking.guestEmail}) on {whenLabel}. The guest
-            will be notified and the event will be removed from your calendar.
+            {guestLine} on {scheduleLine}. The guest will be notified and the
+            event will be removed from your calendar.
           </p>
           <p className="text-text-muted text-xs">
             Enter confirms. Esc keeps the booking.
@@ -120,18 +121,14 @@ export function PublicBookingOwnerInboxRow({
   }
 
   return (
-    <li className="rounded-lg border border-border bg-surface p-4">
+    <li className="rounded-lg border border-border bg-surface p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1 space-y-1">
-          <p className="font-medium text-sm text-text">{booking.guestName}</p>
-          <p className="truncate text-sm text-text-muted">
-            {booking.guestEmail}
-          </p>
-          <p className="text-sm text-text">{whenLabel}</p>
-          <p className="text-sm text-text-muted">{durationLabel}</p>
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="break-words text-sm text-text">{guestLine}</p>
+          <p className="text-sm text-text-muted">{scheduleLine}</p>
           {booking.meetLink ? (
             <a
-              className="c-focus-ring inline-flex min-h-11 items-center text-accent text-sm underline"
+              className="c-focus-ring inline-flex min-h-11 items-center pt-1 text-accent text-sm underline"
               href={booking.meetLink}
               rel="noopener noreferrer"
               target="_blank"

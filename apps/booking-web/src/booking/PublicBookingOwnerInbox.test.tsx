@@ -39,8 +39,8 @@ const upcomingBookings = [
     reservationId: "507f1f77bcf86cd799439011",
     guestName: "Ada Lovelace",
     guestEmail: "ada@example.com",
-    slotStart: "2026-09-15T15:00:00.000Z",
-    slotEnd: "2026-09-15T15:30:00.000Z",
+    slotStart: "2026-10-31T13:00:00.000Z",
+    slotEnd: "2026-10-31T13:30:00.000Z",
     durationMinutes: 30,
     meetLink: "https://meet.google.com/abc-defg-hij",
   },
@@ -48,9 +48,9 @@ const upcomingBookings = [
     reservationId: "507f1f77bcf86cd799439012",
     guestName: "Grace Hopper",
     guestEmail: "grace@example.com",
-    slotStart: "2026-09-16T15:00:00.000Z",
-    slotEnd: "2026-09-16T15:30:00.000Z",
-    durationMinutes: 30,
+    slotStart: "2026-11-01T20:00:00.000Z",
+    slotEnd: "2026-11-01T20:45:00.000Z",
+    durationMinutes: 45,
     meetLink: null,
   },
 ];
@@ -118,8 +118,14 @@ describe("PublicBookingOwnerInbox", () => {
     expect(
       await screen.findByRole("heading", { name: "Your upcoming bookings" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
-    expect(screen.getByText("Grace Hopper")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ada Lovelace · ada@example.com"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("Grace Hopper · grace@example.com"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Oct 31.*30 min/)).toBeInTheDocument();
+    expect(screen.getByText(/Nov 1.*45 min/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Join meeting" })).toHaveAttribute(
       "href",
       "https://meet.google.com/abc-defg-hij",
@@ -155,13 +161,15 @@ describe("PublicBookingOwnerInbox", () => {
     );
 
     renderMeetPage();
-    await screen.findByText("Ada Lovelace");
+    await screen.findByText("Ada Lovelace · ada@example.com");
     await user.click(screen.getAllByRole("button", { name: "Cancel" })[0]!);
     await screen.findByRole("alertdialog", { name: "Cancel this booking?" });
     await user.keyboard("{Escape}");
     expect(
       screen.queryByRole("alertdialog", { name: "Cancel this booking?" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+    expect(
+      screen.getByText("Ada Lovelace · ada@example.com"),
+    ).toBeInTheDocument();
   });
 });

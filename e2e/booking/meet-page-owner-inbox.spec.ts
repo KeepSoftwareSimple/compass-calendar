@@ -60,9 +60,18 @@ test.describe("meet page owner inbox", () => {
     await expect(
       page.getByRole("heading", { name: "Your upcoming bookings" }),
     ).toBeVisible();
-    await expect(page.getByText("Ada Lovelace")).toBeVisible();
-    await expect(page.getByText("Grace Hopper")).toBeVisible();
-    await expect(page.getByText("Alan Turing")).toBeVisible();
+    await expect(
+      page.getByText("Ada Lovelace · ada@example.com"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Grace Hopper · grace@example.com"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Alan Turing · alan@example.com"),
+    ).toBeVisible();
+    await expect(page.getByText(/Oct 31.*30 min/)).toBeVisible();
+    await expect(page.getByText(/Nov 1.*45 min/)).toBeVisible();
+    await expect(page.getByText(/Nov 3.*1 hr/)).toBeVisible();
     await captureViewport(page, "owner-with-bookings", 1280);
     await captureViewport(page, "owner-with-bookings", 360);
 

@@ -23,7 +23,6 @@ import {
   type PatchBookingReservationInput,
   type RescheduleBookingReservationInput,
 } from "@core/types/booking.contracts";
-import { IS_MEET_PAGE_OWNER_INBOX_ENABLED } from "@web/common/constants/env.constants";
 
 const PUBLIC_BOOKING_PAGE_STALE_TIME_MS = 5 * 60 * 1000;
 const PUBLIC_BOOKING_SLOTS_STALE_TIME_MS = 60_000;
@@ -413,7 +412,7 @@ export function usePublicBookingOwnerInboxQuery(slug: string) {
   return useQuery({
     queryKey: publicBookingQueryKeys.ownerUpcoming(slug),
     queryFn: () => PublicBookingApi.getOwnerUpcoming(slug),
-    enabled: IS_MEET_PAGE_OWNER_INBOX_ENABLED && slug.length > 0,
+    enabled: slug.length > 0,
     retry: retryOwnerInboxUnlessUnauthorized,
     staleTime: 30_000,
   });
