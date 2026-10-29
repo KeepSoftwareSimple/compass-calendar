@@ -53,11 +53,8 @@ struct EventFormMeetingLinkRow: View {
             }
         }
         .pageJumpChipAnchor(id: "form-conference")
-        .onChange(of: model.eventFormConferenceFocusRequest) { _, _ in
-            DispatchQueue.main.async {
-                guard model.isEventFormVisible, model.eventFormFocusedField == .conference else { return }
-                linkFocused = true
-            }
+        .onEventFormFocusRequest(model, field: .conference) {
+            linkFocused = true
         }
         .onChange(of: model.eventFormFocusedField) { _, field in
             if field != .conference { linkFocused = false }

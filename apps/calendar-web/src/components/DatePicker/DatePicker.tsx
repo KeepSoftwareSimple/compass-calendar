@@ -342,18 +342,20 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
               nextLabel: "Next month",
             };
 
+        const jumpToThisMonth =
+          monthNav?.onToday ??
+          (() => {
+            headerProps.changeMonth(dayjs().month());
+            headerProps.changeYear(dayjs().year());
+          });
         monthStepHandlersRef.current = {
           onPrev: headerNav.onPrev,
           onNext: headerNav.onNext,
           onGoToThisMonth:
-            view === "sidebar" && monthNav?.onToday
-              ? monthNav.onToday
-              : withTodayButton && isCaptionDayGrid
-                ? () => {
-                    headerProps.changeMonth(dayjs().month());
-                    headerProps.changeYear(dayjs().year());
-                  }
-                : undefined,
+            (view === "sidebar" && monthNav?.onToday) ||
+            (withTodayButton && isCaptionDayGrid)
+              ? jumpToThisMonth
+              : undefined,
         };
 
         const stackHeaderHints =
@@ -465,13 +467,7 @@ export const DatePicker: React.FC<Props> = (datePickerProps) => {
                           currentMonth === selectedMonth && "invisible",
                         )}
                         style={{ color: headerColor }}
-                        onClick={
-                          monthNav?.onToday ??
-                          (() => {
-                            headerProps.changeMonth(dayjs().month());
-                            headerProps.changeYear(dayjs().year());
-                          })
-                        }
+                        onClick={jumpToThisMonth}
                       >
                         <CircleIcon />
                       </button>

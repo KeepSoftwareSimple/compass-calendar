@@ -78,7 +78,8 @@ struct EventFormRsvpSection: View {
             )
             .accessibilityIdentifier("compass-event-form-rsvp")
             .pageJumpChipAnchor(id: "form-rsvp")
-            .onChange(of: model.eventFormRsvpFocusRequest) { _, _ in
+            .onChange(of: model.eventFormFocusRequest) { _, _ in
+                guard model.eventFormFocusedField == .rsvp else { return }
                 let target = selectedStatus.flatMap { status in options.contains(where: { $0.0 == status }) ? status : nil }
                     ?? options.first?.0
                 tabStopResponse = target

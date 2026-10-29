@@ -6,6 +6,12 @@ enum PostHogAnalyticsStorageKeys {
     static let sessionLastActivity = "COMPASS_POSTHOG_SESSION_LAST_ACTIVITY"
 }
 
+public enum PostHogAnalyticsIds {
+    public static func makeLowercasedUUID() -> String {
+        UUID().uuidString.lowercased()
+    }
+}
+
 public protocol PostHogAnalyticsDefaults: Sendable {
     func string(forKey key: String) -> String?
     func set(_ value: String?, forKey key: String)

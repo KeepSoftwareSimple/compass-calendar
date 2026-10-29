@@ -20,7 +20,7 @@ final class EventFormPunctuationFocusTests: XCTestCase {
             characters: "-", charactersIgnoringModifiers: "-", isARepeat: false, keyCode: 27))
         XCTAssertTrue(router.handleKeyDown(event))
         XCTAssertEqual(model.eventFormFocusedField, .rsvp)
-        XCTAssertEqual(model.eventFormRsvpFocusRequest, 1)
+        XCTAssertEqual(model.eventFormFocusRequest, 1)
         for (letter, code) in [("e", UInt16(14)), ("g", UInt16(5))] {
             let key = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero,
                 modifierFlags: [], timestamp: 0, windowNumber: 0, context: nil,
@@ -30,6 +30,6 @@ final class EventFormPunctuationFocusTests: XCTestCase {
             if letter == "g" { XCTAssertEqual(router.dispatcher.lastResolvedLeaderField, "rsvp") }
         }
         XCTAssertEqual(model.eventFormFocusedField, .rsvp)
-        XCTAssertEqual(model.eventFormRsvpFocusRequest, 2)
+        XCTAssertEqual(model.eventFormFocusRequest, 2)
     }
 }
