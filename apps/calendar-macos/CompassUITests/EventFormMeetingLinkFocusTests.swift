@@ -20,6 +20,14 @@ final class EventFormMeetingLinkFocusTests: XCTestCase {
             XCTAssertTrue(
                 conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
                 conference.debugDescription)
+            window.typeKey(.tab, modifierFlags: [])
+            XCTAssertFalse(conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            window.typeKey("=", modifierFlags: [.command])
+            XCTAssertTrue(conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
+            let evidence = XCTAttachment(screenshot: window.screenshot())
+            evidence.name = "Meeting link keyboard focus, \(theme)"
+            evidence.lifetime = .keepAlways
+            add(evidence)
             XCTAssertTrue(form.exists)
             app.terminate()
         }
