@@ -166,6 +166,7 @@ public struct EventFormView: View {
                 .disabled(model.hasPendingEventMutations)
                 .accessibilityLabel("Save")
                 .accessibilityIdentifier("compass-event-form-save")
+                .focusable()
                 EventFormFooterTipsView(
                     model: model,
                     tabNavigationApplies: model.eventFormDateKeyOwner == nil)
