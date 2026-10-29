@@ -20,6 +20,8 @@ const BOOKING_ROUTE_CATEGORIES = [
   "api_booking_page",
   "api_booking_slots",
   "api_booking_create",
+  "api_booking_owner_upcoming",
+  "api_booking_owner_cancel",
   "api_booking_reservation",
   "api_booking_reservation_cancel",
   "api_booking_reservation_slots",
@@ -48,6 +50,9 @@ const WEB_ACTION = /^\/(meet|book)\/(confirmed|cancel|reschedule)\/([^/]+)$/;
 const WEB_PAGE = /^\/(meet|book)\/([^/]+)$/;
 const API_RESERVATION =
   /^\/api\/booking\/reservations\/([^/]+)(?:\/(cancel|slots|reschedule))?$/;
+const API_OWNER_UPCOMING = /^\/api\/booking\/pages\/([^/]+)\/owner\/upcoming$/;
+const API_OWNER_CANCEL =
+  /^\/api\/booking\/pages\/([^/]+)\/owner\/reservations\/([^/]+)\/cancel$/;
 const API_PUBLIC_PAGE =
   /^\/api\/booking\/pages\/([^/]+)(?:\/(slots|reservations))?$/;
 const API_ADMIN = /^\/api\/booking\/page(?:\/.*)?$/;
@@ -161,6 +166,20 @@ export function classifyBookingPath(
         canonicalPath: "/api/booking/reservations/:reservationId",
       }
     );
+  }
+
+  if (API_OWNER_UPCOMING.test(path)) {
+    return {
+      category: "api_booking_owner_upcoming",
+      canonicalPath: "/api/booking/pages/:slug/owner/upcoming",
+    };
+  }
+  if (API_OWNER_CANCEL.test(path)) {
+    return {
+      category: "api_booking_owner_cancel",
+      canonicalPath:
+        "/api/booking/pages/:slug/owner/reservations/:reservationId/cancel",
+    };
   }
 
   const publicPage = API_PUBLIC_PAGE.exec(path);
