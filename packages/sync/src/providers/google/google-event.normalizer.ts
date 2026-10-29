@@ -215,10 +215,13 @@ function mapSchedule(item: gSchema$Event) {
 
   if (start.date && end.date) {
     // Google's all-day end date is already exclusive, matching the contract.
+    // Some clients and ICS imports write a zero-length all-day event
+    // (end.date equal to start.date). Google still shows it as a one-day event,
+    // so give it the one-day exclusive end instead of skipping it.
     return parseProviderSchedule({
       kind: "allDay",
       start: start.date,
-      end: end.date,
+      end: end.date > start.date ? end.date : nextDateOnly(start.date),
     });
   }
 
@@ -242,6 +245,10 @@ function mapSchedule(item: gSchema$Event) {
     "unmappableSchedule",
     "Event start/end mixes date and dateTime",
   );
+}
+
+function nextDateOnly(date: string): string {
+  return dayjs.utc(date).add(1, "day").format("YYYY-MM-DD");
 }
 
 function mapRecurrence(item: gSchema$Event): ProviderEventRecurrence {
