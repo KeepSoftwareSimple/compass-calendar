@@ -24,7 +24,10 @@ final class EventFormMeetingLinkFocusTests: XCTestCase {
             XCTAssertFalse(conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
             window.typeKey("=", modifierFlags: [.command])
             XCTAssertTrue(conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true)
-            XCTAssertTrue(conference.isHittable, "Focused meeting link must be visible above the sticky actions: \(conference.debugDescription)")
+            let viewport = form.scrollViews.firstMatch.frame
+            XCTAssertGreaterThan(conference.frame.height, 0)
+            XCTAssertTrue(viewport.contains(conference.frame), "Focused link must fit inside the scrolling viewport")
+            XCTAssertLessThanOrEqual(conference.frame.maxY, form.buttons["Save"].frame.minY)
             let evidence = XCTAttachment(screenshot: window.screenshot())
             evidence.name = "Meeting link keyboard focus, \(theme)"
             evidence.lifetime = .keepAlways
