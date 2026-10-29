@@ -1,6 +1,16 @@
 import dayjs, { type Dayjs } from "@core/util/date/dayjs";
 
 const CIVIL_DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
+const MS_PER_HOUR = 60 * 60 * 1000;
+const MS_PER_MINUTE = 60 * 1000;
+
+/*
+ * Everything here must give the same answer whatever zone the host runs in.
+ * The dayjs timezone plugin's `startOf` and `add` on a zoned value go through
+ * the host's local zone, so on a US browser they shift by an hour across a
+ * DST change while CI (TZ=Etc/UTC) never sees it. Do the arithmetic on epoch
+ * milliseconds and plain calendar dates instead.
+ */
 
 function civilDateKey(day: Dayjs | Date | string, timeZone: string): string {
   if (typeof day === "string" && CIVIL_DATE_KEY.test(day.trim())) {
@@ -15,7 +25,11 @@ export function startOfCivilDay(
   timeZone: string,
 ): Dayjs {
   const key = civilDateKey(day, timeZone);
-  return dayjs.tz(key, timeZone).startOf("day");
+  return dayjs.tz(key, timeZone);
+}
+
+function nextCivilDateKey(key: string): string {
+  return dayjs.utc(key).add(1, "day").format("YYYY-MM-DD");
 }
 
 /** Minutes from civil midnight to the next civil midnight (1380, 1440, or 1500). */
@@ -23,10 +37,10 @@ export function civilDayLengthMinutes(
   day: Dayjs | Date | string,
   timeZone: string,
 ): number {
-  const start = startOfCivilDay(day, timeZone);
-  const nextKey = start.add(1, "day").format("YYYY-MM-DD");
-  const nextMidnight = dayjs.tz(nextKey, timeZone).startOf("day");
-  return nextMidnight.diff(start, "minute");
+  const key = civilDateKey(day, timeZone);
+  const start = dayjs.tz(key, timeZone);
+  const nextMidnight = dayjs.tz(nextCivilDateKey(key), timeZone);
+  return Math.round((nextMidnight.valueOf() - start.valueOf()) / MS_PER_MINUTE);
 }
 
 /** Hour-sized slots in a civil day (23 on spring-forward, 25 on fall-back). */
@@ -97,6 +111,10 @@ export function gridMinutesFromCivilMidnight(
 /**
  * Hour-line instants after civil midnight (1 AM through 11 PM, plus the next
  * midnight when `includeMidnight` is true). Slot count follows DST.
+ *
+ * Each line is a real elapsed hour after midnight, held at midnight's UTC
+ * offset so the gutter reads 1 AM through 11 PM in wall-clock order (with the
+ * extra fall-back slot at the end), matching {@link gridMinutesFromCivilMidnight}.
  */
 export function civilHourLineInstants(
   day: Dayjs | Date | string,
@@ -106,8 +124,10 @@ export function civilHourLineInstants(
   const slotCount = civilHourSlotCount(day, timeZone);
   const hours = includeMidnight ? slotCount : Math.max(0, slotCount - 1);
   const start = startOfCivilDay(day, timeZone);
+  const startMs = start.valueOf();
+  const offset = start.utcOffset();
   return Array.from({ length: hours }, (_, index) =>
-    start.add(index + 1, "hour"),
+    dayjs(startMs + (index + 1) * MS_PER_HOUR).utcOffset(offset),
   );
 }
 
