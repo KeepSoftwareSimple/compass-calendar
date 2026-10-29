@@ -132,7 +132,11 @@ export type DirectTrackProductEvent = Exclude<
   "signup_step_viewed"
 >;
 
-function captureToPosthog(
+/**
+ * Low-level capture for funnel modules that attach required properties.
+ * Do not call this for `signup_step_viewed` outside `signup-funnel.ts`.
+ */
+export function captureProductEvent(
   event: ProductEvent,
   properties?: ProductEventProperties,
 ): void {
@@ -155,16 +159,5 @@ export function track(
   event: DirectTrackProductEvent,
   properties?: ProductEventProperties,
 ): void {
-  captureToPosthog(event, properties);
-}
-
-/**
- * Low-level capture for funnel modules that attach required properties.
- * Do not call this for `signup_step_viewed` outside `signup-funnel.ts`.
- */
-export function captureProductEvent(
-  event: ProductEvent,
-  properties?: ProductEventProperties,
-): void {
-  captureToPosthog(event, properties);
+  captureProductEvent(event, properties);
 }

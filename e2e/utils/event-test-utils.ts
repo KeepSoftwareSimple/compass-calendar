@@ -251,6 +251,49 @@ export const createEventTitle = (prefix: string) =>
 export const updateEventTitle = (prefix: string) =>
   `${prefix} Updated ${Date.now()}`;
 
+/**
+ * Dismiss the onboarding surfaces that would otherwise cover the grid, and
+ * optionally pin the calendar zones, before the app boots. `storageState` in
+ * `playwright.config.ts` only covers the welcome modal and first-event prompt;
+ * specs that assert on grid chrome need the life-view intro and sidebar too.
+ */
+export const dismissOnboardingBeforeBoot = async (
+  page: Page,
+  options: { calendarTimeZone?: string; secondTimeZone?: string } = {},
+) => {
+  await page.addInitScript((zones) => {
+    localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
+    localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
+    localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
+    localStorage.setItem("compass.view.sidebar-open", "false");
+    if (zones.calendarTimeZone) {
+      localStorage.setItem("compass.timezone.default", zones.calendarTimeZone);
+    }
+    if (zones.secondTimeZone) {
+      localStorage.setItem(
+        "compass.timezone.time-travel",
+        zones.secondTimeZone,
+      );
+    }
+  }, options);
+};
+
+/**
+ * Make `Intl` report UTC however the device zone is emulated, for the specs
+ * that cover a browser whose resolved zone cannot be trusted.
+ */
+export const forceIntlTimeZoneToUtc = async (page: Page) => {
+  await page.addInitScript(() => {
+    const original = Intl.DateTimeFormat.prototype.resolvedOptions;
+    Intl.DateTimeFormat.prototype.resolvedOptions = function (
+      this: Intl.DateTimeFormat,
+    ) {
+      const options = original.call(this);
+      return { ...options, timeZone: "UTC" };
+    };
+  });
+};
+
 export const prepareCalendarPage = async (page: Page) => {
   await page.goto("/week", { waitUntil: "domcontentloaded" });
   await waitForCalendarShell(page);
