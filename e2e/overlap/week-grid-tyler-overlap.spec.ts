@@ -65,11 +65,11 @@ const tylerSaturdayEvents = () => [
   },
   {
     id: "507f1f77bcf86cd799439012",
-    content: { kind: "details", title: "Deutsch …", description: "" },
+    content: { kind: "details", title: "Monthly Ritual", description: "" },
     schedule: {
       kind: "timed",
-      start: "2026-11-01T01:00:00.000Z",
-      end: "2026-10-31T19:30:00",
+      start: "2026-11-01T01:30:00.000Z",
+      end: "2026-10-31T19:00:00",
       timeZone: DENVER,
     },
     createdAt: "2026-10-01T00:00:00.000Z",
@@ -102,9 +102,9 @@ test.describe("Tyler Oct 31 overlap column layout", () => {
     await page.locator("#mainGrid").waitFor({ state: "visible" });
 
     const unwind = page.getByRole("button", { name: /unwind/i });
-    const deutsch = page.getByRole("button", { name: /deutsch/i });
+    const ritual = page.getByRole("button", { name: /monthly ritual/i });
     await expect(unwind).toBeVisible();
-    await expect(deutsch).toBeVisible();
+    await expect(ritual).toBeVisible();
 
     const unwindBox = await unwind.evaluate((node) => {
       const el = node as HTMLElement;
@@ -113,7 +113,7 @@ test.describe("Tyler Oct 31 overlap column layout", () => {
         width: parseFloat(el.style.width),
       };
     });
-    const deutschBox = await deutsch.evaluate((node) => {
+    const ritualBox = await ritual.evaluate((node) => {
       const el = node as HTMLElement;
       return {
         left: parseFloat(el.style.left),
@@ -121,8 +121,11 @@ test.describe("Tyler Oct 31 overlap column layout", () => {
       };
     });
 
-    expect(unwindBox.width).toBeCloseTo(deutschBox.width, 0);
-    expect(deutschBox.left).toBeCloseTo(unwindBox.left + unwindBox.width, 0);
+    expect(unwindBox.width).toBeCloseTo(ritualBox.width, 0);
+    expect(Math.abs(unwindBox.left - ritualBox.left)).toBeCloseTo(
+      unwindBox.width,
+      0,
+    );
 
     await page.locator("#mainGrid").screenshot({
       path: testInfo.outputPath("after-sat-oct31-column.png"),

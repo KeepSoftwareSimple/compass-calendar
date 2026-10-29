@@ -12,6 +12,7 @@ enum GridLayoutConstants {
     static let deckMinWidth = 72.0
     static let timedEventWidthRatio = 0.6
     static let timedEventMinWidth = 280.0
+    static let timedEventMinDurationMinutes = 15
     static let timedEventFanIndent = 44.0
     static let timedEventFanGutter = 120.0
     static let hiddenEventStripWidth = 8.0

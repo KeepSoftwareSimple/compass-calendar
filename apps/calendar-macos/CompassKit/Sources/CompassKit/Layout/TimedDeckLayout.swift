@@ -51,10 +51,11 @@ public enum TimedDeckLayoutEngine {
             .filter { !items[$0.0].isHidden }
             .compactMap { index, event -> DeckCandidate? in
                 guard let start = CompassDateParsing.parseInEffectiveTimeZone(event.startDate),
-                      let end = CompassDateParsing.parseInEffectiveTimeZone(event.endDate)
+                      let parsedEnd = CompassDateParsing.parseInEffectiveTimeZone(event.endDate)
                 else {
                     return nil
                 }
+                let end = gridOverlapIntervalEnd(start: start, end: parsedEnd)
                 return DeckCandidate(
                     dayKey: CompassDateParsing.formatCalendarDay(start),
                     start: start,
@@ -213,6 +214,13 @@ private func groupByOverlap(_ events: [DeckCandidate]) -> [[DeckCandidate]] {
 
 private func overlaps(_ a: DeckCandidate, _ b: DeckCandidate) -> Bool {
     a.start < b.end && a.end > b.start
+}
+
+/// Match web `gridOverlapIntervalEnd` and timed card minimum height.
+private func gridOverlapIntervalEnd(start: Date, end: Date) -> Date {
+    let minutes = Int(end.timeIntervalSince(start) / 60)
+    guard minutes < 1 else { return end }
+    return start.addingTimeInterval(Double(GridLayoutConstants.timedEventMinDurationMinutes * 60))
 }
 
 private func orderBackgroundFirst(_ group: [DeckCandidate]) -> [DeckCandidate] {
