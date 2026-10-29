@@ -10,9 +10,7 @@ public struct PostHogSessionController: Sendable {
 
     public init(
         defaults: PostHogAnalyticsDefaults = UserDefaultsPostHogAnalyticsDefaults(),
-        generateSessionId: @escaping @Sendable () -> String = {
-            UUID().uuidString.lowercased()
-        },
+        generateSessionId: @escaping @Sendable () -> String = PostHogAnalyticsIds.makeLowercasedUUID,
         now: @escaping @Sendable () -> Date = Date.init
     ) {
         self.defaults = defaults

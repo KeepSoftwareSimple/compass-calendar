@@ -100,12 +100,9 @@ public final class NativeCalendarRootModel {
     public var eventFormDateKeyOwner: EventFormDateFieldKeys.Owner?
     public var eventFormTimeKeyOwner: String?
     public var eventFormFocusedField: EventFormField = .title
-    public internal(set) var eventFormActionsFocusRequest = 0
-    public internal(set) var eventFormRsvpFocusRequest = 0
-    public internal(set) var eventFormCalendarFocusRequest = 0
-    public internal(set) var eventFormRecurrenceFocusRequest = 0
-    public internal(set) var eventFormLocationFocusRequest = 0
-    public internal(set) var eventFormAttendeesFocusRequest = 0
+    /// Bumps on every `focusEventFormField` so a repeated shortcut can restore
+    /// focus even when the focused field is unchanged.
+    public internal(set) var eventFormFocusRequest = 0
     public var isTitleBarControlFocused = false
     public var isEventFormActionFocused = false
     /// Keyboard focus inside the color swatches while `eventFormFocusedField == .color`.
