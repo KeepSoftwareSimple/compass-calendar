@@ -345,7 +345,7 @@ export const DescriptionEditor = ({
         visible={linkHintsVisible}
       />
       {linkHintsEnabled && (
-        <DescriptionEditorLinkChrome editorRoot={editorRoot} />
+        <DescriptionEditorLinkChrome editor={editor} editorRoot={editorRoot} />
       )}
       <Divider color={underlineColor} toggled={isFocused} />
     </div>
