@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
+  dismissOnboardingBeforeBoot,
+  forceIntlTimeZoneToUtc,
   openEventForEditingWithKeyboard,
   prepareCalendarPage,
 } from "../utils/event-test-utils";
@@ -37,23 +39,8 @@ test.describe("UTC browser with Denver calendar zone", () => {
   test("gutter, events, and form times follow Denver when device zone is UTC", async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-      localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-      localStorage.setItem(
-        "compass.onboarding.has-seen-life-view-intro",
-        "true",
-      );
-      localStorage.setItem("compass.view.sidebar-open", "false");
-      localStorage.setItem("compass.timezone.default", DENVER);
-      const original = Intl.DateTimeFormat.prototype.resolvedOptions;
-      Intl.DateTimeFormat.prototype.resolvedOptions = function (
-        this: Intl.DateTimeFormat,
-      ) {
-        const options = original.call(this);
-        return { ...options, timeZone: "UTC" };
-      };
-    });
+    await dismissOnboardingBeforeBoot(page, { calendarTimeZone: DENVER });
+    await forceIntlTimeZoneToUtc(page);
     await page.clock.install({ time: new Date(FROZEN_CLOCK) });
     await prepareCalendarPage(page);
     await page.evaluate((zone) => {

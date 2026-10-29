@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { prepareCalendarPage } from "../utils/event-test-utils";
+import {
+  dismissOnboardingBeforeBoot,
+  prepareCalendarPage,
+} from "../utils/event-test-utils";
 import { seedLocalEvents } from "../utils/local-event-seed.util";
 import { evaluateWeekGridEventAlignment } from "../utils/week-grid-alignment.util";
 
@@ -10,13 +13,6 @@ const WEEK_START = "2026-10-18";
 const FROZEN_CLOCK = "2026-10-21T12:25:00-06:00";
 const FROZEN_NOW_MINUTES = 12 * 60 + 25;
 const PROBE_TITLE = "Alignment probe";
-
-const alignmentOnboardingInitScript = () => {
-  localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-  localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-  localStorage.setItem("compass.onboarding.has-seen-life-view-intro", "true");
-  localStorage.setItem("compass.view.sidebar-open", "false");
-};
 
 async function seedAlignmentProbe(page: import("@playwright/test").Page) {
   await seedLocalEvents(page, [
@@ -59,7 +55,7 @@ async function seedAndShowAlignmentProbe(
 async function prepareAlignmentWeekContext(
   page: import("@playwright/test").Page,
 ) {
-  await page.addInitScript(alignmentOnboardingInitScript);
+  await dismissOnboardingBeforeBoot(page);
   await page.clock.install({ time: new Date(FROZEN_CLOCK) });
   await prepareCalendarPage(page);
 }

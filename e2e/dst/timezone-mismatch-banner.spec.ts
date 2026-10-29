@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { prepareCalendarPage } from "../utils/event-test-utils";
+import {
+  dismissOnboardingBeforeBoot,
+  prepareCalendarPage,
+} from "../utils/event-test-utils";
 
 const DENVER = "America/Denver";
 const WEEK_START = "2026-10-18";
@@ -13,15 +16,8 @@ test.describe("Timezone mismatch banner", () => {
   test("shows shortcut hints for a real device and calendar zone difference", async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-      localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-      localStorage.setItem(
-        "compass.onboarding.has-seen-life-view-intro",
-        "true",
-      );
-      localStorage.setItem("compass.view.sidebar-open", "false");
-      localStorage.setItem("compass.timezone.default", "America/New_York");
+    await dismissOnboardingBeforeBoot(page, {
+      calendarTimeZone: "America/New_York",
     });
     await page.clock.install({ time: new Date("2026-08-20T18:00:00-06:00") });
     await prepareCalendarPage(page);

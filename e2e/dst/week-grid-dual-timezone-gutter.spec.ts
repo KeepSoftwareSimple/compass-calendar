@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { prepareCalendarPage } from "../utils/event-test-utils";
+import {
+  dismissOnboardingBeforeBoot,
+  prepareCalendarPage,
+} from "../utils/event-test-utils";
 
 const DENVER = "America/Denver";
 const WEEK_START = "2026-10-18";
@@ -13,16 +16,7 @@ test.describe("Week grid dual timezone gutter", () => {
   test("keeps Denver primary labels and UTC secondary in separate columns", async ({
     page,
   }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem("compass.onboarding.has-seen-welcome", "true");
-      localStorage.setItem("compass.onboarding.first-event-done", "dismissed");
-      localStorage.setItem(
-        "compass.onboarding.has-seen-life-view-intro",
-        "true",
-      );
-      localStorage.setItem("compass.view.sidebar-open", "false");
-      localStorage.setItem("compass.timezone.time-travel", "UTC");
-    });
+    await dismissOnboardingBeforeBoot(page, { secondTimeZone: "UTC" });
     await page.clock.install({ time: new Date("2026-10-21T12:25:00-06:00") });
     await prepareCalendarPage(page);
     await page.goto(`/week/${WEEK_START}`, { waitUntil: "domcontentloaded" });
