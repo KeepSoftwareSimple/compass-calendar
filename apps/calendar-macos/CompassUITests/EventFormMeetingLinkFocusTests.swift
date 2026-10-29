@@ -17,10 +17,9 @@ final class EventFormMeetingLinkFocusTests: XCTestCase {
             window.typeKey("=", modifierFlags: [.command])
             let conference = form.descendants(matching: .any)["compass-event-form-conference"]
             XCTAssertTrue(conference.waitForExistence(timeout: 8))
-            let controls = conference.descendants(matching: .any).allElementsBoundByIndex
-            XCTAssertTrue(controls.contains {
-                $0.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true
-            }, conference.debugDescription)
+            XCTAssertTrue(
+                conference.debugDescription.split(separator: "\n").first?.contains("Keyboard Focused") == true,
+                conference.debugDescription)
             XCTAssertTrue(form.exists)
             app.terminate()
         }
