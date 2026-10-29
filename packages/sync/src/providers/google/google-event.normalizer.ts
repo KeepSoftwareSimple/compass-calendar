@@ -1,6 +1,5 @@
 import { type calendar_v3 } from "@googleapis/calendar";
 import { resolveGooglePopupReminderMinutes } from "@core/notifications/google-popup-reminders.util";
-import { EventScheduleSchema } from "@core/types/event.contracts";
 import {
   type Attendee,
   type Conference,
@@ -18,6 +17,7 @@ import {
   type ProviderEventRead,
   type ProviderEventRecurrence,
 } from "@sync/providers/provider-event.port";
+import { parseProviderSchedule } from "@sync/providers/provider-schedule.util";
 import { toIanaTimeZoneOrUtc } from "@sync/providers/provider-timezone.util";
 
 const RFC3339_OFFSET = dayjs.DateFormat.RFC3339_OFFSET;
@@ -215,7 +215,7 @@ function mapSchedule(item: gSchema$Event) {
 
   if (start.date && end.date) {
     // Google's all-day end date is already exclusive, matching the contract.
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "allDay",
       start: start.date,
       end: end.date,
@@ -230,7 +230,7 @@ function mapSchedule(item: gSchema$Event) {
     // is not (same as the GMT-07:00 path below).
     const timeZone = start.timeZone ?? end.timeZone;
     const ianaTimeZone = timeZone ? toIanaTimeZoneOrUtc(timeZone) : "UTC";
-    return parseSchedule({
+    return parseProviderSchedule({
       kind: "timed",
       start: toOffsetIso({ ...start, timeZone: ianaTimeZone }),
       end: toOffsetIso({ ...end, timeZone: ianaTimeZone }),
@@ -242,21 +242,6 @@ function mapSchedule(item: gSchema$Event) {
     "unmappableSchedule",
     "Event start/end mixes date and dateTime",
   );
-}
-
-// safeParse the neutral schedule so a value the contract rejects surfaces as a
-// skippable ProviderEventError, not a raw ZodError that would escape the
-// reader's per-event skip boundary and fail a whole import page.
-function parseSchedule(candidate: unknown) {
-  const parsed = EventScheduleSchema.safeParse(candidate);
-  if (!parsed.success) {
-    throw new ProviderEventError(
-      "unmappableSchedule",
-      "Event start/end could not be resolved to a schedule",
-      { cause: parsed.error },
-    );
-  }
-  return parsed.data;
 }
 
 function mapRecurrence(item: gSchema$Event): ProviderEventRecurrence {
