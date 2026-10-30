@@ -61,9 +61,54 @@ ensure_api_proxy() {
   wait_for_backend_slot "$(read_backend_active_slot)" || return 1
 }
 
+api_proxy_running() {
+  compose ps --status running --services 2>/dev/null | grep -qx api-proxy
+}
+
+legacy_backend_publishing_port() {
+  host_port=${PORT:-3000}
+  compose ps -a --format '{{.Service}} {{.Ports}}' 2>/dev/null |
+    grep -E "^backend .*127\\.0\\.0\\.1:${host_port}->" >/dev/null 2>&1
+}
+
+# One-time cutover from the pre-proxy `backend` service that still bound
+# 127.0.0.1:${PORT}. Stop it only after the target slot is healthy so the
+# api-proxy can take the host port without a bind conflict.
+migrate_from_legacy_backend() {
+  if api_proxy_running; then
+    return 0
+  fi
+  if ! legacy_backend_publishing_port; then
+    return 0
+  fi
+
+  active=$(read_backend_active_slot)
+  write_upstream_for_slot "$active"
+  compose up -d --no-deps "backend-$active" || return 1
+  if ! wait_for_backend_slot "$active"; then
+    compose ps -a "backend-$active" >&2 || true
+    compose logs --tail=80 "backend-$active" >&2 || true
+    return 1
+  fi
+
+  compose stop -t 45 backend >/dev/null 2>&1 || true
+  compose rm -f backend >/dev/null 2>&1 || true
+
+  compose up -d api-proxy || return 1
+  if ! check_health; then
+    compose ps -a api-proxy "backend-$active" backend >&2 || true
+    compose logs --tail=80 api-proxy "backend-$active" backend >&2 || true
+    return 1
+  fi
+  printf '%s\n' "$active" > "$ACTIVE_SLOT_FILE"
+  return 0
+}
+
 rolling_backend_update() {
   active=$(read_backend_active_slot)
   inactive=$(write_backend_inactive_slot "$active") || return 1
+
+  migrate_from_legacy_backend || return 1
 
   write_upstream_for_slot "$active"
   compose up -d "backend-$active" api-proxy || return 1
