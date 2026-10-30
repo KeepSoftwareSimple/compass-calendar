@@ -5,7 +5,7 @@ set -euo pipefail
 # user id from the public booking slug, tunnels Sync on localhost, and writes a
 # scrubbed JSON artifact. Never prints secrets or raw event titles.
 
-BOOKING_SLUG="${PROD_OVERLAP_BOOKING_SLUG:-tylerdane}"
+BOOKING_SLUG="${PROD_OVERLAP_BOOKING_SLUG:-tylerdeane,tylerdane,tyler-dane}"
 LOCAL_SYNC_PORT="${LOCAL_SYNC_PORT:-3010}"
 OUT_PATH="${1:-prod-overlap-export.json}"
 
@@ -45,18 +45,20 @@ run_mongo_eval() {
   exit 127
 }
 run_mongo_eval '
-  const slug = process.env.BOOKING_SLUG;
+  const slugs = process.env.BOOKING_SLUG.split(",").map((slug) => slug.trim()).filter(Boolean);
   const databases = db.adminCommand({ listDatabases: 1 }).databases
     .map(({ name }) => name)
     .filter((name) => !["admin", "config", "local"].includes(name));
-  for (const name of databases) {
-    const row = db.getSiblingDB(name).bookingPage.findOne(
-      { bookingSlug: slug },
-      { userId: 1 },
-    );
-    if (row && row.userId) {
-      print(row.userId.valueOf());
-      quit(0);
+  for (const slug of slugs) {
+    for (const name of databases) {
+      const row = db.getSiblingDB(name).bookingPage.findOne(
+        { bookingSlug: slug },
+        { userId: 1 },
+      );
+      if (row && row.userId) {
+        print(row.userId.valueOf());
+        quit(0);
+      }
     }
   }
   quit(2);
