@@ -271,6 +271,11 @@ case $command_name in
     load_rolling_backend
     prune_unused_images
     compose pull || fail "Could not pull updated Compass images from Docker Hub."
+    case ",${COMPOSE_PROFILES}," in
+      *,selfhosted,*)
+        compose up -d --force-recreate --no-deps supertokens >/dev/null 2>&1 || true
+        ;;
+    esac
     if ! rolling_backend_update; then
       compose ps -a >&2 || true
       compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true

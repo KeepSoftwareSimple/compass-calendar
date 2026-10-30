@@ -178,7 +178,7 @@ services:
       start_period: 60s
 
   supertokens:
-    image: supertokens/supertokens-postgresql:11.0.2
+    image: supertokens/supertokens-postgresql:12.2.0
     profiles: [selfhosted]
     depends_on:
       supertokens-db:
