@@ -7,6 +7,11 @@ enum DesktopNativeServices {
         let mapped = DesktopThemeAppearance(webTheme: theme)
         let appearance = NSAppearance(named: NSAppearance.Name(rawValue: mapped.nsAppearanceName))
         NSApp.appearance = appearance
+        if let url = Bundle.main.url(forResource: mapped.appIconResourceName, withExtension: "png"),
+           let icon = NSImage(contentsOf: url)
+        {
+            NSApp.applicationIconImage = icon
+        }
     }
 
     static func launchAtLoginEnabled() -> Bool {
