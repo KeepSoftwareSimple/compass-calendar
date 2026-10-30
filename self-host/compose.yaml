@@ -1,8 +1,33 @@
 x-local-bindings:
   web: &web-port "127.0.0.1:${WEB_PORT:-9080}:9080"
   booking-web: &booking-web-port "127.0.0.1:${BOOKING_WEB_PORT:-9082}:9081"
-  backend: &backend-port "127.0.0.1:${PORT:-3000}:3000"
+  api-proxy: &api-proxy-port "127.0.0.1:${PORT:-3000}:8080"
   sync: &sync-port "127.0.0.1:${SYNC_PORT:-3010}:3010"
+
+x-backend-app: &backend-app
+  image: switchbacktech/compass-backend:${COMPASS_VERSION:-latest}
+  environment:
+    COMPASS_CONFIG_FILE: /app/compass.yaml
+    COMPASS_CONFIG_REVISION: ${COMPASS_CONFIG_REVISION:-}
+    LOG_LEVEL: ${LOG_LEVEL:-info}
+  read_only: true
+  tmpfs:
+    - /tmp
+  volumes:
+    - ${COMPASS_CONFIG_FILE:-./compass.yaml}:/app/compass.yaml:ro
+    - compass_backend_logs:/app/logs
+  restart: unless-stopped
+  stop_grace_period: 60s
+  healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        "bun -e \"fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+      ]
+    interval: 10s
+    timeout: 5s
+    retries: 12
+    start_period: 90s
 
 services:
   web:
@@ -17,7 +42,7 @@ services:
     #     BASEURL: http://localhost:3000/api
     #     GOOGLE_CLIENT_ID: ""
     depends_on:
-      backend:
+      api-proxy:
         condition: service_healthy
     ports:
       - *web-port
@@ -35,7 +60,7 @@ services:
     #     API_BASEURL: http://localhost:3000/api
     profiles: [booking]
     depends_on:
-      backend:
+      api-proxy:
         condition: service_healthy
     environment:
       WEB_PORT: "9081"
@@ -58,42 +83,38 @@ services:
       retries: 6
       start_period: 15s
 
-  backend:
-    image: switchbacktech/compass-backend:${COMPASS_VERSION:-latest}
-    # No depends_on mongo here: mongo is gated behind the `selfhosted` profile,
-    # and cloud/Atlas deploys run without a local mongo service. A hard
-    # dependency in this base file makes those projects invalid ("depends on
-    # undefined service mongo"). `required: false` is not a substitute — Compose
-    # treats an unhealthy optional dependency as satisfied and starts backend
-    # before mongo is ready. The selfhosted wait lives in
-    # compose.selfhosted.yaml and is applied by the compass helper when the
-    # selfhosted profile is active.
-    environment:
-      COMPASS_CONFIG_FILE: /app/compass.yaml
-      COMPASS_CONFIG_REVISION: ${COMPASS_CONFIG_REVISION:-}
-      # Default to info so health-check requests stay out of the tail. Reveal
-      # them with `LOG_LEVEL=debug docker compose up -d backend`. A logLevel in
-      # compass.yaml takes precedence over this default.
-      LOG_LEVEL: ${LOG_LEVEL:-info}
+  api-proxy:
+    image: nginx:1.27-alpine
+    # Host Caddy keeps proxying to 127.0.0.1:${PORT}. The proxy forwards to
+    # whichever backend slot is active so deploys can start the new backend,
+    # health-check it, cut traffic over, then drain the old slot.
     ports:
-      - *backend-port
+      - *api-proxy-port
+    volumes:
+      - ./api-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./api-proxy/active-backend.conf:/etc/nginx/conf.d/active-backend.conf
     read_only: true
     tmpfs:
       - /tmp
-    volumes:
-      - ${COMPASS_CONFIG_FILE:-./compass.yaml}:/app/compass.yaml:ro
-      - compass_backend_logs:/app/logs
+      - /var/cache/nginx
+      - /var/run
     restart: unless-stopped
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "bun -e \"fetch('http://127.0.0.1:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))\"",
+          "wget -q -O /dev/null http://127.0.0.1:8080/api/health || exit 1",
         ]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 12
-      start_period: 90s
+      start_period: 15s
+
+  backend-a:
+    <<: *backend-app
+
+  backend-b:
+    <<: *backend-app
 
   sync:
     image: switchbacktech/compass-sync:${COMPASS_VERSION:-latest}

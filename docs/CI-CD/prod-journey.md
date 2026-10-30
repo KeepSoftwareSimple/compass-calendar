@@ -25,8 +25,12 @@ Production backend deploy config must also set:
 
 | Deploy env / yaml | Purpose |
 |---|---|
-| `SYNTHETIC_JOURNEY_EMAILS` | Same base emails as the secrets above |
-| `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` | Same discount id (applied only for synthetic accounts) |
+| `SYNTHETIC_JOURNEY_EMAILS` | Same base emails as the secrets above (comma-separated), e.g. `lance.essert+prod-journey-google@gmail.com,lance.essert+prod-journey-microsoft@gmail.com,lance.essert+prod-journey-apple@gmail.com` |
+| `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` | Same discount id as the `prod-journey` Environment secret (written to `stripe.syntheticJourneyDiscountId`; applied only for synthetic accounts) |
+
+Add `STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID` to the **production** GitHub
+Environment under the same name as `prod-journey` (copy the value once in the
+GitHub UI; deploy references the secret, it does not embed the coupon id).
 
 The spec completes embedded Checkout with a test card, cancels the subscription
 in Settings, then continues logout/login/delete. Accounts are tagged synthetic

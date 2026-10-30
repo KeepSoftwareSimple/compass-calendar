@@ -100,7 +100,7 @@ describe("self-host docker compose", () => {
     expect(dockerfile).not.toContain("posthog:");
   });
 
-  it("mounts compass.yaml into the backend container", () => {
+  it("mounts compass.yaml into backend app containers", () => {
     const compose = readFileSync(join(import.meta.dir, "compose.yaml"), {
       encoding: "utf8",
     });
@@ -114,6 +114,8 @@ describe("self-host docker compose", () => {
         "{COMPASS_CONFIG_FILE:-./compass.yaml}:/app/compass.yaml:ro",
       ),
     );
+    expect(compose).toContain("backend-a:");
+    expect(compose).toContain("backend-b:");
   });
 
   it("exports COMPASS_CONFIG_REVISION from compass.yaml for compose", () => {
@@ -205,6 +207,7 @@ describe("self-host docker compose", () => {
     expect(webBlock).toContain("switchbacktech/compass-web:");
     expect(webBlock).toContain("*web-port");
     expect(webBlock).toContain("depends_on:");
+    expect(webBlock).toContain("api-proxy:");
     expect(webBlock).toContain("condition: service_healthy");
 
     expect(compose).toContain("switchbacktech/compass-booking-web:");
@@ -253,33 +256,29 @@ describe("self-host docker compose", () => {
     expect(compose).toContain("compass_sync_logs:");
   });
 
-  it("omits the backend mongo dependency from the base compose file", () => {
+  it("omits mongo dependencies from backend app services in the base compose file", () => {
     const compose = readFileSync(join(import.meta.dir, "compose.yaml"), {
       encoding: "utf8",
     });
 
-    // mongo is gated behind the `selfhosted` profile, so a profile-less
-    // cloud/Atlas deploy has no mongo container. A hard depends_on in the base
-    // file makes that project invalid ("depends on undefined service mongo").
-    // `required: false` is the wrong fix: Compose treats an unhealthy optional
-    // dependency as satisfied and starts backend before mongo is ready.
-    // Match the top-level service definition ("\n  backend:\n", exactly two
-    // spaces of indent), not the x-local-bindings anchor ("  backend:
-    // &backend-port ...") nor the web service's nested "depends_on: backend:".
     const backendBlock = compose
-      .slice(compose.indexOf("\n  backend:\n") + 1)
+      .slice(compose.indexOf("\n  backend-a:\n") + 1)
       .split(/\n {2}\w/)[0];
     expect(backendBlock).not.toContain("mongo:");
-    expect(backendBlock).toContain("start_period: 90s");
-    expect(compose).toContain("stop_grace_period: 30s");
+    expect(compose).toContain("start_period: 90s");
+    expect(compose).toContain("stop_grace_period: 60s");
+    expect(compose).toContain("api-proxy:");
+    expect(compose).toContain("api-proxy: &api-proxy-port");
   });
 
-  it("waits for mongo before starting backend and sync via the selfhosted overlay", () => {
+  it("waits for mongo before starting backend slots and sync via the selfhosted overlay", () => {
     const overlay = readFileSync(
       join(import.meta.dir, "compose.selfhosted.yaml"),
       { encoding: "utf8" },
     );
 
+    expect(overlay).toContain("backend-a:");
+    expect(overlay).toContain("backend-b:");
     expect(overlay).toContain("depends_on:");
     expect(overlay).toContain("mongo:");
     expect(overlay).toContain("condition: service_healthy");
@@ -382,6 +381,8 @@ describe("self-host installer", () => {
 
     const deploy = readRepoFile(".github/workflows/_deploy-environment.yml");
     expect(deploy).toContain('ORCHESTRATION_DIR/config.sh"');
+    expect(deploy).toContain('ORCHESTRATION_DIR/api-proxy"');
+    expect(deploy).toContain('ORCHESTRATION_DIR/rolling-backend.sh"');
     expect(deploy.indexOf('ORCHESTRATION_DIR/config.sh"')).toBeLessThan(
       deploy.indexOf('ORCHESTRATION_DIR/compass"'),
     );
@@ -539,10 +540,12 @@ describe("self-host helper", () => {
     );
   });
 
-  it("updates in place with compose wait", () => {
+  it("rolls the backend before updating the rest of the stack", () => {
     const helper = readRepoFile("self-host/compass");
 
+    expect(helper).toContain("rolling_backend_update");
     expect(helper).toContain("compose up -d --remove-orphans --wait");
+    expect(helper).toContain("rolling-backend.sh");
   });
 
   it("prunes unused images around update so release tags cannot fill the disk", () => {
@@ -551,7 +554,7 @@ describe("self-host helper", () => {
 
     expect(helper).toContain("prune_unused_images");
     expect(helper).toContain("timeout 120 docker image prune -af");
-    expect(updateBlock).toContain("compose logs --tail=100 mongo backend");
+    expect(updateBlock).toContain("compose logs --tail=100 mongo backend-a");
   });
 
   it("applies the selfhosted mongo overlay when the selfhosted profile is active", () => {
@@ -678,6 +681,12 @@ describe("staging deploy workflow", () => {
     expect(workflow).not.toContain("&& secrets.STRIPE_SECRET_KEY ||");
     expect(workflow).toContain("'stripe:'");
     expect(workflow).toContain("publishableKey:");
+    expect(workflow).toContain("deploy-write-stripe-synthetic-discount.sh");
+    expect(workflow).toContain(
+      "STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: $".concat(
+        "{{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}",
+      ),
+    );
     expect(workflow).toContain("staging-selfhosted must omit this block");
   });
 
@@ -798,6 +807,14 @@ describe("staging deploy workflow", () => {
     const bookingDockerfile = readRepoFile("apps/booking-web/Dockerfile");
     expect(bookingDockerfile).toContain("ARG POSTHOG_KEY=");
     expect(bookingDockerfile).toContain("ARG POSTHOG_HOST=");
+  });
+
+  it("can run a save-loop proof job in parallel with staging-cloud deploy", () => {
+    const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
+
+    expect(workflow).toContain("run_save_loop_proof");
+    expect(workflow).toContain("save-loop-cloud");
+    expect(workflow).toContain(".github/scripts/deploy-save-loop.sh");
   });
 
   it("runs deploy health checks after each staging deploy", () => {
