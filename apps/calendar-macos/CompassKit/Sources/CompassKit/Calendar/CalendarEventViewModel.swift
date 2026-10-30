@@ -58,6 +58,7 @@ public enum CalendarEventViewModel {
                 endDate: payload.end.rawValue,
                 eventId: event.id.rawValue,
                 startDate: payload.start.rawValue,
+                timeZone: payload.timeZone.rawValue,
                 title: displayTitle(for: event)
             )
         }

@@ -15,9 +15,11 @@ Cmd+1 focus restoration coverage stays intact. The new regression exposed a real
 dispatcher collision: resolved title T also dispatched Today before opening the
 form. A minimal early return preserves leader resolution; standalone T still
 navigates Today. A pure dispatcher regression failed before the fix and all16
-KeyboardEngineTests pass after it. New UI verification is pending. New test stays unreviewed in the
-inventory until exact-head isolated native/web strict logs and screenshot are
-inspected. Local lint, Swift contracts/export and five accounting regressions pass.
+KeyboardEngineTests pass after it. Exact db4b native and web strict41111963212
+PASS with no required checks skipped; normal full native41111936558 PASS and
+the saved-title focus screenshot was inspected. A genuine checkpoint conflict
+with merged #4959 required merging origin/main; fresh merge-head verification
+is pending. Behavioral evidence remains recorded independently of final-build gates. Local lint, Swift contracts/export and five accounting regressions pass.
 Full diff reviewed. Production shortcut dispatch is corrected; existing UI
 assertions, timeouts and order are preserved.
 
@@ -35,13 +37,10 @@ with lower-level tests retained as partial evidence. No count-based parity claim
   completion. Web exact-head strict PASS. Current merge-group41094751889 PASS.
   Rounded/inset cream-blue PNGs and extracted ICNS visually inspected. Installed
   Dock and real signed-in acceptance remain separate. Do not rerun or edit branch.
-- Meeting copy #4959 source455f011a9, actual BOTH strict41067682308 PASS/no required
-  skips in `/tmp/compass-meeting-455f-both-strict`. Full normal41067687764 PASS.
-  New copy and both-theme focus screenshots inspected `/tmp/compass-meeting-455f-shots`.
-  Queue removed it for checks_timed_out during Mac capacity delays; its group
-  native41085643670 subsequently PASS. Reenqueued once, actual mergeQueueEntry
-  verified position4 AWAITING_CHECKS. Do not duplicate dispatches or reenqueue
-  while still queued. Record meeting-name acceptance after its implementation merges.
+- Meeting copy #4959 merged 2026-10-30T19:29:31Z. Actual BOTH strict41067682308
+  at source455f011a9 PASS/no required skips in `/tmp/compass-meeting-455f-both-strict`.
+  Full normal41067687764 PASS; new and both-theme focus screenshots inspected in
+  `/tmp/compass-meeting-455f-shots`. Final groupnative41112036724 PASS. No reruns.
 - System #4952 and popover #4942 merged. Prior fixes #4939/#4929/#4926/#4918/
   #4916/#4902 and recurrence/calendar/RSVP are historical verified evidence; do
   not repeat them. The legend's original intermittent Escape failure is not
@@ -55,7 +54,7 @@ Visual, signed-in and final-build gates remain open. Future automatic propagatio
 of web changes is deferred.
 
 Read account usage each wake and before long work; checkpoint at 80% of either
-window or sooner. Latest observation: primary7%, weekly40%, reset timestamps
+window or sooner. Latest observation: primary29%, weekly43%, reset timestamps
 1793399190/1793774272 UTC. Natural reset occurred; reset credit remains unused.
 Keep existing ACTIVE30-minute heartbeat in chat01a18a4c-acd8-7791-9819-4f87caa8c156.
 No verified reset-event trigger: resume at first eligible recurring wake after

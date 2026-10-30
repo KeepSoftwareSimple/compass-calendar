@@ -546,7 +546,14 @@ describe("self-host helper", () => {
 
     expect(helper).toContain("rolling_backend_update");
     expect(helper).toContain("run_compose_wait");
+    expect(helper).toContain(
+      "compose up -d --force-recreate --no-deps web booking-web",
+    );
     expect(helper).toContain("compose up -d --remove-orphans --wait");
+    expect(helper).toContain(
+      'timeout "$wait_sec" "$0" __internal_compose_docker',
+    );
+    expect(helper).not.toMatch(/timeout "\$wait_sec" compose /);
     expect(helper).toContain("rolling-backend.sh");
     expect(rolling).toContain("migrate_from_legacy_backend");
     expect(rolling).toContain("legacy_backend_publishing_port");
@@ -554,6 +561,24 @@ describe("self-host helper", () => {
     expect(rolling).toContain("up_api_proxy_with_bind_retry");
     expect(rolling).toContain("rollback_legacy_cutover");
     expect(helper).toContain("migrate_from_legacy_backend");
+  });
+
+  it("passes the compose wait timeout script check", async () => {
+    const scriptPath = join(import.meta.dir, "compose-wait-timeout.test.sh");
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok compose-wait-timeout-script-check");
+    expect(stderr).toBe("");
   });
 
   it("passes the legacy-to-proxy migration script check", async () => {
@@ -842,8 +867,19 @@ describe("staging deploy workflow", () => {
     const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
 
     expect(workflow).toContain("run_save_loop_proof");
+    expect(workflow).toContain("save-loop-bootstrap");
     expect(workflow).toContain("save-loop-cloud");
     expect(workflow).toContain(".github/scripts/deploy-save-loop.sh");
+    expect(workflow).toContain("always()");
+  });
+
+  it("re-resolves api-proxy backend upstream via Docker DNS", () => {
+    const nginx = readRepoFile("self-host/api-proxy/nginx.conf");
+    const upstream = readRepoFile("self-host/api-proxy/active-backend.conf");
+
+    expect(nginx).toContain("resolver 127.0.0.11");
+    expect(nginx).toContain("proxy_pass http://$backend_upstream");
+    expect(upstream).toContain("set $backend_upstream backend-a:3000");
   });
 
   it("runs deploy health checks after each staging deploy", () => {
@@ -892,6 +928,20 @@ describe("staging deploy workflow", () => {
 });
 
 describe("deploy health check script", () => {
+  it("fails deploy health when public version.json does not match the release", () => {
+    const script = readRepoFile(".github/scripts/deploy-health-check.sh");
+
+    expect(script).toContain(
+      'run_check "public-frontend-version" check_public_frontend_version',
+    );
+    expect(script).toContain(
+      'run_check "loopback-web-version" remote_check_loopback_web_version',
+    );
+    expect(script).not.toContain(
+      "validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true",
+    );
+  });
+
   it("accepts an HTML frontend response", async () => {
     const dir = makeTempDir();
     const bodyPath = join(dir, "frontend.html");

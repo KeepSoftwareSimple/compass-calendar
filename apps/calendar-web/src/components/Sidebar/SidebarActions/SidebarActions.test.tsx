@@ -25,7 +25,11 @@ mockModuleForFile(
   {
     useVersionCheck: () =>
       isVersionCheckMocked
-        ? { isUpdateAvailable: false }
+        ? {
+            isUpdateAvailable: false,
+            availableVersion: null,
+            currentVersion: "test",
+          }
         : actualUseVersionCheck(),
   },
 );

@@ -683,9 +683,9 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormTitleKeyboardTests.swift#testTitleEditSequenceReopensSavedEventWithItsTitleFocused"
       ],
-      "status": "failing",
-      "evidence": "Head16c9ac407 normal native41103444007 fails reopen assertions56-59; log and failure video inspected. Pure dispatcher regression reproduced Today dispatch on resolved title, then16 KeyboardEngineTests PASS after fix. Full new-head native verification pending.",
-      "reason": "Resolved E-then-T title field was shadowed by standalone navToday dispatch. Fix returns the resolved field before ordinary handlers; acceptance regression unchanged.",
+      "status": "passing",
+      "evidence": "Exact db4b78960 isolated native and web strict41111963212 PASS/no required checks skipped; normal41111936558 PASS; saved-title E-then-T focus screenshot inspected /tmp/compass-et-db4b-normal-shots. Original16c9 regression failed, dispatcher regression failed before fix and passes after.",
+      "reason": "Resolved field takes priority over standalone Today. This source behavior is accepted; final merge-head and broader visual/signed-in gates remain separate.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
@@ -787,11 +787,11 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
-        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "missing",
-      "evidence": "",
-      "reason": "Native link-role and focus checks use identifier, not visible Google Meet label. No asserted equivalent label in inspected candidates.",
+      "status": "passing",
+      "evidence": "Merged #4959 exact455f011a9 isolated native/web strict41067682308 PASS/no required skips, normal41067687764 PASS; new copy and both-theme focus screenshots inspected /tmp/compass-meeting-455f-shots. Final groupnative41112036724 PASS.",
+      "reason": "Explicit native link-role/name and positive viewport assertions now match this web behavior. Hint automation and wide-window equivalence remain separately open.",
       "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
     },
     {

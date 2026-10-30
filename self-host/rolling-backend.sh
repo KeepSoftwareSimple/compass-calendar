@@ -28,7 +28,7 @@ write_backend_inactive_slot() {
 write_upstream_for_slot() {
   slot=$1
   umask 077
-  printf 'server backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
+  printf 'set $backend_upstream backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
 }
 
 reload_api_proxy() {

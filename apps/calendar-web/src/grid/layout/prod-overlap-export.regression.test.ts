@@ -1,5 +1,6 @@
 import { gridMinutesFromCivilMidnight } from "@core/util/date/civil-day";
 import dayjs from "@core/util/date/dayjs";
+import { getGridCardTimesLabel } from "@web/common/utils/datetime/web.date.util";
 import { DRAFT_PADDING_BOTTOM } from "@web/grid/grid.constants";
 import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
@@ -147,5 +148,25 @@ describe("prod overlap export → grid deck layout", () => {
     expect(ritualPos.top).toBeLessThan(unwindPos.top - 120);
     expect(ritualPos.top).toBe(((12 * 60 - 60) / 60) * hourHeight);
     expect(unwindPos.top).toBe(((19 * 60 - 60) / 60) * hourHeight);
+  });
+
+  it("labels Monthly Ritual in America/Denver on a pinned Denver calendar", () => {
+    setBrowserTimeZoneForTests("Etc/UTC");
+    setCalendarTimeZoneHint(denver);
+    setPinnedTimeZone(denver);
+
+    const gridEvents = gridEventsFromProdOverlapExport(prodExportFixture());
+    const ritual = gridEvents.find(
+      (event) => event._id === "6a6a3234a3f00a3867f615e1",
+    );
+    expect(ritual).toBeDefined();
+
+    expect(
+      getGridCardTimesLabel(
+        ritual!.startDate,
+        ritual!.endDate,
+        ritual!.timeZone,
+      ),
+    ).toBe("12 - 1:30 PM");
   });
 });
