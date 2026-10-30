@@ -5,7 +5,7 @@ set -euo pipefail
 # user id from the public booking slug, tunnels Sync on localhost, and writes a
 # scrubbed JSON artifact. Never prints secrets or raw event titles.
 
-BOOKING_SLUG="${PROD_OVERLAP_BOOKING_SLUG:-tylerdane}"
+BOOKING_SLUG="${PROD_OVERLAP_BOOKING_SLUG:-tylerdeane,tylerdane,tyler-dane}"
 LOCAL_SYNC_PORT="${LOCAL_SYNC_PORT:-3010}"
 OUT_PATH="${1:-prod-overlap-export.json}"
 
@@ -33,29 +33,57 @@ SSH=(ssh -i ~/.ssh/prod_overlap_key "$SSH_TARGET")
 PRINCIPAL_ID="$(
   "${SSH[@]}" "MONGO_URI=$(printf '%q' "$MONGO_URI") BOOKING_SLUG=$(printf '%q' "$BOOKING_SLUG") bash -se" <<'REMOTE'
 set -euo pipefail
+export BOOKING_SLUG
 run_mongo_eval() {
   if command -v mongosh >/dev/null 2>&1; then
     mongosh "$MONGO_URI" --quiet --eval "$1"
     return
   fi
   if command -v docker >/dev/null 2>&1; then
-    docker run --rm mongo:8 mongosh "$MONGO_URI" --quiet --eval "$1"
+    docker run --rm -e BOOKING_SLUG mongo:8 mongosh "$MONGO_URI" --quiet --eval "$1"
     return
   fi
   exit 127
 }
 run_mongo_eval '
-  const slug = process.env.BOOKING_SLUG;
+  const slugs = (process.env.BOOKING_SLUG || "")
+    .split(",")
+    .map((slug) => slug.trim())
+    .filter(Boolean);
   const databases = db.adminCommand({ listDatabases: 1 }).databases
     .map(({ name }) => name)
     .filter((name) => !["admin", "config", "local"].includes(name));
+  for (const slug of slugs) {
+    for (const name of databases) {
+      const row = db.getSiblingDB(name).bookingPage.findOne(
+        {
+          $or: [
+            { bookingSlug: slug },
+            { bookingSlug: new RegExp("^" + slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i") },
+          ],
+        },
+        { userId: 1 },
+      );
+      if (row && row.userId) {
+        print(row.userId.valueOf());
+        quit(0);
+      }
+    }
+  }
   for (const name of databases) {
-    const row = db.getSiblingDB(name).bookingPage.findOne(
-      { bookingSlug: slug },
-      { userId: 1 },
+    const owner = db.getSiblingDB(name).user.findOne(
+      {
+        $or: [
+          { name: "Tyler Dane" },
+          { firstName: "Tyler", lastName: "Dane" },
+          { email: "tyler@keepsoftwaresimple.com" },
+          { email: "tyler@tylerdane.com" },
+        ],
+      },
+      { _id: 1 },
     );
-    if (row && row.userId) {
-      print(row.userId.valueOf());
+    if (owner && owner._id) {
+      print(owner._id.valueOf());
       quit(0);
     }
   }
