@@ -24,15 +24,20 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
   };
 
   return (
-    <div className="flex w-full items-start gap-1 text-text" data-notice="">
+    <div
+      className="app-update-available-toast flex w-full items-start gap-1 text-text"
+      data-notice=""
+    >
       <button
-        className="c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-default px-1 py-0.5 text-left text-sm transition hover:bg-surface-overlay"
+        className="app-update-available-toast-action c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-default px-1 py-0.5 text-left text-sm transition hover:bg-surface-overlay"
         onClick={() => {
           reloadLocation();
         }}
         type="button"
       >
-        <span className="min-w-0">{APP_UPDATE_TOAST_MESSAGE}</span>
+        <span className="app-update-available-toast-message min-w-0">
+          {APP_UPDATE_TOAST_MESSAGE}
+        </span>
         <ShortcutKeys keys={[...APP_UPDATE_RELOAD_SHORTCUT]} />
       </button>
       <IconButton
@@ -60,5 +65,6 @@ export function showAppUpdateAvailableToast(version: string): Id {
     toastId,
     autoClose: false,
     closeOnClick: false,
+    className: "app-update-available-toast-host",
   });
 }

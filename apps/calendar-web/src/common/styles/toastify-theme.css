@@ -22,6 +22,25 @@
   width: min(24rem, calc(100vw - 2rem));
 }
 
+/* Wide viewports: keep the app-update toast on one line (copy + keycap + dismiss). */
+@media (min-width: 1280px) {
+  .Toastify__toast-container--bottom-left:has(
+    .app-update-available-toast-host
+  ) {
+    width: max-content;
+    max-width: min(36rem, calc(100vw - 2rem));
+  }
+
+  .app-update-available-toast-action {
+    flex-wrap: nowrap;
+  }
+
+  .app-update-available-toast-message {
+    min-width: max-content;
+    white-space: nowrap;
+  }
+}
+
 /* Stack update toasts above the first-event onboarding card. */
 html[data-first-event-prompt-live] .Toastify__toast-container--bottom-left {
   bottom: calc(
