@@ -37,6 +37,7 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { useAppLockReason } from "@web/shortcuts/app-lock";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { dismissSignupTrialStep } from "./dismiss-signup-trial-step";
 import { ForgotPasswordForm } from "./forms/ForgotPasswordForm";
 import { LogInForm } from "./forms/LogInForm";
@@ -200,7 +201,7 @@ export const AuthModal: FC = () => {
     if (!isOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (hasCommandModifier(event)) return;
       if (isEditableKeyboardTarget(event)) return;
       const key = keyboardKey(event).toLowerCase();
       if (key === "p" && !isPrimaryAuthView) {

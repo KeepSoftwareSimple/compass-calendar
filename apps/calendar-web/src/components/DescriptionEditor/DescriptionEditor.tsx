@@ -38,6 +38,7 @@ import { useDescriptionEditorOpenLinkAtCaretShortcut } from "@web/components/Des
 import { useDescriptionLinkPresentation } from "@web/components/DescriptionEditor/useDescriptionLinkPresentation";
 import { Divider } from "@web/components/Divider/Divider";
 import { useDescriptionLinkDigitShortcut } from "@web/shortcuts/description-link/useDescriptionLinkDigitShortcut";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 
 // The allowlist is shared with the desktop export (description-html.policy),
 // which sanitizes the same untrusted provider HTML before emitting the native
@@ -279,7 +280,7 @@ export const DescriptionEditor = ({
 
   const onDescriptionClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if (!editable || !editorRoot) return;
-    if (!(event.metaKey || event.ctrlKey) || event.button !== 0) return;
+    if (!isModKeyHeld(event) || event.button !== 0) return;
 
     const link = findLinkElement(editorRoot, event.target);
     if (!link?.href) return;

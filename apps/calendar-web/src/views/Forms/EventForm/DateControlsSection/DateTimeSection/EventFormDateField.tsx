@@ -5,6 +5,7 @@ import { parseUserDate } from "@web/common/utils/datetime/web.date.util";
 import { resolveFormControlJumpIds } from "@web/common/utils/form/form.util";
 import { showErrorToast } from "@web/common/utils/toast/error-toast.util";
 import { DatePicker } from "@web/components/DatePicker/DatePicker";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   EVENT_FORM_DATE_INPUT_FORMAT,
   formatEventFormDateLabel,
@@ -297,7 +298,7 @@ export const EventFormDateField = ({
       return;
     }
 
-    const modKey = event.metaKey || event.ctrlKey || event.altKey;
+    const modKey = hasCommandModifier(event);
     const closedAction = closedFieldAction(event.key, {
       shiftKey: event.shiftKey,
       modKey,

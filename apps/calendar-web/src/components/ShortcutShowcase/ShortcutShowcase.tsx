@@ -54,6 +54,10 @@ import {
   isBareLetterKey,
   keyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
+import {
+  hasCommandModifier,
+  isModKeyHeld,
+} from "@web/shortcuts/keyboard-modifiers.util";
 
 /** `?` is Shift+/ on common layouts; some browsers report the physical slash. */
 const isLegendToggleKey = (event: KeyboardEvent) =>
@@ -394,7 +398,7 @@ const ShowcaseTakeover: FC = () => {
     // The real palette and legend ignore the app lock; claim their triggers
     // so neither overlay can land on top of a run. Mid-run the same keys
     // drive the simulated versions the discovery tasks teach.
-    const isModChord = event.metaKey || event.ctrlKey;
+    const isModChord = isModKeyHeld(event);
     if (isModChord && keyboardKey(event).toLowerCase() === "k") {
       claim(event);
       if (phase === "running") dispatchKey({ type: "palette" });
@@ -509,12 +513,7 @@ const ShowcaseTakeover: FC = () => {
       return;
     }
 
-    if (
-      /^[0-9]$/.test(event.key) &&
-      !event.metaKey &&
-      !event.ctrlKey &&
-      !event.altKey
-    ) {
+    if (/^[0-9]$/.test(event.key) && !hasCommandModifier(event)) {
       claim(event);
       dispatchKey({ type: "digit", digit: event.key });
       return;

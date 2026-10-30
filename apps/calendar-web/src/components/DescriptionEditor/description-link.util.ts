@@ -3,6 +3,7 @@ import { openExternalUrl } from "@web/common/utils/browser/open-external-url.uti
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
 import { physicalDigitIndex } from "@web/shortcuts/digit-pick.util";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 
 const DESCRIPTION_LINK_COPIED_TOAST_ID = "description-link-copied";
 export const DESCRIPTION_LINK_SHORTCUT_COUNT = 9;
@@ -61,7 +62,7 @@ export const tryOpenDescriptionLinkFromDigit = (
   event: Pick<KeyboardEvent, "code" | "key" | "metaKey" | "ctrlKey" | "altKey">,
   editorRoot: HTMLElement,
 ): boolean => {
-  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  if (hasCommandModifier(event)) return false;
 
   const digitIndex = physicalDigitIndex(event);
   if (digitIndex === null || digitIndex >= DESCRIPTION_LINK_SHORTCUT_COUNT) {

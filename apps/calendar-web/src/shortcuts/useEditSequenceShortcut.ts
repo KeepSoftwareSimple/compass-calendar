@@ -22,6 +22,7 @@ import {
   keyboardKey,
   normalizedKeyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
+import { hasAnyModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   eventJumpActions,
   isEventJumpActive,
@@ -49,10 +50,6 @@ export const isEditSequenceArmed = () =>
 export const resetEditSequenceArm = () => {
   editSequenceActions.disarm();
 };
-
-/** Any modifier at all, used to reject chords as the *second* key. */
-const hasModifier = (event: KeyboardEvent) =>
-  event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
 
 /**
  * The single owner of both edit leaders.
@@ -185,7 +182,7 @@ export function useEditSequenceShortcut<
         }
 
         // The second key must be bare; a chord means the user moved on.
-        if (hasModifier(event)) {
+        if (hasAnyModifier(event)) {
           disarm();
           return;
         }
