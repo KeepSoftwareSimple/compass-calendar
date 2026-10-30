@@ -91,7 +91,9 @@ jobs:
   deploy-cloud:
     name: Deploy to staging-cloud
     needs: save-loop-bootstrap
-    if: ${{ !inputs.run_save_loop_proof || needs.save-loop-bootstrap.result == 'success' }}
+    if: >-
+      always() &&
+      (!inputs.run_save_loop_proof || needs.save-loop-bootstrap.result == 'success')
     uses: ./.github/workflows/_deploy-environment.yml
     with:
       tag: ${{ inputs.tag }}
