@@ -910,13 +910,6 @@
   }
 }
 
-@utility c-description-link-hints {
-  & .tiptap a {
-    box-decoration-break: clone;
-    padding-inline-end: 1.75rem;
-  }
-}
-
 @utility c-not-found {
   @apply flex h-screen w-screen flex-col items-center justify-center text-text;
   background: linear-gradient(

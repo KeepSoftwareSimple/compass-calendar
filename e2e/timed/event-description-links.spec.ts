@@ -47,13 +47,6 @@ test("description links shorten, keep hover copy, and open from shortcuts", asyn
     )
     .toBe(linkUrl);
 
-  await page.getByLabel("Title").click();
-  await expect(page.getByTestId("1-icon").first()).toBeVisible();
-  await page.evaluate(() => {
-    const active = document.activeElement;
-    if (active instanceof HTMLElement) active.blur();
-  });
-
   const opened: string[] = [];
   await page.exposeFunction("recordOpened", (url: string) => {
     opened.push(url);
@@ -67,12 +60,13 @@ test("description links shorten, keep hover copy, and open from shortcuts", asyn
     };
   });
 
-  await page.keyboard.press("1");
+  await link.hover();
+  const mod = process.platform === "darwin" ? "Meta" : "Control";
+  await page.keyboard.press(`${mod}+Shift+Enter`);
   await expect.poll(() => opened.at(-1)).toBe(linkUrl);
 
   await description.click();
   await link.click();
-  const mod = process.platform === "darwin" ? "Meta" : "Control";
   await page.keyboard.press(`${mod}+Shift+Enter`);
   await expect.poll(() => opened.at(-1)).toBe(linkUrl);
 
