@@ -73,7 +73,8 @@ describe("prod overlap export → grid deck layout", () => {
     const gridEvents = gridEventsFromProdOverlapExport(prodExportFixture());
 
     for (const event of gridEvents) {
-      const expected = expectedDenverMinutesByEventId[event._id];
+      expect(event._id).toBeDefined();
+      const expected = expectedDenverMinutesByEventId[event._id!];
       expect(expected).toBeDefined();
 
       const eventZone = event.timeZone ?? denver;
