@@ -38,18 +38,23 @@ export const getTimedEventPosition = (
   event: GridEvent,
   input: EventPositionInput,
 ): EventPosition => {
-  const timeZone = event.timeZone ?? getEffectiveTimeZone();
-  const start = parseGridScheduleDate(event.startDate, timeZone);
-  const end = parseGridScheduleDate(event.endDate, timeZone);
+  const calendarTimeZone = getEffectiveTimeZone();
+  const eventTimeZone = event.timeZone ?? calendarTimeZone;
+  const start = parseGridScheduleDate(event.startDate, eventTimeZone);
+  const end = parseGridScheduleDate(event.endDate, eventTimeZone);
   const dateIndex =
-    input.columnIndex ?? getVisibleDateIndex(start, input.visibleDates);
+    input.columnIndex ??
+    getVisibleDateIndex(start.tz(calendarTimeZone), input.visibleDates);
   if (dateIndex === null) {
     return zeroPosition();
   }
 
   const columnLeft = sumWidthsBefore(input.measurements.colWidths, dateIndex);
   const columnWidth = input.measurements.colWidths[dateIndex] ?? 0;
-  const minutesFromStartOfDay = gridMinutesFromCivilMidnight(start, timeZone);
+  const minutesFromStartOfDay = gridMinutesFromCivilMidnight(
+    start,
+    calendarTimeZone,
+  );
   const durationMinutes = Math.max(15, end.diff(start, "minute"));
   const widthMultiplier = input.isDraft
     ? 1

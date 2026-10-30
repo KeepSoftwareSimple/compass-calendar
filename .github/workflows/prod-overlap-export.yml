@@ -3,6 +3,11 @@ name: Prod overlap export
 # Read-only Tyler overlap repro data from production Sync. Manual only.
 on:
   workflow_dispatch:
+    inputs:
+      principal_id:
+        description: Optional 24-char Compass user id (skips Mongo lookup when set)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -36,6 +41,7 @@ jobs:
           SSH_USER: ${{ vars.SSH_USER }}
           MONGO_URI: ${{ secrets.MONGO_URI }}
           SYNC_INTERNAL_AUTH_TOKEN: ${{ secrets.SYNC_INTERNAL_AUTH_TOKEN }}
+          PROD_OVERLAP_PRINCIPAL_ID: ${{ inputs.principal_id || vars.PROD_OVERLAP_PRINCIPAL_ID }}
         run: bash .github/scripts/prod-overlap-export.sh prod-overlap-export.json
 
       - name: Upload scrubbed overlap artifact

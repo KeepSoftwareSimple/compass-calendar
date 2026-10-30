@@ -30,8 +30,19 @@ ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 SSH_TARGET="${SSH_USER}@${SSH_HOST}"
 SSH=(ssh -i ~/.ssh/prod_overlap_key "$SSH_TARGET")
 
-PRINCIPAL_ID="$(
-  "${SSH[@]}" "MONGO_URI=$(printf '%q' "$MONGO_URI") BOOKING_SLUG=$(printf '%q' "$BOOKING_SLUG") bash -se" <<'REMOTE'
+resolve_principal_id() {
+  if [[ -n "${PROD_OVERLAP_PRINCIPAL_ID:-}" ]]; then
+    if [[ "$PROD_OVERLAP_PRINCIPAL_ID" =~ ^[0-9a-fA-F]{24}$ ]]; then
+      echo "$PROD_OVERLAP_PRINCIPAL_ID"
+      return 0
+    fi
+    echo "PROD_OVERLAP_PRINCIPAL_ID is not a 24-char hex ObjectId" >&2
+    return 1
+  fi
+
+  local raw
+  raw="$(
+    "${SSH[@]}" "MONGO_URI=$(printf '%q' "$MONGO_URI") BOOKING_SLUG=$(printf '%q' "$BOOKING_SLUG") bash -se" <<'REMOTE'
 set -euo pipefail
 export BOOKING_SLUG
 run_mongo_eval() {
@@ -53,13 +64,16 @@ run_mongo_eval '
   const databases = db.adminCommand({ listDatabases: 1 }).databases
     .map(({ name }) => name)
     .filter((name) => !["admin", "config", "local"].includes(name));
-  for (const slug of slugs) {
-    for (const name of databases) {
-      const row = db.getSiblingDB(name).bookingPage.findOne(
+  const dbNames = [...new Set(["prod_calendar", ...databases])];
+
+  const tryBookingSlugs = (compassDb) => {
+    for (const slug of slugs) {
+      const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const row = compassDb.bookingPage.findOne(
         {
           $or: [
             { bookingSlug: slug },
-            { bookingSlug: new RegExp("^" + slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i") },
+            { bookingSlug: new RegExp("^" + escaped + "$", "i") },
           ],
         },
         { userId: 1 },
@@ -69,15 +83,30 @@ run_mongo_eval '
         quit(0);
       }
     }
-  }
-  for (const name of databases) {
-    const owner = db.getSiblingDB(name).user.findOne(
+    const fuzzy = compassDb.bookingPage.findOne(
+      { bookingSlug: { $regex: /tyler/i } },
+      { userId: 1 },
+    );
+    if (fuzzy && fuzzy.userId) {
+      print(fuzzy.userId.valueOf());
+      quit(0);
+    }
+  };
+
+  const tryTylerUser = (compassDb) => {
+    const owner = compassDb.user.findOne(
       {
         $or: [
           { name: "Tyler Dane" },
           { firstName: "Tyler", lastName: "Dane" },
           { email: "tyler@keepsoftwaresimple.com" },
           { email: "tyler@tylerdane.com" },
+          { email: "tyler@switchback.tech" },
+          {
+            identities: {
+              $elemMatch: { email: { $regex: /^tyler@/i } },
+            },
+          },
         ],
       },
       { _id: 1 },
@@ -86,14 +115,25 @@ run_mongo_eval '
       print(owner._id.valueOf());
       quit(0);
     }
+  };
+
+  for (const name of dbNames) {
+    tryBookingSlugs(db.getSiblingDB(name));
+  }
+  for (const name of dbNames) {
+    tryTylerUser(db.getSiblingDB(name));
   }
   quit(2);
 '
 REMOTE
-)"
+  )"
+  printf '%s\n' "$raw" | grep -Eo '[0-9a-fA-F]{24}' | head -1
+}
 
-if ! [[ "$PRINCIPAL_ID" =~ ^[0-9a-fA-F]{24}$ ]]; then
-  echo "Could not resolve principal id for booking slug ${BOOKING_SLUG}" >&2
+PRINCIPAL_ID="$(resolve_principal_id || true)"
+
+if ! [[ "${PRINCIPAL_ID:-}" =~ ^[0-9a-fA-F]{24}$ ]]; then
+  echo "Could not resolve principal id (set PROD_OVERLAP_PRINCIPAL_ID to skip Mongo lookup)" >&2
   exit 1
 fi
 

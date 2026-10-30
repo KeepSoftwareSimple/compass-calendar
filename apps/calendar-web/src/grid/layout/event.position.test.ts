@@ -377,6 +377,33 @@ describe("event position", () => {
     expect(position.top).toBe(3 * measurements.hourHeight);
   });
 
+  it("pins timed placement to the calendar zone when the event zone differs", () => {
+    act(() => {
+      setBrowserTimeZoneForTests("Etc/UTC");
+      setCalendarTimeZoneHint("America/Denver");
+      setPinnedTimeZone("America/Denver");
+    });
+
+    const denverDay = dayjs.tz("2026-10-31", "America/Denver");
+    const position = getTimedEventPosition(
+      {
+        endDate: "2026-10-31T20:30:00+01:00",
+        isAllDay: false,
+        position: { widthMultiplier: 1 },
+        startDate: "2026-10-31T19:00:00+01:00",
+        timeZone: "Europe/Berlin",
+      } as never,
+      {
+        measurements,
+        visibleDates: [{ date: denverDay, key: "2026-10-31" }],
+        isDraft: false,
+      },
+    );
+
+    // 18:00Z → 12:00 Denver; track origin is 1 AM → 11 hours × hourHeight.
+    expect(position.top).toBe(11 * measurements.hourHeight);
+  });
+
   it("shifts timed events right for the extra hour column without moving them in time", () => {
     const event = {
       endDate: "2026-05-20T10:00:00.000",
