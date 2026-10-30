@@ -180,6 +180,8 @@ load_rolling_backend() {
 
 start_stack() {
   load_rolling_backend
+  migrate_from_legacy_backend ||
+    fail "Legacy backend migration failed. Run './compass logs' for details."
   active=$(read_backend_active_slot)
   inactive=$(write_backend_inactive_slot "$active")
   write_upstream_for_slot "$active"

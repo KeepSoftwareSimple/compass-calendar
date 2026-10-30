@@ -549,6 +549,31 @@ describe("self-host helper", () => {
     expect(helper).toContain("rolling-backend.sh");
     expect(rolling).toContain("migrate_from_legacy_backend");
     expect(rolling).toContain("legacy_backend_publishing_port");
+    expect(rolling).toContain("legacy_backend_container_id");
+    expect(rolling).toContain("up_api_proxy_with_bind_retry");
+    expect(rolling).toContain("rollback_legacy_cutover");
+    expect(helper).toContain("migrate_from_legacy_backend");
+  });
+
+  it("passes the legacy-to-proxy migration script check", async () => {
+    const scriptPath = join(
+      import.meta.dir,
+      "rolling-backend.migration.test.sh",
+    );
+    chmodSync(scriptPath, 0o755);
+    const proc = Bun.spawn(["bash", scriptPath], {
+      cwd: repoRoot,
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("ok legacy-proxy-migration-script-check");
+    expect(stderr).toBe("");
   });
 
   it("prunes unused images around update so release tags cannot fill the disk", () => {
