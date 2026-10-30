@@ -863,12 +863,15 @@ describe("staging deploy workflow", () => {
     expect(bookingDockerfile).toContain("ARG POSTHOG_HOST=");
   });
 
-  it("can run a save-loop proof job in parallel with staging-cloud deploy", () => {
+  it("can run a save-loop proof against cloud or selfhosted staging", () => {
     const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
 
     expect(workflow).toContain("run_save_loop_proof");
+    expect(workflow).toContain("save_loop_proof_target");
+    expect(workflow).toContain("staging-selfhosted");
     expect(workflow).toContain("save-loop-bootstrap");
-    expect(workflow).toContain("save-loop-cloud");
+    expect(workflow).toContain("save-loop-during-deploy");
+    expect(workflow).toContain("https://selfhosted.compasscalendar.com");
     expect(workflow).toContain(".github/scripts/deploy-save-loop.sh");
     expect(workflow).toContain("always()");
   });
