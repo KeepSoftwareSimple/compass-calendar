@@ -879,10 +879,16 @@ describe("staging deploy workflow", () => {
     const rolling = readRepoFile("self-host/rolling-backend.sh");
 
     expect(nginx).toContain("resolver 127.0.0.11");
+    expect(nginx).toContain("worker_shutdown_timeout 30s");
     expect(nginx).toContain("proxy_pass http://$backend_upstream");
     expect(upstream).toContain("set $backend_upstream backend-a:3000");
     expect(rolling).toContain("sync_api_proxy_after_deploy");
     expect(rolling).toContain("--force-recreate --no-deps api-proxy");
+    expect(rolling).toContain("wait_for_proxy_health_stable");
+    expect(rolling).toContain("reload_api_proxy_for_cutover");
+    expect(rolling).toContain("compass-backend-cutover:");
+    expect(rolling).toContain("stopping backend-");
+    expect(rolling).toContain("cutover complete active_slot=");
   });
 
   it("runs deploy health checks after each staging deploy", () => {

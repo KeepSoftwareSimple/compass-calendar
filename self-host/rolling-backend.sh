@@ -42,9 +42,46 @@ sync_api_proxy_after_deploy() {
   recreate_api_proxy || return 1
 }
 
+cutover_log() {
+  printf 'compass-backend-cutover: %s\n' "$*" >&2
+}
+
 reload_api_proxy() {
   compose exec -T api-proxy nginx -s reload >/dev/null 2>&1 ||
     recreate_api_proxy >/dev/null 2>&1
+}
+
+reload_api_proxy_for_cutover() {
+  try=1
+  while [ "$try" -le 5 ]; do
+    if compose exec -T api-proxy nginx -s reload >/dev/null 2>&1; then
+      return 0
+    fi
+    try=$((try + 1))
+    sleep 1
+  done
+  cutover_log "nginx reload failed after 5 tries, recreating api-proxy"
+  recreate_api_proxy || return 1
+}
+
+wait_for_proxy_health_stable() {
+  need=${COMPASS_CUTOVER_STABLE_CHECKS:-30}
+  max=${COMPASS_CUTOVER_STABLE_TIMEOUT_SEC:-120}
+  ok=0
+  elapsed=0
+  while [ "$elapsed" -lt "$max" ]; do
+    if check_health; then
+      ok=$((ok + 1))
+      if [ "$ok" -ge "$need" ]; then
+        return 0
+      fi
+    else
+      ok=0
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  return 1
 }
 
 backend_slot_health_ok() {
@@ -196,6 +233,8 @@ rolling_backend_update() {
   active=$(read_backend_active_slot)
   inactive=$(write_backend_inactive_slot "$active") || return 1
 
+  cutover_log "starting rolling update active_slot=${active} target_slot=${inactive}"
+
   migrate_from_legacy_backend || return 1
 
   write_upstream_for_slot "$active"
@@ -207,6 +246,7 @@ rolling_backend_update() {
     return 1
   fi
 
+  cutover_log "recreating backend-${inactive} with new image"
   if ! compose up -d --force-recreate --no-deps "backend-$inactive"; then
     compose ps -a "backend-$inactive" >&2 || true
     compose logs --tail=80 "backend-$inactive" >&2 || true
@@ -220,17 +260,21 @@ rolling_backend_update() {
     return 1
   fi
 
+  cutover_log "switching api-proxy upstream ${active} -> ${inactive}"
   write_upstream_for_slot "$inactive"
-  reload_api_proxy
+  reload_api_proxy_for_cutover || return 1
 
-  if ! check_health; then
+  if ! wait_for_proxy_health_stable; then
     write_upstream_for_slot "$active"
-    reload_api_proxy
+    reload_api_proxy_for_cutover || true
     compose stop -t 10 "backend-$inactive" >/dev/null 2>&1 || true
+    cutover_log "rollback active_slot=${active} after unstable proxy health"
     return 1
   fi
 
+  cutover_log "drain complete, stopping backend-${active}"
   compose stop -t 60 "backend-$active" || return 1
   printf '%s\n' "$inactive" > "$ACTIVE_SLOT_FILE"
+  cutover_log "cutover complete active_slot=${inactive} (was ${active})"
   return 0
 }
