@@ -146,6 +146,12 @@ CALENDAR_ID=$(pick_calendar_id) || {
   exit 1
 }
 
+if [ "${SAVE_LOOP_BOOTSTRAP_ONLY:-0}" = 1 ]; then
+  write_once || exit 1
+  echo "deploy-save-loop-bootstrap ok base=${BASE_URL} provider=${provider}"
+  exit 0
+fi
+
 requests=0
 failures=0
 deadline=$((SECONDS + DURATION_SEC))

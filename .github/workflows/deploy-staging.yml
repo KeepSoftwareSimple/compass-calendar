@@ -42,11 +42,33 @@ jobs:
       needs_json: ${{ toJSON(needs) }}
     secrets: inherit
 
+  save-loop-bootstrap:
+    name: Bootstrap staging journey auth before deploy
+    if: ${{ inputs.run_save_loop_proof }}
+    runs-on: ubuntu-latest
+    environment: staging-journey
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Sign in and verify one write before cutover
+        env:
+          SAVE_LOOP_BOOTSTRAP_ONLY: '1'
+          SAVE_LOOP_BASE_URL: ${{ vars.STAGING_BASE_URL || vars.FRONTEND_URL || 'https://staging.compasscalendar.com' }}
+          STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER || 'google' }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/deploy-save-loop.sh
+
   save-loop-cloud:
     name: Save loop during staging-cloud deploy
     if: ${{ inputs.run_save_loop_proof }}
+    needs: save-loop-bootstrap
     runs-on: ubuntu-latest
-    # Journey credentials live on the staging-journey Environment, not staging-cloud.
     environment: staging-journey
     steps:
       - name: Check out repository
@@ -68,6 +90,8 @@ jobs:
 
   deploy-cloud:
     name: Deploy to staging-cloud
+    needs: save-loop-bootstrap
+    if: ${{ !inputs.run_save_loop_proof || needs.save-loop-bootstrap.result == 'success' }}
     uses: ./.github/workflows/_deploy-environment.yml
     with:
       tag: ${{ inputs.tag }}
