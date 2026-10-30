@@ -545,6 +545,7 @@ describe("self-host helper", () => {
     const rolling = readRepoFile("self-host/rolling-backend.sh");
 
     expect(helper).toContain("rolling_backend_update");
+    expect(helper).toContain("run_compose_wait");
     expect(helper).toContain("compose up -d --remove-orphans --wait");
     expect(helper).toContain("rolling-backend.sh");
     expect(rolling).toContain("migrate_from_legacy_backend");
