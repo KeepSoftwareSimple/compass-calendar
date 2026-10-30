@@ -1,6 +1,6 @@
 # Resume checkpoint
 
-Updated 2026-10-30. System branch `feat/macos-parity-flow`, worktree
+Updated 2026-10-30. Current branch `test/macos-meeting-copy-acceptance`, worktree
 `/Users/tyler/.codex/worktrees/845b/compass-calendar`. Read the runbook before work.
 No local native UI automation is authorized. Do not modify the running app or
 user desktop to triage these tests.
@@ -27,7 +27,10 @@ user desktop to triage these tests.
 - #4945 draft, head `c6354219a82ef0287770dbbfd264d43e8ede449c`, branch
   `feat/macos-theme-app-icons`, worktree
   `/Users/tyler/.codex/worktrees/macos-theme-app-icons/compass-calendar`.
-  Full 78-line textual diff reviewed, resources still require final visual review.
+  Full 78-line textual diff reviewed. Both PNGs and extracted 1024px ICNS
+  representation visually inspected: cream/blue art, rounded tile and inset;
+  sips confirms both PNGs 1024x1024 with alpha. Installed-Dock acceptance remains
+  distinct; no local app or desktop was operated.
   Normal native40981345021 PASS. Strict40981800450 web PASS with no checks skipped;
   native FAIL at NativeLaunchTests.swift:448, Escape leaves shortcuts legend open.
   Downloaded logs `/tmp/compass-icons-strict-c635/compass-{macos,web}-strict-log`.
@@ -68,3 +71,17 @@ keycap visibility and Google Meet label assertions are missing, wide-window geom
 remains unreviewed. This narrows coverage honestly without claiming UI defects.
 Usage primary8%, weekly35%, primary reset1793380146, weekly1793774272.
 No reset credits consumed. Next inspect native retry artifacts and system PR queue.
+
+## Latest work package, 2026-10-30T13:55Z wake
+
+System PR #4952 MERGED 2026-10-30T13:46:47Z. Do not edit merged branch.
+New branch test/macos-meeting-copy-acceptance from origin/main1395c1a43 addresses
+#4957 by strengthening the existing native copy test with actual link name/role,
+positive link/copy viewport geometry and a retained screenshot for visual keycap
+review. Existing clipboard/toast assertions, timeouts and order preserved. No
+production UI changed; keycap visuals and 1440px web-equivalent sizing still open.
+Native UI verification must run only in isolated GitHub Macs. Lint and both Swift
+contract/export checks pass locally; exact-head isolated native/web strict pending.
+Icon strict40981800450 attempt2 still running; no further retry dispatched.
+Usage primary13%, weekly36%, primary reset1793380147, weekly1793774272.
+Credits unused. Next inspect native/web strict logs before ready/autoqueue.
