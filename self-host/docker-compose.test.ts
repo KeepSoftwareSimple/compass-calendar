@@ -542,10 +542,13 @@ describe("self-host helper", () => {
 
   it("rolls the backend before updating the rest of the stack", () => {
     const helper = readRepoFile("self-host/compass");
+    const rolling = readRepoFile("self-host/rolling-backend.sh");
 
     expect(helper).toContain("rolling_backend_update");
     expect(helper).toContain("compose up -d --remove-orphans --wait");
     expect(helper).toContain("rolling-backend.sh");
+    expect(rolling).toContain("migrate_from_legacy_backend");
+    expect(rolling).toContain("legacy_backend_publishing_port");
   });
 
   it("prunes unused images around update so release tags cannot fill the disk", () => {
