@@ -1,8 +1,5 @@
-import { EventIdSchema } from "@core/types/domain-primitives";
-import {
-  type EventSchedule,
-  EventScheduleSchema,
-} from "@core/types/event.contracts";
+import dayjs from "@core/util/date/dayjs";
+import { getTimedEventPosition } from "@web/grid/layout/event.position";
 import {
   gridEventsFromProdOverlapExport,
   type ProdOverlapExportInstance,
@@ -15,101 +12,77 @@ import {
   setPinnedTimeZone,
 } from "@web/timezone/effective-timezone.store";
 import { afterEach, describe, expect, it } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 const denver = "America/Denver";
 
-/** E2E seed shape (sync instants) until prod export artifact is checked in. */
-const tylerOct31ExportInstances = (): ProdOverlapExportInstance[] => [
-  {
-    eventId: EventIdSchema.parse("507f1f77bcf86cd799439021"),
-    calendarId: "507f1f77bcf86cd799439013",
-    label: "H: Fall Festival | Venture Church",
-    schedule: EventScheduleSchema.parse({
-      kind: "timed",
-      start: "2026-10-31T21:00:00.000Z",
-      end: "2026-10-31T23:30:00.000Z",
-      timeZone: denver,
-    }),
-    recurrence: { kind: "single" },
-  },
-  {
-    eventId: EventIdSchema.parse("507f1f77bcf86cd799439022"),
-    calendarId: "507f1f77bcf86cd799439014",
-    label: "Record Compass demo",
-    schedule: EventScheduleSchema.parse({
-      kind: "timed",
-      start: "2026-10-31T21:30:00.000Z",
-      end: "2026-10-31T23:00:00.000Z",
-      timeZone: denver,
-    }),
-    recurrence: { kind: "single" },
-  },
-  {
-    eventId: EventIdSchema.parse("507f1f77bcf86cd799439023"),
-    calendarId: "507f1f77bcf86cd799439015",
-    label: "Update 4e2d",
-    schedule: EventScheduleSchema.parse({
-      kind: "timed",
-      start: "2026-11-01T00:30:00.000Z",
-      end: "2026-11-01T01:00:00.000Z",
-      timeZone: denver,
-    }),
-    recurrence: {
-      kind: "occurrence",
-      seriesId: EventIdSchema.parse("507f1f77bcf86cd799439098"),
-    },
-  },
-  {
-    eventId: EventIdSchema.parse("507f1f77bcf86cd799439011"),
-    calendarId: "507f1f77bcf86cd799439011",
-    label: "Unwind",
-    schedule: EventScheduleSchema.parse({
-      kind: "timed",
-      start: "2026-11-01T01:00:00.000Z",
-      end: "2026-11-01T02:00:00.000Z",
-      timeZone: denver,
-    }),
-    recurrence: {
-      kind: "occurrence",
-      seriesId: EventIdSchema.parse("507f1f77bcf86cd799439099"),
-    },
-  },
-  {
-    eventId: EventIdSchema.parse("507f1f77bcf86cd799439012"),
-    calendarId: "507f1f77bcf86cd799439012",
-    label: "Monthly Ritual",
-    schedule: {
-      kind: "timed",
-      start: "2026-11-01T01:30:00.000Z",
-      end: "2026-10-31T19:00:00",
-      timeZone: denver,
-    } as EventSchedule,
-    recurrence: { kind: "single" },
-  },
-];
+const prodExportFixture = (): ProdOverlapExportInstance[] => {
+  const path = join(
+    import.meta.dir,
+    "fixtures",
+    "tyler-prod-overlap-2026-10-31.json",
+  );
+  const payload = JSON.parse(readFileSync(path, "utf8")) as {
+    instances: ProdOverlapExportInstance[];
+  };
+  return payload.instances;
+};
 
 afterEach(() => {
   resetEffectiveTimeZoneStoreForTests();
 });
 
 describe("prod overlap export → grid deck layout", () => {
-  it("fans Unwind and Monthly Ritual after view-model formatting (Tyler Oct 31)", () => {
+  it("uses Tyler prod Oct 31 scrubbed export shape", () => {
     setBrowserTimeZoneForTests("Etc/UTC");
     setCalendarTimeZoneHint(denver);
     setPinnedTimeZone(denver);
 
-    const gridEvents = gridEventsFromProdOverlapExport(
-      tylerOct31ExportInstances(),
-    );
+    const gridEvents = gridEventsFromProdOverlapExport(prodExportFixture());
     const laid = createTimedEventLayout(gridEvents);
 
     const unwind = laid.find((item) => item.event.title === "Unwind");
-    const ritual = laid.find((item) => item.event.title === "Monthly Ritual");
-    const update = laid.find((item) => item.event.title === "Update 4e2d");
-
+    const eveningUpdate = laid.find(
+      (item) =>
+        item.event.title === "Update 4e2d" &&
+        item.event.startDate.includes("19:30"),
+    );
     expect(unwind?.deckLayout?.groupSize).toBe(2);
-    expect(ritual?.deckLayout?.groupSize).toBe(2);
-    expect(unwind?.deckLayout?.order).not.toBe(ritual?.deckLayout?.order);
-    expect(update?.deckLayout).toBeNull();
+    expect(eveningUpdate?.deckLayout?.groupSize).toBe(2);
+    expect(unwind?.deckLayout?.order).not.toBe(
+      eveningUpdate?.deckLayout?.order,
+    );
+
+    const measurements = {
+      allDayRow: null,
+      colWidths: [140],
+      hourHeight: 60,
+      mainGrid: { height: 1440 } as never,
+    };
+    const visibleDates = [
+      { date: dayjs.tz("2026-10-31", denver), key: "2026-10-31" },
+    ];
+    const ritualEvent = gridEvents.find(
+      (event) => event._id === "6a6a3234a3f00a3867f615e1",
+    );
+    const unwindEvent = gridEvents.find((event) => event.title === "Unwind");
+    expect(ritualEvent).toBeDefined();
+    expect(unwindEvent).toBeDefined();
+
+    const ritualPos = getTimedEventPosition(ritualEvent!, {
+      columnIndex: 0,
+      isDraft: false,
+      measurements,
+      visibleDates,
+    });
+    const unwindPos = getTimedEventPosition(unwindEvent!, {
+      columnIndex: 0,
+      isDraft: false,
+      measurements,
+      visibleDates,
+    });
+
+    expect(ritualPos.top).toBeLessThan(unwindPos.top - 120);
   });
 });
