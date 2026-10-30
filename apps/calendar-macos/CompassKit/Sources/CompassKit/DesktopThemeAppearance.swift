@@ -14,6 +14,10 @@ public enum DesktopThemeAppearance: Equatable, Sendable {
         }
     }
 
+    public var appIconResourceName: String {
+        self == .darkAbyss ? "icon-dark" : "icon"
+    }
+
     public var nsAppearanceName: String {
         switch self {
         case .lightBeach:

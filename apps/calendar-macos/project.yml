@@ -39,8 +39,12 @@ targets:
       - path: Resources/Fonts
         type: folder
         buildPhase: resources
-    resources:
+      - path: Resources/icon.png
+        buildPhase: resources
+      - path: Resources/icon-dark.png
+        buildPhase: resources
       - path: Resources/icon.icns
+        buildPhase: resources
         optional: true
     settings:
       base:
