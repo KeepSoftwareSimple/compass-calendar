@@ -4,6 +4,7 @@ import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
+import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
 import {
   initialFirstEventPromptState,
   noteFirstRealEventCreated,
@@ -179,33 +180,37 @@ describe("FirstEventPrompt", () => {
     });
     expect(prompt).toBeTruthy();
     expect(screen.getByText("Add your first event.")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add Coffee" })).toBeTruthy();
+    const addCoffee = screen.getByRole("button", { name: "Add Coffee" });
+    expect(addCoffee).toBeTruthy();
+    expect(addCoffee.className).toContain("c-button-primary");
   });
 
-  it("lifts above the sidebar footer on wide layouts", () => {
+  it("lifts the shared bottom stack above the sidebar footer on wide layouts", () => {
     markShowcaseSeen();
     act(() => viewActions.setSidebarOpen(true));
-    render(<FirstEventPrompt />);
+    render(
+      <BottomNoticeStack>
+        <FirstEventPrompt />
+      </BottomNoticeStack>,
+    );
 
-    const prompt = screen.getByRole("complementary", {
-      name: "Create your first event",
-    });
-    expect(prompt).toHaveAttribute("data-clears-sidebar-footer", "true");
-    expect(prompt.className).toContain("bottom-20");
+    const stack = screen.getByRole("region", { name: "Notifications" });
+    expect(stack).toHaveAttribute("data-clears-sidebar-footer", "true");
   });
 
-  it("uses full-width bottom anchoring on narrow layouts", () => {
+  it("uses the shared bottom stack width on narrow layouts", () => {
     isNarrowSidebarLayout = true;
     markShowcaseSeen();
-    render(<FirstEventPrompt />);
+    render(
+      <BottomNoticeStack>
+        <FirstEventPrompt />
+      </BottomNoticeStack>,
+    );
 
-    const prompt = screen.getByRole("complementary", {
-      name: "Create your first event",
-    });
-    expect(prompt.className).toContain("inset-x-4");
+    expect(screen.getByRole("region", { name: "Notifications" })).toBeTruthy();
     expect(
-      document.documentElement.getAttribute("data-first-event-prompt-live"),
-    ).toBe("");
+      screen.getByRole("complementary", { name: "Create your first event" }),
+    ).toBeTruthy();
   });
 
   it("creates the default first event when Add Coffee is clicked", async () => {

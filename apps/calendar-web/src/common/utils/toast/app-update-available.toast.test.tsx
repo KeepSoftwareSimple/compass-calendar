@@ -30,15 +30,13 @@ describe("AppUpdateAvailableToast", () => {
     );
 
     expect(screen.getByText(APP_UPDATE_TOAST_MESSAGE)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Refresh to update/i }),
-    ).toBeInTheDocument();
+    const refresh = screen.getByRole("button", { name: /Refresh/i });
+    expect(refresh).toBeInTheDocument();
+    expect(refresh.className).toContain("c-button-primary");
     expect(
       screen.getByRole("button", { name: "Dismiss update notice" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /Refresh to update/i }).textContent,
-    ).toMatch(/R/);
+    expect(refresh.textContent).toMatch(/R/);
   });
 
   it("reloads from the main action and dismisses from ×", () => {
@@ -53,7 +51,7 @@ describe("AppUpdateAvailableToast", () => {
       </HotkeysProvider>,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Refresh to update/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Refresh/i }));
     expect(reloadLocation).toHaveBeenCalledTimes(1);
 
     fireEvent.click(

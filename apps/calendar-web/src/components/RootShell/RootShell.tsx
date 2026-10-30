@@ -27,6 +27,7 @@ import {
   useAuthModalState,
   VIEW_TO_PARAM,
 } from "@web/components/AuthModal/hooks/useAuthModal";
+import { BottomNoticeStack } from "@web/components/BottomNoticeStack/BottomNoticeStack";
 import { ConnectCalendarPromptGate } from "@web/components/ConnectCalendarPrompt/ConnectCalendarPromptGate";
 import { useConnectCalendarPromptSurfaceEligible } from "@web/components/ConnectCalendarPrompt/useConnectCalendarPromptSurfaceEligible";
 import { FirstEventPrompt } from "@web/components/FirstEventPrompt/FirstEventPrompt";
@@ -48,6 +49,7 @@ import {
   shortcutShowcaseActions,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
+import { UpNextBanner } from "@web/components/Sidebar/UpNextCard/UpNextBanner";
 import { WelcomeGuideModal } from "@web/components/WelcomeModal/WelcomeGuideModal";
 import { WelcomeModal } from "@web/components/WelcomeModal/WelcomeModal";
 import {
@@ -238,9 +240,12 @@ export function RootShell() {
       {activeOnboardingSurface === "connectCalendarPrompt" && (
         <ConnectCalendarPromptGate />
       )}
-      {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
       {activeOnboardingSurface === "pointerHint" && <PointerHint />}
-      <LocalModeConnectPrompt />
+      <BottomNoticeStack>
+        <UpNextBanner />
+        {activeOnboardingSurface === "firstEventPrompt" && <FirstEventPrompt />}
+        <LocalModeConnectPrompt />
+      </BottomNoticeStack>
     </AuthModalProvider>
   );
 }

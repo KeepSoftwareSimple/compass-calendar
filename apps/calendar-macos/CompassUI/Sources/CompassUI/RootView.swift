@@ -84,8 +84,8 @@ public struct RootView: View {
                 visible: model.focusStore.pageJumpHintsVisible
             )
         }
-        .overlay(alignment: .bottom) {
-            VStack(spacing: 12) {
+        .overlay(alignment: .bottomLeading) {
+            VStack(alignment: .leading, spacing: 12) {
                 if model.desktopUpdateReadyVersion != nil {
                     DesktopUpdateReadyBannerView {
                         model.onDesktopRestartToUpdate?()
@@ -93,16 +93,17 @@ public struct RootView: View {
                     .noticeFocusRing(model.focusedNotice == .updateReady)
                 }
                 if model.viewStore.view != .life {
-                UpNextBanner(
-                    model: model,
-                    onOpen: { model.openUpNextEvent() },
-                    onJoin: { model.joinUpNextMeeting() },
-                    onBannerShown: { event in
-                        model.upNextBannerShown(event)
-                    })
+                    UpNextBanner(
+                        model: model,
+                        onOpen: { model.openUpNextEvent() },
+                        onJoin: { model.joinUpNextMeeting() },
+                        onBannerShown: { event in
+                            model.upNextBannerShown(event)
+                        })
                 }
             }
-            .padding(.bottom, 24)
+            .padding(.leading, 16)
+            .padding(.bottom, 16)
         }
         .overlay(alignment: .top) {
             if case let .server(server) = model.billingStore.appAccess,

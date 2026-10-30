@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Web bottom-right notice shell (`fixed right-6 bottom-6`, `rounded-xl border
-/// bg-surface/95 px-4 py-3 shadow-xl`) shared by the first-event and sign-up cards.
+/// Web bottom-left notice shell (`BottomNoticeStack`, `rounded-xl border
+/// bg-surface/95 px-4 py-3 shadow-xl`) shared by onboarding cards.
 struct FloatingNoticeCard<Content: View>: View {
     @Environment(\.nativeWebTheme) private var theme
     let width: CGFloat
@@ -12,7 +12,6 @@ struct FloatingNoticeCard<Content: View>: View {
         VStack {
             Spacer()
             HStack {
-                Spacer()
                 content
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
@@ -24,7 +23,9 @@ struct FloatingNoticeCard<Content: View>: View {
                             .stroke(theme.borderColor, lineWidth: 1))
                     .noticeFocusRing(isFocused)
                     .shadow(color: theme.shadowDefaultColor, radius: 20, y: 10)
-                    .padding(24)
+                    .padding(.leading, 16)
+                    .padding(.bottom, 16)
+                Spacer(minLength: 0)
             }
         }
     }
