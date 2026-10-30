@@ -103,6 +103,7 @@ jobs:
   health-check-cloud:
     name: Health check staging-cloud
     needs: deploy-cloud
+    if: ${{ always() && needs.deploy-cloud.result == 'success' }}
     uses: ./.github/workflows/deploy-health-check.yml
     with:
       tag: ${{ inputs.tag }}
