@@ -4,12 +4,16 @@ import { type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { KEYMAP } from "@core/shortcuts/keymap";
 import {
+  applyDescriptionLinkAccessibleLabel,
   copyDescriptionLinkUrl,
   findLinkElement,
   listDescriptionLinks,
   withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
-import { descriptionLinkChromeMiddleware } from "@web/components/DescriptionEditor/description-link-chrome-floating";
+import {
+  DESCRIPTION_LINK_CHROME_PLACEMENT,
+  descriptionLinkChromeMiddleware,
+} from "@web/components/DescriptionEditor/description-link-chrome-floating";
 import { setDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
@@ -58,7 +62,8 @@ export const DescriptionEditorLinkChrome = ({
       const links = listDescriptionLinks(editorRoot).filter(
         (link) =>
           link.getAttribute("tabindex") !== "0" ||
-          link.title !== link.href ||
+          !link.hasAttribute("aria-label") ||
+          link.hasAttribute("title") ||
           !link.classList.contains("c-focus-ring") ||
           !link.classList.contains("rounded-xs"),
       );
@@ -68,7 +73,7 @@ export const DescriptionEditorLinkChrome = ({
           if (link.getAttribute("tabindex") !== "0") {
             link.setAttribute("tabindex", "0");
           }
-          if (link.title !== link.href) link.title = link.href;
+          applyDescriptionLinkAccessibleLabel(link);
           if (!link.classList.contains("c-focus-ring")) {
             link.classList.add("c-focus-ring");
           }
@@ -144,7 +149,7 @@ export const DescriptionEditorLinkChrome = ({
 
   const { refs, floatingStyles } = useFloating({
     open: Boolean(chromeLink),
-    placement: "right-start",
+    placement: DESCRIPTION_LINK_CHROME_PLACEMENT,
     middleware: editorRoot ? descriptionLinkChromeMiddleware(editorRoot) : [],
     whileElementsMounted: autoUpdate,
   });
@@ -180,10 +185,19 @@ export const DescriptionEditorLinkChrome = ({
       onPointerEnter={cancelClearHover}
       onPointerLeave={scheduleClearHover}
     >
-      <div className="flex items-center gap-1 rounded-xs bg-surface-panel px-1 py-0.5 shadow-sm">
+      <fieldset
+        aria-label="Link shortcut and copy"
+        className="flex max-w-[min(100%,18rem)] items-center gap-1.5 rounded-xs border-0 bg-surface-panel p-0 px-2 py-1 text-xs shadow-sm"
+      >
+        <span className="min-w-0 truncate text-text-muted">
+          {chromeLink.href}
+        </span>
+        <span className="shrink-0 text-text-muted" aria-hidden="true">
+          ·
+        </span>
         <ShortcutKeys
           keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
-          className="pointer-coarse:inline-flex"
+          className="pointer-coarse:inline-flex shrink-0"
         />
         <IconButton
           aria-label="Copy link"
@@ -195,7 +209,7 @@ export const DescriptionEditorLinkChrome = ({
         >
           <Copy size={COPY_ICON_SIZE} />
         </IconButton>
-      </div>
+      </fieldset>
     </div>
   );
 };

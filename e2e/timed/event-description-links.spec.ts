@@ -24,7 +24,8 @@ test("description links shorten, keep hover copy, and open from shortcuts", asyn
 
   const link = page.locator(".tiptap a").first();
   await expect(link).toHaveText("one.example");
-  await expect(link).toHaveAttribute("title", linkUrl);
+  await expect(link).toHaveAttribute("aria-label", /one\.example/);
+  await expect(link).not.toHaveAttribute("title");
 
   await page.evaluate(() => {
     (window as unknown as { __copied?: string }).__copied = "";

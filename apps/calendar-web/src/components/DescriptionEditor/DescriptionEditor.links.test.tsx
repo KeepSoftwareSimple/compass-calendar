@@ -4,6 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { registerToastPort } from "@web/common/utils/toast/toast.port";
 import { DescriptionEditor } from "@web/components/DescriptionEditor/DescriptionEditor";
+import {
+  collectDescriptionTextRects,
+  rectsIntersect,
+} from "@web/components/DescriptionEditor/description-link-chrome-floating";
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 const copyTextMock = mock(() => Promise.resolve(true));
@@ -60,7 +64,7 @@ describe("DescriptionEditor link UX", () => {
       { withHotkeys: true },
     );
 
-    const link = screen.getByRole("link", { name: "Join" });
+    const link = screen.getByRole("link", { name: /Join/ });
     expect(link).toHaveAttribute("tabindex", "0");
 
     link.focus();
@@ -97,7 +101,7 @@ describe("DescriptionEditor link UX", () => {
     });
 
     await user.click(document.body);
-    const link = screen.getByRole("link", { name: "example.com" });
+    const link = screen.getByRole("link", { name: /example\.com/ });
     await user.hover(link);
     const copyButton = await waitFor(() =>
       screen.getByRole("button", { name: "Copy link" }),
@@ -129,26 +133,29 @@ describe("DescriptionEditor link UX", () => {
     const panel = screen.getByRole("region", {
       name: "Description panel fixture",
     });
-    const link = screen.getByRole("link", { name: "app.mn.co" });
+    const link = screen.getByRole("link", { name: /app\.mn\.co/ });
     await user.hover(link);
 
-    const copyButton = await waitFor(() =>
-      screen.getByRole("button", { name: "Copy link" }),
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible(),
     );
 
+    const editor = screen.getByRole("textbox", { name: "Description" });
     const panelRect = panel.getBoundingClientRect();
-    const chromeRect = copyButton.getBoundingClientRect();
+    const hintGroup = screen.getByRole("group", {
+      name: "Link shortcut and copy",
+    });
+    const chromeRect = hintGroup.getBoundingClientRect();
     const linkRect = link.getBoundingClientRect();
 
     expect(chromeRect.left).toBeGreaterThanOrEqual(panelRect.left);
     expect(chromeRect.right).toBeLessThanOrEqual(panelRect.right + 1);
+    expect(chromeRect.top).toBeGreaterThanOrEqual(linkRect.bottom - 1);
+    expect(link).not.toHaveAttribute("title");
 
-    const overlapsLink =
-      chromeRect.left < linkRect.right &&
-      chromeRect.right > linkRect.left &&
-      chromeRect.top < linkRect.bottom &&
-      chromeRect.bottom > linkRect.top;
-    expect(overlapsLink).toBe(false);
+    for (const textRect of collectDescriptionTextRects(editor)) {
+      expect(rectsIntersect(chromeRect, textRect)).toBe(false);
+    }
   });
 
   it("opens a hovered link with Mod+Shift+Enter", async () => {
@@ -166,7 +173,7 @@ describe("DescriptionEditor link UX", () => {
       { withHotkeys: true },
     );
 
-    const link = screen.getByRole("link", { name: "example.com" });
+    const link = screen.getByRole("link", { name: /example\.com/ });
     await user.hover(link);
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible(),
@@ -202,7 +209,7 @@ describe("DescriptionEditor link UX", () => {
 
     const description = screen.getByRole("textbox", { name: "Description" });
     await user.click(description);
-    const link = screen.getByRole("link", { name: "example.com" });
+    const link = screen.getByRole("link", { name: /example\.com/ });
     await user.click(link);
     const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
     await user.keyboard(`{${modKey}>}{Shift>}{Enter}{/Shift}{/${modKey}}`);
@@ -230,7 +237,7 @@ describe("DescriptionEditor link UX", () => {
       resetKey: "mod-click",
     });
 
-    const link = screen.getByRole("link", { name: "Join" });
+    const link = screen.getByRole("link", { name: /Join/ });
     fireEvent.click(link);
     expect(openSpy).not.toHaveBeenCalled();
 
