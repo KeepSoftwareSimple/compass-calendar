@@ -8,7 +8,8 @@ user desktop to triage these tests.
 ## Next work package
 
 1. `python3 -B docs/acceptance/macos-parity/audit.py report`.
-2. Diagnose the confirmed legend Escape failure on a new isolated branch from main.
+2. Inspect run40981800450 attempt2 native-only retry before further dispatch.
+   If it fails again, diagnose the legend Escape failure on an isolated branch from main.
    Inspect `NativeGridKeyboardRouter.handleOverlayKeyDown`, root routing and
    legend search focus. Artifact proves legend remains visible. Existing native
    regression `NativeLaunchTests/testQuestionMarkTogglesShortcutsLegend()` already
@@ -32,8 +33,10 @@ user desktop to triage these tests.
   Downloaded logs `/tmp/compass-icons-strict-c635/compass-{macos,web}-strict-log`.
   xcresult downloaded below `/tmp/compass-icons-strict-c635/results`.
   Failure video attachments `/tmp/compass-icons-legend-failure`; inspected final
-  frame `/tmp/compass-icons-legend-final.png` shows legend visibly open. No retry
-  dispatched. Native result: 394 passed, 1 failed, 14 skipped tests (inspect reasons
+  frame `/tmp/compass-icons-legend-final.png` shows legend visibly open. Native-only retry dispatched, run40981800450 attempt2, currently queued.
+  Failed screenshot and synthesized Escape event attachment inspected first; full
+  textual icon diff does not touch key routing. Retry tests intermittency, not a fix.
+  Web passing strict leg retained; do not dispatch another whole-workflow run. Native result: 394 passed, 1 failed, 14 skipped tests (inspect reasons
   before acceptance; a workflow success cannot replace required coverage).
   Local app `/tmp/compass-theme-icons-derived/Build/Products/Debug/Compass.app`
   already running from prior request. Do not take over desktop.
@@ -55,3 +58,13 @@ Reset credit remains available, unused. Check live usage each wake; checkpoint a
 30-minute fallback. Config re-read verified current target and interval. No verified
 reset-specific scheduler trigger; retry at first eligible fallback wake after reset.
 Never redeem credits. Quiet while unchanged. Computer and app must remain running.
+
+## Latest work package, 2026-10-30T13:25Z wake
+
+System PR #4952 remains ready/auto-merge enabled; accounting CI PASS, other CI
+still running. Do not rerun passing suites. Reviewed full web meeting-copy source
+and two native candidates: clipboard/toast shortcut has actual method PASS evidence;
+keycap visibility and Google Meet label assertions are missing, wide-window geometry
+remains unreviewed. This narrows coverage honestly without claiming UI defects.
+Usage primary8%, weekly35%, primary reset1793380146, weekly1793774272.
+No reset credits consumed. Next inspect native retry artifacts and system PR queue.
