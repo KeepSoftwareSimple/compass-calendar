@@ -678,6 +678,12 @@ describe("staging deploy workflow", () => {
     expect(workflow).not.toContain("&& secrets.STRIPE_SECRET_KEY ||");
     expect(workflow).toContain("'stripe:'");
     expect(workflow).toContain("publishableKey:");
+    expect(workflow).toContain("deploy-write-stripe-synthetic-discount.sh");
+    expect(workflow).toContain(
+      "STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: $".concat(
+        "{{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}",
+      ),
+    );
     expect(workflow).toContain("staging-selfhosted must omit this block");
   });
 
