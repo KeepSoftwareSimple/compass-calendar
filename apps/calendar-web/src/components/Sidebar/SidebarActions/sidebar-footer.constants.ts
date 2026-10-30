@@ -2,6 +2,6 @@
 export const FOOTER_ICON_BUTTON_CLASS =
   "flex size-9 items-center justify-center rounded-default text-text-muted transition hover:bg-surface-panel hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
 
-/** Width of the trailing refresh control so the leading group does not shift. */
+/** Width of the trailing reload icon so the leading group does not shift. */
 export const SIDEBAR_REFRESH_SLOT_CLASS =
-  "flex h-9 w-[4.75rem] shrink-0 items-center";
+  "flex size-9 shrink-0 items-center justify-center";
