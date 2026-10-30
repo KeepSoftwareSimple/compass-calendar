@@ -204,6 +204,16 @@ rebuild_stack() {
   fi
 }
 
+run_compose_wait() {
+  wait_sec=$1
+  shift
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$wait_sec" compose up -d --remove-orphans --wait "$@"
+    return $?
+  fi
+  compose up -d --remove-orphans --wait "$@"
+}
+
 prune_unused_images() {
   # Release deploys leave every prior tag on the host. Prune before pull so a
   # full disk cannot block upgrades, and again after recreate so replaced tags
@@ -260,8 +270,9 @@ case $command_name in
         secondary_services="$secondary_services mongo supertokens supertokens-db"
         ;;
     esac
+    compose_wait_sec=${COMPASS_COMPOSE_WAIT_SEC:-900}
     # shellcheck disable=SC2086
-    if ! compose up -d --remove-orphans --wait $secondary_services; then
+    if ! run_compose_wait "$compose_wait_sec" $secondary_services; then
       compose ps -a >&2 || true
       compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
       fail "Docker Compose failed to start updated Compass services."

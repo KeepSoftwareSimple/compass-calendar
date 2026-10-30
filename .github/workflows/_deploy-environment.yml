@@ -19,6 +19,7 @@ jobs:
   deploy:
     name: Deploy ${{ inputs.tag }} to ${{ inputs.environment }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment: ${{ inputs.environment }}
     concurrency:
       group: deploy-${{ inputs.environment }}
