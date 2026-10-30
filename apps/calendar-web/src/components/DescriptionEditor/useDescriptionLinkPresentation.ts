@@ -1,6 +1,7 @@
 import { type Editor } from "@tiptap/react";
 import { useEffect, useRef } from "react";
 import {
+  applyDescriptionLinkAccessibleLabel,
   displayHostForDescriptionLink,
   listDescriptionLinks,
   shouldShortenDescriptionLinkLabel,
@@ -33,7 +34,7 @@ export function useDescriptionLinkPresentation(
 
     withEditorDomObserverPaused(editor, () => {
       for (const link of listDescriptionLinks(editorRoot)) {
-        link.title = link.href;
+        applyDescriptionLinkAccessibleLabel(link);
         const text = link.textContent ?? "";
         if (!shouldShortenDescriptionLinkLabel(text, link.href)) continue;
 

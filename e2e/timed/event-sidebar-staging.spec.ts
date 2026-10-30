@@ -24,7 +24,7 @@ test("description links are focusable and copy with Mod+Shift+C", async ({
 
   const link = page.getByRole("link", { name: "example.com" });
   await expect(link).toBeVisible();
-  await expect(link).toHaveAttribute("title", linkUrl);
+  await expect(link).toHaveAttribute("aria-label", /example\.com/);
   await link.focus();
   await expect(page.getByRole("button", { name: "Copy link" })).toBeVisible();
 

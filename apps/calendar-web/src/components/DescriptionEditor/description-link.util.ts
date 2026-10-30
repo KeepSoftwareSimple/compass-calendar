@@ -8,6 +8,21 @@ const DESCRIPTION_LINK_COPIED_TOAST_ID = "description-link-copied";
 
 const LINK_SELECTOR = "a[href]";
 
+/** Screen-reader label without a native `title` tooltip (custom chrome shows the href). */
+export const applyDescriptionLinkAccessibleLabel = (
+  link: HTMLAnchorElement,
+): void => {
+  const href = link.href;
+  const visible = link.textContent?.trim() ?? "";
+  const label = visible && visible !== href ? `${visible}, ${href}` : href;
+  if (link.getAttribute("aria-label") !== label) {
+    link.setAttribute("aria-label", label);
+  }
+  if (link.hasAttribute("title")) {
+    link.removeAttribute("title");
+  }
+};
+
 /** Host-only label for display; stored href and link text stay unchanged. */
 export const displayHostForDescriptionLink = (url: string): string => {
   try {

@@ -6,7 +6,7 @@ import {
 
 // Regression: a booking event's description is two links in one paragraph
 // ("Cancel | Reschedule"). Opening it froze the tab: the link chrome's
-// MutationObserver wrote tabindex/title/class onto ProseMirror's <a> nodes,
+// MutationObserver wrote tabindex/aria-label/class onto ProseMirror's <a> nodes,
 // ProseMirror redrew them, and the observer fired again, forever.
 
 const BOOKING_DESCRIPTION =
@@ -61,9 +61,10 @@ test("Enter on a booking event with Cancel | Reschedule links opens the form wit
   await expect(cancelLink).toHaveAttribute("tabindex", "0");
   await expect(rescheduleLink).toHaveAttribute("tabindex", "0");
   await expect(cancelLink).toHaveAttribute(
-    "title",
-    "https://compasscalendar.com/meet/host/cancel?token=abc",
+    "aria-label",
+    "Cancel, https://compasscalendar.com/meet/host/cancel?token=abc",
   );
+  await expect(cancelLink).not.toHaveAttribute("title");
   await expect(rescheduleLink).toHaveClass(/c-focus-ring/);
 
   expect(await mainThreadResponds(page)).toBe("ok");
