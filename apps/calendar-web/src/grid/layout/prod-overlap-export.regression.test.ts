@@ -30,7 +30,7 @@ const tylerOct31ExportInstances = (): ProdOverlapExportInstance[] => [
       end: "2026-10-31T23:30:00.000Z",
       timeZone: denver,
     }),
-    recurrence: { kind: "none" },
+    recurrence: { kind: "single" },
   },
   {
     eventId: EventIdSchema.parse("507f1f77bcf86cd799439022"),
@@ -42,7 +42,7 @@ const tylerOct31ExportInstances = (): ProdOverlapExportInstance[] => [
       end: "2026-10-31T23:00:00.000Z",
       timeZone: denver,
     }),
-    recurrence: { kind: "none" },
+    recurrence: { kind: "single" },
   },
   {
     eventId: EventIdSchema.parse("507f1f77bcf86cd799439023"),
@@ -84,7 +84,7 @@ const tylerOct31ExportInstances = (): ProdOverlapExportInstance[] => [
       end: "2026-10-31T19:00:00",
       timeZone: denver,
     } as EventSchedule,
-    recurrence: { kind: "none" },
+    recurrence: { kind: "single" },
   },
 ];
 

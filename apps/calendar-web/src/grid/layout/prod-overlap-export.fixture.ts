@@ -1,6 +1,7 @@
 import { Origin } from "@core/constants/core.constants";
-import { type Event, type EventSchedule } from "@core/types/event.contracts";
-import { type Recurrence } from "@core/types/recurrence.contracts";
+import { CalendarIdSchema, EventIdSchema } from "@core/types/domain-primitives";
+import { type EventSchedule } from "@core/types/event.contracts";
+import { createMockEvent } from "@web/__tests__/utils/factories/event.factory";
 import { type GridEvent } from "@web/common/types/web.event.types";
 import { deriveCalendarEventViewModel } from "@web/events/queries/event.view-model";
 
@@ -10,7 +11,7 @@ export type ProdOverlapExportInstance = {
   calendarId: string;
   label: string;
   schedule: EventSchedule;
-  recurrence: Recurrence;
+  recurrence: ReturnType<typeof createMockEvent>["recurrence"];
   color?: string;
   colorHex?: string | null;
 };
@@ -19,28 +20,21 @@ export type ProdOverlapExportInstance = {
 export const gridEventsFromProdOverlapExport = (
   instances: ProdOverlapExportInstance[],
 ): GridEvent[] => {
-  const events: Event[] = instances.map((instance) => {
+  const events = instances.map((instance) => {
     if (instance.schedule.kind !== "timed") {
       throw new Error(`expected timed schedule for ${instance.label}`);
     }
-    return {
-      id: instance.eventId,
-      calendarId: instance.calendarId,
+    return createMockEvent({
+      id: EventIdSchema.parse(instance.eventId),
+      calendarId: CalendarIdSchema.parse(instance.calendarId),
       content: {
         kind: "details",
         title: instance.label,
         description: "",
-        ...(instance.color !== undefined ? { color: instance.color } : {}),
-        ...(instance.colorHex !== undefined
-          ? { colorHex: instance.colorHex }
-          : {}),
       },
       schedule: instance.schedule,
       recurrence: instance.recurrence,
-      providerManaged: false,
-      createdAt: instance.schedule.start,
-      updatedAt: instance.schedule.end,
-    } as Event;
+    });
   });
 
   const ids = events.map((event) => event.id);
