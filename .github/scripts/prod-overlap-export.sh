@@ -61,6 +61,16 @@ run_mongo_eval '
       }
     }
   }
+  for (const name of databases) {
+    const owner = db.getSiblingDB(name).user.findOne(
+      { displayName: "Tyler Dane" },
+      { _id: 1 },
+    );
+    if (owner && owner._id) {
+      print(owner._id.valueOf());
+      quit(0);
+    }
+  }
   quit(2);
 '
 REMOTE
