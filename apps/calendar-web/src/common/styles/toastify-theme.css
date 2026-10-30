@@ -22,7 +22,22 @@
   width: min(24rem, calc(100vw - 2rem));
 }
 
-/* Wide viewports: keep the app-update toast on one line (copy + keycap + dismiss). */
+.Toastify__toast.app-update-available-toast-host {
+  --toastify-toast-width: auto;
+  width: 100%;
+  max-width: min(36rem, calc(100vw - 2rem));
+}
+
+.Toastify__toast.app-update-available-toast-host .Toastify__toast-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.app-update-available-toast {
+  flex-wrap: wrap;
+}
+
 @media (min-width: 1280px) {
   .Toastify__toast-container--bottom-left:has(
     .app-update-available-toast-host
@@ -31,12 +46,15 @@
     max-width: min(36rem, calc(100vw - 2rem));
   }
 
-  .app-update-available-toast-action {
+  .Toastify__toast.app-update-available-toast-host {
+    width: max-content;
+  }
+
+  .app-update-available-toast {
     flex-wrap: nowrap;
   }
 
   .app-update-available-toast-message {
-    min-width: max-content;
     white-space: nowrap;
   }
 }

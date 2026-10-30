@@ -25,11 +25,11 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
 
   return (
     <div
-      className="app-update-available-toast flex w-full items-start gap-1 text-text"
+      className="app-update-available-toast flex w-full min-w-0 max-w-full items-center gap-2 text-text"
       data-notice=""
     >
       <button
-        className="app-update-available-toast-action c-focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-default px-1 py-0.5 text-left text-sm transition hover:bg-surface-overlay"
+        className="app-update-available-toast-action c-focus-ring min-w-0 flex-1 shrink rounded-default px-1 py-0.5 text-left text-sm transition hover:bg-surface-overlay"
         onClick={() => {
           reloadLocation();
         }}
@@ -38,11 +38,14 @@ export function AppUpdateAvailableToast({ toastId }: { toastId: Id }) {
         <span className="app-update-available-toast-message min-w-0">
           {APP_UPDATE_TOAST_MESSAGE}
         </span>
-        <ShortcutKeys keys={[...APP_UPDATE_RELOAD_SHORTCUT]} />
       </button>
+      <ShortcutKeys
+        className="app-update-available-toast-keys shrink-0"
+        keys={[...APP_UPDATE_RELOAD_SHORTCUT]}
+      />
       <IconButton
         aria-label="Dismiss update notice"
-        className="shrink-0 text-text-muted hover:text-text"
+        className="app-update-available-toast-dismiss shrink-0 text-text-muted hover:text-text"
         onClick={dismiss}
         size="small"
       >
