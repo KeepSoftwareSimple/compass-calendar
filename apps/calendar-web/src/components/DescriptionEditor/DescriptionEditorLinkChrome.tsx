@@ -1,10 +1,4 @@
-import {
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  useFloating,
-} from "@floating-ui/react";
+import { autoUpdate, useFloating } from "@floating-ui/react";
 import { Copy } from "@phosphor-icons/react/dist/csr/Copy";
 import { type Editor } from "@tiptap/react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -15,6 +9,7 @@ import {
   listDescriptionLinks,
   withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
+import { descriptionLinkChromeMiddleware } from "@web/components/DescriptionEditor/description-link-chrome-floating";
 import { setDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
@@ -150,7 +145,7 @@ export const DescriptionEditorLinkChrome = ({
   const { refs, floatingStyles } = useFloating({
     open: Boolean(chromeLink),
     placement: "right-start",
-    middleware: [offset(4), flip(), shift({ padding: 4 })],
+    middleware: editorRoot ? descriptionLinkChromeMiddleware(editorRoot) : [],
     whileElementsMounted: autoUpdate,
   });
 

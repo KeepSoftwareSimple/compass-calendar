@@ -109,6 +109,48 @@ describe("DescriptionEditor link UX", () => {
     expect(copyTextMock).toHaveBeenCalledWith("https://example.com/meet");
   });
 
+  it("keeps link hint chrome inside a narrow description panel", async () => {
+    const user = userEvent.setup();
+    const meetingUrl = "https://app.mn.co";
+    render(
+      <section
+        aria-label="Description panel fixture"
+        style={{ width: "240px", overflow: "hidden" }}
+      >
+        <DescriptionEditor
+          value={`<p><a href="${meetingUrl}">${meetingUrl}</a> for the meeting</p>`}
+          onChange={mock()}
+          editable={true}
+          resetKey="narrow-panel"
+        />
+      </section>,
+    );
+
+    const panel = screen.getByRole("region", {
+      name: "Description panel fixture",
+    });
+    const link = screen.getByRole("link", { name: "app.mn.co" });
+    await user.hover(link);
+
+    const copyButton = await waitFor(() =>
+      screen.getByRole("button", { name: "Copy link" }),
+    );
+
+    const panelRect = panel.getBoundingClientRect();
+    const chromeRect = copyButton.getBoundingClientRect();
+    const linkRect = link.getBoundingClientRect();
+
+    expect(chromeRect.left).toBeGreaterThanOrEqual(panelRect.left);
+    expect(chromeRect.right).toBeLessThanOrEqual(panelRect.right + 1);
+
+    const overlapsLink =
+      chromeRect.left < linkRect.right &&
+      chromeRect.right > linkRect.left &&
+      chromeRect.top < linkRect.bottom &&
+      chromeRect.bottom > linkRect.top;
+    expect(overlapsLink).toBe(false);
+  });
+
   it("opens a hovered link with Mod+Shift+Enter", async () => {
     const user = userEvent.setup();
     const openSpy = mock();
