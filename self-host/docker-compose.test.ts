@@ -841,8 +841,19 @@ describe("staging deploy workflow", () => {
     const workflow = readRepoFile(".github/workflows/deploy-staging.yml");
 
     expect(workflow).toContain("run_save_loop_proof");
+    expect(workflow).toContain("save-loop-bootstrap");
     expect(workflow).toContain("save-loop-cloud");
     expect(workflow).toContain(".github/scripts/deploy-save-loop.sh");
+    expect(workflow).toContain("always()");
+  });
+
+  it("re-resolves api-proxy backend upstream via Docker DNS", () => {
+    const nginx = readRepoFile("self-host/api-proxy/nginx.conf");
+    const upstream = readRepoFile("self-host/api-proxy/active-backend.conf");
+
+    expect(nginx).toContain("resolver 127.0.0.11");
+    expect(nginx).toContain("proxy_pass http://$backend_upstream");
+    expect(upstream).toContain("set $backend_upstream backend-a:3000");
   });
 
   it("runs deploy health checks after each staging deploy", () => {
