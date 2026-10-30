@@ -45,6 +45,21 @@ if [ -z "$EMAIL" ] || [ -z "$PASSWORD" ]; then
   exit 1
 fi
 
+unique_deploy_email() {
+  local base=$1
+  local tag=${GITHUB_RUN_ID:-$$}
+  if [[ "$base" != *"@"* ]]; then
+    printf 'deploy-save-loop.%s@compasscaltest.invalid' "$tag"
+    return 0
+  fi
+  printf '%s' "${base/@/+deploy${tag}@}"
+}
+
+SESSION_EMAIL=$EMAIL
+if [ -n "${GITHUB_RUN_ID:-}" ]; then
+  SESSION_EMAIL=$(unique_deploy_email "$EMAIL")
+fi
+
 header_value() {
   local headers_file=$1
   local name=$2
@@ -59,16 +74,6 @@ cleanup() {
   rm -f "$COOKIE_JAR"
 }
 trap cleanup EXIT
-
-unique_deploy_email() {
-  local base=$1
-  local tag=${GITHUB_RUN_ID:-$$}
-  if [[ "$base" != *"@"* ]]; then
-    printf 'deploy-save-loop.%s@compasscaltest.invalid' "$tag"
-    return 0
-  fi
-  printf '%s' "${base/@/+deploy${tag}@}"
-}
 
 api_get() {
   if [ "$USE_HEADER_AUTH" = 1 ]; then
@@ -153,7 +158,7 @@ sign_in() {
     "${SYNTHETIC_HEADER[@]}" \
     -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -D "$headers_file" \
-    --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}" || echo "000")
+    --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${SESSION_EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}" || echo "000")
   if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
     rm -f "$headers_file" "$body_file"
     printf 'sign-in HTTP %s\n' "$status" >&2
@@ -220,8 +225,10 @@ wait_for_sign_in() {
     fi
     sleep 2
   done
-  if sign_up_fresh_account; then
-    return 0
+  if [ "${SAVE_LOOP_BOOTSTRAP_ONLY:-0}" = 1 ]; then
+    if sign_up_fresh_account; then
+      return 0
+    fi
   fi
   echo "sign-in did not succeed within 180s (API may still be deploying)" >&2
   return 1
