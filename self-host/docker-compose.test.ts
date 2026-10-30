@@ -546,6 +546,9 @@ describe("self-host helper", () => {
 
     expect(helper).toContain("rolling_backend_update");
     expect(helper).toContain("run_compose_wait");
+    expect(helper).toContain(
+      "compose up -d --force-recreate --no-deps web booking-web",
+    );
     expect(helper).toContain("compose up -d --remove-orphans --wait");
     expect(helper).toContain("rolling-backend.sh");
     expect(rolling).toContain("migrate_from_legacy_backend");
@@ -892,6 +895,20 @@ describe("staging deploy workflow", () => {
 });
 
 describe("deploy health check script", () => {
+  it("fails deploy health when public version.json does not match the release", () => {
+    const script = readRepoFile(".github/scripts/deploy-health-check.sh");
+
+    expect(script).toContain(
+      'run_check "public-frontend-version" check_public_frontend_version',
+    );
+    expect(script).toContain(
+      'run_check "loopback-web-version" remote_check_loopback_web_version',
+    );
+    expect(script).not.toContain(
+      "validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true",
+    );
+  });
+
   it("accepts an HTML frontend response", async () => {
     const dir = makeTempDir();
     const bodyPath = join(dir, "frontend.html");

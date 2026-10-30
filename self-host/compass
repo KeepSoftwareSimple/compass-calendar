@@ -270,6 +270,11 @@ case $command_name in
         secondary_services="$secondary_services mongo supertokens supertokens-db"
         ;;
     esac
+    if ! compose up -d --force-recreate --no-deps web booking-web; then
+      compose ps -a web booking-web >&2 || true
+      compose logs --tail=80 web booking-web >&2 || true
+      fail "Docker Compose failed to recreate the web containers."
+    fi
     compose_wait_sec=${COMPASS_COMPOSE_WAIT_SEC:-900}
     # shellcheck disable=SC2086
     if ! run_compose_wait "$compose_wait_sec" $secondary_services; then

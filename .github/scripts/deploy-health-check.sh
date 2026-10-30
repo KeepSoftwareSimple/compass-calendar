@@ -671,6 +671,52 @@ $mongo_cmd "$MONGO_URI" --quiet --eval '
 REMOTE
 }
 
+check_frontend_http() {
+  SUPPRESS_FRONTEND_FINISH=1 validate_frontend
+}
+
+check_public_frontend_version() {
+  SUPPRESS_FRONTEND_FINISH=1 validate_frontend_version
+}
+
+remote_check_loopback_web_version() {
+  local expected
+  expected=$(expected_version) || return 1
+
+  ssh_remote "EXPECTED_VERSION=$(printf '%q' "$expected") bash -se" <<'REMOTE'
+set -euo pipefail
+config="$HOME/compass/compass.yaml"
+web_port=9080
+if [ -f "$config" ]; then
+  web_port=$(awk '
+    /^web:[[:space:]]*$/ { in_web=1; next }
+    in_web && /^[^[:space:]]/ { in_web=0 }
+    in_web && /^[[:space:]]+port:[[:space:]]*/ {
+      line=$0
+      sub(/^[[:space:]]+port:[[:space:]]*/, "", line)
+      gsub(/^"/, "", line)
+      gsub(/"$/, "", line)
+      print line
+      exit
+    }
+  ' "$config")
+fi
+web_port=${web_port:-9080}
+body=$(curl -fsS --max-time 20 "http://127.0.0.1:${web_port}/version.json")
+actual=$(printf '%s' "$body" | sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' | head -n 1)
+if [ -z "$actual" ]; then
+  printf 'missing version field from loopback version.json\n' >&2
+  exit 1
+fi
+if [ "$actual" != "$EXPECTED_VERSION" ]; then
+  ps_web=$(docker compose --project-name compass -f "$HOME/compass/compose.yaml" ps --format '{{.Service}} {{.Image}} {{.Ports}}' web 2>/dev/null | head -n 1)
+  printf 'loopback version.json on 127.0.0.1:%s expected %s, got %s; compose web: %s\n' \
+    "$web_port" "$EXPECTED_VERSION" "$actual" "${ps_web:-missing}" >&2
+  exit 1
+fi
+REMOTE
+}
+
 remote_check_selfhosted_data() {
   local mongo_password=${MONGO_PASSWORD:-}
   local postgres_password=${SUPERTOKENS_POSTGRES_PASSWORD:-}
@@ -723,9 +769,10 @@ run_all_checks() {
   if [ -z "${FRONTEND_URL:-}" ]; then
     record_failure "frontend-url" "missing FRONTEND_URL"
   else
-    SUPPRESS_FRONTEND_FINISH=1 validate_frontend >/tmp/compass-frontend-check.log 2>&1 || true
-    SUPPRESS_FRONTEND_FINISH=1 validate_frontend_version >/tmp/compass-frontend-version-check.log 2>&1 || true
+    run_check "frontend-http" check_frontend_http
+    run_check "public-frontend-version" check_public_frontend_version
   fi
+  run_check "loopback-web-version" remote_check_loopback_web_version
   run_check "backend-health" validate_backend_health
   run_check "backend-config-version" validate_backend_config_version
   run_check "sync-webhook-route" validate_sync_webhook_route
