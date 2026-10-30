@@ -33,12 +33,18 @@ SSH=(ssh -i ~/.ssh/prod_overlap_key "$SSH_TARGET")
 PRINCIPAL_ID="$(
   "${SSH[@]}" "MONGO_URI=$(printf '%q' "$MONGO_URI") BOOKING_SLUG=$(printf '%q' "$BOOKING_SLUG") bash -se" <<'REMOTE'
 set -euo pipefail
-if command -v mongosh >/dev/null 2>&1; then
-  mongo_cmd="mongosh"
-else
-  mongo_cmd="docker run --rm mongo:8 mongosh"
-fi
-"$mongo_cmd" "$MONGO_URI" --quiet --eval '
+run_mongo_eval() {
+  if command -v mongosh >/dev/null 2>&1; then
+    mongosh "$MONGO_URI" --quiet --eval "$1"
+    return
+  fi
+  if command -v docker >/dev/null 2>&1; then
+    docker run --rm mongo:8 mongosh "$MONGO_URI" --quiet --eval "$1"
+    return
+  fi
+  exit 127
+}
+run_mongo_eval '
   const slug = process.env.BOOKING_SLUG;
   const databases = db.adminCommand({ listDatabases: 1 }).databases
     .map(({ name }) => name)
