@@ -20,6 +20,7 @@ import {
   keyboardKey,
   normalizedKeyboardKey,
 } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import {
   POINTER_EVENT_JUMP_REQUEST,
   POINTER_GRID_CREATE_REQUEST,
@@ -94,13 +95,7 @@ const focusedColumnDay = (): Dayjs | null => {
  */
 const isShiftedSingleChar = (event: KeyboardEvent) => {
   const key = keyboardKey(event);
-  return (
-    key.length === 1 &&
-    event.shiftKey &&
-    !event.metaKey &&
-    !event.ctrlKey &&
-    !event.altKey
-  );
+  return key.length === 1 && event.shiftKey && !hasCommandModifier(event);
 };
 
 const FALLBACK_SCHEDULE = {
@@ -552,10 +547,7 @@ export function useShiftHoldEventHints({
         if (useEventJumpStore.getState().pointerDraftDateKey) {
           const inputKey = normalizedKeyboardKey(event);
           const isViewNavigation =
-            !event.metaKey &&
-            !event.ctrlKey &&
-            !event.altKey &&
-            ["j", "k", "t"].includes(inputKey);
+            !hasCommandModifier(event) && ["j", "k", "t"].includes(inputKey);
           if (event.key === "Escape" || isViewNavigation) {
             eventJumpActions.setPointerDraftIntent(null);
           }
@@ -648,7 +640,7 @@ export function useShiftHoldEventHints({
         return;
       }
 
-      if (event.metaKey || event.ctrlKey || event.altKey) {
+      if (hasCommandModifier(event)) {
         return;
       }
 

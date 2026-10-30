@@ -75,7 +75,8 @@ import { useEventById } from "@web/events/queries/useEventById";
 import { FormDigitHintOverlay } from "@web/shortcuts/form-digit-jump/FormDigitHintOverlay";
 import { useFormDigitJumpShortcut } from "@web/shortcuts/form-digit-jump/useFormDigitJumpShortcut";
 import { usePointerFormFieldDigitTeach } from "@web/shortcuts/form-digit-jump/usePointerFormFieldDigitTeach";
-import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { normalizedKeyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { isModKeyHeld } from "@web/shortcuts/keyboard-modifiers.util";
 import { useEventFormFocusStore } from "@web/shortcuts/tips/event-form-focus.store";
 import { shortcutHintProgressActions } from "@web/shortcuts/tips/shortcut-tips.progress.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
@@ -167,6 +168,13 @@ const handleEventFormDelete = ({
 };
 
 const DEFAULT_TIMED_START_HOUR = 9; // fallback when the grid can't be measured
+
+// Mod chords the grid owns. The form swallows them while it has focus so the
+// browser or the OS cannot act on one first; the app shortcut still runs.
+// `<` is only reachable as Shift+comma, so it belongs in the shift-agnostic
+// list rather than the Mod+Shift one.
+const MOD_CHORDS_IGNORED_BY_FORM = ["<", "d", "Enter"];
+const MOD_SHIFT_CHORDS_IGNORED_BY_FORM = ["x", "e", "l"];
 
 export const EventForm: React.FC<GridEventFormProps> = memo(
   ({
@@ -474,39 +482,13 @@ export const EventForm: React.FC<GridEventFormProps> = memo(
         e.stopPropagation();
       }
 
-      if ((e.metaKey || e.ctrlKey) && keyboardKey(e).toLowerCase() === "<") {
+      if (!isModKeyHeld(e)) return;
+      const key = normalizedKeyboardKey(e);
+      if (MOD_CHORDS_IGNORED_BY_FORM.includes(key)) {
         e.preventDefault();
+        return;
       }
-
-      if ((e.metaKey || e.ctrlKey) && keyboardKey(e).toLowerCase() === "d") {
-        e.preventDefault();
-      }
-
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        keyboardKey(e).toLowerCase() === "x"
-      ) {
-        e.preventDefault();
-      }
-
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        keyboardKey(e).toLowerCase() === "e"
-      ) {
-        e.preventDefault();
-      }
-
-      if (
-        (e.metaKey || e.ctrlKey) &&
-        e.shiftKey &&
-        keyboardKey(e).toLowerCase() === "l"
-      ) {
-        e.preventDefault();
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+      if (e.shiftKey && MOD_SHIFT_CHORDS_IGNORED_BY_FORM.includes(key)) {
         e.preventDefault();
       }
     };

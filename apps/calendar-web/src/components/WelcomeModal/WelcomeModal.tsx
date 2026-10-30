@@ -20,6 +20,7 @@ import { OverlayPanel } from "@web/components/OverlayPanel/OverlayPanel";
 import { hasPlayDeepLink } from "@web/components/ShortcutShowcase/play-link";
 import { ShortcutHint } from "@web/components/Shortcuts/ShortcutHint";
 import { keyboardKey } from "@web/shortcuts/is-bare-letter-key";
+import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { PixelPirate } from "./PixelPirate";
 import { useFaqDisclosure } from "./useFaqDisclosure";
 import { useWelcomeJumpShortcuts } from "./useWelcomeJumpShortcuts";
@@ -260,7 +261,7 @@ export function WelcomeModal() {
       return;
     }
     if (isAuthShortcutBlocked()) return;
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (hasCommandModifier(e)) return;
     const key = keyboardKey(e).toLowerCase();
     if (key === "i") {
       e.preventDefault();

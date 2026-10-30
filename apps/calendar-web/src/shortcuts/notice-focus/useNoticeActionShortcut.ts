@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { hasAnyModifier } from "@web/shortcuts/keyboard-modifiers.util";
 import { isEventJumpActive } from "@web/shortcuts/shift-hint/event-jump.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 import { isEditSequenceArmed } from "@web/shortcuts/useEditSequenceShortcut";
@@ -60,10 +61,7 @@ export const isNoticeActionKeyActive = (key: NoticeActionKey): boolean =>
 
 const canHandleNoticeAction = (event: KeyboardEvent) =>
   !event.isComposing &&
-  !event.metaKey &&
-  !event.ctrlKey &&
-  !event.altKey &&
-  !event.shiftKey &&
+  !hasAnyModifier(event) &&
   !isEventJumpActive() &&
   !isEditSequenceArmed();
 
