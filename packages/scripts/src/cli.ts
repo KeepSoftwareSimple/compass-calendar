@@ -69,6 +69,13 @@ export default class CompassCLI {
         await runConnectionReport();
         break;
       }
+      case cmd === "prod-overlap-export": {
+        const { runProdOverlapExportCommand } = await import(
+          "@scripts/commands/prod-overlap-export"
+        );
+        await runProdOverlapExportCommand(process.argv.slice(3));
+        break;
+      }
       case cmd === "apple-poll-throttle": {
         const { runApplePollThrottleCommand } = await import(
           "@scripts/commands/apple-poll-throttle"
@@ -168,6 +175,14 @@ export default class CompassCLI {
       .allowUnknownOption(true)
       .description(
         "Read-only report of Sync connections by provider, state, reason, and last activity",
+      );
+
+    program
+      .command("prod-overlap-export")
+      .helpOption(false)
+      .allowUnknownOption(true)
+      .description(
+        "Read-only scrubbed export of one prod calendar day via Sync /internal/events/full",
       );
 
     program
