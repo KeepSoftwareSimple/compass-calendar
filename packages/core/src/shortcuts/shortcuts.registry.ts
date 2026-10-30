@@ -396,14 +396,7 @@ export const SHORTCUTS_REGISTRY = [
   {
     id: "edit-open-description-link",
     keys: [...B.editOpenDescriptionLink.keycaps],
-    label: "Open link under description caret",
-    section: "edit",
-    when: { isFormOpen: true },
-  },
-  {
-    id: "edit-open-description-link-digit",
-    keys: [...B.editOpenDescriptionLinkDigit.keycaps],
-    label: "Open description link by number",
+    label: "Open focused description link",
     section: "edit",
     when: { isFormOpen: true },
   },

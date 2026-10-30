@@ -602,26 +602,7 @@
         "Shift",
         "Enter"
       ],
-      "label": "Open link under description caret",
-      "section": "edit",
-      "when": {
-        "isFormOpen": true
-      }
-    },
-    {
-      "id": "edit-open-description-link-digit",
-      "keys": [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9"
-      ],
-      "label": "Open description link by number",
+      "label": "Open focused description link",
       "section": "edit",
       "when": {
         "isFormOpen": true
@@ -1044,17 +1025,6 @@
       "Shift",
       "Enter"
     ],
-    "edit-open-description-link-digit": [
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9"
-    ],
     "edit-field-leader-in-form": [
       "Mod+E"
     ],
@@ -1299,30 +1269,6 @@
         "Mod",
         "Shift",
         "Enter"
-      ]
-    },
-    "openDescriptionLinkByDigit": {
-      "digits": [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9"
-      ],
-      "keycaps": [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9"
       ]
     }
   },

@@ -109,13 +109,36 @@ describe("DescriptionEditor link UX", () => {
     expect(copyTextMock).toHaveBeenCalledWith("https://example.com/meet");
   });
 
-  it("shows digit keycaps when the description is not focused", async () => {
-    await renderDescriptionEditor({
-      value: `<p><a href="https://one.example/a">https://one.example/a</a></p>`,
-      resetKey: "digit-hints",
-    });
+  it("opens a hovered link with Mod+Shift+Enter", async () => {
+    const user = userEvent.setup();
+    const openSpy = mock();
+    const originalOpen = window.open;
+    window.open = openSpy as typeof window.open;
 
-    expect(screen.getByText("1")).toBeTruthy();
+    const meetingUrl = "https://example.com/meeting-room";
+    await renderDescriptionEditor(
+      {
+        value: `<p><a href="${meetingUrl}">${meetingUrl}</a></p>`,
+        resetKey: "hover-open",
+      },
+      { withHotkeys: true },
+    );
+
+    const link = screen.getByRole("link", { name: "example.com" });
+    await user.hover(link);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Copy link" })).toBeVisible(),
+    );
+
+    const modKey = resolveModifier("Mod") === "Meta" ? "Meta" : "Control";
+    await user.keyboard(`{${modKey}>}{Shift>}{Enter}{/Shift}{/${modKey}}`);
+    expect(openSpy).toHaveBeenCalledWith(
+      meetingUrl,
+      "_blank",
+      expect.any(String),
+    );
+
+    window.open = originalOpen;
   });
 
   it("opens the caret link with Mod+Shift+Enter and preserves html on blur", async () => {

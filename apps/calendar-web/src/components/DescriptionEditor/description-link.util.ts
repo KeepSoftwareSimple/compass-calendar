@@ -2,13 +2,9 @@ import { type Editor } from "@tiptap/react";
 import { openExternalUrl } from "@web/common/utils/browser/open-external-url.util";
 import { copyText } from "@web/common/utils/clipboard/clipboard.util";
 import { showStatusToast } from "@web/common/utils/toast/status-toast.util";
-import { physicalDigitIndex } from "@web/shortcuts/digit-pick.util";
-import { hasCommandModifier } from "@web/shortcuts/keyboard-modifiers.util";
+import { getDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 
 const DESCRIPTION_LINK_COPIED_TOAST_ID = "description-link-copied";
-export const DESCRIPTION_LINK_SHORTCUT_COUNT = 9;
-/** Inline space reserved after each link for digit keycaps (matches c-description-link-hints). */
-export const DESCRIPTION_LINK_HINT_SLOT_PX = 28;
 
 const LINK_SELECTOR = "a[href]";
 
@@ -56,24 +52,6 @@ export const shouldShortenDescriptionLinkLabel = (
 export const openDescriptionLink = (url: string): void => {
   if (!url) return;
   openExternalUrl(url);
-};
-
-export const tryOpenDescriptionLinkFromDigit = (
-  event: Pick<KeyboardEvent, "code" | "key" | "metaKey" | "ctrlKey" | "altKey">,
-  editorRoot: HTMLElement,
-): boolean => {
-  if (hasCommandModifier(event)) return false;
-
-  const digitIndex = physicalDigitIndex(event);
-  if (digitIndex === null || digitIndex >= DESCRIPTION_LINK_SHORTCUT_COUNT) {
-    return false;
-  }
-
-  const link = listDescriptionLinks(editorRoot)[digitIndex];
-  if (!link?.href) return false;
-
-  openDescriptionLink(link.href);
-  return true;
 };
 
 /** The nearest enclosing link, `node` itself included. */
@@ -136,17 +114,32 @@ export const linkAtCaret = (editor: Editor): HTMLAnchorElement | null => {
   );
 };
 
+export const resolveDescriptionLinkTarget = (
+  editor: Editor,
+  root: HTMLElement,
+  eventTarget: EventTarget | null,
+): HTMLAnchorElement | null => {
+  const fromEvent =
+    findLinkElement(root, eventTarget) ??
+    findLinkElement(root, document.activeElement);
+  if (fromEvent?.href) return fromEvent;
+
+  const interaction = getDescriptionLinkInteraction();
+  if (interaction?.href && root.contains(interaction)) return interaction;
+
+  const caretLink = linkAtCaret(editor);
+  if (caretLink?.href) return caretLink;
+
+  const links = listDescriptionLinks(root);
+  return links[0] ?? null;
+};
+
 export const resolveDescriptionLinkToCopy = (
   editor: Editor,
   root: HTMLElement,
-  activeLink: HTMLAnchorElement | null,
-): string | null => {
-  if (activeLink?.href) return activeLink.href;
-  const caretLink = linkAtCaret(editor);
-  if (caretLink?.href) return caretLink.href;
-  const links = listDescriptionLinks(root);
-  return links[0]?.href ?? null;
-};
+  eventTarget: EventTarget | null,
+): string | null =>
+  resolveDescriptionLinkTarget(editor, root, eventTarget)?.href ?? null;
 
 export const focusAdjacentDescriptionLink = (
   root: HTMLElement,

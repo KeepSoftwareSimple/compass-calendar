@@ -15,9 +15,9 @@ import {
   listDescriptionLinks,
   withEditorDomObserverPaused,
 } from "@web/components/DescriptionEditor/description-link.util";
+import { setDescriptionLinkInteraction } from "@web/components/DescriptionEditor/description-link-interaction.ref";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
-import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 
 const COPY_ICON_SIZE = 14;
 const HOVER_CLOSE_DELAY_MS = 150;
@@ -160,6 +160,11 @@ export const DescriptionEditorLinkChrome = ({
     }
   }, [chromeLink, refs]);
 
+  useEffect(() => {
+    setDescriptionLinkInteraction(chromeLink);
+    return () => setDescriptionLinkInteraction(null);
+  }, [chromeLink]);
+
   if (!chromeLink) return null;
 
   const copyUrl = () => copyDescriptionLinkUrl(chromeLink.href);
@@ -180,24 +185,11 @@ export const DescriptionEditorLinkChrome = ({
       onPointerEnter={cancelClearHover}
       onPointerLeave={scheduleClearHover}
     >
-      <TooltipWrapper
-        description="Link"
-        shortcut={
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1">
-              <span className="text-xs">Copy</span>
-              <ShortcutKeys keys={[...KEYMAP.copyDescriptionLink.keycaps]} />
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-xs">Open</span>
-              <ShortcutKeys
-                keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
-              />
-            </div>
-          </div>
-        }
-        shortcutId="edit-copy-description-link"
-      >
+      <div className="flex items-center gap-1 rounded-xs bg-surface-panel px-1 py-0.5 shadow-sm">
+        <ShortcutKeys
+          keys={[...KEYMAP.openDescriptionLinkAtCaret.keycaps]}
+          className="pointer-coarse:inline-flex"
+        />
         <IconButton
           aria-label="Copy link"
           size="small"
@@ -208,7 +200,7 @@ export const DescriptionEditorLinkChrome = ({
         >
           <Copy size={COPY_ICON_SIZE} />
         </IconButton>
-      </TooltipWrapper>
+      </div>
     </div>
   );
 };
