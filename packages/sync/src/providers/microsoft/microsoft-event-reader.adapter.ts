@@ -118,6 +118,24 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
       }
     };
 
+    // Exceptions reach us twice over: inlined on the master as
+    // `exceptionOccurrences`, and again from the bounded instances fetch
+    // below. An inlined entry either names the same master or names none, so
+    // the enclosing master is the fallback either way. Plain occurrences carry
+    // no edit of their own and are projected from the master's rules instead.
+    const pushExceptions = (
+      exceptions: readonly GraphEventDeltaItem[] | undefined,
+      seriesMasterId: string,
+    ) => {
+      for (const exception of exceptions ?? []) {
+        if (exception.type === "occurrence") continue;
+        pushItem({
+          ...exception,
+          seriesMasterId: exception.seriesMasterId ?? seriesMasterId,
+        });
+      }
+    };
+
     for (const item of page.items) {
       if (item["@removed"]) {
         if (!item.id) {
@@ -149,10 +167,7 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
       pushItem(item);
       if (item.type === "seriesMaster" && item.id) {
         seriesMasterIds.add(item.id);
-        for (const exception of item.exceptionOccurrences ?? []) {
-          if (exception.type === "occurrence") continue;
-          pushItem({ ...exception, seriesMasterId: item.id });
-        }
+        pushExceptions(item.exceptionOccurrences, item.id);
       }
     }
 
@@ -164,13 +179,7 @@ export class MicrosoftEventReaderAdapter implements ProviderEventReader {
         startDateTime: exceptionWindow.timeMin,
         endDateTime: exceptionWindow.timeMax,
       });
-      for (const exception of exceptions) {
-        if (exception.type === "occurrence") continue;
-        pushItem({
-          ...exception,
-          seriesMasterId: exception.seriesMasterId ?? seriesMasterId,
-        });
-      }
+      pushExceptions(exceptions, seriesMasterId);
     }
 
     return {
