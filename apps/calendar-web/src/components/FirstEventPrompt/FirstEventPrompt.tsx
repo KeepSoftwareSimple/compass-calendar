@@ -1,5 +1,6 @@
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
-import { type FC, useCallback, useContext, useEffect } from "react";
+import classNames from "classnames";
+import { type FC, useCallback, useContext, useEffect, useRef } from "react";
 import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
@@ -13,10 +14,16 @@ import {
   selectFirstEventCelebrating,
   useFirstEventPromptStore,
 } from "@web/components/FirstEventPrompt/first-event.store";
+import { useFirstEventPromptStackRegistration } from "@web/components/FirstEventPrompt/useFirstEventPromptStackRegistration";
 import { useFirstEventPromptSurfaceEligible } from "@web/components/FirstEventPrompt/useFirstEventPromptSurfaceEligible";
 import { useQuickCreateFirstEvent } from "@web/components/FirstEventPrompt/useQuickCreateFirstEvent";
 import IconButton from "@web/components/IconButton/IconButton";
 import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
+import { useIsNarrowSidebarLayout } from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
+import {
+  selectIsSidebarOpen,
+  useViewStore,
+} from "@web/events/stores/view.store";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 /** How long the celebration copy holds before it fades out for good. */
@@ -29,11 +36,17 @@ export const FIRST_EVENT_PROMPT_MESSAGE = "Add your first event.";
 export const FIRST_EVENT_PROMPT_PRIMARY_LABEL = "Add Coffee";
 
 const PromptCard: FC = () => {
+  const anchorRef = useRef<HTMLElement>(null);
   const isCelebrating = useFirstEventPromptStore(selectFirstEventCelebrating);
   const { closing, beginDismiss } = useDismissTransition(BANNER_DISMISS_MS);
   const quickCreateFirstEvent = useQuickCreateFirstEvent();
   const editableFocused = useIsEditableFocused();
   const showShortcutKeycaps = !editableFocused;
+  const isNarrowLayout = useIsNarrowSidebarLayout();
+  const isSidebarOpen = useViewStore(selectIsSidebarOpen);
+  const clearsSidebarFooter = !isNarrowLayout && isSidebarOpen;
+
+  useFirstEventPromptStackRegistration(anchorRef, !closing && !isCelebrating);
 
   useEffect(() => {
     firstEventPromptActions.trackShownOnce();
@@ -72,11 +85,22 @@ const PromptCard: FC = () => {
 
   return (
     <aside
+      ref={anchorRef}
       aria-label={FIRST_EVENT_PROMPT_ARIA_LABEL}
       aria-keyshortcuts={
         showShortcutKeycaps ? APP_SHORTCUT_BINDINGS.editSave.hotkey : undefined
       }
-      className={`fixed right-6 bottom-6 starting:translate-y-2 starting:opacity-0 transition-all duration-300 data-closing:opacity-0 motion-reduce:transition-none ${PH_NO_RAGECLICK_CLASS}`}
+      className={classNames(
+        "fixed starting:translate-y-2 starting:opacity-0 transition-all duration-300 data-closing:opacity-0 motion-reduce:transition-none",
+        PH_NO_RAGECLICK_CLASS,
+        isNarrowLayout ? "inset-x-4 bottom-4 max-w-none" : "right-6 w-80",
+        clearsSidebarFooter
+          ? "bottom-20"
+          : isNarrowLayout
+            ? "bottom-4"
+            : "bottom-6",
+      )}
+      data-clears-sidebar-footer={clearsSidebarFooter || undefined}
       data-closing={closing || undefined}
       data-first-event-prompt=""
       data-notice=""

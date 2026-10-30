@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import { STORAGE_KEYS } from "@web/common/constants/storage.constants";
 import { persistentBrowserStore } from "@web/common/storage/browser-key-value.store";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
@@ -12,17 +13,27 @@ import {
   initialShortcutShowcaseState,
   useShortcutShowcaseStore,
 } from "@web/components/ShortcutShowcase/showcase.store";
+import * as realUseIsNarrowSidebarLayout from "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout";
 import {
   createGridEventDraft,
   timedGridSchedule,
 } from "@web/events/grid-event-draft.adapter";
 import { draftActions } from "@web/events/stores/draft.store";
+import { viewActions } from "@web/events/stores/view.store";
 import {
   initialSettingsState,
   settingsActions,
   useSettingsStore,
 } from "@web/settings/settings.store";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
 
 const quickCreateFirstEvent = mock(() => undefined);
 
@@ -33,9 +44,32 @@ mock.module(
   }),
 );
 
-const { FirstEventPrompt } = await import(
-  "@web/components/FirstEventPrompt/FirstEventPrompt"
+let isNarrowSidebarLayout = false;
+let isNarrowLayoutMocked = true;
+const actualUseIsNarrowSidebarLayout =
+  realUseIsNarrowSidebarLayout.useIsNarrowSidebarLayout;
+mockModuleForFile(
+  "@web/components/Sidebar/hooks/useIsNarrowSidebarLayout",
+  realUseIsNarrowSidebarLayout,
+  {
+    useIsNarrowSidebarLayout: () =>
+      isNarrowLayoutMocked
+        ? isNarrowSidebarLayout
+        : actualUseIsNarrowSidebarLayout(),
+  },
 );
+
+afterAll(() => {
+  isNarrowLayoutMocked = false;
+});
+
+const moduleUrl = new URL(
+  `./FirstEventPrompt.tsx?test=${Math.random().toString(36).slice(2)}`,
+  import.meta.url,
+);
+const { FirstEventPrompt } = (await import(
+  moduleUrl.href
+)) as typeof import("./FirstEventPrompt");
 
 const markShowcaseSeen = () => {
   persistentBrowserStore.set(STORAGE_KEYS.HAS_SEEN_SHORTCUT_SHOWCASE, "true");
@@ -43,6 +77,7 @@ const markShowcaseSeen = () => {
 
 describe("FirstEventPrompt", () => {
   beforeEach(() => {
+    isNarrowSidebarLayout = false;
     quickCreateFirstEvent.mockClear();
     draftActions.discard();
     useFirstEventPromptStore.setState({ ...initialFirstEventPromptState });
@@ -145,6 +180,32 @@ describe("FirstEventPrompt", () => {
     expect(prompt).toBeTruthy();
     expect(screen.getByText("Add your first event.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Add Coffee" })).toBeTruthy();
+  });
+
+  it("lifts above the sidebar footer on wide layouts", () => {
+    markShowcaseSeen();
+    act(() => viewActions.setSidebarOpen(true));
+    render(<FirstEventPrompt />);
+
+    const prompt = screen.getByRole("complementary", {
+      name: "Create your first event",
+    });
+    expect(prompt).toHaveAttribute("data-clears-sidebar-footer", "true");
+    expect(prompt.className).toContain("bottom-20");
+  });
+
+  it("uses full-width bottom anchoring on narrow layouts", () => {
+    isNarrowSidebarLayout = true;
+    markShowcaseSeen();
+    render(<FirstEventPrompt />);
+
+    const prompt = screen.getByRole("complementary", {
+      name: "Create your first event",
+    });
+    expect(prompt.className).toContain("inset-x-4");
+    expect(
+      document.documentElement.getAttribute("data-first-event-prompt-live"),
+    ).toBe("");
   });
 
   it("creates the default first event when Add Coffee is clicked", async () => {

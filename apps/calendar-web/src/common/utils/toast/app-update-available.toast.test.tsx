@@ -1,5 +1,5 @@
 import { HotkeysProvider } from "@tanstack/react-hotkeys";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { createTestToastPort } from "@web/__tests__/helpers/web-test-seams";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realBrowserNavigation from "@web/common/utils/browser/browser-navigation.util";
@@ -20,7 +20,7 @@ mockModuleForFile(
 );
 
 describe("AppUpdateAvailableToast", () => {
-  it("renders update copy and the Mod+R hint", () => {
+  it("renders one line, a reload shortcut, and a dismiss control", () => {
     render(
       <HotkeysProvider>
         <AppUpdateAvailableToast
@@ -30,10 +30,36 @@ describe("AppUpdateAvailableToast", () => {
     );
 
     expect(screen.getByText(APP_UPDATE_TOAST_MESSAGE)).toBeInTheDocument();
-    expect(document.body.textContent).toMatch(
-      /Or press (Mod|Ctrl)\+R to refresh\./i,
+    expect(
+      screen.getByRole("button", { name: /Refresh to update/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Dismiss update notice" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /Refresh to update/i }).textContent,
+    ).toMatch(/R/);
+  });
+
+  it("reloads from the main action and dismisses from ×", () => {
+    const { port, mocks } = createTestToastPort();
+    registerToastPort(port);
+
+    render(
+      <HotkeysProvider>
+        <AppUpdateAvailableToast
+          toastId={appUpdateToastIdForVersion("1.0.1")}
+        />
+      </HotkeysProvider>,
     );
-    expect(screen.getByRole("note")).toHaveTextContent(/Esc/i);
+
+    fireEvent.click(screen.getByRole("button", { name: /Refresh to update/i }));
+    expect(reloadLocation).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Dismiss update notice" }),
+    );
+    expect(mocks.dismiss).toHaveBeenCalledWith("app-update-1.0.1");
   });
 });
 
@@ -56,17 +82,7 @@ describe("showAppUpdateAvailableToast", () => {
     expect((mocks.toast.mock.calls[0] as unknown[])[1]).toMatchObject({
       toastId: "app-update-1.0.1",
       autoClose: false,
-      closeOnClick: true,
+      closeOnClick: false,
     });
-  });
-
-  it("reloads when the toast surface is clicked", () => {
-    showAppUpdateAvailableToast("1.0.1");
-    const options = (mocks.toast.mock.calls[0] as unknown[])[1] as {
-      onClick: () => void;
-    };
-
-    options.onClick();
-    expect(reloadLocation).toHaveBeenCalledTimes(1);
   });
 });
