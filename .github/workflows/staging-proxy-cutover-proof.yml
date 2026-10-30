@@ -38,14 +38,19 @@ jobs:
 
       - name: Upload legacy restore assets and run on host
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
+          if [ -z "$SSH_HOST" ] || [ -z "$SSH_USER" ] || [ -z "$SSH_PRIVATE_KEY" ]; then
+            echo "SSH_HOST, SSH_USER (vars), and SSH_PRIVATE_KEY (secret) are required." >&2
+            exit 1
+          fi
           install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
           chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts
           scp -i ~/.ssh/staging_key -o StrictHostKeyChecking=no \
             self-host/compose.legacy-restore.yaml \
             "$SSH_USER@$SSH_HOST:~/compass/compose.legacy-restore.yaml.$$"
