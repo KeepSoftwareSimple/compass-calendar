@@ -737,7 +737,7 @@
  * floating-ui's positioning plus Z_INDEX_FLOATING_MENU, so it carries no
  * position or z-index of its own. */
 @utility c-context-menu {
-  @apply min-w-40 list-none rounded border border-border bg-surface-raised py-[5px] shadow-[0_4px_6px_var(--color-shadow-default)];
+  @apply min-w-40 list-none rounded border border-border bg-surface-raised p-1 shadow-[0_4px_6px_var(--color-shadow-default)];
 }
 
 @utility c-tooltip {
@@ -853,7 +853,7 @@
 }
 
 @utility c-context-menu-item {
-  @apply c-focus-ring flex w-full cursor-pointer appearance-none items-center gap-2 whitespace-nowrap border-0 bg-transparent px-3 py-2.5 text-left text-[14px] text-text select-none hover:bg-surface-overlay focus-visible:bg-surface-overlay disabled:cursor-wait disabled:opacity-50;
+  @apply flex w-full cursor-pointer appearance-none items-center gap-2 whitespace-nowrap rounded-sm border-0 bg-transparent px-2 py-2 text-left text-[14px] text-text select-none hover:bg-surface-overlay focus-visible:bg-surface-overlay focus-visible:outline-none disabled:cursor-wait disabled:opacity-50;
 }
 
 /* The event description editor (DescriptionEditor.tsx). TipTap renders its
