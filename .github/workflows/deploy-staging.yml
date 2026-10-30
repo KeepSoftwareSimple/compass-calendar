@@ -7,12 +7,22 @@ on:
         description: 'Release tag being deployed, such as v1.2.3'
         required: true
         type: string
+      run_save_loop_proof:
+        description: 'Run authenticated save loop during staging-cloud deploy'
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       tag:
         description: 'Release tag being deployed, such as v1.2.3'
         required: true
         type: string
+      run_save_loop_proof:
+        description: 'Run authenticated save loop during staging-cloud deploy'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +41,29 @@ jobs:
       tag: ${{ inputs.tag }}
       needs_json: ${{ toJSON(needs) }}
     secrets: inherit
+
+  save-loop-cloud:
+    name: Save loop during staging-cloud deploy
+    if: ${{ inputs.run_save_loop_proof }}
+    runs-on: ubuntu-latest
+    environment: staging-cloud
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run continuous authenticated save loop
+        env:
+          SAVE_LOOP_DURATION_SEC: '1200'
+          SAVE_LOOP_INTERVAL_SEC: '1'
+          SAVE_LOOP_BASE_URL: ${{ vars.FRONTEND_URL }}
+          STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/deploy-save-loop.sh
 
   deploy-cloud:
     name: Deploy to staging-cloud

@@ -468,7 +468,7 @@ remote_compose_prefix() {
 }
 
 remote_check_stack() {
-  local expected_services=("web" "backend" "sync")
+  local expected_services=("web" "api-proxy" "sync")
   local version=${RELEASE_TAG:-${TAG:-}}
   version=${version#v}
 
@@ -485,6 +485,14 @@ set -euo pipefail
 prefix="$prefix"
 services="$services"
 version="$version"
+active_slot=a
+if [ -f ~/compass/.backend-active-slot ]; then
+  active_slot=\$(tr -d '[:space:]' < ~/compass/.backend-active-slot)
+fi
+case "\$active_slot" in
+  a|b) ;;
+  *) active_slot=a ;;
+esac
 ps_output=\$(eval "\$prefix ps --format '{{.Service}} {{.State}} {{.Health}} {{.Image}}'")
 printf '%s\n' "\$ps_output"
 
@@ -500,7 +508,18 @@ for service in \$services; do
   fi
 done
 
-for service in web backend sync; do
+active_backend="backend-\$active_slot"
+line=\$(printf '%s\n' "\$ps_output" | awk -v service="\$active_backend" '\$1 == service { print; found=1 } END { exit found ? 0 : 1 }')
+printf '%s\n' "\$line" | grep -Eq " running |^\${active_backend} running " || {
+  printf 'active backend %s is not running: %s\n' "\$active_backend" "\$line" >&2
+  exit 1
+}
+if printf '%s\n' "\$line" | grep -Eq ' unhealthy| starting| exited| dead'; then
+  printf 'active backend %s is not healthy/running: %s\n' "\$active_backend" "\$line" >&2
+  exit 1
+fi
+
+for service in web "\$active_backend" sync; do
   line=\$(printf '%s\n' "\$ps_output" | awk -v service="\$service" '\$1 == service { print }')
   # web uses an environment-prefixed tag (e.g. staging-selfhosted-0.5.25); backend uses :0.5.25.
   # Check that the version string appears anywhere in the image tag for both.

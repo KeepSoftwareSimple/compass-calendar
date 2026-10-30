@@ -18,6 +18,7 @@ CONFIG_FILE=${COMPASS_CONFIG_FILE:-"$INSTALL_DIR/compass.yaml"}
 COMPOSE_FILE=$INSTALL_DIR/compose.yaml
 COMPOSE_SELFHOSTED_FILE=$INSTALL_DIR/compose.selfhosted.yaml
 CONFIG_HELPER_FILE=$INSTALL_DIR/config.sh
+ROLLING_BACKEND_FILE=$INSTALL_DIR/rolling-backend.sh
 ENV_LOADED=0
 PROJECT_NAME=$(basename "$INSTALL_DIR")
 APP_URL=http://localhost:9080
@@ -171,8 +172,20 @@ open_browser() {
   fi
 }
 
+load_rolling_backend() {
+  [ -f "$ROLLING_BACKEND_FILE" ] || fail "Missing rolling backend helper: $ROLLING_BACKEND_FILE. Run ./compass update or reinstall Compass."
+  # shellcheck source=rolling-backend.sh
+  . "$ROLLING_BACKEND_FILE"
+}
+
 start_stack() {
+  load_rolling_backend
+  active=$(read_backend_active_slot)
+  inactive=$(write_backend_inactive_slot "$active")
+  write_upstream_for_slot "$active"
+  printf '%s\n' "$active" > "$INSTALL_DIR/.backend-active-slot"
   compose up -d || fail "Docker Compose failed to start Compass."
+  compose stop -t 1 "backend-$inactive" >/dev/null 2>&1 || true
   if wait_for_health; then
     info "Compass is running at $APP_URL"
   else
@@ -231,19 +244,35 @@ case $command_name in
     ;;
   update)
     require_stack
+    load_rolling_backend
     prune_unused_images
     compose pull || fail "Could not pull updated Compass images from Docker Hub."
-    if ! compose up -d --remove-orphans --wait; then
+    if ! rolling_backend_update; then
       compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend sync >&2 || true
-      fail "Docker Compose failed to start updated Compass."
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      fail "Rolling backend update failed. Run './compass logs' for details."
     fi
+    secondary_services="web booking-web sync"
+    case ",${COMPOSE_PROFILES}," in
+      *,selfhosted,*)
+        secondary_services="$secondary_services mongo supertokens supertokens-db"
+        ;;
+    esac
+    # shellcheck disable=SC2086
+    if ! compose up -d --remove-orphans --wait $secondary_services; then
+      compose ps -a >&2 || true
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
+      fail "Docker Compose failed to start updated Compass services."
+    fi
+    active=$(read_backend_active_slot)
+    inactive=$(write_backend_inactive_slot "$active")
+    compose stop -t 1 "backend-$inactive" >/dev/null 2>&1 || true
     prune_unused_images
     if wait_for_health; then
       info "Compass updated and running at $APP_URL"
     else
       compose ps -a >&2 || true
-      compose logs --tail=100 mongo backend sync >&2 || true
+      compose logs --tail=100 mongo backend-a backend-b api-proxy sync >&2 || true
       fail "Compass updated, but the backend health check did not pass. Run './compass logs' for details."
     fi
     ;;
