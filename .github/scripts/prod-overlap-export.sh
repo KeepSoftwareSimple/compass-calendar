@@ -56,7 +56,12 @@ run_mongo_eval '
   for (const slug of slugs) {
     for (const name of databases) {
       const row = db.getSiblingDB(name).bookingPage.findOne(
-        { bookingSlug: slug },
+        {
+          $or: [
+            { bookingSlug: slug },
+            { bookingSlug: new RegExp("^" + slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "$", "i") },
+          ],
+        },
         { userId: 1 },
       );
       if (row && row.userId) {
@@ -69,8 +74,10 @@ run_mongo_eval '
     const owner = db.getSiblingDB(name).user.findOne(
       {
         $or: [
-          { displayName: "Tyler Dane" },
+          { name: "Tyler Dane" },
           { firstName: "Tyler", lastName: "Dane" },
+          { email: "tyler@keepsoftwaresimple.com" },
+          { email: "tyler@tylerdane.com" },
         ],
       },
       { _id: 1 },
