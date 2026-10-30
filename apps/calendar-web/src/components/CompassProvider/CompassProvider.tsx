@@ -17,6 +17,7 @@ import { FeedbackDialogHost } from "@web/components/Feedback/FeedbackDialogHost"
 import { IconProvider } from "@web/components/IconProvider/IconProvider";
 import { LogoutConfirmationProvider } from "@web/components/LogoutConfirmation/LogoutConfirmationProvider";
 import { SettingsModalHost } from "@web/components/Settings/SettingsModalHost";
+import { AppVersionCheckProvider } from "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider";
 import { RecurrenceScopeOpportunityHost } from "@web/events/recurrence/RecurrenceScopeOpportunityHost";
 import { selectTheme, useThemeStore } from "@web/settings/theme/theme.store";
 import { CalendarTimeZoneHintSync } from "@web/timezone/CalendarTimeZoneHintSync";
@@ -77,24 +78,26 @@ export const CompassRequiredProviders = ({
   <QueryClientProvider client={queryClient}>
     <HotkeysProvider>
       <SessionProvider>
-        <GoogleOAuthProvider
-          clientId={ENV_WEB.GOOGLE_CLIENT_ID || "google-not-configured"}
-        >
-          <IconProvider>
-            <LogoutConfirmationProvider>
-              <DeleteAccountConfirmationProvider>
-                <UpgradeConfirmationProvider>
-                  <CalendarTimeZoneHintSync />
-                  {children}
-                  <SettingsModalHost />
-                  <TimezoneDialogHost />
-                  <AboutModalHost />
-                </UpgradeConfirmationProvider>
-              </DeleteAccountConfirmationProvider>
-              <ThemeAwareToastContainer />
-            </LogoutConfirmationProvider>
-          </IconProvider>
-        </GoogleOAuthProvider>
+        <AppVersionCheckProvider>
+          <GoogleOAuthProvider
+            clientId={ENV_WEB.GOOGLE_CLIENT_ID || "google-not-configured"}
+          >
+            <IconProvider>
+              <LogoutConfirmationProvider>
+                <DeleteAccountConfirmationProvider>
+                  <UpgradeConfirmationProvider>
+                    <CalendarTimeZoneHintSync />
+                    {children}
+                    <SettingsModalHost />
+                    <TimezoneDialogHost />
+                    <AboutModalHost />
+                  </UpgradeConfirmationProvider>
+                </DeleteAccountConfirmationProvider>
+                <ThemeAwareToastContainer />
+              </LogoutConfirmationProvider>
+            </IconProvider>
+          </GoogleOAuthProvider>
+        </AppVersionCheckProvider>
       </SessionProvider>
     </HotkeysProvider>
     {IS_DEV && (

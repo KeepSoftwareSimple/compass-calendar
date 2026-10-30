@@ -1,13 +1,12 @@
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
 import { type FC, useEffect, useState } from "react";
 import { reloadLocation } from "@web/common/utils/browser/browser-navigation.util";
+import { useSharedAppVersionCheck } from "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider";
 import {
   FOOTER_ICON_BUTTON_CLASS,
   SIDEBAR_REFRESH_SLOT_CLASS,
 } from "@web/components/Sidebar/SidebarActions/sidebar-footer.constants";
-import { useAppUpdateAvailableNotice } from "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice";
 import { useReloadAppShortcut } from "@web/components/Sidebar/SidebarActions/useReloadAppShortcut";
-import { useVersionCheck } from "@web/components/Sidebar/SidebarActions/useVersionCheck";
 import { TooltipWrapper } from "@web/components/Tooltip/TooltipWrapper";
 import { useSseDegradedSince } from "@web/sse/hooks/useSseDegraded";
 
@@ -48,9 +47,7 @@ const useRefreshDue = (degradedSinceMs: number | null): boolean => {
 export const SidebarRefreshButton: FC = () => {
   const degradedSinceMs = useSseDegradedSince();
   const refreshDue = useRefreshDue(degradedSinceMs);
-  const { isUpdateAvailable, availableVersion } = useVersionCheck();
-
-  useAppUpdateAvailableNotice(isUpdateAvailable, availableVersion);
+  const { isUpdateAvailable } = useSharedAppVersionCheck();
 
   const visible = refreshDue || isUpdateAvailable;
   const description = SIDEBAR_RELOAD_DESCRIPTION;

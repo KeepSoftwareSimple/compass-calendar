@@ -2,40 +2,37 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
+import { type PropsWithChildren } from "react";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realBrowserNavigation from "@web/common/utils/browser/browser-navigation.util";
-import * as realUseAppUpdateNotice from "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice";
-import * as realUseVersionCheck from "@web/components/Sidebar/SidebarActions/useVersionCheck";
 import * as realUseSseDegraded from "@web/sse/hooks/useSseDegraded";
 
 let degradedSinceMs: number | null = null;
 let isUpdateAvailable = false;
 let isDegradedMocked = true;
-let isVersionCheckMocked = true;
 const actualUseSseDegradedSince = realUseSseDegraded.useSseDegradedSince;
-const actualUseVersionCheck = realUseVersionCheck.useVersionCheck;
 mockModuleForFile("@web/sse/hooks/useSseDegraded", realUseSseDegraded, {
   useSseDegradedSince: () =>
     isDegradedMocked ? degradedSinceMs : actualUseSseDegradedSince(),
 });
+const appVersionCheckStub = {
+  useSharedAppVersionCheck: () => ({
+    isUpdateAvailable,
+    availableVersion: isUpdateAvailable ? "9.9.9" : null,
+    currentVersion: "test",
+  }),
+  AppVersionCheckProvider: ({ children }: PropsWithChildren) => children,
+};
 mockModuleForFile(
-  "@web/components/Sidebar/SidebarActions/useVersionCheck",
-  realUseVersionCheck,
+  "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider",
+  appVersionCheckStub,
   {
-    useVersionCheck: () =>
-      isVersionCheckMocked
-        ? {
-            isUpdateAvailable,
-            availableVersion: isUpdateAvailable ? "9.9.9" : null,
-            currentVersion: "test",
-          }
-        : actualUseVersionCheck(),
+    useSharedAppVersionCheck: () => ({
+      isUpdateAvailable,
+      availableVersion: isUpdateAvailable ? "9.9.9" : null,
+      currentVersion: "test",
+    }),
   },
-);
-mockModuleForFile(
-  "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice",
-  realUseAppUpdateNotice,
-  { useAppUpdateAvailableNotice: () => undefined },
 );
 
 const reloadLocation = mock();
@@ -47,7 +44,6 @@ mockModuleForFile(
 
 afterAll(() => {
   isDegradedMocked = false;
-  isVersionCheckMocked = false;
 });
 
 // Cache-bust so this file's mocks apply even when another suite already
