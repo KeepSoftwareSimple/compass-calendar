@@ -95,8 +95,7 @@ print(json.dumps({
 PY
 )
   status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "${API_BASE}/event" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H 'st-auth-mode: header' \
+    -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -H 'Content-Type: application/json' \
     --data "$payload" || echo "000")
   case "$status" in
