@@ -112,8 +112,8 @@ export const SidebarActions = ({ sections }: SidebarActionsProps) => {
           </span>
         </button>
       </TooltipWrapper>
-      <ShortcutLevelBadge sections={sections} />
       <SidebarRefreshButton />
+      <ShortcutLevelBadge sections={sections} />
     </div>
   );
 };

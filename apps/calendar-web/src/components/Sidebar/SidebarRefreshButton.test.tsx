@@ -4,6 +4,7 @@ import { afterAll, afterEach, describe, expect, it, mock } from "bun:test";
 import "@testing-library/jest-dom";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import * as realBrowserNavigation from "@web/common/utils/browser/browser-navigation.util";
+import * as realUseAppUpdateNotice from "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice";
 import * as realUseVersionCheck from "@web/components/Sidebar/SidebarActions/useVersionCheck";
 import * as realUseSseDegraded from "@web/sse/hooks/useSseDegraded";
 
@@ -23,9 +24,18 @@ mockModuleForFile(
   {
     useVersionCheck: () =>
       isVersionCheckMocked
-        ? { isUpdateAvailable, currentVersion: "test" }
+        ? {
+            isUpdateAvailable,
+            availableVersion: isUpdateAvailable ? "9.9.9" : null,
+            currentVersion: "test",
+          }
         : actualUseVersionCheck(),
   },
+);
+mockModuleForFile(
+  "@web/components/Sidebar/SidebarActions/useAppUpdateAvailableNotice",
+  realUseAppUpdateNotice,
+  { useAppUpdateAvailableNotice: () => undefined },
 );
 
 const reloadLocation = mock();
@@ -46,9 +56,13 @@ const moduleUrl = new URL(
   `./SidebarRefreshButton.tsx?test=${Math.random().toString(36).slice(2)}`,
   import.meta.url,
 );
-const { SidebarRefreshButton, REFRESH_AFTER_DEGRADED_MS } = (await import(
-  moduleUrl.href
-)) as typeof import("./SidebarRefreshButton");
+const {
+  SidebarRefreshButton,
+  REFRESH_AFTER_DEGRADED_MS,
+  SIDEBAR_RELOAD_DESCRIPTION,
+} = (await import(moduleUrl.href)) as typeof import("./SidebarRefreshButton");
+
+const reloadButtonName = SIDEBAR_RELOAD_DESCRIPTION;
 
 describe("SidebarRefreshButton", () => {
   afterEach(() => {
@@ -61,7 +75,7 @@ describe("SidebarRefreshButton", () => {
     render(<SidebarRefreshButton />);
 
     expect(
-      screen.queryByRole("button", { name: "Refresh" }),
+      screen.queryByRole("button", { name: reloadButtonName }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();
   });
@@ -71,7 +85,7 @@ describe("SidebarRefreshButton", () => {
     render(<SidebarRefreshButton />);
 
     expect(
-      screen.queryByRole("button", { name: "Refresh" }),
+      screen.queryByRole("button", { name: reloadButtonName }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -82,7 +96,7 @@ describe("SidebarRefreshButton", () => {
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
     render(<SidebarRefreshButton />);
 
-    const refresh = screen.getByRole("button", { name: "Refresh" });
+    const refresh = screen.getByRole("button", { name: reloadButtonName });
     await user.hover(refresh);
     const tooltip = await screen.findByRole("tooltip");
     expect(
@@ -101,23 +115,25 @@ describe("SidebarRefreshButton", () => {
     render(<SidebarRefreshButton />);
 
     expect(
-      screen.queryByRole("button", { name: "Refresh" }),
+      screen.queryByRole("button", { name: reloadButtonName }),
     ).not.toBeInTheDocument();
     expect(
-      await screen.findByRole("button", { name: "Refresh" }),
+      await screen.findByRole("button", { name: reloadButtonName }),
     ).toBeInTheDocument();
   });
 
   it("clears the control when the stream reopens", () => {
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
     const { rerender } = render(<SidebarRefreshButton />);
-    expect(screen.getByRole("button", { name: "Refresh" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: reloadButtonName }),
+    ).toBeInTheDocument();
 
     degradedSinceMs = null;
     rerender(<SidebarRefreshButton />);
 
     expect(
-      screen.queryByRole("button", { name: "Refresh" }),
+      screen.queryByRole("button", { name: reloadButtonName }),
     ).not.toBeInTheDocument();
   });
 
@@ -126,9 +142,12 @@ describe("SidebarRefreshButton", () => {
     isUpdateAvailable = true;
     render(<SidebarRefreshButton />);
 
-    expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: reloadButtonName }),
+    ).toHaveLength(1);
+    expect(screen.queryByText("Refresh")).not.toBeInTheDocument();
 
-    await user.hover(screen.getByRole("button", { name: "Refresh" }));
+    await user.hover(screen.getByRole("button", { name: reloadButtonName }));
     const tooltip = await screen.findByRole("tooltip");
     expect(
       within(tooltip).getByText("Reload for the latest version"),
@@ -141,7 +160,9 @@ describe("SidebarRefreshButton", () => {
     degradedSinceMs = Date.now() - REFRESH_AFTER_DEGRADED_MS - 1_000;
     render(<SidebarRefreshButton />);
 
-    expect(screen.getAllByRole("button", { name: "Refresh" })).toHaveLength(1);
+    expect(
+      screen.getAllByRole("button", { name: reloadButtonName }),
+    ).toHaveLength(1);
     expect(screen.queryByText("Reconnecting…")).not.toBeInTheDocument();
   });
 });
