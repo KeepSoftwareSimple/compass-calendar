@@ -30,16 +30,40 @@ async function prepareSession(page: Page) {
   });
 }
 
+async function completeWelcomeIfPresent(page: Page) {
+  const welcomeDialog = page.getByRole("dialog", {
+    name: "Welcome to Compass Calendar",
+  });
+  if (!(await welcomeDialog.isVisible().catch(() => false))) {
+    return;
+  }
+
+  await welcomeDialog
+    .getByRole("button", { name: "Get started for free" })
+    .click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("s");
+  await expect(welcomeDialog).toBeHidden({ timeout: 30_000 });
+}
+
 async function openWeekWithNotices(page: Page) {
   await page.goto("/week", { waitUntil: "networkidle" });
+  await completeWelcomeIfPresent(page);
 
-  await expect(
-    page.getByRole("complementary", { name: "Create your first event" }),
-  ).toBeVisible({ timeout: 60_000 });
+  const firstEvent = page.getByRole("complementary", {
+    name: "Create your first event",
+  });
+  await expect(firstEvent).toBeVisible({ timeout: 60_000 });
 
-  await expect(
-    page.getByText("Compass just got better. Refresh to update."),
-  ).toBeVisible({ timeout: 90_000 });
+  const updateCopy = page.getByText(
+    "Compass just got better. Refresh to update.",
+  );
+  if (!(await updateCopy.isVisible().catch(() => false))) {
+    await page.reload({ waitUntil: "networkidle" });
+  }
+  await expect(updateCopy).toBeVisible({ timeout: 90_000 });
 }
 
 async function assertBottomLeftStack(page: Page) {
@@ -88,6 +112,7 @@ async function assertNoticesDoNotOverlap(page: Page) {
 }
 
 test.describe("bottom notice stack", () => {
+  test.describe.configure({ mode: "serial" });
   test.use({ storageState: { cookies: [], origins: [] } });
 
   test("1280px anchors notices bottom-left with primary CTAs and no overlap", async ({
