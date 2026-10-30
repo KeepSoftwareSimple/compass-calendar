@@ -16,3 +16,11 @@
 .Toastify__progress-bar-theme--dark {
   background: var(--text-muted);
 }
+
+/* Stack update toasts above the first-event onboarding card. */
+html[data-first-event-prompt-live] .Toastify__toast-container--bottom-left {
+  bottom: calc(
+    max(var(--toastify-toast-offset), env(safe-area-inset-bottom)) +
+    var(--compass-first-event-prompt-stack-height, 0px)
+  );
+}
