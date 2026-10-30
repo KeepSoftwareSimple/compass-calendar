@@ -96,6 +96,24 @@ describe("signup-completed coordinator", () => {
     });
   });
 
+  it("fires on a later flush when identify ran before scheduleSignupCompleted", () => {
+    flushSignupCompletedAfterSessionReady({
+      userId: "race-user",
+      profileEmail: "real.user@gmail.com",
+    });
+    expect(capture).not.toHaveBeenCalled();
+
+    scheduleSignupCompleted("google");
+    flushSignupCompletedAfterSessionReady({
+      userId: "race-user",
+      profileEmail: "real.user@gmail.com",
+    });
+    const signupCalls = capture.mock.calls.filter(
+      ([event]) => event === "signup_completed",
+    );
+    expect(signupCalls).toEqual([["signup_completed", { method: "google" }]]);
+  });
+
   it("skips a second capture after reload when session storage is set", () => {
     scheduleSignupCompleted("microsoft");
     flushSignupCompletedAfterSessionReady({
