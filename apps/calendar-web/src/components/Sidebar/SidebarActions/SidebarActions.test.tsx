@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { type PropsWithChildren } from "react";
 import { createStoreWrapper } from "@web/__tests__/render-with-store";
 import { mockModuleForFile } from "@web/__tests__/utils/mock-module.test.util";
 import {
@@ -31,6 +32,26 @@ mockModuleForFile(
             currentVersion: "test",
           }
         : actualUseVersionCheck(),
+  },
+);
+
+const appVersionCheckStub = {
+  useSharedAppVersionCheck: () => ({
+    isUpdateAvailable: false,
+    availableVersion: null,
+    currentVersion: "test",
+  }),
+  AppVersionCheckProvider: ({ children }: PropsWithChildren) => children,
+};
+mockModuleForFile(
+  "@web/components/Sidebar/SidebarActions/AppVersionCheckProvider",
+  appVersionCheckStub,
+  {
+    useSharedAppVersionCheck: () => ({
+      isUpdateAvailable: false,
+      availableVersion: null,
+      currentVersion: "test",
+    }),
   },
 );
 

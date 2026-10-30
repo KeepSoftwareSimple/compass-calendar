@@ -17,15 +17,15 @@
   background: var(--text-muted);
 }
 
+.Toastify__toast-container--bottom-left {
+  inset-inline: max(1rem, env(safe-area-inset-left));
+  width: min(24rem, calc(100vw - 2rem));
+}
+
 /* Stack update toasts above the first-event onboarding card. */
 html[data-first-event-prompt-live] .Toastify__toast-container--bottom-left {
   bottom: calc(
     max(var(--toastify-toast-offset), env(safe-area-inset-bottom)) +
     var(--compass-first-event-prompt-stack-height, 0px)
   );
-}
-
-.Toastify__toast-container--bottom-left {
-  inset-inline: max(1rem, env(safe-area-inset-left));
-  width: min(24rem, calc(100vw - 2rem));
 }
