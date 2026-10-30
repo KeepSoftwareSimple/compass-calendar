@@ -11,8 +11,27 @@ API_BASE="${BASE_URL}/api"
 EMAIL=${SAVE_LOOP_EMAIL:-}
 PASSWORD=${SAVE_LOOP_PASSWORD:-}
 
+resolve_provider() {
+  local candidate=${STAGING_JOURNEY_PROVIDER:-}
+  candidate=${candidate,,}
+  candidate=${candidate//[[:space:]]/}
+  if [ -n "$candidate" ]; then
+    printf '%s' "$candidate"
+    return 0
+  fi
+  printf '%s' "google"
+}
+
+provider=$(resolve_provider)
+case "$provider" in
+  google | microsoft | apple) ;;
+  *)
+    echo "STAGING_JOURNEY_PROVIDER must be google, microsoft, or apple (got \"${provider}\")." >&2
+    exit 1
+    ;;
+esac
+
 if [ -z "$EMAIL" ] || [ -z "$PASSWORD" ]; then
-  provider=${STAGING_JOURNEY_PROVIDER:-google}
   prefix="STAGING_JOURNEY_${provider^^}_EMAIL"
   password_key="STAGING_JOURNEY_${provider^^}_PASSWORD"
   EMAIL=${EMAIL:-${!prefix:-}}
@@ -30,24 +49,32 @@ header_value() {
   awk -v name="$name" 'BEGIN { IGNORECASE=1 } $1 == name ":" { sub(/^[^:]+:[[:space:]]*/, ""); print; exit }' "$headers_file" | tr -d '\r'
 }
 
+ACCESS_TOKEN=""
+
 sign_in() {
-  local headers_file body_file
+  local headers_file body_file status
   headers_file=$(mktemp)
   body_file=$(mktemp)
-  if ! curl -fsS -X POST "${API_BASE}/signin" \
+  status=$(curl -sS -o "$body_file" -w '%{http_code}' -X POST "${API_BASE}/signin" \
     -H 'Content-Type: application/json' \
     -H 'st-auth-mode: header' \
     -D "$headers_file" \
-    -o "$body_file" \
-    --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}"; then
+    --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}" || echo "000")
+  if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
     rm -f "$headers_file" "$body_file"
-    echo "sign-in request failed" >&2
+    printf 'sign-in HTTP %s\n' "$status" >&2
     return 1
   fi
   ACCESS_TOKEN=$(header_value "$headers_file" st-access-token)
   rm -f "$headers_file" "$body_file"
   if [ -z "$ACCESS_TOKEN" ]; then
     echo "sign-in succeeded but st-access-token header was missing" >&2
+    return 1
+  fi
+  if ! curl -fsS "${API_BASE}/user/profile" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H 'st-auth-mode: header' >/dev/null; then
+    echo "profile check failed after sign-in" >&2
     return 1
   fi
 }
@@ -75,12 +102,6 @@ raise SystemExit(1)
 PY
 }
 
-auth_headers=(
-  -H "Authorization: Bearer ${ACCESS_TOKEN}"
-  -H 'st-auth-mode: header'
-  -H 'Content-Type: application/json'
-)
-
 write_once() {
   local now payload status
   now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
@@ -97,7 +118,9 @@ print(json.dumps({
 PY
 )
   status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "${API_BASE}/event" \
-    "${auth_headers[@]}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H 'st-auth-mode: header' \
+    -H 'Content-Type: application/json' \
     --data "$payload" || echo "000")
   case "$status" in
     2*) return 0 ;;
@@ -105,7 +128,19 @@ PY
   esac
 }
 
-sign_in
+wait_for_sign_in() {
+  local deadline=$((SECONDS + 180))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if sign_in; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "sign-in did not succeed within 180s (API may still be deploying)" >&2
+  return 1
+}
+
+wait_for_sign_in
 CALENDAR_ID=$(pick_calendar_id) || {
   echo "Could not resolve a writable calendar id from GET /api/calendars" >&2
   exit 1
@@ -115,7 +150,7 @@ requests=0
 failures=0
 deadline=$((SECONDS + DURATION_SEC))
 
-echo "deploy-save-loop: ${DURATION_SEC}s interval ${INTERVAL_SEC}s base ${BASE_URL}"
+echo "deploy-save-loop: ${DURATION_SEC}s interval ${INTERVAL_SEC}s base ${BASE_URL} provider=${provider}"
 
 while [ "$SECONDS" -lt "$deadline" ]; do
   requests=$((requests + 1))
