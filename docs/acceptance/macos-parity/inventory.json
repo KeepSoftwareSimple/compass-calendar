@@ -683,9 +683,9 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormTitleKeyboardTests.swift#testTitleEditSequenceReopensSavedEventWithItsTitleFocused"
       ],
-      "status": "unreviewed",
-      "evidence": "New native regression for #4973, pending exact-head isolated strict verification.",
-      "reason": "Distinct from #4929 Cmd+1 focus restoration; no new UI fix claimed.",
+      "status": "failing",
+      "evidence": "Head16c9ac407 normal native41103444007 fails reopen assertions56-59; log and failure video inspected. Pure dispatcher regression reproduced Today dispatch on resolved title, then16 KeyboardEngineTests PASS after fix. Full new-head native verification pending.",
+      "reason": "Resolved E-then-T title field was shadowed by standalone navToday dispatch. Fix returns the resolved field before ordinary handlers; acceptance regression unchanged.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {

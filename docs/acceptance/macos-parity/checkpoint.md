@@ -11,10 +11,15 @@ No local native UI XCTest or desktop takeover is authorized.
 Branch `test/macos-edit-title-sequence`, fixes #4973. A new native regression
 creates and saves a title, confirms its focused grid card, presses E then T and
 asserts visible actual title-input focus plus exact saved text. Existing #4929
-Cmd+1 focus restoration coverage stays intact. New test stays unreviewed in the
+Cmd+1 focus restoration coverage stays intact. The new regression exposed a real
+dispatcher collision: resolved title T also dispatched Today before opening the
+form. A minimal early return preserves leader resolution; standalone T still
+navigates Today. A pure dispatcher regression failed before the fix and all16
+KeyboardEngineTests pass after it. New UI verification is pending. New test stays unreviewed in the
 inventory until exact-head isolated native/web strict logs and screenshot are
 inspected. Local lint, Swift contracts/export and five accounting regressions pass.
-Full diff reviewed. No production UI changed or test assertions/timeouts weakened.
+Full diff reviewed. Production shortcut dispatch is corrected; existing UI
+assertions, timeouts and order are preserved.
 
 Inventory now records complete source reviews of title sequence, booking links,
 list editing and two browser build tools. Browser-only modulepreload and JS budget

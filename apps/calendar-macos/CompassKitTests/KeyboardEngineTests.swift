@@ -165,6 +165,27 @@ final class KeyboardEngineTests: XCTestCase {
         XCTAssertEqual(leader.phase, .idle)
     }
 
+    func testResolvedLeaderFieldDoesNotAlsoDispatchToday() {
+        let fired = LockedBox<ShortcutId?>(nil)
+        let today = ShortcutHandler(
+            id: .navToday, scope: .grid,
+            chords: [KeyChord(token: .character("t"))],
+            handler: { id in fired.withLock { $0 = id } })
+        let leader = LeaderSequenceEngine(leaderKey: "e", fieldRows: registry.editSequenceFields)
+        let dispatcher = ShortcutDispatcher(registry: registry, handlers: [today], leaderEngine: leader)
+        dispatcher.pushScope(.grid)
+
+        XCTAssertNil(dispatcher.dispatch(KeyEvent(character: "e")))
+        XCTAssertNil(dispatcher.dispatch(KeyEvent(character: "t")))
+        XCTAssertEqual(dispatcher.lastResolvedLeaderField, "title")
+        XCTAssertNil(fired.withLock { $0 })
+        XCTAssertTrue(dispatcher.dispatchedShortcutIds.isEmpty)
+
+        XCTAssertEqual(dispatcher.dispatch(KeyEvent(character: "t")), .navToday)
+        XCTAssertNil(dispatcher.lastResolvedLeaderField)
+        XCTAssertEqual(fired.withLock { $0 }, .navToday)
+    }
+
     func testLeaderSequenceTimeoutAndResolve() {
         let timer = DispatchTimer()
         let engine = LeaderSequenceEngine(
