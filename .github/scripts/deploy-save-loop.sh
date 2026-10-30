@@ -91,7 +91,9 @@ print(json.dumps({
 PY
 )
   status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "${API_BASE}/event" \
-    "${auth_headers[@]}" \
+    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+    -H 'st-auth-mode: header' \
+    -H 'Content-Type: application/json' \
     --data "$payload" || echo "000")
   case "$status" in
     2*) return 0 ;;
@@ -99,7 +101,19 @@ PY
   esac
 }
 
-sign_in
+wait_for_sign_in() {
+  local deadline=$((SECONDS + 180))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    if sign_in; then
+      return 0
+    fi
+    sleep 2
+  done
+  echo "sign-in did not succeed within 180s (API may still be deploying)" >&2
+  return 1
+}
+
+wait_for_sign_in
 CALENDAR_ID=$(pick_calendar_id) || {
   echo "Could not resolve a writable calendar id from GET /api/calendars" >&2
   exit 1
