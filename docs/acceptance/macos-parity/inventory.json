@@ -802,11 +802,11 @@
         "e2e/timed/event-form-meeting-link-keycaps.spec.ts#shows meeting-link copy keycaps and copies with Mod+Shift+L"
       ],
       "native": [
-        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkFocusTests.swift#testMeetingLinkShortcutMovesActualFocusInBothThemes"
+        "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "missing",
+      "status": "unreviewed",
       "evidence": "",
-      "reason": "Native link-role and focus checks use identifier, not visible Google Meet label. No asserted equivalent label in inspected candidates.",
+      "reason": "Explicit link-role/name and positive viewport assertions added on test/macos-meeting-copy-acceptance for #4957. Pending exact-head isolated-Mac strict run, not yet accepted.",
       "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
     },
     {
