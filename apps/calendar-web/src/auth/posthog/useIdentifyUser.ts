@@ -5,7 +5,10 @@ import {
   syntheticAccountPosthogRegistration,
 } from "@web/auth/posthog/posthog-audience-filter.util";
 import { usePostHog } from "@web/auth/posthog/posthog-react";
-import { flushSignupCompletedAfterSessionReady } from "@web/auth/posthog/signup-completed-coordinator";
+import {
+  flushSignupCompletedAfterSessionReady,
+  SIGNUP_COMPLETED_FLUSH_REQUEST_EVENT,
+} from "@web/auth/posthog/signup-completed-coordinator";
 
 /**
  * Identifies the signed-in Compass user in PostHog. Guest booking
@@ -26,12 +29,16 @@ export function useIdentifyUser(
     ) {
       return;
     }
-    if (
-      userId &&
-      profileEmail &&
-      posthog &&
-      typeof posthog.identify === "function"
-    ) {
+
+    const identifyAndFlushSignup = () => {
+      if (
+        !userId ||
+        !profileEmail ||
+        !posthog ||
+        typeof posthog.identify !== "function"
+      ) {
+        return;
+      }
       posthog.identify(userId, {
         email: profileEmail,
         user_id: userId,
@@ -47,6 +54,19 @@ export function useIdentifyUser(
         profileEmail,
         isSynthetic,
       });
-    }
+    };
+
+    identifyAndFlushSignup();
+    if (typeof window === "undefined") return;
+    window.addEventListener(
+      SIGNUP_COMPLETED_FLUSH_REQUEST_EVENT,
+      identifyAndFlushSignup,
+    );
+    return () => {
+      window.removeEventListener(
+        SIGNUP_COMPLETED_FLUSH_REQUEST_EVENT,
+        identifyAndFlushSignup,
+      );
+    };
   }, [isSynthetic, profileEmail, posthog, userId]);
 }

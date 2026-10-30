@@ -82,6 +82,26 @@ public enum UITestLaunchPolicy {
             || ProcessInfo.processInfo.arguments.contains("-PARITY_CAPTURE")
     }
 
+    /// XCUITest and parity PNG runs must not emit product analytics to PostHog.
+    public static var capturesProductAnalytics: Bool {
+        capturesProductAnalytics(arguments: ProcessInfo.processInfo.arguments)
+    }
+
+    public static func capturesProductAnalytics(arguments: [String]) -> Bool {
+        if arguments.contains(uiTestLaunchArgument) {
+            return false
+        }
+        if arguments.contains("-COMPASS_UI_TEST_PARITY_CAPTURE")
+            || arguments.contains("-PARITY_CAPTURE")
+        {
+            return false
+        }
+        if ProcessInfo.processInfo.environment["PARITY_CAPTURE"] == "1" {
+            return false
+        }
+        return true
+    }
+
     /// Full week column count so demo fixture events stay in the focus layout during XCUITest.
     public static var pinnedWeekGridTrackWidth: CGFloat? {
         if isParityCapture {
