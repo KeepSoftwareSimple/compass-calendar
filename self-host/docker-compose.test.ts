@@ -876,10 +876,13 @@ describe("staging deploy workflow", () => {
   it("re-resolves api-proxy backend upstream via Docker DNS", () => {
     const nginx = readRepoFile("self-host/api-proxy/nginx.conf");
     const upstream = readRepoFile("self-host/api-proxy/active-backend.conf");
+    const rolling = readRepoFile("self-host/rolling-backend.sh");
 
     expect(nginx).toContain("resolver 127.0.0.11");
     expect(nginx).toContain("proxy_pass http://$backend_upstream");
     expect(upstream).toContain("set $backend_upstream backend-a:3000");
+    expect(rolling).toContain("sync_api_proxy_after_deploy");
+    expect(rolling).toContain("--force-recreate --no-deps api-proxy");
   });
 
   it("runs deploy health checks after each staging deploy", () => {

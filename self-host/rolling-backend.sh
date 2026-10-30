@@ -31,9 +31,20 @@ write_upstream_for_slot() {
   printf 'set $backend_upstream backend-%s:3000;\n' "$slot" > "$UPSTREAM_FILE"
 }
 
+recreate_api_proxy() {
+  compose up -d --force-recreate --no-deps api-proxy >/dev/null 2>&1
+}
+
+# Deploy replaces ~/compass/api-proxy/ as a whole directory. Docker keeps serving
+# the old bind-mounted nginx.conf from the replaced inode until api-proxy is
+# recreated, so reload alone cannot apply resolver-based upstream switching.
+sync_api_proxy_after_deploy() {
+  recreate_api_proxy || return 1
+}
+
 reload_api_proxy() {
   compose exec -T api-proxy nginx -s reload >/dev/null 2>&1 ||
-    compose restart api-proxy >/dev/null 2>&1
+    recreate_api_proxy >/dev/null 2>&1
 }
 
 backend_slot_health_ok() {
@@ -189,6 +200,7 @@ rolling_backend_update() {
 
   write_upstream_for_slot "$active"
   compose up -d "backend-$active" api-proxy || return 1
+  sync_api_proxy_after_deploy || return 1
   if ! wait_for_backend_slot "$active"; then
     compose ps -a "backend-$active" api-proxy >&2 || true
     compose logs --tail=80 "backend-$active" api-proxy >&2 || true
