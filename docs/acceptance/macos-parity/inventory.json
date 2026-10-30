@@ -863,12 +863,11 @@
         "e2e/event-form/description-list-editing.spec.ts#description numbered lists support Enter, exit, and round-trip"
       ],
       "native": [
-        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift#testEnterContinuesListAndEmptyItemExitsIt",
-        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/HTMLFragmentAppKitTests.swift#testListsRetainTheirStructure"
+        "apps/calendar-macos/CompassUITests/DescriptionListPersistenceTests.swift#testNumberedListContinuesExitsAndSurvivesSaveAndReopen"
       ],
-      "status": "missing",
-      "reason": "Native text-view test covers two items and exit, representation test covers pure roundtrip. No native UI three-item/After list/save/reopen equivalence.",
-      "evidence": "",
+      "status": "unreviewed",
+      "reason": "Uses an existing editable demo event instead of creating the web fixture. Checks exact three-item text, semantic ordered-list state at every saved item, exit to normal paragraph and persisted content; no acceptance pass until exercised.",
+      "evidence": "New #4983 real native toolbar/keyboard/save/reopen regression, pending isolated exact-head native/web verification.",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
@@ -1038,6 +1037,230 @@
       "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
       "evidence": "",
       "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "guest-static-route",
+      "behavior": "matches public guest paths and legacy /book",
+      "web": [
+        "apps/calendar-web/src/__tests__/guest-meet-cutover.test.ts#matches public guest paths and legacy /book"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: calendar-web HTTP static routing and source/JS bundle ownership guards have no native AppKit server or SPA fallback. dev.ts redirects public paths to booking-web. This does not waive native external booking links or real guest flow acceptance.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "guest-source-guard",
+      "behavior": "keeps no guest PublicBooking UI modules",
+      "web": [
+        "apps/calendar-web/src/__tests__/guest-meet-cutover.test.ts#keeps no guest PublicBooking UI modules"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: calendar-web HTTP static routing and source/JS bundle ownership guards have no native AppKit server or SPA fallback. dev.ts redirects public paths to booking-web. This does not waive native external booking links or real guest flow acceptance.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "guest-bundle-guard",
+      "behavior": "does not ship guest PublicBooking UI modules",
+      "web": [
+        "apps/calendar-web/src/__tests__/guest-meet-cutover.test.ts#does not ship guest PublicBooking UI modules"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: calendar-web HTTP static routing and source/JS bundle ownership guards have no native AppKit server or SPA fallback. dev.ts redirects public paths to booking-web. This does not waive native external booking links or real guest flow acceptance.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-sidebar-default",
+      "behavior": "Launch shows default open sidebar and width",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L106"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/SidebarResizeKeyboardTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Existing resize/reset coverage proves later width345, not first-frame default.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-sidebar-collapsed",
+      "behavior": "Launch honors a stored collapsed sidebar",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L113"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Native persisted visibility and initial rendering need direct assertion review.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-sidebar-breakpoint",
+      "behavior": "Sidebar collapses below and opens at responsive boundary",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L122"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Inspect native minimum width/responsive policy and equivalent launch assertions.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-sidebar-clamp",
+      "behavior": "Invalid stored sidebar width clamps to supported bounds",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L133"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/SidebarResizeKeyboardTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Home/End resize coverage is not stored invalid-value launch coverage.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-sidebar-zero",
+      "behavior": "Stored zero sidebar width uses documented boot fallback",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L149"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Web pre-JS zero fallback deliberately differs from runtime clamp; review native persisted-value contract before deciding equivalence.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-theme-dark",
+      "behavior": "Stored dark theme applies before first rendered frame",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L229"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/DesktopThemeAppearanceTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Pure theme mapping does not establish stored preference applied before rendering.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-theme-fallback",
+      "behavior": "Unset or unknown stored theme uses default at launch",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L239"],
+      "native": [
+        "apps/calendar-macos/CompassKitTests/DesktopThemeAppearanceTests.swift"
+      ],
+      "status": "unreviewed",
+      "reason": "Pure mapping is a candidate; direct persisted launch behavior remains unreviewed.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-1",
+      "behavior": "Visible columns match usable track width at 1600/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Need match native supported-window geometry and actual startup column assertions, not only fixture counts.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-2",
+      "behavior": "Visible columns match usable track width at breakpoint/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Need match native supported-window geometry and actual startup column assertions, not only fixture counts.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-3",
+      "behavior": "Visible columns match usable track width at below-breakpoint/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Need match native supported-window geometry and actual startup column assertions, not only fixture counts.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-4",
+      "behavior": "Visible columns match usable track width at 1600/max-sidebar",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Need match native supported-window geometry and actual startup column assertions, not only fixture counts.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-5",
+      "behavior": "Visible columns match usable track width at 900/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Need match native supported-window geometry and actual startup column assertions, not only fixture counts.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-6",
+      "behavior": "Visible columns match usable track width at 400/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: native main window minimum width720 in AppDelegate.swift:100 prevents this400/100px UI viewport. Native supported-width geometry remains tracked.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-columns-7",
+      "behavior": "Visible columns match usable track width at 100/default",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L173"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: native main window minimum width720 in AppDelegate.swift:100 prevents this400/100px UI viewport. Native supported-width geometry remains tracked.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-column-boundary-6",
+      "behavior": "Visible columns step from 5 to 6 at computed width boundary",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L217"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Native boundary and sidebar/titlebar geometry assertions need review.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-column-boundary-7",
+      "behavior": "Visible columns step from 6 to 7 at computed width boundary",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L217"],
+      "native": [],
+      "status": "unreviewed",
+      "reason": "Native boundary and sidebar/titlebar geometry assertions need review.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-static-theme",
+      "behavior": "Static HTML carries default theme and browser meta color",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L254"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: native SwiftUI/AppKit has no HTML attributes, browser theme-color meta or inline JS boot scripts. Observable stored-theme launch behavior remains separately tracked.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
+    },
+    {
+      "id": "boot-inline-scripts",
+      "behavior": "HTML contains the two required inline boot scripts",
+      "web": ["apps/calendar-web/src/__tests__/boot-shell.test.ts#L263"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: native SwiftUI/AppKit has no HTML attributes, browser theme-color meta or inline JS boot scripts. Observable stored-theme launch behavior remains separately tracked.",
+      "evidence": "",
+      "review": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
     }
   ],
   "gates": {
@@ -1065,6 +1288,8 @@
     "e2e/event-form/description-booking-links.spec.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
     "e2e/event-form/description-list-editing.spec.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
     "apps/calendar-web/src/__tests__/boot-size-report.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
-    "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
+    "apps/calendar-web/src/__tests__/guest-meet-cutover.test.ts": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior.",
+    "apps/calendar-web/src/__tests__/boot-shell.test.ts": "2026-10-30 agent: inspected full source and all parametrized assertions; implementation exclusions kept separate from observable native launch behavior."
   }
 }
