@@ -38,8 +38,8 @@ jobs:
 
       - name: Upload legacy restore assets and run on host
         env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_USER: ${{ vars.SSH_USER }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         run: |
           set -euo pipefail
@@ -66,7 +66,7 @@ jobs:
       inputs.environment == 'staging-cloud'
     needs: restore-legacy
     runs-on: ubuntu-latest
-    environment: staging-cloud
+    environment: staging-journey
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -75,7 +75,7 @@ jobs:
         env:
           SAVE_LOOP_DURATION_SEC: '900'
           SAVE_LOOP_INTERVAL_SEC: '1'
-          SAVE_LOOP_BASE_URL: ${{ vars.FRONTEND_URL }}
+          SAVE_LOOP_BASE_URL: ${{ vars.STAGING_BASE_URL || 'https://staging.compasscalendar.com' }}
           STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER }}
           STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
           STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}

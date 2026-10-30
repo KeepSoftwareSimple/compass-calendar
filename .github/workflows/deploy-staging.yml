@@ -46,7 +46,8 @@ jobs:
     name: Save loop during staging-cloud deploy
     if: ${{ inputs.run_save_loop_proof }}
     runs-on: ubuntu-latest
-    environment: staging-cloud
+    # Journey credentials live on the staging-journey Environment, not staging-cloud.
+    environment: staging-journey
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -55,7 +56,7 @@ jobs:
         env:
           SAVE_LOOP_DURATION_SEC: '1200'
           SAVE_LOOP_INTERVAL_SEC: '1'
-          SAVE_LOOP_BASE_URL: ${{ vars.FRONTEND_URL }}
+          SAVE_LOOP_BASE_URL: ${{ vars.STAGING_BASE_URL || vars.FRONTEND_URL || 'https://staging.compasscalendar.com' }}
           STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER }}
           STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
           STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
