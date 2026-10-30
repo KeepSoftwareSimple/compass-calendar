@@ -21,6 +21,7 @@ import {
   inEffectiveTimeZone,
   nowInEffectiveTimeZone,
 } from "@web/timezone/in-time-zone";
+import { parseGridScheduleDate } from "@web/timezone/parse-grid-schedule-date";
 
 interface SelectedDates {
   startDate: Date;
@@ -449,6 +450,23 @@ export const getTimesLabel = (
   const label = `${startMinimal} - ${end}`;
 
   return label;
+};
+
+/** Grid card labels follow pinned calendar zone placement, not the event zone wall clock. */
+export const getGridCardTimesLabel = (
+  startDate: string,
+  endDate: string,
+  eventTimeZone?: string | null,
+): string => {
+  const calendarTimeZone = getEffectiveTimeZone();
+  const eventZone = eventTimeZone ?? calendarTimeZone;
+  const start = parseGridScheduleDate(startDate, eventZone).tz(
+    calendarTimeZone,
+  );
+  const end = parseGridScheduleDate(endDate, eventZone).tz(calendarTimeZone);
+  const startLabel = getTimeLabel(start.format(HOURS_AM_FORMAT));
+  const endLabel = getTimeLabel(end.format(HOURS_AM_FORMAT));
+  return `${_cleanStartMeridiem(startLabel, endLabel)} - ${endLabel}`;
 };
 
 export const getWeekRangeLabel = (weekStart: Dayjs, weekEnd: Dayjs) => {
