@@ -171,9 +171,12 @@ export function trackLocalModeSelected(source: LocalModeSource): void {
 }
 
 /** Legacy `signup_completed` plus its funnel step. */
-export function trackSignupCompleted(method: SignupMethod): void {
-  track("signup_completed", { method });
-  trackSignupStep("account_created", { method });
+export function trackSignupCompleted(
+  method: SignupMethod,
+  extraProperties?: Record<string, boolean | number | string>,
+): void {
+  track("signup_completed", { method, ...extraProperties });
+  trackSignupStep("account_created", { method, ...extraProperties });
 }
 
 /** PostHog renders an explicit `undefined` as a property; drop those instead. */
