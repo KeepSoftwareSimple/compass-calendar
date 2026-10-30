@@ -678,30 +678,15 @@
     },
     {
       "id": "title-edit",
-      "behavior": "Keyboard title editing and focus return",
+      "behavior": "Create and save event, focus its grid card, E then T reopens exact saved title with real input focus",
       "web": ["e2e/timed/edit-sequence-title.spec.ts"],
       "native": [
-        "apps/calendar-macos/CompassUITests/EventFormTitleKeyboardTests.swift"
+        "apps/calendar-macos/CompassUITests/EventFormTitleKeyboardTests.swift#testTitleEditSequenceReopensSavedEventWithItsTitleFocused"
       ],
-      "status": "unreviewed",
-      "evidence": "Prior fix #4929, strict40874717945. Review individual assertions before passing this entire web source.",
-      "reason": "",
-      "review": ""
-    },
-    {
-      "id": "description-links",
-      "behavior": "Description booking links and list editing",
-      "web": [
-        "e2e/event-form/description-booking-links.spec.ts",
-        "e2e/event-form/description-list-editing.spec.ts"
-      ],
-      "native": [
-        "apps/calendar-macos/CompassUITests/DescriptionEditorFormattingTests.swift"
-      ],
-      "status": "unreviewed",
-      "evidence": "Prior #4939 verifies plain Tab, not all formatting/link scenarios.",
-      "reason": "",
-      "review": ""
+      "status": "passing",
+      "evidence": "Exact db4b78960 isolated native and web strict41111963212 PASS/no required checks skipped; normal41111936558 PASS; saved-title E-then-T focus screenshot inspected /tmp/compass-et-db4b-normal-shots. Original16c9 regression failed, dispatcher regression failed before fix and passes after.",
+      "reason": "Resolved field takes priority over standalone Today. This source behavior is accepted; final merge-head and broader visual/signed-in gates remain separate.",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     },
     {
       "id": "rsvp-live",
@@ -804,9 +789,9 @@
       "native": [
         "apps/calendar-macos/CompassUITests/EventFormMeetingLinkCopyShortcutTests.swift#testMeetingLinkRowShowsKeycapsAndShortcutCopiesURL"
       ],
-      "status": "unreviewed",
-      "evidence": "",
-      "reason": "Explicit link-role/name and positive viewport assertions added on test/macos-meeting-copy-acceptance for #4957. Pending exact-head isolated-Mac strict run, not yet accepted.",
+      "status": "passing",
+      "evidence": "Merged #4959 exact455f011a9 isolated native/web strict41067682308 PASS/no required skips, normal41067687764 PASS; new copy and both-theme focus screenshots inspected /tmp/compass-meeting-455f-shots. Final groupnative41112036724 PASS.",
+      "reason": "Explicit native link-role/name and positive viewport assertions now match this web behavior. Hint automation and wide-window equivalence remain separately open.",
       "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
     },
     {
@@ -822,6 +807,237 @@
       "evidence": "Native focus test passed strict40981800450 log11008; geometry checks in both themes.",
       "reason": "Native test asserts link geometry but does not set the web test equivalent wide window size. Window-size equivalence still needs review.",
       "review": "2026-10-30 agent: compared each web assertion against copy/focus native test methods; missing assertions remain separate."
+    },
+    {
+      "id": "booking-description-open",
+      "behavior": "Enter opens booking description with two management links, remains responsive and retains exact title",
+      "web": ["e2e/event-form/description-booking-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/BookedMeetingActionsTests.swift#testCancellationShortcutRequiresConfirmationAndEscapeResetsIt"
+      ],
+      "status": "unreviewed",
+      "reason": "Existing UI test saves two RTF links and reopens responsive management buttons, but does not assert the exact title or original HTML fixture; inspect equivalence before passing.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "booking-description-link-keyboard",
+      "behavior": "Cancel and Reschedule description links have keyboard eligibility, visible focus and URL help",
+      "web": ["e2e/event-form/description-booking-links.spec.ts"],
+      "native": [
+        "apps/calendar-macos/CompassUITests/DescriptionLinkCopyShortcutTests.swift#testExportedShortcutCopiesAPastedDescriptionLink"
+      ],
+      "status": "missing",
+      "reason": "Single pasted-link clipboard test does not assert two-link traversal, names, help or focus. Separate management buttons do not prove description link keyboard behavior.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "booking-browser-link-chrome",
+      "behavior": "ProseMirror MutationObserver, DOM tabindex and CSS class implementation assertions",
+      "web": ["e2e/event-form/description-booking-links.spec.ts"],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed native platform exclusion: AppKit rich text has no ProseMirror, MutationObserver, DOM tabindex or c-focus-ring class. Observable keyboard eligibility, URL help, focus and responsiveness remain tracked independently.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "description-selected-list-persistence",
+      "behavior": "Bullet only five selected place lines, preserve preceding literal list text and heading, persist after save/reopen",
+      "web": [
+        "e2e/event-form/description-list-editing.spec.ts#description bullet list applies only to the selected lines"
+      ],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift#testPartialSelectionBulletsOnlySelectedLinesInHardBreakParagraph"
+      ],
+      "status": "missing",
+      "reason": "Native editor unit fixture omits preceding LIST/-Frames and asserts absence, not preservation. It toggles off rather than saving/reopening through the real UI.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "description-ordered-list-persistence",
+      "behavior": "Enter continues three numbered items, double Enter exits to paragraph, all text and structure survive save/reopen",
+      "web": [
+        "e2e/event-form/description-list-editing.spec.ts#description numbered lists support Enter, exit, and round-trip"
+      ],
+      "native": [
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/DescriptionEditorTests.swift#testEnterContinuesListAndEmptyItemExitsIt",
+        "apps/calendar-macos/CompassUI/Tests/CompassUIUnitTests/HTMLFragmentAppKitTests.swift#testListsRetainTheirStructure"
+      ],
+      "status": "missing",
+      "reason": "Native text-view test covers two items and exit, representation test covers pure roundtrip. No native UI three-item/After list/save/reopen equivalence.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-bundle-budget-1",
+      "behavior": "keys on the last node_modules segment, including scoped packages",
+      "web": [
+        "apps/calendar-web/src/__tests__/boot-size-report.test.ts#keys on the last node_modules segment, including scoped packages"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: Bun JS bundle/metafile package attribution and browser chunk budgets do not exist in native Swift packaging. Native launch speed/app size/performance acceptance remains separate.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-bundle-budget-2",
+      "behavior": "sums bytesInOutput on the boot set and ignores lazy chunks",
+      "web": [
+        "apps/calendar-web/src/__tests__/boot-size-report.test.ts#sums bytesInOutput on the boot set and ignores lazy chunks"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: Bun JS bundle/metafile package attribution and browser chunk budgets do not exist in native Swift packaging. Native launch speed/app size/performance acceptance remains separate.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-bundle-budget-3",
+      "behavior": "names the package and the delta when a ceiling is breached",
+      "web": [
+        "apps/calendar-web/src/__tests__/boot-size-report.test.ts#names the package and the delta when a ceiling is breached"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: Bun JS bundle/metafile package attribution and browser chunk budgets do not exist in native Swift packaging. Native launch speed/app size/performance acceptance remains separate.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-bundle-budget-4",
+      "behavior": "does not enforce total gzip against the informational baseline",
+      "web": [
+        "apps/calendar-web/src/__tests__/boot-size-report.test.ts#does not enforce total gzip against the informational baseline"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: Bun JS bundle/metafile package attribution and browser chunk budgets do not exist in native Swift packaging. Native launch speed/app size/performance acceptance remains separate.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-bundle-budget-5",
+      "behavior": "fails packages that have no declared ceiling",
+      "web": [
+        "apps/calendar-web/src/__tests__/boot-size-report.test.ts#fails packages that have no declared ceiling"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: Bun JS bundle/metafile package attribution and browser chunk budgets do not exist in native Swift packaging. Native launch speed/app size/performance acceptance remains separate.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-1",
+      "behavior": "preloads the static closure plus the entry's boot dynamic import, excluding lazy chunks",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#preloads the static closure plus the entry's boot dynamic import, excluding lazy chunks"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-2",
+      "behavior": "visits shared chunks once and accepts a JSON-string metafile",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#visits shared chunks once and accepts a JSON-string metafile"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-3",
+      "behavior": "preloads the chunk holding an always-boot source plus its static closure",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#preloads the chunk holding an always-boot source plus its static closure"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-4",
+      "behavior": "orders the entry graph before always-boot closures and skips other lazy views",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#orders the entry graph before always-boot closures and skips other lazy views"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-5",
+      "behavior": "fails loudly when an always-boot source is in no output",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#fails loudly when an always-boot source is in no output"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-6",
+      "behavior": "injects inside head even when a comment contains the closing tag text",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#injects inside head even when a comment contains the closing tag text"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-7",
+      "behavior": "fails loudly when the build passes no metafile",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#fails loudly when the build passes no metafile"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-8",
+      "behavior": "fails loudly when the walk finds no chunks",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#fails loudly when the walk finds no chunks"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
+    },
+    {
+      "id": "web-module-preload-9",
+      "behavior": "fails loudly when index.html has no head",
+      "web": [
+        "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts#fails loudly when index.html has no head"
+      ],
+      "native": [],
+      "status": "excluded",
+      "reason": "Reviewed platform exclusion: HTML modulepreload injection and JavaScript import graphs have no native AppKit/SwiftUI equivalent. Native startup responsiveness is not excluded.",
+      "evidence": "",
+      "review": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
     }
   ],
   "gates": {
@@ -844,6 +1060,11 @@
   },
   "sourceReviews": {
     "e2e/onboarding/mobile-gate.spec.ts": "2026-10-29 agent: inspected all three tests and assertions, mapped handoff, drag and tap separately. Gameplay remains unreviewed.",
-    "e2e/timed/event-form-meeting-link-keycaps.spec.ts": "2026-10-30 agent: all test assertions inspected. Copy button/toast/clipboard mapped; label, keycap visibility and wide viewport retained as gaps. Duplicate sidebar screenshots feed separate visual gate, not a behavior pass."
+    "e2e/timed/event-form-meeting-link-keycaps.spec.ts": "2026-10-30 agent: all test assertions inspected. Copy button/toast/clipboard mapped; label, keycap visibility and wide viewport retained as gaps. Duplicate sidebar screenshots feed separate visual gate, not a behavior pass.",
+    "e2e/timed/edit-sequence-title.spec.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
+    "e2e/event-form/description-booking-links.spec.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
+    "e2e/event-form/description-list-editing.spec.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
+    "apps/calendar-web/src/__tests__/boot-size-report.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred.",
+    "apps/calendar-web/src/__tests__/inject-module-preloads.test.ts": "2026-10-30 agent: read every source test and assertion, compared native candidates; no test-count equivalence inferred."
   }
 }
