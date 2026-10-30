@@ -1,22 +1,22 @@
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { type FC, useCallback, useContext, useEffect } from "react";
+import { APP_SHORTCUT_BINDINGS } from "@core/shortcuts/app-shortcut-bindings";
 import { PH_NO_RAGECLICK_CLASS } from "@web/auth/posthog/posthog-calendar-grid.util";
 import { BANNER_DISMISS_MS } from "@web/common/constants/motion.constants";
 import { Z_INDEX_TOOLTIP } from "@web/common/constants/web.constants";
 import { useDismissTransition } from "@web/common/hooks/useDismissTransition";
-import { emitViewCommand } from "@web/common/utils/dom/view-command-bus";
+import { useIsEditableFocused } from "@web/common/hooks/useIsEditableFocused";
 import { AuthModalContext } from "@web/components/AuthModal/hooks/useAuthModal";
+import { FIRST_EVENT_CREATE_KEYCAPS } from "@web/components/FirstEventPrompt/first-event.constants";
 import {
   firstEventPromptActions,
   selectFirstEventCelebrating,
   useFirstEventPromptStore,
 } from "@web/components/FirstEventPrompt/first-event.store";
 import { useFirstEventPromptSurfaceEligible } from "@web/components/FirstEventPrompt/useFirstEventPromptSurfaceEligible";
+import { useQuickCreateFirstEvent } from "@web/components/FirstEventPrompt/useQuickCreateFirstEvent";
 import IconButton from "@web/components/IconButton/IconButton";
-import {
-  TOAST_PRIMARY_ACTION_KEY,
-  useNoticeActionShortcut,
-} from "@web/shortcuts/notice-focus/useNoticeActionShortcut";
+import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 import { useAppShortcut } from "@web/shortcuts/useAppShortcut";
 
 /** How long the celebration copy holds before it fades out for good. */
@@ -24,14 +24,16 @@ const CELEBRATE_HOLD_MS = 4_000;
 
 export const FIRST_EVENT_PROMPT_ARIA_LABEL = "Create your first event";
 
-export const FIRST_EVENT_PROMPT_MESSAGE =
-  "Your calendar is ready. Add something to it.";
+export const FIRST_EVENT_PROMPT_MESSAGE = "Add your first event.";
 
-export const FIRST_EVENT_PROMPT_PRIMARY_LABEL = "Add event";
+export const FIRST_EVENT_PROMPT_PRIMARY_LABEL = "Add Coffee";
 
 const PromptCard: FC = () => {
   const isCelebrating = useFirstEventPromptStore(selectFirstEventCelebrating);
   const { closing, beginDismiss } = useDismissTransition(BANNER_DISMISS_MS);
+  const quickCreateFirstEvent = useQuickCreateFirstEvent();
+  const editableFocused = useIsEditableFocused();
+  const showShortcutKeycaps = !editableFocused;
 
   useEffect(() => {
     firstEventPromptActions.trackShownOnce();
@@ -50,16 +52,20 @@ const PromptCard: FC = () => {
     beginDismiss(firstEventPromptActions.dismiss);
   }, [beginDismiss]);
 
-  const addEvent = useCallback(() => {
-    emitViewCommand("CREATE_TIMED_DRAFT");
-  }, []);
+  const addFirstEvent = useCallback(() => {
+    quickCreateFirstEvent();
+  }, [quickCreateFirstEvent]);
 
-  useNoticeActionShortcut(TOAST_PRIMARY_ACTION_KEY, addEvent, {
-    enabled: !isCelebrating && !closing,
+  const shortcutsEnabled = !isCelebrating && !closing;
+
+  useAppShortcut(APP_SHORTCUT_BINDINGS.editSave.hotkey, addFirstEvent, {
+    enabled: shortcutsEnabled,
+    ignoreInputs: true,
+    preventDefault: true,
   });
 
   useAppShortcut("Escape", dismiss, {
-    enabled: !isCelebrating && !closing,
+    enabled: shortcutsEnabled,
     ignoreAppLock: true,
     preventDefault: true,
   });
@@ -67,6 +73,9 @@ const PromptCard: FC = () => {
   return (
     <aside
       aria-label={FIRST_EVENT_PROMPT_ARIA_LABEL}
+      aria-keyshortcuts={
+        showShortcutKeycaps ? APP_SHORTCUT_BINDINGS.editSave.hotkey : undefined
+      }
       className={`fixed right-6 bottom-6 starting:translate-y-2 starting:opacity-0 transition-all duration-300 data-closing:opacity-0 motion-reduce:transition-none ${PH_NO_RAGECLICK_CLASS}`}
       data-closing={closing || undefined}
       data-first-event-prompt=""
@@ -95,10 +104,13 @@ const PromptCard: FC = () => {
             </div>
             <button
               className="c-button-compact c-button-primary inline-flex items-center justify-center gap-2 self-start rounded-xs px-3 py-1.5 text-s"
-              onClick={addEvent}
+              onClick={addFirstEvent}
               type="button"
             >
               {FIRST_EVENT_PROMPT_PRIMARY_LABEL}
+              {showShortcutKeycaps ? (
+                <ShortcutKeys keys={[...FIRST_EVENT_CREATE_KEYCAPS]} />
+              ) : null}
             </button>
           </>
         )}

@@ -24,12 +24,14 @@ import {
 } from "@web/settings/settings.store";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 
-const emitViewCommand = mock(() => undefined);
+const quickCreateFirstEvent = mock(() => undefined);
 
-mock.module("@web/common/utils/dom/view-command-bus", () => ({
-  emitViewCommand,
-  onViewCommand: () => () => undefined,
-}));
+mock.module(
+  "@web/components/FirstEventPrompt/useQuickCreateFirstEvent",
+  () => ({
+    useQuickCreateFirstEvent: () => quickCreateFirstEvent,
+  }),
+);
 
 const { FirstEventPrompt } = await import(
   "@web/components/FirstEventPrompt/FirstEventPrompt"
@@ -41,7 +43,7 @@ const markShowcaseSeen = () => {
 
 describe("FirstEventPrompt", () => {
   beforeEach(() => {
-    emitViewCommand.mockClear();
+    quickCreateFirstEvent.mockClear();
     draftActions.discard();
     useFirstEventPromptStore.setState({ ...initialFirstEventPromptState });
     useShortcutShowcaseStore.setState(initialShortcutShowcaseState);
@@ -141,20 +143,18 @@ describe("FirstEventPrompt", () => {
       name: "Create your first event",
     });
     expect(prompt).toBeTruthy();
-    expect(
-      screen.getByText("Your calendar is ready. Add something to it."),
-    ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Add event" })).toBeTruthy();
+    expect(screen.getByText("Add your first event.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Add Coffee" })).toBeTruthy();
   });
 
-  it("starts a timed draft when Add event is clicked", async () => {
+  it("creates the default first event when Add Coffee is clicked", async () => {
     const user = userEvent.setup();
     markShowcaseSeen();
     render(<FirstEventPrompt />);
 
-    await user.click(screen.getByRole("button", { name: "Add event" }));
+    await user.click(screen.getByRole("button", { name: "Add Coffee" }));
 
-    expect(emitViewCommand).toHaveBeenCalledWith("CREATE_TIMED_DRAFT");
+    expect(quickCreateFirstEvent).toHaveBeenCalledTimes(1);
   });
 
   it("celebrates on the first real event, then retires the card for good", async () => {

@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-  createEventTitle,
-  expectTimedEventVisible,
-  fillTitleAndSaveEventForm,
-} from "../utils/event-test-utils";
+import { expectTimedEventVisible } from "../utils/event-test-utils";
 
 // Most E2E coverage skips onboarding to keep the calendar tests focused. This
 // spec deliberately starts with empty browser storage so a new user's path is
@@ -64,15 +60,13 @@ test("welcomes a first-time user and seeds sample events", async ({
     name: "Create your first event",
   });
   await expect(prompt).toBeVisible();
-  await expect(prompt).toContainText("Your calendar is ready");
-  await prompt.getByRole("button", { name: "Add event" }).click();
-  await expect(prompt).toBeHidden();
-  const title = createEventTitle("First-run event");
-  await fillTitleAndSaveEventForm(page, title);
+  await expect(prompt).toContainText("Add your first event");
+  await prompt.getByRole("button", { name: "Add Coffee" }).click();
 
   // The prompt celebrates the first real event, then retires.
   await expect(prompt).toContainText("It's on the calendar.");
   await expect(prompt).toBeHidden();
+  const title = "Coffee";
 
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(welcomeDialog).toBeHidden();
