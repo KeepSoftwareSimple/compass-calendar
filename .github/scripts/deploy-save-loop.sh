@@ -30,13 +30,20 @@ header_value() {
   awk -v name="$name" 'BEGIN { IGNORECASE=1 } $1 == name ":" { sub(/^[^:]+:[[:space:]]*/, ""); print; exit }' "$headers_file" | tr -d '\r'
 }
 
+COOKIE_JAR=$(mktemp)
+
+cleanup() {
+  rm -f "$COOKIE_JAR"
+}
+trap cleanup EXIT
+
 sign_in() {
   local headers_file body_file
   headers_file=$(mktemp)
   body_file=$(mktemp)
   if ! curl -fsS -X POST "${API_BASE}/signin" \
     -H 'Content-Type: application/json' \
-    -H 'st-auth-mode: header' \
+    -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -D "$headers_file" \
     -o "$body_file" \
     --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}"; then
@@ -44,19 +51,16 @@ sign_in() {
     echo "sign-in request failed" >&2
     return 1
   fi
-  ACCESS_TOKEN=$(header_value "$headers_file" st-access-token)
   rm -f "$headers_file" "$body_file"
-  if [ -z "$ACCESS_TOKEN" ]; then
-    echo "sign-in succeeded but st-access-token header was missing" >&2
+  if ! curl -fsS "${API_BASE}/user/profile" -c "$COOKIE_JAR" -b "$COOKIE_JAR" >/dev/null; then
+    echo "sign-in did not establish a session cookie" >&2
     return 1
   fi
 }
 
 pick_calendar_id() {
   local body
-  body=$(curl -fsS "${API_BASE}/calendars" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H 'st-auth-mode: header')
+  body=$(curl -fsS "${API_BASE}/calendars" -c "$COOKIE_JAR" -b "$COOKIE_JAR")
   python3 - <<'PY' "$body"
 import json, sys
 data = json.loads(sys.argv[1])
