@@ -8,8 +8,8 @@ import {
   type ResetPasswordFormData,
   type SignUpFormData,
 } from "@web/auth/compass/schemas/auth.schemas";
+import { scheduleSignupCompleted } from "@web/auth/posthog/signup-completed-coordinator";
 import {
-  trackSignupCompleted,
   trackSignupFailed,
   trackSignupStep,
 } from "@web/auth/posthog/signup-funnel";
@@ -94,7 +94,7 @@ export function useAuthFormHandlers({
             await completeAuthentication({
               email: response.user.emails[0] ?? data.email,
             });
-            trackSignupCompleted("email");
+            scheduleSignupCompleted("email");
             rememberSignupTrialMethod("email");
             closeModal();
             return;

@@ -12,10 +12,8 @@ import { useRedirectStaleProviderOAuthReplay } from "@web/auth/callback/useRedir
 import { useCompleteAuthentication } from "@web/auth/compass/hooks/useCompleteAuthentication";
 import { trackGoogleOAuthScopesRecoverySucceeded } from "@web/auth/posthog/google-oauth-scopes-recovery-funnel";
 import { trackOAuthSignupFailed } from "@web/auth/posthog/oauth-signup-funnel";
-import {
-  trackSignupCompleted,
-  trackSignupStep,
-} from "@web/auth/posthog/signup-funnel";
+import { scheduleSignupCompleted } from "@web/auth/posthog/signup-completed-coordinator";
+import { trackSignupStep } from "@web/auth/posthog/signup-funnel";
 import { track } from "@web/auth/posthog/track";
 import { completeProviderAuthorization } from "@web/auth/providers/authorization/complete-provider-authorization";
 import {
@@ -105,7 +103,7 @@ export async function completeProviderAuthCallback({
       trackGoogleOAuthScopesRecoverySucceeded();
     }
     if (result.isNewUser) {
-      trackSignupCompleted(provider);
+      scheduleSignupCompleted(provider);
       track("calendar_connected", { source: `signup_${provider}` });
       trackSignupStep("calendar_connected", { method: provider });
     } else {

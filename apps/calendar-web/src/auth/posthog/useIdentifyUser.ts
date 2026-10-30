@@ -5,6 +5,7 @@ import {
   syntheticAccountPosthogRegistration,
 } from "@web/auth/posthog/posthog-audience-filter.util";
 import { usePostHog } from "@web/auth/posthog/posthog-react";
+import { flushSignupCompletedAfterSessionReady } from "@web/auth/posthog/signup-completed-coordinator";
 
 /**
  * Identifies the signed-in Compass user in PostHog. Guest booking
@@ -41,6 +42,11 @@ export function useIdentifyUser(
       ) {
         posthog.register(syntheticAccountPosthogRegistration());
       }
+      flushSignupCompletedAfterSessionReady({
+        userId,
+        profileEmail,
+        isSynthetic,
+      });
     }
   }, [isSynthetic, profileEmail, posthog, userId]);
 }
