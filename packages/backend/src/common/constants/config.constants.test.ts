@@ -129,11 +129,15 @@ describe("config.constants", () => {
         webhookSecret: "whsec_file",
         priceId: " price_file\n",
         publishableKey: " pk_file\n",
+        syntheticJourneyDiscountId: " coupon_synthetic_100 ",
       },
     });
     expect(fromFile.STRIPE_PRICE_ID).toBe("price_file");
     expect(fromFile.STRIPE_SECRET_KEY).toBe("sk_test_abc");
     expect(fromFile.STRIPE_PUBLISHABLE_KEY).toBe("pk_file");
+    expect(fromFile.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID).toBe(
+      "coupon_synthetic_100",
+    );
   });
 
   it("rejects partially configured Google credentials", () => {

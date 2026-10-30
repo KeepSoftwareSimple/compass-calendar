@@ -24,6 +24,12 @@ describe("synthetic account helpers", () => {
         "lance.essert@gmail.com",
       ]),
     ).toBe(true);
+    expect(
+      isSyntheticAccountEmail(
+        "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+        ["lance.essert+prod-journey-google@gmail.com"],
+      ),
+    ).toBe(true);
   });
 
   it("flags internal domains and compasscaltest.invalid", () => {

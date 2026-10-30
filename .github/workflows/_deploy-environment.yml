@@ -147,6 +147,9 @@ jobs:
           STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
           STRIPE_PRICE_ID: ${{ secrets.STRIPE_PRICE_ID }}
           STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
+          # Same secret name as prod-journey; production Environment must expose it
+          # so deploy can write stripe.syntheticJourneyDiscountId into compass.yaml.
+          STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID: ${{ secrets.STRIPE_SYNTHETIC_JOURNEY_DISCOUNT_ID }}
           EMAIL_PROVIDER: ${{ vars.EMAIL_PROVIDER }}
           EMAIL_FROM: ${{ vars.EMAIL_FROM }}
           EMAIL_SCHEDULE_PROFILE: ${{ vars.EMAIL_SCHEDULE_PROFILE }}
@@ -284,6 +287,9 @@ jobs:
                 "  webhookSecret: \"${STRIPE_WEBHOOK_SECRET}\"" \
                 "  priceId: \"${STRIPE_PRICE_ID}\"" \
                 "  publishableKey: \"${STRIPE_PUBLISHABLE_KEY}\""
+              # shellcheck source=.github/scripts/deploy-write-stripe-synthetic-discount.sh
+              . .github/scripts/deploy-write-stripe-synthetic-discount.sh
+              write_stripe_synthetic_journey_discount
             else
               echo "Stripe config: omitting stripe block (environment=${{ inputs.environment }}; secretKey=$([ -n "$STRIPE_SECRET_KEY" ] && echo present || echo empty); webhookSecret=$([ -n "$STRIPE_WEBHOOK_SECRET" ] && echo present || echo empty); priceId=$([ -n "$STRIPE_PRICE_ID" ] && echo present || echo empty); publishableKey=$([ -n "$STRIPE_PUBLISHABLE_KEY" ] && echo present || echo empty))" >&2
             fi

@@ -137,6 +137,34 @@ describe("EmailDispatchService", () => {
     );
   });
 
+  it("skips welcome sends for prod journey plus addresses on configured bases", async () => {
+    CONFIG.EMAIL_PROVIDER = "log";
+    CONFIG.EMAIL_ALLOWLIST = [];
+    CONFIG.SYNTHETIC_JOURNEY_EMAILS = [
+      "lance.essert+prod-journey-google@gmail.com",
+    ];
+    const row = baseRow();
+    const send = mock(async () => ({ messageId: "msg-1" }));
+    spyOn(emailClient, "buildEmailProvider").mockReturnValue({
+      send,
+      verifyWebhook: () => [],
+    });
+    spyOn(emailSendRepository, "claimDue").mockResolvedValue([row]);
+    const markSkipped = spyOn(
+      emailSendRepository,
+      "markSkipped",
+    ).mockResolvedValue(row);
+    spyOn(welcomeContext, "loadWelcomeSequenceUser").mockResolvedValue({
+      email: "lance.essert+prod-journey-google+journey1730123456789@gmail.com",
+      billing: undefined,
+    });
+
+    await new EmailDispatchService().dispatchDue();
+
+    expect(markSkipped).toHaveBeenCalledWith(row._id, "Synthetic account");
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("skips welcome sends for configured synthetic journey plus addresses", async () => {
     CONFIG.EMAIL_PROVIDER = "log";
     CONFIG.EMAIL_ALLOWLIST = [];
