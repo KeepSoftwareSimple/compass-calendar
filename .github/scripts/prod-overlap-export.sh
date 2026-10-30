@@ -63,7 +63,12 @@ run_mongo_eval '
   }
   for (const name of databases) {
     const owner = db.getSiblingDB(name).user.findOne(
-      { displayName: "Tyler Dane" },
+      {
+        $or: [
+          { displayName: "Tyler Dane" },
+          { firstName: "Tyler", lastName: "Dane" },
+        ],
+      },
       { _id: 1 },
     );
     if (owner && owner._id) {
