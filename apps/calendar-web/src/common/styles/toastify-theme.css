@@ -24,3 +24,8 @@ html[data-first-event-prompt-live] .Toastify__toast-container--bottom-left {
     var(--compass-first-event-prompt-stack-height, 0px)
   );
 }
+
+.Toastify__toast-container--bottom-left {
+  inset-inline: max(1rem, env(safe-area-inset-left));
+  width: min(24rem, calc(100vw - 2rem));
+}
