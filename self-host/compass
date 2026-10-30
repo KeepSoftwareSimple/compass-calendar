@@ -106,9 +106,7 @@ require_stack() {
   docker compose version >/dev/null 2>&1 || fail "Docker Compose is not available. Install Docker Desktop or Docker Engine with Compose."
 }
 
-compose() {
-  require_stack
-  set_compose_env
+compose_docker() {
   # Cloud/Atlas (no selfhosted profile) uses only the base file. Selfhosted
   # adds the overlay that hard-waits for healthy mongo before backend. Putting
   # that dependency in the base file breaks profile-less cloud deploys, and
@@ -119,11 +117,17 @@ compose() {
       if [ -f "$COMPOSE_SELFHOSTED_FILE" ]; then
         docker compose --project-name "$PROJECT_NAME" \
           -f "$COMPOSE_FILE" -f "$COMPOSE_SELFHOSTED_FILE" "$@"
-        return
+        return $?
       fi
       ;;
   esac
   docker compose --project-name "$PROJECT_NAME" -f "$COMPOSE_FILE" "$@"
+}
+
+compose() {
+  require_stack
+  set_compose_env
+  compose_docker "$@"
 }
 
 check_health() {
@@ -208,7 +212,8 @@ run_compose_wait() {
   wait_sec=$1
   shift
   if command -v timeout >/dev/null 2>&1; then
-    timeout "$wait_sec" compose up -d --remove-orphans --wait "$@"
+    # GNU timeout execs argv[1]; compose() is a shell function and cannot run under it.
+    timeout "$wait_sec" "$0" __internal_compose_docker up -d --remove-orphans --wait "$@"
     return $?
   fi
   compose up -d --remove-orphans --wait "$@"
@@ -230,6 +235,13 @@ prune_unused_images() {
 command_name=${1:-}
 
 case $command_name in
+  __internal_compose_docker)
+    shift
+    require_stack
+    set_compose_env
+    compose_docker "$@"
+    exit $?
+    ;;
   start)
     start_stack
     ;;
