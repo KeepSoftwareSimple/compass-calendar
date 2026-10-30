@@ -1,0 +1,105 @@
+name: Staging proxy cutover proof
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to deploy after restoring legacy layout (e.g. v1.3.454)
+        required: true
+        type: string
+      environment:
+        description: Staging GitHub Environment to exercise (cloud or selfhosted)
+        required: true
+        type: choice
+        options:
+          - staging-cloud
+          - staging-selfhosted
+        default: staging-cloud
+      run_save_loop:
+        description: Run authenticated save loop during deploy (staging-cloud only)
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  restore-legacy:
+    name: Restore legacy backend layout
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: staging-proxy-cutover-${{ inputs.environment }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Upload legacy restore assets and run on host
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          scp -i ~/.ssh/staging_key -o StrictHostKeyChecking=no \
+            self-host/compose.legacy-restore.yaml \
+            "$SSH_USER@$SSH_HOST:~/compass/compose.legacy-restore.yaml.$$"
+          ssh -i ~/.ssh/staging_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
+            "mv ~/compass/compose.legacy-restore.yaml.$$ ~/compass/compose.legacy-restore.yaml"
+          scp -i ~/.ssh/staging_key -o StrictHostKeyChecking=no \
+            .github/scripts/staging-restore-legacy-backend-layout.sh \
+            "$SSH_USER@$SSH_HOST:~/compass/staging-restore-legacy-backend-layout.sh.$$"
+          ssh -i ~/.ssh/staging_key -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" \
+            "chmod +x ~/compass/staging-restore-legacy-backend-layout.sh.$$ && \
+             mv ~/compass/staging-restore-legacy-backend-layout.sh.$$ ~/compass/staging-restore-legacy-backend-layout.sh && \
+             ~/compass/staging-restore-legacy-backend-layout.sh"
+
+  save-loop:
+    name: Save loop during cutover deploy
+    if: >-
+      inputs.run_save_loop &&
+      inputs.environment == 'staging-cloud'
+    needs: restore-legacy
+    runs-on: ubuntu-latest
+    environment: staging-cloud
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Run continuous authenticated save loop
+        env:
+          SAVE_LOOP_DURATION_SEC: '900'
+          SAVE_LOOP_INTERVAL_SEC: '1'
+          SAVE_LOOP_BASE_URL: ${{ vars.FRONTEND_URL }}
+          STAGING_JOURNEY_PROVIDER: ${{ vars.STAGING_JOURNEY_PROVIDER }}
+          STAGING_JOURNEY_GOOGLE_EMAIL: ${{ secrets.STAGING_JOURNEY_GOOGLE_EMAIL }}
+          STAGING_JOURNEY_GOOGLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_GOOGLE_PASSWORD }}
+          STAGING_JOURNEY_MICROSOFT_EMAIL: ${{ secrets.STAGING_JOURNEY_MICROSOFT_EMAIL }}
+          STAGING_JOURNEY_MICROSOFT_PASSWORD: ${{ secrets.STAGING_JOURNEY_MICROSOFT_PASSWORD }}
+          STAGING_JOURNEY_APPLE_EMAIL: ${{ secrets.STAGING_JOURNEY_APPLE_EMAIL }}
+          STAGING_JOURNEY_APPLE_PASSWORD: ${{ secrets.STAGING_JOURNEY_APPLE_PASSWORD }}
+        run: bash .github/scripts/deploy-save-loop.sh
+
+  deploy:
+    name: Deploy after legacy restore
+    needs: restore-legacy
+    uses: ./.github/workflows/_deploy-environment.yml
+    with:
+      tag: ${{ inputs.tag }}
+      environment: ${{ inputs.environment }}
+    secrets: inherit
+
+  health-check:
+    name: Post-deploy health check
+    needs: deploy
+    uses: ./.github/workflows/deploy-health-check.yml
+    with:
+      tag: ${{ inputs.tag }}
+      environment: ${{ inputs.environment }}
+      profile: ${{ inputs.environment == 'staging-selfhosted' && 'selfhosted' || 'cloud' }}
+    secrets: inherit
