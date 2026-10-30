@@ -75,12 +75,6 @@ raise SystemExit(1)
 PY
 }
 
-auth_headers=(
-  -H "Authorization: Bearer ${ACCESS_TOKEN}"
-  -H 'st-auth-mode: header'
-  -H 'Content-Type: application/json'
-)
-
 write_once() {
   local now payload status
   now=$(date -u +%Y-%m-%dT%H:%M:%S.000Z)
