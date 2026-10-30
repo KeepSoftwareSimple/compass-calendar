@@ -49,15 +49,43 @@ header_value() {
   awk -v name="$name" 'BEGIN { IGNORECASE=1 } $1 == name ":" { sub(/^[^:]+:[[:space:]]*/, ""); print; exit }' "$headers_file" | tr -d '\r'
 }
 
+COOKIE_JAR=$(mktemp)
 ACCESS_TOKEN=""
+USE_HEADER_AUTH=0
+
+cleanup() {
+  rm -f "$COOKIE_JAR"
+}
+trap cleanup EXIT
+
+api_get() {
+  if [ "$USE_HEADER_AUTH" = 1 ]; then
+    curl -fsS "$@" \
+      -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+      -H 'st-auth-mode: header'
+  else
+    curl -fsS "$@" -c "$COOKIE_JAR" -b "$COOKIE_JAR"
+  fi
+}
+
+api_post() {
+  if [ "$USE_HEADER_AUTH" = 1 ]; then
+    curl "$@" \
+      -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+      -H 'st-auth-mode: header'
+  else
+    curl "$@" -c "$COOKIE_JAR" -b "$COOKIE_JAR"
+  fi
+}
 
 sign_in() {
-  local headers_file body_file status
+  local headers_file body_file status access
   headers_file=$(mktemp)
   body_file=$(mktemp)
   status=$(curl -sS -o "$body_file" -w '%{http_code}' -X POST "${API_BASE}/signin" \
     -H 'Content-Type: application/json' \
     -H 'st-auth-mode: header' \
+    -c "$COOKIE_JAR" -b "$COOKIE_JAR" \
     -D "$headers_file" \
     --data "{\"formFields\":[{\"id\":\"email\",\"value\":\"${EMAIL}\"},{\"id\":\"password\",\"value\":\"${PASSWORD}\"}]}" || echo "000")
   if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
@@ -65,25 +93,28 @@ sign_in() {
     printf 'sign-in HTTP %s\n' "$status" >&2
     return 1
   fi
-  ACCESS_TOKEN=$(header_value "$headers_file" st-access-token)
+  access=$(header_value "$headers_file" st-access-token)
   rm -f "$headers_file" "$body_file"
-  if [ -z "$ACCESS_TOKEN" ]; then
-    echo "sign-in succeeded but st-access-token header was missing" >&2
+  if [ -n "$access" ]; then
+    ACCESS_TOKEN=$access
+    USE_HEADER_AUTH=1
+    if api_get "${API_BASE}/user/profile" >/dev/null; then
+      return 0
+    fi
+    echo "sign-in returned a token but profile check failed" >&2
     return 1
   fi
-  if ! curl -fsS "${API_BASE}/user/profile" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H 'st-auth-mode: header' >/dev/null; then
-    echo "profile check failed after sign-in" >&2
-    return 1
+  USE_HEADER_AUTH=0
+  if api_get "${API_BASE}/user/profile" >/dev/null; then
+    return 0
   fi
+  echo "sign-in did not establish a session" >&2
+  return 1
 }
 
 pick_calendar_id() {
   local body
-  body=$(curl -fsS "${API_BASE}/calendars" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H 'st-auth-mode: header')
+  body=$(api_get "${API_BASE}/calendars")
   python3 - <<'PY' "$body"
 import json, sys
 data = json.loads(sys.argv[1])
@@ -117,9 +148,7 @@ print(json.dumps({
 }))
 PY
 )
-  status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "${API_BASE}/event" \
-    -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-    -H 'st-auth-mode: header' \
+  status=$(api_post -sS -o /dev/null -w '%{http_code}' -X POST "${API_BASE}/event" \
     -H 'Content-Type: application/json' \
     --data "$payload" || echo "000")
   case "$status" in
@@ -156,7 +185,7 @@ requests=0
 failures=0
 deadline=$((SECONDS + DURATION_SEC))
 
-echo "deploy-save-loop: ${DURATION_SEC}s interval ${INTERVAL_SEC}s base ${BASE_URL} provider=${provider}"
+echo "deploy-save-loop: ${DURATION_SEC}s interval ${INTERVAL_SEC}s base ${BASE_URL} provider=${provider} auth=$([ "$USE_HEADER_AUTH" = 1 ] && echo header || echo cookie)"
 
 while [ "$SECONDS" -lt "$deadline" ]; do
   requests=$((requests + 1))
