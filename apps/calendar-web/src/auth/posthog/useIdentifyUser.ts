@@ -1,9 +1,7 @@
 import { useEffect } from "react";
+import { syntheticAccountPosthogFlags } from "@core/analytics/synthetic-account.util";
 import { isPublicBookingPath } from "@core/booking/booking-telemetry";
-import {
-  shouldRegisterSyntheticAccount,
-  syntheticAccountPosthogRegistration,
-} from "@web/auth/posthog/posthog-audience-filter.util";
+import { shouldRegisterSyntheticAccount } from "@web/auth/posthog/posthog-audience-filter.util";
 import { usePostHog } from "@web/auth/posthog/posthog-react";
 import {
   flushSignupCompletedAfterSessionReady,
@@ -47,7 +45,7 @@ export function useIdentifyUser(
       if (
         shouldRegisterSyntheticAccount({ email: profileEmail, isSynthetic })
       ) {
-        posthog.register(syntheticAccountPosthogRegistration());
+        posthog.register(syntheticAccountPosthogFlags());
       }
       flushSignupCompletedAfterSessionReady({
         userId,

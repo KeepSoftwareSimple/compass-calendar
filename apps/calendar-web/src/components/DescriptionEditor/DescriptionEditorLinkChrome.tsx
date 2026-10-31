@@ -21,6 +21,13 @@ import { ShortcutKeys } from "@web/components/Shortcuts/ShortcutKeys";
 const COPY_ICON_SIZE = 14;
 const HOVER_CLOSE_DELAY_MS = 150;
 
+const descriptionLinkNeedsDomSync = (link: HTMLAnchorElement): boolean =>
+  link.getAttribute("tabindex") !== "0" ||
+  !link.hasAttribute("aria-label") ||
+  link.hasAttribute("title") ||
+  !link.classList.contains("c-focus-ring") ||
+  !link.classList.contains("rounded-xs");
+
 interface DescriptionEditorLinkChromeProps {
   editor: Editor;
   editorRoot: HTMLElement | null;
@@ -60,12 +67,7 @@ export const DescriptionEditorLinkChrome = ({
     // links in one paragraph, e.g. a booking's "Cancel | Reschedule").
     const syncTabIndex = () => {
       const links = listDescriptionLinks(editorRoot).filter(
-        (link) =>
-          link.getAttribute("tabindex") !== "0" ||
-          !link.hasAttribute("aria-label") ||
-          link.hasAttribute("title") ||
-          !link.classList.contains("c-focus-ring") ||
-          !link.classList.contains("rounded-xs"),
+        descriptionLinkNeedsDomSync,
       );
       if (links.length === 0) return;
       withEditorDomObserverPaused(editor, () => {
