@@ -8,25 +8,22 @@ Native UI XCTest runs only on isolated GitHub Macs. No local desktop takeover.
 
 ## Current package
 
-Branch `test/macos-description-bullet-selection`, fixes #5014. New native UI
-regression pastes equivalent rich text with soft breaks, selects only the five
-place lines using real keyboard input, applies Bullet list and saves/reopens.
-It checks exact visible text, preserved preceding literal list text and headings,
-and semantic list state on every selected/nonselected line. Clipboard contents
-are restored in teardown. The lower-level fixture now includes the previously
-omitted sibling paragraph and asserts it is preserved, rather than asserting
-absence of text never present. No production behavior changed or coverage weakened.
-The original source head's normal full native suite and both new regressions
-passed, but strict hit its unchanged 30-minute budget during the UI pass. Strict
-now restores SwiftPM compilation and saves missing compiled test binaries before
-verification, so a later timeout preserves compilation work. Every test still
-executes in the existing serial order; no timeout or assertion changes. The new
-head requires fresh actual native/web verdicts and capture review before acceptance.
+Branch `chore/macos-parity-reviewed-behaviors`: records selected-bullet acceptance
+from merged #5015 with actual exact084 native/web strict PASS, normal full-suite
+PASS and inspected sampled capture. All broad gates remain open.
 
-Ordered-list acceptance from merged #4984 is recorded with actual exact-head
-verification and sampled capture evidence. Supported geometry, stored sidebar/theme
-initial rendering, booking keyboard links, native startup performance and broad
-visual/signed-in/final-build gates remain open. Counts do not establish parity.
+Completed frozen-source reviews for local-mode trial prompt, initial paint,
+welcome action geometry, welcome body-click/Enter and description links now have
+explicit behavior mappings. Browser first-paint mechanics are narrowly excluded;
+observable native first-frame theme/content/geometry/responsiveness remain open.
+Later web changes to link help/shortcut policy remain deferred. The frozen CTA
+source compares provider/email widths only, not all three actions.
+
+Next inspect real native booking-description link accessibility and responder
+routing before implementing the missing two-link keyboard eligibility/help/focus
+regression. Existing cancellation and clipboard tests do not prove this behavior;
+avoid duplicating them or claiming a product defect from a coverage gap alone.
+No local native UI tests or external link activation.
 
 ## Verified history, do not repeat
 
